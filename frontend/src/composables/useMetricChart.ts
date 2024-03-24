@@ -18,12 +18,16 @@ const TIME_H = 16  // px reserved at bottom for time axis
 const PAD_X = 6
 const PAD_Y = 8
 
-function _fmtRelTime(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = Math.round(seconds % 60)
-  if (m === 0) return `-${s}s`
-  if (s === 0) return `-${m}m`
-  return `-${m}m`
+function _fmtTime(ts: number): string {
+  const d = new Date(ts * 1000)
+  const hh = d.getHours().toString().padStart(2, '0')
+  const mm = d.getMinutes().toString().padStart(2, '0')
+  const today = new Date()
+  const sameDay = d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()
+  if (sameDay) return `${hh}:${mm}`
+  const dd = d.getDate().toString().padStart(2, '0')
+  const mo = (d.getMonth() + 1).toString().padStart(2, '0')
+  return `${dd}.${mo} ${hh}:${mm}`
 }
 
 export function useMetricChart(
@@ -175,12 +179,13 @@ export function useMetricChart(
 
     // Tick marks + labels: left edge, middle, right edge
     type TickDatum = { x: number; label: string; anchor: string }
+    const tsMid = (tsMin + tsMax) / 2
     const ticks: TickDatum[] = hasRange ? [
-      { x: PAD_X,         label: _fmtRelTime(timeDiffSec), anchor: 'start' },
-      { x: W / 2,         label: _fmtRelTime(timeDiffSec / 2),  anchor: 'middle' },
-      { x: W - PAD_X,     label: 'now',                    anchor: 'end' },
+      { x: PAD_X,       label: _fmtTime(tsMin),  anchor: 'start' },
+      { x: W / 2,       label: _fmtTime(tsMid),  anchor: 'middle' },
+      { x: W - PAD_X,   label: _fmtTime(tsMax),  anchor: 'end' },
     ] : [
-      { x: W - PAD_X,     label: 'now',                    anchor: 'end' },
+      { x: W - PAD_X,   label: _fmtTime(tsMax),  anchor: 'end' },
     ]
 
     root.selectAll<SVGLineElement, TickDatum>('line.mc-tick')
