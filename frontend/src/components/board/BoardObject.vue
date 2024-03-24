@@ -38,7 +38,7 @@
           </div>
           <span v-if="chartMetricLabels.length > 6" class="text-[10px] text-zinc-600 self-center">+{{ chartMetricLabels.length - 6 }}</span>
         </div>
-        <svg ref="chartSvgRef" class="w-full flex-1 mb-1.5" style="overflow: visible" />
+        <svg ref="chartSvgRef" class="w-full flex-1" style="overflow: visible" />
       </div>
     </template>
     <!-- URL embed mode -->

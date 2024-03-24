@@ -50,8 +50,10 @@ export function useMetricChart(
     const series = data.value
     if (!svg) return
 
-    const W = getWidth()
-    const H = getHeight()
+    // Use actual rendered dimensions so the chart fits the available flex space exactly.
+    // Fall back to the computed values only before the element has been laid out.
+    const W = svg.clientWidth || getWidth()
+    const H = svg.clientHeight || getHeight()
     if (W <= 0 || H <= 0) return
 
     const root = select(svg).attr('width', W).attr('height', H)
