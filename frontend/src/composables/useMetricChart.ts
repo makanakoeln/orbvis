@@ -15,7 +15,8 @@ export const CHART_PALETTE = [
 ]
 
 const TIME_H = 16  // px reserved at bottom for time axis
-const PAD_X = 6
+const PAD_LEFT = 34 // px for y-axis labels
+const PAD_RIGHT = 6
 const PAD_Y = 8
 
 function _fmtTime(ts: number): string {
@@ -30,11 +31,19 @@ function _fmtTime(ts: number): string {
   return `${dd}.${mo} ${hh}:${mm}`
 }
 
+function _fmtVal(v: number): string {
+  if (Math.abs(v) >= 1000) return `${(v / 1000).toFixed(1)}k`
+  if (Math.abs(v) >= 100) return v.toFixed(0)
+  if (Math.abs(v) >= 10) return v.toFixed(1)
+  return v.toFixed(2)
+}
+
 export function useMetricChart(
   svgRef: Ref<SVGSVGElement | null>,
   data: Ref<Record<string, MetricPoint[]>>,
   getWidth: () => number,
   getHeight: () => number,
+  getWindowSecs?: () => number,
 ) {
   function render(animate = false) {
     const svg = svgRef.value
@@ -56,8 +65,14 @@ export function useMetricChart(
     const allPts = labels.flatMap(l => series[l])
     if (allPts.length === 0) { root.selectAll('*').remove(); return }
 
-    const tsMin = min(allPts, d => d.ts) ?? 0
-    const tsMax = max(allPts, d => d.ts) ?? 1
+    const now = Date.now() / 1000
+    const windowSecs = getWindowSecs?.() ?? 0
+    const tsDataMin = min(allPts, d => d.ts) ?? now
+    const tsDataMax = max(allPts, d => d.ts) ?? now
+    // Use full configured window for X domain so empty leading time is visible
+    const tsMin = windowSecs > 0 ? Math.min(tsDataMin, now - windowSecs) : tsDataMin
+    const tsMax = windowSecs > 0 ? Math.max(tsDataMax, now) : tsDataMax
+
     const valMin = min(allPts, d => d.value) ?? 0
     const valMax = max(allPts, d => d.value) ?? 1
     const range = valMax - valMin || 1
@@ -66,7 +81,7 @@ export function useMetricChart(
 
     const xScale = scaleLinear()
       .domain([tsMin, tsMax === tsMin ? tsMin + 1 : tsMax])
-      .range([PAD_X, W - PAD_X])
+      .range([PAD_LEFT, W - PAD_RIGHT])
     const yScale = scaleLinear()
       .domain([Math.max(0, valMin - range * 0.15), valMax + range * 0.15])
       .range([HC - PAD_Y, PAD_Y])
@@ -86,19 +101,32 @@ export function useMetricChart(
       grad.append('stop').attr('offset', '100%').attr('stop-opacity', '0.02')
     }
 
-    // Subtle horizontal grid lines
+    // Y-axis labels + grid lines
     const [yLo, yHi] = yScale.domain()
-    const gridVals = [0.25, 0.5, 0.75].map(f => yLo + (yHi - yLo) * f)
+    const yTickVals = [0.0, 0.5, 1.0].map(f => yLo + (yHi - yLo) * f)
     let gridG = root.select<SVGGElement>('g.mc-grid')
     if (gridG.empty()) gridG = root.insert('g', 'g.mc-series').attr('class', 'mc-grid')
-    const gridLines = gridG.selectAll<SVGLineElement, number>('line').data(gridVals)
-    gridLines.enter().append('line')
+
+    const gridLines = gridG.selectAll<SVGLineElement, number>('line.mc-hline').data(yTickVals)
+    gridLines.enter().append('line').attr('class', 'mc-hline')
       .merge(gridLines as any)
-      .attr('x1', PAD_X).attr('x2', W - PAD_X)
+      .attr('x1', PAD_LEFT).attr('x2', W - PAD_RIGHT)
       .attr('y1', d => yScale(d)).attr('y2', d => yScale(d))
       .attr('stroke', 'rgba(255,255,255,0.06)')
       .attr('stroke-dasharray', '2,4')
     gridLines.exit().remove()
+
+    const yLabels = gridG.selectAll<SVGTextElement, number>('text.mc-ylabel').data(yTickVals)
+    yLabels.enter().append('text').attr('class', 'mc-ylabel')
+      .merge(yLabels as any)
+      .attr('x', PAD_LEFT - 4)
+      .attr('y', d => yScale(d) + 3)
+      .attr('text-anchor', 'end')
+      .attr('fill', 'rgba(255,255,255,0.32)')
+      .attr('font-size', '8')
+      .attr('font-family', 'ui-monospace,monospace')
+      .text(d => _fmtVal(d))
+    yLabels.exit().remove()
 
     const lineGen = line<MetricPoint>()
       .x(d => xScale(d.ts))
@@ -167,25 +195,23 @@ export function useMetricChart(
       }
     })
 
-    // Time axis
-    const timeDiffSec = tsMax - tsMin
-    const hasRange = timeDiffSec > 1
-
+    // Time axis separator
     root.selectAll<SVGLineElement, number>('line.mc-t-sep').data([0])
       .join('line').attr('class', 'mc-t-sep')
-      .attr('x1', PAD_X).attr('x2', W - PAD_X)
+      .attr('x1', PAD_LEFT).attr('x2', W - PAD_RIGHT)
       .attr('y1', HC + 1).attr('y2', HC + 1)
       .attr('stroke', 'rgba(255,255,255,0.10)')
 
     // Tick marks + labels: left edge, middle, right edge
     type TickDatum = { x: number; label: string; anchor: string }
+    const hasRange = tsMax - tsMin > 1
     const tsMid = (tsMin + tsMax) / 2
     const ticks: TickDatum[] = hasRange ? [
-      { x: PAD_X,       label: _fmtTime(tsMin),  anchor: 'start' },
-      { x: W / 2,       label: _fmtTime(tsMid),  anchor: 'middle' },
-      { x: W - PAD_X,   label: _fmtTime(tsMax),  anchor: 'end' },
+      { x: PAD_LEFT,         label: _fmtTime(tsMin),  anchor: 'start' },
+      { x: (PAD_LEFT + W - PAD_RIGHT) / 2, label: _fmtTime(tsMid), anchor: 'middle' },
+      { x: W - PAD_RIGHT,   label: _fmtTime(tsMax),  anchor: 'end' },
     ] : [
-      { x: W - PAD_X,   label: _fmtTime(tsMax),  anchor: 'end' },
+      { x: W - PAD_RIGHT,   label: _fmtTime(tsMax),  anchor: 'end' },
     ]
 
     root.selectAll<SVGLineElement, TickDatum>('line.mc-tick')

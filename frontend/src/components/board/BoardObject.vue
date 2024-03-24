@@ -322,6 +322,7 @@ useMetricChart(
   chartData,
   () => graphW.value,
   () => Math.max(30, graphH.value - 28),
+  () => (props.object.graph_time_window ?? 60) * 60,
 )
 
 // ---- Graph: URL embed ----
