@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import time
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -160,8 +163,9 @@ async def get_metric_history(
     start = end - minutes * 60
     try:
         raw = await backend.get_metric_history(host, service, start, end)
-    except Exception:
-        return {}
+    except Exception as exc:
+        logger.error("metric-history error: %s", exc, exc_info=True)
+        return {"_error": [MetricPoint(ts=0, value=0, unit=str(exc))]}
     return {
         label: [MetricPoint(ts=ts, value=v, unit=u) for ts, v, u in pts]
         for label, pts in raw.items()

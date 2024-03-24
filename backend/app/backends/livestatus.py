@@ -338,54 +338,130 @@ class LivestatusBackend(BackendBase):
         start: int,
         end: int,
     ) -> dict[str, list[tuple[float, float, str]]]:
-        """Fetch metric history via Checkmk Web API get_graph (works with Nagios/Raw core)."""
-        url = self._checkmk_url.rstrip("/") + "/webapi.py"
-        params = {
-            "action": "get_graph",
-            "_username": self._automation_user,
-            "_secret": self._automation_secret,
-            "request_format": "json",
-            "output_format": "json",
-        }
-        body = {
-            "specification": ["template", {
-                "host_name": host,
-                "service_description": service or "",
-                "graph_index": 0,
-            }],
-            "data_range": {"time_range": [start, end]},
-        }
-        try:
-            async with httpx.AsyncClient(verify=False, timeout=self._timeout) as client:
-                resp = await client.post(url, params=params, json=body)
-            data = resp.json()
-        except Exception as exc:
-            logger.debug("Checkmk Web API get_graph failed: %s", exc)
+        """Fetch metric history via Checkmk 2.x REST API (works with Nagios/Raw core)."""
+        from datetime import datetime, timezone
+
+        cmk_url = self._checkmk_url.rstrip("/")
+        if cmk_url.startswith("/"):
+            cmk_url = "http://127.0.0.1" + cmk_url
+        base_url = cmk_url
+        parts = base_url.rstrip("/").split("/")
+        site = parts[-2] if len(parts) >= 2 and parts[-1] == "check_mk" else parts[-1]
+        api_url = base_url + "/api/1.0/domain-types/metric/actions/get/invoke"
+        auth_header = f"Bearer {self._automation_user} {self._automation_secret}"
+
+        metric_names = await self._get_perf_metric_names(host, service)
+        if not metric_names:
+            metric_names = await self._get_cmk_metric_names(host, service, base_url, auth_header)
+        if not metric_names:
             return {}
 
-        if data.get("result_code") != 0:
-            logger.debug("Checkmk Web API returned error: %s", data.get("result"))
-            return {}
-
-        result_data = data.get("result", {})
-        step = float(result_data.get("step", 60))
-        ts_start = float(result_data.get("start_time", start))
-        curves = result_data.get("curves", [])
+        start_dt = datetime.fromtimestamp(start, tz=timezone.utc).isoformat()
+        end_dt = datetime.fromtimestamp(end, tz=timezone.utc).isoformat()
 
         result: dict[str, list[tuple[float, float, str]]] = {}
-        for curve in curves:
-            title = curve.get("title", "")
-            values = curve.get("data", [])
-            if not title or not values:
-                continue
-            points: list[tuple[float, float, str]] = [
-                (ts_start + i * step, float(v), "")
-                for i, v in enumerate(values)
-                if v is not None
-            ]
-            if points:
-                result[title] = points
+        try:
+            async with httpx.AsyncClient(verify=False, timeout=self._timeout) as client:
+                for metric_id in metric_names[:5]:
+                    body = {
+                        "time_range": {"start": start_dt, "end": end_dt},
+                        "site": site,
+                        "host_name": host,
+                        "service_description": service or "",
+                        "type": "single_metric",
+                        "metric_id": metric_id,
+                    }
+                    try:
+                        resp = await client.post(
+                            api_url, json=body,
+                            headers={"Authorization": auth_header, "Accept": "application/json"},
+                        )
+                        if resp.status_code != 200:
+                            logger.debug("CMK REST API %s: HTTP %s", metric_id, resp.status_code)
+                            continue
+                        data = resp.json()
+                    except Exception as exc:
+                        logger.debug("CMK REST API request failed for %s: %s", metric_id, exc)
+                        continue
+
+                    step = float(data.get("step", 60))
+                    try:
+                        ts_start = datetime.fromisoformat(
+                            data.get("time_range", {}).get("start", "")
+                        ).timestamp()
+                    except Exception:
+                        ts_start = float(start)
+
+                    for metric in data.get("metrics", []):
+                        title = metric.get("title") or metric_id
+                        points: list[tuple[float, float, str]] = [
+                            (ts_start + i * step, float(v), "")
+                            for i, v in enumerate(metric.get("data_points", []))
+                            if v is not None
+                        ]
+                        if points:
+                            result[title] = points
+        except Exception as exc:
+            logger.warning("CMK REST API metric history failed: %s", exc)
         return result
+
+    async def _get_perf_metric_names(self, host: str, service: str | None) -> list[str]:
+        """Get metric names from Livestatus perf_data for a host/service."""
+        if service:
+            query = (
+                f"GET services\n"
+                f"Columns: perf_data\n"
+                f"Filter: host_name = {_ls_escape(host)}\n"
+                f"Filter: description = {_ls_escape(service)}\n"
+            )
+        else:
+            query = (
+                f"GET hosts\n"
+                f"Columns: perf_data\n"
+                f"Filter: name = {_ls_escape(host)}\n"
+            )
+        try:
+            rows = await self._query(query)
+            if not rows or not rows[0]:
+                return []
+            perf_data = str(rows[0][0])
+            return [m.split("=")[0].strip() for m in perf_data.split() if "=" in m]
+        except Exception as exc:
+            logger.debug("Failed to get perf_data from Livestatus: %s", exc)
+            return []
+
+    async def _get_cmk_metric_names(
+        self,
+        host: str,
+        service: str | None,
+        base_url: str,
+        auth_header: str,
+    ) -> list[str]:
+        """Fallback: get metric names via Checkmk REST API service endpoint."""
+        if not service:
+            return []
+        url = (
+            base_url
+            + "/api/1.0/domain-types/service/collections/all"
+            + f"?host_name={host}&columns=metrics&columns=description"
+        )
+        try:
+            async with httpx.AsyncClient(verify=False, timeout=self._timeout) as client:
+                resp = await client.get(
+                    url,
+                    headers={"Authorization": auth_header, "Accept": "application/json"},
+                )
+                if resp.status_code != 200:
+                    return []
+                data = resp.json()
+                for item in data.get("value", []):
+                    ext = item.get("extensions", {})
+                    if ext.get("description") == service:
+                        return ext.get("metrics", [])
+                return []
+        except Exception as exc:
+            logger.warning("CMK REST API metric names fallback failed: %s", exc)
+            return []
 
     async def _fetch_rrddata_history(
         self,
