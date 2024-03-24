@@ -109,22 +109,38 @@ export function useMetricChart(
     let gridG = root.select<SVGGElement>('g.mc-grid')
     if (gridG.empty()) gridG = root.insert('g', 'g.mc-series').attr('class', 'mc-grid')
 
+    // Horizontal grid lines — solid, slightly visible
     const gridLines = gridG.selectAll<SVGLineElement, number>('line.mc-hline').data(yTickVals)
     gridLines.enter().append('line').attr('class', 'mc-hline')
       .merge(gridLines as any)
       .attr('x1', PAD_LEFT).attr('x2', W - PAD_RIGHT)
       .attr('y1', d => yScale(d)).attr('y2', d => yScale(d))
-      .attr('stroke', 'rgba(255,255,255,0.06)')
-      .attr('stroke-dasharray', '2,4')
+      .attr('stroke', 'rgba(255,255,255,0.09)')
     gridLines.exit().remove()
+
+    // Y-axis vertical separator line
+    gridG.selectAll<SVGLineElement, number>('line.mc-yaxis').data([0])
+      .join('line').attr('class', 'mc-yaxis')
+      .attr('x1', PAD_LEFT).attr('x2', PAD_LEFT)
+      .attr('y1', PAD_Y).attr('y2', HC - PAD_Y)
+      .attr('stroke', 'rgba(255,255,255,0.15)')
+
+    // Y-axis tick marks
+    const yTicks = gridG.selectAll<SVGLineElement, number>('line.mc-ytick').data(yTickVals)
+    yTicks.enter().append('line').attr('class', 'mc-ytick')
+      .merge(yTicks as any)
+      .attr('x1', PAD_LEFT - 3).attr('x2', PAD_LEFT)
+      .attr('y1', d => yScale(d)).attr('y2', d => yScale(d))
+      .attr('stroke', 'rgba(255,255,255,0.25)')
+    yTicks.exit().remove()
 
     const yLabels = gridG.selectAll<SVGTextElement, number>('text.mc-ylabel').data(yTickVals)
     yLabels.enter().append('text').attr('class', 'mc-ylabel')
       .merge(yLabels as any)
-      .attr('x', PAD_LEFT - 4)
+      .attr('x', PAD_LEFT - 5)
       .attr('y', d => yScale(d) + 3)
       .attr('text-anchor', 'end')
-      .attr('fill', 'rgba(255,255,255,0.32)')
+      .attr('fill', 'rgba(255,255,255,0.40)')
       .attr('font-size', '8')
       .attr('font-family', 'ui-monospace,monospace')
       .text(d => _fmtVal(d))
