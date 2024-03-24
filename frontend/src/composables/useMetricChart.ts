@@ -14,7 +14,7 @@ export const CHART_PALETTE = [
   '#8b5cf6', '#06b6d4', '#f97316', '#ec4899',
 ]
 
-const TIME_H = 14  // px reserved at bottom for time axis
+const TIME_H = 16  // px reserved at bottom for time axis
 const PAD_X = 6
 const PAD_Y = 8
 
@@ -23,7 +23,7 @@ function _fmtRelTime(seconds: number): string {
   const s = Math.round(seconds % 60)
   if (m === 0) return `-${s}s`
   if (s === 0) return `-${m}m`
-  return `-${m}m ${s}s`
+  return `-${m}m`
 }
 
 export function useMetricChart(
@@ -171,24 +171,33 @@ export function useMetricChart(
       .join('line').attr('class', 'mc-t-sep')
       .attr('x1', PAD_X).attr('x2', W - PAD_X)
       .attr('y1', HC + 1).attr('y2', HC + 1)
-      .attr('stroke', 'rgba(255,255,255,0.07)')
+      .attr('stroke', 'rgba(255,255,255,0.10)')
 
-    root.selectAll<SVGTextElement, string>('text.mc-t-left')
-      .data(hasRange ? [_fmtRelTime(timeDiffSec)] : [''])
-      .join('text').attr('class', 'mc-t-left')
-      .attr('x', PAD_X).attr('y', H - 3)
-      .attr('fill', 'rgba(255,255,255,0.28)').attr('font-size', '9')
-      .attr('font-family', 'ui-monospace,monospace')
-      .text(d => d)
+    // Tick marks + labels: left edge, middle, right edge
+    type TickDatum = { x: number; label: string; anchor: string }
+    const ticks: TickDatum[] = hasRange ? [
+      { x: PAD_X,         label: _fmtRelTime(timeDiffSec), anchor: 'start' },
+      { x: W / 2,         label: _fmtRelTime(timeDiffSec / 2),  anchor: 'middle' },
+      { x: W - PAD_X,     label: 'now',                    anchor: 'end' },
+    ] : [
+      { x: W - PAD_X,     label: 'now',                    anchor: 'end' },
+    ]
 
-    root.selectAll<SVGTextElement, string>('text.mc-t-right')
-      .data(['now'])
-      .join('text').attr('class', 'mc-t-right')
-      .attr('x', W - PAD_X).attr('y', H - 3)
-      .attr('text-anchor', 'end')
-      .attr('fill', 'rgba(255,255,255,0.28)').attr('font-size', '9')
+    root.selectAll<SVGLineElement, TickDatum>('line.mc-tick')
+      .data(ticks, d => d.label)
+      .join('line').attr('class', 'mc-tick')
+      .attr('x1', d => d.x).attr('x2', d => d.x)
+      .attr('y1', HC + 1).attr('y2', HC + 4)
+      .attr('stroke', 'rgba(255,255,255,0.18)')
+
+    root.selectAll<SVGTextElement, TickDatum>('text.mc-t-tick')
+      .data(ticks, d => d.label)
+      .join('text').attr('class', 'mc-t-tick')
+      .attr('x', d => d.x).attr('y', H - 2)
+      .attr('text-anchor', d => d.anchor)
+      .attr('fill', 'rgba(255,255,255,0.40)').attr('font-size', '9')
       .attr('font-family', 'ui-monospace,monospace')
-      .text('now')
+      .text(d => d.label)
   }
 
   onMounted(() => render(false))

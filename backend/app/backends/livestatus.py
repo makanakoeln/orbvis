@@ -393,14 +393,14 @@ class LivestatusBackend(BackendBase):
                         ts_start = float(start)
 
                     for metric in data.get("metrics", []):
-                        title = metric.get("title") or metric_id
                         points: list[tuple[float, float, str]] = [
                             (ts_start + i * step, float(v), "")
                             for i, v in enumerate(metric.get("data_points", []))
                             if v is not None
                         ]
                         if points:
-                            result[title] = points
+                            result[metric_id] = points
+                            break
         except Exception as exc:
             logger.warning("CMK REST API metric history failed: %s", exc)
         return result

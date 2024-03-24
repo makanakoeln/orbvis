@@ -29,13 +29,14 @@
         </div>
         <!-- Metric legend -->
         <div class="flex flex-wrap gap-x-3 gap-y-0.5 px-2.5 pt-1 pb-1.5 shrink-0 border-b border-white/5">
-          <div v-for="(label, idx) in chartMetricLabels" :key="label" class="flex items-center gap-1.5 min-w-0">
+          <div v-for="(label, idx) in chartMetricLabels.slice(0, 6)" :key="label" class="flex items-center gap-1.5 min-w-0" style="max-width: 50%">
             <span class="inline-block w-1.5 h-1.5 rounded-full shrink-0" :style="{ background: CHART_PALETTE[idx % CHART_PALETTE.length] }" />
             <span class="text-[10px] text-zinc-500 truncate">{{ label }}</span>
             <span class="text-[10px] font-mono font-semibold shrink-0" :style="{ color: CHART_PALETTE[idx % CHART_PALETTE.length] }">
-              {{ chartLatestValues[label]?.value }}<span class="text-zinc-600 ml-0.5 font-normal">{{ chartLatestValues[label]?.unit }}</span>
+              {{ chartLatestValues[label]?.value != null ? chartLatestValues[label]?.value : '' }}<span class="text-zinc-600 ml-0.5 font-normal">{{ chartLatestValues[label]?.unit }}</span>
             </span>
           </div>
+          <span v-if="chartMetricLabels.length > 6" class="text-[10px] text-zinc-600 self-center">+{{ chartMetricLabels.length - 6 }}</span>
         </div>
         <svg ref="chartSvgRef" class="w-full flex-1 mb-1.5" style="overflow: visible" />
       </div>
@@ -270,6 +271,8 @@ function _triggerHistoryPrefill() {
 
 onMounted(_triggerHistoryPrefill)
 watch(() => props.object.graph_time_window, _triggerHistoryPrefill)
+// Re-trigger when token becomes available (e.g. after async SSO login)
+watch(() => authStore.accessToken, (token, prev) => { if (token && !prev) _triggerHistoryPrefill() })
 
 // Single arc ring SVG — always a separate overlay SVG that D3 owns exclusively.
 // pointer-events="none" on the SVG element (SVG attribute, not CSS) ensures it
