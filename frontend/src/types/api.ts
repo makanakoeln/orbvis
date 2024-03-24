@@ -216,6 +216,8 @@ export interface BackendConfig {
   port: number
   timeout: number
   checkmk_url?: string | null
+  automation_user?: string | null
+  automation_secret?: string | null
   icinga2_url?: string | null
   icinga2_username?: string | null
   icinga2_password?: string | null

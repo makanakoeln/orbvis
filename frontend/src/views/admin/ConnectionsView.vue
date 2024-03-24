@@ -197,7 +197,7 @@
                 </div>
               </div>
 
-              <!-- Checkmk URL + Timeout -->
+              <!-- Checkmk URL + Automation + Timeout -->
               <div class="border-t border-[var(--border)] pt-4 space-y-4">
                 <div class="space-y-1.5">
                   <label class="text-xs font-medium text-zinc-400">{{ t('admin.checkmkUrl') }}</label>
@@ -205,6 +205,19 @@
                     class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                   <p class="text-xs text-zinc-600">{{ t('admin.contextLinks') }}</p>
                 </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-zinc-400">{{ t('admin.automationUser') }}</label>
+                    <input v-model="form.automation_user" placeholder="automation"
+                      class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                  </div>
+                  <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-zinc-400">{{ t('admin.automationSecret') }}</label>
+                    <input v-model="form.automation_secret" type="password" placeholder="••••••••"
+                      class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                  </div>
+                </div>
+                <p class="text-xs text-zinc-600">{{ t('admin.automationHint') }}</p>
                 <div class="space-y-1.5">
                   <label class="text-xs font-medium text-zinc-400">{{ t('admin.timeout') }}</label>
                   <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-28" />
@@ -328,7 +341,8 @@ const dialogTest = reactive({ loading: false, ran: false, ok: false, message: ''
 
 const emptyForm = (): BackendConfig => ({
   id: '', type: 'livestatus', label: '',
-  socket_path: null, host: null, port: 6557, timeout: 10, checkmk_url: null,
+  socket_path: null, host: null, port: 6557, timeout: 10,
+  checkmk_url: null, automation_user: null, automation_secret: null,
   icinga2_url: null, icinga2_username: null, icinga2_password: null, icinga2_verify_ssl: true,
 })
 const form = reactive<BackendConfig>(emptyForm())

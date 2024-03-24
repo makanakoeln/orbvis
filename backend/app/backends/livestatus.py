@@ -7,6 +7,8 @@ import json as _json
 import logging
 import re as _re
 
+import httpx
+
 from app.backends.base import BackendBase
 from app.core.config import settings
 from app.schemas.state import ObjectState
@@ -86,11 +88,17 @@ class LivestatusBackend(BackendBase):
         host: str | None = None,
         port: int = 6557,
         timeout: float = 10.0,
+        checkmk_url: str | None = None,
+        automation_user: str | None = None,
+        automation_secret: str | None = None,
     ) -> None:
         self._socket_path = socket_path
         self._host = host
         self._port = port
         self._timeout = timeout
+        self._checkmk_url = checkmk_url
+        self._automation_user = automation_user
+        self._automation_secret = automation_secret
         self._semaphore = asyncio.Semaphore(settings.backend_max_connections)
 
     # ------------------------------------------------------------------
@@ -313,12 +321,80 @@ class LivestatusBackend(BackendBase):
         start: int,
         end: int,
     ) -> dict[str, list[tuple[float, float, str]]]:
-        """Fetch metric history via Livestatus rrddata column (Checkmk extension).
+        """Fetch metric history.
 
-        Returns {label: [(ts, value, unit), ...]} with ~60-point resolution.
-        Returns empty dict if the backend doesn't support rrddata or no data exists.
+        Uses Checkmk Web API (webapi.py) when automation credentials are configured
+        (Checkmk Raw / Nagios core). Falls back to Livestatus rrddata column otherwise
+        (Checkmk Enterprise / CMC only).
         """
-        # Step 1: get current state to discover metric names + units from perf_data
+        if self._checkmk_url and self._automation_user and self._automation_secret:
+            return await self._fetch_cmk_graph_history(host, service, start, end)
+        return await self._fetch_rrddata_history(host, service, start, end)
+
+    async def _fetch_cmk_graph_history(
+        self,
+        host: str,
+        service: str | None,
+        start: int,
+        end: int,
+    ) -> dict[str, list[tuple[float, float, str]]]:
+        """Fetch metric history via Checkmk Web API get_graph (works with Nagios/Raw core)."""
+        url = self._checkmk_url.rstrip("/") + "/webapi.py"
+        params = {
+            "action": "get_graph",
+            "_username": self._automation_user,
+            "_secret": self._automation_secret,
+            "request_format": "json",
+            "output_format": "json",
+        }
+        body = {
+            "specification": ["template", {
+                "host_name": host,
+                "service_description": service or "",
+                "graph_index": 0,
+            }],
+            "data_range": {"time_range": [start, end]},
+        }
+        try:
+            async with httpx.AsyncClient(verify=False, timeout=self._timeout) as client:
+                resp = await client.post(url, params=params, json=body)
+            data = resp.json()
+        except Exception as exc:
+            logger.debug("Checkmk Web API get_graph failed: %s", exc)
+            return {}
+
+        if data.get("result_code") != 0:
+            logger.debug("Checkmk Web API returned error: %s", data.get("result"))
+            return {}
+
+        result_data = data.get("result", {})
+        step = float(result_data.get("step", 60))
+        ts_start = float(result_data.get("start_time", start))
+        curves = result_data.get("curves", [])
+
+        result: dict[str, list[tuple[float, float, str]]] = {}
+        for curve in curves:
+            title = curve.get("title", "")
+            values = curve.get("data", [])
+            if not title or not values:
+                continue
+            points: list[tuple[float, float, str]] = [
+                (ts_start + i * step, float(v), "")
+                for i, v in enumerate(values)
+                if v is not None
+            ]
+            if points:
+                result[title] = points
+        return result
+
+    async def _fetch_rrddata_history(
+        self,
+        host: str,
+        service: str | None,
+        start: int,
+        end: int,
+    ) -> dict[str, list[tuple[float, float, str]]]:
+        """Fetch metric history via Livestatus rrddata column (Checkmk Enterprise/CMC only)."""
         try:
             if service:
                 state = await self.get_service_state(host, service)
@@ -343,7 +419,6 @@ class LivestatusBackend(BackendBase):
         else:
             step = 21_600
 
-        # Step 2: one rrddata column per metric in a single query
         rrd_cols = " ".join(
             f"rrddata:{_ls_escape(m['label'])}:{start}:{end}:{step}"
             for m in metrics

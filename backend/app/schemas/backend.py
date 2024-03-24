@@ -17,6 +17,8 @@ class BackendConfig(BaseModel):
     port: int = 6557
     timeout: float = 10.0
     checkmk_url: str | None = None  # e.g. http://localhost/heute
+    automation_user: str | None = None
+    automation_secret: str | None = None
     # Icinga2 REST API connection
     icinga2_url: str | None = None  # e.g. https://localhost:5665
     icinga2_username: str | None = None
@@ -36,6 +38,8 @@ class BackendUpdate(BaseModel):
     port: int = 6557
     timeout: float = 10.0
     checkmk_url: str | None = None
+    automation_user: str | None = None
+    automation_secret: str | None = None
     icinga2_url: str | None = None
     icinga2_username: str | None = None
     icinga2_password: str | None = None

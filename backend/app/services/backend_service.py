@@ -111,6 +111,9 @@ def build_instance(cfg: BackendConfig) -> "BackendBase":
         host=cfg.host,
         port=cfg.port,
         timeout=cfg.timeout,
+        checkmk_url=cfg.checkmk_url,
+        automation_user=cfg.automation_user,
+        automation_secret=cfg.automation_secret,
     )
 
 
