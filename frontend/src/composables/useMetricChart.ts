@@ -58,21 +58,21 @@ export function useMetricChart(
 
     const dark = document.documentElement.classList.contains('dark')
     const c = dark ? {
-      grid: 'rgba(255,255,255,0.09)',
-      axis: 'rgba(255,255,255,0.15)',
-      tick: 'rgba(255,255,255,0.25)',
-      label: 'rgba(255,255,255,0.40)',
-      sep: 'rgba(255,255,255,0.10)',
-      timeTick: 'rgba(255,255,255,0.18)',
-      timeLabel: 'rgba(255,255,255,0.40)',
+      grid: 'rgba(255,255,255,0.18)',
+      axis: 'rgba(255,255,255,0.30)',
+      tick: 'rgba(255,255,255,0.40)',
+      label: 'rgba(255,255,255,0.60)',
+      sep: 'rgba(255,255,255,0.20)',
+      timeTick: 'rgba(255,255,255,0.35)',
+      timeLabel: 'rgba(255,255,255,0.60)',
     } : {
-      grid: 'rgba(0,0,0,0.07)',
-      axis: 'rgba(0,0,0,0.20)',
-      tick: 'rgba(0,0,0,0.25)',
-      label: 'rgba(0,0,0,0.45)',
-      sep: 'rgba(0,0,0,0.10)',
-      timeTick: 'rgba(0,0,0,0.18)',
-      timeLabel: 'rgba(0,0,0,0.45)',
+      grid: 'rgba(0,0,0,0.15)',
+      axis: 'rgba(0,0,0,0.30)',
+      tick: 'rgba(0,0,0,0.35)',
+      label: 'rgba(0,0,0,0.55)',
+      sep: 'rgba(0,0,0,0.18)',
+      timeTick: 'rgba(0,0,0,0.28)',
+      timeLabel: 'rgba(0,0,0,0.55)',
     }
 
     const root = select(svg).attr('width', W).attr('height', H)
