@@ -19,7 +19,7 @@
         <span class="text-xs">{{ t('boardSettings.graphWaitingData') }}</span>
       </div>
       <!-- D3 chart -->
-      <div v-else class="w-full h-full flex flex-col rounded-lg overflow-hidden border dark:bg-zinc-950/90 dark:border-white/10 bg-white border-zinc-200" style="box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06)">
+      <div v-else class="w-full h-full flex flex-col rounded-lg overflow-hidden border dark:bg-zinc-950/90 dark:border-white/10 bg-white border-zinc-200 pb-1" style="box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06)">
         <!-- Title row: service / host -->
         <div class="flex items-center justify-between px-2.5 pt-2 pb-0 shrink-0">
           <span class="text-[11px] font-medium dark:text-zinc-300 text-zinc-700 truncate">
@@ -38,7 +38,7 @@
           </div>
           <span v-if="chartMetricLabels.length > 6" class="text-[10px] dark:text-zinc-600 text-zinc-400 self-center">+{{ chartMetricLabels.length - 6 }}</span>
         </div>
-        <svg ref="chartSvgRef" class="w-full flex-1" style="overflow: visible" />
+        <svg ref="chartSvgRef" class="w-full flex-1" />
       </div>
     </template>
     <!-- URL embed mode -->
