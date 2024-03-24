@@ -19,24 +19,24 @@
         <span class="text-xs">{{ t('boardSettings.graphWaitingData') }}</span>
       </div>
       <!-- D3 chart -->
-      <div v-else class="w-full h-full flex flex-col bg-zinc-950/90 rounded-lg overflow-hidden border border-white/10" style="box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)">
+      <div v-else class="w-full h-full flex flex-col rounded-lg overflow-hidden border dark:bg-zinc-950/90 dark:border-white/10 bg-white border-zinc-200" style="box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06)">
         <!-- Title row: service / host -->
         <div class="flex items-center justify-between px-2.5 pt-2 pb-0 shrink-0">
-          <span class="text-[11px] font-medium text-zinc-300 truncate">
+          <span class="text-[11px] font-medium dark:text-zinc-300 text-zinc-700 truncate">
             {{ object.service_description || object.host_name }}
           </span>
-          <span class="text-[9px] text-zinc-600 shrink-0 ml-2 uppercase tracking-wide">live</span>
+          <span class="text-[9px] dark:text-zinc-600 text-zinc-400 shrink-0 ml-2 uppercase tracking-wide">live</span>
         </div>
         <!-- Metric legend -->
-        <div class="flex flex-wrap gap-x-3 gap-y-0.5 px-2.5 pt-1 pb-1.5 shrink-0 border-b border-white/5">
+        <div class="flex flex-wrap gap-x-3 gap-y-0.5 px-2.5 pt-1 pb-1.5 shrink-0 border-b dark:border-white/5 border-zinc-100">
           <div v-for="(label, idx) in chartMetricLabels.slice(0, 6)" :key="label" class="flex items-center gap-1.5 min-w-0" style="max-width: 50%">
             <span class="inline-block w-1.5 h-1.5 rounded-full shrink-0" :style="{ background: CHART_PALETTE[idx % CHART_PALETTE.length] }" />
-            <span class="text-[10px] text-zinc-500 truncate">{{ label }}</span>
+            <span class="text-[10px] dark:text-zinc-500 text-zinc-500 truncate">{{ label }}</span>
             <span class="text-[10px] font-mono font-semibold shrink-0" :style="{ color: CHART_PALETTE[idx % CHART_PALETTE.length] }">
-              {{ chartLatestValues[label]?.value != null ? chartLatestValues[label]?.value : '' }}<span class="text-zinc-600 ml-0.5 font-normal">{{ chartLatestValues[label]?.unit }}</span>
+              {{ chartLatestValues[label]?.value != null ? chartLatestValues[label]?.value : '' }}<span class="dark:text-zinc-600 text-zinc-400 ml-0.5 font-normal">{{ chartLatestValues[label]?.unit }}</span>
             </span>
           </div>
-          <span v-if="chartMetricLabels.length > 6" class="text-[10px] text-zinc-600 self-center">+{{ chartMetricLabels.length - 6 }}</span>
+          <span v-if="chartMetricLabels.length > 6" class="text-[10px] dark:text-zinc-600 text-zinc-400 self-center">+{{ chartMetricLabels.length - 6 }}</span>
         </div>
         <svg ref="chartSvgRef" class="w-full flex-1" style="overflow: visible" />
       </div>
