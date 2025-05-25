@@ -82,12 +82,6 @@
             <!-- Last step with create-board action -->
             <template v-if="step === TOTAL && showCreateBoard">
               <button
-                class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                @click="finish"
-              >
-                {{ t('onboarding.finish') }}
-              </button>
-              <button
                 class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
                 @click="createBoard"
               >
@@ -184,6 +178,7 @@ const emit = defineEmits<{
   close: [];
   createBoard: [];
   stepClick: [step: number];
+  stepBack: [step: number];
 }>();
 
 // ─── Steps ───────────────────────────────────────────────────────────────────
@@ -341,6 +336,7 @@ function next() {
   step.value++;
 }
 function prev() {
+  emit('stepBack', step.value);
   step.value--;
 }
 function onClickCatcher() {

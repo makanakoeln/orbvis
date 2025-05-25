@@ -634,6 +634,7 @@
       :storage-key="`orbvis_board_toured_${auth.user.user_id}`"
       @close="showBoardTour = false"
       @step-click="onBoardTourStepClick"
+      @step-back="onBoardTourStepBack"
     />
   </div>
 </template>
@@ -717,8 +718,14 @@ const boardTourSteps = computed<TourStep[]>(() => {
 });
 
 function onBoardTourStepClick(step: number) {
-  // Step 4 = FAB — activate edit mode so EditPanel renders for step 5
-  if (auth.isAdmin && step === 4) {
+  // Step 4 = FAB — ensure edit mode is ON so EditPanel renders for step 5
+  if (auth.isAdmin && step === 4 && !editor.editMode.value) {
+    editor.toggleEditMode();
+  }
+}
+function onBoardTourStepBack(step: number) {
+  // Leaving step 5 backwards — ensure edit mode is OFF
+  if (auth.isAdmin && step === 5 && editor.editMode.value) {
     editor.toggleEditMode();
   }
 }
