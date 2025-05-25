@@ -42,7 +42,7 @@
       <div
         :key="step"
         class="fixed w-80 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
-        style="z-index: 10001"
+        style="z-index: 10003"
         :style="cardStyle"
         @click.stop
       >
@@ -102,18 +102,23 @@
             >
               {{ t('onboarding.finish') }}
             </button>
-            <!-- Intermediate step with selector: click-to-continue hint -->
-            <span
-              v-else-if="currentStep.selector && targetRect"
-              class="text-xs text-indigo-400 animate-pulse select-none"
-            >
-              {{ t('onboarding.clickToContinue') }}
-            </span>
+            <!-- Intermediate step with selector: click-to-continue hint + Next button -->
+            <template v-else-if="currentStep.selector && targetRect">
+              <span class="text-xs text-indigo-400 animate-pulse select-none">
+                {{ t('onboarding.clickToContinue') }}
+              </span>
+              <button
+                class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
+                @click="onClickNext"
+              >
+                {{ t('onboarding.next') }}
+              </button>
+            </template>
             <!-- Intermediate step without selector (or target not found): Next button -->
             <button
               v-else
               class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
-              @click="next"
+              @click="onClickNext"
             >
               {{ t('onboarding.next') }}
             </button>
@@ -136,7 +141,7 @@
       <div
         v-if="showCompletion"
         class="fixed inset-0 flex items-center justify-center bg-black/70"
-        style="z-index: 10003"
+        style="z-index: 10004"
       >
         <div class="text-center">
           <div class="check-circle mx-auto mb-5">
@@ -287,24 +292,30 @@ const cardStyle = computed(() => {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
+  // Keep card outside the sidebar
+  const sidebarEl = document.querySelector('aside');
+  const leftBound = sidebarEl
+    ? Math.ceil(sidebarEl.getBoundingClientRect().right) + MARGIN
+    : MARGIN;
+
   let left: number, top: number;
 
   if (rect.right + MARGIN + CARD_W <= vw) {
     left = rect.right + MARGIN;
     top = rect.top;
-  } else if (rect.left - MARGIN - CARD_W >= 0) {
+  } else if (rect.left - MARGIN - CARD_W >= leftBound) {
     left = rect.left - MARGIN - CARD_W;
     top = rect.top;
   } else if (rect.bottom + MARGIN + CARD_H <= vh) {
-    left = Math.max(MARGIN, rect.left);
+    left = rect.left + (rect.width - CARD_W) / 2;
     top = rect.bottom + MARGIN;
   } else {
-    left = Math.max(MARGIN, rect.left);
+    left = rect.left + (rect.width - CARD_W) / 2;
     top = rect.top - MARGIN - CARD_H;
   }
 
   top = Math.max(MARGIN, Math.min(vh - CARD_H - MARGIN, top));
-  left = Math.max(MARGIN, Math.min(vw - CARD_W - MARGIN, left));
+  left = Math.max(leftBound, Math.min(vw - CARD_W - MARGIN, left));
   return { top: `${top}px`, left: `${left}px`, transform: 'none' };
 });
 
@@ -334,6 +345,12 @@ function prev() {
 }
 function onClickCatcher() {
   emit('stepClick', step.value);
+  next();
+}
+function onClickNext() {
+  if (currentStep.value.selector && targetRect.value) {
+    emit('stepClick', step.value);
+  }
   next();
 }
 function skip() {
