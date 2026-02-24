@@ -1,0 +1,37 @@
+{
+  "name": "nagvis2-frontend",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "type-check": "vue-tsc --noEmit",
+    "lint": "eslint . --ext .vue,.ts,.tsx"
+  },
+  "dependencies": {
+    "vue": "^3.5.0",
+    "vue-router": "^4.4.0",
+    "pinia": "^2.2.0",
+    "@vueuse/core": "^11.0.0",
+    "leaflet": "^1.9.4",
+    "@vue-leaflet/vue-leaflet": "^0.10.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.0",
+    "vite": "^6.0.0",
+    "typescript": "^5.7.0",
+    "vue-tsc": "^2.1.0",
+    "@vue/test-utils": "^2.4.0",
+    "vitest": "^2.1.0",
+    "@vitest/ui": "^2.1.0",
+    "jsdom": "^25.0.0",
+    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "openapi-typescript": "^7.4.0"
+  }
+}

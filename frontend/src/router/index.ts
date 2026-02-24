@@ -1,0 +1,68 @@
+import { createRouter, createWebHashHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const router = createRouter({
+  history: createWebHashHistory(),
+  routes: [
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/LoginView.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/',
+      name: 'home',
+      component: () => import('@/views/HomeView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/maps/:name',
+      name: 'map',
+      component: () => import('@/views/MapView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/admin',
+      component: () => import('@/views/AdminLayout.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+      children: [
+        {
+          path: '',
+          redirect: '/admin/users',
+        },
+        {
+          path: 'users',
+          name: 'admin-users',
+          component: () => import('@/views/admin/UsersView.vue'),
+        },
+        {
+          path: 'roles',
+          name: 'admin-roles',
+          component: () => import('@/views/admin/RolesView.vue'),
+        },
+        {
+          path: 'maps',
+          name: 'admin-maps',
+          component: () => import('@/views/admin/MapsAdminView.vue'),
+        },
+      ],
+    },
+  ],
+})
+
+router.beforeEach((to) => {
+  const auth = useAuthStore()
+
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  if (to.meta.requiresAdmin && !auth.isAdmin) {
+    return { name: 'home' }
+  }
+  if (to.name === 'login' && auth.isAuthenticated) {
+    return { name: 'home' }
+  }
+})
+
+export default router

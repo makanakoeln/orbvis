@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-up: #00ff00;
+  --color-down: #ff0000;
+  --color-unreachable: #ff8800;
+  --color-ok: #00ff00;
+  --color-warning: #ffff00;
+  --color-critical: #ff0000;
+  --color-unknown: #ff8800;
+  --color-pending: #aaaaaa;
+}
+
+body {
+  @apply bg-gray-900 text-gray-100 font-sans;
+  margin: 0;
+}
