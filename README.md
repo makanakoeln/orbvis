@@ -1,4 +1,4 @@
-# Orbvis
+# OrbVis
 
 Monitoring visualization platform built with **Python FastAPI** + **Vue.js 3 + TypeScript**.
 
@@ -33,15 +33,15 @@ To uninstall (user data is kept):
 
 ### With Checkmk / OMD
 
-Tested with **Checkmk 2.4**. Deploys orbvis into an existing OMD site, wires up the site's
+Tested with **Checkmk 2.4**. Deploys OrbVis into an existing OMD site, wires up the site's
 Apache and registers an OMD init script so `omd start/stop orbvis` works.
 
 ```bash
 ./install_cmk.sh <site-name>
 ```
 
-orbvis will be available at `https://<host>/<site>/orbvis/`.
-Add the **orbvis Maps** sidebar snapin via *Edit sidebar → orbvis Maps*.
+OrbVis will be available at `https://<host>/<site>/orbvis/`.
+Add the **OrbVis Maps** sidebar snapin via *Edit sidebar → OrbVis Maps*.
 
 To uninstall:
 

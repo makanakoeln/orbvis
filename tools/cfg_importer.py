@@ -3,7 +3,7 @@
 NagVis .cfg to JSON importer.
 
 Parses legacy NagVis 1.x map configuration files and converts them
-to the Orbvis JSON format.
+to the OrbVis JSON format.
 
 Usage:
     python cfg_importer.py <input.cfg> [<output_dir>]

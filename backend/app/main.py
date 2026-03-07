@@ -1,4 +1,4 @@
-"""Orbvis FastAPI application entry point."""
+"""OrbVis FastAPI application entry point."""
 
 import logging
 from collections.abc import AsyncIterator
@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from app.services import backend_service
     from app.services.state_service import register_backend
 
-    logger.info("Starting Orbvis backend…")
+    logger.info("Starting OrbVis backend…")
     await init_db()
     logger.info("Database initialized.")
 
@@ -71,13 +71,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await _ensure_admin_user()
 
     yield
-    logger.info("Shutting down Orbvis backend.")
+    logger.info("Shutting down OrbVis backend.")
 
 
 app = FastAPI(
-    title="Orbvis API",
+    title="OrbVis API",
     version="2.0.0",
-    description="REST API for Orbvis – monitoring visualization",
+    description="REST API for OrbVis – monitoring visualization",
     lifespan=lifespan,
     docs_url="/api/docs",
     redoc_url="/api/redoc",

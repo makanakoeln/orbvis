@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     )
 
     # App
-    app_name: str = "Orbvis"
+    app_name: str = "OrbVis"
     debug: bool = False
     environment: Literal["development", "production", "testing"] = "production"
 
