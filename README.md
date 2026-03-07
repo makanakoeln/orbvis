@@ -63,12 +63,6 @@ Default credentials: `admin` / printed in the backend container log on first sta
 
 ## Development
 
-```bash
-./start.sh   # starts backend + frontend concurrently
-```
-
-Or manually:
-
 **Backend:**
 ```bash
 cd backend
