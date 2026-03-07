@@ -5,10 +5,10 @@ services:
       - "8000:8000"
     volumes:
       - ./data/maps:/app/maps
-      - ./data/nagvis.db:/app/nagvis.db
+      - ./data/orbvis.db:/app/orbvis.db
     environment:
       - MAPS_DIR=/app/maps
-      - DATABASE_URL=sqlite+aiosqlite:////app/nagvis.db
+      - DATABASE_URL=sqlite+aiosqlite:////app/orbvis.db
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
       - ALLOWED_ORIGINS=http://localhost:3000
     restart: unless-stopped

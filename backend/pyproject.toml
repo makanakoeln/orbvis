@@ -1,7 +1,7 @@
 [project]
-name = "nagvis2-backend"
-version = "2.0.0"
-description = "NagVis 2 Backend - FastAPI based monitoring visualization"
+name = "orbvis-backend"
+version = "1.0.0"
+description = "Orbvis Backend - FastAPI based monitoring visualization"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
@@ -13,7 +13,7 @@ dependencies = [
     "pydantic>=2.10.0",
     "pydantic-settings>=2.7.0",
     "python-jose[cryptography]>=3.3.0",
-    "passlib[bcrypt]>=1.7.4",
+    "bcrypt>=4.0.0",
     "python-multipart>=0.0.20",
     "httpx>=0.28.0",
 ]

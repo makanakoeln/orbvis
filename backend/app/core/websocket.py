@@ -42,7 +42,9 @@ class ConnectionManager:
         message = json.dumps({"type": "state_update", "map": map_name, "states": states})
         dead: set[WebSocket] = set()
 
-        for ws in connections:
+        # Iterate over a snapshot so that concurrent disconnect() calls on the live
+        # set don't cause skipped sends or "Set changed size during iteration" errors.
+        for ws in set(connections):
             try:
                 await ws.send_text(message)
             except Exception:

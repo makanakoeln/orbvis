@@ -1,19 +1,47 @@
 <template>
   <div
-    class="fixed z-50 bg-gray-900 border border-gray-600 rounded-lg shadow-xl p-3 text-sm min-w-48 pointer-events-none"
+    class="fixed z-50 pointer-events-none"
     :style="{ left: `${x}px`, top: `${y}px` }"
   >
-    <div class="font-semibold mb-1">{{ displayName }}</div>
-    <div class="text-xs text-gray-400 mb-1">{{ object.type }}</div>
-    <div v-if="state" class="flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full inline-block" :class="stateColor"></span>
-      <span :class="stateTextColor">{{ state.state }}</span>
+    <div class="bg-zinc-900/95 backdrop-blur-md ring-1 ring-white/10 shadow-2xl shadow-black/60 rounded-xl p-3.5 min-w-52 max-w-72">
+      <!-- Header -->
+      <div class="flex items-start gap-2 mb-2">
+        <span class="w-2 h-2 rounded-full mt-1 shrink-0" :class="stateColor" />
+        <div class="min-w-0">
+          <div class="font-semibold text-zinc-100 text-sm leading-tight truncate">{{ displayName }}</div>
+          <div class="text-xs text-zinc-500 mt-0.5">{{ object.type }}</div>
+        </div>
+      </div>
+
+      <!-- State -->
+      <div v-if="state" class="text-xs font-semibold mt-1" :class="stateTextColor">
+        {{ state.state }}
+      </div>
+
+      <!-- Output -->
+      <div v-if="state?.output"
+        class="text-xs text-zinc-500 mt-2 leading-snug line-clamp-3 break-words">
+        {{ state.output }}
+      </div>
+
+      <!-- Badges -->
+      <div v-if="state?.acknowledged || state?.in_downtime" class="flex gap-1.5 mt-2.5">
+        <span v-if="state.acknowledged"
+          class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/25">
+          <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+          ACK
+        </span>
+        <span v-if="state.in_downtime"
+          class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/25">
+          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+          </svg>
+          DOWNTIME
+        </span>
+      </div>
     </div>
-    <div v-if="state?.output" class="text-xs text-gray-400 mt-1 max-w-xs truncate">
-      {{ state.output }}
-    </div>
-    <div v-if="state?.acknowledged" class="text-xs text-yellow-400 mt-1">✓ Acknowledged</div>
-    <div v-if="state?.in_downtime" class="text-xs text-blue-400 mt-1">⏸ In downtime</div>
   </div>
 </template>
 
@@ -39,17 +67,17 @@ const STATE_BG: Record<string, string> = {
   UP: 'bg-green-400', OK: 'bg-green-400',
   DOWN: 'bg-red-500', CRITICAL: 'bg-red-500',
   UNREACHABLE: 'bg-orange-400', UNKNOWN: 'bg-orange-400',
-  WARNING: 'bg-yellow-400',
-  PENDING: 'bg-gray-400',
+  WARNING: 'bg-amber-400',
+  PENDING: 'bg-zinc-500',
 }
 const STATE_TEXT: Record<string, string> = {
   UP: 'text-green-400', OK: 'text-green-400',
   DOWN: 'text-red-400', CRITICAL: 'text-red-400',
   UNREACHABLE: 'text-orange-400', UNKNOWN: 'text-orange-400',
-  WARNING: 'text-yellow-400',
-  PENDING: 'text-gray-400',
+  WARNING: 'text-amber-400',
+  PENDING: 'text-zinc-500',
 }
 
-const stateColor = computed(() => STATE_BG[props.state?.state ?? 'PENDING'] ?? 'bg-gray-400')
-const stateTextColor = computed(() => STATE_TEXT[props.state?.state ?? 'PENDING'] ?? 'text-gray-400')
+const stateColor = computed(() => STATE_BG[props.state?.state ?? 'PENDING'] ?? 'bg-zinc-500')
+const stateTextColor = computed(() => STATE_TEXT[props.state?.state ?? 'PENDING'] ?? 'text-zinc-500')
 </script>

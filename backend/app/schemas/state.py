@@ -15,6 +15,7 @@ class ObjectState(BaseModel):
     type: str
     state: str
     output: str = ""
+    perf_data: str = ""
     acknowledged: bool = False
     in_downtime: bool = False
     stale: bool = False
@@ -24,3 +25,4 @@ class MapStates(BaseModel):
     map_name: str
     states: list[ObjectState]
     generated_at: float  # unix timestamp
+    backend_ok: bool = True  # False when the monitoring backend is unreachable

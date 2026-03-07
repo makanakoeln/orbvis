@@ -38,6 +38,11 @@ class BackendBase(ABC):
         ...
 
     @abstractmethod
+    async def get_topology(self) -> list[dict]:
+        """Return host topology as [{name, parents, state, output}] for automap."""
+        ...
+
+    @abstractmethod
     async def is_available(self) -> bool:
         """Check whether the backend is reachable."""
         ...

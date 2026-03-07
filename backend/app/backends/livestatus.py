@@ -3,13 +3,23 @@
 from __future__ import annotations
 
 import asyncio
+import json as _json
 import logging
-from pathlib import Path
 
 from app.backends.base import BackendBase
 from app.schemas.state import ObjectState
 
 logger = logging.getLogger(__name__)
+
+
+def _ls_escape(value: str) -> str:
+    """Strip newline/carriage-return characters to prevent Livestatus query injection.
+
+    LQL filter values are terminated by a newline; embedding one would allow injecting
+    additional filter lines or commands into the query.
+    """
+    return value.replace("\r", "").replace("\n", "")
+
 
 # Livestatus state code → string mapping
 _HOST_STATE_MAP = {0: "UP", 1: "DOWN", 2: "UNREACHABLE"}
@@ -44,18 +54,19 @@ class LivestatusBackend(BackendBase):
     async def get_host_state(self, hostname: str) -> ObjectState:
         query = (
             f"GET hosts\n"
-            f"Columns: state plugin_output acknowledged scheduled_downtime_depth\n"
-            f"Filter: name = {hostname}\n"
+            f"Columns: state plugin_output perf_data acknowledged scheduled_downtime_depth\n"
+            f"Filter: name = {_ls_escape(hostname)}\n"
         )
         rows = await self._query(query)
         if not rows:
-            return ObjectState(object_id="", type="host", state="PENDING", stale=True)
-        state_code, output, ack, downtime = rows[0]
+            return ObjectState(object_id="", type="host", state="PENDING")
+        state_code, output, perf_data, ack, downtime = rows[0]
         return ObjectState(
             object_id="",
             type="host",
             state=_HOST_STATE_MAP.get(int(state_code), "UNKNOWN"),
             output=output,
+            perf_data=perf_data,
             acknowledged=bool(int(ack)),
             in_downtime=int(downtime) > 0,
         )
@@ -63,19 +74,20 @@ class LivestatusBackend(BackendBase):
     async def get_service_state(self, host: str, service: str) -> ObjectState:
         query = (
             f"GET services\n"
-            f"Columns: state plugin_output acknowledged scheduled_downtime_depth\n"
-            f"Filter: host_name = {host}\n"
-            f"Filter: description = {service}\n"
+            f"Columns: state plugin_output perf_data acknowledged scheduled_downtime_depth\n"
+            f"Filter: host_name = {_ls_escape(host)}\n"
+            f"Filter: description = {_ls_escape(service)}\n"
         )
         rows = await self._query(query)
         if not rows:
-            return ObjectState(object_id="", type="service", state="PENDING", stale=True)
-        state_code, output, ack, downtime = rows[0]
+            return ObjectState(object_id="", type="service", state="PENDING")
+        state_code, output, perf_data, ack, downtime = rows[0]
         return ObjectState(
             object_id="",
             type="service",
             state=_SERVICE_STATE_MAP.get(int(state_code), "UNKNOWN"),
             output=output,
+            perf_data=perf_data,
             acknowledged=bool(int(ack)),
             in_downtime=int(downtime) > 0,
         )
@@ -84,7 +96,7 @@ class LivestatusBackend(BackendBase):
         query = (
             f"GET hosts\n"
             f"Columns: state\n"
-            f"Filter: groups >= {group}\n"
+            f"Filter: groups >= {_ls_escape(group)}\n"
         )
         rows = await self._query(query)
         if not rows:
@@ -99,7 +111,7 @@ class LivestatusBackend(BackendBase):
         query = (
             f"GET services\n"
             f"Columns: state\n"
-            f"Filter: groups >= {group}\n"
+            f"Filter: groups >= {_ls_escape(group)}\n"
         )
         rows = await self._query(query)
         if not rows:
@@ -125,6 +137,21 @@ class LivestatusBackend(BackendBase):
             return [r[0] for r in rows]
         return []
 
+    async def get_topology(self) -> list[dict]:
+        rows = await self._query("GET hosts\nColumns: name parents state plugin_output\n")
+        result = []
+        for r in rows:
+            if not r or not r[0]:
+                continue
+            parents = [p.strip() for p in r[1].split(",") if p.strip()] if len(r) > 1 else []
+            result.append({
+                "name": r[0],
+                "parents": parents,
+                "state": _HOST_STATE_MAP.get(int(r[2]), "UNKNOWN") if len(r) > 2 else "UNKNOWN",
+                "output": r[3] if len(r) > 3 else "",
+            })
+        return result
+
     async def is_available(self) -> bool:
         try:
             await self._query("GET hosts\nColumns: name\nLimit: 1\n")
@@ -136,9 +163,9 @@ class LivestatusBackend(BackendBase):
     # Low-level socket communication
     # ------------------------------------------------------------------
 
-    async def _query(self, query: str) -> list[list[str]]:
+    async def _query(self, query: str) -> list[list]:
         """Send a Livestatus query and return parsed rows."""
-        lql = query.rstrip("\n") + "\nOutputFormat: csv\nResponseHeader: fixed16\n\n"
+        lql = query.rstrip("\n") + "\nOutputFormat: json\nResponseHeader: fixed16\n\n"
 
         if self._host:
             reader, writer = await asyncio.wait_for(
@@ -159,8 +186,12 @@ class LivestatusBackend(BackendBase):
             header = await asyncio.wait_for(reader.read(16), timeout=self._timeout)
             if not header:
                 return []
-            status = int(header[:3])
-            length = int(header[4:15].strip())
+            try:
+                status = int(header[:3])
+                length = int(header[4:15].strip())
+            except ValueError:
+                logger.warning("Livestatus returned unexpected response: %r", header)
+                return []
 
             body = b""
             while len(body) < length:
@@ -178,7 +209,7 @@ class LivestatusBackend(BackendBase):
             text = body.decode("utf-8").strip()
             if not text:
                 return []
-            return [line.split(";") for line in text.splitlines()]
+            return _json.loads(text)
         finally:
             writer.close()
             try:

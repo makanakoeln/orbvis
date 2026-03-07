@@ -1,47 +1,159 @@
 <template>
-  <!-- A line object connects two points; x/y is the start, extra.x2/y2 is the end -->
-  <g v-if="hasCoords">
+  <g>
+    <!-- Invisible fat hit-area: always for right-click, move-cursor only in edit mode -->
     <line
-      :x1="object.x"
-      :y1="object.y"
-      :x2="x2"
-      :y2="y2"
-      :stroke="lineColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      pointer-events="none"
+      :x1="x1" :y1="y1" :x2="x2" :y2="y2"
+      stroke="transparent"
+      stroke-width="12"
+      :style="editMode ? 'cursor: move' : 'cursor: default'"
+      @mousedown.prevent.stop="editMode ? $emit('line-drag-start', $event, 'move') : undefined"
+      @contextmenu.prevent.stop="$emit('context-menu', $event)"
+      @click.stop
     />
-    <!-- Arrowhead marker at end point -->
-    <circle :cx="x2" :cy="y2" r="4" :fill="lineColor" />
+
+    <!-- Weathermap line -->
+    <template v-if="isWeathermap">
+      <defs>
+        <linearGradient :id="gradientId" x1="0%" y1="0%" x2="100%" y2="0%"
+          :gradientTransform="`rotate(${lineAngle}, 0.5, 0.5)`">
+          <stop offset="0%" :stop-color="wmColor" />
+          <stop offset="100%" :stop-color="wmColor" stop-opacity="0.6" />
+        </linearGradient>
+      </defs>
+      <line
+        :x1="x1" :y1="y1" :x2="x2" :y2="y2"
+        :stroke="`url(#${gradientId})`"
+        stroke-width="4"
+        stroke-linecap="round"
+        pointer-events="none"
+      />
+      <!-- Utilization label at midpoint -->
+      <text
+        :x="(x1 + x2) / 2"
+        :y="(y1 + y2) / 2 - 6"
+        text-anchor="middle"
+        font-size="11"
+        font-weight="600"
+        :fill="wmColor"
+        style="text-shadow: 0 1px 3px rgba(0,0,0,0.8)"
+        pointer-events="none"
+      >{{ wmLabel }}</text>
+    </template>
+
+    <!-- Normal line -->
+    <template v-else>
+      <line
+        :x1="x1" :y1="y1" :x2="x2" :y2="y2"
+        :stroke="lineColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        :stroke-dasharray="isDashed ? '6 4' : undefined"
+        pointer-events="none"
+      />
+      <!-- Arrow at endpoint -->
+      <polygon v-if="hasEndArrow"
+        :points="arrowPoints(x2, y2, x1, y1)"
+        :fill="lineColor" pointer-events="none" />
+      <!-- Arrow at startpoint -->
+      <polygon v-if="hasStartArrow"
+        :points="arrowPoints(x1, y1, x2, y2)"
+        :fill="lineColor" pointer-events="none" />
+      <!-- Dot fallback -->
+      <circle v-if="!hasEndArrow && !hasStartArrow"
+        :cx="x2" :cy="y2" r="4" :fill="lineColor" pointer-events="none" />
+    </template>
+
+    <!-- label_text label at midpoint -->
+    <text
+      v-if="props.object.label_show && props.object.label_text"
+      :x="(x1 + x2) / 2"
+      :y="(y1 + y2) / 2 - 10"
+      text-anchor="middle"
+      :font-size="props.object.label_size ?? 11"
+      font-weight="500"
+      :fill="props.object.label_color ?? '#e4e4e7'"
+      pointer-events="none"
+      style="paint-order: stroke; stroke: rgba(0,0,0,0.8); stroke-width: 3px; stroke-linejoin: round"
+    >{{ props.object.label_text }}</text>
+
+    <!-- Edit handles -->
+    <template v-if="editMode">
+      <circle :cx="x1" :cy="y1" r="7"
+        fill="#3b82f6" fill-opacity="0.85" stroke="white" stroke-width="1.5"
+        style="cursor: grab"
+        @mousedown.prevent.stop="$emit('line-drag-start', $event, 'start')" />
+      <circle :cx="x2" :cy="y2" r="7"
+        fill="#3b82f6" fill-opacity="0.85" stroke="white" stroke-width="1.5"
+        style="cursor: grab"
+        @mousedown.prevent.stop="$emit('line-drag-start', $event, 'end')" />
+    </template>
   </g>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { MapObject, ObjectState } from '@/types/api'
+import { parsePerfData, getMetric, utilPercent, utilColor } from '@/utils/perf'
 
 const props = defineProps<{
   object: MapObject
   state: ObjectState | undefined
+  editMode: boolean
+  dragCoords?: { x: number; y: number; x2: number; y2: number }
 }>()
 
-const x2 = computed(() => (props.object.extra?.x2 as number) ?? props.object.x + 50)
-const y2 = computed(() => (props.object.extra?.y2 as number) ?? props.object.y + 50)
-const hasCoords = computed(() => true)
+defineEmits<{
+  'line-drag-start': [event: MouseEvent, mode: 'move' | 'start' | 'end']
+  'context-menu': [event: MouseEvent]
+}>()
+
+const x1 = computed(() => props.dragCoords?.x ?? props.object.x)
+const y1 = computed(() => props.dragCoords?.y ?? props.object.y)
+const x2 = computed(() => props.dragCoords?.x2 ?? (props.object.extra?.x2 as number) ?? props.object.x + 50)
+const y2 = computed(() => props.dragCoords?.y2 ?? (props.object.extra?.y2 as number) ?? props.object.y + 50)
 
 const STATE_COLORS: Record<string, string> = {
-  UP: '#00ff00',
-  OK: '#00ff00',
-  DOWN: '#ff0000',
-  CRITICAL: '#ff0000',
-  UNREACHABLE: '#ff8800',
-  UNKNOWN: '#ff8800',
-  WARNING: '#ffff00',
-  PENDING: '#aaaaaa',
+  UP: '#4ade80', OK: '#4ade80',
+  DOWN: '#f87171', CRITICAL: '#f87171',
+  UNREACHABLE: '#fb923c', UNKNOWN: '#fb923c',
+  WARNING: '#facc15',
+  PENDING: '#9ca3af',
+}
+const lineColor = computed(() => STATE_COLORS[props.state?.state ?? 'PENDING'] ?? STATE_COLORS['PENDING'])
+
+// line_type: 10=plain, 11=arrow→, 12=arrow←, 13=double, 14=dashed, 20=weathermap
+const isWeathermap = computed(() => props.object.line_type === 20)
+const isDashed     = computed(() => props.object.line_type === 14)
+const hasEndArrow  = computed(() => props.object.line_type === 11 || props.object.line_type === 13)
+const hasStartArrow= computed(() => props.object.line_type === 12 || props.object.line_type === 13)
+
+function arrowPoints(tx: number, ty: number, fx: number, fy: number): string {
+  const angle = Math.atan2(ty - fy, tx - fx)
+  const len = 12, w = 6
+  const p1x = tx - len * Math.cos(angle) + w * Math.sin(angle)
+  const p1y = ty - len * Math.sin(angle) - w * Math.cos(angle)
+  const p2x = tx - len * Math.cos(angle) - w * Math.sin(angle)
+  const p2y = ty - len * Math.sin(angle) + w * Math.cos(angle)
+  return `${tx},${ty} ${p1x},${p1y} ${p2x},${p2y}`
 }
 
-const lineColor = computed(() => {
-  const s = props.state?.state ?? 'PENDING'
-  return STATE_COLORS[s] ?? STATE_COLORS['PENDING']
+// Weathermap
+const gradientId = computed(() => `wm-grad-${props.object.id}`)
+const lineAngle = computed(() => {
+  const dx = x2.value - x1.value, dy = y2.value - y1.value
+  return (Math.atan2(dy, dx) * 180) / Math.PI
+})
+
+const wmMetrics = computed(() => parsePerfData(props.state?.perf_data ?? ''))
+const wmMetric  = computed(() => getMetric(wmMetrics.value, props.object.extra?.weathermap_metric as string))
+const wmPct     = computed(() => wmMetric.value ? utilPercent(wmMetric.value) : 0)
+const wmColor   = computed(() => utilColor(wmPct.value))
+const wmLabel   = computed(() => {
+  if (!wmMetric.value) return ''
+  const m = wmMetric.value
+  const val = m.unit === '%' ? `${m.value.toFixed(0)}%`
+    : m.unit ? `${m.value.toFixed(1)} ${m.unit}`
+    : `${m.value.toFixed(0)}`
+  return `${val} (${wmPct.value.toFixed(0)}%)`
 })
 </script>

@@ -2,17 +2,28 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import get_current_user
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import create_access_token, decode_token
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse
 from app.schemas.user import UserRead
-from app.services.auth_service import authenticate_user, create_tokens, get_user_by_id
+from app.services.auth_service import (
+    authenticate_user,
+    create_tokens,
+    get_or_create_sso_user,
+    get_user_by_id,
+    validate_checkmk_cookie,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -57,6 +68,31 @@ async def refresh_token(
 @router.get("/me", response_model=UserRead)
 async def me(current_user: User = Depends(get_current_user)) -> UserRead:
     return UserRead.model_validate(current_user)
+
+
+@router.get("/sso", response_model=TokenResponse)
+async def sso_login(request: Request, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+    """SSO via Checkmk session cookie (auth_<site>).
+
+    The browser automatically sends the Checkmk cookie with every same-origin request.
+    The backend validates the cookie HMAC against the OMD auth.secret file.
+    """
+    site = settings.checkmk_site
+    cookie_name = f"auth_{site}" if site else None
+    username: str | None = None
+
+    if cookie_name:
+        cookie_value = request.cookies.get(cookie_name)
+        if cookie_value:
+            username = validate_checkmk_cookie(cookie_value)
+
+    logger.debug("SSO attempt: cookie=%r username=%r", cookie_name, username)
+
+    if not username:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No valid Checkmk session")
+
+    user = await get_or_create_sso_user(db, username)
+    return create_tokens(user)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

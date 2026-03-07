@@ -29,6 +29,7 @@ export const useMapsStore = defineStore('maps', () => {
   async function fetchMap(name: string) {
     loading.value = true
     error.value = null
+    currentMap.value = null  // clear stale data immediately
     try {
       currentMap.value = await mapsApi.get(name, token())
     } catch (e: unknown) {
@@ -38,8 +39,8 @@ export const useMapsStore = defineStore('maps', () => {
     }
   }
 
-  async function createMap(name: string, alias: string, backendId = 'live_1') {
-    const cfg = await mapsApi.create({ name, alias, backend_id: backendId }, token())
+  async function createMap(name: string, alias: string, backendId = 'live_1', mapType = 'static') {
+    const cfg = await mapsApi.create({ name, alias, backend_id: backendId, map_type: mapType }, token())
     await fetchMaps()
     return cfg
   }

@@ -3,7 +3,7 @@
 NagVis .cfg to JSON importer.
 
 Parses legacy NagVis 1.x map configuration files and converts them
-to the NagVis 2 JSON format.
+to the Orbvis JSON format.
 
 Usage:
     python cfg_importer.py <input.cfg> [<output_dir>]
@@ -86,7 +86,7 @@ def _parse_bool(value: str, default: bool = False) -> bool:
 
 
 def blocks_to_map_json(blocks: list[CfgBlock], map_name: str) -> dict:
-    """Convert parsed blocks into the NagVis 2 map JSON structure."""
+    """Convert parsed blocks into the Orbvis map JSON structure."""
     globals_props: dict[str, Any] = {
         "alias": map_name,
         "background_image": None,

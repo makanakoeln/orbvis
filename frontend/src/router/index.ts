@@ -46,13 +46,19 @@ const router = createRouter({
           name: 'admin-maps',
           component: () => import('@/views/admin/MapsAdminView.vue'),
         },
+        {
+          path: 'backends',
+          name: 'admin-backends',
+          component: () => import('@/views/admin/BackendsView.vue'),
+        },
       ],
     },
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
+  await auth.init()
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }

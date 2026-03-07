@@ -1,19 +1,66 @@
 <template>
   <div
-    class="fixed z-50 bg-gray-900 border border-gray-600 rounded-lg shadow-xl py-1 min-w-40"
+    class="fixed z-50 bg-zinc-900/95 backdrop-blur-md ring-1 ring-white/10 shadow-2xl shadow-black/60 rounded-xl py-1.5 min-w-48"
     :style="{ left: `${x}px`, top: `${y}px` }"
   >
-    <div class="px-3 py-1 text-xs text-gray-500 border-b border-gray-700">
-      {{ object.type }}: {{ displayName }}
+    <!-- Header -->
+    <div class="px-3.5 py-2 border-b border-white/5 mb-1">
+      <p class="text-xs font-semibold text-zinc-100 truncate max-w-52">{{ displayName }}</p>
+      <p class="text-[10px] text-zinc-500 mt-0.5 uppercase tracking-wide">{{ object.type }}</p>
     </div>
-    <button
-      class="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-      @click="openInMonitoring"
-    >Open in monitoring</button>
-    <button
-      class="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-      @click="$emit('close')"
-    >Close</button>
+
+    <a v-if="hostUrl" :href="hostUrl" target="_blank"
+      class="flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800/80 transition-colors">
+      <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+      </svg>
+      <span>Host in Checkmk</span>
+    </a>
+    <a v-if="serviceUrl" :href="serviceUrl" target="_blank"
+      class="flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800/80 transition-colors">
+      <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+      </svg>
+      <span>Service in Checkmk</span>
+    </a>
+    <a v-if="groupUrl" :href="groupUrl" target="_blank"
+      class="flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800/80 transition-colors">
+      <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+      </svg>
+      <span>Group in Checkmk</span>
+    </a>
+
+    <div v-if="!hostUrl && !serviceUrl && !groupUrl && !checkmkUrl"
+      class="px-3.5 py-2 text-xs text-zinc-600 italic">
+      No Checkmk URL configured
+    </div>
+
+    <div class="border-t border-white/5 mt-1 pt-1">
+      <button v-if="showEdit"
+        class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800/80 transition-colors"
+        @click="$emit('edit')">
+        <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+        </svg>
+        Edit properties
+      </button>
+      <button v-if="showEdit"
+        class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/8 transition-colors"
+        @click="$emit('delete')">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+        </svg>
+        Delete
+      </button>
+      <button class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/80 transition-colors"
+        @click="$emit('close')">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        Close
+      </button>
+    </div>
   </div>
 </template>
 
@@ -25,20 +72,55 @@ const props = defineProps<{
   object: MapObject
   x: number
   y: number
+  checkmkUrl?: string | null
+  showEdit?: boolean
 }>()
 
-defineEmits<{ close: [] }>()
+defineEmits<{ close: []; edit: []; delete: [] }>()
 
 const displayName = computed(() => {
+  if (props.object.label_text) return props.object.label_text
   if (props.object.host_name && props.object.service_description)
     return `${props.object.host_name} / ${props.object.service_description}`
   return props.object.host_name ?? props.object.group_name ?? props.object.id
 })
 
-function openInMonitoring() {
-  // Placeholder: open Checkmk/Nagios link
-  if (props.object.host_name) {
-    window.open(`/nagios/cgi-bin/status.cgi?host=${props.object.host_name}`, '_blank')
+const base = computed(() => {
+  // Strip trailing /check_mk or /check_mk/ so we can safely append /check_mk/view.py
+  return props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '') ?? null
+})
+
+// Extract site name from last path segment, e.g. "http://host/heute" → "heute"
+const site = computed(() => {
+  if (!base.value) return null
+  const parts = base.value.split('/')
+  return parts[parts.length - 1] || null
+})
+
+const hostUrl = computed(() => {
+  if (!base.value || !props.object.host_name) return null
+  const p: Record<string, string> = { view_name: 'hoststatus', host: props.object.host_name }
+  if (site.value) p.site = site.value
+  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`
+})
+
+const serviceUrl = computed(() => {
+  if (!base.value || !props.object.host_name || !props.object.service_description) return null
+  const p: Record<string, string> = {
+    view_name: 'service',
+    host: props.object.host_name,
+    service: props.object.service_description,
   }
-}
+  if (site.value) p.site = site.value
+  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`
+})
+
+const groupUrl = computed(() => {
+  if (!base.value || !props.object.group_name) return null
+  const view = props.object.type === 'hostgroup' ? 'hostgroup' : 'servicegroup'
+  const key = props.object.type === 'hostgroup' ? 'hostgroup' : 'servicegroup'
+  const p: Record<string, string> = { view_name: view, [key]: props.object.group_name }
+  if (site.value) p.site = site.value
+  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`
+})
 </script>
