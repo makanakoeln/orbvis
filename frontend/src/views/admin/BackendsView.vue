@@ -121,11 +121,18 @@
 
             <div class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Type</label>
-              <select v-model="form.type"
-                class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                <option value="livestatus">MK Livestatus</option>
-                <option value="test">Test (built-in demo)</option>
-              </select>
+              <div class="relative">
+                <select v-model="form.type"
+                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                  <option value="livestatus">MK Livestatus</option>
+                  <option value="test">Test (built-in demo)</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                  <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </div>
+              </div>
             </div>
 
             <template v-if="form.type === 'livestatus'">
