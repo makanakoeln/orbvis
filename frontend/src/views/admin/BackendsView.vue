@@ -152,8 +152,7 @@
                 </div>
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Port</label>
-                  <input v-model.number="form.port" type="number" min="1" max="65535"
-                    class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                  <NumberInput v-model="form.port" min="1" max="65535" class="w-full" />
                 </div>
               </div>
 
@@ -165,8 +164,7 @@
                 </div>
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Timeout (s)</label>
-                  <input v-model.number="form.timeout" type="number" min="1" max="120" step="0.5"
-                    class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                  <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-full" />
                 </div>
               </div>
             </template>
@@ -212,6 +210,7 @@ import { useBackendsStore } from '@/stores/backends'
 import { backendsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { BackendConfig } from '@/types/api'
+import NumberInput from '@/components/NumberInput.vue'
 
 const store = useBackendsStore()
 const auth = useAuthStore()

@@ -252,8 +252,7 @@
               </div>
               <div class="space-y-1.5">
                 <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Icon size</label>
-                <input v-model.number="settingsForm.icon_size" type="number" min="12" max="96"
-                  class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                <NumberInput v-model="settingsForm.icon_size" min="12" max="96" class="w-full" />
               </div>
             </div>
 
@@ -280,18 +279,15 @@
               <div class="grid grid-cols-3 gap-3">
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Latitude</label>
-                  <input v-model.number="settingsForm.worldmap_lat" type="number" step="any"
-                    class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                  <NumberInput v-model="settingsForm.worldmap_lat" step="any" class="w-full" />
                 </div>
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Longitude</label>
-                  <input v-model.number="settingsForm.worldmap_lng" type="number" step="any"
-                    class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                  <NumberInput v-model="settingsForm.worldmap_lng" step="any" class="w-full" />
                 </div>
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Zoom</label>
-                  <input v-model.number="settingsForm.worldmap_zoom" type="number" min="1" max="18"
-                    class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                  <NumberInput v-model="settingsForm.worldmap_zoom" min="1" max="18" class="w-full" />
                 </div>
               </div>
               <p class="text-xs text-zinc-600">Pan/zoom the map first, then reopen settings to capture the current view.</p>
@@ -345,6 +341,7 @@ import { useMapEditor } from '@/composables/useMapEditor'
 import { mapsApi } from '@/api/client'
 import MapCanvas from '@/components/map/MapCanvas.vue'
 import WorldMapCanvas from '@/components/map/WorldMapCanvas.vue'
+import NumberInput from '@/components/NumberInput.vue'
 import AutomapCanvas from '@/components/map/AutomapCanvas.vue'
 import EditPanel from '@/components/map/EditPanel.vue'
 import ObjectPropertiesModal from '@/components/map/ObjectPropertiesModal.vue'
@@ -653,12 +650,3 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
-input[type="number"] {
-  appearance: textfield;
-}
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-}
-</style>

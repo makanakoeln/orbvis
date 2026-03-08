@@ -103,19 +103,19 @@
             <div class="grid grid-cols-2 gap-3">
               <div class="field-row">
                 <label class="field-label">Start X</label>
-                <input v-model.number="form.x" type="number" class="field flex-1" />
+                <NumberInput v-model="form.x" class="flex-1" />
               </div>
               <div class="field-row">
                 <label class="field-label">Y</label>
-                <input v-model.number="form.y" type="number" class="field flex-1" />
+                <NumberInput v-model="form.y" class="flex-1" />
               </div>
               <div class="field-row">
                 <label class="field-label">End X</label>
-                <input v-model.number="form.x2" type="number" class="field flex-1" />
+                <NumberInput v-model="form.x2" class="flex-1" />
               </div>
               <div class="field-row">
                 <label class="field-label">Y</label>
-                <input v-model.number="form.y2" type="number" class="field flex-1" />
+                <NumberInput v-model="form.y2" class="flex-1" />
               </div>
             </div>
             <!-- Label -->
@@ -137,26 +137,26 @@
             <template v-if="mapType === 'worldmap'">
               <div class="field-row col-span-1">
                 <label class="field-label">Lat</label>
-                <input v-model.number="form.lat" type="number" step="0.0001" class="field flex-1" />
+                <NumberInput v-model="form.lat" step="any" class="flex-1" />
               </div>
               <div class="field-row col-span-1">
                 <label class="field-label">Lng</label>
-                <input v-model.number="form.lng" type="number" step="0.0001" class="field flex-1" />
+                <NumberInput v-model="form.lng" step="any" class="flex-1" />
               </div>
             </template>
             <template v-else>
               <div class="field-row col-span-1">
                 <label class="field-label">X</label>
-                <input v-model.number="form.x" type="number" class="field flex-1" />
+                <NumberInput v-model="form.x" class="flex-1" />
               </div>
               <div class="field-row col-span-1">
                 <label class="field-label">Y</label>
-                <input v-model.number="form.y" type="number" class="field flex-1" />
+                <NumberInput v-model="form.y" class="flex-1" />
               </div>
             </template>
             <div class="field-row col-span-1">
               <label class="field-label">Z</label>
-              <input v-model.number="form.z" type="number" min="1" max="999" class="field flex-1" title="Z-index (stacking order)" />
+              <NumberInput v-model="form.z" min="1" max="999" title="Z-index (stacking order)" class="flex-1" />
             </div>
           </div>
         </section>
@@ -177,7 +177,7 @@
               <div class="grid grid-cols-2 gap-3">
                 <div class="field-row">
                   <label class="field-label">Size</label>
-                  <input v-model.number="form.label_size" type="number" min="8" max="72" class="field flex-1" />
+                  <NumberInput v-model="form.label_size" min="8" max="72" class="flex-1" />
                 </div>
                 <div class="field-row">
                   <label class="field-label">Color</label>
@@ -189,11 +189,11 @@
                 </div>
                 <div class="field-row">
                   <label class="field-label">Offset X</label>
-                  <input v-model.number="form.label_x" type="number" class="field flex-1" />
+                  <NumberInput v-model="form.label_x" class="flex-1" />
                 </div>
                 <div class="field-row">
                   <label class="field-label">Offset Y</label>
-                  <input v-model.number="form.label_y" type="number" class="field flex-1" />
+                  <NumberInput v-model="form.label_y" class="flex-1" />
                 </div>
                 <div class="field-row col-span-2">
                   <label class="field-label">Background</label>
@@ -222,13 +222,7 @@
             </div>
             <div class="field-row">
               <label class="field-label">Size</label>
-              <input
-                :value="form.icon_size ?? ''"
-                @input="form.icon_size = ($event.target as HTMLInputElement).value === '' ? null : +($event.target as HTMLInputElement).value"
-                type="number" min="1" max="512"
-                class="field flex-1"
-                placeholder="map default"
-              />
+              <NumberInput v-model="form.icon_size" min="1" max="512" placeholder="map default" class="flex-1" />
             </div>
             <template v-if="form.view_type === 'gadget'">
               <div class="field-row">
@@ -319,6 +313,7 @@ import { useAuthStore } from '@/stores/auth'
 import { parsePerfData } from '@/utils/perf'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import AutocompleteInput from './AutocompleteInput.vue'
+import NumberInput from '@/components/NumberInput.vue'
 
 const props = defineProps<{
   object: MapObject

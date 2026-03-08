@@ -153,19 +153,19 @@
           <div class="grid grid-cols-2 gap-2">
             <div class="space-y-1">
               <label class="text-xs text-zinc-500">Start X</label>
-              <input v-model.number="editForm.x" type="number" class="field" />
+              <NumberInput v-model="editForm.x" />
             </div>
             <div class="space-y-1">
               <label class="text-xs text-zinc-500">Y</label>
-              <input v-model.number="editForm.y" type="number" class="field" />
+              <NumberInput v-model="editForm.y" />
             </div>
             <div class="space-y-1">
               <label class="text-xs text-zinc-500">End X</label>
-              <input v-model.number="editForm.x2" type="number" class="field" />
+              <NumberInput v-model="editForm.x2" />
             </div>
             <div class="space-y-1">
               <label class="text-xs text-zinc-500">Y</label>
-              <input v-model.number="editForm.y2" type="number" class="field" />
+              <NumberInput v-model="editForm.y2" />
             </div>
           </div>
           <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none">
@@ -185,26 +185,26 @@
             <template v-if="props.mapType === 'worldmap'">
               <div class="space-y-1 col-span-1">
                 <label class="text-xs text-zinc-500">Lat</label>
-                <input v-model.number="editForm.lat" type="number" step="0.0001" class="field" />
+                <NumberInput v-model="editForm.lat" step="any" />
               </div>
               <div class="space-y-1 col-span-1">
                 <label class="text-xs text-zinc-500">Lng</label>
-                <input v-model.number="editForm.lng" type="number" step="0.0001" class="field" />
+                <NumberInput v-model="editForm.lng" step="any" />
               </div>
             </template>
             <template v-else>
               <div class="space-y-1 col-span-1">
                 <label class="text-xs text-zinc-500">X</label>
-                <input v-model.number="editForm.x" type="number" class="field" />
+                <NumberInput v-model="editForm.x" />
               </div>
               <div class="space-y-1 col-span-1">
                 <label class="text-xs text-zinc-500">Y</label>
-                <input v-model.number="editForm.y" type="number" class="field" />
+                <NumberInput v-model="editForm.y" />
               </div>
             </template>
             <div class="space-y-1 col-span-1">
               <label class="text-xs text-zinc-500">Z</label>
-              <input v-model.number="editForm.z" type="number" min="1" max="999" class="field" />
+              <NumberInput v-model="editForm.z" min="1" max="999" />
             </div>
           </div>
         </section>
@@ -224,7 +224,7 @@
             <div class="grid grid-cols-2 gap-2">
               <div class="space-y-1">
                 <label class="text-xs text-zinc-500">Size</label>
-                <input v-model.number="editForm.label_size" type="number" min="8" max="72" class="field" />
+                <NumberInput v-model="editForm.label_size" min="8" max="72" />
               </div>
               <div class="space-y-1">
                 <label class="text-xs text-zinc-500">Color</label>
@@ -236,11 +236,11 @@
               </div>
               <div class="space-y-1">
                 <label class="text-xs text-zinc-500">Offset X</label>
-                <input v-model.number="editForm.label_x" type="number" class="field" />
+                <NumberInput v-model="editForm.label_x" />
               </div>
               <div class="space-y-1">
                 <label class="text-xs text-zinc-500">Offset Y</label>
-                <input v-model.number="editForm.label_y" type="number" class="field" />
+                <NumberInput v-model="editForm.label_y" />
               </div>
               <div class="space-y-1 col-span-2">
                 <label class="text-xs text-zinc-500">Background</label>
@@ -267,11 +267,7 @@
           </div>
           <div class="space-y-1">
             <label class="text-xs text-zinc-500">Size</label>
-            <input
-              :value="editForm.icon_size ?? ''"
-              @input="editForm.icon_size = ($event.target as HTMLInputElement).value === '' ? null : +($event.target as HTMLInputElement).value"
-              type="number" min="1" max="512" class="field" placeholder="map default"
-            />
+            <NumberInput v-model="editForm.icon_size" min="1" max="512" placeholder="map default" />
           </div>
           <template v-if="editForm.view_type === 'gadget'">
             <div class="space-y-1">
@@ -350,6 +346,7 @@ import { backendsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import AutocompleteInput from './AutocompleteInput.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import NumberInput from '@/components/NumberInput.vue'
 
 const props = defineProps<{
   draft: NewObjectDraft
