@@ -280,12 +280,12 @@
               <div class="grid grid-cols-3 gap-3">
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Latitude</label>
-                  <input v-model.number="settingsForm.worldmap_lat" type="number" step="0.0001"
+                  <input v-model.number="settingsForm.worldmap_lat" type="number" step="any"
                     class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 </div>
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Longitude</label>
-                  <input v-model.number="settingsForm.worldmap_lng" type="number" step="0.0001"
+                  <input v-model.number="settingsForm.worldmap_lng" type="number" step="any"
                     class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 </div>
                 <div class="space-y-1.5">
