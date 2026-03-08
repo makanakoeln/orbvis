@@ -44,20 +44,14 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
-def user_has_permission(user: User, mod: str, act: str, obj: str) -> bool:
-    """Return True if user is admin OR has the requested permission via any role."""
-    if user.is_admin:
+def user_has_permission(user: User, mod: str, act: str, obj: str, require_explicit: bool = False) -> bool:
+    """Return True if user has the requested permission.
+
+    By default, is_admin grants all permissions. Set require_explicit=True for
+    sensitive operations where an explicit role assignment is always required.
+    """
+    if not require_explicit and user.is_admin:
         return True
-    for role in user.roles:
-        for perm in role.permissions:
-            if perm.mod == mod and perm.act == act and (perm.obj == "*" or perm.obj == obj):
-                return True
-    return False
-
-
-def user_has_explicit_permission(user: User, mod: str, act: str, obj: str) -> bool:
-    """Check permission via roles only — does NOT auto-grant for is_admin.
-    Use this for sensitive operations where explicit role assignment is required."""
     for role in user.roles:
         for perm in role.permissions:
             if perm.mod == mod and perm.act == act and (perm.obj == "*" or perm.obj == obj):

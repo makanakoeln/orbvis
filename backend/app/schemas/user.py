@@ -66,6 +66,6 @@ class UserRead(UserBase):
             "is_active": data.is_active,
             "is_admin": data.is_admin,
             "must_change_password": data.must_change_password,
-            "roles": list(data.roles or []),
+            "roles": data.roles or [],
             "permissions": perms,
         }

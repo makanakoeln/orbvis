@@ -76,7 +76,8 @@ async function save() {
   try {
     await usersApi.update(props.userId, { password: password.value }, auth.accessToken!)
     success.value = true
-    await auth.fetchCurrentUser()
+    // Only refresh own user data — changing another user's password doesn't affect current session
+    if (props.userId === auth.user?.user_id) await auth.fetchCurrentUser()
     password.value = ''
     confirm.value = ''
   } catch (e: unknown) {
