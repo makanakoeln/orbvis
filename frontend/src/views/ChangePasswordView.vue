@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+  <div class="min-h-screen bg-[var(--bg)] flex items-center justify-center p-4">
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <div class="w-12 h-12 rounded-2xl bg-amber-500/15 ring-1 ring-amber-500/25 flex items-center justify-center mx-auto mb-4">
@@ -7,21 +7,21 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
           </svg>
         </div>
-        <h1 class="text-xl font-bold text-zinc-100">Change your password</h1>
+        <h1 class="text-xl font-bold text-[var(--text)]">Change your password</h1>
         <p class="text-sm text-zinc-500 mt-1.5">You must set a new password before continuing.</p>
       </div>
 
-      <div class="bg-zinc-900 ring-1 ring-white/10 rounded-2xl p-6 shadow-2xl shadow-black/50">
+      <div class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-2xl p-6 shadow-2xl shadow-black/50">
         <form @submit.prevent="save" class="space-y-4">
           <div class="space-y-1.5">
             <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">New password</label>
             <input v-model="password" type="password" placeholder="••••••••" required minlength="6" autofocus
-              class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
           </div>
           <div class="space-y-1.5">
             <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Confirm password</label>
             <input v-model="confirm" type="password" placeholder="••••••••" required
-              class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
           </div>
 
           <p v-if="error" class="text-red-400 text-xs">{{ error }}</p>

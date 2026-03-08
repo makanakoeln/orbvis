@@ -7,7 +7,7 @@
       @input="onInput"
       @keydown.up.prevent="step(1)"
       @keydown.down.prevent="step(-1)"
-      class="w-full px-3 py-2 pr-7 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:hidden [&::-webkit-inner-spin-button]:hidden"
+      class="w-full px-3 py-2 pr-7 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:hidden [&::-webkit-inner-spin-button]:hidden"
     />
     <div class="absolute right-0 inset-y-0 w-6 flex flex-col border-l border-zinc-700/60 rounded-r-lg overflow-hidden">
       <button type="button" tabindex="-1" @mousedown.prevent="step(1)"

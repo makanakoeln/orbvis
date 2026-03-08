@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute inset-0 overflow-auto bg-zinc-950">
+  <div class="absolute inset-0 overflow-auto bg-[var(--bg)]">
     <div v-if="loading" class="flex items-center justify-center h-full text-zinc-500 text-sm">Loading topology…</div>
     <div v-else-if="error" class="flex items-center justify-center h-full text-red-400 text-sm">{{ error }}</div>
     <svg v-else :width="canvasW" :height="canvasH" class="block">

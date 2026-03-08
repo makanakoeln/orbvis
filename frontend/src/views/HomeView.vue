@@ -1,47 +1,39 @@
 <template>
-  <div class="min-h-screen bg-zinc-950">
+  <div class="min-h-screen bg-[var(--bg)]">
     <!-- Navbar -->
-    <nav class="sticky top-0 z-40 bg-zinc-900/80 backdrop-blur-md border-b border-white/5 px-6 py-3 flex justify-between items-center">
+    <nav class="sticky top-0 z-40 bg-[var(--bg-glass)] backdrop-blur-md border-b border-[var(--border)] px-6 py-3 flex justify-between items-center">
       <div class="flex items-center gap-2.5">
         <div class="w-7 h-7 rounded-lg bg-indigo-600/20 ring-1 ring-indigo-500/30 flex items-center justify-center shrink-0">
           <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
           </svg>
         </div>
-        <span class="font-bold text-zinc-100 tracking-tight">OrbVis</span>
+        <span class="font-bold text-[var(--text)] tracking-tight">OrbVis</span>
       </div>
       <div class="flex items-center gap-1">
-        <span class="px-3 py-1.5 text-sm text-zinc-500 select-none">{{ auth.user?.name }}</span>
         <router-link
           v-if="auth.isAdmin"
           to="/admin/maps"
-          class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all duration-150"
+          class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
         >Manage</router-link>
-        <template v-if="!auth.ssoActive">
-          <button @click="showChangePw = true"
-            class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all duration-150"
-            title="Change password">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
-            </svg>
-          </button>
-          <button @click="auth.logout"
-            class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all duration-150"
-          >Logout</button>
-        </template>
+        <button @click="showSettings = true"
+          class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
+          {{ auth.user?.name }}
+        </button>
       </div>
 
-      <ChangePasswordModal
-        v-if="showChangePw && auth.user"
+      <UserSettingsPanel
+        v-if="showSettings && auth.user"
         :user-id="auth.user.user_id"
         :user-name="auth.user.name"
-        @close="showChangePw = false"
+        :is-self="true"
+        @close="showSettings = false"
       />
     </nav>
 
     <main class="max-w-5xl mx-auto py-10 px-6">
       <div class="mb-8">
-        <h2 class="text-2xl font-bold text-zinc-100 tracking-tight">Maps</h2>
+        <h2 class="text-2xl font-bold text-[var(--text)] tracking-tight">Maps</h2>
         <p class="text-sm text-zinc-500 mt-1">Select a map to view monitoring status</p>
       </div>
 
@@ -63,7 +55,7 @@
       <!-- Empty state -->
       <div v-else-if="mapsStore.maps.length === 0"
         class="flex flex-col items-center justify-center py-24 text-center">
-        <div class="w-14 h-14 rounded-2xl bg-zinc-800 ring-1 ring-zinc-700 flex items-center justify-center mb-5">
+        <div class="w-14 h-14 rounded-2xl bg-[var(--bg-input)] ring-1 ring-zinc-700 flex items-center justify-center mb-5">
           <svg class="w-7 h-7 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
           </svg>
@@ -82,7 +74,7 @@
           v-for="map in mapsStore.maps"
           :key="map.name"
           :to="`/maps/${map.name}`"
-          class="group relative bg-zinc-900 hover:bg-zinc-800/60 ring-1 ring-zinc-800 hover:ring-indigo-500/40 rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-900/10"
+          class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-indigo-500/40 rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-900/10"
         >
           <!-- Type badge -->
           <div class="absolute top-4 right-4">
@@ -101,7 +93,7 @@
             </svg>
           </div>
 
-          <div class="font-semibold text-zinc-100 group-hover:text-white transition-colors">
+          <div class="font-semibold text-[var(--text)] group-hover:text-white transition-colors">
             {{ map.alias || map.name }}
           </div>
           <div v-if="map.alias" class="text-[11px] text-zinc-600 font-mono mt-0.5">{{ map.name }}</div>
@@ -121,11 +113,11 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useMapsStore } from '@/stores/maps'
-import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
+import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
 
 const auth = useAuthStore()
 const mapsStore = useMapsStore()
-const showChangePw = ref(false)
+const showSettings = ref(false)
 
 onMounted(() => mapsStore.fetchMaps())
 </script>

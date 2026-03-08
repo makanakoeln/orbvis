@@ -2,7 +2,7 @@
   <div>
     <div class="flex justify-between items-center mb-8">
       <div>
-        <h2 class="text-xl font-bold text-zinc-100 tracking-tight">Monitoring Backends</h2>
+        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">Monitoring Backends</h2>
         <p class="text-sm text-zinc-500 mt-1">Configure connections to monitoring systems</p>
       </div>
       <button @click="openCreate"
@@ -27,15 +27,15 @@
     </div>
 
     <div v-else-if="store.backends.length === 0"
-      class="text-center py-16 bg-zinc-900 ring-1 ring-white/5 rounded-xl">
+      class="text-center py-16 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl">
       <p class="text-zinc-500 text-sm">No backends configured</p>
       <p class="text-zinc-600 text-xs mt-1">Add a backend to receive monitoring states</p>
     </div>
 
-    <div v-else class="bg-zinc-900 ring-1 ring-white/5 rounded-xl overflow-hidden">
+    <div v-else class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-white/5">
+          <tr class="border-b border-[var(--border)]">
             <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Status</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">ID</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Label</th>
@@ -44,8 +44,8 @@
             <th class="px-4 py-3 text-right text-xs font-semibold text-zinc-500 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-zinc-800">
-          <tr v-for="b in store.backends" :key="b.id" class="hover:bg-zinc-800/40 transition-colors">
+        <tbody class="divide-y divide-[var(--border)]">
+          <tr v-for="b in store.backends" :key="b.id" class="hover:bg-[var(--bg-hover)] transition-colors">
             <!-- Status -->
             <td class="px-4 py-3">
               <button @click="testExisting(b.id)" :disabled="statusLoading[b.id]"
@@ -93,13 +93,13 @@
     <Teleport to="body">
       <div v-if="dialog.open" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="dialog.open = false" />
-        <div class="relative bg-zinc-900 ring-1 ring-white/10 shadow-2xl shadow-black/50 rounded-2xl p-6 w-[30rem] max-h-[90vh] overflow-y-auto">
+        <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[30rem] max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between mb-5">
-            <h3 class="text-base font-bold text-zinc-100">
+            <h3 class="text-base font-bold text-[var(--text)]">
               {{ dialog.mode === 'create' ? 'Add Backend' : 'Edit Backend' }}
             </h3>
             <button @click="dialog.open = false"
-              class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-all">
+              class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
@@ -110,20 +110,20 @@
                 Backend ID <span class="normal-case font-normal text-zinc-600">(no spaces)</span>
               </label>
               <input v-model="form.id" required pattern="[a-zA-Z0-9_-]+" placeholder="cmk_heute"
-                class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
 
             <div class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Display label</label>
               <input v-model="form.label" placeholder="Checkmk heute"
-                class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
 
             <div class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Type</label>
               <div class="relative">
                 <select v-model="form.type"
-                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                   <option value="livestatus">MK Livestatus</option>
                   <option value="test">Test (built-in demo)</option>
                 </select>
@@ -141,14 +141,14 @@
                   Unix socket path <span class="normal-case font-normal text-zinc-600">or use TCP below</span>
                 </label>
                 <input v-model="form.socket_path" placeholder="/omd/sites/heute/tmp/run/live"
-                  class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                  class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               </div>
 
               <div class="grid grid-cols-[1fr_7rem] gap-3">
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">TCP host</label>
                   <input v-model="form.host" placeholder="192.168.1.10"
-                    class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                    class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 </div>
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Port</label>
@@ -160,7 +160,7 @@
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Checkmk URL <span class="normal-case font-normal text-zinc-600">for context links</span></label>
                   <input v-model="form.checkmk_url" placeholder="http://localhost/heute"
-                    class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                    class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 </div>
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Timeout (s)</label>
@@ -185,11 +185,11 @@
               {{ formError }}
             </p>
 
-            <div class="flex gap-2 justify-end pt-2 border-t border-white/5">
+            <div class="flex gap-2 justify-end pt-2 border-t border-[var(--border)]">
               <button type="button" @click="dialog.open = false"
-                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all">Cancel</button>
+                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">Cancel</button>
               <button type="button" @click="testDialog" :disabled="dialogTest.loading"
-                class="px-4 py-2 ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm text-zinc-300 hover:text-zinc-100 disabled:opacity-50 transition-all">
+                class="px-4 py-2 ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm text-zinc-300 hover:text-[var(--text)] disabled:opacity-50 transition-all">
                 {{ dialogTest.loading ? 'Testing…' : 'Test' }}
               </button>
               <button type="submit" :disabled="saving"

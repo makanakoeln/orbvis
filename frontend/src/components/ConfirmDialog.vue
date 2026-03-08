@@ -2,7 +2,7 @@
   <Teleport to="body">
     <div class="fixed inset-0 z-[60] flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('cancel')" />
-      <div class="relative bg-zinc-900 ring-1 ring-white/10 shadow-2xl shadow-black/60 rounded-2xl p-6 w-80">
+      <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl p-6 w-80">
         <!-- Icon -->
         <div class="flex items-center gap-3 mb-3">
           <div class="w-9 h-9 rounded-full bg-red-500/15 ring-1 ring-red-500/25 flex items-center justify-center shrink-0">
@@ -11,14 +11,14 @@
             </svg>
           </div>
           <div>
-            <p class="font-semibold text-zinc-100 text-sm">{{ title }}</p>
+            <p class="font-semibold text-[var(--text)] text-sm">{{ title }}</p>
             <p v-if="message" class="text-xs text-zinc-500 mt-0.5">{{ message }}</p>
           </div>
         </div>
 
         <div class="flex gap-2 justify-end mt-5">
           <button @click="$emit('cancel')"
-            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all">
+            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
             Cancel
           </button>
           <button @click="$emit('confirm')"

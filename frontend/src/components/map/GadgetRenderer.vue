@@ -1,7 +1,7 @@
 <template>
   <!-- Traffic light -->
   <div v-if="type === 'trafficlight'"
-    class="flex flex-col items-center rounded-xl bg-zinc-900/80 ring-1 ring-white/10"
+    class="flex flex-col items-center rounded-xl bg-[var(--bg-glass)] ring-1 ring-[var(--border)]"
     :style="{ gap: `${Math.max(2, size * 0.08)}px`, padding: `${Math.max(4, size * 0.12)}px` }">
     <div class="rounded-full" :style="{ width: `${size * 0.55}px`, height: `${size * 0.55}px` }" :class="isRed    ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'    : 'bg-red-950'" />
     <div class="rounded-full" :style="{ width: `${size * 0.55}px`, height: `${size * 0.55}px` }" :class="isAmber  ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]' : 'bg-amber-950'" />
@@ -10,7 +10,7 @@
 
   <!-- Progress bar -->
   <div v-else-if="type === 'bar'" class="flex flex-col items-center" :style="{ width: size + 'px', gap: Math.max(2, size * 0.05) + 'px' }">
-    <div class="relative w-full rounded-full overflow-hidden bg-zinc-800 ring-1 ring-zinc-700"
+    <div class="relative w-full rounded-full overflow-hidden bg-[var(--bg-input)] ring-1 ring-zinc-700"
       :style="{ height: Math.max(10, Math.round(size * 0.22)) + 'px' }">
       <div class="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
         :style="{ width: pct + '%', background: color }" />

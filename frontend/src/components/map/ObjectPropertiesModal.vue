@@ -1,18 +1,18 @@
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('close')" />
-    <div class="relative bg-zinc-900 ring-1 ring-white/10 shadow-2xl shadow-black/60 rounded-2xl w-[36rem] max-h-[90vh] flex flex-col">
+    <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl w-[36rem] max-h-[90vh] flex flex-col">
 
       <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
         <div class="flex items-center gap-3">
-          <span class="text-xs font-bold px-2 py-1 rounded-lg bg-zinc-800 ring-1 ring-zinc-700 text-zinc-400 uppercase tracking-wider">
+          <span class="text-xs font-bold px-2 py-1 rounded-lg bg-[var(--bg-input)] ring-1 ring-zinc-700 text-zinc-400 uppercase tracking-wider">
             {{ object.type }}
           </span>
-          <span class="font-bold text-zinc-100">{{ displayName }}</span>
+          <span class="font-bold text-[var(--text)]">{{ displayName }}</span>
         </div>
         <button @click="$emit('close')"
-          class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-all">
+          class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -57,7 +57,7 @@
         <section v-if="object.type === 'textbox'">
           <p class="section-title">Content</p>
           <textarea v-model="form.label_text" rows="3"
-            class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
+            class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
             placeholder="Text content…" />
         </section>
 
@@ -270,13 +270,13 @@
         </section>
 
         <!-- ID (debug) -->
-        <div class="text-xs text-zinc-700 font-mono pt-1 border-t border-white/5">
+        <div class="text-xs text-zinc-700 font-mono pt-1 border-t border-[var(--border)]">
           ID: {{ object.id }}
         </div>
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-between px-6 py-4 border-t border-white/5 shrink-0">
+      <div class="flex items-center justify-between px-6 py-4 border-t border-[var(--border)] shrink-0">
         <div>
           <button @click="confirmDelete = true"
             class="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 ring-1 ring-red-500/20 hover:ring-red-500/40 rounded-lg text-sm font-semibold text-red-400 transition-all">
@@ -294,7 +294,7 @@
         <div class="flex gap-3">
           <p v-if="saveError" class="text-red-400 text-xs self-center">{{ saveError }}</p>
           <button @click="$emit('close')"
-            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all">Cancel</button>
+            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">Cancel</button>
           <button @click="save" :disabled="saving"
             class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all">
             {{ saving ? 'Saving…' : 'Save' }}
@@ -545,7 +545,7 @@ async function save() {
   @apply text-xs text-zinc-500 w-24 shrink-0;
 }
 .field {
-  @apply w-full px-3 py-2 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150;
+  @apply w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150;
   appearance: textfield;
 }
 .field::-webkit-outer-spin-button,

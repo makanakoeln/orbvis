@@ -1,7 +1,7 @@
 <template>
-  <div class="h-screen bg-zinc-950 flex flex-col">
+  <div class="h-screen bg-[var(--bg)] flex flex-col">
     <!-- Navbar -->
-    <nav class="bg-zinc-900/90 backdrop-blur-md border-b border-white/5 px-5 py-2.5 flex justify-between items-center shrink-0 z-30">
+    <nav class="bg-[var(--bg-glass)] backdrop-blur-md border-b border-[var(--border)] px-5 py-2.5 flex justify-between items-center shrink-0 z-30">
       <div class="flex items-center gap-2 min-w-0">
         <router-link to="/"
           class="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors shrink-0">
@@ -13,7 +13,7 @@
         <svg class="w-3 h-3 text-zinc-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
         </svg>
-        <span class="font-semibold text-zinc-100 text-sm truncate">{{ mapConfig?.globals.alias || route.params.name }}</span>
+        <span class="font-semibold text-[var(--text)] text-sm truncate">{{ mapConfig?.globals.alias || route.params.name }}</span>
       </div>
 
       <div class="flex items-center gap-2 shrink-0">
@@ -32,7 +32,7 @@
 
         <!-- Settings button -->
         <button v-if="auth.isAdmin" @click="openSettings"
-          class="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all duration-150"
+          class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
           title="Map settings">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
@@ -45,33 +45,25 @@
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
           :class="editor.editMode.value
             ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30 hover:bg-amber-500/20'
-            : 'bg-zinc-800 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700'">
+            : 'bg-[var(--bg-input)] text-zinc-400 hover:text-[var(--text)] hover:bg-zinc-700'">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
           </svg>
           {{ editor.editMode.value ? 'Editing' : 'Edit' }}
         </button>
 
-        <template v-if="!auth.ssoActive">
-          <span class="w-px h-4 bg-zinc-700" />
-          <button @click="showChangePw = true"
-            class="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all duration-150"
-            title="Change password">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
-            </svg>
-          </button>
-          <button @click="auth.logout"
-            class="px-3 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 transition-all duration-150">
-            Logout
-          </button>
-        </template>
+        <span class="w-px h-4 bg-zinc-700" />
+        <button @click="showUserSettings = true"
+          class="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
+          {{ auth.user?.name }}
+        </button>
 
-        <ChangePasswordModal
-          v-if="showChangePw && auth.user"
+        <UserSettingsPanel
+          v-if="showUserSettings && auth.user"
           :user-id="auth.user.user_id"
           :user-name="auth.user.name"
-          @close="showChangePw = false"
+          :is-self="true"
+          @close="showUserSettings = false"
         />
       </div>
     </nav>
@@ -79,7 +71,7 @@
     <!-- Map area + optional edit panel -->
     <div class="flex flex-1 overflow-hidden">
       <!-- Worldmap -->
-      <div v-if="isWorldmap" class="flex-1 overflow-hidden bg-zinc-950 relative">
+      <div v-if="isWorldmap" class="flex-1 overflow-hidden bg-[var(--bg)] relative">
         <div v-if="mapsStore.loading" class="absolute inset-0 flex items-center justify-center text-zinc-500 z-10 text-sm">
           Loading map…
         </div>
@@ -112,7 +104,7 @@
       </div>
 
       <!-- Static map -->
-      <div v-else class="flex-1 overflow-auto bg-zinc-950">
+      <div v-else class="flex-1 overflow-auto bg-[var(--bg)]">
         <div v-if="mapsStore.loading" class="flex items-center justify-center h-full text-zinc-500 text-sm">
           Loading map…
         </div>
@@ -167,7 +159,7 @@
     <Teleport to="body">
       <div v-if="showExitEditWarning" class="fixed inset-0 z-[60] flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showExitEditWarning = false" />
-        <div class="relative bg-zinc-900 ring-1 ring-white/10 shadow-2xl shadow-black/60 rounded-2xl p-6 w-80">
+        <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl p-6 w-80">
           <div class="flex items-center gap-3 mb-3">
             <div class="w-9 h-9 rounded-full bg-amber-500/15 ring-1 ring-amber-500/25 flex items-center justify-center shrink-0">
               <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -175,7 +167,7 @@
               </svg>
             </div>
             <div>
-              <p class="font-semibold text-zinc-100 text-sm">Unsaved changes</p>
+              <p class="font-semibold text-[var(--text)] text-sm">Unsaved changes</p>
               <p class="text-xs text-zinc-500 mt-0.5">Save or discard before leaving edit mode.</p>
             </div>
           </div>
@@ -186,7 +178,7 @@
             </button>
             <div class="flex gap-2">
               <button @click="showExitEditWarning = false"
-                class="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all">
+                class="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
                 Cancel
               </button>
               <button @click="saveAndExitEditMode"
@@ -227,11 +219,11 @@
     <Teleport to="body">
       <div v-if="showSettings" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showSettings = false" />
-        <div class="relative bg-zinc-900 ring-1 ring-white/10 shadow-2xl shadow-black/50 rounded-2xl p-6 w-[34rem] max-h-[90vh] overflow-y-auto">
+        <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[34rem] max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between mb-6">
-            <h3 class="text-base font-bold text-zinc-100">Map Settings</h3>
+            <h3 class="text-base font-bold text-[var(--text)]">Map Settings</h3>
             <button @click="showSettings = false"
-              class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-all">
+              class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -243,7 +235,7 @@
             <div class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Display name</label>
               <input v-model="settingsForm.alias"
-                class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
 
             <!-- Backend + Icon size -->
@@ -252,7 +244,7 @@
                 <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Backend</label>
                 <div class="relative">
                   <select v-model="settingsForm.backend_id"
-                    class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                    class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                     <option v-for="b in backendsStore.backends" :key="b.id" :value="b.id">
                       {{ b.label || b.id }}
                     </option>
@@ -275,7 +267,7 @@
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Map type</label>
               <div class="relative">
                 <select v-model="settingsForm.map_type"
-                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                   <option value="static">Static map</option>
                   <option value="worldmap">Worldmap (geographic)</option>
                   <option value="automap">Automap (topology)</option>
@@ -312,8 +304,8 @@
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Background image</label>
               <div class="flex gap-2">
                 <input v-model="settingsForm.background_image" placeholder="filename.png"
-                  class="flex-1 px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-                <label class="flex items-center px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all">
+                  class="flex-1 px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                <label class="flex items-center px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all">
                   Upload
                   <input type="file" accept="image/*" class="hidden" @change="uploadBackground" />
                 </label>
@@ -329,9 +321,9 @@
             </div>
 
             <!-- Actions -->
-            <div class="flex gap-3 justify-end pt-2 border-t border-white/5">
+            <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
               <button type="button" @click="showSettings = false"
-                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all">Cancel</button>
+                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">Cancel</button>
               <button type="submit" :disabled="settingsSaving"
                 class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all">
                 {{ settingsSaving ? 'Saving…' : 'Save changes' }}
@@ -360,7 +352,7 @@ import AutomapCanvas from '@/components/map/AutomapCanvas.vue'
 import EditPanel from '@/components/map/EditPanel.vue'
 import ObjectPropertiesModal from '@/components/map/ObjectPropertiesModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
+import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
 import type { MapObject } from '@/types/api'
 
 type LineDragMode = 'move' | 'start' | 'end'
@@ -564,7 +556,7 @@ async function onSaveProperties(updates: Record<string, unknown>) {
 // ---- Map Settings ----
 
 const showSettings = ref(false)
-const showChangePw = ref(false)
+const showUserSettings = ref(false)
 const settingsSaving = ref(false)
 const uploadError = ref('')
 const uploadOk = ref(false)

@@ -1,7 +1,7 @@
 <template>
   <div
     ref="canvasEl"
-    class="relative select-none bg-zinc-950"
+    class="relative select-none bg-[var(--bg)]"
     :style="[backgroundStyle, { width: `${canvasWidth}px`, minHeight: `${canvasHeight}px` }]"
     :class="placing ? 'cursor-crosshair' : ''"
     @click="onCanvasClick"

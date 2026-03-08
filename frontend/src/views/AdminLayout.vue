@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen bg-zinc-950 flex">
+  <div class="min-h-screen bg-[var(--bg)] flex">
     <!-- Sidebar -->
-    <aside class="w-56 bg-zinc-900 border-r border-white/5 flex flex-col shrink-0">
-      <div class="px-4 py-5 border-b border-white/5">
+    <aside class="w-56 bg-[var(--bg-surface)] border-r border-[var(--border)] flex flex-col shrink-0">
+      <div class="px-4 py-5 border-b border-[var(--border)]">
         <router-link to="/"
           class="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors duration-150 mb-4">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -17,7 +17,7 @@
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
-          class="flex items-center px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all duration-150"
+          class="flex items-center px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
           active-class="!text-indigo-300 !bg-indigo-500/10 ring-1 ring-indigo-500/20"
         >
           {{ item.label }}

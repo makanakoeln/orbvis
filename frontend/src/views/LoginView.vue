@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-zinc-950 relative overflow-hidden">
+  <div class="min-h-screen flex items-center justify-center bg-[var(--bg)] relative overflow-hidden">
     <!-- Background glow -->
     <div class="absolute inset-0 bg-gradient-to-br from-indigo-950/50 via-zinc-950 to-zinc-950 pointer-events-none" />
     <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/8 rounded-full blur-3xl pointer-events-none" />
@@ -12,12 +12,12 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
           </svg>
         </div>
-        <h1 class="text-2xl font-bold text-zinc-100 tracking-tight">OrbVis</h1>
+        <h1 class="text-2xl font-bold text-[var(--text)] tracking-tight">OrbVis</h1>
         <p class="text-sm text-zinc-500 mt-1">Monitoring Visualization</p>
       </div>
 
       <!-- Card -->
-      <div class="bg-zinc-900 ring-1 ring-white/8 shadow-2xl shadow-black/50 rounded-2xl p-8">
+      <div class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-8">
         <form @submit.prevent="handleLogin" class="space-y-5">
           <div class="space-y-1.5">
             <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Username</label>
@@ -27,7 +27,7 @@
               autocomplete="username"
               required
               placeholder="admin"
-              class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-150"
+              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-[var(--text)] placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-150"
             />
           </div>
           <div class="space-y-1.5">
@@ -38,7 +38,7 @@
               autocomplete="current-password"
               required
               placeholder="••••••••"
-              class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150"
+              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-[var(--text)] placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150"
             />
           </div>
 

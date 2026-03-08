@@ -4,8 +4,8 @@
     v-if="object.type === 'textbox'"
     class="px-2.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap pointer-events-none ring-1 transition-all"
     :class="selected
-      ? 'ring-indigo-400 bg-zinc-900/90 text-zinc-100'
-      : 'ring-white/10 bg-zinc-900/80 text-zinc-200'"
+      ? 'ring-indigo-400 bg-[var(--bg-glass)] text-[var(--text)]'
+      : 'ring-[var(--border)] bg-[var(--bg-glass)] text-zinc-200'"
     style="backdrop-filter: blur(4px)"
     @mouseenter="$emit('hover', $event)"
     @mouseleave="$emit('hover-leave')"

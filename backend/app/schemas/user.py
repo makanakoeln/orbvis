@@ -24,6 +24,7 @@ class UserBase(BaseModel):
     is_active: bool = True
     is_admin: bool = False
     must_change_password: bool = False
+    theme: str = "system"
 
 
 class UserCreate(UserBase):
@@ -36,6 +37,7 @@ class UserUpdate(BaseModel):
     is_active: bool | None = None
     is_admin: bool | None = None
     must_change_password: bool | None = None
+    theme: str | None = None
 
 
 class UserRead(UserBase):
@@ -66,6 +68,7 @@ class UserRead(UserBase):
             "is_active": data.is_active,
             "is_admin": data.is_admin,
             "must_change_password": data.must_change_password,
+            "theme": getattr(data, "theme", "system"),
             "roles": data.roles or [],
             "permissions": perms,
         }

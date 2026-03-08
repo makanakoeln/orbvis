@@ -1,16 +1,16 @@
 <template>
-  <aside class="w-72 bg-zinc-900 border-l border-white/5 flex flex-col shrink-0 overflow-y-auto text-sm">
+  <aside class="w-72 bg-[var(--bg-surface)] border-l border-[var(--border)] flex flex-col shrink-0 overflow-y-auto text-sm">
     <!-- Header -->
-    <div class="px-4 py-3.5 border-b border-white/5 flex items-center justify-between shrink-0">
+    <div class="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between shrink-0">
       <div>
-        <p class="font-semibold text-zinc-100 text-sm">Edit Mode</p>
+        <p class="font-semibold text-[var(--text)] text-sm">Edit Mode</p>
         <p class="text-xs text-zinc-500 mt-0.5">Drag objects · click to select</p>
       </div>
       <!-- Grid snap -->
       <div class="flex items-center gap-1.5 text-xs text-zinc-500">
         <span>Grid</span>
         <select :value="snapGrid" @change="$emit('update:snapGrid', +($event.target as HTMLSelectElement).value)"
-          class="bg-zinc-800 ring-1 ring-zinc-700 rounded-md px-1.5 py-0.5 text-xs text-zinc-300 focus:outline-none focus:ring-indigo-500">
+          class="bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-md px-1.5 py-0.5 text-xs text-zinc-300 focus:outline-none focus:ring-indigo-500">
           <option value="0">off</option>
           <option value="10">10 px</option>
           <option value="20">20 px</option>
@@ -20,11 +20,11 @@
     </div>
 
     <!-- Add Object -->
-    <div class="p-4 border-b border-white/5 space-y-2.5 shrink-0">
+    <div class="p-4 border-b border-[var(--border)] space-y-2.5 shrink-0">
       <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Add Object</p>
 
       <select v-model="draft.type" @change="onTypeChange"
-        class="w-full px-3 py-2 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+        class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
         <option value="">Select type…</option>
         <option value="host">Host</option>
         <option value="service">Service</option>
@@ -76,7 +76,7 @@
 
       <div class="px-4 pt-4 pb-3 flex items-center gap-2 shrink-0">
         <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Selected</p>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 ring-1 ring-zinc-700 text-zinc-400 font-mono">
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-input)] ring-1 ring-zinc-700 text-zinc-400 font-mono">
           {{ selectedObject.type }}
         </span>
       </div>
@@ -637,7 +637,7 @@ async function saveProperties() {
   @apply text-[10px] font-bold text-zinc-500 uppercase tracking-widest;
 }
 .field {
-  @apply w-full px-3 py-2 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150;
+  @apply w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150;
   appearance: textfield;
 }
 .field::-webkit-outer-spin-button,

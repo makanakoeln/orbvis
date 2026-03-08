@@ -121,6 +121,7 @@ export interface UserRead {
   is_active: boolean
   is_admin: boolean
   must_change_password: boolean
+  theme: string
   roles: RoleRef[]
   permissions: PermissionRef[]
 }

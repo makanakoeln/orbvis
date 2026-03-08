@@ -3,12 +3,12 @@
     class="fixed z-50 pointer-events-none"
     :style="{ left: `${x}px`, top: `${y}px` }"
   >
-    <div class="bg-zinc-900/95 backdrop-blur-md ring-1 ring-white/10 shadow-2xl shadow-black/60 rounded-xl p-3.5 min-w-52 max-w-72">
+    <div class="bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-xl p-3.5 min-w-52 max-w-72">
       <!-- Header -->
       <div class="flex items-start gap-2 mb-2">
         <span class="w-2 h-2 rounded-full mt-1 shrink-0" :class="stateColor" />
         <div class="min-w-0">
-          <div class="font-semibold text-zinc-100 text-sm leading-tight truncate">{{ displayName }}</div>
+          <div class="font-semibold text-[var(--text)] text-sm leading-tight truncate">{{ displayName }}</div>
           <div class="text-xs text-zinc-500 mt-0.5">{{ object.type }}</div>
         </div>
       </div>
