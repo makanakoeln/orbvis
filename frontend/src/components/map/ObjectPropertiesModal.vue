@@ -133,7 +133,7 @@
         <!-- === POSITION === -->
         <section v-if="object.type !== 'line'">
           <p class="section-title">Position</p>
-          <div class="grid grid-cols-3 gap-3">
+          <div class="grid grid-cols-[1fr_1fr_5rem] gap-3">
             <template v-if="mapType === 'worldmap'">
               <div class="field-row col-span-1">
                 <label class="field-label">Lat</label>
@@ -222,7 +222,7 @@
             </div>
             <div class="field-row">
               <label class="field-label">Size</label>
-              <NumberInput v-model="form.icon_size" min="1" max="512" placeholder="map default" class="flex-1" />
+              <NumberInput v-model="form.icon_size" min="1" max="512" placeholder="map default" class="w-24" />
             </div>
             <template v-if="form.view_type === 'gadget'">
               <div class="field-row">

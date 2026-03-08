@@ -2,7 +2,7 @@
   <div class="relative" :class="wrapperClass">
     <input
       type="number"
-      :value="modelValue ?? ''"
+      :value="displayValue"
       v-bind="inputAttrs"
       @input="onInput"
       @keydown.up.prevent="step(1)"
@@ -31,6 +31,7 @@ import { computed, useAttrs } from 'vue'
 
 const props = defineProps<{
   modelValue: number | null | undefined
+  precision?: number
 }>()
 
 const emit = defineEmits<{
@@ -46,6 +47,12 @@ const wrapperClass = computed(() => (attrs as Record<string, unknown>).class)
 const inputAttrs = computed(() => {
   const { class: _, ...rest } = attrs as Record<string, unknown>
   return rest
+})
+
+const displayValue = computed(() => {
+  if (props.modelValue == null) return ''
+  if (props.precision !== undefined) return Number(props.modelValue.toFixed(props.precision))
+  return props.modelValue
 })
 
 const stepSize = computed(() => {

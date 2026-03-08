@@ -233,7 +233,7 @@
             </div>
 
             <!-- Backend + Icon size -->
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-[1fr_6rem] gap-3">
               <div class="space-y-1.5">
                 <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Backend</label>
                 <div class="relative">
@@ -276,14 +276,14 @@
 
             <!-- Worldmap settings -->
             <template v-if="settingsForm.map_type === 'worldmap'">
-              <div class="grid grid-cols-3 gap-3">
+              <div class="grid grid-cols-[1fr_1fr_5rem] gap-3">
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Latitude</label>
-                  <NumberInput v-model="settingsForm.worldmap_lat" step="any" class="w-full" />
+                  <NumberInput v-model="settingsForm.worldmap_lat" step="any" :precision="10" class="w-full" />
                 </div>
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Longitude</label>
-                  <NumberInput v-model="settingsForm.worldmap_lng" step="any" class="w-full" />
+                  <NumberInput v-model="settingsForm.worldmap_lng" step="any" :precision="10" class="w-full" />
                 </div>
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Zoom</label>

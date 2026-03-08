@@ -144,8 +144,8 @@
                   class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               </div>
 
-              <div class="grid grid-cols-3 gap-3">
-                <div class="col-span-2 space-y-1.5">
+              <div class="grid grid-cols-[1fr_7rem] gap-3">
+                <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">TCP host</label>
                   <input v-model="form.host" placeholder="192.168.1.10"
                     class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
@@ -156,8 +156,8 @@
                 </div>
               </div>
 
-              <div class="grid grid-cols-3 gap-3 items-end">
-                <div class="col-span-2 space-y-1.5">
+              <div class="grid grid-cols-[1fr_7rem] gap-3 items-end">
+                <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Checkmk URL <span class="normal-case font-normal text-zinc-600">for context links</span></label>
                   <input v-model="form.checkmk_url" placeholder="http://localhost/heute"
                     class="w-full px-3.5 py-2.5 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />

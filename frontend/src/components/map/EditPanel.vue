@@ -181,15 +181,15 @@
         <!-- Position (non-line) -->
         <section v-if="selectedObject.type !== 'line'" class="p-4 space-y-2">
           <p class="section-title">Position</p>
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-[1fr_1fr_4rem] gap-2">
             <template v-if="props.mapType === 'worldmap'">
               <div class="space-y-1 col-span-1">
                 <label class="text-xs text-zinc-500">Lat</label>
-                <NumberInput v-model="editForm.lat" step="any" />
+                <NumberInput v-model="editForm.lat" step="any" :precision="10" />
               </div>
               <div class="space-y-1 col-span-1">
                 <label class="text-xs text-zinc-500">Lng</label>
-                <NumberInput v-model="editForm.lng" step="any" />
+                <NumberInput v-model="editForm.lng" step="any" :precision="10" />
               </div>
             </template>
             <template v-else>
@@ -267,7 +267,7 @@
           </div>
           <div class="space-y-1">
             <label class="text-xs text-zinc-500">Size</label>
-            <NumberInput v-model="editForm.icon_size" min="1" max="512" placeholder="map default" />
+            <NumberInput v-model="editForm.icon_size" min="1" max="512" placeholder="default" class="w-24" />
           </div>
           <template v-if="editForm.view_type === 'gadget'">
             <div class="space-y-1">
