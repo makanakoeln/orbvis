@@ -175,7 +175,7 @@ BACKENDS_FILE=$BACKENDS_FILE
 DATABASE_URL=sqlite+aiosqlite:///$DB_FILE
 SECRET_KEY=$SECRET_KEY
 STATE_REFRESH_INTERVAL=15
-ALLOWED_ORIGINS=http://localhost,http://localhost:80
+ALLOWED_ORIGINS=["http://localhost","http://localhost:80"]
 EOF
   sudo chown "$SERVICE_USER:$SERVICE_USER" "$ENV_FILE"
   sudo chmod 600 "$ENV_FILE"
