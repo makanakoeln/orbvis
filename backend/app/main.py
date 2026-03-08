@@ -65,6 +65,7 @@ async def _seed_default_roles() -> None:
             "permissions": [
                 {"mod": "map", "act": "view", "obj": "*"},
                 {"mod": "map", "act": "edit", "obj": "*"},
+                {"mod": "user", "act": "edit", "obj": "*"},
             ],
         },
         {
@@ -124,7 +125,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Load and activate all persisted backend configs
     backend_service.activate_all()
 
-    await _ensure_admin_user()
+    # In SSO/CMK mode authentication is handled externally — no local admin needed
+    if not settings.checkmk_omd_root:
+        await _ensure_admin_user()
     await _seed_default_roles()
 
     yield

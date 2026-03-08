@@ -70,16 +70,16 @@ if [[ "$ACTION" == "remove" ]]; then
 
   echo "    Removing files..."
   sudo rm -f  "$APACHE_CONF" "$INIT_SCRIPT" "$SNAPIN_FILE"
-  sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR"
-  # Keep maps/, .env, backends.json, orbvis.db – user data
+  sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$DB_FILE" "$ENV_FILE" "$BACKENDS_FILE"
+  # Maps are kept — remove manually if no longer needed
 
   echo "    Reloading Apache..."
   sudo omd reload "$SITE" apache
 
   echo ""
   echo "Done. OrbVis has been removed from site '$SITE'."
-  echo "Map data, database and config files were kept in: $ORBVIS_DIR"
-  echo "To also remove those, run: sudo rm -rf $ORBVIS_DIR"
+  echo "Map files were kept in: $MAPS_DIR"
+  echo "To also remove those, run: sudo rm -rf $MAPS_DIR"
   exit 0
 fi
 
