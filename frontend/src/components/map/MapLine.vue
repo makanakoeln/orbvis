@@ -14,8 +14,9 @@
     <!-- Weathermap line -->
     <template v-if="isWeathermap">
       <defs>
-        <linearGradient :id="gradientId" x1="0%" y1="0%" x2="100%" y2="0%"
-          :gradientTransform="`rotate(${lineAngle}, 0.5, 0.5)`">
+        <linearGradient :id="gradientId"
+          gradientUnits="userSpaceOnUse"
+          :x1="x1" :y1="y1" :x2="x2" :y2="y2">
           <stop offset="0%" :stop-color="wmColor" />
           <stop offset="100%" :stop-color="wmColor" stop-opacity="0.6" />
         </linearGradient>
@@ -139,10 +140,6 @@ function arrowPoints(tx: number, ty: number, fx: number, fy: number): string {
 
 // Weathermap
 const gradientId = computed(() => `wm-grad-${props.object.id}`)
-const lineAngle = computed(() => {
-  const dx = x2.value - x1.value, dy = y2.value - y1.value
-  return (Math.atan2(dy, dx) * 180) / Math.PI
-})
 
 const wmMetrics = computed(() => parsePerfData(props.state?.perf_data ?? ''))
 const wmMetric  = computed(() => getMetric(wmMetrics.value, props.object.extra?.weathermap_metric as string))

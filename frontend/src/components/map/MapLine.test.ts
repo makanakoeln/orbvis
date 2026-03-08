@@ -1,0 +1,71 @@
+import { describe, it, expect } from 'vitest'
+import { mount } from '@vue/test-utils'
+import MapLine from './MapLine.vue'
+import type { MapObject, ObjectState } from '@/types/api'
+
+function makeLineObject(overrides: Partial<MapObject> = {}): MapObject {
+  return {
+    id: 'line_1',
+    type: 'line',
+    x: 100, y: 100,
+    line_type: 10,
+    view_type: 'line',
+    label_show: false,
+    label_x: 0, label_y: 0, label_size: 10, label_color: '#fff', label_background: 'transparent',
+    url_target: '_blank', z: 1,
+    extra: { x2: 250, y2: 100 },
+    ...overrides,
+  }
+}
+
+const noState: ObjectState = {
+  object_id: 'line_1', type: 'host', state: 'UP',
+  output: '', perf_data: '', acknowledged: false, in_downtime: false, stale: false,
+}
+
+describe('MapLine – weathermap gradient', () => {
+  it('renders a <defs> linearGradient when line_type is 20', () => {
+    const wrapper = mount(MapLine, {
+      props: { object: makeLineObject({ line_type: 20 }), state: noState, editMode: false },
+    })
+    expect(wrapper.find('defs').exists()).toBe(true)
+    expect(wrapper.find('linearGradient').exists()).toBe(true)
+  })
+
+  it('uses gradientUnits="userSpaceOnUse" (not objectBoundingBox)', () => {
+    const wrapper = mount(MapLine, {
+      props: { object: makeLineObject({ line_type: 20 }), state: noState, editMode: false },
+    })
+    const grad = wrapper.find('linearGradient')
+    expect(grad.attributes('gradientunits')).toBe('userSpaceOnUse')
+  })
+
+  it('binds gradient x1/y1/x2/y2 to line start/end coordinates', () => {
+    const obj = makeLineObject({ line_type: 20, x: 50, y: 80, extra: { x2: 300, y2: 200 } })
+    const wrapper = mount(MapLine, {
+      props: { object: obj, state: noState, editMode: false },
+    })
+    const grad = wrapper.find('linearGradient')
+    expect(grad.attributes('x1')).toBe('50')
+    expect(grad.attributes('y1')).toBe('80')
+    expect(grad.attributes('x2')).toBe('300')
+    expect(grad.attributes('y2')).toBe('200')
+  })
+
+  it('gradient id matches the stroke url() reference', () => {
+    const wrapper = mount(MapLine, {
+      props: { object: makeLineObject({ line_type: 20 }), state: noState, editMode: false },
+    })
+    const gradId = wrapper.find('linearGradient').attributes('id')
+    const lineStroke = wrapper.findAll('line').find(l => l.attributes('stroke')?.startsWith('url('))
+    expect(lineStroke).toBeDefined()
+    expect(lineStroke!.attributes('stroke')).toBe(`url(#${gradId})`)
+  })
+
+  it('does not render a <defs> for non-weathermap lines', () => {
+    const wrapper = mount(MapLine, {
+      props: { object: makeLineObject({ line_type: 10 }), state: noState, editMode: false },
+    })
+    expect(wrapper.find('defs').exists()).toBe(false)
+  })
+})
