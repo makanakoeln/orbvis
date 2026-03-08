@@ -11,6 +11,7 @@ import type {
   TokenResponse,
   UserRead,
   RoleRead,
+  PermissionRead,
 } from '@/types/api'
 
 // import.meta.env.BASE_URL is '/' in dev and '/heute/orbvis/' when built with --base
@@ -160,6 +161,15 @@ export const rolesApi = {
 
   delete: (id: number, token: string): Promise<void> =>
     request(`/roles/${id}`, { method: 'DELETE' }, token),
+
+  createPermission: (mod: string, act: string, obj: string, token: string): Promise<PermissionRead> =>
+    request('/roles/permissions/', { method: 'POST', body: JSON.stringify({ mod, act, obj }) }, token),
+
+  assignPermission: (roleId: number, permId: number, token: string): Promise<RoleRead> =>
+    request(`/roles/${roleId}/permissions/${permId}`, { method: 'POST' }, token),
+
+  removePermission: (roleId: number, permId: number, token: string): Promise<void> =>
+    request(`/roles/${roleId}/permissions/${permId}`, { method: 'DELETE' }, token),
 }
 
 // ---- Backends ----

@@ -42,10 +42,16 @@
             </div>
             <p v-else class="text-xs text-zinc-600 mt-2">No permissions assigned</p>
           </div>
-          <button @click="deleteRole(role.role_id)"
-            class="text-xs text-zinc-600 hover:text-red-400 transition-colors shrink-0 px-2 py-1">
-            Delete
-          </button>
+          <div class="flex items-center gap-3 shrink-0">
+            <button @click="openEdit(role)"
+              class="text-xs text-zinc-500 hover:text-indigo-400 transition-colors px-2 py-1">
+              Edit
+            </button>
+            <button @click="deleteRole(role.role_id)"
+              class="text-xs text-zinc-600 hover:text-red-400 transition-colors px-2 py-1">
+              Delete
+            </button>
+          </div>
         </div>
       </div>
 
@@ -82,11 +88,79 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Edit permissions dialog -->
+    <Teleport to="body">
+      <div v-if="editRole" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="editRole = null" />
+        <div class="relative bg-zinc-900 ring-1 ring-white/10 shadow-2xl shadow-black/50 rounded-2xl p-6 w-[28rem] max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="text-base font-bold text-zinc-100">
+              Permissions –
+              <span class="text-indigo-400">{{ editRole.name }}</span>
+            </h3>
+            <button @click="editRole = null"
+              class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-all">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+
+          <!-- Current permissions -->
+          <div class="mb-5">
+            <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Assigned</p>
+            <div v-if="editRole.permissions.length" class="space-y-1.5">
+              <div v-for="perm in editRole.permissions" :key="perm.perm_id"
+                class="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg">
+                <span class="text-xs font-mono text-zinc-300">{{ perm.mod }}/{{ perm.act }}/{{ perm.obj }}</span>
+                <button @click="removePerm(perm.perm_id)" :disabled="permSaving"
+                  class="text-zinc-600 hover:text-red-400 transition-colors shrink-0">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <p v-else class="text-xs text-zinc-600">No permissions assigned yet</p>
+          </div>
+
+          <!-- Add permission form -->
+          <div class="border-t border-white/5 pt-5">
+            <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Add Permission</p>
+            <form @submit.prevent="addPerm" class="space-y-3">
+              <div class="space-y-1.5">
+                <label class="text-xs text-zinc-500">Preset</label>
+                <select v-model="permPreset" @change="applyPreset"
+                  class="w-full px-3 py-2 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  style="background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a1a1aa' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E&quot;); background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1rem; padding-right: 2rem;">
+                  <option value="">— choose a preset —</option>
+                  <option value="map:view:*">View all maps</option>
+                  <option value="map:edit:*">Edit all maps (settings & objects)</option>
+                  <option value="map:view:custom">View a specific map…</option>
+                  <option value="map:edit:custom">Edit a specific map…</option>
+                </select>
+              </div>
+              <div v-if="needsMapName" class="space-y-1">
+                <label class="text-xs text-zinc-500">Map name</label>
+                <input v-model="newPerm.obj" placeholder="my-map" required
+                  class="w-full px-2.5 py-2 bg-zinc-800 ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-100 placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+              </div>
+              <p v-if="permError" class="text-red-400 text-xs">{{ permError }}</p>
+              <div class="flex justify-end">
+                <button type="submit" :disabled="permSaving || !permPreset"
+                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all">
+                  {{ permSaving ? 'Adding…' : 'Add' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { rolesApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { RoleRead } from '@/types/api'
@@ -96,6 +170,19 @@ const roles = ref<RoleRead[]>([])
 const loading = ref(false)
 const showCreate = ref(false)
 const newRoleName = ref('')
+
+const editRole = ref<RoleRead | null>(null)
+const newPerm = ref({ mod: '', act: '', obj: '*' })
+const permSaving = ref(false)
+const permError = ref('')
+const permPreset = ref('')
+const needsMapName = computed(() => permPreset.value.endsWith(':custom'))
+
+function applyPreset() {
+  if (!permPreset.value || permPreset.value.endsWith(':custom')) return
+  const [mod, act, obj] = permPreset.value.split(':')
+  newPerm.value = { mod, act, obj }
+}
 
 async function fetchRoles() {
   loading.value = true
@@ -117,6 +204,53 @@ async function deleteRole(id: number) {
   if (!confirm('Delete this role?')) return
   await rolesApi.delete(id, auth.accessToken!)
   await fetchRoles()
+}
+
+function openEdit(role: RoleRead) {
+  editRole.value = { ...role, permissions: [...role.permissions] }
+  newPerm.value = { mod: '', act: '', obj: '*' }
+  permPreset.value = ''
+  permError.value = ''
+}
+
+async function addPerm() {
+  if (!editRole.value) return
+  permError.value = ''
+  permSaving.value = true
+  try {
+    let mod = newPerm.value.mod
+    let act = newPerm.value.act
+    let obj = newPerm.value.obj || '*'
+    if (permPreset.value && !permPreset.value.endsWith(':custom')) {
+      const parts = permPreset.value.split(':')
+      mod = parts[0]; act = parts[1]; obj = parts[2]
+    }
+    const perm = await rolesApi.createPermission(mod, act, obj, auth.accessToken!)
+    const updated = await rolesApi.assignPermission(editRole.value.role_id, perm.perm_id, auth.accessToken!)
+    editRole.value = updated
+    const idx = roles.value.findIndex(r => r.role_id === updated.role_id)
+    if (idx !== -1) roles.value[idx] = updated
+    permPreset.value = ''
+    newPerm.value = { mod: '', act: '', obj: '*' }
+  } catch (e: unknown) {
+    permError.value = e instanceof Error ? e.message : 'Failed to add permission'
+  } finally {
+    permSaving.value = false
+  }
+}
+
+async function removePerm(permId: number) {
+  if (!editRole.value) return
+  permSaving.value = true
+  try {
+    await rolesApi.removePermission(editRole.value.role_id, permId, auth.accessToken!)
+    editRole.value.permissions = editRole.value.permissions.filter(p => p.perm_id !== permId)
+    // sync in list
+    const idx = roles.value.findIndex(r => r.role_id === editRole.value!.role_id)
+    if (idx !== -1) roles.value[idx] = { ...editRole.value }
+  } finally {
+    permSaving.value = false
+  }
 }
 
 onMounted(fetchRoles)

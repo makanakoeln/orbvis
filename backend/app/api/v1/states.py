@@ -15,7 +15,7 @@ from fastapi import (
 )
 from jose import JWTError
 
-from app.api.v1.deps import get_current_user
+from app.api.v1.deps import get_current_user, user_has_permission
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.security import decode_token
@@ -67,15 +67,7 @@ async def websocket_map_states(
     websocket: WebSocket,
     token: str | None = Query(default=None),
 ) -> None:
-    """WebSocket endpoint: streams state updates for a map.
-
-    Authentication: pass the JWT access token as ?token=<token> query parameter
-    (Authorization header is not available after the WebSocket upgrade handshake).
-
-    A short-lived DB session is used only for the auth check and closed immediately
-    afterwards; the session is NOT held open for the lifetime of the connection.
-    """
-    # --- Authenticate ---
+    """WebSocket endpoint: streams state updates for a map."""
     if not token:
         await websocket.close(code=4001)
         return
@@ -88,19 +80,15 @@ async def websocket_map_states(
         await websocket.close(code=4001)
         return
 
-    # Use an explicit short-lived session rather than Depends(get_db).
-    # Depends(get_db) would hold the connection open until the endpoint returns,
-    # which for WebSockets means until the client disconnects – potentially hours.
     async with AsyncSessionLocal() as db:
         user = await get_user_by_id(db, user_id)
-        user_valid = user is not None and user.is_active
-    # DB session is closed here; no connection held for the WS lifetime.
+        if user is None or not user.is_active:
+            await websocket.close(code=4001)
+            return
+        if not user_has_permission(user, "map", "view", name):
+            await websocket.close(code=4003)
+            return
 
-    if not user_valid:
-        await websocket.close(code=4001)
-        return
-
-    # --- Check map exists ---
     cfg = map_service.get_map(name)
     if cfg is None:
         await websocket.close(code=4004)
@@ -108,15 +96,13 @@ async def websocket_map_states(
 
     await manager.connect(name, websocket)
 
-    # Start the shared broadcast task if it is not already running for this map.
     if name not in _broadcast_tasks or _broadcast_tasks[name].done():
         _broadcast_tasks[name] = asyncio.create_task(_broadcast_loop(name))
 
-    # Hold the connection open until the client disconnects.
     try:
         while True:
-            await websocket.receive()  # any message; we only care about disconnect
+            await websocket.receive()
     except Exception:
-        pass  # WebSocketDisconnect, RuntimeError, or other protocol error
+        pass
     finally:
         manager.disconnect(name, websocket)

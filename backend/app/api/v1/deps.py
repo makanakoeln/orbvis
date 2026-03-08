@@ -42,3 +42,14 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return current_user
+
+
+def user_has_permission(user: User, mod: str, act: str, obj: str) -> bool:
+    """Return True if user is admin OR has the requested permission via any role."""
+    if user.is_admin:
+        return True
+    for role in user.roles:
+        for perm in role.permissions:
+            if perm.mod == mod and perm.act == act and (perm.obj == "*" or perm.obj == obj):
+                return True
+    return False

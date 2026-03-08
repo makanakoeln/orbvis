@@ -51,6 +51,61 @@ async def _ensure_admin_user() -> None:
             print(f"{sep}\n", flush=True)
 
 
+async def _seed_default_roles() -> None:
+    """Create default roles with permissions idempotently on startup."""
+    from sqlalchemy import select
+
+    from app.models.permission import Permission
+    from app.models.role import Role
+
+    defaults = [
+        {
+            "name": "Administrators",
+            "permissions": [
+                {"mod": "map", "act": "view", "obj": "*"},
+                {"mod": "map", "act": "edit", "obj": "*"},
+            ],
+        },
+        {
+            "name": "Viewers",
+            "permissions": [
+                {"mod": "map", "act": "view", "obj": "*"},
+            ],
+        },
+    ]
+
+    async with AsyncSessionLocal() as db:
+        for role_def in defaults:
+            result = await db.execute(select(Role).where(Role.name == role_def["name"]))
+            role = result.scalar_one_or_none()
+            if role is None:
+                role = Role(name=role_def["name"])
+                db.add(role)
+                await db.flush()
+                await db.refresh(role)
+
+            for p in role_def["permissions"]:
+                perm_result = await db.execute(
+                    select(Permission).where(
+                        Permission.mod == p["mod"],
+                        Permission.act == p["act"],
+                        Permission.obj == p["obj"],
+                    )
+                )
+                perm = perm_result.scalar_one_or_none()
+                if perm is None:
+                    perm = Permission(mod=p["mod"], act=p["act"], obj=p["obj"])
+                    db.add(perm)
+                    await db.flush()
+                    await db.refresh(perm)
+
+                if perm not in role.permissions:
+                    role.permissions.append(perm)
+
+        await db.commit()
+    logger.info("Default roles seeded.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: startup and shutdown."""
@@ -69,6 +124,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     backend_service.activate_all()
 
     await _ensure_admin_user()
+    await _seed_default_roles()
 
     yield
     logger.info("Shutting down OrbVis backend.")

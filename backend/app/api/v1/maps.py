@@ -10,7 +10,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 
-from app.api.v1.deps import get_current_user, require_admin
+from app.api.v1.deps import get_current_user, require_admin, user_has_permission
 from app.core.config import settings
 from app.models.user import User
 from app.schemas.map import MapConfig, MapCreate, MapObject, MapRead, MapUpdate
@@ -43,9 +43,22 @@ def _is_valid_image(content: bytes) -> bool:
     return False
 
 
+def _require_map_view(name: str, user: User) -> None:
+    if not user_has_permission(user, "map", "view", name):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No view permission for this map")
+
+
+def _require_map_edit(name: str, user: User) -> None:
+    if not user_has_permission(user, "map", "edit", name):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No edit permission for this map")
+
+
 @router.get("", response_model=list[MapRead])
-async def list_maps(_: User = Depends(get_current_user)) -> list[MapRead]:
-    return map_service.list_maps()
+async def list_maps(current_user: User = Depends(get_current_user)) -> list[MapRead]:
+    all_maps = map_service.list_maps()
+    if current_user.is_admin:
+        return all_maps
+    return [m for m in all_maps if user_has_permission(current_user, "map", "view", m.name)]
 
 
 @router.post("", response_model=MapConfig, status_code=status.HTTP_201_CREATED)
@@ -59,7 +72,8 @@ async def create_map(
 
 
 @router.get("/{name}", response_model=MapConfig)
-async def get_map(name: str, _: User = Depends(get_current_user)) -> MapConfig:
+async def get_map(name: str, current_user: User = Depends(get_current_user)) -> MapConfig:
+    _require_map_view(name, current_user)
     cfg = map_service.get_map(name)
     if cfg is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
@@ -68,8 +82,9 @@ async def get_map(name: str, _: User = Depends(get_current_user)) -> MapConfig:
 
 @router.put("/{name}", response_model=MapConfig)
 async def update_map(
-    name: str, data: MapUpdate, _: User = Depends(require_admin)
+    name: str, data: MapUpdate, current_user: User = Depends(get_current_user)
 ) -> MapConfig:
+    _require_map_edit(name, current_user)
     cfg = map_service.update_map(name, data)
     if cfg is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
@@ -88,8 +103,9 @@ async def delete_map(name: str, _: User = Depends(require_admin)) -> None:
 async def upload_background(
     name: str,
     file: UploadFile = File(...),
-    _: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ) -> JSONResponse:
+    _require_map_edit(name, current_user)
     if map_service.get_map(name) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
     if file.content_type not in _ALLOWED_IMAGE_TYPES:
@@ -116,9 +132,6 @@ async def upload_background(
     filename = f"{name}{suffix}"
     dest = bg_dir / filename
 
-    # Write atomically to avoid a partially-written file on error or concurrent upload.
-    # fd is closed in its own finally block so a failure in replace() doesn't cause
-    # a double-close (EBADF) that would mask the original exception.
     fd, tmp_path = tempfile.mkstemp(dir=bg_dir, prefix=f"{name}.", suffix=suffix)
     try:
         try:
@@ -130,9 +143,7 @@ async def upload_background(
         Path(tmp_path).unlink(missing_ok=True)
         raise
 
-    # Update map globals with the new filename
     map_service.update_map(name, MapUpdate(background_image=filename))
-
     return JSONResponse({"filename": filename})
 
 
@@ -140,8 +151,9 @@ async def upload_background(
 
 @router.post("/{name}/objects", response_model=MapConfig, status_code=status.HTTP_201_CREATED)
 async def add_object(
-    name: str, obj: MapObject, _: User = Depends(require_admin)
+    name: str, obj: MapObject, current_user: User = Depends(get_current_user)
 ) -> MapConfig:
+    _require_map_edit(name, current_user)
     try:
         cfg = map_service.add_object(name, obj)
     except ValueError as exc:
@@ -153,8 +165,9 @@ async def add_object(
 
 @router.put("/{name}/objects/{obj_id}", response_model=MapObject)
 async def update_object(
-    name: str, obj_id: str, updates: dict[str, Any], _: User = Depends(require_admin)
+    name: str, obj_id: str, updates: dict[str, Any], current_user: User = Depends(get_current_user)
 ) -> MapObject:
+    _require_map_edit(name, current_user)
     obj = map_service.update_object(name, obj_id, updates)
     if obj is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Object not found")
@@ -163,7 +176,8 @@ async def update_object(
 
 @router.delete("/{name}/objects/{obj_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_object(
-    name: str, obj_id: str, _: User = Depends(require_admin)
+    name: str, obj_id: str, current_user: User = Depends(get_current_user)
 ) -> None:
+    _require_map_edit(name, current_user)
     if not map_service.delete_object(name, obj_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Object not found")
