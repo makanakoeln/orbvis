@@ -14,6 +14,7 @@ class UserBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     is_active: bool = True
     is_admin: bool = False
+    must_change_password: bool = False
 
 
 class UserCreate(UserBase):
@@ -25,6 +26,7 @@ class UserUpdate(BaseModel):
     password: str | None = Field(None, min_length=6)
     is_active: bool | None = None
     is_admin: bool | None = None
+    must_change_password: bool | None = None
 
 
 class UserRead(UserBase):

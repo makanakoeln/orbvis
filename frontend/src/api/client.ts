@@ -138,7 +138,7 @@ export const usersApi = {
     request(`/users/${id}`, {}, token),
 
   create: (
-    data: { name: string; password: string; is_admin?: boolean },
+    data: { name: string; password: string; is_admin?: boolean; must_change_password?: boolean },
     token: string,
   ): Promise<UserRead> =>
     request('/users', { method: 'POST', body: JSON.stringify(data) }, token),

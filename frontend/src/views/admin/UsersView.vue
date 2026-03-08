@@ -67,11 +67,17 @@
               <span v-else class="text-zinc-700">—</span>
             </td>
             <td class="px-4 py-3 text-right">
-              <button
-                v-if="user.user_id !== auth.user?.user_id"
-                @click="deleteUser(user.user_id)"
-                class="text-xs text-zinc-600 hover:text-red-400 transition-colors"
-              >Delete</button>
+              <div class="flex items-center justify-end gap-3">
+                <button @click="editPw = user"
+                  class="text-xs text-zinc-500 hover:text-indigo-400 transition-colors">
+                  Change password
+                </button>
+                <button
+                  v-if="user.user_id !== auth.user?.user_id"
+                  @click="deleteUser(user.user_id)"
+                  class="text-xs text-zinc-600 hover:text-red-400 transition-colors"
+                >Delete</button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -105,6 +111,10 @@
               <input type="checkbox" v-model="newUser.is_admin" class="rounded accent-indigo-500 w-4 h-4" />
               <span>Administrator</span>
             </label>
+            <label class="flex items-center gap-2.5 text-sm text-zinc-400 cursor-pointer select-none">
+              <input type="checkbox" v-model="newUser.must_change_password" class="rounded accent-indigo-500 w-4 h-4" />
+              <span>Must change password on next login</span>
+            </label>
             <div class="flex gap-3 justify-end pt-2 border-t border-white/5">
               <button type="button" @click="showCreate = false"
                 class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all">Cancel</button>
@@ -115,6 +125,13 @@
         </div>
       </div>
     </Teleport>
+
+    <ChangePasswordModal
+      v-if="editPw"
+      :user-id="editPw.user_id"
+      :user-name="editPw.name"
+      @close="editPw = null"
+    />
   </div>
 </template>
 
@@ -123,12 +140,14 @@ import { ref, onMounted } from 'vue'
 import { usersApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { UserRead } from '@/types/api'
+import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
 
 const auth = useAuthStore()
 const users = ref<UserRead[]>([])
 const loading = ref(false)
 const showCreate = ref(false)
-const newUser = ref({ name: '', password: '', is_admin: false })
+const newUser = ref({ name: '', password: '', is_admin: false, must_change_password: false })
+const editPw = ref<UserRead | null>(null)
 
 async function fetchUsers() {
   loading.value = true
@@ -142,7 +161,7 @@ async function fetchUsers() {
 async function createUser() {
   await usersApi.create(newUser.value, auth.accessToken!)
   showCreate.value = false
-  newUser.value = { name: '', password: '', is_admin: false }
+  newUser.value = { name: '', password: '', is_admin: false, must_change_password: false }
   await fetchUsers()
 }
 

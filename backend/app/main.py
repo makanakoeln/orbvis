@@ -38,6 +38,7 @@ async def _ensure_admin_user() -> None:
                 password=hash_password(password),
                 is_active=True,
                 is_admin=True,
+                must_change_password=True,
             )
             db.add(admin)
             await db.commit()

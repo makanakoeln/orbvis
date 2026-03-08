@@ -113,6 +113,7 @@ export interface UserRead {
   name: string
   is_active: boolean
   is_admin: boolean
+  must_change_password: boolean
   roles: RoleRef[]
 }
 

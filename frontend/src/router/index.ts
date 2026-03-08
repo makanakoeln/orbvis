@@ -53,6 +53,12 @@ const router = createRouter({
         },
       ],
     },
+    {
+      path: '/change-password',
+      name: 'change-password',
+      component: () => import('@/views/ChangePasswordView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 
@@ -65,6 +71,9 @@ router.beforeEach(async (to) => {
   }
   if (to.meta.requiresAdmin && !auth.isAdmin) {
     return { name: 'home' }
+  }
+  if (auth.isAuthenticated && auth.user?.must_change_password && to.name !== 'change-password') {
+    return { name: 'change-password' }
   }
   if (to.name === 'login' && auth.isAuthenticated) {
     return { name: 'home' }

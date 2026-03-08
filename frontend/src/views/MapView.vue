@@ -54,11 +54,25 @@
 
         <template v-if="!auth.ssoActive">
           <span class="w-px h-4 bg-zinc-700" />
+          <button @click="showChangePw = true"
+            class="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all duration-150"
+            title="Change password">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+            </svg>
+          </button>
           <button @click="auth.logout"
             class="px-3 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 transition-all duration-150">
             Logout
           </button>
         </template>
+
+        <ChangePasswordModal
+          v-if="showChangePw && auth.user"
+          :user-id="auth.user.user_id"
+          :user-name="auth.user.name"
+          @close="showChangePw = false"
+        />
       </div>
     </nav>
 
@@ -346,6 +360,7 @@ import AutomapCanvas from '@/components/map/AutomapCanvas.vue'
 import EditPanel from '@/components/map/EditPanel.vue'
 import ObjectPropertiesModal from '@/components/map/ObjectPropertiesModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
 import type { MapObject } from '@/types/api'
 
 type LineDragMode = 'move' | 'start' | 'end'
@@ -549,6 +564,7 @@ async function onSaveProperties(updates: Record<string, unknown>) {
 // ---- Map Settings ----
 
 const showSettings = ref(false)
+const showChangePw = ref(false)
 const settingsSaving = ref(false)
 const uploadError = ref('')
 const uploadOk = ref(false)

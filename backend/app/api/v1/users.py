@@ -71,6 +71,9 @@ async def update_user(
     update_data = data.model_dump(exclude_none=True)
     if "password" in update_data:
         update_data["password"] = hash_password(update_data.pop("password"))
+    # When password is changed, clear the force-change flag automatically
+    if "password" in update_data:
+        update_data["must_change_password"] = False
     # Non-admins cannot change admin flag
     if not current_user.is_admin:
         update_data.pop("is_admin", None)
