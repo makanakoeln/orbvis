@@ -137,6 +137,7 @@
                   <option value="map:edit:*">Edit all maps (settings & objects)</option>
                   <option value="map:view:custom">View a specific map…</option>
                   <option value="map:edit:custom">Edit a specific map…</option>
+                  <option value="user:edit:*">Change any user's password (user/edit/*)</option>
                 </select>
               </div>
               <div v-if="needsMapName" class="space-y-1">

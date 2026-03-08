@@ -64,6 +64,15 @@ async def update_user(
 ) -> UserRead:
     if not current_user.is_admin and current_user.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    # Changing another user's password requires explicit user/edit permission
+    # (is_admin alone is not sufficient — role must be explicitly assigned)
+    if "password" in (data.model_dump(exclude_none=True)) and current_user.user_id != user_id:
+        from app.api.v1.deps import user_has_explicit_permission
+        if not user_has_explicit_permission(current_user, "user", "edit", "*"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="user/edit/* permission required to change another user's password",
+            )
     user = await get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

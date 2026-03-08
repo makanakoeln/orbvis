@@ -68,7 +68,8 @@
             </td>
             <td class="px-4 py-3 text-right">
               <div class="flex items-center justify-end gap-3">
-                <button @click="editPw = user"
+                <button v-if="canEditUsers && user.user_id !== auth.user?.user_id"
+                  @click="editPw = user"
                   class="text-xs text-zinc-500 hover:text-indigo-400 transition-colors">
                   Change password
                 </button>
@@ -136,7 +137,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { usersApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { UserRead } from '@/types/api'
@@ -148,6 +149,9 @@ const loading = ref(false)
 const showCreate = ref(false)
 const newUser = ref({ name: '', password: '', is_admin: false, must_change_password: false })
 const editPw = ref<UserRead | null>(null)
+const canEditUsers = computed(() =>
+  auth.user?.permissions?.some(p => p.mod === 'user' && p.act === 'edit' && p.obj === '*') ?? false
+)
 
 async function fetchUsers() {
   loading.value = true

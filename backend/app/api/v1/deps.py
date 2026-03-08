@@ -53,3 +53,13 @@ def user_has_permission(user: User, mod: str, act: str, obj: str) -> bool:
             if perm.mod == mod and perm.act == act and (perm.obj == "*" or perm.obj == obj):
                 return True
     return False
+
+
+def user_has_explicit_permission(user: User, mod: str, act: str, obj: str) -> bool:
+    """Check permission via roles only — does NOT auto-grant for is_admin.
+    Use this for sensitive operations where explicit role assignment is required."""
+    for role in user.roles:
+        for perm in role.permissions:
+            if perm.mod == mod and perm.act == act and (perm.obj == "*" or perm.obj == obj):
+                return True
+    return False

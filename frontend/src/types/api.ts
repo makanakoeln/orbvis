@@ -108,6 +108,13 @@ export interface TokenResponse {
   token_type: string
 }
 
+export interface PermissionRef {
+  perm_id: number
+  mod: string
+  act: string
+  obj: string
+}
+
 export interface UserRead {
   user_id: number
   name: string
@@ -115,6 +122,7 @@ export interface UserRead {
   is_admin: boolean
   must_change_password: boolean
   roles: RoleRef[]
+  permissions: PermissionRef[]
 }
 
 export interface RoleRef {
