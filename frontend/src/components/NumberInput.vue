@@ -28,6 +28,7 @@
 
 <script setup lang="ts">
 import { computed, useAttrs } from 'vue'
+import type { ClassValue } from 'vue'
 
 const props = defineProps<{
   modelValue: number | null | undefined
@@ -42,10 +43,10 @@ defineOptions({ inheritAttrs: false })
 
 const attrs = useAttrs()
 
-const wrapperClass = computed(() => (attrs as Record<string, unknown>).class)
+const wrapperClass = computed<ClassValue>(() => attrs.class as ClassValue)
 
 const inputAttrs = computed(() => {
-  const { class: _, ...rest } = attrs as Record<string, unknown>
+  const { class: _, ...rest } = attrs
   return rest
 })
 
