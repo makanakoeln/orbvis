@@ -116,6 +116,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from app.services.state_service import register_backend
 
     logger.info("Starting OrbVis backend…")
+    sep = "=" * 60
+    print(f"\n{sep}", flush=True)
+    import os as _os
+    port = _os.environ.get("ORBVIS_PORT", "8082")
+    host_port = "" if port == "80" else f":{port}"
+    print("  OrbVis is starting up.", flush=True)
+    print(f"  Open in your browser: http://localhost{host_port}/orbvis", flush=True)
+    print(f"{sep}\n", flush=True)
     await init_db()
     logger.info("Database initialized.")
 

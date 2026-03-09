@@ -2,15 +2,16 @@ services:
   backend:
     build: ./backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8080:8000"
     volumes:
       - ./data/maps:/app/maps
-      - ./data/orbvis.db:/app/orbvis.db
+      - orbvis_db:/app/data
     environment:
       - MAPS_DIR=/app/maps
-      - DATABASE_URL=sqlite+aiosqlite:////app/orbvis.db
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/orbvis.db
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
-      - ALLOWED_ORIGINS=["http://localhost:3000"]
+      - ORBVIS_PORT=${ORBVIS_PORT:-8082}
+      - ALLOWED_ORIGINS=["http://localhost"]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
@@ -21,9 +22,10 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3000:80"
+      - "${ORBVIS_PORT:-8082}:80"
     depends_on:
       - backend
     restart: unless-stopped
 
-volumes: {}
+volumes:
+  orbvis_db:
