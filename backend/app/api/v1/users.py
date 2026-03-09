@@ -117,11 +117,11 @@ async def assign_role(
 ) -> UserRead:
     user = await get_user_by_id(db, user_id)
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     role_result = await db.execute(select(Role).where(Role.role_id == role_id))
     role = role_result.scalar_one_or_none()
     if role is None:
-        raise HTTPException(status_code=404, detail="Role not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     if role not in user.roles:
         user.roles.append(role)
     await db.flush()
@@ -138,5 +138,5 @@ async def remove_role(
 ) -> None:
     user = await get_user_by_id(db, user_id)
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     user.roles = [r for r in user.roles if r.role_id != role_id]

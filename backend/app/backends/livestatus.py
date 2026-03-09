@@ -160,7 +160,7 @@ class LivestatusBackend(BackendBase):
         for r in rows:
             if not r or not r[0]:
                 continue
-            parents = [p.strip() for p in r[1].split(",") if p.strip()] if len(r) > 1 else []
+            parents = [p.strip() for p in (r[1] or "").split(",") if p.strip()] if len(r) > 1 else []
             result.append({
                 "name": r[0],
                 "parents": parents,

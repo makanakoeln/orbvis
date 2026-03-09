@@ -38,6 +38,11 @@ class BackendBase(ABC):
         ...
 
     @abstractmethod
+    async def get_group_members(self, group_type: str, group_name: str) -> list[str]:
+        """Return member names for a radar filter (hostgroup/servicegroup/all_hosts/all_services)."""
+        ...
+
+    @abstractmethod
     async def get_topology(self) -> list[dict]:
         """Return host topology as [{name, parents, state, output}] for automap."""
         ...
