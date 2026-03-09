@@ -2,7 +2,7 @@ services:
   backend:
     build: ./backend
     ports:
-      - "127.0.0.1:8080:8000"
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8000"
     volumes:
       - ./data/maps:/app/maps
       - orbvis_db:/app/data
