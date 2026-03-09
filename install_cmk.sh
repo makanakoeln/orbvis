@@ -137,6 +137,7 @@ sudo "$VENV_DIR/bin/pip" install --quiet --upgrade pip
 # without needing access to the developer's home directory.
 sudo cp -r "$SCRIPT_DIR/backend/." "$ORBVIS_DIR/src/"
 sudo "$VENV_DIR/bin/pip" install --quiet "$ORBVIS_DIR/src"
+sudo "$VENV_DIR/bin/pip" install --quiet --force-reinstall --no-deps "$ORBVIS_DIR/src"
 
 # ---------------------------------------------------------------------------
 # 4. .env configuration
