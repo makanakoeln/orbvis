@@ -237,10 +237,10 @@ ENV_FILE="$ENV_FILE"
 case "\$1" in
   start)
     if [[ -f "\$PIDFILE" ]] && kill -0 "\$(cat "\$PIDFILE")" 2>/dev/null; then
-      echo "OrbVis already running (pid \$(cat "\$PIDFILE"))"
+      echo "orbvis already running (pid \$(cat "\$PIDFILE"))"
       exit 0
     fi
-    echo -n "Starting OrbVis..."
+    echo -n "Starting orbvis..."
     set -a; source "\$ENV_FILE"; set +a
     "\$VENV/bin/uvicorn" \$APP \\
       --host 127.0.0.1 --port \$PORT \\
@@ -252,11 +252,11 @@ case "\$1" in
   stop)
     if [[ -f "\$PIDFILE" ]]; then
       PID="\$(cat "\$PIDFILE")"
-      echo -n "Stopping OrbVis (pid \$PID)..."
+      echo -n "Stopping orbvis (pid \$PID)..."
       kill "\$PID" 2>/dev/null && rm -f "\$PIDFILE"
       echo " OK"
     else
-      echo "OrbVis not running"
+      echo "orbvis not running"
     fi
     ;;
   restart)
@@ -266,10 +266,10 @@ case "\$1" in
     ;;
   status)
     if [[ -f "\$PIDFILE" ]] && kill -0 "\$(cat "\$PIDFILE")" 2>/dev/null; then
-      echo "OrbVis running (pid \$(cat "\$PIDFILE"))"
+      echo "orbvis running (pid \$(cat "\$PIDFILE"))"
       exit 0
     else
-      echo "OrbVis not running"
+      echo "orbvis not running"
       exit 1
     fi
     ;;
