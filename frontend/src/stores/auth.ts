@@ -29,6 +29,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Ensures initialization runs exactly once per SPA session and is awaitable
   let _initPromise: Promise<void> | null = null
+  let _themeTimer: ReturnType<typeof setInterval> | null = null
 
   function init(): Promise<void> {
     if (!_initPromise) {
@@ -48,6 +49,9 @@ export const useAuthStore = defineStore('auth', () => {
       sessionStorage.setItem(SSO_ACTIVE_KEY, '1')
       ssoActive.value = true
       await fetchCurrentUser()
+      // Poll /me every 15 s so CMK theme changes (AJAX toggle) are picked up promptly
+      if (_themeTimer) clearInterval(_themeTimer)
+      _themeTimer = setInterval(fetchCurrentUser, 15_000)
       return
     } catch {
       // Not running behind Checkmk Apache, fall through to normal auth
@@ -125,6 +129,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     ssoActive.value = false
     _initPromise = null  // allow re-init after logout
+    if (_themeTimer) { clearInterval(_themeTimer); _themeTimer = null }
     localStorage.removeItem(ACCESS_TOKEN_KEY)
     localStorage.removeItem(REFRESH_TOKEN_KEY)
     sessionStorage.removeItem(SSO_ACTIVE_KEY)
