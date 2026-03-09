@@ -60,6 +60,9 @@ class MapGlobals(BaseModel):
     worldmap_lat: float = 51.0
     worldmap_lng: float = 10.0
     worldmap_zoom: int = 5
+    # Radar filter
+    radar_type: Literal["hostgroup", "servicegroup", "all_hosts", "all_services"] = "hostgroup"
+    radar_value: str = ""
 
 
 class MapConfig(BaseModel):
@@ -86,6 +89,8 @@ class MapUpdate(BaseModel):
     worldmap_lat: float | None = None
     worldmap_lng: float | None = None
     worldmap_zoom: int | None = None
+    radar_type: Literal["hostgroup", "servicegroup", "all_hosts", "all_services"] | None = None
+    radar_value: str | None = None
 
 
 class MapRead(BaseModel):
