@@ -2,7 +2,7 @@ services:
   backend:
     build: ./backend
     ports:
-      - "127.0.0.1:${BACKEND_PORT:-8080}:8000"
+      - "127.0.0.1:${BACKEND_PORT:-8742}:8000"
     volumes:
       - ./data/maps:/app/maps
       - orbvis_db:/app/data
@@ -22,7 +22,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "${ORBVIS_PORT:-8082}:80"
+      - "${ORBVIS_PORT:-8741}:80"
     depends_on:
       - backend
     restart: unless-stopped
