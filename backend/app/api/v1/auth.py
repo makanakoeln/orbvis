@@ -18,6 +18,7 @@ from app.schemas.user import UserRead
 from app.services.auth_service import (
     authenticate_user,
     create_tokens,
+    get_cmk_theme,
     get_or_create_sso_user,
     get_user_by_id,
     validate_checkmk_cookie,
@@ -67,7 +68,9 @@ async def refresh_token(
 
 @router.get("/me", response_model=UserRead)
 async def me(current_user: User = Depends(get_current_user)) -> UserRead:
-    return UserRead.model_validate(current_user)
+    result = UserRead.model_validate(current_user)
+    result.cmk_theme = get_cmk_theme(current_user.name)
+    return result
 
 
 @router.get("/sso", response_model=TokenResponse)

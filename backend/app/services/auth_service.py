@@ -38,6 +38,20 @@ _USERNAME_RE = re.compile(r"^[a-zA-Z0-9@._-]+$")
 _DUMMY_HASH: str = hash_password(secrets.token_hex(16))
 
 
+def get_cmk_theme(username: str) -> str | None:
+    """Return the CMK theme for a user by checking ui_theme.mk.
+
+    The file only exists when the user has explicitly selected the 'facelift'
+    (light) theme.  Absence of the file means the default dark theme is active.
+    Returns 'light', 'dark', or None when CMK_OMD_ROOT is not configured.
+    """
+    omd_root = settings.checkmk_omd_root
+    if not omd_root or not _USERNAME_RE.match(username):
+        return None
+    theme_file = pathlib.Path(omd_root) / "var" / "check_mk" / "web" / username / "ui_theme.mk"
+    return "light" if theme_file.is_file() else "dark"
+
+
 def validate_checkmk_cookie(cookie_value: str) -> str | None:
     """Validate a Checkmk auth cookie and return the username, or None if invalid.
 
@@ -62,7 +76,7 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
         secret_path = pathlib.Path(omd_root) / "etc" / "auth.secret"
         if not secret_path.is_file():
             return None
-        secret = secret_path.read_bytes()
+        secret = secret_path.read_text().strip().encode()
 
         serial_path = pathlib.Path(omd_root) / "var" / "check_mk" / "web" / username / "serial.mk"
         serial = 0
