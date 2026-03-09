@@ -52,12 +52,21 @@ if [[ -z "$NPM" ]]; then
   echo "  sudo apt install nodejs npm" >&2
   exit 1
 fi
-PYTHON3="$(command -v python3 2>/dev/null || true)"
-if [[ -z "$PYTHON3" ]]; then
-  echo "Error: python3 not found. Install Python 3.12 or newer:" >&2
-  echo "  sudo apt install python3.12 python3.12-venv" >&2
-  exit 1
+
+# Prefer the OMD site's own Python (correct permissions, correct version).
+# Avoids issues where the system python3 is a wrapper (bazel, pyenv, conda, …)
+# whose symlink targets are inaccessible to the site user.
+if [[ -x "$SITE_ROOT/bin/python3" ]]; then
+  PYTHON3="$SITE_ROOT/bin/python3"
+else
+  PYTHON3="$(command -v python3 2>/dev/null || true)"
+  if [[ -z "$PYTHON3" ]]; then
+    echo "Error: python3 not found. Install Python 3.12 or newer:" >&2
+    echo "  sudo apt install python3.12 python3.12-venv" >&2
+    exit 1
+  fi
 fi
+echo "    Using Python: $PYTHON3"
 
 # ---------------------------------------------------------------------------
 # REMOVE
@@ -69,8 +78,8 @@ if [[ "$ACTION" == "remove" ]]; then
   sudo -u "$SITE" omd stop orbvis 2>/dev/null || true
 
   echo "    Removing files..."
-  sudo rm -f  "$APACHE_CONF" "$INIT_SCRIPT" "$SNAPIN_FILE"
-  sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$DB_FILE" "$ENV_FILE" "$BACKENDS_FILE"
+  sudo rm -f  "$APACHE_CONF" "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis" "$SNAPIN_FILE"
+  sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$DB_FILE" "$ENV_FILE" "$BACKENDS_FILE"
   # Maps are kept — remove manually if no longer needed
 
   echo "    Reloading Apache..."
@@ -118,11 +127,16 @@ echo "==> Setting up Python virtualenv..."
 if sudo test -d "$VENV_DIR"; then
   echo "    Virtualenv already exists, skipping creation."
 else
-  sudo "$PYTHON3" -m venv "$VENV_DIR"
+  # --copies: avoids symlinks into the original Python prefix (important when
+  # python3 is a wrapper/bazel binary whose real path is user-specific).
+  sudo "$PYTHON3" -m venv --copies "$VENV_DIR"
 fi
 echo "==> Installing backend dependencies..."
 sudo "$VENV_DIR/bin/pip" install --quiet --upgrade pip
-sudo "$VENV_DIR/bin/pip" install --quiet -e "$SCRIPT_DIR/backend"
+# Copy backend source into the site directory so the site user can import it
+# without needing access to the developer's home directory.
+sudo cp -r "$SCRIPT_DIR/backend/." "$ORBVIS_DIR/src/"
+sudo "$VENV_DIR/bin/pip" install --quiet "$ORBVIS_DIR/src"
 
 # ---------------------------------------------------------------------------
 # 4. .env configuration
@@ -266,6 +280,10 @@ esac
 EOF
 sudo chmod +x "$INIT_SCRIPT"
 
+# rc.d symlink – required for omd status/start/stop to recognise the service
+RC_LINK="$SITE_ROOT/etc/rc.d/85-orbvis"
+sudo ln -sf "$INIT_SCRIPT" "$RC_LINK"
+
 # ---------------------------------------------------------------------------
 # 8. cmk sidebar snapin
 # ---------------------------------------------------------------------------
@@ -356,6 +374,10 @@ echo "==> Reloading Apache..."
 sudo omd reload "$SITE" apache
 
 echo "==> Starting OrbVis backend..."
+# cd to a neutral directory before switching to the site user —
+# omd restores the cwd after chdir() and the site user has no access to
+# the developer's working directory (e.g. /home/…/frontend).
+cd /tmp
 sudo -u "$SITE" omd start orbvis
 
 HOST="$(hostname -f 2>/dev/null || hostname)"
