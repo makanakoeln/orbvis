@@ -48,8 +48,14 @@ INIT_SCRIPT="$SITE_ROOT/etc/init.d/orbvis"
 # Check required tools
 NPM="$(command -v npm 2>/dev/null || true)"
 if [[ -z "$NPM" ]]; then
-  echo "Error: npm not found. Install Node.js:" >&2
+  echo "Error: npm not found. Install Node.js >= 18:" >&2
   echo "  sudo apt install nodejs npm" >&2
+  exit 1
+fi
+NODE_MAJOR="$(node --version 2>/dev/null | sed 's/v\([0-9]*\).*/\1/')"
+if [[ -z "$NODE_MAJOR" ]] || [[ "$NODE_MAJOR" -lt 18 ]]; then
+  echo "Error: Node.js >= 18 required (found: $(node --version 2>/dev/null || echo 'none'))." >&2
+  echo "  Install via: https://github.com/nodesource/distributions" >&2
   exit 1
 fi
 
