@@ -306,6 +306,34 @@
               <p class="text-xs text-zinc-600">Pan/zoom the map first, then reopen settings to capture the current view.</p>
             </template>
 
+            <!-- Radar settings -->
+            <template v-if="settingsForm.map_type === 'radar'">
+              <div class="grid grid-cols-[1fr_1fr] gap-3">
+                <div class="space-y-1.5">
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Filter type</label>
+                  <div class="relative">
+                    <select v-model="settingsForm.radar_type"
+                      class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                      <option value="hostgroup">Host group</option>
+                      <option value="servicegroup">Service group</option>
+                      <option value="all_hosts">All hosts</option>
+                      <option value="all_services">All services</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="settingsForm.radar_type === 'hostgroup' || settingsForm.radar_type === 'servicegroup'" class="space-y-1.5">
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Group name</label>
+                  <input v-model="settingsForm.radar_value" placeholder="e.g. linux-servers"
+                    class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                </div>
+              </div>
+            </template>
+
             <!-- Background image (static only) -->
             <div v-if="settingsForm.map_type === 'static'" class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Background image</label>
@@ -579,6 +607,8 @@ const settingsForm = reactive({
   worldmap_lat: 51.0,
   worldmap_lng: 10.0,
   worldmap_zoom: 5,
+  radar_type: 'hostgroup',
+  radar_value: '',
 })
 
 function openSettings() {
@@ -589,6 +619,8 @@ function openSettings() {
   settingsForm.icon_size = g.icon_size ?? 22
   settingsForm.background_image = g.background_image ?? ''
   settingsForm.map_type = g.map_type ?? 'static'
+  settingsForm.radar_type = g.radar_type ?? 'hostgroup'
+  settingsForm.radar_value = g.radar_value ?? ''
   uploadError.value = ''
   uploadOk.value = false
 
@@ -624,6 +656,8 @@ async function saveSettings() {
       worldmap_lat: settingsForm.worldmap_lat,
       worldmap_lng: settingsForm.worldmap_lng,
       worldmap_zoom: settingsForm.worldmap_zoom,
+      radar_type: settingsForm.radar_type,
+      radar_value: settingsForm.radar_value,
     }, auth.accessToken!)
     if (mapsStore.currentMap) mapsStore.currentMap.globals = updated.globals
     showSettings.value = false
