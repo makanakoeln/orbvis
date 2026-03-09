@@ -10,7 +10,7 @@ services:
       - MAPS_DIR=/app/maps
       - DATABASE_URL=sqlite+aiosqlite:////app/data/orbvis.db
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
-      - ORBVIS_PORT=${ORBVIS_PORT:-8082}
+      - ORBVIS_PORT=${ORBVIS_PORT:-8741}
       - ALLOWED_ORIGINS=["http://localhost"]
     restart: unless-stopped
     healthcheck:
