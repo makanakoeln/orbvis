@@ -55,7 +55,7 @@ class MapGlobals(BaseModel):
     hover_template: str | None = None
     context_template: str | None = None
     # Map type
-    map_type: Literal["static", "worldmap", "automap"] = "static"
+    map_type: Literal["static", "worldmap", "automap", "radar"] = "static"
     # Worldmap initial view
     worldmap_lat: float = 51.0
     worldmap_lng: float = 10.0
@@ -74,7 +74,7 @@ class MapCreate(BaseModel):
     background_image: str | None = None
     icon_size: int = 22
     backend_id: str = "live_1"
-    map_type: Literal["static", "worldmap", "automap"] = "static"
+    map_type: Literal["static", "worldmap", "automap", "radar"] = "static"
 
 
 class MapUpdate(BaseModel):
@@ -82,7 +82,7 @@ class MapUpdate(BaseModel):
     background_image: str | None = None
     icon_size: int | None = None
     backend_id: str | None = None
-    map_type: Literal["static", "worldmap", "automap"] | None = None
+    map_type: Literal["static", "worldmap", "automap", "radar"] | None = None
     worldmap_lat: float | None = None
     worldmap_lng: float | None = None
     worldmap_zoom: int | None = None
