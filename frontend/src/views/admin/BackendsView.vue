@@ -2,15 +2,15 @@
   <div>
     <div class="flex justify-between items-center mb-8">
       <div>
-        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">Monitoring Backends</h2>
-        <p class="text-sm text-zinc-500 mt-1">Configure connections to monitoring systems</p>
+        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('admin.backendsTitle') }}</h2>
+        <p class="text-sm text-zinc-500 mt-1">{{ t('admin.backendsSubtitle') }}</p>
       </div>
       <button @click="openCreate"
         class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        Add Backend
+        {{ t('admin.addBackend') }}
       </button>
     </div>
 
@@ -19,7 +19,7 @@
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
       </svg>
-      Loading…
+      {{ t('common.loading') }}
     </div>
 
     <div v-else-if="store.error" class="px-4 py-3 bg-red-500/8 ring-1 ring-red-500/20 rounded-xl text-red-400 text-sm">
@@ -28,20 +28,20 @@
 
     <div v-else-if="store.backends.length === 0"
       class="text-center py-16 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl">
-      <p class="text-zinc-500 text-sm">No backends configured</p>
-      <p class="text-zinc-600 text-xs mt-1">Add a backend to receive monitoring states</p>
+      <p class="text-zinc-500 text-sm">{{ t('admin.noBackends') }}</p>
+      <p class="text-zinc-600 text-xs mt-1">{{ t('admin.noBackendsHint') }}</p>
     </div>
 
     <div v-else class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-[var(--border)]">
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Status</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.status') }}</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">ID</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Label</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Type</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Connection</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-zinc-500 uppercase tracking-wider">Actions</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.displayLabel') }}</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.type') }}</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.connection') }}</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.actions') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[var(--border)]">
@@ -49,7 +49,7 @@
             <!-- Status -->
             <td class="px-4 py-3">
               <button @click="testExisting(b.id)" :disabled="statusLoading[b.id]"
-                class="flex items-center gap-2 group" title="Click to retest">
+                class="flex items-center gap-2 group" :title="t('common.test')">
                 <span class="relative flex">
                   <span v-if="statusLoading[b.id]" class="w-2.5 h-2.5 rounded-full bg-zinc-500 animate-pulse" />
                   <span v-else-if="statuses[b.id] === undefined" class="w-2.5 h-2.5 rounded-full bg-zinc-600" />
@@ -58,7 +58,7 @@
                   <span v-else class="w-2.5 h-2.5 rounded-full bg-red-400" />
                 </span>
                 <span class="text-xs text-zinc-600 group-hover:text-zinc-400 transition-colors">
-                  {{ statusLoading[b.id] ? 'Testing…' : statusMessages[b.id] ?? 'Test' }}
+                  {{ statusLoading[b.id] ? t('common.testing') : statusMessages[b.id] ?? t('common.test') }}
                 </span>
               </button>
             </td>
@@ -76,12 +76,12 @@
               <template v-if="b.type === 'livestatus'">
                 {{ b.socket_path || `${b.host}:${b.port}` }}
               </template>
-              <span v-else class="text-zinc-700">built-in</span>
+              <span v-else class="text-zinc-700">{{ t('admin.builtIn') }}</span>
             </td>
             <td class="px-4 py-3 text-right">
               <div class="flex items-center justify-end gap-3">
-                <button @click="openEdit(b)" class="text-xs text-zinc-500 hover:text-indigo-400 transition-colors">Edit</button>
-                <button @click="remove(b.id)" class="text-xs text-zinc-600 hover:text-red-400 transition-colors">Delete</button>
+                <button @click="openEdit(b)" class="text-xs text-zinc-500 hover:text-indigo-400 transition-colors">{{ t('common.edit') }}</button>
+                <button @click="remove(b.id)" class="text-xs text-zinc-600 hover:text-red-400 transition-colors">{{ t('common.delete') }}</button>
               </div>
             </td>
           </tr>
@@ -96,7 +96,7 @@
         <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[30rem] max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between mb-5">
             <h3 class="text-base font-bold text-[var(--text)]">
-              {{ dialog.mode === 'create' ? 'Add Backend' : 'Edit Backend' }}
+              {{ dialog.mode === 'create' ? t('admin.addBackendTitle') : t('admin.editBackend') }}
             </h3>
             <button @click="dialog.open = false"
               class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
@@ -107,25 +107,25 @@
           <form @submit.prevent="save" class="space-y-4">
             <div v-if="dialog.mode === 'create'" class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                Backend ID <span class="normal-case font-normal text-zinc-600">(no spaces)</span>
+                {{ t('admin.backendId') }} <span class="normal-case font-normal text-zinc-600">{{ t('admin.backendIdHint') }}</span>
               </label>
               <input v-model="form.id" required pattern="[a-zA-Z0-9_-]+" placeholder="cmk_heute"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
 
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Display label</label>
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.displayLabel') }}</label>
               <input v-model="form.label" placeholder="Checkmk heute"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
 
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Type</label>
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.type') }}</label>
               <div class="relative">
                 <select v-model="form.type"
                   class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                  <option value="livestatus">MK Livestatus</option>
-                  <option value="test">Test (built-in demo)</option>
+                  <option value="livestatus">{{ t('admin.backendTypeLivestatus') }}</option>
+                  <option value="test">{{ t('admin.backendTypeTest') }}</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                   <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -138,7 +138,7 @@
             <template v-if="form.type === 'livestatus'">
               <div class="space-y-1.5">
                 <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                  Unix socket path <span class="normal-case font-normal text-zinc-600">or use TCP below</span>
+                  {{ t('admin.unixSocket') }} <span class="normal-case font-normal text-zinc-600">{{ t('admin.orTcp') }}</span>
                 </label>
                 <input v-model="form.socket_path" placeholder="/omd/sites/heute/tmp/run/live"
                   class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
@@ -146,24 +146,26 @@
 
               <div class="grid grid-cols-[1fr_7rem] gap-3">
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">TCP host</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.tcpHost') }}</label>
                   <input v-model="form.host" placeholder="192.168.1.10"
                     class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Port</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.port') }}</label>
                   <NumberInput v-model="form.port" min="1" max="65535" class="w-full" />
                 </div>
               </div>
 
               <div class="grid grid-cols-[1fr_7rem] gap-3 items-end">
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Checkmk URL <span class="normal-case font-normal text-zinc-600">for context links</span></label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                    {{ t('admin.checkmkUrl') }} <span class="normal-case font-normal text-zinc-600">{{ t('admin.contextLinks') }}</span>
+                  </label>
                   <input v-model="form.checkmk_url" placeholder="http://localhost/heute"
                     class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Timeout (s)</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.timeout') }}</label>
                   <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-full" />
                 </div>
               </div>
@@ -187,14 +189,14 @@
 
             <div class="flex gap-2 justify-end pt-2 border-t border-[var(--border)]">
               <button type="button" @click="dialog.open = false"
-                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">Cancel</button>
+                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">{{ t('common.cancel') }}</button>
               <button type="button" @click="testDialog" :disabled="dialogTest.loading"
                 class="px-4 py-2 ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm text-zinc-300 hover:text-[var(--text)] disabled:opacity-50 transition-all">
-                {{ dialogTest.loading ? 'Testing…' : 'Test' }}
+                {{ dialogTest.loading ? t('common.testing') : t('common.test') }}
               </button>
               <button type="submit" :disabled="saving"
                 class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all">
-                {{ saving ? 'Saving…' : 'Save' }}
+                {{ saving ? t('common.saving') : t('common.save') }}
               </button>
             </div>
           </form>
@@ -206,12 +208,14 @@
 
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useBackendsStore } from '@/stores/backends'
 import { backendsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { BackendConfig } from '@/types/api'
 import NumberInput from '@/components/NumberInput.vue'
 
+const { t } = useI18n()
 const store = useBackendsStore()
 const auth = useAuthStore()
 
@@ -295,14 +299,14 @@ async function save() {
     dialog.open = false
     testAll()
   } catch (e: unknown) {
-    formError.value = e instanceof Error ? e.message : 'Save failed'
+    formError.value = e instanceof Error ? e.message : t('admin.saveFailed')
   } finally {
     saving.value = false
   }
 }
 
 async function remove(id: string) {
-  if (!confirm(`Delete backend "${id}"?`)) return
+  if (!confirm(t('admin.deleteBackend', { id }))) return
   await store.deleteBackend(id)
   delete statuses[id]
   delete statusMessages[id]

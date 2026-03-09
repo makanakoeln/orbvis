@@ -50,6 +50,7 @@ async def init_db() -> None:
         await conn.run_sync(Base.metadata.create_all)
         # Add columns introduced after initial schema (SQLite has no IF NOT EXISTS for columns)
         await _add_column_if_missing(conn, "users", "theme", "VARCHAR(10) NOT NULL DEFAULT 'system'")
+        await _add_column_if_missing(conn, "users", "language", "VARCHAR(10) NOT NULL DEFAULT 'en'")
 
 
 async def _add_column_if_missing(conn, table: str, column: str, definition: str) -> None:

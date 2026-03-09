@@ -24,6 +24,7 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     theme: Mapped[str] = mapped_column(String(10), default="system", nullable=False)
+    language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
 
     roles: Mapped[list["Role"]] = relationship(
         "Role", secondary=users2roles, back_populates="users", lazy="selectin"

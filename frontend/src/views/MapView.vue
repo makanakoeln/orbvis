@@ -8,7 +8,7 @@
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
           </svg>
-          Maps
+          {{ t('nav.maps') }}
         </router-link>
         <svg class="w-3 h-3 text-zinc-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -24,7 +24,7 @@
             : 'bg-red-500/8 ring-red-500/20 text-red-400'">
           <span class="w-1.5 h-1.5 rounded-full inline-block"
             :class="statesStore.connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'" />
-          {{ statesStore.connected ? 'Live' : 'Offline' }}
+          {{ statesStore.connected ? t('map.live') : t('map.offline') }}
         </div>
 
         <!-- Divider -->
@@ -33,7 +33,7 @@
         <!-- Settings button -->
         <button v-if="auth.isAdmin" @click="openSettings"
           class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
-          title="Map settings">
+          :title="t('map.mapSettings')">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -49,15 +49,15 @@
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
           </svg>
-          {{ editor.editMode.value ? 'Editing' : 'Edit' }}
+          {{ editor.editMode.value ? t('map.editing') : t('map.edit') }}
         </button>
 
         <span class="w-px h-4 bg-zinc-700" />
         <button @click="showUserSettings = true"
           class="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
-          User settings
+          {{ t('nav.userSettings') }}
         </button>
-        <button v-if="!auth.ssoActive" @click="auth.logout()" title="Logout"
+        <button v-if="!auth.ssoActive" @click="auth.logout()" :title="t('auth.logout')"
           class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
@@ -79,7 +79,7 @@
       <!-- Worldmap -->
       <div v-if="isWorldmap" class="flex-1 overflow-hidden bg-[var(--bg)] relative">
         <div v-if="mapsStore.loading" class="absolute inset-0 flex items-center justify-center text-zinc-500 z-10 text-sm">
-          Loading map…
+          {{ t('map.loadingMap') }}
         </div>
         <div v-else-if="mapsStore.error" class="absolute inset-0 flex items-center justify-center text-red-400 z-10 text-sm">
           {{ mapsStore.error }}
@@ -97,7 +97,7 @@
           @canvas-latlng-click="onCanvasLatLngClick"
           @latlng-drag-end="onLatLngDragEnd"
         />
-        <div v-else class="absolute inset-0 flex items-center justify-center text-zinc-600">Map not found</div>
+        <div v-else class="absolute inset-0 flex items-center justify-center text-zinc-600">{{ t('map.mapNotFound') }}</div>
       </div>
 
       <!-- Radar -->
@@ -112,13 +112,13 @@
           v-if="mapConfig?.globals.backend_id"
           :backend-id="mapConfig.globals.backend_id"
         />
-        <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">No backend configured for this map.</div>
+        <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">{{ t('map.noBackendConfigured') }}</div>
       </div>
 
       <!-- Static map -->
       <div v-else class="flex-1 overflow-auto bg-[var(--bg)]">
         <div v-if="mapsStore.loading" class="flex items-center justify-center h-full text-zinc-500 text-sm">
-          Loading map…
+          {{ t('map.loadingMap') }}
         </div>
         <div v-else-if="mapsStore.error" class="flex items-center justify-center h-full text-red-400 text-sm">
           {{ mapsStore.error }}
@@ -145,7 +145,7 @@
           @line-drag-start="onLineDragStart"
           @canvas-click="onCanvasClick"
         />
-        <div v-else class="flex items-center justify-center h-full text-zinc-600">Map not found</div>
+        <div v-else class="flex items-center justify-center h-full text-zinc-600">{{ t('map.mapNotFound') }}</div>
       </div>
 
       <!-- Edit panel (not for automap or radar) -->
@@ -179,23 +179,23 @@
               </svg>
             </div>
             <div>
-              <p class="font-semibold text-[var(--text)] text-sm">Unsaved changes</p>
-              <p class="text-xs text-zinc-500 mt-0.5">Save or discard before leaving edit mode.</p>
+              <p class="font-semibold text-[var(--text)] text-sm">{{ t('map.unsavedChanges') }}</p>
+              <p class="text-xs text-zinc-500 mt-0.5">{{ t('map.saveOrDiscard') }}</p>
             </div>
           </div>
           <div class="flex gap-2 justify-between mt-5">
             <button @click="confirmExitEditMode"
               class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500/15 hover:bg-red-500/25 ring-1 ring-red-500/25 hover:ring-red-500/40 text-red-400 transition-all">
-              Discard
+              {{ t('common.discard') }}
             </button>
             <div class="flex gap-2">
               <button @click="showExitEditWarning = false"
                 class="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
-                Cancel
+                {{ t('common.cancel') }}
               </button>
               <button @click="saveAndExitEditMode"
                 class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-all">
-                Save & exit
+                {{ t('map.saveAndExit') }}
               </button>
             </div>
           </div>
@@ -206,9 +206,9 @@
     <!-- Delete confirmation -->
     <ConfirmDialog
       v-if="deleteTargetObject"
-      title="Delete object"
-      message="This cannot be undone."
-      confirm-label="Delete"
+      :title="t('map.deleteObject')"
+      :message="t('map.cannotBeUndone')"
+      :confirm-label="t('common.delete')"
       @confirm="confirmObjectDelete"
       @cancel="deleteTargetObject = null"
     />
@@ -233,7 +233,7 @@
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showSettings = false" />
         <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[34rem] max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between mb-6">
-            <h3 class="text-base font-bold text-[var(--text)]">Map Settings</h3>
+            <h3 class="text-base font-bold text-[var(--text)]">{{ t('map.settingsTitle') }}</h3>
             <button @click="showSettings = false"
               class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -245,7 +245,7 @@
           <form @submit.prevent="saveSettings" class="space-y-4">
             <!-- Alias -->
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Display name</label>
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.displayName') }}</label>
               <input v-model="settingsForm.alias"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
@@ -253,7 +253,7 @@
             <!-- Backend + Icon size -->
             <div class="grid grid-cols-[1fr_6rem] gap-3">
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Backend</label>
+                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.backend') }}</label>
                 <div class="relative">
                   <select v-model="settingsForm.backend_id"
                     class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
@@ -269,21 +269,21 @@
                 </div>
               </div>
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Icon size</label>
+                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.iconSize') }}</label>
                 <NumberInput v-model="settingsForm.icon_size" min="12" max="96" class="w-full" />
               </div>
             </div>
 
             <!-- Map type -->
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Map type</label>
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.mapType') }}</label>
               <div class="relative">
                 <select v-model="settingsForm.map_type"
                   class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                  <option value="static">Static map</option>
-                  <option value="worldmap">Worldmap (geographic)</option>
-                  <option value="automap">Automap (topology)</option>
-                  <option value="radar">Radar (dynamic filter)</option>
+                  <option value="static">{{ t('map.mapTypeStatic') }}</option>
+                  <option value="worldmap">{{ t('map.mapTypeWorldmap') }}</option>
+                  <option value="automap">{{ t('map.mapTypeAutomap') }}</option>
+                  <option value="radar">{{ t('map.mapTypeRadar') }}</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                   <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -297,33 +297,33 @@
             <template v-if="settingsForm.map_type === 'worldmap'">
               <div class="grid grid-cols-[1fr_1fr_5rem] gap-3">
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Latitude</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.latitude') }}</label>
                   <NumberInput v-model="settingsForm.worldmap_lat" step="any" :precision="10" class="w-full" />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Longitude</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.longitude') }}</label>
                   <NumberInput v-model="settingsForm.worldmap_lng" step="any" :precision="10" class="w-full" />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Zoom</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.zoom') }}</label>
                   <NumberInput v-model="settingsForm.worldmap_zoom" min="1" max="18" class="w-full" />
                 </div>
               </div>
-              <p class="text-xs text-zinc-600">Pan/zoom the map first, then reopen settings to capture the current view.</p>
+              <p class="text-xs text-zinc-600">{{ t('map.worldmapHint') }}</p>
             </template>
 
             <!-- Radar settings -->
             <template v-if="settingsForm.map_type === 'radar'">
               <div class="grid grid-cols-[1fr_1fr] gap-3">
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Filter type</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.filterType') }}</label>
                   <div class="relative">
                     <select v-model="settingsForm.radar_type"
                       class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                      <option value="hostgroup">Host group</option>
-                      <option value="servicegroup">Service group</option>
-                      <option value="all_hosts">All hosts</option>
-                      <option value="all_services">All services</option>
+                      <option value="hostgroup">{{ t('map.filterTypeHostgroup') }}</option>
+                      <option value="servicegroup">{{ t('map.filterTypeServicegroup') }}</option>
+                      <option value="all_hosts">{{ t('map.filterTypeAllHosts') }}</option>
+                      <option value="all_services">{{ t('map.filterTypeAllServices') }}</option>
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                       <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -333,7 +333,7 @@
                   </div>
                 </div>
                 <div v-if="settingsForm.radar_type === 'hostgroup' || settingsForm.radar_type === 'servicegroup'" class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Group name</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.groupName') }}</label>
                   <input v-model="settingsForm.radar_value" placeholder="e.g. linux-servers"
                     class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 </div>
@@ -342,12 +342,12 @@
 
             <!-- Background image (static only) -->
             <div v-if="settingsForm.map_type === 'static'" class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Background image</label>
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.backgroundImage') }}</label>
               <div class="flex gap-2">
                 <input v-model="settingsForm.background_image" placeholder="filename.png"
                   class="flex-1 px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 <label class="flex items-center px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all">
-                  Upload
+                  {{ t('common.upload') }}
                   <input type="file" accept="image/*" class="hidden" @change="uploadBackground" />
                 </label>
               </div>
@@ -357,17 +357,17 @@
               </p>
               <p v-if="uploadOk" class="text-green-400 text-xs flex items-center gap-1">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                Uploaded successfully
+                {{ t('map.uploadedSuccessfully') }}
               </p>
             </div>
 
             <!-- Actions -->
             <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
               <button type="button" @click="showSettings = false"
-                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">Cancel</button>
+                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">{{ t('common.cancel') }}</button>
               <button type="submit" :disabled="settingsSaving"
                 class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all">
-                {{ settingsSaving ? 'Saving…' : 'Save changes' }}
+                {{ settingsSaving ? t('common.saving') : t('map.saveChanges') }}
               </button>
             </div>
           </form>
@@ -380,6 +380,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref, reactive, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useMapsStore } from '@/stores/maps'
 import { useStatesStore } from '@/stores/states'
@@ -399,6 +400,7 @@ import type { MapObject } from '@/types/api'
 
 type LineDragMode = 'move' | 'start' | 'end'
 
+const { t } = useI18n()
 const route = useRoute()
 const auth = useAuthStore()
 const mapsStore = useMapsStore()
@@ -706,4 +708,3 @@ onUnmounted(() => {
   statesStore.disconnect()
 })
 </script>
-

@@ -25,6 +25,7 @@ class UserBase(BaseModel):
     is_admin: bool = False
     must_change_password: bool = False
     theme: str = "system"
+    language: str = "en"
 
 
 class UserCreate(UserBase):
@@ -38,6 +39,7 @@ class UserUpdate(BaseModel):
     is_admin: bool | None = None
     must_change_password: bool | None = None
     theme: str | None = None
+    language: str | None = None
 
 
 class UserRead(UserBase):
@@ -70,6 +72,7 @@ class UserRead(UserBase):
             "is_admin": data.is_admin,
             "must_change_password": data.must_change_password,
             "theme": getattr(data, "theme", "system"),
+            "language": getattr(data, "language", "en"),
             "roles": data.roles or [],
             "permissions": perms,
         }

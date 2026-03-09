@@ -28,11 +28,16 @@ class ApiError extends Error {
   }
 }
 
+const METHOD_OVERRIDE = new Set(['PATCH', 'PUT', 'DELETE'])
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
   token?: string,
 ): Promise<T> {
+  const declaredMethod = ((options.method ?? 'GET') as string).toUpperCase()
+  const needsOverride = METHOD_OVERRIDE.has(declaredMethod)
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
@@ -40,12 +45,22 @@ async function request<T>(
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
+  // Tunnel PATCH/PUT/DELETE through POST so restrictive proxies (e.g. OMD Apache) don't block them.
+  // The backend MethodOverrideMiddleware restores the original method before routing.
+  if (needsOverride) {
+    headers['X-HTTP-Method-Override'] = declaredMethod
+  }
 
-  const response = await fetch(`${BASE_URL}${path}`, { ...options, headers })
+  const response = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    method: needsOverride ? 'POST' : declaredMethod,
+    headers,
+  })
 
   if (!response.ok) {
     const detail = await response.json().catch(() => null)
-    throw new ApiError(response.status, `HTTP ${response.status}`, detail)
+    const msg = detail?.detail ?? detail?.message ?? `HTTP ${response.status}`
+    throw new ApiError(response.status, typeof msg === 'string' ? msg : `HTTP ${response.status}`, detail)
   }
 
   if (response.status === 204) return undefined as T

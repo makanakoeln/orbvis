@@ -220,6 +220,11 @@ Alias /$SITE/orbvis $HTDOCS_DIR
 </Directory>
 
 <Location /$SITE/orbvis/api>
+    # mod_allowmethods (loaded by OMD) returns 405 for unlisted methods.
+    # Override here to allow the full set of methods needed by the REST API.
+    <IfModule mod_allowmethods.c>
+        AllowMethods GET POST PUT PATCH DELETE OPTIONS HEAD
+    </IfModule>
     ProxyPass        http://127.0.0.1:$BACKEND_PORT/api
     ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/api
 </Location>

@@ -124,6 +124,7 @@ export interface UserRead {
   is_admin: boolean
   must_change_password: boolean
   theme: string
+  language: string
   cmk_theme: string | null
   roles: RoleRef[]
   permissions: PermissionRef[]

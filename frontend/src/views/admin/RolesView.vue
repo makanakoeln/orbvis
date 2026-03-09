@@ -2,15 +2,15 @@
   <div>
     <div class="flex justify-between items-center mb-8">
       <div>
-        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">Roles & Permissions</h2>
-        <p class="text-sm text-zinc-500 mt-1">Define access control roles</p>
+        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('admin.rolesAndPermissions') }}</h2>
+        <p class="text-sm text-zinc-500 mt-1">{{ t('admin.rolesSubtitle') }}</p>
       </div>
       <button @click="showCreate = true"
         class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        New Role
+        {{ t('admin.newRole') }}
       </button>
     </div>
 
@@ -19,7 +19,7 @@
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
       </svg>
-      Loading…
+      {{ t('common.loading') }}
     </div>
 
     <div v-else class="space-y-3">
@@ -30,7 +30,7 @@
             <div class="flex items-center gap-2.5 mb-1">
               <span class="font-semibold text-[var(--text)]">{{ role.name }}</span>
               <span class="text-xs px-1.5 py-0.5 rounded bg-[var(--bg-input)] ring-1 ring-zinc-700 text-zinc-500">
-                {{ role.permissions.length }} permissions
+                {{ role.permissions.length }} {{ t('admin.permissions') }}
               </span>
             </div>
             <div v-if="role.permissions.length" class="flex flex-wrap gap-1.5 mt-2.5">
@@ -40,23 +40,23 @@
                 class="text-xs bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-md px-2 py-0.5 text-zinc-400 font-mono"
               >{{ perm.mod }}/{{ perm.act }}/{{ perm.obj }}</span>
             </div>
-            <p v-else class="text-xs text-zinc-600 mt-2">No permissions assigned</p>
+            <p v-else class="text-xs text-zinc-600 mt-2">{{ t('admin.noPermissions') }}</p>
           </div>
           <div class="flex items-center gap-3 shrink-0">
             <button @click="openEdit(role)"
               class="text-xs text-zinc-500 hover:text-indigo-400 transition-colors px-2 py-1">
-              Edit
+              {{ t('common.edit') }}
             </button>
             <button @click="deleteRole(role.role_id)"
               class="text-xs text-zinc-600 hover:text-red-400 transition-colors px-2 py-1">
-              Delete
+              {{ t('common.delete') }}
             </button>
           </div>
         </div>
       </div>
 
       <div v-if="!roles.length" class="text-center py-12 text-zinc-600 text-sm">
-        No roles defined yet
+        {{ t('admin.noRoles') }}
       </div>
     </div>
 
@@ -66,7 +66,7 @@
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showCreate = false" />
         <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-80">
           <div class="flex items-center justify-between mb-5">
-            <h3 class="text-base font-bold text-[var(--text)]">Create Role</h3>
+            <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.createRole') }}</h3>
             <button @click="showCreate = false"
               class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -74,15 +74,15 @@
           </div>
           <form @submit.prevent="createRole" class="space-y-4">
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Role name</label>
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.roleName') }}</label>
               <input v-model="newRoleName" placeholder="e.g. operators" required
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
             <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
               <button type="button" @click="showCreate = false"
-                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">Cancel</button>
+                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">{{ t('common.cancel') }}</button>
               <button type="submit"
-                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all">Create</button>
+                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all">{{ t('common.create') }}</button>
             </div>
           </form>
         </div>
@@ -96,7 +96,7 @@
         <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[28rem] max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between mb-5">
             <h3 class="text-base font-bold text-[var(--text)]">
-              Permissions –
+              {{ t('admin.permissionsTitle') }} –
               <span class="text-indigo-400">{{ editRole.name }}</span>
             </h3>
             <button @click="editRole = null"
@@ -107,7 +107,7 @@
 
           <!-- Current permissions -->
           <div class="mb-5">
-            <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Assigned</p>
+            <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">{{ t('admin.assigned') }}</p>
             <div v-if="editRole.permissions.length" class="space-y-1.5">
               <div v-for="perm in editRole.permissions" :key="perm.perm_id"
                 class="flex items-center justify-between gap-2 px-3 py-2 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg">
@@ -120,28 +120,28 @@
                 </button>
               </div>
             </div>
-            <p v-else class="text-xs text-zinc-600">No permissions assigned yet</p>
+            <p v-else class="text-xs text-zinc-600">{{ t('admin.noPermissionsYet') }}</p>
           </div>
 
           <!-- Add permission form -->
           <div class="border-t border-[var(--border)] pt-5">
-            <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Add Permission</p>
+            <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">{{ t('admin.addPermission') }}</p>
             <form @submit.prevent="addPerm" class="space-y-3">
               <div class="space-y-1.5">
-                <label class="text-xs text-zinc-500">Preset</label>
+                <label class="text-xs text-zinc-500">{{ t('admin.preset') }}</label>
                 <select v-model="permPreset" @change="applyPreset"
                   class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                   style="background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a1a1aa' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E&quot;); background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1rem; padding-right: 2rem;">
-                  <option value="">— choose a preset —</option>
-                  <option value="map:view:*">View all maps</option>
-                  <option value="map:edit:*">Edit all maps (settings & objects)</option>
-                  <option value="map:view:custom">View a specific map…</option>
-                  <option value="map:edit:custom">Edit a specific map…</option>
-                  <option value="user:edit:*">Change any user's password (user/edit/*)</option>
+                  <option value="">{{ t('admin.choosePreset') }}</option>
+                  <option value="map:view:*">{{ t('admin.presetViewAll') }}</option>
+                  <option value="map:edit:*">{{ t('admin.presetEditAll') }}</option>
+                  <option value="map:view:custom">{{ t('admin.presetViewCustom') }}</option>
+                  <option value="map:edit:custom">{{ t('admin.presetEditCustom') }}</option>
+                  <option value="user:edit:*">{{ t('admin.presetEditUsers') }}</option>
                 </select>
               </div>
               <div v-if="needsMapName" class="space-y-1">
-                <label class="text-xs text-zinc-500">Map name</label>
+                <label class="text-xs text-zinc-500">{{ t('admin.mapNameLabel') }}</label>
                 <input v-model="newPerm.obj" placeholder="my-map" required
                   class="w-full px-2.5 py-2 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               </div>
@@ -149,7 +149,7 @@
               <div class="flex justify-end">
                 <button type="submit" :disabled="permSaving || !permPreset"
                   class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all">
-                  {{ permSaving ? 'Adding…' : 'Add' }}
+                  {{ permSaving ? t('admin.adding') : t('admin.add') }}
                 </button>
               </div>
             </form>
@@ -162,10 +162,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { rolesApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { RoleRead } from '@/types/api'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const roles = ref<RoleRead[]>([])
 const loading = ref(false)
@@ -202,7 +204,7 @@ async function createRole() {
 }
 
 async function deleteRole(id: number) {
-  if (!confirm('Delete this role?')) return
+  if (!confirm(t('admin.deleteRole'))) return
   await rolesApi.delete(id, auth.accessToken!)
   await fetchRoles()
 }
@@ -234,7 +236,7 @@ async function addPerm() {
     permPreset.value = ''
     newPerm.value = { mod: '', act: '', obj: '*' }
   } catch (e: unknown) {
-    permError.value = e instanceof Error ? e.message : 'Failed to add permission'
+    permError.value = e instanceof Error ? e.message : t('admin.failedToAddPermission')
   } finally {
     permSaving.value = false
   }

@@ -4,10 +4,34 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
+
+class MethodOverrideMiddleware:
+    """Tunnel PATCH/PUT/DELETE through POST via X-HTTP-Method-Override header.
+
+    Some reverse proxies (e.g. OMD/Checkmk Apache) block non-GET/POST methods.
+    The frontend sends POST with X-HTTP-Method-Override: PATCH (etc.) and this
+    middleware rewrites the ASGI scope method before routing, so all existing
+    FastAPI routes work unchanged.
+    """
+
+    _ALLOWED = frozenset(("PATCH", "PUT", "DELETE"))
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] == "http" and scope["method"] == "POST":
+            headers = {k.lower(): v for k, v in scope.get("headers", [])}
+            override = headers.get(b"x-http-method-override", b"").decode().upper()
+            if override in self._ALLOWED:
+                scope = {**scope, "method": override}
+        await self.app(scope, receive, send)
 
 from app.api.v1 import auth, backends, maps, roles, states, users
 from app.core.config import settings
@@ -159,6 +183,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(MethodOverrideMiddleware)
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(maps.router, prefix="/api/v1/maps", tags=["maps"])

@@ -5,7 +5,7 @@
       <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-80">
         <div class="flex items-center justify-between mb-5">
           <div>
-            <h3 class="text-base font-bold text-[var(--text)]">Change Password</h3>
+            <h3 class="text-base font-bold text-[var(--text)]">{{ t('userSettings.changePassword') }}</h3>
             <p class="text-xs text-zinc-500 mt-0.5">{{ userName }}</p>
           </div>
           <button @click="$emit('close')"
@@ -18,27 +18,27 @@
 
         <form @submit.prevent="save" class="space-y-4">
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">New password</label>
+            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.newPassword') }}</label>
             <input v-model="password" type="password" placeholder="••••••••" required minlength="6" autofocus
               class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
           </div>
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Confirm password</label>
+            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.confirmPassword') }}</label>
             <input v-model="confirm" type="password" placeholder="••••••••" required
               class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
           </div>
 
           <p v-if="error" class="text-red-400 text-xs">{{ error }}</p>
-          <p v-if="success" class="text-green-400 text-xs">Password changed successfully.</p>
+          <p v-if="success" class="text-green-400 text-xs">{{ t('userSettings.passwordChanged') }}</p>
 
           <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
             <button type="button" @click="$emit('close')"
               class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
-              {{ success ? 'Close' : 'Cancel' }}
+              {{ success ? t('common.close') : t('common.cancel') }}
             </button>
             <button v-if="!success" type="submit" :disabled="saving"
               class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all">
-              {{ saving ? 'Saving…' : 'Save' }}
+              {{ saving ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </form>
@@ -49,6 +49,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usersApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 
@@ -59,6 +60,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const password = ref('')
 const confirm = ref('')
@@ -69,7 +71,7 @@ const success = ref(false)
 async function save() {
   error.value = ''
   if (password.value !== confirm.value) {
-    error.value = 'Passwords do not match.'
+    error.value = t('userSettings.passwordMismatch')
     return
   }
   saving.value = true
@@ -81,7 +83,7 @@ async function save() {
     password.value = ''
     confirm.value = ''
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to change password.'
+    error.value = e instanceof Error ? e.message : t('userSettings.failedToChange')
   } finally {
     saving.value = false
   }

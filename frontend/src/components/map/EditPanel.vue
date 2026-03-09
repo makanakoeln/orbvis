@@ -3,15 +3,15 @@
     <!-- Header -->
     <div class="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between shrink-0">
       <div>
-        <p class="font-semibold text-[var(--text)] text-sm">Edit Mode</p>
-        <p class="text-xs text-zinc-500 mt-0.5">Drag objects · click to select</p>
+        <p class="font-semibold text-[var(--text)] text-sm">{{ t('mapSettings.editMode') }}</p>
+        <p class="text-xs text-zinc-500 mt-0.5">{{ t('mapSettings.dragObjects') }}</p>
       </div>
       <!-- Grid snap -->
       <div class="flex items-center gap-1.5 text-xs text-zinc-500">
-        <span>Grid</span>
+        <span>{{ t('mapSettings.grid') }}</span>
         <select :value="snapGrid" @change="$emit('update:snapGrid', +($event.target as HTMLSelectElement).value)"
           class="bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-md px-1.5 py-0.5 text-xs text-zinc-300 focus:outline-none focus:ring-indigo-500">
-          <option value="0">off</option>
+          <option value="0">{{ t('mapSettings.gridOff') }}</option>
           <option value="10">10 px</option>
           <option value="20">20 px</option>
           <option value="50">50 px</option>
@@ -21,45 +21,45 @@
 
     <!-- Add Object -->
     <div class="p-4 border-b border-[var(--border)] space-y-2.5 shrink-0">
-      <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Add Object</p>
+      <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{{ t('mapSettings.addObject') }}</p>
 
       <select v-model="draft.type" @change="onTypeChange"
         class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-        <option value="">Select type…</option>
-        <option value="host">Host</option>
-        <option value="service">Service</option>
-        <option value="hostgroup">Hostgroup</option>
-        <option value="servicegroup">Servicegroup</option>
-        <option value="map">Map link</option>
-        <option value="line">Line</option>
-        <option value="textbox">Textbox</option>
+        <option value="">{{ t('mapSettings.selectType') }}</option>
+        <option value="host">{{ t('mapSettings.typeHost') }}</option>
+        <option value="service">{{ t('mapSettings.typeService') }}</option>
+        <option value="hostgroup">{{ t('mapSettings.typeHostgroup') }}</option>
+        <option value="servicegroup">{{ t('mapSettings.typeServicegroup') }}</option>
+        <option value="map">{{ t('mapSettings.typeMap') }}</option>
+        <option value="line">{{ t('mapSettings.typeLine') }}</option>
+        <option value="textbox">{{ t('mapSettings.typeTextbox') }}</option>
       </select>
 
       <template v-if="draft.type === 'host'">
-        <AutocompleteInput v-model="draft.host_name" :suggestions="addObjects" :loading="loadingAddObjects" placeholder="Hostname" />
+        <AutocompleteInput v-model="draft.host_name" :suggestions="addObjects" :loading="loadingAddObjects" :placeholder="t('mapSettings.hostname')" />
       </template>
 
       <template v-else-if="draft.type === 'service'">
-        <AutocompleteInput v-model="draft.host_name" :suggestions="addObjects" :loading="loadingAddObjects" placeholder="Hostname" @change="onHostChange" />
-        <AutocompleteInput v-model="draft.service_description" :suggestions="addServices" :loading="loadingAddServices" placeholder="Service description" />
+        <AutocompleteInput v-model="draft.host_name" :suggestions="addObjects" :loading="loadingAddObjects" :placeholder="t('mapSettings.hostname')" @change="onHostChange" />
+        <AutocompleteInput v-model="draft.service_description" :suggestions="addServices" :loading="loadingAddServices" :placeholder="t('mapSettings.serviceDescription')" />
       </template>
 
       <template v-else-if="draft.type === 'hostgroup' || draft.type === 'servicegroup'">
-        <AutocompleteInput v-model="draft.group_name" :suggestions="addObjects" :loading="loadingAddObjects" placeholder="Group name" />
+        <AutocompleteInput v-model="draft.group_name" :suggestions="addObjects" :loading="loadingAddObjects" :placeholder="t('mapSettings.groupName')" />
       </template>
 
       <template v-else-if="draft.type === 'map'">
-        <input v-model="draft.map_name" placeholder="Map name" class="field" />
-        <input v-model="draft.label_text" placeholder="Label (optional)" class="field" />
+        <input v-model="draft.map_name" :placeholder="t('mapSettings.mapName')" class="field" />
+        <input v-model="draft.label_text" :placeholder="t('mapSettings.labelOptional')" class="field" />
       </template>
 
       <template v-else-if="draft.type === 'line'">
-        <AutocompleteInput v-model="draft.host_name" :suggestions="addObjects" :loading="loadingAddObjects" placeholder="Hostname (optional)" @change="onHostChange" />
-        <AutocompleteInput v-model="draft.service_description" :suggestions="addServices" :loading="loadingAddServices" placeholder="Service (optional)" />
+        <AutocompleteInput v-model="draft.host_name" :suggestions="addObjects" :loading="loadingAddObjects" :placeholder="t('mapSettings.hostname') + ' (optional)'" @change="onHostChange" />
+        <AutocompleteInput v-model="draft.service_description" :suggestions="addServices" :loading="loadingAddServices" :placeholder="t('mapSettings.serviceOptional')" />
       </template>
 
       <template v-else-if="draft.type === 'textbox'">
-        <input v-model="draft.label_text" placeholder="Text content" class="field" />
+        <input v-model="draft.label_text" :placeholder="t('mapSettings.textContent')" class="field" />
       </template>
 
       <button v-if="draft.type" @click="$emit('start-placing')"
@@ -67,7 +67,7 @@
         :class="placing
           ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30 animate-pulse'
           : 'bg-indigo-600 hover:bg-indigo-500 text-white'">
-        {{ placing ? 'Click on map to place…' : 'Place on map' }}
+        {{ placing ? t('mapSettings.clickToPlace') : t('mapSettings.placeOnMap') }}
       </button>
     </div>
 
@@ -75,7 +75,7 @@
     <div v-if="selectedObject" class="flex flex-col divide-y divide-white/5">
 
       <div class="px-4 pt-4 pb-3 flex items-center gap-2 shrink-0">
-        <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Selected</p>
+        <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{{ t('mapSettings.selected') }}</p>
         <span class="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-input)] ring-1 ring-zinc-700 text-zinc-400 font-mono">
           {{ selectedObject.type }}
         </span>
@@ -85,28 +85,28 @@
 
         <!-- Monitoring Object -->
         <section v-if="needsMonitoringObject" class="p-4 space-y-2">
-          <p class="section-title">Monitoring Object</p>
+          <p class="section-title">{{ t('mapSettings.monitoringObject') }}</p>
           <template v-if="selectedObject.type === 'host' || selectedObject.type === 'service'">
             <div class="space-y-1">
-              <label class="text-xs text-zinc-500">Hostname</label>
-              <AutocompleteInput v-model="editForm.host_name" :suggestions="editObjects" :disabled="true" placeholder="Hostname" />
+              <label class="text-xs text-zinc-500">{{ t('mapSettings.hostname') }}</label>
+              <AutocompleteInput v-model="editForm.host_name" :suggestions="editObjects" :disabled="true" :placeholder="t('mapSettings.hostname')" />
             </div>
           </template>
           <template v-if="selectedObject.type === 'service'">
             <div class="space-y-1">
-              <label class="text-xs text-zinc-500">Service</label>
-              <AutocompleteInput v-model="editForm.service_description" :suggestions="editServices" :disabled="true" placeholder="Service description" />
+              <label class="text-xs text-zinc-500">{{ t('mapSettings.typeService') }}</label>
+              <AutocompleteInput v-model="editForm.service_description" :suggestions="editServices" :disabled="true" :placeholder="t('mapSettings.serviceDescription')" />
             </div>
           </template>
           <template v-if="selectedObject.type === 'hostgroup' || selectedObject.type === 'servicegroup'">
             <div class="space-y-1">
-              <label class="text-xs text-zinc-500">Group name</label>
-              <AutocompleteInput v-model="editForm.group_name" :suggestions="editObjects" :disabled="true" placeholder="Group name" />
+              <label class="text-xs text-zinc-500">{{ t('mapSettings.groupName') }}</label>
+              <AutocompleteInput v-model="editForm.group_name" :suggestions="editObjects" :disabled="true" :placeholder="t('mapSettings.groupName')" />
             </div>
           </template>
           <template v-if="selectedObject.type === 'map'">
             <div class="space-y-1">
-              <label class="text-xs text-zinc-500">Target map</label>
+              <label class="text-xs text-zinc-500">{{ t('mapSettings.targetMap') }}</label>
               <input v-model="editForm.map_name" class="field" disabled />
             </div>
           </template>
@@ -114,96 +114,96 @@
 
         <!-- Textbox Content -->
         <section v-if="selectedObject.type === 'textbox'" class="p-4 space-y-2">
-          <p class="section-title">Content</p>
-          <textarea v-model="editForm.label_text" rows="3" class="field resize-none" placeholder="Text content…" />
+          <p class="section-title">{{ t('mapSettings.content') }}</p>
+          <textarea v-model="editForm.label_text" rows="3" class="field resize-none" :placeholder="t('mapSettings.textContent') + '…'" />
         </section>
 
         <!-- Line: Monitoring Object -->
         <section v-if="selectedObject.type === 'line'" class="p-4 space-y-2">
-          <p class="section-title">Monitoring Object</p>
+          <p class="section-title">{{ t('mapSettings.monitoringObject') }}</p>
           <div class="space-y-1">
-            <label class="text-xs text-zinc-500">Hostname</label>
-            <AutocompleteInput v-model="editForm.host_name" :suggestions="editObjects" placeholder="Hostname" @change="onLineHostChange" />
+            <label class="text-xs text-zinc-500">{{ t('mapSettings.hostname') }}</label>
+            <AutocompleteInput v-model="editForm.host_name" :suggestions="editObjects" :placeholder="t('mapSettings.hostname')" @change="onLineHostChange" />
           </div>
           <div class="space-y-1">
-            <label class="text-xs text-zinc-500">Service</label>
-            <AutocompleteInput v-model="editForm.service_description" :suggestions="editServices" placeholder="Service (optional)" />
+            <label class="text-xs text-zinc-500">{{ t('mapSettings.typeService') }}</label>
+            <AutocompleteInput v-model="editForm.service_description" :suggestions="editServices" :placeholder="t('mapSettings.serviceOptional')" />
           </div>
         </section>
 
         <!-- Line: Config -->
         <section v-if="selectedObject.type === 'line'" class="p-4 space-y-2">
-          <p class="section-title">Line</p>
+          <p class="section-title">{{ t('mapSettings.lineSection') }}</p>
           <div class="space-y-1">
-            <label class="text-xs text-zinc-500">Style</label>
+            <label class="text-xs text-zinc-500">{{ t('mapSettings.lineStyle') }}</label>
             <select v-model.number="editForm.line_type" class="field">
-              <option :value="null">Default</option>
-              <option :value="10">Simple line</option>
-              <option :value="11">Arrow →</option>
-              <option :value="12">Arrow ←</option>
-              <option :value="13">Double arrow ↔</option>
-              <option :value="14">Dashed</option>
-              <option :value="20">Weathermap (utilization)</option>
+              <option :value="null">{{ t('mapSettings.lineDefault') }}</option>
+              <option :value="10">{{ t('mapSettings.lineSimple') }}</option>
+              <option :value="11">{{ t('mapSettings.lineArrowRight') }}</option>
+              <option :value="12">{{ t('mapSettings.lineArrowLeft') }}</option>
+              <option :value="13">{{ t('mapSettings.lineDoubleArrow') }}</option>
+              <option :value="14">{{ t('mapSettings.lineDashed') }}</option>
+              <option :value="20">{{ t('mapSettings.lineWeathermap') }}</option>
             </select>
           </div>
           <div v-if="editForm.line_type === 20" class="space-y-1">
-            <label class="text-xs text-zinc-500">Metric</label>
-            <AutocompleteInput v-model="editForm.weathermap_metric" :suggestions="metricSuggestions" placeholder="first metric" />
+            <label class="text-xs text-zinc-500">{{ t('mapSettings.metric') }}</label>
+            <AutocompleteInput v-model="editForm.weathermap_metric" :suggestions="metricSuggestions" :placeholder="t('mapSettings.firstMetric')" />
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div class="space-y-1">
-              <label class="text-xs text-zinc-500">Start X</label>
+              <label class="text-xs text-zinc-500">{{ t('mapSettings.startX') }}</label>
               <NumberInput v-model="editForm.x" />
             </div>
             <div class="space-y-1">
-              <label class="text-xs text-zinc-500">Y</label>
+              <label class="text-xs text-zinc-500">{{ t('mapSettings.y') }}</label>
               <NumberInput v-model="editForm.y" />
             </div>
             <div class="space-y-1">
-              <label class="text-xs text-zinc-500">End X</label>
+              <label class="text-xs text-zinc-500">{{ t('mapSettings.endX') }}</label>
               <NumberInput v-model="editForm.x2" />
             </div>
             <div class="space-y-1">
-              <label class="text-xs text-zinc-500">Y</label>
+              <label class="text-xs text-zinc-500">{{ t('mapSettings.y') }}</label>
               <NumberInput v-model="editForm.y2" />
             </div>
           </div>
           <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none">
             <input type="checkbox" v-model="editForm.label_show" class="rounded accent-indigo-500" />
-            Show label
+            {{ t('mapSettings.showLabel') }}
           </label>
           <div v-if="editForm.label_show" class="space-y-1">
-            <label class="text-xs text-zinc-500">Label text</label>
-            <input v-model="editForm.label_text" class="field" placeholder="Label on the line" />
+            <label class="text-xs text-zinc-500">{{ t('mapSettings.labelText') }}</label>
+            <input v-model="editForm.label_text" class="field" :placeholder="t('mapSettings.labelOnLine')" />
           </div>
         </section>
 
         <!-- Position (non-line) -->
         <section v-if="selectedObject.type !== 'line'" class="p-4 space-y-2">
-          <p class="section-title">Position</p>
+          <p class="section-title">{{ t('mapSettings.position') }}</p>
           <div class="grid grid-cols-[1fr_1fr_4rem] gap-2">
             <template v-if="props.mapType === 'worldmap'">
               <div class="space-y-1 col-span-1">
-                <label class="text-xs text-zinc-500">Lat</label>
+                <label class="text-xs text-zinc-500">{{ t('mapSettings.lat') }}</label>
                 <NumberInput v-model="editForm.lat" step="any" :precision="10" />
               </div>
               <div class="space-y-1 col-span-1">
-                <label class="text-xs text-zinc-500">Lng</label>
+                <label class="text-xs text-zinc-500">{{ t('mapSettings.lng') }}</label>
                 <NumberInput v-model="editForm.lng" step="any" :precision="10" />
               </div>
             </template>
             <template v-else>
               <div class="space-y-1 col-span-1">
-                <label class="text-xs text-zinc-500">X</label>
+                <label class="text-xs text-zinc-500">{{ t('mapSettings.x') }}</label>
                 <NumberInput v-model="editForm.x" />
               </div>
               <div class="space-y-1 col-span-1">
-                <label class="text-xs text-zinc-500">Y</label>
+                <label class="text-xs text-zinc-500">{{ t('mapSettings.y') }}</label>
                 <NumberInput v-model="editForm.y" />
               </div>
             </template>
             <div class="space-y-1 col-span-1">
-              <label class="text-xs text-zinc-500">Z</label>
+              <label class="text-xs text-zinc-500">{{ t('mapSettings.z') }}</label>
               <NumberInput v-model="editForm.z" min="1" max="999" />
             </div>
           </div>
@@ -211,23 +211,23 @@
 
         <!-- Label (non-line) -->
         <section v-if="selectedObject.type !== 'line'" class="p-4 space-y-2">
-          <p class="section-title">Label</p>
+          <p class="section-title">{{ t('mapSettings.label') }}</p>
           <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none">
             <input type="checkbox" v-model="editForm.label_show" class="rounded accent-indigo-500 w-3.5 h-3.5" />
-            Show label
+            {{ t('mapSettings.showLabel') }}
           </label>
           <template v-if="editForm.label_show">
             <div v-if="selectedObject.type !== 'textbox'" class="space-y-1">
-              <label class="text-xs text-zinc-500">Text</label>
-              <input v-model="editForm.label_text" class="field" placeholder="(auto)" />
+              <label class="text-xs text-zinc-500">{{ t('mapSettings.labelText') }}</label>
+              <input v-model="editForm.label_text" class="field" :placeholder="t('mapSettings.labelAuto')" />
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div class="space-y-1">
-                <label class="text-xs text-zinc-500">Size</label>
+                <label class="text-xs text-zinc-500">{{ t('mapSettings.size') }}</label>
                 <NumberInput v-model="editForm.label_size" min="8" max="72" />
               </div>
               <div class="space-y-1">
-                <label class="text-xs text-zinc-500">Color</label>
+                <label class="text-xs text-zinc-500">{{ t('mapSettings.color') }}</label>
                 <div class="flex gap-1.5 items-center">
                   <input type="color" v-model="editForm.label_color"
                     class="w-8 h-8 rounded border-0 bg-transparent cursor-pointer p-0.5 shrink-0" />
@@ -235,15 +235,15 @@
                 </div>
               </div>
               <div class="space-y-1">
-                <label class="text-xs text-zinc-500">Offset X</label>
+                <label class="text-xs text-zinc-500">{{ t('mapSettings.offsetX') }}</label>
                 <NumberInput v-model="editForm.label_x" />
               </div>
               <div class="space-y-1">
-                <label class="text-xs text-zinc-500">Offset Y</label>
+                <label class="text-xs text-zinc-500">{{ t('mapSettings.offsetY') }}</label>
                 <NumberInput v-model="editForm.label_y" />
               </div>
               <div class="space-y-1 col-span-2">
-                <label class="text-xs text-zinc-500">Background</label>
+                <label class="text-xs text-zinc-500">{{ t('mapSettings.background') }}</label>
                 <div class="flex gap-1.5 items-center">
                   <input type="color" v-model="editForm.label_background"
                     class="w-8 h-8 rounded border-0 bg-transparent cursor-pointer p-0.5 shrink-0" />
@@ -256,52 +256,52 @@
 
         <!-- Appearance (non-line, non-textbox) -->
         <section v-if="selectedObject.type !== 'line' && selectedObject.type !== 'textbox'" class="p-4 space-y-2">
-          <p class="section-title">Appearance</p>
+          <p class="section-title">{{ t('mapSettings.appearance') }}</p>
           <div class="space-y-1">
-            <label class="text-xs text-zinc-500">View type</label>
+            <label class="text-xs text-zinc-500">{{ t('mapSettings.viewType') }}</label>
             <select v-model="editForm.view_type" class="field">
-              <option value="icon">Icon</option>
-              <option value="text">Text only</option>
-              <option value="gadget">Gadget</option>
+              <option value="icon">{{ t('mapSettings.viewTypeIcon') }}</option>
+              <option value="text">{{ t('mapSettings.viewTypeText') }}</option>
+              <option value="gadget">{{ t('mapSettings.viewTypeGadget') }}</option>
             </select>
           </div>
           <div class="space-y-1">
-            <label class="text-xs text-zinc-500">Size</label>
+            <label class="text-xs text-zinc-500">{{ t('mapSettings.size') }}</label>
             <NumberInput v-model="editForm.icon_size" min="1" max="512" placeholder="default" class="w-24" />
           </div>
           <template v-if="editForm.view_type === 'gadget'">
             <div class="space-y-1">
-              <label class="text-xs text-zinc-500">Gadget type</label>
+              <label class="text-xs text-zinc-500">{{ t('mapSettings.gadgetType') }}</label>
               <select v-model="editForm.gadget_type" class="field">
-                <option value="gauge">Gauge</option>
-                <option value="bar">Bar</option>
-                <option value="trafficlight">Traffic light</option>
+                <option value="gauge">{{ t('mapSettings.gadgetGauge') }}</option>
+                <option value="bar">{{ t('mapSettings.gadgetBar') }}</option>
+                <option value="trafficlight">{{ t('mapSettings.gadgetTrafficlight') }}</option>
               </select>
             </div>
             <div class="space-y-1">
-              <label class="text-xs text-zinc-500">Metric</label>
-              <AutocompleteInput v-model="editForm.gadget_metric" :suggestions="metricSuggestions" placeholder="first metric" />
+              <label class="text-xs text-zinc-500">{{ t('mapSettings.metric') }}</label>
+              <AutocompleteInput v-model="editForm.gadget_metric" :suggestions="metricSuggestions" :placeholder="t('mapSettings.firstMetric')" />
             </div>
           </template>
           <div v-if="editForm.view_type !== 'gadget'" class="space-y-1">
-            <label class="text-xs text-zinc-500">Custom icon</label>
+            <label class="text-xs text-zinc-500">{{ t('mapSettings.customIcon') }}</label>
             <input v-model="editForm.icon" class="field font-mono" placeholder="filename.png" />
           </div>
         </section>
 
         <!-- Link -->
         <section class="p-4 space-y-2">
-          <p class="section-title">Link</p>
+          <p class="section-title">{{ t('mapSettings.link') }}</p>
           <div class="space-y-1">
-            <label class="text-xs text-zinc-500">URL</label>
+            <label class="text-xs text-zinc-500">{{ t('mapSettings.url') }}</label>
             <input v-model="editForm.url" class="field font-mono" placeholder="https://…" />
           </div>
           <div class="space-y-1">
-            <label class="text-xs text-zinc-500">Target</label>
+            <label class="text-xs text-zinc-500">{{ t('mapSettings.target') }}</label>
             <select v-model="editForm.url_target" class="field">
-              <option value="_blank">New tab</option>
-              <option value="_self">Same tab</option>
-              <option value="_top">Top frame</option>
+              <option value="_blank">{{ t('mapSettings.targetNewTab') }}</option>
+              <option value="_self">{{ t('mapSettings.targetSameTab') }}</option>
+              <option value="_top">{{ t('mapSettings.targetTopFrame') }}</option>
             </select>
           </div>
         </section>
@@ -315,18 +315,18 @@
               :class="isDirty && !saving
                 ? 'bg-indigo-600 hover:bg-indigo-500'
                 : 'bg-zinc-700 opacity-50 cursor-not-allowed'">
-              {{ saving ? 'Saving…' : 'Save' }}
+              {{ saving ? t('common.saving') : t('common.save') }}
             </button>
             <button type="button" @click="confirmDelete = true"
               class="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 ring-1 ring-red-500/20 hover:ring-red-500/40 rounded-lg font-semibold text-sm text-red-400 transition-all">
-              Delete
+              {{ t('common.delete') }}
             </button>
           </div>
           <ConfirmDialog
             v-if="confirmDelete"
-            title="Delete object"
-            message="This cannot be undone."
-            confirm-label="Delete"
+            :title="t('map.deleteObject')"
+            :message="t('map.cannotBeUndone')"
+            :confirm-label="t('common.delete')"
             @confirm="confirmDelete = false; $emit('delete-selected')"
             @cancel="confirmDelete = false"
           />
@@ -340,6 +340,7 @@
 
 <script setup lang="ts">
 import { computed, ref, reactive, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { MapObject } from '@/types/api'
 import type { NewObjectDraft } from '@/composables/useMapEditor'
 import { backendsApi } from '@/api/client'
@@ -347,6 +348,8 @@ import { useAuthStore } from '@/stores/auth'
 import AutocompleteInput from './AutocompleteInput.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import NumberInput from '@/components/NumberInput.vue'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   draft: NewObjectDraft
@@ -625,7 +628,7 @@ async function saveProperties() {
     emit('save-properties', buildUpdates())
     isDirty.value = false
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : 'Save failed'
+    saveError.value = e instanceof Error ? e.message : t('mapSettings.saveFailed')
   } finally {
     saving.value = false
   }

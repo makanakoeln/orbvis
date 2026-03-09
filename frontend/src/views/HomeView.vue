@@ -15,12 +15,12 @@
           v-if="auth.isAdmin"
           to="/admin/maps"
           class="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--accent)] border border-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-all duration-150"
-        >Manage</router-link>
+        >{{ t('nav.manage') }}</router-link>
         <button @click="showSettings = true"
           class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
-          User settings
+          {{ t('nav.userSettings') }}
         </button>
-        <button v-if="!auth.ssoActive" @click="auth.logout()" title="Logout"
+        <button v-if="!auth.ssoActive" @click="auth.logout()" :title="t('auth.logout')"
           class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
@@ -39,8 +39,8 @@
 
     <main class="max-w-5xl mx-auto py-10 px-6">
       <div class="mb-8">
-        <h2 class="text-2xl font-bold text-[var(--text)] tracking-tight">Maps</h2>
-        <p class="text-sm text-zinc-500 mt-1">Select a map to view monitoring status</p>
+        <h2 class="text-2xl font-bold text-[var(--text)] tracking-tight">{{ t('home.title') }}</h2>
+        <p class="text-sm text-zinc-500 mt-1">{{ t('home.subtitle') }}</p>
       </div>
 
       <!-- Loading -->
@@ -49,7 +49,7 @@
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
         </svg>
-        Loading…
+        {{ t('common.loading') }}
       </div>
 
       <!-- Error -->
@@ -66,11 +66,11 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
           </svg>
         </div>
-        <p class="text-zinc-300 font-semibold">No maps configured</p>
+        <p class="text-zinc-300 font-semibold">{{ t('home.noMapsTitle') }}</p>
         <p class="text-zinc-600 text-sm mt-1.5">
           <router-link v-if="auth.isAdmin" to="/admin/maps"
-            class="text-indigo-400 hover:text-indigo-300 transition-colors">Create your first map</router-link>
-          <span v-else>Contact your administrator</span>
+            class="text-indigo-400 hover:text-indigo-300 transition-colors">{{ t('home.noMapsAdmin') }}</router-link>
+          <span v-else>{{ t('home.noMapsUser') }}</span>
         </p>
       </div>
 
@@ -107,7 +107,7 @@
           <div v-if="map.alias" class="text-[11px] text-zinc-600 font-mono mt-0.5">{{ map.name }}</div>
 
           <div class="flex items-center gap-2 mt-3 text-xs text-zinc-600">
-            <span>{{ map.object_count }} objects</span>
+            <span>{{ t('common.objects', { n: map.object_count }) }}</span>
             <span class="text-zinc-800">·</span>
             <span class="font-mono truncate">{{ map.backend_id }}</span>
           </div>
@@ -119,10 +119,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useMapsStore } from '@/stores/maps'
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const mapsStore = useMapsStore()
 const showSettings = ref(false)

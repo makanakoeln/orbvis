@@ -13,14 +13,14 @@
           </svg>
         </div>
         <h1 class="text-2xl font-bold text-[var(--text)] tracking-tight">OrbVis</h1>
-        <p class="text-sm text-zinc-500 mt-1">Monitoring Visualization</p>
+        <p class="text-sm text-zinc-500 mt-1">{{ t('auth.monitoringVisualization') }}</p>
       </div>
 
       <!-- Card -->
       <div class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-8">
         <form @submit.prevent="handleLogin" class="space-y-5">
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Username</label>
+            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('auth.username') }}</label>
             <input
               v-model="username"
               type="text"
@@ -31,7 +31,7 @@
             />
           </div>
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Password</label>
+            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('auth.password') }}</label>
             <input
               v-model="password"
               type="password"
@@ -55,7 +55,7 @@
             :disabled="authStore.loading"
             class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-all duration-150 shadow-lg shadow-indigo-900/30"
           >
-            {{ authStore.loading ? 'Signing in…' : 'Sign in' }}
+            {{ authStore.loading ? t('auth.signingIn') : t('auth.signIn') }}
           </button>
         </form>
       </div>
@@ -65,8 +65,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const username = ref('')
 const password = ref('')

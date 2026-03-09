@@ -4,6 +4,7 @@ import { authApi } from '@/api/client'
 import type { UserRead } from '@/types/api'
 import router from '@/router'
 import type { RouteLocationRaw } from 'vue-router'
+import { i18n } from '@/main'
 
 const ACCESS_TOKEN_KEY = 'orbvis_access_token'
 const REFRESH_TOKEN_KEY = 'orbvis_refresh_token'
@@ -66,6 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (!accessToken.value) return
     try {
       user.value = await authApi.me(accessToken.value)
+      i18n.global.locale.value = (user.value?.language ?? 'en') as 'en' | 'de'
     } catch {
       // Token invalid; clear state
       clearAuth()

@@ -24,29 +24,29 @@
 
         <!-- === MONITORING OBJECT === -->
         <section v-if="object.type !== 'textbox' && object.type !== 'line'">
-          <p class="section-title">Monitoring Object</p>
+          <p class="section-title">{{ t('mapSettings.monitoringObject') }}</p>
           <div class="space-y-3">
             <template v-if="object.type === 'host' || object.type === 'service'">
               <div class="field-row">
-                <label class="field-label">Hostname</label>
+                <label class="field-label">{{ t('mapSettings.hostname') }}</label>
                 <AutocompleteInput v-model="form.host_name" :suggestions="hosts" :loading="loadingHosts" :disabled="true" placeholder="hostname" class="flex-1" />
               </div>
             </template>
             <template v-if="object.type === 'service'">
               <div class="field-row">
-                <label class="field-label">Service</label>
+                <label class="field-label">{{ t('mapSettings.typeService') }}</label>
                 <AutocompleteInput v-model="form.service_description" :suggestions="services" :loading="loadingServices" :disabled="true" placeholder="service description" class="flex-1" />
               </div>
             </template>
             <template v-if="object.type === 'hostgroup' || object.type === 'servicegroup'">
               <div class="field-row">
-                <label class="field-label">Group name</label>
+                <label class="field-label">{{ t('mapSettings.groupName') }}</label>
                 <AutocompleteInput v-model="form.group_name" :suggestions="groups" :loading="loadingGroups" :disabled="true" placeholder="group name" class="flex-1" />
               </div>
             </template>
             <template v-if="object.type === 'map'">
               <div class="field-row">
-                <label class="field-label">Target map</label>
+                <label class="field-label">{{ t('mapSettings.targetMap') }}</label>
                 <input v-model="form.map_name" :disabled="true" class="field flex-1 disabled:opacity-50 disabled:cursor-not-allowed" placeholder="map-name" />
               </div>
             </template>
@@ -55,132 +55,132 @@
 
         <!-- === TEXTBOX CONTENT === -->
         <section v-if="object.type === 'textbox'">
-          <p class="section-title">Content</p>
+          <p class="section-title">{{ t('mapSettings.content') }}</p>
           <textarea v-model="form.label_text" rows="3"
             class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
-            placeholder="Text content…" />
+            :placeholder="t('mapSettings.textContent') + '…'" />
         </section>
 
         <!-- === LINE CONFIG === -->
         <section v-if="object.type === 'line'">
-          <p class="section-title">Monitoring Object</p>
+          <p class="section-title">{{ t('mapSettings.monitoringObject') }}</p>
           <div class="space-y-3">
             <div class="field-row">
-              <label class="field-label">Hostname</label>
+              <label class="field-label">{{ t('mapSettings.hostname') }}</label>
               <AutocompleteInput v-model="form.host_name" :suggestions="hosts" :loading="loadingHosts" :disabled="true" placeholder="hostname" class="flex-1" />
             </div>
             <div class="field-row">
-              <label class="field-label">Service</label>
+              <label class="field-label">{{ t('mapSettings.typeService') }}</label>
               <AutocompleteInput v-model="form.service_description" :suggestions="services" :loading="loadingServices" :disabled="true" placeholder="service description (optional)" class="flex-1" />
             </div>
           </div>
         </section>
         <section v-if="object.type === 'line'">
-          <p class="section-title">Line</p>
+          <p class="section-title">{{ t('mapSettings.lineSection') }}</p>
           <div class="space-y-3">
             <div class="field-row">
-              <label class="field-label">Style</label>
+              <label class="field-label">{{ t('mapSettings.lineStyle') }}</label>
               <select v-model.number="form.line_type" class="field flex-1">
-                <option :value="null">Default</option>
-                <option :value="10">Simple line</option>
-                <option :value="11">Line with arrow →</option>
-                <option :value="12">Line with arrow ←</option>
-                <option :value="13">Double arrow ↔</option>
-                <option :value="14">Dashed</option>
-                <option :value="20">Weathermap (utilization)</option>
+                <option :value="null">{{ t('mapSettings.lineDefault') }}</option>
+                <option :value="10">{{ t('mapSettings.lineSimple') }}</option>
+                <option :value="11">{{ t('mapSettings.lineArrowRight') }}</option>
+                <option :value="12">{{ t('mapSettings.lineArrowLeft') }}</option>
+                <option :value="13">{{ t('mapSettings.lineDoubleArrow') }}</option>
+                <option :value="14">{{ t('mapSettings.lineDashed') }}</option>
+                <option :value="20">{{ t('mapSettings.lineWeathermap') }}</option>
               </select>
             </div>
             <!-- Weathermap metric -->
             <div v-if="form.line_type === 20" class="field-row">
-              <label class="field-label">Metric</label>
+              <label class="field-label">{{ t('mapSettings.metric') }}</label>
               <AutocompleteInput
                 v-model="form.weathermap_metric"
                 :suggestions="metricSuggestions"
-                placeholder="leave empty for first metric"
+                :placeholder="t('mapSettings.firstMetric')"
                 class="flex-1"
               />
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div class="field-row">
-                <label class="field-label">Start X</label>
+                <label class="field-label">{{ t('mapSettings.startX') }}</label>
                 <NumberInput v-model="form.x" class="flex-1" />
               </div>
               <div class="field-row">
-                <label class="field-label">Y</label>
+                <label class="field-label">{{ t('mapSettings.y') }}</label>
                 <NumberInput v-model="form.y" class="flex-1" />
               </div>
               <div class="field-row">
-                <label class="field-label">End X</label>
+                <label class="field-label">{{ t('mapSettings.endX') }}</label>
                 <NumberInput v-model="form.x2" class="flex-1" />
               </div>
               <div class="field-row">
-                <label class="field-label">Y</label>
+                <label class="field-label">{{ t('mapSettings.y') }}</label>
                 <NumberInput v-model="form.y2" class="flex-1" />
               </div>
             </div>
             <!-- Label -->
             <div class="field-row">
-              <label class="field-label">Show label</label>
+              <label class="field-label">{{ t('mapSettings.showLabel') }}</label>
               <input v-model="form.label_show" type="checkbox" class="accent-indigo-500" />
             </div>
             <div v-if="form.label_show" class="field-row">
-              <label class="field-label">Label text</label>
-              <input v-model="form.label_text" class="field flex-1" placeholder="Label on the line" />
+              <label class="field-label">{{ t('mapSettings.labelText') }}</label>
+              <input v-model="form.label_text" class="field flex-1" :placeholder="t('mapSettings.labelOnLine')" />
             </div>
           </div>
         </section>
 
         <!-- === POSITION === -->
         <section v-if="object.type !== 'line'">
-          <p class="section-title">Position</p>
+          <p class="section-title">{{ t('mapSettings.position') }}</p>
           <div class="grid grid-cols-[1fr_1fr_5rem] gap-3">
             <template v-if="mapType === 'worldmap'">
               <div class="field-row col-span-1">
-                <label class="field-label">Lat</label>
+                <label class="field-label">{{ t('mapSettings.lat') }}</label>
                 <NumberInput v-model="form.lat" step="any" class="flex-1" />
               </div>
               <div class="field-row col-span-1">
-                <label class="field-label">Lng</label>
+                <label class="field-label">{{ t('mapSettings.lng') }}</label>
                 <NumberInput v-model="form.lng" step="any" class="flex-1" />
               </div>
             </template>
             <template v-else>
               <div class="field-row col-span-1">
-                <label class="field-label">X</label>
+                <label class="field-label">{{ t('mapSettings.x') }}</label>
                 <NumberInput v-model="form.x" class="flex-1" />
               </div>
               <div class="field-row col-span-1">
-                <label class="field-label">Y</label>
+                <label class="field-label">{{ t('mapSettings.y') }}</label>
                 <NumberInput v-model="form.y" class="flex-1" />
               </div>
             </template>
             <div class="field-row col-span-1">
-              <label class="field-label">Z</label>
-              <NumberInput v-model="form.z" min="1" max="999" title="Z-index (stacking order)" class="flex-1" />
+              <label class="field-label">{{ t('mapSettings.z') }}</label>
+              <NumberInput v-model="form.z" min="1" max="999" class="flex-1" />
             </div>
           </div>
         </section>
 
         <!-- === LABEL === -->
         <section v-if="object.type !== 'line'">
-          <p class="section-title">Label</p>
+          <p class="section-title">{{ t('mapSettings.label') }}</p>
           <div class="space-y-3">
             <label class="flex items-center gap-2.5 text-sm text-zinc-400 cursor-pointer select-none">
               <input type="checkbox" v-model="form.label_show" class="rounded accent-indigo-500 w-4 h-4" />
-              Show label
+              {{ t('mapSettings.showLabel') }}
             </label>
             <template v-if="form.label_show">
               <div class="field-row" v-if="object.type !== 'textbox'">
-                <label class="field-label">Text</label>
+                <label class="field-label">{{ t('mapSettings.labelText') }}</label>
                 <input v-model="form.label_text" class="field flex-1" placeholder="(auto from object)" />
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div class="field-row">
-                  <label class="field-label">Size</label>
+                  <label class="field-label">{{ t('mapSettings.size') }}</label>
                   <NumberInput v-model="form.label_size" min="8" max="72" class="flex-1" />
                 </div>
                 <div class="field-row">
-                  <label class="field-label">Color</label>
+                  <label class="field-label">{{ t('mapSettings.color') }}</label>
                   <div class="flex gap-2 flex-1 items-center">
                     <input type="color" v-model="form.label_color"
                       class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5" />
@@ -188,15 +188,15 @@
                   </div>
                 </div>
                 <div class="field-row">
-                  <label class="field-label">Offset X</label>
+                  <label class="field-label">{{ t('mapSettings.offsetX') }}</label>
                   <NumberInput v-model="form.label_x" class="flex-1" />
                 </div>
                 <div class="field-row">
-                  <label class="field-label">Offset Y</label>
+                  <label class="field-label">{{ t('mapSettings.offsetY') }}</label>
                   <NumberInput v-model="form.label_y" class="flex-1" />
                 </div>
                 <div class="field-row col-span-2">
-                  <label class="field-label">Background</label>
+                  <label class="field-label">{{ t('mapSettings.background') }}</label>
                   <div class="flex gap-2 flex-1 items-center">
                     <input type="color" v-model="form.label_background"
                       class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5" />
@@ -210,41 +210,41 @@
 
         <!-- === APPEARANCE === -->
         <section v-if="object.type !== 'line' && object.type !== 'textbox'">
-          <p class="section-title">Appearance</p>
+          <p class="section-title">{{ t('mapSettings.appearance') }}</p>
           <div class="space-y-3">
             <div class="field-row">
-              <label class="field-label">View type</label>
+              <label class="field-label">{{ t('mapSettings.viewType') }}</label>
               <select v-model="form.view_type" class="field flex-1">
-                <option value="icon">Icon</option>
-                <option value="text">Text only</option>
-                <option value="gadget">Gadget</option>
+                <option value="icon">{{ t('mapSettings.viewTypeIcon') }}</option>
+                <option value="text">{{ t('mapSettings.viewTypeText') }}</option>
+                <option value="gadget">{{ t('mapSettings.viewTypeGadget') }}</option>
               </select>
             </div>
             <div class="field-row">
-              <label class="field-label">Size</label>
+              <label class="field-label">{{ t('mapSettings.size') }}</label>
               <NumberInput v-model="form.icon_size" min="1" max="512" placeholder="map default" class="w-24" />
             </div>
             <template v-if="form.view_type === 'gadget'">
               <div class="field-row">
-                <label class="field-label">Gadget type</label>
+                <label class="field-label">{{ t('mapSettings.gadgetType') }}</label>
                 <select v-model="form.gadget_type" class="field flex-1">
-                  <option value="gauge">Gauge</option>
-                  <option value="bar">Bar</option>
-                  <option value="trafficlight">Traffic light</option>
+                  <option value="gauge">{{ t('mapSettings.gadgetGauge') }}</option>
+                  <option value="bar">{{ t('mapSettings.gadgetBar') }}</option>
+                  <option value="trafficlight">{{ t('mapSettings.gadgetTrafficlight') }}</option>
                 </select>
               </div>
               <div class="field-row">
-                <label class="field-label">Metric</label>
+                <label class="field-label">{{ t('mapSettings.metric') }}</label>
                 <AutocompleteInput
                   v-model="form.gadget_metric"
                   :suggestions="metricSuggestions"
-                  placeholder="leave empty for first metric"
+                  :placeholder="t('mapSettings.firstMetric')"
                   class="flex-1"
                 />
               </div>
             </template>
             <div v-if="form.view_type !== 'gadget'" class="field-row">
-              <label class="field-label">Custom icon</label>
+              <label class="field-label">{{ t('mapSettings.customIcon') }}</label>
               <input v-model="form.icon" class="field flex-1 font-mono" placeholder="filename.png" />
             </div>
           </div>
@@ -252,18 +252,18 @@
 
         <!-- === LINK === -->
         <section>
-          <p class="section-title">Link</p>
+          <p class="section-title">{{ t('mapSettings.link') }}</p>
           <div class="space-y-3">
             <div class="field-row">
-              <label class="field-label">URL</label>
+              <label class="field-label">{{ t('mapSettings.url') }}</label>
               <input v-model="form.url" class="field flex-1 font-mono" placeholder="https://…" />
             </div>
             <div class="field-row">
-              <label class="field-label">Target</label>
+              <label class="field-label">{{ t('mapSettings.target') }}</label>
               <select v-model="form.url_target" class="field flex-1">
-                <option value="_blank">New tab (_blank)</option>
-                <option value="_self">Same tab (_self)</option>
-                <option value="_top">Top frame (_top)</option>
+                <option value="_blank">{{ t('mapSettings.targetNewTab') }} (_blank)</option>
+                <option value="_self">{{ t('mapSettings.targetSameTab') }} (_self)</option>
+                <option value="_top">{{ t('mapSettings.targetTopFrame') }} (_top)</option>
               </select>
             </div>
           </div>
@@ -280,13 +280,13 @@
         <div>
           <button @click="confirmDelete = true"
             class="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 ring-1 ring-red-500/20 hover:ring-red-500/40 rounded-lg text-sm font-semibold text-red-400 transition-all">
-            Delete
+            {{ t('common.delete') }}
           </button>
           <ConfirmDialog
             v-if="confirmDelete"
-            title="Delete object"
-            message="This cannot be undone."
-            confirm-label="Delete"
+            :title="t('map.deleteObject')"
+            :message="t('map.cannotBeUndone')"
+            :confirm-label="t('common.delete')"
             @confirm="confirmDelete = false; $emit('delete')"
             @cancel="confirmDelete = false"
           />
@@ -294,10 +294,10 @@
         <div class="flex gap-3">
           <p v-if="saveError" class="text-red-400 text-xs self-center">{{ saveError }}</p>
           <button @click="$emit('close')"
-            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">Cancel</button>
+            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">{{ t('common.cancel') }}</button>
           <button @click="save" :disabled="saving"
             class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all">
-            {{ saving ? 'Saving…' : 'Save' }}
+            {{ saving ? t('common.saving') : t('common.save') }}
           </button>
         </div>
       </div>
@@ -307,6 +307,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { MapObject, ObjectState } from '@/types/api'
 import { backendsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
@@ -314,6 +315,8 @@ import { parsePerfData } from '@/utils/perf'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import AutocompleteInput from './AutocompleteInput.vue'
 import NumberInput from '@/components/NumberInput.vue'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   object: MapObject
@@ -528,7 +531,7 @@ async function save() {
 
     emit('save', updates)
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : 'Save failed'
+    saveError.value = e instanceof Error ? e.message : t('mapSettings.saveFailed')
     saving.value = false
   }
 }
