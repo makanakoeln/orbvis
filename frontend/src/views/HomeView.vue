@@ -81,8 +81,10 @@
             <span class="text-xs px-2 py-0.5 rounded-full font-medium"
               :class="map.map_type === 'worldmap'
                 ? 'bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20'
+                : map.map_type === 'radar'
+                ? 'bg-violet-500/10 text-violet-400 ring-1 ring-violet-500/20'
                 : 'bg-zinc-700/60 text-zinc-500 ring-1 ring-zinc-700'">
-              {{ map.map_type === 'worldmap' ? 'worldmap' : 'static' }}
+              {{ map.map_type }}
             </span>
           </div>
 

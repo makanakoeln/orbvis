@@ -48,8 +48,10 @@
               <span class="text-xs px-2 py-0.5 rounded-full font-medium ring-1"
                 :class="map.map_type === 'worldmap'
                   ? 'bg-cyan-500/10 text-cyan-400 ring-cyan-500/20'
+                  : map.map_type === 'radar'
+                  ? 'bg-violet-500/10 text-violet-400 ring-violet-500/20'
                   : 'bg-zinc-700/50 text-zinc-500 ring-zinc-700'">
-                {{ map.map_type === 'worldmap' ? 'worldmap' : 'static' }}
+                {{ map.map_type }}
               </span>
             </td>
             <td class="px-4 py-3 text-zinc-500 font-mono text-xs">{{ map.backend_id }}</td>
