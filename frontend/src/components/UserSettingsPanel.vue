@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <div class="fixed inset-0 z-50 flex items-center justify-center">
-      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('close')" />
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="tryClose" />
       <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-80 space-y-5">
 
         <!-- Header -->
@@ -10,7 +10,7 @@
             <h3 class="text-base font-bold text-[var(--text)]">User Settings</h3>
             <p class="text-xs text-zinc-500 mt-0.5">{{ userName }}</p>
           </div>
-          <button @click="$emit('close')"
+          <button @click="tryClose"
             class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -25,7 +25,7 @@
             <button
               v-for="opt in themeOptions"
               :key="opt.value"
-              @click="setTheme(opt.value)"
+              @click="selectTheme(opt.value)"
               class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all border"
               :class="selectedTheme === opt.value
                 ? 'bg-indigo-600/20 border-indigo-500/50 text-indigo-300'
@@ -56,11 +56,24 @@
           </form>
         </div>
 
-        <!-- Logout (only for self and not in SSO mode – SSO shows it in the navbar) -->
-        <div v-if="isSelf && !auth.ssoActive" class="pt-1 border-t border-[var(--border)]">
-          <button @click="auth.logout()"
-            class="w-full px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all text-left">
-            Logout
+        <!-- Unsaved changes warning -->
+        <div v-if="showUnsavedWarning" class="flex items-center gap-2 px-3 py-2 bg-amber-500/10 ring-1 ring-amber-500/30 rounded-lg text-amber-400 text-xs">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          Unsaved changes —
+          <button @click="discardAndClose" class="underline hover:text-amber-300">Discard</button>
+        </div>
+
+        <!-- Footer: Save / Cancel -->
+        <div v-if="isSelf" class="flex gap-2 pt-1 border-t border-[var(--border)]">
+          <button @click="discardAndClose"
+            class="flex-1 px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
+            Cancel
+          </button>
+          <button @click="save" :disabled="saving || !isDirty"
+            class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded-lg text-sm font-semibold text-white transition-all">
+            {{ saving ? 'Saving…' : 'Save' }}
           </button>
         </div>
 
@@ -81,13 +94,18 @@ const props = defineProps<{
   isSelf: boolean
 }>()
 
-defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: [] }>()
 
 const auth = useAuthStore()
 
 // ---- Theme ----
 
+const savedTheme = ref(auth.user?.theme ?? 'system')
 const selectedTheme = ref(auth.user?.theme ?? 'system')
+
+const isDirty = computed(() => selectedTheme.value !== savedTheme.value)
+const showUnsavedWarning = ref(false)
+const saving = ref(false)
 
 const SunIcon = () => h('svg', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '2' },
   [h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', d: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z' })]
@@ -105,12 +123,39 @@ const themeOptions = [
   { value: 'system', label: 'Auto', icon: SystemIcon },
 ]
 
-async function setTheme(theme: string) {
+function selectTheme(theme: string) {
   selectedTheme.value = theme
-  // Apply immediately to DOM — don't wait for the store watcher
+  showUnsavedWarning.value = false
+  // Preview immediately in DOM without persisting
   if (props.isSelf) applyTheme(theme, auth.ssoActive, auth.user?.cmk_theme)
-  await usersApi.update(props.userId, { theme }, auth.accessToken!)
-  if (props.isSelf) await auth.fetchCurrentUser()
+}
+
+async function save() {
+  saving.value = true
+  try {
+    await usersApi.update(props.userId, { theme: selectedTheme.value }, auth.accessToken!)
+    savedTheme.value = selectedTheme.value
+    if (props.isSelf) await auth.fetchCurrentUser()
+    showUnsavedWarning.value = false
+    emit('close')
+  } finally {
+    saving.value = false
+  }
+}
+
+function tryClose() {
+  if (isDirty.value) {
+    showUnsavedWarning.value = true
+  } else {
+    emit('close')
+  }
+}
+
+function discardAndClose() {
+  // Revert theme preview to saved value
+  if (props.isSelf) applyTheme(savedTheme.value, auth.ssoActive, auth.user?.cmk_theme)
+  selectedTheme.value = savedTheme.value
+  emit('close')
 }
 
 // ---- Password ----
