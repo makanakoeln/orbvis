@@ -374,12 +374,12 @@ sudo chown -R "$SITE:$SITE" "$ORBVIS_DIR"
 echo "==> Reloading Apache..."
 sudo omd reload "$SITE" apache
 
-echo "==> Starting OrbVis backend..."
+echo "==> Restarting OrbVis backend..."
 # cd to a neutral directory before switching to the site user —
 # omd restores the cwd after chdir() and the site user has no access to
 # the developer's working directory (e.g. /home/…/frontend).
 cd /tmp
-sudo -u "$SITE" omd start orbvis
+sudo -u "$SITE" omd restart orbvis
 
 HOST="$(hostname -f 2>/dev/null || hostname)"
 
