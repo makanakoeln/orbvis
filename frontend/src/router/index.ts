@@ -66,12 +66,6 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
   await auth.init()
 
-  // In SSO mode re-fetch /me on every navigation so CMK theme changes are picked up
-  // without a full page reload. The call is lightweight (no new JWT needed).
-  if (auth.ssoActive) {
-    await auth.fetchCurrentUser()
-  }
-
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
