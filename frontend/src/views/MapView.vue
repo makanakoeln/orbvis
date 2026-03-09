@@ -94,6 +94,12 @@
         <div v-else class="absolute inset-0 flex items-center justify-center text-zinc-600">Map not found</div>
       </div>
 
+      <!-- Radar -->
+      <RadarCanvas
+        v-else-if="isRadar"
+        :states="statesStore.states"
+      />
+
       <!-- Automap -->
       <div v-else-if="isAutomap" class="flex-1 relative overflow-hidden">
         <AutomapCanvas
@@ -136,9 +142,9 @@
         <div v-else class="flex items-center justify-center h-full text-zinc-600">Map not found</div>
       </div>
 
-      <!-- Edit panel (not for automap) -->
+      <!-- Edit panel (not for automap or radar) -->
       <EditPanel
-        v-if="editor.editMode.value && !isAutomap"
+        v-if="editor.editMode.value && !isAutomap && !isRadar"
         :draft="editor.draft"
         :placing="editor.placing.value"
         :selected-object="selectedObject"
@@ -271,6 +277,7 @@
                   <option value="static">Static map</option>
                   <option value="worldmap">Worldmap (geographic)</option>
                   <option value="automap">Automap (topology)</option>
+                  <option value="radar">Radar (dynamic filter)</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                   <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -349,6 +356,7 @@ import MapCanvas from '@/components/map/MapCanvas.vue'
 import WorldMapCanvas from '@/components/map/WorldMapCanvas.vue'
 import NumberInput from '@/components/NumberInput.vue'
 import AutomapCanvas from '@/components/map/AutomapCanvas.vue'
+import RadarCanvas from '@/components/map/RadarCanvas.vue'
 import EditPanel from '@/components/map/EditPanel.vue'
 import ObjectPropertiesModal from '@/components/map/ObjectPropertiesModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
@@ -370,6 +378,7 @@ const worldmapCanvasRef = ref<InstanceType<typeof WorldMapCanvas> | null>(null)
 
 const isWorldmap = computed(() => mapConfig.value?.globals.map_type === 'worldmap')
 const isAutomap  = computed(() => mapConfig.value?.globals.map_type === 'automap')
+const isRadar    = computed(() => mapConfig.value?.globals.map_type === 'radar')
 
 const checkmkUrl = computed(() => {
   const bid = mapConfig.value?.globals.backend_id

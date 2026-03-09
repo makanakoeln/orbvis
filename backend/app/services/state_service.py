@@ -53,6 +53,9 @@ async def get_map_states(cfg: MapConfig) -> MapStates:
         ]
         return MapStates(map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=False)
 
+    if cfg.globals.map_type == "radar":
+        return await _get_radar_states(cfg, backend)
+
     tasks = [_get_object_state(backend, obj) for obj in cfg.objects]
     states = list(await asyncio.gather(*tasks))
 
@@ -95,3 +98,42 @@ async def _get_object_state(backend: "BackendBase", obj: MapObject) -> ObjectSta
     except Exception as exc:
         logger.exception("Error fetching state for object %s: %s", obj.id, exc)
         return ObjectState(object_id=obj.id, type=obj.type, state="PENDING", stale=True)
+
+
+async def _get_radar_states(cfg: "MapConfig", backend: "BackendBase") -> MapStates:
+    """Fetch states for all dynamically resolved radar map members."""
+    members = await backend.get_group_members(cfg.globals.radar_type, cfg.globals.radar_value)
+    if not members:
+        return MapStates(map_name=cfg.name, states=[], generated_at=time.time(), backend_ok=True)
+
+    tasks = []
+    for member in members:
+        if ";" in member:
+            host, svc = member.split(";", 1)
+            tasks.append(_get_virtual_service_state(backend, member, host, svc))
+        else:
+            tasks.append(_get_virtual_host_state(backend, member))
+
+    states = list(await asyncio.gather(*tasks))
+    backend_ok = not all(s.stale for s in states)
+    return MapStates(map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=backend_ok)
+
+
+async def _get_virtual_host_state(backend: "BackendBase", hostname: str) -> ObjectState:
+    try:
+        state = await backend.get_host_state(hostname)
+        state.object_id = hostname
+        return state
+    except Exception as exc:
+        logger.exception("Radar: error fetching host state for %s: %s", hostname, exc)
+        return ObjectState(object_id=hostname, type="host", state="PENDING", stale=True)
+
+
+async def _get_virtual_service_state(backend: "BackendBase", member_id: str, host: str, svc: str) -> ObjectState:
+    try:
+        state = await backend.get_service_state(host, svc)
+        state.object_id = member_id
+        return state
+    except Exception as exc:
+        logger.exception("Radar: error fetching service state for %s/%s: %s", host, svc, exc)
+        return ObjectState(object_id=member_id, type="service", state="PENDING", stale=True)

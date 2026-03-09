@@ -86,6 +86,11 @@ class TestBackend(BackendBase):
             return [f"{h};{s}" for h in _DEMO_HOSTS for s in _DEMO_SERVICES]
         return []
 
+    async def get_group_members(self, group_type: str, group_name: str) -> list[str]:
+        if group_type in ("all_services", "servicegroup"):
+            return [f"{h};{s}" for h in _DEMO_HOSTS for s in _DEMO_SERVICES]
+        return list(_DEMO_HOSTS)
+
     async def get_topology(self) -> list[dict]:
         return [
             {"name": "router01",    "parents": [],           "state": "UP",   "output": ""},

@@ -137,6 +137,23 @@ class LivestatusBackend(BackendBase):
             return [r[0] for r in rows]
         return []
 
+    async def get_group_members(self, group_type: str, group_name: str) -> list[str]:
+        if group_type == "all_hosts":
+            rows = await self._query("GET hosts\nColumns: name\n")
+            return [r[0] for r in rows]
+        if group_type == "all_services":
+            rows = await self._query("GET services\nColumns: host_name description\n")
+            return [f"{r[0]};{r[1]}" for r in rows]
+        if group_type == "hostgroup":
+            query = f"GET hosts\nColumns: name\nFilter: groups >= {_ls_escape(group_name)}\n"
+            rows = await self._query(query)
+            return [r[0] for r in rows]
+        if group_type == "servicegroup":
+            query = f"GET services\nColumns: host_name description\nFilter: groups >= {_ls_escape(group_name)}\n"
+            rows = await self._query(query)
+            return [f"{r[0]};{r[1]}" for r in rows]
+        return []
+
     async def get_topology(self) -> list[dict]:
         rows = await self._query("GET hosts\nColumns: name parents state plugin_output\n")
         result = []

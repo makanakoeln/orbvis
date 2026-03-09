@@ -59,6 +59,8 @@ export interface MapGlobals {
   worldmap_lat: number
   worldmap_lng: number
   worldmap_zoom: number
+  radar_type: string
+  radar_value: string
 }
 
 export interface MapConfig {
