@@ -21,18 +21,33 @@
   --border: rgba(255, 255, 255, 0.06);
   --text: #f4f4f5;
   --text-muted: #71717a;
+  --accent: #6366f1;
 }
 
 .light {
   --bg: #fafafa;
   --bg-surface: #ffffff;
-  --bg-input: #f4f4f5;
+  --bg-input: #e4e4e7;
   --bg-glass: rgba(255, 255, 255, 0.92);
-  --bg-hover: rgba(0, 0, 0, 0.06);
-  --border: rgba(0, 0, 0, 0.08);
+  --bg-hover: rgba(0, 0, 0, 0.07);
+  --border: rgba(0, 0, 0, 0.15);
   --text: #18181b;
-  --text-muted: #71717a;
+  --text-muted: #52525b;
+  --accent: #4f46e5;
 }
+
+/* Light theme: remap dark-only zinc shades to readable equivalents */
+.light .text-zinc-300 { color: #3f3f46; }
+.light .text-zinc-400 { color: #52525b; }
+.light .text-zinc-500 { color: #3f3f46; }
+.light .text-zinc-600 { color: #27272a; }
+.light .hover\:text-zinc-300:hover { color: #18181b; }
+.light .hover\:text-zinc-400:hover { color: #3f3f46; }
+.light .ring-zinc-700 { --tw-ring-color: #a1a1aa; }
+.light .hover\:ring-zinc-500:hover { --tw-ring-color: #71717a; }
+.light .bg-zinc-700\/50,
+.light .bg-zinc-700\/60 { background-color: rgba(212, 212, 216, 0.7); }
+.light .text-zinc-700 { color: #18181b; }
 
 body {
   background-color: var(--bg);

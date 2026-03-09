@@ -14,7 +14,7 @@
         <router-link
           v-if="auth.isAdmin"
           to="/admin/maps"
-          class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+          class="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--accent)] border border-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-all duration-150"
         >Manage</router-link>
         <button @click="showSettings = true"
           class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
