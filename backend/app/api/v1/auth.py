@@ -84,15 +84,18 @@ async def sso_login(request: Request, db: AsyncSession = Depends(get_db)) -> Tok
     cookie_name = f"auth_{site}" if site else None
     username: str | None = None
 
-    if cookie_name:
+    if not cookie_name:
+        logger.info("SSO: CHECKMK_SITE not configured")
+    else:
         cookie_value = request.cookies.get(cookie_name)
-        if cookie_value:
+        if not cookie_value:
+            logger.info("SSO: cookie %r not present (available: %s)", cookie_name, list(request.cookies.keys()))
+        else:
             username = validate_checkmk_cookie(cookie_value)
-
-    logger.debug("SSO attempt: cookie=%r username=%r", cookie_name, username)
 
     if not username:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No valid Checkmk session")
+    logger.info("SSO: login successful for user %r", username)
 
     user = await get_or_create_sso_user(db, username)
     return create_tokens(user)
