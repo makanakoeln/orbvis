@@ -1,10 +1,27 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OrbVis</title>
+    <!--
+      Synchronous theme bootstrap — runs before Vue, prevents flash of wrong theme.
+      Reads data-theme from CMK's parent frame (same-origin). Defaults to dark.
+    -->
+    <script>
+      (function () {
+        try {
+          if (window.top && window.top !== window) {
+            var cmk = window.top.document.body.getAttribute('data-theme');
+            if (cmk && !cmk.includes('dark')) {
+              document.documentElement.classList.remove('dark');
+              document.documentElement.classList.add('light');
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

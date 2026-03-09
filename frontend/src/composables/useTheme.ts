@@ -1,27 +1,17 @@
 import { watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
-function getCmkThemeCookie(): string | null {
-  const match = document.cookie.match(/(?:^|;\s*)theme=([^;]*)/)
-  return match ? decodeURIComponent(match[1]) : null
-}
-
-export function applyTheme(theme: string, ssoActive: boolean) {
+export function applyTheme(theme: string, ssoActive: boolean, cmkTheme?: string | null) {
   let dark: boolean
   if (theme === 'dark') {
     dark = true
   } else if (theme === 'light') {
     dark = false
   } else {
-    // 'system': in SSO mode try CMK cookie first, fall back to OS preference
-    if (ssoActive) {
-      const cmk = getCmkThemeCookie()
-      // No cookie = user never changed from CMK default (modern-dark) → dark
-      dark = cmk !== null ? cmk === 'modern-dark' : true
-    } else {
-      dark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    }
+    // 'system': follow CMK theme (from ui_theme.mk via backend) or default to dark.
+    dark = cmkTheme !== 'light'
   }
+
 
   const root = document.documentElement
   if (dark) {
@@ -31,15 +21,20 @@ export function applyTheme(theme: string, ssoActive: boolean) {
     root.classList.remove('dark')
     root.classList.add('light')
   }
+
 }
 
 export function useTheme() {
   const auth = useAuthStore()
 
+  // Watch both theme and ssoActive so we re-apply whenever either changes.
+  // Skip the very first fire if auth hasn't resolved yet (user still null and
+  // ssoActive still false) — the index.html dark class already covers that gap.
   watch(
-    () => auth.user?.theme,
-    (theme) => {
-      applyTheme(theme ?? 'system', auth.ssoActive)
+    () => [auth.user?.theme, auth.user?.cmk_theme, auth.ssoActive] as const,
+    ([theme]) => {
+      if (auth.user === null && !auth.ssoActive) return
+      applyTheme(theme ?? 'system', auth.ssoActive, auth.user?.cmk_theme)
     },
     { immediate: true },
   )

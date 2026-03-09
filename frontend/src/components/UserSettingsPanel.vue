@@ -108,7 +108,7 @@ const themeOptions = [
 async function setTheme(theme: string) {
   selectedTheme.value = theme
   // Apply immediately to DOM — don't wait for the store watcher
-  if (props.isSelf) applyTheme(theme, auth.ssoActive)
+  if (props.isSelf) applyTheme(theme, auth.ssoActive, auth.user?.cmk_theme)
   await usersApi.update(props.userId, { theme }, auth.accessToken!)
   if (props.isSelf) await auth.fetchCurrentUser()
 }
