@@ -55,7 +55,11 @@
         <span class="w-px h-4 bg-zinc-700" />
         <button @click="showUserSettings = true"
           class="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
-          {{ auth.user?.name }}
+          User settings
+        </button>
+        <button v-if="!auth.ssoActive" @click="auth.logout()"
+          class="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
+          Logout
         </button>
 
         <UserSettingsPanel

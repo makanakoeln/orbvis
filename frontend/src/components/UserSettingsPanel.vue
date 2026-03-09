@@ -56,8 +56,8 @@
           </form>
         </div>
 
-        <!-- Logout (only for self) -->
-        <div v-if="isSelf" class="pt-1 border-t border-[var(--border)]">
+        <!-- Logout (only for self and not in SSO mode – SSO shows it in the navbar) -->
+        <div v-if="isSelf && !auth.ssoActive" class="pt-1 border-t border-[var(--border)]">
           <button @click="auth.logout()"
             class="w-full px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all text-left">
             Logout

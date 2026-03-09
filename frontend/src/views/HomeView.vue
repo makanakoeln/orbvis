@@ -18,7 +18,11 @@
         >Manage</router-link>
         <button @click="showSettings = true"
           class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
-          {{ auth.user?.name }}
+          User settings
+        </button>
+        <button v-if="!auth.ssoActive" @click="auth.logout()"
+          class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
+          Logout
         </button>
       </div>
 
