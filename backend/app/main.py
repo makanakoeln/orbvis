@@ -132,6 +132,227 @@ async def _seed_default_roles() -> None:
     logger.info("Default roles seeded.")
 
 
+def _seed_demo_map() -> None:
+    """Write the built-in demo map to disk if it doesn't already exist."""
+    from app.schemas.map import MapConfig, MapGlobals, MapObject
+    from app.services.map_service import _map_path, _save_map_file
+
+    if _map_path("demo").exists():
+        return
+
+    cfg = MapConfig(
+        name="demo",
+        globals=MapGlobals(
+            alias="OrbVis Demo",
+            icon_size=28,
+            backend_id="test",
+            map_type="static",
+            hover_template="{{name}}\nState: {{state}}\n{{output}}",
+        ),
+        objects=[
+            # ── Title ──────────────────────────────────────────────────────
+            MapObject(
+                id="title",
+                type="textbox",
+                x=320, y=18,
+                label_show=True,
+                label_text=(
+                    "OrbVis Demo Map  ·  all object types: "
+                    "host · service · hostgroup · servicegroup · map · shape · line · textbox"
+                ),
+                label_size=12,
+                label_color="#e2e8f0",
+                label_background="#1e293b",
+                z=10,
+            ),
+            # ── Hosts (row 1) ───────────────────────────────────────────────
+            MapObject(
+                id="host-localhost",
+                type="host",
+                x=80, y=130,
+                host_name="localhost",
+                view_type="icon",
+                label_show=True,
+                label_text="localhost",
+                label_x=0, label_y=34, label_size=11,
+            ),
+            MapObject(
+                id="host-router01",
+                type="host",
+                x=260, y=130,
+                host_name="router01",
+                view_type="icon",
+                label_show=True,
+                label_text="router01",
+                label_x=0, label_y=34, label_size=11,
+            ),
+            MapObject(
+                id="host-fileserver",
+                type="host",
+                x=170, y=240,
+                host_name="fileserver",
+                view_type="icon",
+                label_show=True,
+                label_text="fileserver",
+                label_x=0, label_y=34, label_size=11,
+            ),
+            # ── Lines ───────────────────────────────────────────────────────
+            MapObject(
+                id="line-loc-rtr",
+                type="line",
+                x=80, y=130,
+                label_show=False,
+                line_type=10,
+                extra={"x2": 260, "y2": 130},
+            ),
+            MapObject(
+                id="line-rtr-fs",
+                type="line",
+                x=260, y=130,
+                label_show=False,
+                line_type=10,
+                extra={"x2": 170, "y2": 240},
+            ),
+            # ── Services (row 2) ────────────────────────────────────────────
+            MapObject(
+                id="svc-http",
+                type="service",
+                x=80, y=360,
+                host_name="localhost",
+                service_description="HTTP",
+                view_type="icon",
+                label_show=True,
+                label_x=0, label_y=34, label_size=10,
+            ),
+            MapObject(
+                id="svc-ping",
+                type="service",
+                x=220, y=360,
+                host_name="router01",
+                service_description="PING",
+                view_type="icon",
+                label_show=True,
+                label_x=0, label_y=34, label_size=10,
+            ),
+            MapObject(
+                id="svc-cpu-gauge",
+                type="service",
+                x=80, y=470,
+                host_name="localhost",
+                service_description="CPU Load",
+                view_type="gadget",
+                gadget_type="gauge",
+                label_show=True,
+                label_text="CPU Load (gauge)",
+                label_x=0, label_y=56, label_size=10,
+            ),
+            MapObject(
+                id="svc-disk-bar",
+                type="service",
+                x=240, y=470,
+                host_name="fileserver",
+                service_description="Disk /",
+                view_type="gadget",
+                gadget_type="bar",
+                label_show=True,
+                label_text="Disk / (bar)",
+                label_x=0, label_y=56, label_size=10,
+            ),
+            # ── Groups ──────────────────────────────────────────────────────
+            MapObject(
+                id="hg-linux",
+                type="hostgroup",
+                x=460, y=130,
+                group_name="linux-servers",
+                view_type="icon",
+                label_show=True,
+                label_text="linux-servers",
+                label_x=0, label_y=34, label_size=11,
+            ),
+            MapObject(
+                id="sg-web",
+                type="servicegroup",
+                x=460, y=260,
+                group_name="web-services",
+                view_type="icon",
+                label_show=True,
+                label_text="web-services",
+                label_x=0, label_y=34, label_size=11,
+            ),
+            # ── Shape ───────────────────────────────────────────────────────
+            MapObject(
+                id="shape-logo",
+                type="shape",
+                x=640, y=130,
+                icon=None,          # no icon uploaded yet → renders as shape placeholder
+                view_type="icon",
+                label_show=True,
+                label_text="shape\n(upload icon)",
+                label_x=0, label_y=34, label_size=10,
+            ),
+            # ── Map link ────────────────────────────────────────────────────
+            MapObject(
+                id="map-self",
+                type="map",
+                x=640, y=260,
+                map_name="demo",    # links back to this map (self-reference for demo)
+                view_type="icon",
+                label_show=True,
+                label_text="map link\n→ demo",
+                label_x=0, label_y=34, label_size=10,
+            ),
+            # ── Section labels ───────────────────────────────────────────────
+            MapObject(
+                id="lbl-hosts",
+                type="textbox",
+                x=20, y=90,
+                label_show=True,
+                label_text="HOSTS",
+                label_size=10,
+                label_color="#94a3b8",
+                label_background="transparent",
+                z=5,
+            ),
+            MapObject(
+                id="lbl-services",
+                type="textbox",
+                x=20, y=320,
+                label_show=True,
+                label_text="SERVICES",
+                label_size=10,
+                label_color="#94a3b8",
+                label_background="transparent",
+                z=5,
+            ),
+            MapObject(
+                id="lbl-groups",
+                type="textbox",
+                x=400, y=90,
+                label_show=True,
+                label_text="GROUPS",
+                label_size=10,
+                label_color="#94a3b8",
+                label_background="transparent",
+                z=5,
+            ),
+            MapObject(
+                id="lbl-other",
+                type="textbox",
+                x=580, y=90,
+                label_show=True,
+                label_text="SHAPE / MAP",
+                label_size=10,
+                label_color="#94a3b8",
+                label_background="transparent",
+                z=5,
+            ),
+        ],
+    )
+
+    _save_map_file(cfg)
+    logger.info("Seeded built-in demo map.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: startup and shutdown."""
@@ -161,6 +382,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if not settings.checkmk_omd_root:
         await _ensure_admin_user()
     await _seed_default_roles()
+    _seed_demo_map()
 
     yield
     logger.info("Shutting down OrbVis backend.")
