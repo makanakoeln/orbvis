@@ -12,7 +12,10 @@ Usage:
 Supports:
     - define global { ... }
     - define host/service/hostgroup/servicegroup/map/shape/line/textbox { ... }
-    - Coordinate parsing (absolute integers)
+    - Coordinate parsing (absolute integers and relative "100%50" references)
+    - Label styling: label_x, label_y, label_size, label_color, label_background
+    - Link fields: url, url_target
+    - Textbox content: text field
     - Batch import of entire etc/maps/ directories
 """
 
@@ -42,8 +45,9 @@ def parse_cfg_file(path: Path) -> list[CfgBlock]:
     text = path.read_text(encoding="utf-8", errors="replace")
     blocks: list[CfgBlock] = []
 
-    # Remove comments
-    text = re.sub(r"#[^\n]*", "", text)
+    # Remove comments: # only at start of line or after whitespace (not inside values like #rrggbb)
+    text = re.sub(r"(?m)^\s*#[^\n]*", "", text)
+    text = re.sub(r"\s+#[^\n]*", "", text)
     text = re.sub(r";[^\n]*", "", text)
 
     # Match: define <type> { ... }
@@ -79,6 +83,24 @@ def _parse_int(value: str, default: int = 0) -> int:
         return int(value)
     except (ValueError, TypeError):
         return default
+
+
+def _parse_coord(value: str) -> tuple[int, str | None]:
+    """Parse a NagVis coordinate value.
+
+    Returns (resolved_int, original_string_or_None).
+    Absolute integers are returned as-is with no original string.
+    Relative references like "100%50" (offset +50 from object 100) are stored
+    in extra for reference; the numeric offset is used as the resolved value.
+    """
+    v = value.strip()
+    if v.lstrip("-").isdigit():
+        return int(v), None
+    # Relative format: <ref_id>%<offset>  e.g. "123%-10"
+    m = re.match(r"(-?\d+)%(-?\d+)", v)
+    if m:
+        return int(m.group(2)), v  # use offset as best-effort position
+    return 0, v
 
 
 def _parse_bool(value: str, default: bool = False) -> bool:
@@ -118,12 +140,9 @@ def blocks_to_map_json(blocks: list[CfgBlock], map_name: str) -> dict:
         obj_counter += 1
         obj_id = p.get("object_id", str(obj_counter))
 
-        # Parse coordinates
-        x_raw = p.get("x", "0")
-        y_raw = p.get("y", "0")
-        # Handle "100%50" relative coords (offset from object) – store as-is in extra
-        x = _parse_int(x_raw) if x_raw.lstrip("-").isdigit() else 0
-        y = _parse_int(y_raw) if y_raw.lstrip("-").isdigit() else 0
+        # Parse coordinates (absolute integers or relative "ref%offset" format)
+        x, x_orig = _parse_coord(p.get("x", "0"))
+        y, y_orig = _parse_coord(p.get("y", "0"))
 
         obj: dict[str, Any] = {
             "id": obj_id,
@@ -135,11 +154,11 @@ def blocks_to_map_json(blocks: list[CfgBlock], map_name: str) -> dict:
             "extra": {},
         }
 
-        # Store original coordinate strings if non-numeric (relative references)
-        if not x_raw.lstrip("-").isdigit():
-            obj["extra"]["x_orig"] = x_raw
-        if not y_raw.lstrip("-").isdigit():
-            obj["extra"]["y_orig"] = y_raw
+        # Preserve original relative coordinate strings for reference
+        if x_orig is not None:
+            obj["extra"]["x_orig"] = x_orig
+        if y_orig is not None:
+            obj["extra"]["y_orig"] = y_orig
 
         # Type-specific fields
         if obj_type == "host":
@@ -154,19 +173,46 @@ def blocks_to_map_json(blocks: list[CfgBlock], map_name: str) -> dict:
         elif obj_type == "shape":
             obj["icon"] = p.get("icon")
         elif obj_type == "line":
-            # Lines in old format have x2/y2 in extra
-            x2_raw = p.get("x2", "0")
-            y2_raw = p.get("y2", "0")
-            obj["extra"]["x2"] = _parse_int(x2_raw)
-            obj["extra"]["y2"] = _parse_int(y2_raw)
+            x2, x2_orig = _parse_coord(p.get("x2", "0"))
+            y2, y2_orig = _parse_coord(p.get("y2", "0"))
+            obj["extra"]["x2"] = x2
+            obj["extra"]["y2"] = y2
+            if x2_orig is not None:
+                obj["extra"]["x2_orig"] = x2_orig
+            if y2_orig is not None:
+                obj["extra"]["y2_orig"] = y2_orig
             obj["line_type"] = _parse_int(p.get("line_type", "10"))
 
         if "label_text" in p:
             obj["label_text"] = p["label_text"]
 
+        # Label styling
+        if "label_x" in p:
+            obj["label_x"] = _parse_int(p["label_x"])
+        if "label_y" in p:
+            obj["label_y"] = _parse_int(p["label_y"])
+        if "label_size" in p:
+            obj["label_size"] = _parse_int(p["label_size"], 11)
+        if "label_color" in p:
+            obj["label_color"] = p["label_color"]
+        if "label_background" in p:
+            obj["label_background"] = p["label_background"]
+
+        # Link fields
+        if "url" in p:
+            obj["url"] = p["url"]
+        if "url_target" in p:
+            obj["url_target"] = p["url_target"]
+
+        # Textbox content
+        if obj_type == "textbox" and "text" in p:
+            obj["label_text"] = p["text"]
+
         # Carry over any unknown properties
         known_keys = {
             "object_id", "x", "y", "x2", "y2", "view_type", "label_show", "label_text",
+            "label_x", "label_y", "label_size", "label_color", "label_background",
+            "url", "url_target", "text",
             "host_name", "service_description", "hostgroup_name", "servicegroup_name",
             "map_name", "icon", "line_type", "backend_id", "iconset",
         }
