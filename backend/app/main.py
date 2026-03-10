@@ -180,14 +180,6 @@ def _seed_demo_map() -> None:
 
             # ── Hosts ───────────────────────────────────────────────────────
             MapObject(
-                id="lbl-hosts",
-                type="textbox",
-                x=150, y=82,
-                label_show=True, label_text="HOSTS",
-                label_size=10, label_color="#94a3b8", label_background="transparent",
-                z=5,
-            ),
-            MapObject(
                 id="host-localhost",
                 type="host",
                 x=200, y=140,
@@ -232,9 +224,7 @@ def _seed_demo_map() -> None:
                 x=200, y=140,
                 host_name="localhost",
                 service_description="CPU Load",
-                label_show=True,
-                label_text="CPU Load",
-                label_size=10,
+                label_show=False,
                 line_type=20,
                 extra={"x2": 310, "y2": 280},
             ),
@@ -245,22 +235,12 @@ def _seed_demo_map() -> None:
                 x=420, y=140,
                 host_name="router01",
                 service_description="HTTP",
-                label_show=True,
-                label_text="HTTP",
-                label_size=10,
+                label_show=False,
                 line_type=20,
                 extra={"x2": 310, "y2": 280},
             ),
 
             # ── Services ────────────────────────────────────────────────────
-            MapObject(
-                id="lbl-services",
-                type="textbox",
-                x=530, y=82,
-                label_show=True, label_text="SERVICES",
-                label_size=10, label_color="#94a3b8", label_background="transparent",
-                z=5,
-            ),
             MapObject(
                 id="svc-http",
                 type="service",
@@ -308,14 +288,6 @@ def _seed_demo_map() -> None:
 
             # ── Groups ──────────────────────────────────────────────────────
             MapObject(
-                id="lbl-groups",
-                type="textbox",
-                x=760, y=82,
-                label_show=True, label_text="GROUPS",
-                label_size=10, label_color="#94a3b8", label_background="transparent",
-                z=5,
-            ),
-            MapObject(
                 id="hg-linux",
                 type="hostgroup",
                 x=800, y=140,
@@ -335,14 +307,6 @@ def _seed_demo_map() -> None:
             ),
 
             # ── Shape & Map link ────────────────────────────────────────────
-            MapObject(
-                id="lbl-other",
-                type="textbox",
-                x=890, y=82,
-                label_show=True, label_text="SHAPE / MAP",
-                label_size=10, label_color="#94a3b8", label_background="transparent",
-                z=5,
-            ),
             MapObject(
                 id="shape-logo",
                 type="shape",
@@ -364,21 +328,6 @@ def _seed_demo_map() -> None:
                 label_x=0, label_y=34, label_size=10,
             ),
 
-            # ── Weathermap legend ────────────────────────────────────────────
-            MapObject(
-                id="lbl-wm",
-                type="textbox",
-                x=150, y=390,
-                label_show=True,
-                label_text=(
-                    "Weathermap lines (▬) show utilization from perf_data:\n"
-                    "green = OK  ·  yellow = warning  ·  red = critical"
-                ),
-                label_size=10,
-                label_color="#94a3b8",
-                label_background="transparent",
-                z=5,
-            ),
         ],
     )
 
