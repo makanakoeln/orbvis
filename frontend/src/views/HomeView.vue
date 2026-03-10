@@ -82,8 +82,13 @@
           :to="`/maps/${map.name}`"
           class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-indigo-500/40 rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-900/10"
         >
-          <!-- Type badge -->
-          <div class="absolute top-4 right-4">
+          <!-- Type + rotation badges -->
+          <div class="absolute top-4 right-4 flex items-center gap-1.5">
+            <span v-if="map.rotation_interval > 0"
+              class="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20"
+              :title="t('home.rotationBadgeTitle', { n: map.rotation_interval })">
+              ↻ {{ map.rotation_interval }}s
+            </span>
             <span class="text-xs px-2 py-0.5 rounded-full font-medium"
               :class="map.map_type === 'worldmap'
                 ? 'bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20'

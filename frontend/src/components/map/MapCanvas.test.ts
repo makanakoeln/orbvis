@@ -8,7 +8,7 @@ const sampleConfig: MapConfig = {
   globals: {
     alias: 'Test', icon_size: 22, backend_id: 'test',
     map_type: 'regular', worldmap_lat: 0, worldmap_lng: 0, worldmap_zoom: 5,
-    radar_type: 'hostgroup', radar_value: '',
+    radar_type: 'hostgroup', radar_value: '', rotation_interval: 0,
   },
   objects: [
     {

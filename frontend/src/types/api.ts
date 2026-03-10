@@ -63,6 +63,7 @@ export interface MapGlobals {
   worldmap_zoom: number
   radar_type: string
   radar_value: string
+  rotation_interval: number
 }
 
 export interface MapConfig {
@@ -79,6 +80,7 @@ export interface MapRead {
   backend_id: string
   map_type: string
   object_count: number
+  rotation_interval: number
 }
 
 export interface ObjectState {

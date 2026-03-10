@@ -66,6 +66,8 @@ class MapGlobals(BaseModel):
     # Radar filter
     radar_type: Literal["hostgroup", "servicegroup", "all_hosts", "all_services"] = "hostgroup"
     radar_value: str = ""
+    # Rotation: 0 = disabled; positive value = interval in seconds
+    rotation_interval: int = 0
 
 
 class MapConfig(BaseModel):
@@ -96,6 +98,7 @@ class MapUpdate(BaseModel):
     radar_value: str | None = None
     hover_template: str | None = None
     context_template: str | None = None
+    rotation_interval: int | None = None
 
 
 class MapRead(BaseModel):
@@ -106,6 +109,7 @@ class MapRead(BaseModel):
     backend_id: str
     map_type: str
     object_count: int
+    rotation_interval: int
 
 
 class MapPermissionsRead(BaseModel):

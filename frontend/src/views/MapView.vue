@@ -300,6 +300,14 @@
                 <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.iconSize') }}</label>
                 <NumberInput v-model="settingsForm.icon_size" min="12" max="96" class="w-full" />
               </div>
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.rotationInterval') }}</label>
+                <div class="flex items-center gap-2">
+                  <NumberInput v-model="settingsForm.rotation_interval" min="0" max="3600" class="w-full" />
+                  <span class="text-xs text-zinc-500 shrink-0">{{ t('map.rotationSuffix') }}</span>
+                </div>
+                <p class="text-xs text-zinc-500">{{ t('map.rotationIntervalHint') }}</p>
+              </div>
             </div>
 
             <!-- Map type -->
@@ -420,7 +428,7 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref, reactive, watch, watchEffect } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useMapsStore } from '@/stores/maps'
@@ -447,6 +455,7 @@ type LineDragMode = 'move' | 'start' | 'end'
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const mapsStore = useMapsStore()
 const statesStore = useStatesStore()
@@ -709,6 +718,7 @@ const settingsForm = reactive({
   radar_value: '',
   hover_template: '',
   context_template: '',
+  rotation_interval: 0,
 })
 
 function openSettings() {
@@ -723,6 +733,7 @@ function openSettings() {
   settingsForm.radar_value = g.radar_value ?? ''
   settingsForm.hover_template = g.hover_template ?? ''
   settingsForm.context_template = g.context_template ?? ''
+  settingsForm.rotation_interval = g.rotation_interval ?? 0
   uploadError.value = ''
   uploadOk.value = false
 
@@ -762,8 +773,11 @@ async function saveSettings() {
       radar_value: settingsForm.radar_value,
       hover_template: settingsForm.hover_template || null,
       context_template: settingsForm.context_template || null,
+      rotation_interval: settingsForm.rotation_interval,
     }, auth.accessToken!)
     if (mapsStore.currentMap) mapsStore.currentMap.globals = updated.globals
+    stopRotation()
+    scheduleRotation(settingsForm.rotation_interval)
     showSettings.value = false
   } finally {
     settingsSaving.value = false
@@ -784,16 +798,43 @@ async function uploadBackground(event: Event) {
   }
 }
 
+// ---- Rotation ----
+
+const rotationTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+
+function stopRotation() {
+  if (rotationTimer.value !== null) {
+    clearTimeout(rotationTimer.value)
+    rotationTimer.value = null
+  }
+}
+
+function scheduleRotation(intervalSeconds: number) {
+  stopRotation()
+  if (intervalSeconds <= 0 || editor.editMode.value) return
+  rotationTimer.value = setTimeout(async () => {
+    // Ensure map list is loaded
+    if (mapsStore.maps.length === 0) await mapsStore.fetchMaps()
+    const all = mapsStore.maps
+    if (all.length < 2) return
+    const idx = all.findIndex(m => m.name === mapName.value)
+    const next = all[(idx + 1) % all.length]
+    router.push({ name: 'map', params: { name: next.name } })
+  }, intervalSeconds * 1000)
+}
+
 // Re-run whenever the map name changes (component is reused by Vue Router between maps).
 // Reset all edit state so edit mode, selection, and unsaved changes from Map A
 // don't carry over when navigating to Map B.
 watchEffect(async () => {
   const name = mapName.value
+  stopRotation()
   editor.resetForNewMap()
   hasUnsavedChanges.value = false
   objectSnapshot.value = null
   await mapsStore.fetchMap(name)
   statesStore.connectToMap(name, auth.accessToken ?? undefined)
+  scheduleRotation(mapsStore.currentMap?.globals.rotation_interval ?? 0)
 })
 
 onMounted(() => {
@@ -802,5 +843,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   statesStore.disconnect()
+  stopRotation()
 })
 </script>

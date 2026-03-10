@@ -37,6 +37,7 @@ export default {
     noMapsTitle: 'Keine Karten konfiguriert',
     noMapsAdmin: 'Erste Karte erstellen',
     noMapsUser: 'Kontaktieren Sie Ihren Administrator',
+    rotationBadgeTitle: 'Wechselt alle {n} Sekunden',
   },
   map: {
     live: 'Live',
@@ -57,6 +58,9 @@ export default {
     displayName: 'Anzeigename',
     backend: 'Backend',
     iconSize: 'Symbolgröße',
+    rotationInterval: 'Rotationsintervall',
+    rotationIntervalHint: '0 = deaktiviert · Sekunden bis zur nächsten Karte',
+    rotationSuffix: 's',
     mapType: 'Kartentyp',
     mapTypeStatic: 'Statische Karte',
     mapTypeWorldmap: 'Weltkarte (geografisch)',

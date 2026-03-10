@@ -37,6 +37,7 @@ export default {
     noMapsTitle: 'No maps configured',
     noMapsAdmin: 'Create your first map',
     noMapsUser: 'Contact your administrator',
+    rotationBadgeTitle: 'Rotates every {n} seconds',
   },
   map: {
     live: 'Live',
@@ -57,6 +58,9 @@ export default {
     displayName: 'Display name',
     backend: 'Backend',
     iconSize: 'Icon size',
+    rotationInterval: 'Rotation interval',
+    rotationIntervalHint: '0 = disabled · seconds until the next map is shown',
+    rotationSuffix: 's',
     mapType: 'Map type',
     mapTypeStatic: 'Static map',
     mapTypeWorldmap: 'Worldmap (geographic)',

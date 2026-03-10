@@ -174,4 +174,5 @@ def _to_read(cfg: MapConfig) -> MapRead:
         backend_id=cfg.globals.backend_id,
         map_type=cfg.globals.map_type,
         object_count=len(cfg.objects),
+        rotation_interval=cfg.globals.rotation_interval,
     )
