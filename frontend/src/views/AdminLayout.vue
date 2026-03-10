@@ -43,5 +43,7 @@ const navItems = computed(() => [
   { to: '/admin/roles', label: t('admin.rolesAndPermissions') },
   { to: '/admin/maps', label: t('admin.maps') },
   { to: '/admin/backends', label: t('admin.backends') },
+  { to: '/admin/icons', label: t('admin.icons') },
+  { to: '/admin/settings', label: t('admin.settings') },
 ])
 </script>

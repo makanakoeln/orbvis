@@ -269,6 +269,22 @@
           </div>
         </section>
 
+        <!-- === TEMPLATES === -->
+        <section>
+          <p class="section-title">{{ t('mapSettings.templates') }}</p>
+          <div class="space-y-3">
+            <div class="field-row">
+              <label class="field-label">{{ t('map.hoverTemplate') }}</label>
+              <input v-model="form.hover_template" class="field flex-1 font-mono" :placeholder="t('map.templatePlaceholder')" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">{{ t('map.contextTemplate') }}</label>
+              <input v-model="form.context_template" class="field flex-1 font-mono" :placeholder="t('map.templatePlaceholder')" />
+            </div>
+            <p class="text-xs text-zinc-600 pl-[6.75rem]">{{ t('map.templateHint') }}</p>
+          </div>
+        </section>
+
         <!-- ID (debug) -->
         <div class="text-xs text-zinc-700 font-mono pt-1 border-t border-[var(--border)]">
           ID: {{ object.id }}
@@ -370,6 +386,8 @@ const form = reactive({
   weathermap_metric: '',
   url: '',
   url_target: '_blank',
+  hover_template: '',
+  context_template: '',
   x: 0,
   y: 0,
   lat: 0,
@@ -404,6 +422,8 @@ watch(() => props.object, (obj) => {
   form.icon_size = obj.icon_size ?? null
   form.url = obj.url ?? ''
   form.url_target = obj.url_target ?? '_blank'
+  form.hover_template = obj.hover_template ?? ''
+  form.context_template = obj.context_template ?? ''
   form.x = obj.x ?? 0
   form.y = obj.y ?? 0
   form.lat = obj.lat ?? 0
@@ -499,6 +519,8 @@ async function save() {
       label_background: form.label_background,
       url: form.url || null,
       url_target: form.url_target,
+      hover_template: form.hover_template || null,
+      context_template: form.context_template || null,
       z: form.z,
     }
 

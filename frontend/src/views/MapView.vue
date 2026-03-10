@@ -77,7 +77,7 @@
     <!-- Map area + optional edit panel -->
     <div class="flex flex-1 overflow-hidden">
       <!-- Worldmap -->
-      <div v-if="isWorldmap" class="flex-1 overflow-hidden bg-[var(--bg)] relative">
+      <div v-if="isWorldmap" class="flex-1 overflow-hidden bg-[var(--bg)] relative" @click="closeWorldmapMenus">
         <div v-if="mapsStore.loading" class="absolute inset-0 flex items-center justify-center text-zinc-500 z-10 text-sm">
           {{ t('map.loadingMap') }}
         </div>
@@ -94,6 +94,9 @@
           :selected-object-id="editor.selectedObjectId.value"
           @object-click="onObjectClick"
           @object-contextmenu="onObjectContextMenu"
+          @object-contextmenu-view="onWorldmapContextMenuView"
+          @object-hover="onWorldmapHover"
+          @object-hover-leave="onWorldmapHoverLeave"
           @canvas-latlng-click="onCanvasLatLngClick"
           @latlng-drag-end="onLatLngDragEnd"
         />
@@ -211,6 +214,31 @@
       :confirm-label="t('common.delete')"
       @confirm="confirmObjectDelete"
       @cancel="deleteTargetObject = null"
+    />
+
+    <!-- Worldmap HoverMenu -->
+    <HoverMenu
+      v-if="isWorldmap && worldmapHover.visible && worldmapHover.object"
+      :object="worldmapHover.object"
+      :state="statesStore.states[worldmapHover.object.id]"
+      :x="worldmapHover.x"
+      :y="worldmapHover.y"
+      :template="resolveTemplate(worldmapHover.object.hover_template, mapConfig?.globals.hover_template, settingsStore.settings.hover_template)"
+    />
+
+    <!-- Worldmap ContextMenu -->
+    <ContextMenu
+      v-if="isWorldmap && worldmapCtxMenu.visible && worldmapCtxMenu.object"
+      :object="worldmapCtxMenu.object"
+      :state="statesStore.states[worldmapCtxMenu.object.id]"
+      :x="worldmapCtxMenu.x"
+      :y="worldmapCtxMenu.y"
+      :checkmk-url="checkmkUrl"
+      :show-edit="auth.isAdmin"
+      :template="resolveTemplate(worldmapCtxMenu.object.context_template, mapConfig?.globals.context_template, settingsStore.settings.context_template)"
+      @close="closeWorldmapMenus"
+      @edit="onWorldmapCtxEdit"
+      @delete="onWorldmapCtxDelete"
     />
 
     <!-- Object Properties Modal -->
@@ -340,6 +368,19 @@
               </div>
             </template>
 
+            <!-- Templates -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.hoverTemplate') }}</label>
+              <input v-model="settingsForm.hover_template" :placeholder="t('map.templatePlaceholder')"
+                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.contextTemplate') }}</label>
+              <input v-model="settingsForm.context_template" :placeholder="t('map.templatePlaceholder')"
+                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+              <p class="text-xs text-zinc-600">{{ t('map.templateHint') }}</p>
+            </div>
+
             <!-- Background image (static only) -->
             <div v-if="settingsForm.map_type === 'static'" class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.backgroundImage') }}</label>
@@ -385,10 +426,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useMapsStore } from '@/stores/maps'
 import { useStatesStore } from '@/stores/states'
 import { useBackendsStore } from '@/stores/backends'
+import { useSettingsStore } from '@/stores/settings'
 import { useMapEditor } from '@/composables/useMapEditor'
 import { mapsApi } from '@/api/client'
+import { resolveTemplate } from '@/utils/template'
 import MapCanvas from '@/components/map/MapCanvas.vue'
 import WorldMapCanvas from '@/components/map/WorldMapCanvas.vue'
+import HoverMenu from '@/components/map/HoverMenu.vue'
+import ContextMenu from '@/components/map/ContextMenu.vue'
 import NumberInput from '@/components/NumberInput.vue'
 import AutomapCanvas from '@/components/map/AutomapCanvas.vue'
 import RadarCanvas from '@/components/map/RadarCanvas.vue'
@@ -406,6 +451,7 @@ const auth = useAuthStore()
 const mapsStore = useMapsStore()
 const statesStore = useStatesStore()
 const backendsStore = useBackendsStore()
+const settingsStore = useSettingsStore()
 
 const mapName = computed(() => route.params.name as string)
 const mapConfig = computed(() => mapsStore.currentMap)
@@ -438,6 +484,50 @@ function onObjectContextMenu(obj: MapObject) {
   if (!editor.editMode.value) {
     propsModalObject.value = obj
   }
+}
+
+// ---- Worldmap hover & context menu ----
+
+const worldmapHover = reactive({ visible: false, object: null as MapObject | null, x: 0, y: 0 })
+const worldmapCtxMenu = reactive({ visible: false, object: null as MapObject | null, x: 0, y: 0 })
+
+function onWorldmapHover(obj: MapObject, event: MouseEvent) {
+  worldmapHover.object = obj
+  worldmapHover.x = event.pageX + 12
+  worldmapHover.y = event.pageY + 12
+  worldmapHover.visible = true
+}
+
+function onWorldmapHoverLeave() {
+  worldmapHover.visible = false
+}
+
+function onWorldmapContextMenuView(obj: MapObject, x: number, y: number) {
+  editor.selectObject(obj.id)
+  worldmapCtxMenu.object = obj
+  worldmapCtxMenu.x = x
+  worldmapCtxMenu.y = y
+  worldmapCtxMenu.visible = true
+}
+
+function onWorldmapCtxEdit() {
+  const obj = worldmapCtxMenu.object
+  worldmapCtxMenu.visible = false
+  if (obj) propsModalObject.value = obj
+}
+
+function onWorldmapCtxDelete() {
+  const obj = worldmapCtxMenu.object
+  worldmapCtxMenu.visible = false
+  if (obj) {
+    editor.selectObject(obj.id)
+    editor.deleteSelected()
+  }
+}
+
+function closeWorldmapMenus() {
+  worldmapHover.visible = false
+  worldmapCtxMenu.visible = false
 }
 
 async function onPropsModalSave(updates: Record<string, unknown>) {
@@ -617,6 +707,8 @@ const settingsForm = reactive({
   worldmap_zoom: 5,
   radar_type: 'hostgroup',
   radar_value: '',
+  hover_template: '',
+  context_template: '',
 })
 
 function openSettings() {
@@ -629,6 +721,8 @@ function openSettings() {
   settingsForm.map_type = g.map_type ?? 'static'
   settingsForm.radar_type = g.radar_type ?? 'hostgroup'
   settingsForm.radar_value = g.radar_value ?? ''
+  settingsForm.hover_template = g.hover_template ?? ''
+  settingsForm.context_template = g.context_template ?? ''
   uploadError.value = ''
   uploadOk.value = false
 
@@ -666,6 +760,8 @@ async function saveSettings() {
       worldmap_zoom: settingsForm.worldmap_zoom,
       radar_type: settingsForm.radar_type,
       radar_value: settingsForm.radar_value,
+      hover_template: settingsForm.hover_template || null,
+      context_template: settingsForm.context_template || null,
     }, auth.accessToken!)
     if (mapsStore.currentMap) mapsStore.currentMap.globals = updated.globals
     showSettings.value = false

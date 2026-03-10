@@ -37,7 +37,7 @@
     </div>
   </div>
 
-  <!-- All other types: icon circle + label -->
+  <!-- All other types: icon circle (or custom image) + label -->
   <div
     v-else
     class="flex flex-col items-center"
@@ -47,13 +47,24 @@
   >
     <!-- Icon with badges -->
     <div class="relative">
+      <!-- Custom icon image -->
+      <img
+        v-if="object.icon"
+        :src="`/icons/${object.icon}`"
+        :style="iconStyle"
+        class="object-contain transition-all duration-300"
+        :class="selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded' : ''"
+      />
+      <!-- State circle (fallback) -->
       <div
+        v-else
         class="rounded-full flex items-center justify-center transition-colors duration-300"
         :class="[stateClass, selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950' : '', pulseClass]"
         :style="iconStyle"
       >
         <span class="text-white leading-none select-none" :style="charStyle">{{ typeChar }}</span>
       </div>
+      <!-- Badges only shown for state circle, not custom icons -->
       <!-- Acknowledged badge -->
       <span
         v-if="state?.acknowledged"

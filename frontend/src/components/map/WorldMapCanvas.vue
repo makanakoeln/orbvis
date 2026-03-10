@@ -19,6 +19,9 @@ const props = defineProps<{
 const emit = defineEmits<{
   'object-click': [obj: MapObjectType]
   'object-contextmenu': [obj: MapObjectType]
+  'object-contextmenu-view': [obj: MapObjectType, x: number, y: number]
+  'object-hover': [obj: MapObjectType, event: MouseEvent]
+  'object-hover-leave': []
   'canvas-latlng-click': [lat: number, lng: number]
   'latlng-drag-end': [id: string, lat: number, lng: number]
 }>()
@@ -48,21 +51,28 @@ function displayName(obj: MapObjectType): string {
 
 function makeDivIcon(obj: MapObjectType): L.DivIcon {
   const color = stateColor(obj.id)
-  const size = props.config.globals.icon_size ?? 22
+  const size = obj.icon_size ?? props.config.globals.icon_size ?? 22
   const label = obj.label_show !== false ? displayName(obj) : ''
   const selected = props.selectedObjectId === obj.id
-  const ring = selected ? `box-shadow: 0 0 0 3px white, 0 0 0 5px ${color};` : ''
-  return L.divIcon({
-    className: '',
-    html: `<div style="
+
+  let iconHtml: string
+  if (obj.icon) {
+    const outline = selected ? 'outline: 3px solid white; outline-offset: 2px; border-radius: 3px;' : ''
+    iconHtml = `<img src="/icons/${obj.icon}" style="width:${size}px;height:${size}px;object-fit:contain;display:block;${outline}" />`
+  } else {
+    iconHtml = `<div style="
         width: ${size}px; height: ${size}px;
         background: ${color};
         border-radius: 50%;
         border: 2px solid rgba(0,0,0,0.35);
         box-shadow: 0 1px 4px rgba(0,0,0,0.5)${selected ? `, 0 0 0 3px white` : ''};
         position: relative;
-      "></div>
-      ${label ? `<div style="
+      "></div>`
+  }
+
+  return L.divIcon({
+    className: '',
+    html: iconHtml + (label ? `<div style="
         text-align: center;
         color: white;
         font-size: 11px;
@@ -70,7 +80,7 @@ function makeDivIcon(obj: MapObjectType): L.DivIcon {
         text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
         white-space: nowrap;
         margin-top: 3px;
-      ">${label}</div>` : ''}`,
+      ">${label}</div>` : ''),
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
     popupAnchor: [0, -(size / 2 + 4)],
@@ -101,12 +111,22 @@ function syncMarkers() {
         const current = props.config.objects.find(o => o.id === objId)
         if (current) emit('object-click', current)
       })
-      marker.on('contextmenu', (e) => {
+      marker.on('contextmenu', (e: L.LeafletMouseEvent) => {
         L.DomEvent.stopPropagation(e)
+        const current = props.config.objects.find(o => o.id === objId)
+        if (!current) return
         if (props.editMode) {
-          const current = props.config.objects.find(o => o.id === objId)
-          if (current) emit('object-contextmenu', current)
+          emit('object-contextmenu', current)
+        } else {
+          emit('object-contextmenu-view', current, e.originalEvent.clientX, e.originalEvent.clientY)
         }
+      })
+      marker.on('mouseover', (e: L.LeafletMouseEvent) => {
+        const current = props.config.objects.find(o => o.id === objId)
+        if (current) emit('object-hover', current, e.originalEvent)
+      })
+      marker.on('mouseout', () => {
+        emit('object-hover-leave')
       })
       marker.on('dragend', () => {
         const pos = marker.getLatLng()

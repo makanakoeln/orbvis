@@ -5,6 +5,7 @@ import type { UserRead } from '@/types/api'
 import router from '@/router'
 import type { RouteLocationRaw } from 'vue-router'
 import { i18n } from '@/main'
+import { useSettingsStore } from '@/stores/settings'
 
 const ACCESS_TOKEN_KEY = 'orbvis_access_token'
 const REFRESH_TOKEN_KEY = 'orbvis_refresh_token'
@@ -60,6 +61,10 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken.value = localStorage.getItem(REFRESH_TOKEN_KEY)
     if (accessToken.value) {
       await fetchCurrentUser()
+    } else if (refreshToken.value) {
+      // No access token but refresh token present — silently renew
+      const ok = await refreshAccessToken()
+      if (ok) await fetchCurrentUser()
     }
   }
 
@@ -68,8 +73,21 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       user.value = await authApi.me(accessToken.value)
       i18n.global.locale.value = (user.value?.language ?? 'en') as 'en' | 'de'
+      // Load global settings so they're available for new map/object creation
+      useSettingsStore().load().catch(() => {})
     } catch {
-      // Token invalid; clear state
+      // Access token may be expired — try refresh before giving up
+      if (refreshToken.value) {
+        const ok = await refreshAccessToken()
+        if (ok && accessToken.value) {
+          try {
+            user.value = await authApi.me(accessToken.value)
+            i18n.global.locale.value = (user.value?.language ?? 'en') as 'en' | 'de'
+            useSettingsStore().load().catch(() => {})
+            return
+          } catch { /* fall through to clearAuth */ }
+        }
+      }
       clearAuth()
     }
   }

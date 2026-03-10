@@ -9,6 +9,10 @@
       <p class="text-[10px] text-zinc-500 mt-0.5 uppercase tracking-wide">{{ object.type }}</p>
     </div>
 
+    <!-- Custom template block -->
+    <!-- eslint-disable-next-line vue/no-v-html -->
+    <div v-if="renderedTemplate" class="px-3.5 py-2 text-xs text-[var(--text)] border-b border-[var(--border)] mb-1" v-html="renderedTemplate" />
+
     <a v-if="hostUrl" :href="hostUrl" target="_blank"
       class="flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors">
       <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -67,19 +71,26 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { MapObject } from '@/types/api'
+import type { MapObject, ObjectState } from '@/types/api'
+import { interpolateTemplate } from '@/utils/template'
 
 const { t } = useI18n()
 
 const props = defineProps<{
   object: MapObject
+  state?: ObjectState
   x: number
   y: number
   checkmkUrl?: string | null
   showEdit?: boolean
+  template?: string | null
 }>()
 
 defineEmits<{ close: []; edit: []; delete: [] }>()
+
+const renderedTemplate = computed(() =>
+  props.template ? interpolateTemplate(props.template, props.object, props.state) : null,
+)
 
 const displayName = computed(() => {
   if (props.object.label_text) return props.object.label_text

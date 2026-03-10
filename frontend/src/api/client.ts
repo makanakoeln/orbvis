@@ -4,8 +4,11 @@
 
 import type {
   BackendConfig,
+  GlobalSettings,
+  IconEntry,
   MapConfig,
   MapObject,
+  MapPermissions,
   MapRead,
   MapStates,
   TokenResponse,
@@ -127,6 +130,9 @@ export const mapsApi = {
   deleteObject: (mapName: string, objId: string, token: string): Promise<void> =>
     request(`/maps/${mapName}/objects/${objId}`, { method: 'DELETE' }, token),
 
+  getPermissions: (name: string, token: string): Promise<MapPermissions> =>
+    request(`/maps/${name}/permissions`, {}, token),
+
   uploadBackground: async (mapName: string, file: File, token: string): Promise<{ filename: string }> => {
     const form = new FormData()
     form.append('file', file)
@@ -225,6 +231,41 @@ export const backendsApi = {
     token: string,
   ): Promise<{ ok: boolean; message: string }> =>
     request('/backends/test-connection', { method: 'POST', body: JSON.stringify(data) }, token),
+}
+
+// ---- Icons ----
+
+export const iconsApi = {
+  list: (token: string): Promise<IconEntry[]> =>
+    request('/icons', {}, token),
+
+  upload: async (file: File, token: string): Promise<IconEntry> => {
+    const form = new FormData()
+    form.append('file', file)
+    const response = await fetch(`${BASE_URL}/icons`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    })
+    if (!response.ok) {
+      const detail = await response.json().catch(() => null)
+      throw new ApiError(response.status, `HTTP ${response.status}`, detail)
+    }
+    return response.json()
+  },
+
+  delete: (name: string, token: string): Promise<void> =>
+    request(`/icons/${encodeURIComponent(name)}`, { method: 'DELETE' }, token),
+}
+
+// ---- Global Settings ----
+
+export const settingsApi = {
+  get: (token: string): Promise<GlobalSettings> =>
+    request('/settings', {}, token),
+
+  update: (data: GlobalSettings, token: string): Promise<GlobalSettings> =>
+    request('/settings', { method: 'PUT', body: JSON.stringify(data) }, token),
 }
 
 export { ApiError }

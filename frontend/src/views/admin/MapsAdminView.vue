@@ -56,7 +56,14 @@
             </td>
             <td class="px-4 py-3 text-zinc-500 font-mono text-xs">{{ map.backend_id }}</td>
             <td class="px-4 py-3 text-zinc-500">{{ map.object_count }}</td>
-            <td class="px-4 py-3 text-right">
+            <td class="px-4 py-3 text-right flex items-center justify-end gap-3">
+              <button @click="openPermissions(map.name)"
+                class="text-xs text-zinc-500 hover:text-indigo-400 transition-colors"
+                :title="t('admin.mapPermissions')">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              </button>
               <button @click="deleteMap(map.name)"
                 class="text-xs text-zinc-600 hover:text-red-400 transition-colors">{{ t('common.delete') }}</button>
             </td>
@@ -136,25 +143,110 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Map Permissions Modal -->
+    <Teleport to="body">
+      <div v-if="permissionsMapName" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="permissionsMapName = null" />
+        <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[34rem] max-h-[80vh] flex flex-col">
+          <div class="flex items-center justify-between mb-5 shrink-0">
+            <div>
+              <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.mapPermissions') }}</h3>
+              <p class="text-xs text-zinc-500 mt-0.5 font-mono">{{ permissionsMapName }}</p>
+            </div>
+            <button @click="permissionsMapName = null"
+              class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+
+          <div v-if="permissionsLoading" class="flex items-center justify-center py-8 text-zinc-500 text-sm gap-2">
+            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            {{ t('common.loading') }}
+          </div>
+
+          <div v-else class="overflow-y-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-[var(--border)]">
+                  <th class="px-3 py-2.5 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.role') }}</th>
+                  <th class="px-3 py-2.5 text-center text-xs font-semibold text-zinc-500 uppercase tracking-wider w-20">View</th>
+                  <th class="px-3 py-2.5 text-center text-xs font-semibold text-zinc-500 uppercase tracking-wider w-20">Edit</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[var(--border)]">
+                <tr v-for="role in permissionsRoles" :key="role.role_id" class="hover:bg-[var(--bg-hover)]">
+                  <td class="px-3 py-2.5 font-medium text-[var(--text)]">
+                    {{ role.name }}
+                  </td>
+                  <td class="px-3 py-2.5 text-center">
+                    <div class="flex items-center justify-center gap-1">
+                      <input
+                        type="checkbox"
+                        :checked="hasPerm(role, 'view')"
+                        :disabled="hasWildcard(role, 'view') || permUpdating.has(`${role.role_id}-view`)"
+                        class="accent-indigo-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        @change="togglePerm(role, 'view')"
+                      />
+                      <span v-if="hasWildcard(role, 'view')" class="text-[10px] text-zinc-600" title="Via *-Regel">*</span>
+                    </div>
+                  </td>
+                  <td class="px-3 py-2.5 text-center">
+                    <div class="flex items-center justify-center gap-1">
+                      <input
+                        type="checkbox"
+                        :checked="hasPerm(role, 'edit')"
+                        :disabled="hasWildcard(role, 'edit') || permUpdating.has(`${role.role_id}-edit`)"
+                        class="accent-indigo-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        @change="togglePerm(role, 'edit')"
+                      />
+                      <span v-if="hasWildcard(role, 'edit')" class="text-[10px] text-zinc-600" title="Via *-Regel">*</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="!permissionsRoles.length" class="text-center py-6 text-zinc-600 text-sm">
+              {{ t('admin.noRoles') }}
+            </p>
+            <p class="text-xs text-zinc-600 mt-3 px-1">* {{ t('admin.wildcardNote') }}</p>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMapsStore } from '@/stores/maps'
 import { useBackendsStore } from '@/stores/backends'
+import { useSettingsStore } from '@/stores/settings'
+import { useAuthStore } from '@/stores/auth'
+import { rolesApi } from '@/api/client'
+import type { RoleRead, PermissionRead } from '@/types/api'
 
 const { t } = useI18n()
 const mapsStore = useMapsStore()
 const backendsStore = useBackendsStore()
+const settingsStore = useSettingsStore()
+const authStore = useAuthStore()
 const showCreate = ref(false)
 const newMap = ref({ name: '', alias: '', backend_id: '', map_type: 'static' })
 
 async function createMap() {
   await mapsStore.createMap(newMap.value.name, newMap.value.alias, newMap.value.backend_id, newMap.value.map_type)
   showCreate.value = false
-  newMap.value = { name: '', alias: '', backend_id: backendsStore.backends[0]?.id ?? '', map_type: 'static' }
+  newMap.value = {
+    name: '',
+    alias: '',
+    backend_id: settingsStore.settings.default_backend_id || backendsStore.backends[0]?.id || '',
+    map_type: settingsStore.settings.default_map_type || 'static',
+  }
 }
 
 async function deleteMap(name: string) {
@@ -163,9 +255,73 @@ async function deleteMap(name: string) {
 }
 
 onMounted(async () => {
-  await Promise.all([mapsStore.fetchMaps(), backendsStore.fetchBackends()])
-  if (!newMap.value.backend_id && backendsStore.backends.length > 0) {
-    newMap.value.backend_id = backendsStore.backends[0].id
+  await Promise.all([
+    mapsStore.fetchMaps(),
+    backendsStore.fetchBackends(),
+    settingsStore.load(),
+  ])
+  // Pre-fill new map form with global defaults
+  if (!newMap.value.backend_id) {
+    newMap.value.backend_id = settingsStore.settings.default_backend_id || backendsStore.backends[0]?.id || ''
   }
+  newMap.value.map_type = settingsStore.settings.default_map_type || 'static'
 })
+
+// ---- Map Permissions ----
+
+const permissionsMapName = ref<string | null>(null)
+const permissionsRoles = ref<RoleRead[]>([])
+const permissionsLoading = ref(false)
+const permUpdating = reactive(new Set<string>())
+
+async function openPermissions(mapName: string) {
+  permissionsMapName.value = mapName
+  permissionsLoading.value = true
+  try {
+    permissionsRoles.value = await rolesApi.list(authStore.accessToken!)
+  } finally {
+    permissionsLoading.value = false
+  }
+}
+
+function hasWildcard(role: RoleRead, act: string): boolean {
+  return role.permissions.some(p => p.mod === 'map' && p.act === act && p.obj === '*')
+}
+
+function hasDirectPerm(role: RoleRead, act: string): boolean {
+  return role.permissions.some(p => p.mod === 'map' && p.act === act && p.obj === permissionsMapName.value)
+}
+
+function hasPerm(role: RoleRead, act: string): boolean {
+  return hasDirectPerm(role, act) || hasWildcard(role, act)
+}
+
+async function togglePerm(role: RoleRead, act: string) {
+  const mapName = permissionsMapName.value
+  if (!mapName || hasWildcard(role, act)) return
+  const key = `${role.role_id}-${act}`
+  permUpdating.add(key)
+  try {
+    if (hasDirectPerm(role, act)) {
+      // Remove the direct permission
+      const perm = role.permissions.find(p => p.mod === 'map' && p.act === act && p.obj === mapName)!
+      await rolesApi.removePermission(role.role_id, perm.perm_id, authStore.accessToken!)
+    } else {
+      // Find existing permission across all roles, or create it
+      let existingPerm: PermissionRead | null = null
+      for (const r of permissionsRoles.value) {
+        const p = r.permissions.find(p => p.mod === 'map' && p.act === act && p.obj === mapName)
+        if (p) { existingPerm = p; break }
+      }
+      if (!existingPerm) {
+        existingPerm = await rolesApi.createPermission('map', act, mapName, authStore.accessToken!)
+      }
+      await rolesApi.assignPermission(role.role_id, existingPerm.perm_id, authStore.accessToken!)
+    }
+    // Reload roles to reflect change
+    permissionsRoles.value = await rolesApi.list(authStore.accessToken!)
+  } finally {
+    permUpdating.delete(key)
+  }
+}
 </script>

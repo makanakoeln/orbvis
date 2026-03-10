@@ -5,6 +5,7 @@ import { ref, reactive, computed, type Ref } from 'vue'
 import { mapsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useMapsStore } from '@/stores/maps'
+import { useSettingsStore } from '@/stores/settings'
 import type { MapObject, ObjectType } from '@/types/api'
 
 export interface NewObjectDraft {
@@ -218,6 +219,7 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
   async function placeAt(x: number, y: number) {
     if (!placing.value || !draft.type) return
     placing.value = false
+    const s = useSettingsStore().settings
     // Use crypto.randomUUID() to avoid collisions from rapid or concurrent placements.
     const id = `${draft.type}_${crypto.randomUUID()}`
     const obj: MapObject = {
@@ -228,10 +230,11 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
       group_name: draft.group_name || undefined,
       map_name: draft.map_name || undefined,
       label_text: draft.label_text || undefined,
-      label_show: true,
-      label_x: 0, label_y: 0, label_size: 10, label_color: '#ffffff', label_background: 'transparent',
-      view_type: draft.type === 'line' ? 'line' : 'icon',
-      url_target: '_blank', z: 1,
+      label_show: s.label_show,
+      label_x: s.label_x, label_y: s.label_y,
+      label_size: s.label_size, label_color: s.label_color, label_background: s.label_background,
+      view_type: draft.type === 'line' ? 'line' : s.view_type,
+      url_target: s.url_target, z: s.z,
       extra: draft.type === 'line' ? { x2: _snap(Math.round(x)) + 150, y2: _snap(Math.round(y)) } : {},
     }
     try {
@@ -247,6 +250,7 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
   async function placeAtLatLng(lat: number, lng: number) {
     if (!placing.value || !draft.type) return
     placing.value = false
+    const s = useSettingsStore().settings
     const id = `${draft.type}_${crypto.randomUUID()}`
     const obj: MapObject = {
       id, type: draft.type,
@@ -257,10 +261,11 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
       group_name: draft.group_name || undefined,
       map_name: draft.map_name || undefined,
       label_text: draft.label_text || undefined,
-      label_show: true,
-      label_x: 0, label_y: 0, label_size: 10, label_color: '#ffffff', label_background: 'transparent',
-      view_type: 'icon',
-      url_target: '_blank', z: 1,
+      label_show: s.label_show,
+      label_x: s.label_x, label_y: s.label_y,
+      label_size: s.label_size, label_color: s.label_color, label_background: s.label_background,
+      view_type: s.view_type,
+      url_target: s.url_target, z: s.z,
       extra: {},
     }
     try {

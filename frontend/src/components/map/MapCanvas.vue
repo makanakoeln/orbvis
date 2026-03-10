@@ -62,16 +62,19 @@
       :state="states[hoverMenu.object.id]"
       :x="hoverMenu.x"
       :y="hoverMenu.y"
+      :template="resolveTemplate(hoverMenu.object.hover_template, props.config.globals.hover_template, settingsStore.settings.hover_template)"
     />
 
     <!-- Context menu -->
     <ContextMenu
       v-if="contextMenu.visible && contextMenu.object"
       :object="contextMenu.object"
+      :state="states[contextMenu.object.id]"
       :x="contextMenu.x"
       :y="contextMenu.y"
       :checkmk-url="checkmkUrl"
       :show-edit="isAdmin"
+      :template="resolveTemplate(contextMenu.object.context_template, props.config.globals.context_template, settingsStore.settings.context_template)"
       @close="closeMenus"
       @edit="onContextMenuEdit"
       @delete="onContextMenuDelete"
@@ -83,10 +86,14 @@
 import { computed, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import type { MapConfig, MapObject as MapObjectType, ObjectState } from '@/types/api'
+import { resolveTemplate } from '@/utils/template'
+import { useSettingsStore } from '@/stores/settings'
 import MapObject from './MapObject.vue'
 import MapLine from './MapLine.vue'
 import HoverMenu from './HoverMenu.vue'
 import ContextMenu from './ContextMenu.vue'
+
+const settingsStore = useSettingsStore()
 
 const props = defineProps<{
   config: MapConfig

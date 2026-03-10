@@ -51,6 +51,16 @@ const router = createRouter({
           name: 'admin-backends',
           component: () => import('@/views/admin/BackendsView.vue'),
         },
+        {
+          path: 'settings',
+          name: 'admin-settings',
+          component: () => import('@/views/admin/GlobalSettingsView.vue'),
+        },
+        {
+          path: 'icons',
+          name: 'admin-icons',
+          component: () => import('@/views/admin/IconsView.vue'),
+        },
       ],
     },
     {

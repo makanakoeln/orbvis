@@ -45,6 +45,8 @@ export interface MapObject {
   url?: string
   url_target: string
   z: number
+  hover_template?: string | null
+  context_template?: string | null
   extra: Record<string, unknown>
 }
 
@@ -159,8 +161,36 @@ export interface BackendConfig {
   checkmk_url?: string | null
 }
 
+export interface GlobalSettings {
+  icon_size: number
+  view_type: string
+  label_show: boolean
+  label_size: number
+  label_color: string
+  label_background: string
+  label_x: number
+  label_y: number
+  url_target: string
+  z: number
+  line_type?: number | null
+  default_backend_id: string
+  default_map_type: string
+  hover_template?: string | null
+  context_template?: string | null
+}
+
 export interface WebSocketStateUpdate {
   type: 'state_update'
   map: string
   states: MapStates
+}
+
+export interface IconEntry {
+  name: string
+  url: string
+}
+
+export interface MapPermissions {
+  view: string[]
+  edit: string[]
 }
