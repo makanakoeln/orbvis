@@ -43,6 +43,9 @@ class MapObject(BaseModel):
     url_target: str = "_blank"
     # Stacking
     z: int = 1
+    # Templates (override map-global / global defaults)
+    hover_template: str | None = None
+    context_template: str | None = None
     # Extra properties
     extra: dict[str, Any] = Field(default_factory=dict)
 
@@ -91,6 +94,8 @@ class MapUpdate(BaseModel):
     worldmap_zoom: int | None = None
     radar_type: Literal["hostgroup", "servicegroup", "all_hosts", "all_services"] | None = None
     radar_value: str | None = None
+    hover_template: str | None = None
+    context_template: str | None = None
 
 
 class MapRead(BaseModel):
@@ -101,3 +106,9 @@ class MapRead(BaseModel):
     backend_id: str
     map_type: str
     object_count: int
+
+
+class MapPermissionsRead(BaseModel):
+    """Which roles have view/edit access to a specific map (by name, not wildcard)."""
+    view: list[str]
+    edit: list[str]

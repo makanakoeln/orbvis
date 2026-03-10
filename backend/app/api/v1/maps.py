@@ -9,11 +9,14 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.deps import get_current_user, require_admin, user_has_permission
+from app.api.v1.deps import get_current_user, get_db, require_admin, user_has_permission
 from app.core.config import settings
+from app.models.role import Role
 from app.models.user import User
-from app.schemas.map import MapConfig, MapCreate, MapObject, MapRead, MapUpdate
+from app.schemas.map import MapConfig, MapCreate, MapObject, MapPermissionsRead, MapRead, MapUpdate
 from app.services import map_service
 
 router = APIRouter()
@@ -95,6 +98,31 @@ async def update_map(
 async def delete_map(name: str, _: User = Depends(require_admin)) -> None:
     if not map_service.delete_map(name):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
+
+
+# ----- Map permissions (read) -----
+
+@router.get("/{name}/permissions", response_model=MapPermissionsRead)
+async def get_map_permissions(
+    name: str,
+    _: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> MapPermissionsRead:
+    """Return which roles have direct (non-wildcard) view/edit permissions on this map."""
+    result = await db.execute(select(Role))
+    roles = result.scalars().all()
+
+    view_roles: list[str] = []
+    edit_roles: list[str] = []
+    for role in roles:
+        for perm in role.permissions:
+            if perm.mod == "map" and perm.obj == name:
+                if perm.act == "view" and role.name not in view_roles:
+                    view_roles.append(role.name)
+                elif perm.act == "edit" and role.name not in edit_roles:
+                    edit_roles.append(role.name)
+
+    return MapPermissionsRead(view=view_roles, edit=edit_roles)
 
 
 # ----- Background image -----

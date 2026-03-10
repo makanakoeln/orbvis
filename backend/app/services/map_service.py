@@ -82,7 +82,7 @@ def update_map(name: str, data: MapUpdate) -> MapConfig | None:
     cfg = get_map(name)
     if cfg is None:
         return None
-    update_data = data.model_dump(exclude_none=True)
+    update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(cfg.globals, key, value)
     _save_map_file(cfg)

@@ -60,24 +60,24 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
     """
     omd_root = settings.checkmk_omd_root
     if not omd_root:
-        logger.info("SSO: CHECKMK_OMD_ROOT not set, skipping cookie validation")
+        logger.warning("SSO: CHECKMK_OMD_ROOT not set, skipping cookie validation")
         return None
     try:
         parts = cookie_value.split(":", 2)
         if len(parts) != 3:
-            logger.info("SSO: cookie has unexpected format (parts=%d)", len(parts))
+            logger.warning("SSO: cookie has unexpected format (parts=%d)", len(parts))
             return None
         username, session_id, cookie_hash = parts
 
         # Validate username before using it in a filesystem path.
         # An attacker-controlled username with ".." could traverse outside OMD_ROOT.
         if not _USERNAME_RE.match(username):
-            logger.info("SSO: rejecting cookie with unsafe username: %r", username)
+            logger.warning("SSO: rejecting cookie with unsafe username: %r", username)
             return None
 
         secret_path = pathlib.Path(omd_root) / "etc" / "auth.secret"
         if not secret_path.is_file():
-            logger.info("SSO: auth.secret not found at %s", secret_path)
+            logger.warning("SSO: auth.secret not found at %s", secret_path)
             return None
         secret = secret_path.read_bytes().strip()
 
@@ -87,16 +87,16 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
             try:
                 serial = int(serial_path.read_text().strip())
             except ValueError:
-                logger.info("SSO: could not parse serial from %s", serial_path)
+                logger.warning("SSO: could not parse serial from %s", serial_path)
 
         msg = f"{username}{session_id}{serial}".encode()
         expected = _hmac.new(key=secret, msg=msg, digestmod=hashlib.sha256).digest().hex()
         if not _hmac.compare_digest(expected, cookie_hash):
-            logger.info("SSO: HMAC mismatch for user %r (serial=%d)", username, serial)
+            logger.warning("SSO: HMAC mismatch for user %r (serial=%d)", username, serial)
             return None
         return username
     except Exception as e:
-        logger.info("SSO: cookie validation failed: %s", e)
+        logger.warning("SSO: cookie validation failed: %s", e)
         return None
 
 

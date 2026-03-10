@@ -33,7 +33,7 @@ class MethodOverrideMiddleware:
                 scope = {**scope, "method": override}
         await self.app(scope, receive, send)
 
-from app.api.v1 import auth, backends, maps, roles, states, users
+from app.api.v1 import auth, backends, icons, maps, roles, settings as settings_api, states, users
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, init_db
 
@@ -191,6 +191,8 @@ app.include_router(states.router, prefix="/api/v1", tags=["states"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(roles.router, prefix="/api/v1/roles", tags=["roles"])
 app.include_router(backends.router, prefix="/api/v1/backends", tags=["backends"])
+app.include_router(settings_api.router, prefix="/api/v1/settings", tags=["settings"])
+app.include_router(icons.router, prefix="/api/v1/icons", tags=["icons"])
 
 
 @app.get("/api/health")
@@ -202,3 +204,8 @@ async def health_check():
 _bg_dir = Path(settings.maps_dir) / "backgrounds"
 _bg_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/maps/backgrounds", StaticFiles(directory=str(_bg_dir)), name="backgrounds")
+
+# Serve icon set images
+_icons_dir = Path(settings.maps_dir).parent / "icons"
+_icons_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/icons", StaticFiles(directory=str(_icons_dir)), name="icons")
