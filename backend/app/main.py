@@ -140,6 +140,18 @@ def _seed_demo_map() -> None:
     if _map_path("demo").exists():
         return
 
+    # Layout overview (x: 150–900, y: 50–530)
+    #
+    #  [HOSTS]                     [SERVICES]       [GROUPS]     [SHAPE/MAP]
+    #  localhost ─── router01      HTTP  PING        linux-srv    shape
+    #       \       /              CPU▓  Disk▓       web-svc      map →
+    #        fileserver
+    #  ══ weathermap lines ══
+    #  localhost→fileserver  (CPU Load perf data, line_type=20)
+    #  router01→fileserver   (HTTP perf data,     line_type=20)
+    #
+    # Section x-offsets: Hosts 160-440, Services 540-680, Groups 760-800, Other 880
+
     cfg = MapConfig(
         name="demo",
         globals=MapGlobals(
@@ -154,70 +166,105 @@ def _seed_demo_map() -> None:
             MapObject(
                 id="title",
                 type="textbox",
-                x=320, y=18,
+                x=150, y=18,
                 label_show=True,
                 label_text=(
-                    "OrbVis Demo Map  ·  all object types: "
-                    "host · service · hostgroup · servicegroup · map · shape · line · textbox"
+                    "OrbVis Demo  ·  "
+                    "host · service · hostgroup · servicegroup · map · shape · line (weathermap) · textbox · gadget"
                 ),
                 label_size=12,
                 label_color="#e2e8f0",
                 label_background="#1e293b",
                 z=10,
             ),
-            # ── Hosts (row 1) ───────────────────────────────────────────────
+
+            # ── Hosts ───────────────────────────────────────────────────────
+            MapObject(
+                id="lbl-hosts",
+                type="textbox",
+                x=150, y=82,
+                label_show=True, label_text="HOSTS",
+                label_size=10, label_color="#94a3b8", label_background="transparent",
+                z=5,
+            ),
             MapObject(
                 id="host-localhost",
                 type="host",
-                x=80, y=130,
+                x=200, y=140,
                 host_name="localhost",
                 view_type="icon",
-                label_show=True,
-                label_text="localhost",
+                label_show=True, label_text="localhost",
                 label_x=0, label_y=34, label_size=11,
             ),
             MapObject(
                 id="host-router01",
                 type="host",
-                x=260, y=130,
+                x=420, y=140,
                 host_name="router01",
                 view_type="icon",
-                label_show=True,
-                label_text="router01",
+                label_show=True, label_text="router01",
                 label_x=0, label_y=34, label_size=11,
             ),
             MapObject(
                 id="host-fileserver",
                 type="host",
-                x=170, y=240,
+                x=310, y=280,
                 host_name="fileserver",
                 view_type="icon",
-                label_show=True,
-                label_text="fileserver",
+                label_show=True, label_text="fileserver",
                 label_x=0, label_y=34, label_size=11,
             ),
+
             # ── Lines ───────────────────────────────────────────────────────
+            # Plain line: localhost ↔ router01 (color = host state)
             MapObject(
                 id="line-loc-rtr",
                 type="line",
-                x=80, y=130,
+                x=200, y=140,
                 label_show=False,
                 line_type=10,
-                extra={"x2": 260, "y2": 130},
+                extra={"x2": 420, "y2": 140},
             ),
+            # Weathermap: localhost → fileserver  (perf_data from CPU Load service)
             MapObject(
-                id="line-rtr-fs",
+                id="wm-loc-fs",
                 type="line",
-                x=260, y=130,
-                label_show=False,
-                line_type=10,
-                extra={"x2": 170, "y2": 240},
+                x=200, y=140,
+                host_name="localhost",
+                service_description="CPU Load",
+                label_show=True,
+                label_text="CPU Load",
+                label_size=10,
+                line_type=20,
+                extra={"x2": 310, "y2": 280},
             ),
-            # ── Services (row 2) ────────────────────────────────────────────
+            # Weathermap: router01 → fileserver  (perf_data from HTTP service)
+            MapObject(
+                id="wm-rtr-fs",
+                type="line",
+                x=420, y=140,
+                host_name="router01",
+                service_description="HTTP",
+                label_show=True,
+                label_text="HTTP",
+                label_size=10,
+                line_type=20,
+                extra={"x2": 310, "y2": 280},
+            ),
+
+            # ── Services ────────────────────────────────────────────────────
+            MapObject(
+                id="lbl-services",
+                type="textbox",
+                x=530, y=82,
+                label_show=True, label_text="SERVICES",
+                label_size=10, label_color="#94a3b8", label_background="transparent",
+                z=5,
+            ),
             MapObject(
                 id="svc-http",
                 type="service",
-                x=80, y=360,
+                x=560, y=140,
                 host_name="localhost",
                 service_description="HTTP",
                 view_type="icon",
@@ -227,7 +274,7 @@ def _seed_demo_map() -> None:
             MapObject(
                 id="svc-ping",
                 type="service",
-                x=220, y=360,
+                x=680, y=140,
                 host_name="router01",
                 service_description="PING",
                 view_type="icon",
@@ -237,110 +284,96 @@ def _seed_demo_map() -> None:
             MapObject(
                 id="svc-cpu-gauge",
                 type="service",
-                x=80, y=470,
+                x=560, y=260,
                 host_name="localhost",
                 service_description="CPU Load",
                 view_type="gadget",
                 gadget_type="gauge",
                 label_show=True,
-                label_text="CPU Load (gauge)",
+                label_text="CPU Load",
                 label_x=0, label_y=56, label_size=10,
             ),
             MapObject(
                 id="svc-disk-bar",
                 type="service",
-                x=240, y=470,
+                x=680, y=260,
                 host_name="fileserver",
                 service_description="Disk /",
                 view_type="gadget",
                 gadget_type="bar",
                 label_show=True,
-                label_text="Disk / (bar)",
+                label_text="Disk /",
                 label_x=0, label_y=56, label_size=10,
             ),
+
             # ── Groups ──────────────────────────────────────────────────────
+            MapObject(
+                id="lbl-groups",
+                type="textbox",
+                x=760, y=82,
+                label_show=True, label_text="GROUPS",
+                label_size=10, label_color="#94a3b8", label_background="transparent",
+                z=5,
+            ),
             MapObject(
                 id="hg-linux",
                 type="hostgroup",
-                x=460, y=130,
+                x=800, y=140,
                 group_name="linux-servers",
                 view_type="icon",
-                label_show=True,
-                label_text="linux-servers",
+                label_show=True, label_text="linux-servers",
                 label_x=0, label_y=34, label_size=11,
             ),
             MapObject(
                 id="sg-web",
                 type="servicegroup",
-                x=460, y=260,
+                x=800, y=280,
                 group_name="web-services",
                 view_type="icon",
-                label_show=True,
-                label_text="web-services",
+                label_show=True, label_text="web-services",
                 label_x=0, label_y=34, label_size=11,
             ),
-            # ── Shape ───────────────────────────────────────────────────────
-            MapObject(
-                id="shape-logo",
-                type="shape",
-                x=640, y=130,
-                icon=None,          # no icon uploaded yet → renders as shape placeholder
-                view_type="icon",
-                label_show=True,
-                label_text="shape\n(upload icon)",
-                label_x=0, label_y=34, label_size=10,
-            ),
-            # ── Map link ────────────────────────────────────────────────────
-            MapObject(
-                id="map-self",
-                type="map",
-                x=640, y=260,
-                map_name="demo",    # links back to this map (self-reference for demo)
-                view_type="icon",
-                label_show=True,
-                label_text="map link\n→ demo",
-                label_x=0, label_y=34, label_size=10,
-            ),
-            # ── Section labels ───────────────────────────────────────────────
-            MapObject(
-                id="lbl-hosts",
-                type="textbox",
-                x=20, y=90,
-                label_show=True,
-                label_text="HOSTS",
-                label_size=10,
-                label_color="#94a3b8",
-                label_background="transparent",
-                z=5,
-            ),
-            MapObject(
-                id="lbl-services",
-                type="textbox",
-                x=20, y=320,
-                label_show=True,
-                label_text="SERVICES",
-                label_size=10,
-                label_color="#94a3b8",
-                label_background="transparent",
-                z=5,
-            ),
-            MapObject(
-                id="lbl-groups",
-                type="textbox",
-                x=400, y=90,
-                label_show=True,
-                label_text="GROUPS",
-                label_size=10,
-                label_color="#94a3b8",
-                label_background="transparent",
-                z=5,
-            ),
+
+            # ── Shape & Map link ────────────────────────────────────────────
             MapObject(
                 id="lbl-other",
                 type="textbox",
-                x=580, y=90,
+                x=890, y=82,
+                label_show=True, label_text="SHAPE / MAP",
+                label_size=10, label_color="#94a3b8", label_background="transparent",
+                z=5,
+            ),
+            MapObject(
+                id="shape-logo",
+                type="shape",
+                x=930, y=140,
+                icon=None,
+                view_type="icon",
                 label_show=True,
-                label_text="SHAPE / MAP",
+                label_text="shape",
+                label_x=0, label_y=34, label_size=10,
+            ),
+            MapObject(
+                id="map-self",
+                type="map",
+                x=930, y=280,
+                map_name="demo",
+                view_type="icon",
+                label_show=True,
+                label_text="map → demo",
+                label_x=0, label_y=34, label_size=10,
+            ),
+
+            # ── Weathermap legend ────────────────────────────────────────────
+            MapObject(
+                id="lbl-wm",
+                type="textbox",
+                x=150, y=390,
+                label_show=True,
+                label_text=(
+                    "Weathermap lines (▬) show utilization from perf_data:\n"
+                    "green = OK  ·  yellow = warning  ·  red = critical"
+                ),
                 label_size=10,
                 label_color="#94a3b8",
                 label_background="transparent",
