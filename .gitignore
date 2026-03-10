@@ -33,3 +33,6 @@ start.sh
 .idea/
 .vscode/
 *.swp
+
+# Claude Code
+.claude/
