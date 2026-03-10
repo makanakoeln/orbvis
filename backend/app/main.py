@@ -162,22 +162,6 @@ def _seed_demo_map() -> None:
             hover_template="{{name}}\nState: {{state}}\n{{output}}",
         ),
         objects=[
-            # ── Title ──────────────────────────────────────────────────────
-            MapObject(
-                id="title",
-                type="textbox",
-                x=150, y=18,
-                label_show=True,
-                label_text=(
-                    "OrbVis Demo  ·  "
-                    "host · service · hostgroup · servicegroup · map · shape · line (weathermap) · textbox · gadget"
-                ),
-                label_size=12,
-                label_color="#e2e8f0",
-                label_background="#1e293b",
-                z=10,
-            ),
-
             # ── Hosts ───────────────────────────────────────────────────────
             MapObject(
                 id="host-localhost",
