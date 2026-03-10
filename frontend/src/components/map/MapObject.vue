@@ -50,7 +50,7 @@
       <!-- Custom icon image -->
       <img
         v-if="object.icon"
-        :src="`/icons/${object.icon}`"
+        :src="`${BASE_URL}icons/${object.icon}`"
         :style="iconStyle"
         class="object-contain transition-all duration-300"
         :class="selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded' : ''"
@@ -95,6 +95,8 @@
 import { computed } from 'vue'
 import type { MapObject, ObjectState } from '@/types/api'
 import GadgetRenderer from './GadgetRenderer.vue'
+
+const BASE_URL = import.meta.env.BASE_URL
 
 const props = defineProps<{
   object: MapObject

@@ -228,6 +228,18 @@ Alias /$SITE/orbvis $HTDOCS_DIR
     ProxyPass        http://127.0.0.1:$BACKEND_PORT/api
     ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/api
 </Location>
+
+# Static files served by the backend (uploaded icons and map backgrounds).
+# These Location blocks take precedence over the Alias above.
+<Location /$SITE/orbvis/icons>
+    ProxyPass        http://127.0.0.1:$BACKEND_PORT/icons
+    ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/icons
+</Location>
+
+<Location /$SITE/orbvis/maps/backgrounds>
+    ProxyPass        http://127.0.0.1:$BACKEND_PORT/maps/backgrounds
+    ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/maps/backgrounds
+</Location>
 EOF
 
 # ---------------------------------------------------------------------------

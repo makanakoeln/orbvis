@@ -128,7 +128,7 @@ const backgroundStyle = computed(() => {
   const bg = props.config.globals.background_image
   if (!bg) return {}
   return {
-    backgroundImage: `url(/maps/backgrounds/${bg})`,
+    backgroundImage: `url(${import.meta.env.BASE_URL}maps/backgrounds/${bg})`,
     backgroundRepeat: 'no-repeat',
     backgroundSize: 'contain',
   }

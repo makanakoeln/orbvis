@@ -58,7 +58,7 @@ function makeDivIcon(obj: MapObjectType): L.DivIcon {
   let iconHtml: string
   if (obj.icon) {
     const outline = selected ? 'outline: 3px solid white; outline-offset: 2px; border-radius: 3px;' : ''
-    iconHtml = `<img src="/icons/${obj.icon}" style="width:${size}px;height:${size}px;object-fit:contain;display:block;${outline}" />`
+    iconHtml = `<img src="${import.meta.env.BASE_URL}icons/${obj.icon}" style="width:${size}px;height:${size}px;object-fit:contain;display:block;${outline}" />`
   } else {
     iconHtml = `<div style="
         width: ${size}px; height: ${size}px;
