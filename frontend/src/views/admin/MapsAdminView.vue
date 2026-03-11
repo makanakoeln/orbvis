@@ -5,13 +5,23 @@
         <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('admin.maps') }}</h2>
         <p class="text-sm text-zinc-500 mt-1">{{ t('admin.mapsSubtitle') }}</p>
       </div>
-      <button @click="showCreate = true"
-        class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-        {{ t('admin.newMap') }}
-      </button>
+      <div class="flex items-center gap-2">
+        <!-- Import -->
+        <label class="flex items-center gap-2 px-4 py-2 bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] rounded-lg text-sm font-semibold text-zinc-300 transition-all cursor-pointer">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+          </svg>
+          {{ t('admin.importMap') }}
+          <input type="file" accept=".json,application/json" class="hidden" @change="importMap" />
+        </label>
+        <button @click="showCreate = true"
+          class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          {{ t('admin.newMap') }}
+        </button>
+      </div>
     </div>
 
     <div v-if="mapsStore.loading" class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center">
@@ -57,13 +67,31 @@
             <td class="px-4 py-3 text-zinc-500 font-mono text-xs">{{ map.backend_id }}</td>
             <td class="px-4 py-3 text-zinc-500">{{ map.object_count }}</td>
             <td class="px-4 py-3 text-right flex items-center justify-end gap-3">
+              <!-- Permissions -->
               <button @click="openPermissions(map.name)"
-                class="text-xs text-zinc-500 hover:text-indigo-400 transition-colors"
+                class="text-zinc-500 hover:text-indigo-400 transition-colors"
                 :title="t('admin.mapPermissions')">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                 </svg>
               </button>
+              <!-- Export -->
+              <button @click="exportMap(map.name)"
+                class="text-zinc-500 hover:text-emerald-400 transition-colors"
+                :title="t('admin.exportMap')">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+              </button>
+              <!-- Clone -->
+              <button @click="cloneMap(map.name)"
+                class="text-zinc-500 hover:text-amber-400 transition-colors"
+                :title="t('admin.cloneMap')">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                </svg>
+              </button>
+              <!-- Delete -->
               <button @click="deleteMap(map.name)"
                 class="text-xs text-zinc-600 hover:text-red-400 transition-colors">{{ t('common.delete') }}</button>
             </td>
@@ -227,8 +255,8 @@ import { useMapsStore } from '@/stores/maps'
 import { useBackendsStore } from '@/stores/backends'
 import { useSettingsStore } from '@/stores/settings'
 import { useAuthStore } from '@/stores/auth'
-import { rolesApi } from '@/api/client'
-import type { RoleRead, PermissionRead } from '@/types/api'
+import { mapsApi, rolesApi } from '@/api/client'
+import type { MapConfig, RoleRead, PermissionRead } from '@/types/api'
 
 const { t } = useI18n()
 const mapsStore = useMapsStore()
@@ -252,6 +280,48 @@ async function createMap() {
 async function deleteMap(name: string) {
   if (!confirm(t('admin.deleteMap', { name }))) return
   await mapsStore.deleteMap(name)
+}
+
+async function cloneMap(name: string) {
+  const newName = prompt(t('admin.cloneMapPrompt', { name }), `${name}_copy`)
+  if (!newName) return
+  try {
+    await mapsApi.clone(name, { new_name: newName }, authStore.accessToken!)
+    await mapsStore.fetchMaps()
+  } catch (e: unknown) {
+    alert(e instanceof Error ? e.message : t('admin.cloneFailed'))
+  }
+}
+
+async function exportMap(name: string) {
+  await mapsApi.exportMap(name, authStore.accessToken!)
+}
+
+async function importMap(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  try {
+    const text = await file.text()
+    const data: MapConfig = JSON.parse(text)
+    const overwrite = false
+    try {
+      await mapsApi.importMap(data, authStore.accessToken!, overwrite)
+    } catch (e: unknown) {
+      // 409 = already exists → ask to overwrite
+      if (e instanceof Error && e.message.includes('already exists')) {
+        if (!confirm(t('admin.importOverwrite', { name: data.name }))) return
+        await mapsApi.importMap(data, authStore.accessToken!, true)
+      } else {
+        throw e
+      }
+    }
+    await mapsStore.fetchMaps()
+  } catch (e: unknown) {
+    alert(e instanceof Error ? e.message : t('admin.importFailed'))
+  } finally {
+    // Reset file input so the same file can be re-imported
+    ;(event.target as HTMLInputElement).value = ''
+  }
 }
 
 onMounted(async () => {
