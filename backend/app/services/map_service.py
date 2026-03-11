@@ -165,6 +165,31 @@ def _save_map_file(cfg: MapConfig) -> None:
         raise
 
 
+def clone_map(name: str, new_name: str, alias: str | None = None) -> MapConfig:
+    src = get_map(name)
+    if src is None:
+        raise ValueError(f"Map '{name}' not found")
+    dest_path = _map_path(new_name)
+    if dest_path.exists():
+        raise ValueError(f"Map '{new_name}' already exists")
+    import copy
+    cfg = copy.deepcopy(src)
+    cfg.name = new_name
+    if alias is not None:
+        cfg.globals.alias = alias
+    _save_map_file(cfg)
+    return cfg
+
+
+def import_map(data: dict, *, overwrite: bool = False) -> MapConfig:
+    cfg = MapConfig.model_validate(data)
+    path = _map_path(cfg.name)
+    if path.exists() and not overwrite:
+        raise ValueError(f"Map '{cfg.name}' already exists")
+    _save_map_file(cfg)
+    return cfg
+
+
 def _to_read(cfg: MapConfig) -> MapRead:
     return MapRead(
         name=cfg.name,

@@ -16,7 +16,7 @@ from app.api.v1.deps import get_current_user, get_db, require_admin, user_has_pe
 from app.core.config import settings
 from app.models.role import Role
 from app.models.user import User
-from app.schemas.map import MapConfig, MapCreate, MapObject, MapPermissionsRead, MapRead, MapUpdate
+from app.schemas.map import MapClone, MapConfig, MapCreate, MapObject, MapPermissionsRead, MapRead, MapUpdate
 from app.services import map_service
 
 router = APIRouter()
@@ -100,6 +100,27 @@ async def delete_map(name: str, _: User = Depends(require_admin)) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
 
 
+@router.post("/{name}/clone", response_model=MapConfig, status_code=status.HTTP_201_CREATED)
+async def clone_map(
+    name: str, data: MapClone, _: User = Depends(require_admin)
+) -> MapConfig:
+    try:
+        return map_service.clone_map(name, data.new_name, data.alias)
+    except ValueError as exc:
+        code = status.HTTP_404_NOT_FOUND if "not found" in str(exc) else status.HTTP_409_CONFLICT
+        raise HTTPException(status_code=code, detail=str(exc))
+
+
+@router.post("/import", response_model=MapConfig, status_code=status.HTTP_201_CREATED)
+async def import_map(
+    data: dict, overwrite: bool = False, _: User = Depends(require_admin)
+) -> MapConfig:
+    try:
+        return map_service.import_map(data, overwrite=overwrite)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+
 # ----- Map permissions (read) -----
 
 @router.get("/{name}/permissions", response_model=MapPermissionsRead)
@@ -173,6 +194,17 @@ async def upload_background(
 
     map_service.update_map(name, MapUpdate(background_image=filename))
     return JSONResponse({"filename": filename})
+
+
+@router.delete("/{name}/background", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_background(name: str, current_user: User = Depends(get_current_user)) -> None:
+    _require_map_edit(name, current_user)
+    if map_service.get_map(name) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
+    bg_dir = Path(settings.maps_dir) / "backgrounds"
+    for f in bg_dir.glob(f"{name}.*"):
+        f.unlink(missing_ok=True)
+    map_service.update_map(name, MapUpdate(background_image=None))
 
 
 # ----- Object sub-resources -----

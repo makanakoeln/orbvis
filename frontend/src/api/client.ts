@@ -147,6 +147,26 @@ export const mapsApi = {
     }
     return response.json()
   },
+
+  deleteBackground: (mapName: string, token: string): Promise<void> =>
+    request(`/maps/${mapName}/background`, { method: 'DELETE' }, token),
+
+  clone: (name: string, data: { new_name: string; alias?: string }, token: string): Promise<MapConfig> =>
+    request(`/maps/${name}/clone`, { method: 'POST', body: JSON.stringify(data) }, token),
+
+  importMap: (data: MapConfig, token: string, overwrite = false): Promise<MapConfig> =>
+    request(`/maps/import?overwrite=${overwrite}`, { method: 'POST', body: JSON.stringify(data) }, token),
+
+  exportMap: async (name: string, token: string): Promise<void> => {
+    const cfg = await request<MapConfig>(`/maps/${name}`, {}, token)
+    const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${name}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  },
 }
 
 // ---- Users ----

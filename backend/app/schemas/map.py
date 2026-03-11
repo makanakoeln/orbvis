@@ -112,6 +112,11 @@ class MapRead(BaseModel):
     rotation_interval: int
 
 
+class MapClone(BaseModel):
+    new_name: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-zA-Z0-9_\-]+$")
+    alias: str | None = None
+
+
 class MapPermissionsRead(BaseModel):
     """Which roles have view/edit access to a specific map (by name, not wildcard)."""
     view: list[str]
