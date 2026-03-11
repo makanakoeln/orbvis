@@ -1,5 +1,6 @@
 """OrbVis FastAPI application entry point."""
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -132,12 +133,58 @@ async def _seed_default_roles() -> None:
     logger.info("Default roles seeded.")
 
 
+_DEMO_BG_SVG = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="640">
+  <!-- Section: Hosts + Lines -->
+  <rect x="190" y="16" width="470" height="610" rx="10"
+        fill="#4f46e5" fill-opacity="0.06" stroke="#4f46e5" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="425" y="40" text-anchor="middle"
+        font-family="monospace" font-size="9" font-weight="bold" letter-spacing="2"
+        fill="#818cf8">HOSTS + LINES</text>
+  <!-- Section: Services + Gadgets -->
+  <rect x="690" y="16" width="305" height="610" rx="10"
+        fill="#10b981" fill-opacity="0.05" stroke="#10b981" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="842" y="40" text-anchor="middle"
+        font-family="monospace" font-size="9" font-weight="bold" letter-spacing="2"
+        fill="#34d399">SERVICES + GADGETS</text>
+  <!-- Section: Groups -->
+  <rect x="1015" y="16" width="155" height="610" rx="10"
+        fill="#f59e0b" fill-opacity="0.05" stroke="#f59e0b" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="1092" y="40" text-anchor="middle"
+        font-family="monospace" font-size="9" font-weight="bold" letter-spacing="2"
+        fill="#fbbf24">GROUPS</text>
+  <!-- Section: Shape + Map -->
+  <rect x="1195" y="16" width="205" height="610" rx="10"
+        fill="#a78bfa" fill-opacity="0.05" stroke="#a78bfa" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="1297" y="40" text-anchor="middle"
+        font-family="monospace" font-size="9" font-weight="bold" letter-spacing="2"
+        fill="#c4b5fd">SHAPE + MAP</text>
+  <!-- Row type labels in left margin -->
+  <text x="95" y="194" text-anchor="middle" font-family="monospace" font-size="8" fill="#6b7280">icon view</text>
+  <text x="95" y="359" text-anchor="middle" font-family="monospace" font-size="8" fill="#6b7280">gauge / bar</text>
+  <text x="95" y="524" text-anchor="middle" font-family="monospace" font-size="8" fill="#6b7280">traffic light</text>
+</svg>
+"""
+
+
 def _seed_demo_map() -> None:
     """Write the built-in demo map to disk if it doesn't already exist."""
-    from app.schemas.map import MapConfig, MapGlobals, MapObject
-    from app.services.map_service import _map_path, _save_map_file
+    from app.schemas.map import MapConfig, MapGlobals, MapObject, MapUpdate
+    from app.services.map_service import _map_path, _save_map_file, get_map, update_map
+
+    # Always ensure the background SVG is present on disk
+    bg_dir = Path(settings.maps_dir) / "backgrounds"
+    bg_dir.mkdir(parents=True, exist_ok=True)
+    bg_file = bg_dir / "demo.svg"
+    if not bg_file.exists():
+        bg_file.write_text(_DEMO_BG_SVG, encoding="utf-8")
 
     if _map_path("demo").exists():
+        # Upgrade existing demo map: set background_image if not yet configured
+        existing = get_map("demo")
+        if existing and not existing.globals.background_image:
+            update_map("demo", MapUpdate(background_image="demo.svg"))
         return
 
     # Layout overview (x: 150–900, y: 50–530)
@@ -155,18 +202,19 @@ def _seed_demo_map() -> None:
     cfg = MapConfig(
         name="demo",
         globals=MapGlobals(
-            alias="OrbVis Demo",
+            alias="Demo Static",
             icon_size=28,
             backend_id="test",
             map_type="static",
             hover_template="{{name}}\nState: {{state}}\n{{output}}",
+            background_image="demo.svg",
         ),
         objects=[
             # ── Hosts ───────────────────────────────────────────────────────
             MapObject(
                 id="host-localhost",
                 type="host",
-                x=200, y=140,
+                x=270, y=190,
                 host_name="localhost",
                 view_type="icon",
                 label_show=True, label_text="localhost",
@@ -175,7 +223,7 @@ def _seed_demo_map() -> None:
             MapObject(
                 id="host-router01",
                 type="host",
-                x=420, y=140,
+                x=570, y=190,
                 host_name="router01",
                 view_type="icon",
                 label_show=True, label_text="router01",
@@ -184,7 +232,7 @@ def _seed_demo_map() -> None:
             MapObject(
                 id="host-fileserver",
                 type="host",
-                x=310, y=280,
+                x=420, y=380,
                 host_name="fileserver",
                 view_type="icon",
                 label_show=True, label_text="fileserver",
@@ -196,39 +244,39 @@ def _seed_demo_map() -> None:
             MapObject(
                 id="line-loc-rtr",
                 type="line",
-                x=200, y=140,
+                x=270, y=190,
                 label_show=False,
                 line_type=10,
-                extra={"x2": 420, "y2": 140},
+                extra={"x2": 570, "y2": 190},
             ),
             # Weathermap: localhost → fileserver  (perf_data from CPU Load service)
             MapObject(
                 id="wm-loc-fs",
                 type="line",
-                x=200, y=140,
+                x=270, y=190,
                 host_name="localhost",
                 service_description="CPU Load",
                 label_show=False,
                 line_type=20,
-                extra={"x2": 310, "y2": 280},
+                extra={"x2": 420, "y2": 380},
             ),
             # Weathermap: router01 → fileserver  (perf_data from HTTP service)
             MapObject(
                 id="wm-rtr-fs",
                 type="line",
-                x=420, y=140,
+                x=570, y=190,
                 host_name="router01",
                 service_description="HTTP",
                 label_show=False,
                 line_type=20,
-                extra={"x2": 310, "y2": 280},
+                extra={"x2": 420, "y2": 380},
             ),
 
             # ── Services ────────────────────────────────────────────────────
             MapObject(
                 id="svc-http",
                 type="service",
-                x=560, y=140,
+                x=760, y=190,
                 host_name="localhost",
                 service_description="HTTP",
                 view_type="icon",
@@ -238,7 +286,7 @@ def _seed_demo_map() -> None:
             MapObject(
                 id="svc-ping",
                 type="service",
-                x=680, y=140,
+                x=925, y=190,
                 host_name="router01",
                 service_description="PING",
                 view_type="icon",
@@ -248,7 +296,7 @@ def _seed_demo_map() -> None:
             MapObject(
                 id="svc-cpu-gauge",
                 type="service",
-                x=560, y=260,
+                x=760, y=355,
                 host_name="localhost",
                 service_description="CPU Load",
                 view_type="gadget",
@@ -260,7 +308,7 @@ def _seed_demo_map() -> None:
             MapObject(
                 id="svc-disk-bar",
                 type="service",
-                x=680, y=260,
+                x=925, y=355,
                 host_name="fileserver",
                 service_description="Disk /",
                 view_type="gadget",
@@ -269,12 +317,24 @@ def _seed_demo_map() -> None:
                 label_text="Disk /",
                 label_x=0, label_y=56, label_size=10,
             ),
+            MapObject(
+                id="svc-memory-tl",
+                type="service",
+                x=842, y=520,
+                host_name="mailserver",
+                service_description="Memory",
+                view_type="gadget",
+                gadget_type="trafficlight",
+                label_show=True,
+                label_text="Memory",
+                label_x=0, label_y=56, label_size=10,
+            ),
 
             # ── Groups ──────────────────────────────────────────────────────
             MapObject(
                 id="hg-linux",
                 type="hostgroup",
-                x=800, y=140,
+                x=1092, y=190,
                 group_name="linux-servers",
                 view_type="icon",
                 label_show=True, label_text="linux-servers",
@@ -283,7 +343,7 @@ def _seed_demo_map() -> None:
             MapObject(
                 id="sg-web",
                 type="servicegroup",
-                x=800, y=280,
+                x=1092, y=380,
                 group_name="web-services",
                 view_type="icon",
                 label_show=True, label_text="web-services",
@@ -294,7 +354,7 @@ def _seed_demo_map() -> None:
             MapObject(
                 id="shape-logo",
                 type="shape",
-                x=930, y=140,
+                x=1265, y=190,
                 icon=None,
                 view_type="icon",
                 label_show=True,
@@ -304,7 +364,7 @@ def _seed_demo_map() -> None:
             MapObject(
                 id="map-self",
                 type="map",
-                x=930, y=280,
+                x=1265, y=380,
                 map_name="demo",
                 view_type="icon",
                 label_show=True,
@@ -317,6 +377,149 @@ def _seed_demo_map() -> None:
 
     _save_map_file(cfg)
     logger.info("Seeded built-in demo map.")
+
+
+def _seed_demo_worldmap() -> None:
+    """Write the built-in world demo map to disk if it doesn't already exist."""
+    from app.schemas.map import MapConfig, MapGlobals, MapObject
+    from app.services.map_service import _map_path, _save_map_file
+
+    if _map_path("demo_world").exists():
+        return
+
+    # Five demo hosts placed at real European cities + one service per host (slightly offset).
+    # fileserver is DOWN in the TestBackend → shows as red marker on the map.
+    cfg = MapConfig(
+        name="demo_world",
+        readonly=True,
+        globals=MapGlobals(
+            alias="Demo Worldmap",
+            backend_id="test",
+            map_type="worldmap",
+            icon_size=28,
+            worldmap_lat=50.5,
+            worldmap_lng=8.0,
+            worldmap_zoom=5,
+            hover_template="{{name}}\nState: {{state}}\n{{output}}",
+        ),
+        objects=[
+            # ── Hosts ────────────────────────────────────────────────────────
+            MapObject(
+                id="wh-router01",
+                type="host", lat=50.11, lng=8.68,
+                x=0, y=0,
+                host_name="router01",
+                label_show=True, label_text="router01\nFrankfurt",
+                label_x=0, label_y=34, label_size=11,
+            ),
+            MapObject(
+                id="wh-switch01",
+                type="host", lat=52.37, lng=4.90,
+                x=0, y=0,
+                host_name="switch01",
+                label_show=True, label_text="switch01\nAmsterdam",
+                label_x=0, label_y=34, label_size=11,
+            ),
+            MapObject(
+                id="wh-localhost",
+                type="host", lat=51.51, lng=-0.13,
+                x=0, y=0,
+                host_name="localhost",
+                label_show=True, label_text="localhost\nLondon",
+                label_x=0, label_y=34, label_size=11,
+            ),
+            MapObject(
+                id="wh-fileserver",
+                type="host", lat=48.86, lng=2.35,
+                x=0, y=0,
+                host_name="fileserver",
+                label_show=True, label_text="fileserver\nParis",
+                label_x=0, label_y=34, label_size=11,
+            ),
+            MapObject(
+                id="wh-mailserver",
+                type="host", lat=48.14, lng=11.58,
+                x=0, y=0,
+                host_name="mailserver",
+                label_show=True, label_text="mailserver\nMunich",
+                label_x=0, label_y=34, label_size=11,
+            ),
+            # ── Services ─────────────────────────────────────────────────────
+            MapObject(
+                id="ws-http",
+                type="service", lat=51.55, lng=-0.20,
+                x=0, y=0,
+                host_name="localhost",
+                service_description="HTTP",
+                label_show=True, label_text="HTTP",
+                label_x=0, label_y=34, label_size=10,
+            ),
+            MapObject(
+                id="ws-cpu",
+                type="service", lat=50.16, lng=8.82,
+                x=0, y=0,
+                host_name="router01",
+                service_description="CPU Load",
+                view_type="gadget", gadget_type="gauge",
+                label_show=True, label_text="CPU Load",
+                label_x=0, label_y=56, label_size=10,
+            ),
+            MapObject(
+                id="ws-disk",
+                type="service", lat=48.82, lng=2.48,
+                x=0, y=0,
+                host_name="fileserver",
+                service_description="Disk /",
+                label_show=True, label_text="Disk /",
+                label_x=0, label_y=34, label_size=10,
+            ),
+        ],
+    )
+
+    _save_map_file(cfg)
+    logger.info("Seeded built-in world demo map.")
+
+
+def _run_migrations() -> None:
+    """Apply alembic migrations on startup (synchronous).
+
+    Called directly from the lifespan — migrations complete in milliseconds
+    so briefly blocking the event loop during startup is fine.
+
+    Handles three cases:
+    - Fresh DB: alembic creates all tables normally.
+    - Legacy install: tables exist without migration history → stamp at head.
+    - Partial migration: ``alembic_version`` table empty (DDL ran but version
+      row was never committed) → stamp at head.
+    """
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import create_engine, inspect, text
+
+    alembic_ini = Path(__file__).parent.parent / "alembic.ini"
+    sync_url = settings.database_url.replace("+aiosqlite", "").replace("+asyncpg", "")
+
+    engine = create_engine(sync_url)
+    try:
+        tables = inspect(engine).get_table_names()
+        if "users" in tables:
+            # Existing tables — check whether migration history is present and valid
+            needs_stamp = "alembic_version" not in tables
+            if not needs_stamp and "alembic_version" in tables:
+                with engine.connect() as conn:
+                    row = conn.execute(
+                        text("SELECT version_num FROM alembic_version LIMIT 1")
+                    ).fetchone()
+                needs_stamp = row is None
+            if needs_stamp:
+                logger.info("Stamping existing database at alembic head.")
+                command.stamp(Config(str(alembic_ini)), "head")
+                return
+    finally:
+        engine.dispose()
+
+    command.upgrade(Config(str(alembic_ini)), "head")
+    logger.info("Database migrations applied.")
 
 
 @asynccontextmanager
@@ -335,7 +538,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     print("  OrbVis is starting up.", flush=True)
     print(f"  Open in your browser: http://localhost{host_port}/orbvis", flush=True)
     print(f"{sep}\n", flush=True)
-    await init_db()
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _run_migrations)
     logger.info("Database initialized.")
 
     # Always provide the built-in test backend (no config needed)
@@ -349,6 +553,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await _ensure_admin_user()
     await _seed_default_roles()
     _seed_demo_map()
+    _seed_demo_worldmap()
 
     yield
     logger.info("Shutting down OrbVis backend.")
