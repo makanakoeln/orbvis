@@ -42,11 +42,6 @@ const router = createRouter({
           component: () => import('@/views/admin/RolesView.vue'),
         },
         {
-          path: 'boards',
-          name: 'admin-boards',
-          component: () => import('@/views/admin/BoardsAdminView.vue'),
-        },
-        {
           path: 'connections',
           name: 'admin-connections',
           component: () => import('@/views/admin/ConnectionsView.vue'),
