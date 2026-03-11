@@ -15,6 +15,7 @@ export interface NewObjectDraft {
   group_name: string
   map_name: string
   label_text: string
+  icon: string
 }
 
 interface LineCoords { x: number; y: number; x2: number; y2: number }
@@ -196,13 +197,14 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
   // --- Place new object ---
   const placing = ref(false)
   const draft = reactive<NewObjectDraft>({
-    type: '', host_name: '', service_description: '', group_name: '', map_name: '', label_text: '',
+    type: '', host_name: '', service_description: '', group_name: '', map_name: '', label_text: '', icon: '',
   })
 
   function startPlacing() {
     if (!draft.type) return
     placing.value = true
     selectedObjectId.value = null
+
   }
 
   async function placeAt(x: number, y: number) {
@@ -219,6 +221,7 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
       group_name: draft.group_name || undefined,
       map_name: draft.map_name || undefined,
       label_text: draft.label_text || undefined,
+      icon: draft.icon || undefined,
       label_show: s.label_show,
       label_x: s.label_x, label_y: s.label_y,
       label_size: s.label_size, label_color: s.label_color, label_background: s.label_background,
@@ -289,6 +292,7 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     draft.group_name = ''
     draft.map_name = ''
     draft.label_text = ''
+    draft.icon = ''
     Object.keys(lineDragPositions).forEach(k => delete lineDragPositions[k])
   }
 

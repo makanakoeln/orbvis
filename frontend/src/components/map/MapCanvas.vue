@@ -13,9 +13,7 @@
   >
     <!-- SVG overlay for grid + lines -->
     <svg
-      class="absolute top-0 left-0"
-      :width="bgImageSize ? '100%' : canvasWidth"
-      :height="bgImageSize ? '100%' : canvasHeight"
+      class="absolute inset-0 w-full h-full"
       :viewBox="bgImageSize ? `0 0 ${bgImageSize.width} ${bgImageSize.height}` : undefined"
       :preserveAspectRatio="bgImageSize ? 'none' : undefined"
     >
@@ -23,11 +21,11 @@
       <template v-if="editMode && (snapGrid ?? 0) > 0">
         <defs>
           <pattern :id="`grid-${snapGrid}`" :width="snapGrid" :height="snapGrid" patternUnits="userSpaceOnUse">
-            <line x1="0" y1="-4" x2="0" y2="4" stroke="rgba(99,102,241,0.55)" stroke-width="1" />
-            <line x1="-4" y1="0" x2="4" y2="0" stroke="rgba(99,102,241,0.55)" stroke-width="1" />
+            <line x1="0" :y1="-Math.round((snapGrid ?? 0) * 0.2)" x2="0" :y2="Math.round((snapGrid ?? 0) * 0.2)" stroke="rgba(99,102,241,0.55)" stroke-width="1" />
+            <line :x1="-Math.round((snapGrid ?? 0) * 0.2)" y1="0" :x2="Math.round((snapGrid ?? 0) * 0.2)" y2="0" stroke="rgba(99,102,241,0.55)" stroke-width="1" />
           </pattern>
         </defs>
-        <rect width="100%" height="100%" :fill="`url(#grid-${snapGrid})`" />
+        <rect width="100%" height="100%" :fill="`url(#grid-${snapGrid})`" pointer-events="none" />
       </template>
 
       <MapLine
@@ -180,8 +178,8 @@ const canvasStyle = computed(() => {
     }
   }
   return {
-    width: `${canvasWidth.value}px`,
-    minHeight: `${canvasHeight.value}px`,
+    minWidth: `max(${canvasWidth.value}px, 100%)`,
+    minHeight: `max(${canvasHeight.value}px, 100%)`,
   }
 })
 
@@ -223,6 +221,7 @@ function objectWrapperStyle(obj: MapObjectType) {
 // ---- Pointer-capture drag handlers ----
 
 function onObjectPointerDown(event: PointerEvent, obj: MapObjectType) {
+
   if (!(props.editMode || props.isAdmin)) return
   const canvas = canvasEl.value
   if (!canvas) return
@@ -250,14 +249,20 @@ function onCanvasPointerMove(event: PointerEvent) {
   localDragPositions[id] = { x, y }
 }
 
-function onCanvasPointerUp(_event: PointerEvent) {
+function onCanvasPointerUp(event: PointerEvent) {
   const id = _dragId.value
   _dragId.value = null
-  if (!id) return
+
+  if (!id) {
+    if (props.placing) emit('canvas-click', event as unknown as MouseEvent)
+    return
+  }
   const pos = localDragPositions[id]
   delete localDragPositions[id]
   if (_didMove.value && pos) {
     emit('object-drag-end', id, pos.x, pos.y)
+  } else if (!_didMove.value && props.placing) {
+    emit('canvas-click', event as unknown as MouseEvent)
   }
 }
 
@@ -326,6 +331,7 @@ function onObjectContextMenu(event: MouseEvent, obj: MapObjectType) {
 }
 
 function onCanvasClick(event: MouseEvent) {
+
   closeMenus()
   emit('canvas-click', event)
 }
