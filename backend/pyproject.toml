@@ -2,6 +2,7 @@
 name = "orbvis-backend"
 version = "1.0.0"
 description = "OrbVis Backend - FastAPI based monitoring visualization"
+license = { text = "BUSL-1.1" }
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
