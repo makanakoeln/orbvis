@@ -140,7 +140,7 @@
       </div>
 
       <!-- Static map -->
-      <div v-else class="flex-1 overflow-auto bg-[var(--bg)]">
+      <div v-else class="flex-1 bg-[var(--bg)] relative" :class="mapConfig?.globals.background_image ? 'overflow-hidden' : 'overflow-auto'">
         <div v-if="mapsStore.loading" class="flex items-center justify-center h-full text-zinc-500 text-sm">
           {{ t('map.loadingMap') }}
         </div>
@@ -693,11 +693,8 @@ function onObjectClick(obj: MapObject) {
 function onCanvasClick(event: MouseEvent) {
   if (!editor.editMode.value) return
   if (!editor.placing.value) { editor.selectObject(null); return }
-  const canvas = canvasRef.value?.canvasEl
-  if (!canvas) return
-  const rect = canvas.getBoundingClientRect()
-  const parent = canvas.parentElement!
-  editor.placeAt(event.clientX - rect.left + parent.scrollLeft, event.clientY - rect.top + parent.scrollTop)
+  const pos = canvasRef.value?.getMapPosition(event)
+  if (pos) editor.placeAt(pos.x, pos.y)
 }
 
 function onLineDragStart(event: MouseEvent, obj: MapObject, mode: LineDragMode) {
@@ -822,6 +819,7 @@ async function uploadBackground(event: Event) {
   try {
     const result = await mapsApi.uploadBackground(mapName.value, file, auth.accessToken!)
     settingsForm.background_image = result.filename
+    await reloadMap()
     uploadOk.value = true
   } catch (e: unknown) {
     uploadError.value = e instanceof Error ? e.message : 'Upload failed'
@@ -832,6 +830,7 @@ async function deleteBackground() {
   try {
     await mapsApi.deleteBackground(mapName.value, auth.accessToken!)
     settingsForm.background_image = ''
+    await reloadMap()
   } catch (e: unknown) {
     uploadError.value = e instanceof Error ? e.message : 'Delete failed'
   }

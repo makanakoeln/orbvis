@@ -72,6 +72,16 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
 
   function _mouseToCanvas(event: MouseEvent, canvasEl: HTMLElement) {
     const rect = canvasEl.getBoundingClientRect()
+    // When canvas fills its parent (background image mode), positions are percentages
+    // of native image size — read native dims from data attributes set by MapCanvas.
+    const nativeW = parseFloat(canvasEl.dataset.nativeWidth ?? '0')
+    const nativeH = parseFloat(canvasEl.dataset.nativeHeight ?? '0')
+    if (nativeW > 0 && nativeH > 0) {
+      return {
+        x: ((event.clientX - rect.left) / rect.width) * nativeW,
+        y: ((event.clientY - rect.top) / rect.height) * nativeH,
+      }
+    }
     const parent = canvasEl.parentElement!
     return {
       x: event.clientX - rect.left + parent.scrollLeft,

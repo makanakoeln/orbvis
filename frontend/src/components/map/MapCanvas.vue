@@ -2,15 +2,19 @@
   <div
     ref="canvasEl"
     class="relative select-none bg-[var(--bg)]"
-    :style="[backgroundStyle, { width: `${canvasWidth}px`, minHeight: `${canvasHeight}px` }]"
-    :class="placing ? 'cursor-crosshair' : ''"
+    :class="[placing ? 'cursor-crosshair' : '', bgImageSize ? 'w-full h-full' : '']"
+    :style="canvasStyle"
+    :data-native-width="bgImageSize?.width"
+    :data-native-height="bgImageSize?.height"
     @click="onCanvasClick"
   >
     <!-- SVG overlay for grid + lines -->
     <svg
       class="absolute top-0 left-0"
-      :width="canvasWidth"
-      :height="canvasHeight"
+      :width="bgImageSize ? '100%' : canvasWidth"
+      :height="bgImageSize ? '100%' : canvasHeight"
+      :viewBox="bgImageSize ? `0 0 ${bgImageSize.width} ${bgImageSize.height}` : undefined"
+      :preserveAspectRatio="bgImageSize ? 'none' : undefined"
     >
       <!-- Grid crosshairs (edit mode only) -->
       <template v-if="editMode && (snapGrid ?? 0) > 0">
@@ -83,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, reactive } from 'vue'
+import { computed, ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { MapConfig, MapObject as MapObjectType, ObjectState } from '@/types/api'
 import { resolveTemplate } from '@/utils/template'
@@ -121,16 +125,47 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const canvasEl = ref<HTMLDivElement | null>(null)
-const canvasWidth = 2000
-const canvasHeight = 2000
+const bgImageSize = ref<{ width: number; height: number } | null>(null)
 
-const backgroundStyle = computed(() => {
+watch(
+  () => props.config.globals.background_image,
+  (bg) => {
+    if (!bg) { bgImageSize.value = null; return }
+    const img = new Image()
+    img.onload = () => { bgImageSize.value = { width: img.naturalWidth, height: img.naturalHeight } }
+    img.src = `${import.meta.env.BASE_URL}maps/backgrounds/${bg}`
+  },
+  { immediate: true },
+)
+
+const canvasWidth = computed(() =>
+  props.config.objects.reduce((m, o) => Math.max(m, o.x + 150), 800),
+)
+const canvasHeight = computed(() =>
+  props.config.objects.reduce((m, o) => Math.max(m, o.y + 150), 600),
+)
+
+// Canvas style: with background → fill parent absolutely; without → fixed pixel size
+const canvasStyle = computed(() => {
   const bg = props.config.globals.background_image
-  if (!bg) return {}
+  if (bg && bgImageSize.value) {
+    return {
+      backgroundImage: `url(${import.meta.env.BASE_URL}maps/backgrounds/${bg})`,
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: '100% 100%',
+    }
+  }
+  if (bg) {
+    // Image still loading — fill with background color, reveal once size known
+    return {
+      backgroundImage: `url(${import.meta.env.BASE_URL}maps/backgrounds/${bg})`,
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: '100% 100%',
+    }
+  }
   return {
-    backgroundImage: `url(${import.meta.env.BASE_URL}maps/backgrounds/${bg})`,
-    backgroundRepeat: 'no-repeat',
-    backgroundSize: 'contain',
+    width: `${canvasWidth.value}px`,
+    minHeight: `${canvasHeight.value}px`,
   }
 })
 
@@ -144,14 +179,27 @@ const lineObjects = computed(() =>
 function objectWrapperStyle(obj: MapObjectType) {
   const pos = props.dragPositions[obj.id] ?? { x: obj.x, y: obj.y }
   const isMap = obj.type === 'map'
+  const cursor = props.editMode
+    ? (props.draggingId === obj.id ? 'grabbing' : 'grab')
+    : (isMap || obj.url || !!buildCheckmkUrl(obj) ? 'pointer' : 'default')
+  const zIndex = props.draggingId === obj.id ? 100 : (obj.z ?? 1)
+
+  if (bgImageSize.value) {
+    // Percentage positions relative to native image dimensions
+    return {
+      left: `${(pos.x / bgImageSize.value.width) * 100}%`,
+      top: `${(pos.y / bgImageSize.value.height) * 100}%`,
+      transform: 'translate(-50%, -50%)',
+      cursor,
+      zIndex,
+    }
+  }
   return {
     left: `${pos.x}px`,
     top: `${pos.y}px`,
     transform: 'translate(-50%, -50%)',
-    cursor: props.editMode
-      ? (props.draggingId === obj.id ? 'grabbing' : 'grab')
-      : (isMap || obj.url || !!buildCheckmkUrl(obj) ? 'pointer' : 'default'),
-    zIndex: props.draggingId === obj.id ? 100 : (obj.z ?? 1),
+    cursor,
+    zIndex,
   }
 }
 
@@ -195,17 +243,14 @@ function onObjectClick(obj: MapObjectType) {
     emit('object-click', obj)
     return
   }
-  // Explicit URL overrides everything
   if (obj.url) {
     window.open(obj.url, obj.url_target || '_blank')
     return
   }
-  // Map link → navigate internally
   if (obj.type === 'map' && obj.map_name) {
     router.push({ name: 'map', params: { name: obj.map_name } })
     return
   }
-  // Host/Service/Group → auto-open Checkmk view
   const cmkUrl = buildCheckmkUrl(obj)
   if (cmkUrl) {
     window.open(cmkUrl, '_blank')
@@ -273,5 +318,22 @@ function closeMenus() {
   contextMenu.visible = false
 }
 
-defineExpose({ canvasEl })
+function getMapPosition(event: MouseEvent): { x: number; y: number } {
+  if (!canvasEl.value) return { x: 0, y: 0 }
+  const rect = canvasEl.value.getBoundingClientRect()
+  if (bgImageSize.value) {
+    // Canvas fills container — convert screen coords to native image coords
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * bgImageSize.value.width,
+      y: ((event.clientY - rect.top) / rect.height) * bgImageSize.value.height,
+    }
+  }
+  const parent = canvasEl.value.parentElement!
+  return {
+    x: event.clientX - rect.left + parent.scrollLeft,
+    y: event.clientY - rect.top + parent.scrollTop,
+  }
+}
+
+defineExpose({ canvasEl, getMapPosition })
 </script>
