@@ -22,6 +22,7 @@
   --text: #f4f4f5;
   --text-muted: #71717a;
   --accent: #6366f1;
+  --gauge-track: #3f3f46;
 }
 
 .light {
@@ -34,20 +35,64 @@
   --text: #18181b;
   --text-muted: #52525b;
   --accent: #4f46e5;
+  --gauge-track: #d4d4d8;
 }
 
 /* Light theme: remap dark-only zinc shades to readable equivalents */
+
+/* Text */
+.light .text-zinc-200 { color: #27272a; }
 .light .text-zinc-300 { color: #3f3f46; }
 .light .text-zinc-400 { color: #52525b; }
-.light .text-zinc-500 { color: #3f3f46; }
-.light .text-zinc-600 { color: #27272a; }
-.light .hover\:text-zinc-300:hover { color: #18181b; }
+.light .text-zinc-500 { color: #71717a; }
+.light .text-zinc-600 { color: #52525b; }
+.light .text-zinc-700 { color: #3f3f46; }
+.light .text-zinc-800 { color: #27272a; }
+.light .text-zinc-900 { color: #18181b; }
+.light .text-zinc-950 { color: #09090b; }
+
+/* Hover text */
+.light .hover\:text-zinc-200:hover { color: #18181b; }
+.light .hover\:text-zinc-300:hover { color: #27272a; }
 .light .hover\:text-zinc-400:hover { color: #3f3f46; }
-.light .ring-zinc-700 { --tw-ring-color: #a1a1aa; }
+
+/* Backgrounds */
+.light .bg-zinc-700    { background-color: #e4e4e7; }
+.light .bg-zinc-800    { background-color: #f4f4f5; }
+.light .bg-zinc-900    { background-color: #fafafa; }
+.light .bg-zinc-950    { background-color: #ffffff; }
+.light .bg-zinc-700\/50 { background-color: rgba(212, 212, 216, 0.6); }
+.light .bg-zinc-700\/60 { background-color: rgba(212, 212, 216, 0.75); }
+.light .bg-zinc-800\/70 { background-color: rgba(244, 244, 245, 0.85); }
+
+/* Hover backgrounds */
+.light .hover\:bg-zinc-700:hover    { background-color: #e4e4e7; }
+.light .hover\:bg-zinc-700\/60:hover { background-color: rgba(212, 212, 216, 0.75); }
+
+/* Borders */
+.light .border-zinc-500   { border-color: #a1a1aa; }
+.light .border-zinc-600   { border-color: #a1a1aa; }
+.light .border-zinc-700   { border-color: #d4d4d8; }
+.light .border-zinc-700\/60 { border-color: rgba(212, 212, 216, 0.7); }
+
+/* Hover borders */
+.light .hover\:border-zinc-500:hover { border-color: #71717a; }
+
+/* Rings */
+.light .ring-zinc-500   { --tw-ring-color: #71717a; }
+.light .ring-zinc-600   { --tw-ring-color: #a1a1aa; }
+.light .ring-zinc-700   { --tw-ring-color: #a1a1aa; }
+.light .ring-zinc-700\/60 { --tw-ring-color: rgba(161, 161, 170, 0.6); }
+
+/* Hover rings */
 .light .hover\:ring-zinc-500:hover { --tw-ring-color: #71717a; }
-.light .bg-zinc-700\/50,
-.light .bg-zinc-700\/60 { background-color: rgba(212, 212, 216, 0.7); }
-.light .text-zinc-700 { color: #18181b; }
+.light .hover\:ring-zinc-600:hover { --tw-ring-color: #a1a1aa; }
+
+/* Placeholder */
+.light .placeholder-zinc-600::placeholder { color: #a1a1aa; }
+
+/* ring-offset color (selection ring on icons) */
+.light .ring-offset-zinc-950 { --tw-ring-offset-color: #fafafa; }
 
 body {
   background-color: var(--bg);

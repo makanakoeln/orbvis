@@ -142,8 +142,9 @@ sudo "$VENV_DIR/bin/pip" install --quiet --upgrade pip
 # Copy backend source into the site directory so the site user can import it
 # without needing access to the developer's home directory.
 sudo cp -r "$SCRIPT_DIR/backend/." "$ORBVIS_DIR/src/"
-sudo "$VENV_DIR/bin/pip" install --quiet "$ORBVIS_DIR/src"
-sudo "$VENV_DIR/bin/pip" install --quiet --force-reinstall --no-deps "$ORBVIS_DIR/src"
+# Editable install: keeps __file__ pointing at $ORBVIS_DIR/src so that
+# relative paths (alembic.ini, alembic/ migrations dir) resolve correctly.
+sudo "$VENV_DIR/bin/pip" install --quiet -e "$ORBVIS_DIR/src"
 
 # ---------------------------------------------------------------------------
 # 4. .env configuration
@@ -265,6 +266,8 @@ case "\$1" in
     fi
     echo -n "Starting orbvis..."
     set -a; source "\$ENV_FILE"; set +a
+    cd "$ORBVIS_DIR/src"
+    "\$VENV/bin/python3" -m alembic upgrade head >> "\$LOGFILE" 2>&1
     "\$VENV/bin/uvicorn" \$APP \\
       --host 127.0.0.1 --port \$PORT \\
       --log-level warning \\

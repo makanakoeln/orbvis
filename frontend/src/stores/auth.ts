@@ -40,19 +40,31 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function _doInit(): Promise<void> {
-    // Try Checkmk SSO via session cookie (auth_<site>); only works when served through OMD Apache
-    try {
-      const tokens = await authApi.sso()
-      accessToken.value = tokens.access_token
-      refreshToken.value = tokens.refresh_token
-      localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token)
-      localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token)
+    // Try Checkmk SSO via session cookie (auth_<site>); only works when served through OMD Apache.
+    // Retry once on network errors (server may still be starting up), but not on HTTP 401.
+    let ssoTokens = null
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        ssoTokens = await authApi.sso()
+        break
+      } catch (e: unknown) {
+        if (e instanceof TypeError && attempt === 0) {
+          // Network-level failure (server not ready yet) — wait briefly and retry
+          await new Promise(r => setTimeout(r, 600))
+        } else {
+          break  // HTTP 401 or second failure: SSO not available
+        }
+      }
+    }
+    if (ssoTokens) {
+      accessToken.value = ssoTokens.access_token
+      refreshToken.value = ssoTokens.refresh_token
+      localStorage.setItem(ACCESS_TOKEN_KEY, ssoTokens.access_token)
+      localStorage.setItem(REFRESH_TOKEN_KEY, ssoTokens.refresh_token)
       sessionStorage.setItem(SSO_ACTIVE_KEY, '1')
       ssoActive.value = true
       await fetchCurrentUser()
       return
-    } catch {
-      // Not running behind Checkmk Apache, fall through to normal auth
     }
 
     ssoActive.value = false

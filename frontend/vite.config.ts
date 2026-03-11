@@ -17,6 +17,14 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
         ws: true,
+        configure: (proxy) => {
+          proxy.on('error', (_err, _req, res) => {
+            if ('writeHead' in res && !res.headersSent) {
+              res.writeHead(503, { 'Content-Type': 'text/plain' })
+              res.end('Backend restarting')
+            }
+          })
+        },
       },
       '/maps': {
         target: 'http://localhost:8080',
