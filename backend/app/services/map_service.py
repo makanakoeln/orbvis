@@ -47,7 +47,7 @@ def list_maps() -> list[MapRead]:
             maps.append(_to_read(cfg))
         except Exception as exc:
             logger.warning("Skipping invalid map file %s: %s", path, exc)
-    return sorted(maps, key=lambda m: m.name)
+    return sorted(maps, key=lambda m: (not m.readonly, m.name))
 
 
 def get_map(name: str) -> MapConfig | None:
@@ -83,6 +83,8 @@ def update_map(name: str, data: MapUpdate) -> MapConfig | None:
     if cfg is None:
         return None
     update_data = data.model_dump(exclude_unset=True)
+    if not update_data:
+        return cfg
     for key, value in update_data.items():
         setattr(cfg.globals, key, value)
     _save_map_file(cfg)
@@ -175,6 +177,7 @@ def clone_map(name: str, new_name: str, alias: str | None = None) -> MapConfig:
     import copy
     cfg = copy.deepcopy(src)
     cfg.name = new_name
+    cfg.readonly = False  # clones are always editable
     if alias is not None:
         cfg.globals.alias = alias
     _save_map_file(cfg)
@@ -184,8 +187,12 @@ def clone_map(name: str, new_name: str, alias: str | None = None) -> MapConfig:
 def import_map(data: dict, *, overwrite: bool = False) -> MapConfig:
     cfg = MapConfig.model_validate(data)
     path = _map_path(cfg.name)
-    if path.exists() and not overwrite:
-        raise ValueError(f"Map '{cfg.name}' already exists")
+    if path.exists():
+        if not overwrite:
+            raise ValueError(f"Map '{cfg.name}' already exists")
+        existing = _load_map_file(path)
+        if existing.readonly:
+            raise ValueError(f"Map '{cfg.name}' is read-only and cannot be overwritten")
     _save_map_file(cfg)
     return cfg
 
@@ -200,4 +207,8 @@ def _to_read(cfg: MapConfig) -> MapRead:
         map_type=cfg.globals.map_type,
         object_count=len(cfg.objects),
         rotation_interval=cfg.globals.rotation_interval,
+        readonly=cfg.readonly,
+        worldmap_lat=cfg.globals.worldmap_lat,
+        worldmap_lng=cfg.globals.worldmap_lng,
+        worldmap_zoom=cfg.globals.worldmap_zoom,
     )

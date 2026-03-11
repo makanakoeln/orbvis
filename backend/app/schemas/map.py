@@ -74,6 +74,7 @@ class MapConfig(BaseModel):
     name: str
     globals: MapGlobals = Field(default_factory=MapGlobals)
     objects: list[MapObject] = Field(default_factory=list)
+    readonly: bool = False
 
 
 class MapCreate(BaseModel):
@@ -110,6 +111,10 @@ class MapRead(BaseModel):
     map_type: str
     object_count: int
     rotation_interval: int
+    readonly: bool = False
+    worldmap_lat: float = 51.0
+    worldmap_lng: float = 10.0
+    worldmap_zoom: int = 5
 
 
 class MapClone(BaseModel):

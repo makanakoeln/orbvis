@@ -56,6 +56,12 @@ def _require_map_edit(name: str, user: User) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No edit permission for this map")
 
 
+def _require_not_readonly(name: str) -> None:
+    cfg = map_service.get_map(name)
+    if cfg and cfg.readonly:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This map is read-only")
+
+
 @router.get("", response_model=list[MapRead])
 async def list_maps(current_user: User = Depends(get_current_user)) -> list[MapRead]:
     all_maps = map_service.list_maps()
@@ -88,6 +94,7 @@ async def update_map(
     name: str, data: MapUpdate, current_user: User = Depends(get_current_user)
 ) -> MapConfig:
     _require_map_edit(name, current_user)
+    _require_not_readonly(name)
     cfg = map_service.update_map(name, data)
     if cfg is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
@@ -155,6 +162,7 @@ async def upload_background(
     current_user: User = Depends(get_current_user),
 ) -> JSONResponse:
     _require_map_edit(name, current_user)
+    _require_not_readonly(name)
     if map_service.get_map(name) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
     if file.content_type not in _ALLOWED_IMAGE_TYPES:
@@ -199,6 +207,7 @@ async def upload_background(
 @router.delete("/{name}/background", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_background(name: str, current_user: User = Depends(get_current_user)) -> None:
     _require_map_edit(name, current_user)
+    _require_not_readonly(name)
     if map_service.get_map(name) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
     bg_dir = Path(settings.maps_dir) / "backgrounds"
@@ -214,6 +223,7 @@ async def add_object(
     name: str, obj: MapObject, current_user: User = Depends(get_current_user)
 ) -> MapConfig:
     _require_map_edit(name, current_user)
+    _require_not_readonly(name)
     try:
         cfg = map_service.add_object(name, obj)
     except ValueError as exc:
@@ -228,6 +238,7 @@ async def update_object(
     name: str, obj_id: str, updates: dict[str, Any], current_user: User = Depends(get_current_user)
 ) -> MapObject:
     _require_map_edit(name, current_user)
+    _require_not_readonly(name)
     obj = map_service.update_object(name, obj_id, updates)
     if obj is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Object not found")
@@ -239,5 +250,6 @@ async def delete_object(
     name: str, obj_id: str, current_user: User = Depends(get_current_user)
 ) -> None:
     _require_map_edit(name, current_user)
+    _require_not_readonly(name)
     if not map_service.delete_object(name, obj_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Object not found")
