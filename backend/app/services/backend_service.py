@@ -96,6 +96,15 @@ def build_instance(cfg: BackendConfig) -> "BackendBase":
     if cfg.type == "test":
         from app.backends.test import TestBackend
         return TestBackend()
+    if cfg.type == "icinga2":
+        from app.backends.icinga2 import Icinga2Backend
+        return Icinga2Backend(
+            url=cfg.icinga2_url or "https://localhost:5665",
+            username=cfg.icinga2_username or "",
+            password=cfg.icinga2_password or "",
+            timeout=cfg.timeout,
+            verify_ssl=cfg.icinga2_verify_ssl,
+        )
     from app.backends.livestatus import LivestatusBackend
     return LivestatusBackend(
         socket_path=cfg.socket_path or "/var/run/nagios/rw/live",
