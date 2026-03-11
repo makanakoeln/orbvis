@@ -114,75 +114,7 @@
       </div>
     </div>
 
-    <!-- Create board dialog -->
-    <Teleport to="body">
-      <div v-if="showCreate" class="fixed inset-0 z-50 flex items-center justify-center">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showCreate = false" />
-        <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[26rem]">
-          <div class="flex items-center justify-between mb-5">
-            <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.createBoard') }}</h3>
-            <button @click="showCreate = false"
-              class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-          <form @submit.prevent="createBoard" class="space-y-4">
-            <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                {{ t('admin.boardId') }} <span class="normal-case font-normal text-zinc-600">{{ t('admin.boardIdHint') }}</span>
-              </label>
-              <input v-model="newBoard.name" placeholder="my-map" required pattern="[a-zA-Z0-9_-]+"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.alias') }}</label>
-              <input v-model="newBoard.alias" placeholder="My Map"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.connection') }}</label>
-              <div class="relative">
-                <select v-model="newBoard.backend_id" required
-                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                  <option value="" disabled>{{ t('admin.selectConnection') }}</option>
-                  <option v-for="b in connectionsStore.backends" :key="b.id" :value="b.id">
-                    {{ b.label || b.id }}
-                  </option>
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                  <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.boardType') }}</label>
-              <div class="relative">
-                <select v-model="newBoard.map_type"
-                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                  <option value="static">{{ t('board.boardTypeStatic') }}</option>
-                  <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
-                  <option value="automap">{{ t('board.boardTypeFlowBoard') }}</option>
-                  <option value="radar">{{ t('board.boardTypeRadar') }}</option>
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                  <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
-              <button type="button" @click="showCreate = false"
-                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">{{ t('common.cancel') }}</button>
-              <button type="submit"
-                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all">{{ t('common.create') }}</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </Teleport>
+    <CreateBoardModal v-if="showCreate" @close="showCreate = false" @created="showCreate = false" />
 
     <!-- Board Permissions Modal -->
     <Teleport to="body">
@@ -264,30 +196,15 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBoardsStore } from '@/stores/boards'
-import { useConnectionsStore } from '@/stores/connections'
-import { useSettingsStore } from '@/stores/settings'
 import { useAuthStore } from '@/stores/auth'
 import { boardsApi, rolesApi } from '@/api/client'
 import type { BoardConfig, RoleRead, PermissionRead } from '@/types/api'
+import CreateBoardModal from '@/components/board/CreateBoardModal.vue'
 
 const { t } = useI18n()
 const boardsStore = useBoardsStore()
-const connectionsStore = useConnectionsStore()
-const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
 const showCreate = ref(false)
-const newBoard = ref({ name: '', alias: '', backend_id: '', map_type: 'static' })
-
-async function createBoard() {
-  await boardsStore.createBoard(newBoard.value.name, newBoard.value.alias, newBoard.value.backend_id, newBoard.value.map_type)
-  showCreate.value = false
-  newBoard.value = {
-    name: '',
-    alias: '',
-    backend_id: settingsStore.settings.default_backend_id || connectionsStore.backends[0]?.id || '',
-    map_type: settingsStore.settings.default_map_type || 'static',
-  }
-}
 
 async function deleteBoard(name: string) {
   if (!confirm(t('admin.deleteBoard', { name }))) return
@@ -336,18 +253,7 @@ async function importBoard(event: Event) {
   }
 }
 
-onMounted(async () => {
-  await Promise.all([
-    boardsStore.fetchBoards(),
-    connectionsStore.fetchBackends(),
-    settingsStore.load(),
-  ])
-  // Pre-fill new map form with global defaults
-  if (!newBoard.value.backend_id) {
-    newBoard.value.backend_id = settingsStore.settings.default_backend_id || connectionsStore.backends[0]?.id || ''
-  }
-  newBoard.value.map_type = settingsStore.settings.default_map_type || 'static'
-})
+onMounted(() => boardsStore.fetchBoards())
 
 // ---- Map Permissions ----
 

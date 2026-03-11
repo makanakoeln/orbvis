@@ -6,6 +6,13 @@
           <h2 class="text-2xl font-bold text-[var(--text)] tracking-tight">{{ t('home.title') }}</h2>
           <p class="text-sm text-zinc-500 mt-1">{{ t('home.subtitle') }}</p>
         </div>
+        <button v-if="auth.isAdmin" @click="showCreate = true"
+          class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          {{ t('admin.newBoard') }}
+        </button>
         <div class="relative w-56 shrink-0">
           <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -182,19 +189,29 @@
       </div>
     </main>
   </div>
+  <CreateBoardModal v-if="showCreate" @close="showCreate = false" @created="onCreated" />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
 import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue'
+import CreateBoardModal from '@/components/board/CreateBoardModal.vue'
 
 const { t } = useI18n()
 const baseUrl = import.meta.env.BASE_URL
 const auth = useAuthStore()
 const boardsStore = useBoardsStore()
+const router = useRouter()
+const showCreate = ref(false)
+
+function onCreated(name: string) {
+  showCreate.value = false
+  router.push(`/boards/${name}`)
+}
 const searchQuery = ref('')
 
 const filteredBoards = computed(() => {
