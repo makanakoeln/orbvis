@@ -2,10 +2,19 @@
   <div class="flex flex-col flex-1 overflow-hidden bg-[var(--bg)]">
     <!-- Slim map-specific topbar -->
     <div class="bg-[var(--bg-surface)] border-b border-[var(--border)] px-4 py-2 flex items-center justify-between shrink-0 z-30">
-      <!-- Map name -->
-      <span class="font-semibold text-[var(--text)] text-sm truncate">
-        {{ boardConfig?.globals.alias || route.params.name }}
-      </span>
+      <!-- Left: back link (Checkmk/SSO mode) + board name -->
+      <div class="flex items-center gap-2.5 min-w-0">
+        <router-link v-if="auth.ssoActive" to="/"
+          class="shrink-0 flex items-center gap-1 text-zinc-500 hover:text-zinc-300 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+          <span class="text-xs font-medium">{{ t('nav.overview') }}</span>
+        </router-link>
+        <span class="font-semibold text-[var(--text)] text-sm truncate">
+          {{ boardConfig?.globals.alias || route.params.name }}
+        </span>
+      </div>
 
       <div class="flex items-center gap-1.5 shrink-0">
         <!-- Connection status -->

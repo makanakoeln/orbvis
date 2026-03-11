@@ -1,6 +1,6 @@
 <template>
   <div v-if="showShell" class="flex h-screen bg-[var(--bg)] overflow-hidden">
-    <AppSidebar />
+    <AppSidebar v-if="!auth.ssoActive" />
     <div class="flex-1 min-w-0 flex flex-col overflow-hidden">
       <router-view />
     </div>
