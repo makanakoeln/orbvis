@@ -74,7 +74,72 @@
               :zoom="map.worldmap_zoom ?? 5"
               class="opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none"
             />
-            <!-- Placeholder when no background image -->
+            <!-- Flow Board thumbnail -->
+            <svg v-else-if="map.map_type === 'automap'" viewBox="0 0 256 128"
+              class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none">
+              <rect width="256" height="128" fill="#18181b"/>
+              <line x1="128" y1="28" x2="72" y2="66" stroke="#3f3f46" stroke-width="1.5"/>
+              <line x1="128" y1="28" x2="184" y2="66" stroke="#3f3f46" stroke-width="1.5"/>
+              <line x1="72" y1="66" x2="36" y2="100" stroke="#3f3f46" stroke-width="1.5"/>
+              <line x1="72" y1="66" x2="108" y2="100" stroke="#3f3f46" stroke-width="1.5"/>
+              <line x1="184" y1="66" x2="148" y2="100" stroke="#3f3f46" stroke-width="1.5"/>
+              <line x1="184" y1="66" x2="220" y2="100" stroke="#3f3f46" stroke-width="1.5"/>
+              <circle cx="128" cy="28" r="11" fill="#22c55e"/>
+              <circle cx="72" cy="66" r="9" fill="#22c55e"/>
+              <circle cx="184" cy="66" r="9" fill="#ef4444"/>
+              <circle cx="36" cy="100" r="7" fill="#22c55e"/>
+              <circle cx="108" cy="100" r="7" fill="#f59e0b"/>
+              <circle cx="148" cy="100" r="7" fill="#22c55e"/>
+              <circle cx="220" cy="100" r="7" fill="#22c55e"/>
+              <text x="128" y="32" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="8" font-weight="700">H</text>
+              <text x="72" y="70" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="7" font-weight="700">H</text>
+              <text x="184" y="70" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="7" font-weight="700">H</text>
+            </svg>
+            <!-- Radar Board thumbnail — status card grid -->
+            <svg v-else-if="map.map_type === 'radar'" viewBox="0 0 256 128"
+              class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none">
+              <rect width="256" height="128" fill="#18181b"/>
+              <!-- OK cards -->
+              <rect x="10" y="10" width="56" height="34" rx="4" fill="rgba(34,197,94,0.07)" stroke="rgba(34,197,94,0.22)" stroke-width="0.75"/>
+              <circle cx="17" cy="21" r="2.5" fill="#22c55e"/><rect x="23" y="18.5" width="30" height="3.5" rx="1.5" fill="rgba(134,239,172,0.3)"/>
+              <rect x="13" y="30" width="32" height="7" rx="2" fill="rgba(34,197,94,0.12)"/><circle cx="17.5" cy="33.5" r="1.5" fill="#22c55e"/>
+              <rect x="70" y="10" width="56" height="34" rx="4" fill="rgba(34,197,94,0.07)" stroke="rgba(34,197,94,0.22)" stroke-width="0.75"/>
+              <circle cx="77" cy="21" r="2.5" fill="#22c55e"/><rect x="83" y="18.5" width="30" height="3.5" rx="1.5" fill="rgba(134,239,172,0.3)"/>
+              <rect x="73" y="30" width="32" height="7" rx="2" fill="rgba(34,197,94,0.12)"/><circle cx="77.5" cy="33.5" r="1.5" fill="#22c55e"/>
+              <rect x="190" y="10" width="56" height="34" rx="4" fill="rgba(34,197,94,0.07)" stroke="rgba(34,197,94,0.22)" stroke-width="0.75"/>
+              <circle cx="197" cy="21" r="2.5" fill="#22c55e"/><rect x="203" y="18.5" width="30" height="3.5" rx="1.5" fill="rgba(134,239,172,0.3)"/>
+              <rect x="193" y="30" width="32" height="7" rx="2" fill="rgba(34,197,94,0.12)"/><circle cx="197.5" cy="33.5" r="1.5" fill="#22c55e"/>
+              <rect x="10" y="48" width="56" height="34" rx="4" fill="rgba(34,197,94,0.07)" stroke="rgba(34,197,94,0.22)" stroke-width="0.75"/>
+              <circle cx="17" cy="59" r="2.5" fill="#22c55e"/><rect x="23" y="56.5" width="30" height="3.5" rx="1.5" fill="rgba(134,239,172,0.3)"/>
+              <rect x="13" y="68" width="32" height="7" rx="2" fill="rgba(34,197,94,0.12)"/><circle cx="17.5" cy="71.5" r="1.5" fill="#22c55e"/>
+              <rect x="130" y="48" width="56" height="34" rx="4" fill="rgba(34,197,94,0.07)" stroke="rgba(34,197,94,0.22)" stroke-width="0.75"/>
+              <circle cx="137" cy="59" r="2.5" fill="#22c55e"/><rect x="143" y="56.5" width="30" height="3.5" rx="1.5" fill="rgba(134,239,172,0.3)"/>
+              <rect x="133" y="68" width="32" height="7" rx="2" fill="rgba(34,197,94,0.12)"/><circle cx="137.5" cy="71.5" r="1.5" fill="#22c55e"/>
+              <rect x="190" y="48" width="56" height="34" rx="4" fill="rgba(34,197,94,0.07)" stroke="rgba(34,197,94,0.22)" stroke-width="0.75"/>
+              <circle cx="197" cy="59" r="2.5" fill="#22c55e"/><rect x="203" y="56.5" width="30" height="3.5" rx="1.5" fill="rgba(134,239,172,0.3)"/>
+              <rect x="193" y="68" width="32" height="7" rx="2" fill="rgba(34,197,94,0.12)"/><circle cx="197.5" cy="71.5" r="1.5" fill="#22c55e"/>
+              <rect x="70" y="86" width="56" height="34" rx="4" fill="rgba(34,197,94,0.07)" stroke="rgba(34,197,94,0.22)" stroke-width="0.75"/>
+              <circle cx="77" cy="97" r="2.5" fill="#22c55e"/><rect x="83" y="94.5" width="30" height="3.5" rx="1.5" fill="rgba(134,239,172,0.3)"/>
+              <rect x="73" y="106" width="32" height="7" rx="2" fill="rgba(34,197,94,0.12)"/><circle cx="77.5" cy="109.5" r="1.5" fill="#22c55e"/>
+              <rect x="130" y="86" width="56" height="34" rx="4" fill="rgba(34,197,94,0.07)" stroke="rgba(34,197,94,0.22)" stroke-width="0.75"/>
+              <circle cx="137" cy="97" r="2.5" fill="#22c55e"/><rect x="143" y="94.5" width="30" height="3.5" rx="1.5" fill="rgba(134,239,172,0.3)"/>
+              <rect x="133" y="106" width="32" height="7" rx="2" fill="rgba(34,197,94,0.12)"/><circle cx="137.5" cy="109.5" r="1.5" fill="#22c55e"/>
+              <!-- CRITICAL cards -->
+              <rect x="130" y="10" width="56" height="34" rx="4" fill="rgba(239,68,68,0.07)" stroke="rgba(239,68,68,0.22)" stroke-width="0.75"/>
+              <circle cx="137" cy="21" r="2.5" fill="#ef4444"/><rect x="143" y="18.5" width="30" height="3.5" rx="1.5" fill="rgba(252,165,165,0.3)"/>
+              <rect x="133" y="30" width="32" height="7" rx="2" fill="rgba(239,68,68,0.12)"/><circle cx="137.5" cy="33.5" r="1.5" fill="#ef4444"/>
+              <rect x="10" y="86" width="56" height="34" rx="4" fill="rgba(239,68,68,0.07)" stroke="rgba(239,68,68,0.22)" stroke-width="0.75"/>
+              <circle cx="17" cy="97" r="2.5" fill="#ef4444"/><rect x="23" y="94.5" width="30" height="3.5" rx="1.5" fill="rgba(252,165,165,0.3)"/>
+              <rect x="13" y="106" width="32" height="7" rx="2" fill="rgba(239,68,68,0.12)"/><circle cx="17.5" cy="109.5" r="1.5" fill="#ef4444"/>
+              <!-- WARNING cards -->
+              <rect x="70" y="48" width="56" height="34" rx="4" fill="rgba(234,179,8,0.07)" stroke="rgba(234,179,8,0.22)" stroke-width="0.75"/>
+              <circle cx="77" cy="59" r="2.5" fill="#eab308"/><rect x="83" y="56.5" width="30" height="3.5" rx="1.5" fill="rgba(253,224,71,0.3)"/>
+              <rect x="73" y="68" width="32" height="7" rx="2" fill="rgba(234,179,8,0.12)"/><circle cx="77.5" cy="71.5" r="1.5" fill="#eab308"/>
+              <rect x="190" y="86" width="56" height="34" rx="4" fill="rgba(234,179,8,0.07)" stroke="rgba(234,179,8,0.22)" stroke-width="0.75"/>
+              <circle cx="197" cy="97" r="2.5" fill="#eab308"/><rect x="203" y="94.5" width="30" height="3.5" rx="1.5" fill="rgba(253,224,71,0.3)"/>
+              <rect x="193" y="106" width="32" height="7" rx="2" fill="rgba(234,179,8,0.12)"/><circle cx="197.5" cy="109.5" r="1.5" fill="#eab308"/>
+            </svg>
+            <!-- Placeholder for static without background -->
             <div v-else class="w-full h-full flex items-center justify-center">
               <svg class="w-10 h-10 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
