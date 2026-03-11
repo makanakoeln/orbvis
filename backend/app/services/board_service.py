@@ -1,4 +1,4 @@
-"""Map CRUD and persistence."""
+"""Board CRUD and persistence."""
 
 from __future__ import annotations
 
@@ -10,63 +10,63 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import settings
-from app.schemas.map import (
-    MapConfig,
-    MapCreate,
-    MapGlobals,
-    MapObject,
-    MapRead,
-    MapUpdate,
+from app.schemas.board import (
+    BoardConfig,
+    BoardCreate,
+    BoardGlobals,
+    BoardObject,
+    BoardRead,
+    BoardUpdate,
 )
 
 logger = logging.getLogger(__name__)
 
 # Only alphanumeric, underscore, and hyphen – enforced both in the Pydantic schema
-# (MapCreate.name pattern) and here to prevent path traversal on read/delete.
+# (BoardCreate.name pattern) and here to prevent path traversal on read/delete.
 _NAME_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
 
-def _maps_dir() -> Path:
-    p = Path(settings.maps_dir)
+def _boards_dir() -> Path:
+    p = Path(settings.boards_dir)
     p.mkdir(parents=True, exist_ok=True)
     return p
 
 
-def _map_path(name: str) -> Path:
-    """Return the absolute path for a map file, rejecting unsafe names."""
+def _board_path(name: str) -> Path:
+    """Return the absolute path for a board file, rejecting unsafe names."""
     if not _NAME_RE.match(name):
-        raise ValueError(f"Invalid map name: {name!r}")
-    return _maps_dir() / f"{name}.json"
+        raise ValueError(f"Invalid board name: {name!r}")
+    return _boards_dir() / f"{name}.json"
 
 
-def list_maps() -> list[MapRead]:
-    maps = []
-    for path in _maps_dir().glob("*.json"):
+def list_boards() -> list[BoardRead]:
+    boards = []
+    for path in _boards_dir().glob("*.json"):
         try:
-            cfg = _load_map_file(path)
-            maps.append(_to_read(cfg))
+            cfg = _load_board_file(path)
+            boards.append(_to_read(cfg))
         except Exception as exc:
-            logger.warning("Skipping invalid map file %s: %s", path, exc)
-    return sorted(maps, key=lambda m: (not m.readonly, m.name))
+            logger.warning("Skipping invalid board file %s: %s", path, exc)
+    return sorted(boards, key=lambda m: (not m.readonly, (m.alias or m.name).lower()))
 
 
-def get_map(name: str) -> MapConfig | None:
+def get_board(name: str) -> BoardConfig | None:
     try:
-        path = _map_path(name)
+        path = _board_path(name)
     except ValueError:
         return None
     if not path.exists():
         return None
-    return _load_map_file(path)
+    return _load_board_file(path)
 
 
-def create_map(data: MapCreate) -> MapConfig:
-    path = _map_path(data.name)
+def create_board(data: BoardCreate) -> BoardConfig:
+    path = _board_path(data.name)
     if path.exists():
-        raise ValueError(f"Map '{data.name}' already exists")
-    cfg = MapConfig(
+        raise ValueError(f"Board '{data.name}' already exists")
+    cfg = BoardConfig(
         name=data.name,
-        globals=MapGlobals(
+        globals=BoardGlobals(
             alias=data.alias,
             background_image=data.background_image,
             icon_size=data.icon_size,
@@ -74,12 +74,12 @@ def create_map(data: MapCreate) -> MapConfig:
             map_type=data.map_type,
         ),
     )
-    _save_map_file(cfg)
+    _save_board_file(cfg)
     return cfg
 
 
-def update_map(name: str, data: MapUpdate) -> MapConfig | None:
-    cfg = get_map(name)
+def update_board(name: str, data: BoardUpdate) -> BoardConfig | None:
+    cfg = get_board(name)
     if cfg is None:
         return None
     update_data = data.model_dump(exclude_unset=True)
@@ -87,13 +87,13 @@ def update_map(name: str, data: MapUpdate) -> MapConfig | None:
         return cfg
     for key, value in update_data.items():
         setattr(cfg.globals, key, value)
-    _save_map_file(cfg)
+    _save_board_file(cfg)
     return cfg
 
 
-def delete_map(name: str) -> bool:
+def delete_board(name: str) -> bool:
     try:
-        path = _map_path(name)
+        path = _board_path(name)
     except ValueError:
         return False
     if not path.exists():
@@ -102,20 +102,20 @@ def delete_map(name: str) -> bool:
     return True
 
 
-def add_object(name: str, obj: MapObject) -> MapConfig | None:
-    cfg = get_map(name)
+def add_object(name: str, obj: BoardObject) -> BoardConfig | None:
+    cfg = get_board(name)
     if cfg is None:
         return None
     existing_ids = {o.id for o in cfg.objects}
     if obj.id in existing_ids:
-        raise ValueError(f"Object ID '{obj.id}' already exists in map '{name}'")
+        raise ValueError(f"Object ID '{obj.id}' already exists in board '{name}'")
     cfg.objects.append(obj)
-    _save_map_file(cfg)
+    _save_board_file(cfg)
     return cfg
 
 
-def update_object(map_name: str, obj_id: str, updates: dict[str, Any]) -> MapObject | None:
-    cfg = get_map(map_name)
+def update_object(board_name: str, obj_id: str, updates: dict[str, Any]) -> BoardObject | None:
+    cfg = get_board(board_name)
     if cfg is None:
         return None
     for obj in cfg.objects:
@@ -127,36 +127,36 @@ def update_object(map_name: str, obj_id: str, updates: dict[str, Any]) -> MapObj
                     setattr(obj, key, value)
                 else:
                     obj.extra[key] = value
-            _save_map_file(cfg)
+            _save_board_file(cfg)
             return obj
     return None
 
 
-def delete_object(map_name: str, obj_id: str) -> bool:
-    cfg = get_map(map_name)
+def delete_object(board_name: str, obj_id: str) -> bool:
+    cfg = get_board(board_name)
     if cfg is None:
         return False
     original_len = len(cfg.objects)
     cfg.objects = [o for o in cfg.objects if o.id != obj_id]
     if len(cfg.objects) == original_len:
         return False
-    _save_map_file(cfg)
+    _save_board_file(cfg)
     return True
 
 
-def _load_map_file(path: Path) -> MapConfig:
+def _load_board_file(path: Path) -> BoardConfig:
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
-    return MapConfig.model_validate(data)
+    return BoardConfig.model_validate(data)
 
 
-def _save_map_file(cfg: MapConfig) -> None:
+def _save_board_file(cfg: BoardConfig) -> None:
     """Write atomically: write to a uniquely-named temp file, then rename (POSIX-atomic).
 
     Using a process-unique suffix prevents two concurrent saves from clobbering the
     same .tmp file (last write wins and silently drops the other's changes).
     """
-    path = _map_path(cfg.name)
+    path = _board_path(cfg.name)
     tmp = path.with_name(f"{path.stem}.{os.getpid()}.{os.urandom(4).hex()}.tmp")
     try:
         with open(tmp, "w", encoding="utf-8") as f:
@@ -167,38 +167,38 @@ def _save_map_file(cfg: MapConfig) -> None:
         raise
 
 
-def clone_map(name: str, new_name: str, alias: str | None = None) -> MapConfig:
-    src = get_map(name)
+def clone_board(name: str, new_name: str, alias: str | None = None) -> BoardConfig:
+    src = get_board(name)
     if src is None:
-        raise ValueError(f"Map '{name}' not found")
-    dest_path = _map_path(new_name)
+        raise ValueError(f"Board '{name}' not found")
+    dest_path = _board_path(new_name)
     if dest_path.exists():
-        raise ValueError(f"Map '{new_name}' already exists")
+        raise ValueError(f"Board '{new_name}' already exists")
     import copy
     cfg = copy.deepcopy(src)
     cfg.name = new_name
     cfg.readonly = False  # clones are always editable
     if alias is not None:
         cfg.globals.alias = alias
-    _save_map_file(cfg)
+    _save_board_file(cfg)
     return cfg
 
 
-def import_map(data: dict, *, overwrite: bool = False) -> MapConfig:
-    cfg = MapConfig.model_validate(data)
-    path = _map_path(cfg.name)
+def import_board(data: dict, *, overwrite: bool = False) -> BoardConfig:
+    cfg = BoardConfig.model_validate(data)
+    path = _board_path(cfg.name)
     if path.exists():
         if not overwrite:
-            raise ValueError(f"Map '{cfg.name}' already exists")
-        existing = _load_map_file(path)
+            raise ValueError(f"Board '{cfg.name}' already exists")
+        existing = _load_board_file(path)
         if existing.readonly:
-            raise ValueError(f"Map '{cfg.name}' is read-only and cannot be overwritten")
-    _save_map_file(cfg)
+            raise ValueError(f"Board '{cfg.name}' is read-only and cannot be overwritten")
+    _save_board_file(cfg)
     return cfg
 
 
-def _to_read(cfg: MapConfig) -> MapRead:
-    return MapRead(
+def _to_read(cfg: BoardConfig) -> BoardRead:
+    return BoardRead(
         name=cfg.name,
         alias=cfg.globals.alias,
         background_image=cfg.globals.background_image,

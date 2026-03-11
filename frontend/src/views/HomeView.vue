@@ -17,7 +17,7 @@
       </div>
 
       <!-- Loading -->
-      <div v-if="mapsStore.loading" class="flex items-center gap-3 text-zinc-500 text-sm py-12 justify-center">
+      <div v-if="boardsStore.loading" class="flex items-center gap-3 text-zinc-500 text-sm py-12 justify-center">
         <svg class="animate-spin w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -26,43 +26,43 @@
       </div>
 
       <!-- Error -->
-      <div v-else-if="mapsStore.error"
+      <div v-else-if="boardsStore.error"
         class="flex items-center gap-2 px-4 py-3 bg-red-500/8 ring-1 ring-red-500/20 rounded-xl text-red-400 text-sm">
-        {{ mapsStore.error }}
+        {{ boardsStore.error }}
       </div>
 
       <!-- Empty state -->
-      <div v-else-if="mapsStore.maps.length === 0"
+      <div v-else-if="boardsStore.boards.length === 0"
         class="flex flex-col items-center justify-center py-24 text-center">
         <div class="w-14 h-14 rounded-2xl bg-[var(--bg-input)] ring-1 ring-zinc-700 flex items-center justify-center mb-5">
           <svg class="w-7 h-7 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
           </svg>
         </div>
-        <p class="text-zinc-300 font-semibold">{{ t('home.noMapsTitle') }}</p>
+        <p class="text-zinc-300 font-semibold">{{ t('home.noBoardsTitle') }}</p>
         <p class="text-zinc-600 text-sm mt-1.5">
-          <router-link v-if="auth.isAdmin" to="/admin/maps"
-            class="text-indigo-400 hover:text-indigo-300 transition-colors">{{ t('home.noMapsAdmin') }}</router-link>
-          <span v-else>{{ t('home.noMapsUser') }}</span>
+          <router-link v-if="auth.isAdmin" to="/admin/boards"
+            class="text-indigo-400 hover:text-indigo-300 transition-colors">{{ t('home.noBoardsAdmin') }}</router-link>
+          <span v-else>{{ t('home.noBoardsUser') }}</span>
         </p>
       </div>
 
-      <!-- Map grid -->
+      <!-- Board grid -->
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <p v-if="searchQuery && !filteredMaps.length" class="col-span-full text-center py-12 text-zinc-600 text-sm">
+        <p v-if="searchQuery && !filteredBoards.length" class="col-span-full text-center py-12 text-zinc-600 text-sm">
           {{ t('home.noSearchResults', { q: searchQuery }) }}
         </p>
         <router-link
-          v-for="map in filteredMaps"
+          v-for="map in filteredBoards"
           :key="map.name"
-          :to="`/maps/${map.name}`"
+          :to="`/boards/${map.name}`"
           class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-indigo-500/40 rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-900/10"
         >
           <!-- Thumbnail -->
           <div class="relative w-full h-32 overflow-hidden bg-[var(--bg-input)]">
             <img
               v-if="map.background_image"
-              :src="`${baseUrl}maps/backgrounds/${map.background_image}`"
+              :src="`${baseUrl}boards/backgrounds/${map.background_image}`"
               :alt="map.alias || map.name"
               class="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity duration-200"
             />
@@ -92,8 +92,10 @@
                   ? 'bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/30'
                   : map.map_type === 'radar'
                   ? 'bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30'
+                  : map.map_type === 'automap'
+                  ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30'
                   : 'bg-zinc-800/70 text-zinc-400 ring-1 ring-zinc-700/60'">
-                {{ map.map_type }}
+                {{ boardTypeLabel(map.map_type) }}
               </span>
             </div>
           </div>
@@ -121,22 +123,32 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { useMapsStore } from '@/stores/maps'
+import { useBoardsStore } from '@/stores/boards'
 import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue'
 
 const { t } = useI18n()
 const baseUrl = import.meta.env.BASE_URL
 const auth = useAuthStore()
-const mapsStore = useMapsStore()
+const boardsStore = useBoardsStore()
 const searchQuery = ref('')
 
-const filteredMaps = computed(() => {
+const filteredBoards = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return mapsStore.maps
-  return mapsStore.maps.filter(m =>
+  if (!q) return boardsStore.boards
+  return boardsStore.boards.filter(m =>
     m.name.toLowerCase().includes(q) || m.alias.toLowerCase().includes(q)
   )
 })
 
-onMounted(() => mapsStore.fetchMaps())
+const TYPE_LABELS: Record<string, string> = {
+  static: 'Static',
+  worldmap: 'Geo Board',
+  automap: 'Flow Board',
+  radar: 'Radar',
+}
+function boardTypeLabel(type: string) {
+  return TYPE_LABELS[type] ?? type
+}
+
+onMounted(() => boardsStore.fetchBoards())
 </script>

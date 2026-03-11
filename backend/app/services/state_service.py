@@ -1,4 +1,4 @@
-"""Aggregate monitoring states for map objects."""
+"""Aggregate monitoring states for board objects."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
-from app.schemas.map import MapConfig, MapObject
+from app.schemas.board import BoardConfig, BoardObject
 from app.schemas.state import MapStates, ObjectState
 
 if TYPE_CHECKING:
@@ -40,8 +40,8 @@ async def get_backend_objects(backend_id: str, obj_type: str, host: str | None =
     return raw
 
 
-async def get_map_states(cfg: MapConfig) -> MapStates:
-    """Fetch current states for all objects in a map."""
+async def get_board_states(cfg: BoardConfig) -> MapStates:
+    """Fetch current states for all objects in a board."""
     backend_id = cfg.globals.backend_id
     backend = get_backend(backend_id)
 
@@ -77,7 +77,7 @@ async def get_map_states(cfg: MapConfig) -> MapStates:
     return MapStates(map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=backend_ok)
 
 
-async def _get_object_state(backend: "BackendBase", obj: MapObject) -> ObjectState:
+async def _get_object_state(backend: "BackendBase", obj: BoardObject) -> ObjectState:
     try:
         if obj.type == "host" and obj.host_name:
             state = await backend.get_host_state(obj.host_name)
@@ -100,7 +100,7 @@ async def _get_object_state(backend: "BackendBase", obj: MapObject) -> ObjectSta
         return ObjectState(object_id=obj.id, type=obj.type, state="PENDING", stale=True)
 
 
-async def _get_radar_states(cfg: "MapConfig", backend: "BackendBase") -> MapStates:
+async def _get_radar_states(cfg: "BoardConfig", backend: "BackendBase") -> MapStates:
     """Fetch states for all dynamically resolved radar map members."""
     members = await backend.get_group_members(cfg.globals.radar_type, cfg.globals.radar_value)
     if not members:

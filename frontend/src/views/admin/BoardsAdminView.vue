@@ -2,8 +2,8 @@
   <div>
     <div class="flex justify-between items-center mb-8">
       <div>
-        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('admin.maps') }}</h2>
-        <p class="text-sm text-zinc-500 mt-1">{{ t('admin.mapsSubtitle') }}</p>
+        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('admin.boards') }}</h2>
+        <p class="text-sm text-zinc-500 mt-1">{{ t('admin.boardsSubtitle') }}</p>
       </div>
       <div class="flex items-center gap-2">
         <!-- Import -->
@@ -11,20 +11,20 @@
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
           </svg>
-          {{ t('admin.importMap') }}
-          <input type="file" accept=".json,application/json" class="hidden" @change="importMap" />
+          {{ t('admin.importBoard') }}
+          <input type="file" accept=".json,application/json" class="hidden" @change="importBoard" />
         </label>
         <button @click="showCreate = true"
           class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          {{ t('admin.newMap') }}
+          {{ t('admin.newBoard') }}
         </button>
       </div>
     </div>
 
-    <div v-if="mapsStore.loading" class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center">
+    <div v-if="boardsStore.loading" class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center">
       <svg class="animate-spin w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -39,16 +39,16 @@
             <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.name') }}</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.alias2') }}</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.type') }}</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.backends') }}</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.connections') }}</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.objectsHeader') }}</th>
             <th class="px-4 py-3 text-right text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.actions') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[var(--border)]">
-          <tr v-for="map in mapsStore.maps" :key="map.name"
+          <tr v-for="map in boardsStore.boards" :key="map.name"
             class="hover:bg-[var(--bg-hover)] transition-colors">
             <td class="px-4 py-3">
-              <router-link :to="`/maps/${map.name}`"
+              <router-link :to="`/boards/${map.name}`"
                 class="font-medium text-indigo-400 hover:text-indigo-300 transition-colors font-mono text-xs">
                 {{ map.name }}
               </router-link>
@@ -72,7 +72,7 @@
                   : map.map_type === 'radar'
                   ? 'bg-violet-500/10 text-violet-400 ring-violet-500/20'
                   : 'bg-zinc-700/50 text-zinc-500 ring-zinc-700'">
-                {{ map.map_type }}
+                {{ { static: t('board.boardTypeStatic'), worldmap: t('board.boardTypeGeoBoard'), automap: t('board.boardTypeFlowBoard'), radar: t('board.boardTypeRadar') }[map.map_type] ?? map.map_type }}
               </span>
             </td>
             <td class="px-4 py-3 text-zinc-500 font-mono text-xs">{{ map.backend_id }}</td>
@@ -81,71 +81,71 @@
               <!-- Permissions (not for readonly) -->
               <button v-if="!map.readonly" @click="openPermissions(map.name)"
                 class="text-zinc-500 hover:text-indigo-400 transition-colors"
-                :title="t('admin.mapPermissions')">
+                :title="t('admin.boardPermissions')">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                 </svg>
               </button>
               <!-- Export -->
-              <button @click="exportMap(map.name)"
+              <button @click="exportBoard(map.name)"
                 class="text-zinc-500 hover:text-emerald-400 transition-colors"
-                :title="t('admin.exportMap')">
+                :title="t('admin.exportBoard')">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                 </svg>
               </button>
               <!-- Clone -->
-              <button @click="cloneMap(map.name)"
+              <button @click="cloneBoard(map.name)"
                 class="text-zinc-500 hover:text-amber-400 transition-colors"
-                :title="t('admin.cloneMap')">
+                :title="t('admin.cloneBoard')">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
                 </svg>
               </button>
               <!-- Delete -->
-              <button @click="deleteMap(map.name)"
+              <button @click="deleteBoard(map.name)"
                 class="text-xs text-zinc-600 hover:text-red-400 transition-colors">{{ t('common.delete') }}</button>
             </td>
           </tr>
         </tbody>
       </table>
-      <div v-if="!mapsStore.maps.length" class="text-center py-12 text-zinc-600 text-sm">
-        {{ t('admin.noMaps') }}
+      <div v-if="!boardsStore.boards.length" class="text-center py-12 text-zinc-600 text-sm">
+        {{ t('admin.noBoards') }}
       </div>
     </div>
 
-    <!-- Create map dialog -->
+    <!-- Create board dialog -->
     <Teleport to="body">
       <div v-if="showCreate" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showCreate = false" />
         <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[26rem]">
           <div class="flex items-center justify-between mb-5">
-            <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.createMap') }}</h3>
+            <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.createBoard') }}</h3>
             <button @click="showCreate = false"
               class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
-          <form @submit.prevent="createMap" class="space-y-4">
+          <form @submit.prevent="createBoard" class="space-y-4">
             <div class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                {{ t('admin.mapId') }} <span class="normal-case font-normal text-zinc-600">{{ t('admin.mapIdHint') }}</span>
+                {{ t('admin.boardId') }} <span class="normal-case font-normal text-zinc-600">{{ t('admin.boardIdHint') }}</span>
               </label>
-              <input v-model="newMap.name" placeholder="my-map" required pattern="[a-zA-Z0-9_-]+"
+              <input v-model="newBoard.name" placeholder="my-map" required pattern="[a-zA-Z0-9_-]+"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
             <div class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.alias') }}</label>
-              <input v-model="newMap.alias" placeholder="My Map"
+              <input v-model="newBoard.alias" placeholder="My Map"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.backend') }}</label>
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.connection') }}</label>
               <div class="relative">
-                <select v-model="newMap.backend_id" required
+                <select v-model="newBoard.backend_id" required
                   class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                  <option value="" disabled>{{ t('admin.selectBackend') }}</option>
-                  <option v-for="b in backendsStore.backends" :key="b.id" :value="b.id">
+                  <option value="" disabled>{{ t('admin.selectConnection') }}</option>
+                  <option v-for="b in connectionsStore.backends" :key="b.id" :value="b.id">
                     {{ b.label || b.id }}
                   </option>
                 </select>
@@ -157,14 +157,14 @@
               </div>
             </div>
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.mapType') }}</label>
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.boardType') }}</label>
               <div class="relative">
-                <select v-model="newMap.map_type"
+                <select v-model="newBoard.map_type"
                   class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                  <option value="static">{{ t('map.mapTypeStatic') }}</option>
-                  <option value="worldmap">{{ t('map.mapTypeWorldmap') }}</option>
-                  <option value="automap">{{ t('map.mapTypeAutomap') }}</option>
-                  <option value="radar">{{ t('map.mapTypeRadar') }}</option>
+                  <option value="static">{{ t('board.boardTypeStatic') }}</option>
+                  <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
+                  <option value="automap">{{ t('board.boardTypeFlowBoard') }}</option>
+                  <option value="radar">{{ t('board.boardTypeRadar') }}</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                   <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -184,14 +184,14 @@
       </div>
     </Teleport>
 
-    <!-- Map Permissions Modal -->
+    <!-- Board Permissions Modal -->
     <Teleport to="body">
       <div v-if="permissionsMapName" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="permissionsMapName = null" />
         <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[34rem] max-h-[80vh] flex flex-col">
           <div class="flex items-center justify-between mb-5 shrink-0">
             <div>
-              <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.mapPermissions') }}</h3>
+              <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.boardPermissions') }}</h3>
               <p class="text-xs text-zinc-500 mt-0.5 font-mono">{{ permissionsMapName }}</p>
             </div>
             <button @click="permissionsMapName = null"
@@ -263,71 +263,71 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useMapsStore } from '@/stores/maps'
-import { useBackendsStore } from '@/stores/backends'
+import { useBoardsStore } from '@/stores/boards'
+import { useConnectionsStore } from '@/stores/connections'
 import { useSettingsStore } from '@/stores/settings'
 import { useAuthStore } from '@/stores/auth'
-import { mapsApi, rolesApi } from '@/api/client'
-import type { MapConfig, RoleRead, PermissionRead } from '@/types/api'
+import { boardsApi, rolesApi } from '@/api/client'
+import type { BoardConfig, RoleRead, PermissionRead } from '@/types/api'
 
 const { t } = useI18n()
-const mapsStore = useMapsStore()
-const backendsStore = useBackendsStore()
+const boardsStore = useBoardsStore()
+const connectionsStore = useConnectionsStore()
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
 const showCreate = ref(false)
-const newMap = ref({ name: '', alias: '', backend_id: '', map_type: 'static' })
+const newBoard = ref({ name: '', alias: '', backend_id: '', map_type: 'static' })
 
-async function createMap() {
-  await mapsStore.createMap(newMap.value.name, newMap.value.alias, newMap.value.backend_id, newMap.value.map_type)
+async function createBoard() {
+  await boardsStore.createBoard(newBoard.value.name, newBoard.value.alias, newBoard.value.backend_id, newBoard.value.map_type)
   showCreate.value = false
-  newMap.value = {
+  newBoard.value = {
     name: '',
     alias: '',
-    backend_id: settingsStore.settings.default_backend_id || backendsStore.backends[0]?.id || '',
+    backend_id: settingsStore.settings.default_backend_id || connectionsStore.backends[0]?.id || '',
     map_type: settingsStore.settings.default_map_type || 'static',
   }
 }
 
-async function deleteMap(name: string) {
-  if (!confirm(t('admin.deleteMap', { name }))) return
-  await mapsStore.deleteMap(name)
+async function deleteBoard(name: string) {
+  if (!confirm(t('admin.deleteBoard', { name }))) return
+  await boardsStore.deleteBoard(name)
 }
 
-async function cloneMap(name: string) {
-  const newName = prompt(t('admin.cloneMapPrompt', { name }), `${name}_copy`)
+async function cloneBoard(name: string) {
+  const newName = prompt(t('admin.cloneBoardPrompt', { name }), `${name}_copy`)
   if (!newName) return
   try {
-    await mapsApi.clone(name, { new_name: newName }, authStore.accessToken!)
-    await mapsStore.fetchMaps()
+    await boardsApi.clone(name, { new_name: newName }, authStore.accessToken!)
+    await boardsStore.fetchBoards()
   } catch (e: unknown) {
     alert(e instanceof Error ? e.message : t('admin.cloneFailed'))
   }
 }
 
-async function exportMap(name: string) {
-  await mapsApi.exportMap(name, authStore.accessToken!)
+async function exportBoard(name: string) {
+  await boardsApi.exportBoard(name, authStore.accessToken!)
 }
 
-async function importMap(event: Event) {
+async function importBoard(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   try {
     const text = await file.text()
-    const data: MapConfig = JSON.parse(text)
+    const data: BoardConfig = JSON.parse(text)
     const overwrite = false
     try {
-      await mapsApi.importMap(data, authStore.accessToken!, overwrite)
+      await boardsApi.importBoard(data, authStore.accessToken!, overwrite)
     } catch (e: unknown) {
       // 409 = already exists → ask to overwrite
       if (e instanceof Error && e.message.includes('already exists')) {
         if (!confirm(t('admin.importOverwrite', { name: data.name }))) return
-        await mapsApi.importMap(data, authStore.accessToken!, true)
+        await boardsApi.importBoard(data, authStore.accessToken!, true)
       } else {
         throw e
       }
     }
-    await mapsStore.fetchMaps()
+    await boardsStore.fetchBoards()
   } catch (e: unknown) {
     alert(e instanceof Error ? e.message : t('admin.importFailed'))
   } finally {
@@ -338,15 +338,15 @@ async function importMap(event: Event) {
 
 onMounted(async () => {
   await Promise.all([
-    mapsStore.fetchMaps(),
-    backendsStore.fetchBackends(),
+    boardsStore.fetchBoards(),
+    connectionsStore.fetchBackends(),
     settingsStore.load(),
   ])
   // Pre-fill new map form with global defaults
-  if (!newMap.value.backend_id) {
-    newMap.value.backend_id = settingsStore.settings.default_backend_id || backendsStore.backends[0]?.id || ''
+  if (!newBoard.value.backend_id) {
+    newBoard.value.backend_id = settingsStore.settings.default_backend_id || connectionsStore.backends[0]?.id || ''
   }
-  newMap.value.map_type = settingsStore.settings.default_map_type || 'static'
+  newBoard.value.map_type = settingsStore.settings.default_map_type || 'static'
 })
 
 // ---- Map Permissions ----

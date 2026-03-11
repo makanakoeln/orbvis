@@ -33,29 +33,29 @@
 
         <!-- === MONITORING OBJECT === -->
         <section v-if="object.type !== 'textbox' && object.type !== 'line'">
-          <p class="section-title">{{ t('mapSettings.monitoringObject') }}</p>
+          <p class="section-title">{{ t('boardSettings.monitoringObject') }}</p>
           <div class="space-y-3">
             <template v-if="object.type === 'host' || object.type === 'service'">
               <div class="field-row">
-                <label class="field-label">{{ t('mapSettings.hostname') }}</label>
+                <label class="field-label">{{ t('boardSettings.hostname') }}</label>
                 <AutocompleteInput v-model="form.host_name" :suggestions="hosts" :loading="loadingHosts" :disabled="true" placeholder="hostname" class="flex-1" />
               </div>
             </template>
             <template v-if="object.type === 'service'">
               <div class="field-row">
-                <label class="field-label">{{ t('mapSettings.typeService') }}</label>
+                <label class="field-label">{{ t('boardSettings.typeService') }}</label>
                 <AutocompleteInput v-model="form.service_description" :suggestions="services" :loading="loadingServices" :disabled="true" placeholder="service description" class="flex-1" />
               </div>
             </template>
             <template v-if="object.type === 'hostgroup' || object.type === 'servicegroup'">
               <div class="field-row">
-                <label class="field-label">{{ t('mapSettings.groupName') }}</label>
+                <label class="field-label">{{ t('boardSettings.groupName') }}</label>
                 <AutocompleteInput v-model="form.group_name" :suggestions="groups" :loading="loadingGroups" :disabled="true" placeholder="group name" class="flex-1" />
               </div>
             </template>
             <template v-if="object.type === 'map'">
               <div class="field-row">
-                <label class="field-label">{{ t('mapSettings.targetMap') }}</label>
+                <label class="field-label">{{ t('boardSettings.targetMap') }}</label>
                 <input v-model="form.map_name" :disabled="true" class="field flex-1 disabled:opacity-50 disabled:cursor-not-allowed" placeholder="map-name" />
               </div>
             </template>
@@ -64,107 +64,107 @@
 
         <!-- === TEXTBOX CONTENT === -->
         <section v-if="object.type === 'textbox'">
-          <p class="section-title">{{ t('mapSettings.content') }}</p>
+          <p class="section-title">{{ t('boardSettings.content') }}</p>
           <textarea v-model="form.label_text" rows="3"
             class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
-            :placeholder="t('mapSettings.textContent') + '…'" />
+            :placeholder="t('boardSettings.textContent') + '…'" />
         </section>
 
         <!-- === LINE CONFIG === -->
         <section v-if="object.type === 'line'">
-          <p class="section-title">{{ t('mapSettings.monitoringObject') }}</p>
+          <p class="section-title">{{ t('boardSettings.monitoringObject') }}</p>
           <div class="space-y-3">
             <div class="field-row">
-              <label class="field-label">{{ t('mapSettings.hostname') }}</label>
+              <label class="field-label">{{ t('boardSettings.hostname') }}</label>
               <AutocompleteInput v-model="form.host_name" :suggestions="hosts" :loading="loadingHosts" :disabled="true" placeholder="hostname" class="flex-1" />
             </div>
             <div class="field-row">
-              <label class="field-label">{{ t('mapSettings.typeService') }}</label>
+              <label class="field-label">{{ t('boardSettings.typeService') }}</label>
               <AutocompleteInput v-model="form.service_description" :suggestions="services" :loading="loadingServices" :disabled="true" placeholder="service description (optional)" class="flex-1" />
             </div>
           </div>
         </section>
         <section v-if="object.type === 'line'">
-          <p class="section-title">{{ t('mapSettings.lineSection') }}</p>
+          <p class="section-title">{{ t('boardSettings.lineSection') }}</p>
           <div class="space-y-3">
             <div class="field-row">
-              <label class="field-label">{{ t('mapSettings.lineStyle') }}</label>
+              <label class="field-label">{{ t('boardSettings.lineStyle') }}</label>
               <select v-model.number="form.line_type" class="field flex-1">
-                <option :value="null">{{ t('mapSettings.lineDefault') }}</option>
-                <option :value="10">{{ t('mapSettings.lineSimple') }}</option>
-                <option :value="11">{{ t('mapSettings.lineArrowRight') }}</option>
-                <option :value="12">{{ t('mapSettings.lineArrowLeft') }}</option>
-                <option :value="13">{{ t('mapSettings.lineDoubleArrow') }}</option>
-                <option :value="14">{{ t('mapSettings.lineDashed') }}</option>
-                <option :value="20">{{ t('mapSettings.lineWeathermap') }}</option>
+                <option :value="null">{{ t('boardSettings.lineDefault') }}</option>
+                <option :value="10">{{ t('boardSettings.lineSimple') }}</option>
+                <option :value="11">{{ t('boardSettings.lineArrowRight') }}</option>
+                <option :value="12">{{ t('boardSettings.lineArrowLeft') }}</option>
+                <option :value="13">{{ t('boardSettings.lineDoubleArrow') }}</option>
+                <option :value="14">{{ t('boardSettings.lineDashed') }}</option>
+                <option :value="20">{{ t('boardSettings.lineWeathermap') }}</option>
               </select>
             </div>
             <!-- Weathermap metric -->
             <div v-if="form.line_type === 20" class="field-row">
-              <label class="field-label">{{ t('mapSettings.metric') }}</label>
+              <label class="field-label">{{ t('boardSettings.metric') }}</label>
               <AutocompleteInput
                 v-model="form.weathermap_metric"
                 :suggestions="metricSuggestions"
-                :placeholder="t('mapSettings.firstMetric')"
+                :placeholder="t('boardSettings.firstMetric')"
                 class="flex-1"
               />
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div class="field-row">
-                <label class="field-label">{{ t('mapSettings.startX') }}</label>
+                <label class="field-label">{{ t('boardSettings.startX') }}</label>
                 <NumberInput v-model="form.x" class="flex-1" />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('mapSettings.y') }}</label>
+                <label class="field-label">{{ t('boardSettings.y') }}</label>
                 <NumberInput v-model="form.y" class="flex-1" />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('mapSettings.endX') }}</label>
+                <label class="field-label">{{ t('boardSettings.endX') }}</label>
                 <NumberInput v-model="form.x2" class="flex-1" />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('mapSettings.y') }}</label>
+                <label class="field-label">{{ t('boardSettings.y') }}</label>
                 <NumberInput v-model="form.y2" class="flex-1" />
               </div>
             </div>
             <!-- Label -->
             <div class="field-row">
-              <label class="field-label">{{ t('mapSettings.showLabel') }}</label>
+              <label class="field-label">{{ t('boardSettings.showLabel') }}</label>
               <input v-model="form.label_show" type="checkbox" class="accent-indigo-500" />
             </div>
             <div v-if="form.label_show" class="field-row">
-              <label class="field-label">{{ t('mapSettings.labelText') }}</label>
-              <input v-model="form.label_text" class="field flex-1" :placeholder="t('mapSettings.labelOnLine')" />
+              <label class="field-label">{{ t('boardSettings.labelText') }}</label>
+              <input v-model="form.label_text" class="field flex-1" :placeholder="t('boardSettings.labelOnLine')" />
             </div>
           </div>
         </section>
 
         <!-- === POSITION === -->
         <section v-if="object.type !== 'line'">
-          <p class="section-title">{{ t('mapSettings.position') }}</p>
+          <p class="section-title">{{ t('boardSettings.position') }}</p>
           <div class="grid grid-cols-[1fr_1fr_5rem] gap-3">
             <template v-if="mapType === 'worldmap'">
               <div class="field-row col-span-1">
-                <label class="field-label">{{ t('mapSettings.lat') }}</label>
+                <label class="field-label">{{ t('boardSettings.lat') }}</label>
                 <NumberInput v-model="form.lat" step="any" class="flex-1" />
               </div>
               <div class="field-row col-span-1">
-                <label class="field-label">{{ t('mapSettings.lng') }}</label>
+                <label class="field-label">{{ t('boardSettings.lng') }}</label>
                 <NumberInput v-model="form.lng" step="any" class="flex-1" />
               </div>
             </template>
             <template v-else>
               <div class="field-row col-span-1">
-                <label class="field-label">{{ t('mapSettings.x') }}</label>
+                <label class="field-label">{{ t('boardSettings.x') }}</label>
                 <NumberInput v-model="form.x" class="flex-1" />
               </div>
               <div class="field-row col-span-1">
-                <label class="field-label">{{ t('mapSettings.y') }}</label>
+                <label class="field-label">{{ t('boardSettings.y') }}</label>
                 <NumberInput v-model="form.y" class="flex-1" />
               </div>
             </template>
             <div class="field-row col-span-1">
-              <label class="field-label">{{ t('mapSettings.z') }}</label>
+              <label class="field-label">{{ t('boardSettings.z') }}</label>
               <NumberInput v-model="form.z" min="1" max="999" class="flex-1" />
             </div>
           </div>
@@ -172,24 +172,24 @@
 
         <!-- === LABEL === -->
         <section v-if="object.type !== 'line'">
-          <p class="section-title">{{ t('mapSettings.label') }}</p>
+          <p class="section-title">{{ t('boardSettings.label') }}</p>
           <div class="space-y-3">
             <label class="flex items-center gap-2.5 text-sm text-zinc-400 cursor-pointer select-none">
               <input type="checkbox" v-model="form.label_show" class="rounded accent-indigo-500 w-4 h-4" />
-              {{ t('mapSettings.showLabel') }}
+              {{ t('boardSettings.showLabel') }}
             </label>
             <template v-if="form.label_show">
               <div class="field-row" v-if="object.type !== 'textbox'">
-                <label class="field-label">{{ t('mapSettings.labelText') }}</label>
+                <label class="field-label">{{ t('boardSettings.labelText') }}</label>
                 <input v-model="form.label_text" class="field flex-1" placeholder="(auto from object)" />
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div class="field-row">
-                  <label class="field-label">{{ t('mapSettings.size') }}</label>
+                  <label class="field-label">{{ t('boardSettings.size') }}</label>
                   <NumberInput v-model="form.label_size" min="8" max="72" class="flex-1" />
                 </div>
                 <div class="field-row">
-                  <label class="field-label">{{ t('mapSettings.color') }}</label>
+                  <label class="field-label">{{ t('boardSettings.color') }}</label>
                   <div class="flex gap-2 flex-1 items-center">
                     <input type="color" v-model="form.label_color"
                       class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5" />
@@ -197,15 +197,15 @@
                   </div>
                 </div>
                 <div class="field-row">
-                  <label class="field-label">{{ t('mapSettings.offsetX') }}</label>
+                  <label class="field-label">{{ t('boardSettings.offsetX') }}</label>
                   <NumberInput v-model="form.label_x" class="flex-1" />
                 </div>
                 <div class="field-row">
-                  <label class="field-label">{{ t('mapSettings.offsetY') }}</label>
+                  <label class="field-label">{{ t('boardSettings.offsetY') }}</label>
                   <NumberInput v-model="form.label_y" class="flex-1" />
                 </div>
                 <div class="field-row col-span-2">
-                  <label class="field-label">{{ t('mapSettings.background') }}</label>
+                  <label class="field-label">{{ t('boardSettings.background') }}</label>
                   <div class="flex gap-2 flex-1 items-center">
                     <input type="color" v-model="form.label_background"
                       class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5" />
@@ -219,41 +219,41 @@
 
         <!-- === APPEARANCE === -->
         <section v-if="object.type !== 'line' && object.type !== 'textbox'">
-          <p class="section-title">{{ t('mapSettings.appearance') }}</p>
+          <p class="section-title">{{ t('boardSettings.appearance') }}</p>
           <div class="space-y-3">
             <div class="field-row">
-              <label class="field-label">{{ t('mapSettings.viewType') }}</label>
+              <label class="field-label">{{ t('boardSettings.viewType') }}</label>
               <select v-model="form.view_type" class="field flex-1">
-                <option value="icon">{{ t('mapSettings.viewTypeIcon') }}</option>
-                <option value="text">{{ t('mapSettings.viewTypeText') }}</option>
-                <option value="gadget">{{ t('mapSettings.viewTypeGadget') }}</option>
+                <option value="icon">{{ t('boardSettings.viewTypeIcon') }}</option>
+                <option value="text">{{ t('boardSettings.viewTypeText') }}</option>
+                <option value="gadget">{{ t('boardSettings.viewTypeGadget') }}</option>
               </select>
             </div>
             <div class="field-row">
-              <label class="field-label">{{ t('mapSettings.size') }}</label>
+              <label class="field-label">{{ t('boardSettings.size') }}</label>
               <NumberInput v-model="form.icon_size" min="1" max="512" placeholder="map default" class="w-24" />
             </div>
             <template v-if="form.view_type === 'gadget'">
               <div class="field-row">
-                <label class="field-label">{{ t('mapSettings.gadgetType') }}</label>
+                <label class="field-label">{{ t('boardSettings.gadgetType') }}</label>
                 <select v-model="form.gadget_type" class="field flex-1">
-                  <option value="gauge">{{ t('mapSettings.gadgetGauge') }}</option>
-                  <option value="bar">{{ t('mapSettings.gadgetBar') }}</option>
-                  <option value="trafficlight">{{ t('mapSettings.gadgetTrafficlight') }}</option>
+                  <option value="gauge">{{ t('boardSettings.gadgetGauge') }}</option>
+                  <option value="bar">{{ t('boardSettings.gadgetBar') }}</option>
+                  <option value="trafficlight">{{ t('boardSettings.gadgetTrafficlight') }}</option>
                 </select>
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('mapSettings.metric') }}</label>
+                <label class="field-label">{{ t('boardSettings.metric') }}</label>
                 <AutocompleteInput
                   v-model="form.gadget_metric"
                   :suggestions="metricSuggestions"
-                  :placeholder="t('mapSettings.firstMetric')"
+                  :placeholder="t('boardSettings.firstMetric')"
                   class="flex-1"
                 />
               </div>
             </template>
             <div v-if="form.view_type !== 'gadget'" class="field-row">
-              <label class="field-label">{{ t('mapSettings.customIcon') }}</label>
+              <label class="field-label">{{ t('boardSettings.customIcon') }}</label>
               <input v-model="form.icon" class="field flex-1 font-mono" placeholder="filename.png" />
             </div>
           </div>
@@ -261,18 +261,18 @@
 
         <!-- === LINK === -->
         <section>
-          <p class="section-title">{{ t('mapSettings.link') }}</p>
+          <p class="section-title">{{ t('boardSettings.link') }}</p>
           <div class="space-y-3">
             <div class="field-row">
-              <label class="field-label">{{ t('mapSettings.url') }}</label>
+              <label class="field-label">{{ t('boardSettings.url') }}</label>
               <input v-model="form.url" class="field flex-1 font-mono" placeholder="https://…" />
             </div>
             <div class="field-row">
-              <label class="field-label">{{ t('mapSettings.target') }}</label>
+              <label class="field-label">{{ t('boardSettings.target') }}</label>
               <select v-model="form.url_target" class="field flex-1">
-                <option value="_blank">{{ t('mapSettings.targetNewTab') }} (_blank)</option>
-                <option value="_self">{{ t('mapSettings.targetSameTab') }} (_self)</option>
-                <option value="_top">{{ t('mapSettings.targetTopFrame') }} (_top)</option>
+                <option value="_blank">{{ t('boardSettings.targetNewTab') }} (_blank)</option>
+                <option value="_self">{{ t('boardSettings.targetSameTab') }} (_self)</option>
+                <option value="_top">{{ t('boardSettings.targetTopFrame') }} (_top)</option>
               </select>
             </div>
           </div>
@@ -280,17 +280,17 @@
 
         <!-- === TEMPLATES === -->
         <section>
-          <p class="section-title">{{ t('mapSettings.templates') }}</p>
+          <p class="section-title">{{ t('boardSettings.templates') }}</p>
           <div class="space-y-3">
             <div class="field-row">
-              <label class="field-label">{{ t('map.hoverTemplate') }}</label>
-              <input v-model="form.hover_template" class="field flex-1 font-mono" :placeholder="t('map.templatePlaceholder')" />
+              <label class="field-label">{{ t('board.hoverTemplate') }}</label>
+              <input v-model="form.hover_template" class="field flex-1 font-mono" :placeholder="t('board.templatePlaceholder')" />
             </div>
             <div class="field-row">
-              <label class="field-label">{{ t('map.contextTemplate') }}</label>
-              <input v-model="form.context_template" class="field flex-1 font-mono" :placeholder="t('map.templatePlaceholder')" />
+              <label class="field-label">{{ t('board.contextTemplate') }}</label>
+              <input v-model="form.context_template" class="field flex-1 font-mono" :placeholder="t('board.templatePlaceholder')" />
             </div>
-            <p class="text-xs text-zinc-600 pl-[6.75rem]">{{ t('map.templateHint') }}</p>
+            <p class="text-xs text-zinc-600 pl-[6.75rem]">{{ t('board.templateHint') }}</p>
           </div>
         </section>
 
@@ -309,8 +309,8 @@
           </button>
           <ConfirmDialog
             v-if="confirmDelete"
-            :title="t('map.deleteObject')"
-            :message="t('map.cannotBeUndone')"
+            :title="t('board.deleteObject')"
+            :message="t('board.cannotBeUndone')"
             :confirm-label="t('common.delete')"
             @confirm="confirmDelete = false; $emit('delete')"
             @cancel="confirmDelete = false"
@@ -334,8 +334,8 @@
 <script setup lang="ts">
 import { reactive, ref, watch, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { MapObject, ObjectState } from '@/types/api'
-import { backendsApi } from '@/api/client'
+import type { BoardObject, ObjectState } from '@/types/api'
+import { connectionsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { parsePerfData } from '@/utils/perf'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
@@ -345,7 +345,7 @@ import NumberInput from '@/components/NumberInput.vue'
 const { t } = useI18n()
 
 const props = defineProps<{
-  object: MapObject
+  object: BoardObject
   state?: ObjectState
   backendId: string
   mapType?: string
@@ -397,7 +397,7 @@ const metricSuggestions = computed(() => {
 
 async function fetchMetrics(host: string, service?: string) {
   if (!props.backendId || !host) return
-  fetchedMetrics.value = await backendsApi.perfMetrics(
+  fetchedMetrics.value = await connectionsApi.perfMetrics(
     props.backendId, host, auth.accessToken!, service || undefined,
   ).catch(() => [])
 }
@@ -487,20 +487,20 @@ async function loadAutocomplete() {
   const type = props.object.type
   if (type === 'host' || type === 'service' || type === 'line') {
     loadingHosts.value = true
-    hosts.value = await backendsApi.objects(props.backendId, 'host', auth.accessToken!).catch(() => [])
+    hosts.value = await connectionsApi.objects(props.backendId, 'host', auth.accessToken!).catch(() => [])
     loadingHosts.value = false
     if ((type === 'service' || type === 'line') && form.host_name) {
       loadingServices.value = true
-      services.value = await backendsApi.objects(props.backendId, 'service', auth.accessToken!, form.host_name).catch(() => [])
+      services.value = await connectionsApi.objects(props.backendId, 'service', auth.accessToken!, form.host_name).catch(() => [])
       loadingServices.value = false
     }
   } else if (type === 'hostgroup') {
     loadingGroups.value = true
-    groups.value = await backendsApi.objects(props.backendId, 'hostgroup', auth.accessToken!).catch(() => [])
+    groups.value = await connectionsApi.objects(props.backendId, 'hostgroup', auth.accessToken!).catch(() => [])
     loadingGroups.value = false
   } else if (type === 'servicegroup') {
     loadingGroups.value = true
-    groups.value = await backendsApi.objects(props.backendId, 'servicegroup', auth.accessToken!).catch(() => [])
+    groups.value = await connectionsApi.objects(props.backendId, 'servicegroup', auth.accessToken!).catch(() => [])
     loadingGroups.value = false
   }
 }
@@ -519,7 +519,7 @@ watch(() => [form.host_name, form.service_description], ([host, svc]) => {
 watch(() => form.host_name, async (host) => {
   if ((props.object.type === 'service' || props.object.type === 'line') && host) {
     loadingServices.value = true
-    services.value = await backendsApi.objects(props.backendId, 'service', auth.accessToken!, host).catch(() => [])
+    services.value = await connectionsApi.objects(props.backendId, 'service', auth.accessToken!, host).catch(() => [])
     loadingServices.value = false
   }
 })
@@ -592,7 +592,7 @@ async function save() {
 
     emit('save', updates)
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : t('mapSettings.saveFailed')
+    saveError.value = e instanceof Error ? e.message : t('boardSettings.saveFailed')
     saving.value = false
   }
 }

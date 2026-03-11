@@ -1,0 +1,20 @@
+{
+  "name": "demo-radar",
+  "globals": {
+    "alias": "Radar Board (Demo)",
+    "background_image": null,
+    "icon_size": 22,
+    "backend_id": "test",
+    "hover_template": null,
+    "context_template": null,
+    "map_type": "radar",
+    "worldmap_lat": 51.0,
+    "worldmap_lng": 10.0,
+    "worldmap_zoom": 5,
+    "radar_type": "all_hosts",
+    "radar_value": "",
+    "rotation_interval": 0
+  },
+  "objects": [],
+  "readonly": true
+}

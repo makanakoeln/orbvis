@@ -4,7 +4,7 @@
     <div class="bg-[var(--bg-surface)] border-b border-[var(--border)] px-4 py-2 flex items-center justify-between shrink-0 z-30">
       <!-- Map name -->
       <span class="font-semibold text-[var(--text)] text-sm truncate">
-        {{ mapConfig?.globals.alias || route.params.name }}
+        {{ boardConfig?.globals.alias || route.params.name }}
       </span>
 
       <div class="flex items-center gap-1.5 shrink-0">
@@ -15,7 +15,7 @@
             : 'bg-red-500/8 ring-red-500/20 text-red-400'">
           <span class="w-1.5 h-1.5 rounded-full inline-block"
             :class="statesStore.connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'" />
-          {{ statesStore.connected ? t('map.live') : t('map.offline') }}
+          {{ statesStore.connected ? t('board.live') : t('board.offline') }}
         </div>
 
         <!-- Notification bell -->
@@ -24,25 +24,25 @@
           :class="statesStore.notificationsEnabled
             ? 'text-amber-400 hover:bg-amber-500/10'
             : 'text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)]'"
-          :title="statesStore.notificationsEnabled ? t('map.notificationsOn') : t('map.notificationsOff')">
+          :title="statesStore.notificationsEnabled ? t('board.notificationsOn') : t('board.notificationsOff')">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
           </svg>
         </button>
 
         <!-- Read-only badge -->
-        <span v-if="mapConfig?.readonly"
+        <span v-if="boardConfig?.readonly"
           class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-zinc-700/50 text-zinc-400 ring-1 ring-zinc-700">
           <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
           </svg>
-          {{ t('map.readOnly') }}
+          {{ t('board.readOnly') }}
         </span>
 
         <!-- Settings button (admin only) -->
-        <button v-if="auth.isAdmin && !mapConfig?.readonly" @click="openSettings"
+        <button v-if="auth.isAdmin && !boardConfig?.readonly" @click="openSettings"
           class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
-          :title="t('map.mapSettings')">
+          :title="t('board.boardSettings')">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -55,16 +55,16 @@
     <div class="flex flex-1 overflow-hidden">
       <!-- Worldmap -->
       <div v-if="isWorldmap" class="flex-1 overflow-hidden bg-[var(--bg)] relative" @click="closeWorldmapMenus">
-        <div v-if="mapsStore.loading" class="absolute inset-0 flex items-center justify-center text-zinc-500 z-10 text-sm">
-          {{ t('map.loadingMap') }}
+        <div v-if="boardsStore.loading" class="absolute inset-0 flex items-center justify-center text-zinc-500 z-10 text-sm">
+          {{ t('board.loadingBoard') }}
         </div>
-        <div v-else-if="mapsStore.error" class="absolute inset-0 flex items-center justify-center text-red-400 z-10 text-sm">
-          {{ mapsStore.error }}
+        <div v-else-if="boardsStore.error" class="absolute inset-0 flex items-center justify-center text-red-400 z-10 text-sm">
+          {{ boardsStore.error }}
         </div>
         <WorldMapCanvas
-          v-else-if="mapConfig"
+          v-else-if="boardConfig"
           ref="worldmapCanvasRef"
-          :config="mapConfig"
+          :config="boardConfig"
           :states="statesStore.states"
           :edit-mode="editor.editMode.value"
           :placing="editor.placing.value"
@@ -77,7 +77,7 @@
           @canvas-latlng-click="onCanvasLatLngClick"
           @latlng-drag-end="onLatLngDragEnd"
         />
-        <div v-else class="absolute inset-0 flex items-center justify-center text-zinc-600">{{ t('map.mapNotFound') }}</div>
+        <div v-else class="absolute inset-0 flex items-center justify-center text-zinc-600">{{ t('board.boardNotFound') }}</div>
       </div>
 
       <!-- Radar -->
@@ -89,25 +89,26 @@
       <!-- Automap -->
       <div v-else-if="isAutomap" class="flex-1 relative overflow-hidden">
         <AutomapCanvas
-          v-if="mapConfig?.globals.backend_id"
-          :backend-id="mapConfig.globals.backend_id"
+          v-if="boardConfig?.globals.backend_id"
+          :backend-id="boardConfig.globals.backend_id"
+          :service-layout="serviceLayout"
         />
-        <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">{{ t('map.noBackendConfigured') }}</div>
+        <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">{{ t('board.noConnectionConfigured') }}</div>
       </div>
 
       <!-- Static map -->
-      <div v-else class="flex-1 bg-[var(--bg)] relative" :class="mapConfig?.globals.background_image ? 'overflow-hidden' : 'overflow-auto'"
+      <div v-else class="flex-1 bg-[var(--bg)] relative" :class="boardConfig?.globals.background_image ? 'overflow-hidden' : 'overflow-auto'"
         @click="onContainerClick">
-        <div v-if="mapsStore.loading" class="flex items-center justify-center h-full text-zinc-500 text-sm">
-          {{ t('map.loadingMap') }}
+        <div v-if="boardsStore.loading" class="flex items-center justify-center h-full text-zinc-500 text-sm">
+          {{ t('board.loadingBoard') }}
         </div>
-        <div v-else-if="mapsStore.error" class="flex items-center justify-center h-full text-red-400 text-sm">
-          {{ mapsStore.error }}
+        <div v-else-if="boardsStore.error" class="flex items-center justify-center h-full text-red-400 text-sm">
+          {{ boardsStore.error }}
         </div>
-        <MapCanvas
-          v-else-if="mapConfig"
+        <BoardCanvas
+          v-else-if="boardConfig"
           ref="canvasRef"
-          :config="mapConfig"
+          :config="boardConfig"
           :states="statesStore.states"
           :edit-mode="editor.editMode.value"
           :placing="editor.placing.value"
@@ -124,14 +125,14 @@
           @line-drag-start="onLineDragStart"
           @canvas-click="onCanvasClick"
         />
-        <div v-else class="flex items-center justify-center h-full text-zinc-600">{{ t('map.mapNotFound') }}</div>
+        <div v-else class="flex items-center justify-center h-full text-zinc-600">{{ t('board.boardNotFound') }}</div>
       </div>
 
     </div>
 
     <!-- FAB + Add Object panel + action bar (all bottom-right) -->
     <Teleport to="body">
-      <div v-if="auth.isAdmin && !mapConfig?.readonly"
+      <div v-if="isAutomap || (auth.isAdmin && !boardConfig?.readonly)"
         class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
 
         <!-- Add Object panel — expands upward from FAB -->
@@ -140,7 +141,7 @@
           enter-active-class="transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-bottom-right"
           leave-to-class="opacity-0 scale-y-75 scale-x-95 translate-y-4"
           leave-active-class="transition-all duration-200 ease-[cubic-bezier(0.4,0,1,1)] origin-bottom-right">
-          <div v-if="editor.editMode.value && !isAutomap && !isRadar"
+          <div v-if="auth.isAdmin && !boardConfig?.readonly && editor.editMode.value && !isAutomap && !isRadar"
             class="w-72 max-h-[calc(100vh-10rem)] flex flex-col overflow-hidden
                    bg-[var(--bg-surface)] backdrop-blur-xl
                    ring-1 ring-white/8 shadow-2xl shadow-black/60
@@ -148,7 +149,7 @@
             <EditPanel
               :draft="editor.draft"
               :placing="editor.placing.value"
-              :backend-id="mapConfig?.globals.backend_id ?? ''"
+              :backend-id="boardConfig?.globals.backend_id ?? ''"
               :snap-grid="editor.snapGrid.value"
               @start-placing="editor.startPlacing()"
               @update:snap-grid="editor.snapGrid.value = $event"
@@ -163,7 +164,7 @@
           enter-active-class="transition-all duration-150 ease-out"
           leave-to-class="opacity-0 translate-y-1 scale-95"
           leave-active-class="transition-all duration-100 ease-in">
-          <div v-if="editor.editMode.value && editor.selectedObjectId.value && selectedObject"
+          <div v-if="auth.isAdmin && !boardConfig?.readonly && editor.editMode.value && editor.selectedObjectId.value && selectedObject"
             class="flex items-center gap-1 px-2 py-1.5 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/40 backdrop-blur-md">
             <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-1.5">{{ selectedObject.type }}</span>
             <div class="w-px h-4 bg-zinc-700 mx-0.5" />
@@ -188,20 +189,65 @@
           </div>
         </Transition>
 
-        <!-- FAB: Edit toggle -->
-        <button @click="onToggleEditMode"
-          class="w-12 h-12 rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1"
-          :class="editor.editMode.value
-            ? 'bg-zinc-700 hover:bg-zinc-600 ring-zinc-600 text-zinc-300 hover:text-white'
-            : 'bg-[var(--bg-surface)]/80 hover:bg-[var(--bg-surface)] ring-[var(--border)] text-zinc-500 hover:text-zinc-300'"
-          :title="editor.editMode.value ? t('map.editing') : t('mapSettings.addObject')">
-          <svg v-if="!editor.editMode.value" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <!-- Bottom row: Services toggle + FAB -->
+        <div class="flex items-center gap-2">
+          <!-- Services layout picker (Flow Board only) -->
+          <div v-if="isAutomap" class="relative">
+            <!-- Backdrop to close dropdown on outside click -->
+            <div v-if="serviceLayoutOpen" class="fixed inset-0 z-0" @click="serviceLayoutOpen = false" />
+
+            <button @click="serviceLayoutOpen = !serviceLayoutOpen"
+              class="relative z-10 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium ring-1 shadow-lg shadow-black/30 transition-all duration-200"
+              :class="serviceLayout !== 'off'
+                ? 'bg-indigo-500/15 text-indigo-300 ring-indigo-500/40'
+                : 'bg-[var(--bg-surface)]/80 text-zinc-400 ring-[var(--border)] hover:text-[var(--text)] hover:bg-[var(--bg-surface)]'">
+              Services
+              <svg class="w-3 h-3 transition-transform duration-150" :class="serviceLayoutOpen ? 'rotate-180' : ''"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+
+            <!-- Dropdown -->
+            <Transition
+              enter-from-class="opacity-0 scale-95 translate-y-1"
+              enter-active-class="transition-all duration-150 ease-out origin-bottom-right"
+              leave-to-class="opacity-0 scale-95 translate-y-1"
+              leave-active-class="transition-all duration-100 ease-in origin-bottom-right">
+              <div v-if="serviceLayoutOpen"
+                class="absolute bottom-full mb-2 right-0 z-10 w-36 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/50 overflow-hidden">
+                <button v-for="opt in ([['off', 'Aus'], ['fan', 'Fächer'], ['orbit', 'Orbit'], ['row', 'Reihe']] as const)"
+                  :key="opt[0]"
+                  @click="serviceLayout = opt[0]; serviceLayoutOpen = false"
+                  class="w-full flex items-center justify-between px-3 py-2 text-xs transition-colors"
+                  :class="serviceLayout === opt[0]
+                    ? 'text-indigo-300 bg-indigo-500/10'
+                    : 'text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'">
+                  {{ opt[1] }}
+                  <svg v-if="serviceLayout === opt[0]" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                </button>
+              </div>
+            </Transition>
+          </div>
+
+          <!-- FAB: Edit toggle (admin only) -->
+          <button v-if="auth.isAdmin && !boardConfig?.readonly" @click="onToggleEditMode"
+            class="w-12 h-12 rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1"
+            :class="editor.editMode.value
+              ? 'bg-zinc-700 hover:bg-zinc-600 ring-zinc-600 text-zinc-300 hover:text-white'
+              : 'bg-[var(--bg-surface)]/80 hover:bg-[var(--bg-surface)] ring-[var(--border)] text-zinc-500 hover:text-zinc-300'"
+            :title="editor.editMode.value ? t('board.editing') : t('boardSettings.addObject')">
+            <svg v-if="!editor.editMode.value" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
     </Teleport>
 
@@ -209,8 +255,8 @@
     <!-- Delete confirmation -->
     <ConfirmDialog
       v-if="deleteTargetObject"
-      :title="t('map.deleteObject')"
-      :message="t('map.cannotBeUndone')"
+      :title="t('board.deleteObject')"
+      :message="t('board.cannotBeUndone')"
       :confirm-label="t('common.delete')"
       @confirm="confirmObjectDelete"
       @cancel="deleteTargetObject = null"
@@ -223,7 +269,7 @@
       :state="statesStore.states[worldmapHover.object.id]"
       :x="worldmapHover.x"
       :y="worldmapHover.y"
-      :template="resolveTemplate(worldmapHover.object.hover_template, mapConfig?.globals.hover_template, settingsStore.settings.hover_template)"
+      :template="resolveTemplate(worldmapHover.object.hover_template, boardConfig?.globals.hover_template, settingsStore.settings.hover_template)"
     />
 
     <!-- Worldmap ContextMenu -->
@@ -235,7 +281,7 @@
       :y="worldmapCtxMenu.y"
       :checkmk-url="checkmkUrl"
       :show-edit="auth.isAdmin"
-      :template="resolveTemplate(worldmapCtxMenu.object.context_template, mapConfig?.globals.context_template, settingsStore.settings.context_template)"
+      :template="resolveTemplate(worldmapCtxMenu.object.context_template, boardConfig?.globals.context_template, settingsStore.settings.context_template)"
       @close="closeWorldmapMenus"
       @edit="onWorldmapCtxEdit"
       @delete="onWorldmapCtxDelete"
@@ -247,8 +293,8 @@
         v-if="propsModalObject"
         :object="propsModalObject"
         :state="statesStore.states[propsModalObject.id]"
-        :backend-id="mapConfig?.globals.backend_id ?? ''"
-        :map-type="mapConfig?.globals.map_type"
+        :backend-id="boardConfig?.globals.backend_id ?? ''"
+        :map-type="boardConfig?.globals.map_type"
         :anchor-rect="propsModalAnchor"
         @close="_closePropsModal()"
         @save="onPropsModalSave"
@@ -262,7 +308,7 @@
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showSettings = false" />
         <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[34rem] max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between mb-6">
-            <h3 class="text-base font-bold text-[var(--text)]">{{ t('map.settingsTitle') }}</h3>
+            <h3 class="text-base font-bold text-[var(--text)]">{{ t('board.settingsTitle') }}</h3>
             <button @click="showSettings = false"
               class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -274,7 +320,7 @@
           <form @submit.prevent="saveSettings" class="space-y-4">
             <!-- Alias -->
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.displayName') }}</label>
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.displayName') }}</label>
               <input v-model="settingsForm.alias"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
@@ -282,11 +328,11 @@
             <!-- Backend + Icon size -->
             <div class="grid grid-cols-[1fr_6rem] gap-3">
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.backend') }}</label>
+                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.connection') }}</label>
                 <div class="relative">
                   <select v-model="settingsForm.backend_id"
                     class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                    <option v-for="b in backendsStore.backends" :key="b.id" :value="b.id">
+                    <option v-for="b in connectionsStore.backends" :key="b.id" :value="b.id">
                       {{ b.label || b.id }}
                     </option>
                   </select>
@@ -298,29 +344,29 @@
                 </div>
               </div>
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.iconSize') }}</label>
+                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.iconSize') }}</label>
                 <NumberInput v-model="settingsForm.icon_size" min="12" max="96" class="w-full" />
               </div>
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.rotationInterval') }}</label>
+                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.rotationInterval') }}</label>
                 <div class="flex items-center gap-2">
                   <NumberInput v-model="settingsForm.rotation_interval" min="0" max="3600" class="w-full" />
-                  <span class="text-xs text-zinc-500 shrink-0">{{ t('map.rotationSuffix') }}</span>
+                  <span class="text-xs text-zinc-500 shrink-0">{{ t('board.rotationSuffix') }}</span>
                 </div>
-                <p class="text-xs text-zinc-500">{{ t('map.rotationIntervalHint') }}</p>
+                <p class="text-xs text-zinc-500">{{ t('board.rotationIntervalHint') }}</p>
               </div>
             </div>
 
             <!-- Map type -->
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.mapType') }}</label>
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.boardType') }}</label>
               <div class="relative">
                 <select v-model="settingsForm.map_type"
                   class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                  <option value="static">{{ t('map.mapTypeStatic') }}</option>
-                  <option value="worldmap">{{ t('map.mapTypeWorldmap') }}</option>
-                  <option value="automap">{{ t('map.mapTypeAutomap') }}</option>
-                  <option value="radar">{{ t('map.mapTypeRadar') }}</option>
+                  <option value="static">{{ t('board.boardTypeStatic') }}</option>
+                  <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
+                  <option value="automap">{{ t('board.boardTypeFlowBoard') }}</option>
+                  <option value="radar">{{ t('board.boardTypeRadar') }}</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                   <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -334,33 +380,33 @@
             <template v-if="settingsForm.map_type === 'worldmap'">
               <div class="grid grid-cols-[1fr_1fr_5rem] gap-3">
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.latitude') }}</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.latitude') }}</label>
                   <NumberInput v-model="settingsForm.worldmap_lat" step="any" :precision="10" class="w-full" />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.longitude') }}</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.longitude') }}</label>
                   <NumberInput v-model="settingsForm.worldmap_lng" step="any" :precision="10" class="w-full" />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.zoom') }}</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.zoom') }}</label>
                   <NumberInput v-model="settingsForm.worldmap_zoom" min="1" max="18" class="w-full" />
                 </div>
               </div>
-              <p class="text-xs text-zinc-600">{{ t('map.worldmapHint') }}</p>
+              <p class="text-xs text-zinc-600">{{ t('board.worldmapHint') }}</p>
             </template>
 
             <!-- Radar settings -->
             <template v-if="settingsForm.map_type === 'radar'">
               <div class="grid grid-cols-[1fr_1fr] gap-3">
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.filterType') }}</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.filterType') }}</label>
                   <div class="relative">
                     <select v-model="settingsForm.radar_type"
                       class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                      <option value="hostgroup">{{ t('map.filterTypeHostgroup') }}</option>
-                      <option value="servicegroup">{{ t('map.filterTypeServicegroup') }}</option>
-                      <option value="all_hosts">{{ t('map.filterTypeAllHosts') }}</option>
-                      <option value="all_services">{{ t('map.filterTypeAllServices') }}</option>
+                      <option value="hostgroup">{{ t('board.filterTypeHostgroup') }}</option>
+                      <option value="servicegroup">{{ t('board.filterTypeServicegroup') }}</option>
+                      <option value="all_hosts">{{ t('board.filterTypeAllHosts') }}</option>
+                      <option value="all_services">{{ t('board.filterTypeAllServices') }}</option>
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                       <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -370,7 +416,7 @@
                   </div>
                 </div>
                 <div v-if="settingsForm.radar_type === 'hostgroup' || settingsForm.radar_type === 'servicegroup'" class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.groupName') }}</label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.groupName') }}</label>
                   <input v-model="settingsForm.radar_value" placeholder="e.g. linux-servers"
                     class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 </div>
@@ -379,20 +425,20 @@
 
             <!-- Templates -->
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.hoverTemplate') }}</label>
-              <input v-model="settingsForm.hover_template" :placeholder="t('map.templatePlaceholder')"
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.hoverTemplate') }}</label>
+              <input v-model="settingsForm.hover_template" :placeholder="t('board.templatePlaceholder')"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.contextTemplate') }}</label>
-              <input v-model="settingsForm.context_template" :placeholder="t('map.templatePlaceholder')"
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.contextTemplate') }}</label>
+              <input v-model="settingsForm.context_template" :placeholder="t('board.templatePlaceholder')"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-              <p class="text-xs text-zinc-600">{{ t('map.templateHint') }}</p>
+              <p class="text-xs text-zinc-600">{{ t('board.templateHint') }}</p>
             </div>
 
             <!-- Background image (static only) -->
             <div v-if="settingsForm.map_type === 'static'" class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('map.backgroundImage') }}</label>
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.backgroundImage') }}</label>
               <div class="flex gap-2">
                 <input v-model="settingsForm.background_image" placeholder="filename.png"
                   class="flex-1 px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
@@ -403,7 +449,7 @@
                 <button v-if="settingsForm.background_image" type="button"
                   @click="deleteBackground"
                   class="px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 hover:ring-red-500 rounded-lg text-sm text-zinc-500 hover:text-red-400 transition-all"
-                  :title="t('map.deleteBackground')">
+                  :title="t('board.deleteBackground')">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                   </svg>
@@ -415,7 +461,7 @@
               </p>
               <p v-if="uploadOk" class="text-green-400 text-xs flex items-center gap-1">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                {{ t('map.uploadedSuccessfully') }}
+                {{ t('board.uploadedSuccessfully') }}
               </p>
             </div>
 
@@ -425,7 +471,7 @@
                 class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">{{ t('common.cancel') }}</button>
               <button type="submit" :disabled="settingsSaving"
                 class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all">
-                {{ settingsSaving ? t('common.saving') : t('map.saveChanges') }}
+                {{ settingsSaving ? t('common.saving') : t('board.saveChanges') }}
               </button>
             </div>
           </form>
@@ -440,25 +486,25 @@ import { onMounted, onUnmounted, computed, ref, reactive, watch, watchEffect } f
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { useMapsStore } from '@/stores/maps'
+import { useBoardsStore } from '@/stores/boards'
 import { useStatesStore } from '@/stores/states'
-import { useBackendsStore } from '@/stores/backends'
+import { useConnectionsStore } from '@/stores/connections'
 import { useSettingsStore } from '@/stores/settings'
-import { useMapEditor } from '@/composables/useMapEditor'
-import { mapsApi } from '@/api/client'
+import { useBoardEditor } from '@/composables/useBoardEditor'
+import { boardsApi } from '@/api/client'
 import { resolveTemplate } from '@/utils/template'
-import MapCanvas from '@/components/map/MapCanvas.vue'
-import WorldMapCanvas from '@/components/map/WorldMapCanvas.vue'
-import HoverMenu from '@/components/map/HoverMenu.vue'
-import ContextMenu from '@/components/map/ContextMenu.vue'
+import BoardCanvas from '@/components/board/BoardCanvas.vue'
+import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue'
+import HoverMenu from '@/components/board/HoverMenu.vue'
+import ContextMenu from '@/components/board/ContextMenu.vue'
 import NumberInput from '@/components/NumberInput.vue'
-import AutomapCanvas from '@/components/map/AutomapCanvas.vue'
-import RadarCanvas from '@/components/map/RadarCanvas.vue'
-import EditPanel from '@/components/map/EditPanel.vue'
-import ObjectPropertiesModal from '@/components/map/ObjectPropertiesModal.vue'
+import AutomapCanvas from '@/components/board/AutomapCanvas.vue'
+import RadarCanvas from '@/components/board/RadarCanvas.vue'
+import EditPanel from '@/components/board/EditPanel.vue'
+import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
-import type { MapObject } from '@/types/api'
+import type { BoardObject } from '@/types/api'
 
 type LineDragMode = 'move' | 'start' | 'end'
 
@@ -466,56 +512,56 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
-const mapsStore = useMapsStore()
+const boardsStore = useBoardsStore()
 const statesStore = useStatesStore()
-const backendsStore = useBackendsStore()
+const connectionsStore = useConnectionsStore()
 const settingsStore = useSettingsStore()
 
-const mapName = computed(() => route.params.name as string)
-const mapConfig = computed(() => mapsStore.currentMap)
-const canvasRef = ref<InstanceType<typeof MapCanvas> | null>(null)
+const boardName = computed(() => route.params.name as string)
+const boardConfig = computed(() => boardsStore.currentBoard)
+const canvasRef = ref<InstanceType<typeof BoardCanvas> | null>(null)
 const worldmapCanvasRef = ref<InstanceType<typeof WorldMapCanvas> | null>(null)
 
-const isWorldmap = computed(() => mapConfig.value?.globals.map_type === 'worldmap')
-const isAutomap  = computed(() => mapConfig.value?.globals.map_type === 'automap')
-const isRadar    = computed(() => mapConfig.value?.globals.map_type === 'radar')
+const isWorldmap = computed(() => boardConfig.value?.globals.map_type === 'worldmap')
+const isAutomap  = computed(() => boardConfig.value?.globals.map_type === 'automap')
+const isRadar    = computed(() => boardConfig.value?.globals.map_type === 'radar')
 
 const checkmkUrl = computed(() => {
-  const bid = mapConfig.value?.globals.backend_id
+  const bid = boardConfig.value?.globals.backend_id
   if (!bid) return null
-  return backendsStore.backends.find(b => b.id === bid)?.checkmk_url ?? null
+  return connectionsStore.backends.find(b => b.id === bid)?.checkmk_url ?? null
 })
 
-async function reloadMap() {
-  await mapsStore.fetchMap(mapName.value)
+async function reloadBoard() {
+  await boardsStore.fetchBoard(boardName.value)
 }
 
-const editor = useMapEditor(mapName, reloadMap)
+const editor = useBoardEditor(boardName, reloadBoard)
 
 // ---- Object properties modal (right-click in view mode) ----
 
 type AnchorRect = { left: number; top: number; right: number; bottom: number }
 
-const propsModalObject = ref<MapObject | null>(null)
+const propsModalObject = ref<BoardObject | null>(null)
 const propsModalAnchor = ref<AnchorRect | null>(null)
-const deleteTargetObject = ref<MapObject | null>(null)
+const deleteTargetObject = ref<BoardObject | null>(null)
 
-function openPropsModal(obj: MapObject, anchor?: AnchorRect | null) {
+function openPropsModal(obj: BoardObject, anchor?: AnchorRect | null) {
   editor.selectObject(obj.id)
   propsModalAnchor.value = anchor ?? null
   propsModalObject.value = obj
 }
 
-function onObjectContextMenu(obj: MapObject, anchor?: AnchorRect | null) {
+function onObjectContextMenu(obj: BoardObject, anchor?: AnchorRect | null) {
   openPropsModal(obj, anchor)
 }
 
 // ---- Worldmap hover & context menu ----
 
-const worldmapHover = reactive({ visible: false, object: null as MapObject | null, x: 0, y: 0 })
-const worldmapCtxMenu = reactive({ visible: false, object: null as MapObject | null, x: 0, y: 0 })
+const worldmapHover = reactive({ visible: false, object: null as BoardObject | null, x: 0, y: 0 })
+const worldmapCtxMenu = reactive({ visible: false, object: null as BoardObject | null, x: 0, y: 0 })
 
-function onWorldmapHover(obj: MapObject, event: MouseEvent) {
+function onWorldmapHover(obj: BoardObject, event: MouseEvent) {
   worldmapHover.object = obj
   worldmapHover.x = event.pageX + 12
   worldmapHover.y = event.pageY + 12
@@ -526,7 +572,7 @@ function onWorldmapHoverLeave() {
   worldmapHover.visible = false
 }
 
-function onWorldmapContextMenuView(obj: MapObject, x: number, y: number) {
+function onWorldmapContextMenuView(obj: BoardObject, x: number, y: number) {
   editor.selectObject(obj.id)
   worldmapCtxMenu.object = obj
   worldmapCtxMenu.x = x
@@ -543,7 +589,7 @@ function onWorldmapCtxEdit() {
 }
 
 function onWorldmapCtxDelete() {
-  if (mapConfig.value?.readonly) return
+  if (boardConfig.value?.readonly) return
   const obj = worldmapCtxMenu.object
   worldmapCtxMenu.visible = false
   if (obj) {
@@ -581,7 +627,7 @@ function onToggleEditMode() {
   editor.toggleEditMode()
 }
 
-function onObjectDelete(obj: MapObject) {
+function onObjectDelete(obj: BoardObject) {
   deleteTargetObject.value = obj
 }
 
@@ -594,9 +640,9 @@ async function confirmObjectDelete() {
   }
 }
 
-const selectedObject = computed<MapObject | null>(() => {
-  if (!editor.selectedObjectId.value || !mapConfig.value) return null
-  return mapConfig.value.objects.find(o => o.id === editor.selectedObjectId.value) ?? null
+const selectedObject = computed<BoardObject | null>(() => {
+  if (!editor.selectedObjectId.value || !boardConfig.value) return null
+  return boardConfig.value.objects.find(o => o.id === editor.selectedObjectId.value) ?? null
 })
 
 // ---- Static map event handlers ----
@@ -605,7 +651,7 @@ async function onObjectDragEnd(id: string, x: number, y: number) {
   await editor.saveObjectPosition(id, x, y)
 }
 
-function onObjectClick(obj: MapObject, _event?: MouseEvent) {
+function onObjectClick(obj: BoardObject, _event?: MouseEvent) {
   editor.selectObject(obj.id)
 }
 
@@ -623,7 +669,7 @@ function onContainerClick(event: MouseEvent) {
   if (pos) editor.placeAt(pos.x, pos.y)
 }
 
-function onLineDragStart(event: MouseEvent, obj: MapObject, mode: LineDragMode) {
+function onLineDragStart(event: MouseEvent, obj: BoardObject, mode: LineDragMode) {
   const canvas = canvasRef.value?.getCanvasEl()
   if (canvas) editor.startLineDrag(event, obj, mode, canvas)
 }
@@ -646,6 +692,9 @@ async function onSaveProperties(updates: Record<string, unknown>) {
 
 // ---- Map Settings ----
 
+type ServiceLayout = 'off' | 'fan' | 'row' | 'orbit'
+const serviceLayout = ref<ServiceLayout>('off')
+const serviceLayoutOpen = ref(false)
 const showSettings = ref(false)
 const showUserSettings = ref(false)
 const settingsSaving = ref(false)
@@ -669,8 +718,8 @@ const settingsForm = reactive({
 })
 
 function openSettings() {
-  if (!mapConfig.value) return
-  const g = mapConfig.value.globals
+  if (!boardConfig.value) return
+  const g = boardConfig.value.globals
   settingsForm.alias = g.alias ?? ''
   settingsForm.backend_id = g.backend_id ?? ''
   settingsForm.icon_size = g.icon_size ?? 22
@@ -707,7 +756,7 @@ function openSettings() {
 async function saveSettings() {
   settingsSaving.value = true
   try {
-    const updated = await mapsApi.update(mapName.value, {
+    const updated = await boardsApi.update(boardName.value, {
       alias: settingsForm.alias,
       backend_id: settingsForm.backend_id,
       icon_size: settingsForm.icon_size,
@@ -722,7 +771,7 @@ async function saveSettings() {
       context_template: settingsForm.context_template || null,
       rotation_interval: settingsForm.rotation_interval,
     }, auth.accessToken!)
-    if (mapsStore.currentMap) mapsStore.currentMap.globals = updated.globals
+    if (boardsStore.currentBoard) boardsStore.currentBoard.globals = updated.globals
     stopRotation()
     scheduleRotation(settingsForm.rotation_interval)
     showSettings.value = false
@@ -737,9 +786,9 @@ async function uploadBackground(event: Event) {
   uploadError.value = ''
   uploadOk.value = false
   try {
-    const result = await mapsApi.uploadBackground(mapName.value, file, auth.accessToken!)
+    const result = await boardsApi.uploadBackground(boardName.value, file, auth.accessToken!)
     settingsForm.background_image = result.filename
-    await reloadMap()
+    await reloadBoard()
     uploadOk.value = true
   } catch (e: unknown) {
     uploadError.value = e instanceof Error ? e.message : 'Upload failed'
@@ -748,9 +797,9 @@ async function uploadBackground(event: Event) {
 
 async function deleteBackground() {
   try {
-    await mapsApi.deleteBackground(mapName.value, auth.accessToken!)
+    await boardsApi.deleteBackground(boardName.value, auth.accessToken!)
     settingsForm.background_image = ''
-    await reloadMap()
+    await reloadBoard()
   } catch (e: unknown) {
     uploadError.value = e instanceof Error ? e.message : 'Delete failed'
   }
@@ -772,12 +821,12 @@ function scheduleRotation(intervalSeconds: number) {
   if (intervalSeconds <= 0 || editor.editMode.value) return
   rotationTimer.value = setTimeout(async () => {
     // Ensure map list is loaded
-    if (mapsStore.maps.length === 0) await mapsStore.fetchMaps()
-    const all = mapsStore.maps
+    if (boardsStore.boards.length === 0) await boardsStore.fetchBoards()
+    const all = boardsStore.boards
     if (all.length < 2) return
-    const idx = all.findIndex(m => m.name === mapName.value)
+    const idx = all.findIndex(m => m.name === boardName.value)
     const next = all[(idx + 1) % all.length]
-    router.push({ name: 'map', params: { name: next.name } })
+    router.push({ name: 'board', params: { name: next.name } })
   }, intervalSeconds * 1000)
 }
 
@@ -785,13 +834,13 @@ function scheduleRotation(intervalSeconds: number) {
 // Reset all edit state so edit mode, selection, and unsaved changes from Map A
 // don't carry over when navigating to Map B.
 watchEffect(async () => {
-  const name = mapName.value
+  const name = boardName.value
   stopRotation()
   editor.resetForNewMap()
 
-  await mapsStore.fetchMap(name)
+  await boardsStore.fetchBoard(name)
   statesStore.connectToMap(name, auth.accessToken ?? undefined)
-  scheduleRotation(mapsStore.currentMap?.globals.rotation_interval ?? 0)
+  scheduleRotation(boardsStore.currentBoard?.globals.rotation_interval ?? 0)
 })
 
 function onKeyDown(e: KeyboardEvent) {
@@ -812,7 +861,7 @@ function onKeyDown(e: KeyboardEvent) {
 }
 
 onMounted(() => {
-  if (auth.isAdmin) backendsStore.fetchBackends()
+  if (auth.isAdmin) connectionsStore.fetchBackends()
   document.addEventListener('keydown', onKeyDown)
 })
 

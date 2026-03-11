@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ObjectState, WebSocketStateUpdate } from '@/types/api'
-import { mapsApi } from '@/api/client'
+import { boardsApi } from '@/api/client'
 import { parsePerfData, utilPercent } from '@/utils/perf'
 
 export interface MetricSnapshot { ts: number; pct: number }
@@ -78,7 +78,7 @@ export const useStatesStore = defineStore('states', () => {
   async function _fetchStates() {
     if (!currentMap || !currentToken) return
     try {
-      const data = await mapsApi.getStates(currentMap, currentToken)
+      const data = await boardsApi.getStates(currentMap, currentToken)
       const newStates: Record<string, ObjectState> = {}
       const ts = Date.now() / 1000
       for (const s of data.states) {
@@ -107,7 +107,7 @@ export const useStatesStore = defineStore('states', () => {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
     // Token is passed as a query parameter – the Authorization header is unavailable
     // after the WebSocket upgrade handshake.
-    const url = `${protocol}://${window.location.host}${_base}/api/v1/ws/maps/${currentMap}?token=${encodeURIComponent(currentToken)}`
+    const url = `${protocol}://${window.location.host}${_base}/api/v1/ws/boards/${currentMap}?token=${encodeURIComponent(currentToken)}`
     ws = new WebSocket(url)
     let opened = false
 

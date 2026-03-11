@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def _settings_path() -> Path:
-    return Path(settings.maps_dir).parent / "settings.json"
+    return Path(settings.boards_dir).parent / "settings.json"
 
 
 def get_settings() -> GlobalSettings:

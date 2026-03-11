@@ -6,10 +6,10 @@ import type {
   BackendConfig,
   GlobalSettings,
   IconEntry,
-  MapConfig,
-  MapObject,
-  MapPermissions,
-  MapRead,
+  BoardConfig,
+  BoardObject,
+  BoardPermissions,
+  BoardRead,
   MapStates,
   TokenResponse,
   UserRead,
@@ -95,48 +95,48 @@ export const authApi = {
     request('/auth/logout', { method: 'POST' }, token),
 }
 
-// ---- Maps ----
+// ---- Boards ----
 
-export const mapsApi = {
-  list: (token: string): Promise<MapRead[]> =>
-    request('/maps', {}, token),
+export const boardsApi = {
+  list: (token: string): Promise<BoardRead[]> =>
+    request('/boards', {}, token),
 
-  get: (name: string, token: string): Promise<MapConfig> =>
-    request(`/maps/${name}`, {}, token),
+  get: (name: string, token: string): Promise<BoardConfig> =>
+    request(`/boards/${name}`, {}, token),
 
-  create: (data: { name: string; alias?: string; backend_id?: string; map_type?: string }, token: string): Promise<MapConfig> =>
-    request('/maps', { method: 'POST', body: JSON.stringify(data) }, token),
+  create: (data: { name: string; alias?: string; backend_id?: string; map_type?: string }, token: string): Promise<BoardConfig> =>
+    request('/boards', { method: 'POST', body: JSON.stringify(data) }, token),
 
-  update: (name: string, data: Record<string, unknown>, token: string): Promise<MapConfig> =>
-    request(`/maps/${name}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  update: (name: string, data: Record<string, unknown>, token: string): Promise<BoardConfig> =>
+    request(`/boards/${name}`, { method: 'PUT', body: JSON.stringify(data) }, token),
 
   delete: (name: string, token: string): Promise<void> =>
-    request(`/maps/${name}`, { method: 'DELETE' }, token),
+    request(`/boards/${name}`, { method: 'DELETE' }, token),
 
   getStates: (name: string, token: string): Promise<MapStates> =>
-    request(`/maps/${name}/states`, {}, token),
+    request(`/boards/${name}/states`, {}, token),
 
-  addObject: (mapName: string, obj: MapObject, token: string): Promise<MapConfig> =>
-    request(`/maps/${mapName}/objects`, { method: 'POST', body: JSON.stringify(obj) }, token),
+  addObject: (boardName: string, obj: BoardObject, token: string): Promise<BoardConfig> =>
+    request(`/boards/${boardName}/objects`, { method: 'POST', body: JSON.stringify(obj) }, token),
 
   updateObject: (
-    mapName: string,
+    boardName: string,
     objId: string,
     updates: Record<string, unknown>,
     token: string,
-  ): Promise<MapObject> =>
-    request(`/maps/${mapName}/objects/${objId}`, { method: 'PUT', body: JSON.stringify(updates) }, token),
+  ): Promise<BoardObject> =>
+    request(`/boards/${boardName}/objects/${objId}`, { method: 'PUT', body: JSON.stringify(updates) }, token),
 
-  deleteObject: (mapName: string, objId: string, token: string): Promise<void> =>
-    request(`/maps/${mapName}/objects/${objId}`, { method: 'DELETE' }, token),
+  deleteObject: (boardName: string, objId: string, token: string): Promise<void> =>
+    request(`/boards/${boardName}/objects/${objId}`, { method: 'DELETE' }, token),
 
-  getPermissions: (name: string, token: string): Promise<MapPermissions> =>
-    request(`/maps/${name}/permissions`, {}, token),
+  getPermissions: (name: string, token: string): Promise<BoardPermissions> =>
+    request(`/boards/${name}/permissions`, {}, token),
 
-  uploadBackground: async (mapName: string, file: File, token: string): Promise<{ filename: string }> => {
+  uploadBackground: async (boardName: string, file: File, token: string): Promise<{ filename: string }> => {
     const form = new FormData()
     form.append('file', file)
-    const response = await fetch(`${BASE_URL}/maps/${mapName}/background`, {
+    const response = await fetch(`${BASE_URL}/boards/${boardName}/background`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: form,
@@ -148,17 +148,17 @@ export const mapsApi = {
     return response.json()
   },
 
-  deleteBackground: (mapName: string, token: string): Promise<void> =>
-    request(`/maps/${mapName}/background`, { method: 'DELETE' }, token),
+  deleteBackground: (boardName: string, token: string): Promise<void> =>
+    request(`/boards/${boardName}/background`, { method: 'DELETE' }, token),
 
-  clone: (name: string, data: { new_name: string; alias?: string }, token: string): Promise<MapConfig> =>
-    request(`/maps/${name}/clone`, { method: 'POST', body: JSON.stringify(data) }, token),
+  clone: (name: string, data: { new_name: string; alias?: string }, token: string): Promise<BoardConfig> =>
+    request(`/boards/${name}/clone`, { method: 'POST', body: JSON.stringify(data) }, token),
 
-  importMap: (data: MapConfig, token: string, overwrite = false): Promise<MapConfig> =>
-    request(`/maps/import?overwrite=${overwrite}`, { method: 'POST', body: JSON.stringify(data) }, token),
+  importBoard: (data: BoardConfig, token: string, overwrite = false): Promise<BoardConfig> =>
+    request(`/boards/import?overwrite=${overwrite}`, { method: 'POST', body: JSON.stringify(data) }, token),
 
-  exportMap: async (name: string, token: string): Promise<void> => {
-    const cfg = await request<MapConfig>(`/maps/${name}`, {}, token)
+  exportBoard: async (name: string, token: string): Promise<void> => {
+    const cfg = await request<BoardConfig>(`/boards/${name}`, {}, token)
     const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -215,7 +215,7 @@ export const rolesApi = {
 
 // ---- Backends ----
 
-export const backendsApi = {
+export const connectionsApi = {
   list: (token: string): Promise<BackendConfig[]> =>
     request('/backends', {}, token),
 
@@ -237,8 +237,8 @@ export const backendsApi = {
   test: (backendId: string, token: string): Promise<{ ok: boolean; message: string }> =>
     request(`/backends/${backendId}/test`, {}, token),
 
-  topology: (backendId: string, token: string): Promise<import('@/types/api').TopologyNode[]> =>
-    request(`/backends/${backendId}/topology`, {}, token),
+  topology: (backendId: string, token: string, includeServices = false): Promise<import('@/types/api').TopologyNode[]> =>
+    request(`/backends/${backendId}/topology${includeServices ? '?include_services=true' : ''}`, {}, token),
 
   perfMetrics: (backendId: string, host: string, token: string, service?: string): Promise<string[]> => {
     const params = new URLSearchParams({ host })

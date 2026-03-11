@@ -6,10 +6,10 @@
 import { onMounted, onUnmounted, watch, ref } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { MapConfig, MapObject as MapObjectType, ObjectState } from '@/types/api'
+import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api'
 
 const props = defineProps<{
-  config: MapConfig
+  config: BoardConfig
   states: Record<string, ObjectState>
   editMode: boolean
   placing: boolean
@@ -17,10 +17,10 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'object-click': [obj: MapObjectType]
-  'object-contextmenu': [obj: MapObjectType]
-  'object-contextmenu-view': [obj: MapObjectType, x: number, y: number]
-  'object-hover': [obj: MapObjectType, event: MouseEvent]
+  'object-click': [obj: BoardObjectType]
+  'object-contextmenu': [obj: BoardObjectType]
+  'object-contextmenu-view': [obj: BoardObjectType, x: number, y: number]
+  'object-hover': [obj: BoardObjectType, event: MouseEvent]
   'object-hover-leave': []
   'canvas-latlng-click': [lat: number, lng: number]
   'latlng-drag-end': [id: string, lat: number, lng: number]
@@ -47,13 +47,13 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function displayName(obj: MapObjectType): string {
+function displayName(obj: BoardObjectType): string {
   if (obj.label_text) return obj.label_text
   if (obj.host_name && obj.service_description) return `${obj.host_name}/${obj.service_description}`
   return obj.host_name ?? obj.group_name ?? obj.map_name ?? obj.id
 }
 
-function makeDivIcon(obj: MapObjectType): L.DivIcon {
+function makeDivIcon(obj: BoardObjectType): L.DivIcon {
   const color = stateColor(obj.id)
   const size = obj.icon_size ?? props.config.globals.icon_size ?? 22
   const label = obj.label_show !== false ? escapeHtml(displayName(obj)) : ''

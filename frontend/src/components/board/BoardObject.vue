@@ -106,7 +106,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { MapObject, ObjectState } from '@/types/api'
+import type { BoardObject, ObjectState } from '@/types/api'
 import GadgetRenderer from './GadgetRenderer.vue'
 import { useArcRing } from '@/composables/useArcRing'
 import { parsePerfData, utilPercent, utilColor as _utilColor } from '@/utils/perf'
@@ -115,7 +115,7 @@ const BASE_URL = import.meta.env.BASE_URL
 const RING_PAD = 6
 
 const props = defineProps<{
-  object: MapObject
+  object: BoardObject
   state: ObjectState | undefined
   iconSize: number
   selected?: boolean

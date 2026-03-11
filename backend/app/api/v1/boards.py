@@ -1,4 +1,4 @@
-"""Map CRUD endpoints."""
+"""Board CRUD endpoints."""
 
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ from app.api.v1.deps import get_current_user, get_db, require_admin, user_has_pe
 from app.core.config import settings
 from app.models.role import Role
 from app.models.user import User
-from app.schemas.map import MapClone, MapConfig, MapCreate, MapObject, MapPermissionsRead, MapRead, MapUpdate
-from app.services import map_service
+from app.schemas.board import BoardClone, BoardConfig, BoardCreate, BoardObject, BoardPermissionsRead, BoardRead, BoardUpdate
+from app.services import board_service
 
 router = APIRouter()
 
@@ -46,97 +46,97 @@ def _is_valid_image(content: bytes) -> bool:
     return False
 
 
-def _require_map_view(name: str, user: User) -> None:
+def _require_board_view(name: str, user: User) -> None:
     if not user_has_permission(user, "map", "view", name):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No view permission for this map")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No view permission for this board")
 
 
-def _require_map_edit(name: str, user: User) -> None:
+def _require_board_edit(name: str, user: User) -> None:
     if not user_has_permission(user, "map", "edit", name):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No edit permission for this map")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No edit permission for this board")
 
 
 def _require_not_readonly(name: str) -> None:
-    cfg = map_service.get_map(name)
+    cfg = board_service.get_board(name)
     if cfg and cfg.readonly:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This map is read-only")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This board is read-only")
 
 
-@router.get("", response_model=list[MapRead])
-async def list_maps(current_user: User = Depends(get_current_user)) -> list[MapRead]:
-    all_maps = map_service.list_maps()
+@router.get("", response_model=list[BoardRead])
+async def list_boards(current_user: User = Depends(get_current_user)) -> list[BoardRead]:
+    all_boards = board_service.list_boards()
     if current_user.is_admin:
-        return all_maps
-    return [m for m in all_maps if user_has_permission(current_user, "map", "view", m.name)]
+        return all_boards
+    return [m for m in all_boards if user_has_permission(current_user, "map", "view", m.name)]
 
 
-@router.post("", response_model=MapConfig, status_code=status.HTTP_201_CREATED)
-async def create_map(
-    data: MapCreate, _: User = Depends(require_admin)
-) -> MapConfig:
+@router.post("", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
+async def create_board(
+    data: BoardCreate, _: User = Depends(require_admin)
+) -> BoardConfig:
     try:
-        return map_service.create_map(data)
+        return board_service.create_board(data)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
 
-@router.get("/{name}", response_model=MapConfig)
-async def get_map(name: str, current_user: User = Depends(get_current_user)) -> MapConfig:
-    _require_map_view(name, current_user)
-    cfg = map_service.get_map(name)
+@router.get("/{name}", response_model=BoardConfig)
+async def get_board(name: str, current_user: User = Depends(get_current_user)) -> BoardConfig:
+    _require_board_view(name, current_user)
+    cfg = board_service.get_board(name)
     if cfg is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
     return cfg
 
 
-@router.put("/{name}", response_model=MapConfig)
-async def update_map(
-    name: str, data: MapUpdate, current_user: User = Depends(get_current_user)
-) -> MapConfig:
-    _require_map_edit(name, current_user)
+@router.put("/{name}", response_model=BoardConfig)
+async def update_board(
+    name: str, data: BoardUpdate, current_user: User = Depends(get_current_user)
+) -> BoardConfig:
+    _require_board_edit(name, current_user)
     _require_not_readonly(name)
-    cfg = map_service.update_map(name, data)
+    cfg = board_service.update_board(name, data)
     if cfg is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
     return cfg
 
 
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_map(name: str, _: User = Depends(require_admin)) -> None:
-    if not map_service.delete_map(name):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
+async def delete_board(name: str, _: User = Depends(require_admin)) -> None:
+    if not board_service.delete_board(name):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
 
 
-@router.post("/{name}/clone", response_model=MapConfig, status_code=status.HTTP_201_CREATED)
-async def clone_map(
-    name: str, data: MapClone, _: User = Depends(require_admin)
-) -> MapConfig:
+@router.post("/{name}/clone", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
+async def clone_board(
+    name: str, data: BoardClone, _: User = Depends(require_admin)
+) -> BoardConfig:
     try:
-        return map_service.clone_map(name, data.new_name, data.alias)
+        return board_service.clone_board(name, data.new_name, data.alias)
     except ValueError as exc:
         code = status.HTTP_404_NOT_FOUND if "not found" in str(exc) else status.HTTP_409_CONFLICT
         raise HTTPException(status_code=code, detail=str(exc))
 
 
-@router.post("/import", response_model=MapConfig, status_code=status.HTTP_201_CREATED)
-async def import_map(
+@router.post("/import", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
+async def import_board(
     data: dict, overwrite: bool = False, _: User = Depends(require_admin)
-) -> MapConfig:
+) -> BoardConfig:
     try:
-        return map_service.import_map(data, overwrite=overwrite)
+        return board_service.import_board(data, overwrite=overwrite)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
 
-# ----- Map permissions (read) -----
+# ----- Board permissions (read) -----
 
-@router.get("/{name}/permissions", response_model=MapPermissionsRead)
-async def get_map_permissions(
+@router.get("/{name}/permissions", response_model=BoardPermissionsRead)
+async def get_board_permissions(
     name: str,
     _: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
-) -> MapPermissionsRead:
-    """Return which roles have direct (non-wildcard) view/edit permissions on this map."""
+) -> BoardPermissionsRead:
+    """Return which roles have direct (non-wildcard) view/edit permissions on this board."""
     result = await db.execute(select(Role))
     roles = result.scalars().all()
 
@@ -150,7 +150,7 @@ async def get_map_permissions(
                 elif perm.act == "edit" and role.name not in edit_roles:
                     edit_roles.append(role.name)
 
-    return MapPermissionsRead(view=view_roles, edit=edit_roles)
+    return BoardPermissionsRead(view=view_roles, edit=edit_roles)
 
 
 # ----- Background image -----
@@ -161,10 +161,10 @@ async def upload_background(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
 ) -> JSONResponse:
-    _require_map_edit(name, current_user)
+    _require_board_edit(name, current_user)
     _require_not_readonly(name)
-    if map_service.get_map(name) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
+    if board_service.get_board(name) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
     if file.content_type not in _ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Unsupported image type")
 
@@ -183,7 +183,7 @@ async def upload_background(
     raw_suffix = Path(file.filename or "").suffix.lower()
     suffix = raw_suffix if raw_suffix in _ALLOWED_SUFFIXES else ".png"
 
-    bg_dir = Path(settings.maps_dir) / "backgrounds"
+    bg_dir = Path(settings.boards_dir) / "backgrounds"
     bg_dir.mkdir(parents=True, exist_ok=True)
 
     filename = f"{name}{suffix}"
@@ -200,46 +200,46 @@ async def upload_background(
         Path(tmp_path).unlink(missing_ok=True)
         raise
 
-    map_service.update_map(name, MapUpdate(background_image=filename))
+    board_service.update_board(name, BoardUpdate(background_image=filename))
     return JSONResponse({"filename": filename})
 
 
 @router.delete("/{name}/background", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_background(name: str, current_user: User = Depends(get_current_user)) -> None:
-    _require_map_edit(name, current_user)
+    _require_board_edit(name, current_user)
     _require_not_readonly(name)
-    if map_service.get_map(name) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
-    bg_dir = Path(settings.maps_dir) / "backgrounds"
+    if board_service.get_board(name) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
+    bg_dir = Path(settings.boards_dir) / "backgrounds"
     for f in bg_dir.glob(f"{name}.*"):
         f.unlink(missing_ok=True)
-    map_service.update_map(name, MapUpdate(background_image=None))
+    board_service.update_board(name, BoardUpdate(background_image=None))
 
 
 # ----- Object sub-resources -----
 
-@router.post("/{name}/objects", response_model=MapConfig, status_code=status.HTTP_201_CREATED)
+@router.post("/{name}/objects", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
 async def add_object(
-    name: str, obj: MapObject, current_user: User = Depends(get_current_user)
-) -> MapConfig:
-    _require_map_edit(name, current_user)
+    name: str, obj: BoardObject, current_user: User = Depends(get_current_user)
+) -> BoardConfig:
+    _require_board_edit(name, current_user)
     _require_not_readonly(name)
     try:
-        cfg = map_service.add_object(name, obj)
+        cfg = board_service.add_object(name, obj)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     if cfg is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Map '{name}' not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
     return cfg
 
 
-@router.put("/{name}/objects/{obj_id}", response_model=MapObject)
+@router.put("/{name}/objects/{obj_id}", response_model=BoardObject)
 async def update_object(
     name: str, obj_id: str, updates: dict[str, Any], current_user: User = Depends(get_current_user)
-) -> MapObject:
-    _require_map_edit(name, current_user)
+) -> BoardObject:
+    _require_board_edit(name, current_user)
     _require_not_readonly(name)
-    obj = map_service.update_object(name, obj_id, updates)
+    obj = board_service.update_object(name, obj_id, updates)
     if obj is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Object not found")
     return obj
@@ -249,7 +249,7 @@ async def update_object(
 async def delete_object(
     name: str, obj_id: str, current_user: User = Depends(get_current_user)
 ) -> None:
-    _require_map_edit(name, current_user)
+    _require_board_edit(name, current_user)
     _require_not_readonly(name)
-    if not map_service.delete_object(name, obj_id):
+    if not board_service.delete_object(name, obj_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Object not found")

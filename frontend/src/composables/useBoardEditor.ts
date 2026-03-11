@@ -2,18 +2,18 @@
  * Map edit-mode state: drag & drop, line editing, object selection, placing new objects.
  */
 import { ref, reactive, type Ref } from 'vue'
-import { mapsApi } from '@/api/client'
+import { boardsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
-import { useMapsStore } from '@/stores/maps'
+import { useBoardsStore } from '@/stores/boards'
 import { useSettingsStore } from '@/stores/settings'
-import type { MapObject, ObjectType } from '@/types/api'
+import type { BoardObject, ObjectType } from '@/types/api'
 
 export interface NewObjectDraft {
   type: ObjectType | ''
   host_name: string
   service_description: string
   group_name: string
-  map_name: string
+  board_name: string
   label_text: string
   icon: string
 }
@@ -25,9 +25,9 @@ type DragTarget =
 
 // mapName is a Ref so that this composable stays in sync when Vue Router reuses
 // the MapView component for a different map (avoids stale closure over the old name).
-export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<void>) {
+export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<void>) {
   const auth = useAuthStore()
-  const mapsStore = useMapsStore()
+  const boardsStore = useBoardsStore()
 
   // --- Edit mode ---
   const editMode = ref(false)
@@ -65,7 +65,7 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
   function _mouseToCanvas(event: MouseEvent, canvasEl: HTMLElement) {
     const rect = canvasEl.getBoundingClientRect()
     // When canvas fills its parent (background image mode), positions are percentages
-    // of native image size — read native dims from data attributes set by MapCanvas.
+    // of native image size — read native dims from data attributes set by BoardCanvas.
     const nativeW = parseFloat(canvasEl.dataset.nativeWidth ?? '0')
     const nativeH = parseFloat(canvasEl.dataset.nativeHeight ?? '0')
     if (nativeW > 0 && nativeH > 0) {
@@ -125,14 +125,14 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     document.addEventListener('mouseup', _onDocMouseUp, { capture: true })
   }
 
-  // --- Save object position (called from MapCanvas object-drag-end event) ---
+  // --- Save object position (called from BoardCanvas object-drag-end event) ---
   async function saveObjectPosition(id: string, x: number, y: number) {
     // Optimistic update before the API call so Vue re-renders at the new position
     // immediately when localDragPositions is cleared — no snap-back glitch.
-    const obj = mapsStore.currentMap?.objects.find(o => o.id === id)
+    const obj = boardsStore.currentBoard?.objects.find(o => o.id === id)
     if (obj) { obj.x = x; obj.y = y }
     try {
-      await mapsApi.updateObject(mapName.value, id, { x, y }, auth.accessToken!)
+      await boardsApi.updateObject(mapName.value, id, { x, y }, auth.accessToken!)
       if (_onDragSaved) _onDragSaved(id)
     } catch (e) {
       console.error('Failed to save drag', e)
@@ -143,7 +143,7 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
   // --- Line drag ---
   function startLineDrag(
     event: MouseEvent,
-    obj: MapObject,
+    obj: BoardObject,
     mode: 'move' | 'start' | 'end',
     canvasEl: HTMLElement,
   ) {
@@ -166,11 +166,11 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     dragTarget.value = null
     try {
       const lp = lineDragPositions[t.id]
-      await mapsApi.updateObject(mapName.value, t.id, {
+      await boardsApi.updateObject(mapName.value, t.id, {
         x: lp.x, y: lp.y,
         extra: { x2: lp.x2, y2: lp.y2 },
       }, auth.accessToken!)
-      const obj = mapsStore.currentMap?.objects.find(o => o.id === t.id)
+      const obj = boardsStore.currentBoard?.objects.find(o => o.id === t.id)
       if (obj) {
         obj.x = lp.x; obj.y = lp.y
         if (!obj.extra) obj.extra = {}
@@ -186,8 +186,8 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
 
   // --- Update object properties (from EditPanel) ---
   async function updateObjectProperties(id: string, updates: Record<string, unknown>) {
-    const updated = await mapsApi.updateObject(mapName.value, id, updates, auth.accessToken!)
-    const objects = mapsStore.currentMap?.objects
+    const updated = await boardsApi.updateObject(mapName.value, id, updates, auth.accessToken!)
+    const objects = boardsStore.currentBoard?.objects
     if (objects && updated) {
       const idx = objects.findIndex(o => o.id === id)
       if (idx !== -1) objects[idx] = updated
@@ -197,7 +197,7 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
   // --- Place new object ---
   const placing = ref(false)
   const draft = reactive<NewObjectDraft>({
-    type: '', host_name: '', service_description: '', group_name: '', map_name: '', label_text: '', icon: '',
+    type: '', host_name: '', service_description: '', group_name: '', board_name: '', label_text: '', icon: '',
   })
 
   function startPlacing() {
@@ -213,13 +213,13 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     const s = useSettingsStore().settings
     // Use crypto.randomUUID() to avoid collisions from rapid or concurrent placements.
     const id = `${draft.type}_${crypto.randomUUID()}`
-    const obj: MapObject = {
+    const obj: BoardObject = {
       id, type: draft.type,
       x: _snap(Math.round(x)), y: _snap(Math.round(y)),
       host_name: draft.host_name || undefined,
       service_description: draft.service_description || undefined,
       group_name: draft.group_name || undefined,
-      map_name: draft.map_name || undefined,
+      map_name: draft.board_name || undefined,
       label_text: draft.label_text || undefined,
       icon: draft.icon || undefined,
       label_show: s.label_show,
@@ -230,8 +230,8 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
       extra: draft.type === 'line' ? { x2: _snap(Math.round(x)) + 150, y2: _snap(Math.round(y)) } : {},
     }
     try {
-      const newConfig = await mapsApi.addObject(mapName.value, obj, auth.accessToken!)
-      if (mapsStore.currentMap) mapsStore.currentMap.objects = newConfig.objects
+      const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!)
+      if (boardsStore.currentBoard) boardsStore.currentBoard.objects = newConfig.objects
       selectedObjectId.value = id
     } catch (e) {
       console.error('Failed to add object', e)
@@ -244,14 +244,14 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     placing.value = false
     const s = useSettingsStore().settings
     const id = `${draft.type}_${crypto.randomUUID()}`
-    const obj: MapObject = {
+    const obj: BoardObject = {
       id, type: draft.type,
       x: 0, y: 0,
       lat, lng,
       host_name: draft.host_name || undefined,
       service_description: draft.service_description || undefined,
       group_name: draft.group_name || undefined,
-      map_name: draft.map_name || undefined,
+      map_name: draft.board_name || undefined,
       label_text: draft.label_text || undefined,
       label_show: s.label_show,
       label_x: s.label_x, label_y: s.label_y,
@@ -261,8 +261,8 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
       extra: {},
     }
     try {
-      const newConfig = await mapsApi.addObject(mapName.value, obj, auth.accessToken!)
-      if (mapsStore.currentMap) mapsStore.currentMap.objects = newConfig.objects
+      const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!)
+      if (boardsStore.currentBoard) boardsStore.currentBoard.objects = newConfig.objects
       selectedObjectId.value = id
     } catch (e) {
       console.error('Failed to add object', e)
@@ -271,8 +271,8 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
 
   async function moveObjectToLatLng(id: string, lat: number, lng: number) {
     try {
-      await mapsApi.updateObject(mapName.value, id, { lat, lng }, auth.accessToken!)
-      const obj = mapsStore.currentMap?.objects.find(o => o.id === id)
+      await boardsApi.updateObject(mapName.value, id, { lat, lng }, auth.accessToken!)
+      const obj = boardsStore.currentBoard?.objects.find(o => o.id === id)
       if (obj) { obj.lat = lat; obj.lng = lng }
     } catch (e) {
       console.error('Failed to save lat/lng', e)
@@ -290,7 +290,7 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     draft.host_name = ''
     draft.service_description = ''
     draft.group_name = ''
-    draft.map_name = ''
+    draft.board_name = ''
     draft.label_text = ''
     draft.icon = ''
     Object.keys(lineDragPositions).forEach(k => delete lineDragPositions[k])
@@ -302,9 +302,9 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     if (!id) return
     selectedObjectId.value = null
     try {
-      await mapsApi.deleteObject(mapName.value, id, auth.accessToken!)
-      if (mapsStore.currentMap)
-        mapsStore.currentMap.objects = mapsStore.currentMap.objects.filter(o => o.id !== id)
+      await boardsApi.deleteObject(mapName.value, id, auth.accessToken!)
+      if (boardsStore.currentBoard)
+        boardsStore.currentBoard.objects = boardsStore.currentBoard.objects.filter(o => o.id !== id)
     } catch (e) {
       console.error('Failed to delete object', e)
       await onMapChange()
@@ -314,11 +314,11 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
   // --- Duplicate selected object ---
   async function duplicateSelected() {
     const id = selectedObjectId.value
-    if (!id || !mapsStore.currentMap) return
-    const src = mapsStore.currentMap.objects.find(o => o.id === id)
+    if (!id || !boardsStore.currentBoard) return
+    const src = boardsStore.currentBoard.objects.find(o => o.id === id)
     if (!src) return
     const newId = `${src.type}_${crypto.randomUUID()}`
-    const clone: MapObject = {
+    const clone: BoardObject = {
       ...JSON.parse(JSON.stringify(src)),
       id: newId,
       x: _snap(src.x + 30),
@@ -328,8 +328,8 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
       clone.extra = { ...clone.extra, x2: (clone.extra.x2 as number) + 30, y2: (clone.extra.y2 as number) + 30 }
     }
     try {
-      const newConfig = await mapsApi.addObject(mapName.value, clone, auth.accessToken!)
-      if (mapsStore.currentMap) mapsStore.currentMap.objects = newConfig.objects
+      const newConfig = await boardsApi.addObject(mapName.value, clone, auth.accessToken!)
+      if (boardsStore.currentBoard) boardsStore.currentBoard.objects = newConfig.objects
       selectedObjectId.value = newId
     } catch (e) {
       console.error('Failed to duplicate object', e)

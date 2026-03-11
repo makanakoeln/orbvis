@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import MapCanvas from './MapCanvas.vue'
-import type { MapConfig, ObjectState } from '@/types/api'
+import BoardCanvas from './BoardCanvas.vue'
+import type { BoardConfig, ObjectState } from '@/types/api'
 
-const sampleConfig: MapConfig = {
+const sampleConfig: BoardConfig = {
   name: 'test',
   globals: {
     alias: 'Test', icon_size: 22, backend_id: 'test',
@@ -48,9 +48,9 @@ const baseProps = {
   selectedObjectId: null,
 }
 
-describe('MapCanvas', () => {
+describe('BoardCanvas', () => {
   it('renders without errors', () => {
-    const wrapper = mount(MapCanvas, {
+    const wrapper = mount(BoardCanvas, {
       props: baseProps,
       global: { stubs: { HoverMenu: true, ContextMenu: true } },
     })
@@ -58,11 +58,11 @@ describe('MapCanvas', () => {
   })
 
   it('renders the correct number of objects', () => {
-    const wrapper = mount(MapCanvas, {
+    const wrapper = mount(BoardCanvas, {
       props: baseProps,
-      global: { stubs: { HoverMenu: true, ContextMenu: true, MapLine: true } },
+      global: { stubs: { HoverMenu: true, ContextMenu: true, BoardLine: true } },
     })
-    const objects = wrapper.findAllComponents({ name: 'MapObject' })
+    const objects = wrapper.findAllComponents({ name: 'BoardObject' })
     expect(objects).toHaveLength(1)
   })
 })

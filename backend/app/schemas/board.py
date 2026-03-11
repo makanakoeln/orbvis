@@ -1,4 +1,4 @@
-"""Map configuration schemas."""
+"""Board configuration schemas."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
-class MapObject(BaseModel):
+class BoardObject(BaseModel):
     id: str
     type: Literal["host", "service", "hostgroup", "servicegroup", "map", "shape", "line", "textbox"]
     x: int | float = 0
@@ -29,7 +29,7 @@ class MapObject(BaseModel):
     view_type: str = "icon"  # 'icon' | 'text' | 'gadget'
     gadget_type: str | None = None   # 'gauge' | 'bar' | 'trafficlight'
     gadget_metric: str | None = None  # perf metric label, None = first
-    icon_size: int | None = None      # per-object override, None = use map default
+    icon_size: int | None = None      # per-object override, None = use board default
     label_show: bool = True
     label_text: str | None = None
     # Label styling
@@ -43,21 +43,21 @@ class MapObject(BaseModel):
     url_target: str = "_blank"
     # Stacking
     z: int = 1
-    # Templates (override map-global / global defaults)
+    # Templates (override board-global / global defaults)
     hover_template: str | None = None
     context_template: str | None = None
     # Extra properties
     extra: dict[str, Any] = Field(default_factory=dict)
 
 
-class MapGlobals(BaseModel):
+class BoardGlobals(BaseModel):
     alias: str = ""
     background_image: str | None = None
     icon_size: int = 22
     backend_id: str = "live_1"
     hover_template: str | None = None
     context_template: str | None = None
-    # Map type
+    # Board type
     map_type: Literal["static", "worldmap", "automap", "radar"] = "static"
     # Worldmap initial view
     worldmap_lat: float = 51.0
@@ -70,14 +70,14 @@ class MapGlobals(BaseModel):
     rotation_interval: int = 0
 
 
-class MapConfig(BaseModel):
+class BoardConfig(BaseModel):
     name: str
-    globals: MapGlobals = Field(default_factory=MapGlobals)
-    objects: list[MapObject] = Field(default_factory=list)
+    globals: BoardGlobals = Field(default_factory=BoardGlobals)
+    objects: list[BoardObject] = Field(default_factory=list)
     readonly: bool = False
 
 
-class MapCreate(BaseModel):
+class BoardCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-zA-Z0-9_\-]+$")
     alias: str = ""
     background_image: str | None = None
@@ -86,7 +86,7 @@ class MapCreate(BaseModel):
     map_type: Literal["static", "worldmap", "automap", "radar"] = "static"
 
 
-class MapUpdate(BaseModel):
+class BoardUpdate(BaseModel):
     alias: str | None = None
     background_image: str | None = None
     icon_size: int | None = None
@@ -102,7 +102,7 @@ class MapUpdate(BaseModel):
     rotation_interval: int | None = None
 
 
-class MapRead(BaseModel):
+class BoardRead(BaseModel):
     name: str
     alias: str
     background_image: str | None
@@ -117,12 +117,12 @@ class MapRead(BaseModel):
     worldmap_zoom: int = 5
 
 
-class MapClone(BaseModel):
+class BoardClone(BaseModel):
     new_name: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-zA-Z0-9_\-]+$")
     alias: str | None = None
 
 
-class MapPermissionsRead(BaseModel):
-    """Which roles have view/edit access to a specific map (by name, not wildcard)."""
+class BoardPermissionsRead(BaseModel):
+    """Which roles have view/edit access to a specific board (by name, not wildcard)."""
     view: list[str]
     edit: list[str]

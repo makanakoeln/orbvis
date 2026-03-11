@@ -18,7 +18,7 @@ export type HostState = 'UP' | 'DOWN' | 'UNREACHABLE' | 'PENDING'
 export type ServiceState = 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN' | 'PENDING'
 export type MonitoringState = HostState | ServiceState
 
-export interface MapObject {
+export interface BoardObject {
   id: string
   type: ObjectType
   x: number
@@ -50,7 +50,7 @@ export interface MapObject {
   extra: Record<string, unknown>
 }
 
-export interface MapGlobals {
+export interface BoardGlobals {
   alias: string
   background_image?: string
   icon_size: number
@@ -66,14 +66,14 @@ export interface MapGlobals {
   rotation_interval: number
 }
 
-export interface MapConfig {
+export interface BoardConfig {
   name: string
-  globals: MapGlobals
-  objects: MapObject[]
+  globals: BoardGlobals
+  objects: BoardObject[]
   readonly?: boolean
 }
 
-export interface MapRead {
+export interface BoardRead {
   name: string
   alias: string
   background_image?: string | null
@@ -99,11 +99,18 @@ export interface ObjectState {
   stale: boolean
 }
 
+export interface ServiceNode {
+  name: string
+  state: string
+  output: string
+}
+
 export interface TopologyNode {
   name: string
   parents: string[]
   state: string
   output: string
+  services?: ServiceNode[]
 }
 
 export interface MapStates {
@@ -196,12 +203,13 @@ export interface WebSocketStateUpdate {
   states: MapStates
 }
 
+
 export interface IconEntry {
   name: string
   url: string
 }
 
-export interface MapPermissions {
+export interface BoardPermissions {
   view: string[]
   edit: string[]
 }

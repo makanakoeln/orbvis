@@ -28,7 +28,7 @@
         <rect width="100%" height="100%" :fill="`url(#grid-${snapGrid})`" pointer-events="none" />
       </template>
 
-      <MapLine
+      <BoardLine
         v-for="line in lineObjects"
         :key="line.id"
         :object="line"
@@ -51,7 +51,7 @@
       @click.stop="onObjectClick(obj, $event)"
       @contextmenu.prevent="onObjectContextMenu($event, obj)"
     >
-      <MapObject
+      <BoardObject
         :object="obj"
         :state="states[obj.id]"
         :icon-size="obj.icon_size ?? (obj.view_type === 'gadget' ? 60 : (iconSizeOverride ?? config.globals.icon_size))"
@@ -91,18 +91,18 @@
 <script setup lang="ts">
 import { computed, ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import type { MapConfig, MapObject as MapObjectType, ObjectState } from '@/types/api'
+import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api'
 import { resolveTemplate } from '@/utils/template'
 import { useSettingsStore } from '@/stores/settings'
-import MapObject from './MapObject.vue'
-import MapLine from './MapLine.vue'
+import BoardObject from './BoardObject.vue'
+import BoardLine from './BoardLine.vue'
 import HoverMenu from './HoverMenu.vue'
 import ContextMenu from './ContextMenu.vue'
 
 const settingsStore = useSettingsStore()
 
 const props = defineProps<{
-  config: MapConfig
+  config: BoardConfig
   states: Record<string, ObjectState>
   editMode: boolean
   placing: boolean
@@ -116,10 +116,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'object-drag-end': [id: string, x: number, y: number]
-  'object-click': [obj: MapObjectType, event?: MouseEvent]
-  'object-contextmenu': [obj: MapObjectType, anchor: { left: number; top: number; right: number; bottom: number } | null]
-  'object-delete': [obj: MapObjectType]
-  'line-drag-start': [event: MouseEvent, obj: MapObjectType, mode: 'move' | 'start' | 'end']
+  'object-click': [obj: BoardObjectType, event?: MouseEvent]
+  'object-contextmenu': [obj: BoardObjectType, anchor: { left: number; top: number; right: number; bottom: number } | null]
+  'object-delete': [obj: BoardObjectType]
+  'line-drag-start': [event: MouseEvent, obj: BoardObjectType, mode: 'move' | 'start' | 'end']
   'canvas-click': [event: MouseEvent]
 }>()
 
@@ -190,7 +190,7 @@ const lineObjects = computed(() =>
   props.config.objects.filter((o) => o.type === 'line'),
 )
 
-function objectWrapperStyle(obj: MapObjectType) {
+function objectWrapperStyle(obj: BoardObjectType) {
   const pos = localDragPositions[obj.id] ?? { x: obj.x, y: obj.y }
   const isMap = obj.type === 'map'
   const canDrag = props.editMode || props.isAdmin
@@ -220,7 +220,7 @@ function objectWrapperStyle(obj: MapObjectType) {
 
 // ---- Pointer-capture drag handlers ----
 
-function onObjectPointerDown(event: PointerEvent, obj: MapObjectType) {
+function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
 
   if (!(props.editMode || props.isAdmin)) return
   const canvas = canvasEl.value
@@ -268,7 +268,7 @@ function onCanvasPointerUp(event: PointerEvent) {
 
 // ---- Event delegation ----
 
-function buildCheckmkUrl(obj: MapObjectType): string | null {
+function buildCheckmkUrl(obj: BoardObjectType): string | null {
   const base = props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
   if (!base) return null
   const parts = base.split('/')
@@ -295,7 +295,7 @@ function buildCheckmkUrl(obj: MapObjectType): string | null {
   return null
 }
 
-function onObjectClick(obj: MapObjectType, event?: MouseEvent) {
+function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
   if (props.editMode) {
     if (!_didMove.value) emit('object-click', obj, event)
     return
@@ -316,7 +316,7 @@ function onObjectClick(obj: MapObjectType, event?: MouseEvent) {
   }
 }
 
-function onObjectContextMenu(event: MouseEvent, obj: MapObjectType) {
+function onObjectContextMenu(event: MouseEvent, obj: BoardObjectType) {
   if (props.editMode) {
     // Get the bounding rect of the clicked element (wrapper div or SVG element)
     const el = (event.currentTarget ?? event.target) as Element | null
@@ -340,16 +340,16 @@ function onCanvasClick(event: MouseEvent) {
 
 const hoverMenu = reactive({
   visible: false,
-  object: null as MapObjectType | null,
+  object: null as BoardObjectType | null,
   x: 0, y: 0,
 })
 const contextMenu = reactive({
   visible: false,
-  object: null as MapObjectType | null,
+  object: null as BoardObjectType | null,
   x: 0, y: 0,
 })
 
-function openHoverMenu(event: MouseEvent, obj: MapObjectType) {
+function openHoverMenu(event: MouseEvent, obj: BoardObjectType) {
   hoverMenu.object = obj
   hoverMenu.x = event.pageX + 12
   hoverMenu.y = event.pageY + 12
@@ -360,7 +360,7 @@ function closeHoverMenu() {
   hoverMenu.visible = false
 }
 
-function openContextMenu(event: MouseEvent, obj: MapObjectType) {
+function openContextMenu(event: MouseEvent, obj: BoardObjectType) {
   contextMenu.object = obj
   contextMenu.x = event.pageX
   contextMenu.y = event.pageY

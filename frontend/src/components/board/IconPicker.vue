@@ -21,7 +21,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
       </svg>
       <span :class="modelValue ? 'text-zinc-400' : 'text-zinc-500'">
-        {{ modelValue ? t('mapSettings.customIcon') : t('mapSettings.iconName') }}
+        {{ modelValue ? t('boardSettings.customIcon') : t('boardSettings.iconName') }}
       </span>
       <svg class="w-3.5 h-3.5 text-zinc-600 ml-auto transition-transform duration-150" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
@@ -41,7 +41,7 @@
         <div class="p-2 border-b border-zinc-700/60">
           <input
             v-model="query"
-            :placeholder="t('mapSettings.searchIcons')"
+            :placeholder="t('boardSettings.searchIcons')"
             class="w-full px-2.5 py-1.5 text-xs bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-md text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-indigo-500 transition-all"
           />
         </div>
@@ -66,7 +66,7 @@
               <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
               </svg>
-              {{ t('mapSettings.uploadIconInline') }}
+              {{ t('boardSettings.uploadIconInline') }}
               <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" multiple class="hidden" @change="uploadIcons" />
             </label>
           </div>
@@ -120,7 +120,7 @@
               <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
               </svg>
-              {{ t('mapSettings.uploadIconInline') }}
+              {{ t('boardSettings.uploadIconInline') }}
               <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" multiple class="hidden" @change="uploadIcons" />
             </label>
             <div v-if="uploading" class="flex items-center gap-1 text-[10px] text-zinc-500">

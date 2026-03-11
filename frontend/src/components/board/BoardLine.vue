@@ -93,11 +93,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { MapObject, ObjectState } from '@/types/api'
+import type { BoardObject, ObjectState } from '@/types/api'
 import { parsePerfData, getMetric, utilPercent, utilColor } from '@/utils/perf'
 
 const props = defineProps<{
-  object: MapObject
+  object: BoardObject
   state: ObjectState | undefined
   editMode: boolean
   dragCoords?: { x: number; y: number; x2: number; y2: number }

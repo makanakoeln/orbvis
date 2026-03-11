@@ -34,7 +34,7 @@ class MethodOverrideMiddleware:
                 scope = {**scope, "method": override}
         await self.app(scope, receive, send)
 
-from app.api.v1 import auth, backends, icons, maps, roles, settings as settings_api, states, users
+from app.api.v1 import auth, backends, boards, icons, roles, settings as settings_api, states, users
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, init_db
 
@@ -170,21 +170,21 @@ _DEMO_BG_SVG = """\
 
 def _seed_demo_map() -> None:
     """Write the built-in demo map to disk if it doesn't already exist."""
-    from app.schemas.map import MapConfig, MapGlobals, MapObject, MapUpdate
-    from app.services.map_service import _map_path, _save_map_file, get_map, update_map
+    from app.schemas.board import BoardConfig, BoardGlobals, BoardObject, BoardUpdate
+    from app.services.board_service import _board_path, _save_board_file, get_board, update_board
 
     # Always ensure the background SVG is present on disk
-    bg_dir = Path(settings.maps_dir) / "backgrounds"
+    bg_dir = Path(settings.boards_dir) / "backgrounds"
     bg_dir.mkdir(parents=True, exist_ok=True)
     bg_file = bg_dir / "demo.svg"
     if not bg_file.exists():
         bg_file.write_text(_DEMO_BG_SVG, encoding="utf-8")
 
-    if _map_path("demo").exists():
-        # Upgrade existing demo map: set background_image if not yet configured
-        existing = get_map("demo")
+    if _board_path("demo").exists():
+        # Upgrade existing demo board: set background_image if not yet configured
+        existing = get_board("demo")
         if existing and not existing.globals.background_image:
-            update_map("demo", MapUpdate(background_image="demo.svg"))
+            update_board("demo", BoardUpdate(background_image="demo.svg"))
         return
 
     # Layout overview (x: 150–900, y: 50–530)
@@ -199,10 +199,10 @@ def _seed_demo_map() -> None:
     #
     # Section x-offsets: Hosts 160-440, Services 540-680, Groups 760-800, Other 880
 
-    cfg = MapConfig(
+    cfg = BoardConfig(
         name="demo",
-        globals=MapGlobals(
-            alias="Demo Static",
+        globals=BoardGlobals(
+            alias="Static Board (Demo)",
             icon_size=28,
             backend_id="test",
             map_type="static",
@@ -211,7 +211,7 @@ def _seed_demo_map() -> None:
         ),
         objects=[
             # ── Hosts ───────────────────────────────────────────────────────
-            MapObject(
+            BoardObject(
                 id="host-localhost",
                 type="host",
                 x=270, y=190,
@@ -220,7 +220,7 @@ def _seed_demo_map() -> None:
                 label_show=True, label_text="localhost",
                 label_x=0, label_y=34, label_size=11,
             ),
-            MapObject(
+            BoardObject(
                 id="host-router01",
                 type="host",
                 x=570, y=190,
@@ -229,7 +229,7 @@ def _seed_demo_map() -> None:
                 label_show=True, label_text="router01",
                 label_x=0, label_y=34, label_size=11,
             ),
-            MapObject(
+            BoardObject(
                 id="host-fileserver",
                 type="host",
                 x=420, y=380,
@@ -241,7 +241,7 @@ def _seed_demo_map() -> None:
 
             # ── Lines ───────────────────────────────────────────────────────
             # Plain line: localhost ↔ router01 (color = host state)
-            MapObject(
+            BoardObject(
                 id="line-loc-rtr",
                 type="line",
                 x=270, y=190,
@@ -250,7 +250,7 @@ def _seed_demo_map() -> None:
                 extra={"x2": 570, "y2": 190},
             ),
             # Weathermap: localhost → fileserver  (perf_data from CPU Load service)
-            MapObject(
+            BoardObject(
                 id="wm-loc-fs",
                 type="line",
                 x=270, y=190,
@@ -261,7 +261,7 @@ def _seed_demo_map() -> None:
                 extra={"x2": 420, "y2": 380},
             ),
             # Weathermap: router01 → fileserver  (perf_data from HTTP service)
-            MapObject(
+            BoardObject(
                 id="wm-rtr-fs",
                 type="line",
                 x=570, y=190,
@@ -273,7 +273,7 @@ def _seed_demo_map() -> None:
             ),
 
             # ── Services ────────────────────────────────────────────────────
-            MapObject(
+            BoardObject(
                 id="svc-http",
                 type="service",
                 x=760, y=190,
@@ -283,7 +283,7 @@ def _seed_demo_map() -> None:
                 label_show=True,
                 label_x=0, label_y=34, label_size=10,
             ),
-            MapObject(
+            BoardObject(
                 id="svc-ping",
                 type="service",
                 x=925, y=190,
@@ -293,7 +293,7 @@ def _seed_demo_map() -> None:
                 label_show=True,
                 label_x=0, label_y=34, label_size=10,
             ),
-            MapObject(
+            BoardObject(
                 id="svc-cpu-gauge",
                 type="service",
                 x=760, y=355,
@@ -305,7 +305,7 @@ def _seed_demo_map() -> None:
                 label_text="CPU Load",
                 label_x=0, label_y=56, label_size=10,
             ),
-            MapObject(
+            BoardObject(
                 id="svc-disk-bar",
                 type="service",
                 x=925, y=355,
@@ -317,7 +317,7 @@ def _seed_demo_map() -> None:
                 label_text="Disk /",
                 label_x=0, label_y=56, label_size=10,
             ),
-            MapObject(
+            BoardObject(
                 id="svc-memory-tl",
                 type="service",
                 x=842, y=520,
@@ -331,7 +331,7 @@ def _seed_demo_map() -> None:
             ),
 
             # ── Groups ──────────────────────────────────────────────────────
-            MapObject(
+            BoardObject(
                 id="hg-linux",
                 type="hostgroup",
                 x=1092, y=190,
@@ -340,7 +340,7 @@ def _seed_demo_map() -> None:
                 label_show=True, label_text="linux-servers",
                 label_x=0, label_y=34, label_size=11,
             ),
-            MapObject(
+            BoardObject(
                 id="sg-web",
                 type="servicegroup",
                 x=1092, y=380,
@@ -351,7 +351,7 @@ def _seed_demo_map() -> None:
             ),
 
             # ── Shape & Map link ────────────────────────────────────────────
-            MapObject(
+            BoardObject(
                 id="shape-logo",
                 type="shape",
                 x=1265, y=190,
@@ -361,7 +361,7 @@ def _seed_demo_map() -> None:
                 label_text="shape",
                 label_x=0, label_y=34, label_size=10,
             ),
-            MapObject(
+            BoardObject(
                 id="map-self",
                 type="map",
                 x=1265, y=380,
@@ -375,25 +375,25 @@ def _seed_demo_map() -> None:
         ],
     )
 
-    _save_map_file(cfg)
-    logger.info("Seeded built-in demo map.")
+    _save_board_file(cfg)
+    logger.info("Seeded built-in demo board.")
 
 
 def _seed_demo_worldmap() -> None:
     """Write the built-in world demo map to disk if it doesn't already exist."""
-    from app.schemas.map import MapConfig, MapGlobals, MapObject
-    from app.services.map_service import _map_path, _save_map_file
+    from app.schemas.board import BoardConfig, BoardGlobals, BoardObject
+    from app.services.board_service import _board_path, _save_board_file
 
-    if _map_path("demo_world").exists():
+    if _board_path("demo_world").exists():
         return
 
     # Five demo hosts placed at real European cities + one service per host (slightly offset).
     # fileserver is DOWN in the TestBackend → shows as red marker on the map.
-    cfg = MapConfig(
+    cfg = BoardConfig(
         name="demo_world",
         readonly=True,
-        globals=MapGlobals(
-            alias="Demo Worldmap",
+        globals=BoardGlobals(
+            alias="Geo Board (Demo)",
             backend_id="test",
             map_type="worldmap",
             icon_size=28,
@@ -404,7 +404,7 @@ def _seed_demo_worldmap() -> None:
         ),
         objects=[
             # ── Hosts ────────────────────────────────────────────────────────
-            MapObject(
+            BoardObject(
                 id="wh-router01",
                 type="host", lat=50.11, lng=8.68,
                 x=0, y=0,
@@ -412,7 +412,7 @@ def _seed_demo_worldmap() -> None:
                 label_show=True, label_text="router01\nFrankfurt",
                 label_x=0, label_y=34, label_size=11,
             ),
-            MapObject(
+            BoardObject(
                 id="wh-switch01",
                 type="host", lat=52.37, lng=4.90,
                 x=0, y=0,
@@ -420,7 +420,7 @@ def _seed_demo_worldmap() -> None:
                 label_show=True, label_text="switch01\nAmsterdam",
                 label_x=0, label_y=34, label_size=11,
             ),
-            MapObject(
+            BoardObject(
                 id="wh-localhost",
                 type="host", lat=51.51, lng=-0.13,
                 x=0, y=0,
@@ -428,7 +428,7 @@ def _seed_demo_worldmap() -> None:
                 label_show=True, label_text="localhost\nLondon",
                 label_x=0, label_y=34, label_size=11,
             ),
-            MapObject(
+            BoardObject(
                 id="wh-fileserver",
                 type="host", lat=48.86, lng=2.35,
                 x=0, y=0,
@@ -436,7 +436,7 @@ def _seed_demo_worldmap() -> None:
                 label_show=True, label_text="fileserver\nParis",
                 label_x=0, label_y=34, label_size=11,
             ),
-            MapObject(
+            BoardObject(
                 id="wh-mailserver",
                 type="host", lat=48.14, lng=11.58,
                 x=0, y=0,
@@ -445,7 +445,7 @@ def _seed_demo_worldmap() -> None:
                 label_x=0, label_y=34, label_size=11,
             ),
             # ── Services ─────────────────────────────────────────────────────
-            MapObject(
+            BoardObject(
                 id="ws-http",
                 type="service", lat=51.55, lng=-0.20,
                 x=0, y=0,
@@ -454,7 +454,7 @@ def _seed_demo_worldmap() -> None:
                 label_show=True, label_text="HTTP",
                 label_x=0, label_y=34, label_size=10,
             ),
-            MapObject(
+            BoardObject(
                 id="ws-cpu",
                 type="service", lat=50.16, lng=8.82,
                 x=0, y=0,
@@ -464,7 +464,7 @@ def _seed_demo_worldmap() -> None:
                 label_show=True, label_text="CPU Load",
                 label_x=0, label_y=56, label_size=10,
             ),
-            MapObject(
+            BoardObject(
                 id="ws-disk",
                 type="service", lat=48.82, lng=2.48,
                 x=0, y=0,
@@ -476,8 +476,8 @@ def _seed_demo_worldmap() -> None:
         ],
     )
 
-    _save_map_file(cfg)
-    logger.info("Seeded built-in world demo map.")
+    _save_board_file(cfg)
+    logger.info("Seeded built-in world demo board.")
 
 
 def _run_migrations() -> None:
@@ -556,7 +556,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _seed_demo_worldmap()
 
     from app.seed_icons import seed_builtin_icons
-    seed_builtin_icons(Path(settings.maps_dir).parent / "icons")
+    seed_builtin_icons(Path(settings.boards_dir).parent / "icons")
 
     yield
     logger.info("Shutting down OrbVis backend.")
@@ -582,7 +582,7 @@ app.add_middleware(
 app.add_middleware(MethodOverrideMiddleware)
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
-app.include_router(maps.router, prefix="/api/v1/maps", tags=["maps"])
+app.include_router(boards.router, prefix="/api/v1/boards", tags=["boards"])
 app.include_router(states.router, prefix="/api/v1", tags=["states"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(roles.router, prefix="/api/v1/roles", tags=["roles"])
@@ -597,11 +597,11 @@ async def health_check():
 
 
 # Serve background images uploaded via the API
-_bg_dir = Path(settings.maps_dir) / "backgrounds"
+_bg_dir = Path(settings.boards_dir) / "backgrounds"
 _bg_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/maps/backgrounds", StaticFiles(directory=str(_bg_dir)), name="backgrounds")
+app.mount("/boards/backgrounds", StaticFiles(directory=str(_bg_dir)), name="backgrounds")
 
 # Serve icon set images
-_icons_dir = Path(settings.maps_dir).parent / "icons"
+_icons_dir = Path(settings.boards_dir).parent / "icons"
 _icons_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/icons", StaticFiles(directory=str(_icons_dir)), name="icons")

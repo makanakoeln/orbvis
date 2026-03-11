@@ -39,8 +39,8 @@ class Settings(BaseSettings):
     # OMD site name (e.g. heute) – used as auth cookie name: auth_<site>
     checkmk_site: str = ""
 
-    # Maps
-    maps_dir: str = "./maps"
+    # Boards
+    boards_dir: str = "./boards"
 
     # Monitoring backends
     backends_file: str = "./backends.json"

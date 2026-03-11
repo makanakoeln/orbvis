@@ -62,13 +62,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { MapObject, ObjectState } from '@/types/api'
+import type { BoardObject, ObjectState } from '@/types/api'
 import { interpolateTemplate } from '@/utils/template'
 import { useStatesStore } from '@/stores/states'
 import { useSparkline } from '@/composables/useSparkline'
 
 const props = defineProps<{
-  object: MapObject
+  object: BoardObject
   state: ObjectState | undefined
   x: number
   y: number

@@ -71,13 +71,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { MapObject, ObjectState } from '@/types/api'
+import type { BoardObject, ObjectState } from '@/types/api'
 import { interpolateTemplate } from '@/utils/template'
 
 const { t } = useI18n()
 
 const props = defineProps<{
-  object: MapObject
+  object: BoardObject
   state?: ObjectState
   x: number
   y: number

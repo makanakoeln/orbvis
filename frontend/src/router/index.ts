@@ -17,9 +17,9 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/maps/:name',
-      name: 'map',
-      component: () => import('@/views/MapView.vue'),
+      path: '/boards/:name',
+      name: 'board',
+      component: () => import('@/views/BoardView.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -42,14 +42,14 @@ const router = createRouter({
           component: () => import('@/views/admin/RolesView.vue'),
         },
         {
-          path: 'maps',
-          name: 'admin-maps',
-          component: () => import('@/views/admin/MapsAdminView.vue'),
+          path: 'boards',
+          name: 'admin-boards',
+          component: () => import('@/views/admin/BoardsAdminView.vue'),
         },
         {
-          path: 'backends',
-          name: 'admin-backends',
-          component: () => import('@/views/admin/BackendsView.vue'),
+          path: 'connections',
+          name: 'admin-connections',
+          component: () => import('@/views/admin/ConnectionsView.vue'),
         },
         {
           path: 'settings',

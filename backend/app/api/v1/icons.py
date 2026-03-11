@@ -21,7 +21,7 @@ _MAX_ICON_BYTES = 2 * 1024 * 1024  # 2 MB
 
 
 def _icons_dir() -> Path:
-    d = Path(settings.maps_dir).parent / "icons"
+    d = Path(settings.boards_dir).parent / "icons"
     d.mkdir(parents=True, exist_ok=True)
     return d
 

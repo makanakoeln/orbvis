@@ -1,4 +1,4 @@
-import type { MapObject, ObjectState } from '@/types/api'
+import type { BoardObject as MapObject, ObjectState } from '@/types/api'
 import { parsePerfData } from '@/utils/perf'
 
 /**

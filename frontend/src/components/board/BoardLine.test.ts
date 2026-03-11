@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import MapLine from './MapLine.vue'
-import type { MapObject, ObjectState } from '@/types/api'
+import BoardLine from './BoardLine.vue'
+import type { BoardObject, ObjectState } from '@/types/api'
 
-function makeLineObject(overrides: Partial<MapObject> = {}): MapObject {
+function makeLineObject(overrides: Partial<BoardObject> = {}): BoardObject {
   return {
     id: 'line_1',
     type: 'line',
@@ -23,9 +23,9 @@ const noState: ObjectState = {
   output: '', perf_data: '', acknowledged: false, in_downtime: false, stale: false,
 }
 
-describe('MapLine – weathermap gradient', () => {
+describe('BoardLine – weathermap gradient', () => {
   it('renders a <defs> linearGradient when line_type is 20', () => {
-    const wrapper = mount(MapLine, {
+    const wrapper = mount(BoardLine, {
       props: { object: makeLineObject({ line_type: 20 }), state: noState, editMode: false },
     })
     expect(wrapper.find('defs').exists()).toBe(true)
@@ -33,7 +33,7 @@ describe('MapLine – weathermap gradient', () => {
   })
 
   it('uses gradientUnits="userSpaceOnUse" (not objectBoundingBox)', () => {
-    const wrapper = mount(MapLine, {
+    const wrapper = mount(BoardLine, {
       props: { object: makeLineObject({ line_type: 20 }), state: noState, editMode: false },
     })
     const grad = wrapper.find('linearGradient')
@@ -42,7 +42,7 @@ describe('MapLine – weathermap gradient', () => {
 
   it('binds gradient x1/y1/x2/y2 to line start/end coordinates', () => {
     const obj = makeLineObject({ line_type: 20, x: 50, y: 80, extra: { x2: 300, y2: 200 } })
-    const wrapper = mount(MapLine, {
+    const wrapper = mount(BoardLine, {
       props: { object: obj, state: noState, editMode: false },
     })
     const grad = wrapper.find('linearGradient')
@@ -53,7 +53,7 @@ describe('MapLine – weathermap gradient', () => {
   })
 
   it('gradient id matches the stroke url() reference', () => {
-    const wrapper = mount(MapLine, {
+    const wrapper = mount(BoardLine, {
       props: { object: makeLineObject({ line_type: 20 }), state: noState, editMode: false },
     })
     const gradId = wrapper.find('linearGradient').attributes('id')
@@ -63,7 +63,7 @@ describe('MapLine – weathermap gradient', () => {
   })
 
   it('does not render a <defs> for non-weathermap lines', () => {
-    const wrapper = mount(MapLine, {
+    const wrapper = mount(BoardLine, {
       props: { object: makeLineObject({ line_type: 10 }), state: noState, editMode: false },
     })
     expect(wrapper.find('defs').exists()).toBe(false)
