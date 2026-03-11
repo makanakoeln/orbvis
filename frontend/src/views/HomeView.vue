@@ -1,42 +1,5 @@
 <template>
-  <div class="min-h-screen bg-[var(--bg)]">
-    <!-- Navbar -->
-    <nav class="sticky top-0 z-40 bg-[var(--bg-glass)] backdrop-blur-md border-b border-[var(--border)] px-6 py-3 flex justify-between items-center">
-      <div class="flex items-center gap-2.5">
-        <div class="w-7 h-7 rounded-lg bg-indigo-600/20 ring-1 ring-indigo-500/30 flex items-center justify-center shrink-0">
-          <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
-          </svg>
-        </div>
-        <span class="font-bold text-[var(--text)] tracking-tight">OrbVis</span>
-      </div>
-      <div class="flex items-center gap-1">
-        <router-link
-          v-if="auth.isAdmin"
-          to="/admin/maps"
-          class="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--accent)] border border-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-all duration-150"
-        >{{ t('nav.manage') }}</router-link>
-        <button @click="showSettings = true"
-          class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
-          {{ t('nav.userSettings') }}
-        </button>
-        <button v-if="!auth.ssoActive" @click="auth.logout()" :title="t('auth.logout')"
-          class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
-          </svg>
-        </button>
-      </div>
-
-      <UserSettingsPanel
-        v-if="showSettings && auth.user"
-        :user-id="auth.user.user_id"
-        :user-name="auth.user.name"
-        :is-self="true"
-        @close="showSettings = false"
-      />
-    </nav>
-
+  <div class="flex-1 overflow-y-auto bg-[var(--bg)]">
     <main class="max-w-5xl mx-auto py-10 px-6">
       <div class="mb-8 flex items-end justify-between gap-4">
         <div>
@@ -159,14 +122,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useMapsStore } from '@/stores/maps'
-import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
 import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue'
 
 const { t } = useI18n()
 const baseUrl = import.meta.env.BASE_URL
 const auth = useAuthStore()
 const mapsStore = useMapsStore()
-const showSettings = ref(false)
 const searchQuery = ref('')
 
 const filteredMaps = computed(() => {

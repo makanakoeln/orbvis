@@ -1,22 +1,13 @@
 <template>
-  <div class="h-screen bg-[var(--bg)] flex flex-col">
-    <!-- Navbar -->
-    <nav class="bg-[var(--bg-glass)] backdrop-blur-md border-b border-[var(--border)] px-5 py-2.5 flex justify-between items-center shrink-0 z-30">
-      <div class="flex items-center gap-2 min-w-0">
-        <router-link to="/"
-          class="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors shrink-0">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-          </svg>
-          {{ t('nav.maps') }}
-        </router-link>
-        <svg class="w-3 h-3 text-zinc-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-        </svg>
-        <span class="font-semibold text-[var(--text)] text-sm truncate">{{ mapConfig?.globals.alias || route.params.name }}</span>
-      </div>
+  <div class="flex flex-col flex-1 overflow-hidden bg-[var(--bg)]">
+    <!-- Slim map-specific topbar -->
+    <div class="bg-[var(--bg-surface)] border-b border-[var(--border)] px-4 py-2 flex items-center justify-between shrink-0 z-30">
+      <!-- Map name -->
+      <span class="font-semibold text-[var(--text)] text-sm truncate">
+        {{ mapConfig?.globals.alias || route.params.name }}
+      </span>
 
-      <div class="flex items-center gap-2 shrink-0">
+      <div class="flex items-center gap-1.5 shrink-0">
         <!-- Connection status -->
         <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 transition-all"
           :class="statesStore.connected
@@ -26,25 +17,6 @@
             :class="statesStore.connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'" />
           {{ statesStore.connected ? t('map.live') : t('map.offline') }}
         </div>
-
-        <!-- Settings button (admin only) -->
-        <button v-if="auth.isAdmin && !mapConfig?.readonly" @click="openSettings"
-          class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
-          :title="t('map.mapSettings')">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </button>
-
-        <!-- Read-only badge -->
-        <span v-if="mapConfig?.readonly"
-          class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-zinc-700/50 text-zinc-400 ring-1 ring-zinc-700">
-          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-          </svg>
-          {{ t('map.readOnly') }}
-        </span>
 
         <!-- Notification bell -->
         <button @click="statesStore.requestNotificationPermission()"
@@ -58,27 +30,26 @@
           </svg>
         </button>
 
-        <span class="w-px h-4 bg-zinc-700" />
-        <button @click="showUserSettings = true"
-          class="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
-          {{ t('nav.userSettings') }}
-        </button>
-        <button v-if="!auth.ssoActive" @click="auth.logout()" :title="t('auth.logout')"
-          class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+        <!-- Read-only badge -->
+        <span v-if="mapConfig?.readonly"
+          class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-zinc-700/50 text-zinc-400 ring-1 ring-zinc-700">
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+          {{ t('map.readOnly') }}
+        </span>
+
+        <!-- Settings button (admin only) -->
+        <button v-if="auth.isAdmin && !mapConfig?.readonly" @click="openSettings"
+          class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+          :title="t('map.mapSettings')">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </button>
-
-        <UserSettingsPanel
-          v-if="showUserSettings && auth.user"
-          :user-id="auth.user.user_id"
-          :user-name="auth.user.name"
-          :is-self="true"
-          @close="showUserSettings = false"
-        />
       </div>
-    </nav>
+    </div>
 
     <!-- Map area + optional edit panel -->
     <div class="flex flex-1 overflow-hidden">
@@ -125,7 +96,8 @@
       </div>
 
       <!-- Static map -->
-      <div v-else class="flex-1 bg-[var(--bg)] relative" :class="mapConfig?.globals.background_image ? 'overflow-hidden' : 'overflow-auto'">
+      <div v-else class="flex-1 bg-[var(--bg)] relative" :class="mapConfig?.globals.background_image ? 'overflow-hidden' : 'overflow-auto'"
+        @click="onContainerClick">
         <div v-if="mapsStore.loading" class="flex items-center justify-center h-full text-zinc-500 text-sm">
           {{ t('map.loadingMap') }}
         </div>
@@ -157,64 +129,56 @@
 
     </div>
 
-    <!-- Floating Edit Panel (top-right overlay, replaces sidebar) -->
-    <Teleport to="body">
-      <Transition
-        enter-from-class="opacity-0 translate-x-6 scale-[0.97]"
-        enter-active-class="transition-all duration-250 ease-[cubic-bezier(0.16,1,0.3,1)]"
-        leave-to-class="opacity-0 translate-x-6 scale-[0.97]"
-        leave-active-class="transition-all duration-200 ease-in">
-        <div v-if="editor.editMode.value && !isAutomap && !isRadar"
-          class="fixed right-4 top-[4.5rem] z-30 w-72 max-h-[calc(100vh-7rem)] flex flex-col overflow-hidden
-                 bg-[var(--bg-surface)] backdrop-blur-xl
-                 ring-1 ring-white/8 shadow-2xl shadow-black/60
-                 rounded-2xl">
-          <EditPanel
-            :draft="editor.draft"
-            :placing="editor.placing.value"
-            :selected-object="selectedObject"
-            :backend-id="mapConfig?.globals.backend_id ?? ''"
-            :snap-grid="editor.snapGrid.value"
-            :map-type="mapConfig?.globals.map_type"
-            @start-placing="editor.startPlacing()"
-            @delete-selected="editor.deleteSelected()"
-            @preview-properties="onPreviewProperties"
-            @save-properties="onSaveProperties"
-            @update:dirty="hasUnsavedChanges = $event"
-            @update:snap-grid="editor.snapGrid.value = $event"
-            @close-edit-mode="onToggleEditMode"
-          />
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Floating Edit FAB (bottom-right) -->
+    <!-- FAB + Add Object panel + action bar (all bottom-right) -->
     <Teleport to="body">
       <div v-if="auth.isAdmin && !mapConfig?.readonly"
-        class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2">
+        class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+
+        <!-- Add Object panel — expands upward from FAB -->
+        <Transition
+          enter-from-class="opacity-0 scale-y-75 scale-x-95 translate-y-4"
+          enter-active-class="transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-bottom-right"
+          leave-to-class="opacity-0 scale-y-75 scale-x-95 translate-y-4"
+          leave-active-class="transition-all duration-200 ease-[cubic-bezier(0.4,0,1,1)] origin-bottom-right">
+          <div v-if="editor.editMode.value && !isAutomap && !isRadar"
+            class="w-72 max-h-[calc(100vh-10rem)] flex flex-col overflow-hidden
+                   bg-[var(--bg-surface)] backdrop-blur-xl
+                   ring-1 ring-white/8 shadow-2xl shadow-black/60
+                   rounded-2xl">
+            <EditPanel
+              :draft="editor.draft"
+              :placing="editor.placing.value"
+              :backend-id="mapConfig?.globals.backend_id ?? ''"
+              :snap-grid="editor.snapGrid.value"
+              @start-placing="editor.startPlacing()"
+              @update:snap-grid="editor.snapGrid.value = $event"
+              @close-edit-mode="editor.toggleEditMode()"
+            />
+          </div>
+        </Transition>
+
         <!-- Object action bar (appears when object selected in edit mode) -->
-        <Transition enter-from-class="opacity-0 translate-y-1 scale-95" enter-active-class="transition-all duration-150 ease-out"
-          leave-to-class="opacity-0 translate-y-1 scale-95" leave-active-class="transition-all duration-100 ease-in">
+        <Transition
+          enter-from-class="opacity-0 translate-y-1 scale-95"
+          enter-active-class="transition-all duration-150 ease-out"
+          leave-to-class="opacity-0 translate-y-1 scale-95"
+          leave-active-class="transition-all duration-100 ease-in">
           <div v-if="editor.editMode.value && editor.selectedObjectId.value && selectedObject"
             class="flex items-center gap-1 px-2 py-1.5 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/40 backdrop-blur-md">
-            <!-- Type badge -->
             <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-1.5">{{ selectedObject.type }}</span>
             <div class="w-px h-4 bg-zinc-700 mx-0.5" />
-            <!-- Edit properties (centered modal, no position = FAB button click) -->
             <button @click="openPropsModal(selectedObject!)" title="Edit properties"
               class="p-2 rounded-lg text-zinc-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-all">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
               </svg>
             </button>
-            <!-- Duplicate -->
             <button @click="editor.duplicateSelected()" title="Duplicate"
               class="p-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60 transition-all">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
               </svg>
             </button>
-            <!-- Delete -->
             <button @click="deleteTargetObject = selectedObject" title="Delete"
               class="p-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -226,58 +190,21 @@
 
         <!-- FAB: Edit toggle -->
         <button @click="onToggleEditMode"
-          class="w-14 h-14 rounded-2xl shadow-2xl shadow-black/50 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1"
+          class="w-12 h-12 rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1"
           :class="editor.editMode.value
-            ? 'bg-amber-500 hover:bg-amber-400 ring-amber-400/40 text-white shadow-amber-500/25'
-            : 'bg-[var(--bg-surface)] hover:bg-zinc-700 ring-[var(--border)] text-zinc-300 hover:text-white'"
-          :title="editor.editMode.value ? t('map.editing') : t('map.edit')">
-          <!-- Pencil icon (view mode) -->
-          <svg v-if="!editor.editMode.value" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+            ? 'bg-zinc-700 hover:bg-zinc-600 ring-zinc-600 text-zinc-300 hover:text-white'
+            : 'bg-[var(--bg-surface)]/80 hover:bg-[var(--bg-surface)] ring-[var(--border)] text-zinc-500 hover:text-zinc-300'"
+          :title="editor.editMode.value ? t('map.editing') : t('mapSettings.addObject')">
+          <svg v-if="!editor.editMode.value" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          <!-- Check icon (edit mode active) -->
-          <svg v-else class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
     </Teleport>
 
-    <!-- Unsaved changes warning when leaving edit mode -->
-    <Teleport to="body">
-      <div v-if="showExitEditWarning" class="fixed inset-0 z-[60] flex items-center justify-center">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showExitEditWarning = false" />
-        <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl p-6 w-80">
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-9 h-9 rounded-full bg-amber-500/15 ring-1 ring-amber-500/25 flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-              </svg>
-            </div>
-            <div>
-              <p class="font-semibold text-[var(--text)] text-sm">{{ t('map.unsavedChanges') }}</p>
-              <p class="text-xs text-zinc-500 mt-0.5">{{ t('map.saveOrDiscard') }}</p>
-            </div>
-          </div>
-          <div class="flex gap-2 justify-between mt-5">
-            <button @click="confirmExitEditMode"
-              class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500/15 hover:bg-red-500/25 ring-1 ring-red-500/25 hover:ring-red-500/40 text-red-400 transition-all">
-              {{ t('common.discard') }}
-            </button>
-            <div class="flex gap-2">
-              <button @click="showExitEditWarning = false"
-                class="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
-                {{ t('common.cancel') }}
-              </button>
-              <button @click="saveAndExitEditMode"
-                class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-all">
-                {{ t('map.saveAndExit') }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
 
     <!-- Delete confirmation -->
     <ConfirmDialog
@@ -650,81 +577,8 @@ async function onPropsModalDelete() {
   }
 }
 
-// ---- Edit mode toggle with unsaved-changes guard ----
-
-const hasUnsavedChanges = ref(false)
-const showExitEditWarning = ref(false)
-const lastPreviewUpdates = ref<Record<string, unknown> | null>(null)
-
 function onToggleEditMode() {
-  if (editor.editMode.value && hasUnsavedChanges.value) {
-    showExitEditWarning.value = true
-  } else {
-    editor.toggleEditMode()
-  }
-}
-
-function confirmExitEditMode() {
-  showExitEditWarning.value = false
-  // Restore snapshot (discard unsaved preview changes)
-  if (editor.selectedObjectId.value && objectSnapshot.value && mapsStore.currentMap) {
-    const idx = mapsStore.currentMap.objects.findIndex(o => o.id === editor.selectedObjectId.value)
-    if (idx !== -1) mapsStore.currentMap.objects[idx] = objectSnapshot.value
-  }
-  objectSnapshot.value = null
-  hasUnsavedChanges.value = false
   editor.toggleEditMode()
-}
-
-async function saveAndExitEditMode() {
-  showExitEditWarning.value = false
-  if (editor.selectedObjectId.value && lastPreviewUpdates.value) {
-    await onSaveProperties(lastPreviewUpdates.value)
-  }
-  hasUnsavedChanges.value = false
-  editor.toggleEditMode()
-}
-
-// ---- Live preview: apply sidebar form changes directly to the store ----
-
-const objectSnapshot = ref<MapObject | null>(null)
-
-// After a drag saves successfully: replace store object (new ref triggers EditPanel position sync)
-// and update snapshot so deselect doesn't revert the dragged position.
-editor.setDragSavedCallback((id) => {
-  if (!mapsStore.currentMap) return
-  const idx = mapsStore.currentMap.objects.findIndex(o => o.id === id)
-  if (idx !== -1) {
-    mapsStore.currentMap.objects[idx] = { ...mapsStore.currentMap.objects[idx] }
-    if (id === editor.selectedObjectId.value)
-      objectSnapshot.value = JSON.parse(JSON.stringify(mapsStore.currentMap.objects[idx]))
-  }
-})
-
-watch(() => editor.selectedObjectId.value, (newId, oldId) => {
-  // Restore snapshot when deselecting without saving
-  if (oldId && objectSnapshot.value && mapsStore.currentMap) {
-    const idx = mapsStore.currentMap.objects.findIndex(o => o.id === oldId)
-    if (idx !== -1) mapsStore.currentMap.objects[idx] = objectSnapshot.value
-  }
-  objectSnapshot.value = null
-  if (newId && mapsStore.currentMap) {
-    const obj = mapsStore.currentMap.objects.find(o => o.id === newId)
-    if (obj) objectSnapshot.value = JSON.parse(JSON.stringify(obj))
-  }
-})
-
-function onPreviewProperties(updates: Record<string, unknown>) {
-  lastPreviewUpdates.value = updates
-  if (!editor.selectedObjectId.value || !mapsStore.currentMap) return
-  const idx = mapsStore.currentMap.objects.findIndex(o => o.id === editor.selectedObjectId.value)
-  if (idx !== -1) {
-    const current = mapsStore.currentMap.objects[idx]
-    const extra = updates.extra && typeof updates.extra === 'object'
-      ? { ...(typeof current.extra === 'object' && current.extra ? current.extra as object : {}), ...(updates.extra as object) }
-      : current.extra
-    mapsStore.currentMap.objects[idx] = { ...current, ...updates, extra }
-  }
 }
 
 function onObjectDelete(obj: MapObject) {
@@ -762,6 +616,13 @@ function onCanvasClick(event: MouseEvent) {
   if (pos) editor.placeAt(pos.x, pos.y)
 }
 
+// Clicks on the scroll container outside the canvas bounds also trigger placing.
+function onContainerClick(event: MouseEvent) {
+  if (!editor.editMode.value || !editor.placing.value) return
+  const pos = canvasRef.value?.getMapPosition(event)
+  if (pos) editor.placeAt(pos.x, pos.y)
+}
+
 function onLineDragStart(event: MouseEvent, obj: MapObject, mode: LineDragMode) {
   const canvas = canvasRef.value?.getCanvasEl()
   if (canvas) editor.startLineDrag(event, obj, mode, canvas)
@@ -779,14 +640,8 @@ function onLatLngDragEnd(id: string, lat: number, lng: number) {
 }
 
 async function onSaveProperties(updates: Record<string, unknown>) {
-  if (editor.selectedObjectId.value) {
+  if (editor.selectedObjectId.value)
     await editor.updateObjectProperties(editor.selectedObjectId.value, updates)
-    // Update snapshot to new saved state so deselect doesn't revert
-    if (mapsStore.currentMap) {
-      const obj = mapsStore.currentMap.objects.find(o => o.id === editor.selectedObjectId.value)
-      if (obj) objectSnapshot.value = JSON.parse(JSON.stringify(obj))
-    }
-  }
 }
 
 // ---- Map Settings ----
@@ -933,8 +788,7 @@ watchEffect(async () => {
   const name = mapName.value
   stopRotation()
   editor.resetForNewMap()
-  hasUnsavedChanges.value = false
-  objectSnapshot.value = null
+
   await mapsStore.fetchMap(name)
   statesStore.connectToMap(name, auth.accessToken ?? undefined)
   scheduleRotation(mapsStore.currentMap?.globals.rotation_interval ?? 0)
