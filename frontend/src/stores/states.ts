@@ -77,8 +77,10 @@ export const useStatesStore = defineStore('states', () => {
 
   async function _fetchStates() {
     if (!currentMap || !currentToken) return
+    const mapAtStart = currentMap
     try {
-      const data = await boardsApi.getStates(currentMap, currentToken)
+      const data = await boardsApi.getStates(mapAtStart, currentToken)
+      if (currentMap !== mapAtStart) return  // board changed while fetching
       const newStates: Record<string, ObjectState> = {}
       const ts = Date.now() / 1000
       for (const s of data.states) {
