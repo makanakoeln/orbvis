@@ -57,14 +57,6 @@
           :key="map.name"
           class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-indigo-500/40 rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-900/10"
         >
-          <!-- Delete button (admin only, hover) -->
-          <button v-if="auth.isAdmin" @click.stop="deleteBoard(map)"
-            class="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-black/50 text-zinc-400 hover:text-red-400 hover:bg-red-500/20 backdrop-blur-sm transition-all"
-            :title="t('admin.deleteBoard', { name: map.alias || map.name })">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-            </svg>
-          </button>
           <router-link :to="`/boards/${map.name}`" class="block">
           <!-- Thumbnail -->
           <div class="relative w-full h-32 overflow-hidden bg-[var(--bg-input)]">
@@ -180,10 +172,19 @@
             </div>
             <div v-if="map.alias" class="text-[11px] text-zinc-600 font-mono mt-0.5 truncate">{{ map.name }}</div>
 
-            <div class="flex items-center gap-2 mt-2 text-xs text-zinc-600">
-              <span>{{ t('common.objects', { n: map.object_count }) }}</span>
-              <span class="text-zinc-800">·</span>
-              <span class="font-mono truncate">{{ map.backend_id }}</span>
+            <div class="flex items-center justify-between mt-2">
+              <div class="flex items-center gap-2 text-xs text-zinc-600">
+                <span>{{ t('common.objects', { n: map.object_count }) }}</span>
+                <span class="text-zinc-800">·</span>
+                <span class="font-mono truncate">{{ map.backend_id }}</span>
+              </div>
+              <button v-if="auth.isAdmin" @click.prevent.stop="deleteBoard(map)"
+                class="opacity-0 group-hover:opacity-100 p-1 rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                :title="t('admin.deleteBoard', { name: map.alias || map.name })">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                </svg>
+              </button>
             </div>
           </div>
           </router-link>
