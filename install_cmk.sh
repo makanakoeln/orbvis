@@ -355,6 +355,8 @@ def _get_maps() -> List[Tuple[str, str]]:
     if not _BOARDS_DIR.is_dir():
         return results
     for p in sorted(_BOARDS_DIR.glob("*.json")):
+        if p.stem.startswith("demo-") or p.stem == "demo":
+            continue
         try:
             data = json.loads(p.read_text())
             name = data.get("name") or p.stem
