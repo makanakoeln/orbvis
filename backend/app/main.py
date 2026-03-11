@@ -180,11 +180,11 @@ def _seed_demo_map() -> None:
     if not bg_file.exists():
         bg_file.write_text(_DEMO_BG_SVG, encoding="utf-8")
 
-    if _board_path("demo").exists():
+    if _board_path("demo-static").exists():
         # Upgrade existing demo board: set background_image if not yet configured
-        existing = get_board("demo")
+        existing = get_board("demo-static")
         if existing and not existing.globals.background_image:
-            update_board("demo", BoardUpdate(background_image="demo.svg"))
+            update_board("demo-static", BoardUpdate(background_image="demo.svg"))
         return
 
     # Layout overview (x: 150–900, y: 50–530)
@@ -200,7 +200,7 @@ def _seed_demo_map() -> None:
     # Section x-offsets: Hosts 160-440, Services 540-680, Groups 760-800, Other 880
 
     cfg = BoardConfig(
-        name="demo",
+        name="demo-static",
         globals=BoardGlobals(
             alias="Static Board (Demo)",
             icon_size=28,
@@ -365,7 +365,7 @@ def _seed_demo_map() -> None:
                 id="map-self",
                 type="map",
                 x=1265, y=380,
-                map_name="demo",
+                map_name="demo-static",
                 view_type="icon",
                 label_show=True,
                 label_text="map → demo",
@@ -384,13 +384,13 @@ def _seed_demo_worldmap() -> None:
     from app.schemas.board import BoardConfig, BoardGlobals, BoardObject
     from app.services.board_service import _board_path, _save_board_file
 
-    if _board_path("demo_world").exists():
+    if _board_path("demo-world").exists():
         return
 
     # Five demo hosts placed at real European cities + one service per host (slightly offset).
     # fileserver is DOWN in the TestBackend → shows as red marker on the map.
     cfg = BoardConfig(
-        name="demo_world",
+        name="demo-world",
         readonly=True,
         globals=BoardGlobals(
             alias="Geo Board (Demo)",

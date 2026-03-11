@@ -1,5 +1,5 @@
 {
-  "name": "demo",
+  "name": "demo-static",
   "globals": {
     "alias": "Static Board (Demo)",
     "background_image": "demo.svg",
@@ -477,7 +477,7 @@
       "gadget_metric": null,
       "icon_size": null,
       "label_show": true,
-      "label_text": "map \u2192 demo",
+      "label_text": "map → demo",
       "label_x": 0,
       "label_y": 34,
       "label_size": 10,
