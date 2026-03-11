@@ -26,7 +26,7 @@ export default defineConfig({
           })
         },
       },
-      '/maps': {
+      '/boards/backgrounds': {
         target: 'http://localhost:8080',
         changeOrigin: true,
       },

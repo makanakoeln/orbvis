@@ -147,7 +147,7 @@ watch(
     if (!bg) { bgImageSize.value = null; return }
     const img = new Image()
     img.onload = () => { bgImageSize.value = { width: img.naturalWidth, height: img.naturalHeight } }
-    img.src = `${import.meta.env.BASE_URL}maps/backgrounds/${bg}`
+    img.src = `${import.meta.env.BASE_URL}boards/backgrounds/${bg}`
   },
   { immediate: true },
 )
@@ -164,7 +164,7 @@ const canvasStyle = computed(() => {
   const bg = props.config.globals.background_image
   if (bg && bgImageSize.value) {
     return {
-      backgroundImage: `url(${import.meta.env.BASE_URL}maps/backgrounds/${bg})`,
+      backgroundImage: `url(${import.meta.env.BASE_URL}boards/backgrounds/${bg})`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: '100% 100%',
     }
@@ -172,7 +172,7 @@ const canvasStyle = computed(() => {
   if (bg) {
     // Image still loading — fill with background color, reveal once size known
     return {
-      backgroundImage: `url(${import.meta.env.BASE_URL}maps/backgrounds/${bg})`,
+      backgroundImage: `url(${import.meta.env.BASE_URL}boards/backgrounds/${bg})`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: '100% 100%',
     }
