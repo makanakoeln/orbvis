@@ -42,7 +42,8 @@
         class="group relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-3 flex flex-col items-center gap-2 hover:ring-zinc-600 transition-all"
       >
         <img :src="icon.url" :alt="icon.name"
-          class="w-12 h-12 object-contain" />
+          class="w-12 h-12 object-contain"
+          :class="icon.name.endsWith('.svg') ? 'svg-icon' : ''" />
         <p class="text-[10px] text-zinc-500 font-mono text-center truncate w-full" :title="icon.name">{{ icon.name }}</p>
         <button
           class="absolute top-1.5 right-1.5 w-5 h-5 rounded bg-red-500/0 hover:bg-red-500/20 text-zinc-700 hover:text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"

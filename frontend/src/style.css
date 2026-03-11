@@ -100,3 +100,7 @@ body {
   font-family: ui-sans-serif, system-ui, sans-serif;
   margin: 0;
 }
+
+/* SVG icons loaded as <img> lose currentColor — invert makes black strokes white in dark mode.
+   Only apply to monochrome SVGs (Tabler Icons style), not to coloured bitmaps. */
+.dark .svg-icon { filter: invert(1); }

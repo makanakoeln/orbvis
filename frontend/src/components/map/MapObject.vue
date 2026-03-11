@@ -55,7 +55,7 @@
         :style="iconStyle"
         draggable="false"
         class="object-contain transition-all duration-300 select-none"
-        :class="selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded' : ''"
+        :class="[isSvgIcon ? 'svg-icon' : '', selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded' : '']"
       />
       <!-- State circle fallback (Vue-owned, unchanged from original) -->
       <div
@@ -154,6 +154,10 @@ const firstMetricPct = computed(() => {
 
 const ringUtilColor = computed(() =>
   firstMetricPct.value !== null ? _utilColor(firstMetricPct.value) : stateColorRgb.value,
+)
+
+const isSvgIcon = computed(() =>
+  props.object.icon?.toLowerCase().endsWith('.svg') ?? false
 )
 
 const shouldShowRing = computed(() =>
