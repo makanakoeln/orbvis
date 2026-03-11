@@ -31,50 +31,50 @@
 
           <!-- Icon size -->
           <label class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('map.iconSize') }}</span>
+            <span class="text-xs text-zinc-400 mb-1 block">{{ t('board.iconSize') }}</span>
             <NumberInput v-model="form.icon_size" min="8" max="256" class="w-24" />
           </label>
 
           <!-- View type -->
           <label class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('mapSettings.viewType') }}</span>
+            <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.viewType') }}</span>
             <select v-model="form.view_type"
               class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500">
-              <option value="icon">{{ t('mapSettings.viewTypeIcon') }}</option>
-              <option value="text">{{ t('mapSettings.viewTypeText') }}</option>
-              <option value="gadget">{{ t('mapSettings.viewTypeGadget') }}</option>
+              <option value="icon">{{ t('boardSettings.viewTypeIcon') }}</option>
+              <option value="text">{{ t('boardSettings.viewTypeText') }}</option>
+              <option value="gadget">{{ t('boardSettings.viewTypeGadget') }}</option>
             </select>
           </label>
 
           <!-- Line type -->
           <label class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('mapSettings.lineStyle') }}</span>
+            <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.lineStyle') }}</span>
             <select v-model="form.line_type"
               class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500">
-              <option :value="null">{{ t('mapSettings.lineDefault') }}</option>
-              <option :value="10">{{ t('mapSettings.lineSimple') }}</option>
-              <option :value="11">{{ t('mapSettings.lineArrowRight') }}</option>
-              <option :value="12">{{ t('mapSettings.lineArrowLeft') }}</option>
-              <option :value="13">{{ t('mapSettings.lineDoubleArrow') }}</option>
-              <option :value="14">{{ t('mapSettings.lineDashed') }}</option>
-              <option :value="15">{{ t('mapSettings.lineWeathermap') }}</option>
+              <option :value="null">{{ t('boardSettings.lineDefault') }}</option>
+              <option :value="10">{{ t('boardSettings.lineSimple') }}</option>
+              <option :value="11">{{ t('boardSettings.lineArrowRight') }}</option>
+              <option :value="12">{{ t('boardSettings.lineArrowLeft') }}</option>
+              <option :value="13">{{ t('boardSettings.lineDoubleArrow') }}</option>
+              <option :value="14">{{ t('boardSettings.lineDashed') }}</option>
+              <option :value="15">{{ t('boardSettings.lineWeathermap') }}</option>
             </select>
           </label>
 
           <!-- URL target -->
           <label class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('mapSettings.target') }}</span>
+            <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.target') }}</span>
             <select v-model="form.url_target"
               class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500">
-              <option value="_blank">{{ t('mapSettings.targetNewTab') }}</option>
-              <option value="_self">{{ t('mapSettings.targetSameTab') }}</option>
-              <option value="_top">{{ t('mapSettings.targetTopFrame') }}</option>
+              <option value="_blank">{{ t('boardSettings.targetNewTab') }}</option>
+              <option value="_self">{{ t('boardSettings.targetSameTab') }}</option>
+              <option value="_top">{{ t('boardSettings.targetTopFrame') }}</option>
             </select>
           </label>
 
           <!-- Z-index -->
           <div class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('mapSettings.z') }}</span>
+            <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.z') }}</span>
             <NumberInput v-model="form.z" min="1" max="999" class="w-20" />
             <p class="text-xs text-zinc-600 mt-1">{{ t('settings.zHint') }}</p>
           </div>
@@ -83,7 +83,7 @@
           <label class="flex items-center gap-3 cursor-pointer pt-4">
             <input v-model="form.label_show" type="checkbox"
               class="w-4 h-4 rounded accent-indigo-500" />
-            <span class="text-sm text-[var(--text)]">{{ t('mapSettings.showLabel') }}</span>
+            <span class="text-sm text-[var(--text)]">{{ t('boardSettings.showLabel') }}</span>
           </label>
         </div>
       </section>
@@ -98,13 +98,13 @@
 
           <!-- Label size -->
           <label class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('mapSettings.size') }} (px)</span>
+            <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.size') }} (px)</span>
             <NumberInput v-model="form.label_size" min="6" max="72" class="w-24" />
           </label>
 
           <!-- Label color -->
           <label class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('mapSettings.color') }}</span>
+            <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.color') }}</span>
             <div class="flex gap-2">
               <input v-model="form.label_color" type="color"
                 class="w-10 h-9 rounded cursor-pointer bg-[var(--bg)] border border-[var(--border)]" />
@@ -115,7 +115,7 @@
 
           <!-- Label background -->
           <label class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('mapSettings.background') }}</span>
+            <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.background') }}</span>
             <div class="flex gap-2">
               <input v-model="form.label_background" type="color"
                 :disabled="form.label_background === 'transparent'"
@@ -129,11 +129,11 @@
           <!-- Label offset X/Y -->
           <div class="grid grid-cols-2 gap-3">
             <label class="block">
-              <span class="text-xs text-zinc-400 mb-1 block">{{ t('mapSettings.offsetX') }}</span>
+              <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.offsetX') }}</span>
               <NumberInput v-model="form.label_x" class="w-24" />
             </label>
             <label class="block">
-              <span class="text-xs text-zinc-400 mb-1 block">{{ t('mapSettings.offsetY') }}</span>
+              <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.offsetY') }}</span>
               <NumberInput v-model="form.label_y" class="w-24" />
             </label>
           </div>
@@ -143,32 +143,32 @@
       <!-- New map defaults -->
       <section class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-6">
         <h3 class="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-5">
-          {{ t('settings.newMapDefaults') }}
+          {{ t('settings.newBoardDefaults') }}
         </h3>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
 
           <!-- Default backend -->
           <label class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('map.backend') }}</span>
+            <span class="text-xs text-zinc-400 mb-1 block">{{ t('board.connection') }}</span>
             <select v-model="form.default_backend_id"
               class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                      <option v-for="b in backendsStore.backends" :key="b.id" :value="b.id">
+                      <option v-for="b in connectionsStore.backends" :key="b.id" :value="b.id">
                 {{ b.label || b.id }}
               </option>
-              <option v-if="backendsStore.backends.length === 0" value="live_1">live_1</option>
+              <option v-if="connectionsStore.backends.length === 0" value="live_1">live_1</option>
             </select>
           </label>
 
           <!-- Default map type -->
           <label class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('map.mapType') }}</span>
+            <span class="text-xs text-zinc-400 mb-1 block">{{ t('board.boardType') }}</span>
             <select v-model="form.default_map_type"
               class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500">
-              <option value="static">{{ t('map.mapTypeStatic') }}</option>
-              <option value="worldmap">{{ t('map.mapTypeWorldmap') }}</option>
-              <option value="automap">{{ t('map.mapTypeAutomap') }}</option>
-              <option value="radar">{{ t('map.mapTypeRadar') }}</option>
+              <option value="static">{{ t('board.boardTypeStatic') }}</option>
+              <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
+              <option value="automap">{{ t('board.boardTypeFlowBoard') }}</option>
+              <option value="radar">{{ t('board.boardTypeRadar') }}</option>
             </select>
           </label>
 
@@ -199,12 +199,12 @@ import { useI18n } from 'vue-i18n'
 
 import NumberInput from '@/components/NumberInput.vue'
 import { useSettingsStore } from '@/stores/settings'
-import { useBackendsStore } from '@/stores/backends'
+import { useConnectionsStore } from '@/stores/connections'
 import type { GlobalSettings } from '@/types/api'
 
 const { t } = useI18n()
 const store = useSettingsStore()
-const backendsStore = useBackendsStore()
+const connectionsStore = useConnectionsStore()
 
 const form = reactive<GlobalSettings>({ ...store.settings })
 const saving = ref(false)
@@ -230,7 +230,7 @@ async function handleSave() {
 }
 
 onMounted(async () => {
-  await Promise.all([store.load(), backendsStore.fetchBackends()])
+  await Promise.all([store.load(), connectionsStore.fetchBackends()])
   Object.assign(form, store.settings)
 })
 </script>

@@ -33,14 +33,14 @@
         </p>
         <div v-else class="my-3 border-t border-[var(--border)]" />
 
-        <NavItem to="/admin/maps" :label="t('admin.maps')" :collapsed="collapsed">
+        <NavItem to="/admin/boards" :label="t('admin.boards')" :collapsed="collapsed">
           <template #icon>
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
           </template>
         </NavItem>
 
-        <NavItem to="/admin/backends" :label="t('admin.backends')" :collapsed="collapsed">
+        <NavItem to="/admin/connections" :label="t('admin.connections')" :collapsed="collapsed">
           <template #icon>
             <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 2.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
           </template>
@@ -144,9 +144,9 @@ const route = useRoute()
 const showSettings = ref(false)
 const collapsed = ref(false)
 
-// Auto-collapse when entering a map view, expand when leaving
+// Auto-collapse when entering a board view, expand when leaving
 watch(() => route.name, (name) => {
-  if (name === 'map') collapsed.value = true
+  if (name === 'board') collapsed.value = true
   else collapsed.value = false
 }, { immediate: true })
 

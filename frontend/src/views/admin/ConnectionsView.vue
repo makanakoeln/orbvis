@@ -2,15 +2,15 @@
   <div>
     <div class="flex justify-between items-center mb-8">
       <div>
-        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('admin.backendsTitle') }}</h2>
-        <p class="text-sm text-zinc-500 mt-1">{{ t('admin.backendsSubtitle') }}</p>
+        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('admin.connectionsTitle') }}</h2>
+        <p class="text-sm text-zinc-500 mt-1">{{ t('admin.connectionsSubtitle') }}</p>
       </div>
       <button @click="openCreate"
         class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        {{ t('admin.addBackend') }}
+        {{ t('admin.addConnection') }}
       </button>
     </div>
 
@@ -28,8 +28,8 @@
 
     <div v-else-if="store.backends.length === 0"
       class="text-center py-16 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl">
-      <p class="text-zinc-500 text-sm">{{ t('admin.noBackends') }}</p>
-      <p class="text-zinc-600 text-xs mt-1">{{ t('admin.noBackendsHint') }}</p>
+      <p class="text-zinc-500 text-sm">{{ t('admin.noConnections') }}</p>
+      <p class="text-zinc-600 text-xs mt-1">{{ t('admin.noConnectionsHint') }}</p>
     </div>
 
     <div v-else class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden">
@@ -101,7 +101,7 @@
         <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[30rem] max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between mb-5">
             <h3 class="text-base font-bold text-[var(--text)]">
-              {{ dialog.mode === 'create' ? t('admin.addBackendTitle') : t('admin.editBackend') }}
+              {{ dialog.mode === 'create' ? t('admin.addConnectionTitle') : t('admin.editConnection') }}
             </h3>
             <button @click="dialog.open = false"
               class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
@@ -112,7 +112,7 @@
           <form @submit.prevent="save" class="space-y-4">
             <div v-if="dialog.mode === 'create'" class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                {{ t('admin.backendId') }} <span class="normal-case font-normal text-zinc-600">{{ t('admin.backendIdHint') }}</span>
+                {{ t('admin.connectionId') }} <span class="normal-case font-normal text-zinc-600">{{ t('admin.connectionIdHint') }}</span>
               </label>
               <input v-model="form.id" required pattern="[a-zA-Z0-9_-]+" placeholder="cmk_heute"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
@@ -129,9 +129,9 @@
               <div class="relative">
                 <select v-model="form.type"
                   class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                  <option value="livestatus">{{ t('admin.backendTypeLivestatus') }}</option>
-                  <option value="icinga2">{{ t('admin.backendTypeIcinga2') }}</option>
-                  <option value="test">{{ t('admin.backendTypeTest') }}</option>
+                  <option value="livestatus">{{ t('admin.connectionTypeLivestatus') }}</option>
+                  <option value="icinga2">{{ t('admin.connectionTypeIcinga2') }}</option>
+                  <option value="test">{{ t('admin.connectionTypeTest') }}</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                   <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -249,14 +249,14 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useBackendsStore } from '@/stores/backends'
-import { backendsApi } from '@/api/client'
+import { useConnectionsStore } from '@/stores/connections'
+import { connectionsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { BackendConfig } from '@/types/api'
 import NumberInput from '@/components/NumberInput.vue'
 
 const { t } = useI18n()
-const store = useBackendsStore()
+const store = useConnectionsStore()
 const auth = useAuthStore()
 
 const statuses = reactive<Record<string, boolean>>({})
@@ -266,7 +266,7 @@ const statusLoading = reactive<Record<string, boolean>>({})
 async function testExisting(id: string) {
   statusLoading[id] = true
   try {
-    const result = await backendsApi.test(id, auth.accessToken!)
+    const result = await connectionsApi.test(id, auth.accessToken!)
     statuses[id] = result.ok
     statusMessages[id] = result.message
   } catch (e: unknown) {
@@ -314,7 +314,7 @@ async function testDialog() {
   dialogTest.loading = true
   dialogTest.ran = false
   try {
-    const result = await backendsApi.testConnection({ ...form }, auth.accessToken!)
+    const result = await connectionsApi.testConnection({ ...form }, auth.accessToken!)
     dialogTest.ok = result.ok
     dialogTest.message = result.message
     dialogTest.ran = true
