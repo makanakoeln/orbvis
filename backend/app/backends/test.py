@@ -100,5 +100,12 @@ class TestBackend(BackendBase):
             {"name": "mailserver",  "parents": ["switch01"], "state": "UP",   "output": ""},
         ]
 
+    async def get_host_services(self, hostname: str) -> list[dict]:
+        result = []
+        for svc in _DEMO_SERVICES:
+            state = await self.get_service_state(hostname, svc)
+            result.append({"name": svc, "state": state.state, "output": state.output})
+        return result
+
     async def is_available(self) -> bool:
         return True

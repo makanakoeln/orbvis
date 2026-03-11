@@ -169,6 +169,22 @@ class LivestatusBackend(BackendBase):
             })
         return result
 
+    async def get_host_services(self, hostname: str) -> list[dict]:
+        rows = await self._query(
+            "GET services\n"
+            f"Filter: host_name = {_ls_escape(hostname)}\n"
+            "Columns: description state plugin_output\n"
+        )
+        state_map = ["OK", "WARNING", "CRITICAL", "UNKNOWN"]
+        return [
+            {
+                "name": r[0],
+                "state": state_map[int(r[1])] if str(r[1]).isdigit() and int(r[1]) < 4 else "UNKNOWN",
+                "output": r[2],
+            }
+            for r in rows
+        ]
+
     async def is_available(self) -> bool:
         try:
             await self._query("GET hosts\nColumns: name\nLimit: 1\n")

@@ -48,6 +48,11 @@ class BackendBase(ABC):
         ...
 
     @abstractmethod
+    async def get_host_services(self, hostname: str) -> list[dict]:
+        """Return services for a host as [{name, state, output}]."""
+        ...
+
+    @abstractmethod
     async def is_available(self) -> bool:
         """Check whether the backend is reachable."""
         ...

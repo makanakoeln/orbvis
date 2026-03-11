@@ -75,20 +75,38 @@ async def test_connection(data: BackendCreate, _: object = Depends(require_admin
         return TestResult(ok=False, message=str(exc))
 
 
+class ServiceNode(BaseModel):
+    name: str
+    state: str
+    output: str
+
+
 class TopologyNode(BaseModel):
     name: str
     parents: list[str]
     state: str
     output: str
+    services: list[ServiceNode] = []
 
 
 @router.get("/{backend_id}/topology", response_model=list[TopologyNode])
-async def get_topology(backend_id: str, _: object = Depends(get_current_user)):
+async def get_topology(
+    backend_id: str,
+    include_services: bool = Query(False),
+    _: object = Depends(get_current_user),
+):
     """Return host topology for automap rendering."""
     backend = get_backend(backend_id)
     if backend is None:
         raise HTTPException(status_code=404, detail="Backend not registered")
-    return await backend.get_topology()
+    nodes = await backend.get_topology()
+    if include_services:
+        result = []
+        for node in nodes:
+            svcs = await backend.get_host_services(node["name"])
+            result.append(TopologyNode(**node, services=[ServiceNode(**s) for s in svcs]))
+        return result
+    return [TopologyNode(**n) for n in nodes]
 
 
 @router.get("/{backend_id}/perf-metrics", response_model=list[str])

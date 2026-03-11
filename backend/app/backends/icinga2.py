@@ -236,6 +236,30 @@ class Icinga2Backend(BackendBase):
             })
         return nodes
 
+    async def get_host_services(self, hostname: str) -> list[dict]:
+        try:
+            results = await self._get_results(
+                "objects/services",
+                params={
+                    "filter": f'service.host_name=="{hostname}"',
+                    "attrs": "name,state,last_check_result",
+                },
+            )
+        except Exception as exc:
+            logger.warning("Icinga2 get_host_services(%s) failed: %s", hostname, exc)
+            return []
+        out = []
+        for r in results:
+            attrs = r.get("attrs", {})
+            state_int = int(attrs.get("state", 3))
+            output = attrs.get("last_check_result", {}).get("output", "")
+            out.append({
+                "name": attrs.get("name", ""),
+                "state": _SVC_STATE_MAP.get(state_int, "UNKNOWN"),
+                "output": output,
+            })
+        return out
+
     async def is_available(self) -> bool:
         try:
             async with self._client() as client:
