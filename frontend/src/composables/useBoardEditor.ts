@@ -253,6 +253,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       group_name: draft.group_name || undefined,
       map_name: draft.board_name || undefined,
       label_text: draft.label_text || undefined,
+      icon: draft.icon || undefined,
       label_show: s.label_show,
       label_x: s.label_x, label_y: s.label_y,
       label_size: s.label_size, label_color: s.label_color, label_background: s.label_background,
