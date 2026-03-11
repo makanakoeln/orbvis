@@ -68,6 +68,8 @@
               <span class="text-xs px-2 py-0.5 rounded-full font-medium ring-1"
                 :class="b.type === 'livestatus'
                   ? 'bg-indigo-500/10 text-indigo-400 ring-indigo-500/20'
+                  : b.type === 'icinga2'
+                  ? 'bg-amber-500/10 text-amber-400 ring-amber-500/20'
                   : 'bg-zinc-700/50 text-zinc-500 ring-zinc-700'">
                 {{ b.type }}
               </span>
@@ -75,6 +77,9 @@
             <td class="px-4 py-3 text-zinc-600 font-mono text-xs">
               <template v-if="b.type === 'livestatus'">
                 {{ b.socket_path || `${b.host}:${b.port}` }}
+              </template>
+              <template v-else-if="b.type === 'icinga2'">
+                {{ b.icinga2_url || '—' }}
               </template>
               <span v-else class="text-zinc-700">{{ t('admin.builtIn') }}</span>
             </td>
@@ -125,6 +130,7 @@
                 <select v-model="form.type"
                   class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                   <option value="livestatus">{{ t('admin.backendTypeLivestatus') }}</option>
+                  <option value="icinga2">{{ t('admin.backendTypeIcinga2') }}</option>
                   <option value="test">{{ t('admin.backendTypeTest') }}</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
@@ -168,6 +174,40 @@
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.timeout') }}</label>
                   <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-full" />
                 </div>
+              </div>
+            </template>
+
+            <template v-if="form.type === 'icinga2'">
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.icinga2Url') }}</label>
+                <input v-model="form.icinga2_url" placeholder="https://localhost:5665"
+                  class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1.5">
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.icinga2Username') }}</label>
+                  <input v-model="form.icinga2_username" placeholder="root"
+                    class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                </div>
+                <div class="space-y-1.5">
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.icinga2Password') }}</label>
+                  <input v-model="form.icinga2_password" type="password" placeholder="••••••••"
+                    class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2.5">
+                <input id="verify-ssl" v-model="form.icinga2_verify_ssl" type="checkbox"
+                  class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-zinc-900" />
+                <label for="verify-ssl" class="text-sm text-zinc-400 cursor-pointer select-none">
+                  {{ t('admin.icinga2VerifySsl') }}
+                </label>
+              </div>
+
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.timeout') }}</label>
+                <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-28" />
               </div>
             </template>
 
@@ -249,6 +289,7 @@ const dialogTest = reactive({ loading: false, ran: false, ok: false, message: ''
 const emptyForm = (): BackendConfig => ({
   id: '', type: 'livestatus', label: '',
   socket_path: null, host: null, port: 6557, timeout: 10, checkmk_url: null,
+  icinga2_url: null, icinga2_username: null, icinga2_password: null, icinga2_verify_ssl: true,
 })
 const form = reactive<BackendConfig>(emptyForm())
 

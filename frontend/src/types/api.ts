@@ -70,17 +70,22 @@ export interface MapConfig {
   name: string
   globals: MapGlobals
   objects: MapObject[]
+  readonly?: boolean
 }
 
 export interface MapRead {
   name: string
   alias: string
-  background_image?: string
+  background_image?: string | null
   icon_size: number
   backend_id: string
   map_type: string
   object_count: number
   rotation_interval: number
+  readonly?: boolean
+  worldmap_lat?: number
+  worldmap_lng?: number
+  worldmap_zoom?: number
 }
 
 export interface ObjectState {
@@ -154,13 +159,17 @@ export interface PermissionRead {
 
 export interface BackendConfig {
   id: string
-  type: 'livestatus' | 'test'
+  type: 'livestatus' | 'icinga2' | 'test'
   label: string
   socket_path?: string | null
   host?: string | null
   port: number
   timeout: number
   checkmk_url?: string | null
+  icinga2_url?: string | null
+  icinga2_username?: string | null
+  icinga2_password?: string | null
+  icinga2_verify_ssl?: boolean
 }
 
 export interface GlobalSettings {

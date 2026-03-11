@@ -28,10 +28,10 @@
         </div>
 
         <!-- Divider -->
-        <span v-if="auth.isAdmin" class="w-px h-4 bg-zinc-700" />
+        <span v-if="auth.isAdmin && !mapConfig?.readonly" class="w-px h-4 bg-zinc-700" />
 
         <!-- Settings button -->
-        <button v-if="auth.isAdmin" @click="openSettings"
+        <button v-if="auth.isAdmin && !mapConfig?.readonly" @click="openSettings"
           class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
           :title="t('map.mapSettings')">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -40,8 +40,17 @@
           </svg>
         </button>
 
+        <!-- Read-only badge -->
+        <span v-if="mapConfig?.readonly"
+          class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-zinc-700/50 text-zinc-400 ring-1 ring-zinc-700">
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+          {{ t('map.readOnly') }}
+        </span>
+
         <!-- Edit toggle -->
-        <button v-if="auth.isAdmin" @click="onToggleEditMode"
+        <button v-if="auth.isAdmin && !mapConfig?.readonly" @click="onToggleEditMode"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
           :class="editor.editMode.value
             ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30 hover:bg-amber-500/20'
@@ -546,6 +555,7 @@ function onWorldmapCtxEdit() {
 }
 
 function onWorldmapCtxDelete() {
+  if (mapConfig.value?.readonly) return
   const obj = worldmapCtxMenu.object
   worldmapCtxMenu.visible = false
   if (obj) {

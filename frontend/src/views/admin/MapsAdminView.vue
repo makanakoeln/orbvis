@@ -53,7 +53,16 @@
                 {{ map.name }}
               </router-link>
             </td>
-            <td class="px-4 py-3 text-zinc-400">{{ map.alias || '—' }}</td>
+            <td class="px-4 py-3 text-zinc-400">
+              {{ map.alias || '—' }}
+              <span v-if="map.readonly"
+                class="ml-2 inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-zinc-700/50 text-zinc-500 ring-1 ring-zinc-700">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+                read-only
+              </span>
+            </td>
             <td class="px-4 py-3">
               <span class="text-xs px-2 py-0.5 rounded-full font-medium ring-1"
                 :class="map.map_type === 'worldmap'
@@ -67,8 +76,8 @@
             <td class="px-4 py-3 text-zinc-500 font-mono text-xs">{{ map.backend_id }}</td>
             <td class="px-4 py-3 text-zinc-500">{{ map.object_count }}</td>
             <td class="px-4 py-3 text-right flex items-center justify-end gap-3">
-              <!-- Permissions -->
-              <button @click="openPermissions(map.name)"
+              <!-- Permissions (not for readonly) -->
+              <button v-if="!map.readonly" @click="openPermissions(map.name)"
                 class="text-zinc-500 hover:text-indigo-400 transition-colors"
                 :title="t('admin.mapPermissions')">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
