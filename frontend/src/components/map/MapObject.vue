@@ -158,9 +158,10 @@ const labelStyle = computed(() => ({
   color: props.object.label_color ?? '#e4e4e7',
   background: props.object.label_background && props.object.label_background !== 'transparent'
     ? props.object.label_background
-    : 'rgba(9,9,11,0.75)',
+    : 'rgba(0,0,0,0.65)',
   backdropFilter: 'blur(4px)',
-  textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+  textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+  outline: '1px solid rgba(255,255,255,0.12)',
 }))
 
 const displayName = computed(() => {

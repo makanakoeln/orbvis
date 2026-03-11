@@ -43,6 +43,10 @@ function stateColor(id: string): string {
   }
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 function displayName(obj: MapObjectType): string {
   if (obj.label_text) return obj.label_text
   if (obj.host_name && obj.service_description) return `${obj.host_name}/${obj.service_description}`
@@ -52,8 +56,14 @@ function displayName(obj: MapObjectType): string {
 function makeDivIcon(obj: MapObjectType): L.DivIcon {
   const color = stateColor(obj.id)
   const size = obj.icon_size ?? props.config.globals.icon_size ?? 22
-  const label = obj.label_show !== false ? displayName(obj) : ''
+  const label = obj.label_show !== false ? escapeHtml(displayName(obj)) : ''
   const selected = props.selectedObjectId === obj.id
+
+  const TYPE_CHARS: Record<string, string> = {
+    host: 'H', service: 'S', hostgroup: 'HG', servicegroup: 'SG', map: 'M', shape: '◆',
+  }
+  const typeChar = TYPE_CHARS[obj.type] ?? '?'
+  const charSize = Math.max(8, Math.round(size * (typeChar.length > 1 ? 0.34 : 0.42)))
 
   let iconHtml: string
   if (obj.icon) {
@@ -66,8 +76,9 @@ function makeDivIcon(obj: MapObjectType): L.DivIcon {
         border-radius: 50%;
         border: 2px solid rgba(0,0,0,0.35);
         box-shadow: 0 1px 4px rgba(0,0,0,0.5)${selected ? `, 0 0 0 3px white` : ''};
+        display: flex; align-items: center; justify-content: center;
         position: relative;
-      "></div>`
+      "><span style="color:white;font-size:${charSize}px;font-weight:700;line-height:1;user-select:none;">${typeChar}</span></div>`
   }
 
   return L.divIcon({
@@ -80,7 +91,7 @@ function makeDivIcon(obj: MapObjectType): L.DivIcon {
         text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
         white-space: nowrap;
         margin-top: 3px;
-      ">${label}</div>` : ''),
+      ">${label.replace(/\n/g, '<br>')}</div>` : ''),
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
     popupAnchor: [0, -(size / 2 + 4)],
