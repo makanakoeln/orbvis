@@ -212,6 +212,8 @@ export default {
     deleteUser: 'Diesen Benutzer löschen?',
     deleteRole: 'Diese Rolle löschen?',
     deleteBoard: 'Board „{name}" löschen?',
+    deleteBoardTitle: 'Board löschen',
+    deleteBoardConfirm: 'Soll „{name}" wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.',
     deleteBackend: 'Backend „{id}" löschen?',
     noPermissions: 'Keine Berechtigungen zugewiesen',
     noPermissionsYet: 'Noch keine Berechtigungen zugewiesen',

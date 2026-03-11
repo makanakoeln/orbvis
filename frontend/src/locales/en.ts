@@ -212,6 +212,8 @@ export default {
     deleteUser: 'Delete this user?',
     deleteRole: 'Delete this role?',
     deleteBoard: 'Delete board "{name}"?',
+    deleteBoardTitle: 'Delete board',
+    deleteBoardConfirm: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
     deleteConnection: 'Delete connection "{id}"?',
     noPermissions: 'No permissions assigned',
     noPermissionsYet: 'No permissions assigned yet',
