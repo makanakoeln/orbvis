@@ -122,10 +122,23 @@ sudo mkdir -p "$HTDOCS_DIR"
 sudo cp -r "$SCRIPT_DIR/frontend/dist/." "$HTDOCS_DIR/"
 
 # ---------------------------------------------------------------------------
-# 2. Create data directories
+# 2. Create data directories and install demo boards
 # ---------------------------------------------------------------------------
 ICONS_DIR="$(dirname "$BOARDS_DIR")/icons"
-sudo mkdir -p "$BOARDS_DIR" "$ICONS_DIR"
+sudo mkdir -p "$BOARDS_DIR/backgrounds" "$ICONS_DIR"
+
+echo "==> Installing demo boards (skipping existing files)..."
+for demo in "$SCRIPT_DIR/backend/boards/"demo*.json; do
+  fname="$(basename "$demo")"
+  if ! sudo test -f "$BOARDS_DIR/$fname"; then
+    sudo cp "$demo" "$BOARDS_DIR/$fname"
+    echo "    + $fname"
+  fi
+done
+if ! sudo test -f "$BOARDS_DIR/backgrounds/demo.svg"; then
+  sudo cp "$SCRIPT_DIR/backend/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
+  echo "    + backgrounds/demo.svg"
+fi
 
 # ---------------------------------------------------------------------------
 # 3. Python virtualenv + backend dependencies
