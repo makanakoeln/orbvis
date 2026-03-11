@@ -34,7 +34,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 INSTALL_DIR="/opt/orbvis"
 HTDOCS_DIR="$INSTALL_DIR/htdocs"
-MAPS_DIR="$INSTALL_DIR/maps"
+BOARDS_DIR="$INSTALL_DIR/boards"
 ENV_FILE="$INSTALL_DIR/.env"
 BACKENDS_FILE="$INSTALL_DIR/backends.json"
 DB_FILE="$INSTALL_DIR/orbvis.db"
@@ -76,7 +76,7 @@ if [[ "$ACTION" == "remove" ]]; then
   fi
 
   sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR"
-  # Keep maps/, .env, backends.json, orbvis.db – user data
+  # Keep boards/, .env, backends.json, orbvis.db – user data
 
   echo ""
   echo "Done. OrbVis has been removed."
@@ -135,8 +135,8 @@ fi
 # 2. Install directory
 # ---------------------------------------------------------------------------
 ICONS_DIR="$INSTALL_DIR/icons"
-sudo mkdir -p "$INSTALL_DIR" "$MAPS_DIR" "$ICONS_DIR"
-sudo chown "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR" "$MAPS_DIR" "$ICONS_DIR"
+sudo mkdir -p "$INSTALL_DIR" "$BOARDS_DIR" "$ICONS_DIR"
+sudo chown "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR" "$BOARDS_DIR" "$ICONS_DIR"
 
 # ---------------------------------------------------------------------------
 # 3. Build frontend
@@ -171,7 +171,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo "==> Writing $ENV_FILE..."
   SECRET_KEY="$("$PYTHON3" -c 'import secrets; print(secrets.token_hex(32))')"
   sudo tee "$ENV_FILE" > /dev/null <<EOF
-MAPS_DIR=$MAPS_DIR
+BOARDS_DIR=$BOARDS_DIR
 BACKENDS_FILE=$BACKENDS_FILE
 DATABASE_URL=sqlite+aiosqlite:///$DB_FILE
 SECRET_KEY=$SECRET_KEY
@@ -277,8 +277,8 @@ server {
     }
 
     # Background images uploaded via the API
-    location $BASE_PATH/maps/backgrounds/ {
-        alias $MAPS_DIR/backgrounds/;
+    location $BASE_PATH/boards/backgrounds/ {
+        alias $BOARDS_DIR/backgrounds/;
         expires 1h;
         add_header Cache-Control "public";
     }
@@ -326,8 +326,8 @@ Alias $BASE_PATH/icons/ $INSTALL_DIR/icons/
 </Directory>
 
 # Background images uploaded via the API (served directly)
-Alias $BASE_PATH/maps/backgrounds/ $MAPS_DIR/backgrounds/
-<Directory $MAPS_DIR/backgrounds/>
+Alias $BASE_PATH/boards/backgrounds/ $BOARDS_DIR/backgrounds/
+<Directory $BOARDS_DIR/backgrounds/>
     Options -Indexes
     Require all granted
 </Directory>

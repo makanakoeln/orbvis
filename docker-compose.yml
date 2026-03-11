@@ -4,11 +4,11 @@ services:
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8742}:8000"
     volumes:
-      - ./data/maps:/app/maps
+      - ./data/boards:/app/boards
       - ./data/icons:/app/icons
       - orbvis_db:/app/data
     environment:
-      - MAPS_DIR=/app/maps
+      - BOARDS_DIR=/app/boards
       - DATABASE_URL=sqlite+aiosqlite:////app/data/orbvis.db
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
       - ORBVIS_PORT=${ORBVIS_PORT:-8741}
