@@ -52,6 +52,18 @@
           {{ editor.editMode.value ? t('map.editing') : t('map.edit') }}
         </button>
 
+        <!-- Notification bell -->
+        <button @click="statesStore.requestNotificationPermission()"
+          class="p-1.5 rounded-lg transition-all duration-150"
+          :class="statesStore.notificationsEnabled
+            ? 'text-amber-400 hover:bg-amber-500/10'
+            : 'text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)]'"
+          :title="statesStore.notificationsEnabled ? t('map.notificationsOn') : t('map.notificationsOff')">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+          </svg>
+        </button>
+
         <span class="w-px h-4 bg-zinc-700" />
         <button @click="showUserSettings = true"
           class="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150">
@@ -854,12 +866,31 @@ watchEffect(async () => {
   scheduleRotation(mapsStore.currentMap?.globals.rotation_interval ?? 0)
 })
 
+function onKeyDown(e: KeyboardEvent) {
+  if (!editor.editMode.value) return
+  const target = e.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    if (editor.placing.value) editor.cancelPlacing()
+    else editor.selectObject(null)
+  } else if ((e.key === 'Delete' || e.key === 'Backspace') && editor.selectedObjectId.value) {
+    e.preventDefault()
+    editor.deleteSelected()
+  } else if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault()
+    editor.duplicateSelected()
+  }
+}
+
 onMounted(() => {
   if (auth.isAdmin) backendsStore.fetchBackends()
+  document.addEventListener('keydown', onKeyDown)
 })
 
 onUnmounted(() => {
   statesStore.disconnect()
   stopRotation()
+  document.removeEventListener('keydown', onKeyDown)
 })
 </script>

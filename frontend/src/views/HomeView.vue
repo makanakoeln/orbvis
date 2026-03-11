@@ -38,9 +38,19 @@
     </nav>
 
     <main class="max-w-5xl mx-auto py-10 px-6">
-      <div class="mb-8">
-        <h2 class="text-2xl font-bold text-[var(--text)] tracking-tight">{{ t('home.title') }}</h2>
-        <p class="text-sm text-zinc-500 mt-1">{{ t('home.subtitle') }}</p>
+      <div class="mb-8 flex items-end justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-[var(--text)] tracking-tight">{{ t('home.title') }}</h2>
+          <p class="text-sm text-zinc-500 mt-1">{{ t('home.subtitle') }}</p>
+        </div>
+        <div class="relative w-56 shrink-0">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+          <input v-model="searchQuery"
+            :placeholder="t('home.search')"
+            class="w-full pl-8 pr-3 py-2 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+        </div>
       </div>
 
       <!-- Loading -->
@@ -76,8 +86,11 @@
 
       <!-- Map grid -->
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <p v-if="searchQuery && !filteredMaps.length" class="col-span-full text-center py-12 text-zinc-600 text-sm">
+          {{ t('home.noSearchResults', { q: searchQuery }) }}
+        </p>
         <router-link
-          v-for="map in mapsStore.maps"
+          v-for="map in filteredMaps"
           :key="map.name"
           :to="`/maps/${map.name}`"
           class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-indigo-500/40 rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-900/10"
@@ -123,7 +136,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useMapsStore } from '@/stores/maps'
@@ -133,6 +146,15 @@ const { t } = useI18n()
 const auth = useAuthStore()
 const mapsStore = useMapsStore()
 const showSettings = ref(false)
+const searchQuery = ref('')
+
+const filteredMaps = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return mapsStore.maps
+  return mapsStore.maps.filter(m =>
+    m.name.toLowerCase().includes(q) || m.alias.toLowerCase().includes(q)
+  )
+})
 
 onMounted(() => mapsStore.fetchMaps())
 </script>

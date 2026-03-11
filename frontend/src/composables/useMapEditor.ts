@@ -319,6 +319,36 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     }
   }
 
+  // --- Duplicate selected object ---
+  async function duplicateSelected() {
+    const id = selectedObjectId.value
+    if (!id || !mapsStore.currentMap) return
+    const src = mapsStore.currentMap.objects.find(o => o.id === id)
+    if (!src) return
+    const newId = `${src.type}_${crypto.randomUUID()}`
+    const clone: MapObject = {
+      ...JSON.parse(JSON.stringify(src)),
+      id: newId,
+      x: _snap(src.x + 30),
+      y: _snap(src.y + 30),
+    }
+    if (clone.extra?.x2 !== undefined) {
+      clone.extra = { ...clone.extra, x2: (clone.extra.x2 as number) + 30, y2: (clone.extra.y2 as number) + 30 }
+    }
+    try {
+      const newConfig = await mapsApi.addObject(mapName.value, clone, auth.accessToken!)
+      if (mapsStore.currentMap) mapsStore.currentMap.objects = newConfig.objects
+      selectedObjectId.value = newId
+    } catch (e) {
+      console.error('Failed to duplicate object', e)
+    }
+  }
+
+  // --- Cancel placing ---
+  function cancelPlacing() {
+    placing.value = false
+  }
+
   return {
     editMode, toggleEditMode,
     selectedObjectId, selectObject,
@@ -328,7 +358,7 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     startDrag, startLineDrag,
     updateObjectProperties,
     placing, draft, startPlacing, placeAt, placeAtLatLng, moveObjectToLatLng,
-    deleteSelected,
+    deleteSelected, duplicateSelected, cancelPlacing,
     resetForNewMap,
   }
 }

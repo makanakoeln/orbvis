@@ -38,6 +38,8 @@ export default {
     noMapsAdmin: 'Create your first map',
     noMapsUser: 'Contact your administrator',
     rotationBadgeTitle: 'Rotates every {n} seconds',
+    search: 'Search maps…',
+    noSearchResults: 'No maps match "{q}"',
   },
   map: {
     live: 'Live',
@@ -78,6 +80,8 @@ export default {
     groupName: 'Group name',
     backgroundImage: 'Background image',
     deleteBackground: 'Remove background image',
+    notificationsOn: 'Browser notifications enabled — click to disable',
+    notificationsOff: 'Enable browser notifications for state changes',
     saveChanges: 'Save changes',
     hoverTemplate: 'Hover template',
     contextTemplate: 'Context template',

@@ -6,10 +6,42 @@ import { mapsApi } from '@/api/client'
 // Base path without trailing slash, e.g. '/heute/orbvis' or ''
 const _base = import.meta.env.BASE_URL.replace(/\/$/, '')
 
+// States considered "bad" (descending severity)
+const _BAD_STATES = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN'])
+const _SEVERITY: Record<string, number> = {
+  OK: 0, UP: 0, PENDING: 0,
+  WARNING: 1, UNKNOWN: 1,
+  CRITICAL: 2, UNREACHABLE: 2,
+  DOWN: 3,
+}
+
+function _notifyStateChange(obj: ObjectState, prev: ObjectState | undefined) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  const prevSev = _SEVERITY[prev?.state ?? 'OK'] ?? 0
+  const newSev = _SEVERITY[obj.state] ?? 0
+  if (newSev <= prevSev) return  // only notify on worsening
+  if (!_BAD_STATES.has(obj.state)) return
+  const name = obj.object_id
+  new Notification(`OrbVis: ${obj.state}`, {
+    body: name,
+    tag: name,  // de-duplicate: same object → replace existing notification
+  })
+}
+
 export const useStatesStore = defineStore('states', () => {
   const states = ref<Record<string, ObjectState>>({})  // keyed by object_id
   const connected = ref(false)
   const lastUpdate = ref<number | null>(null)
+  const notificationsEnabled = ref(false)
+
+  async function requestNotificationPermission(): Promise<boolean> {
+    if (typeof Notification === 'undefined') return false
+    if (Notification.permission === 'granted') { notificationsEnabled.value = true; return true }
+    if (Notification.permission === 'denied') return false
+    const result = await Notification.requestPermission()
+    notificationsEnabled.value = result === 'granted'
+    return notificationsEnabled.value
+  }
 
   let ws: WebSocket | null = null
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
@@ -75,7 +107,10 @@ export const useStatesStore = defineStore('states', () => {
         const msg: WebSocketStateUpdate = JSON.parse(event.data)
         if (msg.type === 'state_update') {
           const newStates: Record<string, ObjectState> = {}
-          for (const s of msg.states.states) newStates[s.object_id] = s
+          for (const s of msg.states.states) {
+            if (notificationsEnabled.value) _notifyStateChange(s, states.value[s.object_id])
+            newStates[s.object_id] = s
+          }
           for (const id of Object.keys(states.value)) {
             if (!newStates[id]) delete states.value[id]
           }
@@ -117,5 +152,5 @@ export const useStatesStore = defineStore('states', () => {
     return states.value[objectId]
   }
 
-  return { states, connected, lastUpdate, connectToMap, disconnect, getState }
+  return { states, connected, lastUpdate, notificationsEnabled, connectToMap, disconnect, getState, requestNotificationPermission }
 })

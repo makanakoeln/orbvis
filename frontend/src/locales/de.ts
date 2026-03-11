@@ -38,6 +38,8 @@ export default {
     noMapsAdmin: 'Erste Karte erstellen',
     noMapsUser: 'Kontaktieren Sie Ihren Administrator',
     rotationBadgeTitle: 'Wechselt alle {n} Sekunden',
+    search: 'Karten suchen…',
+    noSearchResults: 'Keine Karten für „{q}" gefunden',
   },
   map: {
     live: 'Live',
@@ -76,6 +78,8 @@ export default {
     filterTypeAllHosts: 'Alle Hosts',
     filterTypeAllServices: 'Alle Services',
     groupName: 'Gruppenname',
+    notificationsOn: 'Browser-Benachrichtigungen aktiv — klicken zum Deaktivieren',
+    notificationsOff: 'Browser-Benachrichtigungen bei Zustandsänderungen aktivieren',
     backgroundImage: 'Hintergrundbild',
     deleteBackground: 'Hintergrundbild entfernen',
     saveChanges: 'Änderungen speichern',
