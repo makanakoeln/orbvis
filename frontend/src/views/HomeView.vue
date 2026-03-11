@@ -6,13 +6,6 @@
           <h2 class="text-2xl font-bold text-[var(--text)] tracking-tight">{{ t('home.title') }}</h2>
           <p class="text-sm text-zinc-500 mt-1">{{ t('home.subtitle') }}</p>
         </div>
-        <button v-if="auth.isAdmin" @click="showCreate = true"
-          class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          {{ t('admin.newBoard') }}
-        </button>
         <div class="relative w-56 shrink-0">
           <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -59,12 +52,20 @@
         <p v-if="searchQuery && !filteredBoards.length" class="col-span-full text-center py-12 text-zinc-600 text-sm">
           {{ t('home.noSearchResults', { q: searchQuery }) }}
         </p>
-        <router-link
+        <div
           v-for="map in filteredBoards"
           :key="map.name"
-          :to="`/boards/${map.name}`"
           class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-indigo-500/40 rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-900/10"
         >
+          <!-- Delete button (admin only, hover) -->
+          <button v-if="auth.isAdmin" @click.stop="deleteBoard(map)"
+            class="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-black/50 text-zinc-400 hover:text-red-400 hover:bg-red-500/20 backdrop-blur-sm transition-all"
+            :title="t('admin.deleteBoard', { name: map.alias || map.name })">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+            </svg>
+          </button>
+          <router-link :to="`/boards/${map.name}`" class="block">
           <!-- Thumbnail -->
           <div class="relative w-full h-32 overflow-hidden bg-[var(--bg-input)]">
             <img
@@ -185,10 +186,19 @@
               <span class="font-mono truncate">{{ map.backend_id }}</span>
             </div>
           </div>
-        </router-link>
+          </router-link>
+        </div>
       </div>
     </main>
   </div>
+  <!-- FAB: create board (admin only) -->
+  <button v-if="auth.isAdmin" @click="showCreate = true"
+    class="fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-900/40 flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95"
+    :title="t('admin.newBoard')">
+    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  </button>
   <CreateBoardModal v-if="showCreate" @close="showCreate = false" @created="onCreated" />
 </template>
 
@@ -211,6 +221,11 @@ const showCreate = ref(false)
 function onCreated(name: string) {
   showCreate.value = false
   router.push(`/boards/${name}`)
+}
+
+async function deleteBoard(map: { name: string; alias: string }) {
+  if (!confirm(t('admin.deleteBoard', { name: map.alias || map.name }))) return
+  await boardsStore.deleteBoard(map.name)
 }
 const searchQuery = ref('')
 
