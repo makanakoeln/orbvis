@@ -93,41 +93,60 @@
           v-for="map in filteredMaps"
           :key="map.name"
           :to="`/maps/${map.name}`"
-          class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-indigo-500/40 rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-900/10"
+          class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-indigo-500/40 rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-900/10"
         >
-          <!-- Type + rotation badges -->
-          <div class="absolute top-4 right-4 flex items-center gap-1.5">
-            <span v-if="map.rotation_interval > 0"
-              class="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20"
-              :title="t('home.rotationBadgeTitle', { n: map.rotation_interval })">
-              ↻ {{ map.rotation_interval }}s
-            </span>
-            <span class="text-xs px-2 py-0.5 rounded-full font-medium"
-              :class="map.map_type === 'worldmap'
-                ? 'bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20'
-                : map.map_type === 'radar'
-                ? 'bg-violet-500/10 text-violet-400 ring-1 ring-violet-500/20'
-                : 'bg-zinc-700/60 text-zinc-500 ring-1 ring-zinc-700'">
-              {{ map.map_type }}
-            </span>
+          <!-- Thumbnail -->
+          <div class="relative w-full h-32 overflow-hidden bg-[var(--bg-input)]">
+            <img
+              v-if="map.background_image"
+              :src="`${baseUrl}maps/backgrounds/${map.background_image}`"
+              :alt="map.alias || map.name"
+              class="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity duration-200"
+            />
+            <!-- Worldmap thumbnail -->
+            <WorldMapThumbnail
+              v-else-if="map.map_type === 'worldmap'"
+              :lat="map.worldmap_lat ?? 51"
+              :lng="map.worldmap_lng ?? 10"
+              :zoom="map.worldmap_zoom ?? 5"
+              class="opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none"
+            />
+            <!-- Placeholder when no background image -->
+            <div v-else class="w-full h-full flex items-center justify-center">
+              <svg class="w-10 h-10 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
+              </svg>
+            </div>
+            <!-- Type + rotation badges overlaid on thumbnail -->
+            <div class="absolute top-2 right-2 flex items-center gap-1.5">
+              <span v-if="map.rotation_interval > 0"
+                class="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30 backdrop-blur-sm"
+                :title="t('home.rotationBadgeTitle', { n: map.rotation_interval })">
+                ↻ {{ map.rotation_interval }}s
+              </span>
+              <span class="text-xs px-2 py-0.5 rounded-full font-medium backdrop-blur-sm"
+                :class="map.map_type === 'worldmap'
+                  ? 'bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/30'
+                  : map.map_type === 'radar'
+                  ? 'bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30'
+                  : 'bg-zinc-800/70 text-zinc-400 ring-1 ring-zinc-700/60'">
+                {{ map.map_type }}
+              </span>
+            </div>
           </div>
 
-          <!-- Icon -->
-          <div class="w-10 h-10 rounded-xl bg-indigo-600/10 ring-1 ring-indigo-500/20 flex items-center justify-center mb-4 group-hover:bg-indigo-600/15 transition-colors">
-            <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
-            </svg>
-          </div>
+          <!-- Card body -->
+          <div class="p-4">
+            <div class="font-semibold text-[var(--text)] group-hover:text-white transition-colors truncate">
+              {{ map.alias || map.name }}
+            </div>
+            <div v-if="map.alias" class="text-[11px] text-zinc-600 font-mono mt-0.5 truncate">{{ map.name }}</div>
 
-          <div class="font-semibold text-[var(--text)] group-hover:text-white transition-colors">
-            {{ map.alias || map.name }}
-          </div>
-          <div v-if="map.alias" class="text-[11px] text-zinc-600 font-mono mt-0.5">{{ map.name }}</div>
-
-          <div class="flex items-center gap-2 mt-3 text-xs text-zinc-600">
-            <span>{{ t('common.objects', { n: map.object_count }) }}</span>
-            <span class="text-zinc-800">·</span>
-            <span class="font-mono truncate">{{ map.backend_id }}</span>
+            <div class="flex items-center gap-2 mt-2 text-xs text-zinc-600">
+              <span>{{ t('common.objects', { n: map.object_count }) }}</span>
+              <span class="text-zinc-800">·</span>
+              <span class="font-mono truncate">{{ map.backend_id }}</span>
+            </div>
           </div>
         </router-link>
       </div>
@@ -141,8 +160,10 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useMapsStore } from '@/stores/maps'
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
+import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue'
 
 const { t } = useI18n()
+const baseUrl = import.meta.env.BASE_URL
 const auth = useAuthStore()
 const mapsStore = useMapsStore()
 const showSettings = ref(false)
