@@ -124,7 +124,8 @@ sudo cp -r "$SCRIPT_DIR/frontend/dist/." "$HTDOCS_DIR/"
 # ---------------------------------------------------------------------------
 # 2. Create data directories
 # ---------------------------------------------------------------------------
-sudo mkdir -p "$MAPS_DIR"
+ICONS_DIR="$(dirname "$MAPS_DIR")/icons"
+sudo mkdir -p "$MAPS_DIR" "$ICONS_DIR"
 
 # ---------------------------------------------------------------------------
 # 3. Python virtualenv + backend dependencies

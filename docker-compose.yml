@@ -5,6 +5,7 @@ services:
       - "127.0.0.1:${BACKEND_PORT:-8742}:8000"
     volumes:
       - ./data/maps:/app/maps
+      - ./data/icons:/app/icons
       - orbvis_db:/app/data
     environment:
       - MAPS_DIR=/app/maps

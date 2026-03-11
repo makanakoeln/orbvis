@@ -555,6 +555,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _seed_demo_map()
     _seed_demo_worldmap()
 
+    from app.seed_icons import seed_builtin_icons
+    seed_builtin_icons(Path(settings.maps_dir).parent / "icons")
+
     yield
     logger.info("Shutting down OrbVis backend.")
 

@@ -134,8 +134,9 @@ fi
 # ---------------------------------------------------------------------------
 # 2. Install directory
 # ---------------------------------------------------------------------------
-sudo mkdir -p "$INSTALL_DIR" "$MAPS_DIR"
-sudo chown "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR" "$MAPS_DIR"
+ICONS_DIR="$INSTALL_DIR/icons"
+sudo mkdir -p "$INSTALL_DIR" "$MAPS_DIR" "$ICONS_DIR"
+sudo chown "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR" "$MAPS_DIR" "$ICONS_DIR"
 
 # ---------------------------------------------------------------------------
 # 3. Build frontend
@@ -268,6 +269,13 @@ server {
         proxy_read_timeout 3600;
     }
 
+    # Uploaded icons and built-in icon set (served directly for performance)
+    location $BASE_PATH/icons/ {
+        alias $INSTALL_DIR/icons/;
+        expires 1h;
+        add_header Cache-Control "public";
+    }
+
     # Background images uploaded via the API
     location $BASE_PATH/maps/backgrounds/ {
         alias $MAPS_DIR/backgrounds/;
@@ -310,9 +318,17 @@ RewriteRule ^$BASE_PATH/api/(.*) ws://127.0.0.1:$BACKEND_PORT/api/\$1 [P,L]
     ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/api/
 </Location>
 
-# Background images uploaded via the API
+# Uploaded icons and built-in icon set (served directly)
+Alias $BASE_PATH/icons/ $INSTALL_DIR/icons/
+<Directory $INSTALL_DIR/icons/>
+    Options -Indexes
+    Require all granted
+</Directory>
+
+# Background images uploaded via the API (served directly)
 Alias $BASE_PATH/maps/backgrounds/ $MAPS_DIR/backgrounds/
 <Directory $MAPS_DIR/backgrounds/>
+    Options -Indexes
     Require all granted
 </Directory>
 EOF
