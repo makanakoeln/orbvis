@@ -47,7 +47,7 @@ async def list_icons(
     result = []
     for f in sorted(d.iterdir()):
         if f.is_file() and f.suffix.lower() in _ALLOWED_SUFFIXES:
-            result.append({"name": f.name, "url": f"/icons/{f.name}"})
+            result.append({"name": f.name, "url": f"icons/{f.name}"})
     return result
 
 
@@ -92,7 +92,7 @@ async def upload_icon(
         Path(tmp_path).unlink(missing_ok=True)
         raise
 
-    return JSONResponse({"name": filename, "url": f"/icons/{filename}"}, status_code=201)
+    return JSONResponse({"name": filename, "url": f"icons/{filename}"}, status_code=201)
 
 
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT)

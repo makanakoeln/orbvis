@@ -108,7 +108,7 @@
               :class="modelValue === icon.name ? 'ring-1 ring-indigo-500 bg-indigo-500/10' : ''"
               :title="icon.name"
             >
-              <img :src="icon.url" :alt="icon.name" class="w-8 h-8 object-contain" :class="icon.name.endsWith('.svg') ? 'svg-icon' : ''" />
+              <img :src="`${BASE_URL}${icon.url}`" :alt="icon.name" class="w-8 h-8 object-contain" :class="icon.name.endsWith('.svg') ? 'svg-icon' : ''" />
               <span class="text-[9px] font-mono text-zinc-500 truncate w-full text-center leading-tight">{{ icon.name }}</span>
             </button>
           </div>

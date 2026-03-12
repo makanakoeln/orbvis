@@ -41,7 +41,7 @@
         :key="icon.name"
         class="group relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-3 flex flex-col items-center gap-2 hover:ring-zinc-600 transition-all"
       >
-        <img :src="icon.url" :alt="icon.name"
+        <img :src="`${BASE_URL}${icon.url}`" :alt="icon.name"
           class="w-12 h-12 object-contain"
           :class="icon.name.endsWith('.svg') ? 'svg-icon' : ''" />
         <p class="text-[10px] text-zinc-500 font-mono text-center truncate w-full" :title="icon.name">{{ icon.name }}</p>
@@ -66,6 +66,7 @@ import { useAuthStore } from '@/stores/auth'
 import { iconsApi } from '@/api/client'
 import type { IconEntry } from '@/types/api'
 
+const BASE_URL = import.meta.env.BASE_URL
 const { t } = useI18n()
 const auth = useAuthStore()
 
