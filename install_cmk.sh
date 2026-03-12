@@ -292,16 +292,22 @@ case "\$1" in
   stop)
     if [[ -f "\$PIDFILE" ]]; then
       PID="\$(cat "\$PIDFILE")"
-      echo -n "Stopping orbvis (pid \$PID)..."
-      kill "\$PID" 2>/dev/null && rm -f "\$PIDFILE"
-      echo " OK"
+      if kill -0 "\$PID" 2>/dev/null; then
+        echo -n "Stopping orbvis (pid \$PID)..."
+        kill "\$PID" 2>/dev/null
+        for _ in \$(seq 1 20); do
+          kill -0 "\$PID" 2>/dev/null || break
+          sleep 0.5
+        done
+        echo " OK"
+      fi
+      rm -f "\$PIDFILE"
     else
       echo "orbvis not running"
     fi
     ;;
   restart)
     \$0 stop
-    sleep 1
     \$0 start
     ;;
   status)

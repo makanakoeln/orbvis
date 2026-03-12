@@ -71,6 +71,12 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
   await auth.init()
 
+  // In SSO mode the CMK theme can change at any time (ajax_ui_theme).
+  // Re-fetch the user profile on every navigation so the theme stays in sync.
+  if (auth.ssoActive) {
+    auth.fetchCurrentUser()
+  }
+
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
