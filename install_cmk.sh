@@ -1,35 +1,49 @@
 #!/bin/bash
-# install_cmk.sh – Deploy/remove OrbVis in an OMD/cmk site
+# install_cmk.sh – Deploy/remove OrbVis in an OMD/Checkmk site
 # Usage: ./install_cmk.sh <site-name> [install|remove]
 # Run as a normal user; sudo is invoked automatically for privileged steps.
 set -euo pipefail
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+BOLD='\033[1m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+RESET='\033[0m'
+
+step()  { echo -e "  ${BOLD}▸ $*${RESET}"; }
+ok()    { echo -e "  ${GREEN}✓ $*${RESET}"; }
+warn()  { echo -e "  ${YELLOW}⚠ $*${RESET}"; }
+die()   { echo -e "\n${RED}Error: $*${RESET}\n" >&2; exit 1; }
+header(){ echo -e "\n${BOLD}$*${RESET}"; }
+
+# All verbose output goes here; shown only on failure
+LOG_FILE="/tmp/orbvis_install_${1:-unknown}.log"
+# Redirect all command output to log unless already shown
+quietly() { "$@" >> "$LOG_FILE" 2>&1; }
+
+# ---------------------------------------------------------------------------
+# Arguments
+# ---------------------------------------------------------------------------
 SITE="${1:-}"
 ACTION="${2:-install}"
 
 if [[ -z "$SITE" ]] || [[ "$ACTION" != "install" && "$ACTION" != "remove" ]]; then
-  echo "Usage: $0 <site-name> [install|remove]" >&2
+  echo "Usage: $0 <site-name> [install|remove]"
   exit 1
 fi
 
-if [[ "$EUID" -eq 0 ]]; then
-  echo "Error: run this script as a normal user, not as root." >&2
-  exit 1
-fi
+[[ "$EUID" -eq 0 ]] && die "Run this script as a normal user, not as root."
 
 SITE_ROOT="/omd/sites/$SITE"
-if [[ ! -d "$SITE_ROOT" ]]; then
-  echo "Error: OMD site '$SITE' not found (expected $SITE_ROOT)" >&2
-  exit 1
-fi
+[[ -d "$SITE_ROOT" ]] || die "OMD site '$SITE' not found."
 
-# Pre-authenticate sudo once so subsequent sudo calls don't re-prompt
-echo "sudo credentials are needed for privileged operations."
-sudo -v
-
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Paths inside the site
 ORBVIS_DIR="$SITE_ROOT/local/share/orbvis"
 HTDOCS_DIR="$ORBVIS_DIR/htdocs"
 BOARDS_DIR="$ORBVIS_DIR/boards"
@@ -40,131 +54,116 @@ BACKEND_PORT=8420
 BASE_PATH="/$SITE/orbvis"
 LIVESTATUS_SOCKET="$SITE_ROOT/tmp/run/live"
 VENV_DIR="$ORBVIS_DIR/venv"
-SNAPIN_DIR="$SITE_ROOT/local/share/check_mk/web/plugins/sidebar"
-SNAPIN_FILE="$SNAPIN_DIR/orbvis_boards.py"
+CMK_PLUGINS_SRC="$SCRIPT_DIR/cmk_plugins"
+CMK_PLUGINS_DST="$ORBVIS_DIR/cmk_plugins"
 APACHE_CONF="$SITE_ROOT/etc/apache/conf.d/orbvis.conf"
 INIT_SCRIPT="$SITE_ROOT/etc/init.d/orbvis"
 
-# Check required tools
+# ---------------------------------------------------------------------------
+# Prerequisites
+# ---------------------------------------------------------------------------
 NPM="$(command -v npm 2>/dev/null || true)"
-if [[ -z "$NPM" ]]; then
-  echo "Error: npm not found. Install Node.js >= 18:" >&2
-  echo "  sudo apt install nodejs npm" >&2
-  exit 1
-fi
-NODE_MAJOR="$(node --version 2>/dev/null | sed 's/v\([0-9]*\).*/\1/')"
-if [[ -z "$NODE_MAJOR" ]] || [[ "$NODE_MAJOR" -lt 18 ]]; then
-  echo "Error: Node.js >= 18 required (found: $(node --version 2>/dev/null || echo 'none'))." >&2
-  echo "  Install via: https://github.com/nodesource/distributions" >&2
-  exit 1
-fi
+[[ -z "$NPM" ]] && die "npm not found. Install Node.js >= 18:\n  sudo apt install nodejs npm"
 
-# Prefer the OMD site's own Python (correct permissions, correct version).
-# Avoids issues where the system python3 is a wrapper (bazel, pyenv, conda, …)
-# whose symlink targets are inaccessible to the site user.
+NODE_MAJOR="$(node --version 2>/dev/null | sed 's/v\([0-9]*\).*/\1/')"
+[[ -z "$NODE_MAJOR" || "$NODE_MAJOR" -lt 18 ]] && \
+  die "Node.js >= 18 required (found: $(node --version 2>/dev/null || echo none))."
+
 if [[ -x "$SITE_ROOT/bin/python3" ]]; then
   PYTHON3="$SITE_ROOT/bin/python3"
 else
   PYTHON3="$(command -v python3 2>/dev/null || true)"
-  if [[ -z "$PYTHON3" ]]; then
-    echo "Error: python3 not found. Install Python 3.12 or newer:" >&2
-    echo "  sudo apt install python3.12 python3.12-venv" >&2
-    exit 1
-  fi
+  [[ -z "$PYTHON3" ]] && die "python3 not found."
 fi
-echo "    Using Python: $PYTHON3"
+
+PTH_FILE="$("$PYTHON3" -c 'import site; print(site.getsitepackages()[0])')/orbvis_cmk_plugins.pth"
+
+# ---------------------------------------------------------------------------
+# Sudo – authenticate once up front
+# ---------------------------------------------------------------------------
+echo ""
+echo "sudo is required for privileged steps. You may be prompted for your password."
+sudo -v
 
 # ---------------------------------------------------------------------------
 # REMOVE
 # ---------------------------------------------------------------------------
 if [[ "$ACTION" == "remove" ]]; then
-  echo "==> Removing OrbVis from cmk site '$SITE'..."
+  header "Removing OrbVis from site '$SITE'"
+  : > "$LOG_FILE"
 
-  echo "    Stopping backend..."
-  sudo -u "$SITE" omd stop orbvis 2>/dev/null || true
+  step "Stopping OrbVis backend"
+  quietly sudo -u "$SITE" omd stop orbvis 2>/dev/null || true
+  ok "Backend stopped"
 
-  echo "    Removing files..."
-  sudo rm -f  "$APACHE_CONF" "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis" "$SNAPIN_FILE"
-  sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$DB_FILE" "$ENV_FILE" "$BACKENDS_FILE"
-  # Maps are kept — remove manually if no longer needed
+  step "Removing files"
+  quietly sudo rm -f "$APACHE_CONF" "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis" "$PTH_FILE"
+  quietly sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$DB_FILE" "$ENV_FILE" "$BACKENDS_FILE" "$CMK_PLUGINS_DST"
+  ok "Files removed"
 
-  echo "    Reloading Apache..."
-  sudo omd reload "$SITE" apache
+  step "Reloading Apache"
+  quietly sudo omd reload "$SITE" apache
+  ok "Apache reloaded"
 
   echo ""
-  echo "Done. OrbVis has been removed from site '$SITE'."
-  echo "Board files were kept in: $BOARDS_DIR"
-  echo "To also remove those, run: sudo rm -rf $BOARDS_DIR"
+  echo -e "${GREEN}${BOLD}OrbVis removed from site '$SITE'.${RESET}"
+  warn "Board files were kept in: $BOARDS_DIR"
+  echo "  To remove them as well: sudo rm -rf $BOARDS_DIR"
+  echo ""
   exit 0
 fi
 
 # ---------------------------------------------------------------------------
 # INSTALL
 # ---------------------------------------------------------------------------
-echo "==> Installing OrbVis into cmk site '$SITE'"
-echo "    Site root:    $SITE_ROOT"
-echo "    OrbVis dir:   $ORBVIS_DIR"
-echo "    Backend port: $BACKEND_PORT"
-echo "    Base path:    $BASE_PATH"
-echo ""
+header "Installing OrbVis into Checkmk site '$SITE'"
+echo "  Site:    $SITE_ROOT"
+echo "  URL:     https://$(hostname -f 2>/dev/null || hostname)$BASE_PATH/"
+: > "$LOG_FILE"
 
-# ---------------------------------------------------------------------------
-# 1. Build frontend (runs as current user, no sudo needed)
-# ---------------------------------------------------------------------------
-echo "==> Building Vue frontend (base=$BASE_PATH/)..."
+# 1. Frontend
+step "Building frontend"
 cd "$SCRIPT_DIR/frontend"
-"$NPM" install --silent
-"$NPM" run build -- --base="$BASE_PATH/"
+quietly "$NPM" install
+quietly "$NPM" run build -- --base="$BASE_PATH/"
+quietly sudo rm -rf "$HTDOCS_DIR"
+quietly sudo mkdir -p "$HTDOCS_DIR"
+quietly sudo cp -r "$SCRIPT_DIR/frontend/dist/." "$HTDOCS_DIR/"
+ok "Frontend built and deployed"
 
-echo "==> Deploying frontend to $HTDOCS_DIR..."
-sudo rm -rf "$HTDOCS_DIR"
-sudo mkdir -p "$HTDOCS_DIR"
-sudo cp -r "$SCRIPT_DIR/frontend/dist/." "$HTDOCS_DIR/"
-
-# ---------------------------------------------------------------------------
-# 2. Create data directories and install demo boards
-# ---------------------------------------------------------------------------
+# 2. Data directories + demo boards
+step "Setting up data directories"
 ICONS_DIR="$(dirname "$BOARDS_DIR")/icons"
-sudo mkdir -p "$BOARDS_DIR/backgrounds" "$ICONS_DIR"
-
-echo "==> Installing demo boards (skipping existing files)..."
+quietly sudo mkdir -p "$BOARDS_DIR/backgrounds" "$ICONS_DIR"
+NEW_BOARDS=0
 for demo in "$SCRIPT_DIR/backend/boards/"demo*.json; do
   fname="$(basename "$demo")"
   if ! sudo test -f "$BOARDS_DIR/$fname"; then
-    sudo cp "$demo" "$BOARDS_DIR/$fname"
-    echo "    + $fname"
+    quietly sudo cp "$demo" "$BOARDS_DIR/$fname"
+    (( NEW_BOARDS++ )) || true
   fi
 done
 if ! sudo test -f "$BOARDS_DIR/backgrounds/demo.svg"; then
-  sudo cp "$SCRIPT_DIR/backend/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
-  echo "    + backgrounds/demo.svg"
+  quietly sudo cp "$SCRIPT_DIR/backend/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
 fi
+[[ $NEW_BOARDS -gt 0 ]] && ok "Directories ready ($NEW_BOARDS demo board(s) installed)" \
+                         || ok "Directories ready (demo boards already present)"
 
-# ---------------------------------------------------------------------------
-# 3. Python virtualenv + backend dependencies
-# ---------------------------------------------------------------------------
-echo "==> Setting up Python virtualenv..."
+# 3. Python virtualenv + dependencies
+step "Setting up Python environment"
 if sudo test -d "$VENV_DIR"; then
-  echo "    Virtualenv already exists, skipping creation."
+  ok "Virtualenv already exists, skipping creation"
 else
-  # --copies: avoids symlinks into the original Python prefix (important when
-  # python3 is a wrapper/bazel binary whose real path is user-specific).
-  sudo "$PYTHON3" -m venv --copies "$VENV_DIR"
+  quietly sudo "$PYTHON3" -m venv --copies "$VENV_DIR"
 fi
-echo "==> Installing backend dependencies..."
-sudo "$VENV_DIR/bin/pip" install --quiet --upgrade pip
-# Copy backend source into the site directory so the site user can import it
-# without needing access to the developer's home directory.
-sudo cp -r "$SCRIPT_DIR/backend/." "$ORBVIS_DIR/src/"
-# Editable install: keeps __file__ pointing at $ORBVIS_DIR/src so that
-# relative paths (alembic.ini, alembic/ migrations dir) resolve correctly.
-sudo "$VENV_DIR/bin/pip" install --quiet -e "$ORBVIS_DIR/src"
+step "Installing backend dependencies"
+quietly sudo "$VENV_DIR/bin/pip" install --quiet --upgrade pip
+quietly sudo cp -r "$SCRIPT_DIR/backend/." "$ORBVIS_DIR/src/"
+quietly sudo "$VENV_DIR/bin/pip" install --quiet -e "$ORBVIS_DIR/src"
+ok "Backend dependencies installed"
 
-# ---------------------------------------------------------------------------
-# 4. .env configuration
-# ---------------------------------------------------------------------------
-echo "==> Writing $ENV_FILE..."
-# Preserve secret_key if it already exists
+# 4. Configuration
+step "Writing configuration"
 EXISTING_SECRET=""
 if sudo test -f "$ENV_FILE"; then
   EXISTING_SECRET=$(sudo grep -E '^SECRET_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)
@@ -182,13 +181,9 @@ CHECKMK_OMD_ROOT=$SITE_ROOT
 CHECKMK_SITE=$SITE
 EOF
 
-# ---------------------------------------------------------------------------
-# 5. backends.json
-# ---------------------------------------------------------------------------
 if sudo test -f "$BACKENDS_FILE"; then
-  echo "    $BACKENDS_FILE already exists, skipping."
+  ok "Configuration written (existing backends.json kept)"
 else
-  echo "==> Writing $BACKENDS_FILE..."
   sudo tee "$BACKENDS_FILE" > /dev/null <<EOF
 [
   {
@@ -200,17 +195,15 @@ else
   }
 ]
 EOF
+  ok "Configuration written"
 fi
 
-# ---------------------------------------------------------------------------
-# 6. Apache configuration
-# ---------------------------------------------------------------------------
-echo "==> Writing Apache config: $APACHE_CONF..."
+# 5. Apache config
+step "Writing Apache configuration"
 sudo tee "$APACHE_CONF" > /dev/null <<EOF
 # OrbVis – static frontend + backend proxy
 # Auto-generated by install_cmk.sh
 
-# OMD ships its own Apache binary – load proxy modules from OMD's module path
 <IfModule !mod_proxy.c>
     LoadModule proxy_module $SITE_ROOT/lib/apache/modules/mod_proxy.so
 </IfModule>
@@ -220,8 +213,6 @@ sudo tee "$APACHE_CONF" > /dev/null <<EOF
 
 Alias /$SITE/orbvis $HTDOCS_DIR
 
-# OrbVis handles authentication itself via cmk session cookie SSO.
-# AuthType None overrides OMD's auth.conf so the browser never sees a challenge.
 <Location /$SITE/orbvis>
     AuthType None
     Require all granted
@@ -235,8 +226,6 @@ Alias /$SITE/orbvis $HTDOCS_DIR
 </Directory>
 
 <Location /$SITE/orbvis/api>
-    # mod_allowmethods (loaded by OMD) returns 405 for unlisted methods.
-    # Override here to allow the full set of methods needed by the REST API.
     <IfModule mod_allowmethods.c>
         AllowMethods GET POST PUT PATCH DELETE OPTIONS HEAD
     </IfModule>
@@ -244,8 +233,6 @@ Alias /$SITE/orbvis $HTDOCS_DIR
     ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/api
 </Location>
 
-# Static files served by the backend (uploaded icons and map backgrounds).
-# These Location blocks take precedence over the Alias above.
 <Location /$SITE/orbvis/icons>
     ProxyPass        http://127.0.0.1:$BACKEND_PORT/icons
     ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/icons
@@ -256,11 +243,10 @@ Alias /$SITE/orbvis $HTDOCS_DIR
     ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/boards/backgrounds
 </Location>
 EOF
+ok "Apache configuration written"
 
-# ---------------------------------------------------------------------------
-# 7. OMD init script
-# ---------------------------------------------------------------------------
-echo "==> Writing OMD init script: $INIT_SCRIPT..."
+# 6. OMD init script
+step "Registering OrbVis as OMD service"
 sudo tee "$INIT_SCRIPT" > /dev/null <<EOF
 #!/bin/bash
 # OMD init script for OrbVis backend
@@ -325,114 +311,48 @@ case "\$1" in
     ;;
 esac
 EOF
-sudo chmod +x "$INIT_SCRIPT"
+quietly sudo chmod +x "$INIT_SCRIPT"
+quietly sudo ln -sf "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis"
+ok "OrbVis registered as OMD service"
 
-# rc.d symlink – required for omd status/start/stop to recognise the service
-RC_LINK="$SITE_ROOT/etc/rc.d/85-orbvis"
-sudo ln -sf "$INIT_SCRIPT" "$RC_LINK"
+# 7. Checkmk GUI plugins
+step "Installing Checkmk GUI plugins"
+quietly sudo mkdir -p "$CMK_PLUGINS_DST"
+quietly sudo cp -r "$CMK_PLUGINS_SRC/." "$CMK_PLUGINS_DST/"
+quietly sudo mkdir -p "$(dirname "$PTH_FILE")"
+echo "$CMK_PLUGINS_DST" | quietly sudo tee "$PTH_FILE"
+ok "Checkmk GUI plugins installed"
 
-# ---------------------------------------------------------------------------
-# 8. cmk sidebar snapin
-# ---------------------------------------------------------------------------
-sudo mkdir -p "$SNAPIN_DIR"
-echo "==> Writing sidebar snapin: $SNAPIN_FILE..."
-sudo tee "$SNAPIN_FILE" > /dev/null <<'PYEOF'
-# OrbVis sidebar snapin – shows all available OrbVis boards as links
-# Auto-generated by install_cmk.sh
+# 8. Ownership
+step "Setting file permissions"
+quietly sudo chown -R "$SITE:$SITE" "$ORBVIS_DIR"
+ok "Permissions set"
 
-import os
-import json
-import pathlib
-from typing import List, Tuple
+# 9. Start services
+step "Restarting Apache"
+quietly sudo omd restart "$SITE" apache
+ok "Apache restarted"
 
-from cmk.gui.htmllib.html import html
-from cmk.gui.i18n import _
-from cmk.gui.plugins.sidebar.utils import SidebarSnapin, snapin_registry
-from cmk.gui.sidebar._snapin._helpers import footnotelinks
-
-_BOARDS_DIR = pathlib.Path(os.environ.get("OMD_ROOT", "")) / "local" / "share" / "orbvis" / "boards"
-_SITE = os.environ.get("OMD_SITE", "")
-_BASE_URL = f"/{_SITE}/orbvis/#/boards"
-_EDIT_URL = f"/{_SITE}/orbvis/#/"
-
-
-def _get_maps() -> List[Tuple[str, str]]:
-    results = []
-    if not _BOARDS_DIR.is_dir():
-        return results
-    for p in sorted(_BOARDS_DIR.glob("*.json")):
-        if p.stem.startswith("demo-") or p.stem == "demo":
-            continue
-        try:
-            data = json.loads(p.read_text())
-            name = data.get("name") or p.stem
-            alias = data.get("alias") or name
-            results.append((name, alias))
-        except Exception:
-            results.append((p.stem, p.stem))
-    return results
-
-
-@snapin_registry.register
-class OrbVisBoardsSnapin(SidebarSnapin):
-    @staticmethod
-    def type_name() -> str:
-        return "orbvis_boards"
-
-    @classmethod
-    def title(cls) -> str:
-        return _("OrbVis Boards")
-
-    @classmethod
-    def description(cls) -> str:
-        return _("Links to OrbVis monitoring boards")
-
-    @classmethod
-    def allowed_roles(cls):
-        return ["admin", "user", "guest"]
-
-    def show(self) -> None:
-        maps = _get_maps()
-        if not maps:
-            html.p(_("No OrbVis boards found."))
-        else:
-            html.open_ul(class_="snapin_nagtree")
-            for name, alias in maps:
-                url = f"{_BASE_URL}/{name}"
-                html.open_li()
-                html.open_a(href=url, target="main", title=alias)
-                html.icon("network_topology", title=None)
-                html.write_text(f" {alias}")
-                html.close_a()
-                html.close_li()
-            html.close_ul()
-
-        footnotelinks([(_("Edit"), _EDIT_URL)])
-PYEOF
-
-# ---------------------------------------------------------------------------
-# 9. Fix ownership
-# ---------------------------------------------------------------------------
-echo "==> Setting file ownership to site user '$SITE'..."
-sudo chown -R "$SITE:$SITE" "$ORBVIS_DIR"
-
-# ---------------------------------------------------------------------------
-# 10. Reload Apache and start backend
-# ---------------------------------------------------------------------------
-echo "==> Reloading Apache..."
-sudo omd reload "$SITE" apache
-
-echo "==> Restarting OrbVis backend..."
-# cd to a neutral directory before switching to the site user —
-# omd restores the cwd after chdir() and the site user has no access to
-# the developer's working directory (e.g. /home/…/frontend).
+step "Starting OrbVis backend"
 cd /tmp
-sudo -u "$SITE" omd restart orbvis
+quietly sudo -u "$SITE" omd restart orbvis
+ok "OrbVis backend started"
 
+# ---------------------------------------------------------------------------
+# Done
+# ---------------------------------------------------------------------------
 HOST="$(hostname -f 2>/dev/null || hostname)"
-
 echo ""
-echo "Done! OrbVis is available at:"
-echo "  https://$HOST/$SITE/orbvis/"
+echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+echo -e "${GREEN}${BOLD}  OrbVis successfully installed!${RESET}"
+echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 echo ""
-echo "Add the 'OrbVis Boards' snapin via: Edit sidebar -> OrbVis Maps"
+echo "  Open in browser:  https://$HOST$BASE_PATH/"
+echo ""
+echo "  Main menu:        OrbVis entry in the Checkmk navigation bar"
+echo ""
+echo "  To add the sidebar snapin:"
+echo "  Edit sidebar → Add snapin → OrbVis Boards"
+echo ""
+echo "  Install log: $LOG_FILE"
+echo ""
