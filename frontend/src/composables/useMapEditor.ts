@@ -1,7 +1,7 @@
 /**
  * Map edit-mode state: drag & drop, line editing, object selection, placing new objects.
  */
-import { ref, reactive, computed, type Ref } from 'vue'
+import { ref, reactive, type Ref } from 'vue'
 import { mapsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useMapsStore } from '@/stores/maps'
@@ -20,7 +20,6 @@ export interface NewObjectDraft {
 interface LineCoords { x: number; y: number; x2: number; y2: number }
 
 type DragTarget =
-  | { kind: 'object'; id: string }
   | { kind: 'line'; id: string; mode: 'move' | 'start' | 'end'; init: LineCoords; mouseStartX: number; mouseStartY: number }
 
 // mapName is a Ref so that this composable stays in sync when Vue Router reuses
@@ -60,15 +59,7 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
   const dragTarget = ref<DragTarget | null>(null)
   let _canvasEl: HTMLElement | null = null
 
-  const dragPositions = reactive<Record<string, { x: number; y: number }>>({})
   const lineDragPositions = reactive<Record<string, LineCoords>>({})
-
-  let _dragOffsetX = 0
-  let _dragOffsetY = 0
-
-  // Reactive derived value: which object is currently being dragged.
-  // Using computed() ensures Vue's reactivity system tracks it properly.
-  const draggingId = computed(() => dragTarget.value?.id ?? null)
 
   function _mouseToCanvas(event: MouseEvent, canvasEl: HTMLElement) {
     const rect = canvasEl.getBoundingClientRect()
@@ -89,7 +80,7 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     }
   }
 
-  // --- Document-level drag handlers ---
+  // --- Document-level drag handlers (line drag only) ---
 
   function _onDocMouseMove(event: MouseEvent) {
     event.preventDefault()
@@ -98,56 +89,54 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     if (!t) return
     const pos = _mouseToCanvas(event, _canvasEl)
 
-    if (t.kind === 'object') {
-      dragPositions[t.id] = {
-        x: Math.max(0, _snap(Math.round(pos.x - _dragOffsetX))),
-        y: Math.max(0, _snap(Math.round(pos.y - _dragOffsetY))),
+    const dx = pos.x - t.mouseStartX
+    const dy = pos.y - t.mouseStartY
+    const { init, mode } = t
+    if (mode === 'move') {
+      lineDragPositions[t.id] = {
+        x: _snap(Math.round(init.x + dx)), y: _snap(Math.round(init.y + dy)),
+        x2: _snap(Math.round(init.x2 + dx)), y2: _snap(Math.round(init.y2 + dy)),
       }
-    } else if (t.kind === 'line') {
-      const dx = pos.x - t.mouseStartX
-      const dy = pos.y - t.mouseStartY
-      const { init, mode } = t
-      if (mode === 'move') {
-        lineDragPositions[t.id] = {
-          x: _snap(Math.round(init.x + dx)), y: _snap(Math.round(init.y + dy)),
-          x2: _snap(Math.round(init.x2 + dx)), y2: _snap(Math.round(init.y2 + dy)),
-        }
-      } else if (mode === 'start') {
-        lineDragPositions[t.id] = {
-          x: _snap(Math.round(init.x + dx)), y: _snap(Math.round(init.y + dy)),
-          x2: init.x2, y2: init.y2,
-        }
-      } else {
-        lineDragPositions[t.id] = {
-          x: init.x, y: init.y,
-          x2: _snap(Math.round(init.x2 + dx)), y2: _snap(Math.round(init.y2 + dy)),
-        }
+    } else if (mode === 'start') {
+      lineDragPositions[t.id] = {
+        x: _snap(Math.round(init.x + dx)), y: _snap(Math.round(init.y + dy)),
+        x2: init.x2, y2: init.y2,
+      }
+    } else {
+      lineDragPositions[t.id] = {
+        x: init.x, y: init.y,
+        x2: _snap(Math.round(init.x2 + dx)), y2: _snap(Math.round(init.y2 + dy)),
       }
     }
   }
 
   function _onDocMouseUp() {
-    document.removeEventListener('mousemove', _onDocMouseMove)
-    document.removeEventListener('mouseup', _onDocMouseUp)
-    endDrag()
+    document.removeEventListener('mousemove', _onDocMouseMove, { capture: true })
+    document.removeEventListener('mouseup', _onDocMouseUp, { capture: true })
+    endLineDrag()
   }
 
   function _startDocDrag(canvasEl: HTMLElement) {
     _canvasEl = canvasEl
-    document.addEventListener('mousemove', _onDocMouseMove)
-    document.addEventListener('mouseup', _onDocMouseUp)
+    // Use capture phase so we receive events before any child element that may
+    // call stopPropagation() (e.g. D3 internal handlers).
+    document.addEventListener('mousemove', _onDocMouseMove, { capture: true })
+    document.addEventListener('mouseup', _onDocMouseUp, { capture: true })
   }
 
-  // --- Object (icon) drag ---
-  function startDrag(event: MouseEvent, obj: MapObject, canvasEl: HTMLElement) {
-    const pos = _mouseToCanvas(event, canvasEl)
-    _dragOffsetX = pos.x - obj.x
-    _dragOffsetY = pos.y - obj.y
-    dragPositions[obj.id] = { x: obj.x, y: obj.y }
-    dragTarget.value = { kind: 'object', id: obj.id }
-    _startDocDrag(canvasEl)
-    event.preventDefault()
-    event.stopPropagation()
+  // --- Save object position (called from MapCanvas object-drag-end event) ---
+  async function saveObjectPosition(id: string, x: number, y: number) {
+    // Optimistic update before the API call so Vue re-renders at the new position
+    // immediately when localDragPositions is cleared — no snap-back glitch.
+    const obj = mapsStore.currentMap?.objects.find(o => o.id === id)
+    if (obj) { obj.x = x; obj.y = y }
+    try {
+      await mapsApi.updateObject(mapName.value, id, { x, y }, auth.accessToken!)
+      if (_onDragSaved) _onDragSaved(id)
+    } catch (e) {
+      console.error('Failed to save drag', e)
+      await onMapChange()
+    }
   }
 
   // --- Line drag ---
@@ -169,37 +158,27 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     event.stopPropagation()
   }
 
-  // --- End drag (save to backend, patch store locally) ---
-  async function endDrag() {
+  // --- End line drag (save to backend, patch store locally) ---
+  async function endLineDrag() {
     const t = dragTarget.value
-    if (!t) return
+    if (!t || t.kind !== 'line') return
     dragTarget.value = null
-
     try {
-      if (t.kind === 'object') {
-        const pos = dragPositions[t.id]
-        await mapsApi.updateObject(mapName.value, t.id, { x: pos.x, y: pos.y }, auth.accessToken!)
-        const obj = mapsStore.currentMap?.objects.find(o => o.id === t.id)
-        if (obj) { obj.x = pos.x; obj.y = pos.y }
-        delete dragPositions[t.id]
-        if (_onDragSaved) _onDragSaved(t.id)
-      } else if (t.kind === 'line') {
-        const lp = lineDragPositions[t.id]
-        await mapsApi.updateObject(mapName.value, t.id, {
-          x: lp.x, y: lp.y,
-          extra: { x2: lp.x2, y2: lp.y2 },
-        }, auth.accessToken!)
-        const obj = mapsStore.currentMap?.objects.find(o => o.id === t.id)
-        if (obj) {
-          obj.x = lp.x; obj.y = lp.y
-          if (!obj.extra) obj.extra = {}
-          obj.extra.x2 = lp.x2; obj.extra.y2 = lp.y2
-        }
-        delete lineDragPositions[t.id]
-        if (_onDragSaved) _onDragSaved(t.id)
+      const lp = lineDragPositions[t.id]
+      await mapsApi.updateObject(mapName.value, t.id, {
+        x: lp.x, y: lp.y,
+        extra: { x2: lp.x2, y2: lp.y2 },
+      }, auth.accessToken!)
+      const obj = mapsStore.currentMap?.objects.find(o => o.id === t.id)
+      if (obj) {
+        obj.x = lp.x; obj.y = lp.y
+        if (!obj.extra) obj.extra = {}
+        obj.extra.x2 = lp.x2; obj.extra.y2 = lp.y2
       }
+      delete lineDragPositions[t.id]
+      if (_onDragSaved) _onDragSaved(t.id)
     } catch (e) {
-      console.error('Failed to save drag', e)
+      console.error('Failed to save line drag', e)
       await onMapChange()
     }
   }
@@ -310,7 +289,6 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     draft.group_name = ''
     draft.map_name = ''
     draft.label_text = ''
-    Object.keys(dragPositions).forEach(k => delete dragPositions[k])
     Object.keys(lineDragPositions).forEach(k => delete lineDragPositions[k])
   }
 
@@ -363,9 +341,8 @@ export function useMapEditor(mapName: Ref<string>, onMapChange: () => Promise<vo
     editMode, toggleEditMode,
     selectedObjectId, selectObject,
     snapGrid, setDragSavedCallback,
-    draggingId, dragPositions,
     lineDragPositions,
-    startDrag, startLineDrag,
+    saveObjectPosition, startLineDrag,
     updateObjectProperties,
     placing, draft, startPlacing, placeAt, placeAtLatLng, moveObjectToLatLng,
     deleteSelected, duplicateSelected, cancelPlacing,

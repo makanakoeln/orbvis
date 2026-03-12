@@ -44,8 +44,6 @@ const baseProps = {
   states: sampleStates,
   editMode: false,
   placing: false,
-  draggingId: null,
-  dragPositions: {},
   lineDragPositions: {},
   selectedObjectId: null,
 }

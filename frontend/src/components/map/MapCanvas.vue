@@ -7,6 +7,9 @@
     :data-native-width="bgImageSize?.width"
     :data-native-height="bgImageSize?.height"
     @click="onCanvasClick"
+    @pointermove.prevent="onCanvasPointerMove"
+    @pointerup="onCanvasPointerUp"
+    @pointercancel="onCanvasPointerUp"
   >
     <!-- SVG overlay for grid + lines -->
     <svg
@@ -45,8 +48,9 @@
       :key="obj.id"
       class="absolute"
       :style="objectWrapperStyle(obj)"
-      @mousedown.prevent="onObjectMouseDown($event, obj)"
-      @click.stop="onObjectClick(obj)"
+      @pointerdown.prevent="onObjectPointerDown($event, obj)"
+      @dragstart.prevent
+      @click.stop="onObjectClick(obj, $event)"
       @contextmenu.prevent="onObjectContextMenu($event, obj)"
     >
       <MapObject
@@ -104,8 +108,6 @@ const props = defineProps<{
   states: Record<string, ObjectState>
   editMode: boolean
   placing: boolean
-  draggingId: string | null
-  dragPositions: Record<string, { x: number; y: number }>
   lineDragPositions: Record<string, { x: number; y: number; x2: number; y2: number }>
   selectedObjectId: string | null
   checkmkUrl?: string | null
@@ -115,9 +117,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'object-mousedown': [event: MouseEvent, obj: MapObjectType]
-  'object-click': [obj: MapObjectType]
-  'object-contextmenu': [obj: MapObjectType]
+  'object-drag-end': [id: string, x: number, y: number]
+  'object-click': [obj: MapObjectType, event?: MouseEvent]
+  'object-contextmenu': [obj: MapObjectType, anchor: { left: number; top: number; right: number; bottom: number } | null]
   'object-delete': [obj: MapObjectType]
   'line-drag-start': [event: MouseEvent, obj: MapObjectType, mode: 'move' | 'start' | 'end']
   'canvas-click': [event: MouseEvent]
@@ -126,6 +128,20 @@ const emit = defineEmits<{
 const router = useRouter()
 const canvasEl = ref<HTMLDivElement | null>(null)
 const bgImageSize = ref<{ width: number; height: number } | null>(null)
+
+// Local pointer-capture drag state
+const _dragId = ref<string | null>(null)
+const _dragOffX = ref(0)
+const _dragOffY = ref(0)
+const _dragInitX = ref(0)
+const _dragInitY = ref(0)
+const _didMove = ref(false)
+const localDragPositions = reactive<Record<string, { x: number; y: number }>>({})
+
+function _snap(v: number): number {
+  if (!props.snapGrid) return v
+  return Math.round(v / props.snapGrid) * props.snapGrid
+}
 
 watch(
   () => props.config.globals.background_image,
@@ -177,12 +193,13 @@ const lineObjects = computed(() =>
 )
 
 function objectWrapperStyle(obj: MapObjectType) {
-  const pos = props.dragPositions[obj.id] ?? { x: obj.x, y: obj.y }
+  const pos = localDragPositions[obj.id] ?? { x: obj.x, y: obj.y }
   const isMap = obj.type === 'map'
-  const cursor = props.editMode
-    ? (props.draggingId === obj.id ? 'grabbing' : 'grab')
+  const canDrag = props.editMode || props.isAdmin
+  const cursor = canDrag
+    ? (_dragId.value === obj.id ? 'grabbing' : 'grab')
     : (isMap || obj.url || !!buildCheckmkUrl(obj) ? 'pointer' : 'default')
-  const zIndex = props.draggingId === obj.id ? 100 : (obj.z ?? 1)
+  const zIndex = _dragId.value === obj.id ? 100 : (obj.z ?? 1)
 
   if (bgImageSize.value) {
     // Percentage positions relative to native image dimensions
@@ -203,13 +220,48 @@ function objectWrapperStyle(obj: MapObjectType) {
   }
 }
 
-// ---- Event delegation ----
+// ---- Pointer-capture drag handlers ----
 
-function onObjectMouseDown(event: MouseEvent, obj: MapObjectType) {
-  if (props.editMode) {
-    emit('object-mousedown', event, obj)
+function onObjectPointerDown(event: PointerEvent, obj: MapObjectType) {
+  if (!(props.editMode || props.isAdmin)) return
+  const canvas = canvasEl.value
+  if (!canvas) return
+  canvas.setPointerCapture(event.pointerId)
+  const rect = canvas.getBoundingClientRect()
+  _dragOffX.value = (event.clientX - rect.left) - obj.x
+  _dragOffY.value = (event.clientY - rect.top) - obj.y
+  _dragInitX.value = obj.x
+  _dragInitY.value = obj.y
+  _didMove.value = false
+  _dragId.value = obj.id
+  localDragPositions[obj.id] = { x: obj.x, y: obj.y }
+  if (props.editMode) emit('object-click', obj) // select on pointerdown (no event = no action bar)
+}
+
+function onCanvasPointerMove(event: PointerEvent) {
+  const id = _dragId.value
+  if (!id || !canvasEl.value) return
+  const rect = canvasEl.value.getBoundingClientRect()
+  const x = Math.max(0, _snap(Math.round(event.clientX - rect.left - _dragOffX.value)))
+  const y = Math.max(0, _snap(Math.round(event.clientY - rect.top - _dragOffY.value)))
+  if (!_didMove.value && (Math.abs(x - _dragInitX.value) > 4 || Math.abs(y - _dragInitY.value) > 4)) {
+    _didMove.value = true
+  }
+  localDragPositions[id] = { x, y }
+}
+
+function onCanvasPointerUp(_event: PointerEvent) {
+  const id = _dragId.value
+  _dragId.value = null
+  if (!id) return
+  const pos = localDragPositions[id]
+  delete localDragPositions[id]
+  if (_didMove.value && pos) {
+    emit('object-drag-end', id, pos.x, pos.y)
   }
 }
+
+// ---- Event delegation ----
 
 function buildCheckmkUrl(obj: MapObjectType): string | null {
   const base = props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
@@ -238,11 +290,13 @@ function buildCheckmkUrl(obj: MapObjectType): string | null {
   return null
 }
 
-function onObjectClick(obj: MapObjectType) {
+function onObjectClick(obj: MapObjectType, event?: MouseEvent) {
   if (props.editMode) {
-    emit('object-click', obj)
+    if (!_didMove.value) emit('object-click', obj, event)
     return
   }
+  // Suppress navigation click if the pointer just completed a real drag move
+  if (_didMove.value) return
   if (obj.url) {
     window.open(obj.url, obj.url_target || '_blank')
     return
@@ -259,7 +313,13 @@ function onObjectClick(obj: MapObjectType) {
 
 function onObjectContextMenu(event: MouseEvent, obj: MapObjectType) {
   if (props.editMode) {
-    emit('object-contextmenu', obj)
+    // Get the bounding rect of the clicked element (wrapper div or SVG element)
+    const el = (event.currentTarget ?? event.target) as Element | null
+    const r = el?.getBoundingClientRect?.()
+    const anchor = r && (r.width > 0 || r.height > 0)
+      ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
+      : { left: event.clientX, top: event.clientY, right: event.clientX, bottom: event.clientY }
+    emit('object-contextmenu', obj, anchor)
   } else {
     openContextMenu(event, obj)
   }
@@ -303,8 +363,10 @@ function openContextMenu(event: MouseEvent, obj: MapObjectType) {
 
 function onContextMenuEdit() {
   const obj = contextMenu.object
+  const x = contextMenu.x
+  const y = contextMenu.y
   closeMenus()
-  if (obj) emit('object-contextmenu', obj)
+  if (obj) emit('object-contextmenu', obj, { left: x, top: y, right: x, bottom: y })
 }
 
 function onContextMenuDelete() {
@@ -335,5 +397,5 @@ function getMapPosition(event: MouseEvent): { x: number; y: number } {
   }
 }
 
-defineExpose({ canvasEl, getMapPosition })
+defineExpose({ getCanvasEl: () => canvasEl.value, getMapPosition })
 </script>
