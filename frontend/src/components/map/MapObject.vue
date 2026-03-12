@@ -45,26 +45,39 @@
     @mouseleave="$emit('hover-leave')"
     @contextmenu.prevent="$emit('context-menu', $event)"
   >
-    <!-- Icon with badges -->
+    <!-- Icon with arc ring overlay + badges -->
     <div class="relative">
-      <!-- Custom icon image -->
+      <!-- Custom icon image — draggable="false" prevents the browser from starting
+           an HTML5 drag operation which would swallow all subsequent mousemove events -->
       <img
         v-if="object.icon"
         :src="`${BASE_URL}icons/${object.icon}`"
         :style="iconStyle"
-        class="object-contain transition-all duration-300"
+        draggable="false"
+        class="object-contain transition-all duration-300 select-none"
         :class="selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded' : ''"
       />
-      <!-- State circle (fallback) -->
+      <!-- State circle fallback (Vue-owned, unchanged from original) -->
       <div
         v-else
         class="rounded-full flex items-center justify-center transition-colors duration-300"
-        :class="[stateClass, selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950' : '', pulseClass]"
+        :class="[stateClass, selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950' : '']"
         :style="iconStyle"
       >
         <span class="text-white leading-none select-none" :style="charStyle">{{ typeChar }}</span>
       </div>
-      <!-- Badges only shown for state circle, not custom icons -->
+
+      <!-- D3 arc ring overlay — pointer-events:none set via attribute + style to ensure
+           it never intercepts mousedown/drag events in any browser -->
+      <svg
+        v-if="shouldShowRing"
+        ref="arcSvgEl"
+        :width="svgSize" :height="svgSize"
+        pointer-events="none"
+        class="absolute pointer-events-none"
+        :style="{ top: `-${RING_PAD}px`, left: `-${RING_PAD}px`, pointerEvents: 'none' }"
+      />
+
       <!-- Acknowledged badge -->
       <span
         v-if="state?.acknowledged"
@@ -92,11 +105,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { MapObject, ObjectState } from '@/types/api'
 import GadgetRenderer from './GadgetRenderer.vue'
+import { useArcRing } from '@/composables/useArcRing'
+import { parsePerfData, utilPercent, utilColor as _utilColor } from '@/utils/perf'
 
 const BASE_URL = import.meta.env.BASE_URL
+const RING_PAD = 6
 
 const props = defineProps<{
   object: MapObject
@@ -111,21 +127,50 @@ defineEmits<{
   'context-menu': [event: MouseEvent]
 }>()
 
+// Single arc ring SVG — always a separate overlay SVG that D3 owns exclusively.
+// pointer-events="none" on the SVG element (SVG attribute, not CSS) ensures it
+// never intercepts mousedown/click events, preserving drag behaviour in edit mode.
+const arcSvgEl = ref<SVGSVGElement | null>(null)
+
+const svgSize = computed(() => props.iconSize + RING_PAD * 2)
+
 const iconStyle = computed(() => ({
   width: `${props.iconSize}px`,
   height: `${props.iconSize}px`,
 }))
 
-const charStyle = computed(() => {
-  const chars = typeChar.value.length
-  const factor = chars === 1 ? 0.46 : 0.30
-  return {
-    fontSize: `${Math.max(10, Math.round(props.iconSize * factor))}px`,
-    fontWeight: '900',
-    textShadow: '0 1px 2px rgba(0,0,0,0.4)',
-  }
+const STATE_RGB: Record<string, string> = {
+  UP: 'rgb(34,197,94)', OK: 'rgb(34,197,94)',
+  DOWN: 'rgb(239,68,68)', CRITICAL: 'rgb(239,68,68)',
+  UNREACHABLE: 'rgb(249,115,22)', UNKNOWN: 'rgb(249,115,22)',
+  WARNING: 'rgb(245,158,11)', PENDING: 'rgb(113,113,122)',
+}
+const stateColorRgb = computed(() => STATE_RGB[props.state?.state ?? 'PENDING'] ?? STATE_RGB['PENDING'])
+
+const firstMetricPct = computed(() => {
+  const metrics = parsePerfData(props.state?.perf_data ?? '')
+  return metrics.length ? utilPercent(metrics[0]) : null
 })
 
+const ringUtilColor = computed(() =>
+  firstMetricPct.value !== null ? _utilColor(firstMetricPct.value) : stateColorRgb.value,
+)
+
+const shouldShowRing = computed(() =>
+  !['textbox', 'line'].includes(props.object.type) &&
+  props.object.view_type !== 'gadget',
+)
+
+useArcRing({
+  svgRef: arcSvgEl,
+  iconSize: computed(() => props.iconSize),
+  pct: firstMetricPct,
+  stateColor: stateColorRgb,
+  utilColor: ringUtilColor,
+  enabled: shouldShowRing,
+})
+
+// Original state classes — fallback div is Vue-owned, untouched by D3
 const STATE_CLASSES: Record<string, string> = {
   UP: 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]',
   OK: 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]',
@@ -136,16 +181,17 @@ const STATE_CLASSES: Record<string, string> = {
   WARNING: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]',
   PENDING: 'bg-zinc-500',
 }
+const stateClass = computed(() => STATE_CLASSES[props.state?.state ?? 'PENDING'] ?? STATE_CLASSES['PENDING'])
 
-const stateClass = computed(() => {
-  const s = props.state?.state ?? 'PENDING'
-  return STATE_CLASSES[s] ?? STATE_CLASSES['PENDING']
+const charStyle = computed(() => {
+  const chars = typeChar.value.length
+  const factor = chars === 1 ? 0.46 : 0.30
+  return {
+    fontSize: `${Math.max(10, Math.round(props.iconSize * factor))}px`,
+    fontWeight: '900',
+    textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+  }
 })
-
-const PULSE_STATES = new Set(['DOWN', 'CRITICAL', 'UNREACHABLE'])
-const pulseClass = computed(() =>
-  PULSE_STATES.has(props.state?.state ?? '') ? 'state-pulse' : ''
-)
 
 const TYPE_CHARS: Record<string, string> = {
   host: 'H', service: 'S', hostgroup: 'HG', servicegroup: 'SG',
@@ -178,8 +224,5 @@ const displayName = computed(() => {
 @keyframes state-pulse {
   0%, 100% { box-shadow: 0 0 6px 1px rgba(239, 68, 68, 0.5); }
   50%       { box-shadow: 0 0 18px 4px rgba(239, 68, 68, 0.85); }
-}
-.state-pulse {
-  animation: state-pulse 1.8s ease-in-out infinite;
 }
 </style>

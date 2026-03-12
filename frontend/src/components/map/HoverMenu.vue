@@ -48,15 +48,24 @@
             DOWNTIME
           </span>
         </div>
+
+        <!-- Sparkline trend chart -->
+        <div v-if="sparkData.length > 1"
+          class="mt-3 pt-2 border-t border-[var(--border)]">
+          <div class="text-[10px] text-zinc-500 mb-1 uppercase tracking-wide font-medium">Trend</div>
+          <svg ref="sparkSvgRef" width="120" height="40" class="w-full" style="overflow: visible" />
+        </div>
       </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { MapObject, ObjectState } from '@/types/api'
 import { interpolateTemplate } from '@/utils/template'
+import { useStatesStore } from '@/stores/states'
+import { useSparkline } from '@/composables/useSparkline'
 
 const props = defineProps<{
   object: MapObject
@@ -65,6 +74,13 @@ const props = defineProps<{
   y: number
   template?: string | null
 }>()
+
+const statesStore = useStatesStore()
+
+const sparkSvgRef = ref<SVGSVGElement | null>(null)
+const sparkData = computed(() => statesStore.history[props.object.id] ?? [])
+
+useSparkline({ svgRef: sparkSvgRef, data: sparkData })
 
 const renderedTemplate = computed(() =>
   props.template ? interpolateTemplate(props.template, props.object, props.state) : null,

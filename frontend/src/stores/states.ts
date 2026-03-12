@@ -2,6 +2,10 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ObjectState, WebSocketStateUpdate } from '@/types/api'
 import { mapsApi } from '@/api/client'
+import { parsePerfData, utilPercent } from '@/utils/perf'
+
+export interface MetricSnapshot { ts: number; pct: number }
+const HISTORY_MAX = 20
 
 // Base path without trailing slash, e.g. '/heute/orbvis' or ''
 const _base = import.meta.env.BASE_URL.replace(/\/$/, '')
@@ -30,6 +34,7 @@ function _notifyStateChange(obj: ObjectState, prev: ObjectState | undefined) {
 
 export const useStatesStore = defineStore('states', () => {
   const states = ref<Record<string, ObjectState>>({})  // keyed by object_id
+  const history = ref<Record<string, MetricSnapshot[]>>({})
   const connected = ref(false)
   const lastUpdate = ref<number | null>(null)
   const notificationsEnabled = ref(false)
@@ -41,6 +46,15 @@ export const useStatesStore = defineStore('states', () => {
     const result = await Notification.requestPermission()
     notificationsEnabled.value = result === 'granted'
     return notificationsEnabled.value
+  }
+
+  function _recordHistory(objectId: string, perf_data: string, ts: number) {
+    const metrics = parsePerfData(perf_data)
+    if (!metrics.length) return
+    const arr = history.value[objectId] ?? []
+    arr.push({ ts, pct: utilPercent(metrics[0]) })
+    if (arr.length > HISTORY_MAX) arr.splice(0, arr.length - HISTORY_MAX)
+    history.value[objectId] = arr
   }
 
   let ws: WebSocket | null = null
@@ -66,12 +80,16 @@ export const useStatesStore = defineStore('states', () => {
     try {
       const data = await mapsApi.getStates(currentMap, currentToken)
       const newStates: Record<string, ObjectState> = {}
-      for (const s of data.states) newStates[s.object_id] = s
+      const ts = Date.now() / 1000
+      for (const s of data.states) {
+        newStates[s.object_id] = s
+        if (s.perf_data) _recordHistory(s.object_id, s.perf_data, ts)
+      }
       for (const id of Object.keys(states.value)) {
         if (!newStates[id]) delete states.value[id]
       }
       Object.assign(states.value, newStates)
-      lastUpdate.value = Date.now() / 1000
+      lastUpdate.value = ts
       connected.value = data.backend_ok
     } catch {
       // Backend unreachable or auth error – show as offline
@@ -110,6 +128,7 @@ export const useStatesStore = defineStore('states', () => {
           for (const s of msg.states.states) {
             if (notificationsEnabled.value) _notifyStateChange(s, states.value[s.object_id])
             newStates[s.object_id] = s
+            if (s.perf_data) _recordHistory(s.object_id, s.perf_data, msg.states.generated_at)
           }
           for (const id of Object.keys(states.value)) {
             if (!newStates[id]) delete states.value[id]
@@ -144,6 +163,7 @@ export const useStatesStore = defineStore('states', () => {
     if (ws) { ws.onclose = null; ws.close(); ws = null }
     connected.value = false
     states.value = {}
+    history.value = {}
     currentMap = null
     currentToken = undefined
   }
@@ -152,5 +172,5 @@ export const useStatesStore = defineStore('states', () => {
     return states.value[objectId]
   }
 
-  return { states, connected, lastUpdate, notificationsEnabled, connectToMap, disconnect, getState, requestNotificationPermission }
+  return { states, history, connected, lastUpdate, notificationsEnabled, connectToMap, disconnect, getState, requestNotificationPermission }
 })
