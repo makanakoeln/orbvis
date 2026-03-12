@@ -187,11 +187,14 @@ async def authenticate_user(db: AsyncSession, username: str, password: str) -> U
         if user is None:
             user = await get_or_create_sso_user(db, username)
         else:
-            # Sync admin flag for htpasswd users – same as SSO cookie login.
-            is_admin = _is_checkmk_admin(username)
-            if user.is_admin != is_admin:
-                user.is_admin = is_admin
-                await db.flush()
+            # Sync admin flag for htpasswd users – only when CHECKMK_OMD_ROOT is configured.
+            # Without OMD_ROOT we cannot determine CMK roles, so we preserve the existing flag
+            # rather than incorrectly clearing admin status.
+            if settings.checkmk_omd_root:
+                is_admin = _is_checkmk_admin(username)
+                if user.is_admin != is_admin:
+                    user.is_admin = is_admin
+                    await db.flush()
         return user
 
     return None
