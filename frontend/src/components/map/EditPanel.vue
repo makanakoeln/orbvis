@@ -1,26 +1,33 @@
 <template>
-  <aside class="w-72 bg-[var(--bg-surface)] border-l border-[var(--border)] flex flex-col shrink-0 overflow-y-auto text-sm">
+  <div class="flex flex-col min-h-0 text-sm">
     <!-- Header -->
-    <div class="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between shrink-0">
-      <div>
-        <p class="font-semibold text-[var(--text)] text-sm">{{ t('mapSettings.editMode') }}</p>
-        <p class="text-xs text-zinc-500 mt-0.5">{{ t('mapSettings.dragObjects') }}</p>
-      </div>
+    <div class="px-4 py-3 border-b border-white/8 flex items-center gap-2 shrink-0">
+      <!-- Edit mode indicator dot -->
+      <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />
+      <span class="font-semibold text-[var(--text)] text-sm flex-1">{{ t('mapSettings.editMode') }}</span>
       <!-- Grid snap -->
-      <div class="flex items-center gap-1.5 text-xs text-zinc-500">
-        <span>{{ t('mapSettings.grid') }}</span>
-        <select :value="snapGrid" @change="$emit('update:snapGrid', +($event.target as HTMLSelectElement).value)"
-          class="bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-md px-1.5 py-0.5 text-xs text-zinc-300 focus:outline-none focus:ring-indigo-500">
-          <option value="0">{{ t('mapSettings.gridOff') }}</option>
-          <option value="10">10 px</option>
-          <option value="20">20 px</option>
-          <option value="50">50 px</option>
-        </select>
-      </div>
+      <select :value="snapGrid" @change="$emit('update:snapGrid', +($event.target as HTMLSelectElement).value)"
+        class="bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-md px-1.5 py-1 text-xs text-zinc-300 focus:outline-none focus:ring-indigo-500">
+        <option value="0">{{ t('mapSettings.gridOff') }}</option>
+        <option value="10">10 px</option>
+        <option value="20">20 px</option>
+        <option value="50">50 px</option>
+      </select>
+      <!-- Close / exit edit mode -->
+      <button @click="$emit('close-edit-mode')"
+        class="p-1 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/8 transition-all shrink-0"
+        :title="t('map.edit')">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
 
+    <!-- Scrollable body -->
+    <div class="overflow-y-auto flex-1 min-h-0">
+
     <!-- Add Object -->
-    <div class="p-4 border-b border-[var(--border)] space-y-2.5 shrink-0">
+    <div class="p-4 border-b border-white/8 space-y-2.5 shrink-0">
       <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{{ t('mapSettings.addObject') }}</p>
 
       <select v-model="draft.type" @change="onTypeChange"
@@ -72,7 +79,7 @@
     </div>
 
     <!-- Selected Object Properties -->
-    <div v-if="selectedObject" class="flex flex-col divide-y divide-white/5">
+    <div v-if="selectedObject" class="flex flex-col divide-y divide-white/8">
 
       <div class="px-4 pt-4 pb-3 flex items-center gap-2 shrink-0">
         <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{{ t('mapSettings.selected') }}</p>
@@ -335,7 +342,9 @@
 
       </form>
     </div>
-  </aside>
+
+    </div><!-- end scrollable body -->
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -355,7 +364,6 @@ const props = defineProps<{
   draft: NewObjectDraft
   placing: boolean
   selectedObject: MapObject | null
-  dragPositions: Record<string, { x: number; y: number }>
   backendId: string
   snapGrid: number
   mapType?: string
@@ -368,6 +376,7 @@ const emit = defineEmits<{
   'save-properties': [updates: Record<string, unknown>]
   'update:snapGrid': [value: number]
   'update:dirty': [value: boolean]
+  'close-edit-mode': []
 }>()
 
 const auth = useAuthStore()

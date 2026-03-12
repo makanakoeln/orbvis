@@ -1,7 +1,16 @@
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('close')" />
-    <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl w-[36rem] max-h-[90vh] flex flex-col">
+  <div class="fixed inset-0 z-50" :class="isPopover ? '' : 'flex items-center justify-center'">
+    <!-- Backdrop: dark in modal mode, transparent dismiss layer in popover mode -->
+    <div class="absolute inset-0 transition-all"
+      :class="isPopover ? '' : 'bg-black/60 backdrop-blur-sm'"
+      @click="$emit('close')" />
+    <!-- Card: centered in modal mode, positioned at click in popover mode -->
+    <Transition appear
+      enter-from-class="opacity-0 scale-95 -translate-y-1"
+      enter-active-class="transition-all duration-150 ease-out">
+    <div class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl flex flex-col overflow-hidden"
+      :class="isPopover ? 'absolute w-[25rem] max-h-[75vh]' : 'relative w-[36rem] max-h-[90vh]'"
+      :style="isPopover ? popoverStyle : {}">
 
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
@@ -318,6 +327,7 @@
         </div>
       </div>
     </div>
+    </Transition>
   </div>
 </template>
 
@@ -339,6 +349,7 @@ const props = defineProps<{
   state?: ObjectState
   backendId: string
   mapType?: string
+  anchorRect?: { left: number; top: number; right: number; bottom: number } | null
 }>()
 
 const emit = defineEmits<{
@@ -348,6 +359,34 @@ const emit = defineEmits<{
 }>()
 
 const auth = useAuthStore()
+
+// Popover vs centered modal
+const isPopover = computed(() => !!props.anchorRect)
+const popoverStyle = computed(() => {
+  const r = props.anchorRect
+  if (!r) return {}
+  const margin = 12
+  const cardW = 400
+  const cardMaxH = window.innerHeight * 0.75 // matches max-h-[75vh]
+
+  // Horizontal: prefer right of object, fall back to left
+  let left: number
+  if (r.right + margin + cardW <= window.innerWidth) {
+    left = r.right + margin
+  } else {
+    left = Math.max(margin, r.left - margin - cardW)
+  }
+
+  // Vertical: align top of card with top of object, clamp to viewport
+  let top = r.top
+  // If the card would overflow the bottom, push it up
+  if (top + cardMaxH + margin > window.innerHeight) {
+    top = window.innerHeight - cardMaxH - margin
+  }
+  top = Math.max(margin, top)
+
+  return { left: `${left}px`, top: `${top}px` }
+})
 
 const fetchedMetrics = ref<string[]>([])
 
