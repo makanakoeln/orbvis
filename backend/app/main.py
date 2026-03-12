@@ -514,7 +514,9 @@ def _run_migrations() -> None:
             if needs_stamp:
                 logger.info("Stamping existing database at alembic head.")
                 command.stamp(Config(str(alembic_ini)), "head")
-                return
+            else:
+                logger.info("Database already at head, skipping migrations.")
+            return
     finally:
         engine.dispose()
 
