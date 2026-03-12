@@ -67,6 +67,8 @@
               <span class="text-xs px-2 py-0.5 rounded-full font-medium ring-1"
                 :class="map.map_type === 'worldmap'
                   ? 'bg-cyan-500/10 text-cyan-400 ring-cyan-500/20'
+                  : map.map_type === 'automap'
+                  ? 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20'
                   : map.map_type === 'radar'
                   ? 'bg-violet-500/10 text-violet-400 ring-violet-500/20'
                   : 'bg-zinc-700/50 text-zinc-500 ring-zinc-700'">
@@ -161,6 +163,7 @@
                   class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                   <option value="static">{{ t('map.mapTypeStatic') }}</option>
                   <option value="worldmap">{{ t('map.mapTypeWorldmap') }}</option>
+                  <option value="automap">{{ t('map.mapTypeAutomap') }}</option>
                   <option value="radar">{{ t('map.mapTypeRadar') }}</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
