@@ -142,6 +142,7 @@ export interface UserRead {
   theme: string
   language: string
   cmk_theme: string | null
+  cmk_language: string | null
   roles: RoleRef[]
   permissions: PermissionRef[]
 }

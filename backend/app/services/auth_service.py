@@ -32,10 +32,33 @@ logger = logging.getLogger(__name__)
 # Validated before use in filesystem paths to prevent path traversal.
 _USERNAME_RE = re.compile(r"^[a-zA-Z0-9@._-]+$")
 
+# Languages supported by OrbVis — used when mapping CMK language codes.
+_SUPPORTED_LANGUAGES = {"en", "de"}
+
 # Pre-computed bcrypt hash used as a timing dummy when no DB user is found.
 # Computing it once at import time avoids an extra ~100 ms bcrypt round on
 # every failed login with an unknown username.
 _DUMMY_HASH: str = hash_password(secrets.token_hex(16))
+
+
+def get_cmk_language(username: str) -> str | None:
+    """Return the CMK UI language for a user mapped to a supported OrbVis language.
+
+    Returns a language code ('en', 'de', …) if the CMK language is supported,
+    None if CMK is not configured or the language is unknown/unsupported.
+    Fallback on the caller's side should be 'en'.
+    """
+    if not settings.checkmk_omd_root or not _USERNAME_RE.match(username):
+        return None
+    from app.integrations import checkmk as cmk_integration
+    if cmk_integration.available:
+        raw = cmk_integration.load_user(username).get("language")
+    else:
+        lang_file = pathlib.Path(settings.checkmk_omd_root) / "var" / "check_mk" / "web" / username / "language.mk"
+        raw = lang_file.read_text().strip() if lang_file.is_file() else None
+    if not raw:
+        return None
+    return raw if raw in _SUPPORTED_LANGUAGES else "en"
 
 
 def get_cmk_theme(username: str) -> str | None:

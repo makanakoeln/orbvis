@@ -36,39 +36,56 @@ def setup() -> None:
 def load_user(username: str) -> dict[str, Any]:
     """Load all available Checkmk attributes for a user.
 
-    Reads from two sources (no Flask context required):
-    - etc/check_mk/multisite.d/wato/users.mk  → roles, email, alias, …
-    - var/check_mk/web/{username}/*.mk         → runtime attrs (ui_theme, …)
+    Tries cmk.gui.userdb.store (the proper CMK API) first:
+    - load_user()        → wato user spec (language, roles, alias, …)
+    - load_custom_attr() → per-user runtime attrs (ui_theme, …)
 
-    Uses settings.checkmk_omd_root for path resolution (guaranteed correct)
-    rather than cmk.utils.paths (depends on OMD_ROOT env var at import time).
-
-    Returns an empty dict when the user is not found or cmk modules are
-    unavailable.
+    Falls back to direct file parsing when the CMK API is unavailable.
+    Returns an empty dict when the user is not found.
     """
     if not available or not settings.checkmk_omd_root:
         return {}
     try:
+        from cmk.gui.userdb.store import (
+            load_custom_attr as _load_custom_attr,
+            load_user as _load_user,
+        )
+        # Wato user spec contains language, roles, alias, email, …
+        data = dict(_load_user(username))
+        # Per-user custom attrs (written by ajax_ui_theme etc.) override wato data.
+        # Only enumerate the attrs we care about to avoid touching unrelated files.
+        for key in ("ui_theme",):
+            val = _load_custom_attr(user_id=username, key=key, parser=lambda x: x)
+            if val is not None:
+                data[key] = val
+        return data
+    except Exception as e:
+        log.warning("load_user(%s) via cmk.gui.userdb.store failed (%s) — using fallback", username, e)
+        return _load_user_fallback(username)
+
+
+def _load_user_fallback(username: str) -> dict[str, Any]:
+    """Direct file fallback when cmk.gui.userdb.store is unavailable."""
+    try:
         omd_root = Path(settings.checkmk_omd_root)
 
-        # --- static user config (roles, alias, email, …) ---
+        # Static user config (roles, alias, email, language, …) via exec()
         users_mk = omd_root / "etc" / "check_mk" / "multisite.d" / "wato" / "users.mk"
         ns: dict = {"multisite_users": {}}
         if users_mk.is_file():
             exec(compile(users_mk.read_bytes(), str(users_mk), "exec"), ns)  # noqa: S102
         user_data: dict = dict(ns["multisite_users"].get(username, {}))
 
-        # --- per-user runtime attributes (plain-text .mk files) ---
+        # Per-user runtime attrs override wato data (plain-text .mk files)
         profile_dir = omd_root / "var" / "check_mk" / "web" / username
         if profile_dir.is_dir():
             for attr_file in profile_dir.glob("*.mk"):
                 key = attr_file.stem
-                if key not in user_data:
-                    val = attr_file.read_text().strip()
-                    if val:
-                        user_data[key] = val
+                val = attr_file.read_text().strip()
+                if val:
+                    user_data[key] = val
 
         return user_data
     except Exception as e:
-        log.warning("load_user(%s): %s", username, e)
+        log.warning("_load_user_fallback(%s): %s", username, e)
         return {}

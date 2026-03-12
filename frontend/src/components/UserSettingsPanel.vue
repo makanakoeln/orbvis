@@ -37,8 +37,8 @@
           </div>
         </div>
 
-        <!-- Language selector (only for self) -->
-        <div v-if="isSelf" class="space-y-2">
+        <!-- Language selector (only for self, not in SSO mode where CMK controls it) -->
+        <div v-if="isSelf && !auth.ssoActive" class="space-y-2">
           <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.language') }}</label>
           <div class="flex gap-2">
             <button

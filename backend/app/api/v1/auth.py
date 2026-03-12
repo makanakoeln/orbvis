@@ -18,6 +18,7 @@ from app.schemas.user import UserRead
 from app.services.auth_service import (
     authenticate_user,
     create_tokens,
+    get_cmk_language,
     get_cmk_theme,
     get_or_create_sso_user,
     get_user_by_id,
@@ -70,6 +71,7 @@ async def refresh_token(
 async def me(current_user: User = Depends(get_current_user)) -> UserRead:
     result = UserRead.model_validate(current_user)
     result.cmk_theme = get_cmk_theme(current_user.name)
+    result.cmk_language = get_cmk_language(current_user.name)
     return result
 
 

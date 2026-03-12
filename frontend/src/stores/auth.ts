@@ -84,7 +84,10 @@ export const useAuthStore = defineStore('auth', () => {
     if (!accessToken.value) return
     try {
       user.value = await authApi.me(accessToken.value)
-      i18n.global.locale.value = (user.value?.language ?? 'en') as 'en' | 'de'
+      const lang = ssoActive.value && user.value.cmk_language
+        ? user.value.cmk_language
+        : (user.value.language ?? 'en')
+      i18n.global.locale.value = lang as 'en' | 'de'
       // Load global settings so they're available for new map/object creation
       useSettingsStore().load().catch(() => {})
     } catch {
@@ -94,7 +97,10 @@ export const useAuthStore = defineStore('auth', () => {
         if (ok && accessToken.value) {
           try {
             user.value = await authApi.me(accessToken.value)
-            i18n.global.locale.value = (user.value?.language ?? 'en') as 'en' | 'de'
+            const lang2 = ssoActive.value && user.value.cmk_language
+              ? user.value.cmk_language
+              : (user.value.language ?? 'en')
+            i18n.global.locale.value = lang2 as 'en' | 'de'
             useSettingsStore().load().catch(() => {})
             return
           } catch { /* fall through to clearAuth */ }
