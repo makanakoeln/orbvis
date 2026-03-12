@@ -525,6 +525,10 @@ def _run_migrations() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: startup and shutdown."""
+    from app.integrations import checkmk as cmk_integration
+
+    cmk_integration.setup()
+
     from app.backends.test import TestBackend
     from app.services import backend_service
     from app.services.state_service import register_backend

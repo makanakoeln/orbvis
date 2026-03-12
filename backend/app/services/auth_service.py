@@ -39,17 +39,21 @@ _DUMMY_HASH: str = hash_password(secrets.token_hex(16))
 
 
 def get_cmk_theme(username: str) -> str | None:
-    """Return the CMK theme for a user by checking ui_theme.mk.
+    """Return the CMK theme for a user.
 
-    The file only exists when the user has explicitly selected the 'facelift'
-    (light) theme.  Absence of the file means the default dark theme is active.
     Returns 'light', 'dark', or None when CMK_OMD_ROOT is not configured.
     """
-    omd_root = settings.checkmk_omd_root
-    if not omd_root or not _USERNAME_RE.match(username):
+    if not settings.checkmk_omd_root or not _USERNAME_RE.match(username):
         return None
-    theme_file = pathlib.Path(omd_root) / "var" / "check_mk" / "web" / username / "ui_theme.mk"
-    return "light" if theme_file.is_file() else "dark"
+    from app.integrations import checkmk as cmk_integration
+    if cmk_integration.available:
+        raw = cmk_integration.load_user(username).get("ui_theme")
+    else:
+        # Fallback: read ui_theme.mk directly (plain-text, not a Python expression)
+        theme_file = pathlib.Path(settings.checkmk_omd_root) / "var" / "check_mk" / "web" / username / "ui_theme.mk"
+        raw = theme_file.read_text().strip() if theme_file.is_file() else None
+    # "facelift" → light, "modern-dark" / absent → dark (CMK default)
+    return "light" if raw == "facelift" else "dark"
 
 
 def validate_checkmk_cookie(cookie_value: str) -> str | None:
@@ -206,23 +210,25 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
 
 
 def _is_checkmk_admin(username: str) -> bool:
-    """Check whether a Checkmk user has the 'admin' role by reading users.mk."""
-    omd_root = settings.checkmk_omd_root
-    if not omd_root:
+    """Check whether a Checkmk user has the 'admin' role."""
+    if not settings.checkmk_omd_root:
         logger.warning("CHECKMK_OMD_ROOT not set – cannot determine Checkmk role for %s", username)
         return False
-    users_mk = pathlib.Path(omd_root) / "etc" / "check_mk" / "multisite.d" / "wato" / "users.mk"
+    from app.integrations import checkmk as cmk_integration
+    if cmk_integration.available:
+        user_data = cmk_integration.load_user(username)
+        is_admin = "admin" in user_data.get("roles", [])
+        logger.debug("Checkmk role check for %s: roles=%s is_admin=%s", username, user_data.get("roles"), is_admin)
+        return is_admin
+    # Fallback: read users.mk directly via exec()
+    users_mk = pathlib.Path(settings.checkmk_omd_root) / "etc" / "check_mk" / "multisite.d" / "wato" / "users.mk"
     if not users_mk.is_file():
         logger.warning("Checkmk users.mk not found at %s", users_mk)
         return False
     try:
-        text = users_mk.read_text(encoding="utf-8")
-        # Execute the file in a controlled namespace – handles both
-        # `multisite_users = {...}` and `multisite_users.update({...})`
         ns: dict = {"multisite_users": {}}
-        exec(compile(text, str(users_mk), "exec"), ns)  # noqa: S102
-        data = ns["multisite_users"]
-        user_cfg = data.get(username, {})
+        exec(compile(users_mk.read_text(encoding="utf-8"), str(users_mk), "exec"), ns)  # noqa: S102
+        user_cfg = ns["multisite_users"].get(username, {})
         is_admin = "admin" in user_cfg.get("roles", [])
         logger.debug("Checkmk role check for %s: roles=%s is_admin=%s", username, user_cfg.get("roles"), is_admin)
         return is_admin
