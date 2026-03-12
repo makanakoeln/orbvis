@@ -135,13 +135,13 @@ const { t } = useI18n()
 const auth = useAuthStore()
 const route = useRoute()
 const showSettings = ref(false)
-const collapsed = ref(false)
 
-// Auto-collapse when entering a board view, expand when leaving
-watch(() => route.name, (name) => {
-  if (name === 'board') collapsed.value = true
-  else collapsed.value = false
-}, { immediate: true })
+const LS_KEY = 'orbvis_sidebar_collapsed'
+const collapsed = ref(localStorage.getItem(LS_KEY) === '1')
+
+watch(collapsed, (val) => {
+  localStorage.setItem(LS_KEY, val ? '1' : '0')
+})
 
 // NavItem: router-link wrapper with icon slot + active styling + collapsed mode
 const NavItem = defineComponent({
