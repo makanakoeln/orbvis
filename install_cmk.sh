@@ -184,6 +184,9 @@ EOF
 if sudo test -f "$BACKENDS_FILE"; then
   ok "Configuration written (existing backends.json kept)"
 else
+  if sudo -u "$SITE" omd config show LIVEPROXYD 2>/dev/null | grep -qi "^on$"; then
+    LIVESTATUS_SOCKET="$SITE_ROOT/tmp/run/liveproxyd/$SITE.sock"
+  fi
   sudo tee "$BACKENDS_FILE" > /dev/null <<EOF
 [
   {
