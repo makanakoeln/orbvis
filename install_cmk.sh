@@ -55,7 +55,6 @@ BASE_PATH="/$SITE/orbvis"
 LIVESTATUS_SOCKET="$SITE_ROOT/tmp/run/live"
 VENV_DIR="$ORBVIS_DIR/venv"
 CMK_PLUGINS_SRC="$SCRIPT_DIR/cmk_plugins"
-CMK_PLUGINS_DST="$ORBVIS_DIR/cmk_plugins"
 APACHE_CONF="$SITE_ROOT/etc/apache/conf.d/orbvis.conf"
 INIT_SCRIPT="$SITE_ROOT/etc/init.d/orbvis"
 
@@ -76,7 +75,6 @@ else
   [[ -z "$PYTHON3" ]] && die "python3 not found."
 fi
 
-PTH_FILE="$("$PYTHON3" -c 'import site; print(site.getsitepackages()[0])')/orbvis_cmk_plugins.pth"
 
 # ---------------------------------------------------------------------------
 # Sudo – authenticate once up front
@@ -97,8 +95,9 @@ if [[ "$ACTION" == "remove" ]]; then
   ok "Backend stopped"
 
   step "Removing files"
-  quietly sudo rm -f "$APACHE_CONF" "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis" "$PTH_FILE"
-  quietly sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$DB_FILE" "$ENV_FILE" "$BACKENDS_FILE" "$CMK_PLUGINS_DST"
+  quietly sudo rm -f "$APACHE_CONF" "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis"
+  quietly sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$DB_FILE" "$ENV_FILE" "$BACKENDS_FILE"
+  quietly sudo -u "$SITE" "$PYTHON3" -m pip uninstall -y orbvis-cmk 2>/dev/null || true
   ok "Files removed"
 
   step "Reloading Apache"
@@ -317,10 +316,7 @@ ok "OrbVis registered as OMD service"
 
 # 7. Checkmk GUI plugins
 step "Installing Checkmk GUI plugins"
-quietly sudo mkdir -p "$CMK_PLUGINS_DST"
-quietly sudo cp -r "$CMK_PLUGINS_SRC/." "$CMK_PLUGINS_DST/"
-quietly sudo mkdir -p "$(dirname "$PTH_FILE")"
-echo "$CMK_PLUGINS_DST" | quietly sudo tee "$PTH_FILE"
+quietly sudo -u "$SITE" "$PYTHON3" -m pip install --quiet --upgrade "$CMK_PLUGINS_SRC"
 ok "Checkmk GUI plugins installed"
 
 # 8. Ownership
