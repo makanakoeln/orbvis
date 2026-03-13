@@ -38,25 +38,25 @@
             <template v-if="object.type === 'host' || object.type === 'service'">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.hostname') }}</label>
-                <AutocompleteInput v-model="form.host_name" :suggestions="hosts" :loading="loadingHosts" :disabled="true" placeholder="hostname" class="flex-1" />
+                <AutocompleteInput v-model="form.host_name" :suggestions="hosts" :loading="loadingHosts" placeholder="hostname" class="flex-1" />
               </div>
             </template>
             <template v-if="object.type === 'service'">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.typeService') }}</label>
-                <AutocompleteInput v-model="form.service_description" :suggestions="services" :loading="loadingServices" :disabled="true" placeholder="service description" class="flex-1" />
+                <AutocompleteInput v-model="form.service_description" :suggestions="services" :loading="loadingServices" placeholder="service description" class="flex-1" />
               </div>
             </template>
             <template v-if="object.type === 'hostgroup' || object.type === 'servicegroup'">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.groupName') }}</label>
-                <AutocompleteInput v-model="form.group_name" :suggestions="groups" :loading="loadingGroups" :disabled="true" placeholder="group name" class="flex-1" />
+                <AutocompleteInput v-model="form.group_name" :suggestions="groups" :loading="loadingGroups" placeholder="group name" class="flex-1" />
               </div>
             </template>
             <template v-if="object.type === 'map'">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.targetMap') }}</label>
-                <input v-model="form.map_name" :disabled="true" class="field flex-1 disabled:opacity-50 disabled:cursor-not-allowed" placeholder="map-name" />
+                <input v-model="form.map_name" class="field flex-1" placeholder="map-name" />
               </div>
             </template>
           </div>
@@ -76,11 +76,11 @@
           <div class="space-y-3">
             <div class="field-row">
               <label class="field-label">{{ t('boardSettings.hostname') }}</label>
-              <AutocompleteInput v-model="form.host_name" :suggestions="hosts" :loading="loadingHosts" :disabled="true" placeholder="hostname" class="flex-1" />
+              <AutocompleteInput v-model="form.host_name" :suggestions="hosts" :loading="loadingHosts" placeholder="hostname" class="flex-1" />
             </div>
             <div class="field-row">
               <label class="field-label">{{ t('boardSettings.typeService') }}</label>
-              <AutocompleteInput v-model="form.service_description" :suggestions="services" :loading="loadingServices" :disabled="true" placeholder="service description (optional)" class="flex-1" />
+              <AutocompleteInput v-model="form.service_description" :suggestions="services" :loading="loadingServices" placeholder="service description (optional)" class="flex-1" />
             </div>
           </div>
         </section>
@@ -261,8 +261,17 @@
 
         <!-- === LINK === -->
         <section>
-          <p class="section-title">{{ t('boardSettings.link') }}</p>
-          <div class="space-y-3">
+          <button type="button" @click="showLink = !showLink"
+            class="flex items-center gap-2 w-full group mb-3">
+            <p class="section-title mb-0">{{ t('boardSettings.link') }}</p>
+            <span v-if="form.url" class="text-[10px] text-indigo-400 font-mono truncate max-w-[12rem]">{{ form.url }}</span>
+            <svg class="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-all ml-auto shrink-0"
+              :class="showLink ? '' : '-rotate-90'"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+          <div v-if="showLink" class="space-y-3">
             <div class="field-row">
               <label class="field-label">{{ t('boardSettings.url') }}</label>
               <input v-model="form.url" class="field flex-1 font-mono" placeholder="https://…" />
@@ -280,8 +289,16 @@
 
         <!-- === TEMPLATES === -->
         <section>
-          <p class="section-title">{{ t('boardSettings.templates') }}</p>
-          <div class="space-y-3">
+          <button type="button" @click="showTemplates = !showTemplates"
+            class="flex items-center gap-2 w-full group mb-3">
+            <p class="section-title mb-0">{{ t('boardSettings.templates') }}</p>
+            <svg class="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-all ml-auto shrink-0"
+              :class="showTemplates ? '' : '-rotate-90'"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+          <div v-if="showTemplates" class="space-y-3">
             <div class="field-row">
               <label class="field-label">{{ t('board.hoverTemplate') }}</label>
               <input v-model="form.hover_template" class="field flex-1 font-mono" :placeholder="t('board.templatePlaceholder')" />
@@ -443,6 +460,8 @@ const form = reactive({
 const saving = ref(false)
 const saveError = ref('')
 const confirmDelete = ref(false)
+const showLink = ref(!!props.object.url)
+const showTemplates = ref(!!(props.object.hover_template || props.object.context_template))
 
 // Initialize form from object
 watch(() => props.object, (obj) => {
@@ -606,7 +625,7 @@ async function save() {
 
 <style scoped>
 .section-title {
-  @apply text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3;
+  @apply text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 leading-none;
 }
 .field-row {
   @apply flex items-center gap-3;
