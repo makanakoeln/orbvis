@@ -28,7 +28,7 @@
         </div>
 
         <!-- Notification bell -->
-        <button @click="statesStore.requestNotificationPermission()"
+        <button @click="statesStore.toggleNotifications()"
           class="p-1.5 rounded-lg transition-all duration-150"
           :class="statesStore.notificationsEnabled
             ? 'text-amber-400 hover:bg-amber-500/10'
@@ -141,7 +141,7 @@
 
     <!-- FAB + Add Object panel + action bar (all bottom-right) -->
     <Teleport to="body">
-      <div v-if="isAutomap || (auth.isAdmin && !boardConfig?.readonly)"
+      <div v-if="auth.isAdmin && !boardConfig?.readonly && !isAutomap && !isRadar && !boardConfig?.name.startsWith('demo-')"
         class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
 
         <!-- Add Object panel — expands upward from FAB -->
@@ -150,7 +150,7 @@
           enter-active-class="transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-bottom-right"
           leave-to-class="opacity-0 scale-y-75 scale-x-95 translate-y-4"
           leave-active-class="transition-all duration-200 ease-[cubic-bezier(0.4,0,1,1)] origin-bottom-right">
-          <div v-if="auth.isAdmin && !boardConfig?.readonly && editor.editMode.value && !isAutomap && !isRadar"
+          <div v-if="editor.editMode.value"
             class="w-72 max-h-[calc(100vh-10rem)] flex flex-col overflow-hidden
                    bg-[var(--bg-surface)] backdrop-blur-xl
                    ring-1 ring-white/8 shadow-2xl shadow-black/60
@@ -664,18 +664,24 @@ function onObjectClick(obj: BoardObject, _event?: MouseEvent) {
   editor.selectObject(obj.id)
 }
 
-function onCanvasClick(event: MouseEvent) {
+async function onCanvasClick(event: MouseEvent) {
   if (!editor.editMode.value) return
   if (!editor.placing.value) { editor.selectObject(null); return }
   const pos = canvasRef.value?.getMapPosition(event)
-  if (pos) editor.placeAt(pos.x, pos.y)
+  if (pos) {
+    await editor.placeAt(pos.x, pos.y)
+    if (selectedObject.value) openPropsModal(selectedObject.value)
+  }
 }
 
 // Clicks on the scroll container outside the canvas bounds also trigger placing.
-function onContainerClick(event: MouseEvent) {
+async function onContainerClick(event: MouseEvent) {
   if (!editor.editMode.value || !editor.placing.value) return
   const pos = canvasRef.value?.getMapPosition(event)
-  if (pos) editor.placeAt(pos.x, pos.y)
+  if (pos) {
+    await editor.placeAt(pos.x, pos.y)
+    if (selectedObject.value) openPropsModal(selectedObject.value)
+  }
 }
 
 function onLineDragStart(event: MouseEvent, obj: BoardObject, mode: LineDragMode) {
@@ -685,9 +691,10 @@ function onLineDragStart(event: MouseEvent, obj: BoardObject, mode: LineDragMode
 
 // ---- Worldmap event handlers ----
 
-function onCanvasLatLngClick(lat: number, lng: number) {
+async function onCanvasLatLngClick(lat: number, lng: number) {
   if (!editor.editMode.value || !editor.placing.value) return
-  editor.placeAtLatLng(lat, lng)
+  await editor.placeAtLatLng(lat, lng)
+  if (selectedObject.value) openPropsModal(selectedObject.value)
 }
 
 function onLatLngDragEnd(id: string, lat: number, lng: number) {
