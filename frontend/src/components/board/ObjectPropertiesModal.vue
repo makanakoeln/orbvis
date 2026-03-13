@@ -178,42 +178,44 @@
               <input type="checkbox" v-model="form.label.show" class="rounded accent-indigo-500 w-4 h-4" />
               {{ t('boardSettings.showLabel') }}
             </label>
-            <template v-if="form.label.show">
-              <div class="field-row" v-if="object.type !== 'textbox'">
-                <label class="field-label">{{ t('boardSettings.labelText') }}</label>
-                <input v-model="form.label.text" class="field flex-1" placeholder="(auto from object)" />
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.size') }}</label>
-                  <NumberInput v-model="form.label.size" min="8" max="72" class="flex-1" />
+            <div :class="!form.label.show ? 'opacity-40 pointer-events-none' : ''">
+              <div class="space-y-3">
+                <div class="field-row" v-if="object.type !== 'textbox'">
+                  <label class="field-label">{{ t('boardSettings.labelText') }}</label>
+                  <input v-model="form.label.text" class="field flex-1" placeholder="(auto from object)" />
                 </div>
-                <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.color') }}</label>
-                  <div class="flex gap-2 flex-1 items-center">
-                    <input type="color" v-model="form.label.color"
-                      class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5" />
-                    <input v-model="form.label.color" class="field flex-1" placeholder="#ffffff" />
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="field-row">
+                    <label class="field-label">{{ t('boardSettings.size') }}</label>
+                    <NumberInput v-model="form.label.size" min="8" max="72" class="flex-1" />
+                  </div>
+                  <div class="field-row">
+                    <label class="field-label">{{ t('boardSettings.color') }}</label>
+                    <div class="flex gap-2 flex-1 items-center">
+                      <input type="color" v-model="form.label.color"
+                        class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5" />
+                      <input v-model="form.label.color" class="field flex-1" placeholder="#ffffff" />
+                    </div>
+                  </div>
+                  <div class="field-row">
+                    <label class="field-label">{{ t('boardSettings.offsetX') }}</label>
+                    <NumberInput v-model="form.label.x" class="flex-1" />
+                  </div>
+                  <div class="field-row">
+                    <label class="field-label">{{ t('boardSettings.offsetY') }}</label>
+                    <NumberInput v-model="form.label.y" class="flex-1" />
+                  </div>
+                  <div class="field-row col-span-2">
+                    <label class="field-label">{{ t('boardSettings.background') }}</label>
+                    <div class="flex gap-2 flex-1 items-center">
+                      <input type="color" v-model="form.label.background"
+                        class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5" />
+                      <input v-model="form.label.background" class="field flex-1" placeholder="transparent" />
+                    </div>
                   </div>
                 </div>
-                <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.offsetX') }}</label>
-                  <NumberInput v-model="form.label.x" class="flex-1" />
-                </div>
-                <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.offsetY') }}</label>
-                  <NumberInput v-model="form.label.y" class="flex-1" />
-                </div>
-                <div class="field-row col-span-2">
-                  <label class="field-label">{{ t('boardSettings.background') }}</label>
-                  <div class="flex gap-2 flex-1 items-center">
-                    <input type="color" v-model="form.label.background"
-                      class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5" />
-                    <input v-model="form.label.background" class="field flex-1" placeholder="transparent" />
-                  </div>
-                </div>
               </div>
-            </template>
+            </div>
           </div>
         </section>
 
