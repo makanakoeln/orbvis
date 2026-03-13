@@ -17,7 +17,7 @@ class GlobalSettings(BaseModel):
     label_y: int = 0
     url_target: str = "_blank"
     z: int = 1
-    line_type: int | None = None
+    line_style: str | None = None
     # New map defaults
     default_backend_id: str = "live_1"
     default_map_type: str = "static"

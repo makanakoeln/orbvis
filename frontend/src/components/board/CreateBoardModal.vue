@@ -98,7 +98,7 @@ onMounted(async () => {
 })
 
 async function submit() {
-  await boardsStore.createBoard(form.value.name, form.value.alias, form.value.backend_id, form.value.view_type)
+  await boardsStore.createBoard(form.value.name, form.value.alias, form.value.backend_id, form.value.view_type, settingsStore.settings.icon_size)
   const created = form.value.name
   form.value = {
     name: '',

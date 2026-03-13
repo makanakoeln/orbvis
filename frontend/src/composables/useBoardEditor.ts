@@ -231,7 +231,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       },
       image_src: draft.type === 'image' ? (draft.image_src || null) : undefined,
       url_target: s.url_target, z: s.z,
-      ...(draft.type === 'line' ? { x2: _snap(Math.round(x)) + 150, y2: _snap(Math.round(y)) } : {}),
+      ...(draft.type === 'line' ? { x2: _snap(Math.round(x)) + 150, y2: _snap(Math.round(y)), line_style: s.line_style ?? 'plain' } : {}),
     }
     try {
       const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!)
