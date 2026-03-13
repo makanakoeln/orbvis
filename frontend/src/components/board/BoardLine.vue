@@ -64,18 +64,18 @@
         :cx="x2" :cy="y2" r="4" :fill="lineColor" pointer-events="none" />
     </template>
 
-    <!-- label_text label at midpoint -->
+    <!-- label text at midpoint -->
     <text
-      v-if="props.object.label_show && props.object.label_text"
+      v-if="props.object.label?.show && props.object.label?.text"
       :x="(x1 + x2) / 2"
       :y="(y1 + y2) / 2 - 10"
       text-anchor="middle"
-      :font-size="props.object.label_size ?? 11"
+      :font-size="props.object.label?.size ?? 11"
       font-weight="500"
-      :fill="props.object.label_color ?? '#e4e4e7'"
+      :fill="props.object.label?.color ?? '#e4e4e7'"
       pointer-events="none"
       style="paint-order: stroke; stroke: rgba(0,0,0,0.8); stroke-width: 3px; stroke-linejoin: round"
-    >{{ props.object.label_text }}</text>
+    >{{ props.object.label?.text }}</text>
 
     <!-- Edit handles -->
     <template v-if="editMode">
@@ -110,8 +110,8 @@ defineEmits<{
 
 const x1 = computed(() => props.dragCoords?.x ?? props.object.x)
 const y1 = computed(() => props.dragCoords?.y ?? props.object.y)
-const x2 = computed(() => props.dragCoords?.x2 ?? (props.object.extra?.x2 as number) ?? props.object.x + 50)
-const y2 = computed(() => props.dragCoords?.y2 ?? (props.object.extra?.y2 as number) ?? props.object.y + 50)
+const x2 = computed(() => props.dragCoords?.x2 ?? props.object.x2 ?? props.object.x + 50)
+const y2 = computed(() => props.dragCoords?.y2 ?? props.object.y2 ?? props.object.y + 50)
 
 const STATE_COLORS: Record<string, string> = {
   UP: '#4ade80', OK: '#4ade80',
@@ -122,11 +122,10 @@ const STATE_COLORS: Record<string, string> = {
 }
 const lineColor = computed(() => STATE_COLORS[props.state?.state ?? 'PENDING'] ?? STATE_COLORS['PENDING'])
 
-// line_type: 10=plain, 11=arrow→, 12=arrow←, 13=double, 14=dashed, 20=weathermap
-const isWeathermap = computed(() => props.object.line_type === 20)
-const isDashed     = computed(() => props.object.line_type === 14)
-const hasEndArrow  = computed(() => props.object.line_type === 11 || props.object.line_type === 13)
-const hasStartArrow= computed(() => props.object.line_type === 12 || props.object.line_type === 13)
+const isWeathermap = computed(() => props.object.line_style === 'weathermap')
+const isDashed     = computed(() => props.object.line_style === 'dashed')
+const hasEndArrow  = computed(() => props.object.line_style === 'arrow_end' || props.object.line_style === 'arrow_both')
+const hasStartArrow= computed(() => props.object.line_style === 'arrow_start' || props.object.line_style === 'arrow_both')
 
 function arrowPoints(tx: number, ty: number, fx: number, fy: number): string {
   const angle = Math.atan2(ty - fy, tx - fx)
@@ -142,7 +141,7 @@ function arrowPoints(tx: number, ty: number, fx: number, fy: number): string {
 const gradientId = computed(() => `wm-grad-${props.object.id}`)
 
 const wmMetrics = computed(() => parsePerfData(props.state?.perf_data ?? ''))
-const wmMetric  = computed(() => getMetric(wmMetrics.value, props.object.extra?.weathermap_metric as string))
+const wmMetric  = computed(() => getMetric(wmMetrics.value, props.object.weathermap_metric ?? undefined))
 const wmPct     = computed(() => wmMetric.value ? utilPercent(wmMetric.value) : 0)
 const wmColor   = computed(() => utilColor(wmPct.value))
 const wmLabel   = computed(() => {

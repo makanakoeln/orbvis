@@ -6,7 +6,7 @@
 import { onMounted, onUnmounted, watch, ref } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api'
+import type { BoardConfig, BoardObject as BoardObjectType, ObjectState, WorldmapView } from '@/types/api'
 
 const props = defineProps<{
   config: BoardConfig
@@ -48,15 +48,15 @@ function escapeHtml(s: string): string {
 }
 
 function displayName(obj: BoardObjectType): string {
-  if (obj.label_text) return obj.label_text
+  if (obj.label?.text) return obj.label.text
   if (obj.host_name && obj.service_description) return `${obj.host_name}/${obj.service_description}`
   return obj.host_name ?? obj.group_name ?? obj.map_name ?? obj.id
 }
 
 function makeDivIcon(obj: BoardObjectType): L.DivIcon {
   const color = stateColor(obj.id)
-  const size = obj.icon_size ?? props.config.globals.icon_size ?? 22
-  const label = obj.label_show !== false ? escapeHtml(displayName(obj)) : ''
+  const size = obj.display?.icon_size ?? props.config.icon_size ?? 22
+  const label = obj.label?.show !== false ? escapeHtml(displayName(obj)) : ''
   const selected = props.selectedObjectId === obj.id
 
   const TYPE_CHARS: Record<string, string> = {
@@ -65,10 +65,11 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
   const typeChar = TYPE_CHARS[obj.type] ?? '?'
   const charSize = Math.max(8, Math.round(size * (typeChar.length > 1 ? 0.34 : 0.42)))
 
+  const iconFile = obj.display?.icon ?? obj.shape_icon
   let iconHtml: string
-  if (obj.icon) {
+  if (iconFile) {
     const outline = selected ? 'outline: 3px solid white; outline-offset: 2px; border-radius: 3px;' : ''
-    iconHtml = `<img src="${import.meta.env.BASE_URL}icons/${obj.icon}" style="width:${size}px;height:${size}px;object-fit:contain;display:block;${outline}" />`
+    iconHtml = `<img src="${import.meta.env.BASE_URL}icons/${iconFile}" style="width:${size}px;height:${size}px;object-fit:contain;display:block;${outline}" />`
   } else {
     iconHtml = `<div style="
         width: ${size}px; height: ${size}px;
@@ -104,8 +105,9 @@ function syncMarkers() {
   const currentIds = new Set(objects.map(o => o.id))
 
   for (const obj of objects) {
-    const lat = obj.lat ?? props.config.globals.worldmap_lat ?? 51
-    const lng = obj.lng ?? props.config.globals.worldmap_lng ?? 10
+    const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null
+    const lat = obj.lat ?? wv?.lat ?? 51
+    const lng = obj.lng ?? wv?.lng ?? 10
     const icon = makeDivIcon(obj)
     const objId = obj.id
 
@@ -159,10 +161,10 @@ function syncMarkers() {
 
 onMounted(() => {
   if (!mapEl.value) return
-  const g = props.config.globals
+  const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null
   leafletMap = L.map(mapEl.value, {
-    center: [g.worldmap_lat ?? 51, g.worldmap_lng ?? 10],
-    zoom: g.worldmap_zoom ?? 5,
+    center: [wv?.lat ?? 51, wv?.lng ?? 10],
+    zoom: wv?.zoom ?? 5,
   })
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',

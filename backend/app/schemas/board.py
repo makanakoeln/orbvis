@@ -2,19 +2,72 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field
+
+ObjectType = Literal[
+    "host", "service", "hostgroup", "servicegroup",
+    "map", "shape", "line", "textbox", "cmk_label",
+]
+
+LineStyle = Literal["plain", "arrow_end", "arrow_start", "arrow_both", "dashed", "weathermap"]
+
+
+class LabelConfig(BaseModel):
+    show: bool = True
+    text: str | None = None
+    x: int = 0
+    y: int = 0
+    size: int = 11
+    color: str = "#ffffff"
+    background: str = "transparent"
+
+
+class DisplayConfig(BaseModel):
+    mode: Literal["icon", "text", "gadget"] = "icon"
+    icon: str | None = None
+    icon_size: int | None = None
+    gadget_type: Literal["gauge", "bar", "trafficlight"] | None = None
+    gadget_metric: str | None = None
+
+
+class StaticView(BaseModel):
+    type: Literal["static"] = "static"
+
+
+class WorldmapView(BaseModel):
+    type: Literal["worldmap"] = "worldmap"
+    lat: float = 51.0
+    lng: float = 10.0
+    zoom: int = 5
+
+
+class RadarView(BaseModel):
+    type: Literal["radar"] = "radar"
+    filter: Literal["hostgroup", "servicegroup", "all_hosts", "all_services"] = "hostgroup"
+    filter_value: str = ""
+
+
+class AutomapView(BaseModel):
+    type: Literal["automap"] = "automap"
+
+
+BoardView = Annotated[
+    Union[StaticView, WorldmapView, RadarView, AutomapView],
+    Field(discriminator="type"),
+]
 
 
 class BoardObject(BaseModel):
     id: str
-    type: Literal["host", "service", "hostgroup", "servicegroup", "map", "shape", "line", "textbox"]
+    type: ObjectType
     x: int | float = 0
     y: int | float = 0
     # Geographic coordinates (worldmap)
     lat: float | None = None
     lng: float | None = None
+    z: int = 1
     # Host/Service specific
     host_name: str | None = None
     service_description: str | None = None
@@ -22,59 +75,40 @@ class BoardObject(BaseModel):
     group_name: str | None = None
     # Map object
     map_name: str | None = None
-    # Shape/icon
-    icon: str | None = None
-    # Line
-    line_type: int | None = None
-    view_type: str = "icon"  # 'icon' | 'text' | 'gadget'
-    gadget_type: str | None = None   # 'gauge' | 'bar' | 'trafficlight'
-    gadget_metric: str | None = None  # perf metric label, None = first
-    icon_size: int | None = None      # per-object override, None = use board default
-    label_show: bool = True
-    label_text: str | None = None
-    # Label styling
-    label_x: int = 0
-    label_y: int = 0
-    label_size: int = 11
-    label_color: str = "#ffffff"
-    label_background: str = "transparent"
+    # Shape icon (separate from display.icon which is for monitoring objects)
+    shape_icon: str | None = None
+    # Line endpoints
+    x2: int | float | None = None
+    y2: int | float | None = None
+    line_style: LineStyle | None = None
+    weathermap_metric: str | None = None
+    # CMK label filter
+    cmk_label_name: str | None = None
+    cmk_label_value: str | None = None
+    cmk_label_target: Literal["hosts", "services"] | None = None
+    # Nested configs
+    label: LabelConfig | None = Field(default_factory=LabelConfig)
+    display: DisplayConfig | None = Field(default_factory=DisplayConfig)
     # Link
     url: str | None = None
     url_target: str = "_blank"
-    # Stacking
-    z: int = 1
     # Templates (override board-global / global defaults)
     hover_template: str | None = None
     context_template: str | None = None
-    # Extra properties
-    extra: dict[str, Any] = Field(default_factory=dict)
-
-
-class BoardGlobals(BaseModel):
-    alias: str = ""
-    background_image: str | None = None
-    icon_size: int = 22
-    backend_id: str = "live_1"
-    hover_template: str | None = None
-    context_template: str | None = None
-    # Board type
-    map_type: Literal["static", "worldmap", "automap", "radar"] = "static"
-    # Worldmap initial view
-    worldmap_lat: float = 51.0
-    worldmap_lng: float = 10.0
-    worldmap_zoom: int = 5
-    # Radar filter
-    radar_type: Literal["hostgroup", "servicegroup", "all_hosts", "all_services"] = "hostgroup"
-    radar_value: str = ""
-    # Rotation: 0 = disabled; positive value = interval in seconds
-    rotation_interval: int = 0
 
 
 class BoardConfig(BaseModel):
     name: str
-    globals: BoardGlobals = Field(default_factory=BoardGlobals)
-    objects: list[BoardObject] = Field(default_factory=list)
+    alias: str = ""
     readonly: bool = False
+    backend_id: str = "live_1"
+    icon_size: int = 22
+    rotation_interval: int = 0
+    hover_template: str | None = None
+    context_template: str | None = None
+    background_image: str | None = None
+    view: BoardView = Field(default_factory=StaticView)
+    objects: list[BoardObject] = Field(default_factory=list)
 
 
 class BoardCreate(BaseModel):
@@ -83,7 +117,7 @@ class BoardCreate(BaseModel):
     background_image: str | None = None
     icon_size: int = 22
     backend_id: str = "live_1"
-    map_type: Literal["static", "worldmap", "automap", "radar"] = "static"
+    view: BoardView = Field(default_factory=StaticView)
 
 
 class BoardUpdate(BaseModel):
@@ -91,12 +125,7 @@ class BoardUpdate(BaseModel):
     background_image: str | None = None
     icon_size: int | None = None
     backend_id: str | None = None
-    map_type: Literal["static", "worldmap", "automap", "radar"] | None = None
-    worldmap_lat: float | None = None
-    worldmap_lng: float | None = None
-    worldmap_zoom: int | None = None
-    radar_type: Literal["hostgroup", "servicegroup", "all_hosts", "all_services"] | None = None
-    radar_value: str | None = None
+    view: BoardView | None = None
     hover_template: str | None = None
     context_template: str | None = None
     rotation_interval: int | None = None
@@ -108,13 +137,11 @@ class BoardRead(BaseModel):
     background_image: str | None
     icon_size: int
     backend_id: str
-    map_type: str
+    view_type: str
+    view: BoardView
     object_count: int
     rotation_interval: int
     readonly: bool = False
-    worldmap_lat: float = 51.0
-    worldmap_lng: float = 10.0
-    worldmap_zoom: int = 5
 
 
 class BoardClone(BaseModel):

@@ -75,7 +75,7 @@ async def test_clone_board(client, admin_token, tmp_path, monkeypatch):
     assert resp.status_code == 201
     data = resp.json()
     assert data["name"] == "clone-board"
-    assert data["globals"]["alias"] == "Cloned"
+    assert data["alias"] == "Cloned"
 
 
 @pytest.mark.asyncio
@@ -113,7 +113,8 @@ async def test_import_board(client, admin_token, tmp_path, monkeypatch):
     _patch(monkeypatch, tmp_path)
     payload = {
         "name": "imported",
-        "globals": {"alias": "Imported", "backend_id": "test"},
+        "alias": "Imported",
+        "backend_id": "test",
         "objects": [],
     }
     resp = await client.post(
@@ -128,7 +129,7 @@ async def test_import_board(client, admin_token, tmp_path, monkeypatch):
 @pytest.mark.asyncio
 async def test_import_board_conflict(client, admin_token, tmp_path, monkeypatch):
     await _create(client, admin_token, tmp_path, monkeypatch, "dup-board")
-    payload = {"name": "dup-board", "globals": {}, "objects": []}
+    payload = {"name": "dup-board", "objects": []}
     resp = await client.post(
         "/api/v1/boards/import",
         json=payload,
@@ -140,14 +141,14 @@ async def test_import_board_conflict(client, admin_token, tmp_path, monkeypatch)
 @pytest.mark.asyncio
 async def test_import_board_overwrite(client, admin_token, tmp_path, monkeypatch):
     await _create(client, admin_token, tmp_path, monkeypatch, "over-board")
-    payload = {"name": "over-board", "globals": {"alias": "Updated"}, "objects": []}
+    payload = {"name": "over-board", "alias": "Updated", "objects": []}
     resp = await client.post(
         "/api/v1/boards/import?overwrite=true",
         json=payload,
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert resp.status_code == 201
-    assert resp.json()["globals"]["alias"] == "Updated"
+    assert resp.json()["alias"] == "Updated"
 
 
 # ---- Background delete ----
@@ -179,4 +180,4 @@ async def test_delete_background(client, admin_token, tmp_path, monkeypatch):
         "/api/v1/boards/src-board",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert get_resp.json()["globals"]["background_image"] is None
+    assert get_resp.json()["background_image"] is None

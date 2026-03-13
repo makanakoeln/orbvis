@@ -65,7 +65,7 @@
         <!-- === TEXTBOX CONTENT === -->
         <section v-if="object.type === 'textbox'">
           <p class="section-title">{{ t('boardSettings.content') }}</p>
-          <textarea v-model="form.label_text" rows="3"
+          <textarea v-model="form.label.text" rows="3"
             class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
             :placeholder="t('boardSettings.textContent') + '…'" />
         </section>
@@ -89,18 +89,18 @@
           <div class="space-y-3">
             <div class="field-row">
               <label class="field-label">{{ t('boardSettings.lineStyle') }}</label>
-              <select v-model.number="form.line_type" class="field flex-1">
+              <select v-model="form.line_style" class="field flex-1">
                 <option :value="null">{{ t('boardSettings.lineDefault') }}</option>
-                <option :value="10">{{ t('boardSettings.lineSimple') }}</option>
-                <option :value="11">{{ t('boardSettings.lineArrowRight') }}</option>
-                <option :value="12">{{ t('boardSettings.lineArrowLeft') }}</option>
-                <option :value="13">{{ t('boardSettings.lineDoubleArrow') }}</option>
-                <option :value="14">{{ t('boardSettings.lineDashed') }}</option>
-                <option :value="20">{{ t('boardSettings.lineWeathermap') }}</option>
+                <option value="plain">{{ t('boardSettings.lineSimple') }}</option>
+                <option value="arrow_end">{{ t('boardSettings.lineArrowRight') }}</option>
+                <option value="arrow_start">{{ t('boardSettings.lineArrowLeft') }}</option>
+                <option value="arrow_both">{{ t('boardSettings.lineDoubleArrow') }}</option>
+                <option value="dashed">{{ t('boardSettings.lineDashed') }}</option>
+                <option value="weathermap">{{ t('boardSettings.lineWeathermap') }}</option>
               </select>
             </div>
             <!-- Weathermap metric -->
-            <div v-if="form.line_type === 20" class="field-row">
+            <div v-if="form.line_style === 'weathermap'" class="field-row">
               <label class="field-label">{{ t('boardSettings.metric') }}</label>
               <AutocompleteInput
                 v-model="form.weathermap_metric"
@@ -130,11 +130,11 @@
             <!-- Label -->
             <div class="field-row">
               <label class="field-label">{{ t('boardSettings.showLabel') }}</label>
-              <input v-model="form.label_show" type="checkbox" class="accent-indigo-500" />
+              <input v-model="form.label.show" type="checkbox" class="accent-indigo-500" />
             </div>
-            <div v-if="form.label_show" class="field-row">
+            <div v-if="form.label.show" class="field-row">
               <label class="field-label">{{ t('boardSettings.labelText') }}</label>
-              <input v-model="form.label_text" class="field flex-1" :placeholder="t('boardSettings.labelOnLine')" />
+              <input v-model="form.label.text" class="field flex-1" :placeholder="t('boardSettings.labelOnLine')" />
             </div>
           </div>
         </section>
@@ -175,41 +175,41 @@
           <p class="section-title">{{ t('boardSettings.label') }}</p>
           <div class="space-y-3">
             <label class="flex items-center gap-2.5 text-sm text-zinc-400 cursor-pointer select-none">
-              <input type="checkbox" v-model="form.label_show" class="rounded accent-indigo-500 w-4 h-4" />
+              <input type="checkbox" v-model="form.label.show" class="rounded accent-indigo-500 w-4 h-4" />
               {{ t('boardSettings.showLabel') }}
             </label>
-            <template v-if="form.label_show">
+            <template v-if="form.label.show">
               <div class="field-row" v-if="object.type !== 'textbox'">
                 <label class="field-label">{{ t('boardSettings.labelText') }}</label>
-                <input v-model="form.label_text" class="field flex-1" placeholder="(auto from object)" />
+                <input v-model="form.label.text" class="field flex-1" placeholder="(auto from object)" />
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div class="field-row">
                   <label class="field-label">{{ t('boardSettings.size') }}</label>
-                  <NumberInput v-model="form.label_size" min="8" max="72" class="flex-1" />
+                  <NumberInput v-model="form.label.size" min="8" max="72" class="flex-1" />
                 </div>
                 <div class="field-row">
                   <label class="field-label">{{ t('boardSettings.color') }}</label>
                   <div class="flex gap-2 flex-1 items-center">
-                    <input type="color" v-model="form.label_color"
+                    <input type="color" v-model="form.label.color"
                       class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5" />
-                    <input v-model="form.label_color" class="field flex-1" placeholder="#ffffff" />
+                    <input v-model="form.label.color" class="field flex-1" placeholder="#ffffff" />
                   </div>
                 </div>
                 <div class="field-row">
                   <label class="field-label">{{ t('boardSettings.offsetX') }}</label>
-                  <NumberInput v-model="form.label_x" class="flex-1" />
+                  <NumberInput v-model="form.label.x" class="flex-1" />
                 </div>
                 <div class="field-row">
                   <label class="field-label">{{ t('boardSettings.offsetY') }}</label>
-                  <NumberInput v-model="form.label_y" class="flex-1" />
+                  <NumberInput v-model="form.label.y" class="flex-1" />
                 </div>
                 <div class="field-row col-span-2">
                   <label class="field-label">{{ t('boardSettings.background') }}</label>
                   <div class="flex gap-2 flex-1 items-center">
-                    <input type="color" v-model="form.label_background"
+                    <input type="color" v-model="form.label.background"
                       class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5" />
-                    <input v-model="form.label_background" class="field flex-1" placeholder="transparent" />
+                    <input v-model="form.label.background" class="field flex-1" placeholder="transparent" />
                   </div>
                 </div>
               </div>
@@ -223,7 +223,7 @@
           <div class="space-y-3">
             <div class="field-row">
               <label class="field-label">{{ t('boardSettings.viewType') }}</label>
-              <select v-model="form.view_type" class="field flex-1">
+              <select v-model="form.display.mode" class="field flex-1">
                 <option value="icon">{{ t('boardSettings.viewTypeIcon') }}</option>
                 <option value="text">{{ t('boardSettings.viewTypeText') }}</option>
                 <option value="gadget">{{ t('boardSettings.viewTypeGadget') }}</option>
@@ -231,12 +231,12 @@
             </div>
             <div class="field-row">
               <label class="field-label">{{ t('boardSettings.size') }}</label>
-              <NumberInput v-model="form.icon_size" min="1" max="512" placeholder="map default" class="w-24" />
+              <NumberInput v-model="form.display.icon_size" min="1" max="512" placeholder="map default" class="w-24" />
             </div>
-            <template v-if="form.view_type === 'gadget'">
+            <template v-if="form.display.mode === 'gadget'">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.gadgetType') }}</label>
-                <select v-model="form.gadget_type" class="field flex-1">
+                <select v-model="form.display.gadget_type" class="field flex-1">
                   <option value="gauge">{{ t('boardSettings.gadgetGauge') }}</option>
                   <option value="bar">{{ t('boardSettings.gadgetBar') }}</option>
                   <option value="trafficlight">{{ t('boardSettings.gadgetTrafficlight') }}</option>
@@ -245,16 +245,16 @@
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.metric') }}</label>
                 <AutocompleteInput
-                  v-model="form.gadget_metric"
+                  v-model="form.display.gadget_metric"
                   :suggestions="metricSuggestions"
                   :placeholder="t('boardSettings.firstMetric')"
                   class="flex-1"
                 />
               </div>
             </template>
-            <div v-if="form.view_type !== 'gadget'" class="field-row">
+            <div v-if="form.display.mode !== 'gadget'" class="field-row">
               <label class="field-label">{{ t('boardSettings.customIcon') }}</label>
-              <input v-model="form.icon" class="field flex-1 font-mono" placeholder="filename.png" />
+              <input v-model="form.display.icon" class="field flex-1 font-mono" placeholder="filename.png" />
             </div>
           </div>
         </section>
@@ -409,19 +409,23 @@ const form = reactive({
   service_description: '',
   group_name: '',
   map_name: '',
-  icon: '',
-  line_type: null as number | null,
-  view_type: 'icon',
-  label_show: true,
-  label_text: '',
-  label_x: 0,
-  label_y: 0,
-  label_size: 11,
-  label_color: '#ffffff',
-  label_background: 'transparent',
-  gadget_type: 'gauge',
-  gadget_metric: '',
-  icon_size: null as number | null,
+  line_style: null as string | null,
+  label: {
+    show: true,
+    text: '',
+    x: 0,
+    y: 0,
+    size: 11,
+    color: '#ffffff',
+    background: 'transparent',
+  },
+  display: {
+    mode: 'icon' as 'icon' | 'text' | 'gadget',
+    icon: '',
+    icon_size: null as number | null,
+    gadget_type: 'gauge' as string,
+    gadget_metric: '',
+  },
   weathermap_metric: '',
   url: '',
   url_target: '_blank',
@@ -446,19 +450,20 @@ watch(() => props.object, (obj) => {
   form.service_description = obj.service_description ?? ''
   form.group_name = obj.group_name ?? ''
   form.map_name = obj.map_name ?? ''
-  form.icon = obj.icon ?? ''
-  form.line_type = obj.line_type ?? null
-  form.view_type = obj.view_type ?? 'icon'
-  form.label_show = obj.label_show ?? true
-  form.label_text = obj.label_text ?? ''
-  form.label_x = obj.label_x ?? 0
-  form.label_y = obj.label_y ?? 0
-  form.label_size = obj.label_size ?? 11
-  form.label_color = obj.label_color ?? '#ffffff'
-  form.label_background = obj.label_background ?? 'transparent'
-  form.gadget_type = obj.gadget_type ?? 'gauge'
-  form.gadget_metric = obj.gadget_metric ?? ''
-  form.icon_size = obj.icon_size ?? null
+  form.line_style = obj.line_style ?? null
+  form.label.show = obj.label?.show ?? true
+  form.label.text = obj.label?.text ?? ''
+  form.label.x = obj.label?.x ?? 0
+  form.label.y = obj.label?.y ?? 0
+  form.label.size = obj.label?.size ?? 11
+  form.label.color = obj.label?.color ?? '#ffffff'
+  form.label.background = obj.label?.background ?? 'transparent'
+  form.display.mode = obj.display?.mode ?? 'icon'
+  form.display.icon = obj.display?.icon ?? ''
+  form.display.icon_size = obj.display?.icon_size ?? null
+  form.display.gadget_type = obj.display?.gadget_type ?? 'gauge'
+  form.display.gadget_metric = obj.display?.gadget_metric ?? ''
+  form.weathermap_metric = obj.weathermap_metric ?? ''
   form.url = obj.url ?? ''
   form.url_target = obj.url_target ?? '_blank'
   form.hover_template = obj.hover_template ?? ''
@@ -468,9 +473,8 @@ watch(() => props.object, (obj) => {
   form.lat = obj.lat ?? 0
   form.lng = obj.lng ?? 0
   form.z = obj.z ?? 1
-  form.x2 = (obj.extra?.x2 as number) ?? obj.x + 150
-  form.y2 = (obj.extra?.y2 as number) ?? obj.y
-  form.weathermap_metric = (obj.extra?.weathermap_metric as string) ?? ''
+  form.x2 = obj.x2 ?? obj.x + 150
+  form.y2 = obj.y2 ?? obj.y
 }, { immediate: true })
 
 // ---- Autocomplete ----
@@ -528,7 +532,7 @@ watch(() => form.host_name, async (host) => {
 
 const displayName = (() => {
   const obj = props.object
-  if (obj.label_text) return obj.label_text
+  if (obj.label?.text) return obj.label.text
   if (obj.type === 'host') return obj.host_name ?? obj.id
   if (obj.type === 'service') return obj.service_description ? `${obj.host_name}/${obj.service_description}` : obj.id
   if (obj.type === 'map') return obj.map_name ?? obj.id
@@ -543,19 +547,23 @@ async function save() {
   saving.value = true
   try {
     const updates: Record<string, unknown> = {
-      view_type: form.view_type,
-      gadget_type: form.view_type === 'gadget' ? form.gadget_type : null,
-      gadget_metric: form.view_type === 'gadget' ? (form.gadget_metric || null) : null,
-      icon_size: form.icon_size ?? null,
-      icon: form.icon || null,
-      line_type: form.line_type,
-      label_show: form.label_show,
-      label_text: form.label_text || null,
-      label_x: form.label_x,
-      label_y: form.label_y,
-      label_size: form.label_size,
-      label_color: form.label_color,
-      label_background: form.label_background,
+      display: {
+        mode: form.display.mode,
+        icon: form.display.icon || null,
+        icon_size: form.display.icon_size ?? null,
+        gadget_type: form.display.mode === 'gadget' ? form.display.gadget_type : null,
+        gadget_metric: form.display.mode === 'gadget' ? (form.display.gadget_metric || null) : null,
+      },
+      label: {
+        show: form.label.show,
+        text: form.label.text || null,
+        x: form.label.x,
+        y: form.label.y,
+        size: form.label.size,
+        color: form.label.color,
+        background: form.label.background,
+      },
+      line_style: form.line_style,
       url: form.url || null,
       url_target: form.url_target,
       hover_template: form.hover_template || null,
@@ -577,11 +585,9 @@ async function save() {
       updates.y = form.y
       updates.host_name = form.host_name || null
       updates.service_description = form.service_description || null
-      updates.extra = {
-        x2: form.x2,
-        y2: form.y2,
-        ...(form.line_type === 20 ? { weathermap_metric: form.weathermap_metric || null } : {}),
-      }
+      updates.x2 = form.x2
+      updates.y2 = form.y2
+      if (form.line_style === 'weathermap') updates.weathermap_metric = form.weathermap_metric || null
     } else if (props.mapType === 'worldmap') {
       updates.lat = form.lat
       updates.lng = form.lng

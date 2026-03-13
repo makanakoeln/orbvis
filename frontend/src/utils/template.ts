@@ -27,7 +27,7 @@ export function interpolateTemplate(
   state: ObjectState | undefined,
 ): string {
   const displayName =
-    object.label_text ||
+    object.label?.text ||
     (object.host_name && object.service_description
       ? `${object.host_name} / ${object.service_description}`
       : object.host_name ?? object.group_name ?? object.id)

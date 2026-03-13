@@ -20,7 +20,7 @@ export const SETTINGS_DEFAULTS: GlobalSettings = {
   label_y: 0,
   url_target: '_blank',
   z: 1,
-  line_type: null,
+  line_style: null,
   default_backend_id: 'live_1',
   default_map_type: 'static',
   hover_template: null,

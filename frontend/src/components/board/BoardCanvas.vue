@@ -54,7 +54,7 @@
       <BoardObject
         :object="obj"
         :state="states[obj.id]"
-        :icon-size="obj.icon_size ?? (obj.view_type === 'gadget' ? 60 : (iconSizeOverride ?? config.globals.icon_size))"
+        :icon-size="obj.display?.icon_size ?? (obj.display?.mode === 'gadget' ? 60 : (iconSizeOverride ?? config.icon_size))"
         :selected="selectedObjectId === obj.id"
         @hover="!editMode && openHoverMenu($event, obj)"
         @hover-leave="!editMode && closeHoverMenu()"
@@ -68,7 +68,7 @@
       :state="states[hoverMenu.object.id]"
       :x="hoverMenu.x"
       :y="hoverMenu.y"
-      :template="resolveTemplate(hoverMenu.object.hover_template, props.config.globals.hover_template, settingsStore.settings.hover_template)"
+      :template="resolveTemplate(hoverMenu.object.hover_template, props.config.hover_template, settingsStore.settings.hover_template)"
     />
 
     <!-- Context menu -->
@@ -80,7 +80,7 @@
       :y="contextMenu.y"
       :checkmk-url="checkmkUrl"
       :show-edit="isAdmin"
-      :template="resolveTemplate(contextMenu.object.context_template, props.config.globals.context_template, settingsStore.settings.context_template)"
+      :template="resolveTemplate(contextMenu.object.context_template, props.config.context_template, settingsStore.settings.context_template)"
       @close="closeMenus"
       @edit="onContextMenuEdit"
       @delete="onContextMenuDelete"
@@ -142,7 +142,7 @@ function _snap(v: number): number {
 }
 
 watch(
-  () => props.config.globals.background_image,
+  () => props.config.background_image,
   (bg) => {
     if (!bg) { bgImageSize.value = null; return }
     const img = new Image()
@@ -161,7 +161,7 @@ const canvasHeight = computed(() =>
 
 // Canvas style: with background → fill parent absolutely; without → fixed pixel size
 const canvasStyle = computed(() => {
-  const bg = props.config.globals.background_image
+  const bg = props.config.background_image
   if (bg && bgImageSize.value) {
     return {
       backgroundImage: `url(${import.meta.env.BASE_URL}boards/backgrounds/${bg})`,

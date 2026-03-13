@@ -45,7 +45,7 @@
           <div class="space-y-1.5">
             <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.boardType') }}</label>
             <div class="relative">
-              <select v-model="form.map_type"
+              <select v-model="form.view_type"
                 class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                 <option value="static">{{ t('board.boardTypeStatic') }}</option>
                 <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
@@ -89,22 +89,22 @@ const boardsStore = useBoardsStore()
 const connectionsStore = useConnectionsStore()
 const settingsStore = useSettingsStore()
 
-const form = ref({ name: '', alias: '', backend_id: '', map_type: 'static' })
+const form = ref({ name: '', alias: '', backend_id: '', view_type: 'static' })
 
 onMounted(async () => {
   await Promise.all([connectionsStore.fetchBackends(), settingsStore.load()])
   form.value.backend_id = settingsStore.settings.default_backend_id || connectionsStore.backends[0]?.id || ''
-  form.value.map_type = settingsStore.settings.default_map_type || 'static'
+  form.value.view_type = settingsStore.settings.default_map_type || 'static'
 })
 
 async function submit() {
-  await boardsStore.createBoard(form.value.name, form.value.alias, form.value.backend_id, form.value.map_type)
+  await boardsStore.createBoard(form.value.name, form.value.alias, form.value.backend_id, form.value.view_type)
   const created = form.value.name
   form.value = {
     name: '',
     alias: '',
     backend_id: settingsStore.settings.default_backend_id || connectionsStore.backends[0]?.id || '',
-    map_type: settingsStore.settings.default_map_type || 'static',
+    view_type: settingsStore.settings.default_map_type || 'static',
   }
   emit('created', created)
 }

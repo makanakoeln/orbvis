@@ -1,20 +1,13 @@
 {
   "name": "demo-automap",
-  "globals": {
-    "alias": "Flow Board (Demo)",
-    "background_image": null,
-    "icon_size": 22,
-    "backend_id": "test",
-    "hover_template": null,
-    "context_template": null,
-    "map_type": "automap",
-    "worldmap_lat": 51.0,
-    "worldmap_lng": 10.0,
-    "worldmap_zoom": 5,
-    "radar_type": "hostgroup",
-    "radar_value": "",
-    "rotation_interval": 0
-  },
-  "objects": [],
-  "readonly": true
+  "alias": "Flow Board (Demo)",
+  "readonly": true,
+  "backend_id": "test",
+  "icon_size": 22,
+  "rotation_interval": 0,
+  "hover_template": null,
+  "context_template": null,
+  "background_image": null,
+  "view": { "type": "automap" },
+  "objects": []
 }

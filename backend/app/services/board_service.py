@@ -13,7 +13,6 @@ from app.core.config import settings
 from app.schemas.board import (
     BoardConfig,
     BoardCreate,
-    BoardGlobals,
     BoardObject,
     BoardRead,
     BoardUpdate,
@@ -66,13 +65,11 @@ def create_board(data: BoardCreate) -> BoardConfig:
         raise ValueError(f"Board '{data.name}' already exists")
     cfg = BoardConfig(
         name=data.name,
-        globals=BoardGlobals(
-            alias=data.alias,
-            background_image=data.background_image,
-            icon_size=data.icon_size,
-            backend_id=data.backend_id,
-            map_type=data.map_type,
-        ),
+        alias=data.alias,
+        background_image=data.background_image,
+        icon_size=data.icon_size,
+        backend_id=data.backend_id,
+        view=data.view,
     )
     _save_board_file(cfg)
     return cfg
@@ -86,7 +83,7 @@ def update_board(name: str, data: BoardUpdate) -> BoardConfig | None:
     if not update_data:
         return cfg
     for key, value in update_data.items():
-        setattr(cfg.globals, key, value)
+        setattr(cfg, key, value)
     _save_board_file(cfg)
     return cfg
 
@@ -121,12 +118,8 @@ def update_object(board_name: str, obj_id: str, updates: dict[str, Any]) -> Boar
     for obj in cfg.objects:
         if obj.id == obj_id:
             for key, value in updates.items():
-                if key == "extra" and isinstance(value, dict):
-                    obj.extra.update(value)  # merge, don't nest
-                elif hasattr(obj, key):
+                if hasattr(obj, key):
                     setattr(obj, key, value)
-                else:
-                    obj.extra[key] = value
             _save_board_file(cfg)
             return obj
     return None
@@ -145,8 +138,7 @@ def delete_object(board_name: str, obj_id: str) -> bool:
 
 
 def _load_board_file(path: Path) -> BoardConfig:
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
+    data = json.loads(path.read_text())
     return BoardConfig.model_validate(data)
 
 
@@ -179,7 +171,7 @@ def clone_board(name: str, new_name: str, alias: str | None = None) -> BoardConf
     cfg.name = new_name
     cfg.readonly = False  # clones are always editable
     if alias is not None:
-        cfg.globals.alias = alias
+        cfg.alias = alias
     _save_board_file(cfg)
     return cfg
 
@@ -200,15 +192,13 @@ def import_board(data: dict, *, overwrite: bool = False) -> BoardConfig:
 def _to_read(cfg: BoardConfig) -> BoardRead:
     return BoardRead(
         name=cfg.name,
-        alias=cfg.globals.alias,
-        background_image=cfg.globals.background_image,
-        icon_size=cfg.globals.icon_size,
-        backend_id=cfg.globals.backend_id,
-        map_type=cfg.globals.map_type,
+        alias=cfg.alias,
+        background_image=cfg.background_image,
+        icon_size=cfg.icon_size,
+        backend_id=cfg.backend_id,
+        view_type=cfg.view.type,
+        view=cfg.view,
         object_count=len(cfg.objects),
-        rotation_interval=cfg.globals.rotation_interval,
+        rotation_interval=cfg.rotation_interval,
         readonly=cfg.readonly,
-        worldmap_lat=cfg.globals.worldmap_lat,
-        worldmap_lng=cfg.globals.worldmap_lng,
-        worldmap_zoom=cfg.globals.worldmap_zoom,
     )

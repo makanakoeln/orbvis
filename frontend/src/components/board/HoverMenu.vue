@@ -87,7 +87,7 @@ const renderedTemplate = computed(() =>
 )
 
 const displayName = computed(() => {
-  if (props.object.label_text) return props.object.label_text
+  if (props.object.label?.text) return props.object.label.text
   if (props.object.host_name && props.object.service_description)
     return `${props.object.host_name} / ${props.object.service_description}`
   return props.object.host_name ?? props.object.group_name ?? props.object.id

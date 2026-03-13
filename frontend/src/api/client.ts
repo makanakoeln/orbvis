@@ -104,7 +104,7 @@ export const boardsApi = {
   get: (name: string, token: string): Promise<BoardConfig> =>
     request(`/boards/${name}`, {}, token),
 
-  create: (data: { name: string; alias?: string; backend_id?: string; map_type?: string }, token: string): Promise<BoardConfig> =>
+  create: (data: { name: string; alias?: string; backend_id?: string; view?: Record<string, unknown> }, token: string): Promise<BoardConfig> =>
     request('/boards', { method: 'POST', body: JSON.stringify(data) }, token),
 
   update: (name: string, data: Record<string, unknown>, token: string): Promise<BoardConfig> =>

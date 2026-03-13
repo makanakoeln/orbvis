@@ -5,11 +5,11 @@ import type { BoardConfig, ObjectState } from '@/types/api'
 
 const sampleConfig: BoardConfig = {
   name: 'test',
-  globals: {
-    alias: 'Test', icon_size: 22, backend_id: 'test',
-    map_type: 'regular', worldmap_lat: 0, worldmap_lng: 0, worldmap_zoom: 5,
-    radar_type: 'hostgroup', radar_value: '', rotation_interval: 0,
-  },
+  alias: 'Test',
+  icon_size: 22,
+  backend_id: 'test',
+  rotation_interval: 0,
+  view: { type: 'static' },
   objects: [
     {
       id: '1',
@@ -17,11 +17,9 @@ const sampleConfig: BoardConfig = {
       x: 100,
       y: 200,
       host_name: 'localhost',
-      view_type: 'icon',
-      label_show: true,
-      label_x: 0, label_y: 0, label_size: 10, label_color: '#ffffff', label_background: 'transparent',
+      label: { show: true, x: 0, y: 0, size: 10, color: '#ffffff', background: 'transparent' },
+      display: { mode: 'icon' },
       url_target: '_blank', z: 1,
-      extra: {},
     },
   ],
 }

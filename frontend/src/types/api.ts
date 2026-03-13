@@ -13,6 +13,33 @@ export type ObjectType =
   | 'shape'
   | 'line'
   | 'textbox'
+  | 'cmk_label'
+
+export interface LabelConfig {
+  show: boolean
+  text?: string | null
+  x: number
+  y: number
+  size: number
+  color: string
+  background: string
+}
+
+export interface DisplayConfig {
+  mode: 'icon' | 'text' | 'gadget'
+  icon?: string | null
+  icon_size?: number | null
+  gadget_type?: 'gauge' | 'bar' | 'trafficlight' | null
+  gadget_metric?: string | null
+}
+
+export type LineStyle = 'plain' | 'arrow_end' | 'arrow_start' | 'arrow_both' | 'dashed' | 'weathermap'
+
+export interface StaticView { type: 'static' }
+export interface WorldmapView { type: 'worldmap'; lat: number; lng: number; zoom: number }
+export interface RadarView { type: 'radar'; filter: string; filter_value: string }
+export interface AutomapView { type: 'automap' }
+export type BoardView = StaticView | WorldmapView | RadarView | AutomapView
 
 export type HostState = 'UP' | 'DOWN' | 'UNREACHABLE' | 'PENDING'
 export type ServiceState = 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN' | 'PENDING'
@@ -23,54 +50,41 @@ export interface BoardObject {
   type: ObjectType
   x: number
   y: number
-  lat?: number
-  lng?: number
-  host_name?: string
-  service_description?: string
-  group_name?: string
-  map_name?: string
-  icon?: string
-  line_type?: number
-  view_type: string
-  gadget_type?: string
-  gadget_metric?: string
-  icon_size?: number
-  label_show: boolean
-  label_text?: string
-  label_x: number
-  label_y: number
-  label_size: number
-  label_color: string
-  label_background: string
-  url?: string
-  url_target: string
+  lat?: number | null
+  lng?: number | null
   z: number
+  host_name?: string | null
+  service_description?: string | null
+  group_name?: string | null
+  map_name?: string | null
+  shape_icon?: string | null
+  x2?: number | null
+  y2?: number | null
+  line_style?: LineStyle | null
+  weathermap_metric?: string | null
+  cmk_label_name?: string | null
+  cmk_label_value?: string | null
+  cmk_label_target?: 'hosts' | 'services' | null
+  label?: LabelConfig | null
+  display?: DisplayConfig | null
+  url?: string | null
+  url_target: string
   hover_template?: string | null
   context_template?: string | null
-  extra: Record<string, unknown>
-}
-
-export interface BoardGlobals {
-  alias: string
-  background_image?: string
-  icon_size: number
-  backend_id: string
-  hover_template?: string
-  context_template?: string
-  map_type: string
-  worldmap_lat: number
-  worldmap_lng: number
-  worldmap_zoom: number
-  radar_type: string
-  radar_value: string
-  rotation_interval: number
 }
 
 export interface BoardConfig {
   name: string
-  globals: BoardGlobals
-  objects: BoardObject[]
+  alias: string
   readonly?: boolean
+  backend_id: string
+  icon_size: number
+  rotation_interval: number
+  hover_template?: string | null
+  context_template?: string | null
+  background_image?: string | null
+  view: BoardView
+  objects: BoardObject[]
 }
 
 export interface BoardRead {
@@ -79,13 +93,11 @@ export interface BoardRead {
   background_image?: string | null
   icon_size: number
   backend_id: string
-  map_type: string
+  view_type: string
+  view: BoardView
   object_count: number
   rotation_interval: number
   readonly?: boolean
-  worldmap_lat?: number
-  worldmap_lng?: number
-  worldmap_zoom?: number
 }
 
 export interface ObjectState {
@@ -191,7 +203,7 @@ export interface GlobalSettings {
   label_y: number
   url_target: string
   z: number
-  line_type?: number | null
+  line_style?: LineStyle | null
   default_backend_id: string
   default_map_type: string
   hover_template?: string | null

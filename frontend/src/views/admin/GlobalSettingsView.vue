@@ -49,15 +49,15 @@
           <!-- Line type -->
           <label class="block">
             <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.lineStyle') }}</span>
-            <select v-model="form.line_type"
+            <select v-model="form.line_style"
               class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500">
               <option :value="null">{{ t('boardSettings.lineDefault') }}</option>
-              <option :value="10">{{ t('boardSettings.lineSimple') }}</option>
-              <option :value="11">{{ t('boardSettings.lineArrowRight') }}</option>
-              <option :value="12">{{ t('boardSettings.lineArrowLeft') }}</option>
-              <option :value="13">{{ t('boardSettings.lineDoubleArrow') }}</option>
-              <option :value="14">{{ t('boardSettings.lineDashed') }}</option>
-              <option :value="15">{{ t('boardSettings.lineWeathermap') }}</option>
+              <option value="plain">{{ t('boardSettings.lineSimple') }}</option>
+              <option value="arrow_end">{{ t('boardSettings.lineArrowRight') }}</option>
+              <option value="arrow_start">{{ t('boardSettings.lineArrowLeft') }}</option>
+              <option value="arrow_both">{{ t('boardSettings.lineDoubleArrow') }}</option>
+              <option value="dashed">{{ t('boardSettings.lineDashed') }}</option>
+              <option value="weathermap">{{ t('boardSettings.lineWeathermap') }}</option>
             </select>
           </label>
 

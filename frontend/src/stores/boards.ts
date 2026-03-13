@@ -40,7 +40,7 @@ export const useBoardsStore = defineStore('boards', () => {
   }
 
   async function createBoard(name: string, alias: string, backendId = 'live_1', boardType = 'static') {
-    const cfg = await boardsApi.create({ name, alias, backend_id: backendId, map_type: boardType }, token())
+    const cfg = await boardsApi.create({ name, alias, backend_id: backendId, view: { type: boardType } }, token())
     await fetchBoards()
     return cfg
   }

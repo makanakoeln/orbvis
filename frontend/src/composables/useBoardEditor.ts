@@ -148,8 +148,8 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     canvasEl: HTMLElement,
   ) {
     const mouse = _mouseToCanvas(event, canvasEl)
-    const x2 = (obj.extra?.x2 as number) ?? obj.x + 100
-    const y2 = (obj.extra?.y2 as number) ?? obj.y + 100
+    const x2 = obj.x2 ?? obj.x + 100
+    const y2 = obj.y2 ?? obj.y + 100
     const init: LineCoords = { x: obj.x, y: obj.y, x2, y2 }
     lineDragPositions[obj.id] = { ...init }
     dragTarget.value = { kind: 'line', id: obj.id, mode, init, mouseStartX: mouse.x, mouseStartY: mouse.y }
@@ -168,13 +168,12 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       const lp = lineDragPositions[t.id]
       await boardsApi.updateObject(mapName.value, t.id, {
         x: lp.x, y: lp.y,
-        extra: { x2: lp.x2, y2: lp.y2 },
+        x2: lp.x2, y2: lp.y2,
       }, auth.accessToken!)
       const obj = boardsStore.currentBoard?.objects.find(o => o.id === t.id)
       if (obj) {
         obj.x = lp.x; obj.y = lp.y
-        if (!obj.extra) obj.extra = {}
-        obj.extra.x2 = lp.x2; obj.extra.y2 = lp.y2
+        obj.x2 = lp.x2; obj.y2 = lp.y2
       }
       delete lineDragPositions[t.id]
       if (_onDragSaved) _onDragSaved(t.id)
@@ -220,14 +219,19 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       service_description: draft.service_description || undefined,
       group_name: draft.group_name || undefined,
       map_name: draft.board_name || undefined,
-      label_text: draft.label_text || undefined,
-      icon: draft.icon || undefined,
-      label_show: s.label_show,
-      label_x: s.label_x, label_y: s.label_y,
-      label_size: s.label_size, label_color: s.label_color, label_background: s.label_background,
-      view_type: draft.type === 'line' ? 'line' : s.view_type,
+      label: {
+        show: s.label_show,
+        text: draft.label_text || null,
+        x: s.label_x, y: s.label_y,
+        size: s.label_size, color: s.label_color, background: s.label_background,
+      },
+      display: draft.type === 'line' ? null : {
+        mode: s.view_type as 'icon' | 'text' | 'gadget',
+        icon: draft.icon || null,
+      },
+      shape_icon: draft.type === 'shape' ? (draft.icon || null) : undefined,
       url_target: s.url_target, z: s.z,
-      extra: draft.type === 'line' ? { x2: _snap(Math.round(x)) + 150, y2: _snap(Math.round(y)) } : {},
+      ...(draft.type === 'line' ? { x2: _snap(Math.round(x)) + 150, y2: _snap(Math.round(y)) } : {}),
     }
     try {
       const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!)
@@ -252,14 +256,17 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       service_description: draft.service_description || undefined,
       group_name: draft.group_name || undefined,
       map_name: draft.board_name || undefined,
-      label_text: draft.label_text || undefined,
-      icon: draft.icon || undefined,
-      label_show: s.label_show,
-      label_x: s.label_x, label_y: s.label_y,
-      label_size: s.label_size, label_color: s.label_color, label_background: s.label_background,
-      view_type: s.view_type,
+      label: {
+        show: s.label_show,
+        text: draft.label_text || null,
+        x: s.label_x, y: s.label_y,
+        size: s.label_size, color: s.label_color, background: s.label_background,
+      },
+      display: {
+        mode: s.view_type as 'icon' | 'text' | 'gadget',
+        icon: draft.icon || null,
+      },
       url_target: s.url_target, z: s.z,
-      extra: {},
     }
     try {
       const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!)
@@ -325,8 +332,9 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       x: _snap(src.x + 30),
       y: _snap(src.y + 30),
     }
-    if (clone.extra?.x2 !== undefined) {
-      clone.extra = { ...clone.extra, x2: (clone.extra.x2 as number) + 30, y2: (clone.extra.y2 as number) + 30 }
+    if (clone.x2 !== undefined && clone.x2 !== null) {
+      clone.x2 = (clone.x2 as number) + 30
+      clone.y2 = (clone.y2 as number) + 30
     }
     try {
       const newConfig = await boardsApi.addObject(mapName.value, clone, auth.accessToken!)

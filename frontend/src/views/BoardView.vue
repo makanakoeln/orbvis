@@ -12,7 +12,7 @@
           <span class="text-xs font-medium">{{ t('nav.overview') }}</span>
         </router-link>
         <span class="font-semibold text-[var(--text)] text-sm truncate">
-          {{ boardConfig?.globals.alias || route.params.name }}
+          {{ boardConfig?.alias || route.params.name }}
         </span>
       </div>
 
@@ -98,15 +98,15 @@
       <!-- Automap -->
       <div v-else-if="isAutomap" class="flex-1 relative overflow-hidden">
         <AutomapCanvas
-          v-if="boardConfig?.globals.backend_id"
-          :backend-id="boardConfig.globals.backend_id"
+          v-if="boardConfig?.backend_id"
+          :backend-id="boardConfig.backend_id"
           :service-layout="serviceLayout"
         />
         <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">{{ t('board.noConnectionConfigured') }}</div>
       </div>
 
       <!-- Static map -->
-      <div v-else class="flex-1 bg-[var(--bg)] relative" :class="boardConfig?.globals.background_image ? 'overflow-hidden' : 'overflow-auto'"
+      <div v-else class="flex-1 bg-[var(--bg)] relative" :class="boardConfig?.background_image ? 'overflow-hidden' : 'overflow-auto'"
         @click="onContainerClick">
         <div v-if="boardsStore.loading" class="flex items-center justify-center h-full text-zinc-500 text-sm">
           {{ t('board.loadingBoard') }}
@@ -158,7 +158,7 @@
             <EditPanel
               :draft="editor.draft"
               :placing="editor.placing.value"
-              :backend-id="boardConfig?.globals.backend_id ?? ''"
+              :backend-id="boardConfig?.backend_id ?? ''"
               :snap-grid="editor.snapGrid.value"
               @start-placing="editor.startPlacing()"
               @update:snap-grid="editor.snapGrid.value = $event"
@@ -278,7 +278,7 @@
       :state="statesStore.states[worldmapHover.object.id]"
       :x="worldmapHover.x"
       :y="worldmapHover.y"
-      :template="resolveTemplate(worldmapHover.object.hover_template, boardConfig?.globals.hover_template, settingsStore.settings.hover_template)"
+      :template="resolveTemplate(worldmapHover.object.hover_template, boardConfig?.hover_template, settingsStore.settings.hover_template)"
     />
 
     <!-- Worldmap ContextMenu -->
@@ -290,7 +290,7 @@
       :y="worldmapCtxMenu.y"
       :checkmk-url="checkmkUrl"
       :show-edit="auth.isAdmin"
-      :template="resolveTemplate(worldmapCtxMenu.object.context_template, boardConfig?.globals.context_template, settingsStore.settings.context_template)"
+      :template="resolveTemplate(worldmapCtxMenu.object.context_template, boardConfig?.context_template, settingsStore.settings.context_template)"
       @close="closeWorldmapMenus"
       @edit="onWorldmapCtxEdit"
       @delete="onWorldmapCtxDelete"
@@ -302,8 +302,8 @@
         v-if="propsModalObject"
         :object="propsModalObject"
         :state="statesStore.states[propsModalObject.id]"
-        :backend-id="boardConfig?.globals.backend_id ?? ''"
-        :map-type="boardConfig?.globals.map_type"
+        :backend-id="boardConfig?.backend_id ?? ''"
+        :map-type="boardConfig?.view.type"
         :anchor-rect="propsModalAnchor"
         @close="_closePropsModal()"
         @save="onPropsModalSave"
@@ -531,12 +531,12 @@ const boardConfig = computed(() => boardsStore.currentBoard)
 const canvasRef = ref<InstanceType<typeof BoardCanvas> | null>(null)
 const worldmapCanvasRef = ref<InstanceType<typeof WorldMapCanvas> | null>(null)
 
-const isWorldmap = computed(() => boardConfig.value?.globals.map_type === 'worldmap')
-const isAutomap  = computed(() => boardConfig.value?.globals.map_type === 'automap')
-const isRadar    = computed(() => boardConfig.value?.globals.map_type === 'radar')
+const isWorldmap = computed(() => boardConfig.value?.view.type === 'worldmap')
+const isAutomap  = computed(() => boardConfig.value?.view.type === 'automap')
+const isRadar    = computed(() => boardConfig.value?.view.type === 'radar')
 
 const checkmkUrl = computed(() => {
-  const bid = boardConfig.value?.globals.backend_id
+  const bid = boardConfig.value?.backend_id
   if (!bid) return null
   return connectionsStore.backends.find(b => b.id === bid)?.checkmk_url ?? null
 })
@@ -728,35 +728,48 @@ const settingsForm = reactive({
 
 function openSettings() {
   if (!boardConfig.value) return
-  const g = boardConfig.value.globals
-  settingsForm.alias = g.alias ?? ''
-  settingsForm.backend_id = g.backend_id ?? ''
-  settingsForm.icon_size = g.icon_size ?? 22
-  settingsForm.background_image = g.background_image ?? ''
-  settingsForm.map_type = g.map_type ?? 'static'
-  settingsForm.radar_type = g.radar_type ?? 'hostgroup'
-  settingsForm.radar_value = g.radar_value ?? ''
-  settingsForm.hover_template = g.hover_template ?? ''
-  settingsForm.context_template = g.context_template ?? ''
-  settingsForm.rotation_interval = g.rotation_interval ?? 0
+  const cfg = boardConfig.value
+  settingsForm.alias = cfg.alias ?? ''
+  settingsForm.backend_id = cfg.backend_id ?? ''
+  settingsForm.icon_size = cfg.icon_size ?? 22
+  settingsForm.background_image = cfg.background_image ?? ''
+  settingsForm.map_type = cfg.view.type ?? 'static'
+  settingsForm.hover_template = cfg.hover_template ?? ''
+  settingsForm.context_template = cfg.context_template ?? ''
+  settingsForm.rotation_interval = cfg.rotation_interval ?? 0
   uploadError.value = ''
   uploadOk.value = false
 
-  if (g.map_type === 'worldmap' && worldmapCanvasRef.value) {
+  if (cfg.view.type === 'radar') {
+    const rv = cfg.view as import('@/types/api').RadarView
+    settingsForm.radar_type = rv.filter ?? 'hostgroup'
+    settingsForm.radar_value = rv.filter_value ?? ''
+  } else {
+    settingsForm.radar_type = 'hostgroup'
+    settingsForm.radar_value = ''
+  }
+
+  if (cfg.view.type === 'worldmap' && worldmapCanvasRef.value) {
     const view = worldmapCanvasRef.value.getView()
+    const wv = cfg.view as import('@/types/api').WorldmapView
     if (view) {
       settingsForm.worldmap_lat = view.lat
       settingsForm.worldmap_lng = view.lng
       settingsForm.worldmap_zoom = view.zoom
     } else {
-      settingsForm.worldmap_lat = g.worldmap_lat ?? 51
-      settingsForm.worldmap_lng = g.worldmap_lng ?? 10
-      settingsForm.worldmap_zoom = g.worldmap_zoom ?? 5
+      settingsForm.worldmap_lat = wv.lat ?? 51
+      settingsForm.worldmap_lng = wv.lng ?? 10
+      settingsForm.worldmap_zoom = wv.zoom ?? 5
     }
+  } else if (cfg.view.type === 'worldmap') {
+    const wv = cfg.view as import('@/types/api').WorldmapView
+    settingsForm.worldmap_lat = wv.lat ?? 51
+    settingsForm.worldmap_lng = wv.lng ?? 10
+    settingsForm.worldmap_zoom = wv.zoom ?? 5
   } else {
-    settingsForm.worldmap_lat = g.worldmap_lat ?? 51
-    settingsForm.worldmap_lng = g.worldmap_lng ?? 10
-    settingsForm.worldmap_zoom = g.worldmap_zoom ?? 5
+    settingsForm.worldmap_lat = 51.0
+    settingsForm.worldmap_lng = 10.0
+    settingsForm.worldmap_zoom = 5
   }
 
   showSettings.value = true
@@ -765,22 +778,25 @@ function openSettings() {
 async function saveSettings() {
   settingsSaving.value = true
   try {
+    let view: Record<string, unknown>
+    if (settingsForm.map_type === 'worldmap') {
+      view = { type: 'worldmap', lat: settingsForm.worldmap_lat, lng: settingsForm.worldmap_lng, zoom: settingsForm.worldmap_zoom }
+    } else if (settingsForm.map_type === 'radar') {
+      view = { type: 'radar', filter: settingsForm.radar_type, filter_value: settingsForm.radar_value }
+    } else {
+      view = { type: settingsForm.map_type }
+    }
     const updated = await boardsApi.update(boardName.value, {
       alias: settingsForm.alias,
       backend_id: settingsForm.backend_id,
       icon_size: settingsForm.icon_size,
       background_image: settingsForm.background_image || null,
-      map_type: settingsForm.map_type,
-      worldmap_lat: settingsForm.worldmap_lat,
-      worldmap_lng: settingsForm.worldmap_lng,
-      worldmap_zoom: settingsForm.worldmap_zoom,
-      radar_type: settingsForm.radar_type,
-      radar_value: settingsForm.radar_value,
+      view,
       hover_template: settingsForm.hover_template || null,
       context_template: settingsForm.context_template || null,
       rotation_interval: settingsForm.rotation_interval,
     }, auth.accessToken!)
-    if (boardsStore.currentBoard) boardsStore.currentBoard.globals = updated.globals
+    if (boardsStore.currentBoard) Object.assign(boardsStore.currentBoard, updated)
     stopRotation()
     scheduleRotation(settingsForm.rotation_interval)
     showSettings.value = false
@@ -849,7 +865,7 @@ watchEffect(async () => {
 
   await boardsStore.fetchBoard(name)
   statesStore.connectToMap(name, auth.accessToken ?? undefined)
-  scheduleRotation(boardsStore.currentBoard?.globals.rotation_interval ?? 0)
+  scheduleRotation(boardsStore.currentBoard?.rotation_interval ?? 0)
 })
 
 function onKeyDown(e: KeyboardEvent) {

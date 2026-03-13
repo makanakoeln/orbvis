@@ -11,12 +11,12 @@
     @mouseleave="$emit('hover-leave')"
     @contextmenu.prevent="$emit('context-menu', $event)"
   >
-    {{ object.label_text || 'Text' }}
+    {{ object.label?.text || 'Text' }}
   </div>
 
   <!-- Gadget -->
   <div
-    v-else-if="object.view_type === 'gadget'"
+    v-else-if="object.display?.mode === 'gadget'"
     class="flex flex-col items-center"
     @mouseenter="$emit('hover', $event)"
     @mouseleave="$emit('hover-leave')"
@@ -24,13 +24,13 @@
   >
     <div :class="selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded-xl' : ''">
       <GadgetRenderer
-        :type="object.gadget_type || 'gauge'"
-        :metric="object.gadget_metric"
+        :type="object.display?.gadget_type || 'gauge'"
+        :metric="object.display?.gadget_metric"
         :state="state"
         :size="iconSize"
       />
     </div>
-    <div v-if="object.label_show"
+    <div v-if="object.label?.show"
       class="mt-1 font-medium whitespace-nowrap pointer-events-none px-1.5 py-0.5 rounded"
       :style="labelStyle">
       {{ displayName }}
@@ -50,8 +50,8 @@
       <!-- Custom icon image — draggable="false" prevents the browser from starting
            an HTML5 drag operation which would swallow all subsequent mousemove events -->
       <img
-        v-if="object.icon"
-        :src="`${BASE_URL}icons/${object.icon}`"
+        v-if="object.display?.icon ?? object.shape_icon"
+        :src="`${BASE_URL}icons/${object.display?.icon ?? object.shape_icon}`"
         :style="iconStyle"
         draggable="false"
         class="object-contain transition-all duration-300 select-none"
@@ -95,7 +95,7 @@
     </div>
     <!-- Label -->
     <div
-      v-if="object.label_show"
+      v-if="object.label?.show"
       class="mt-1.5 font-medium whitespace-nowrap pointer-events-none px-1.5 py-0.5 rounded"
       :style="labelStyle"
     >
@@ -156,13 +156,14 @@ const ringUtilColor = computed(() =>
   firstMetricPct.value !== null ? _utilColor(firstMetricPct.value) : stateColorRgb.value,
 )
 
-const isSvgIcon = computed(() =>
-  props.object.icon?.toLowerCase().endsWith('.svg') ?? false
-)
+const isSvgIcon = computed(() => {
+  const icon = props.object.display?.icon ?? props.object.shape_icon
+  return icon?.toLowerCase().endsWith('.svg') ?? false
+})
 
 const shouldShowRing = computed(() =>
   !['textbox', 'line'].includes(props.object.type) &&
-  props.object.view_type !== 'gadget',
+  props.object.display?.mode !== 'gadget',
 )
 
 useArcRing({
@@ -204,10 +205,10 @@ const TYPE_CHARS: Record<string, string> = {
 const typeChar = computed(() => TYPE_CHARS[props.object.type] ?? '?')
 
 const labelStyle = computed(() => ({
-  fontSize: `${props.object.label_size ?? 11}px`,
-  color: props.object.label_color ?? '#e4e4e7',
-  background: props.object.label_background && props.object.label_background !== 'transparent'
-    ? props.object.label_background
+  fontSize: `${props.object.label?.size ?? 11}px`,
+  color: props.object.label?.color ?? '#e4e4e7',
+  background: props.object.label?.background && props.object.label.background !== 'transparent'
+    ? props.object.label.background
     : 'rgba(0,0,0,0.65)',
   backdropFilter: 'blur(4px)',
   textShadow: '0 1px 3px rgba(0,0,0,0.9)',
@@ -215,7 +216,7 @@ const labelStyle = computed(() => ({
 }))
 
 const displayName = computed(() => {
-  if (props.object.label_text) return props.object.label_text
+  if (props.object.label?.text) return props.object.label.text
   if (props.object.type === 'host') return props.object.host_name ?? props.object.id
   if (props.object.type === 'service') return props.object.service_description ?? props.object.id
   if (props.object.type === 'map') return props.object.map_name ?? props.object.id

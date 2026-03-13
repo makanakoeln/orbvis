@@ -67,14 +67,14 @@
             />
             <!-- Worldmap thumbnail -->
             <WorldMapThumbnail
-              v-else-if="map.map_type === 'worldmap'"
-              :lat="map.worldmap_lat ?? 51"
-              :lng="map.worldmap_lng ?? 10"
-              :zoom="map.worldmap_zoom ?? 5"
+              v-else-if="map.view_type === 'worldmap'"
+              :lat="worldmapLat(map)"
+              :lng="worldmapLng(map)"
+              :zoom="worldmapZoom(map)"
               class="opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none"
             />
             <!-- Flow Board thumbnail -->
-            <svg v-else-if="map.map_type === 'automap'" viewBox="0 0 256 128"
+            <svg v-else-if="map.view_type === 'automap'" viewBox="0 0 256 128"
               class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none">
               <rect width="256" height="128" fill="#18181b"/>
               <line x1="128" y1="28" x2="72" y2="66" stroke="#3f3f46" stroke-width="1.5"/>
@@ -95,7 +95,7 @@
               <text x="184" y="70" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="7" font-weight="700">H</text>
             </svg>
             <!-- Radar Board thumbnail — status card grid -->
-            <svg v-else-if="map.map_type === 'radar'" viewBox="0 0 256 128"
+            <svg v-else-if="map.view_type === 'radar'" viewBox="0 0 256 128"
               class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none">
               <rect width="256" height="128" fill="#18181b"/>
               <!-- OK cards -->
@@ -161,14 +161,14 @@
                 {{ map.alias || map.name }}
               </div>
               <span class="shrink-0 text-[11px] px-1.5 py-0.5 rounded-md font-medium"
-                :class="map.map_type === 'worldmap'
+                :class="map.view_type === 'worldmap'
                   ? 'bg-cyan-500/15 text-cyan-400 ring-1 ring-cyan-500/25'
-                  : map.map_type === 'radar'
+                  : map.view_type === 'radar'
                   ? 'bg-violet-500/15 text-violet-400 ring-1 ring-violet-500/25'
-                  : map.map_type === 'automap'
+                  : map.view_type === 'automap'
                   ? 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/25'
                   : 'bg-zinc-700/50 text-zinc-500 ring-1 ring-zinc-700/60'">
-                {{ boardTypeLabel(map.map_type) }}
+                {{ boardTypeLabel(map.view_type) }}
               </span>
             </div>
             <div v-if="!map.name.startsWith('demo-')" class="flex items-center gap-1.5 mt-1.5 text-[11px] text-zinc-600 truncate">
@@ -334,7 +334,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
 import { boardsApi, rolesApi } from '@/api/client'
-import type { BoardConfig, RoleRead, PermissionRead } from '@/types/api'
+import type { BoardConfig, BoardRead, RoleRead, PermissionRead, WorldmapView } from '@/types/api'
 import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue'
 import CreateBoardModal from '@/components/board/CreateBoardModal.vue'
 
@@ -471,6 +471,16 @@ const TYPE_LABELS: Record<string, string> = {
 }
 function boardTypeLabel(type: string) {
   return TYPE_LABELS[type] ?? type
+}
+
+function worldmapLat(map: BoardRead) {
+  return map.view.type === 'worldmap' ? (map.view as WorldmapView).lat : 51
+}
+function worldmapLng(map: BoardRead) {
+  return map.view.type === 'worldmap' ? (map.view as WorldmapView).lng : 10
+}
+function worldmapZoom(map: BoardRead) {
+  return map.view.type === 'worldmap' ? (map.view as WorldmapView).zoom : 5
 }
 
 onMounted(() => boardsStore.fetchBoards())
