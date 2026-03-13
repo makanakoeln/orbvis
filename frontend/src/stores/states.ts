@@ -37,15 +37,27 @@ export const useStatesStore = defineStore('states', () => {
   const history = ref<Record<string, MetricSnapshot[]>>({})
   const connected = ref(false)
   const lastUpdate = ref<number | null>(null)
-  const notificationsEnabled = ref(false)
+  const _LS_NOTIF = 'orbvis_notifications'
+  const notificationsEnabled = ref(
+    typeof Notification !== 'undefined' &&
+    Notification.permission === 'granted' &&
+    localStorage.getItem(_LS_NOTIF) === '1'
+  )
 
-  async function requestNotificationPermission(): Promise<boolean> {
-    if (typeof Notification === 'undefined') return false
-    if (Notification.permission === 'granted') { notificationsEnabled.value = true; return true }
-    if (Notification.permission === 'denied') return false
-    const result = await Notification.requestPermission()
-    notificationsEnabled.value = result === 'granted'
-    return notificationsEnabled.value
+  async function toggleNotifications(): Promise<void> {
+    if (typeof Notification === 'undefined') return
+    if (notificationsEnabled.value) {
+      notificationsEnabled.value = false
+      localStorage.setItem(_LS_NOTIF, '0')
+      return
+    }
+    if (Notification.permission === 'denied') return
+    if (Notification.permission !== 'granted') {
+      const result = await Notification.requestPermission()
+      if (result !== 'granted') return
+    }
+    notificationsEnabled.value = true
+    localStorage.setItem(_LS_NOTIF, '1')
   }
 
   function _recordHistory(objectId: string, perf_data: string, ts: number) {
@@ -84,6 +96,7 @@ export const useStatesStore = defineStore('states', () => {
       const newStates: Record<string, ObjectState> = {}
       const ts = Date.now() / 1000
       for (const s of data.states) {
+        if (notificationsEnabled.value) _notifyStateChange(s, states.value[s.object_id])
         newStates[s.object_id] = s
         if (s.perf_data) _recordHistory(s.object_id, s.perf_data, ts)
       }
@@ -174,5 +187,5 @@ export const useStatesStore = defineStore('states', () => {
     return states.value[objectId]
   }
 
-  return { states, history, connected, lastUpdate, notificationsEnabled, connectToMap, disconnect, getState, requestNotificationPermission }
+  return { states, history, connected, lastUpdate, notificationsEnabled, connectToMap, disconnect, getState, toggleNotifications }
 })
