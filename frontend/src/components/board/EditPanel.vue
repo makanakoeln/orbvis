@@ -70,11 +70,12 @@
         </select>
       </div>
 
-      <button v-if="draft.type" @click="$emit('start-placing')"
-        class="w-full px-3 py-2 rounded-lg font-semibold text-sm transition-all duration-150"
+      <button v-if="draft.type" @click="canPlace && $emit('start-placing')"
+        :disabled="!canPlace"
+        class="w-full px-3 py-2 rounded-lg font-semibold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
         :class="placing
           ? 'bg-[#ffd000]/15 text-[#ffd000] ring-1 ring-[#ffd000]/30 animate-pulse'
-          : 'bg-indigo-600 hover:bg-indigo-500 text-white'">
+          : canPlace ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-indigo-600 text-white'">
         {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.placeOnBoard') }}
       </button>
 
@@ -83,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { NewObjectDraft } from '@/composables/useBoardEditor'
 import { connectionsApi } from '@/api/client'
@@ -107,6 +108,21 @@ defineEmits<{
 }>()
 
 const auth = useAuthStore()
+
+const canPlace = computed(() => {
+  const d = props.draft
+  switch (d.type) {
+    case 'host':         return !!d.host_name
+    case 'service':      return !!d.host_name && !!d.service_description
+    case 'hostgroup':
+    case 'servicegroup': return !!d.group_name
+    case 'map':          return !!d.board_name
+    case 'line':
+    case 'textbox':
+    case 'image':        return true
+    default:             return false
+  }
+})
 
 const addObjects = ref<string[]>([])
 const addServices = ref<string[]>([])
