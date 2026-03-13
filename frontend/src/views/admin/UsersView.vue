@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="max-w-4xl">
     <div class="flex justify-between items-center mb-8">
       <div>
         <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('admin.users') }}</h2>
@@ -7,7 +7,7 @@
       </div>
       <button
         @click="showCreate = true"
-        class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20"
+        class="flex items-center gap-2 px-4 py-2 ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
       >
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -29,7 +29,7 @@
         <thead>
           <tr class="border-b border-[var(--border)]">
             <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.name') }}</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.role') }}</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.type') }}</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.status') }}</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.roles') }}</th>
             <th class="px-4 py-3 text-right text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.actions') }}</th>
@@ -71,7 +71,7 @@
                 <button v-if="canEditUsers && user.user_id !== auth.user?.user_id"
                   @click="editUser = user"
                   class="text-xs text-zinc-500 hover:text-indigo-400 transition-colors">
-                  {{ t('admin.settings') }}
+                  {{ t('common.edit') }}
                 </button>
                 <button
                   v-if="user.user_id !== auth.user?.user_id"
@@ -97,25 +97,38 @@
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
-          <form @submit.prevent="createUser" class="space-y-4">
+          <form @submit.prevent="createUser" class="space-y-3">
+
             <div class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('auth.username') }}</label>
-              <input v-model="newUser.name" placeholder="john" required
+              <input v-model="newUser.name" placeholder="john" required autocomplete="off"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
+
             <div class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('auth.password') }}</label>
-              <input v-model="newUser.password" type="password" placeholder="••••••••" required minlength="6"
+              <input v-model="newUser.password" type="password" placeholder="••••••••" required minlength="6" autocomplete="new-password"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+              <p class="text-xs text-zinc-600">Mindestens 6 Zeichen</p>
             </div>
-            <label class="flex items-center gap-2.5 text-sm text-zinc-400 cursor-pointer select-none">
-              <input type="checkbox" v-model="newUser.is_admin" class="rounded accent-indigo-500 w-4 h-4" />
-              <span>{{ t('admin.administrator') }}</span>
-            </label>
-            <label class="flex items-center gap-2.5 text-sm text-zinc-400 cursor-pointer select-none">
-              <input type="checkbox" v-model="newUser.must_change_password" class="rounded accent-indigo-500 w-4 h-4" />
-              <span>{{ t('admin.mustChangePassword') }}</span>
-            </label>
+
+            <div class="border-t border-[var(--border)] pt-3 space-y-3">
+
+              <label class="flex items-start gap-3 cursor-pointer group select-none">
+                <input type="checkbox" v-model="newUser.is_admin" class="rounded accent-indigo-500 w-4 h-4 mt-0.5 shrink-0" />
+                <div>
+                  <p class="text-sm text-zinc-300 group-hover:text-[var(--text)] transition-colors">{{ t('admin.administrator') }}</p>
+                  <p class="text-xs text-zinc-600 mt-0.5">Vollzugriff auf alle Admin-Funktionen</p>
+                </div>
+              </label>
+
+              <label class="flex items-center gap-3 cursor-pointer select-none">
+                <input type="checkbox" v-model="newUser.must_change_password" class="rounded accent-indigo-500 w-4 h-4 shrink-0" />
+                <p class="text-sm text-zinc-400">{{ t('admin.mustChangePassword') }}</p>
+              </label>
+
+            </div>
+
             <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
               <button type="button" @click="showCreate = false"
                 class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">{{ t('common.cancel') }}</button>

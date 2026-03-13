@@ -56,21 +56,30 @@
         </div>
 
         <!-- Password change (hidden in SSO+self) -->
-        <div v-if="showPasswordSection" class="space-y-3 pt-1 border-t border-[var(--border)]">
+        <div v-if="showPasswordSection" class="space-y-3 pt-4 border-t border-[var(--border)]">
           <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.changePassword') }}</p>
           <form @submit.prevent="savePassword" class="space-y-3">
-            <input v-model="password" type="password" :placeholder="t('userSettings.newPassword')" required minlength="6"
-              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-            <input v-model="confirm" type="password" :placeholder="t('userSettings.confirmPassword')" required
-              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.newPassword') }}</label>
+              <input v-model="password" type="password" autocomplete="new-password" required minlength="6"
+                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+              <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.confirmPassword') }}</label>
+              <input v-model="confirm" type="password" autocomplete="new-password" required
+                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+            </div>
 
             <p v-if="pwError" class="text-red-400 text-xs">{{ pwError }}</p>
             <p v-if="pwSuccess" class="text-green-400 text-xs">{{ t('userSettings.passwordChanged') }}</p>
 
-            <button v-if="!pwSuccess" type="submit" :disabled="pwSaving"
-              class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all">
-              {{ pwSaving ? t('common.saving') : t('userSettings.changePasswordBtn') }}
-            </button>
+            <div v-if="!pwSuccess" class="flex justify-end">
+              <button type="submit" :disabled="pwSaving"
+                class="px-4 py-2 ring-1 ring-zinc-700 hover:ring-zinc-500 disabled:opacity-50 rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all">
+                {{ pwSaving ? t('common.saving') : t('userSettings.changePasswordBtn') }}
+              </button>
+            </div>
           </form>
         </div>
 

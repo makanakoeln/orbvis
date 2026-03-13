@@ -307,6 +307,7 @@ export default {
     newPassword: 'New password',
     confirmPassword: 'Confirm password',
     changePasswordBtn: 'Change Password',
+    passwordMinLength: 'At least 6 characters',
     passwordChanged: 'Password changed successfully.',
     passwordMismatch: 'Passwords do not match.',
     failedToChange: 'Failed to change password.',

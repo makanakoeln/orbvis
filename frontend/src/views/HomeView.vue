@@ -67,14 +67,14 @@
             />
             <!-- Worldmap thumbnail -->
             <WorldMapThumbnail
-              v-else-if="map.view_type === 'worldmap'"
+              v-else-if="map.view.type === 'worldmap'"
               :lat="worldmapLat(map)"
               :lng="worldmapLng(map)"
               :zoom="worldmapZoom(map)"
               class="opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none"
             />
             <!-- Flow Board thumbnail -->
-            <svg v-else-if="map.view_type === 'automap'" viewBox="0 0 256 128"
+            <svg v-else-if="map.view.type === 'automap'" viewBox="0 0 256 128"
               class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none">
               <rect width="256" height="128" fill="#18181b"/>
               <line x1="128" y1="28" x2="72" y2="66" stroke="#3f3f46" stroke-width="1.5"/>
@@ -95,7 +95,7 @@
               <text x="184" y="70" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="7" font-weight="700">H</text>
             </svg>
             <!-- Radar Board thumbnail — status card grid -->
-            <svg v-else-if="map.view_type === 'radar'" viewBox="0 0 256 128"
+            <svg v-else-if="map.view.type === 'radar'" viewBox="0 0 256 128"
               class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none">
               <rect width="256" height="128" fill="#18181b"/>
               <!-- OK cards -->
@@ -139,12 +139,36 @@
               <rect x="193" y="106" width="32" height="7" rx="2" fill="rgba(234,179,8,0.12)"/><circle cx="197.5" cy="109.5" r="1.5" fill="#eab308"/>
             </svg>
             <!-- Placeholder for static without background -->
-            <div v-else class="w-full h-full flex items-center justify-center">
-              <svg class="w-10 h-10 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
-              </svg>
-            </div>
+            <svg v-else viewBox="0 0 256 128" class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none">
+              <rect width="256" height="128" fill="#18181b"/>
+              <line x1="80" y1="52" x2="128" y2="34" stroke="#71717a" stroke-width="1.5"/>
+              <line x1="128" y1="34" x2="176" y2="52" stroke="#71717a" stroke-width="1.5"/>
+              <line x1="80" y1="52" x2="96" y2="90" stroke="#71717a" stroke-width="1.5"/>
+              <line x1="176" y1="52" x2="160" y2="90" stroke="#71717a" stroke-width="1.5"/>
+              <circle cx="80" cy="52" r="12" fill="#22c55e"/>
+              <circle cx="128" cy="34" r="12" fill="#ef4444"/>
+              <circle cx="176" cy="52" r="12" fill="#22c55e"/>
+              <circle cx="96" cy="90" r="9" fill="#eab308"/>
+              <circle cx="160" cy="90" r="9" fill="#22c55e"/>
+              <text x="80" y="56" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="8" font-weight="700">H</text>
+              <text x="128" y="38" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="8" font-weight="700">H</text>
+              <text x="176" y="56" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="8" font-weight="700">H</text>
+              <text x="96" y="94" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="7" font-weight="700">S</text>
+              <text x="160" y="94" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="7" font-weight="700">S</text>
+            </svg>
             <!-- Type + rotation badges overlaid on thumbnail -->
+            <div class="absolute bottom-2 left-2 flex items-center gap-1.5">
+              <span class="text-[11px] px-1.5 py-0.5 rounded-md font-medium backdrop-blur-sm"
+                :class="map.view.type === 'worldmap'
+                  ? 'bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/30'
+                  : map.view.type === 'radar'
+                  ? 'bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30'
+                  : map.view.type === 'automap'
+                  ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30'
+                  : 'bg-zinc-800/70 text-zinc-400 ring-1 ring-zinc-700/60'">
+                {{ boardTypeLabel(map.view.type) }}
+              </span>
+            </div>
             <div class="absolute top-2 right-2 flex items-center gap-1.5">
               <span v-if="map.rotation_interval > 0"
                 class="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30 backdrop-blur-sm"
@@ -156,31 +180,20 @@
 
           <!-- Card body -->
           <div class="p-4">
-            <div class="flex items-center gap-2 min-w-0">
-              <div class="font-semibold text-[var(--text)] group-hover:text-white transition-colors truncate">
-                {{ map.alias || map.name }}
-              </div>
-              <span class="shrink-0 text-[11px] px-1.5 py-0.5 rounded-md font-medium"
-                :class="map.view_type === 'worldmap'
-                  ? 'bg-cyan-500/15 text-cyan-400 ring-1 ring-cyan-500/25'
-                  : map.view_type === 'radar'
-                  ? 'bg-violet-500/15 text-violet-400 ring-1 ring-violet-500/25'
-                  : map.view_type === 'automap'
-                  ? 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/25'
-                  : 'bg-zinc-700/50 text-zinc-500 ring-1 ring-zinc-700/60'">
-                {{ boardTypeLabel(map.view_type) }}
-              </span>
+            <div class="font-semibold text-[var(--text)] group-hover:text-white transition-colors truncate">
+              {{ map.alias || map.name }}
             </div>
-            <div v-if="!map.name.startsWith('demo-')" class="flex items-center gap-1.5 mt-1.5 text-[11px] text-zinc-600 truncate">
-              <span class="text-zinc-700 font-medium uppercase tracking-wider text-[10px]">{{ t('board.connection') }}</span>
-              <span class="font-mono">{{ map.backend_id }}</span>
+            <div v-if="!map.name.startsWith('demo-')" class="flex items-center gap-1.5 mt-1.5 text-xs text-zinc-500 truncate">
+              <svg class="w-3 h-3 shrink-0 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
+              </svg>
+              <span class="font-mono truncate">{{ map.backend_id }}</span>
+              <span class="text-zinc-600">·</span>
+              <span>{{ t('common.objects', { n: map.object_count }) }}</span>
             </div>
 
-            <div class="flex items-center justify-between mt-2">
-              <div class="flex items-center gap-2 text-xs text-zinc-600">
-                <span v-if="!map.name.startsWith('demo-')">{{ t('common.objects', { n: map.object_count }) }}</span>
-              </div>
-              <div v-if="auth.isAdmin" class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+            <div v-if="auth.isAdmin" class="flex items-center justify-end mt-2">
+              <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
                 <!-- Permissions -->
                 <button v-if="!map.readonly" @click.prevent.stop="openPermissions(map.name)"
                   class="p-1 rounded-md text-zinc-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"

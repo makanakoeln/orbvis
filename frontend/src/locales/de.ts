@@ -307,6 +307,7 @@ export default {
     newPassword: 'Neues Passwort',
     confirmPassword: 'Passwort bestätigen',
     changePasswordBtn: 'Passwort ändern',
+    passwordMinLength: 'Mindestens 6 Zeichen',
     passwordChanged: 'Passwort erfolgreich geändert.',
     passwordMismatch: 'Passwörter stimmen nicht überein.',
     failedToChange: 'Passwort konnte nicht geändert werden.',

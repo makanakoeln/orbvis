@@ -25,6 +25,15 @@
   --gauge-track: #3f3f46;
 }
 
+/* Override browser autofill yellow highlight */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 .light {
   --bg: #fafafa;
   --bg-surface: #ffffff;

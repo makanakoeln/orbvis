@@ -1,12 +1,12 @@
 <template>
-  <div>
+  <div class="max-w-5xl">
     <div class="flex justify-between items-center mb-8">
       <div>
         <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('admin.connectionsTitle') }}</h2>
         <p class="text-sm text-zinc-500 mt-1">{{ t('admin.connectionsSubtitle') }}</p>
       </div>
       <button @click="openCreate"
-        class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20">
+        class="flex items-center gap-2 px-4 py-2 ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
@@ -49,17 +49,23 @@
             <!-- Status -->
             <td class="px-4 py-3">
               <button @click="testExisting(b.id)" :disabled="statusLoading[b.id]"
-                class="flex items-center gap-2 group" :title="t('common.test')">
-                <span class="relative flex">
+                class="flex items-center gap-2 group cursor-pointer" :title="t('common.test')">
+                <span class="relative flex shrink-0">
                   <span v-if="statusLoading[b.id]" class="w-2.5 h-2.5 rounded-full bg-zinc-500 animate-pulse" />
                   <span v-else-if="statuses[b.id] === undefined" class="w-2.5 h-2.5 rounded-full bg-zinc-600" />
                   <span v-else-if="statuses[b.id]"
                     class="w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)]" />
                   <span v-else class="w-2.5 h-2.5 rounded-full bg-red-400" />
                 </span>
-                <span class="text-xs text-zinc-600 group-hover:text-zinc-400 transition-colors">
+                <span class="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors">
                   {{ statusLoading[b.id] ? t('common.testing') : statusMessages[b.id] ?? t('common.test') }}
                 </span>
+                <!-- Refresh icon — visible on hover to signal clickability -->
+                <svg class="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
               </button>
             </td>
             <td class="px-4 py-3 font-mono text-xs text-zinc-400">{{ b.id }}</td>
@@ -74,7 +80,7 @@
                 {{ b.type }}
               </span>
             </td>
-            <td class="px-4 py-3 text-zinc-600 font-mono text-xs">
+            <td class="px-4 py-3 text-zinc-400 font-mono text-xs">
               <template v-if="b.type === 'livestatus'">
                 {{ b.socket_path || `${b.host}:${b.port}` }}
               </template>
@@ -86,7 +92,7 @@
             <td class="px-4 py-3 text-right">
               <div class="flex items-center justify-end gap-3">
                 <button @click="openEdit(b)" class="text-xs text-zinc-500 hover:text-indigo-400 transition-colors">{{ t('common.edit') }}</button>
-                <button @click="remove(b.id)" class="text-xs text-zinc-600 hover:text-red-400 transition-colors">{{ t('common.delete') }}</button>
+                <button @click="remove(b.id)" class="text-xs text-zinc-500 hover:text-red-400 transition-colors">{{ t('common.delete') }}</button>
               </div>
             </td>
           </tr>
@@ -110,12 +116,12 @@
           </div>
 
           <form @submit.prevent="save" class="space-y-4">
+
             <div v-if="dialog.mode === 'create'" class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                {{ t('admin.connectionId') }} <span class="normal-case font-normal text-zinc-600">{{ t('admin.connectionIdHint') }}</span>
-              </label>
+              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.connectionId') }}</label>
               <input v-model="form.id" required pattern="[a-zA-Z0-9_-]+" placeholder="cmk_heute"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+              <p class="text-xs text-zinc-600">{{ t('admin.connectionIdHint') }}</p>
             </div>
 
             <div class="space-y-1.5">
@@ -142,14 +148,22 @@
             </div>
 
             <template v-if="form.type === 'livestatus'">
+
+              <!-- Unix socket -->
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                  {{ t('admin.unixSocket') }} <span class="normal-case font-normal text-zinc-600">{{ t('admin.orTcp') }}</span>
-                </label>
+                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.unixSocket') }}</label>
                 <input v-model="form.socket_path" placeholder="/omd/sites/heute/tmp/run/live"
                   class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               </div>
 
+              <!-- OR divider -->
+              <div class="relative flex items-center gap-3">
+                <div class="flex-1 border-t border-[var(--border)]" />
+                <span class="text-xs text-zinc-600 shrink-0">{{ t('admin.orTcp') }}</span>
+                <div class="flex-1 border-t border-[var(--border)]" />
+              </div>
+
+              <!-- TCP Host + Port -->
               <div class="grid grid-cols-[1fr_7rem] gap-3">
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.tcpHost') }}</label>
@@ -162,19 +176,21 @@
                 </div>
               </div>
 
-              <div class="grid grid-cols-[1fr_7rem] gap-3 items-end">
+              <!-- Checkmk URL + Timeout -->
+              <div class="border-t border-[var(--border)] pt-4 space-y-4">
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                    {{ t('admin.checkmkUrl') }} <span class="normal-case font-normal text-zinc-600">{{ t('admin.contextLinks') }}</span>
-                  </label>
+                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.checkmkUrl') }}</label>
                   <input v-model="form.checkmk_url" placeholder="http://localhost/heute"
                     class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+                  <p class="text-xs text-zinc-600">{{ t('admin.contextLinks') }}</p>
                 </div>
                 <div class="space-y-1.5">
                   <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.timeout') }}</label>
-                  <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-full" />
+                  <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-28" />
+                  <p class="text-xs text-zinc-600">seconds</p>
                 </div>
               </div>
+
             </template>
 
             <template v-if="form.type === 'icinga2'">
@@ -208,6 +224,7 @@
               <div class="space-y-1.5">
                 <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.timeout') }}</label>
                 <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-28" />
+                <p class="text-xs text-zinc-600">seconds</p>
               </div>
             </template>
 
