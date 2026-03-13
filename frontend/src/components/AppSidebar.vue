@@ -5,15 +5,31 @@
   >
 
     <!-- Brand -->
-    <div class="px-2 py-4 border-b border-[var(--border)] shrink-0 flex items-center" :class="collapsed ? 'justify-center' : 'justify-between px-4'">
-      <router-link to="/" class="flex items-center gap-2.5 group min-w-0">
+    <div class="px-2 py-3 border-b border-[var(--border)] shrink-0 flex items-center" :class="collapsed ? 'justify-center' : 'justify-between px-3'">
+      <router-link v-if="!collapsed" to="/" class="flex items-center gap-2.5 group min-w-0">
         <div class="w-7 h-7 rounded-lg bg-indigo-600/20 ring-1 ring-indigo-500/30 flex items-center justify-center shrink-0">
           <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c-.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
           </svg>
         </div>
-        <span v-if="!collapsed" class="font-bold text-[var(--text)] tracking-tight group-hover:text-white transition-colors truncate">OrbVis</span>
+        <span class="font-bold text-[var(--text)] tracking-tight group-hover:text-white transition-colors truncate">OrbVis</span>
       </router-link>
+      <!-- Expand button when collapsed -->
+      <button v-if="collapsed" @click="collapsed = false"
+        class="w-7 h-7 rounded-lg bg-indigo-600/20 ring-1 ring-indigo-500/30 flex items-center justify-center text-indigo-400 hover:bg-indigo-600/30 transition-all"
+        :title="t('nav.expandSidebar')">
+        <svg class="w-4 h-4 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 9l-3 3m0 0l3 3m-3-3h7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </button>
+      <!-- Collapse toggle — in header, far from logout -->
+      <button v-if="!collapsed" @click="collapsed = !collapsed"
+        class="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all shrink-0"
+        :title="t('nav.collapseSidebar')">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 9l-3 3m0 0l3 3m-3-3h7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </button>
     </div>
 
     <!-- Navigation -->
@@ -28,7 +44,7 @@
 
       <!-- Admin section -->
       <template v-if="auth.isAdmin">
-        <p v-if="!collapsed" class="px-3 pt-5 pb-1 text-[10px] font-bold text-zinc-600 uppercase tracking-widest select-none">
+        <p v-if="!collapsed" class="px-3 pt-5 pb-1 text-xs font-semibold text-zinc-500 uppercase tracking-wider select-none">
           {{ t('nav.administration') }}
         </p>
         <div v-else class="my-3 border-t border-[var(--border)]" />
@@ -67,43 +83,25 @@
     </nav>
 
     <!-- User section -->
-    <div class="border-t border-[var(--border)] p-2 shrink-0">
-      <!-- Toggle collapse — always at the same position -->
-      <button @click="collapsed = !collapsed"
-        class="w-full flex items-center rounded-lg text-sm text-zinc-600 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all duration-150 mb-1"
-        :class="collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'"
-        :title="collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')">
-        <svg class="w-4 h-4 shrink-0 transition-transform duration-200" :class="collapsed ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 9l-3 3m0 0l3 3m-3-3h7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span v-if="!collapsed" class="text-xs">{{ t('nav.collapseSidebar') }}</span>
-      </button>
+    <div class="border-t border-[var(--border)] p-2 shrink-0 space-y-0.5">
 
-      <!-- User info row -->
-      <div class="flex items-center rounded-lg mb-1" :class="collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-2 py-2'">
-        <div
-          class="w-7 h-7 rounded-full bg-indigo-600/20 ring-1 ring-indigo-500/30 flex items-center justify-center shrink-0 text-xs font-bold text-indigo-300 uppercase"
-          :title="collapsed ? auth.user?.name : undefined"
-        >
+      <!-- User info + settings (combined clickable row) -->
+      <button @click="showSettings = true"
+        class="w-full flex items-center rounded-lg hover:bg-[var(--bg-hover)] transition-all duration-150 group"
+        :class="collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-2 py-2'"
+        :title="collapsed ? auth.user?.name : t('nav.userSettings')">
+        <div class="w-7 h-7 rounded-full bg-indigo-600/20 ring-1 ring-indigo-500/30 flex items-center justify-center shrink-0 text-xs font-bold text-indigo-300 uppercase">
           {{ auth.user?.name?.[0] }}
         </div>
-        <span v-if="!collapsed" class="text-sm text-[var(--text)] font-medium truncate flex-1">{{ auth.user?.name }}</span>
-      </div>
-
-      <!-- User settings -->
-      <button @click="showSettings = true"
-        class="w-full flex items-center rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
-        :class="collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'"
-        :title="collapsed ? t('nav.userSettings') : undefined">
-        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-        <span v-if="!collapsed">{{ t('nav.userSettings') }}</span>
+        <div v-if="!collapsed" class="flex-1 min-w-0 text-left">
+          <p class="text-sm font-medium text-[var(--text)] truncate leading-tight">{{ auth.user?.name }}</p>
+          <p class="text-xs text-zinc-500 group-hover:text-zinc-400 transition-colors leading-tight">{{ t('nav.userSettings') }}</p>
+        </div>
       </button>
 
       <!-- Logout -->
       <button v-if="!auth.ssoActive" @click="auth.logout()"
-        class="w-full flex items-center rounded-lg text-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/5 transition-all duration-150"
+        class="w-full flex items-center rounded-lg text-sm text-zinc-500 hover:text-red-400 hover:bg-red-500/5 transition-all duration-150"
         :class="collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'"
         :title="collapsed ? t('auth.logout') : undefined">
         <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -111,6 +109,7 @@
         </svg>
         <span v-if="!collapsed">{{ t('auth.logout') }}</span>
       </button>
+
     </div>
 
     <!-- User settings panel -->
