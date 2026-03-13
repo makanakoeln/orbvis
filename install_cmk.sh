@@ -55,6 +55,7 @@ BASE_PATH="/$SITE/orbvis"
 LIVESTATUS_SOCKET="$SITE_ROOT/tmp/run/live"
 VENV_DIR="$ORBVIS_DIR/venv"
 CMK_PLUGINS_SRC="$SCRIPT_DIR/cmk_plugins"
+CMK_PLUGINS_DST="$ORBVIS_DIR/cmk_plugins"
 APACHE_CONF="$SITE_ROOT/etc/apache/conf.d/orbvis.conf"
 INIT_SCRIPT="$SITE_ROOT/etc/init.d/orbvis"
 
@@ -96,8 +97,8 @@ if [[ "$ACTION" == "remove" ]]; then
 
   step "Removing files"
   quietly sudo rm -f "$APACHE_CONF" "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis"
-  quietly sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$DB_FILE" "$ENV_FILE" "$BACKENDS_FILE"
   quietly sudo -u "$SITE" "$PYTHON3" -m pip uninstall -y orbvis-cmk 2>/dev/null || true
+  quietly sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$CMK_PLUGINS_DST" "$DB_FILE" "$ENV_FILE" "$BACKENDS_FILE"
   ok "Files removed"
 
   step "Reloading Apache"
@@ -316,7 +317,9 @@ ok "OrbVis registered as OMD service"
 
 # 7. Checkmk GUI plugins
 step "Installing Checkmk GUI plugins"
-quietly sudo -u "$SITE" "$PYTHON3" -m pip install --quiet -e "$CMK_PLUGINS_SRC"
+quietly sudo cp -r "$CMK_PLUGINS_SRC/." "$CMK_PLUGINS_DST/"
+quietly sudo chown -R "$SITE:$SITE" "$CMK_PLUGINS_DST"
+quietly sudo -u "$SITE" "$PYTHON3" -m pip install --quiet -e "$CMK_PLUGINS_DST"
 ok "Checkmk GUI plugins installed"
 
 # 8. Ownership
