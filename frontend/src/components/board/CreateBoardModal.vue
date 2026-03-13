@@ -15,10 +15,13 @@
         <form @submit.prevent="submit" class="space-y-4">
           <div class="space-y-1.5">
             <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-              {{ t('admin.boardId') }} <span class="normal-case font-normal text-zinc-600">{{ t('admin.boardIdHint') }}</span>
+              {{ t('admin.boardId') }}
             </label>
-            <input v-model="form.name" placeholder="my-board" required pattern="[a-zA-Z0-9_-]+"
-              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+            <input :value="form.name" @input="onNameInput" placeholder="my-board" required
+              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 transition-all"
+              :class="nameError ? 'ring-red-500/60 focus:ring-red-500' : 'ring-zinc-700 focus:ring-indigo-500'" />
+            <p v-if="nameError" class="text-xs text-red-400">{{ nameError }}</p>
+            <p v-else class="text-xs text-zinc-600">{{ t('admin.boardIdHint') }}</p>
           </div>
           <div class="space-y-1.5">
             <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.alias') }}</label>
@@ -64,8 +67,8 @@
               class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
               {{ t('common.cancel') }}
             </button>
-            <button type="submit"
-              class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all">
+            <button type="submit" :disabled="!form.name || !!nameError"
+              class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-white transition-all">
               {{ t('common.create') }}
             </button>
           </div>
@@ -76,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBoardsStore } from '@/stores/boards'
 import { useConnectionsStore } from '@/stores/connections'
@@ -90,6 +93,19 @@ const connectionsStore = useConnectionsStore()
 const settingsStore = useSettingsStore()
 
 const form = ref({ name: '', alias: '', backend_id: '', view_type: 'static' })
+
+const _NAME_RE = /^[a-zA-Z0-9_-]+$/
+const nameError = computed(() => {
+  if (!form.value.name) return ''
+  if (!_NAME_RE.test(form.value.name)) return t('admin.boardIdInvalid')
+  return ''
+})
+
+function onNameInput(e: Event) {
+  const raw = (e.target as HTMLInputElement).value
+  // auto-sanitize: spaces → hyphens, strip remaining invalid chars
+  form.value.name = raw.replace(/ /g, '-').replace(/[^a-zA-Z0-9_-]/g, '')
+}
 
 onMounted(async () => {
   await Promise.all([connectionsStore.fetchBackends(), settingsStore.load()])
