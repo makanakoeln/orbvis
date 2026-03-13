@@ -73,9 +73,9 @@
       <button v-if="draft.type" @click="$emit('start-placing')"
         class="w-full px-3 py-2 rounded-lg font-semibold text-sm transition-all duration-150"
         :class="placing
-          ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30 animate-pulse'
+          ? 'bg-[#ffd000]/15 text-[#ffd000] ring-1 ring-[#ffd000]/30 animate-pulse'
           : 'bg-indigo-600 hover:bg-indigo-500 text-white'">
-        {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.placeOnMap') }}
+        {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.placeOnBoard') }}
       </button>
 
     </div>
