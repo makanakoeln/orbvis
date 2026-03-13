@@ -316,7 +316,7 @@ ok "OrbVis registered as OMD service"
 
 # 7. Checkmk GUI plugins
 step "Installing Checkmk GUI plugins"
-quietly sudo -u "$SITE" "$PYTHON3" -m pip install --quiet --upgrade "$CMK_PLUGINS_SRC"
+quietly sudo -u "$SITE" "$PYTHON3" -m pip install --quiet -e "$CMK_PLUGINS_SRC"
 ok "Checkmk GUI plugins installed"
 
 # 8. Ownership
