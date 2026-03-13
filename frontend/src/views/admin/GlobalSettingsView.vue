@@ -189,16 +189,16 @@
           <label class="block">
             <span class="text-xs text-zinc-400 mb-1 block">{{ t('settings.hoverTemplate') }}</span>
             <input v-model="form.hover_template" type="text"
-              placeholder="{{name}} · {{state}}&#10;{{output}}"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              placeholder="{{name}} | {{state}} | {{output}}"
+              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
           </label>
 
           <!-- Context template -->
           <label class="block">
             <span class="text-xs text-zinc-400 mb-1 block">{{ t('settings.contextTemplate') }}</span>
             <input v-model="form.context_template" type="text"
-              placeholder="{{name}} · {{state}}"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              placeholder="{{name}} | {{state}}"
+              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
           </label>
 
         </div>
