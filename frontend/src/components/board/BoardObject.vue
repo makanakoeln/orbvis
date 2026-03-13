@@ -143,7 +143,7 @@ const STATE_RGB: Record<string, string> = {
   UP: 'rgb(34,197,94)', OK: 'rgb(34,197,94)',
   DOWN: 'rgb(239,68,68)', CRITICAL: 'rgb(239,68,68)',
   UNREACHABLE: 'rgb(249,115,22)', UNKNOWN: 'rgb(249,115,22)',
-  WARNING: 'rgb(245,158,11)', PENDING: 'rgb(113,113,122)',
+  WARNING: 'rgb(255,208,0)', PENDING: 'rgb(113,113,122)',
 }
 const stateColorRgb = computed(() => STATE_RGB[props.state?.state ?? 'PENDING'] ?? STATE_RGB['PENDING'])
 
@@ -183,7 +183,7 @@ const STATE_CLASSES: Record<string, string> = {
   CRITICAL: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]',
   UNREACHABLE: 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]',
   UNKNOWN: 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]',
-  WARNING: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]',
+  WARNING: 'bg-[#ffd000] shadow-[0_0_8px_rgba(255,208,0,0.4)]',
   PENDING: 'bg-zinc-500',
 }
 const stateClass = computed(() => STATE_CLASSES[props.state?.state ?? 'PENDING'] ?? STATE_CLASSES['PENDING'])

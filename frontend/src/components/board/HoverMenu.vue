@@ -97,14 +97,14 @@ const STATE_BG: Record<string, string> = {
   UP: 'bg-green-400', OK: 'bg-green-400',
   DOWN: 'bg-red-500', CRITICAL: 'bg-red-500',
   UNREACHABLE: 'bg-orange-400', UNKNOWN: 'bg-orange-400',
-  WARNING: 'bg-amber-400',
+  WARNING: 'bg-[#ffd000]',
   PENDING: 'bg-zinc-500',
 }
 const STATE_TEXT: Record<string, string> = {
   UP: 'text-green-400', OK: 'text-green-400',
   DOWN: 'text-red-400', CRITICAL: 'text-red-400',
   UNREACHABLE: 'text-orange-400', UNKNOWN: 'text-orange-400',
-  WARNING: 'text-amber-400',
+  WARNING: 'text-[#ffd000]',
   PENDING: 'text-zinc-500',
 }
 

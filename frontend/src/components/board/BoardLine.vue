@@ -117,7 +117,7 @@ const STATE_COLORS: Record<string, string> = {
   UP: '#4ade80', OK: '#4ade80',
   DOWN: '#f87171', CRITICAL: '#f87171',
   UNREACHABLE: '#fb923c', UNKNOWN: '#fb923c',
-  WARNING: '#facc15',
+  WARNING: '#ffd000',
   PENDING: '#9ca3af',
 }
 const lineColor = computed(() => STATE_COLORS[props.state?.state ?? 'PENDING'] ?? STATE_COLORS['PENDING'])

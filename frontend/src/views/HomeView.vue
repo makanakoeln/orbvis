@@ -131,12 +131,12 @@
               <circle cx="17" cy="97" r="2.5" fill="#ef4444"/><rect x="23" y="94.5" width="30" height="3.5" rx="1.5" fill="rgba(252,165,165,0.3)"/>
               <rect x="13" y="106" width="32" height="7" rx="2" fill="rgba(239,68,68,0.12)"/><circle cx="17.5" cy="109.5" r="1.5" fill="#ef4444"/>
               <!-- WARNING cards -->
-              <rect x="70" y="48" width="56" height="34" rx="4" fill="rgba(234,179,8,0.07)" stroke="rgba(234,179,8,0.22)" stroke-width="0.75"/>
-              <circle cx="77" cy="59" r="2.5" fill="#eab308"/><rect x="83" y="56.5" width="30" height="3.5" rx="1.5" fill="rgba(253,224,71,0.3)"/>
-              <rect x="73" y="68" width="32" height="7" rx="2" fill="rgba(234,179,8,0.12)"/><circle cx="77.5" cy="71.5" r="1.5" fill="#eab308"/>
-              <rect x="190" y="86" width="56" height="34" rx="4" fill="rgba(234,179,8,0.07)" stroke="rgba(234,179,8,0.22)" stroke-width="0.75"/>
-              <circle cx="197" cy="97" r="2.5" fill="#eab308"/><rect x="203" y="94.5" width="30" height="3.5" rx="1.5" fill="rgba(253,224,71,0.3)"/>
-              <rect x="193" y="106" width="32" height="7" rx="2" fill="rgba(234,179,8,0.12)"/><circle cx="197.5" cy="109.5" r="1.5" fill="#eab308"/>
+              <rect x="70" y="48" width="56" height="34" rx="4" fill="rgba(255,208,0,0.07)" stroke="rgba(255,208,0,0.22)" stroke-width="0.75"/>
+              <circle cx="77" cy="59" r="2.5" fill="#ffd000"/><rect x="83" y="56.5" width="30" height="3.5" rx="1.5" fill="rgba(255,208,0,0.3)"/>
+              <rect x="73" y="68" width="32" height="7" rx="2" fill="rgba(255,208,0,0.12)"/><circle cx="77.5" cy="71.5" r="1.5" fill="#ffd000"/>
+              <rect x="190" y="86" width="56" height="34" rx="4" fill="rgba(255,208,0,0.07)" stroke="rgba(255,208,0,0.22)" stroke-width="0.75"/>
+              <circle cx="197" cy="97" r="2.5" fill="#ffd000"/><rect x="203" y="94.5" width="30" height="3.5" rx="1.5" fill="rgba(255,208,0,0.3)"/>
+              <rect x="193" y="106" width="32" height="7" rx="2" fill="rgba(255,208,0,0.12)"/><circle cx="197.5" cy="109.5" r="1.5" fill="#ffd000"/>
             </svg>
             <!-- Placeholder for static without background -->
             <svg v-else viewBox="0 0 256 128" class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none">

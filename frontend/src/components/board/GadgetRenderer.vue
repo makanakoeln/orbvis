@@ -7,7 +7,7 @@
     <div class="rounded-full transition-all duration-300"
       :style="{ ...bulbStyle(isRed,   '239,68,68'), width: `${size * 0.55}px`, height: `${size * 0.55}px` }" />
     <div class="rounded-full transition-all duration-300"
-      :style="{ ...bulbStyle(isAmber, '251,191,36'), width: `${size * 0.55}px`, height: `${size * 0.55}px` }" />
+      :style="{ ...bulbStyle(isAmber, '255,208,0'), width: `${size * 0.55}px`, height: `${size * 0.55}px` }" />
     <div class="rounded-full transition-all duration-300"
       :style="{ ...bulbStyle(isGreen, '34,197,94'),  width: `${size * 0.55}px`, height: `${size * 0.55}px` }" />
   </div>

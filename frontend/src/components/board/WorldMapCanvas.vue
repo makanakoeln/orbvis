@@ -36,7 +36,7 @@ function stateColor(id: string): string {
   switch (s) {
     case 'UP': case 'OK': return '#22c55e'
     case 'DOWN': case 'CRITICAL': return '#ef4444'
-    case 'WARNING': return '#f59e0b'
+    case 'WARNING': return '#ffd000'
     case 'UNKNOWN': return '#f97316'
     case 'UNREACHABLE': return '#a855f7'
     default: return '#6b7280'

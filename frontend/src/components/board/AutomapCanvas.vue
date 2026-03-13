@@ -114,7 +114,7 @@ function stateColor(state: string): string {
     UP: '#22c55e', OK: '#22c55e',
     DOWN: '#ef4444', CRITICAL: '#ef4444',
     UNREACHABLE: '#f97316', UNKNOWN: '#f97316',
-    WARNING: '#f59e0b',
+    WARNING: '#ffd000',
   }
   return map[state] ?? '#6b7280'
 }

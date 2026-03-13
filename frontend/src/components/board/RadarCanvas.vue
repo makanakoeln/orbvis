@@ -121,7 +121,7 @@ function cardClass(state: string): string {
     case 'CRITICAL':    return 'bg-red-500/8 ring-red-500/20 hover:shadow-red-900/20'
     case 'UNREACHABLE': return 'bg-orange-500/8 ring-orange-500/20 hover:shadow-orange-900/20'
     case 'WARNING':
-    case 'UNKNOWN':     return 'bg-yellow-500/8 ring-yellow-500/20 hover:shadow-yellow-900/20'
+    case 'UNKNOWN':     return 'bg-[#ffd000]/8 ring-[#ffd000]/20 hover:shadow-yellow-900/20'
     case 'UP':
     case 'OK':          return 'bg-green-500/8 ring-green-500/20 hover:shadow-green-900/20'
     default:            return 'bg-[var(--bg-input)] ring-[var(--border)]'
@@ -134,7 +134,7 @@ function nameClass(state: string): string {
     case 'CRITICAL':    return 'text-red-300'
     case 'UNREACHABLE': return 'text-orange-300'
     case 'WARNING':
-    case 'UNKNOWN':     return 'text-yellow-300'
+    case 'UNKNOWN':     return 'text-[#ffd000]'
     case 'UP':
     case 'OK':          return 'text-green-300'
     default:            return 'text-zinc-400'
@@ -147,7 +147,7 @@ function badgeClass(state: string): string {
     case 'CRITICAL':    return 'bg-red-500/15 text-red-400'
     case 'UNREACHABLE': return 'bg-orange-500/15 text-orange-400'
     case 'WARNING':
-    case 'UNKNOWN':     return 'bg-yellow-500/15 text-yellow-400'
+    case 'UNKNOWN':     return 'bg-[#ffd000]/15 text-[#ffd000]'
     case 'UP':
     case 'OK':          return 'bg-green-500/15 text-green-400'
     default:            return 'bg-zinc-700/50 text-zinc-500'
@@ -160,7 +160,7 @@ function stateDotClass(state: string): string {
     case 'CRITICAL':    return 'bg-red-400'
     case 'UNREACHABLE': return 'bg-orange-400'
     case 'WARNING':
-    case 'UNKNOWN':     return 'bg-yellow-400'
+    case 'UNKNOWN':     return 'bg-[#ffd000]'
     case 'UP':
     case 'OK':          return 'bg-green-400'
     default:            return 'bg-zinc-500'
@@ -173,7 +173,7 @@ function stateTextClass(state: string): string {
     case 'CRITICAL':    return 'text-red-400'
     case 'UNREACHABLE': return 'text-orange-400'
     case 'WARNING':
-    case 'UNKNOWN':     return 'text-yellow-400'
+    case 'UNKNOWN':     return 'text-[#ffd000]'
     case 'UP':
     case 'OK':          return 'text-green-400'
     default:            return 'text-zinc-500'
