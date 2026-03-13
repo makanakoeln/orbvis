@@ -57,15 +57,29 @@
         class="object-contain transition-all duration-300 select-none"
         :class="[isSvgIcon ? 'svg-icon' : '', selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded' : '']"
       />
-      <!-- State circle fallback (Vue-owned, unchanged from original) -->
-      <div
+      <!-- State circle fallback — SVG for crisp sub-pixel text centering -->
+      <svg
         v-else
-        class="rounded-full flex items-center justify-center transition-colors duration-300"
-        :class="[stateClass, selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950' : '']"
-        :style="iconStyle"
+        :width="iconSize" :height="iconSize"
+        :viewBox="`0 0 ${iconSize} ${iconSize}`"
+        overflow="visible"
+        class="block select-none transition-all duration-300 rounded-full"
+        :class="selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950' : ''"
+        :style="{ filter: stateGlow }"
       >
-        <span class="text-white leading-none select-none" :style="charStyle">{{ typeChar }}</span>
-      </div>
+        <circle :cx="iconSize / 2" :cy="iconSize / 2" :r="iconSize / 2" :fill="stateColorRgb" />
+        <text
+          :x="iconSize / 2" :y="iconSize / 2"
+          text-anchor="middle"
+          dominant-baseline="central"
+          fill="white"
+          :font-size="charFontSize"
+          font-weight="700"
+          font-family="system-ui,-apple-system,BlinkMacSystemFont,sans-serif"
+          :letter-spacing="typeChar.length > 1 ? -1 : 0.5"
+          style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5))"
+        >{{ typeChar }}</text>
+      </svg>
 
       <!-- D3 arc ring overlay — pointer-events:none set via attribute + style to ensure
            it never intercepts mousedown/drag events in any browser -->
@@ -175,27 +189,22 @@ useArcRing({
   enabled: shouldShowRing,
 })
 
-// Original state classes — fallback div is Vue-owned, untouched by D3
-const STATE_CLASSES: Record<string, string> = {
-  UP: 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]',
-  OK: 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]',
-  DOWN: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]',
-  CRITICAL: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]',
-  UNREACHABLE: 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]',
-  UNKNOWN: 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]',
-  WARNING: 'bg-[#ffd000] shadow-[0_0_8px_rgba(255,208,0,0.4)]',
-  PENDING: 'bg-zinc-500',
+const STATE_GLOWS: Record<string, string> = {
+  UP:          'drop-shadow(0 0 5px rgba(34,197,94,0.55))',
+  OK:          'drop-shadow(0 0 5px rgba(34,197,94,0.55))',
+  DOWN:        'drop-shadow(0 0 6px rgba(239,68,68,0.65))',
+  CRITICAL:    'drop-shadow(0 0 6px rgba(239,68,68,0.65))',
+  UNREACHABLE: 'drop-shadow(0 0 5px rgba(249,115,22,0.55))',
+  UNKNOWN:     'drop-shadow(0 0 5px rgba(249,115,22,0.55))',
+  WARNING:     'drop-shadow(0 0 5px rgba(255,208,0,0.55))',
+  PENDING:     'none',
 }
-const stateClass = computed(() => STATE_CLASSES[props.state?.state ?? 'PENDING'] ?? STATE_CLASSES['PENDING'])
+const stateGlow = computed(() => STATE_GLOWS[props.state?.state ?? 'PENDING'] ?? 'none')
 
-const charStyle = computed(() => {
-  const chars = typeChar.value.length
-  const factor = chars === 1 ? 0.46 : 0.30
-  return {
-    fontSize: `${Math.max(10, Math.round(props.iconSize * factor))}px`,
-    fontWeight: '900',
-    textShadow: '0 1px 2px rgba(0,0,0,0.4)',
-  }
+const charFontSize = computed(() => {
+  const n = typeChar.value.length
+  const factor = n === 1 ? 0.44 : n === 2 ? 0.31 : 0.26
+  return Math.max(9, Math.round(props.iconSize * factor))
 })
 
 const TYPE_CHARS: Record<string, string> = {
