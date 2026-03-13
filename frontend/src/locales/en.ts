@@ -288,9 +288,11 @@ export default {
     objectDefaults: 'Object defaults',
     labelDefaults: 'Label defaults',
     newBoardDefaults: 'New board defaults',
+    templates: 'Templates',
+    templatesSubtitle: 'Global fallback — applies to any board or object without its own template set',
     hoverTemplate: 'Hover template',
     contextTemplate: 'Context template',
-    zHint: 'Stacking order – higher value = in front',
+    zHint: 'Stacking order – higher = in front',
   },
   userSettings: {
     title: 'User Settings',

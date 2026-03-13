@@ -27,7 +27,7 @@
           {{ t('settings.objectDefaults') }}
         </h3>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+        <div class="flex flex-wrap gap-x-6 gap-y-4 items-start">
 
           <!-- Icon size -->
           <label class="block">
@@ -35,22 +35,20 @@
             <NumberInput v-model="form.icon_size" min="8" max="256" class="w-24" />
           </label>
 
-          <!-- View type -->
+          <!-- Display mode -->
           <label class="block">
             <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.viewType') }}</span>
-            <select v-model="form.view_type"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <select v-model="form.view_type" class="select w-44">
               <option value="icon">{{ t('boardSettings.viewTypeIcon') }}</option>
               <option value="text">{{ t('boardSettings.viewTypeText') }}</option>
               <option value="gadget">{{ t('boardSettings.viewTypeGadget') }}</option>
             </select>
           </label>
 
-          <!-- Line type -->
+          <!-- Line style -->
           <label class="block">
             <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.lineStyle') }}</span>
-            <select v-model="form.line_style"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <select v-model="form.line_style" class="select w-44">
               <option :value="null">{{ t('boardSettings.lineDefault') }}</option>
               <option value="plain">{{ t('boardSettings.lineSimple') }}</option>
               <option value="arrow_end">{{ t('boardSettings.lineArrowRight') }}</option>
@@ -64,8 +62,7 @@
           <!-- URL target -->
           <label class="block">
             <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.target') }}</span>
-            <select v-model="form.url_target"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <select v-model="form.url_target" class="select w-40">
               <option value="_blank">{{ t('boardSettings.targetNewTab') }}</option>
               <option value="_self">{{ t('boardSettings.targetSameTab') }}</option>
               <option value="_top">{{ t('boardSettings.targetTopFrame') }}</option>
@@ -73,18 +70,14 @@
           </label>
 
           <!-- Z-index -->
-          <div class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.z') }}</span>
+          <label class="block">
+            <span class="text-xs text-zinc-400 mb-1 block">
+              {{ t('boardSettings.z') }}
+              <span class="text-zinc-600 normal-case font-normal ml-1">{{ t('settings.zHint') }}</span>
+            </span>
             <NumberInput v-model="form.z" min="1" max="999" class="w-20" />
-            <p class="text-xs text-zinc-600 mt-1">{{ t('settings.zHint') }}</p>
-          </div>
-
-          <!-- Show label -->
-          <label class="flex items-center gap-3 cursor-pointer pt-4">
-            <input v-model="form.label_show" type="checkbox"
-              class="w-4 h-4 rounded accent-indigo-500" />
-            <span class="text-sm text-[var(--text)]">{{ t('boardSettings.showLabel') }}</span>
           </label>
+
         </div>
       </section>
 
@@ -94,77 +87,85 @@
           {{ t('settings.labelDefaults') }}
         </h3>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+        <div class="space-y-4">
 
-          <!-- Label size -->
-          <label class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.size') }} (px)</span>
-            <NumberInput v-model="form.label_size" min="6" max="72" class="w-24" />
+          <!-- Show label -->
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input v-model="form.label_show" type="checkbox"
+              class="w-4 h-4 rounded accent-indigo-500" />
+            <span class="text-sm text-[var(--text)]">{{ t('boardSettings.showLabel') }}</span>
           </label>
 
-          <!-- Label color -->
-          <label class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.color') }}</span>
-            <div class="flex gap-2">
-              <input v-model="form.label_color" type="color"
-                class="w-10 h-9 rounded cursor-pointer bg-[var(--bg)] border border-[var(--border)]" />
-              <input v-model="form.label_color" type="text"
-                class="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-            </div>
-          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
 
-          <!-- Label background -->
-          <label class="block">
-            <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.background') }}</span>
-            <div class="flex gap-2">
-              <input v-model="form.label_background" type="color"
-                :disabled="form.label_background === 'transparent'"
-                class="w-10 h-9 rounded cursor-pointer bg-[var(--bg)] border border-[var(--border)] disabled:opacity-40" />
-              <input v-model="form.label_background" type="text"
-                placeholder="transparent"
-                class="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-            </div>
-          </label>
-
-          <!-- Label offset X/Y -->
-          <div class="grid grid-cols-2 gap-3">
+            <!-- Label size -->
             <label class="block">
-              <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.offsetX') }}</span>
-              <NumberInput v-model="form.label_x" class="w-24" />
+              <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.size') }} (px)</span>
+              <NumberInput v-model="form.label_size" min="6" max="72" class="w-24" />
             </label>
+
+            <!-- Label color -->
             <label class="block">
-              <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.offsetY') }}</span>
-              <NumberInput v-model="form.label_y" class="w-24" />
+              <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.color') }}</span>
+              <div class="flex gap-2">
+                <input v-model="form.label_color" type="color"
+                  class="w-10 h-9 rounded cursor-pointer bg-[var(--bg)] border border-[var(--border)]" />
+                <input v-model="form.label_color" type="text" placeholder="#ffffff"
+                  class="w-28 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              </div>
             </label>
+
+            <!-- Label background -->
+            <label class="block">
+              <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.background') }}</span>
+              <div class="flex gap-2">
+                <input v-model="form.label_background" type="color"
+                  :disabled="form.label_background === 'transparent'"
+                  class="w-10 h-9 rounded cursor-pointer bg-[var(--bg)] border border-[var(--border)] disabled:opacity-40" />
+                <input v-model="form.label_background" type="text" placeholder="transparent"
+                  class="w-28 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              </div>
+            </label>
+
+            <!-- Label offset X/Y -->
+            <div class="flex gap-4">
+              <label class="block">
+                <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.offsetX') }}</span>
+                <NumberInput v-model="form.label_x" class="w-24" />
+              </label>
+              <label class="block">
+                <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.offsetY') }}</span>
+                <NumberInput v-model="form.label_y" class="w-24" />
+              </label>
+            </div>
+
           </div>
         </div>
       </section>
 
-      <!-- New map defaults -->
+      <!-- New board defaults -->
       <section class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-6">
         <h3 class="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-5">
           {{ t('settings.newBoardDefaults') }}
         </h3>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+        <div class="flex flex-wrap gap-x-6 gap-y-4 items-start">
 
           <!-- Default backend -->
           <label class="block">
             <span class="text-xs text-zinc-400 mb-1 block">{{ t('board.connection') }}</span>
-            <select v-model="form.default_backend_id"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                      <option v-for="b in connectionsStore.backends" :key="b.id" :value="b.id">
+            <select v-model="form.default_backend_id" class="select w-48">
+              <option v-for="b in connectionsStore.backends" :key="b.id" :value="b.id">
                 {{ b.label || b.id }}
               </option>
               <option v-if="connectionsStore.backends.length === 0" value="live_1">live_1</option>
             </select>
           </label>
 
-          <!-- Default map type -->
+          <!-- Default board type -->
           <label class="block">
             <span class="text-xs text-zinc-400 mb-1 block">{{ t('board.boardType') }}</span>
-            <select v-model="form.default_map_type"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <select v-model="form.default_map_type" class="select w-44">
               <option value="static">{{ t('board.boardTypeStatic') }}</option>
               <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
               <option value="automap">{{ t('board.boardTypeFlowBoard') }}</option>
@@ -172,19 +173,34 @@
             </select>
           </label>
 
+        </div>
+      </section>
+
+      <!-- Templates -->
+      <section class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-6">
+        <h3 class="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-1">
+          {{ t('settings.templates') }}
+        </h3>
+        <p class="text-xs text-zinc-600 mb-5">{{ t('settings.templatesSubtitle') }}</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+
           <!-- Hover template -->
           <label class="block">
             <span class="text-xs text-zinc-400 mb-1 block">{{ t('settings.hoverTemplate') }}</span>
-            <input v-model="form.hover_template" type="text" :placeholder="t('common.noData')"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+            <input v-model="form.hover_template" type="text"
+              placeholder="{{name}} · {{state}}&#10;{{output}}"
+              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
           </label>
 
           <!-- Context template -->
           <label class="block">
             <span class="text-xs text-zinc-400 mb-1 block">{{ t('settings.contextTemplate') }}</span>
-            <input v-model="form.context_template" type="text" :placeholder="t('common.noData')"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+            <input v-model="form.context_template" type="text"
+              placeholder="{{name}} · {{state}}"
+              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
           </label>
+
         </div>
       </section>
 
@@ -234,3 +250,9 @@ onMounted(async () => {
   Object.assign(form, store.settings)
 })
 </script>
+
+<style scoped>
+.select {
+  @apply bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500;
+}
+</style>

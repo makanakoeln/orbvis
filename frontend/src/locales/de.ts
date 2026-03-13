@@ -288,6 +288,8 @@ export default {
     objectDefaults: 'Objekt-Standardwerte',
     labelDefaults: 'Beschriftungs-Standardwerte',
     newBoardDefaults: 'Standardwerte für neue Boards',
+    templates: 'Templates',
+    templatesSubtitle: 'Globaler Fallback – gilt für alle Boards und Objekte ohne eigenes Template',
     hoverTemplate: 'Hover-Template',
     contextTemplate: 'Kontext-Template',
     zHint: 'Stapelreihenfolge – höherer Wert = weiter vorne',
