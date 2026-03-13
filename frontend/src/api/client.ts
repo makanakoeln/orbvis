@@ -5,7 +5,7 @@
 import type {
   BackendConfig,
   GlobalSettings,
-  IconEntry,
+  ImageEntry,
   BoardConfig,
   BoardObject,
   BoardPermissions,
@@ -253,16 +253,16 @@ export const connectionsApi = {
     request('/backends/test-connection', { method: 'POST', body: JSON.stringify(data) }, token),
 }
 
-// ---- Icons ----
+// ---- Images ----
 
-export const iconsApi = {
-  list: (token: string): Promise<IconEntry[]> =>
-    request('/icons', {}, token),
+export const imagesApi = {
+  list: (token: string): Promise<ImageEntry[]> =>
+    request('/images', {}, token),
 
-  upload: async (file: File, token: string): Promise<IconEntry> => {
+  upload: async (file: File, token: string): Promise<ImageEntry> => {
     const form = new FormData()
     form.append('file', file)
-    const response = await fetch(`${BASE_URL}/icons`, {
+    const response = await fetch(`${BASE_URL}/images`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: form,
@@ -275,7 +275,7 @@ export const iconsApi = {
   },
 
   delete: (name: string, token: string): Promise<void> =>
-    request(`/icons/${encodeURIComponent(name)}`, { method: 'DELETE' }, token),
+    request(`/images/${encodeURIComponent(name)}`, { method: 'DELETE' }, token),
 }
 
 // ---- Global Settings ----

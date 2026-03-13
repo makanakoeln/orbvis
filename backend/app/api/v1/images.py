@@ -1,4 +1,4 @@
-"""Icon set management endpoints."""
+"""Image library management endpoints."""
 
 from __future__ import annotations
 
@@ -20,8 +20,8 @@ _ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg", ".svg", ".webp"}
 _MAX_ICON_BYTES = 2 * 1024 * 1024  # 2 MB
 
 
-def _icons_dir() -> Path:
-    d = Path(settings.boards_dir).parent / "icons"
+def _images_dir() -> Path:
+    d = Path(settings.boards_dir).parent / "images"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -40,19 +40,19 @@ def _is_valid_icon(content: bytes) -> bool:
 
 
 @router.get("", response_model=list[dict])
-async def list_icons(
+async def list_images(
     _current_user: User = Depends(get_current_user),
 ) -> list[dict]:
-    d = _icons_dir()
+    d = _images_dir()
     result = []
     for f in sorted(d.iterdir()):
         if f.is_file() and f.suffix.lower() in _ALLOWED_SUFFIXES:
-            result.append({"name": f.name, "url": f"icons/{f.name}"})
+            result.append({"name": f.name, "url": f"images/{f.name}"})
     return result
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def upload_icon(
+async def upload_image(
     file: UploadFile = File(...),
     _: User = Depends(require_admin),
 ) -> JSONResponse:
@@ -66,7 +66,7 @@ async def upload_icon(
     if len(contents) > _MAX_ICON_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="Icon file too large (max 2 MB)",
+            detail="Image file too large (max 2 MB)",
         )
 
     if not _is_valid_icon(contents):
@@ -77,10 +77,10 @@ async def upload_icon(
 
     raw_suffix = Path(file.filename or "").suffix.lower()
     suffix = raw_suffix if raw_suffix in _ALLOWED_SUFFIXES else ".png"
-    stem = Path(file.filename or "icon").stem
+    stem = Path(file.filename or "image").stem
     filename = stem + suffix
 
-    d = _icons_dir()
+    d = _images_dir()
     fd, tmp_path = tempfile.mkstemp(dir=d, prefix="upload_", suffix=suffix)
     try:
         try:
@@ -92,19 +92,19 @@ async def upload_icon(
         Path(tmp_path).unlink(missing_ok=True)
         raise
 
-    return JSONResponse({"name": filename, "url": f"icons/{filename}"}, status_code=201)
+    return JSONResponse({"name": filename, "url": f"images/{filename}"}, status_code=201)
 
 
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_icon(
+async def delete_image(
     name: str,
     _: User = Depends(require_admin),
 ) -> None:
-    d = _icons_dir()
+    d = _images_dir()
     # Prevent path traversal
     path = (d / name).resolve()
     if not str(path).startswith(str(d.resolve())):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
     if not path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Icon '{name}' not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Image '{name}' not found")
     path.unlink()

@@ -133,8 +133,8 @@ ok "Frontend built and deployed"
 
 # 2. Data directories + demo boards
 step "Setting up data directories"
-ICONS_DIR="$(dirname "$BOARDS_DIR")/icons"
-quietly sudo mkdir -p "$BOARDS_DIR/backgrounds" "$ICONS_DIR"
+IMAGES_DIR="$(dirname "$BOARDS_DIR")/images"
+quietly sudo mkdir -p "$BOARDS_DIR/backgrounds" "$IMAGES_DIR"
 NEW_BOARDS=0
 for demo in "$SCRIPT_DIR/backend/boards/"demo*.json; do
   fname="$(basename "$demo")"
@@ -236,9 +236,9 @@ Alias /$SITE/orbvis $HTDOCS_DIR
     ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/api
 </Location>
 
-<Location /$SITE/orbvis/icons>
-    ProxyPass        http://127.0.0.1:$BACKEND_PORT/icons
-    ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/icons
+<Location /$SITE/orbvis/images>
+    ProxyPass        http://127.0.0.1:$BACKEND_PORT/images
+    ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/images
 </Location>
 
 <Location /$SITE/orbvis/boards/backgrounds>

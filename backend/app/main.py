@@ -34,7 +34,7 @@ class MethodOverrideMiddleware:
                 scope = {**scope, "method": override}
         await self.app(scope, receive, send)
 
-from app.api.v1 import auth, backends, boards, icons, roles, settings as settings_api, states, users
+from app.api.v1 import auth, backends, boards, images, roles, settings as settings_api, states, users
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, init_db
 
@@ -332,7 +332,7 @@ def _seed_demo_map() -> None:
             # ── Shape & Map link ────────────────────────────────────────────
             BoardObject(
                 id="shape-logo",
-                type="shape",
+                type="image",
                 x=1265, y=190,
                 display=DisplayConfig(mode="icon"),
                 label=LabelConfig(show=True, text="shape", x=0, y=34, size=10),
@@ -522,8 +522,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _seed_demo_map()
     _seed_demo_worldmap()
 
-    from app.seed_icons import seed_builtin_icons
-    seed_builtin_icons(Path(settings.boards_dir).parent / "icons")
+    from app.seed_images import seed_builtin_images
+    seed_builtin_images(Path(settings.boards_dir).parent / "images")
 
     yield
     logger.info("Shutting down OrbVis backend.")
@@ -555,7 +555,7 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(roles.router, prefix="/api/v1/roles", tags=["roles"])
 app.include_router(backends.router, prefix="/api/v1/backends", tags=["backends"])
 app.include_router(settings_api.router, prefix="/api/v1/settings", tags=["settings"])
-app.include_router(icons.router, prefix="/api/v1/icons", tags=["icons"])
+app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
 
 
 @app.get("/api/health")
@@ -568,7 +568,7 @@ _bg_dir = Path(settings.boards_dir) / "backgrounds"
 _bg_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/boards/backgrounds", StaticFiles(directory=str(_bg_dir)), name="backgrounds")
 
-# Serve icon set images
-_icons_dir = Path(settings.boards_dir).parent / "icons"
-_icons_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/icons", StaticFiles(directory=str(_icons_dir)), name="icons")
+# Serve image set images
+_images_dir = Path(settings.boards_dir).parent / "images"
+_images_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/images", StaticFiles(directory=str(_images_dir)), name="images")

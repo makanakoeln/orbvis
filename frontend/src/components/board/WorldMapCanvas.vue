@@ -55,21 +55,21 @@ function displayName(obj: BoardObjectType): string {
 
 function makeDivIcon(obj: BoardObjectType): L.DivIcon {
   const color = stateColor(obj.id)
-  const size = obj.display?.icon_size ?? props.config.icon_size ?? 22
+  const size = obj.display?.image_size ?? props.config.icon_size ?? 22
   const label = obj.label?.show !== false ? escapeHtml(displayName(obj)) : ''
   const selected = props.selectedObjectId === obj.id
 
   const TYPE_CHARS: Record<string, string> = {
-    host: 'H', service: 'S', hostgroup: 'HG', servicegroup: 'SG', map: 'M', shape: '◆',
+    host: 'H', service: 'S', hostgroup: 'HG', servicegroup: 'SG', map: 'M', image: '◆',
   }
   const typeChar = TYPE_CHARS[obj.type] ?? '?'
   const charSize = Math.max(8, Math.round(size * (typeChar.length > 1 ? 0.34 : 0.42)))
 
-  const iconFile = obj.display?.icon ?? obj.shape_icon
+  const iconFile = obj.display?.image ?? obj.image_src
   let iconHtml: string
   if (iconFile) {
     const outline = selected ? 'outline: 3px solid white; outline-offset: 2px; border-radius: 3px;' : ''
-    iconHtml = `<img src="${import.meta.env.BASE_URL}icons/${iconFile}" style="width:${size}px;height:${size}px;object-fit:contain;display:block;${outline}" />`
+    iconHtml = `<img src="${import.meta.env.BASE_URL}images/${iconFile}" style="width:${size}px;height:${size}px;object-fit:contain;display:block;${outline}" />`
   } else {
     iconHtml = `<div style="
         width: ${size}px; height: ${size}px;

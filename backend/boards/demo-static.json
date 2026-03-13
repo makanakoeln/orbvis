@@ -154,7 +154,7 @@
     },
     {
       "id": "shape-logo",
-      "type": "shape",
+      "type": "image",
       "x": 1265,
       "y": 190,
       "z": 1,

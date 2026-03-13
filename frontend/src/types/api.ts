@@ -10,7 +10,7 @@ export type ObjectType =
   | 'hostgroup'
   | 'servicegroup'
   | 'map'
-  | 'shape'
+  | 'image'
   | 'line'
   | 'textbox'
   | 'cmk_label'
@@ -27,8 +27,8 @@ export interface LabelConfig {
 
 export interface DisplayConfig {
   mode: 'icon' | 'text' | 'gadget'
-  icon?: string | null
-  icon_size?: number | null
+  image?: string | null
+  image_size?: number | null
   gadget_type?: 'gauge' | 'bar' | 'trafficlight' | null
   gadget_metric?: string | null
 }
@@ -57,7 +57,7 @@ export interface BoardObject {
   service_description?: string | null
   group_name?: string | null
   map_name?: string | null
-  shape_icon?: string | null
+  image_src?: string | null
   x2?: number | null
   y2?: number | null
   line_style?: LineStyle | null
@@ -217,7 +217,7 @@ export interface WebSocketStateUpdate {
 }
 
 
-export interface IconEntry {
+export interface ImageEntry {
   name: string
   url: string
 }

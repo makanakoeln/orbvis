@@ -50,8 +50,8 @@
       <!-- Custom icon image — draggable="false" prevents the browser from starting
            an HTML5 drag operation which would swallow all subsequent mousemove events -->
       <img
-        v-if="object.display?.icon ?? object.shape_icon"
-        :src="`${BASE_URL}icons/${object.display?.icon ?? object.shape_icon}`"
+        v-if="object.display?.image ?? object.image_src"
+        :src="`${BASE_URL}images/${object.display?.image ?? object.image_src}`"
         :style="iconStyle"
         draggable="false"
         class="object-contain transition-all duration-300 select-none"
@@ -157,7 +157,7 @@ const ringUtilColor = computed(() =>
 )
 
 const isSvgIcon = computed(() => {
-  const icon = props.object.display?.icon ?? props.object.shape_icon
+  const icon = props.object.display?.image ?? props.object.image_src
   return icon?.toLowerCase().endsWith('.svg') ?? false
 })
 
@@ -200,7 +200,7 @@ const charStyle = computed(() => {
 
 const TYPE_CHARS: Record<string, string> = {
   host: 'H', service: 'S', hostgroup: 'HG', servicegroup: 'SG',
-  map: 'M', shape: '◆', line: '—',
+  map: 'M', image: '◆', line: '—',
 }
 const typeChar = computed(() => TYPE_CHARS[props.object.type] ?? '?')
 

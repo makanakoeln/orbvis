@@ -23,7 +23,7 @@
         <option value="map">{{ t('boardSettings.typeMap') }}</option>
         <option value="line">{{ t('boardSettings.typeLine') }}</option>
         <option value="textbox">{{ t('boardSettings.typeTextbox') }}</option>
-        <option value="shape">{{ t('boardSettings.typeShape') }}</option>
+        <option value="image">{{ t('boardSettings.typeShape') }}</option>
       </select>
 
       <template v-if="draft.type === 'host'">
@@ -53,8 +53,8 @@
         <input v-model="draft.label_text" :placeholder="t('boardSettings.textContent')" class="field" />
       </template>
 
-      <template v-else-if="draft.type === 'shape'">
-        <IconPicker v-model="draft.icon" />
+      <template v-else-if="draft.type === 'image'">
+        <ImagePicker v-model="draft.image_src" />
         <input v-model="draft.label_text" :placeholder="t('boardSettings.labelOptional')" class="field" />
       </template>
 
@@ -89,7 +89,7 @@ import type { NewObjectDraft } from '@/composables/useBoardEditor'
 import { connectionsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import AutocompleteInput from './AutocompleteInput.vue'
-import IconPicker from './IconPicker.vue'
+import ImagePicker from './ImagePicker.vue'
 
 const { t } = useI18n()
 
@@ -114,7 +114,7 @@ const loadingAddObjects = ref(false)
 const loadingAddServices = ref(false)
 
 async function fetchAddObjects(type: string) {
-  if (!props.backendId || !type || type === 'line' || type === 'textbox' || type === 'map') {
+  if (!props.backendId || !type || type === 'line' || type === 'textbox' || type === 'map' || type === 'image') {
     addObjects.value = []; return
   }
   loadingAddObjects.value = true

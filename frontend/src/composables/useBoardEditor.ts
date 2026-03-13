@@ -15,7 +15,7 @@ export interface NewObjectDraft {
   group_name: string
   board_name: string
   label_text: string
-  icon: string
+  image_src: string
 }
 
 interface LineCoords { x: number; y: number; x2: number; y2: number }
@@ -196,7 +196,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
   // --- Place new object ---
   const placing = ref(false)
   const draft = reactive<NewObjectDraft>({
-    type: '', host_name: '', service_description: '', group_name: '', board_name: '', label_text: '', icon: '',
+    type: '', host_name: '', service_description: '', group_name: '', board_name: '', label_text: '', image_src: '',
   })
 
   function startPlacing() {
@@ -227,9 +227,9 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       },
       display: draft.type === 'line' ? null : {
         mode: s.view_type as 'icon' | 'text' | 'gadget',
-        icon: draft.icon || null,
+        image: draft.image_src || null,
       },
-      shape_icon: draft.type === 'shape' ? (draft.icon || null) : undefined,
+      image_src: draft.type === 'image' ? (draft.image_src || null) : undefined,
       url_target: s.url_target, z: s.z,
       ...(draft.type === 'line' ? { x2: _snap(Math.round(x)) + 150, y2: _snap(Math.round(y)) } : {}),
     }
@@ -264,7 +264,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       },
       display: {
         mode: s.view_type as 'icon' | 'text' | 'gadget',
-        icon: draft.icon || null,
+        image: draft.image_src || null,
       },
       url_target: s.url_target, z: s.z,
     }
@@ -300,7 +300,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     draft.group_name = ''
     draft.board_name = ''
     draft.label_text = ''
-    draft.icon = ''
+    draft.image_src = ''
     Object.keys(lineDragPositions).forEach(k => delete lineDragPositions[k])
   }
 

@@ -134,9 +134,9 @@ fi
 # ---------------------------------------------------------------------------
 # 2. Install directory
 # ---------------------------------------------------------------------------
-ICONS_DIR="$INSTALL_DIR/icons"
-sudo mkdir -p "$INSTALL_DIR" "$BOARDS_DIR" "$ICONS_DIR"
-sudo chown "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR" "$BOARDS_DIR" "$ICONS_DIR"
+IMAGES_DIR="$INSTALL_DIR/images"
+sudo mkdir -p "$INSTALL_DIR" "$BOARDS_DIR" "$IMAGES_DIR"
+sudo chown "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR" "$BOARDS_DIR" "$IMAGES_DIR"
 
 # ---------------------------------------------------------------------------
 # 3. Build frontend
@@ -269,9 +269,9 @@ server {
         proxy_read_timeout 3600;
     }
 
-    # Uploaded icons and built-in icon set (served directly for performance)
-    location $BASE_PATH/icons/ {
-        alias $INSTALL_DIR/icons/;
+    # Uploaded images and built-in image set (served directly for performance)
+    location $BASE_PATH/images/ {
+        alias $INSTALL_DIR/images/;
         expires 1h;
         add_header Cache-Control "public";
     }
@@ -318,9 +318,9 @@ RewriteRule ^$BASE_PATH/api/(.*) ws://127.0.0.1:$BACKEND_PORT/api/\$1 [P,L]
     ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/api/
 </Location>
 
-# Uploaded icons and built-in icon set (served directly)
-Alias $BASE_PATH/icons/ $INSTALL_DIR/icons/
-<Directory $INSTALL_DIR/icons/>
+# Uploaded images and built-in image set (served directly)
+Alias $BASE_PATH/images/ $INSTALL_DIR/images/
+<Directory $INSTALL_DIR/images/>
     Options -Indexes
     Require all granted
 </Directory>

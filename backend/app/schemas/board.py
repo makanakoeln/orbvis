@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 ObjectType = Literal[
     "host", "service", "hostgroup", "servicegroup",
-    "map", "shape", "line", "textbox", "cmk_label",
+    "map", "image", "line", "textbox", "cmk_label",
 ]
 
 LineStyle = Literal["plain", "arrow_end", "arrow_start", "arrow_both", "dashed", "weathermap"]
@@ -26,8 +26,8 @@ class LabelConfig(BaseModel):
 
 class DisplayConfig(BaseModel):
     mode: Literal["icon", "text", "gadget"] = "icon"
-    icon: str | None = None
-    icon_size: int | None = None
+    image: str | None = None
+    image_size: int | None = None
     gadget_type: Literal["gauge", "bar", "trafficlight"] | None = None
     gadget_metric: str | None = None
 
@@ -75,8 +75,8 @@ class BoardObject(BaseModel):
     group_name: str | None = None
     # Map object
     map_name: str | None = None
-    # Shape icon (separate from display.icon which is for monitoring objects)
-    shape_icon: str | None = None
+    # Image source (separate from display.image which is for monitoring objects)
+    image_src: str | None = None
     # Line endpoints
     x2: int | float | None = None
     y2: int | float | None = None

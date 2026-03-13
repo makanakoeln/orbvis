@@ -54,7 +54,7 @@
       <BoardObject
         :object="obj"
         :state="states[obj.id]"
-        :icon-size="obj.display?.icon_size ?? (obj.display?.mode === 'gadget' ? 60 : (iconSizeOverride ?? config.icon_size))"
+        :icon-size="obj.display?.image_size ?? (obj.display?.mode === 'gadget' ? 60 : (iconSizeOverride ?? config.icon_size))"
         :selected="selectedObjectId === obj.id"
         @hover="!editMode && openHoverMenu($event, obj)"
         @hover-leave="!editMode && closeHoverMenu()"

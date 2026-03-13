@@ -63,21 +63,21 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { iconsApi } from '@/api/client'
-import type { IconEntry } from '@/types/api'
+import { imagesApi } from '@/api/client'
+import type { ImageEntry } from '@/types/api'
 
 const BASE_URL = import.meta.env.BASE_URL
 const { t } = useI18n()
 const auth = useAuthStore()
 
-const icons = ref<IconEntry[]>([])
+const icons = ref<ImageEntry[]>([])
 const loading = ref(false)
 const uploadError = ref('')
 
 async function fetchIcons() {
   loading.value = true
   try {
-    icons.value = await iconsApi.list(auth.accessToken!)
+    icons.value = await imagesApi.list(auth.accessToken!)
   } finally {
     loading.value = false
   }
@@ -89,7 +89,7 @@ async function uploadIcons(event: Event) {
   uploadError.value = ''
   try {
     for (const file of Array.from(files)) {
-      await iconsApi.upload(file, auth.accessToken!)
+      await imagesApi.upload(file, auth.accessToken!)
     }
     await fetchIcons()
   } catch (e: unknown) {
@@ -102,7 +102,7 @@ async function uploadIcons(event: Event) {
 async function deleteIcon(name: string) {
   if (!confirm(t('admin.deleteIcon', { name }))) return
   try {
-    await iconsApi.delete(name, auth.accessToken!)
+    await imagesApi.delete(name, auth.accessToken!)
     icons.value = icons.value.filter(i => i.name !== name)
   } catch (e: unknown) {
     uploadError.value = e instanceof Error ? e.message : 'Delete failed'

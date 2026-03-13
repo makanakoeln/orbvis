@@ -231,7 +231,7 @@
             </div>
             <div class="field-row">
               <label class="field-label">{{ t('boardSettings.size') }}</label>
-              <NumberInput v-model="form.display.icon_size" min="1" max="512" placeholder="map default" class="w-24" />
+              <NumberInput v-model="form.display.image_size" min="1" max="512" placeholder="map default" class="w-24" />
             </div>
             <template v-if="form.display.mode === 'gadget'">
               <div class="field-row">
@@ -254,7 +254,7 @@
             </template>
             <div v-if="form.display.mode !== 'gadget'" class="field-row">
               <label class="field-label">{{ t('boardSettings.customIcon') }}</label>
-              <input v-model="form.display.icon" class="field flex-1 font-mono" placeholder="filename.png" />
+              <input v-model="form.display.image" class="field flex-1 font-mono" placeholder="filename.png" />
             </div>
           </div>
         </section>
@@ -421,8 +421,8 @@ const form = reactive({
   },
   display: {
     mode: 'icon' as 'icon' | 'text' | 'gadget',
-    icon: '',
-    icon_size: null as number | null,
+    image: '',
+    image_size: null as number | null,
     gadget_type: 'gauge' as string,
     gadget_metric: '',
   },
@@ -459,8 +459,8 @@ watch(() => props.object, (obj) => {
   form.label.color = obj.label?.color ?? '#ffffff'
   form.label.background = obj.label?.background ?? 'transparent'
   form.display.mode = obj.display?.mode ?? 'icon'
-  form.display.icon = obj.display?.icon ?? ''
-  form.display.icon_size = obj.display?.icon_size ?? null
+  form.display.image = obj.display?.image ?? ''
+  form.display.image_size = obj.display?.image_size ?? null
   form.display.gadget_type = obj.display?.gadget_type ?? 'gauge'
   form.display.gadget_metric = obj.display?.gadget_metric ?? ''
   form.weathermap_metric = obj.weathermap_metric ?? ''
@@ -549,8 +549,8 @@ async function save() {
     const updates: Record<string, unknown> = {
       display: {
         mode: form.display.mode,
-        icon: form.display.icon || null,
-        icon_size: form.display.icon_size ?? null,
+        image: form.display.image || null,
+        image_size: form.display.image_size ?? null,
         gadget_type: form.display.mode === 'gadget' ? form.display.gadget_type : null,
         gadget_metric: form.display.mode === 'gadget' ? (form.display.gadget_metric || null) : null,
       },
