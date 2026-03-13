@@ -7,7 +7,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
-from app.schemas.board import BoardConfig, BoardObject
+from app.schemas.board import BoardConfig, BoardObject, RadarView
 from app.schemas.state import MapStates, ObjectState
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ async def get_backend_objects(backend_id: str, obj_type: str, host: str | None =
 
 async def get_board_states(cfg: BoardConfig) -> MapStates:
     """Fetch current states for all objects in a board."""
-    backend_id = cfg.globals.backend_id
+    backend_id = cfg.backend_id
     backend = get_backend(backend_id)
 
     if backend is None:
@@ -53,7 +53,7 @@ async def get_board_states(cfg: BoardConfig) -> MapStates:
         ]
         return MapStates(map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=False)
 
-    if cfg.globals.map_type == "radar":
+    if cfg.view.type == "radar":
         return await _get_radar_states(cfg, backend)
 
     tasks = [_get_object_state(backend, obj) for obj in cfg.objects]
@@ -102,7 +102,8 @@ async def _get_object_state(backend: "BackendBase", obj: BoardObject) -> ObjectS
 
 async def _get_radar_states(cfg: "BoardConfig", backend: "BackendBase") -> MapStates:
     """Fetch states for all dynamically resolved radar map members."""
-    members = await backend.get_group_members(cfg.globals.radar_type, cfg.globals.radar_value)
+    rv = cfg.view if isinstance(cfg.view, RadarView) else RadarView()
+    members = await backend.get_group_members(rv.filter, rv.filter_value)
     if not members:
         return MapStates(map_name=cfg.name, states=[], generated_at=time.time(), backend_ok=True)
 
