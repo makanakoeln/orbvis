@@ -6,7 +6,7 @@ import type { BoardConfig, ObjectState } from '@/types/api'
 const sampleConfig: BoardConfig = {
   name: 'test',
   alias: 'Test',
-  icon_size: 22,
+  icon_size: 30,
   backend_id: 'test',
   rotation_interval: 0,
   view: { type: 'static' },

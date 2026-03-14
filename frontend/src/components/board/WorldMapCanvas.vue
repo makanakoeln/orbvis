@@ -55,7 +55,7 @@ function displayName(obj: BoardObjectType): string {
 
 function makeDivIcon(obj: BoardObjectType): L.DivIcon {
   const color = stateColor(obj.id)
-  const size = obj.display?.image_size ?? props.config.icon_size ?? 22
+  const size = obj.display?.image_size ?? props.config.icon_size ?? 30
   const label = obj.label?.show !== false ? escapeHtml(displayName(obj)) : ''
   const selected = props.selectedObjectId === obj.id
 

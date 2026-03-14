@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 class GlobalSettings(BaseModel):
     # Object defaults
-    icon_size: int = 22
+    icon_size: int = 30
     view_type: str = "icon"
     label_show: bool = True
     label_size: int = 11

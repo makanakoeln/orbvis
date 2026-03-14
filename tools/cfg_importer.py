@@ -112,7 +112,7 @@ def blocks_to_map_json(blocks: list[CfgBlock], map_name: str) -> dict:
     globals_props: dict[str, Any] = {
         "alias": map_name,
         "background_image": None,
-        "icon_size": 22,
+        "icon_size": 30,
         "backend_id": "live_1",
     }
     objects: list[dict] = []

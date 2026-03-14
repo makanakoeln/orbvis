@@ -102,7 +102,7 @@ class BoardConfig(BaseModel):
     alias: str = ""
     readonly: bool = False
     backend_id: str = "live_1"
-    icon_size: int = 22
+    icon_size: int = 30
     rotation_interval: int = 0
     hover_template: str | None = None
     context_template: str | None = None
@@ -115,7 +115,7 @@ class BoardCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-zA-Z0-9_\-]+$")
     alias: str = ""
     background_image: str | None = None
-    icon_size: int = 22
+    icon_size: int = 30
     backend_id: str = "live_1"
     view: BoardView = Field(default_factory=StaticView)
 

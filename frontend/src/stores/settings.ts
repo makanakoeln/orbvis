@@ -10,7 +10,7 @@ function token() {
 }
 
 export const SETTINGS_DEFAULTS: GlobalSettings = {
-  icon_size: 22,
+  icon_size: 30,
   view_type: 'icon',
   label_show: true,
   label_size: 11,

@@ -1,0 +1,17 @@
+{
+  "icon_size": 30,
+  "view_type": "icon",
+  "label_show": true,
+  "label_size": 11,
+  "label_color": "#ffffff",
+  "label_background": "transparent",
+  "label_x": 0,
+  "label_y": 0,
+  "url_target": "_blank",
+  "z": 1,
+  "line_style": null,
+  "default_backend_id": "live_1",
+  "default_map_type": "static",
+  "hover_template": null,
+  "context_template": null
+}
