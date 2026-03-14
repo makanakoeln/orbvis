@@ -45,6 +45,7 @@ export default {
     noBoardsUser: 'Contact your administrator',
     rotationBadgeTitle: 'Rotates every {n} seconds',
     search: 'Search boards…',
+    clearSearch: 'Clear search',
     noSearchResults: 'No boards match "{q}"',
     dynamicObjects: 'dynamic',
   },

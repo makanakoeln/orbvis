@@ -45,6 +45,7 @@ export default {
     noBoardsUser: 'Kontaktieren Sie Ihren Administrator',
     rotationBadgeTitle: 'Wechselt alle {n} Sekunden',
     search: 'Boards suchen…',
+    clearSearch: 'Suche zurücksetzen',
     noSearchResults: 'Keine Boards für „{q}" gefunden',
     dynamicObjects: 'dynamisch',
   },

@@ -11,7 +11,15 @@
           </svg>
           <input v-model="searchQuery"
             :placeholder="t('home.search')"
-            class="w-full pl-8 pr-3 py-2 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+            class="w-full pl-8 py-2 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+            :class="searchQuery ? 'pr-7' : 'pr-3'" />
+          <button v-if="searchQuery" @click="searchQuery = ''"
+            class="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+            :title="t('home.clearSearch')">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -232,20 +240,17 @@
           <!-- Admin actions: absolute overlay, no height reservation -->
           <div v-if="auth.isAdmin"
             class="absolute bottom-3 right-3 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
-            <!-- Settings (grayed out for readonly) -->
+            <!-- Settings -->
             <button @click.stop="openSettings(map)"
-              class="p-1 rounded-md transition-all"
-              :class="map.readonly
-                ? 'text-zinc-700 cursor-not-allowed'
-                : 'text-zinc-600 hover:text-indigo-400 hover:bg-indigo-500/10'"
-              :title="map.readonly ? t('board.readOnly') : t('board.settingsTitle')">
+              class="p-1 rounded-md text-zinc-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+              :title="t('board.settingsTitle')">
               <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
               </svg>
             </button>
             <!-- Clone -->
-            <button @click.stop="cloneBoard(map.name)"
+            <button @click.stop="cloneBoard(map)"
               class="p-1 rounded-md text-zinc-600 hover:text-amber-400 hover:bg-amber-500/10 transition-all"
               :title="t('admin.cloneBoard')">
               <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -311,23 +316,30 @@
   <Teleport to="body">
     <div v-if="confirmClone" class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="confirmClone = null" />
-      <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-80">
-        <h3 class="text-base font-bold text-[var(--text)] mb-4">{{ t('admin.cloneBoard') }}</h3>
-        <label class="block text-xs font-medium text-zinc-400 mb-1.5">
-          {{ t('admin.cloneBoardPrompt', { name: confirmClone }) }}
-        </label>
-        <input
-          ref="cloneInputEl"
-          :value="cloneNewName"
-          @input="onCloneNameInput"
-          @keydown.enter="doClone"
-          @keydown.esc="confirmClone = null"
-          @focus="($event.target as HTMLInputElement).select()"
-          class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-          spellcheck="false"
-        />
-        <p v-if="cloneError" class="mt-2 text-xs text-red-400">{{ cloneError }}</p>
-        <div class="flex gap-3 justify-end mt-5">
+      <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-80 space-y-3">
+        <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.cloneBoard') }}</h3>
+        <div>
+          <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">{{ t('admin.boardId') }}</label>
+          <input
+            ref="cloneInputEl"
+            :value="cloneNewName"
+            @input="onCloneNameInput"
+            @keydown.enter="doClone"
+            @keydown.esc="confirmClone = null"
+            @focus="($event.target as HTMLInputElement).select()"
+            class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+            spellcheck="false"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">{{ t('admin.alias') }}</label>
+          <input v-model="cloneAlias"
+            class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            spellcheck="false"
+          />
+        </div>
+        <p v-if="cloneError" class="text-xs text-red-400">{{ cloneError }}</p>
+        <div class="flex gap-3 justify-end pt-1 border-t border-[var(--border)]">
           <button @click="confirmClone = null"
             class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
             {{ t('common.cancel') }}
@@ -426,12 +438,14 @@ async function exportBoard(name: string) {
 
 const confirmClone = ref<string | null>(null)
 const cloneNewName = ref('')
+const cloneAlias = ref('')
 const cloneError = ref('')
 const cloneInputEl = ref<HTMLInputElement | null>(null)
 
-function cloneBoard(name: string) {
-  confirmClone.value = name
-  cloneNewName.value = `${name}_copy`
+function cloneBoard(map: BoardRead) {
+  confirmClone.value = map.name
+  cloneNewName.value = `${map.name}_copy`
+  cloneAlias.value = map.alias ? `${map.alias} (Copy)` : ''
   cloneError.value = ''
   nextTick(() => { cloneInputEl.value?.select() })
 }
@@ -444,7 +458,7 @@ function onCloneNameInput(e: Event) {
 async function doClone() {
   if (!confirmClone.value || !cloneNewName.value) return
   try {
-    await boardsApi.clone(confirmClone.value, { new_name: cloneNewName.value }, auth.accessToken!)
+    await boardsApi.clone(confirmClone.value, { new_name: cloneNewName.value, alias: cloneAlias.value || undefined }, auth.accessToken!)
     await boardsStore.fetchBoards()
     confirmClone.value = null
   } catch (e: unknown) {
@@ -455,7 +469,7 @@ async function doClone() {
 const settingsBoard = ref<BoardRead | null>(null)
 
 function openSettings(map: BoardRead) {
-  if (!map.readonly) settingsBoard.value = map
+  settingsBoard.value = map
 }
 
 const searchQuery = ref('')
