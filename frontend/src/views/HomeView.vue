@@ -1,10 +1,9 @@
 <template>
   <div class="flex-1 overflow-y-auto bg-[var(--bg)]">
-    <main class="max-w-5xl mx-auto py-10 px-6">
+    <main class="max-w-5xl mx-auto py-10 px-6 pb-24">
       <div class="mb-8 flex items-end justify-between gap-4">
         <div>
           <h2 class="text-2xl font-bold text-[var(--text)] tracking-tight">{{ t('home.title') }}</h2>
-          <p class="text-sm text-zinc-500 mt-1">{{ t('home.subtitle') }}</p>
         </div>
         <div class="relative w-56 shrink-0">
           <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -60,7 +59,7 @@
           <!-- Thumbnail -->
           <div class="relative w-full h-32 overflow-hidden bg-[var(--bg-input)]">
             <img
-              v-if="map.background_image"
+              v-if="map.background_image && !map.name.startsWith('demo-')"
               :src="`${baseUrl}boards/backgrounds/${map.background_image}`"
               :alt="map.alias || map.name"
               class="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity duration-200"
@@ -87,7 +86,7 @@
               <circle cx="72" cy="66" r="9" fill="#22c55e"/>
               <circle cx="184" cy="66" r="9" fill="#ef4444"/>
               <circle cx="36" cy="100" r="7" fill="#22c55e"/>
-              <circle cx="108" cy="100" r="7" fill="#f59e0b"/>
+              <circle cx="108" cy="100" r="7" fill="#ffd000"/>
               <circle cx="148" cy="100" r="7" fill="#22c55e"/>
               <circle cx="220" cy="100" r="7" fill="#22c55e"/>
               <text x="128" y="32" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="8" font-weight="700">H</text>
@@ -138,23 +137,58 @@
               <circle cx="197" cy="97" r="2.5" fill="#ffd000"/><rect x="203" y="94.5" width="30" height="3.5" rx="1.5" fill="rgba(255,208,0,0.3)"/>
               <rect x="193" y="106" width="32" height="7" rx="2" fill="rgba(255,208,0,0.12)"/><circle cx="197.5" cy="109.5" r="1.5" fill="#ffd000"/>
             </svg>
-            <!-- Placeholder for static without background -->
-            <svg v-else viewBox="0 0 256 128" class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none">
+            <!-- Static board thumbnail — scattered host/service objects, no tree structure -->
+            <svg v-else viewBox="0 0 256 128" class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none"
+              font-family="system-ui,-apple-system,sans-serif">
               <rect width="256" height="128" fill="#18181b"/>
-              <line x1="80" y1="52" x2="128" y2="34" stroke="#71717a" stroke-width="1.5"/>
-              <line x1="128" y1="34" x2="176" y2="52" stroke="#71717a" stroke-width="1.5"/>
-              <line x1="80" y1="52" x2="96" y2="90" stroke="#71717a" stroke-width="1.5"/>
-              <line x1="176" y1="52" x2="160" y2="90" stroke="#71717a" stroke-width="1.5"/>
-              <circle cx="80" cy="52" r="12" fill="#22c55e"/>
-              <circle cx="128" cy="34" r="12" fill="#ef4444"/>
-              <circle cx="176" cy="52" r="12" fill="#22c55e"/>
-              <circle cx="96" cy="90" r="9" fill="#eab308"/>
-              <circle cx="160" cy="90" r="9" fill="#22c55e"/>
-              <text x="80" y="56" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="8" font-weight="700">H</text>
-              <text x="128" y="38" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="8" font-weight="700">H</text>
-              <text x="176" y="56" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="8" font-weight="700">H</text>
-              <text x="96" y="94" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="7" font-weight="700">S</text>
-              <text x="160" y="94" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.9)" font-size="7" font-weight="700">S</text>
+              <!-- subtle grid -->
+              <line x1="64" y1="0" x2="64" y2="128" stroke="#27272a" stroke-width="0.5"/>
+              <line x1="128" y1="0" x2="128" y2="128" stroke="#27272a" stroke-width="0.5"/>
+              <line x1="192" y1="0" x2="192" y2="128" stroke="#27272a" stroke-width="0.5"/>
+              <line x1="0" y1="43" x2="256" y2="43" stroke="#27272a" stroke-width="0.5"/>
+              <line x1="0" y1="86" x2="256" y2="86" stroke="#27272a" stroke-width="0.5"/>
+              <!-- host OK top-left -->
+              <circle cx="36" cy="30" r="13" fill="#22c55e" filter="url(#gs)"/>
+              <text x="36" y="30" text-anchor="middle" dominant-baseline="central" fill="white" font-size="9" font-weight="700">H</text>
+              <rect x="18" y="48" width="36" height="7" rx="2" fill="rgba(0,0,0,0.55)"/>
+              <text x="36" y="52" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.7)" font-size="5">web-srv-01</text>
+              <!-- service CRITICAL right -->
+              <circle cx="212" cy="24" r="11" fill="#ef4444" filter="url(#rs)"/>
+              <text x="212" y="24" text-anchor="middle" dominant-baseline="central" fill="white" font-size="8" font-weight="700">S</text>
+              <rect x="193" y="40" width="38" height="7" rx="2" fill="rgba(0,0,0,0.55)"/>
+              <text x="212" y="44" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.7)" font-size="5">HTTP Check</text>
+              <!-- hostgroup OK center -->
+              <circle cx="118" cy="58" r="14" fill="#22c55e" filter="url(#gs)"/>
+              <text x="118" y="58" text-anchor="middle" dominant-baseline="central" fill="white" font-size="7.5" font-weight="700" letter-spacing="-0.5">HG</text>
+              <rect x="98" y="77" width="40" height="7" rx="2" fill="rgba(0,0,0,0.55)"/>
+              <text x="118" y="81" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.7)" font-size="5">linux-servers</text>
+              <!-- service WARNING bottom-left -->
+              <circle cx="58" cy="100" r="11" fill="#ffd000"/>
+              <text x="58" y="100" text-anchor="middle" dominant-baseline="central" fill="rgba(0,0,0,0.75)" font-size="8" font-weight="700">S</text>
+              <rect x="38" y="116" width="40" height="7" rx="2" fill="rgba(0,0,0,0.55)"/>
+              <text x="58" y="120" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.7)" font-size="5">Disk Usage</text>
+              <!-- service OK right-center -->
+              <circle cx="190" cy="82" r="11" fill="#22c55e" filter="url(#gs)"/>
+              <text x="190" y="82" text-anchor="middle" dominant-baseline="central" fill="white" font-size="8" font-weight="700">S</text>
+              <rect x="170" y="98" width="40" height="7" rx="2" fill="rgba(0,0,0,0.55)"/>
+              <text x="190" y="102" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.7)" font-size="5">CPU Load</text>
+              <!-- map link top-center -->
+              <circle cx="152" cy="20" r="9" fill="#71717a"/>
+              <text x="152" y="20" text-anchor="middle" dominant-baseline="central" fill="white" font-size="7" font-weight="700">M</text>
+              <!-- servicegroup bottom-right -->
+              <circle cx="234" cy="108" r="10" fill="#22c55e" filter="url(#gs)"/>
+              <text x="234" y="108" text-anchor="middle" dominant-baseline="central" fill="white" font-size="6.5" font-weight="700" letter-spacing="-0.5">SG</text>
+              <!-- host UNREACHABLE bottom-center -->
+              <circle cx="96" cy="112" r="9" fill="#f97316"/>
+              <text x="96" y="112" text-anchor="middle" dominant-baseline="central" fill="white" font-size="7" font-weight="700">H</text>
+              <defs>
+                <filter id="gs" x="-30%" y="-30%" width="160%" height="160%">
+                  <feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="rgba(34,197,94,0.4)"/>
+                </filter>
+                <filter id="rs" x="-30%" y="-30%" width="160%" height="160%">
+                  <feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="rgba(239,68,68,0.5)"/>
+                </filter>
+              </defs>
             </svg>
             <!-- Type + rotation badges overlaid on thumbnail -->
             <div class="absolute bottom-2 left-2 flex items-center gap-1.5">
@@ -183,23 +217,25 @@
             <div class="font-semibold text-[var(--text)] group-hover:text-white transition-colors truncate">
               {{ map.alias || map.name }}
             </div>
-            <div v-if="!map.name.startsWith('demo-')" class="flex items-center gap-1.5 mt-1.5 text-xs text-zinc-500 truncate">
+            <div class="flex items-center gap-1.5 mt-1.5 text-xs text-zinc-500 truncate">
               <svg class="w-3 h-3 shrink-0 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
               </svg>
               <span class="font-mono truncate">{{ map.backend_id }}</span>
               <span class="text-zinc-600">·</span>
-              <span>{{ t('common.objects', { n: map.object_count }) }}</span>
+              <span v-if="['automap', 'radar'].includes(map.view.type)" class="italic">{{ t('home.dynamicObjects') }}</span>
+              <span v-else>{{ t('common.objects', { n: map.object_count }) }}</span>
             </div>
 
             <div v-if="auth.isAdmin" class="flex items-center justify-end mt-2">
               <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
-                <!-- Permissions -->
-                <button v-if="!map.readonly" @click.prevent.stop="openPermissions(map.name)"
+                <!-- Settings -->
+                <button v-if="!map.readonly" @click.prevent.stop="settingsBoard = map"
                   class="p-1 rounded-md text-zinc-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
-                  :title="t('admin.boardPermissions')">
+                  :title="t('board.settingsTitle')">
                   <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                   </svg>
                 </button>
                 <!-- Clone -->
@@ -257,99 +293,81 @@
     </div>
   </Teleport>
 
-  <!-- Board Permissions Modal -->
+  <!-- Clone Board Modal -->
   <Teleport to="body">
-    <div v-if="permissionsMapName" class="fixed inset-0 z-50 flex items-center justify-center">
-      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="permissionsMapName = null" />
-      <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[34rem] max-h-[80vh] flex flex-col">
-        <div class="flex items-center justify-between mb-5 shrink-0">
-          <div>
-            <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.boardPermissions') }}</h3>
-            <p class="text-xs text-zinc-500 mt-0.5 font-mono">{{ permissionsMapName }}</p>
-          </div>
-          <button @click="permissionsMapName = null"
-            class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+    <div v-if="confirmClone" class="fixed inset-0 z-50 flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="confirmClone = null" />
+      <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-80">
+        <h3 class="text-base font-bold text-[var(--text)] mb-4">{{ t('admin.cloneBoard') }}</h3>
+        <label class="block text-xs font-medium text-zinc-400 mb-1.5">
+          {{ t('admin.cloneBoardPrompt', { name: confirmClone }) }}
+        </label>
+        <input
+          ref="cloneInputEl"
+          :value="cloneNewName"
+          @input="onCloneNameInput"
+          @keydown.enter="doClone"
+          @keydown.esc="confirmClone = null"
+          @focus="($event.target as HTMLInputElement).select()"
+          class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+          spellcheck="false"
+        />
+        <p v-if="cloneError" class="mt-2 text-xs text-red-400">{{ cloneError }}</p>
+        <div class="flex gap-3 justify-end mt-5">
+          <button @click="confirmClone = null"
+            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
+            {{ t('common.cancel') }}
           </button>
-        </div>
-        <div v-if="permissionsLoading" class="flex items-center justify-center py-8 text-zinc-500 text-sm gap-2">
-          <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
-          {{ t('common.loading') }}
-        </div>
-        <div v-else class="overflow-y-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-[var(--border)]">
-                <th class="px-3 py-2.5 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.role') }}</th>
-                <th class="px-3 py-2.5 text-center text-xs font-semibold text-zinc-500 uppercase tracking-wider w-20">View</th>
-                <th class="px-3 py-2.5 text-center text-xs font-semibold text-zinc-500 uppercase tracking-wider w-20">Edit</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[var(--border)]">
-              <tr v-for="role in permissionsRoles" :key="role.role_id" class="hover:bg-[var(--bg-hover)]">
-                <td class="px-3 py-2.5 font-medium text-[var(--text)]">{{ role.name }}</td>
-                <td class="px-3 py-2.5 text-center">
-                  <div class="flex items-center justify-center gap-1">
-                    <input type="checkbox" :checked="hasPerm(role, 'view')"
-                      :disabled="hasWildcard(role, 'view') || permUpdating.has(`${role.role_id}-view`)"
-                      class="accent-indigo-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      @change="togglePerm(role, 'view')" />
-                    <span v-if="hasWildcard(role, 'view')" class="text-[10px] text-zinc-600" title="Via *-Regel">*</span>
-                  </div>
-                </td>
-                <td class="px-3 py-2.5 text-center">
-                  <div class="flex items-center justify-center gap-1">
-                    <input type="checkbox" :checked="hasPerm(role, 'edit')"
-                      :disabled="hasWildcard(role, 'edit') || permUpdating.has(`${role.role_id}-edit`)"
-                      class="accent-indigo-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      @change="togglePerm(role, 'edit')" />
-                    <span v-if="hasWildcard(role, 'edit')" class="text-[10px] text-zinc-600" title="Via *-Regel">*</span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-if="!permissionsRoles.length" class="text-center py-6 text-zinc-600 text-sm">{{ t('admin.noRoles') }}</p>
-          <p class="text-xs text-zinc-600 mt-3 px-1">* {{ t('admin.wildcardNote') }}</p>
+          <button @click="doClone" :disabled="!cloneNewName"
+            class="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-all">
+            {{ t('admin.cloneBoardAction') }}
+          </button>
         </div>
       </div>
     </div>
   </Teleport>
 
+  <BoardSettingsModal
+    v-if="settingsBoard"
+    :board="settingsBoard"
+    @close="settingsBoard = null"
+    @updated="boardsStore.fetchBoards()"
+  />
+
   <!-- FABs: import + create board (admin only) -->
   <div v-if="auth.isAdmin" class="fixed bottom-6 right-6 z-40 flex items-center gap-2">
     <label
-      class="w-10 h-10 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] shadow-lg flex items-center justify-center text-zinc-400 hover:text-zinc-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+      class="group flex items-center gap-2 h-10 pl-3 pr-3.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] shadow-lg text-zinc-400 hover:text-zinc-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
       :title="t('admin.importBoard')">
-      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
       </svg>
+      <span class="text-sm font-medium">{{ t('admin.importBoard') }}</span>
       <input type="file" accept=".json,application/json" class="hidden" @change="importBoard" />
     </label>
     <button @click="showCreate = true"
-      class="w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-900/40 flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95"
+      class="flex items-center gap-2 h-12 pl-4 pr-5 rounded-full bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-900/40 text-white transition-all hover:scale-105 active:scale-95"
       :title="t('admin.newBoard')">
-      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
       </svg>
+      <span class="text-sm font-semibold">{{ t('admin.newBoard') }}</span>
     </button>
   </div>
   <CreateBoardModal v-if="showCreate" @close="showCreate = false" @created="onCreated" />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
-import { boardsApi, rolesApi } from '@/api/client'
-import type { BoardConfig, BoardRead, RoleRead, PermissionRead, WorldmapView } from '@/types/api'
+import { boardsApi } from '@/api/client'
+import type { BoardConfig, BoardRead, WorldmapView } from '@/types/api'
 import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue'
 import CreateBoardModal from '@/components/board/CreateBoardModal.vue'
+import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue'
 
 const { t } = useI18n()
 const baseUrl = import.meta.env.BASE_URL
@@ -402,70 +420,36 @@ async function exportBoard(name: string) {
   await boardsApi.exportBoard(name, auth.accessToken!)
 }
 
-async function cloneBoard(name: string) {
-  const newName = prompt(t('admin.cloneBoardPrompt', { name }), `${name}_copy`)
-  if (!newName) return
+const confirmClone = ref<string | null>(null)
+const cloneNewName = ref('')
+const cloneError = ref('')
+const cloneInputEl = ref<HTMLInputElement | null>(null)
+
+function cloneBoard(name: string) {
+  confirmClone.value = name
+  cloneNewName.value = `${name}_copy`
+  cloneError.value = ''
+  nextTick(() => { cloneInputEl.value?.select() })
+}
+
+function onCloneNameInput(e: Event) {
+  cloneNewName.value = (e.target as HTMLInputElement).value
+    .replace(/ /g, '-').replace(/[^a-zA-Z0-9_-]/g, '')
+}
+
+async function doClone() {
+  if (!confirmClone.value || !cloneNewName.value) return
   try {
-    await boardsApi.clone(name, { new_name: newName }, auth.accessToken!)
+    await boardsApi.clone(confirmClone.value, { new_name: cloneNewName.value }, auth.accessToken!)
     await boardsStore.fetchBoards()
+    confirmClone.value = null
   } catch (e: unknown) {
-    alert(e instanceof Error ? e.message : t('admin.cloneFailed'))
+    cloneError.value = e instanceof Error ? e.message : t('admin.cloneFailed')
   }
 }
 
-// ---- Permissions ----
-const permissionsMapName = ref<string | null>(null)
-const permissionsRoles = ref<RoleRead[]>([])
-const permissionsLoading = ref(false)
-const permUpdating = reactive(new Set<string>())
+const settingsBoard = ref<BoardRead | null>(null)
 
-async function openPermissions(mapName: string) {
-  permissionsMapName.value = mapName
-  permissionsLoading.value = true
-  try {
-    permissionsRoles.value = await rolesApi.list(auth.accessToken!)
-  } finally {
-    permissionsLoading.value = false
-  }
-}
-
-function hasWildcard(role: RoleRead, act: string): boolean {
-  return role.permissions.some(p => p.mod === 'map' && p.act === act && p.obj === '*')
-}
-
-function hasDirectPerm(role: RoleRead, act: string): boolean {
-  return role.permissions.some(p => p.mod === 'map' && p.act === act && p.obj === permissionsMapName.value)
-}
-
-function hasPerm(role: RoleRead, act: string): boolean {
-  return hasDirectPerm(role, act) || hasWildcard(role, act)
-}
-
-async function togglePerm(role: RoleRead, act: string) {
-  const mapName = permissionsMapName.value
-  if (!mapName || hasWildcard(role, act)) return
-  const key = `${role.role_id}-${act}`
-  permUpdating.add(key)
-  try {
-    if (hasDirectPerm(role, act)) {
-      const perm = role.permissions.find(p => p.mod === 'map' && p.act === act && p.obj === mapName)!
-      await rolesApi.removePermission(role.role_id, perm.perm_id, auth.accessToken!)
-    } else {
-      let existingPerm: PermissionRead | null = null
-      for (const r of permissionsRoles.value) {
-        const p = r.permissions.find(p => p.mod === 'map' && p.act === act && p.obj === mapName)
-        if (p) { existingPerm = p; break }
-      }
-      if (!existingPerm) {
-        existingPerm = await rolesApi.createPermission('map', act, mapName, auth.accessToken!)
-      }
-      await rolesApi.assignPermission(role.role_id, existingPerm.perm_id, auth.accessToken!)
-    }
-    permissionsRoles.value = await rolesApi.list(auth.accessToken!)
-  } finally {
-    permUpdating.delete(key)
-  }
-}
 const searchQuery = ref('')
 
 const filteredBoards = computed(() => {
