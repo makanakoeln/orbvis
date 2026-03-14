@@ -348,26 +348,16 @@
     @updated="boardsStore.fetchBoards()"
   />
 
-  <!-- FABs: import + create board (admin only) -->
-  <div v-if="auth.isAdmin" class="fixed bottom-6 right-6 z-40 flex items-center gap-2">
-    <label
-      class="group flex items-center gap-2 h-10 pl-3 pr-3.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] shadow-lg text-zinc-400 hover:text-zinc-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
-      :title="t('admin.importBoard')">
-      <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-      </svg>
-      <span class="text-sm font-medium">{{ t('admin.importBoard') }}</span>
-      <input type="file" accept=".json,application/json" class="hidden" @change="importBoard" />
-    </label>
-    <button @click="showCreate = true"
-      class="flex items-center gap-2 h-12 pl-4 pr-5 rounded-full bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-900/40 text-white transition-all hover:scale-105 active:scale-95"
-      :title="t('admin.newBoard')">
-      <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-      </svg>
-      <span class="text-sm font-semibold">{{ t('admin.newBoard') }}</span>
-    </button>
-  </div>
+  <!-- Import FAB (admin only) -->
+  <label v-if="auth.isAdmin"
+    class="group fixed bottom-6 right-6 z-40 flex items-center gap-2 h-10 pl-3 pr-3.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] shadow-lg text-zinc-400 hover:text-zinc-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+    :title="t('admin.importBoard')">
+    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+    </svg>
+    <span class="text-sm font-medium">{{ t('admin.importBoard') }}</span>
+    <input type="file" accept=".json,application/json" class="hidden" @change="importBoard" />
+  </label>
   <CreateBoardModal v-if="showCreate" @close="showCreate = false" @created="onCreated" />
 </template>
 
