@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-[var(--bg)] relative overflow-hidden">
+  <div class="min-h-screen flex items-start justify-center bg-[var(--bg)] relative overflow-hidden pt-[18vh]">
     <!-- Background glow -->
     <div class="absolute inset-0 bg-gradient-to-br from-indigo-950/50 via-zinc-950 to-zinc-950 pointer-events-none" />
     <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/8 rounded-full blur-3xl pointer-events-none" />
@@ -20,26 +20,45 @@
       <div class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-8">
         <form @submit.prevent="handleLogin" class="space-y-5">
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('auth.username') }}</label>
+            <label for="login-username" class="text-xs font-semibold text-zinc-300 uppercase tracking-wider">{{ t('auth.username') }}</label>
             <input
+              id="login-username"
+              ref="usernameEl"
               v-model="username"
               type="text"
               autocomplete="username"
               required
-              placeholder="admin"
-              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-[var(--text)] placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-150"
+              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-600 rounded-lg text-[var(--text)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-150"
             />
           </div>
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('auth.password') }}</label>
-            <input
-              v-model="password"
-              type="password"
-              autocomplete="current-password"
-              required
-              placeholder="••••••••"
-              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-[var(--text)] placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150"
-            />
+            <label for="login-password" class="text-xs font-semibold text-zinc-300 uppercase tracking-wider">{{ t('auth.password') }}</label>
+            <div class="relative">
+              <input
+                id="login-password"
+                v-model="password"
+                :type="showPassword ? 'text' : 'password'"
+                autocomplete="current-password"
+                required
+                class="w-full px-3.5 py-2.5 pr-10 bg-[var(--bg-input)] ring-1 ring-zinc-600 rounded-lg text-[var(--text)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150"
+              />
+              <button
+                type="button"
+                @click="showPassword = !showPassword"
+                class="absolute inset-y-0 right-0 flex items-center px-3 text-zinc-500 hover:text-zinc-300 transition-colors"
+                :title="showPassword ? t('auth.hidePassword') : t('auth.showPassword')"
+              >
+                <!-- Eye (show) -->
+                <svg v-if="!showPassword" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <!-- Eye-slash (hide) -->
+                <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div v-if="authStore.error"
@@ -64,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
@@ -72,6 +91,10 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const username = ref('')
 const password = ref('')
+const showPassword = ref(false)
+const usernameEl = ref<HTMLInputElement | null>(null)
+
+onMounted(() => usernameEl.value?.focus())
 
 async function handleLogin() {
   await authStore.login(username.value, password.value)
