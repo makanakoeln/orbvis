@@ -56,7 +56,7 @@
         </div>
 
         <!-- Password change (hidden in SSO+self) -->
-        <div v-if="showPasswordSection" class="space-y-3 pt-4 border-t border-[var(--border)]">
+        <div v-if="showPasswordSection" class="space-y-3" :class="isSelf ? 'pt-4 border-t border-[var(--border)]' : ''">
           <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.changePassword') }}</p>
           <form @submit.prevent="savePassword" class="space-y-3">
             <div class="space-y-1.5">
