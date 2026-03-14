@@ -223,7 +223,7 @@
               </svg>
               <span class="font-mono truncate">{{ map.backend_id }}</span>
               <span class="text-zinc-600">·</span>
-              <span v-if="['automap', 'radar', 'worldmap'].includes(map.view.type)" class="italic">{{ t('home.dynamicObjects') }}</span>
+              <span v-if="map.readonly || ['automap', 'radar', 'worldmap'].includes(map.view.type)" class="italic">{{ t('home.dynamicObjects') }}</span>
               <span v-else>{{ t('common.objects', { n: map.object_count }) }}</span>
             </div>
           </div>
