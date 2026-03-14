@@ -125,7 +125,7 @@
           :selected-object-id="editor.selectedObjectId.value"
           :checkmk-url="checkmkUrl"
           :is-admin="auth.isAdmin"
-          :icon-size-override="showSettings ? settingsForm.icon_size : undefined"
+          :icon-size-override="undefined"
           :snap-grid="editor.snapGrid.value"
           @object-drag-end="onObjectDragEnd"
           @object-click="onObjectClick"
@@ -246,11 +246,11 @@
           <button v-if="auth.isAdmin && !boardConfig?.readonly" @click="onToggleEditMode"
             class="w-12 h-12 rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1"
             :class="editor.editMode.value
-              ? 'bg-zinc-700 hover:bg-zinc-600 ring-zinc-600 text-zinc-300 hover:text-white'
+              ? 'bg-indigo-600/20 hover:bg-indigo-600/30 ring-indigo-500/40 text-indigo-300 hover:text-indigo-200'
               : 'bg-[var(--bg-surface)]/80 hover:bg-[var(--bg-surface)] ring-[var(--border)] text-zinc-500 hover:text-zinc-300'"
-            :title="editor.editMode.value ? t('board.editing') : t('boardSettings.addObject')">
-            <svg v-if="!editor.editMode.value" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            :title="editor.editMode.value ? t('board.editing') : t('board.edit')">
+            <svg v-if="!editor.editMode.value" class="w-4.5 h-4.5 w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
             </svg>
             <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -312,181 +312,13 @@
     </Teleport>
 
     <!-- Map Settings Modal -->
-    <Teleport to="body">
-      <div v-if="showSettings" class="fixed inset-0 z-50 flex items-center justify-center">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showSettings = false" />
-        <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[34rem] max-h-[90vh] overflow-y-auto">
-          <div class="flex items-center justify-between mb-6">
-            <h3 class="text-base font-bold text-[var(--text)]">{{ t('board.settingsTitle') }}</h3>
-            <button @click="showSettings = false"
-              class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <form @submit.prevent="saveSettings" class="space-y-4">
-            <!-- Alias -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.displayName') }}</label>
-              <input v-model="settingsForm.alias"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-            </div>
-
-            <!-- Backend + Icon size -->
-            <div class="grid grid-cols-[1fr_6rem] gap-3">
-              <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.connection') }}</label>
-                <div class="relative">
-                  <select v-model="settingsForm.backend_id"
-                    class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                    <option v-for="b in connectionsStore.backends" :key="b.id" :value="b.id">
-                      {{ b.label || b.id }}
-                    </option>
-                  </select>
-                  <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                    <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.iconSize') }}</label>
-                <NumberInput v-model="settingsForm.icon_size" min="12" max="96" class="w-full" />
-              </div>
-              <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.rotationInterval') }}</label>
-                <div class="flex items-center gap-2">
-                  <NumberInput v-model="settingsForm.rotation_interval" min="0" max="3600" class="w-full" />
-                  <span class="text-xs text-zinc-500 shrink-0">{{ t('board.rotationSuffix') }}</span>
-                </div>
-                <p class="text-xs text-zinc-500">{{ t('board.rotationIntervalHint') }}</p>
-              </div>
-            </div>
-
-            <!-- Map type -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.boardType') }}</label>
-              <div class="relative">
-                <select v-model="settingsForm.map_type"
-                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                  <option value="static">{{ t('board.boardTypeStatic') }}</option>
-                  <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
-                  <option value="automap">{{ t('board.boardTypeFlowBoard') }}</option>
-                  <option value="radar">{{ t('board.boardTypeRadar') }}</option>
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                  <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <!-- Worldmap settings -->
-            <template v-if="settingsForm.map_type === 'worldmap'">
-              <div class="grid grid-cols-[1fr_1fr_5rem] gap-3">
-                <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.latitude') }}</label>
-                  <NumberInput v-model="settingsForm.worldmap_lat" step="any" :precision="10" class="w-full" />
-                </div>
-                <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.longitude') }}</label>
-                  <NumberInput v-model="settingsForm.worldmap_lng" step="any" :precision="10" class="w-full" />
-                </div>
-                <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.zoom') }}</label>
-                  <NumberInput v-model="settingsForm.worldmap_zoom" min="1" max="18" class="w-full" />
-                </div>
-              </div>
-              <p class="text-xs text-zinc-600">{{ t('board.worldmapHint') }}</p>
-            </template>
-
-            <!-- Radar settings -->
-            <template v-if="settingsForm.map_type === 'radar'">
-              <div class="grid grid-cols-[1fr_1fr] gap-3">
-                <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.filterType') }}</label>
-                  <div class="relative">
-                    <select v-model="settingsForm.radar_type"
-                      class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                      <option value="hostgroup">{{ t('board.filterTypeHostgroup') }}</option>
-                      <option value="servicegroup">{{ t('board.filterTypeServicegroup') }}</option>
-                      <option value="all_hosts">{{ t('board.filterTypeAllHosts') }}</option>
-                      <option value="all_services">{{ t('board.filterTypeAllServices') }}</option>
-                    </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                      <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                <div v-if="settingsForm.radar_type === 'hostgroup' || settingsForm.radar_type === 'servicegroup'" class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.groupName') }}</label>
-                  <input v-model="settingsForm.radar_value" placeholder="e.g. linux-servers"
-                    class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-                </div>
-              </div>
-            </template>
-
-            <!-- Templates -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.hoverTemplate') }}</label>
-              <input v-model="settingsForm.hover_template" :placeholder="t('board.templatePlaceholder')"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.contextTemplate') }}</label>
-              <input v-model="settingsForm.context_template" :placeholder="t('board.templatePlaceholder')"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-              <p class="text-xs text-zinc-600">{{ t('board.templateHint') }}</p>
-            </div>
-
-            <!-- Background image (static only) -->
-            <div v-if="settingsForm.map_type === 'static'" class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.backgroundImage') }}</label>
-              <div class="flex gap-2">
-                <input v-model="settingsForm.background_image" placeholder="filename.png"
-                  class="flex-1 px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-                <label class="flex items-center px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all">
-                  {{ t('common.upload') }}
-                  <input type="file" accept="image/*" class="hidden" @change="uploadBackground" />
-                </label>
-                <button v-if="settingsForm.background_image" type="button"
-                  @click="deleteBackground"
-                  class="px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 hover:ring-red-500 rounded-lg text-sm text-zinc-500 hover:text-red-400 transition-all"
-                  :title="t('board.deleteBackground')">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                  </svg>
-                </button>
-              </div>
-              <p v-if="uploadError" class="text-red-400 text-xs flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                {{ uploadError }}
-              </p>
-              <p v-if="uploadOk" class="text-green-400 text-xs flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                {{ t('board.uploadedSuccessfully') }}
-              </p>
-            </div>
-
-            <!-- Actions -->
-            <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
-              <button type="button" @click="showSettings = false"
-                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">{{ t('common.cancel') }}</button>
-              <button type="submit" :disabled="settingsSaving"
-                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all">
-                {{ settingsSaving ? t('common.saving') : t('board.saveChanges') }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </Teleport>
+    <BoardSettingsModal
+      v-if="showSettings && boardConfigAsRead"
+      :board="boardConfigAsRead"
+      :worldmap-view="settingsWorldmapView"
+      @close="showSettings = false"
+      @updated="onSettingsUpdated"
+    />
   </div>
 </template>
 
@@ -500,17 +332,16 @@ import { useStatesStore } from '@/stores/states'
 import { useConnectionsStore } from '@/stores/connections'
 import { useSettingsStore } from '@/stores/settings'
 import { useBoardEditor } from '@/composables/useBoardEditor'
-import { boardsApi } from '@/api/client'
 import { resolveTemplate } from '@/utils/template'
 import BoardCanvas from '@/components/board/BoardCanvas.vue'
 import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue'
 import HoverMenu from '@/components/board/HoverMenu.vue'
 import ContextMenu from '@/components/board/ContextMenu.vue'
-import NumberInput from '@/components/NumberInput.vue'
 import AutomapCanvas from '@/components/board/AutomapCanvas.vue'
 import RadarCanvas from '@/components/board/RadarCanvas.vue'
 import EditPanel from '@/components/board/EditPanel.vue'
 import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue'
+import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
 import type { BoardObject } from '@/types/api'
@@ -528,6 +359,24 @@ const settingsStore = useSettingsStore()
 
 const boardName = computed(() => route.params.name as string)
 const boardConfig = computed(() => boardsStore.currentBoard)
+const boardConfigAsRead = computed<import('@/types/api').BoardRead | null>(() => {
+  const cfg = boardsStore.currentBoard
+  if (!cfg) return null
+  return {
+    name: cfg.name,
+    alias: cfg.alias,
+    background_image: cfg.background_image,
+    icon_size: cfg.icon_size,
+    backend_id: cfg.backend_id,
+    view_type: cfg.view.type,
+    view: cfg.view,
+    object_count: cfg.objects.length,
+    rotation_interval: cfg.rotation_interval,
+    readonly: cfg.readonly,
+    hover_template: cfg.hover_template,
+    context_template: cfg.context_template,
+  }
+})
 const canvasRef = ref<InstanceType<typeof BoardCanvas> | null>(null)
 const worldmapCanvasRef = ref<InstanceType<typeof WorldMapCanvas> | null>(null)
 
@@ -713,128 +562,23 @@ const serviceLayout = ref<ServiceLayout>('off')
 const serviceLayoutOpen = ref(false)
 const showSettings = ref(false)
 const showUserSettings = ref(false)
-const settingsSaving = ref(false)
-const uploadError = ref('')
-const uploadOk = ref(false)
-
-const settingsForm = reactive({
-  alias: '',
-  backend_id: '',
-  icon_size: 22,
-  background_image: '',
-  map_type: 'static',
-  worldmap_lat: 51.0,
-  worldmap_lng: 10.0,
-  worldmap_zoom: 5,
-  radar_type: 'hostgroup',
-  radar_value: '',
-  hover_template: '',
-  context_template: '',
-  rotation_interval: 0,
-})
+const settingsWorldmapView = ref<{ lat: number; lng: number; zoom: number } | null>(null)
 
 function openSettings() {
   if (!boardConfig.value) return
   const cfg = boardConfig.value
-  settingsForm.alias = cfg.alias ?? ''
-  settingsForm.backend_id = cfg.backend_id ?? ''
-  settingsForm.icon_size = cfg.icon_size ?? 22
-  settingsForm.background_image = cfg.background_image ?? ''
-  settingsForm.map_type = cfg.view.type ?? 'static'
-  settingsForm.hover_template = cfg.hover_template ?? ''
-  settingsForm.context_template = cfg.context_template ?? ''
-  settingsForm.rotation_interval = cfg.rotation_interval ?? 0
-  uploadError.value = ''
-  uploadOk.value = false
-
-  if (cfg.view.type === 'radar') {
-    const rv = cfg.view as import('@/types/api').RadarView
-    settingsForm.radar_type = rv.filter ?? 'hostgroup'
-    settingsForm.radar_value = rv.filter_value ?? ''
-  } else {
-    settingsForm.radar_type = 'hostgroup'
-    settingsForm.radar_value = ''
-  }
-
   if (cfg.view.type === 'worldmap' && worldmapCanvasRef.value) {
-    const view = worldmapCanvasRef.value.getView()
-    const wv = cfg.view as import('@/types/api').WorldmapView
-    if (view) {
-      settingsForm.worldmap_lat = view.lat
-      settingsForm.worldmap_lng = view.lng
-      settingsForm.worldmap_zoom = view.zoom
-    } else {
-      settingsForm.worldmap_lat = wv.lat ?? 51
-      settingsForm.worldmap_lng = wv.lng ?? 10
-      settingsForm.worldmap_zoom = wv.zoom ?? 5
-    }
-  } else if (cfg.view.type === 'worldmap') {
-    const wv = cfg.view as import('@/types/api').WorldmapView
-    settingsForm.worldmap_lat = wv.lat ?? 51
-    settingsForm.worldmap_lng = wv.lng ?? 10
-    settingsForm.worldmap_zoom = wv.zoom ?? 5
+    settingsWorldmapView.value = worldmapCanvasRef.value.getView() ?? null
   } else {
-    settingsForm.worldmap_lat = 51.0
-    settingsForm.worldmap_lng = 10.0
-    settingsForm.worldmap_zoom = 5
+    settingsWorldmapView.value = null
   }
-
   showSettings.value = true
 }
 
-async function saveSettings() {
-  settingsSaving.value = true
-  try {
-    let view: Record<string, unknown>
-    if (settingsForm.map_type === 'worldmap') {
-      view = { type: 'worldmap', lat: settingsForm.worldmap_lat, lng: settingsForm.worldmap_lng, zoom: settingsForm.worldmap_zoom }
-    } else if (settingsForm.map_type === 'radar') {
-      view = { type: 'radar', filter: settingsForm.radar_type, filter_value: settingsForm.radar_value }
-    } else {
-      view = { type: settingsForm.map_type }
-    }
-    const updated = await boardsApi.update(boardName.value, {
-      alias: settingsForm.alias,
-      backend_id: settingsForm.backend_id,
-      icon_size: settingsForm.icon_size,
-      background_image: settingsForm.background_image || null,
-      view,
-      hover_template: settingsForm.hover_template || null,
-      context_template: settingsForm.context_template || null,
-      rotation_interval: settingsForm.rotation_interval,
-    }, auth.accessToken!)
-    if (boardsStore.currentBoard) Object.assign(boardsStore.currentBoard, updated)
-    stopRotation()
-    scheduleRotation(settingsForm.rotation_interval)
-    showSettings.value = false
-  } finally {
-    settingsSaving.value = false
-  }
-}
-
-async function uploadBackground(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  uploadError.value = ''
-  uploadOk.value = false
-  try {
-    const result = await boardsApi.uploadBackground(boardName.value, file, auth.accessToken!)
-    settingsForm.background_image = result.filename
-    await reloadBoard()
-    uploadOk.value = true
-  } catch (e: unknown) {
-    uploadError.value = e instanceof Error ? e.message : 'Upload failed'
-  }
-}
-
-async function deleteBackground() {
-  try {
-    await boardsApi.deleteBackground(boardName.value, auth.accessToken!)
-    settingsForm.background_image = ''
-    await reloadBoard()
-  } catch (e: unknown) {
-    uploadError.value = e instanceof Error ? e.message : 'Delete failed'
-  }
+async function onSettingsUpdated() {
+  await reloadBoard()
+  stopRotation()
+  scheduleRotation(boardsStore.currentBoard?.rotation_interval ?? 0)
 }
 
 // ---- Rotation ----
