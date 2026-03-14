@@ -1,14 +1,8 @@
 <template>
   <div class="max-w-2xl">
-    <div class="flex justify-between items-center mb-8">
-      <div>
-        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('settings.title') }}</h2>
-        <p class="text-sm text-zinc-500 mt-1">{{ t('settings.subtitle') }}</p>
-      </div>
-      <button @click="handleSave" :disabled="saving"
-        class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20">
-        {{ saving ? t('common.saving') : t('common.save') }}
-      </button>
+    <div class="mb-8">
+      <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('settings.title') }}</h2>
+      <p class="text-sm text-zinc-500 mt-1">{{ t('settings.subtitle') }}</p>
     </div>
 
     <div v-if="store.loading" class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center">
@@ -212,6 +206,13 @@
       </section>
 
       <p v-if="saveError" class="text-sm text-red-400">{{ saveError }}</p>
+
+      <div class="flex justify-end">
+        <button @click="handleSave" :disabled="saving"
+          class="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20">
+          {{ saving ? t('common.saving') : t('common.save') }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
