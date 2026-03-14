@@ -282,6 +282,7 @@ export default {
     deleteIcon: 'Bild „{name}" löschen?',
     boardPermissions: 'Board-Berechtigungen',
     wildcardNote: 'Mit * markierte Berechtigungen gelten über eine Wildcard-Regel und können hier nicht geändert werden.',
+    viaWildcardRule: 'Über Wildcard-Regel gewährt',
     cloneBoard: 'Board klonen',
     cloneBoardPrompt: 'Neuer Name für Klon von „{name}"',
     cloneBoardAction: 'Klonen',

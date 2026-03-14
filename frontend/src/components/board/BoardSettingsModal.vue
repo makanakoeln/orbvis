@@ -207,7 +207,7 @@
                           :disabled="hasWildcard(role, 'view') || permUpdating.has(`${role.role_id}-view`)"
                           class="accent-indigo-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           @change="togglePerm(role, 'view')" />
-                        <span v-if="hasWildcard(role, 'view')" class="text-[10px] text-zinc-600" title="Via *-Regel">*</span>
+                        <span v-if="hasWildcard(role, 'view')" class="text-[10px] text-zinc-600" :title="t('admin.viaWildcardRule')">*</span>
                       </div>
                     </td>
                     <td class="px-3 py-2.5 text-center">
@@ -216,7 +216,7 @@
                           :disabled="hasWildcard(role, 'edit') || permUpdating.has(`${role.role_id}-edit`)"
                           class="accent-indigo-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           @change="togglePerm(role, 'edit')" />
-                        <span v-if="hasWildcard(role, 'edit')" class="text-[10px] text-zinc-600" title="Via *-Regel">*</span>
+                        <span v-if="hasWildcard(role, 'edit')" class="text-[10px] text-zinc-600" :title="t('admin.viaWildcardRule')">*</span>
                       </div>
                     </td>
                   </tr>
@@ -247,7 +247,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { boardsApi, connectionsApi, rolesApi } from '@/api/client'
@@ -419,5 +419,11 @@ onMounted(async () => {
     loadPermissions(),
   ])
   backends.value = bs
+  // Re-apply backend_id after options are rendered (browser may reset select with no options)
+  await nextTick()
+  const saved = form.value.backend_id
+  form.value.backend_id = ''
+  await nextTick()
+  form.value.backend_id = saved
 })
 </script>

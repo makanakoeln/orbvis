@@ -282,6 +282,7 @@ export default {
     deleteIcon: 'Delete image "{name}"?',
     boardPermissions: 'Board Permissions',
     wildcardNote: 'Permissions marked with * apply via a wildcard rule and cannot be changed here.',
+    viaWildcardRule: 'Granted via wildcard rule',
     cloneBoard: 'Clone board',
     cloneBoardPrompt: 'New name for clone of "{name}"',
     cloneBoardAction: 'Clone',
