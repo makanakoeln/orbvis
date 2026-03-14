@@ -198,10 +198,14 @@
           </div>
         </Transition>
 
-        <!-- Bottom row: Services toggle + FAB -->
-        <div class="flex items-center gap-2">
-          <!-- Services layout picker (Flow Board only) -->
-          <div v-if="isAutomap" class="relative">
+      </div>
+    </Teleport>
+
+    <!-- Bottom row: Services toggle + FAB -->
+    <Teleport to="body">
+      <div class="fixed bottom-6 right-6 z-40 flex items-center gap-2">
+        <!-- Services layout picker (Flow Board only) -->
+        <div v-if="isAutomap" class="relative">
             <!-- Backdrop to close dropdown on outside click -->
             <div v-if="serviceLayoutOpen" class="fixed inset-0 z-0" @click="serviceLayoutOpen = false" />
 
@@ -242,8 +246,8 @@
             </Transition>
           </div>
 
-          <!-- FAB: Edit toggle (admin only) -->
-          <button v-if="auth.isAdmin && !boardConfig?.readonly" @click="onToggleEditMode"
+          <!-- FAB: Edit toggle (admin only, editable static/worldmap boards) -->
+          <button v-if="auth.isAdmin && !boardConfig?.readonly && !isAutomap && !isRadar && !boardConfig?.name.startsWith('demo-')" @click="onToggleEditMode"
             class="w-12 h-12 rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1"
             :class="editor.editMode.value
               ? 'bg-indigo-600/20 hover:bg-indigo-600/30 ring-indigo-500/40 text-indigo-300 hover:text-indigo-200'
@@ -257,7 +261,6 @@
             </svg>
           </button>
         </div>
-      </div>
     </Teleport>
 
 
