@@ -98,6 +98,8 @@ export interface BoardRead {
   object_count: number
   rotation_interval: number
   readonly?: boolean
+  hover_template?: string | null
+  context_template?: string | null
 }
 
 export interface ObjectState {

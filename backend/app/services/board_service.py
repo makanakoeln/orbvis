@@ -201,4 +201,6 @@ def _to_read(cfg: BoardConfig) -> BoardRead:
         object_count=len(cfg.objects),
         rotation_interval=cfg.rotation_interval,
         readonly=cfg.readonly,
+        hover_template=cfg.hover_template,
+        context_template=cfg.context_template,
     )

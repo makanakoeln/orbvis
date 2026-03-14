@@ -142,6 +142,8 @@ class BoardRead(BaseModel):
     object_count: int
     rotation_interval: int
     readonly: bool = False
+    hover_template: str | None = None
+    context_template: str | None = None
 
 
 class BoardClone(BaseModel):
