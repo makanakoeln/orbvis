@@ -92,7 +92,7 @@ export default {
     saveChanges: 'Änderungen speichern',
     hoverTemplate: 'Hover-Template',
     contextTemplate: 'Kontext-Template',
-    templatePlaceholder: 'z. B. <b>{{name}}</b> ist {{state}}',
+    templatePlaceholder: 'z. B. {{name}} ist {{state}}',
     templateHint: 'Verfügbar: {{name}}, {{type}}, {{state}}, {{output}}, {{host}}, {{service}}, {{acknowledged}}, {{in_downtime}}',
   },
   boardSettings: {
@@ -253,6 +253,7 @@ export default {
     connection: 'Verbindung',
     mustChangePassword: 'Muss das Passwort bei der nächsten Anmeldung ändern',
     administrator: 'Administrator',
+    administratorHint: 'Vollzugriff auf alle Admin-Funktionen',
     isAdmin: 'Admin',
     builtIn: 'integriert',
     selectConnection: 'Connection auswählen…',
