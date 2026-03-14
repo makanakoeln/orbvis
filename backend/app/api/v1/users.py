@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import get_current_user, require_admin, user_has_permission
@@ -21,7 +22,7 @@ router = APIRouter()
 async def list_users(
     db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
 ) -> list[UserRead]:
-    result = await db.execute(select(User))
+    result = await db.execute(select(User).options(selectinload(User.roles)))
     users = result.scalars().all()
     return [UserRead.model_validate(u) for u in users]
 
