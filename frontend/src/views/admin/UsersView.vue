@@ -67,17 +67,26 @@
               <span v-else class="text-zinc-700">—</span>
             </td>
             <td class="px-4 py-3 text-right">
-              <div class="flex items-center justify-end gap-3">
-                <button v-if="canEditUsers && user.user_id !== auth.user?.user_id"
-                  @click="editUser = user"
-                  class="text-xs text-zinc-500 hover:text-indigo-400 transition-colors">
-                  {{ t('common.edit') }}
-                </button>
-                <button
-                  v-if="user.user_id !== auth.user?.user_id"
-                  @click="deleteUser(user.user_id)"
-                  class="text-xs text-zinc-600 hover:text-red-400 transition-colors"
-                >{{ t('common.delete') }}</button>
+              <div class="flex items-center justify-end gap-1">
+                <template v-if="user.user_id !== auth.user?.user_id">
+                  <button v-if="canEditUsers"
+                    @click="editUser = user"
+                    class="p-1.5 rounded-md text-zinc-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+                    :title="t('common.edit')">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                    </svg>
+                  </button>
+                  <button
+                    @click="deleteUser(user.user_id)"
+                    class="p-1.5 rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                    :title="t('common.delete')">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                    </svg>
+                  </button>
+                </template>
+                <span v-else class="text-xs text-zinc-700 pr-1">—</span>
               </div>
             </td>
           </tr>
@@ -109,7 +118,7 @@
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('auth.password') }}</label>
               <input v-model="newUser.password" type="password" placeholder="••••••••" required minlength="6" autocomplete="new-password"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-              <p class="text-xs text-zinc-600">Mindestens 6 Zeichen</p>
+              <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
 
             <div class="border-t border-[var(--border)] pt-3 space-y-3">
@@ -118,7 +127,7 @@
                 <input type="checkbox" v-model="newUser.is_admin" class="rounded accent-indigo-500 w-4 h-4 mt-0.5 shrink-0" />
                 <div>
                   <p class="text-sm text-zinc-300 group-hover:text-[var(--text)] transition-colors">{{ t('admin.administrator') }}</p>
-                  <p class="text-xs text-zinc-600 mt-0.5">Vollzugriff auf alle Admin-Funktionen</p>
+                  <p class="text-xs text-zinc-600 mt-0.5">{{ t('admin.administratorHint') }}</p>
                 </div>
               </label>
 
