@@ -232,7 +232,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, nextTick, reactive, ref, watch } from 'vue'
+import { onMounted, onUnmounted, nextTick, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import NumberInput from '@/components/NumberInput.vue'
@@ -278,6 +278,8 @@ async function handleSave() {
     saving.value = false
   }
 }
+
+onUnmounted(() => { if (savedOkTimer) clearTimeout(savedOkTimer) })
 
 onMounted(async () => {
   await Promise.all([store.load(), connectionsStore.fetchBackends()])

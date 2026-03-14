@@ -49,7 +49,7 @@
         </span>
 
         <!-- Settings button (admin only) -->
-        <button v-if="auth.isAdmin && !boardConfig?.readonly" @click="openSettings"
+        <button v-if="auth.isAdmin" @click="openSettings"
           class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
           :title="t('board.boardSettings')">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -141,7 +141,7 @@
 
     <!-- FAB + Add Object panel + action bar (all bottom-right) -->
     <Teleport to="body">
-      <div v-if="auth.isAdmin && !boardConfig?.readonly && !isAutomap && !isRadar"
+      <div v-if="auth.isAdmin && boardConfig && !boardConfig.readonly && !isAutomap && !isRadar"
         class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
 
         <!-- Add Object panel — expands upward from FAB -->
@@ -247,7 +247,7 @@
           </div>
 
           <!-- FAB: Edit toggle (admin only, editable static/worldmap boards) -->
-          <button v-if="auth.isAdmin && !boardConfig?.readonly && !isAutomap && !isRadar" @click="onToggleEditMode"
+          <button v-if="auth.isAdmin && boardConfig && !boardConfig.readonly && !isAutomap && !isRadar" @click="onToggleEditMode"
             class="w-12 h-12 rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1"
             :class="editor.editMode.value
               ? 'bg-indigo-600/20 hover:bg-indigo-600/30 ring-indigo-500/40 text-indigo-300 hover:text-indigo-200'

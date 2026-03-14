@@ -376,7 +376,7 @@ async function save() {
 }
 
 async function remove(id: string) {
-  if (!confirm(t('admin.deleteBackend', { id }))) return
+  if (!confirm(t('admin.deleteConnection', { id }))) return
   await store.deleteBackend(id)
   delete statuses[id]
   delete statusMessages[id]

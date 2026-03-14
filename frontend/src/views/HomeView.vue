@@ -381,6 +381,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
 import { boardsApi } from '@/api/client'
 import type { BoardConfig, BoardRead, WorldmapView } from '@/types/api'
+import { sanitizeBoardName } from '@/utils/naming'
 import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue'
 import CreateBoardModal from '@/components/board/CreateBoardModal.vue'
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue'
@@ -451,8 +452,7 @@ function cloneBoard(map: BoardRead) {
 }
 
 function onCloneNameInput(e: Event) {
-  cloneNewName.value = (e.target as HTMLInputElement).value
-    .replace(/ /g, '-').replace(/[^a-zA-Z0-9_-]/g, '')
+  cloneNewName.value = sanitizeBoardName((e.target as HTMLInputElement).value)
 }
 
 async function doClone() {

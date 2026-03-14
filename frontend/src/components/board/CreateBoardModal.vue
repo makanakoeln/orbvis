@@ -85,6 +85,7 @@ import { useI18n } from 'vue-i18n'
 import { useBoardsStore } from '@/stores/boards'
 import { useConnectionsStore } from '@/stores/connections'
 import { useSettingsStore } from '@/stores/settings'
+import { sanitizeBoardName, slugToTitleCase } from '@/utils/naming'
 
 const emit = defineEmits<{ close: []; created: [name: string] }>()
 
@@ -104,11 +105,9 @@ const nameError = computed(() => {
 })
 
 function onNameInput(e: Event) {
-  const raw = (e.target as HTMLInputElement).value
-  form.value.name = raw.replace(/ /g, '-').replace(/[^a-zA-Z0-9_-]/g, '')
+  form.value.name = sanitizeBoardName((e.target as HTMLInputElement).value)
   if (!aliasTouched.value) {
-    // Auto-fill alias: replace hyphens/underscores with spaces, title-case
-    form.value.alias = form.value.name.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    form.value.alias = slugToTitleCase(form.value.name)
   }
 }
 
