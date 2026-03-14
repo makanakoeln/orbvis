@@ -273,7 +273,7 @@
 
         <!-- Ghost "New Board" card -->
         <button v-if="auth.isAdmin && !searchQuery" @click="showCreate = true"
-          class="group flex flex-col items-center justify-center min-h-[12rem] rounded-2xl border-2 border-dashed border-zinc-800 hover:border-indigo-500/40 text-zinc-700 hover:text-indigo-400 transition-all duration-200">
+          class="group flex flex-col items-center justify-center min-h-[13.5rem] rounded-2xl border-2 border-dashed border-zinc-800 hover:border-indigo-500/40 text-zinc-700 hover:text-indigo-400 transition-all duration-200">
           <div class="w-9 h-9 rounded-xl border-2 border-current flex items-center justify-center mb-2">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
