@@ -116,7 +116,7 @@
 
             <div class="space-y-1.5">
               <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('auth.password') }}</label>
-              <input v-model="newUser.password" type="password" placeholder="••••••••" required minlength="6" autocomplete="new-password"
+              <input v-model="newUser.password" type="password" required minlength="6" autocomplete="new-password"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
