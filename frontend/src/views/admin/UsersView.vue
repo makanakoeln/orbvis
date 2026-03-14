@@ -138,11 +138,14 @@
 
             </div>
 
+            <p v-if="createError" class="text-xs text-red-400">{{ createError }}</p>
             <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
               <button type="button" @click="showCreate = false"
                 class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">{{ t('common.cancel') }}</button>
-              <button type="submit"
-                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all">{{ t('common.create') }}</button>
+              <button type="submit" :disabled="creating"
+                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all">
+                {{ creating ? t('common.saving') : t('common.create') }}
+              </button>
             </div>
           </form>
         </div>
@@ -172,6 +175,8 @@ const auth = useAuthStore()
 const users = ref<UserRead[]>([])
 const loading = ref(false)
 const showCreate = ref(false)
+const creating = ref(false)
+const createError = ref('')
 const newUser = ref({ name: '', password: '', is_admin: false, must_change_password: false })
 const editUser = ref<UserRead | null>(null)
 const canEditUsers = computed(() =>
@@ -188,10 +193,18 @@ async function fetchUsers() {
 }
 
 async function createUser() {
-  await usersApi.create(newUser.value, auth.accessToken!)
-  showCreate.value = false
-  newUser.value = { name: '', password: '', is_admin: false, must_change_password: false }
-  await fetchUsers()
+  creating.value = true
+  createError.value = ''
+  try {
+    await usersApi.create(newUser.value, auth.accessToken!)
+    showCreate.value = false
+    newUser.value = { name: '', password: '', is_admin: false, must_change_password: false }
+    await fetchUsers()
+  } catch (e: unknown) {
+    createError.value = e instanceof Error ? e.message : t('admin.saveFailed')
+  } finally {
+    creating.value = false
+  }
 }
 
 async function deleteUser(id: number) {
