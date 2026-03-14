@@ -189,7 +189,12 @@ const permPreset = ref('')
 const needsMapName = computed(() => permPreset.value.endsWith(':custom'))
 
 function applyPreset() {
-  if (!permPreset.value || permPreset.value.endsWith(':custom')) return
+  if (!permPreset.value) return
+  if (permPreset.value.endsWith(':custom')) {
+    const [mod, act] = permPreset.value.split(':')
+    newPerm.value = { mod, act, obj: '' }
+    return
+  }
   const [mod, act, obj] = permPreset.value.split(':')
   newPerm.value = { mod, act, obj }
 }
