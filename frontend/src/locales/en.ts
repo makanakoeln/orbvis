@@ -15,6 +15,7 @@ export default {
     upload: 'Upload',
     objects: '{n} objects',
     noData: '—',
+    saved: 'Saved',
   },
   auth: {
     username: 'Username',

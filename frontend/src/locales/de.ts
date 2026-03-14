@@ -15,6 +15,7 @@ export default {
     upload: 'Hochladen',
     objects: '{n} Objekte',
     noData: '—',
+    saved: 'Gespeichert',
   },
   auth: {
     username: 'Benutzername',

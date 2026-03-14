@@ -116,8 +116,10 @@
               <label class="block">
                 <span class="text-xs text-zinc-400 mb-1 block">{{ t('boardSettings.background') }}</span>
                 <div class="flex gap-2">
-                  <input v-model="form.label_background" type="color"
+                  <input type="color"
+                    :value="form.label_background === 'transparent' ? '#000000' : form.label_background"
                     :disabled="form.label_background === 'transparent'"
+                    @input="form.label_background = ($event.target as HTMLInputElement).value"
                     class="w-10 h-9 rounded cursor-pointer bg-[var(--bg)] border border-[var(--border)] disabled:opacity-40" />
                   <input v-model="form.label_background" type="text" placeholder="transparent"
                     class="w-32 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500" />
@@ -190,7 +192,7 @@
           <label class="block">
             <span class="text-xs text-zinc-400 mb-1 block">{{ t('settings.hoverTemplate') }}</span>
             <input v-model="form.hover_template" type="text"
-              placeholder="{{name}}, {{state}}, {{output}}"
+              :placeholder="t('board.templatePlaceholder')"
               class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
           </label>
 
@@ -198,7 +200,7 @@
           <label class="block">
             <span class="text-xs text-zinc-400 mb-1 block">{{ t('settings.contextTemplate') }}</span>
             <input v-model="form.context_template" type="text"
-              placeholder="{{name}}, {{state}}"
+              :placeholder="t('board.templatePlaceholder')"
               class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
           </label>
 
@@ -207,7 +209,15 @@
 
       <p v-if="saveError" class="text-sm text-red-400">{{ saveError }}</p>
 
-      <div class="flex justify-end">
+      <div class="flex items-center justify-end gap-3">
+        <Transition enter-from-class="opacity-0 translate-x-2" enter-active-class="transition-all duration-200" leave-to-class="opacity-0" leave-active-class="transition-opacity duration-300">
+          <span v-if="savedOk" class="flex items-center gap-1.5 text-sm text-green-400">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+            {{ t('common.saved') }}
+          </span>
+        </Transition>
         <button @click="handleSave" :disabled="saving"
           class="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20">
           {{ saving ? t('common.saving') : t('common.save') }}
@@ -218,7 +228,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, nextTick, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import NumberInput from '@/components/NumberInput.vue'
@@ -233,6 +243,8 @@ const connectionsStore = useConnectionsStore()
 const form = reactive<GlobalSettings>({ ...store.settings })
 const saving = ref(false)
 const saveError = ref('')
+const savedOk = ref(false)
+let savedOkTimer: ReturnType<typeof setTimeout> | null = null
 
 // Sync form when store finishes loading
 watch(
@@ -244,8 +256,12 @@ watch(
 async function handleSave() {
   saving.value = true
   saveError.value = ''
+  savedOk.value = false
   try {
     await store.save({ ...form })
+    savedOk.value = true
+    if (savedOkTimer) clearTimeout(savedOkTimer)
+    savedOkTimer = setTimeout(() => { savedOk.value = false }, 3000)
   } catch {
     saveError.value = t('admin.saveFailed')
   } finally {
@@ -256,6 +272,12 @@ async function handleSave() {
 onMounted(async () => {
   await Promise.all([store.load(), connectionsStore.fetchBackends()])
   Object.assign(form, store.settings)
+  // Force the connection <select> to pick up the value after options are rendered
+  await nextTick()
+  const saved = form.default_backend_id
+  form.default_backend_id = ''
+  await nextTick()
+  form.default_backend_id = saved
 })
 </script>
 
