@@ -1,7 +1,7 @@
 {
   "name": "demo-static",
   "alias": "Static Board (Demo)",
-  "readonly": false,
+  "readonly": true,
   "backend_id": "test",
   "icon_size": 28,
   "rotation_interval": 0,
