@@ -18,8 +18,8 @@
       <button v-if="collapsed" @click="collapsed = false"
         class="w-7 h-7 rounded-lg bg-indigo-600/20 ring-1 ring-indigo-500/30 flex items-center justify-center text-indigo-400 hover:bg-indigo-600/30 transition-all"
         :title="t('nav.expandSidebar')">
-        <svg class="w-4 h-4 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 9l-3 3m0 0l3 3m-3-3h7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
         </svg>
       </button>
       <!-- Collapse toggle — in header, far from logout -->
@@ -27,7 +27,7 @@
         class="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all shrink-0"
         :title="t('nav.collapseSidebar')">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 9l-3 3m0 0l3 3m-3-3h7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
         </svg>
       </button>
     </div>
@@ -44,10 +44,10 @@
 
       <!-- Admin section -->
       <template v-if="auth.isAdmin">
-        <p v-if="!collapsed" class="px-3 pt-5 pb-1 text-xs font-semibold text-zinc-500 uppercase tracking-wider select-none">
+        <div class="mx-2 mt-4 mb-2 border-t border-[var(--border)]" />
+        <p v-if="!collapsed" class="px-3 pb-1 text-xs font-semibold text-zinc-500 uppercase tracking-wider select-none">
           {{ t('nav.administration') }}
         </p>
-        <div v-else class="my-3 border-t border-[var(--border)]" />
 
         <NavItem to="/admin/connections" :label="t('admin.connections')" :collapsed="collapsed">
           <template #icon>
