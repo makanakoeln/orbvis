@@ -218,6 +218,10 @@
             {{ t('common.saved') }}
           </span>
         </Transition>
+        <button @click="resetForm"
+          class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
+          {{ t('common.cancel') }}
+        </button>
         <button @click="handleSave" :disabled="saving"
           class="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20">
           {{ saving ? t('common.saving') : t('common.save') }}
@@ -252,6 +256,12 @@ watch(
   (val) => Object.assign(form, val),
   { deep: true },
 )
+
+function resetForm() {
+  Object.assign(form, store.settings)
+  savedOk.value = false
+  saveError.value = ''
+}
 
 async function handleSave() {
   saving.value = true
