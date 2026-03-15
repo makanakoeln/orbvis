@@ -54,7 +54,7 @@
       </div>
 
       <!-- Board grid -->
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div v-else data-tour="boards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <p v-if="searchQuery && !filteredBoards.length" class="col-span-full text-center py-12 text-zinc-600 text-sm">
           {{ t('home.noSearchResults', { q: searchQuery }) }}
         </p>
@@ -277,7 +277,7 @@
         </div>
 
         <!-- Ghost "New Board" card -->
-        <button v-if="auth.isAdmin && !searchQuery" @click="showCreate = true"
+        <button v-if="auth.isAdmin && !searchQuery" data-tour="new-board" @click="showCreate = true"
           class="group flex flex-col items-center justify-center min-h-[13.5rem] rounded-2xl border-2 border-dashed border-zinc-800 hover:border-indigo-500/40 text-zinc-700 hover:text-indigo-400 transition-all duration-200">
           <div class="w-9 h-9 rounded-xl border-2 border-current flex items-center justify-center mb-2">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -371,6 +371,13 @@
     <input type="file" accept=".json,application/json" class="hidden" @change="importBoard" />
   </label>
   <CreateBoardModal v-if="showCreate" @close="showCreate = false" @created="onCreated" />
+  <OnboardingTour
+    v-if="showOnboarding && auth.user"
+    :user-id="auth.user.user_id"
+    :is-admin="auth.isAdmin"
+    @close="showOnboarding = false"
+    @create-board="showOnboarding = false; showCreate = true"
+  />
 </template>
 
 <script setup lang="ts">
@@ -385,6 +392,7 @@ import { sanitizeBoardName } from '@/utils/naming'
 import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue'
 import CreateBoardModal from '@/components/board/CreateBoardModal.vue'
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue'
+import OnboardingTour from '@/components/OnboardingTour.vue'
 
 const { t } = useI18n()
 const baseUrl = import.meta.env.BASE_URL
@@ -392,6 +400,7 @@ const auth = useAuthStore()
 const boardsStore = useBoardsStore()
 const router = useRouter()
 const showCreate = ref(false)
+const showOnboarding = ref(false)
 const confirmDelete = ref<{ name: string; alias: string } | null>(null)
 
 function onCreated(name: string) {
@@ -502,5 +511,10 @@ function worldmapZoom(map: BoardRead) {
   return map.view.type === 'worldmap' ? (map.view as WorldmapView).zoom : 5
 }
 
-onMounted(() => boardsStore.fetchBoards())
+onMounted(() => {
+  boardsStore.fetchBoards()
+  if (auth.user && !localStorage.getItem(`orbvis_onboarded_${auth.user.user_id}`)) {
+    showOnboarding.value = true
+  }
+})
 </script>

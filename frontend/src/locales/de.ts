@@ -287,6 +287,7 @@ export default {
     cloneBoardPrompt: 'Neuer Name für Klon von „{name}"',
     cloneBoardAction: 'Klonen',
     cloneFailed: 'Klonen fehlgeschlagen',
+    roleRequired: 'Bitte mindestens eine Rolle auswählen.',
     exportBoard: 'Board als JSON exportieren',
     importBoard: 'Importieren',
     importOverwrite: 'Board „{name}" existiert bereits. Überschreiben?',
@@ -322,6 +323,31 @@ export default {
     passwordMismatch: 'Passwörter stimmen nicht überein.',
     failedToChange: 'Passwort konnte nicht geändert werden.',
     unsavedChanges: 'Ungespeicherte Änderungen —',
+  },
+  onboarding: {
+    skip: 'Tour überspringen',
+    back: 'Zurück',
+    next: 'Weiter',
+    finish: 'Fertig',
+    createFirstBoard: 'Erstes Board anlegen',
+    step1: {
+      title: 'Willkommen bei OrbVis',
+      body: 'OrbVis visualisiert den Status deiner überwachten Infrastruktur — Hosts, Services, Gruppen und mehr — auf konfigurierbaren Boards.',
+    },
+    step2: {
+      title: 'Navigation',
+      bodyAdmin: '„Übersicht" in der Seitenleiste bringt dich zur Board-Liste zurück. Darunter der Admin-Bereich mit Connections, Bildern, Benutzern und Einstellungen.',
+      bodyUser: '„Übersicht" in der Seitenleiste bringt dich zur Board-Liste zurück.',
+    },
+    step3: {
+      title: 'Deine Boards',
+      body: 'Jede Kachel ist ein Board — eine visuelle Karte deiner Monitoring-Landschaft. OrbVis unterstützt statische Boards, Geo-Boards, Radar-Ansichten und Flow-Boards.',
+    },
+    step4: {
+      title: 'Los geht\'s!',
+      bodyAdmin: 'Lege hier dein erstes Board an. Klicke darin auf den Stift-Button (unten rechts), um den Bearbeitungsmodus zu öffnen und Monitoring-Objekte zu platzieren.',
+      bodyUser: 'Dein Administrator kann Boards anlegen und dir Zugriff gewähren. Sobald ein Board verfügbar ist, erscheint es hier.',
+    },
   },
   changePassword: {
     title: 'Passwort ändern',

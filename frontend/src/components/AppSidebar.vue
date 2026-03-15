@@ -33,7 +33,7 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 overflow-y-auto p-2 space-y-0.5">
+    <nav data-tour="sidebar-nav" class="flex-1 overflow-y-auto p-2 space-y-0.5">
 
       <!-- Overview -->
       <NavItem to="/" :exact="true" :label="t('nav.overview')" :collapsed="collapsed">

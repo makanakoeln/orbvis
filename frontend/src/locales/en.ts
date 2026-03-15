@@ -287,6 +287,7 @@ export default {
     cloneBoardPrompt: 'New name for clone of "{name}"',
     cloneBoardAction: 'Clone',
     cloneFailed: 'Clone failed',
+    roleRequired: 'Please select at least one role.',
     exportBoard: 'Export board as JSON',
     importBoard: 'Import',
     importOverwrite: 'Board "{name}" already exists. Overwrite?',
@@ -322,6 +323,31 @@ export default {
     passwordMismatch: 'Passwords do not match.',
     failedToChange: 'Failed to change password.',
     unsavedChanges: 'Unsaved changes —',
+  },
+  onboarding: {
+    skip: 'Skip tour',
+    back: 'Back',
+    next: 'Next',
+    finish: 'Done',
+    createFirstBoard: 'Create first board',
+    step1: {
+      title: 'Welcome to OrbVis',
+      body: 'OrbVis visualizes the status of your monitored infrastructure — hosts, services, groups and more — on customizable boards.',
+    },
+    step2: {
+      title: 'Navigation',
+      bodyAdmin: '"Overview" in the sidebar brings you back to the board list. The admin section below gives access to connections, images, users and settings.',
+      bodyUser: '"Overview" in the sidebar brings you back to the board list.',
+    },
+    step3: {
+      title: 'Your boards',
+      body: 'Each card is a board — a visual map of your monitoring landscape. OrbVis supports static boards, Geo Boards, Radar views and Flow Boards.',
+    },
+    step4: {
+      title: 'Ready to go!',
+      bodyAdmin: 'Create your first board here. Inside a board, click the pencil button (bottom-right) to enter edit mode and start placing monitoring objects.',
+      bodyUser: 'Your administrator can create boards and grant you access. Once a board is available it will appear here.',
+    },
   },
   changePassword: {
     title: 'Change your password',
