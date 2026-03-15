@@ -218,7 +218,8 @@
 
     <!-- Bottom row: Services toggle (Flow Board only) -->
     <Teleport to="body">
-      <div v-if="isAutomap" class="fixed bottom-6 right-6 z-40 relative">
+      <div v-if="isAutomap" class="fixed bottom-6 right-6 z-40">
+        <div class="relative">
         <!-- Backdrop to close dropdown on outside click -->
         <div v-if="serviceLayoutOpen" class="fixed inset-0 z-0" @click="serviceLayoutOpen = false" />
 
@@ -257,6 +258,7 @@
             </button>
           </div>
         </Transition>
+        </div>
       </div>
     </Teleport>
 
