@@ -24,13 +24,6 @@ def _orbvis_topics() -> list[TopicMenuTopic]:
                     icon="save_dashboard",
                 ),
                 TopicMenuItem(
-                    name="orbvis_settings",
-                    title=_("Settings"),
-                    url=f"/{_SITE}/orbvis/#/admin/settings",
-                    sort_index=20,
-                    icon="configuration",
-                ),
-                TopicMenuItem(
                     name="orbvis_connections",
                     title=_("Connections"),
                     url=f"/{_SITE}/orbvis/#/admin/connections",
