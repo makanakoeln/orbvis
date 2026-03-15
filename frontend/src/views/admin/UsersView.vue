@@ -138,6 +138,16 @@
 
             </div>
 
+            <div v-if="availableRoles.length" class="border-t border-[var(--border)] pt-3 space-y-2">
+              <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.roles') }}</p>
+              <label v-for="role in availableRoles" :key="role.role_id"
+                class="flex items-center gap-3 cursor-pointer select-none">
+                <input type="checkbox" :value="role.role_id" v-model="selectedRoleIds"
+                  class="rounded accent-indigo-500 w-4 h-4 shrink-0" />
+                <p class="text-sm text-zinc-400">{{ role.name }}</p>
+              </label>
+            </div>
+
             <p v-if="createError" class="text-xs text-red-400">{{ createError }}</p>
             <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
               <button type="button" @click="showCreate = false"
@@ -157,17 +167,19 @@
       :user-id="editUser.user_id"
       :user-name="editUser.name"
       :is-self="false"
-      @close="editUser = null"
+      :user-read="editUser"
+      :available-roles="availableRoles"
+      @close="editUser = null; fetchUsers()"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { usersApi } from '@/api/client'
+import { usersApi, rolesApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
-import type { UserRead } from '@/types/api'
+import type { UserRead, RoleRead } from '@/types/api'
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
 
 const { t } = useI18n()
@@ -179,8 +191,17 @@ const creating = ref(false)
 const createError = ref('')
 const newUser = ref({ name: '', password: '', is_admin: false, must_change_password: false })
 const editUser = ref<UserRead | null>(null)
+const availableRoles = ref<RoleRead[]>([])
+const selectedRoleIds = ref<number[]>([])
+
+watch(showCreate, (open) => {
+  if (!open) return
+  const viewers = availableRoles.value.find(r => r.name === 'Viewers')
+  selectedRoleIds.value = viewers ? [viewers.role_id] : []
+})
 const canEditUsers = computed(() =>
-  auth.user?.permissions?.some(p => p.mod === 'user' && p.act === 'edit' && p.obj === '*') ?? false
+  auth.user?.is_admin ||
+  (auth.user?.permissions?.some(p => p.mod === 'user' && p.act === 'edit' && p.obj === '*') ?? false)
 )
 
 async function fetchUsers() {
@@ -193,10 +214,17 @@ async function fetchUsers() {
 }
 
 async function createUser() {
+  if (selectedRoleIds.value.length === 0) {
+    createError.value = t('admin.roleRequired')
+    return
+  }
   creating.value = true
   createError.value = ''
   try {
-    await usersApi.create(newUser.value, auth.accessToken!)
+    const created = await usersApi.create(newUser.value, auth.accessToken!)
+    await Promise.all(selectedRoleIds.value.map(rid =>
+      usersApi.assignRole(created.user_id, rid, auth.accessToken!)
+    ))
     showCreate.value = false
     newUser.value = { name: '', password: '', is_admin: false, must_change_password: false }
     await fetchUsers()
@@ -213,5 +241,9 @@ async function deleteUser(id: number) {
   await fetchUsers()
 }
 
-onMounted(fetchUsers)
+async function loadRoles() {
+  availableRoles.value = await rolesApi.list(auth.accessToken!)
+}
+
+onMounted(() => { fetchUsers(); loadRoles() })
 </script>

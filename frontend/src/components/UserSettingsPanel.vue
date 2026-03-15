@@ -18,6 +18,40 @@
           </button>
         </div>
 
+        <!-- Admin settings (non-self editing) -->
+        <div v-if="!isSelf && userRead" class="space-y-3">
+          <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.settings') }}</p>
+
+          <label class="flex items-start gap-3 cursor-pointer group select-none">
+            <input type="checkbox" v-model="adminIsAdmin" class="rounded accent-indigo-500 w-4 h-4 mt-0.5 shrink-0" />
+            <div>
+              <p class="text-sm text-zinc-300 group-hover:text-[var(--text)] transition-colors">{{ t('admin.administrator') }}</p>
+              <p class="text-xs text-zinc-600 mt-0.5">{{ t('admin.administratorHint') }}</p>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 cursor-pointer select-none">
+            <input type="checkbox" v-model="adminIsActive" class="rounded accent-indigo-500 w-4 h-4 shrink-0" />
+            <p class="text-sm text-zinc-400">{{ t('admin.active') }}</p>
+          </label>
+
+          <label class="flex items-center gap-3 cursor-pointer select-none">
+            <input type="checkbox" v-model="adminMustChange" class="rounded accent-indigo-500 w-4 h-4 shrink-0" />
+            <p class="text-sm text-zinc-400">{{ t('admin.mustChangePassword') }}</p>
+          </label>
+        </div>
+
+        <!-- Role assignment (non-self editing) -->
+        <div v-if="!isSelf && userRead && availableRoles?.length" class="border-t border-[var(--border)] pt-3 space-y-2">
+          <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.roles') }}</p>
+          <label v-for="role in availableRoles" :key="role.role_id"
+            class="flex items-center gap-3 cursor-pointer select-none">
+            <input type="checkbox" :value="role.role_id" v-model="adminRoleIds"
+              class="rounded accent-indigo-500 w-4 h-4 shrink-0" />
+            <p class="text-sm text-zinc-400">{{ role.name }}</p>
+          </label>
+        </div>
+
         <!-- Theme selector (only for self) -->
         <div v-if="isSelf" class="space-y-2">
           <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.theme') }}</label>
@@ -84,7 +118,7 @@
         </div>
 
         <!-- Save error -->
-        <p v-if="saveError" class="text-red-400 text-xs px-1">{{ saveError }}</p>
+        <p v-if="saveError || adminError" class="text-red-400 text-xs px-1">{{ saveError || adminError }}</p>
 
         <!-- Unsaved changes warning -->
         <div v-if="showUnsavedWarning" class="flex items-center gap-2 px-3 py-2 bg-amber-500/10 ring-1 ring-amber-500/30 rounded-lg text-amber-400 text-xs">
@@ -96,14 +130,16 @@
         </div>
 
         <!-- Footer: Save / Cancel -->
-        <div v-if="isSelf" class="flex gap-2 pt-1 border-t border-[var(--border)]">
+        <div v-if="isSelf || (!isSelf && userRead)" class="flex gap-2 pt-1 border-t border-[var(--border)]">
           <button @click="discardAndClose"
             class="flex-1 px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
             {{ t('common.cancel') }}
           </button>
-          <button @click="save" :disabled="saving || !isDirty"
+          <button
+            @click="isSelf ? save() : saveAdminSettings()"
+            :disabled="isSelf ? (saving || !isDirty) : adminSaving"
             class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded-lg text-sm font-semibold text-white transition-all">
-            {{ saving ? t('common.saving') : t('common.save') }}
+            {{ (isSelf ? saving : adminSaving) ? t('common.saving') : t('common.save') }}
           </button>
         </div>
 
@@ -119,6 +155,7 @@ import { usersApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { applyTheme } from '@/composables/useTheme'
 import { i18n } from '@/main'
+import type { UserRead, RoleRead } from '@/types/api'
 
 const { t } = useI18n()
 
@@ -126,11 +163,46 @@ const props = defineProps<{
   userId: number
   userName: string
   isSelf: boolean
+  userRead?: UserRead
+  availableRoles?: RoleRead[]
 }>()
 
 const emit = defineEmits<{ close: [] }>()
 
 const auth = useAuthStore()
+
+// ---- Admin settings (non-self) ----
+
+const adminIsAdmin = ref(props.userRead?.is_admin ?? false)
+const adminIsActive = ref(props.userRead?.is_active ?? true)
+const adminMustChange = ref(props.userRead?.must_change_password ?? false)
+const adminRoleIds = ref<number[]>(props.userRead?.roles.map(r => r.role_id) ?? [])
+const adminSaving = ref(false)
+const adminError = ref('')
+
+async function saveAdminSettings() {
+  adminSaving.value = true
+  adminError.value = ''
+  try {
+    await usersApi.update(props.userId, {
+      is_admin: adminIsAdmin.value,
+      is_active: adminIsActive.value,
+      must_change_password: adminMustChange.value,
+    }, auth.accessToken!)
+    const currentIds = props.userRead?.roles.map(r => r.role_id) ?? []
+    const toAdd = adminRoleIds.value.filter(id => !currentIds.includes(id))
+    const toRemove = currentIds.filter(id => !adminRoleIds.value.includes(id))
+    await Promise.all([
+      ...toAdd.map(rid => usersApi.assignRole(props.userId, rid, auth.accessToken!)),
+      ...toRemove.map(rid => usersApi.removeRole(props.userId, rid, auth.accessToken!)),
+    ])
+    emit('close')
+  } catch (e: unknown) {
+    adminError.value = e instanceof Error ? e.message : 'Save failed.'
+  } finally {
+    adminSaving.value = false
+  }
+}
 
 // ---- Theme ----
 
@@ -199,7 +271,7 @@ async function save() {
 }
 
 function tryClose() {
-  if (isDirty.value) {
+  if (props.isSelf && isDirty.value) {
     showUnsavedWarning.value = true
   } else {
     emit('close')

@@ -189,6 +189,12 @@ export const usersApi = {
 
   delete: (id: number, token: string): Promise<void> =>
     request(`/users/${id}`, { method: 'DELETE' }, token),
+
+  assignRole: (userId: number, roleId: number, token: string): Promise<UserRead> =>
+    request(`/users/${userId}/roles/${roleId}`, { method: 'POST' }, token),
+
+  removeRole: (userId: number, roleId: number, token: string): Promise<void> =>
+    request(`/users/${userId}/roles/${roleId}`, { method: 'DELETE' }, token),
 }
 
 // ---- Roles ----
