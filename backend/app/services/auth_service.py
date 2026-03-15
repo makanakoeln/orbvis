@@ -106,7 +106,8 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
         if not secret_path.is_file():
             logger.warning("SSO: auth.secret not found at %s", secret_path)
             return None
-        secret = secret_path.read_bytes().strip()
+        # Read raw bytes — Checkmk writes and reads the secret without any stripping.
+        secret = secret_path.read_bytes()
 
         serial_path = pathlib.Path(omd_root) / "var" / "check_mk" / "web" / username / "serial.mk"
         serial = 0
@@ -116,7 +117,9 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
             except ValueError:
                 logger.warning("SSO: could not parse serial from %s", serial_path)
 
-        msg = f"{username}{session_id}{serial}".encode()
+        # Checkmk joins the parts with ":" before computing the HMAC.
+        # See cmk/gui/userdb/session.py :: generate_auth_hash()
+        msg = f"{username}:{session_id}:{serial}".encode()
         expected = _hmac.new(key=secret, msg=msg, digestmod=hashlib.sha256).digest().hex()
         if not _hmac.compare_digest(expected, cookie_hash):
             logger.warning("SSO: HMAC mismatch for user %r (serial=%d)", username, serial)
