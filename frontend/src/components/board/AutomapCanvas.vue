@@ -145,6 +145,7 @@ interface FNode extends SimulationNodeDatum {
   bfsLevel: number
   nodeType: 'host' | 'service'
   hostId?: string
+  svcTotalCount?: number  // total services for this host (set on service nodes for label visibility)
   // d3-force sets x/y/vx/vy
 }
 interface FLink extends SimulationLinkDatum<FNode> {
@@ -274,12 +275,13 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     for (const n of topoNodes) {
       if (!n.services) continue
       const hostLevel = levels.get(n.name) ?? 0
+      const N = n.services.length
       for (const svc of n.services) {
         const svcId = `${n.name}::${svc.name}`
         const cached = nodeCache.get(svcId)
         const svcNode: FNode = cached
-          ? { ...cached, state: svc.state, output: svc.output, bfsLevel: hostLevel, nodeType: 'service', hostId: n.name }
-          : { id: svcId, state: svc.state, output: svc.output, bfsLevel: hostLevel, nodeType: 'service', hostId: n.name }
+          ? { ...cached, state: svc.state, output: svc.output, bfsLevel: hostLevel, nodeType: 'service', hostId: n.name, svcTotalCount: N }
+          : { id: svcId, state: svc.state, output: svc.output, bfsLevel: hostLevel, nodeType: 'service', hostId: n.name, svcTotalCount: N }
         nodeCache.set(svcId, svcNode)
         fNodes.push(svcNode)
       }
@@ -488,7 +490,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
   // Service nodes
   const svcEnter = nodeEnter.filter(d => d.nodeType === 'service')
   svcEnter.append('circle')
-    .attr('r', d => svcR(servicesByHost.get(d.hostId ?? '')?.length ?? 1))
+    .attr('r', d => svcR(d.svcTotalCount ?? 1))
     .attr('stroke', 'rgba(0,0,0,0.4)')
     .attr('stroke-width', 1)
   svcEnter.append('text')
@@ -496,7 +498,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     .attr('text-anchor', 'middle')
     .attr('dominant-baseline', 'central')
     .attr('fill', 'rgba(255,255,255,0.9)')
-    .attr('font-size', d => svcR(servicesByHost.get(d.hostId ?? '')?.length ?? 1) <= 7 ? 6 : 8)
+    .attr('font-size', d => svcR(d.svcTotalCount ?? 1) <= 7 ? 6 : 8)
     .attr('font-weight', '700')
     .attr('pointer-events', 'none')
     .text('S')
@@ -508,8 +510,8 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     .attr('font-weight', '400')
     .attr('pointer-events', 'none')
     .style('fill', 'var(--text)')
-    .attr('y', d => svcR(servicesByHost.get(d.hostId ?? '')?.length ?? 1) + 4)
-    .style('display', d => showSvcLabel(servicesByHost.get(d.hostId ?? '')?.length ?? 1) ? null : 'none')
+    .attr('y', d => svcR(d.svcTotalCount ?? 1) + 4)
+    .style('display', d => showSvcLabel(d.svcTotalCount ?? 1) ? null : 'none')
 
   const nodeMerge = nodeEnter.merge(nodeSel)
   nodeMerge.select('circle').attr('fill', d => stateColor(d.state))
@@ -522,7 +524,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
   })
   // Refresh service label visibility — may change when switching layout or on re-render
   nodeMerge.filter(d => d.nodeType === 'service').select('text.node-label')
-    .style('display', d => showSvcLabel(servicesByHost.get(d.hostId ?? '')?.length ?? 1) ? null : 'none')
+    .style('display', d => showSvcLabel(d.svcTotalCount ?? 1) ? null : 'none')
 
   // --- Tick handler ---
   function ticked() {
