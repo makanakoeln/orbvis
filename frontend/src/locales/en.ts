@@ -94,8 +94,8 @@ export default {
     saveChanges: 'Save changes',
     hoverTemplate: 'Hover template',
     contextTemplate: 'Context template',
-    templatePlaceholder: 'e.g. {{name}} is {{state}}',
-    templateHint: 'Available: {{name}}, {{type}}, {{state}}, {{output}}, {{host}}, {{service}}, {{acknowledged}}, {{in_downtime}}',
+    templatePlaceholder: "e.g. {'{'}{'{'}name{'}'}{'}'} is {'{'}{'{'}state{'}'}{'}'}" ,
+    templateHint: "Available: {'{'}{'{'}name{'}'}{'}'}, {'{'}{'{'}type{'}'}{'}'}, {'{'}{'{'}state{'}'}{'}'}, {'{'}{'{'}output{'}'}{'}'}, {'{'}{'{'}host{'}'}{'}'}, {'{'}{'{'}service{'}'}{'}'}, {'{'}{'{'}acknowledged{'}'}{'}'}, {'{'}{'{'}in_downtime{'}'}{'}'}",
   },
   boardSettings: {
     editMode: 'Edit Mode',
