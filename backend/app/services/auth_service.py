@@ -117,9 +117,9 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
             except ValueError:
                 logger.warning("SSO: could not parse serial from %s", serial_path)
 
-        # Checkmk joins the parts with ":" before computing the HMAC.
-        # See cmk/gui/userdb/session.py :: generate_auth_hash()
-        msg = f"{username}:{session_id}:{serial}".encode()
+        # Checkmk 2.4 concatenates without separators.
+        # See installed cmk/gui/userdb/session.py :: generate_auth_hash()
+        msg = f"{username}{session_id}{serial}".encode("utf-8")
         expected = _hmac.new(key=secret, msg=msg, digestmod=hashlib.sha256).digest().hex()
         if not _hmac.compare_digest(expected, cookie_hash):
             logger.warning("SSO: HMAC mismatch for user %r (serial=%d)", username, serial)
