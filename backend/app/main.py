@@ -515,6 +515,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Load and activate all persisted backend configs
     backend_service.activate_all()
 
+    # In Checkmk/OMD mode: auto-create a Livestatus connection if none exists yet
+    if settings.checkmk_omd_root and settings.checkmk_site:
+        conn_id = f"cmk_{settings.checkmk_site}"
+        if not backend_service.get(conn_id):
+            from app.schemas.backend import BackendConfig
+            socket_path = str(Path(settings.checkmk_omd_root) / "tmp" / "run" / "live")
+            cfg = BackendConfig(
+                id=conn_id,
+                type="livestatus",
+                label=f"Checkmk {settings.checkmk_site}",
+                socket_path=socket_path,
+                checkmk_url=f"/{settings.checkmk_site}",
+                host=None, port=6557, timeout=10,
+                icinga2_url=None, icinga2_username=None, icinga2_password=None, icinga2_verify_ssl=True,
+            )
+            backend_service.create(cfg)
+            logger.info("Auto-created Checkmk connection '%s' → %s", conn_id, socket_path)
+
     # In SSO/CMK mode authentication is handled externally — no local admin needed
     if not settings.checkmk_omd_root:
         await _ensure_admin_user()
