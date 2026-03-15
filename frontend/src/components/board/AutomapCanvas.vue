@@ -73,8 +73,26 @@ const props = defineProps<{ backendId: string; serviceLayout: 'off' | 'fan' | 'r
 const auth = useAuthStore()
 
 const NODE_R = 18
-const SVC_R = 11
-const FAN_R = 80  // distance host-center → service-center in fan layout
+const SVC_R_MAX = 11   // service node radius at low service count
+const ORBIT_R_MIN = 80 // minimum orbit/fan radius
+
+// Scale service node radius down when a host has many services
+function svcR(N: number): number {
+  if (N <= 6) return SVC_R_MAX
+  if (N <= 12) return 9
+  if (N <= 20) return 7
+  return 6
+}
+
+// Scale orbit radius up so service circles don't overlap.
+// Full circle circumference = 2π·R must fit N circles of diameter 2r+gap.
+function orbitR(N: number): number {
+  const r = svcR(N)
+  return Math.max(ORBIT_R_MIN, Math.ceil(N * (r * 2 + 3) / (2 * Math.PI)))
+}
+
+// Show labels only when few enough services per host
+function showSvcLabel(N: number): boolean { return N <= 10 }
 const svgEl = ref<SVGSVGElement | null>(null)
 const nodes = ref<TopologyNode[]>([])
 const loading = ref(true)
@@ -234,7 +252,12 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
   // --- Build FNode list (reuse cached positions) ---
   const levels = bfsLevels(topoNodes)
   const maxLvl = Math.max(0, ...levels.values())
-  const vSpacing = Math.min(130, (H * 0.8) / Math.max(1, maxLvl + 1))
+  // When services are visible, increase vertical spacing to fit orbit rings
+  const maxSvcN = Math.max(0, ...[...(nodes.value ?? []).map(n => n.services?.length ?? 0)])
+  const minVSpacing = props.serviceLayout !== 'off' && maxSvcN > 0
+    ? orbitR(maxSvcN) * 2 + 50
+    : 0
+  const vSpacing = Math.max(minVSpacing, Math.min(130, (H * 0.8) / Math.max(1, maxLvl + 1)))
 
   // Host nodes first
   const fNodes: FNode[] = topoNodes.map(n => {
@@ -304,7 +327,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
   // Measured row spacings per host (populated after first DOM render)
   const rowSpacings = new Map<string, number>()
 
-  // Service positioning: fan (semicircle below) or row (horizontal line below)
+  // Service positioning
   function updateFanPositions() {
     for (const [hostId, services] of servicesByHost) {
       const host = nodeById.get(hostId)
@@ -312,33 +335,35 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
       const hx = host.x ?? 0
       const hy = host.y ?? 0
       const N = services.length
+      const R = orbitR(N)
 
-      if (props.serviceLayout === 'fan') {
-        // 40° per slot, max spread ±80° (= 160° total)
-        const spread = N > 1 ? Math.min(8 * Math.PI / 9, (N - 1) * 2 * Math.PI / 9) : 0
+      if (props.serviceLayout === 'fan' && N <= 8) {
+        // Small fan: semicircle below host, evenly spaced
+        const spread = N > 1 ? Math.PI * 0.9 : 0
         services.forEach((svc, i) => {
           const angle = Math.PI / 2 + (N > 1 ? -spread / 2 + i * spread / (N - 1) : 0)
-          svc.fx = hx + FAN_R * Math.cos(angle)
-          svc.fy = hy + FAN_R * Math.sin(angle)
+          svc.fx = hx + R * Math.cos(angle)
+          svc.fy = hy + R * Math.sin(angle)
         })
-      } else if (props.serviceLayout === 'orbit') {
-        // Full circle evenly distributed around host
+      } else if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit') {
+        // Full circle — fan auto-upgrades to orbit when N > 8 to avoid overlap
         services.forEach((svc, i) => {
-          const angle = (2 * Math.PI * i) / N
-          svc.fx = hx + FAN_R * Math.cos(angle)
-          svc.fy = hy + FAN_R * Math.sin(angle)
+          const angle = (2 * Math.PI * i) / N - Math.PI / 2
+          svc.fx = hx + R * Math.cos(angle)
+          svc.fy = hy + R * Math.sin(angle)
         })
       } else {
-        // Row: grid layout with automatic wrapping
+        // Row: compact grid with automatic wrapping
+        const r = svcR(N)
         const cols = Math.min(N, Math.max(4, Math.ceil(Math.sqrt(N * 1.5))))
         const measured = rowSpacings.get(hostId)
         const fallback = services.reduce((max, svc) => {
           const label = svc.id.split('::').at(-1) ?? svc.id
           return Math.max(max, label.length * 5.5 + 8)
-        }, SVC_R * 2 + 14)
+        }, r * 2 + 14)
         const spacingX = measured ?? fallback
-        const spacingY = SVC_R * 2 + 26  // circle + label + gap
-        const yOffset = NODE_R + SVC_R + 22
+        const spacingY = r * 2 + (showSvcLabel(N) ? 26 : 6)
+        const yOffset = NODE_R + r + 22
         services.forEach((svc, i) => {
           const col = i % cols
           const row = Math.floor(i / cols)
@@ -357,7 +382,15 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
   const hostLinks = fLinks.filter(l => !l.isServiceLink)
 
   simulation = forceSimulation<FNode>(fNodes)
-    .force('link', forceLink<FNode, FLink>(hostLinks).id(d => d.id).distance(160).strength(0.4))
+    .force('link', forceLink<FNode, FLink>(hostLinks).id(d => d.id)
+      .distance(d => {
+        // Space hosts far enough apart that their service rings don't overlap
+        const srcN = servicesByHost.get((d.source as FNode).id)?.length ?? 0
+        const tgtN = servicesByHost.get((d.target as FNode).id)?.length ?? 0
+        if (srcN === 0 && tgtN === 0) return 160
+        return Math.max(200, orbitR(srcN) + orbitR(tgtN) + 60)
+      })
+      .strength(0.4))
     .force('charge', forceManyBody<FNode>().strength(d => d.nodeType === 'service' ? 0 : -600))
     .force('center', forceCenter<FNode>(0, 0).strength(0.05))
     .force('collide', forceCollide<FNode>(d => {
@@ -365,11 +398,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
       const svcs = servicesByHost.get(d.id) ?? []
       const N = svcs.length
       if (N === 0 || props.serviceLayout === 'off') return NODE_R + 10
-      if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit') return FAN_R + SVC_R + 10
-      // Row grid: use half-width of the widest row as collision radius
+      if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit') return orbitR(N) + svcR(N) + 10
+      // Row grid
       const cols = Math.min(N, Math.max(4, Math.ceil(Math.sqrt(N * 1.5))))
       const spacingX = rowSpacings.get(d.id) ?? 60
-      return (cols / 2) * spacingX + SVC_R + 10
+      return (cols / 2) * spacingX + svcR(N) + 10
     }))
     .force('y', forceY<FNode>(d => (d.bfsLevel - maxLvl / 2) * vSpacing).strength(d => d.nodeType === 'service' ? 0 : 0.4))
     .alphaDecay(0.03)
@@ -455,7 +488,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
   // Service nodes
   const svcEnter = nodeEnter.filter(d => d.nodeType === 'service')
   svcEnter.append('circle')
-    .attr('r', SVC_R)
+    .attr('r', d => svcR(servicesByHost.get(d.hostId ?? '')?.length ?? 1))
     .attr('stroke', 'rgba(0,0,0,0.4)')
     .attr('stroke-width', 1)
   svcEnter.append('text')
@@ -463,7 +496,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     .attr('text-anchor', 'middle')
     .attr('dominant-baseline', 'central')
     .attr('fill', 'rgba(255,255,255,0.9)')
-    .attr('font-size', 8)
+    .attr('font-size', d => svcR(servicesByHost.get(d.hostId ?? '')?.length ?? 1) <= 7 ? 6 : 8)
     .attr('font-weight', '700')
     .attr('pointer-events', 'none')
     .text('S')
@@ -475,7 +508,8 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     .attr('font-weight', '400')
     .attr('pointer-events', 'none')
     .style('fill', 'var(--text)')
-    .attr('y', SVC_R + 4)
+    .attr('y', d => svcR(servicesByHost.get(d.hostId ?? '')?.length ?? 1) + 4)
+    .style('display', d => showSvcLabel(servicesByHost.get(d.hostId ?? '')?.length ?? 1) ? null : 'none')
 
   const nodeMerge = nodeEnter.merge(nodeSel)
   nodeMerge.select('circle').attr('fill', d => stateColor(d.state))
@@ -486,6 +520,9 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     }
     return d.id
   })
+  // Refresh service label visibility — may change when switching layout or on re-render
+  nodeMerge.filter(d => d.nodeType === 'service').select('text.node-label')
+    .style('display', d => showSvcLabel(servicesByHost.get(d.hostId ?? '')?.length ?? 1) ? null : 'none')
 
   // --- Tick handler ---
   function ticked() {
@@ -511,6 +548,12 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
   // For row layout: measure actual label widths from DOM, re-layout with exact spacing
   if (props.serviceLayout === 'row') {
     for (const [hostId, services] of servicesByHost) {
+      const N = services.length
+      if (!showSvcLabel(N)) {
+        // No labels — use diameter + gap as spacing
+        rowSpacings.set(hostId, svcR(N) * 2 + 6)
+        continue
+      }
       let maxW = 0
       for (const svc of services) {
         const g = gNodes.selectAll<SVGGElement, FNode>('g.node').filter(d => d.id === svc.id).node()
