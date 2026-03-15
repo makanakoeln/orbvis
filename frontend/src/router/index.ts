@@ -71,9 +71,11 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
   await auth.init()
 
-  // In SSO mode the CMK theme can change at any time (ajax_ui_theme).
+  // In Checkmk mode the CMK theme can change at any time (ajax_ui_theme).
   // Re-fetch the user profile on every navigation so the theme stays in sync.
-  if (auth.ssoActive) {
+  // Use isCheckmkDeployment (URL-based) so this also runs when SSO temporarily
+  // failed and the user logged in manually.
+  if (auth.ssoActive || auth.isCheckmkDeployment) {
     auth.fetchCurrentUser()
   }
 

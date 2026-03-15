@@ -72,7 +72,7 @@
         </div>
 
         <!-- Language selector (only for self, not in SSO mode where CMK controls it) -->
-        <div v-if="isSelf && !auth.ssoActive" class="space-y-2">
+        <div v-if="isSelf && !auth.ssoActive && !auth.isCheckmkDeployment" class="space-y-2">
           <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.language') }}</label>
           <div class="flex gap-2">
             <button
@@ -288,7 +288,7 @@ function discardAndClose() {
 
 // ---- Password ----
 
-const showPasswordSection = computed(() => !(props.isSelf && auth.ssoActive))
+const showPasswordSection = computed(() => !(props.isSelf && (auth.ssoActive || auth.isCheckmkDeployment)))
 
 const password = ref('')
 const confirm = ref('')

@@ -116,7 +116,7 @@ const steps = computed<TourStep[]>(() => {
       body: props.isAdmin ? t('onboarding.step4.bodyAdmin') : t('onboarding.step4.bodyUser'),
     },
   ]
-  return auth.ssoActive ? all.filter(s => s.selector !== '[data-tour="sidebar-nav"]') : all
+  return (auth.ssoActive || auth.isCheckmkDeployment) ? all.filter(s => s.selector !== '[data-tour="sidebar-nav"]') : all
 })
 
 const TOTAL = computed(() => steps.value.length)

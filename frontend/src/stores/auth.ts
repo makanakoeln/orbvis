@@ -26,6 +26,12 @@ export const useAuthStore = defineStore('auth', () => {
   // true when logged in via Checkmk SSO
   const ssoActive = ref(false)
 
+  // true when OrbVis is served inside a Checkmk/OMD installation (path: /{site}/orbvis/…)
+  // Used to suppress the OrbVis sidebar even when SSO is temporarily unavailable.
+  const isCheckmkDeployment = computed(() =>
+    /^\/[^/]+\/orbvis/.test(window.location.pathname),
+  )
+
   const isAuthenticated = computed(() => !!accessToken.value && !!user.value)
   const isAdmin = computed(() => user.value?.is_admin ?? false)
 
@@ -177,6 +183,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isAdmin,
     ssoActive,
+    isCheckmkDeployment,
     init,
     login,
     logout,
