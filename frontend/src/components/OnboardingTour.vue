@@ -68,8 +68,10 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
+const auth = useAuthStore()
 
 const props = defineProps<{
   userId: number
@@ -83,7 +85,6 @@ const emit = defineEmits<{
 
 // ─── Steps ───────────────────────────────────────────────────────────────────
 
-const TOTAL = 4
 const step = ref(1)
 
 interface TourStep {
@@ -92,29 +93,33 @@ interface TourStep {
   body: string
 }
 
-const steps = computed<TourStep[]>(() => [
-  {
-    selector: null,
-    title: t('onboarding.step1.title'),
-    body: t('onboarding.step1.body'),
-  },
-  {
-    selector: '[data-tour="sidebar-nav"]',
-    title: t('onboarding.step2.title'),
-    body: props.isAdmin ? t('onboarding.step2.bodyAdmin') : t('onboarding.step2.bodyUser'),
-  },
-  {
-    selector: '[data-tour="boards-grid"]',
-    title: t('onboarding.step3.title'),
-    body: t('onboarding.step3.body'),
-  },
-  {
-    selector: props.isAdmin ? '[data-tour="new-board"]' : null,
-    title: t('onboarding.step4.title'),
-    body: props.isAdmin ? t('onboarding.step4.bodyAdmin') : t('onboarding.step4.bodyUser'),
-  },
-])
+const steps = computed<TourStep[]>(() => {
+  const all: TourStep[] = [
+    {
+      selector: null,
+      title: t('onboarding.step1.title'),
+      body: t('onboarding.step1.body'),
+    },
+    {
+      selector: '[data-tour="sidebar-nav"]',
+      title: t('onboarding.step2.title'),
+      body: props.isAdmin ? t('onboarding.step2.bodyAdmin') : t('onboarding.step2.bodyUser'),
+    },
+    {
+      selector: '[data-tour="boards-grid"]',
+      title: t('onboarding.step3.title'),
+      body: t('onboarding.step3.body'),
+    },
+    {
+      selector: props.isAdmin ? '[data-tour="new-board"]' : null,
+      title: t('onboarding.step4.title'),
+      body: props.isAdmin ? t('onboarding.step4.bodyAdmin') : t('onboarding.step4.bodyUser'),
+    },
+  ]
+  return auth.ssoActive ? all.filter(s => s.selector !== '[data-tour="sidebar-nav"]') : all
+})
 
+const TOTAL = computed(() => steps.value.length)
 const currentStep = computed(() => steps.value[step.value - 1])
 
 // ─── Target rect ─────────────────────────────────────────────────────────────
