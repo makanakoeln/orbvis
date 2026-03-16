@@ -87,11 +87,15 @@ async def sso_login(request: Request, db: AsyncSession = Depends(get_db)) -> Tok
     username: str | None = None
 
     if not cookie_name:
-        logger.warning("SSO: CHECKMK_SITE not configured")
+        logger.warning("SSO: CHECKMK_SITE not configured (checkmk_site=%r)", settings.checkmk_site)
     else:
         cookie_value = request.cookies.get(cookie_name)
         if not cookie_value:
-            logger.warning("SSO: cookie %r not present (available: %s)", cookie_name, list(request.cookies.keys()))
+            logger.warning(
+                "SSO: cookie %r not present — available cookies: %s",
+                cookie_name,
+                list(request.cookies.keys()),
+            )
         else:
             username = validate_checkmk_cookie(cookie_value)
 

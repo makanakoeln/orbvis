@@ -58,6 +58,7 @@ export const useAuthStore = defineStore('auth', () => {
           // Network-level failure (server not ready yet) — wait briefly and retry
           await new Promise(r => setTimeout(r, 600))
         } else {
+          console.warn('[OrbVis] SSO failed:', e)
           break  // HTTP 401 or second failure: SSO not available
         }
       }
