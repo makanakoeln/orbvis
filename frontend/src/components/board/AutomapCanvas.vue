@@ -403,8 +403,8 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     .force('charge', forceManyBody<FNode>().strength(d => {
       if (d.nodeType === 'service') return 0
       const N = servicesByHost.get(d.id)?.length ?? 0
-      // Scale repulsion with orbit size so hosts with large rings push far enough apart
-      return N > 0 ? -Math.max(600, orbitR(N) * 28) : -600
+      // Modest extra repulsion so service rings don't crowd; collision handles the hard min
+      return N > 0 ? -Math.max(700, orbitR(N) * 9) : -600
     }))
     .force('center', forceCenter<FNode>(0, 0).strength(0.05))
     .force('collide', forceCollide<FNode>(d => {
