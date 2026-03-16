@@ -112,9 +112,16 @@ async function fetchTopology() {
 }
 
 // Re-fetch and clear service cache when serviceLayout prop changes
-watch(() => props.serviceLayout, () => {
+watch(() => props.serviceLayout, (newVal, oldVal) => {
   for (const k of nodeCache.keys()) {
     if (k.includes('::')) nodeCache.delete(k)
+  }
+  // When enabling services, reset host positions so the simulation can spread them out
+  // from scratch rather than starting from a cramped no-service layout.
+  if (newVal !== 'off' && oldVal === 'off') {
+    for (const node of nodeCache.values()) {
+      node.x = undefined; node.y = undefined; node.vx = undefined; node.vy = undefined
+    }
   }
   fetchTopology()
 })
@@ -393,19 +400,24 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         return Math.max(200, orbitR(srcN) + orbitR(tgtN) + 60)
       })
       .strength(0.4))
-    .force('charge', forceManyBody<FNode>().strength(d => d.nodeType === 'service' ? 0 : -600))
+    .force('charge', forceManyBody<FNode>().strength(d => {
+      if (d.nodeType === 'service') return 0
+      const N = servicesByHost.get(d.id)?.length ?? 0
+      // Scale repulsion with orbit size so hosts with large rings push far enough apart
+      return N > 0 ? -Math.max(600, orbitR(N) * 28) : -600
+    }))
     .force('center', forceCenter<FNode>(0, 0).strength(0.05))
     .force('collide', forceCollide<FNode>(d => {
       if (d.nodeType === 'service') return 0
       const svcs = servicesByHost.get(d.id) ?? []
       const N = svcs.length
       if (N === 0 || props.serviceLayout === 'off') return NODE_R + 10
-      if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit') return orbitR(N) + svcR(N) + 10
+      if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit') return orbitR(N) + svcR(N) + 20
       // Row grid
       const cols = Math.min(N, Math.max(4, Math.ceil(Math.sqrt(N * 1.5))))
       const spacingX = rowSpacings.get(d.id) ?? 60
       return (cols / 2) * spacingX + svcR(N) + 10
-    }))
+    }).iterations(3))
     .force('y', forceY<FNode>(d => (d.bfsLevel - maxLvl / 2) * vSpacing).strength(d => d.nodeType === 'service' ? 0 : 0.4))
     .alphaDecay(0.03)
     .stop()
@@ -543,7 +555,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
   }
 
   // Pre-tick to near-settled positions, render once, fit immediately, then animate remainder
-  simulation.tick(150)
+  simulation.tick(props.serviceLayout !== 'off' ? 250 : 150)
   updateFanPositions()
   ticked()
 
