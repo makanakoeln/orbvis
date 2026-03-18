@@ -123,6 +123,7 @@ watch(() => props.serviceLayout, (newVal, oldVal) => {
       node.x = undefined; node.y = undefined; node.vx = undefined; node.vy = undefined
     }
   }
+  _hasFitOnce = false
   fetchTopology()
 })
 
