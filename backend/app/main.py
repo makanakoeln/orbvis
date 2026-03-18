@@ -518,7 +518,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # In Checkmk/OMD mode: auto-create a Livestatus connection if none exists yet
     if settings.checkmk_omd_root and settings.checkmk_site:
         conn_id = f"cmk_{settings.checkmk_site}"
-        if not backend_service.get(conn_id):
+        if not backend_service.load_all():
             from app.schemas.backend import BackendConfig
             socket_path = str(Path(settings.checkmk_omd_root) / "tmp" / "run" / "live")
             cfg = BackendConfig(
