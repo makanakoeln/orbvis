@@ -58,7 +58,7 @@
 import { ref, watch, reactive, onMounted, onUnmounted } from 'vue'
 import { select } from 'd3-selection'
 import {
-  forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide, forceY,
+  forceSimulation, forceLink, forceManyBody, forceX, forceCollide, forceY,
   type SimulationNodeDatum, type SimulationLinkDatum,
 } from 'd3-force'
 import { zoom, zoomIdentity } from 'd3-zoom'
@@ -406,7 +406,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
       // Modest extra repulsion so service rings don't crowd; collision handles the hard min
       return N > 0 ? -Math.max(700, orbitR(N) * 9) : -600
     }))
-    .force('center', forceCenter<FNode>(0, 0).strength(0.05))
+    .force('center', forceX<FNode>(0).strength(d => d.nodeType === 'host' ? 0.05 : 0))
     .force('collide', forceCollide<FNode>(d => {
       if (d.nodeType === 'service') return 0
       const svcs = servicesByHost.get(d.id) ?? []
