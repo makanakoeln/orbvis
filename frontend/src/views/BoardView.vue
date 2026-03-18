@@ -228,7 +228,7 @@
           :class="serviceLayout !== 'off'
             ? 'bg-indigo-500/15 text-indigo-300 ring-indigo-500/40'
             : 'bg-[var(--bg-surface)]/80 text-zinc-400 ring-[var(--border)] hover:text-[var(--text)] hover:bg-[var(--bg-surface)]'">
-          Services
+          {{ t('board.services') }}
           <svg class="w-3 h-3 transition-transform duration-150" :class="serviceLayoutOpen ? 'rotate-180' : ''"
             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
@@ -243,15 +243,15 @@
           leave-active-class="transition-all duration-100 ease-in origin-bottom-right">
           <div v-if="serviceLayoutOpen"
             class="absolute bottom-full mb-2 right-0 z-10 w-36 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/50 overflow-hidden">
-            <button v-for="opt in ([['off', 'Aus'], ['fan', 'Fächer'], ['orbit', 'Orbit'], ['row', 'Reihe']] as const)"
-              :key="opt[0]"
-              @click="serviceLayout = opt[0]; serviceLayoutOpen = false"
+            <button v-for="opt in serviceLayoutOptions"
+              :key="opt.value"
+              @click="serviceLayout = opt.value; serviceLayoutOpen = false"
               class="w-full flex items-center justify-between px-3 py-2 text-xs transition-colors"
-              :class="serviceLayout === opt[0]
+              :class="serviceLayout === opt.value
                 ? 'text-indigo-300 bg-indigo-500/10'
                 : 'text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'">
-              {{ opt[1] }}
-              <svg v-if="serviceLayout === opt[0]" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+              {{ opt.label }}
+              <svg v-if="serviceLayout === opt.value" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
@@ -562,6 +562,12 @@ async function onSaveProperties(updates: Record<string, unknown>) {
 type ServiceLayout = 'off' | 'fan' | 'row' | 'orbit'
 const serviceLayout = ref<ServiceLayout>('off')
 const serviceLayoutOpen = ref(false)
+const serviceLayoutOptions = computed(() => [
+  { value: 'off' as ServiceLayout, label: t('board.serviceLayoutOff') },
+  { value: 'fan' as ServiceLayout, label: t('board.serviceLayoutFan') },
+  { value: 'orbit' as ServiceLayout, label: t('board.serviceLayoutOrbit') },
+  { value: 'row' as ServiceLayout, label: t('board.serviceLayoutRow') },
+])
 const showSettings = ref(false)
 const showUserSettings = ref(false)
 const settingsWorldmapView = ref<{ lat: number; lng: number; zoom: number } | null>(null)
