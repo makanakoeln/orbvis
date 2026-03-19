@@ -86,6 +86,9 @@ class BoardObject(BaseModel):
     cmk_label_name: str | None = None
     cmk_label_value: str | None = None
     cmk_label_target: Literal["hosts", "services"] | None = None
+    # State behaviour flags
+    only_hard_states: bool = False
+    recognize_services: bool = False
     # Nested configs
     label: LabelConfig | None = Field(default_factory=LabelConfig)
     display: DisplayConfig | None = Field(default_factory=DisplayConfig)

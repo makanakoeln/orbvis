@@ -10,6 +10,15 @@ from typing import TYPE_CHECKING
 from app.schemas.board import BoardConfig, BoardObject, RadarView
 from app.schemas.state import MapStates, ObjectState
 
+# Combined severity for cross-scale worst-state aggregation (recognize_services)
+_COMBINED_SEVERITY: dict[str, int] = {
+    "PENDING": -1,
+    "UP": 0, "OK": 0,
+    "UNREACHABLE": 1, "UNKNOWN": 1,
+    "WARNING": 2,
+    "DOWN": 3, "CRITICAL": 4,
+}
+
 if TYPE_CHECKING:
     from app.backends.base import BackendBase
 
@@ -80,9 +89,17 @@ async def get_board_states(cfg: BoardConfig) -> MapStates:
 async def _get_object_state(backend: "BackendBase", obj: BoardObject) -> ObjectState:
     try:
         if obj.type == "host" and obj.host_name:
-            state = await backend.get_host_state(obj.host_name)
+            if obj.only_hard_states:
+                state = await backend.get_host_hard_state(obj.host_name)
+            else:
+                state = await backend.get_host_state(obj.host_name)
+            if obj.recognize_services:
+                state = await _aggregate_host_with_services(backend, state, obj.host_name)
         elif obj.type == "service" and obj.host_name and obj.service_description:
-            state = await backend.get_service_state(obj.host_name, obj.service_description)
+            if obj.only_hard_states:
+                state = await backend.get_service_hard_state(obj.host_name, obj.service_description)
+            else:
+                state = await backend.get_service_state(obj.host_name, obj.service_description)
         elif obj.type == "hostgroup" and obj.group_name:
             state = await backend.get_hostgroup_states(obj.group_name)
         elif obj.type == "servicegroup" and obj.group_name:
@@ -98,6 +115,31 @@ async def _get_object_state(backend: "BackendBase", obj: BoardObject) -> ObjectS
     except Exception as exc:
         logger.exception("Error fetching state for object %s: %s", obj.id, exc)
         return ObjectState(object_id=obj.id, type=obj.type, state="PENDING", stale=True)
+
+
+async def _aggregate_host_with_services(
+    backend: "BackendBase", host_state: ObjectState, hostname: str
+) -> ObjectState:
+    """Aggregate host state with the worst state of all its services."""
+    try:
+        services = await backend.get_host_services(hostname)
+    except Exception:
+        return host_state
+    if not services:
+        return host_state
+    all_states = [host_state.state] + [s.get("state", "PENDING") for s in services]
+    worst = max(all_states, key=lambda s: _COMBINED_SEVERITY.get(s, 0))
+    if worst == host_state.state:
+        return host_state
+    return ObjectState(
+        object_id=host_state.object_id,
+        type="host",
+        state=worst,
+        output=host_state.output,
+        perf_data=host_state.perf_data,
+        acknowledged=host_state.acknowledged,
+        in_downtime=host_state.in_downtime,
+    )
 
 
 async def _get_radar_states(cfg: "BoardConfig", backend: "BackendBase") -> MapStates:

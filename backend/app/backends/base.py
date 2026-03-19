@@ -52,6 +52,14 @@ class BackendBase(ABC):
         """Return services for a host as [{name, state, output}]."""
         ...
 
+    async def get_host_hard_state(self, hostname: str) -> ObjectState:
+        """Return the last hard state for a host (default: delegates to current state)."""
+        return await self.get_host_state(hostname)
+
+    async def get_service_hard_state(self, host: str, service: str) -> ObjectState:
+        """Return the last hard state for a service (default: delegates to current state)."""
+        return await self.get_service_state(host, service)
+
     @abstractmethod
     async def is_available(self) -> bool:
         """Check whether the backend is reachable."""

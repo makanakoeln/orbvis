@@ -92,6 +92,47 @@ class LivestatusBackend(BackendBase):
             in_downtime=int(downtime) > 0,
         )
 
+    async def get_host_hard_state(self, hostname: str) -> ObjectState:
+        query = (
+            f"GET hosts\n"
+            f"Columns: last_hard_state plugin_output perf_data acknowledged scheduled_downtime_depth\n"
+            f"Filter: name = {_ls_escape(hostname)}\n"
+        )
+        rows = await self._query(query)
+        if not rows:
+            return ObjectState(object_id="", type="host", state="PENDING")
+        state_code, output, perf_data, ack, downtime = rows[0]
+        return ObjectState(
+            object_id="",
+            type="host",
+            state=_HOST_STATE_MAP.get(int(state_code), "UNKNOWN"),
+            output=output,
+            perf_data=perf_data,
+            acknowledged=bool(int(ack)),
+            in_downtime=int(downtime) > 0,
+        )
+
+    async def get_service_hard_state(self, host: str, service: str) -> ObjectState:
+        query = (
+            f"GET services\n"
+            f"Columns: last_hard_state plugin_output perf_data acknowledged scheduled_downtime_depth\n"
+            f"Filter: host_name = {_ls_escape(host)}\n"
+            f"Filter: description = {_ls_escape(service)}\n"
+        )
+        rows = await self._query(query)
+        if not rows:
+            return ObjectState(object_id="", type="service", state="PENDING")
+        state_code, output, perf_data, ack, downtime = rows[0]
+        return ObjectState(
+            object_id="",
+            type="service",
+            state=_SERVICE_STATE_MAP.get(int(state_code), "UNKNOWN"),
+            output=output,
+            perf_data=perf_data,
+            acknowledged=bool(int(ack)),
+            in_downtime=int(downtime) > 0,
+        )
+
     async def get_hostgroup_states(self, group: str) -> ObjectState:
         query = (
             f"GET hosts\n"
