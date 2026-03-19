@@ -46,7 +46,7 @@
       :key="obj.id"
       class="absolute"
       :style="objectWrapperStyle(obj)"
-      @pointerdown.prevent="onObjectPointerDown($event, obj)"
+      @pointerdown="onObjectPointerDown($event, obj)"
       @dragstart.prevent
       @click.stop="onObjectClick(obj, $event)"
       @contextmenu.prevent="onObjectContextMenu($event, obj)"
@@ -243,7 +243,8 @@ function objectWrapperStyle(obj: BoardObjectType) {
 // ---- Pointer-capture drag handlers ----
 
 function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
-
+  if (event.button === 2) return  // right-click: let contextmenu event fire normally
+  event.preventDefault()
   if (!(props.editMode || props.isAdmin)) return
   const canvas = canvasEl.value
   if (!canvas) return
