@@ -84,8 +84,27 @@
       @close="closeMenus"
       @edit="onContextMenuEdit"
       @delete="onContextMenuDelete"
+      @acknowledge="onContextMenuAck"
+      @schedule-downtime="onContextMenuDowntime"
+      @force-check="onContextMenuForceCheck"
     />
   </div>
+
+  <!-- ACK modal -->
+  <AckModal
+    v-if="ackModalObject && checkmkUrl"
+    :object="ackModalObject"
+    :checkmk-url="checkmkUrl"
+    @close="ackModalObject = null"
+  />
+
+  <!-- Downtime modal -->
+  <DowntimeModal
+    v-if="downtimeModalObject && checkmkUrl"
+    :object="downtimeModalObject"
+    :checkmk-url="checkmkUrl"
+    @close="downtimeModalObject = null"
+  />
 </template>
 
 <script setup lang="ts">
@@ -98,6 +117,9 @@ import BoardObject from './BoardObject.vue'
 import BoardLine from './BoardLine.vue'
 import HoverMenu from './HoverMenu.vue'
 import ContextMenu from './ContextMenu.vue'
+import AckModal from './AckModal.vue'
+import DowntimeModal from './DowntimeModal.vue'
+import { cmkApi } from '@/api/client'
 
 const settingsStore = useSettingsStore()
 
@@ -379,6 +401,38 @@ function onContextMenuDelete() {
   const obj = contextMenu.object
   closeMenus()
   if (obj) emit('object-delete', obj)
+}
+
+// ---- CMK actions from context menu ----
+
+const ackModalObject = ref<BoardObjectType | null>(null)
+const downtimeModalObject = ref<BoardObjectType | null>(null)
+
+function onContextMenuAck() {
+  const obj = contextMenu.object
+  closeMenus()
+  if (obj) ackModalObject.value = obj
+}
+
+function onContextMenuDowntime() {
+  const obj = contextMenu.object
+  closeMenus()
+  if (obj) downtimeModalObject.value = obj
+}
+
+async function onContextMenuForceCheck() {
+  const obj = contextMenu.object
+  closeMenus()
+  if (!obj || !props.checkmkUrl) return
+  try {
+    if (obj.type === 'service' && obj.host_name && obj.service_description) {
+      await cmkApi.forceCheckService(props.checkmkUrl, obj.host_name, obj.service_description)
+    } else if (obj.host_name) {
+      await cmkApi.forceCheckHost(props.checkmkUrl, obj.host_name)
+    }
+  } catch {
+    // Silently ignore — user will see updated state on next poll
+  }
 }
 
 function closeMenus() {

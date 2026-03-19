@@ -40,6 +40,36 @@
       {{ t('contextMenu.noCheckmkUrl') }}
     </div>
 
+    <!-- CMK actions: ACK / Downtime / Force-check -->
+    <template v-if="checkmkUrl && (object.type === 'host' || object.type === 'service')">
+      <div class="border-t border-[var(--border)] mt-1 pt-1">
+        <button
+          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+          @click="$emit('acknowledge')">
+          <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{{ t('contextMenu.acknowledge') }}</span>
+        </button>
+        <button
+          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+          @click="$emit('scheduleDowntime')">
+          <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{{ t('contextMenu.scheduleDowntime') }}</span>
+        </button>
+        <button
+          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+          @click="$emit('forceCheck')">
+          <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+          <span>{{ t('contextMenu.forceCheck') }}</span>
+        </button>
+      </div>
+    </template>
+
     <div class="border-t border-[var(--border)] mt-1 pt-1">
       <button v-if="showEdit"
         class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
@@ -86,7 +116,7 @@ const props = defineProps<{
   template?: string | null
 }>()
 
-defineEmits<{ close: []; edit: []; delete: [] }>()
+defineEmits<{ close: []; edit: []; delete: []; acknowledge: []; scheduleDowntime: []; forceCheck: [] }>()
 
 const renderedTemplate = computed(() =>
   props.template ? interpolateTemplate(props.template, props.object, props.state) : null,
