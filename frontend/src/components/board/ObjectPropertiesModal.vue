@@ -47,6 +47,18 @@
                 <AutocompleteInput v-model="form.service_description" :suggestions="services" :loading="loadingServices" placeholder="service description" class="flex-1" />
               </div>
             </template>
+            <template v-if="object.type === 'host' || object.type === 'service'">
+              <label class="flex items-center gap-2.5 text-sm text-zinc-400 cursor-pointer select-none">
+                <input type="checkbox" v-model="form.only_hard_states" class="rounded accent-indigo-500 w-4 h-4" />
+                {{ t('boardSettings.onlyHardStates') }}
+              </label>
+            </template>
+            <template v-if="object.type === 'host'">
+              <label class="flex items-center gap-2.5 text-sm text-zinc-400 cursor-pointer select-none">
+                <input type="checkbox" v-model="form.recognize_services" class="rounded accent-indigo-500 w-4 h-4" />
+                {{ t('boardSettings.recognizeServices') }}
+              </label>
+            </template>
             <template v-if="object.type === 'hostgroup' || object.type === 'servicegroup'">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.groupName') }}</label>
@@ -446,6 +458,8 @@ const form = reactive({
     gadget_metric: '',
   },
   weathermap_metric: '',
+  only_hard_states: false,
+  recognize_services: false,
   url: '',
   url_target: '_blank',
   hover_template: '',
@@ -485,6 +499,8 @@ watch(() => props.object, (obj) => {
   form.display.gadget_type = obj.display?.gadget_type ?? 'gauge'
   form.display.gadget_metric = obj.display?.gadget_metric ?? ''
   form.weathermap_metric = obj.weathermap_metric ?? ''
+  form.only_hard_states = obj.only_hard_states ?? false
+  form.recognize_services = obj.recognize_services ?? false
   form.url = obj.url ?? ''
   form.url_target = obj.url_target ?? '_blank'
   form.hover_template = obj.hover_template ?? ''
@@ -592,8 +608,12 @@ async function save() {
       z: form.z,
     }
 
-    if (props.object.type === 'host' || props.object.type === 'service')
+    if (props.object.type === 'host' || props.object.type === 'service') {
       updates.host_name = form.host_name || null
+      updates.only_hard_states = form.only_hard_states
+    }
+    if (props.object.type === 'host')
+      updates.recognize_services = form.recognize_services
     if (props.object.type === 'service')
       updates.service_description = form.service_description || null
     if (props.object.type === 'hostgroup' || props.object.type === 'servicegroup')

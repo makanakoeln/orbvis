@@ -65,6 +65,8 @@ export interface BoardObject {
   cmk_label_name?: string | null
   cmk_label_value?: string | null
   cmk_label_target?: 'hosts' | 'services' | null
+  only_hard_states?: boolean
+  recognize_services?: boolean
   label?: LabelConfig | null
   display?: DisplayConfig | null
   url?: string | null
