@@ -16,7 +16,7 @@
           <span class="w-2 h-2 rounded-full mt-1 shrink-0" :class="stateColor" />
           <div class="min-w-0">
             <div class="font-semibold text-[var(--text)] text-sm leading-tight truncate">{{ displayName }}</div>
-            <div class="text-xs text-zinc-500 mt-0.5">{{ object.type }}</div>
+            <div class="text-xs text-[var(--text-muted)] mt-0.5">{{ object.type }}</div>
           </div>
         </div>
 
@@ -27,21 +27,21 @@
 
         <!-- Output -->
         <div v-if="state?.output"
-          class="text-xs text-zinc-500 mt-2 leading-snug line-clamp-3 break-words">
+          class="text-xs text-[var(--text-muted)] mt-2 leading-snug line-clamp-3 break-words">
           {{ state.output }}
         </div>
 
         <!-- Badges -->
         <div v-if="state?.acknowledged || state?.in_downtime" class="flex gap-1.5 mt-2.5">
           <span v-if="state.acknowledged"
-            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/25">
+            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/20 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/40 dark:ring-amber-500/25">
             <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
             ACK
           </span>
           <span v-if="state.in_downtime"
-            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/25">
+            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/20 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 ring-1 ring-blue-500/40 dark:ring-blue-500/25">
             <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
             </svg>
@@ -52,7 +52,7 @@
         <!-- Sparkline trend chart -->
         <div v-if="sparkData.length > 1"
           class="mt-3 pt-2 border-t border-[var(--border)]">
-          <div class="text-[10px] text-zinc-500 mb-1 uppercase tracking-wide font-medium">Trend</div>
+          <div class="text-[10px] text-[var(--text-muted)] mb-1 uppercase tracking-wide font-medium">Trend</div>
           <svg ref="sparkSvgRef" width="120" height="40" class="w-full" style="overflow: visible" />
         </div>
       </template>
@@ -101,11 +101,11 @@ const STATE_BG: Record<string, string> = {
   PENDING: 'bg-zinc-500',
 }
 const STATE_TEXT: Record<string, string> = {
-  UP: 'text-green-400', OK: 'text-green-400',
-  DOWN: 'text-red-400', CRITICAL: 'text-red-400',
-  UNREACHABLE: 'text-orange-400', UNKNOWN: 'text-orange-400',
-  WARNING: 'text-[#ffd000]',
-  PENDING: 'text-zinc-500',
+  UP: 'text-green-600 dark:text-green-400', OK: 'text-green-600 dark:text-green-400',
+  DOWN: 'text-red-600 dark:text-red-400', CRITICAL: 'text-red-600 dark:text-red-400',
+  UNREACHABLE: 'text-orange-600 dark:text-orange-400', UNKNOWN: 'text-orange-600 dark:text-orange-400',
+  WARNING: 'text-amber-600 dark:text-[#ffd000]',
+  PENDING: 'text-[var(--text-muted)]',
 }
 
 const stateColor = computed(() => STATE_BG[props.state?.state ?? 'PENDING'] ?? 'bg-zinc-500')
