@@ -95,17 +95,23 @@
       <!-- Acknowledged badge -->
       <span
         v-if="state?.acknowledged"
-        class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 text-zinc-900 flex items-center justify-center leading-none shadow-sm"
+        class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-400 text-zinc-900 flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
         title="Acknowledged"
-        style="font-size: 8px; font-weight: 900"
-      >✓</span>
+      >
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+      </span>
       <!-- Downtime badge -->
       <span
         v-if="state?.in_downtime"
-        class="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-blue-400 text-zinc-900 flex items-center justify-center leading-none shadow-sm"
+        class="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
         title="In downtime"
-        style="font-size: 8px; font-weight: 900"
-      >⏸</span>
+      >
+        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+        </svg>
+      </span>
     </div>
     <!-- Label -->
     <div
