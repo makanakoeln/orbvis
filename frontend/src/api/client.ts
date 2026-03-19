@@ -294,4 +294,106 @@ export const settingsApi = {
     request('/settings', { method: 'PUT', body: JSON.stringify(data) }, token),
 }
 
+// ---- Checkmk REST API (direct browser → CMK, same-origin session) ----
+
+async function cmkRequest(baseUrl: string, path: string, body?: unknown): Promise<void> {
+  // baseUrl e.g. "http://host/site" → API at "http://host/site/check_mk/api/1.0"
+  const base = baseUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
+  const url = `${base}/check_mk/api/1.0${path}`
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null)
+    const msg = detail?.detail ?? detail?.title ?? `HTTP ${response.status}`
+    throw new Error(typeof msg === 'string' ? msg : `HTTP ${response.status}`)
+  }
+}
+
+export const cmkApi = {
+  acknowledgeHost(
+    baseUrl: string,
+    hostname: string,
+    comment: string,
+    sticky: boolean,
+    notify: boolean,
+    persistent: boolean,
+  ): Promise<void> {
+    return cmkRequest(baseUrl, '/domain-types/acknowledge_host_related_problem/collections/host', {
+      acknowledge_type: 'host',
+      host_name: hostname,
+      comment,
+      sticky,
+      notify,
+      persistent,
+    })
+  },
+
+  acknowledgeService(
+    baseUrl: string,
+    hostname: string,
+    serviceDescription: string,
+    comment: string,
+    sticky: boolean,
+    notify: boolean,
+    persistent: boolean,
+  ): Promise<void> {
+    return cmkRequest(baseUrl, '/domain-types/acknowledge_service_related_problem/collections/service', {
+      acknowledge_type: 'service',
+      host_name: hostname,
+      service_description: serviceDescription,
+      comment,
+      sticky,
+      notify,
+      persistent,
+    })
+  },
+
+  downtimeHost(
+    baseUrl: string,
+    hostname: string,
+    startTime: string,
+    endTime: string,
+    comment: string,
+  ): Promise<void> {
+    return cmkRequest(baseUrl, '/domain-types/downtime/collections/host', {
+      downtime_type: 'host',
+      host_name: hostname,
+      start_time: startTime,
+      end_time: endTime,
+      comment,
+    })
+  },
+
+  downtimeService(
+    baseUrl: string,
+    hostname: string,
+    serviceDescription: string,
+    startTime: string,
+    endTime: string,
+    comment: string,
+  ): Promise<void> {
+    return cmkRequest(baseUrl, '/domain-types/downtime/collections/service', {
+      downtime_type: 'service',
+      host_name: hostname,
+      service_description: serviceDescription,
+      start_time: startTime,
+      end_time: endTime,
+      comment,
+    })
+  },
+
+  forceCheckHost(baseUrl: string, hostname: string): Promise<void> {
+    return cmkRequest(baseUrl, `/objects/host/${encodeURIComponent(hostname)}/actions/reschedule-active-checks/invoke`, { force: true })
+  },
+
+  forceCheckService(baseUrl: string, hostname: string, serviceDescription: string): Promise<void> {
+    const id = `${encodeURIComponent(hostname)}~${encodeURIComponent(serviceDescription)}`
+    return cmkRequest(baseUrl, `/objects/service/${id}/actions/reschedule-active-checks/invoke`, { force: true })
+  },
+}
+
 export { ApiError }
