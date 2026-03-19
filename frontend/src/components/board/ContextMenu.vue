@@ -6,7 +6,7 @@
     <!-- Header -->
     <div class="px-3.5 py-2 border-b border-[var(--border)] mb-1">
       <p class="text-xs font-semibold text-[var(--text)] truncate max-w-52">{{ displayName }}</p>
-      <p class="text-[10px] text-zinc-500 mt-0.5 uppercase tracking-wide">{{ object.type }}</p>
+      <p class="text-[10px] text-[var(--text-muted)] mt-0.5 uppercase tracking-wide">{{ object.type }}</p>
     </div>
 
     <!-- Custom template block -->
@@ -14,29 +14,29 @@
     <div v-if="renderedTemplate" class="px-3.5 py-2 text-xs text-[var(--text)] border-b border-[var(--border)] mb-1" v-html="renderedTemplate" />
 
     <a v-if="hostUrl" :href="hostUrl" target="_blank"
-      class="flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors">
-      <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors">
+      <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
       </svg>
       <span>{{ t('contextMenu.hostInCheckmk') }}</span>
     </a>
     <a v-if="serviceUrl" :href="serviceUrl" target="_blank"
-      class="flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors">
-      <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors">
+      <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
       </svg>
       <span>{{ t('contextMenu.serviceInCheckmk') }}</span>
     </a>
     <a v-if="groupUrl" :href="groupUrl" target="_blank"
-      class="flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors">
-      <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors">
+      <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
       </svg>
       <span>{{ t('contextMenu.groupInCheckmk') }}</span>
     </a>
 
     <div v-if="!hostUrl && !serviceUrl && !groupUrl && !checkmkUrl"
-      class="px-3.5 py-2 text-xs text-zinc-600 italic">
+      class="px-3.5 py-2 text-xs text-[var(--text-muted)] italic">
       {{ t('contextMenu.noCheckmkUrl') }}
     </div>
 
@@ -44,25 +44,25 @@
     <template v-if="checkmkUrl && (object.type === 'host' || object.type === 'service')">
       <div class="border-t border-[var(--border)] mt-1 pt-1">
         <button v-if="isProblematic"
-          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
           @click="$emit('acknowledge')">
-          <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>{{ t('contextMenu.acknowledge') }}</span>
         </button>
         <button
-          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
           @click="$emit('scheduleDowntime')">
-          <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>{{ t('contextMenu.scheduleDowntime') }}</span>
         </button>
         <button
-          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
           @click="$emit('forceCheck')">
-          <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
           </svg>
           <span>{{ t('contextMenu.forceCheck') }}</span>
@@ -72,9 +72,9 @@
 
     <div class="border-t border-[var(--border)] mt-1 pt-1">
       <button v-if="showEdit"
-        class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+        class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
         @click="$emit('edit')">
-        <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
         </svg>
         {{ t('contextMenu.editProperties') }}
@@ -87,7 +87,7 @@
         </svg>
         {{ t('contextMenu.delete') }}
       </button>
-      <button class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-colors"
+      <button class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
         @click="$emit('close')">
         <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />

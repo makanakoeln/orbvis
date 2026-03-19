@@ -4,21 +4,21 @@
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('close')" />
       <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl p-6 w-[26rem] space-y-4">
         <h3 class="text-base font-bold text-[var(--text)]">{{ t('downtime.title') }}</h3>
-        <p class="text-xs text-zinc-500 -mt-2">{{ displayName }}</p>
+        <p class="text-xs text-[var(--text-muted)] -mt-2">{{ displayName }}</p>
 
         <div class="space-y-3">
           <div>
-            <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">{{ t('downtime.startTime') }}</label>
+            <label class="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">{{ t('downtime.startTime') }}</label>
             <input v-model="startTime" type="datetime-local"
               class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
-            <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">{{ t('downtime.endTime') }}</label>
+            <label class="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">{{ t('downtime.endTime') }}</label>
             <input v-model="endTime" type="datetime-local"
               class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
-            <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">{{ t('downtime.comment') }}</label>
+            <label class="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">{{ t('downtime.comment') }}</label>
             <input v-model="comment"
               class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               :placeholder="t('downtime.comment') + '…'"
@@ -31,7 +31,7 @@
 
         <div class="flex gap-3 justify-end pt-1 border-t border-[var(--border)]">
           <button @click="$emit('close')"
-            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
+            class="px-4 py-2 rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
             {{ t('common.cancel') }}
           </button>
           <button @click="submit" :disabled="submitting || !comment.trim()"
