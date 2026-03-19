@@ -322,7 +322,7 @@ export const cmkApi = {
     notify: boolean,
     persistent: boolean,
   ): Promise<void> {
-    return cmkRequest(baseUrl, '/domain-types/acknowledge_host_related_problem/collections/host', {
+    return cmkRequest(baseUrl, '/domain-types/acknowledge/collections/host', {
       acknowledge_type: 'host',
       host_name: hostname,
       comment,
@@ -341,7 +341,7 @@ export const cmkApi = {
     notify: boolean,
     persistent: boolean,
   ): Promise<void> {
-    return cmkRequest(baseUrl, '/domain-types/acknowledge_service_related_problem/collections/service', {
+    return cmkRequest(baseUrl, '/domain-types/acknowledge/collections/service', {
       acknowledge_type: 'service',
       host_name: hostname,
       service_description: serviceDescription,
@@ -379,7 +379,7 @@ export const cmkApi = {
     return cmkRequest(baseUrl, '/domain-types/downtime/collections/service', {
       downtime_type: 'service',
       host_name: hostname,
-      service_description: serviceDescription,
+      service_descriptions: [serviceDescription],
       start_time: startTime,
       end_time: endTime,
       comment,
