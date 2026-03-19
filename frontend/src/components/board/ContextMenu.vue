@@ -43,7 +43,7 @@
     <!-- CMK actions: ACK / Downtime / Force-check -->
     <template v-if="checkmkUrl && (object.type === 'host' || object.type === 'service')">
       <div class="border-t border-[var(--border)] mt-1 pt-1">
-        <button
+        <button v-if="isProblematic"
           class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-zinc-300 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
           @click="$emit('acknowledge')">
           <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -120,6 +120,12 @@ defineEmits<{ close: []; edit: []; delete: []; acknowledge: []; scheduleDowntime
 
 const renderedTemplate = computed(() =>
   props.template ? interpolateTemplate(props.template, props.object, props.state) : null,
+)
+
+// ACK is only meaningful for problem states
+const _OK_STATES = new Set(['UP', 'OK', 'PENDING'])
+const isProblematic = computed(() =>
+  props.state !== undefined && !_OK_STATES.has(props.state.state),
 )
 
 const displayName = computed(() => {

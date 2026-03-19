@@ -303,7 +303,7 @@ async function cmkRequest(baseUrl: string, path: string, body?: unknown): Promis
   const response = await fetch(url, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
   if (!response.ok) {
