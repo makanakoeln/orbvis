@@ -62,6 +62,12 @@
                 </svg>
               </div>
             </div>
+            <p class="text-xs text-zinc-500">
+              <template v-if="form.view_type === 'static'">{{ t('board.boardTypeStaticDesc') }}</template>
+              <template v-else-if="form.view_type === 'worldmap'">{{ t('board.boardTypeGeoBoardDesc') }}</template>
+              <template v-else-if="form.view_type === 'automap'">{{ t('board.boardTypeFlowBoardDesc') }}</template>
+              <template v-else-if="form.view_type === 'radar'">{{ t('board.boardTypeRadarDesc') }}</template>
+            </p>
           </div>
           <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
             <button type="button" @click="$emit('close')"
