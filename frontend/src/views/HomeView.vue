@@ -368,7 +368,7 @@
       <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
     </svg>
     <span class="text-sm font-medium">{{ t('admin.importBoard') }}</span>
-    <input type="file" accept=".json,application/json" class="hidden" @change="importBoard" />
+    <input type="file" accept=".json,.cfg,application/json" class="hidden" @change="importBoard" />
   </label>
   <CreateBoardModal v-if="showCreate" @close="showCreate = false" @created="onCreated" />
   <OnboardingTour
@@ -422,16 +422,32 @@ async function importBoard(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   try {
-    const text = await file.text()
-    const data: BoardConfig = JSON.parse(text)
-    try {
-      await boardsApi.importBoard(data, auth.accessToken!, false)
-    } catch (e: unknown) {
-      if (e instanceof Error && e.message.includes('already exists')) {
-        if (!confirm(t('admin.importOverwrite', { name: data.name }))) return
-        await boardsApi.importBoard(data, auth.accessToken!, true)
-      } else {
-        throw e
+    if (file.name.toLowerCase().endsWith('.cfg')) {
+      // NagVis .cfg import
+      try {
+        await boardsApi.importCfg(file, auth.accessToken!, false)
+      } catch (e: unknown) {
+        if (e instanceof Error && e.message.includes('already exists')) {
+          const name = file.name.replace(/\.cfg$/i, '')
+          if (!confirm(t('admin.importOverwrite', { name }))) return
+          await boardsApi.importCfg(file, auth.accessToken!, true)
+        } else {
+          throw e
+        }
+      }
+    } else {
+      // OrbVis JSON import
+      const text = await file.text()
+      const data: BoardConfig = JSON.parse(text)
+      try {
+        await boardsApi.importBoard(data, auth.accessToken!, false)
+      } catch (e: unknown) {
+        if (e instanceof Error && e.message.includes('already exists')) {
+          if (!confirm(t('admin.importOverwrite', { name: data.name }))) return
+          await boardsApi.importBoard(data, auth.accessToken!, true)
+        } else {
+          throw e
+        }
       }
     }
     await boardsStore.fetchBoards()

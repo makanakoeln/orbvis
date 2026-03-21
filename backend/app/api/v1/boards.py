@@ -18,6 +18,7 @@ from app.models.role import Role
 from app.models.user import User
 from app.schemas.board import BoardClone, BoardConfig, BoardCreate, BoardObject, BoardPermissionsRead, BoardRead, BoardUpdate
 from app.services import board_service
+from app.services.cfg_parser import cfg_to_board
 
 router = APIRouter()
 
@@ -122,6 +123,24 @@ async def clone_board(
 async def import_board(
     data: dict, overwrite: bool = False, _: User = Depends(require_admin)
 ) -> BoardConfig:
+    try:
+        return board_service.import_board(data, overwrite=overwrite)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+
+@router.post("/import/cfg", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
+async def import_cfg(
+    file: UploadFile = File(...),
+    overwrite: bool = False,
+    _: User = Depends(require_admin),
+) -> BoardConfig:
+    """Import a NagVis .cfg map file and convert it to an OrbVis board."""
+    if not file.filename or not file.filename.lower().endswith(".cfg"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only .cfg files are accepted")
+    content = (await file.read()).decode("utf-8", errors="replace")
+    map_name = Path(file.filename).stem
+    data = cfg_to_board(content, map_name)
     try:
         return board_service.import_board(data, overwrite=overwrite)
     except ValueError as exc:

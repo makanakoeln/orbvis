@@ -157,6 +157,22 @@ export const boardsApi = {
   importBoard: (data: BoardConfig, token: string, overwrite = false): Promise<BoardConfig> =>
     request(`/boards/import?overwrite=${overwrite}`, { method: 'POST', body: JSON.stringify(data) }, token),
 
+  importCfg: async (file: File, token: string, overwrite = false): Promise<BoardConfig> => {
+    const form = new FormData()
+    form.append('file', file)
+    const BASE_URL = `${import.meta.env.BASE_URL}api/v1`
+    const res = await fetch(`${BASE_URL}/boards/import/cfg?overwrite=${overwrite}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }))
+      throw new Error(err.detail ?? res.statusText)
+    }
+    return res.json()
+  },
+
   exportBoard: async (name: string, token: string): Promise<void> => {
     const cfg = await request<BoardConfig>(`/boards/${name}`, {}, token)
     const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' })
