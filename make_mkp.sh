@@ -5,7 +5,7 @@
 #   ./make_mkp.sh [--version 1.2.3] [--out /path/to/output]
 #
 # Creates a self-contained .mkp that can be installed via:
-#   mkp install orbvis-<version>.mkp
+#   mkp add orbvis-<version>.mkp && mkp enable orbvis
 #
 # After MKP installation, run once as the site user:
 #   su - <SITE> -c "orbvis-setup"
@@ -328,35 +328,30 @@ ok "orbvis-setup generated"
 # ---------------------------------------------------------------------------
 step "Building file manifest"
 
-# Collect paths relative to each category base
+# Paths relative to each category base directory
 mapfile -t WEB_FILES < <(find "$TMPDIR/web" -type f | sed "s|$TMPDIR/web/||" | sort)
 mapfile -t LIB_FILES < <(find "$TMPDIR/lib" -type f | sed "s|$TMPDIR/lib/||" | sort)
 BIN_FILES=("orbvis-setup")
 
-# Format as Python list entries (single-quoted strings)
-py_list() { local IFS=$'\n'; printf "        '%s',\n" "$@"; }
-
-ok "Manifest: ${#WEB_FILES[@]} web, ${#LIB_FILES[@]} lib, ${#BIN_FILES[@]} bin files"
+ok "Manifest: ${#BIN_FILES[@]} bin, ${#WEB_FILES[@]} web, ${#LIB_FILES[@]} lib files"
 
 # ---------------------------------------------------------------------------
-# 5. Write info in Python dict format (required by ast.literal_eval in CMK)
+# 5. Write info (Python dict) + info.json — both required by CMK
 # ---------------------------------------------------------------------------
-step "Writing MKP info (Python dict format)"
+step "Writing MKP manifests"
+
+# Build Python list literal from an array: 'a', 'b', ...
+py_list() { printf "'%s', " "$@"; }
+
 {
   echo "{"
   echo "  'author': 'OrbVis Project',"
   echo "  'description': 'OrbVis monitoring visualization.\\n\\nAfter install run: su - <SITE> -c orbvis-setup',"
   echo "  'download_url': '',"
   echo "  'files': {"
-  echo "    'bin': ["
-  py_list "${BIN_FILES[@]}"
-  echo "    ],"
-  echo "    'lib': ["
-  py_list "${LIB_FILES[@]}"
-  echo "    ],"
-  echo "    'web': ["
-  py_list "${WEB_FILES[@]}"
-  echo "    ],"
+  echo "    'bin': [$(py_list "${BIN_FILES[@]}")],"
+  echo "    'lib': [$(py_list "${LIB_FILES[@]}")],"
+  echo "    'web': [$(py_list "${WEB_FILES[@]}")],"
   echo "  },"
   echo "  'name': 'orbvis',"
   echo "  'title': 'OrbVis - Network Monitoring Visualization',"
@@ -367,17 +362,41 @@ step "Writing MKP info (Python dict format)"
   echo "}"
 } > "$TMPDIR/info"
 
-# Verify it parses
 python3 -c "import ast; ast.literal_eval(open('$TMPDIR/info').read())" \
-  && ok "info written and validated" \
   || die "info file failed ast.literal_eval validation"
 
+# Generate info.json from info (CMK reads both)
+python3 - "$TMPDIR/info" "$TMPDIR/info.json" << 'PY'
+import ast, json, sys
+data = ast.literal_eval(open(sys.argv[1]).read())
+# Flatten files values to lists of strings
+data["files"] = {k: [str(f) for f in v] for k, v in data["files"].items()}
+open(sys.argv[2], "w").write(json.dumps(data))
+PY
+
+ok "Manifests written and validated"
+
 # ---------------------------------------------------------------------------
-# 6. Package into .mkp (tar.gz)
+# 6. Create per-category inner tars, then assemble .mkp
+#
+# MKP structure (as required by cmk.mkp_tool._mkp):
+#   orbvis-X.mkp  (outer: tar.gz)
+#   ├── info          – Python dict manifest
+#   ├── info.json     – JSON manifest
+#   ├── bin.tar       – uncompressed tar, extracted to local/bin/
+#   ├── web.tar       – uncompressed tar, extracted to local/share/check_mk/web/
+#   └── lib.tar       – uncompressed tar, extracted to local/lib/
 # ---------------------------------------------------------------------------
+step "Creating per-category inner tars"
+
+tar cf "$TMPDIR/bin.tar" --dereference -C "$TMPDIR/bin" "${BIN_FILES[@]}"
+tar cf "$TMPDIR/web.tar" --dereference -C "$TMPDIR/web" "${WEB_FILES[@]}"
+tar cf "$TMPDIR/lib.tar" --dereference -C "$TMPDIR/lib" "${LIB_FILES[@]}"
+
+ok "Inner tars created (bin.tar, web.tar, lib.tar)"
+
 step "Creating ${MKP_NAME}"
-cd "$TMPDIR"
-tar czf "$MKP_OUT" --transform='s|^\./||' .
+tar czf "$MKP_OUT" -C "$TMPDIR" info info.json bin.tar web.tar lib.tar
 ok "Created: $MKP_OUT"
 
 # ---------------------------------------------------------------------------
@@ -392,7 +411,7 @@ echo ""
 echo "  Package: $MKP_OUT"
 echo ""
 echo "  Install via Checkmk GUI:  Setup → Extension Packages → Upload"
-echo "  Install via CLI:          mkp install $MKP_NAME"
+echo "  Install via CLI:          mkp add $MKP_NAME && mkp enable orbvis"
 echo ""
 echo "  After installation, run once as the site user:"
 echo "    su - <SITE> -c 'orbvis-setup'"
