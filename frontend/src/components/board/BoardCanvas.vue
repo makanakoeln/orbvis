@@ -49,6 +49,7 @@
       @pointerdown="onObjectPointerDown($event, obj)"
       @dragstart.prevent
       @click.stop="onObjectClick(obj, $event)"
+      @dblclick.stop="emit('object-dblclick', obj)"
       @contextmenu.prevent="onObjectContextMenu($event, obj)"
     >
       <BoardObject
@@ -83,6 +84,7 @@
       :template="resolveTemplate(contextMenu.object.context_template, props.config.context_template, settingsStore.settings.context_template)"
       @close="closeMenus"
       @edit="onContextMenuEdit"
+      @duplicate="onContextMenuDuplicate"
       @delete="onContextMenuDelete"
       @acknowledge="onContextMenuAck"
       @schedule-downtime="onContextMenuDowntime"
@@ -140,7 +142,9 @@ const emit = defineEmits<{
   'object-drag-end': [id: string, x: number, y: number]
   'object-click': [obj: BoardObjectType, event?: MouseEvent]
   'object-contextmenu': [obj: BoardObjectType, anchor: { left: number; top: number; right: number; bottom: number } | null]
+  'object-dblclick': [obj: BoardObjectType]
   'object-delete': [obj: BoardObjectType]
+  'object-duplicate': [obj: BoardObjectType]
   'line-drag-start': [event: MouseEvent, obj: BoardObjectType, mode: 'move' | 'start' | 'end']
   'canvas-click': [event: MouseEvent]
 }>()
@@ -408,6 +412,12 @@ function onContextMenuDelete() {
   const obj = contextMenu.object
   closeMenus()
   if (obj) emit('object-delete', obj)
+}
+
+function onContextMenuDuplicate() {
+  const obj = contextMenu.object
+  closeMenus()
+  if (obj) emit('object-duplicate', obj)
 }
 
 // ---- CMK actions from context menu ----
