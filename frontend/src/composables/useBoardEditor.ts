@@ -211,7 +211,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     placing.value = false
     const s = useSettingsStore().settings
     // Use crypto.randomUUID() to avoid collisions from rapid or concurrent placements.
-    const id = `${draft.type}_${crypto.randomUUID()}`
+    const id = `${draft.type}_${crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36))}`
     const obj: BoardObject = {
       id, type: draft.type,
       x: _snap(Math.round(x)), y: _snap(Math.round(y)),
@@ -248,7 +248,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     if (!placing.value || !draft.type) return
     placing.value = false
     const s = useSettingsStore().settings
-    const id = `${draft.type}_${crypto.randomUUID()}`
+    const id = `${draft.type}_${crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36))}`
     const obj: BoardObject = {
       id, type: draft.type,
       x: 0, y: 0,
@@ -327,7 +327,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     if (!id || !boardsStore.currentBoard) return
     const src = boardsStore.currentBoard.objects.find(o => o.id === id)
     if (!src) return
-    const newId = `${src.type}_${crypto.randomUUID()}`
+    const newId = `${src.type}_${crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36))}`
     const clone: BoardObject = {
       ...JSON.parse(JSON.stringify(src)),
       id: newId,
