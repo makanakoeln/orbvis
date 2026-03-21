@@ -1,22 +1,13 @@
 #!/usr/bin/env python3
 """
-NagVis .cfg to JSON importer.
+NagVis .cfg to OrbVis JSON importer.
 
 Parses legacy NagVis 1.x map configuration files and converts them
-to the OrbVis JSON format.
+to the OrbVis v2 board JSON format.
 
 Usage:
     python cfg_importer.py <input.cfg> [<output_dir>]
     python cfg_importer.py --batch <maps_dir> <output_dir>
-
-Supports:
-    - define global { ... }
-    - define host/service/hostgroup/servicegroup/map/shape/line/textbox { ... }
-    - Coordinate parsing (absolute integers and relative "100%50" references)
-    - Label styling: label_x, label_y, label_size, label_color, label_background
-    - Link fields: url, url_target
-    - Textbox content: text field
-    - Batch import of entire etc/maps/ directories
 """
 
 from __future__ import annotations
@@ -31,6 +22,30 @@ from typing import Any
 
 
 # ---------------------------------------------------------------------------
+# NagVis line_type integer → OrbVis line_style string
+# ---------------------------------------------------------------------------
+LINE_TYPE_MAP: dict[int, str] = {
+    10: "plain",
+    11: "arrow_end",
+    12: "arrow_start",
+    13: "arrow_both",
+    14: "dashed",
+    20: "weathermap",
+}
+
+# Rough icon_size from NagVis iconset name
+ICONSET_SIZE: dict[str, int] = {
+    "std_big":    30,
+    "std_medium": 24,
+    "std":        22,
+    "std_small":  16,
+}
+
+# NagVis url_target values that reference the old CMK frameset — remap to _blank
+_FRAMESET_TARGETS = {"main", "frames", "main_window"}
+
+
+# ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
 
@@ -41,19 +56,16 @@ class CfgBlock:
 
 
 def parse_cfg_file(path: Path) -> list[CfgBlock]:
-    """Parse a NagVis .cfg file into a list of blocks."""
+    """Parse a NagVis .cfg file into a list of define blocks."""
     text = path.read_text(encoding="utf-8", errors="replace")
-    blocks: list[CfgBlock] = []
 
-    # Remove comments: # only at start of line or after whitespace (not inside values like #rrggbb)
+    # Strip line comments (but NOT inline # inside colour values like #rrggbb).
+    # Rule: a standalone # at the start of a line is a comment; semicolons too.
     text = re.sub(r"(?m)^\s*#[^\n]*", "", text)
-    text = re.sub(r"\s+#[^\n]*", "", text)
-    text = re.sub(r";[^\n]*", "", text)
+    text = re.sub(r"(?m)^\s*;[^\n]*", "", text)
 
-    # Match: define <type> { ... }
-    pattern = re.compile(
-        r"define\s+(\w+)\s*\{([^}]*)\}", re.DOTALL
-    )
+    blocks: list[CfgBlock] = []
+    pattern = re.compile(r"define\s+(\w+)\s*\{([^}]*)\}", re.DOTALL)
 
     for match in pattern.finditer(text):
         block_type = match.group(1).strip().lower()
@@ -64,7 +76,6 @@ def parse_cfg_file(path: Path) -> list[CfgBlock]:
             line = line.strip()
             if not line:
                 continue
-            # key=value or key = value
             kv = re.match(r"(\w+)\s*=\s*(.*)", line)
             if kv:
                 props[kv.group(1).strip()] = kv.group(2).strip()
@@ -75,158 +86,250 @@ def parse_cfg_file(path: Path) -> list[CfgBlock]:
 
 
 # ---------------------------------------------------------------------------
-# Converter
+# Conversion helpers
 # ---------------------------------------------------------------------------
 
-def _parse_int(value: str, default: int = 0) -> int:
+def _int(value: str | None, default: int = 0) -> int:
     try:
-        return int(value)
+        return int(value)  # type: ignore[arg-type]
     except (ValueError, TypeError):
         return default
 
 
-def _parse_coord(value: str) -> tuple[int, str | None]:
-    """Parse a NagVis coordinate value.
+def _bool(value: str | None, default: bool = False) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in ("1", "true", "yes")
 
-    Returns (resolved_int, original_string_or_None).
-    Absolute integers are returned as-is with no original string.
-    Relative references like "100%50" (offset +50 from object 100) are stored
-    in extra for reference; the numeric offset is used as the resolved value.
+
+def _parse_coord(value: str) -> tuple[int, str | None]:
+    """Return (resolved_int, original_if_relative).
+
+    NagVis absolute coord  → int, None
+    NagVis relative "ref%offset" → offset as int, original string
     """
     v = value.strip()
     if v.lstrip("-").isdigit():
         return int(v), None
-    # Relative format: <ref_id>%<offset>  e.g. "123%-10"
     m = re.match(r"(-?\d+)%(-?\d+)", v)
     if m:
-        return int(m.group(2)), v  # use offset as best-effort position
+        return int(m.group(2)), v
     return 0, v
 
 
-def _parse_bool(value: str, default: bool = False) -> bool:
-    return value.lower() in ("1", "true", "yes") if value else default
+def _parse_line_coords(p: dict[str, str]) -> tuple[int, int, int, int]:
+    """Parse NagVis line coords.
+
+    NagVis encodes both endpoints in x and y as comma-separated values:
+        x=x1,x2   y=y1,y2
+
+    Falls back to separate x2/y2 keys (non-standard but tolerated).
+    """
+    raw_x = p.get("x", "0")
+    raw_y = p.get("y", "0")
+
+    if "," in raw_x:
+        x1_s, x2_s = raw_x.split(",", 1)
+        x, _ = _parse_coord(x1_s.strip())
+        x2, _ = _parse_coord(x2_s.strip())
+    else:
+        x, _ = _parse_coord(raw_x)
+        x2, _ = _parse_coord(p.get("x2", "0"))
+
+    if "," in raw_y:
+        y1_s, y2_s = raw_y.split(",", 1)
+        y, _ = _parse_coord(y1_s.strip())
+        y2, _ = _parse_coord(y2_s.strip())
+    else:
+        y, _ = _parse_coord(raw_y)
+        y2, _ = _parse_coord(p.get("y2", "0"))
+
+    return x, y, x2, y2
 
 
-def blocks_to_map_json(blocks: list[CfgBlock], map_name: str) -> dict:
-    """Convert parsed blocks into the Orbvis map JSON structure."""
-    globals_props: dict[str, Any] = {
-        "alias": map_name,
-        "background_image": None,
-        "icon_size": 30,
-        "backend_id": "live_1",
+def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
+    """Build a LabelConfig dict from NagVis properties."""
+    return {
+        "show":       _bool(p.get("label_show"), show_default),
+        "text":       p.get("label_text") or None,
+        "x":          _int(p.get("label_x")),
+        "y":          _int(p.get("label_y"), 34),
+        "size":       _int(p.get("label_size"), 11),
+        "color":      p.get("label_color", "#ffffff"),
+        "background": p.get("label_background", "transparent"),
     }
-    objects: list[dict] = []
-    obj_counter = 0
+
+
+def _display(p: dict[str, str]) -> dict[str, Any]:
+    """Build a DisplayConfig dict from NagVis properties."""
+    mode = p.get("view_type", "icon")
+    if mode not in ("icon", "text", "gadget"):
+        mode = "icon"
+    return {"mode": mode}
+
+
+def _url_target(raw: str | None) -> str:
+    if raw and raw in _FRAMESET_TARGETS:
+        return "_blank"
+    return raw or "_blank"
+
+
+# ---------------------------------------------------------------------------
+# Main converter
+# ---------------------------------------------------------------------------
+
+def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any]:
+    """Convert parsed NagVis blocks into an OrbVis v2 board JSON dict."""
+
+    # Board-level defaults (populated from define global)
+    board: dict[str, Any] = {
+        "name": map_name,
+        "alias": map_name,
+        "readonly": False,
+        "backend_id": "live_1",
+        "icon_size": 22,
+        "rotation_interval": 0,
+        "hover_template": None,
+        "context_template": None,
+        "background_image": None,
+        "view": {"type": "static"},
+        "objects": [],
+    }
+
+    objects: list[dict[str, Any]] = []
+    counter = 0
 
     for block in blocks:
         p = block.properties
 
+        # ── global ──────────────────────────────────────────────────────────
         if block.block_type == "global":
             if "alias" in p:
-                globals_props["alias"] = p["alias"]
+                board["alias"] = p["alias"]
             if "map_image" in p:
-                globals_props["background_image"] = p["map_image"]
-            if "iconset" in p:
-                pass  # iconset not directly mapped
+                board["background_image"] = p["map_image"]
             if "backend_id" in p:
-                globals_props["backend_id"] = p["backend_id"]
+                board["backend_id"] = p["backend_id"]
+            if "iconset" in p:
+                board["icon_size"] = ICONSET_SIZE.get(p["iconset"], 22)
             continue
 
-        # Object types
-        obj_type = block.block_type
-        if obj_type not in ("host", "service", "hostgroup", "servicegroup", "map", "shape", "line", "textbox"):
+        # ── skip unknown block types ────────────────────────────────────────
+        if block.block_type not in (
+            "host", "service", "hostgroup", "servicegroup",
+            "map", "shape", "line", "textbox",
+        ):
             continue
 
-        obj_counter += 1
-        obj_id = p.get("object_id", str(obj_counter))
+        counter += 1
+        nagvis_type = block.block_type
+        raw_id = p.get("object_id", str(counter))
 
-        # Parse coordinates (absolute integers or relative "ref%offset" format)
-        x, x_orig = _parse_coord(p.get("x", "0"))
-        y, y_orig = _parse_coord(p.get("y", "0"))
+        # ── line ────────────────────────────────────────────────────────────
+        if nagvis_type == "line":
+            x, y, x2, y2 = _parse_line_coords(p)
+            line_type = _int(p.get("line_type", "10"))
+            line_style = LINE_TYPE_MAP.get(line_type, "plain")
 
-        obj: dict[str, Any] = {
-            "id": obj_id,
-            "type": obj_type,
-            "x": x,
-            "y": y,
-            "view_type": p.get("view_type", "icon"),
-            "label_show": _parse_bool(p.get("label_show", "1"), True),
-            "extra": {},
+            obj: dict[str, Any] = {
+                "id": f"line_{raw_id}",
+                "type": "line",
+                "x": x, "y": y,
+                "z": _int(p.get("z"), 1),
+                "x2": x2, "y2": y2,
+                "line_style": line_style,
+                "label": {"show": False},
+            }
+            # Weathermap lines may reference a service
+            if line_style == "weathermap":
+                if "host_name" in p:
+                    obj["host_name"] = p["host_name"]
+                if "service_description" in p:
+                    obj["service_description"] = p["service_description"]
+                if "weathermap_metric" in p:
+                    obj["weathermap_metric"] = p["weathermap_metric"]
+            objects.append(obj)
+            continue
+
+        # ── shape → image ───────────────────────────────────────────────────
+        if nagvis_type == "shape":
+            x, _ = _parse_coord(p.get("x", "0"))
+            y, _ = _parse_coord(p.get("y", "0"))
+            objects.append({
+                "id": f"image_{raw_id}",
+                "type": "image",
+                "x": x, "y": y,
+                "z": _int(p.get("z"), 1),
+                "image_src": p.get("icon") or None,
+                "label": {"show": False},
+            })
+            continue
+
+        # ── textbox ─────────────────────────────────────────────────────────
+        if nagvis_type == "textbox":
+            x, _ = _parse_coord(p.get("x", "0"))
+            y, _ = _parse_coord(p.get("y", "0"))
+            objects.append({
+                "id": f"textbox_{raw_id}",
+                "type": "textbox",
+                "x": x, "y": y,
+                "z": _int(p.get("z"), 1),
+                "label": {
+                    "show": True,
+                    "text": p.get("text") or None,
+                    "x": 0, "y": 0,
+                    "size": 11,
+                    "color": "#ffffff",
+                    "background": "transparent",
+                },
+            })
+            continue
+
+        # ── monitoring objects (host / service / hostgroup / servicegroup / map) ──
+        x, _ = _parse_coord(p.get("x", "0"))
+        y, _ = _parse_coord(p.get("y", "0"))
+
+        # Map NagVis type to OrbVis type
+        orbvis_type = nagvis_type  # host/service/hostgroup/servicegroup/map all identical
+
+        obj = {
+            "id": f"{orbvis_type}_{raw_id}",
+            "type": orbvis_type,
+            "x": x, "y": y,
+            "z": _int(p.get("z"), 1),
+            "label": _label(p),
+            "display": _display(p),
         }
 
-        # Preserve original relative coordinate strings for reference
-        if x_orig is not None:
-            obj["extra"]["x_orig"] = x_orig
-        if y_orig is not None:
-            obj["extra"]["y_orig"] = y_orig
-
-        # Type-specific fields
-        if obj_type == "host":
+        # Type-specific identity fields
+        if nagvis_type == "host":
             obj["host_name"] = p.get("host_name")
-        elif obj_type == "service":
+            if _bool(p.get("only_hard_states")):
+                obj["only_hard_states"] = True
+            if _bool(p.get("recognize_services")):
+                obj["recognize_services"] = True
+        elif nagvis_type == "service":
             obj["host_name"] = p.get("host_name")
             obj["service_description"] = p.get("service_description")
-        elif obj_type in ("hostgroup", "servicegroup"):
-            obj["group_name"] = p.get("hostgroup_name") or p.get("servicegroup_name")
-        elif obj_type == "map":
+            if _bool(p.get("only_hard_states")):
+                obj["only_hard_states"] = True
+        elif nagvis_type == "hostgroup":
+            obj["group_name"] = p.get("hostgroup_name") or p.get("group_name")
+        elif nagvis_type == "servicegroup":
+            obj["group_name"] = p.get("servicegroup_name") or p.get("group_name")
+        elif nagvis_type == "map":
             obj["map_name"] = p.get("map_name")
-        elif obj_type == "shape":
-            obj["icon"] = p.get("icon")
-        elif obj_type == "line":
-            x2, x2_orig = _parse_coord(p.get("x2", "0"))
-            y2, y2_orig = _parse_coord(p.get("y2", "0"))
-            obj["extra"]["x2"] = x2
-            obj["extra"]["y2"] = y2
-            if x2_orig is not None:
-                obj["extra"]["x2_orig"] = x2_orig
-            if y2_orig is not None:
-                obj["extra"]["y2_orig"] = y2_orig
-            obj["line_type"] = _parse_int(p.get("line_type", "10"))
 
-        if "label_text" in p:
-            obj["label_text"] = p["label_text"]
-
-        # Label styling
-        if "label_x" in p:
-            obj["label_x"] = _parse_int(p["label_x"])
-        if "label_y" in p:
-            obj["label_y"] = _parse_int(p["label_y"])
-        if "label_size" in p:
-            obj["label_size"] = _parse_int(p["label_size"], 11)
-        if "label_color" in p:
-            obj["label_color"] = p["label_color"]
-        if "label_background" in p:
-            obj["label_background"] = p["label_background"]
-
-        # Link fields
+        # Optional link
         if "url" in p:
             obj["url"] = p["url"]
         if "url_target" in p:
-            obj["url_target"] = p["url_target"]
-
-        # Textbox content
-        if obj_type == "textbox" and "text" in p:
-            obj["label_text"] = p["text"]
-
-        # Carry over any unknown properties
-        known_keys = {
-            "object_id", "x", "y", "x2", "y2", "view_type", "label_show", "label_text",
-            "label_x", "label_y", "label_size", "label_color", "label_background",
-            "url", "url_target", "text",
-            "host_name", "service_description", "hostgroup_name", "servicegroup_name",
-            "map_name", "icon", "line_type", "backend_id", "iconset",
-        }
-        for key, value in p.items():
-            if key not in known_keys:
-                obj["extra"][key] = value
+            obj["url_target"] = _url_target(p["url_target"])
 
         objects.append(obj)
 
-    return {
-        "name": map_name,
-        "globals": globals_props,
-        "objects": objects,
-    }
+    board["objects"] = objects
+    return board
 
 
 # ---------------------------------------------------------------------------
@@ -236,19 +339,18 @@ def blocks_to_map_json(blocks: list[CfgBlock], map_name: str) -> dict:
 def convert_file(cfg_path: Path, output_dir: Path) -> Path:
     map_name = cfg_path.stem
     blocks = parse_cfg_file(cfg_path)
-    map_json = blocks_to_map_json(blocks, map_name)
+    board = blocks_to_board_json(blocks, map_name)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     out_path = output_dir / f"{map_name}.json"
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(map_json, f, indent=2, ensure_ascii=False)
+    out_path.write_text(json.dumps(board, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    print(f"✓  {cfg_path.name}  →  {out_path}  ({len(map_json['objects'])} objects)")
+    print(f"✓  {cfg_path.name}  →  {out_path}  ({len(board['objects'])} objects)")
     return out_path
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Import NagVis 1.x .cfg maps to JSON")
+    parser = argparse.ArgumentParser(description="Import NagVis 1.x .cfg maps to OrbVis JSON")
     parser.add_argument("input", help=".cfg file or maps directory (with --batch)")
     parser.add_argument("output", nargs="?", default="./maps", help="Output directory (default: ./maps)")
     parser.add_argument("--batch", action="store_true", help="Import all .cfg files in a directory")
@@ -261,12 +363,12 @@ def main() -> None:
         if not input_path.is_dir():
             print(f"Error: {input_path} is not a directory", file=sys.stderr)
             sys.exit(1)
-        cfg_files = list(input_path.glob("*.cfg"))
+        cfg_files = sorted(input_path.glob("*.cfg"))
         if not cfg_files:
             print(f"No .cfg files found in {input_path}")
             return
         print(f"Importing {len(cfg_files)} map(s) from {input_path}…")
-        for cfg_file in sorted(cfg_files):
+        for cfg_file in cfg_files:
             convert_file(cfg_file, output_dir)
     else:
         if not input_path.is_file():
