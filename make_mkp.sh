@@ -57,33 +57,25 @@ ok "Frontend built"
 # 2. Stage directory structure for MKP
 # ---------------------------------------------------------------------------
 step "Staging MKP structure"
+mkdir -p "$TMPDIR/web/plugins/sidebar" "$TMPDIR/web/plugins/wato" "$TMPDIR/lib/orbvis"
 
 # GUI plugins (CMK 2.3 web/plugins/ layout)
-mkdir -p "$TMPDIR/web/plugins/sidebar"
-mkdir -p "$TMPDIR/web/plugins/wato"
 cp "$SCRIPT_DIR/cmk_plugins_23/orbvis_sidebar.py" "$TMPDIR/web/plugins/sidebar/orbvis_sidebar.py"
 cp "$SCRIPT_DIR/cmk_plugins_23/orbvis_menu.py"    "$TMPDIR/web/plugins/wato/orbvis_menu.py"
 
-# Frontend build (stored in lib/orbvis/htdocs/ inside the MKP)
-# Maps to: $OMD_ROOT/local/lib/orbvis/htdocs/
-mkdir -p "$TMPDIR/lib/orbvis/htdocs"
-cp -r "$SCRIPT_DIR/frontend/dist/." "$TMPDIR/lib/orbvis/htdocs/"
+# Frontend: single tarball → lib/orbvis/htdocs.tar.gz
+# orbvis-setup extracts it to $OMD_ROOT/local/share/orbvis/htdocs/
+tar czf "$TMPDIR/lib/orbvis/htdocs.tar.gz" -C "$SCRIPT_DIR/frontend/dist" .
 
-# Backend Python source (stored in lib/orbvis/server/)
-# Maps to: $OMD_ROOT/local/lib/orbvis/server/
-mkdir -p "$TMPDIR/lib/orbvis/server"
-cp -r "$SCRIPT_DIR/backend/." "$TMPDIR/lib/orbvis/server/"
+# Backend: single tarball → lib/orbvis/server.tar.gz
+tar czf "$TMPDIR/lib/orbvis/server.tar.gz" -C "$SCRIPT_DIR/backend" .
 
-# Demo boards
-mkdir -p "$TMPDIR/lib/orbvis/boards/backgrounds"
-for f in "$SCRIPT_DIR/backend/boards/"demo*.json; do
-  [[ -f "$f" ]] && cp "$f" "$TMPDIR/lib/orbvis/boards/"
-done
-if [[ -f "$SCRIPT_DIR/backend/boards/backgrounds/demo.svg" ]]; then
-  cp "$SCRIPT_DIR/backend/boards/backgrounds/demo.svg" "$TMPDIR/lib/orbvis/boards/backgrounds/"
-fi
+# Demo boards: tarball → lib/orbvis/boards.tar.gz
+tar czf "$TMPDIR/lib/orbvis/boards.tar.gz" \
+  -C "$SCRIPT_DIR/backend" \
+  $(cd "$SCRIPT_DIR/backend" && find boards -name "demo*.json" -o -name "demo.svg" 2>/dev/null | sort)
 
-ok "Files staged"
+ok "Files staged (frontend + backend + boards bundled as tarballs)"
 
 # ---------------------------------------------------------------------------
 # 3. Generate orbvis-setup script
@@ -133,18 +125,26 @@ echo -e "${BOLD}OrbVis Post-Install Setup${RESET}"
 echo "  Site: $SITE  ($ROOT)"
 echo ""
 
-# 1. Frontend: symlink/copy pre-built assets
+# 1. Frontend: extract pre-built tarball
 step "Deploying frontend"
-mkdir -p "$ORBVIS_DIR"
-rm -rf "$HTDOCS_DIR"
-cp -r "$MKP_LIB/htdocs" "$HTDOCS_DIR"
+mkdir -p "$HTDOCS_DIR"
+rm -rf "${HTDOCS_DIR:?}"/*
+tar xzf "$MKP_LIB/htdocs.tar.gz" -C "$HTDOCS_DIR"
 ok "Frontend deployed to $HTDOCS_DIR"
 
-# 2. Demo boards (skip if already present)
+# 2. Backend source: extract tarball
+step "Extracting backend source"
+mkdir -p "$MKP_LIB/server"
+tar xzf "$MKP_LIB/server.tar.gz" -C "$MKP_LIB/server"
+ok "Backend source extracted"
+
+# 3. Demo boards (extract, skip existing files)
 step "Setting up board data"
 mkdir -p "$BOARDS_DIR/backgrounds"
+TMPBOARDS="$(mktemp -d)"
+tar xzf "$MKP_LIB/boards.tar.gz" -C "$TMPBOARDS"
 NEW_BOARDS=0
-for f in "$MKP_LIB/boards/"*.json; do
+for f in "$TMPBOARDS/boards/"*.json 2>/dev/null; do
   [[ -f "$f" ]] || continue
   fname="$(basename "$f")"
   if [[ ! -f "$BOARDS_DIR/$fname" ]]; then
@@ -152,9 +152,9 @@ for f in "$MKP_LIB/boards/"*.json; do
     (( NEW_BOARDS++ )) || true
   fi
 done
-if [[ -f "$MKP_LIB/boards/backgrounds/demo.svg" && ! -f "$BOARDS_DIR/backgrounds/demo.svg" ]]; then
-  cp "$MKP_LIB/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
-fi
+[[ -f "$TMPBOARDS/boards/backgrounds/demo.svg" && ! -f "$BOARDS_DIR/backgrounds/demo.svg" ]] && \
+  cp "$TMPBOARDS/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
+rm -rf "$TMPBOARDS"
 ok "Boards ready ($NEW_BOARDS new demo boards)"
 
 # 3. Python virtualenv + backend
@@ -166,7 +166,7 @@ if [[ ! -d "$VENV_DIR" ]]; then
 fi
 step "Installing backend dependencies"
 "$VENV_DIR/bin/pip" install --quiet --upgrade pip
-"$VENV_DIR/bin/pip" install --quiet -e "$MKP_LIB/server"
+"$VENV_DIR/bin/pip" install --quiet "$MKP_LIB/server"
 ok "Backend installed"
 
 # 4. Configuration
@@ -263,7 +263,7 @@ case "\$1" in
     fi
     echo -n "Starting orbvis..."
     set -a; source "\$ENV_FILE"; set +a
-    cd "$MKP_LIB/server"
+    cd "$MKP_LIB/server"  # extracted by orbvis-setup step 2
     "\$VENV/bin/python3" -m alembic upgrade head >> "\$LOGFILE" 2>&1
     "\$VENV/bin/uvicorn" app.main:app \\
       --host 127.0.0.1 --port \$PORT \\
@@ -328,53 +328,49 @@ ok "orbvis-setup generated"
 # ---------------------------------------------------------------------------
 step "Building file manifest"
 
-WEB_FILES=()
-while IFS= read -r f; do
-  WEB_FILES+=("\"${f#$TMPDIR/web/}\"")
-done < <(find "$TMPDIR/web" -type f | sort)
+# Collect paths relative to each category base
+mapfile -t WEB_FILES < <(find "$TMPDIR/web" -type f | sed "s|$TMPDIR/web/||" | sort)
+mapfile -t LIB_FILES < <(find "$TMPDIR/lib" -type f | sed "s|$TMPDIR/lib/||" | sort)
+BIN_FILES=("orbvis-setup")
 
-LIB_FILES=()
-while IFS= read -r f; do
-  LIB_FILES+=("\"${f#$TMPDIR/lib/}\"")
-done < <(find "$TMPDIR/lib" -type f | sort)
+# Format as Python list entries (single-quoted strings)
+py_list() { local IFS=$'\n'; printf "        '%s',\n" "$@"; }
 
-BIN_FILES=("\"orbvis-setup\"")
-
-web_json="$(IFS=,; echo "${WEB_FILES[*]}" | sed 's/,/,\n      /g')"
-lib_json="$(IFS=,; echo "${LIB_FILES[*]}" | sed 's/,/,\n      /g')"
-bin_json="$(IFS=,; echo "${BIN_FILES[*]}")"
-
-ok "Manifest built (${#WEB_FILES[@]} web, ${#LIB_FILES[@]} lib, ${#BIN_FILES[@]} bin files)"
+ok "Manifest: ${#WEB_FILES[@]} web, ${#LIB_FILES[@]} lib, ${#BIN_FILES[@]} bin files"
 
 # ---------------------------------------------------------------------------
-# 5. Write info JSON
+# 5. Write info in Python dict format (required by ast.literal_eval in CMK)
 # ---------------------------------------------------------------------------
-step "Writing MKP info"
-cat > "$TMPDIR/info" << EOF
+step "Writing MKP info (Python dict format)"
 {
-  "author": "OrbVis Project",
-  "description": "OrbVis - Network monitoring visualization for Checkmk.\n\nAfter installation run once as the site user:\n  su - <SITE> -c \"orbvis-setup\"",
-  "download_url": "",
-  "files": {
-    "bin": [
-      $bin_json
-    ],
-    "lib": [
-      $lib_json
-    ],
-    "web": [
-      $web_json
-    ]
-  },
-  "name": "orbvis",
-  "title": "OrbVis - Network Monitoring Visualization",
-  "version": "${VERSION}",
-  "version.min_required": "2.3.0",
-  "version.packaged": "2.3.0p1",
-  "version.usable_until": null
-}
-EOF
-ok "info written"
+  echo "{"
+  echo "  'author': 'OrbVis Project',"
+  echo "  'description': 'OrbVis monitoring visualization.\\n\\nAfter install run: su - <SITE> -c orbvis-setup',"
+  echo "  'download_url': '',"
+  echo "  'files': {"
+  echo "    'bin': ["
+  py_list "${BIN_FILES[@]}"
+  echo "    ],"
+  echo "    'lib': ["
+  py_list "${LIB_FILES[@]}"
+  echo "    ],"
+  echo "    'web': ["
+  py_list "${WEB_FILES[@]}"
+  echo "    ],"
+  echo "  },"
+  echo "  'name': 'orbvis',"
+  echo "  'title': 'OrbVis - Network Monitoring Visualization',"
+  echo "  'version': '${VERSION}',"
+  echo "  'version.min_required': '2.3.0',"
+  echo "  'version.packaged': '2.3.0p1',"
+  echo "  'version.usable_until': None,"
+  echo "}"
+} > "$TMPDIR/info"
+
+# Verify it parses
+python3 -c "import ast; ast.literal_eval(open('$TMPDIR/info').read())" \
+  && ok "info written and validated" \
+  || die "info file failed ast.literal_eval validation"
 
 # ---------------------------------------------------------------------------
 # 6. Package into .mkp (tar.gz)
