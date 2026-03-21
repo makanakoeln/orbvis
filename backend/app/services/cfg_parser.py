@@ -163,12 +163,19 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, Any]:
             continue
 
         if block_type == "textbox":
+            raw_text = p.get("text") or None
+            if raw_text:
+                raw_text = re.sub(r"<br\s*/?>", "\n", raw_text, flags=re.IGNORECASE)
+                raw_text = re.sub(r"<[^>]+>", "", raw_text)
+            # NagVis textbox x/y is top-left; OrbVis centers objects — offset by half w/h
+            tx = _coord(p.get("x", "0")) + _int(p.get("w"), 200) // 2
+            ty = _coord(p.get("y", "0")) + _int(p.get("h"), 40) // 2
             objects.append({
                 "id": f"textbox_{raw_id}", "type": "textbox",
-                "x": _coord(p.get("x", "0")), "y": _coord(p.get("y", "0")),
+                "x": tx, "y": ty,
                 "z": _int(p.get("z"), 1),
                 "label": {
-                    "show": True, "text": p.get("text") or None,
+                    "show": True, "text": raw_text,
                     "x": 0, "y": 0, "size": 11,
                     "color": "#ffffff", "background": "transparent",
                 },

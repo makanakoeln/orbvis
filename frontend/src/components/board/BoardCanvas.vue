@@ -163,12 +163,16 @@ function _snap(v: number): number {
   return Math.round(v / props.snapGrid) * props.snapGrid
 }
 
+const bgImageFailed = ref(false)
+
 watch(
   () => props.config.background_image,
   (bg) => {
+    bgImageFailed.value = false
     if (!bg) { bgImageSize.value = null; return }
     const img = new Image()
     img.onload = () => { bgImageSize.value = { width: img.naturalWidth, height: img.naturalHeight } }
+    img.onerror = () => { bgImageFailed.value = true; bgImageSize.value = null }
     img.src = `${import.meta.env.BASE_URL}boards/backgrounds/${bg}`
   },
   { immediate: true },
@@ -184,6 +188,10 @@ const canvasHeight = computed(() =>
 // Canvas style: with background → fill parent absolutely; without → fixed pixel size
 const canvasStyle = computed(() => {
   const bg = props.config.background_image
+  const pixelSize = {
+    minWidth: `max(${canvasWidth.value}px, 100%)`,
+    minHeight: `max(${canvasHeight.value}px, 100%)`,
+  }
   if (bg && bgImageSize.value) {
     return {
       backgroundImage: `url(${import.meta.env.BASE_URL}boards/backgrounds/${bg})`,
@@ -191,18 +199,16 @@ const canvasStyle = computed(() => {
       backgroundSize: '100% 100%',
     }
   }
-  if (bg) {
-    // Image still loading — fill with background color, reveal once size known
+  if (bg && !bgImageFailed.value) {
+    // Image still loading — reserve pixel space so SVG overlay doesn't collapse
     return {
+      ...pixelSize,
       backgroundImage: `url(${import.meta.env.BASE_URL}boards/backgrounds/${bg})`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: '100% 100%',
     }
   }
-  return {
-    minWidth: `max(${canvasWidth.value}px, 100%)`,
-    minHeight: `max(${canvasHeight.value}px, 100%)`,
-  }
+  return pixelSize
 })
 
 const nonLineObjects = computed(() =>

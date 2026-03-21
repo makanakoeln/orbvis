@@ -267,8 +267,15 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
 
         # ── textbox ─────────────────────────────────────────────────────────
         if nagvis_type == "textbox":
+            # NagVis textbox x/y is top-left; OrbVis centers objects — offset by half w/h
             x, _ = _parse_coord(p.get("x", "0"))
             y, _ = _parse_coord(p.get("y", "0"))
+            x += _int(p.get("w"), 200) // 2
+            y += _int(p.get("h"), 40) // 2
+            raw_text = p.get("text") or None
+            if raw_text:
+                raw_text = re.sub(r"<br\s*/?>", "\n", raw_text, re.IGNORECASE)
+                raw_text = re.sub(r"<[^>]+>", "", raw_text)
             objects.append({
                 "id": f"textbox_{raw_id}",
                 "type": "textbox",
@@ -276,7 +283,7 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
                 "z": _int(p.get("z"), 1),
                 "label": {
                     "show": True,
-                    "text": p.get("text") or None,
+                    "text": raw_text,
                     "x": 0, "y": 0,
                     "size": 11,
                     "color": "#ffffff",
