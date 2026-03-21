@@ -4,7 +4,7 @@
     <div class="bg-[var(--bg-surface)] border-b border-[var(--border)] px-4 py-2 flex items-center justify-between shrink-0 z-30">
       <!-- Left: back link (Checkmk/SSO mode) + board name -->
       <div class="flex items-center gap-2.5 min-w-0">
-        <router-link v-if="auth.ssoActive || auth.isCheckmkDeployment" to="/"
+        <router-link to="/"
           class="shrink-0 flex items-center gap-1 text-zinc-500 hover:text-zinc-300 transition-colors">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -46,6 +46,15 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
           </svg>
           {{ t('board.readOnly') }}
+        </span>
+
+        <!-- Editing badge -->
+        <span v-if="editor.editMode.value"
+          class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+          </svg>
+          {{ t('board.editing') }}
         </span>
 
         <!-- Settings button (admin only) -->
@@ -114,26 +123,40 @@
         <div v-else-if="boardsStore.error" class="flex items-center justify-center h-full text-red-400 text-sm">
           {{ boardsStore.error }}
         </div>
-        <BoardCanvas
-          v-else-if="boardConfig"
-          ref="canvasRef"
-          :config="boardConfig"
-          :states="statesStore.states"
-          :edit-mode="editor.editMode.value"
-          :placing="editor.placing.value"
-          :line-drag-positions="editor.lineDragPositions"
-          :selected-object-id="editor.selectedObjectId.value"
-          :checkmk-url="checkmkUrl"
-          :is-admin="auth.isAdmin"
-          :icon-size-override="undefined"
-          :snap-grid="editor.snapGrid.value"
-          @object-drag-end="onObjectDragEnd"
-          @object-click="onObjectClick"
-          @object-contextmenu="onObjectContextMenu"
-          @object-delete="onObjectDelete"
-          @line-drag-start="onLineDragStart"
-          @canvas-click="onCanvasClick"
-        />
+        <template v-else-if="boardConfig">
+          <!-- Empty board hint -->
+          <div v-if="boardConfig.objects.length === 0 && !editor.editMode.value"
+            class="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none select-none z-10">
+            <svg class="w-10 h-10 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0H3" />
+            </svg>
+            <p class="text-sm text-zinc-600">
+              <template v-if="auth.isAdmin">{{ t('board.emptyBoardAdmin') }}</template>
+              <template v-else>{{ t('board.emptyBoard') }}</template>
+            </p>
+          </div>
+          <BoardCanvas
+            ref="canvasRef"
+            :config="boardConfig"
+            :states="statesStore.states"
+            :edit-mode="editor.editMode.value"
+            :placing="editor.placing.value"
+            :line-drag-positions="editor.lineDragPositions"
+            :selected-object-id="editor.selectedObjectId.value"
+            :checkmk-url="checkmkUrl"
+            :is-admin="auth.isAdmin"
+            :icon-size-override="undefined"
+            :snap-grid="editor.snapGrid.value"
+            @object-drag-end="onObjectDragEnd"
+            @object-click="onObjectClick"
+            @object-contextmenu="onObjectContextMenu"
+            @object-dblclick="onObjectDblclick"
+            @object-delete="onObjectDelete"
+            @object-duplicate="onObjectDuplicate"
+            @line-drag-start="onLineDragStart"
+            @canvas-click="onCanvasClick"
+          />
+        </template>
         <div v-else class="flex items-center justify-center h-full text-zinc-600">{{ t('board.boardNotFound') }}</div>
       </div>
 
@@ -414,6 +437,15 @@ function openPropsModal(obj: BoardObject, anchor?: AnchorRect | null) {
 
 function onObjectContextMenu(obj: BoardObject, anchor?: AnchorRect | null) {
   openPropsModal(obj, anchor)
+}
+
+function onObjectDblclick(obj: BoardObject) {
+  openPropsModal(obj)
+}
+
+function onObjectDuplicate(obj: BoardObject) {
+  editor.selectObject(obj.id)
+  editor.duplicateSelected()
 }
 
 // ---- Worldmap hover & context menu ----
