@@ -49,16 +49,18 @@
       <!-- Custom icon image — draggable="false" prevents the browser from starting
            an HTML5 drag operation which would swallow all subsequent mousemove events -->
       <img
-        v-if="object.display?.image ?? object.image_src"
+        v-if="(object.display?.image ?? object.image_src) && !imgLoadFailed"
         :src="`${BASE_URL}images/${object.display?.image ?? object.image_src}`"
         :style="iconStyle"
         draggable="false"
         class="object-contain transition-all duration-300 select-none"
         :class="[isSvgIcon ? 'svg-icon' : '', selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded' : '']"
+        @error="imgLoadFailed = true"
       />
       <!-- State circle fallback — SVG for crisp sub-pixel text centering -->
+      <!-- Not shown for type=image: if the image fails, the object simply becomes invisible -->
       <svg
-        v-else
+        v-else-if="object.type !== 'image' || !imgLoadFailed"
         :width="iconSize" :height="iconSize"
         :viewBox="`0 0 ${iconSize} ${iconSize}`"
         overflow="visible"
@@ -150,6 +152,7 @@ defineEmits<{
 // pointer-events="none" on the SVG element (SVG attribute, not CSS) ensures it
 // never intercepts mousedown/click events, preserving drag behaviour in edit mode.
 const arcSvgEl = ref<SVGSVGElement | null>(null)
+const imgLoadFailed = ref(false)
 
 const svgSize = computed(() => props.iconSize + RING_PAD * 2)
 
