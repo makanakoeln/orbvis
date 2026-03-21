@@ -144,12 +144,12 @@ mkdir -p "$BOARDS_DIR/backgrounds"
 TMPBOARDS="$(mktemp -d)"
 tar xzf "$MKP_LIB/boards.tar.gz" -C "$TMPBOARDS"
 NEW_BOARDS=0
-for f in "$TMPBOARDS/boards/"*.json 2>/dev/null; do
+for f in "$TMPBOARDS/boards/"*.json; do
   [[ -f "$f" ]] || continue
   fname="$(basename "$f")"
   if [[ ! -f "$BOARDS_DIR/$fname" ]]; then
     cp "$f" "$BOARDS_DIR/$fname"
-    (( NEW_BOARDS++ )) || true
+    NEW_BOARDS=$(( NEW_BOARDS + 1 ))
   fi
 done
 [[ -f "$TMPBOARDS/boards/backgrounds/demo.svg" && ! -f "$BOARDS_DIR/backgrounds/demo.svg" ]] && \
