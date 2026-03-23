@@ -667,14 +667,14 @@ async function onSettingsUpdated() {
 
 // ---- Rotation ----
 
-const rotationTimer = ref<ReturnType<typeof setInterval> | null>(null)
+let rotationTimer: ReturnType<typeof setInterval> | null = null
 const rotationCountdown = ref(0)
 const rotationPaused = ref(false)
 
 function stopRotation() {
-  if (rotationTimer.value !== null) {
-    clearInterval(rotationTimer.value)
-    rotationTimer.value = null
+  if (rotationTimer !== null) {
+    clearInterval(rotationTimer)
+    rotationTimer = null
   }
   rotationCountdown.value = 0
 }
@@ -693,7 +693,7 @@ function scheduleRotation(intervalSeconds: number) {
   rotationPaused.value = false
   if (intervalSeconds <= 0 || editor.editMode.value) return
   rotationCountdown.value = intervalSeconds
-  rotationTimer.value = setInterval(() => {
+  rotationTimer = setInterval(() => {
     if (rotationPaused.value || editor.editMode.value) return
     rotationCountdown.value--
     if (rotationCountdown.value <= 0) {
