@@ -203,4 +203,5 @@ def _to_read(cfg: BoardConfig) -> BoardRead:
         readonly=cfg.readonly,
         hover_template=cfg.hover_template,
         context_template=cfg.context_template,
+        show_in_lists=cfg.show_in_lists,
     )

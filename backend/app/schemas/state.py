@@ -19,6 +19,12 @@ class ObjectState(BaseModel):
     acknowledged: bool = False
     in_downtime: bool = False
     stale: bool = False
+    address: str = ""
+    last_check: float | None = None
+    state_type: str = ""          # "HARD" | "SOFT" | ""
+    current_attempt: int = 0
+    max_attempts: int = 0
+    last_state_change: float | None = None
 
 
 class MapStates(BaseModel):

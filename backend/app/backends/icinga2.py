@@ -30,6 +30,18 @@ def _worst_svc(*states: str) -> str:
     return max(states, key=lambda s: _SVC_SEVERITY.get(s, 0))
 
 
+def _parse_icinga_extra(attrs: dict) -> dict:
+    lsc = attrs.get("last_state_change", 0) or 0
+    lc  = attrs.get("last_check", 0) or 0
+    return dict(
+        last_check=float(lc) if lc > 0 else None,
+        state_type="HARD" if attrs.get("state_type", 1) else "SOFT",
+        current_attempt=int(attrs.get("check_attempt", 0)),
+        max_attempts=int(attrs.get("max_check_attempts", 0)),
+        last_state_change=float(lsc) if lsc > 0 else None,
+    )
+
+
 class Icinga2Backend(BackendBase):
     """Query monitoring state from an Icinga2 instance via its REST API."""
 
@@ -93,6 +105,8 @@ class Icinga2Backend(BackendBase):
             output=attrs.get("last_check_result", {}).get("output", ""),
             acknowledged=bool(attrs.get("acknowledgement", 0)),
             in_downtime=bool(attrs.get("downtime_depth", 0)),
+            address=attrs.get("address", ""),
+            **_parse_icinga_extra(attrs),
         )
 
     async def get_service_state(self, host: str, service: str) -> ObjectState:
@@ -121,6 +135,7 @@ class Icinga2Backend(BackendBase):
             perf_data=perf_data,
             acknowledged=bool(attrs.get("acknowledgement", 0)),
             in_downtime=bool(attrs.get("downtime_depth", 0)),
+            **_parse_icinga_extra(attrs),
         )
 
     async def get_hostgroup_states(self, group: str) -> ObjectState:

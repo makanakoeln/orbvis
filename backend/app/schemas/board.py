@@ -89,12 +89,28 @@ class BoardObject(BaseModel):
     # State behaviour flags
     only_hard_states: bool = False
     recognize_services: bool = False
+    # Member exclusion (hostgroup, servicegroup, host, map)
+    exclude_members: str | None = None
+    exclude_member_states: str | None = None
     # Nested configs
     label: LabelConfig | None = Field(default_factory=LabelConfig)
     display: DisplayConfig | None = Field(default_factory=DisplayConfig)
+    # Label extensions
+    label_border: str | None = None
+    label_maxlen: int | None = None
+    # Textbox styling
+    textbox_background: str | None = None
+    textbox_border: str | None = None
+    textbox_width: int | None = None
+    textbox_height: int | None = None
+    # Line custom colors
+    line_color: str | None = None
+    line_color_border: str | None = None
     # Link
     url: str | None = None
     url_target: str = "_blank"
+    # Hover URL (custom hover popup URL instead of template)
+    hover_url: str | None = None
     # Templates (override board-global / global defaults)
     hover_template: str | None = None
     context_template: str | None = None
@@ -104,6 +120,7 @@ class BoardConfig(BaseModel):
     name: str
     alias: str = ""
     readonly: bool = False
+    show_in_lists: bool = True
     backend_id: str = "live_1"
     icon_size: int = 30
     rotation_interval: int = 0
@@ -132,6 +149,7 @@ class BoardUpdate(BaseModel):
     hover_template: str | None = None
     context_template: str | None = None
     rotation_interval: int | None = None
+    show_in_lists: bool | None = None
 
 
 class BoardRead(BaseModel):
@@ -145,6 +163,7 @@ class BoardRead(BaseModel):
     object_count: int
     rotation_interval: int
     readonly: bool = False
+    show_in_lists: bool = True
     hover_template: str | None = None
     context_template: str | None = None
 
