@@ -212,6 +212,11 @@
               </span>
             </div>
             <div class="absolute top-2 right-2 flex items-center gap-1.5">
+              <span v-if="map.show_in_lists === false && auth.isAdmin"
+                class="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-zinc-800/80 text-zinc-500 ring-1 ring-zinc-700/60 backdrop-blur-sm"
+                :title="t('home.hiddenBoard')">
+                {{ t('home.hidden') }}
+              </span>
               <span v-if="map.rotation_interval > 0"
                 class="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30 backdrop-blur-sm"
                 :title="t('home.rotationBadgeTitle', { n: map.rotation_interval })">
@@ -232,7 +237,7 @@
               <span class="font-mono truncate">{{ map.backend_id }}</span>
               <span class="text-zinc-600">·</span>
               <span v-if="map.readonly || ['automap', 'radar', 'worldmap'].includes(map.view.type)" class="italic">{{ t('home.dynamicObjects') }}</span>
-              <span v-else>{{ t('common.objects', { n: map.object_count }) }}</span>
+              <span v-else>{{ t('common.objects', map.object_count) }}</span>
             </div>
           </div>
           </router-link>
@@ -370,6 +375,26 @@
     <span class="text-sm font-medium">{{ t('admin.importBoard') }}</span>
     <input type="file" accept=".json,.cfg,application/json" class="hidden" @change="importBoard" />
   </label>
+  <Teleport to="body">
+    <div v-if="importConflict" class="fixed inset-0 z-50 flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="importConflict = null" />
+      <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-96">
+        <h3 class="text-base font-bold text-[var(--text)] mb-1">{{ t('admin.importBoard') }}</h3>
+        <p class="text-sm text-zinc-400 mb-5">{{ t('admin.importOverwrite', { name: importConflict.name }) }}</p>
+        <div class="flex gap-3 justify-end">
+          <button @click="importConflict = null"
+            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
+            {{ t('common.cancel') }}
+          </button>
+          <button @click="confirmImportOverwrite"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg text-sm font-semibold text-white transition-all">
+            {{ t('common.overwrite') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
   <CreateBoardModal v-if="showCreate" @close="showCreate = false" @created="onCreated" />
   <OnboardingTour
     v-if="showOnboarding && auth.user"
@@ -418,36 +443,32 @@ async function doDelete() {
   confirmDelete.value = null
 }
 
+const importConflict = ref<{ name: string; action: () => Promise<unknown> } | null>(null)
+
 async function importBoard(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   try {
     if (file.name.toLowerCase().endsWith('.cfg')) {
-      // NagVis .cfg import
       try {
         await boardsApi.importCfg(file, auth.accessToken!, false)
       } catch (e: unknown) {
         if (e instanceof Error && e.message.includes('already exists')) {
           const name = file.name.replace(/\.cfg$/i, '')
-          if (!confirm(t('admin.importOverwrite', { name }))) return
-          await boardsApi.importCfg(file, auth.accessToken!, true)
-        } else {
-          throw e
-        }
+          importConflict.value = { name, action: () => boardsApi.importCfg(file, auth.accessToken!, true) }
+          return
+        } else { throw e }
       }
     } else {
-      // OrbVis JSON import
       const text = await file.text()
       const data: BoardConfig = JSON.parse(text)
       try {
         await boardsApi.importBoard(data, auth.accessToken!, false)
       } catch (e: unknown) {
         if (e instanceof Error && e.message.includes('already exists')) {
-          if (!confirm(t('admin.importOverwrite', { name: data.name }))) return
-          await boardsApi.importBoard(data, auth.accessToken!, true)
-        } else {
-          throw e
-        }
+          importConflict.value = { name: data.name, action: () => boardsApi.importBoard(data, auth.accessToken!, true) }
+          return
+        } else { throw e }
       }
     }
     await boardsStore.fetchBoards()
@@ -455,6 +476,18 @@ async function importBoard(event: Event) {
     alert(e instanceof Error ? e.message : t('admin.importFailed'))
   } finally {
     ;(event.target as HTMLInputElement).value = ''
+  }
+}
+
+async function confirmImportOverwrite() {
+  if (!importConflict.value) return
+  const action = importConflict.value.action
+  importConflict.value = null
+  try {
+    await action()
+    await boardsStore.fetchBoards()
+  } catch (e: unknown) {
+    alert(e instanceof Error ? e.message : t('admin.importFailed'))
   }
 }
 
@@ -499,10 +532,16 @@ function openSettings(map: BoardRead) {
 
 const searchQuery = ref('')
 
+const visibleBoards = computed(() =>
+  auth.isAdmin
+    ? boardsStore.boards
+    : boardsStore.boards.filter(m => m.show_in_lists !== false),
+)
+
 const filteredBoards = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return boardsStore.boards
-  return boardsStore.boards.filter(m =>
+  if (!q) return visibleBoards.value
+  return visibleBoards.value.filter(m =>
     m.name.toLowerCase().includes(q) || m.alias.toLowerCase().includes(q)
   )
 })
