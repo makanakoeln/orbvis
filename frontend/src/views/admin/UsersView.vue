@@ -78,7 +78,7 @@
                     </svg>
                   </button>
                   <button
-                    @click="deleteUser(user.user_id)"
+                    @click="deleteTargetId = user.user_id"
                     class="p-1.5 rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
                     :title="t('common.delete')">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -162,6 +162,15 @@
       </div>
     </Teleport>
 
+    <ConfirmDialog
+      v-if="deleteTargetId !== null"
+      :title="t('admin.deleteUser')"
+      :message="t('board.cannotBeUndone')"
+      :confirm-label="t('common.delete')"
+      @confirm="confirmDeleteUser"
+      @cancel="deleteTargetId = null"
+    />
+
     <UserSettingsPanel
       v-if="editUser"
       :user-id="editUser.user_id"
@@ -181,6 +190,7 @@ import { usersApi, rolesApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { UserRead, RoleRead } from '@/types/api'
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -235,8 +245,12 @@ async function createUser() {
   }
 }
 
-async function deleteUser(id: number) {
-  if (!confirm(t('admin.deleteUser'))) return
+const deleteTargetId = ref<number | null>(null)
+
+async function confirmDeleteUser() {
+  const id = deleteTargetId.value
+  if (id === null) return
+  deleteTargetId.value = null
   await usersApi.delete(id, auth.accessToken!)
   await fetchUsers()
 }

@@ -48,7 +48,7 @@
         <button
           class="absolute top-1.5 right-1.5 w-5 h-5 rounded bg-red-500/0 hover:bg-red-500/20 text-zinc-700 hover:text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
           :title="t('common.delete')"
-          @click="deleteIcon(icon.name)"
+          @click="deleteTargetName = icon.name"
         >
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -57,6 +57,15 @@
       </div>
     </div>
   </div>
+
+  <ConfirmDialog
+    v-if="deleteTargetName"
+    :title="t('admin.deleteIcon', { name: deleteTargetName })"
+    :message="t('board.cannotBeUndone')"
+    :confirm-label="t('common.delete')"
+    @confirm="confirmDeleteIcon"
+    @cancel="deleteTargetName = null"
+  />
 </template>
 
 <script setup lang="ts">
@@ -65,6 +74,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { imagesApi } from '@/api/client'
 import type { ImageEntry } from '@/types/api'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const BASE_URL = import.meta.env.BASE_URL
 const { t } = useI18n()
@@ -99,8 +109,12 @@ async function uploadIcons(event: Event) {
   (event.target as HTMLInputElement).value = ''
 }
 
-async function deleteIcon(name: string) {
-  if (!confirm(t('admin.deleteIcon', { name }))) return
+const deleteTargetName = ref<string | null>(null)
+
+async function confirmDeleteIcon() {
+  const name = deleteTargetName.value
+  if (!name) return
+  deleteTargetName.value = null
   try {
     await imagesApi.delete(name, auth.accessToken!)
     icons.value = icons.value.filter(i => i.name !== name)

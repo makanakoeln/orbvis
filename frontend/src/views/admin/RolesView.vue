@@ -47,7 +47,7 @@
               class="text-xs text-zinc-500 hover:text-indigo-400 transition-colors px-2 py-1">
               {{ t('common.edit') }}
             </button>
-            <button @click="deleteRole(role.role_id)"
+            <button @click="deleteTargetId = role.role_id"
               class="text-xs text-zinc-600 hover:text-red-400 transition-colors px-2 py-1">
               {{ t('common.delete') }}
             </button>
@@ -164,6 +164,15 @@
         </div>
       </div>
     </Teleport>
+
+    <ConfirmDialog
+      v-if="deleteTargetId !== null"
+      :title="t('admin.deleteRole')"
+      :message="t('board.cannotBeUndone')"
+      :confirm-label="t('common.delete')"
+      @confirm="confirmDeleteRole"
+      @cancel="deleteTargetId = null"
+    />
   </div>
 </template>
 
@@ -173,6 +182,7 @@ import { useI18n } from 'vue-i18n'
 import { rolesApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { RoleRead } from '@/types/api'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -215,8 +225,12 @@ async function createRole() {
   await fetchRoles()
 }
 
-async function deleteRole(id: number) {
-  if (!confirm(t('admin.deleteRole'))) return
+const deleteTargetId = ref<number | null>(null)
+
+async function confirmDeleteRole() {
+  const id = deleteTargetId.value
+  if (id === null) return
+  deleteTargetId.value = null
   await rolesApi.delete(id, auth.accessToken!)
   await fetchRoles()
 }

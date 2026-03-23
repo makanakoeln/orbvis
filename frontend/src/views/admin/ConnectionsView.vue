@@ -98,7 +98,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
                   </svg>
                 </button>
-                <button @click="remove(b.id)"
+                <button @click="deleteTarget = b.id"
                   class="p-1.5 rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
                   :title="t('common.delete')">
                   <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -111,6 +111,15 @@
         </tbody>
       </table>
     </div>
+
+    <ConfirmDialog
+      v-if="deleteTarget"
+      :title="t('admin.deleteConnection', { id: deleteTarget })"
+      :message="t('board.cannotBeUndone')"
+      :confirm-label="t('common.delete')"
+      @confirm="confirmRemove"
+      @cancel="deleteTarget = null"
+    />
 
     <!-- Create / Edit dialog -->
     <Teleport to="body">
@@ -283,6 +292,7 @@ import { connectionsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { BackendConfig } from '@/types/api'
 import NumberInput from '@/components/NumberInput.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const { t } = useI18n()
 const store = useConnectionsStore()
@@ -310,6 +320,7 @@ async function testAll() {
   for (const b of store.backends) testExisting(b.id)
 }
 
+const deleteTarget = ref<string | null>(null)
 const dialog = reactive({ open: false, mode: 'create' as 'create' | 'edit', editId: '' })
 const saving = ref(false)
 const formError = ref('')
@@ -375,8 +386,10 @@ async function save() {
   }
 }
 
-async function remove(id: string) {
-  if (!confirm(t('admin.deleteConnection', { id }))) return
+async function confirmRemove() {
+  const id = deleteTarget.value
+  if (!id) return
+  deleteTarget.value = null
   await store.deleteBackend(id)
   delete statuses[id]
   delete statusMessages[id]
