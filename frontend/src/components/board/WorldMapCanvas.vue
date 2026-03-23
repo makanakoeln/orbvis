@@ -28,7 +28,10 @@ const emit = defineEmits<{
 
 const mapEl = ref<HTMLDivElement | null>(null)
 let leafletMap: L.Map | null = null
+let tileLayer: L.TileLayer | null = null
 const markers = new Map<string, L.Marker>()
+
+const DEFAULT_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 
 function stateColor(id: string): string {
   const s = props.states[id]?.state
@@ -159,6 +162,25 @@ function syncMarkers() {
   }
 }
 
+function applyTileSettings() {
+  if (!leafletMap) return
+  const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null
+  const url = wv?.tile_url || DEFAULT_TILE_URL
+  if (tileLayer) tileLayer.remove()
+  tileLayer = L.tileLayer(url, {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).addTo(leafletMap)
+  const pane = leafletMap.getPane('tilePane') as HTMLElement | undefined
+  if (pane) pane.style.filter = wv?.tile_saturate != null ? `saturate(${wv.tile_saturate}%)` : ''
+}
+
+function fitAll() {
+  if (!leafletMap) return
+  const objects = props.config.objects.filter(o => o.type !== 'line' && o.lat != null && o.lng != null)
+  if (!objects.length) return
+  leafletMap.fitBounds(L.latLngBounds(objects.map(o => [o.lat!, o.lng!] as [number, number])), { padding: [40, 40] })
+}
+
 onMounted(() => {
   if (!mapEl.value) return
   const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null
@@ -166,20 +188,19 @@ onMounted(() => {
     center: [wv?.lat ?? 51, wv?.lng ?? 10],
     zoom: wv?.zoom ?? 5,
   })
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  }).addTo(leafletMap)
   leafletMap.on('click', (e) => {
     if (props.placing) {
       emit('canvas-latlng-click', e.latlng.lat, e.latlng.lng)
     }
   })
+  applyTileSettings()
   syncMarkers()
 })
 
 onUnmounted(() => {
   leafletMap?.remove()
   leafletMap = null
+  tileLayer = null
   markers.clear()
 })
 
@@ -189,11 +210,19 @@ watch(
   { deep: true },
 )
 
+watch(
+  () => {
+    const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null
+    return [wv?.tile_url, wv?.tile_saturate]
+  },
+  applyTileSettings,
+)
+
 function getView() {
   if (!leafletMap) return null
   const c = leafletMap.getCenter()
   return { lat: c.lat, lng: c.lng, zoom: leafletMap.getZoom() }
 }
 
-defineExpose({ getView })
+defineExpose({ getView, fitAll })
 </script>

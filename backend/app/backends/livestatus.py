@@ -28,6 +28,35 @@ _SERVICE_STATE_MAP = {0: "OK", 1: "WARNING", 2: "CRITICAL", 3: "UNKNOWN"}
 # Aggregate: worst state wins (higher = worse)
 _HOST_SEVERITY = {"UP": 0, "UNREACHABLE": 1, "DOWN": 2, "PENDING": -1}
 _SERVICE_SEVERITY = {"OK": 0, "UNKNOWN": 1, "WARNING": 2, "CRITICAL": 3, "PENDING": -1}
+_STATE_TYPE_MAP = {0: "SOFT", 1: "HARD"}
+
+_HOST_EXTRA_COLS = "address last_check state_type current_attempt max_check_attempts last_state_change"
+_SVC_EXTRA_COLS  = "last_check state_type current_attempt max_check_attempts last_state_change"
+
+
+def _parse_extra(row: list, offset: int = 5, *, include_address: bool = False) -> dict:
+    try:
+        col = offset
+        address = str(row[col]) if include_address and len(row) > col else ""
+        if include_address:
+            col += 1
+        lc      = float(row[col])     if len(row) > col     else 0.0
+        st      = int(row[col + 1])   if len(row) > col + 1 else 1
+        attempt = int(row[col + 2])   if len(row) > col + 2 else 0
+        max_att = int(row[col + 3])   if len(row) > col + 3 else 0
+        lsc     = float(row[col + 4]) if len(row) > col + 4 else 0.0
+    except (ValueError, TypeError):
+        return {}
+    result = dict(
+        last_check=lc if lc > 0 else None,
+        state_type=_STATE_TYPE_MAP.get(st, "HARD"),
+        current_attempt=attempt,
+        max_attempts=max_att,
+        last_state_change=lsc if lsc > 0 else None,
+    )
+    if include_address:
+        result["address"] = address
+    return result
 
 
 class LivestatusBackend(BackendBase):
@@ -54,83 +83,87 @@ class LivestatusBackend(BackendBase):
     async def get_host_state(self, hostname: str) -> ObjectState:
         query = (
             f"GET hosts\n"
-            f"Columns: state plugin_output perf_data acknowledged scheduled_downtime_depth\n"
+            f"Columns: state plugin_output perf_data acknowledged scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
             f"Filter: name = {_ls_escape(hostname)}\n"
         )
         rows = await self._query(query)
         if not rows:
             return ObjectState(object_id="", type="host", state="PENDING")
-        state_code, output, perf_data, ack, downtime = rows[0]
+        r = rows[0]
         return ObjectState(
             object_id="",
             type="host",
-            state=_HOST_STATE_MAP.get(int(state_code), "UNKNOWN"),
-            output=output,
-            perf_data=perf_data,
-            acknowledged=bool(int(ack)),
-            in_downtime=int(downtime) > 0,
+            state=_HOST_STATE_MAP.get(int(r[0]), "UNKNOWN"),
+            output=r[1],
+            perf_data=r[2],
+            acknowledged=bool(int(r[3])),
+            in_downtime=int(r[4]) > 0,
+            **_parse_extra(r, include_address=True),
         )
 
     async def get_service_state(self, host: str, service: str) -> ObjectState:
         query = (
             f"GET services\n"
-            f"Columns: state plugin_output perf_data acknowledged scheduled_downtime_depth\n"
+            f"Columns: state plugin_output perf_data acknowledged scheduled_downtime_depth {_SVC_EXTRA_COLS}\n"
             f"Filter: host_name = {_ls_escape(host)}\n"
             f"Filter: description = {_ls_escape(service)}\n"
         )
         rows = await self._query(query)
         if not rows:
             return ObjectState(object_id="", type="service", state="PENDING")
-        state_code, output, perf_data, ack, downtime = rows[0]
+        r = rows[0]
         return ObjectState(
             object_id="",
             type="service",
-            state=_SERVICE_STATE_MAP.get(int(state_code), "UNKNOWN"),
-            output=output,
-            perf_data=perf_data,
-            acknowledged=bool(int(ack)),
-            in_downtime=int(downtime) > 0,
+            state=_SERVICE_STATE_MAP.get(int(r[0]), "UNKNOWN"),
+            output=r[1],
+            perf_data=r[2],
+            acknowledged=bool(int(r[3])),
+            in_downtime=int(r[4]) > 0,
+            **_parse_extra(r),
         )
 
     async def get_host_hard_state(self, hostname: str) -> ObjectState:
         query = (
             f"GET hosts\n"
-            f"Columns: last_hard_state plugin_output perf_data acknowledged scheduled_downtime_depth\n"
+            f"Columns: last_hard_state plugin_output perf_data acknowledged scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
             f"Filter: name = {_ls_escape(hostname)}\n"
         )
         rows = await self._query(query)
         if not rows:
             return ObjectState(object_id="", type="host", state="PENDING")
-        state_code, output, perf_data, ack, downtime = rows[0]
+        r = rows[0]
         return ObjectState(
             object_id="",
             type="host",
-            state=_HOST_STATE_MAP.get(int(state_code), "UNKNOWN"),
-            output=output,
-            perf_data=perf_data,
-            acknowledged=bool(int(ack)),
-            in_downtime=int(downtime) > 0,
+            state=_HOST_STATE_MAP.get(int(r[0]), "UNKNOWN"),
+            output=r[1],
+            perf_data=r[2],
+            acknowledged=bool(int(r[3])),
+            in_downtime=int(r[4]) > 0,
+            **_parse_extra(r, include_address=True),
         )
 
     async def get_service_hard_state(self, host: str, service: str) -> ObjectState:
         query = (
             f"GET services\n"
-            f"Columns: last_hard_state plugin_output perf_data acknowledged scheduled_downtime_depth\n"
+            f"Columns: last_hard_state plugin_output perf_data acknowledged scheduled_downtime_depth {_SVC_EXTRA_COLS}\n"
             f"Filter: host_name = {_ls_escape(host)}\n"
             f"Filter: description = {_ls_escape(service)}\n"
         )
         rows = await self._query(query)
         if not rows:
             return ObjectState(object_id="", type="service", state="PENDING")
-        state_code, output, perf_data, ack, downtime = rows[0]
+        r = rows[0]
         return ObjectState(
             object_id="",
             type="service",
-            state=_SERVICE_STATE_MAP.get(int(state_code), "UNKNOWN"),
-            output=output,
-            perf_data=perf_data,
-            acknowledged=bool(int(ack)),
-            in_downtime=int(downtime) > 0,
+            state=_SERVICE_STATE_MAP.get(int(r[0]), "UNKNOWN"),
+            output=r[1],
+            perf_data=r[2],
+            acknowledged=bool(int(r[3])),
+            in_downtime=int(r[4]) > 0,
+            **_parse_extra(r),
         )
 
     async def get_hostgroup_states(self, group: str) -> ObjectState:
@@ -229,6 +262,33 @@ class LivestatusBackend(BackendBase):
             }
             for r in rows
         ]
+
+    async def get_host_geo(self, hostname: str) -> tuple[float, float] | None:
+        query = (
+            f"GET hosts\n"
+            f"Columns: labels custom_variable_names custom_variable_values\n"
+            f"Filter: name = {_ls_escape(hostname)}\n"
+        )
+        rows = await self._query(query)
+        if not rows or not rows[0]:
+            return None
+        r = rows[0]
+
+        # 1. OrbVis labels: orbvis_lat / orbvis_lng
+        labels: dict = r[0] if isinstance(r[0], dict) else {}
+        try:
+            return float(labels["orbvis_lat"]), float(labels["orbvis_lng"])
+        except (KeyError, TypeError, ValueError):
+            pass
+
+        # 2. NagVis-compatible custom variables: LAT / LONG
+        try:
+            names: list = r[1] if isinstance(r[1], list) else []
+            values: list = r[2] if isinstance(r[2], list) else []
+            cv = dict(zip(names, values))
+            return float(cv["LAT"]), float(cv["LONG"])
+        except (KeyError, TypeError, ValueError):
+            return None
 
     async def is_available(self) -> bool:
         try:

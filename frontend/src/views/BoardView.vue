@@ -95,7 +95,19 @@
           @canvas-latlng-click="onCanvasLatLngClick"
           @latlng-drag-end="onLatLngDragEnd"
         />
-        <div v-else class="absolute inset-0 flex items-center justify-center text-zinc-600">{{ t('board.boardNotFound') }}</div>
+        <!-- Fit all button -->
+        <button
+          v-if="boardConfig && boardConfig.objects.some(o => o.lat != null)"
+          @click.stop="worldmapCanvasRef?.fitAll()"
+          :title="t('board.fitAll')"
+          class="absolute z-[1000] leaflet-control-fit-all bg-white hover:bg-zinc-100 text-zinc-700 border border-zinc-300 rounded px-1.5 py-1 text-xs font-medium shadow transition-colors"
+          style="top: 80px; left: 10px;"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+          </svg>
+        </button>
+        <div v-else-if="!boardConfig" class="absolute inset-0 flex items-center justify-center text-zinc-600">{{ t('board.boardNotFound') }}</div>
       </div>
 
       <!-- Radar -->
@@ -183,7 +195,7 @@
               :placing="editor.placing.value"
               :backend-id="boardConfig?.backend_id ?? ''"
               :snap-grid="editor.snapGrid.value"
-              @start-placing="editor.startPlacing()"
+              @start-placing="onStartPlacing()"
               @update:snap-grid="editor.snapGrid.value = $event"
               @close-edit-mode="editor.toggleEditMode()"
             />
@@ -352,6 +364,7 @@ import { onMounted, onUnmounted, computed, ref, reactive, watch, watchEffect } f
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { connectionsApi } from '@/api/client'
 import { useBoardsStore } from '@/stores/boards'
 import { useStatesStore } from '@/stores/states'
 import { useConnectionsStore } from '@/stores/connections'
@@ -573,6 +586,23 @@ function onLineDragStart(event: MouseEvent, obj: BoardObject, mode: LineDragMode
 }
 
 // ---- Worldmap event handlers ----
+
+async function onStartPlacing() {
+  const d = editor.draft
+  const backendId = boardConfig.value?.backend_id
+  if (boardConfig.value?.view.type === 'worldmap' && backendId && d.host_name) {
+    try {
+      const geo = await connectionsApi.hostGeo(backendId, d.host_name, auth.accessToken!)
+      if (geo) {
+        editor.startPlacing()
+        await editor.placeAtLatLng(geo.lat, geo.lng)
+        if (selectedObject.value) openPropsModal(selectedObject.value)
+        return
+      }
+    } catch {}
+  }
+  editor.startPlacing()
+}
 
 async function onCanvasLatLngClick(lat: number, lng: number) {
   if (!editor.editMode.value || !editor.placing.value) return

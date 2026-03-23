@@ -36,7 +36,7 @@ export interface DisplayConfig {
 export type LineStyle = 'plain' | 'arrow_end' | 'arrow_start' | 'arrow_both' | 'dashed' | 'weathermap'
 
 export interface StaticView { type: 'static' }
-export interface WorldmapView { type: 'worldmap'; lat: number; lng: number; zoom: number }
+export interface WorldmapView { type: 'worldmap'; lat: number; lng: number; zoom: number; tile_url?: string | null; tile_saturate?: number | null }
 export interface RadarView { type: 'radar'; filter: string; filter_value: string }
 export interface AutomapView { type: 'automap' }
 export type BoardView = StaticView | WorldmapView | RadarView | AutomapView
@@ -67,10 +67,21 @@ export interface BoardObject {
   cmk_label_target?: 'hosts' | 'services' | null
   only_hard_states?: boolean
   recognize_services?: boolean
+  exclude_members?: string | null
+  exclude_member_states?: string | null
   label?: LabelConfig | null
   display?: DisplayConfig | null
+  label_border?: string | null
+  label_maxlen?: number | null
+  textbox_background?: string | null
+  textbox_border?: string | null
+  textbox_width?: number | null
+  textbox_height?: number | null
+  line_color?: string | null
+  line_color_border?: string | null
   url?: string | null
   url_target: string
+  hover_url?: string | null
   hover_template?: string | null
   context_template?: string | null
 }
@@ -100,6 +111,7 @@ export interface BoardRead {
   object_count: number
   rotation_interval: number
   readonly?: boolean
+  show_in_lists?: boolean
   hover_template?: string | null
   context_template?: string | null
 }
@@ -113,6 +125,12 @@ export interface ObjectState {
   acknowledged: boolean
   in_downtime: boolean
   stale: boolean
+  address?: string
+  last_check?: number | null
+  state_type?: string
+  current_attempt?: number
+  max_attempts?: number
+  last_state_change?: number | null
 }
 
 export interface ServiceNode {

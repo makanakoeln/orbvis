@@ -112,6 +112,15 @@
                   <NumberInput v-model="form.worldmap_zoom" min="1" max="18" class="w-full" />
                 </div>
               </div>
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.tileUrl') }}</label>
+                <input v-model="form.worldmap_tile_url" :placeholder="t('board.tileUrlPlaceholder')"
+                  class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-500 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.tileSaturate') }}</label>
+                <NumberInput v-model="form.worldmap_tile_saturate" :min="0" :max="100" :step="5" :placeholder="t('board.tileSaturatePlaceholder')" class="w-full" />
+              </div>
               <p class="text-xs text-zinc-600">{{ t('board.worldmapHint') }}</p>
             </template>
 
@@ -153,6 +162,20 @@
               <input v-model="form.context_template" :placeholder="t('board.templatePlaceholder')"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               <p class="text-xs text-zinc-600">{{ t('board.templateHint') }}</p>
+            </div>
+
+            <!-- Show in lists toggle -->
+            <div class="flex items-center justify-between py-1 border-t border-[var(--border)] mt-1 pt-3">
+              <div>
+                <div class="text-sm font-medium text-[var(--text)]">{{ t('board.showInLists') }}</div>
+                <div class="text-xs text-zinc-500 mt-0.5">{{ t('board.showInListsHint') }}</div>
+              </div>
+              <button type="button" @click="form.show_in_lists = !form.show_in_lists"
+                class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-200"
+                :class="form.show_in_lists ? 'bg-indigo-600' : 'bg-zinc-700'">
+                <span class="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+                  :class="form.show_in_lists ? 'translate-x-4' : 'translate-x-0'" />
+              </button>
             </div>
 
             <!-- Background image (static only) -->
@@ -284,16 +307,20 @@ function initWorldmapCoords() {
 
 const wm = initWorldmapCoords()
 const rv = props.board.view.type === 'radar' ? props.board.view as RadarView : null
+const wmv = props.board.view.type === 'worldmap' ? props.board.view as WorldmapView : null
 
 const form = ref({
   alias: props.board.alias,
   backend_id: props.board.backend_id,
   icon_size: props.board.icon_size,
   rotation_interval: props.board.rotation_interval,
+  show_in_lists: props.board.show_in_lists !== false,
   map_type: props.board.view.type,
   worldmap_lat: wm.lat,
   worldmap_lng: wm.lng,
   worldmap_zoom: wm.zoom,
+  worldmap_tile_url: wmv?.tile_url ?? '',
+  worldmap_tile_saturate: wmv?.tile_saturate ?? (null as number | null),
   radar_filter: rv?.filter ?? 'hostgroup',
   radar_filter_value: rv?.filter_value ?? '',
   hover_template: props.board.hover_template ?? '',
@@ -313,7 +340,14 @@ async function save() {
   try {
     let view: Record<string, unknown>
     if (form.value.map_type === 'worldmap') {
-      view = { type: 'worldmap', lat: form.value.worldmap_lat, lng: form.value.worldmap_lng, zoom: form.value.worldmap_zoom }
+      view = {
+        type: 'worldmap',
+        lat: form.value.worldmap_lat,
+        lng: form.value.worldmap_lng,
+        zoom: form.value.worldmap_zoom,
+        tile_url: form.value.worldmap_tile_url || null,
+        tile_saturate: form.value.worldmap_tile_saturate,
+      }
     } else if (form.value.map_type === 'radar') {
       view = { type: 'radar', filter: form.value.radar_filter, filter_value: form.value.radar_filter_value }
     } else {
@@ -324,6 +358,7 @@ async function save() {
       backend_id: form.value.backend_id,
       icon_size: form.value.icon_size,
       rotation_interval: form.value.rotation_interval,
+      show_in_lists: form.value.show_in_lists,
       background_image: form.value.background_image || null,
       view,
       hover_template: form.value.hover_template || null,
