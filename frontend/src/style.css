@@ -113,3 +113,16 @@ body {
 /* SVG icons loaded as <img> lose currentColor — invert makes black strokes white in dark mode.
    Only apply to monochrome SVGs (Tabler Icons style), not to coloured bitmaps. */
 .dark .svg-icon { filter: invert(1); }
+
+/* Custom scrollbars — dark theme */
+::-webkit-scrollbar              { width: 6px; height: 6px; }
+::-webkit-scrollbar-track        { background: transparent; }
+::-webkit-scrollbar-thumb        { background: #3f3f46; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover  { background: #52525b; }
+::-webkit-scrollbar-corner       { background: transparent; }
+* { scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; }
+
+/* Custom scrollbars — light theme */
+.light ::-webkit-scrollbar-thumb       { background: #d4d4d8; }
+.light ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+.light * { scrollbar-color: #d4d4d8 transparent; }
