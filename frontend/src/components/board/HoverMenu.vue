@@ -32,7 +32,7 @@
         </div>
 
         <!-- Badges -->
-        <div v-if="state?.acknowledged || state?.in_downtime" class="flex gap-1.5 mt-2.5">
+        <div v-if="state?.acknowledged || state?.in_downtime || state?.stale" class="flex gap-1.5 mt-2.5 flex-wrap">
           <span v-if="state.acknowledged"
             class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/20 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/40 dark:ring-amber-500/25">
             <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
@@ -46,6 +46,13 @@
               <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
             </svg>
             DOWNTIME
+          </span>
+          <span v-if="state.stale"
+            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-zinc-500/20 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-500/40 dark:ring-zinc-500/25">
+            <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            STALE
           </span>
         </div>
 

@@ -43,6 +43,15 @@
 
     <!-- Normal line -->
     <template v-else>
+      <!-- Border/outline line (rendered behind) -->
+      <line v-if="lineColorBorder"
+        :x1="x1" :y1="y1" :x2="x2" :y2="y2"
+        :stroke="lineColorBorder"
+        stroke-width="4"
+        stroke-linecap="round"
+        :stroke-dasharray="isDashed ? '6 4' : undefined"
+        pointer-events="none"
+      />
       <line
         :x1="x1" :y1="y1" :x2="x2" :y2="y2"
         :stroke="lineColor"
@@ -120,7 +129,10 @@ const STATE_COLORS: Record<string, string> = {
   WARNING: '#ffd000',
   PENDING: '#9ca3af',
 }
-const lineColor = computed(() => STATE_COLORS[props.state?.state ?? 'PENDING'] ?? STATE_COLORS['PENDING'])
+const lineColor = computed(() =>
+  props.object.line_color ?? STATE_COLORS[props.state?.state ?? 'PENDING'] ?? STATE_COLORS['PENDING'],
+)
+const lineColorBorder = computed(() => props.object.line_color_border ?? null)
 
 const isWeathermap = computed(() => props.object.line_style === 'weathermap')
 const isDashed     = computed(() => props.object.line_style === 'dashed')

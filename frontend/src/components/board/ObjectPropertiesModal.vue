@@ -29,7 +29,7 @@
       </div>
 
       <!-- Scrollable body -->
-      <div class="overflow-y-auto flex-1 px-6 py-5 space-y-6">
+      <div class="overflow-y-auto overflow-x-hidden flex-1 px-6 py-5 space-y-6">
 
         <!-- === MONITORING OBJECT === -->
         <section v-if="object.type !== 'textbox' && object.type !== 'line'">
@@ -74,12 +74,32 @@
           </div>
         </section>
 
-        <!-- === TEXTBOX CONTENT === -->
+        <!-- === TEXTBOX CONTENT + STYLING === -->
         <section v-if="object.type === 'textbox'">
           <p class="section-title">{{ t('boardSettings.content') }}</p>
           <textarea v-model="form.label.text" rows="3"
-            class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
+            class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none mb-3"
             :placeholder="t('boardSettings.textContent') + '…'" />
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="field-row">
+                <label class="field-label">{{ t('boardSettings.width') }}</label>
+                <NumberInput v-model="form.textbox_width" :placeholder="t('boardSettings.auto')" class="flex-1" />
+              </div>
+              <div class="field-row">
+                <label class="field-label">{{ t('boardSettings.height') }}</label>
+                <NumberInput v-model="form.textbox_height" :placeholder="t('boardSettings.auto')" class="flex-1" />
+              </div>
+            </div>
+            <div class="field-row">
+              <label class="field-label">{{ t('boardSettings.background') }}</label>
+              <ColorInput v-model="form.textbox_background" none-label="transparent" default-color="#1a1a2e" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">{{ t('boardSettings.borderColor') }}</label>
+              <ColorInput v-model="form.textbox_border" none-label="default" default-color="#e5e5e5" />
+            </div>
+          </div>
         </section>
 
         <!-- === LINE CONFIG === -->
@@ -122,6 +142,14 @@
               />
             </div>
             <div class="grid grid-cols-2 gap-3">
+              <div class="field-row col-span-2">
+                <label class="field-label">{{ t('boardSettings.lineColor') }}</label>
+                <ColorInput v-model="form.line_color" :none-label="t('boardSettings.lineColorAuto')" default-color="#ffffff" />
+              </div>
+              <div class="field-row col-span-2">
+                <label class="field-label">{{ t('boardSettings.lineColorBorder') }}</label>
+                <ColorInput v-model="form.line_color_border" none-label="none" default-color="#000000" />
+              </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.startX') }}</label>
                 <NumberInput v-model="form.x" class="flex-1" />
@@ -154,7 +182,7 @@
         <!-- === POSITION === -->
         <section v-if="object.type !== 'line'">
           <p class="section-title">{{ t('boardSettings.position') }}</p>
-          <div class="grid grid-cols-[1fr_1fr_5rem] gap-3">
+          <div class="grid grid-cols-[1fr_1fr_7rem] gap-3">
             <template v-if="mapType === 'worldmap'">
               <div class="field-row col-span-1">
                 <label class="field-label">{{ t('boardSettings.lat') }}</label>
@@ -209,6 +237,16 @@
                       <input v-model="form.label.color" class="field flex-1" placeholder="#ffffff" />
                     </div>
                   </div>
+                  <div class="col-span-2">
+                    <button type="button" @click="showLabelAdvanced = !showLabelAdvanced"
+                      class="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-400 transition-colors">
+                      <svg class="w-3 h-3 transition-transform" :class="showLabelAdvanced ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
+                      {{ t('boardSettings.labelAdvanced') }}
+                    </button>
+                  </div>
+                  <template v-if="showLabelAdvanced">
                   <div class="field-row">
                     <label class="field-label">{{ t('boardSettings.offsetX') }}</label>
                     <NumberInput v-model="form.label.x" class="flex-1" />
@@ -219,12 +257,17 @@
                   </div>
                   <div class="field-row col-span-2">
                     <label class="field-label">{{ t('boardSettings.background') }}</label>
-                    <div class="flex gap-2 flex-1 items-center">
-                      <input type="color" v-model="form.label.background"
-                        class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5" />
-                      <input v-model="form.label.background" class="field flex-1" placeholder="transparent" />
-                    </div>
+                    <ColorInput v-model="form.label.background" none-label="transparent" none-value="transparent" default-color="#000000" />
                   </div>
+                  <div class="field-row col-span-2">
+                    <label class="field-label">{{ t('boardSettings.borderColor') }}</label>
+                    <ColorInput v-model="form.label_border" none-label="default" default-color="#e5e5e5" />
+                  </div>
+                  <div class="field-row col-span-2">
+                    <label class="field-label">{{ t('boardSettings.maxLength') }}</label>
+                    <NumberInput v-model="form.label_maxlen" min="0" :placeholder="t('boardSettings.noLimit')" class="flex-1" />
+                  </div>
+                  </template>
                 </div>
               </div>
             </div>
@@ -301,6 +344,30 @@
           </div>
         </section>
 
+        <!-- === FILTER (exclude members) === -->
+        <section v-if="['host', 'hostgroup', 'servicegroup', 'map'].includes(object.type)">
+          <button type="button" @click="showFilter = !showFilter"
+            class="flex items-center gap-2 w-full group mb-3">
+            <p class="section-title mb-0">{{ t('boardSettings.filterSection') }}</p>
+            <svg class="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-all ml-auto shrink-0"
+              :class="showFilter ? '' : '-rotate-90'"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+          <div v-if="showFilter" class="space-y-3">
+            <div class="field-row">
+              <label class="field-label">{{ t('boardSettings.excludeMembers') }}</label>
+              <input v-model="form.exclude_members" class="field flex-1 font-mono" :placeholder="t('boardSettings.regexPlaceholder')" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">{{ t('boardSettings.excludeStates') }}</label>
+              <input v-model="form.exclude_member_states" class="field flex-1 font-mono" placeholder="DOWN,CRITICAL" />
+            </div>
+            <p class="text-xs text-zinc-600 pl-[6.75rem]">{{ t('boardSettings.excludeHint') }}</p>
+          </div>
+        </section>
+
         <!-- === TEMPLATES === -->
         <section>
           <button type="button" @click="showTemplates = !showTemplates"
@@ -316,6 +383,10 @@
             <div class="field-row">
               <label class="field-label">{{ t('board.hoverTemplate') }}</label>
               <input v-model="form.hover_template" class="field flex-1 font-mono" :placeholder="t('board.templatePlaceholder')" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">{{ t('boardSettings.hoverUrl') }}</label>
+              <input v-model="form.hover_url" class="field flex-1 font-mono" placeholder="https://…" />
             </div>
             <div class="field-row">
               <label class="field-label">{{ t('board.contextTemplate') }}</label>
@@ -372,6 +443,7 @@ import { parsePerfData } from '@/utils/perf'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import AutocompleteInput from './AutocompleteInput.vue'
 import NumberInput from '@/components/NumberInput.vue'
+import ColorInput from '@/components/ColorInput.vue'
 
 const { t } = useI18n()
 
@@ -441,6 +513,8 @@ const form = reactive({
   group_name: '',
   map_name: '',
   line_style: null as string | null,
+  line_color: null as string | null,
+  line_color_border: null as string | null,
   label: {
     show: true,
     text: '',
@@ -450,6 +524,12 @@ const form = reactive({
     color: '#ffffff',
     background: 'transparent',
   },
+  label_border: null as string | null,
+  label_maxlen: null as number | null,
+  textbox_background: null as string | null,
+  textbox_border: null as string | null,
+  textbox_width: null as number | null,
+  textbox_height: null as number | null,
   display: {
     mode: 'icon' as 'icon' | 'text' | 'gadget',
     image: '',
@@ -460,8 +540,11 @@ const form = reactive({
   weathermap_metric: '',
   only_hard_states: false,
   recognize_services: false,
+  exclude_members: '',
+  exclude_member_states: '',
   url: '',
   url_target: '_blank',
+  hover_url: '',
   hover_template: '',
   context_template: '',
   x: 0,
@@ -477,7 +560,9 @@ const saving = ref(false)
 const saveError = ref('')
 const confirmDelete = ref(false)
 const showLink = ref(!!props.object.url)
-const showTemplates = ref(!!(props.object.hover_template || props.object.context_template))
+const showLabelAdvanced = ref(false)
+const showTemplates = ref(!!(props.object.hover_template || props.object.context_template || props.object.hover_url))
+const showFilter = ref(!!(props.object.exclude_members || props.object.exclude_member_states))
 
 // Initialize form from object
 watch(() => props.object, (obj) => {
@@ -486,6 +571,8 @@ watch(() => props.object, (obj) => {
   form.group_name = obj.group_name ?? ''
   form.map_name = obj.map_name ?? ''
   form.line_style = obj.line_style ?? null
+  form.line_color = obj.line_color ?? null
+  form.line_color_border = obj.line_color_border ?? null
   form.label.show = obj.label?.show ?? true
   form.label.text = obj.label?.text ?? ''
   form.label.x = obj.label?.x ?? 0
@@ -493,6 +580,12 @@ watch(() => props.object, (obj) => {
   form.label.size = obj.label?.size ?? 11
   form.label.color = obj.label?.color ?? '#ffffff'
   form.label.background = obj.label?.background ?? 'transparent'
+  form.label_border = obj.label_border ?? null
+  form.label_maxlen = obj.label_maxlen ?? null
+  form.textbox_background = obj.textbox_background ?? null
+  form.textbox_border = obj.textbox_border ?? null
+  form.textbox_width = obj.textbox_width ?? null
+  form.textbox_height = obj.textbox_height ?? null
   form.display.mode = obj.display?.mode ?? 'icon'
   form.display.image = obj.display?.image ?? ''
   form.display.image_size = obj.display?.image_size ?? null
@@ -501,8 +594,11 @@ watch(() => props.object, (obj) => {
   form.weathermap_metric = obj.weathermap_metric ?? ''
   form.only_hard_states = obj.only_hard_states ?? false
   form.recognize_services = obj.recognize_services ?? false
+  form.exclude_members = obj.exclude_members ?? ''
+  form.exclude_member_states = obj.exclude_member_states ?? ''
   form.url = obj.url ?? ''
   form.url_target = obj.url_target ?? '_blank'
+  form.hover_url = obj.hover_url ?? ''
   form.hover_template = obj.hover_template ?? ''
   form.context_template = obj.context_template ?? ''
   form.x = obj.x ?? 0
@@ -512,6 +608,9 @@ watch(() => props.object, (obj) => {
   form.z = obj.z ?? 1
   form.x2 = obj.x2 ?? obj.x + 150
   form.y2 = obj.y2 ?? obj.y
+  showLabelAdvanced.value = false
+  showTemplates.value = !!(obj.hover_template || obj.context_template || obj.hover_url)
+  showFilter.value = !!(obj.exclude_members || obj.exclude_member_states)
 }, { immediate: true })
 
 // ---- Autocomplete ----
@@ -600,11 +699,22 @@ async function save() {
         color: form.label.color,
         background: form.label.background,
       },
+      label_border: form.label_border || null,
+      label_maxlen: form.label_maxlen ?? null,
+      textbox_background: form.textbox_background || null,
+      textbox_border: form.textbox_border || null,
+      textbox_width: form.textbox_width ?? null,
+      textbox_height: form.textbox_height ?? null,
       line_style: form.line_style,
+      line_color: form.line_color || null,
+      line_color_border: form.line_color_border || null,
       url: form.url || null,
       url_target: form.url_target,
+      hover_url: form.hover_url || null,
       hover_template: form.hover_template || null,
       context_template: form.context_template || null,
+      exclude_members: form.exclude_members || null,
+      exclude_member_states: form.exclude_member_states || null,
       z: form.z,
     }
 

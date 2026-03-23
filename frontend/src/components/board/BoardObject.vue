@@ -2,11 +2,9 @@
   <!-- Textbox -->
   <div
     v-if="object.type === 'textbox'"
-    class="px-2.5 py-1.5 rounded-lg text-sm font-medium whitespace-pre-wrap pointer-events-none ring-1 transition-all"
-    :class="selected
-      ? 'ring-indigo-400 bg-[var(--bg-glass)] text-[var(--text)]'
-      : 'ring-[var(--border)] bg-[var(--bg-glass)] text-zinc-200'"
-    style="backdrop-filter: blur(4px)"
+    class="px-2.5 py-1.5 rounded-lg text-sm font-medium whitespace-pre-wrap pointer-events-none ring-1 transition-all overflow-auto"
+    :class="selected ? 'ring-indigo-400' : 'ring-[var(--border)]'"
+    :style="textboxStyle"
     @mouseenter="$emit('hover', $event)"
     @mouseleave="$emit('hover-leave')"
     @contextmenu.prevent="$emit('context-menu', $event)"
@@ -93,6 +91,16 @@
         :style="{ top: `-${RING_PAD}px`, left: `-${RING_PAD}px`, pointerEvents: 'none' }"
       />
 
+      <!-- Stale data badge -->
+      <span
+        v-if="state?.stale"
+        class="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-zinc-600 text-zinc-200 flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
+        title="Stale data"
+      >
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </span>
       <!-- Acknowledged badge -->
       <span
         v-if="state?.acknowledged"
@@ -222,24 +230,39 @@ const TYPE_CHARS: Record<string, string> = {
 }
 const typeChar = computed(() => TYPE_CHARS[props.object.type] ?? '?')
 
-const labelStyle = computed(() => ({
-  fontSize: `${props.object.label?.size ?? 11}px`,
-  color: props.object.label?.color ?? '#e4e4e7',
-  background: props.object.label?.background && props.object.label.background !== 'transparent'
-    ? props.object.label.background
-    : 'rgba(0,0,0,0.65)',
+const textboxStyle = computed(() => ({
   backdropFilter: 'blur(4px)',
-  textShadow: '0 1px 3px rgba(0,0,0,0.9)',
-  outline: '1px solid rgba(255,255,255,0.12)',
+  background: props.object.textbox_background ?? 'var(--bg-glass)',
+  borderColor: props.object.textbox_border ?? undefined,
+  color: 'var(--text)',
+  width: props.object.textbox_width ? `${props.object.textbox_width}px` : undefined,
+  height: props.object.textbox_height ? `${props.object.textbox_height}px` : undefined,
 }))
 
+const labelStyle = computed(() => {
+  const bg = props.object.label?.background
+  return {
+    fontSize: `${props.object.label?.size ?? 11}px`,
+    color: props.object.label?.color ?? '#e4e4e7',
+    background: bg && bg !== 'transparent' ? bg : 'rgba(0,0,0,0.65)',
+    backdropFilter: 'blur(4px)',
+    textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+    outline: props.object.label_border
+      ? `1px solid ${props.object.label_border}`
+      : '1px solid rgba(255,255,255,0.12)',
+  }
+})
+
 const displayName = computed(() => {
-  if (props.object.label?.text) return props.object.label.text
-  if (props.object.type === 'host') return props.object.host_name ?? props.object.id
-  if (props.object.type === 'service') return props.object.service_description ?? props.object.id
-  if (props.object.type === 'map') return props.object.map_name ?? props.object.id
-  if (props.object.group_name) return props.object.group_name
-  return props.object.id
+  let name = ''
+  if (props.object.label?.text) name = props.object.label.text
+  else if (props.object.type === 'host') name = props.object.host_name ?? props.object.id
+  else if (props.object.type === 'service') name = props.object.service_description ?? props.object.id
+  else if (props.object.type === 'map') name = props.object.map_name ?? props.object.id
+  else name = props.object.group_name ?? props.object.id
+  const maxlen = props.object.label_maxlen
+  if (maxlen && maxlen > 0 && name.length > maxlen) return name.slice(0, maxlen) + '…'
+  return name
 })
 </script>
 

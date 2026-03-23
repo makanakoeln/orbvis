@@ -7,7 +7,9 @@
       </svg>
       <div class="flex-1 min-w-0">
         <div class="font-semibold text-[var(--text)] text-sm">{{ t('boardSettings.addObject') }}</div>
-        <div class="text-[10px] text-zinc-500 mt-0.5">{{ t('boardSettings.dragObjects') }}</div>
+        <div class="text-[10px] mt-0.5" :class="placing ? 'text-amber-400/70' : 'text-zinc-500'">
+          {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.dragObjects') }}
+        </div>
       </div>
     </div>
 
@@ -78,6 +80,7 @@
           : canPlace ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-indigo-600 text-white'">
         {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.placeOnBoard') }}
       </button>
+      <p v-if="draft.type && !canPlace && !placing" class="text-xs text-zinc-500 text-center">{{ missingFieldHint }}</p>
 
     </div>
   </div>
@@ -109,6 +112,13 @@ defineEmits<{
 
 const auth = useAuthStore()
 
+const MISSING_FIELD_KEY: Record<string, string> = {
+  host: 'boardSettings.hostname',
+  hostgroup: 'boardSettings.groupName',
+  servicegroup: 'boardSettings.groupName',
+  map: 'boardSettings.boardName',
+}
+
 const canPlace = computed(() => {
   const d = props.draft
   switch (d.type) {
@@ -122,6 +132,13 @@ const canPlace = computed(() => {
     case 'image':        return true
     default:             return false
   }
+})
+
+const missingFieldHint = computed(() => {
+  if (canPlace.value) return ''
+  const d = props.draft
+  if (d.type === 'service') return `↑ ${t(d.host_name ? 'boardSettings.serviceDescription' : 'boardSettings.hostname')}`
+  return MISSING_FIELD_KEY[d.type] ? `↑ ${t(MISSING_FIELD_KEY[d.type])}` : ''
 })
 
 const addObjects = ref<string[]>([])
