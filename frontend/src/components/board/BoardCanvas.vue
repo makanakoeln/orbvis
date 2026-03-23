@@ -161,6 +161,10 @@ const _dragInitX = ref(0)
 const _dragInitY = ref(0)
 const _didMove = ref(false)
 const localDragPositions = reactive<Record<string, { x: number; y: number }>>({})
+// When the user taps an object (no drag, no placing), pointer capture redirects
+// the synthetic click to the canvas div. Suppress that canvas-click so it doesn't
+// deselect the just-selected object.
+const _suppressNextCanvasClick = ref(false)
 
 function _snap(v: number): number {
   if (!props.snapGrid) return v
@@ -254,6 +258,7 @@ function objectWrapperStyle(obj: BoardObjectType) {
 
 function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
   if (event.button === 2) return  // right-click: let contextmenu event fire normally
+  _suppressNextCanvasClick.value = false
   event.preventDefault()
   if (!(props.editMode || props.isAdmin)) return
   const canvas = canvasEl.value
@@ -296,6 +301,8 @@ function onCanvasPointerUp(event: PointerEvent) {
     emit('object-drag-end', id, pos.x, pos.y)
   } else if (!_didMove.value && props.placing) {
     emit('canvas-click', event as unknown as MouseEvent)
+  } else if (!_didMove.value) {
+    _suppressNextCanvasClick.value = true
   }
 }
 
@@ -364,7 +371,10 @@ function onObjectContextMenu(event: MouseEvent, obj: BoardObjectType) {
 }
 
 function onCanvasClick(event: MouseEvent) {
-
+  if (_suppressNextCanvasClick.value) {
+    _suppressNextCanvasClick.value = false
+    return
+  }
   closeMenus()
   emit('canvas-click', event)
 }
