@@ -268,6 +268,9 @@ export const connectionsApi = {
     return request(`/backends/${backendId}/perf-metrics?${params}`, {}, token)
   },
 
+  hostGeo: (backendId: string, host: string, token: string): Promise<{ lat: number; lng: number } | null> =>
+    request(`/backends/${backendId}/host-geo?host=${encodeURIComponent(host)}`, {}, token),
+
   testConnection: (
     data: BackendConfig,
     token: string,

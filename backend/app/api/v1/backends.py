@@ -139,6 +139,25 @@ def _parse_metric_names(perf_data: str) -> list[str]:
     return names
 
 
+class HostGeo(BaseModel):
+    lat: float
+    lng: float
+
+
+@router.get("/{backend_id}/host-geo", response_model=HostGeo | None)
+async def get_host_geo(
+    backend_id: str,
+    host: str = Query(...),
+    _: object = Depends(get_current_user),
+):
+    """Return orbvis_lat/orbvis_lng coordinates for a host, or null if not set."""
+    backend = get_backend(backend_id)
+    if backend is None:
+        return None
+    result = await backend.get_host_geo(host)
+    return HostGeo(lat=result[0], lng=result[1]) if result else None
+
+
 @router.get("/{backend_id}/objects", response_model=list[str])
 async def list_backend_objects(
     backend_id: str,

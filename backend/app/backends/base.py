@@ -60,6 +60,10 @@ class BackendBase(ABC):
         """Return the last hard state for a service (default: delegates to current state)."""
         return await self.get_service_state(host, service)
 
+    async def get_host_geo(self, hostname: str) -> tuple[float, float] | None:
+        """Return (lat, lng) from orbvis_lat/orbvis_lng host labels, or None if not set."""
+        return None
+
     @abstractmethod
     async def is_available(self) -> bool:
         """Check whether the backend is reachable."""
