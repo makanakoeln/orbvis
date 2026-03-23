@@ -57,6 +57,20 @@
           {{ t('board.editing') }}
         </span>
 
+        <!-- Rotation countdown -->
+        <button v-if="boardConfig && boardConfig.rotation_interval > 0 && rotationCountdown > 0"
+          @click="toggleRotationPause"
+          :title="rotationPaused ? t('board.rotationResume') : t('board.rotationPause')"
+          class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ring-1 transition-all"
+          :class="rotationPaused
+            ? 'bg-zinc-700/50 ring-zinc-700 text-zinc-400'
+            : 'bg-indigo-500/8 ring-indigo-500/20 text-indigo-400'">
+          <svg class="w-3 h-3" :class="rotationPaused ? '' : 'animate-spin'" style="animation-duration:3s" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+          {{ rotationCountdown }}{{ t('board.rotationSuffix') }}
+        </button>
+
         <!-- Settings button (admin only) -->
         <button v-if="auth.isAdmin" @click="openSettings"
           class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
@@ -653,27 +667,44 @@ async function onSettingsUpdated() {
 
 // ---- Rotation ----
 
-const rotationTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+const rotationTimer = ref<ReturnType<typeof setInterval> | null>(null)
+const rotationCountdown = ref(0)
+const rotationPaused = ref(false)
 
 function stopRotation() {
   if (rotationTimer.value !== null) {
-    clearTimeout(rotationTimer.value)
+    clearInterval(rotationTimer.value)
     rotationTimer.value = null
   }
+  rotationCountdown.value = 0
+}
+
+async function goToNextBoard() {
+  if (boardsStore.boards.length === 0) await boardsStore.fetchBoards()
+  const pool = boardsStore.boards.filter(b => (b.rotation_interval ?? 0) > 0)
+  if (pool.length < 2) return
+  const idx = pool.findIndex(b => b.name === boardName.value)
+  const next = pool[(idx + 1) % pool.length]
+  router.push({ name: 'board', params: { name: next.name } })
 }
 
 function scheduleRotation(intervalSeconds: number) {
   stopRotation()
+  rotationPaused.value = false
   if (intervalSeconds <= 0 || editor.editMode.value) return
-  rotationTimer.value = setTimeout(async () => {
-    // Ensure map list is loaded
-    if (boardsStore.boards.length === 0) await boardsStore.fetchBoards()
-    const all = boardsStore.boards
-    if (all.length < 2) return
-    const idx = all.findIndex(m => m.name === boardName.value)
-    const next = all[(idx + 1) % all.length]
-    router.push({ name: 'board', params: { name: next.name } })
-  }, intervalSeconds * 1000)
+  rotationCountdown.value = intervalSeconds
+  rotationTimer.value = setInterval(() => {
+    if (rotationPaused.value || editor.editMode.value) return
+    rotationCountdown.value--
+    if (rotationCountdown.value <= 0) {
+      stopRotation()
+      goToNextBoard()
+    }
+  }, 1000)
+}
+
+function toggleRotationPause() {
+  rotationPaused.value = !rotationPaused.value
 }
 
 // Re-run whenever the map name changes (component is reused by Vue Router between maps).

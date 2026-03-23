@@ -77,6 +77,8 @@ export default {
     rotationInterval: 'Rotation interval',
     rotationIntervalHint: '0 = disabled · seconds until the next board is shown',
     rotationSuffix: 's',
+    rotationPause: 'Pause rotation',
+    rotationResume: 'Resume rotation',
     boardType: 'Board type',
     boardTypeStatic: 'Static board',
     boardTypeGeoBoard: 'Geo Board',
