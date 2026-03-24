@@ -159,6 +159,7 @@ fi
 step "Installing backend dependencies"
 quietly sudo "$VENV_DIR/bin/pip" install --quiet --upgrade pip
 quietly sudo cp -r "$SCRIPT_DIR/backend/." "$ORBVIS_DIR/src/"
+quietly sudo cp "$SCRIPT_DIR/VERSION" "$ORBVIS_DIR/VERSION"
 quietly sudo "$VENV_DIR/bin/pip" install --quiet -e "$ORBVIS_DIR/src"
 ok "Backend dependencies installed"
 

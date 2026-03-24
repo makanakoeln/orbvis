@@ -12,7 +12,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
-APP_VERSION = (Path(__file__).parent.parent.parent / "VERSION").read_text().strip()
+_version_candidates = [
+    Path(__file__).parent.parent.parent / "VERSION",  # repo root or $ORBVIS_DIR
+    Path(__file__).parent.parent / "VERSION",         # inside backend/
+]
+APP_VERSION = next(
+    (p.read_text().strip() for p in _version_candidates if p.is_file()), "0.0.0"
+)
 
 
 class MethodOverrideMiddleware:
