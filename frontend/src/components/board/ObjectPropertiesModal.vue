@@ -182,29 +182,29 @@
         <!-- === POSITION === -->
         <section v-if="object.type !== 'line'">
           <p class="section-title">{{ t('boardSettings.position') }}</p>
-          <div class="grid grid-cols-[1fr_1fr_7rem] gap-3">
+          <div class="grid grid-cols-3 gap-3">
             <template v-if="mapType === 'worldmap'">
-              <div class="field-row col-span-1">
-                <label class="field-label">{{ t('boardSettings.lat') }}</label>
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.lat') }}</label>
                 <NumberInput v-model="form.lat" step="any" class="flex-1" />
               </div>
-              <div class="field-row col-span-1">
-                <label class="field-label">{{ t('boardSettings.lng') }}</label>
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.lng') }}</label>
                 <NumberInput v-model="form.lng" step="any" class="flex-1" />
               </div>
             </template>
             <template v-else>
-              <div class="field-row col-span-1">
-                <label class="field-label">{{ t('boardSettings.x') }}</label>
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.x') }}</label>
                 <NumberInput v-model="form.x" class="flex-1" />
               </div>
-              <div class="field-row col-span-1">
-                <label class="field-label">{{ t('boardSettings.y') }}</label>
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.y') }}</label>
                 <NumberInput v-model="form.y" class="flex-1" />
               </div>
             </template>
-            <div class="field-row col-span-1">
-              <label class="field-label">{{ t('boardSettings.z') }}</label>
+            <div class="flex items-center gap-2">
+              <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.z') }}</label>
               <NumberInput v-model="form.z" min="1" max="999" class="flex-1" />
             </div>
           </div>
