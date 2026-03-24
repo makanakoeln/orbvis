@@ -6,8 +6,6 @@ import logging
 import re
 import time
 
-logger = logging.getLogger(__name__)
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
@@ -16,6 +14,7 @@ from app.schemas.backend import BackendConfig, BackendCreate, BackendUpdate
 from app.services import backend_service
 from app.services.state_service import get_backend, get_backend_objects
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -35,7 +34,7 @@ async def create_backend(data: BackendCreate, _: object = Depends(require_admin)
     try:
         return backend_service.create(data)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from None
 
 
 @router.put("/{backend_id}", response_model=BackendConfig)
@@ -137,8 +136,10 @@ async def get_perf_metrics(
 
 
 def _parse_metric_names(perf_data: str) -> list[str]:
-    return [part[:part.index("=")].strip("'")
-            for part in re.findall(r"(?:'[^']+'|[^\s]+)=[^\s]*", perf_data)]
+    return [
+        part[: part.index("=")].strip("'")
+        for part in re.findall(r"(?:'[^']+'|[^\s]+)=[^\s]*", perf_data)
+    ]
 
 
 class MetricPoint(BaseModel):

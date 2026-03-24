@@ -46,7 +46,7 @@ class UserRead(UserBase):
     user_id: int
     roles: list[RoleRef] = []
     permissions: list[PermissionRef] = []
-    cmk_theme: str | None = None      # populated at runtime from ui_theme.mk, not stored in DB
+    cmk_theme: str | None = None  # populated at runtime from ui_theme.mk, not stored in DB
     cmk_language: str | None = None  # populated at runtime from language.mk, not stored in DB
 
     model_config = {"from_attributes": True}

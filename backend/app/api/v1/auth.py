@@ -42,9 +42,7 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)) -> Token
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(
-    data: RefreshRequest, db: AsyncSession = Depends(get_db)
-) -> TokenResponse:
+async def refresh_token(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid refresh token",
@@ -55,7 +53,7 @@ async def refresh_token(
             raise credentials_exception
         user_id = int(payload["sub"])
     except (JWTError, KeyError, ValueError):
-        raise credentials_exception
+        raise credentials_exception from None
 
     user = await get_user_by_id(db, user_id)
     if user is None or not user.is_active:
@@ -100,7 +98,9 @@ async def sso_login(request: Request, db: AsyncSession = Depends(get_db)) -> Tok
             username = validate_checkmk_cookie(cookie_value)
 
     if not username:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No valid Checkmk session")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="No valid Checkmk session"
+        )
     logger.info("SSO: login successful for user %r", username)
 
     user = await get_or_create_sso_user(db, username)

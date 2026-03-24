@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
 ObjectType = Literal[
-    "host", "service", "hostgroup", "servicegroup",
-    "map", "image", "line", "textbox", "cmk_label", "graph",
+    "host",
+    "service",
+    "hostgroup",
+    "servicegroup",
+    "map",
+    "image",
+    "line",
+    "textbox",
+    "cmk_label",
+    "graph",
 ]
 
 LineStyle = Literal["plain", "arrow_end", "arrow_start", "arrow_both", "dashed", "weathermap"]
@@ -54,7 +62,7 @@ class AutomapView(BaseModel):
 
 
 BoardView = Annotated[
-    Union[StaticView, WorldmapView, RadarView, AutomapView],
+    StaticView | WorldmapView | RadarView | AutomapView,
     Field(discriminator="type"),
 ]
 
@@ -183,5 +191,6 @@ class BoardClone(BaseModel):
 
 class BoardPermissionsRead(BaseModel):
     """Which roles have view/edit access to a specific board (by name, not wildcard)."""
+
     view: list[str]
     edit: list[str]

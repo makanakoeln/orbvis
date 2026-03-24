@@ -23,7 +23,7 @@ class Permission(Base):
     act: Mapped[str] = mapped_column(String(100), nullable=False)
     obj: Mapped[str] = mapped_column(String(200), nullable=False, default="*")
 
-    roles: Mapped[list["Role"]] = relationship(
+    roles: Mapped[list[Role]] = relationship(
         "Role", secondary=roles2perms, back_populates="permissions", lazy="selectin"
     )
 

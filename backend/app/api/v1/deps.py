@@ -30,7 +30,7 @@ async def get_current_user(
             raise credentials_exception
         user_id: int = int(payload["sub"])
     except (JWTError, KeyError, ValueError):
-        raise credentials_exception
+        raise credentials_exception from None
 
     user = await get_user_by_id(db, user_id)
     if user is None or not user.is_active:
@@ -44,7 +44,9 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
-def user_has_permission(user: User, mod: str, act: str, obj: str, require_explicit: bool = False) -> bool:
+def user_has_permission(
+    user: User, mod: str, act: str, obj: str, require_explicit: bool = False
+) -> bool:
     """Return True if user has the requested permission.
 
     By default, is_admin grants all permissions. Set require_explicit=True for

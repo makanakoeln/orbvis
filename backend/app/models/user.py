@@ -26,7 +26,7 @@ class User(Base):
     theme: Mapped[str] = mapped_column(String(10), default="system", nullable=False)
     language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
 
-    roles: Mapped[list["Role"]] = relationship(
+    roles: Mapped[list[Role]] = relationship(
         "Role", secondary=users2roles, back_populates="users", lazy="selectin"
     )
 

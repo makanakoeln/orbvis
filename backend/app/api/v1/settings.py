@@ -18,7 +18,5 @@ async def get_settings(current_user: User = Depends(get_current_user)) -> Global
 
 
 @router.put("", response_model=GlobalSettings)
-async def update_settings(
-    data: GlobalSettings, _: User = Depends(require_admin)
-) -> GlobalSettings:
+async def update_settings(data: GlobalSettings, _: User = Depends(require_admin)) -> GlobalSettings:
     return settings_service.save_settings(data)

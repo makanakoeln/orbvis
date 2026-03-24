@@ -6,10 +6,20 @@ from app.schemas.state import MapStates, ObjectState
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 
 __all__ = [
-    "UserCreate", "UserRead", "UserUpdate",
-    "RoleCreate", "RoleRead",
-    "PermissionRead", "PermissionCreate",
-    "BoardConfig", "BoardObject", "BoardRead", "BoardCreate", "BoardUpdate",
-    "TokenResponse", "LoginRequest",
-    "ObjectState", "MapStates",
+    "BoardConfig",
+    "BoardCreate",
+    "BoardObject",
+    "BoardRead",
+    "BoardUpdate",
+    "LoginRequest",
+    "MapStates",
+    "ObjectState",
+    "PermissionCreate",
+    "PermissionRead",
+    "RoleCreate",
+    "RoleRead",
+    "TokenResponse",
+    "UserCreate",
+    "UserRead",
+    "UserUpdate",
 ]

@@ -16,7 +16,15 @@ from app.api.v1.deps import get_current_user, get_db, require_admin, user_has_pe
 from app.core.config import settings
 from app.models.role import Role
 from app.models.user import User
-from app.schemas.board import BoardClone, BoardConfig, BoardCreate, BoardObject, BoardPermissionsRead, BoardRead, BoardUpdate
+from app.schemas.board import (
+    BoardClone,
+    BoardConfig,
+    BoardCreate,
+    BoardObject,
+    BoardPermissionsRead,
+    BoardRead,
+    BoardUpdate,
+)
 from app.services import board_service
 from app.services.cfg_parser import cfg_to_board
 
@@ -49,12 +57,16 @@ def _is_valid_image(content: bytes) -> bool:
 
 def _require_board_view(name: str, user: User) -> None:
     if not user_has_permission(user, "map", "view", name):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No view permission for this board")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="No view permission for this board"
+        )
 
 
 def _require_board_edit(name: str, user: User) -> None:
     if not user_has_permission(user, "map", "edit", name):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No edit permission for this board")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="No edit permission for this board"
+        )
 
 
 def _require_not_readonly(name: str) -> None:
@@ -72,13 +84,11 @@ async def list_boards(current_user: User = Depends(get_current_user)) -> list[Bo
 
 
 @router.post("", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
-async def create_board(
-    data: BoardCreate, _: User = Depends(require_admin)
-) -> BoardConfig:
+async def create_board(data: BoardCreate, _: User = Depends(require_admin)) -> BoardConfig:
     try:
         return board_service.create_board(data)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
 
 
 @router.get("/{name}", response_model=BoardConfig)
@@ -86,7 +96,9 @@ async def get_board(name: str, current_user: User = Depends(get_current_user)) -
     _require_board_view(name, current_user)
     cfg = board_service.get_board(name)
     if cfg is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
     return cfg
 
 
@@ -98,25 +110,27 @@ async def update_board(
     _require_not_readonly(name)
     cfg = board_service.update_board(name, data)
     if cfg is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
     return cfg
 
 
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_board(name: str, _: User = Depends(require_admin)) -> None:
     if not board_service.delete_board(name):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
 
 
 @router.post("/{name}/clone", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
-async def clone_board(
-    name: str, data: BoardClone, _: User = Depends(require_admin)
-) -> BoardConfig:
+async def clone_board(name: str, data: BoardClone, _: User = Depends(require_admin)) -> BoardConfig:
     try:
         return board_service.clone_board(name, data.new_name, data.alias)
     except ValueError as exc:
         code = status.HTTP_404_NOT_FOUND if "not found" in str(exc) else status.HTTP_409_CONFLICT
-        raise HTTPException(status_code=code, detail=str(exc))
+        raise HTTPException(status_code=code, detail=str(exc)) from None
 
 
 @router.post("/import", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
@@ -126,7 +140,7 @@ async def import_board(
     try:
         return board_service.import_board(data, overwrite=overwrite)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
 
 
 @router.post("/import/cfg", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
@@ -137,17 +151,20 @@ async def import_cfg(
 ) -> BoardConfig:
     """Import a NagVis .cfg map file and convert it to an OrbVis board."""
     if not file.filename or not file.filename.lower().endswith(".cfg"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only .cfg files are accepted")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Only .cfg files are accepted"
+        )
     content = (await file.read()).decode("utf-8", errors="replace")
     map_name = Path(file.filename).stem
     data = cfg_to_board(content, map_name)
     try:
         return board_service.import_board(data, overwrite=overwrite)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
 
 
 # ----- Board permissions (read) -----
+
 
 @router.get("/{name}/permissions", response_model=BoardPermissionsRead)
 async def get_board_permissions(
@@ -174,6 +191,7 @@ async def get_board_permissions(
 
 # ----- Background image -----
 
+
 @router.post("/{name}/background")
 async def upload_background(
     name: str,
@@ -183,9 +201,13 @@ async def upload_background(
     _require_board_edit(name, current_user)
     _require_not_readonly(name)
     if board_service.get_board(name) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
     if file.content_type not in _ALLOWED_IMAGE_TYPES:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Unsupported image type")
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Unsupported image type"
+        )
 
     contents = await file.read(_MAX_BACKGROUND_BYTES + 1)
     if len(contents) > _MAX_BACKGROUND_BYTES:
@@ -228,7 +250,9 @@ async def delete_background(name: str, current_user: User = Depends(get_current_
     _require_board_edit(name, current_user)
     _require_not_readonly(name)
     if board_service.get_board(name) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
     bg_dir = Path(settings.boards_dir) / "backgrounds"
     for f in bg_dir.glob(f"{name}.*"):
         f.unlink(missing_ok=True)
@@ -236,6 +260,7 @@ async def delete_background(name: str, current_user: User = Depends(get_current_
 
 
 # ----- Object sub-resources -----
+
 
 @router.post("/{name}/objects", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
 async def add_object(
@@ -246,9 +271,11 @@ async def add_object(
     try:
         cfg = board_service.add_object(name, obj)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
     if cfg is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
     return cfg
 
 

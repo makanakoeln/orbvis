@@ -13,10 +13,13 @@ from app.schemas.state import MapStates, ObjectState
 # Combined severity for cross-scale worst-state aggregation (recognize_services)
 _COMBINED_SEVERITY: dict[str, int] = {
     "PENDING": -1,
-    "UP": 0, "OK": 0,
-    "UNREACHABLE": 1, "UNKNOWN": 1,
+    "UP": 0,
+    "OK": 0,
+    "UNREACHABLE": 1,
+    "UNKNOWN": 1,
     "WARNING": 2,
-    "DOWN": 3, "CRITICAL": 4,
+    "DOWN": 3,
+    "CRITICAL": 4,
 }
 
 if TYPE_CHECKING:
@@ -25,14 +28,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # In-memory registry of configured backends
-_backends: dict[str, "BackendBase"] = {}
+_backends: dict[str, BackendBase] = {}
 
 
-def register_backend(backend_id: str, backend: "BackendBase") -> None:
+def register_backend(backend_id: str, backend: BackendBase) -> None:
     _backends[backend_id] = backend
 
 
-def get_backend(backend_id: str) -> "BackendBase | None":
+def get_backend(backend_id: str) -> BackendBase | None:
     return _backends.get(backend_id)
 
 
@@ -45,7 +48,7 @@ async def get_backend_objects(backend_id: str, obj_type: str, host: str | None =
     if obj_type == "service" and host:
         # raw items are "hostname;service_description" – filter and strip prefix
         prefix = f"{host};"
-        return [item[len(prefix):] for item in raw if item.startswith(prefix)]
+        return [item[len(prefix) :] for item in raw if item.startswith(prefix)]
     return raw
 
 
@@ -57,10 +60,11 @@ async def get_board_states(cfg: BoardConfig) -> MapStates:
     if backend is None:
         logger.warning("No backend registered for '%s'", backend_id)
         states = [
-            ObjectState(object_id=obj.id, type=obj.type, state="PENDING")
-            for obj in cfg.objects
+            ObjectState(object_id=obj.id, type=obj.type, state="PENDING") for obj in cfg.objects
         ]
-        return MapStates(map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=False)
+        return MapStates(
+            map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=False
+        )
 
     if cfg.view.type == "radar":
         return await _get_radar_states(cfg, backend)
@@ -83,11 +87,13 @@ async def get_board_states(cfg: BoardConfig) -> MapStates:
         except Exception:
             backend_ok = False
 
-    return MapStates(map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=backend_ok)
+    return MapStates(
+        map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=backend_ok
+    )
 
 
 async def _get_board_states_batched(
-    backend: "BackendBase",
+    backend: BackendBase,
     objects: list[BoardObject],
 ) -> dict[str, ObjectState]:
     """Fetch states for all board objects using batch queries where supported."""
@@ -118,12 +124,16 @@ async def _get_board_states_batched(
         if not host_group:
             continue
         try:
-            batch = await backend.get_hosts_states([o.host_name for o in host_group], only_hard=only_hard)  # type: ignore[misc]
+            batch = await backend.get_hosts_states(
+                [o.host_name for o in host_group], only_hard=only_hard
+            )  # type: ignore[misc]
         except Exception:
             logger.warning("Batch host state query failed (only_hard=%s)", only_hard, exc_info=True)
             batch = {}
         for obj in host_group:
-            s = batch.get(obj.host_name) or ObjectState(object_id=obj.id, type="host", state="PENDING", stale=True)  # type: ignore[arg-type]
+            s = batch.get(obj.host_name) or ObjectState(
+                object_id=obj.id, type="host", state="PENDING", stale=True
+            )  # type: ignore[arg-type]
             s.object_id = obj.id
             results[obj.id] = s
 
@@ -137,7 +147,8 @@ async def _get_board_states_batched(
             svc_batch = {}
         for obj in rs_objs:
             results[obj.id] = _aggregate_host_with_services_from_data(
-                results[obj.id], svc_batch.get(obj.host_name, [])  # type: ignore[arg-type]
+                results[obj.id],
+                svc_batch.get(obj.host_name, []),  # type: ignore[arg-type]
             )
 
     for svc_group, only_hard in [(svcs_soft, False), (svcs_hard, True)]:
@@ -147,10 +158,14 @@ async def _get_board_states_batched(
         try:
             batch = await backend.get_services_states(pairs, only_hard=only_hard)  # type: ignore[arg-type]
         except Exception:
-            logger.warning("Batch service state query failed (only_hard=%s)", only_hard, exc_info=True)
+            logger.warning(
+                "Batch service state query failed (only_hard=%s)", only_hard, exc_info=True
+            )
             batch = {}
         for obj in svc_group:
-            s = batch.get((obj.host_name, obj.service_description)) or ObjectState(object_id=obj.id, type="service", state="PENDING", stale=True)  # type: ignore[arg-type]
+            s = batch.get((obj.host_name, obj.service_description)) or ObjectState(
+                object_id=obj.id, type="service", state="PENDING", stale=True
+            )  # type: ignore[arg-type]
             s.object_id = obj.id
             results[obj.id] = s
 
@@ -182,7 +197,7 @@ def _aggregate_host_with_services_from_data(
     )
 
 
-async def _get_object_state(backend: "BackendBase", obj: BoardObject) -> ObjectState:
+async def _get_object_state(backend: BackendBase, obj: BoardObject) -> ObjectState:
     try:
         if obj.type == "host" and obj.host_name:
             if obj.only_hard_states:
@@ -218,7 +233,7 @@ async def _get_object_state(backend: "BackendBase", obj: BoardObject) -> ObjectS
 
 
 async def _aggregate_host_with_services(
-    backend: "BackendBase", host_state: ObjectState, hostname: str
+    backend: BackendBase, host_state: ObjectState, hostname: str
 ) -> ObjectState:
     """Aggregate host state with the worst state of all its services."""
     try:
@@ -228,7 +243,7 @@ async def _aggregate_host_with_services(
     return _aggregate_host_with_services_from_data(host_state, services)
 
 
-async def _get_radar_states(cfg: "BoardConfig", backend: "BackendBase") -> MapStates:
+async def _get_radar_states(cfg: BoardConfig, backend: BackendBase) -> MapStates:
     """Fetch states for all dynamically resolved radar map members."""
     rv = cfg.view if isinstance(cfg.view, RadarView) else RadarView()
     members = await backend.get_group_members(rv.filter, rv.filter_value)
@@ -257,9 +272,13 @@ async def _get_radar_states(cfg: "BoardConfig", backend: "BackendBase") -> MapSt
         except Exception:
             batch = {}
         for member_id, host, svc in svc_members:
-            s = batch.get((host, svc)) or ObjectState(object_id=member_id, type="service", state="PENDING", stale=True)  # type: ignore[arg-type]
+            s = batch.get((host, svc)) or ObjectState(
+                object_id=member_id, type="service", state="PENDING", stale=True
+            )  # type: ignore[arg-type]
             s.object_id = member_id
             states.append(s)
 
     backend_ok = not all(s.stale for s in states)
-    return MapStates(map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=backend_ok)
+    return MapStates(
+        map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=backend_ok
+    )

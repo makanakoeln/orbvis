@@ -14,11 +14,9 @@ from fastapi.staticfiles import StaticFiles
 
 _version_candidates = [
     Path(__file__).parent.parent.parent / "VERSION",  # repo root or $ORBVIS_DIR
-    Path(__file__).parent.parent / "VERSION",         # inside backend/
+    Path(__file__).parent.parent / "VERSION",  # inside backend/
 ]
-APP_VERSION = next(
-    (p.read_text().strip() for p in _version_candidates if p.is_file()), "0.0.0"
-)
+APP_VERSION = next((p.read_text().strip() for p in _version_candidates if p.is_file()), "0.0.0")
 
 
 class MethodOverrideMiddleware:
@@ -43,9 +41,21 @@ class MethodOverrideMiddleware:
                 scope = {**scope, "method": override}
         await self.app(scope, receive, send)
 
-from app.api.v1 import auth, backends, boards, images, roles, settings as settings_api, states, users
+
+from app.api.v1 import (
+    auth,
+    backends,
+    boards,
+    images,
+    roles,
+    states,
+    users,
+)
+from app.api.v1 import (
+    settings as settings_api,
+)
 from app.core.config import settings
-from app.core.database import AsyncSessionLocal, init_db
+from app.core.database import AsyncSessionLocal
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -179,7 +189,14 @@ _DEMO_BG_SVG = """\
 
 def _seed_demo_map() -> None:
     """Write the built-in demo map to disk if it doesn't already exist."""
-    from app.schemas.board import BoardConfig, BoardObject, LabelConfig, DisplayConfig, StaticView, BoardUpdate
+    from app.schemas.board import (
+        BoardConfig,
+        BoardObject,
+        BoardUpdate,
+        DisplayConfig,
+        LabelConfig,
+        StaticView,
+    )
     from app.services.board_service import _board_path, _save_board_file, get_board, update_board
 
     # Always ensure the background SVG is present on disk
@@ -221,7 +238,8 @@ def _seed_demo_map() -> None:
             BoardObject(
                 id="host-localhost",
                 type="host",
-                x=270, y=190,
+                x=270,
+                y=190,
                 host_name="localhost",
                 display=DisplayConfig(mode="icon"),
                 label=LabelConfig(show=True, text="localhost", x=0, y=34, size=11),
@@ -229,7 +247,8 @@ def _seed_demo_map() -> None:
             BoardObject(
                 id="host-router01",
                 type="host",
-                x=570, y=190,
+                x=570,
+                y=190,
                 host_name="router01",
                 display=DisplayConfig(mode="icon"),
                 label=LabelConfig(show=True, text="router01", x=0, y=34, size=11),
@@ -237,18 +256,21 @@ def _seed_demo_map() -> None:
             BoardObject(
                 id="host-fileserver",
                 type="host",
-                x=420, y=380,
+                x=420,
+                y=380,
                 host_name="fileserver",
                 display=DisplayConfig(mode="icon"),
                 label=LabelConfig(show=True, text="fileserver", x=0, y=34, size=11),
             ),
-
             # ── Lines ───────────────────────────────────────────────────────
             # Plain line: localhost ↔ router01 (color = host state)
             BoardObject(
                 id="line-loc-rtr",
                 type="line",
-                x=270, y=190, x2=570, y2=190,
+                x=270,
+                y=190,
+                x2=570,
+                y2=190,
                 label=LabelConfig(show=False),
                 line_style="plain",
             ),
@@ -256,7 +278,10 @@ def _seed_demo_map() -> None:
             BoardObject(
                 id="wm-loc-fs",
                 type="line",
-                x=270, y=190, x2=420, y2=380,
+                x=270,
+                y=190,
+                x2=420,
+                y2=380,
                 host_name="localhost",
                 service_description="CPU Load",
                 label=LabelConfig(show=False),
@@ -266,18 +291,21 @@ def _seed_demo_map() -> None:
             BoardObject(
                 id="wm-rtr-fs",
                 type="line",
-                x=570, y=190, x2=420, y2=380,
+                x=570,
+                y=190,
+                x2=420,
+                y2=380,
                 host_name="router01",
                 service_description="HTTP",
                 label=LabelConfig(show=False),
                 line_style="weathermap",
             ),
-
             # ── Services ────────────────────────────────────────────────────
             BoardObject(
                 id="svc-http",
                 type="service",
-                x=760, y=190,
+                x=760,
+                y=190,
                 host_name="localhost",
                 service_description="HTTP",
                 display=DisplayConfig(mode="icon"),
@@ -286,7 +314,8 @@ def _seed_demo_map() -> None:
             BoardObject(
                 id="svc-ping",
                 type="service",
-                x=925, y=190,
+                x=925,
+                y=190,
                 host_name="router01",
                 service_description="PING",
                 display=DisplayConfig(mode="icon"),
@@ -295,7 +324,8 @@ def _seed_demo_map() -> None:
             BoardObject(
                 id="svc-cpu-gauge",
                 type="service",
-                x=760, y=355,
+                x=760,
+                y=355,
                 host_name="localhost",
                 service_description="CPU Load",
                 display=DisplayConfig(mode="gadget", gadget_type="gauge"),
@@ -304,7 +334,8 @@ def _seed_demo_map() -> None:
             BoardObject(
                 id="svc-disk-bar",
                 type="service",
-                x=925, y=355,
+                x=925,
+                y=355,
                 host_name="fileserver",
                 service_description="Disk /",
                 display=DisplayConfig(mode="gadget", gadget_type="bar"),
@@ -313,18 +344,19 @@ def _seed_demo_map() -> None:
             BoardObject(
                 id="svc-memory-tl",
                 type="service",
-                x=842, y=520,
+                x=842,
+                y=520,
                 host_name="mailserver",
                 service_description="Memory",
                 display=DisplayConfig(mode="gadget", gadget_type="trafficlight"),
                 label=LabelConfig(show=True, text="Memory", x=0, y=56, size=10),
             ),
-
             # ── Groups ──────────────────────────────────────────────────────
             BoardObject(
                 id="hg-linux",
                 type="hostgroup",
-                x=1092, y=190,
+                x=1092,
+                y=190,
                 group_name="linux-servers",
                 display=DisplayConfig(mode="icon"),
                 label=LabelConfig(show=True, text="linux-servers", x=0, y=34, size=11),
@@ -332,29 +364,30 @@ def _seed_demo_map() -> None:
             BoardObject(
                 id="sg-web",
                 type="servicegroup",
-                x=1092, y=380,
+                x=1092,
+                y=380,
                 group_name="web-services",
                 display=DisplayConfig(mode="icon"),
                 label=LabelConfig(show=True, text="web-services", x=0, y=34, size=11),
             ),
-
             # ── Image & Map link ────────────────────────────────────────────
             BoardObject(
                 id="image-logo",
                 type="image",
-                x=1265, y=190,
+                x=1265,
+                y=190,
                 display=DisplayConfig(mode="icon"),
                 label=LabelConfig(show=True, text="image", x=0, y=34, size=10),
             ),
             BoardObject(
                 id="map-self",
                 type="map",
-                x=1265, y=380,
+                x=1265,
+                y=380,
                 map_name="demo-static",
                 display=DisplayConfig(mode="icon"),
                 label=LabelConfig(show=True, text="map → demo", x=0, y=34, size=10),
             ),
-
         ],
     )
 
@@ -364,7 +397,7 @@ def _seed_demo_map() -> None:
 
 def _seed_demo_worldmap() -> None:
     """Write the built-in world demo map to disk if it doesn't already exist."""
-    from app.schemas.board import BoardConfig, BoardObject, LabelConfig, DisplayConfig, WorldmapView
+    from app.schemas.board import BoardConfig, BoardObject, DisplayConfig, LabelConfig, WorldmapView
     from app.services.board_service import _board_path, _save_board_file
 
     if _board_path("demo-world").exists():
@@ -384,52 +417,73 @@ def _seed_demo_worldmap() -> None:
             # ── Hosts ────────────────────────────────────────────────────────
             BoardObject(
                 id="wh-router01",
-                type="host", lat=50.11, lng=8.68,
-                x=0, y=0,
+                type="host",
+                lat=50.11,
+                lng=8.68,
+                x=0,
+                y=0,
                 host_name="router01",
                 label=LabelConfig(show=True, text="router01\nFrankfurt", x=0, y=34, size=11),
             ),
             BoardObject(
                 id="wh-switch01",
-                type="host", lat=52.37, lng=4.90,
-                x=0, y=0,
+                type="host",
+                lat=52.37,
+                lng=4.90,
+                x=0,
+                y=0,
                 host_name="switch01",
                 label=LabelConfig(show=True, text="switch01\nAmsterdam", x=0, y=34, size=11),
             ),
             BoardObject(
                 id="wh-localhost",
-                type="host", lat=51.51, lng=-0.13,
-                x=0, y=0,
+                type="host",
+                lat=51.51,
+                lng=-0.13,
+                x=0,
+                y=0,
                 host_name="localhost",
                 label=LabelConfig(show=True, text="localhost\nLondon", x=0, y=34, size=11),
             ),
             BoardObject(
                 id="wh-fileserver",
-                type="host", lat=48.86, lng=2.35,
-                x=0, y=0,
+                type="host",
+                lat=48.86,
+                lng=2.35,
+                x=0,
+                y=0,
                 host_name="fileserver",
                 label=LabelConfig(show=True, text="fileserver\nParis", x=0, y=34, size=11),
             ),
             BoardObject(
                 id="wh-mailserver",
-                type="host", lat=48.14, lng=11.58,
-                x=0, y=0,
+                type="host",
+                lat=48.14,
+                lng=11.58,
+                x=0,
+                y=0,
                 host_name="mailserver",
                 label=LabelConfig(show=True, text="mailserver\nMunich", x=0, y=34, size=11),
             ),
             # ── Services ─────────────────────────────────────────────────────
             BoardObject(
                 id="ws-http",
-                type="service", lat=51.55, lng=-0.20,
-                x=0, y=0,
+                type="service",
+                lat=51.55,
+                lng=-0.20,
+                x=0,
+                y=0,
                 host_name="localhost",
                 service_description="HTTP",
                 label=LabelConfig(show=True, text="HTTP", x=0, y=34, size=10),
             ),
             BoardObject(
                 id="ws-cpu",
-                type="service", lat=50.16, lng=8.82,
-                x=0, y=0,
+                type="service",
+                lat=50.16,
+                lng=8.82,
+                x=0,
+                y=0,
                 host_name="router01",
                 service_description="CPU Load",
                 display=DisplayConfig(mode="gadget", gadget_type="gauge"),
@@ -437,8 +491,11 @@ def _seed_demo_worldmap() -> None:
             ),
             BoardObject(
                 id="ws-disk",
-                type="service", lat=48.82, lng=2.48,
-                x=0, y=0,
+                type="service",
+                lat=48.82,
+                lng=2.48,
+                x=0,
+                y=0,
                 host_name="fileserver",
                 service_description="Disk /",
                 label=LabelConfig(show=True, text="Disk /", x=0, y=34, size=10),
@@ -462,9 +519,10 @@ def _run_migrations() -> None:
     - Partial migration: ``alembic_version`` table empty (DDL ran but version
       row was never committed) → stamp at head.
     """
-    from alembic import command
     from alembic.config import Config
     from sqlalchemy import create_engine, inspect, text
+
+    from alembic import command
 
     alembic_ini = Path(__file__).parent.parent / "alembic.ini"
     sync_url = settings.database_url.replace("+aiosqlite", "").replace("+asyncpg", "")
@@ -509,6 +567,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     sep = "=" * 60
     print(f"\n{sep}", flush=True)
     import os as _os
+
     port = _os.environ.get("ORBVIS_PORT", "8082")
     host_port = "" if port == "80" else f":{port}"
     print("  OrbVis is starting up.", flush=True)
@@ -529,6 +588,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         conn_id = f"cmk_{settings.checkmk_site}"
         if not backend_service.load_all():
             from app.schemas.backend import BackendConfig
+
             socket_path = str(Path(settings.checkmk_omd_root) / "tmp" / "run" / "live")
             cfg = BackendConfig(
                 id=conn_id,
@@ -536,8 +596,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 label=f"Checkmk {settings.checkmk_site}",
                 socket_path=socket_path,
                 checkmk_url=f"/{settings.checkmk_site}",
-                host=None, port=6557, timeout=10,
-                icinga2_url=None, icinga2_username=None, icinga2_password=None, icinga2_verify_ssl=True,
+                host=None,
+                port=6557,
+                timeout=10,
+                icinga2_url=None,
+                icinga2_username=None,
+                icinga2_password=None,
+                icinga2_verify_ssl=True,
             )
             backend_service.create(cfg)
             logger.info("Auto-created Checkmk connection '%s' → %s", conn_id, socket_path)
@@ -550,6 +615,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _seed_demo_worldmap()
 
     from app.seed_images import seed_builtin_images
+
     seed_builtin_images(Path(settings.boards_dir).parent / "images")
 
     yield

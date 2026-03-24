@@ -167,6 +167,7 @@ def clone_board(name: str, new_name: str, alias: str | None = None) -> BoardConf
     if dest_path.exists():
         raise ValueError(f"Board '{new_name}' already exists")
     import copy
+
     cfg = copy.deepcopy(src)
     cfg.name = new_name
     cfg.readonly = False  # clones are always editable

@@ -31,6 +31,7 @@ BackendCreate = BackendConfig
 
 class BackendUpdate(BaseModel):
     """Full replacement of all mutable fields (id stays fixed)."""
+
     type: Literal["livestatus", "icinga2", "test"] = "livestatus"
     label: str = ""
     socket_path: str | None = None

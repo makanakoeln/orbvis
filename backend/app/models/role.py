@@ -25,7 +25,9 @@ roles2perms = Table(
     "roles2perms",
     Base.metadata,
     Column("role_id", Integer, ForeignKey("roles.role_id", ondelete="CASCADE"), primary_key=True),
-    Column("perm_id", Integer, ForeignKey("permissions.perm_id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "perm_id", Integer, ForeignKey("permissions.perm_id", ondelete="CASCADE"), primary_key=True
+    ),
 )
 
 
@@ -35,10 +37,10 @@ class Role(Base):
     role_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
 
-    users: Mapped[list["User"]] = relationship(
+    users: Mapped[list[User]] = relationship(
         "User", secondary=users2roles, back_populates="roles", lazy="selectin"
     )
-    permissions: Mapped[list["Permission"]] = relationship(
+    permissions: Mapped[list[Permission]] = relationship(
         "Permission", secondary=roles2perms, back_populates="roles", lazy="selectin"
     )
 

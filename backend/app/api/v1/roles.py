@@ -19,6 +19,7 @@ router = APIRouter()
 
 # ---- Roles ----
 
+
 @router.get("", response_model=list[RoleRead])
 async def list_roles(
     db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
@@ -66,6 +67,7 @@ async def delete_role(
 
 
 # ---- Permissions ----
+
 
 @router.get("/permissions/", response_model=list[PermissionRead])
 async def list_permissions(

@@ -52,12 +52,12 @@ async def _broadcast_loop(board_name: str) -> None:
 
 
 @router.get("/boards/{name}/states", response_model=MapStates)
-async def get_board_states(
-    name: str, _: User = Depends(get_current_user)
-) -> MapStates:
+async def get_board_states(name: str, _: User = Depends(get_current_user)) -> MapStates:
     cfg = board_service.get_board(name)
     if cfg is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
     return await state_service.get_board_states(cfg)
 
 
@@ -106,4 +106,3 @@ async def websocket_board_states(
         pass
     finally:
         manager.disconnect(name, websocket)
-

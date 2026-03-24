@@ -91,13 +91,15 @@ def activate_all() -> None:
             logger.error("Failed to activate backend '%s': %s", cfg.id, exc)
 
 
-def build_instance(cfg: BackendConfig) -> "BackendBase":
+def build_instance(cfg: BackendConfig) -> BackendBase:
     """Build a backend instance without registering it (e.g. for connection tests)."""
     if cfg.type == "test":
         from app.backends.test import TestBackend
+
         return TestBackend()
     if cfg.type == "icinga2":
         from app.backends.icinga2 import Icinga2Backend
+
         return Icinga2Backend(
             url=cfg.icinga2_url or "https://localhost:5665",
             username=cfg.icinga2_username or "",
@@ -106,6 +108,7 @@ def build_instance(cfg: BackendConfig) -> "BackendBase":
             verify_ssl=cfg.icinga2_verify_ssl,
         )
     from app.backends.livestatus import LivestatusBackend
+
     return LivestatusBackend(
         socket_path=cfg.socket_path or "/var/run/nagios/rw/live",
         host=cfg.host,

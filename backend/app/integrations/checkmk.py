@@ -4,6 +4,7 @@ Optional Checkmk Python integration.
 Adds $OMD_ROOT/lib/python3 to sys.path when running inside an OMD site,
 making cmk.* modules importable. Falls back gracefully when standalone.
 """
+
 import logging
 import sys
 from pathlib import Path
@@ -27,6 +28,7 @@ def setup() -> None:
         sys.path.insert(0, lib_path)
     try:
         import cmk.utils.paths  # noqa: F401 — smoke test
+
         available = True
         log.info("Checkmk Python modules available (%s)", lib_path)
     except ImportError as e:
@@ -48,8 +50,11 @@ def load_user(username: str) -> dict[str, Any]:
     try:
         from cmk.gui.userdb.store import (
             load_custom_attr as _load_custom_attr,
+        )
+        from cmk.gui.userdb.store import (
             load_user as _load_user,
         )
+
         # Wato user spec contains language, roles, alias, email, …
         data = dict(_load_user(username))
         # Per-user custom attrs (written by ajax_ui_theme etc.) override wato data.
@@ -60,7 +65,9 @@ def load_user(username: str) -> dict[str, Any]:
                 data[key] = val
         return data
     except Exception as e:
-        log.warning("load_user(%s) via cmk.gui.userdb.store failed (%s) — using fallback", username, e)
+        log.warning(
+            "load_user(%s) via cmk.gui.userdb.store failed (%s) — using fallback", username, e
+        )
         return _load_user_fallback(username)
 
 
@@ -73,7 +80,7 @@ def _load_user_fallback(username: str) -> dict[str, Any]:
         users_mk = omd_root / "etc" / "check_mk" / "multisite.d" / "wato" / "users.mk"
         ns: dict = {"multisite_users": {}}
         if users_mk.is_file():
-            exec(compile(users_mk.read_bytes(), str(users_mk), "exec"), ns)  # noqa: S102
+            exec(compile(users_mk.read_bytes(), str(users_mk), "exec"), ns)
         user_data: dict = dict(ns["multisite_users"].get(username, {}))
 
         # Per-user runtime attrs override wato data (plain-text .mk files)

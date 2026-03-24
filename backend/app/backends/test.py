@@ -94,11 +94,16 @@ class TestBackend(BackendBase):
 
     async def get_topology(self) -> list[dict]:
         return [
-            {"name": "router01",    "parents": [],           "state": "UP",   "output": ""},
-            {"name": "switch01",    "parents": ["router01"], "state": "UP",   "output": ""},
-            {"name": "localhost",   "parents": ["router01"], "state": "UP",   "output": ""},
-            {"name": "fileserver",  "parents": ["switch01"], "state": "DOWN", "output": "Connection refused"},
-            {"name": "mailserver",  "parents": ["switch01"], "state": "UP",   "output": ""},
+            {"name": "router01", "parents": [], "state": "UP", "output": ""},
+            {"name": "switch01", "parents": ["router01"], "state": "UP", "output": ""},
+            {"name": "localhost", "parents": ["router01"], "state": "UP", "output": ""},
+            {
+                "name": "fileserver",
+                "parents": ["switch01"],
+                "state": "DOWN",
+                "output": "Connection refused",
+            },
+            {"name": "mailserver", "parents": ["switch01"], "state": "UP", "output": ""},
         ]
 
     async def get_host_services(self, hostname: str) -> list[dict]:
@@ -125,8 +130,8 @@ class TestBackend(BackendBase):
         # Determine metrics from service name (same logic as get_service_state)
         if service and ("CPU" in service or "Load" in service or "load" in service):
             metric_defs = [
-                ("load1",  0.0, ""),
-                ("load5",  1.0, ""),
+                ("load1", 0.0, ""),
+                ("load5", 1.0, ""),
                 ("load15", 2.0, ""),
             ]
         elif service and ("Memory" in service or "Mem" in service):

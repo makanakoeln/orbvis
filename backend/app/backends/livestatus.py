@@ -6,6 +6,7 @@ import asyncio
 import json as _json
 import logging
 import re as _re
+from datetime import UTC
 
 import httpx
 
@@ -34,8 +35,10 @@ _HOST_SEVERITY = {"UP": 0, "UNREACHABLE": 1, "DOWN": 2, "PENDING": -1}
 _SERVICE_SEVERITY = {"OK": 0, "UNKNOWN": 1, "WARNING": 2, "CRITICAL": 3, "PENDING": -1}
 _STATE_TYPE_MAP = {0: "SOFT", 1: "HARD"}
 
-_HOST_EXTRA_COLS = "address last_check state_type current_attempt max_check_attempts last_state_change"
-_SVC_EXTRA_COLS  = "last_check state_type current_attempt max_check_attempts last_state_change"
+_HOST_EXTRA_COLS = (
+    "address last_check state_type current_attempt max_check_attempts last_state_change"
+)
+_SVC_EXTRA_COLS = "last_check state_type current_attempt max_check_attempts last_state_change"
 
 
 def _parse_extra(row: list, offset: int = 5, *, include_address: bool = False) -> dict:
@@ -44,20 +47,20 @@ def _parse_extra(row: list, offset: int = 5, *, include_address: bool = False) -
         address = str(row[col]) if include_address and len(row) > col else ""
         if include_address:
             col += 1
-        lc      = float(row[col])     if len(row) > col     else 0.0
-        st      = int(row[col + 1])   if len(row) > col + 1 else 1
-        attempt = int(row[col + 2])   if len(row) > col + 2 else 0
-        max_att = int(row[col + 3])   if len(row) > col + 3 else 0
-        lsc     = float(row[col + 4]) if len(row) > col + 4 else 0.0
+        lc = float(row[col]) if len(row) > col else 0.0
+        st = int(row[col + 1]) if len(row) > col + 1 else 1
+        attempt = int(row[col + 2]) if len(row) > col + 2 else 0
+        max_att = int(row[col + 3]) if len(row) > col + 3 else 0
+        lsc = float(row[col + 4]) if len(row) > col + 4 else 0.0
     except (ValueError, TypeError):
         return {}
-    result = dict(
-        last_check=lc if lc > 0 else None,
-        state_type=_STATE_TYPE_MAP.get(st, "HARD"),
-        current_attempt=attempt,
-        max_attempts=max_att,
-        last_state_change=lsc if lsc > 0 else None,
-    )
+    result = {
+        "last_check": lc if lc > 0 else None,
+        "state_type": _STATE_TYPE_MAP.get(st, "HARD"),
+        "current_attempt": attempt,
+        "max_attempts": max_att,
+        "last_state_change": lsc if lsc > 0 else None,
+    }
     if include_address:
         result["address"] = address
     return result
@@ -69,7 +72,7 @@ def _parse_metrics_from_perf(perf_data: str) -> list[dict]:
     for part in _re.findall(r"(?:'[^']+'|[^\s]+)=\S*", perf_data):
         eq = part.index("=")
         label = part[:eq].strip("'")
-        rest = part[eq + 1:]
+        rest = part[eq + 1 :]
         # Extract unit from the value part (digits/dots/minus, then unit letters)
         m = _re.match(r"[-\d.]+([a-zA-Z%]*)", rest.split(";")[0])
         unit = m.group(1) if m else ""
@@ -192,11 +195,7 @@ class LivestatusBackend(BackendBase):
         )
 
     async def get_hostgroup_states(self, group: str) -> ObjectState:
-        query = (
-            f"GET hosts\n"
-            f"Columns: state\n"
-            f"Filter: groups >= {_ls_escape(group)}\n"
-        )
+        query = f"GET hosts\nColumns: state\nFilter: groups >= {_ls_escape(group)}\n"
         rows = await self._query(query)
         if not rows:
             return ObjectState(object_id="", type="hostgroup", state="PENDING")
@@ -207,11 +206,7 @@ class LivestatusBackend(BackendBase):
         return ObjectState(object_id="", type="hostgroup", state=worst)
 
     async def get_servicegroup_states(self, group: str) -> ObjectState:
-        query = (
-            f"GET services\n"
-            f"Columns: state\n"
-            f"Filter: groups >= {_ls_escape(group)}\n"
-        )
+        query = f"GET services\nColumns: state\nFilter: groups >= {_ls_escape(group)}\n"
         rows = await self._query(query)
         if not rows:
             return ObjectState(object_id="", type="servicegroup", state="PENDING")
@@ -264,12 +259,14 @@ class LivestatusBackend(BackendBase):
                 parents = [p for p in raw_parents if p]
             else:
                 parents = [p.strip() for p in (raw_parents or "").split(",") if p.strip()]
-            result.append({
-                "name": r[0],
-                "parents": parents,
-                "state": _HOST_STATE_MAP.get(int(r[2]), "UNKNOWN") if len(r) > 2 else "UNKNOWN",
-                "output": r[3] if len(r) > 3 else "",
-            })
+            result.append(
+                {
+                    "name": r[0],
+                    "parents": parents,
+                    "state": _HOST_STATE_MAP.get(int(r[2]), "UNKNOWN") if len(r) > 2 else "UNKNOWN",
+                    "output": r[3] if len(r) > 3 else "",
+                }
+            )
         return result
 
     async def get_host_services(self, hostname: str) -> list[dict]:
@@ -309,7 +306,7 @@ class LivestatusBackend(BackendBase):
         try:
             names: list = r[1] if isinstance(r[1], list) else []
             values: list = r[2] if isinstance(r[2], list) else []
-            cv = dict(zip(names, values))
+            cv = dict(zip(names, values, strict=False))
             return float(cv["LAT"]), float(cv["LONG"])
         except (KeyError, TypeError, ValueError):
             return None
@@ -339,7 +336,7 @@ class LivestatusBackend(BackendBase):
         end: int,
     ) -> dict[str, list[tuple[float, float, str]]]:
         """Fetch metric history via Checkmk 2.x REST API (works with Nagios/Raw core)."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         cmk_url = self._checkmk_url.rstrip("/")
         if cmk_url.startswith("/"):
@@ -356,8 +353,8 @@ class LivestatusBackend(BackendBase):
         if not metric_names:
             return {}
 
-        start_dt = datetime.fromtimestamp(start, tz=timezone.utc).isoformat()
-        end_dt = datetime.fromtimestamp(end, tz=timezone.utc).isoformat()
+        start_dt = datetime.fromtimestamp(start, tz=UTC).isoformat()
+        end_dt = datetime.fromtimestamp(end, tz=UTC).isoformat()
 
         result: dict[str, list[tuple[float, float, str]]] = {}
         try:
@@ -373,7 +370,8 @@ class LivestatusBackend(BackendBase):
                     }
                     try:
                         resp = await client.post(
-                            api_url, json=body,
+                            api_url,
+                            json=body,
                             headers={"Authorization": auth_header, "Accept": "application/json"},
                         )
                         if resp.status_code != 200:
@@ -415,11 +413,7 @@ class LivestatusBackend(BackendBase):
                 f"Filter: description = {_ls_escape(service)}\n"
             )
         else:
-            query = (
-                f"GET hosts\n"
-                f"Columns: perf_data\n"
-                f"Filter: name = {_ls_escape(host)}\n"
-            )
+            query = f"GET hosts\nColumns: perf_data\nFilter: name = {_ls_escape(host)}\n"
         try:
             rows = await self._query(query)
             if not rows or not rows[0]:
@@ -496,8 +490,7 @@ class LivestatusBackend(BackendBase):
             step = 21_600
 
         rrd_cols = " ".join(
-            f"rrddata:{_ls_escape(m['label'])}:{start}:{end}:{step}"
-            for m in metrics
+            f"rrddata:{_ls_escape(m['label'])}:{start}:{end}:{step}" for m in metrics
         )
         if service:
             query = (
@@ -507,11 +500,7 @@ class LivestatusBackend(BackendBase):
                 f"Filter: description = {_ls_escape(service)}\n"
             )
         else:
-            query = (
-                f"GET hosts\n"
-                f"Columns: {rrd_cols}\n"
-                f"Filter: name = {_ls_escape(host)}\n"
-            )
+            query = f"GET hosts\nColumns: {rrd_cols}\nFilter: name = {_ls_escape(host)}\n"
 
         try:
             rows = await self._query(query)
@@ -634,26 +623,24 @@ class LivestatusBackend(BackendBase):
                 results[pair] = ObjectState(object_id="", type="service", state="PENDING")
         return results
 
-    async def get_hosts_services_batch(
-        self, hostnames: list[str]
-    ) -> dict[str, list[dict]]:
+    async def get_hosts_services_batch(self, hostnames: list[str]) -> dict[str, list[dict]]:
         if not hostnames:
             return {}
         filters = "".join(f"Filter: host_name = {_ls_escape(h)}\n" for h in hostnames)
         if len(hostnames) > 1:
             filters += f"Or: {len(hostnames)}\n"
         rows = await self._query(
-            f"GET services\n"
-            f"Columns: host_name description state plugin_output\n"
-            f"{filters}"
+            f"GET services\nColumns: host_name description state plugin_output\n{filters}"
         )
         results: dict[str, list[dict]] = {h: [] for h in hostnames}
         for r in rows:
-            results[str(r[0])].append({
-                "name": r[1],
-                "state": _SERVICE_STATE_MAP.get(int(r[2]), "UNKNOWN"),
-                "output": r[3],
-            })
+            results[str(r[0])].append(
+                {
+                    "name": r[1],
+                    "state": _SERVICE_STATE_MAP.get(int(r[2]), "UNKNOWN"),
+                    "output": r[3],
+                }
+            )
         return results
 
     # ------------------------------------------------------------------

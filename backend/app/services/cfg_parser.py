@@ -19,10 +19,10 @@ LINE_TYPE_MAP: dict[int, str] = {
 }
 
 ICONSET_SIZE: dict[str, int] = {
-    "std_big":    30,
+    "std_big": 30,
     "std_medium": 24,
-    "std":        22,
-    "std_small":  16,
+    "std": 22,
+    "std_small": 16,
 }
 
 _FRAMESET_TARGETS = {"main", "frames", "main_window"}
@@ -31,6 +31,7 @@ _FRAMESET_TARGETS = {"main", "frames", "main_window"}
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
+
 
 def _parse_blocks(text: str) -> list[tuple[str, dict[str, str]]]:
     text = re.sub(r"(?m)^\s*#[^\n]*", "", text)
@@ -84,12 +85,12 @@ def _line_coords(p: dict[str, str]) -> tuple[int, int, int, int]:
 
 def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
     return {
-        "show":       _bool(p.get("label_show"), show_default),
-        "text":       p.get("label_text") or None,
-        "x":          _int(p.get("label_x")),
-        "y":          _int(p.get("label_y"), 34),
-        "size":       _int(p.get("label_size"), 11),
-        "color":      p.get("label_color", "#ffffff"),
+        "show": _bool(p.get("label_show"), show_default),
+        "text": p.get("label_text") or None,
+        "x": _int(p.get("label_x")),
+        "y": _int(p.get("label_y"), 34),
+        "size": _int(p.get("label_size"), 11),
+        "color": p.get("label_color", "#ffffff"),
         "background": p.get("label_background", "transparent"),
     }
 
@@ -97,6 +98,7 @@ def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Converter
 # ---------------------------------------------------------------------------
+
 
 def cfg_to_board(content: str, map_name: str) -> dict[str, Any]:
     """Convert NagVis .cfg text to an OrbVis board JSON dict."""
@@ -128,8 +130,16 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, Any]:
                 board["icon_size"] = ICONSET_SIZE.get(p["iconset"], 22)
             continue
 
-        if block_type not in ("host", "service", "hostgroup", "servicegroup",
-                               "map", "shape", "line", "textbox"):
+        if block_type not in (
+            "host",
+            "service",
+            "hostgroup",
+            "servicegroup",
+            "map",
+            "shape",
+            "line",
+            "textbox",
+        ):
             continue
 
         counter += 1
@@ -139,9 +149,14 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, Any]:
             x, y, x2, y2 = _line_coords(p)
             line_style = LINE_TYPE_MAP.get(_int(p.get("line_type", "10")), "plain")
             obj: dict[str, Any] = {
-                "id": f"line_{raw_id}", "type": "line",
-                "x": x, "y": y, "z": _int(p.get("z"), 1),
-                "x2": x2, "y2": y2, "line_style": line_style,
+                "id": f"line_{raw_id}",
+                "type": "line",
+                "x": x,
+                "y": y,
+                "z": _int(p.get("z"), 1),
+                "x2": x2,
+                "y2": y2,
+                "line_style": line_style,
                 "label": {"show": False},
             }
             if line_style == "weathermap":
@@ -153,13 +168,17 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, Any]:
             continue
 
         if block_type == "shape":
-            objects.append({
-                "id": f"image_{raw_id}", "type": "image",
-                "x": _coord(p.get("x", "0")), "y": _coord(p.get("y", "0")),
-                "z": _int(p.get("z"), 1),
-                "image_src": p.get("icon") or None,
-                "label": {"show": False},
-            })
+            objects.append(
+                {
+                    "id": f"image_{raw_id}",
+                    "type": "image",
+                    "x": _coord(p.get("x", "0")),
+                    "y": _coord(p.get("y", "0")),
+                    "z": _int(p.get("z"), 1),
+                    "image_src": p.get("icon") or None,
+                    "label": {"show": False},
+                }
+            )
             continue
 
         if block_type == "textbox":
@@ -170,16 +189,24 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, Any]:
             # NagVis textbox x/y is top-left; OrbVis centers objects — offset by half w/h
             tx = _coord(p.get("x", "0")) + _int(p.get("w"), 200) // 2
             ty = _coord(p.get("y", "0")) + _int(p.get("h"), 40) // 2
-            objects.append({
-                "id": f"textbox_{raw_id}", "type": "textbox",
-                "x": tx, "y": ty,
-                "z": _int(p.get("z"), 1),
-                "label": {
-                    "show": True, "text": raw_text,
-                    "x": 0, "y": 0, "size": 11,
-                    "color": "#ffffff", "background": "transparent",
-                },
-            })
+            objects.append(
+                {
+                    "id": f"textbox_{raw_id}",
+                    "type": "textbox",
+                    "x": tx,
+                    "y": ty,
+                    "z": _int(p.get("z"), 1),
+                    "label": {
+                        "show": True,
+                        "text": raw_text,
+                        "x": 0,
+                        "y": 0,
+                        "size": 11,
+                        "color": "#ffffff",
+                        "background": "transparent",
+                    },
+                }
+            )
             continue
 
         # host / service / hostgroup / servicegroup / map
@@ -189,8 +216,11 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, Any]:
         if mode not in ("icon", "text", "gadget"):
             mode = "icon"
         obj = {
-            "id": f"{block_type}_{raw_id}", "type": block_type,
-            "x": x, "y": y, "z": _int(p.get("z"), 1),
+            "id": f"{block_type}_{raw_id}",
+            "type": block_type,
+            "x": x,
+            "y": y,
+            "z": _int(p.get("z"), 1),
             "label": _label(p),
             "display": {"mode": mode},
         }

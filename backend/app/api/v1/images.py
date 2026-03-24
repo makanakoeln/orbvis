@@ -106,5 +106,7 @@ async def delete_image(
     if not str(path).startswith(str(d.resolve())):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
     if not path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Image '{name}' not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Image '{name}' not found"
+        )
     path.unlink()

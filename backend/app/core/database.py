@@ -46,10 +46,13 @@ async def init_db() -> None:
     """Create all tables on startup and apply lightweight column migrations."""
     # Import all models so metadata is populated
     import app.models  # noqa: F401
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         # Add columns introduced after initial schema (SQLite has no IF NOT EXISTS for columns)
-        await _add_column_if_missing(conn, "users", "theme", "VARCHAR(10) NOT NULL DEFAULT 'system'")
+        await _add_column_if_missing(
+            conn, "users", "theme", "VARCHAR(10) NOT NULL DEFAULT 'system'"
+        )
         await _add_column_if_missing(conn, "users", "language", "VARCHAR(10) NOT NULL DEFAULT 'en'")
 
 
