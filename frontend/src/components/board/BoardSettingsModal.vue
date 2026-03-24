@@ -37,7 +37,7 @@
 
             <!-- Alias -->
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.displayName') }}</label>
+              <label class="text-xs font-medium text-zinc-400">{{ t('board.displayName') }}</label>
               <input v-model="form.alias"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
@@ -45,7 +45,7 @@
             <!-- Connection + Icon size -->
             <div class="grid grid-cols-[1fr_7rem] gap-3">
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.connection') }}</label>
+                <label class="text-xs font-medium text-zinc-400">{{ t('board.connection') }}</label>
                 <div class="relative">
                   <select v-model="form.backend_id"
                     class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
@@ -59,7 +59,7 @@
                 </div>
               </div>
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.iconSize') }}</label>
+                <label class="text-xs font-medium text-zinc-400">{{ t('board.iconSize') }}</label>
                 <div class="flex items-center gap-1.5">
                   <NumberInput v-model="form.icon_size" min="12" max="96" class="w-full" />
                   <span class="text-xs text-zinc-500 shrink-0">px</span>
@@ -69,7 +69,7 @@
 
             <!-- Rotation interval -->
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.rotationInterval') }}</label>
+              <label class="text-xs font-medium text-zinc-400">{{ t('board.rotationInterval') }}</label>
               <div class="flex items-center gap-2">
                 <NumberInput v-model="form.rotation_interval" min="0" max="3600" class="w-32" />
                 <span class="text-xs text-zinc-500 shrink-0">{{ t('board.rotationSuffix') }}</span>
@@ -79,7 +79,7 @@
 
             <!-- Board type -->
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.boardType') }}</label>
+              <label class="text-xs font-medium text-zinc-400">{{ t('board.boardType') }}</label>
               <div class="relative">
                 <select v-model="form.map_type"
                   class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
@@ -100,25 +100,25 @@
             <template v-if="form.map_type === 'worldmap'">
               <div class="grid grid-cols-3 gap-3">
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.latitude') }}</label>
+                  <label class="text-xs font-medium text-zinc-400">{{ t('board.latitude') }}</label>
                   <NumberInput v-model="form.worldmap_lat" step="any" :precision="10" class="w-full" />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.longitude') }}</label>
+                  <label class="text-xs font-medium text-zinc-400">{{ t('board.longitude') }}</label>
                   <NumberInput v-model="form.worldmap_lng" step="any" :precision="10" class="w-full" />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.zoom') }}</label>
+                  <label class="text-xs font-medium text-zinc-400">{{ t('board.zoom') }}</label>
                   <NumberInput v-model="form.worldmap_zoom" min="1" max="18" class="w-full" />
                 </div>
               </div>
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.tileUrl') }}</label>
+                <label class="text-xs font-medium text-zinc-400">{{ t('board.tileUrl') }}</label>
                 <input v-model="form.worldmap_tile_url" :placeholder="t('board.tileUrlPlaceholder')"
                   class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-500 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               </div>
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.tileSaturate') }}</label>
+                <label class="text-xs font-medium text-zinc-400">{{ t('board.tileSaturate') }}</label>
                 <NumberInput v-model="form.worldmap_tile_saturate" :min="0" :max="100" :step="5" :placeholder="t('board.tileSaturatePlaceholder')" class="w-full" />
               </div>
               <p class="text-xs text-zinc-600">{{ t('board.worldmapHint') }}</p>
@@ -128,7 +128,7 @@
             <template v-if="form.map_type === 'radar'">
               <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.filterType') }}</label>
+                  <label class="text-xs font-medium text-zinc-400">{{ t('board.filterType') }}</label>
                   <div class="relative">
                     <select v-model="form.radar_filter"
                       class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
@@ -145,7 +145,7 @@
                   </div>
                 </div>
                 <div v-if="form.radar_filter === 'hostgroup' || form.radar_filter === 'servicegroup'" class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.groupName') }}</label>
+                  <label class="text-xs font-medium text-zinc-400">{{ t('board.groupName') }}</label>
                   <input v-model="form.radar_filter_value" placeholder="e.g. linux-servers"
                     class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 </div>
@@ -154,7 +154,7 @@
 
             <!-- Templates -->
             <div class="space-y-1.5 pt-1 border-t border-[var(--border)]">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider block mt-2">{{ t('boardSettings.templates') }}</label>
+              <label class="text-xs font-medium text-zinc-400 block mt-2">{{ t('boardSettings.templates') }}</label>
               <label class="text-xs text-zinc-400 block mt-3">{{ t('board.hoverTemplate') }}</label>
               <input v-model="form.hover_template" :placeholder="t('board.templatePlaceholder')"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
@@ -180,7 +180,7 @@
 
             <!-- Background image (static only) -->
             <div v-if="form.map_type === 'static'" class="space-y-1.5 pt-1 border-t border-[var(--border)]">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider block mt-2">{{ t('board.backgroundImage') }}</label>
+              <label class="text-xs font-medium text-zinc-400 block mt-2">{{ t('board.backgroundImage') }}</label>
               <div class="flex gap-2 mt-1.5">
                 <input v-model="form.background_image" placeholder="filename.png"
                   class="flex-1 px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
@@ -226,19 +226,19 @@
                     <td class="px-3 py-2.5 font-medium text-[var(--text)]">{{ role.name }}</td>
                     <td class="px-3 py-2.5 text-center">
                       <div class="flex items-center justify-center gap-1">
-                        <input type="checkbox" :checked="hasPerm(role, 'view')"
-                          :disabled="hasWildcard(role, 'view') || permUpdating.has(`${role.role_id}-view`)"
+                        <input type="checkbox" :checked="hasDraftPerm(role, 'view')"
+                          :disabled="hasWildcard(role, 'view')"
                           class="accent-indigo-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                          @change="togglePerm(role, 'view')" />
+                          @change="toggleDraftPerm(role, 'view')" />
                         <span v-if="hasWildcard(role, 'view')" class="text-[10px] text-zinc-600" :title="t('admin.viaWildcardRule')">*</span>
                       </div>
                     </td>
                     <td class="px-3 py-2.5 text-center">
                       <div class="flex items-center justify-center gap-1">
-                        <input type="checkbox" :checked="hasPerm(role, 'edit')"
-                          :disabled="hasWildcard(role, 'edit') || permUpdating.has(`${role.role_id}-edit`)"
+                        <input type="checkbox" :checked="hasDraftPerm(role, 'edit')"
+                          :disabled="hasWildcard(role, 'edit')"
                           class="accent-indigo-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                          @change="togglePerm(role, 'edit')" />
+                          @change="toggleDraftPerm(role, 'edit')" />
                         <span v-if="hasWildcard(role, 'edit')" class="text-[10px] text-zinc-600" :title="t('admin.viaWildcardRule')">*</span>
                       </div>
                     </td>
@@ -256,9 +256,9 @@
         <div class="flex items-center justify-end gap-3 px-6 py-4 shrink-0 border-t border-[var(--border)]">
           <button @click="$emit('close')"
             class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
-            {{ activeTab === 'general' ? t('common.cancel') : t('common.close') }}
+            {{ t('common.cancel') }}
           </button>
-          <button v-if="activeTab === 'general'" @click="save" :disabled="saving"
+          <button @click="save" :disabled="saving"
             class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-white transition-all">
             {{ saving ? t('common.saving') : t('common.save') }}
           </button>
@@ -338,6 +338,10 @@ async function save() {
   saving.value = true
   saveError.value = ''
   try {
+    // Always save any pending permission changes
+    if (permDraft.size > 0) {
+      await savePermissions()
+    }
     let view: Record<string, unknown>
     if (form.value.map_type === 'worldmap') {
       view = {
@@ -400,12 +404,14 @@ async function deleteBackground() {
 // ── Permissions ────────────────────────────────────────────────────────────
 const permRoles = ref<RoleRead[]>([])
 const permLoading = ref(false)
-const permUpdating = reactive(new Set<string>())
+// Draft: key = `${role_id}-${act}`, value = desired checked state (undefined = use server state)
+const permDraft = reactive(new Map<string, boolean>())
 
 async function loadPermissions() {
   permLoading.value = true
   try {
     permRoles.value = await rolesApi.list(auth.accessToken!)
+    permDraft.clear()
   } finally {
     permLoading.value = false
   }
@@ -419,33 +425,46 @@ function hasDirectPerm(role: RoleRead, act: string): boolean {
   return role.permissions.some(p => p.mod === 'map' && p.act === act && p.obj === props.board.name)
 }
 
-function hasPerm(role: RoleRead, act: string): boolean {
+function hasDraftPerm(role: RoleRead, act: string): boolean {
+  const key = `${role.role_id}-${act}`
+  if (permDraft.has(key)) return permDraft.get(key)!
   return hasDirectPerm(role, act) || hasWildcard(role, act)
 }
 
-async function togglePerm(role: RoleRead, act: string) {
+function toggleDraftPerm(role: RoleRead, act: string) {
   if (hasWildcard(role, act)) return
   const key = `${role.role_id}-${act}`
-  permUpdating.add(key)
-  try {
-    if (hasDirectPerm(role, act)) {
-      const perm = role.permissions.find(p => p.mod === 'map' && p.act === act && p.obj === props.board.name)!
-      await rolesApi.removePermission(role.role_id, perm.perm_id, auth.accessToken!)
-    } else {
-      let existingPerm: PermissionRead | null = null
-      for (const r of permRoles.value) {
-        const p = r.permissions.find(p => p.mod === 'map' && p.act === act && p.obj === props.board.name)
-        if (p) { existingPerm = p; break }
+  const current = hasDraftPerm(role, act)
+  permDraft.set(key, !current)
+}
+
+async function savePermissions() {
+  for (const role of permRoles.value) {
+    for (const act of ['view', 'edit'] as const) {
+      if (hasWildcard(role, act)) continue
+      const key = `${role.role_id}-${act}`
+      if (!permDraft.has(key)) continue // no change
+      const desired = permDraft.get(key)!
+      const hasServer = hasDirectPerm(role, act)
+      if (desired && !hasServer) {
+        // add
+        let existingPerm: PermissionRead | null = null
+        for (const r of permRoles.value) {
+          const p = r.permissions.find(p => p.mod === 'map' && p.act === act && p.obj === props.board.name)
+          if (p) { existingPerm = p; break }
+        }
+        if (!existingPerm) {
+          existingPerm = await rolesApi.createPermission('map', act, props.board.name, auth.accessToken!)
+        }
+        await rolesApi.assignPermission(role.role_id, existingPerm.perm_id, auth.accessToken!)
+      } else if (!desired && hasServer) {
+        // remove
+        const perm = role.permissions.find(p => p.mod === 'map' && p.act === act && p.obj === props.board.name)!
+        await rolesApi.removePermission(role.role_id, perm.perm_id, auth.accessToken!)
       }
-      if (!existingPerm) {
-        existingPerm = await rolesApi.createPermission('map', act, props.board.name, auth.accessToken!)
-      }
-      await rolesApi.assignPermission(role.role_id, existingPerm.perm_id, auth.accessToken!)
     }
-    permRoles.value = await rolesApi.list(auth.accessToken!)
-  } finally {
-    permUpdating.delete(key)
   }
+  permDraft.clear()
 }
 
 onMounted(async () => {

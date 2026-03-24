@@ -22,7 +22,7 @@
             Cancel
           </button>
           <button @click="$emit('confirm')"
-            class="px-4 py-2 rounded-lg text-sm font-semibold bg-red-500/15 hover:bg-red-500/25 ring-1 ring-red-500/25 hover:ring-red-500/40 text-red-400 transition-all">
+            class="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-500 text-white transition-all">
             {{ confirmLabel }}
           </button>
         </div>

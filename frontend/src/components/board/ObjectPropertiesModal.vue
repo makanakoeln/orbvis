@@ -406,7 +406,7 @@
       <div class="flex items-center justify-between px-6 py-4 border-t border-[var(--border)] shrink-0">
         <div>
           <button @click="confirmDelete = true"
-            class="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 ring-1 ring-red-500/20 hover:ring-red-500/40 rounded-lg text-sm font-semibold text-red-400 transition-all">
+            class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-sm font-semibold text-white transition-all">
             {{ t('common.delete') }}
           </button>
           <ConfirmDialog

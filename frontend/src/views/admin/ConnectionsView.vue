@@ -139,20 +139,20 @@
           <form @submit.prevent="save" class="space-y-4">
 
             <div v-if="dialog.mode === 'create'" class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.connectionId') }}</label>
+              <label class="text-xs font-medium text-zinc-400">{{ t('admin.connectionId') }}</label>
               <input v-model="form.id" required pattern="[a-zA-Z0-9_-]+" placeholder="cmk_heute"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               <p class="text-xs text-zinc-600">{{ t('admin.connectionIdHint') }}</p>
             </div>
 
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.displayLabel') }}</label>
+              <label class="text-xs font-medium text-zinc-400">{{ t('admin.displayLabel') }}</label>
               <input v-model="form.label" placeholder="Checkmk heute"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
 
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.type') }}</label>
+              <label class="text-xs font-medium text-zinc-400">{{ t('admin.type') }}</label>
               <div class="relative">
                 <select v-model="form.type"
                   class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
@@ -172,7 +172,7 @@
 
               <!-- Unix socket -->
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.unixSocket') }}</label>
+                <label class="text-xs font-medium text-zinc-400">{{ t('admin.unixSocket') }}</label>
                 <input v-model="form.socket_path" placeholder="/omd/sites/heute/tmp/run/live"
                   class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               </div>
@@ -187,12 +187,12 @@
               <!-- TCP Host + Port -->
               <div class="grid grid-cols-[1fr_7rem] gap-3">
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.tcpHost') }}</label>
+                  <label class="text-xs font-medium text-zinc-400">{{ t('admin.tcpHost') }}</label>
                   <input v-model="form.host" placeholder="192.168.1.10"
                     class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.port') }}</label>
+                  <label class="text-xs font-medium text-zinc-400">{{ t('admin.port') }}</label>
                   <NumberInput v-model="form.port" min="1" max="65535" class="w-full" />
                 </div>
               </div>
@@ -200,13 +200,13 @@
               <!-- Checkmk URL + Timeout -->
               <div class="border-t border-[var(--border)] pt-4 space-y-4">
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.checkmkUrl') }}</label>
+                  <label class="text-xs font-medium text-zinc-400">{{ t('admin.checkmkUrl') }}</label>
                   <input v-model="form.checkmk_url" placeholder="http://localhost/heute"
                     class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                   <p class="text-xs text-zinc-600">{{ t('admin.contextLinks') }}</p>
                 </div>
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.timeout') }}</label>
+                  <label class="text-xs font-medium text-zinc-400">{{ t('admin.timeout') }}</label>
                   <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-28" />
                   <p class="text-xs text-zinc-600">seconds</p>
                 </div>
@@ -216,19 +216,19 @@
 
             <template v-if="form.type === 'icinga2'">
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.icinga2Url') }}</label>
+                <label class="text-xs font-medium text-zinc-400">{{ t('admin.icinga2Url') }}</label>
                 <input v-model="form.icinga2_url" placeholder="https://localhost:5665"
                   class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.icinga2Username') }}</label>
+                  <label class="text-xs font-medium text-zinc-400">{{ t('admin.icinga2Username') }}</label>
                   <input v-model="form.icinga2_username" placeholder="root"
                     class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.icinga2Password') }}</label>
+                  <label class="text-xs font-medium text-zinc-400">{{ t('admin.icinga2Password') }}</label>
                   <input v-model="form.icinga2_password" type="password"
                     class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
                 </div>
@@ -243,7 +243,7 @@
               </div>
 
               <div class="space-y-1.5">
-                <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.timeout') }}</label>
+                <label class="text-xs font-medium text-zinc-400">{{ t('admin.timeout') }}</label>
                 <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-28" />
                 <p class="text-xs text-zinc-600">seconds</p>
               </div>

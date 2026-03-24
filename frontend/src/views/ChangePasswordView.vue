@@ -14,12 +14,12 @@
       <div class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-2xl p-6 shadow-2xl shadow-black/50">
         <form @submit.prevent="save" class="space-y-4">
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('changePassword.newPassword') }}</label>
+            <label class="text-xs font-medium text-zinc-400">{{ t('changePassword.newPassword') }}</label>
             <input v-model="password" type="password" placeholder="••••••••" required minlength="6" autofocus
               class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
           </div>
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('changePassword.confirmPassword') }}</label>
+            <label class="text-xs font-medium text-zinc-400">{{ t('changePassword.confirmPassword') }}</label>
             <input v-model="confirm" type="password" placeholder="••••••••" required
               class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
           </div>

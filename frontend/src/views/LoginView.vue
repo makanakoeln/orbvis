@@ -20,7 +20,7 @@
       <div class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-8">
         <form @submit.prevent="handleLogin" class="space-y-5">
           <div class="space-y-1.5">
-            <label for="login-username" class="text-xs font-semibold text-zinc-300 uppercase tracking-wider">{{ t('auth.username') }}</label>
+            <label for="login-username" class="text-xs font-medium text-zinc-300">{{ t('auth.username') }}</label>
             <input
               id="login-username"
               ref="usernameEl"
@@ -32,7 +32,7 @@
             />
           </div>
           <div class="space-y-1.5">
-            <label for="login-password" class="text-xs font-semibold text-zinc-300 uppercase tracking-wider">{{ t('auth.password') }}</label>
+            <label for="login-password" class="text-xs font-medium text-zinc-300">{{ t('auth.password') }}</label>
             <div class="relative">
               <input
                 id="login-password"

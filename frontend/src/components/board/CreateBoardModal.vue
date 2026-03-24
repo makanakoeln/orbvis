@@ -14,7 +14,7 @@
         </div>
         <form @submit.prevent="submit" class="space-y-4">
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+            <label class="text-xs font-medium text-zinc-400">
               {{ t('admin.boardId') }}
             </label>
             <input :value="form.name" @input="onNameInput" placeholder="my-board" required
@@ -24,13 +24,13 @@
             <p v-else class="text-xs text-zinc-600">{{ t('admin.boardIdHint') }}</p>
           </div>
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.alias') }}</label>
+            <label class="text-xs font-medium text-zinc-400">{{ t('admin.alias') }}</label>
             <input v-model="form.alias" placeholder="My Board"
               @input="aliasTouched = true"
               class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
           </div>
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.connection') }}</label>
+            <label class="text-xs font-medium text-zinc-400">{{ t('board.connection') }}</label>
             <template v-if="connectionsStore.backends.length > 0">
               <div class="relative">
                 <select v-model="form.backend_id" required
@@ -63,7 +63,7 @@
             </template>
           </div>
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('board.boardType') }}</label>
+            <label class="text-xs font-medium text-zinc-400">{{ t('board.boardType') }}</label>
             <div class="relative">
               <select v-model="form.view_type"
                 class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">

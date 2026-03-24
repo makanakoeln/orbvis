@@ -8,7 +8,7 @@
 
         <div class="space-y-3">
           <div>
-            <label class="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">{{ t('ack.comment') }}</label>
+            <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{{ t('ack.comment') }}</label>
             <input v-model="comment" ref="commentEl"
               class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               :placeholder="t('ack.comment') + '…'"

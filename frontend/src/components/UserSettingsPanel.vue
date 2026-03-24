@@ -7,8 +7,8 @@
         <!-- Header -->
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-base font-bold text-[var(--text)]">{{ t('userSettings.title') }}</h3>
-            <p class="text-xs text-zinc-500 mt-0.5">{{ userName }}</p>
+            <h3 class="text-base font-bold text-[var(--text)]">{{ isSelf ? t('userSettings.title') : t('admin.editUser', { name: userName }) }}</h3>
+            <p v-if="isSelf" class="text-xs text-zinc-500 mt-0.5">{{ userName }}</p>
           </div>
           <button @click="tryClose"
             class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
@@ -20,7 +20,7 @@
 
         <!-- Admin settings (non-self editing) -->
         <div v-if="!isSelf && userRead" class="space-y-3">
-          <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.settings') }}</p>
+          <p class="text-xs font-medium text-zinc-400">{{ t('admin.settings') }}</p>
 
           <label class="flex items-start gap-3 cursor-pointer group select-none">
             <input type="checkbox" v-model="adminIsAdmin" class="rounded accent-indigo-500 w-4 h-4 mt-0.5 shrink-0" />
@@ -43,7 +43,7 @@
 
         <!-- Role assignment (non-self editing) -->
         <div v-if="!isSelf && userRead && availableRoles?.length" class="border-t border-[var(--border)] pt-3 space-y-2">
-          <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.roles') }}</p>
+          <p class="text-xs font-medium text-zinc-400">{{ t('admin.roles') }}</p>
           <label v-for="role in availableRoles" :key="role.role_id"
             class="flex items-center gap-3 cursor-pointer select-none">
             <input type="checkbox" :value="role.role_id" v-model="adminRoleIds"
@@ -54,7 +54,7 @@
 
         <!-- Theme selector (only for self) -->
         <div v-if="isSelf" class="space-y-2">
-          <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.theme') }}</label>
+          <label class="text-xs font-medium text-zinc-400">{{ t('userSettings.theme') }}</label>
           <div class="flex gap-2">
             <button
               v-for="opt in themeOptions"
@@ -62,7 +62,7 @@
               @click="selectTheme(opt.value)"
               class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all border"
               :class="selectedTheme === opt.value
-                ? 'bg-indigo-600/20 border-indigo-500/50 text-indigo-300'
+                ? 'bg-zinc-600 border-zinc-500 text-zinc-100'
                 : 'bg-[var(--bg-input)] border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'"
             >
               <component :is="opt.icon" class="w-3.5 h-3.5" />
@@ -73,7 +73,7 @@
 
         <!-- Language selector (only for self, not in SSO mode where CMK controls it) -->
         <div v-if="isSelf && !auth.ssoActive && !auth.isCheckmkDeployment" class="space-y-2">
-          <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.language') }}</label>
+          <label class="text-xs font-medium text-zinc-400">{{ t('userSettings.language') }}</label>
           <div class="flex gap-2">
             <button
               v-for="opt in languageOptions"
@@ -81,7 +81,7 @@
               @click="selectedLanguage = opt.value"
               class="flex-1 flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium transition-all border"
               :class="selectedLanguage === opt.value
-                ? 'bg-indigo-600/20 border-indigo-500/50 text-indigo-300'
+                ? 'bg-zinc-600 border-zinc-500 text-zinc-100'
                 : 'bg-[var(--bg-input)] border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'"
             >
               {{ opt.label }}
@@ -91,16 +91,16 @@
 
         <!-- Password change (hidden in SSO+self) -->
         <div v-if="showPasswordSection" class="space-y-3" :class="isSelf ? 'pt-4 border-t border-[var(--border)]' : ''">
-          <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.changePassword') }}</p>
+          <p class="text-xs font-medium text-zinc-400">{{ t('userSettings.changePassword') }}</p>
           <form @submit.prevent="savePassword" class="space-y-3">
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.newPassword') }}</label>
+              <label class="text-xs font-medium text-zinc-400">{{ t('userSettings.newPassword') }}</label>
               <input v-model="password" type="password" autocomplete="new-password" required minlength="6"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('userSettings.confirmPassword') }}</label>
+              <label class="text-xs font-medium text-zinc-400">{{ t('userSettings.confirmPassword') }}</label>
               <input v-model="confirm" type="password" autocomplete="new-password" required
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>

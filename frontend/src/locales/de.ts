@@ -267,6 +267,7 @@ export default {
     newBoard: 'Neues Board',
     addConnection: 'Connection hinzufügen',
     createUser: 'Benutzer erstellen',
+    editUser: 'Benutzer bearbeiten: {name}',
     createRole: 'Rolle erstellen',
     createBoard: 'Board erstellen',
     addConnectionTitle: 'Connection hinzufügen',

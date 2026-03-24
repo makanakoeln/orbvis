@@ -109,13 +109,13 @@
           <form @submit.prevent="createUser" class="space-y-3">
 
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('auth.username') }}</label>
+              <label class="text-xs font-medium text-zinc-400">{{ t('auth.username') }}</label>
               <input v-model="newUser.name" placeholder="john" required autocomplete="off"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
 
             <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('auth.password') }}</label>
+              <label class="text-xs font-medium text-zinc-400">{{ t('auth.password') }}</label>
               <input v-model="newUser.password" type="password" required minlength="6" autocomplete="new-password"
                 class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
@@ -139,7 +139,7 @@
             </div>
 
             <div v-if="availableRoles.length" class="border-t border-[var(--border)] pt-3 space-y-2">
-              <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{{ t('admin.roles') }}</p>
+              <p class="text-xs font-medium text-zinc-400">{{ t('admin.roles') }}</p>
               <label v-for="role in availableRoles" :key="role.role_id"
                 class="flex items-center gap-3 cursor-pointer select-none">
                 <input type="checkbox" :value="role.role_id" v-model="selectedRoleIds"
@@ -206,8 +206,7 @@ const selectedRoleIds = ref<number[]>([])
 
 watch(showCreate, (open) => {
   if (!open) return
-  const viewers = availableRoles.value.find(r => r.name === 'Viewers')
-  selectedRoleIds.value = viewers ? [viewers.role_id] : []
+  selectedRoleIds.value = []
 })
 const canEditUsers = computed(() =>
   auth.user?.is_admin ||
@@ -224,10 +223,6 @@ async function fetchUsers() {
 }
 
 async function createUser() {
-  if (selectedRoleIds.value.length === 0) {
-    createError.value = t('admin.roleRequired')
-    return
-  }
   creating.value = true
   createError.value = ''
   try {

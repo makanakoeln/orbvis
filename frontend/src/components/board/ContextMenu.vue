@@ -95,13 +95,6 @@
         </svg>
         {{ t('contextMenu.delete') }}
       </button>
-      <button class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
-        @click="$emit('close')">
-        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-        {{ t('contextMenu.close') }}
-      </button>
     </div>
   </div>
 </template>
