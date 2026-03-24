@@ -14,6 +14,9 @@
         </div>
         <h1 class="text-2xl font-bold text-[var(--text)] tracking-tight">OrbVis</h1>
         <p class="text-sm text-zinc-500 mt-1">{{ t('auth.monitoringVisualization') }}</p>
+        <button @click="showChangelog = true" class="text-xs text-zinc-600 hover:text-zinc-400 transition-colors mt-1">
+          v{{ appVersion }}
+        </button>
       </div>
 
       <!-- Card -->
@@ -79,6 +82,8 @@
         </form>
       </div>
     </div>
+
+    <ChangelogModal v-if="showChangelog" @close="showChangelog = false" />
   </div>
 </template>
 
@@ -86,12 +91,15 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import ChangelogModal from '@/components/ChangelogModal.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
 const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const showChangelog = ref(false)
+const appVersion = __APP_VERSION__
 const usernameEl = ref<HTMLInputElement | null>(null)
 
 onMounted(() => usernameEl.value?.focus())

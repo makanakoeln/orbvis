@@ -9,7 +9,10 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+
+APP_VERSION = (Path(__file__).parent.parent.parent / "VERSION").read_text().strip()
 
 
 class MethodOverrideMiddleware:
@@ -549,7 +552,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="OrbVis API",
-    version="2.0.0",
+    version=APP_VERSION,
     description="REST API for OrbVis – monitoring visualization",
     lifespan=lifespan,
     docs_url="/api/docs",
@@ -578,7 +581,13 @@ app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "version": "2.0.0"}
+    return {"status": "ok", "version": APP_VERSION}
+
+
+@app.get("/api/changelog")
+async def get_changelog():
+    path = Path(__file__).parent.parent.parent / "CHANGELOG.md"
+    return PlainTextResponse(path.read_text())
 
 
 # Serve background images uploaded via the API

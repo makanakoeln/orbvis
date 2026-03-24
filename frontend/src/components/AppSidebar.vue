@@ -110,6 +110,12 @@
         <span v-if="!collapsed">{{ t('auth.logout') }}</span>
       </button>
 
+      <!-- Version -->
+      <button v-if="!collapsed" @click="showChangelog = true"
+        class="w-full text-left px-3 py-1 text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
+        v{{ appVersion }}
+      </button>
+
     </div>
 
     <!-- User settings panel -->
@@ -120,6 +126,8 @@
       :is-self="true"
       @close="showSettings = false"
     />
+
+    <ChangelogModal v-if="showChangelog" @close="showChangelog = false" />
   </aside>
 </template>
 
@@ -129,11 +137,14 @@ import { useI18n } from 'vue-i18n'
 import { RouterLink, useLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
+import ChangelogModal from '@/components/ChangelogModal.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 const route = useRoute()
 const showSettings = ref(false)
+const showChangelog = ref(false)
+const appVersion = __APP_VERSION__
 
 const LS_KEY = 'orbvis_sidebar_collapsed'
 const collapsed = ref(localStorage.getItem(LS_KEY) === '1')
