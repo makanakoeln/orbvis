@@ -36,3 +36,12 @@ start.sh
 
 # Claude Code
 .claude/
+
+# Local board data (dev)
+backend/boards/
+
+# Screenshots / test artifacts
+*.png
+*.mkp
+.playwright-mcp/
+frontend/*.cfg
