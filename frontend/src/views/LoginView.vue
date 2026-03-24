@@ -7,8 +7,8 @@
     <div class="relative w-full max-w-sm mx-4">
       <!-- Logo -->
       <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600/15 ring-1 ring-indigo-500/25 mb-4">
-          <svg class="w-10 h-10 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <div class="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-indigo-600/15 ring-1 ring-indigo-500/25 mb-4">
+          <svg class="w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M2 12C5 7 19 7 22 12C19 17 5 17 2 12Z" />
             <circle cx="12" cy="12" r="3.5" stroke-width="1" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M9.5 13.5L11 11L12.5 12.5L14 10" />
