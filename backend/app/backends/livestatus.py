@@ -7,6 +7,7 @@ import json as _json
 import logging
 
 from app.backends.base import BackendBase
+from app.core.config import settings
 from app.schemas.state import ObjectState
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,7 @@ class LivestatusBackend(BackendBase):
         self._host = host
         self._port = port
         self._timeout = timeout
+        self._semaphore = asyncio.Semaphore(settings.backend_max_connections)
 
     # ------------------------------------------------------------------
     # Public interface
@@ -298,10 +300,122 @@ class LivestatusBackend(BackendBase):
             return False
 
     # ------------------------------------------------------------------
+    # Batch query methods
+    # ------------------------------------------------------------------
+
+    async def get_hosts_states(
+        self, hostnames: list[str], only_hard: bool = False
+    ) -> dict[str, ObjectState]:
+        if not hostnames:
+            return {}
+        state_col = "last_hard_state" if only_hard else "state"
+        filters = "".join(f"Filter: name = {_ls_escape(h)}\n" for h in hostnames)
+        if len(hostnames) > 1:
+            filters += f"Or: {len(hostnames)}\n"
+        rows = await self._query(
+            f"GET hosts\n"
+            f"Columns: name {state_col} plugin_output perf_data acknowledged "
+            f"scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
+            f"{filters}"
+        )
+        # Columns: [0]=name [1]=state [2]=output [3]=perf_data [4]=ack [5]=downtime [6..]=extra
+        results: dict[str, ObjectState] = {}
+        for r in rows:
+            name = str(r[0])
+            results[name] = ObjectState(
+                object_id="",
+                type="host",
+                state=_HOST_STATE_MAP.get(int(r[1]), "UNKNOWN"),
+                output=r[2],
+                perf_data=r[3],
+                acknowledged=bool(int(r[4])),
+                in_downtime=int(r[5]) > 0,
+                **_parse_extra(r, offset=6, include_address=True),
+            )
+        for h in hostnames:
+            if h not in results:
+                results[h] = ObjectState(object_id="", type="host", state="PENDING")
+        return results
+
+    async def get_services_states(
+        self, pairs: list[tuple[str, str]], only_hard: bool = False
+    ) -> dict[tuple[str, str], ObjectState]:
+        if not pairs:
+            return {}
+        state_col = "last_hard_state" if only_hard else "state"
+        filter_lines = ""
+        for host, svc in pairs:
+            filter_lines += (
+                f"Filter: host_name = {_ls_escape(host)}\n"
+                f"Filter: description = {_ls_escape(svc)}\n"
+                f"And: 2\n"
+            )
+        if len(pairs) > 1:
+            filter_lines += f"Or: {len(pairs)}\n"
+        rows = await self._query(
+            f"GET services\n"
+            f"Columns: host_name description {state_col} plugin_output perf_data "
+            f"acknowledged scheduled_downtime_depth {_SVC_EXTRA_COLS}\n"
+            f"{filter_lines}"
+        )
+        # Columns: [0]=host_name [1]=description [2]=state [3]=output [4]=perf_data
+        #          [5]=ack [6]=downtime [7..]=extra
+        results: dict[tuple[str, str], ObjectState] = {}
+        for r in rows:
+            key = (str(r[0]), str(r[1]))
+            results[key] = ObjectState(
+                object_id="",
+                type="service",
+                state=_SERVICE_STATE_MAP.get(int(r[2]), "UNKNOWN"),
+                output=r[3],
+                perf_data=r[4],
+                acknowledged=bool(int(r[5])),
+                in_downtime=int(r[6]) > 0,
+                **_parse_extra(r, offset=7),
+            )
+        for pair in pairs:
+            if pair not in results:
+                results[pair] = ObjectState(object_id="", type="service", state="PENDING")
+        return results
+
+    async def get_hosts_services_batch(
+        self, hostnames: list[str]
+    ) -> dict[str, list[dict]]:
+        if not hostnames:
+            return {}
+        filters = "".join(f"Filter: host_name = {_ls_escape(h)}\n" for h in hostnames)
+        if len(hostnames) > 1:
+            filters += f"Or: {len(hostnames)}\n"
+        rows = await self._query(
+            f"GET services\n"
+            f"Columns: host_name description state plugin_output\n"
+            f"{filters}"
+        )
+        state_map = ["OK", "WARNING", "CRITICAL", "UNKNOWN"]
+        results: dict[str, list[dict]] = {h: [] for h in hostnames}
+        for r in rows:
+            host = str(r[0])
+            if host in results:
+                results[host].append({
+                    "name": r[1],
+                    "state": state_map[int(r[2])] if str(r[2]).isdigit() and int(r[2]) < 4 else "UNKNOWN",
+                    "output": r[3],
+                })
+        return results
+
+    # ------------------------------------------------------------------
     # Low-level socket communication
     # ------------------------------------------------------------------
 
     async def _query(self, query: str) -> list[list]:
+        """Acquire connection slot and run query with an overall timeout."""
+        async with self._semaphore:
+            return await asyncio.wait_for(
+                self._query_raw(query),
+                timeout=settings.backend_query_timeout,
+            )
+
+    async def _query_raw(self, query: str) -> list[list]:
         """Send a Livestatus query and return parsed rows."""
         lql = query.rstrip("\n") + "\nOutputFormat: json\nResponseHeader: fixed16\n\n"
 

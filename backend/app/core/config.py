@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     ws_ping_interval: int = 30
     state_refresh_interval: int = 5
 
+    # Monitoring backend limits
+    backend_query_timeout: int = 10    # seconds; caps full round-trip per LQL query
+    backend_max_connections: int = 20  # max concurrent Livestatus socket connections
+
     # CORS
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
