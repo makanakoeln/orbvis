@@ -14,10 +14,10 @@
           <circle cx="14" cy="10" r="0.8" fill="currentColor" stroke="none" />
         </svg>
         <h1 class="text-2xl font-bold text-[var(--text)] tracking-tight">OrbVis</h1>
-        <p class="text-sm text-zinc-500 mt-1">{{ t('auth.monitoringVisualization') }}</p>
-        <button @click="showChangelog = true" class="text-xs text-zinc-600 hover:text-zinc-400 transition-colors mt-1">
+        <button @click="showChangelog = true" class="text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
           v{{ appVersion }}
         </button>
+        <p class="text-sm text-zinc-500 mt-1">{{ t('auth.monitoringVisualization') }}</p>
       </div>
 
       <!-- Card -->
