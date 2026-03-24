@@ -38,8 +38,8 @@ def _orbvis_topics() -> list[TopicMenuTopic]:
                     icon="sites",
                 ),
                 TopicMenuItem(
-                    name="orbvis_icons",
-                    title=_("Icons"),
+                    name="orbvis_images",
+                    title=_("Images"),
                     url=f"/{_SITE}/orbvis/#/admin/icons",
                     sort_index=40,
                     icon="icons",
