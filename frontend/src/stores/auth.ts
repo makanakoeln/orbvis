@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { authApi } from '@/api/client'
-import type { UserRead } from '@/types/api'
-import router from '@/router'
+import { computed, ref } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
+
+import { authApi } from '@/api/client'
 import { i18n } from '@/i18n'
+import router from '@/router'
 import { useSettingsStore } from '@/stores/settings'
+import type { UserRead } from '@/types/api'
 
 const ACCESS_TOKEN_KEY = 'orbvis_access_token'
 const REFRESH_TOKEN_KEY = 'orbvis_refresh_token'
@@ -28,9 +29,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // true when OrbVis is served inside a Checkmk/OMD installation (path: /{site}/orbvis/…)
   // Used to suppress the OrbVis sidebar even when SSO is temporarily unavailable.
-  const isCheckmkDeployment = computed(() =>
-    /^\/[^/]+\/orbvis/.test(window.location.pathname),
-  )
+  const isCheckmkDeployment = computed(() => /^\/[^/]+\/orbvis/.test(window.location.pathname))
 
   const isAuthenticated = computed(() => !!accessToken.value && !!user.value)
   const isAdmin = computed(() => user.value?.is_admin ?? false)
@@ -56,10 +55,10 @@ export const useAuthStore = defineStore('auth', () => {
       } catch (e: unknown) {
         if (e instanceof TypeError && attempt === 0) {
           // Network-level failure (server not ready yet) — wait briefly and retry
-          await new Promise(r => setTimeout(r, 600))
+          await new Promise((r) => setTimeout(r, 600))
         } else {
           console.warn('[OrbVis] SSO failed:', e)
-          break  // HTTP 401 or second failure: SSO not available
+          break // HTTP 401 or second failure: SSO not available
         }
       }
     }
@@ -91,12 +90,15 @@ export const useAuthStore = defineStore('auth', () => {
     if (!accessToken.value) return
     try {
       user.value = await authApi.me(accessToken.value)
-      const lang = ssoActive.value && user.value.cmk_language
-        ? user.value.cmk_language
-        : (user.value.language ?? 'en')
+      const lang =
+        ssoActive.value && user.value.cmk_language
+          ? user.value.cmk_language
+          : (user.value.language ?? 'en')
       i18n.global.locale.value = lang as 'en' | 'de'
       // Load global settings so they're available for new map/object creation
-      useSettingsStore().load().catch(() => {})
+      useSettingsStore()
+        .load()
+        .catch(() => {})
     } catch {
       // Access token may be expired — try refresh before giving up
       if (refreshToken.value) {
@@ -104,13 +106,18 @@ export const useAuthStore = defineStore('auth', () => {
         if (ok && accessToken.value) {
           try {
             user.value = await authApi.me(accessToken.value)
-            const lang2 = ssoActive.value && user.value.cmk_language
-              ? user.value.cmk_language
-              : (user.value.language ?? 'en')
+            const lang2 =
+              ssoActive.value && user.value.cmk_language
+                ? user.value.cmk_language
+                : (user.value.language ?? 'en')
             i18n.global.locale.value = lang2 as 'en' | 'de'
-            useSettingsStore().load().catch(() => {})
+            useSettingsStore()
+              .load()
+              .catch(() => {})
             return
-          } catch { /* fall through to clearAuth */ }
+          } catch {
+            /* fall through to clearAuth */
+          }
         }
       }
       clearAuth()
@@ -146,7 +153,10 @@ export const useAuthStore = defineStore('auth', () => {
     if (ssoActive.value) {
       // In Checkmk SSO mode, log out of Checkmk itself
       const url = _checkmkLogoutUrl()
-      if (url) { window.location.href = url; return }
+      if (url) {
+        window.location.href = url
+        return
+      }
     }
     router.push('/login')
   }
@@ -169,7 +179,7 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken.value = null
     user.value = null
     ssoActive.value = false
-    _initPromise = null  // allow re-init after logout
+    _initPromise = null // allow re-init after logout
     localStorage.removeItem(ACCESS_TOKEN_KEY)
     localStorage.removeItem(REFRESH_TOKEN_KEY)
     sessionStorage.removeItem(SSO_ACTIVE_KEY)

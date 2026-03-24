@@ -116,8 +116,9 @@ export default {
     saveChanges: 'Save changes',
     hoverTemplate: 'Hover template',
     contextTemplate: 'Context template',
-    templatePlaceholder: "e.g. {'{'}{'{'}name{'}'}{'}'} is {'{'}{'{'}state{'}'}{'}'}" ,
-    templateHint: "Available: {'{'}{'{'}name{'}'}{'}'}, {'{'}{'{'}state{'}'}{'}'}, {'{'}{'{'}output{'}'}{'}'}, {'{'}{'{'}host{'}'}{'}'}, {'{'}{'{'}service{'}'}{'}'}, {'{'}{'{'}address{'}'}{'}'}, {'{'}{'{'}state_type{'}'}{'}'}, {'{'}{'{'}attempts{'}'}{'}'}, {'{'}{'{'}last_check{'}'}{'}'}, {'{'}{'{'}state_duration{'}'}{'}'}, {'{'}{'{'}acknowledged{'}'}{'}'}, {'{'}{'{'}in_downtime{'}'}{'}'}, {'{'}{'{'}stale{'}'}{'}'}",
+    templatePlaceholder: "e.g. {'{'}{'{'}name{'}'}{'}'} is {'{'}{'{'}state{'}'}{'}'}",
+    templateHint:
+      "Available: {'{'}{'{'}name{'}'}{'}'}, {'{'}{'{'}state{'}'}{'}'}, {'{'}{'{'}output{'}'}{'}'}, {'{'}{'{'}host{'}'}{'}'}, {'{'}{'{'}service{'}'}{'}'}, {'{'}{'{'}address{'}'}{'}'}, {'{'}{'{'}state_type{'}'}{'}'}, {'{'}{'{'}attempts{'}'}{'}'}, {'{'}{'{'}last_check{'}'}{'}'}, {'{'}{'{'}state_duration{'}'}{'}'}, {'{'}{'{'}acknowledged{'}'}{'}'}, {'{'}{'{'}in_downtime{'}'}{'}'}, {'{'}{'{'}stale{'}'}{'}'}",
     showInLists: 'Show in board list',
     showInListsHint: 'When disabled, this board is hidden from regular users',
   },
@@ -329,7 +330,8 @@ export default {
     roleName: 'Role name',
     permissionsTitle: 'Permissions',
     boardId: 'Board ID',
-    boardIdHint: 'Letters, digits, hyphens and underscores only — spaces become hyphens automatically',
+    boardIdHint:
+      'Letters, digits, hyphens and underscores only — spaces become hyphens automatically',
     boardIdInvalid: 'Only letters, digits, hyphens (-) and underscores (_) allowed',
     alias: 'Display name',
     type: 'Type',
@@ -353,7 +355,8 @@ export default {
     contextLinks: 'for context links',
     automationUser: 'Automation user',
     automationSecret: 'Automation secret',
-    automationHint: 'Required for metric history when using Nagios/Checkmk Raw as monitoring core (no rrddata via Livestatus).',
+    automationHint:
+      'Required for metric history when using Nagios/Checkmk Raw as monitoring core (no rrddata via Livestatus).',
     timeout: 'Timeout (s)',
     connectionTypeLivestatus: 'MK Livestatus',
     connectionTypeIcinga2: 'Icinga2 REST API',
@@ -389,7 +392,8 @@ export default {
     labelDefaults: 'Label defaults',
     newBoardDefaults: 'New board defaults',
     templates: 'Templates',
-    templatesSubtitle: 'Global fallback — applies to any board or object without its own template set',
+    templatesSubtitle:
+      'Global fallback — applies to any board or object without its own template set',
     hoverTemplate: 'Hover template',
     contextTemplate: 'Context template',
     zHint: 'Stacking order – higher = in front',
@@ -425,7 +429,8 @@ export default {
     },
     step2: {
       title: 'Navigation',
-      bodyAdmin: '"Overview" in the sidebar brings you back to the board list. The admin section below gives access to connections, images, users and settings.',
+      bodyAdmin:
+        '"Overview" in the sidebar brings you back to the board list. The admin section below gives access to connections, images, users and settings.',
       bodyUser: '"Overview" in the sidebar brings you back to the board list.',
     },
     step3: {
@@ -434,8 +439,10 @@ export default {
     },
     step4: {
       title: 'Ready to go!',
-      bodyAdmin: 'Create your first board here. Inside a board, click the pencil button (bottom-right) to enter edit mode and start placing monitoring objects.',
-      bodyUser: 'Your administrator can create boards and grant you access. Once a board is available it will appear here.',
+      bodyAdmin:
+        'Create your first board here. Inside a board, click the pencil button (bottom-right) to enter edit mode and start placing monitoring objects.',
+      bodyUser:
+        'Your administrator can create boards and grant you access. Once a board is available it will appear here.',
     },
   },
   changePassword: {

@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+
 import { connectionsApi } from '@/api/client'
 import type { BackendConfig } from '@/types/api'
+
 import { useAuthStore } from './auth'
 
 export const useConnectionsStore = defineStore('backends', () => {

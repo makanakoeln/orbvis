@@ -3,10 +3,17 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch, ref } from 'vue'
-import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { BoardConfig, BoardObject as BoardObjectType, ObjectState, WorldmapView } from '@/types/api'
+
+import L from 'leaflet'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+
+import type {
+  BoardConfig,
+  BoardObject as BoardObjectType,
+  ObjectState,
+  WorldmapView,
+} from '@/types/api'
 
 const props = defineProps<{
   config: BoardConfig
@@ -37,17 +44,29 @@ function stateColor(id: string): string {
   const s = props.states[id]?.state
   if (!s) return '#6b7280'
   switch (s) {
-    case 'UP': case 'OK': return '#22c55e'
-    case 'DOWN': case 'CRITICAL': return '#ef4444'
-    case 'WARNING': return '#ffd000'
-    case 'UNKNOWN': return '#f97316'
-    case 'UNREACHABLE': return '#a855f7'
-    default: return '#6b7280'
+    case 'UP':
+    case 'OK':
+      return '#22c55e'
+    case 'DOWN':
+    case 'CRITICAL':
+      return '#ef4444'
+    case 'WARNING':
+      return '#ffd000'
+    case 'UNKNOWN':
+      return '#f97316'
+    case 'UNREACHABLE':
+      return '#a855f7'
+    default:
+      return '#6b7280'
   }
 }
 
 function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
 function displayName(obj: BoardObjectType): string {
@@ -63,7 +82,12 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
   const selected = props.selectedObjectId === obj.id
 
   const TYPE_CHARS: Record<string, string> = {
-    host: 'H', service: 'S', hostgroup: 'HG', servicegroup: 'SG', map: 'M', image: '◆',
+    host: 'H',
+    service: 'S',
+    hostgroup: 'HG',
+    servicegroup: 'SG',
+    map: 'M',
+    image: '◆',
   }
   const typeChar = TYPE_CHARS[obj.type] ?? '?'
   const charSize = Math.max(8, Math.round(size * (typeChar.length > 1 ? 0.34 : 0.42)))
@@ -71,7 +95,9 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
   const iconFile = obj.display?.image ?? obj.image_src
   let iconHtml: string
   if (iconFile) {
-    const outline = selected ? 'outline: 3px solid white; outline-offset: 2px; border-radius: 3px;' : ''
+    const outline = selected
+      ? 'outline: 3px solid white; outline-offset: 2px; border-radius: 3px;'
+      : ''
     iconHtml = `<img src="${import.meta.env.BASE_URL}images/${iconFile}" style="width:${size}px;height:${size}px;object-fit:contain;display:block;${outline}" />`
   } else {
     iconHtml = `<div style="
@@ -87,7 +113,10 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
 
   return L.divIcon({
     className: '',
-    html: iconHtml + (label ? `<div style="
+    html:
+      iconHtml +
+      (label
+        ? `<div style="
         text-align: center;
         color: white;
         font-size: 11px;
@@ -95,7 +124,8 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
         text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
         white-space: nowrap;
         margin-top: 3px;
-      ">${label.replace(/\n/g, '<br>')}</div>` : ''),
+      ">${label.replace(/\n/g, '<br>')}</div>`
+        : ''),
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
     popupAnchor: [0, -(size / 2 + 4)],
@@ -104,8 +134,8 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
 
 function syncMarkers() {
   if (!leafletMap) return
-  const objects = props.config.objects.filter(o => o.type !== 'line')
-  const currentIds = new Set(objects.map(o => o.id))
+  const objects = props.config.objects.filter((o) => o.type !== 'line')
+  const currentIds = new Set(objects.map((o) => o.id))
 
   for (const obj of objects) {
     const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null
@@ -124,12 +154,12 @@ function syncMarkers() {
       const marker = L.marker([lat, lng], { icon, draggable: props.editMode })
       marker.on('click', (e) => {
         L.DomEvent.stopPropagation(e)
-        const current = props.config.objects.find(o => o.id === objId)
+        const current = props.config.objects.find((o) => o.id === objId)
         if (current) emit('object-click', current)
       })
       marker.on('contextmenu', (e: L.LeafletMouseEvent) => {
         L.DomEvent.stopPropagation(e)
-        const current = props.config.objects.find(o => o.id === objId)
+        const current = props.config.objects.find((o) => o.id === objId)
         if (!current) return
         if (props.editMode) {
           emit('object-contextmenu', current)
@@ -138,7 +168,7 @@ function syncMarkers() {
         }
       })
       marker.on('mouseover', (e: L.LeafletMouseEvent) => {
-        const current = props.config.objects.find(o => o.id === objId)
+        const current = props.config.objects.find((o) => o.id === objId)
         if (current) emit('object-hover', current, e.originalEvent)
       })
       marker.on('mouseout', () => {
@@ -168,7 +198,8 @@ function applyTileSettings() {
   const url = wv?.tile_url || DEFAULT_TILE_URL
   if (tileLayer) tileLayer.remove()
   tileLayer = L.tileLayer(url, {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(leafletMap)
   const pane = leafletMap.getPane('tilePane') as HTMLElement | undefined
   if (pane) pane.style.filter = wv?.tile_saturate != null ? `saturate(${wv.tile_saturate}%)` : ''
@@ -176,9 +207,13 @@ function applyTileSettings() {
 
 function fitAll() {
   if (!leafletMap) return
-  const objects = props.config.objects.filter(o => o.type !== 'line' && o.lat != null && o.lng != null)
+  const objects = props.config.objects.filter(
+    (o) => o.type !== 'line' && o.lat != null && o.lng != null,
+  )
   if (!objects.length) return
-  leafletMap.fitBounds(L.latLngBounds(objects.map(o => [o.lat!, o.lng!] as [number, number])), { padding: [40, 40] })
+  leafletMap.fitBounds(L.latLngBounds(objects.map((o) => [o.lat!, o.lng!] as [number, number])), {
+    padding: [40, 40],
+  })
 }
 
 onMounted(() => {
@@ -210,13 +245,10 @@ watch(
   { deep: true },
 )
 
-watch(
-  () => {
-    const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null
-    return [wv?.tile_url, wv?.tile_saturate]
-  },
-  applyTileSettings,
-)
+watch(() => {
+  const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null
+  return [wv?.tile_url, wv?.tile_saturate]
+}, applyTileSettings)
 
 function getView() {
   if (!leafletMap) return null

@@ -1,12 +1,20 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { ObjectState, WebSocketStateUpdate } from '@/types/api'
+
 import { boardsApi, connectionsApi } from '@/api/client'
+import type { ObjectState, WebSocketStateUpdate } from '@/types/api'
 import { parsePerfData, utilPercent } from '@/utils/perf'
 
-export interface MetricSnapshot { ts: number; pct: number }
-export interface MetricPoint { ts: number; value: number; unit: string }
-const HISTORY_MAX = 10080  // up to 7d at 1min resolution
+export interface MetricSnapshot {
+  ts: number
+  pct: number
+}
+export interface MetricPoint {
+  ts: number
+  value: number
+  unit: string
+}
+const HISTORY_MAX = 10080 // up to 7d at 1min resolution
 
 // Base path without trailing slash, e.g. '/heute/orbvis' or ''
 const _base = import.meta.env.BASE_URL.replace(/\/$/, '')
@@ -14,9 +22,13 @@ const _base = import.meta.env.BASE_URL.replace(/\/$/, '')
 // States considered "bad" (descending severity)
 const _BAD_STATES = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN'])
 const _SEVERITY: Record<string, number> = {
-  OK: 0, UP: 0, PENDING: 0,
-  WARNING: 1, UNKNOWN: 1,
-  CRITICAL: 2, UNREACHABLE: 2,
+  OK: 0,
+  UP: 0,
+  PENDING: 0,
+  WARNING: 1,
+  UNKNOWN: 1,
+  CRITICAL: 2,
+  UNREACHABLE: 2,
   DOWN: 3,
 }
 
@@ -24,17 +36,17 @@ function _notifyStateChange(obj: ObjectState, prev: ObjectState | undefined) {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
   const prevSev = _SEVERITY[prev?.state ?? 'OK'] ?? 0
   const newSev = _SEVERITY[obj.state] ?? 0
-  if (newSev <= prevSev) return  // only notify on worsening
+  if (newSev <= prevSev) return // only notify on worsening
   if (!_BAD_STATES.has(obj.state)) return
   const name = obj.object_id
   new Notification(`OrbVis: ${obj.state}`, {
     body: name,
-    tag: name,  // de-duplicate: same object → replace existing notification
+    tag: name, // de-duplicate: same object → replace existing notification
   })
 }
 
 export const useStatesStore = defineStore('states', () => {
-  const states = ref<Record<string, ObjectState>>({})  // keyed by object_id
+  const states = ref<Record<string, ObjectState>>({}) // keyed by object_id
   const history = ref<Record<string, MetricSnapshot[]>>({})
   const metricValues = ref<Record<string, Record<string, MetricPoint[]>>>({})
   const connected = ref(false)
@@ -42,8 +54,8 @@ export const useStatesStore = defineStore('states', () => {
   const _LS_NOTIF = 'orbvis_notifications'
   const notificationsEnabled = ref(
     typeof Notification !== 'undefined' &&
-    Notification.permission === 'granted' &&
-    localStorage.getItem(_LS_NOTIF) === '1'
+      Notification.permission === 'granted' &&
+      localStorage.getItem(_LS_NOTIF) === '1',
   )
 
   async function toggleNotifications(): Promise<void> {
@@ -101,7 +113,7 @@ export const useStatesStore = defineStore('states', () => {
     const mapAtStart = currentMap
     try {
       const data = await boardsApi.getStates(mapAtStart, currentToken)
-      if (currentMap !== mapAtStart) return  // board changed while fetching
+      if (currentMap !== mapAtStart) return // board changed while fetching
       const newStates: Record<string, ObjectState> = {}
       const ts = Date.now() / 1000
       for (const s of data.states) {
@@ -161,7 +173,9 @@ export const useStatesStore = defineStore('states', () => {
           lastUpdate.value = msg.states.generated_at
           connected.value = msg.states.backend_ok
         }
-      } catch { /* ignore parse errors */ }
+      } catch {
+        /* ignore parse errors */
+      }
     }
 
     ws.onclose = () => {
@@ -178,13 +192,25 @@ export const useStatesStore = defineStore('states', () => {
       reconnectTimer = setTimeout(_connect, 5000)
     }
 
-    ws.onerror = () => { ws?.close() }
+    ws.onerror = () => {
+      ws?.close()
+    }
   }
 
   function disconnect() {
-    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null }
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
-    if (ws) { ws.onclose = null; ws.close(); ws = null }
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+    if (pollTimer) {
+      clearInterval(pollTimer)
+      pollTimer = null
+    }
+    if (ws) {
+      ws.onclose = null
+      ws.close()
+      ws = null
+    }
     connected.value = false
     states.value = {}
     history.value = {}
@@ -206,17 +232,22 @@ export const useStatesStore = defineStore('states', () => {
     accessToken: string,
   ): Promise<void> {
     try {
-      const data = await connectionsApi.metricHistory(backendId, host, service, timeWindowMinutes, accessToken)
+      const data = await connectionsApi.metricHistory(
+        backendId,
+        host,
+        service,
+        timeWindowMinutes,
+        accessToken,
+      )
       if (!data || !Object.keys(data).length) return
       // Merge: historical points first, live WebSocket points on top (deduplicated by ts)
       const mv: Record<string, MetricPoint[]> = { ...(metricValues.value[objectId] ?? {}) }
       for (const [label, pts] of Object.entries(data)) {
         const existing = mv[label] ?? []
-        const existingTs = new Set(existing.map(p => p.ts))
-        const merged = [
-          ...pts.filter(p => !existingTs.has(p.ts)),
-          ...existing,
-        ].sort((a, b) => a.ts - b.ts).slice(-HISTORY_MAX)
+        const existingTs = new Set(existing.map((p) => p.ts))
+        const merged = [...pts.filter((p) => !existingTs.has(p.ts)), ...existing]
+          .sort((a, b) => a.ts - b.ts)
+          .slice(-HISTORY_MAX)
         mv[label] = merged
       }
       metricValues.value[objectId] = mv
@@ -225,5 +256,17 @@ export const useStatesStore = defineStore('states', () => {
     }
   }
 
-  return { states, history, metricValues, connected, lastUpdate, notificationsEnabled, connectToMap, disconnect, getState, toggleNotifications, prefillMetricHistory }
+  return {
+    states,
+    history,
+    metricValues,
+    connected,
+    lastUpdate,
+    notificationsEnabled,
+    connectToMap,
+    disconnect,
+    getState,
+    toggleNotifications,
+    prefillMetricHistory,
+  }
 })

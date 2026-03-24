@@ -1,10 +1,10 @@
-import { onMounted, onUnmounted, watch } from 'vue'
-import type { Ref } from 'vue'
+import { easeBackOut, easeCubicOut, easeQuadInOut } from 'd3-ease'
+import { interpolate, interpolateLab } from 'd3-interpolate'
 import { select } from 'd3-selection'
 import { arc } from 'd3-shape'
 import { transition } from 'd3-transition'
-import { interpolate, interpolateLab } from 'd3-interpolate'
-import { easeQuadInOut, easeCubicOut, easeBackOut } from 'd3-ease'
+import type { Ref } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 
 // d3-transition side-effects must be imported for .transition() to work on selections
 void transition
@@ -18,9 +18,15 @@ interface ArcRingOptions {
   enabled: Ref<boolean>
 }
 
-const START_ANGLE = -Math.PI / 2  // 12 o'clock
+const START_ANGLE = -Math.PI / 2 // 12 o'clock
 
-function buildRing(svg: SVGSVGElement, iconSize: number, pct: number | null, stateColor: string, utilColor: string) {
+function buildRing(
+  svg: SVGSVGElement,
+  iconSize: number,
+  pct: number | null,
+  stateColor: string,
+  utilColor: string,
+) {
   const pad = 6
   const size = iconSize + pad * 2
   const outerR = iconSize / 2 + pad
@@ -34,13 +40,17 @@ function buildRing(svg: SVGSVGElement, iconSize: number, pct: number | null, sta
   if (g.empty()) {
     // pointer-events="none" explicitly on the group so all D3-appended children
     // are guaranteed non-interactive regardless of browser SVG inheritance quirks.
-    g = root.append('g').attr('class', 'arc-root')
+    g = root
+      .append('g')
+      .attr('class', 'arc-root')
       .attr('pointer-events', 'none')
       .attr('transform', `translate(${size / 2},${size / 2})`)
     // Entrance animation
     g.attr('transform', `translate(${size / 2},${size / 2}) scale(0.6)`)
       .attr('opacity', '0')
-      .transition().duration(300).ease(easeBackOut.overshoot(1.4))
+      .transition()
+      .duration(300)
+      .ease(easeBackOut.overshoot(1.4))
       .attr('transform', `translate(${size / 2},${size / 2}) scale(1)`)
       .attr('opacity', '1')
   }
@@ -71,32 +81,49 @@ function buildRing(svg: SVGSVGElement, iconSize: number, pct: number | null, sta
     if (track.empty()) {
       track = g.append('path').attr('class', 'arc-track')
     }
-    track.attr('d', arcGen({
-      innerRadius: innerR,
-      outerRadius: outerR,
-      startAngle: START_ANGLE,
-      endAngle: START_ANGLE + 2 * Math.PI,
-    })!).attr('fill', 'rgba(255,255,255,0.12)')
+    track
+      .attr(
+        'd',
+        arcGen({
+          innerRadius: innerR,
+          outerRadius: outerR,
+          startAngle: START_ANGLE,
+          endAngle: START_ANGLE + 2 * Math.PI,
+        })!,
+      )
+      .attr('fill', 'rgba(255,255,255,0.12)')
 
     // Progress arc
     const targetAngle = START_ANGLE + (pct / 100) * 2 * Math.PI
     let fg = g.select<SVGPathElement & { _currentEndAngle?: number }>('path.arc-fg')
     if (fg.empty()) {
       fg = g.append('path').attr('class', 'arc-fg')
-      const d = arcGen({ innerRadius: innerR, outerRadius: outerR, startAngle: START_ANGLE, endAngle: START_ANGLE })!
+      const d = arcGen({
+        innerRadius: innerR,
+        outerRadius: outerR,
+        startAngle: START_ANGLE,
+        endAngle: START_ANGLE,
+      })!
       fg.attr('d', d)
       ;(fg.node() as SVGPathElement & { _currentEndAngle?: number })._currentEndAngle = START_ANGLE
     }
     const fgNode = fg.node() as SVGPathElement & { _currentEndAngle?: number }
     const fromAngle = fgNode._currentEndAngle ?? START_ANGLE
     fg.attr('fill', utilColor)
-    fg.transition().duration(600).ease(easeQuadInOut)
-      .attrTween('d', function() {
+    fg.transition()
+      .duration(600)
+      .ease(easeQuadInOut)
+      .attrTween('d', function () {
         const interp = interpolate(fromAngle, targetAngle)
         return (t: number) => {
           const angle = interp(t)
           fgNode._currentEndAngle = angle
-          return arcGen({ innerRadius: innerR, outerRadius: outerR, startAngle: START_ANGLE, endAngle: angle })!
+          return arcGen({
+            innerRadius: innerR,
+            outerRadius: outerR,
+            startAngle: START_ANGLE,
+            endAngle: angle,
+          })!
         }
       })
   }
@@ -115,18 +142,28 @@ function addPulse(svg: SVGSVGElement, iconSize: number, stateColor: string) {
   if (g.empty()) return
   g.select('circle.pulse-ring').remove()
 
-  const pulseRing = g.append('circle').attr('class', 'pulse-ring')
-    .attr('cx', 0).attr('cy', 0).attr('fill', 'none')
-    .attr('stroke', stateColor).attr('stroke-width', '1.5')
+  const pulseRing = g
+    .append('circle')
+    .attr('class', 'pulse-ring')
+    .attr('cx', 0)
+    .attr('cy', 0)
+    .attr('fill', 'none')
+    .attr('stroke', stateColor)
+    .attr('stroke-width', '1.5')
 
   function step() {
-    pulseRing.attr('r', String(innerR)).attr('opacity', '0.7')
-      .transition().duration(900).ease(easeCubicOut)
-      .attr('r', String(outerR + 8)).attr('opacity', '0')
+    pulseRing
+      .attr('r', String(innerR))
+      .attr('opacity', '0.7')
+      .transition()
+      .duration(900)
+      .ease(easeCubicOut)
+      .attr('r', String(outerR + 8))
+      .attr('opacity', '0')
       .on('end', step)
   }
   step()
-  void size  // suppress unused warning
+  void size // suppress unused warning
 }
 
 const PULSE_STATES = new Set(['DOWN', 'CRITICAL', 'UNREACHABLE'])
@@ -145,11 +182,7 @@ export function useArcRing(opts: ArcRingOptions) {
 
   onMounted(render)
 
-  watch(
-    [opts.pct, opts.utilColor],
-    render,
-    { flush: 'post' },
-  )
+  watch([opts.pct, opts.utilColor], render, { flush: 'post' })
 
   watch(
     opts.stateColor,
@@ -157,12 +190,18 @@ export function useArcRing(opts: ArcRingOptions) {
       const svg = opts.svgRef.value
       if (!svg || !opts.enabled.value) return
       const g = select(svg).select<SVGGElement>('g.arc-root')
-      if (g.empty()) { render(); return }
+      if (g.empty()) {
+        render()
+        return
+      }
       // Animate state ring color if visible
       const ring = g.select<SVGPathElement>('path.state-ring')
       if (!ring.empty()) {
         const interp = interpolateLab(oldColor, newColor)
-        ring.transition().duration(500).attrTween('fill', () => (t: number) => interp(t))
+        ring
+          .transition()
+          .duration(500)
+          .attrTween('fill', () => (t: number) => interp(t))
       }
     },
     { flush: 'post' },
@@ -176,8 +215,8 @@ export function useArcRing(opts: ArcRingOptions) {
       if (!svg || !opts.enabled.value) return
       // Detect if current state is a pulse state via color match
       const STATE_PULSE_COLORS = new Set([
-        'rgb(239,68,68)',   // DOWN / CRITICAL
-        'rgb(249,115,22)',  // UNREACHABLE
+        'rgb(239,68,68)', // DOWN / CRITICAL
+        'rgb(249,115,22)', // UNREACHABLE
       ])
       const g = select(svg).select<SVGGElement>('g.arc-root')
       if (g.empty()) return

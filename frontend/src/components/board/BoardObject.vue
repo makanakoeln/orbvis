@@ -11,32 +11,75 @@
     <!-- Native chart mode (host linked) -->
     <template v-if="isNativeChart">
       <!-- Waiting for first data point -->
-      <div v-if="!hasChartData"
-        class="w-full h-full flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-zinc-600 rounded-lg text-zinc-500">
-        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+      <div
+        v-if="!hasChartData"
+        class="w-full h-full flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-zinc-600 rounded-lg text-zinc-500"
+      >
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
+          />
         </svg>
         <span class="text-xs">{{ t('boardSettings.graphWaitingData') }}</span>
       </div>
       <!-- D3 chart -->
-      <div v-else class="w-full h-full flex flex-col rounded-lg overflow-hidden border dark:bg-zinc-950/90 dark:border-white/10 bg-white border-zinc-200 pb-1" style="box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06)">
+      <div
+        v-else
+        class="w-full h-full flex flex-col rounded-lg overflow-hidden border dark:bg-zinc-950/90 dark:border-white/10 bg-white border-zinc-200 pb-1"
+        style="
+          box-shadow:
+            0 1px 3px rgb(0 0 0 / 8%),
+            0 4px 16px rgb(0 0 0 / 6%);
+        "
+      >
         <!-- Title row: service / host -->
         <div class="flex items-center justify-between px-2.5 pt-2 pb-0 shrink-0">
           <span class="text-[11px] font-medium dark:text-zinc-300 text-zinc-700 truncate">
             {{ object.service_description || object.host_name }}
           </span>
-          <span class="text-[9px] dark:text-zinc-600 text-zinc-400 shrink-0 ml-2 uppercase tracking-wide">live</span>
+          <span
+            class="text-[9px] dark:text-zinc-600 text-zinc-400 shrink-0 ml-2 uppercase tracking-wide"
+            >live</span
+          >
         </div>
         <!-- Metric legend -->
-        <div class="flex flex-wrap gap-x-3 gap-y-0.5 px-2.5 pt-1 pb-1.5 shrink-0 border-b dark:border-white/5 border-zinc-100">
-          <div v-for="(label, idx) in chartMetricLabels.slice(0, 6)" :key="label" class="flex items-center gap-1.5 min-w-0" style="max-width: 50%">
-            <span class="inline-block w-1.5 h-1.5 rounded-full shrink-0" :style="{ background: CHART_PALETTE[idx % CHART_PALETTE.length] }" />
+        <div
+          class="flex flex-wrap gap-x-3 gap-y-0.5 px-2.5 pt-1 pb-1.5 shrink-0 border-b dark:border-white/5 border-zinc-100"
+        >
+          <div
+            v-for="(label, idx) in chartMetricLabels.slice(0, 6)"
+            :key="label"
+            class="flex items-center gap-1.5 min-w-0"
+            style="max-width: 50%"
+          >
+            <span
+              class="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+              :style="{ background: CHART_PALETTE[idx % CHART_PALETTE.length] }"
+            />
             <span class="text-[10px] dark:text-zinc-500 text-zinc-500 truncate">{{ label }}</span>
-            <span class="text-[10px] font-mono font-semibold shrink-0" :style="{ color: CHART_PALETTE[idx % CHART_PALETTE.length] }">
-              {{ chartLatestValues[label]?.value != null ? chartLatestValues[label]?.value : '' }}<span class="dark:text-zinc-600 text-zinc-400 ml-0.5 font-normal">{{ chartLatestValues[label]?.unit }}</span>
+            <span
+              class="text-[10px] font-mono font-semibold shrink-0"
+              :style="{ color: CHART_PALETTE[idx % CHART_PALETTE.length] }"
+            >
+              {{ chartLatestValues[label]?.value != null ? chartLatestValues[label]?.value : ''
+              }}<span class="dark:text-zinc-600 text-zinc-400 ml-0.5 font-normal">{{
+                chartLatestValues[label]?.unit
+              }}</span>
             </span>
           </div>
-          <span v-if="chartMetricLabels.length > 6" class="text-[10px] dark:text-zinc-600 text-zinc-400 self-center">+{{ chartMetricLabels.length - 6 }}</span>
+          <span
+            v-if="chartMetricLabels.length > 6"
+            class="text-[10px] dark:text-zinc-600 text-zinc-400 self-center"
+            >+{{ chartMetricLabels.length - 6 }}</span
+          >
         </div>
         <svg ref="chartSvgRef" class="w-full flex-1" />
       </div>
@@ -44,15 +87,30 @@
     <!-- URL embed mode -->
     <template v-else>
       <!-- Placeholder: no URL or load error -->
-      <div v-if="!object.graph_url || graphLoadFailed"
-        class="w-full h-full flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-zinc-600 rounded-lg text-zinc-500">
-        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+      <div
+        v-if="!object.graph_url || graphLoadFailed"
+        class="w-full h-full flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-zinc-600 rounded-lg text-zinc-500"
+      >
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
+          />
         </svg>
-        <span class="text-xs">{{ object.graph_url ? t('boardSettings.graphLoadFailed') : t('boardSettings.graphNoUrl') }}</span>
+        <span class="text-xs">{{
+          object.graph_url ? t('boardSettings.graphLoadFailed') : t('boardSettings.graphNoUrl')
+        }}</span>
       </div>
       <!-- img embed -->
-      <img v-else-if="object.graph_embed_type !== 'iframe'"
+      <img
+        v-else-if="object.graph_embed_type !== 'iframe'"
         :src="graphSrc"
         class="block w-full h-full object-fill rounded-lg"
         draggable="false"
@@ -60,29 +118,47 @@
         @load="graphLoadFailed = false"
       />
       <!-- iframe embed -->
-      <iframe v-else
+      <iframe
+        v-else
         :src="object.graph_url"
         class="block w-full h-full border-0 rounded-lg"
         sandbox="allow-scripts allow-same-origin"
       />
     </template>
     <!-- Optional caption label -->
-    <div v-if="object.label?.show && object.label?.text"
+    <div
+      v-if="object.label?.show && object.label?.text"
       class="absolute -bottom-5 left-0 right-0 text-center text-xs pointer-events-none px-1.5 py-0.5 rounded"
-      :style="labelStyle">
+      :style="labelStyle"
+    >
       {{ object.label.text }}
     </div>
     <!-- Resize handle (edit mode only) -->
-    <div v-if="editMode"
-      @pointerdown.stop="$emit('graph-resize-start', $event)"
+    <div
+      v-if="editMode"
       class="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize bg-indigo-500/70 hover:bg-indigo-400 rounded-tl flex items-center justify-center transition-colors"
-      title="Resize">
-      <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15M19.5 4.5v6m0-6h-6" />
+      title="Resize"
+      @pointerdown.stop="$emit('graph-resize-start', $event)"
+    >
+      <svg
+        class="w-3 h-3 text-white"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2.5"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M4.5 19.5l15-15M19.5 4.5v6m0-6h-6"
+        />
       </svg>
     </div>
     <!-- Selection ring -->
-    <div v-if="selected" class="absolute inset-0 rounded-lg ring-2 ring-indigo-400 ring-offset-1 ring-offset-zinc-950 pointer-events-none" />
+    <div
+      v-if="selected"
+      class="absolute inset-0 rounded-lg ring-2 ring-indigo-400 ring-offset-1 ring-offset-zinc-950 pointer-events-none"
+    />
   </div>
 
   <!-- Textbox -->
@@ -105,7 +181,11 @@
     @mouseleave="$emit('hover-leave')"
     @contextmenu.prevent="$emit('context-menu', $event)"
   >
-    <div :class="selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded-xl' : ''">
+    <div
+      :class="
+        selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded-xl' : ''
+      "
+    >
       <GadgetRenderer
         :type="object.display?.gadget_type || 'gauge'"
         :metric="object.display?.gadget_metric"
@@ -113,9 +193,11 @@
         :size="iconSize"
       />
     </div>
-    <div v-if="object.label?.show"
+    <div
+      v-if="object.label?.show"
       class="mt-1 font-medium whitespace-nowrap pointer-events-none px-1.5 py-0.5 rounded"
-      :style="labelStyle">
+      :style="labelStyle"
+    >
       {{ displayName }}
     </div>
   </div>
@@ -138,14 +220,18 @@
         :style="iconStyle"
         draggable="false"
         class="object-contain transition-all duration-300 select-none"
-        :class="[isSvgIcon ? 'svg-icon' : '', selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded' : '']"
+        :class="[
+          isSvgIcon ? 'svg-icon' : '',
+          selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded' : '',
+        ]"
         @error="imgLoadFailed = true"
       />
       <!-- State circle fallback — SVG for crisp sub-pixel text centering -->
       <!-- Not shown for type=image: if the image fails, the object simply becomes invisible -->
       <svg
         v-else-if="object.type !== 'image' || !imgLoadFailed"
-        :width="iconSize" :height="iconSize"
+        :width="iconSize"
+        :height="iconSize"
         :viewBox="`0 0 ${iconSize} ${iconSize}`"
         overflow="visible"
         class="block select-none transition-all duration-300 rounded-full"
@@ -154,7 +240,8 @@
       >
         <circle :cx="iconSize / 2" :cy="iconSize / 2" :r="iconSize / 2" :fill="stateColorRgb" />
         <text
-          :x="iconSize / 2" :y="iconSize / 2"
+          :x="iconSize / 2"
+          :y="iconSize / 2"
           text-anchor="middle"
           dominant-baseline="central"
           fill="white"
@@ -162,8 +249,10 @@
           font-weight="700"
           font-family="system-ui,-apple-system,BlinkMacSystemFont,sans-serif"
           :letter-spacing="typeChar.length > 1 ? -1 : 0.5"
-          style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5))"
-        >{{ typeChar }}</text>
+          style="filter: drop-shadow(0 1px 2px rgb(0 0 0 / 50%))"
+        >
+          {{ typeChar }}
+        </text>
       </svg>
 
       <!-- D3 arc ring overlay — pointer-events:none set via attribute + style to ensure
@@ -171,7 +260,8 @@
       <svg
         v-if="shouldShowRing"
         ref="arcSvgEl"
-        :width="svgSize" :height="svgSize"
+        :width="svgSize"
+        :height="svgSize"
         pointer-events="none"
         class="absolute pointer-events-none"
         :style="{ top: `-${RING_PAD}px`, left: `-${RING_PAD}px`, pointerEvents: 'none' }"
@@ -183,8 +273,18 @@
         class="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-zinc-600 text-zinc-200 flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
         title="Stale data"
       >
-        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          class="w-3 h-3"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
       </span>
       <!-- Acknowledged badge -->
@@ -193,7 +293,13 @@
         class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-400 text-zinc-900 flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
         title="Acknowledged"
       >
-        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
+        <svg
+          class="w-3 h-3"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="3.5"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
         </svg>
       </span>
@@ -204,7 +310,7 @@
         title="In downtime"
       >
         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
         </svg>
       </span>
     </div>
@@ -220,16 +326,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, watchEffect, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { BoardObject, ObjectState } from '@/types/api'
-import GadgetRenderer from './GadgetRenderer.vue'
+
 import { useArcRing } from '@/composables/useArcRing'
-import { useMetricChart, CHART_PALETTE } from '@/composables/useMetricChart'
-import { parsePerfData, utilPercent, utilColor as _utilColor } from '@/utils/perf'
-import { useStatesStore } from '@/stores/states'
-import type { MetricPoint } from '@/stores/states'
+import { CHART_PALETTE, useMetricChart } from '@/composables/useMetricChart'
 import { useAuthStore } from '@/stores/auth'
+import type { MetricPoint } from '@/stores/states'
+import { useStatesStore } from '@/stores/states'
+import type { BoardObject, ObjectState } from '@/types/api'
+import { parsePerfData, utilColor as _utilColor, utilPercent } from '@/utils/perf'
+
+import GadgetRenderer from './GadgetRenderer.vue'
 
 const BASE_URL = import.meta.env.BASE_URL
 const RING_PAD = 6
@@ -272,7 +380,12 @@ function _triggerHistoryPrefill() {
 onMounted(_triggerHistoryPrefill)
 watch(() => props.object.graph_time_window, _triggerHistoryPrefill)
 // Re-trigger when token becomes available (e.g. after async SSO login)
-watch(() => authStore.accessToken, (token, prev) => { if (token && !prev) _triggerHistoryPrefill() })
+watch(
+  () => authStore.accessToken,
+  (token, prev) => {
+    if (token && !prev) _triggerHistoryPrefill()
+  },
+)
 
 // Single arc ring SVG — always a separate overlay SVG that D3 owns exclusively.
 // pointer-events="none" on the SVG element (SVG attribute, not CSS) ensures it
@@ -295,7 +408,7 @@ const chartData = computed((): Record<string, MetricPoint[]> => {
   const cutoff = now - windowSecs
 
   const applyWindow = (pts: MetricPoint[]) => {
-    const filtered = pts.filter(p => p.ts >= cutoff)
+    const filtered = pts.filter((p) => p.ts >= cutoff)
     // If nothing falls in the window yet, show last point as baseline
     return filtered.length ? [...filtered] : pts.length ? [pts[pts.length - 1]] : []
   }
@@ -308,10 +421,12 @@ const chartData = computed((): Record<string, MetricPoint[]> => {
 })
 
 const chartMetricLabels = computed(() => Object.keys(chartData.value))
-const hasChartData = computed(() => chartMetricLabels.value.some(k => chartData.value[k].length > 0))
+const hasChartData = computed(() =>
+  chartMetricLabels.value.some((k) => chartData.value[k].length > 0),
+)
 
 const chartLatestValues = computed(() =>
-  Object.fromEntries(chartMetricLabels.value.map(k => [k, chartData.value[k].at(-1) ?? null]))
+  Object.fromEntries(chartMetricLabels.value.map((k) => [k, chartData.value[k].at(-1) ?? null])),
 )
 
 const graphW = computed(() => props.resizeOverride?.width ?? props.object.graph_width ?? 400)
@@ -329,17 +444,29 @@ useMetricChart(
 const graphLoadFailed = ref(false)
 const refreshTick = ref(0)
 
-watch(() => props.object.graph_url, () => { graphLoadFailed.value = false })
+watch(
+  () => props.object.graph_url,
+  () => {
+    graphLoadFailed.value = false
+  },
+)
 let _refreshTimer: ReturnType<typeof setInterval> | null = null
 
 watchEffect(() => {
-  if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null }
+  if (_refreshTimer) {
+    clearInterval(_refreshTimer)
+    _refreshTimer = null
+  }
   const interval = props.object.graph_refresh_interval ?? 0
   if (props.object.type === 'graph' && interval > 0) {
-    _refreshTimer = setInterval(() => { refreshTick.value++ }, interval * 1000)
+    _refreshTimer = setInterval(() => {
+      refreshTick.value++
+    }, interval * 1000)
   }
 })
-onUnmounted(() => { if (_refreshTimer) clearInterval(_refreshTimer) })
+onUnmounted(() => {
+  if (_refreshTimer) clearInterval(_refreshTimer)
+})
 
 const graphSrc = computed(() => {
   const url = props.object.graph_url
@@ -364,12 +491,18 @@ const iconStyle = computed(() => ({
 }))
 
 const STATE_RGB: Record<string, string> = {
-  UP: 'rgb(34,197,94)', OK: 'rgb(34,197,94)',
-  DOWN: 'rgb(239,68,68)', CRITICAL: 'rgb(239,68,68)',
-  UNREACHABLE: 'rgb(249,115,22)', UNKNOWN: 'rgb(249,115,22)',
-  WARNING: 'rgb(255,208,0)', PENDING: 'rgb(113,113,122)',
+  UP: 'rgb(34,197,94)',
+  OK: 'rgb(34,197,94)',
+  DOWN: 'rgb(239,68,68)',
+  CRITICAL: 'rgb(239,68,68)',
+  UNREACHABLE: 'rgb(249,115,22)',
+  UNKNOWN: 'rgb(249,115,22)',
+  WARNING: 'rgb(255,208,0)',
+  PENDING: 'rgb(113,113,122)',
 }
-const stateColorRgb = computed(() => STATE_RGB[props.state?.state ?? 'PENDING'] ?? STATE_RGB['PENDING'])
+const stateColorRgb = computed(
+  () => STATE_RGB[props.state?.state ?? 'PENDING'] ?? STATE_RGB['PENDING'],
+)
 
 const firstMetricPct = computed(() => {
   const metrics = parsePerfData(props.state?.perf_data ?? '')
@@ -385,10 +518,11 @@ const isSvgIcon = computed(() => {
   return icon?.toLowerCase().endsWith('.svg') ?? false
 })
 
-const shouldShowRing = computed(() =>
-  !['textbox', 'line'].includes(props.object.type) &&
-  props.object.display?.mode !== 'gadget' &&
-  !(props.object.type === 'image' && imgLoadFailed.value),
+const shouldShowRing = computed(
+  () =>
+    !['textbox', 'line'].includes(props.object.type) &&
+    props.object.display?.mode !== 'gadget' &&
+    !(props.object.type === 'image' && imgLoadFailed.value),
 )
 
 useArcRing({
@@ -401,14 +535,14 @@ useArcRing({
 })
 
 const STATE_GLOWS: Record<string, string> = {
-  UP:          'drop-shadow(0 0 5px rgba(34,197,94,0.55))',
-  OK:          'drop-shadow(0 0 5px rgba(34,197,94,0.55))',
-  DOWN:        'drop-shadow(0 0 6px rgba(239,68,68,0.65))',
-  CRITICAL:    'drop-shadow(0 0 6px rgba(239,68,68,0.65))',
+  UP: 'drop-shadow(0 0 5px rgba(34,197,94,0.55))',
+  OK: 'drop-shadow(0 0 5px rgba(34,197,94,0.55))',
+  DOWN: 'drop-shadow(0 0 6px rgba(239,68,68,0.65))',
+  CRITICAL: 'drop-shadow(0 0 6px rgba(239,68,68,0.65))',
   UNREACHABLE: 'drop-shadow(0 0 5px rgba(249,115,22,0.55))',
-  UNKNOWN:     'drop-shadow(0 0 5px rgba(249,115,22,0.55))',
-  WARNING:     'drop-shadow(0 0 5px rgba(255,208,0,0.55))',
-  PENDING:     'none',
+  UNKNOWN: 'drop-shadow(0 0 5px rgba(249,115,22,0.55))',
+  WARNING: 'drop-shadow(0 0 5px rgba(255,208,0,0.55))',
+  PENDING: 'none',
 }
 const stateGlow = computed(() => STATE_GLOWS[props.state?.state ?? 'PENDING'] ?? 'none')
 
@@ -419,8 +553,13 @@ const charFontSize = computed(() => {
 })
 
 const TYPE_CHARS: Record<string, string> = {
-  host: 'H', service: 'S', hostgroup: 'HG', servicegroup: 'SG',
-  map: 'M', image: '◆', line: '—',
+  host: 'H',
+  service: 'S',
+  hostgroup: 'HG',
+  servicegroup: 'SG',
+  map: 'M',
+  image: '◆',
+  line: '—',
 }
 const typeChar = computed(() => TYPE_CHARS[props.object.type] ?? '?')
 
@@ -448,12 +587,12 @@ const labelStyle = computed(() => {
 })
 
 const displayName = computed(() => {
-  let name = ''
+  let name = props.object.group_name ?? props.object.id
   if (props.object.label?.text) name = props.object.label.text
   else if (props.object.type === 'host') name = props.object.host_name ?? props.object.id
-  else if (props.object.type === 'service') name = props.object.service_description ?? props.object.id
+  else if (props.object.type === 'service')
+    name = props.object.service_description ?? props.object.id
   else if (props.object.type === 'map') name = props.object.map_name ?? props.object.id
-  else name = props.object.group_name ?? props.object.id
   const maxlen = props.object.label_maxlen
   if (maxlen && maxlen > 0 && name.length > maxlen) return name.slice(0, maxlen) + '…'
   return name
@@ -462,7 +601,13 @@ const displayName = computed(() => {
 
 <style scoped>
 @keyframes state-pulse {
-  0%, 100% { box-shadow: 0 0 6px 1px rgba(239, 68, 68, 0.5); }
-  50%       { box-shadow: 0 0 18px 4px rgba(239, 68, 68, 0.85); }
+  0%,
+  100% {
+    box-shadow: 0 0 6px 1px rgb(239 68 68 / 50%);
+  }
+
+  50% {
+    box-shadow: 0 0 18px 4px rgb(239 68 68 / 85%);
+  }
 }
 </style>

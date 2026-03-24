@@ -40,7 +40,7 @@ export function parsePerfData(raw: string): PerfMetric[] {
 export function getMetric(metrics: PerfMetric[], label?: string | null): PerfMetric | null {
   if (!metrics.length) return null
   if (!label) return metrics[0]
-  return metrics.find(m => m.label === label) ?? metrics[0]
+  return metrics.find((m) => m.label === label) ?? metrics[0]
 }
 
 /** Calculate utilization percentage (0–100) for a metric. */

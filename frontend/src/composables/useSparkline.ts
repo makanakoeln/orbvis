@@ -1,11 +1,12 @@
-import { onMounted, onUnmounted, watch } from 'vue'
-import type { Ref } from 'vue'
-import { select } from 'd3-selection'
-import { line, area, curveMonotoneX } from 'd3-shape'
-import { scaleLinear } from 'd3-scale'
-import { min, max } from 'd3-array'
-import { transition } from 'd3-transition'
+import { max, min } from 'd3-array'
 import { easeQuadInOut } from 'd3-ease'
+import { scaleLinear } from 'd3-scale'
+import { select } from 'd3-selection'
+import { area, curveMonotoneX, line } from 'd3-shape'
+import { transition } from 'd3-transition'
+import type { Ref } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
+
 import type { MetricSnapshot } from '@/stores/states'
 import { utilColor } from '@/utils/perf'
 
@@ -24,17 +25,19 @@ export function useSparkline(opts: SparklineOptions) {
   const H = opts.height ?? 40
 
   const xScale = scaleLinear().range([4, W - 4])
-  const yScale = scaleLinear().domain([0, 100]).range([H - 4, 4])
+  const yScale = scaleLinear()
+    .domain([0, 100])
+    .range([H - 4, 4])
 
   const lineGen = line<MetricSnapshot>()
-    .x(d => xScale(d.ts))
-    .y(d => yScale(d.pct))
+    .x((d) => xScale(d.ts))
+    .y((d) => yScale(d.pct))
     .curve(curveMonotoneX)
 
   const areaGen = area<MetricSnapshot>()
-    .x(d => xScale(d.ts))
+    .x((d) => xScale(d.ts))
     .y0(H - 4)
-    .y1(d => yScale(d.pct))
+    .y1((d) => yScale(d.pct))
     .curve(curveMonotoneX)
 
   function render(animate = false) {
@@ -47,15 +50,18 @@ export function useSparkline(opts: SparklineOptions) {
     if (data.length < 2) {
       root.selectAll('*').remove()
       if (data.length === 1) {
-        root.append('circle')
-          .attr('cx', W / 2).attr('cy', H / 2).attr('r', 3)
+        root
+          .append('circle')
+          .attr('cx', W / 2)
+          .attr('cy', H / 2)
+          .attr('r', 3)
           .attr('fill', utilColor(data[0].pct))
       }
       return
     }
 
-    const tsMin = min(data, d => d.ts) ?? data[0].ts
-    const tsMax = max(data, d => d.ts) ?? data[0].ts
+    const tsMin = min(data, (d) => d.ts) ?? data[0].ts
+    const tsMax = max(data, (d) => d.ts) ?? data[0].ts
     xScale.domain([tsMin, tsMax === tsMin ? tsMin + 1 : tsMax])
 
     const color = utilColor(data[data.length - 1].pct)
@@ -72,8 +78,12 @@ export function useSparkline(opts: SparklineOptions) {
     // Line
     let linePath = root.select<SVGPathElement>('path.spark-path')
     if (linePath.empty()) {
-      linePath = root.append('path').attr('class', 'spark-path')
-        .attr('fill', 'none').attr('stroke-width', '1.5').attr('stroke-linecap', 'round')
+      linePath = root
+        .append('path')
+        .attr('class', 'spark-path')
+        .attr('fill', 'none')
+        .attr('stroke-width', '1.5')
+        .attr('stroke-linecap', 'round')
     }
     linePath.attr('stroke', color)
 

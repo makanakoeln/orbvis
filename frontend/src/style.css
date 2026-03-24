@@ -3,22 +3,22 @@
 @tailwind utilities;
 
 :root {
-  --color-up: #00ff00;
-  --color-down: #ff0000;
-  --color-unreachable: #ff8800;
-  --color-ok: #00ff00;
-  --color-warning: #ffff00;
-  --color-critical: #ff0000;
-  --color-unknown: #ff8800;
-  --color-pending: #aaaaaa;
+  --color-up: #0f0;
+  --color-down: #f00;
+  --color-unreachable: #f80;
+  --color-ok: #0f0;
+  --color-warning: #ff0;
+  --color-critical: #f00;
+  --color-unknown: #f80;
+  --color-pending: #aaa;
 
   /* Dark theme (default) */
   --bg: #09090b;
   --bg-surface: #18181b;
   --bg-input: #27272a;
-  --bg-glass: rgba(24, 24, 27, 0.92);
-  --bg-hover: rgba(39, 39, 42, 0.6);
-  --border: rgba(255, 255, 255, 0.06);
+  --bg-glass: rgb(24 24 27 / 92%);
+  --bg-hover: rgb(39 39 42 / 60%);
+  --border: rgb(255 255 255 / 6%);
   --text: #f4f4f5;
   --text-muted: #71717a;
   --accent: #6366f1;
@@ -29,18 +29,18 @@
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+  box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
   -webkit-text-fill-color: var(--text) !important;
   transition: background-color 5000s ease-in-out 0s;
 }
 
 .light {
   --bg: #fafafa;
-  --bg-surface: #ffffff;
+  --bg-surface: #fff;
   --bg-input: #e4e4e7;
-  --bg-glass: rgba(255, 255, 255, 0.92);
-  --bg-hover: rgba(0, 0, 0, 0.07);
-  --border: rgba(0, 0, 0, 0.15);
+  --bg-glass: rgb(255 255 255 / 92%);
+  --bg-hover: rgb(0 0 0 / 7%);
+  --border: rgb(0 0 0 / 15%);
   --text: #18181b;
   --text-muted: #52525b;
   --accent: #4f46e5;
@@ -50,58 +50,150 @@ input:-webkit-autofill:focus {
 /* Light theme: remap dark-only zinc shades to readable equivalents */
 
 /* Text */
-.light .text-zinc-200 { color: #27272a; }
-.light .text-zinc-300 { color: #3f3f46; }
-.light .text-zinc-400 { color: #52525b; }
-.light .text-zinc-500 { color: #71717a; }
-.light .text-zinc-600 { color: #52525b; }
-.light .text-zinc-700 { color: #3f3f46; }
-.light .text-zinc-800 { color: #27272a; }
-.light .text-zinc-900 { color: #18181b; }
-.light .text-zinc-950 { color: #09090b; }
+.light .text-zinc-200 {
+  color: #27272a;
+}
+
+.light .text-zinc-300 {
+  color: #3f3f46;
+}
+
+.light .text-zinc-400 {
+  color: #52525b;
+}
+
+.light .text-zinc-500 {
+  color: #71717a;
+}
+
+.light .text-zinc-600 {
+  color: #52525b;
+}
+
+.light .text-zinc-700 {
+  color: #3f3f46;
+}
+
+.light .text-zinc-800 {
+  color: #27272a;
+}
+
+.light .text-zinc-900 {
+  color: #18181b;
+}
+
+.light .text-zinc-950 {
+  color: #09090b;
+}
 
 /* Hover text */
-.light .hover\:text-zinc-200:hover { color: #18181b; }
-.light .hover\:text-zinc-300:hover { color: #27272a; }
-.light .hover\:text-zinc-400:hover { color: #3f3f46; }
+.light .hover\:text-zinc-200:hover {
+  color: #18181b;
+}
+
+.light .hover\:text-zinc-300:hover {
+  color: #27272a;
+}
+
+.light .hover\:text-zinc-400:hover {
+  color: #3f3f46;
+}
 
 /* Backgrounds */
-.light .bg-zinc-700    { background-color: #e4e4e7; }
-.light .bg-zinc-800    { background-color: #f4f4f5; }
-.light .bg-zinc-900    { background-color: #fafafa; }
-.light .bg-zinc-950    { background-color: #ffffff; }
-.light .bg-zinc-700\/50 { background-color: rgba(212, 212, 216, 0.6); }
-.light .bg-zinc-700\/60 { background-color: rgba(212, 212, 216, 0.75); }
-.light .bg-zinc-800\/70 { background-color: rgba(244, 244, 245, 0.85); }
+.light .bg-zinc-700 {
+  background-color: #e4e4e7;
+}
+
+.light .bg-zinc-800 {
+  background-color: #f4f4f5;
+}
+
+.light .bg-zinc-900 {
+  background-color: #fafafa;
+}
+
+.light .bg-zinc-950 {
+  background-color: #fff;
+}
+
+.light .bg-zinc-700\/50 {
+  background-color: rgb(212 212 216 / 60%);
+}
+
+.light .bg-zinc-700\/60 {
+  background-color: rgb(212 212 216 / 75%);
+}
+
+.light .bg-zinc-800\/70 {
+  background-color: rgb(244 244 245 / 85%);
+}
 
 /* Hover backgrounds */
-.light .hover\:bg-zinc-700:hover    { background-color: #e4e4e7; }
-.light .hover\:bg-zinc-700\/60:hover { background-color: rgba(212, 212, 216, 0.75); }
+.light .hover\:bg-zinc-700:hover {
+  background-color: #e4e4e7;
+}
+
+.light .hover\:bg-zinc-700\/60:hover {
+  background-color: rgb(212 212 216 / 75%);
+}
 
 /* Borders */
-.light .border-zinc-500   { border-color: #a1a1aa; }
-.light .border-zinc-600   { border-color: #a1a1aa; }
-.light .border-zinc-700   { border-color: #d4d4d8; }
-.light .border-zinc-700\/60 { border-color: rgba(212, 212, 216, 0.7); }
+.light .border-zinc-500 {
+  border-color: #a1a1aa;
+}
+
+.light .border-zinc-600 {
+  border-color: #a1a1aa;
+}
+
+.light .border-zinc-700 {
+  border-color: #d4d4d8;
+}
+
+.light .border-zinc-700\/60 {
+  border-color: rgb(212 212 216 / 70%);
+}
 
 /* Hover borders */
-.light .hover\:border-zinc-500:hover { border-color: #71717a; }
+.light .hover\:border-zinc-500:hover {
+  border-color: #71717a;
+}
 
 /* Rings */
-.light .ring-zinc-500   { --tw-ring-color: #71717a; }
-.light .ring-zinc-600   { --tw-ring-color: #a1a1aa; }
-.light .ring-zinc-700   { --tw-ring-color: #a1a1aa; }
-.light .ring-zinc-700\/60 { --tw-ring-color: rgba(161, 161, 170, 0.6); }
+.light .ring-zinc-500 {
+  --tw-ring-color: #71717a;
+}
+
+.light .ring-zinc-600 {
+  --tw-ring-color: #a1a1aa;
+}
+
+.light .ring-zinc-700 {
+  --tw-ring-color: #a1a1aa;
+}
+
+.light .ring-zinc-700\/60 {
+  --tw-ring-color: rgb(161 161 170 / 60%);
+}
 
 /* Hover rings */
-.light .hover\:ring-zinc-500:hover { --tw-ring-color: #71717a; }
-.light .hover\:ring-zinc-600:hover { --tw-ring-color: #a1a1aa; }
+.light .hover\:ring-zinc-500:hover {
+  --tw-ring-color: #71717a;
+}
+
+.light .hover\:ring-zinc-600:hover {
+  --tw-ring-color: #a1a1aa;
+}
 
 /* Placeholder */
-.light .placeholder-zinc-600::placeholder { color: #a1a1aa; }
+.light .placeholder-zinc-600::placeholder {
+  color: #a1a1aa;
+}
 
 /* ring-offset color (selection ring on icons) */
-.light .ring-offset-zinc-950 { --tw-ring-offset-color: #fafafa; }
+.light .ring-offset-zinc-950 {
+  --tw-ring-offset-color: #fafafa;
+}
 
 body {
   background-color: var(--bg);
@@ -112,17 +204,47 @@ body {
 
 /* SVG icons loaded as <img> lose currentColor — invert makes black strokes white in dark mode.
    Only apply to monochrome SVGs (Tabler Icons style), not to coloured bitmaps. */
-.dark .svg-icon { filter: invert(1); }
+.dark .svg-icon {
+  filter: invert(1);
+}
 
 /* Custom scrollbars — dark theme */
-::-webkit-scrollbar              { width: 6px; height: 6px; }
-::-webkit-scrollbar-track        { background: transparent; }
-::-webkit-scrollbar-thumb        { background: #3f3f46; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover  { background: #52525b; }
-::-webkit-scrollbar-corner       { background: transparent; }
-* { scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
 
 /* Custom scrollbars — light theme */
-.light ::-webkit-scrollbar-thumb       { background: #d4d4d8; }
-.light ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
-.light * { scrollbar-color: #d4d4d8 transparent; }
+.light ::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+.light * {
+  scrollbar-color: #d4d4d8 transparent;
+}

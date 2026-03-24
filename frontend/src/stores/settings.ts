@@ -2,8 +2,8 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import { settingsApi } from '@/api/client'
-import type { GlobalSettings } from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
+import type { GlobalSettings } from '@/types/api'
 
 function token() {
   return useAuthStore().accessToken ?? ''

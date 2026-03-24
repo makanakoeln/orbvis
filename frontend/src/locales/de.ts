@@ -85,14 +85,16 @@ export default {
     boardTypeGeoBoard: 'Geo Board',
     boardTypeFlowBoard: 'Flow Board',
     boardTypeRadar: 'Radar (dynamischer Filter)',
-    boardTypeStaticDesc: 'Freie Positionierung von Objekten auf einer Fläche oder einem Hintergrundbild',
+    boardTypeStaticDesc:
+      'Freie Positionierung von Objekten auf einer Fläche oder einem Hintergrundbild',
     boardTypeGeoBoardDesc: 'Objekte auf einer interaktiven Weltkarte mit Geo-Koordinaten',
     boardTypeFlowBoardDesc: 'Dynamische Baumstruktur aller Hosts und ihrer Beziehungen',
     boardTypeRadarDesc: 'Automatische Anzeige aller Hosts/Services einer Gruppe',
     latitude: 'Breitengrad',
     longitude: 'Längengrad',
     zoom: 'Zoom',
-    worldmapHint: 'Zuerst die Karte verschieben/zoomen, dann Einstellungen erneut öffnen, um die aktuelle Ansicht zu speichern.',
+    worldmapHint:
+      'Zuerst die Karte verschieben/zoomen, dann Einstellungen erneut öffnen, um die aktuelle Ansicht zu speichern.',
     tileUrl: 'Tile-Server URL',
     tileUrlPlaceholder: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     tileSaturate: 'Karten-Sättigung (%)',
@@ -116,8 +118,9 @@ export default {
     saveChanges: 'Änderungen speichern',
     hoverTemplate: 'Hover-Template',
     contextTemplate: 'Kontext-Template',
-    templatePlaceholder: "z. B. {'{'}{'{'}name{'}'}{'}'} ist {'{'}{'{'}state{'}'}{'}'}" ,
-    templateHint: "Verfügbar: {'{'}{'{'}name{'}'}{'}'}, {'{'}{'{'}state{'}'}{'}'}, {'{'}{'{'}output{'}'}{'}'}, {'{'}{'{'}host{'}'}{'}'}, {'{'}{'{'}service{'}'}{'}'}, {'{'}{'{'}address{'}'}{'}'}, {'{'}{'{'}state_type{'}'}{'}'}, {'{'}{'{'}attempts{'}'}{'}'}, {'{'}{'{'}last_check{'}'}{'}'}, {'{'}{'{'}state_duration{'}'}{'}'}, {'{'}{'{'}acknowledged{'}'}{'}'}, {'{'}{'{'}in_downtime{'}'}{'}'}, {'{'}{'{'}stale{'}'}{'}'}",
+    templatePlaceholder: "z. B. {'{'}{'{'}name{'}'}{'}'} ist {'{'}{'{'}state{'}'}{'}'}",
+    templateHint:
+      "Verfügbar: {'{'}{'{'}name{'}'}{'}'}, {'{'}{'{'}state{'}'}{'}'}, {'{'}{'{'}output{'}'}{'}'}, {'{'}{'{'}host{'}'}{'}'}, {'{'}{'{'}service{'}'}{'}'}, {'{'}{'{'}address{'}'}{'}'}, {'{'}{'{'}state_type{'}'}{'}'}, {'{'}{'{'}attempts{'}'}{'}'}, {'{'}{'{'}last_check{'}'}{'}'}, {'{'}{'{'}state_duration{'}'}{'}'}, {'{'}{'{'}acknowledged{'}'}{'}'}, {'{'}{'{'}in_downtime{'}'}{'}'}, {'{'}{'{'}stale{'}'}{'}'}",
     showInLists: 'Im Board-Verzeichnis anzeigen',
     showInListsHint: 'Wenn deaktiviert, wird dieses Board für reguläre Benutzer ausgeblendet',
   },
@@ -303,7 +306,8 @@ export default {
     deleteRole: 'Diese Rolle löschen?',
     deleteBoard: 'Board „{name}" löschen?',
     deleteBoardTitle: 'Board löschen',
-    deleteBoardConfirm: 'Soll „{name}" wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.',
+    deleteBoardConfirm:
+      'Soll „{name}" wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.',
     deleteBackend: 'Backend „{id}" löschen?',
     noPermissions: 'Keine Berechtigungen zugewiesen',
     noPermissionsYet: 'Noch keine Berechtigungen zugewiesen',
@@ -329,7 +333,8 @@ export default {
     roleName: 'Rollenname',
     permissionsTitle: 'Berechtigungen',
     boardId: 'Board-ID',
-    boardIdHint: 'Buchstaben, Ziffern, Bindestriche und Unterstriche — Leerzeichen werden automatisch zu Bindestrichen',
+    boardIdHint:
+      'Buchstaben, Ziffern, Bindestriche und Unterstriche — Leerzeichen werden automatisch zu Bindestrichen',
     boardIdInvalid: 'Nur Buchstaben, Ziffern, Bindestriche (-) und Unterstriche (_) erlaubt',
     alias: 'Anzeigename',
     type: 'Typ',
@@ -353,7 +358,8 @@ export default {
     contextLinks: 'für Kontextlinks',
     automationUser: 'Automation-Benutzer',
     automationSecret: 'Automation-Secret',
-    automationHint: 'Erforderlich für Metrik-Historie bei Nutzung von Nagios/Checkmk Raw als Monitoring-Core (kein rrddata via Livestatus).',
+    automationHint:
+      'Erforderlich für Metrik-Historie bei Nutzung von Nagios/Checkmk Raw als Monitoring-Core (kein rrddata via Livestatus).',
     timeout: 'Timeout (s)',
     connectionTypeLivestatus: 'MK Livestatus',
     connectionTypeIcinga2: 'Icinga2 REST API',
@@ -370,7 +376,8 @@ export default {
     noIcons: 'Noch keine Bilder hochgeladen',
     deleteIcon: 'Bild „{name}" löschen?',
     boardPermissions: 'Board-Berechtigungen',
-    wildcardNote: 'Mit * markierte Berechtigungen gelten über eine Wildcard-Regel und können hier nicht geändert werden.',
+    wildcardNote:
+      'Mit * markierte Berechtigungen gelten über eine Wildcard-Regel und können hier nicht geändert werden.',
     viaWildcardRule: 'Über Wildcard-Regel gewährt',
     cloneBoard: 'Board klonen',
     cloneBoardPrompt: 'Neuer Name für Klon von „{name}"',
@@ -425,7 +432,8 @@ export default {
     },
     step2: {
       title: 'Navigation',
-      bodyAdmin: '„Übersicht" in der Seitenleiste bringt dich zur Board-Liste zurück. Darunter der Admin-Bereich mit Connections, Bildern, Benutzern und Einstellungen.',
+      bodyAdmin:
+        '„Übersicht" in der Seitenleiste bringt dich zur Board-Liste zurück. Darunter der Admin-Bereich mit Connections, Bildern, Benutzern und Einstellungen.',
       bodyUser: '„Übersicht" in der Seitenleiste bringt dich zur Board-Liste zurück.',
     },
     step3: {
@@ -433,9 +441,11 @@ export default {
       body: 'Jede Kachel ist ein Board — eine visuelle Karte deiner Monitoring-Landschaft. OrbVis unterstützt statische Boards, Geo-Boards, Radar-Ansichten und Flow-Boards.',
     },
     step4: {
-      title: 'Los geht\'s!',
-      bodyAdmin: 'Lege hier dein erstes Board an. Klicke darin auf den Stift-Button (unten rechts), um den Bearbeitungsmodus zu öffnen und Monitoring-Objekte zu platzieren.',
-      bodyUser: 'Dein Administrator kann Boards anlegen und dir Zugriff gewähren. Sobald ein Board verfügbar ist, erscheint es hier.',
+      title: "Los geht's!",
+      bodyAdmin:
+        'Lege hier dein erstes Board an. Klicke darin auf den Stift-Button (unten rechts), um den Bearbeitungsmodus zu öffnen und Monitoring-Objekte zu platzieren.',
+      bodyUser:
+        'Dein Administrator kann Boards anlegen und dir Zugriff gewähren. Sobald ein Board verfügbar ist, erscheint es hier.',
     },
   },
   changePassword: {

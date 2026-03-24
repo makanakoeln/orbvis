@@ -5,5 +5,5 @@ export function sanitizeBoardName(raw: string): string {
 
 /** Convert a hyphen/underscore-separated slug to Title Case display name. */
 export function slugToTitleCase(slug: string): string {
-  return slug.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  return slug.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }

@@ -34,12 +34,33 @@ export interface DisplayConfig {
   gadget_metric?: string | null
 }
 
-export type LineStyle = 'plain' | 'arrow_end' | 'arrow_start' | 'arrow_both' | 'dashed' | 'weathermap'
+export type LineStyle =
+  | 'plain'
+  | 'arrow_end'
+  | 'arrow_start'
+  | 'arrow_both'
+  | 'dashed'
+  | 'weathermap'
 
-export interface StaticView { type: 'static' }
-export interface WorldmapView { type: 'worldmap'; lat: number; lng: number; zoom: number; tile_url?: string | null; tile_saturate?: number | null }
-export interface RadarView { type: 'radar'; filter: string; filter_value: string }
-export interface AutomapView { type: 'automap' }
+export interface StaticView {
+  type: 'static'
+}
+export interface WorldmapView {
+  type: 'worldmap'
+  lat: number
+  lng: number
+  zoom: number
+  tile_url?: string | null
+  tile_saturate?: number | null
+}
+export interface RadarView {
+  type: 'radar'
+  filter: string
+  filter_value: string
+}
+export interface AutomapView {
+  type: 'automap'
+}
 export type BoardView = StaticView | WorldmapView | RadarView | AutomapView
 
 export type HostState = 'UP' | 'DOWN' | 'UNREACHABLE' | 'PENDING'
@@ -247,7 +268,6 @@ export interface WebSocketStateUpdate {
   map: string
   states: MapStates
 }
-
 
 export interface ImageEntry {
   name: string

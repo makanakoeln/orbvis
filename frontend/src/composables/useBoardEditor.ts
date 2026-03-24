@@ -1,7 +1,8 @@
 /**
  * Map edit-mode state: drag & drop, line editing, object selection, placing new objects.
  */
-import { ref, reactive, type Ref } from 'vue'
+import { reactive, type Ref, ref } from 'vue'
+
 import { boardsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
@@ -19,10 +20,21 @@ export interface NewObjectDraft {
   graph_url: string
 }
 
-interface LineCoords { x: number; y: number; x2: number; y2: number }
+interface LineCoords {
+  x: number
+  y: number
+  x2: number
+  y2: number
+}
 
-type DragTarget =
-  | { kind: 'line'; id: string; mode: 'move' | 'start' | 'end'; init: LineCoords; mouseStartX: number; mouseStartY: number }
+type DragTarget = {
+  kind: 'line'
+  id: string
+  mode: 'move' | 'start' | 'end'
+  init: LineCoords
+  mouseStartX: number
+  mouseStartY: number
+}
 
 // mapName is a Ref so that this composable stays in sync when Vue Router reuses
 // the MapView component for a different map (avoids stale closure over the old name).
@@ -48,7 +60,9 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
 
   // --- Post-drag callback (so MapView can sync snapshot + EditPanel) ---
   let _onDragSaved: ((id: string) => void) | null = null
-  function setDragSavedCallback(cb: (id: string) => void) { _onDragSaved = cb }
+  function setDragSavedCallback(cb: (id: string) => void) {
+    _onDragSaved = cb
+  }
 
   // --- Grid snapping ---
   const snapGrid = ref(0) // 0 = off, 10 or 20 = snap to grid
@@ -96,18 +110,24 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     const { init, mode } = t
     if (mode === 'move') {
       lineDragPositions[t.id] = {
-        x: _snap(Math.round(init.x + dx)), y: _snap(Math.round(init.y + dy)),
-        x2: _snap(Math.round(init.x2 + dx)), y2: _snap(Math.round(init.y2 + dy)),
+        x: _snap(Math.round(init.x + dx)),
+        y: _snap(Math.round(init.y + dy)),
+        x2: _snap(Math.round(init.x2 + dx)),
+        y2: _snap(Math.round(init.y2 + dy)),
       }
     } else if (mode === 'start') {
       lineDragPositions[t.id] = {
-        x: _snap(Math.round(init.x + dx)), y: _snap(Math.round(init.y + dy)),
-        x2: init.x2, y2: init.y2,
+        x: _snap(Math.round(init.x + dx)),
+        y: _snap(Math.round(init.y + dy)),
+        x2: init.x2,
+        y2: init.y2,
       }
     } else {
       lineDragPositions[t.id] = {
-        x: init.x, y: init.y,
-        x2: _snap(Math.round(init.x2 + dx)), y2: _snap(Math.round(init.y2 + dy)),
+        x: init.x,
+        y: init.y,
+        x2: _snap(Math.round(init.x2 + dx)),
+        y2: _snap(Math.round(init.y2 + dy)),
       }
     }
   }
@@ -130,8 +150,11 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
   async function saveObjectPosition(id: string, x: number, y: number) {
     // Optimistic update before the API call so Vue re-renders at the new position
     // immediately when localDragPositions is cleared — no snap-back glitch.
-    const obj = boardsStore.currentBoard?.objects.find(o => o.id === id)
-    if (obj) { obj.x = x; obj.y = y }
+    const obj = boardsStore.currentBoard?.objects.find((o) => o.id === id)
+    if (obj) {
+      obj.x = x
+      obj.y = y
+    }
     try {
       await boardsApi.updateObject(mapName.value, id, { x, y }, auth.accessToken!)
       if (_onDragSaved) _onDragSaved(id)
@@ -153,7 +176,14 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     const y2 = obj.y2 ?? obj.y + 100
     const init: LineCoords = { x: obj.x, y: obj.y, x2, y2 }
     lineDragPositions[obj.id] = { ...init }
-    dragTarget.value = { kind: 'line', id: obj.id, mode, init, mouseStartX: mouse.x, mouseStartY: mouse.y }
+    dragTarget.value = {
+      kind: 'line',
+      id: obj.id,
+      mode,
+      init,
+      mouseStartX: mouse.x,
+      mouseStartY: mouse.y,
+    }
     selectedObjectId.value = obj.id
     _startDocDrag(canvasEl)
     event.preventDefault()
@@ -167,14 +197,23 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     dragTarget.value = null
     try {
       const lp = lineDragPositions[t.id]
-      await boardsApi.updateObject(mapName.value, t.id, {
-        x: lp.x, y: lp.y,
-        x2: lp.x2, y2: lp.y2,
-      }, auth.accessToken!)
-      const obj = boardsStore.currentBoard?.objects.find(o => o.id === t.id)
+      await boardsApi.updateObject(
+        mapName.value,
+        t.id,
+        {
+          x: lp.x,
+          y: lp.y,
+          x2: lp.x2,
+          y2: lp.y2,
+        },
+        auth.accessToken!,
+      )
+      const obj = boardsStore.currentBoard?.objects.find((o) => o.id === t.id)
       if (obj) {
-        obj.x = lp.x; obj.y = lp.y
-        obj.x2 = lp.x2; obj.y2 = lp.y2
+        obj.x = lp.x
+        obj.y = lp.y
+        obj.x2 = lp.x2
+        obj.y2 = lp.y2
       }
       delete lineDragPositions[t.id]
       if (_onDragSaved) _onDragSaved(t.id)
@@ -189,7 +228,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     const updated = await boardsApi.updateObject(mapName.value, id, updates, auth.accessToken!)
     const objects = boardsStore.currentBoard?.objects
     if (objects && updated) {
-      const idx = objects.findIndex(o => o.id === id)
+      const idx = objects.findIndex((o) => o.id === id)
       if (idx !== -1) objects[idx] = updated
     }
   }
@@ -197,14 +236,20 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
   // --- Place new object ---
   const placing = ref(false)
   const draft = reactive<NewObjectDraft>({
-    type: '', host_name: '', service_description: '', group_name: '', board_name: '', label_text: '', image_src: '', graph_url: '',
+    type: '',
+    host_name: '',
+    service_description: '',
+    group_name: '',
+    board_name: '',
+    label_text: '',
+    image_src: '',
+    graph_url: '',
   })
 
   function startPlacing() {
     if (!draft.type) return
     placing.value = true
     selectedObjectId.value = null
-
   }
 
   async function placeAt(x: number, y: number) {
@@ -212,10 +257,12 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     placing.value = false
     const s = useSettingsStore().settings
     // Use crypto.randomUUID() to avoid collisions from rapid or concurrent placements.
-    const id = `${draft.type}_${crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36))}`
+    const id = `${draft.type}_${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)}`
     const obj: BoardObject = {
-      id, type: draft.type,
-      x: _snap(Math.round(x)), y: _snap(Math.round(y)),
+      id,
+      type: draft.type,
+      x: _snap(Math.round(x)),
+      y: _snap(Math.round(y)),
       host_name: draft.host_name || undefined,
       service_description: draft.service_description || undefined,
       group_name: draft.group_name || undefined,
@@ -223,22 +270,39 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       label: {
         show: s.label_show,
         text: draft.label_text || null,
-        x: s.label_x, y: s.label_y,
-        size: s.label_size, color: s.label_color, background: s.label_background,
+        x: s.label_x,
+        y: s.label_y,
+        size: s.label_size,
+        color: s.label_color,
+        background: s.label_background,
       },
-      display: (draft.type === 'line' || draft.type === 'graph') ? null : {
-        mode: s.view_type as 'icon' | 'text' | 'gadget',
-        image: draft.image_src || null,
-        image_size: s.icon_size,
-      },
-      image_src: draft.type === 'image' ? (draft.image_src || null) : undefined,
-      url_target: s.url_target, z: s.z,
-      ...(draft.type === 'line' ? { x2: _snap(Math.round(x)) + 150, y2: _snap(Math.round(y)), line_style: s.line_style ?? 'plain' } : {}),
-      ...(draft.type === 'graph' ? {
-        graph_url: draft.graph_url || null,
-        graph_width: 400, graph_height: 200,
-        graph_embed_type: 'img', graph_refresh_interval: 0,
-      } : {}),
+      display:
+        draft.type === 'line' || draft.type === 'graph'
+          ? null
+          : {
+              mode: s.view_type as 'icon' | 'text' | 'gadget',
+              image: draft.image_src || null,
+              image_size: s.icon_size,
+            },
+      image_src: draft.type === 'image' ? draft.image_src || null : undefined,
+      url_target: s.url_target,
+      z: s.z,
+      ...(draft.type === 'line'
+        ? {
+            x2: _snap(Math.round(x)) + 150,
+            y2: _snap(Math.round(y)),
+            line_style: s.line_style ?? 'plain',
+          }
+        : {}),
+      ...(draft.type === 'graph'
+        ? {
+            graph_url: draft.graph_url || null,
+            graph_width: 400,
+            graph_height: 200,
+            graph_embed_type: 'img',
+            graph_refresh_interval: 0,
+          }
+        : {}),
     }
     try {
       const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!)
@@ -254,11 +318,14 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     if (!placing.value || !draft.type) return
     placing.value = false
     const s = useSettingsStore().settings
-    const id = `${draft.type}_${crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36))}`
+    const id = `${draft.type}_${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)}`
     const obj: BoardObject = {
-      id, type: draft.type,
-      x: 0, y: 0,
-      lat, lng,
+      id,
+      type: draft.type,
+      x: 0,
+      y: 0,
+      lat,
+      lng,
       host_name: draft.host_name || undefined,
       service_description: draft.service_description || undefined,
       group_name: draft.group_name || undefined,
@@ -266,15 +333,19 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       label: {
         show: s.label_show,
         text: draft.label_text || null,
-        x: s.label_x, y: s.label_y,
-        size: s.label_size, color: s.label_color, background: s.label_background,
+        x: s.label_x,
+        y: s.label_y,
+        size: s.label_size,
+        color: s.label_color,
+        background: s.label_background,
       },
       display: {
         mode: s.view_type as 'icon' | 'text' | 'gadget',
         image: draft.image_src || null,
         image_size: s.icon_size,
       },
-      url_target: s.url_target, z: s.z,
+      url_target: s.url_target,
+      z: s.z,
     }
     try {
       const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!)
@@ -288,8 +359,11 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
   async function moveObjectToLatLng(id: string, lat: number, lng: number) {
     try {
       await boardsApi.updateObject(mapName.value, id, { lat, lng }, auth.accessToken!)
-      const obj = boardsStore.currentBoard?.objects.find(o => o.id === id)
-      if (obj) { obj.lat = lat; obj.lng = lng }
+      const obj = boardsStore.currentBoard?.objects.find((o) => o.id === id)
+      if (obj) {
+        obj.lat = lat
+        obj.lng = lng
+      }
     } catch (e) {
       console.error('Failed to save lat/lng', e)
       await onMapChange()
@@ -310,7 +384,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     draft.label_text = ''
     draft.image_src = ''
     draft.graph_url = ''
-    Object.keys(lineDragPositions).forEach(k => delete lineDragPositions[k])
+    Object.keys(lineDragPositions).forEach((k) => delete lineDragPositions[k])
   }
 
   // --- Delete ---
@@ -321,7 +395,9 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     try {
       await boardsApi.deleteObject(mapName.value, id, auth.accessToken!)
       if (boardsStore.currentBoard)
-        boardsStore.currentBoard.objects = boardsStore.currentBoard.objects.filter(o => o.id !== id)
+        boardsStore.currentBoard.objects = boardsStore.currentBoard.objects.filter(
+          (o) => o.id !== id,
+        )
     } catch (e) {
       console.error('Failed to delete object', e)
       await onMapChange()
@@ -332,9 +408,9 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
   async function duplicateSelected() {
     const id = selectedObjectId.value
     if (!id || !boardsStore.currentBoard) return
-    const src = boardsStore.currentBoard.objects.find(o => o.id === id)
+    const src = boardsStore.currentBoard.objects.find((o) => o.id === id)
     if (!src) return
-    const newId = `${src.type}_${crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36))}`
+    const newId = `${src.type}_${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)}`
     const clone: BoardObject = {
       ...JSON.parse(JSON.stringify(src)),
       id: newId,
@@ -360,14 +436,25 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
   }
 
   return {
-    editMode, toggleEditMode,
-    selectedObjectId, selectObject,
-    snapGrid, setDragSavedCallback,
+    editMode,
+    toggleEditMode,
+    selectedObjectId,
+    selectObject,
+    snapGrid,
+    setDragSavedCallback,
     lineDragPositions,
-    saveObjectPosition, startLineDrag,
+    saveObjectPosition,
+    startLineDrag,
     updateObjectProperties,
-    placing, draft, startPlacing, placeAt, placeAtLatLng, moveObjectToLatLng,
-    deleteSelected, duplicateSelected, cancelPlacing,
+    placing,
+    draft,
+    startPlacing,
+    placeAt,
+    placeAtLatLng,
+    moveObjectToLatLng,
+    deleteSelected,
+    duplicateSelected,
+    cancelPlacing,
     resetForNewMap,
   }
 }

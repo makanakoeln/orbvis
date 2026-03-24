@@ -1,17 +1,28 @@
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="$emit('close')">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('close')" />
-    <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-2xl shadow-2xl shadow-black/50 w-full max-w-2xl max-h-[80vh] flex flex-col">
-
+    <div
+      class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-2xl shadow-2xl shadow-black/50 w-full max-w-2xl max-h-[80vh] flex flex-col"
+    >
       <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
+      <div
+        class="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0"
+      >
         <div>
           <h2 class="text-base font-semibold text-[var(--text)]">Changelog</h2>
           <p class="text-xs text-zinc-500 mt-0.5">OrbVis v{{ appVersion }}</p>
         </div>
-        <button @click="$emit('close')"
-          class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <button
+          class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+          @click="$emit('close')"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -23,15 +34,16 @@
           Loading…
         </div>
         <div v-else-if="error" class="text-red-400 text-sm">{{ error }}</div>
-        <pre v-else class="text-xs text-zinc-300 font-mono whitespace-pre-wrap leading-relaxed">{{ content }}</pre>
+        <pre v-else class="text-xs text-zinc-300 font-mono whitespace-pre-wrap leading-relaxed">{{
+          content
+        }}</pre>
       </div>
-
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 
 defineEmits<{ close: [] }>()
 

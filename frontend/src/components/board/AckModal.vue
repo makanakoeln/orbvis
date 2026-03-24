@@ -2,28 +2,42 @@
   <Teleport to="body">
     <div class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('close')" />
-      <div class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl p-6 w-[26rem] space-y-4">
+      <div
+        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl p-6 w-[26rem] space-y-4"
+      >
         <h3 class="text-base font-bold text-[var(--text)]">{{ t('ack.title') }}</h3>
         <p class="text-xs text-[var(--text-muted)] -mt-2">{{ displayName }}</p>
 
         <div class="space-y-3">
           <div>
-            <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{{ t('ack.comment') }}</label>
-            <input v-model="comment" ref="commentEl"
+            <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{{
+              t('ack.comment')
+            }}</label>
+            <input
+              ref="commentEl"
+              v-model="comment"
               class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               :placeholder="t('ack.comment') + '…'"
-              @keydown.enter="submit" @keydown.esc="$emit('close')" />
+              @keydown.enter="submit"
+              @keydown.esc="$emit('close')"
+            />
           </div>
-          <label class="flex items-center gap-2.5 text-sm text-[var(--text-muted)] cursor-pointer select-none">
-            <input type="checkbox" v-model="sticky" class="rounded accent-indigo-500 w-4 h-4" />
+          <label
+            class="flex items-center gap-2.5 text-sm text-[var(--text-muted)] cursor-pointer select-none"
+          >
+            <input v-model="sticky" type="checkbox" class="rounded accent-indigo-500 w-4 h-4" />
             {{ t('ack.sticky') }}
           </label>
-          <label class="flex items-center gap-2.5 text-sm text-[var(--text-muted)] cursor-pointer select-none">
-            <input type="checkbox" v-model="notify" class="rounded accent-indigo-500 w-4 h-4" />
+          <label
+            class="flex items-center gap-2.5 text-sm text-[var(--text-muted)] cursor-pointer select-none"
+          >
+            <input v-model="notify" type="checkbox" class="rounded accent-indigo-500 w-4 h-4" />
             {{ t('ack.notify') }}
           </label>
-          <label class="flex items-center gap-2.5 text-sm text-[var(--text-muted)] cursor-pointer select-none">
-            <input type="checkbox" v-model="persistent" class="rounded accent-indigo-500 w-4 h-4" />
+          <label
+            class="flex items-center gap-2.5 text-sm text-[var(--text-muted)] cursor-pointer select-none"
+          >
+            <input v-model="persistent" type="checkbox" class="rounded accent-indigo-500 w-4 h-4" />
             {{ t('ack.persistent') }}
           </label>
         </div>
@@ -32,12 +46,17 @@
         <p v-if="success" class="text-xs text-green-400">{{ t('ack.success') }}</p>
 
         <div class="flex gap-3 justify-end pt-1 border-t border-[var(--border)]">
-          <button @click="$emit('close')"
-            class="px-4 py-2 rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all">
+          <button
+            class="px-4 py-2 rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            @click="$emit('close')"
+          >
             {{ t('common.cancel') }}
           </button>
-          <button @click="submit" :disabled="submitting || !comment.trim()"
-            class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-white transition-all">
+          <button
+            :disabled="submitting || !comment.trim()"
+            class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-white transition-all"
+            @click="submit"
+          >
             {{ submitting ? t('ack.submitting') : t('ack.submit') }}
           </button>
         </div>
@@ -47,10 +66,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { BoardObject } from '@/types/api'
+
 import { cmkApi } from '@/api/client'
+import type { BoardObject } from '@/types/api'
 
 const { t } = useI18n()
 
@@ -70,7 +90,9 @@ const error = ref('')
 const success = ref(false)
 const commentEl = ref<HTMLInputElement | null>(null)
 
-onMounted(() => { commentEl.value?.focus() })
+onMounted(() => {
+  commentEl.value?.focus()
+})
 
 const displayName = computed(() => {
   if (props.object.host_name && props.object.service_description)
@@ -83,7 +105,11 @@ async function submit() {
   submitting.value = true
   error.value = ''
   try {
-    if (props.object.type === 'service' && props.object.host_name && props.object.service_description) {
+    if (
+      props.object.type === 'service' &&
+      props.object.host_name &&
+      props.object.service_description
+    ) {
       await cmkApi.acknowledgeService(
         props.checkmkUrl,
         props.object.host_name,

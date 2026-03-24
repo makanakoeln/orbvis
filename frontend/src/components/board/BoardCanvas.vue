@@ -12,12 +12,23 @@
     @pointercancel="onCanvasPointerUp"
   >
     <!-- Grid overlay — always in CSS pixel space so it's visible regardless of bg-image scale -->
-    <svg v-if="editMode && (snapGrid ?? 0) > 0"
+    <svg
+      v-if="editMode && (snapGrid ?? 0) > 0"
       class="absolute inset-0 w-full h-full pointer-events-none"
     >
       <defs>
-        <pattern :id="`grid-${snapGrid}`" :width="snapGrid" :height="snapGrid" patternUnits="userSpaceOnUse">
-          <path :d="`M ${snapGrid} 0 L 0 0 0 ${snapGrid}`" fill="none" stroke="rgba(99,102,241,0.6)" stroke-width="1" />
+        <pattern
+          :id="`grid-${snapGrid}`"
+          :width="snapGrid"
+          :height="snapGrid"
+          patternUnits="userSpaceOnUse"
+        >
+          <path
+            :d="`M ${snapGrid} 0 L 0 0 0 ${snapGrid}`"
+            fill="none"
+            stroke="rgba(99,102,241,0.6)"
+            stroke-width="1"
+          />
         </pattern>
       </defs>
       <rect width="100%" height="100%" :fill="`url(#grid-${snapGrid})`" />
@@ -29,7 +40,6 @@
       :viewBox="bgImageSize ? `0 0 ${bgImageSize.width} ${bgImageSize.height}` : undefined"
       :preserveAspectRatio="bgImageSize ? 'none' : undefined"
     >
-
       <BoardLine
         v-for="line in lineObjects"
         :key="line.id"
@@ -57,7 +67,10 @@
       <BoardObject
         :object="obj"
         :state="states[obj.id]"
-        :icon-size="obj.display?.image_size ?? (obj.display?.mode === 'gadget' ? 60 : (iconSizeOverride ?? config.icon_size))"
+        :icon-size="
+          obj.display?.image_size ??
+          (obj.display?.mode === 'gadget' ? 60 : (iconSizeOverride ?? config.icon_size))
+        "
         :selected="selectedObjectId === obj.id"
         :edit-mode="editMode"
         :resize-override="localResizeDimensions[obj.id]"
@@ -75,7 +88,13 @@
       :state="states[hoverMenu.object.id]"
       :x="hoverMenu.x"
       :y="hoverMenu.y"
-      :template="resolveTemplate(hoverMenu.object.hover_template, props.config.hover_template, settingsStore.settings.hover_template)"
+      :template="
+        resolveTemplate(
+          hoverMenu.object.hover_template,
+          props.config.hover_template,
+          settingsStore.settings.hover_template,
+        )
+      "
     />
 
     <!-- Context menu -->
@@ -87,7 +106,13 @@
       :y="contextMenu.y"
       :checkmk-url="checkmkUrl"
       :show-edit="isAdmin"
-      :template="resolveTemplate(contextMenu.object.context_template, props.config.context_template, settingsStore.settings.context_template)"
+      :template="
+        resolveTemplate(
+          contextMenu.object.context_template,
+          props.config.context_template,
+          settingsStore.settings.context_template,
+        )
+      "
       @close="closeMenus"
       @edit="onContextMenuEdit"
       @duplicate="onContextMenuDuplicate"
@@ -116,18 +141,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+
+import { cmkApi } from '@/api/client'
+import { useSettingsStore } from '@/stores/settings'
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api'
 import { resolveTemplate } from '@/utils/template'
-import { useSettingsStore } from '@/stores/settings'
-import BoardObject from './BoardObject.vue'
-import BoardLine from './BoardLine.vue'
-import HoverMenu from './HoverMenu.vue'
-import ContextMenu from './ContextMenu.vue'
+
 import AckModal from './AckModal.vue'
+import BoardLine from './BoardLine.vue'
+import BoardObject from './BoardObject.vue'
+import ContextMenu from './ContextMenu.vue'
 import DowntimeModal from './DowntimeModal.vue'
-import { cmkApi } from '@/api/client'
+import HoverMenu from './HoverMenu.vue'
 
 const settingsStore = useSettingsStore()
 
@@ -147,7 +174,10 @@ const props = defineProps<{
 const emit = defineEmits<{
   'object-drag-end': [id: string, x: number, y: number]
   'object-click': [obj: BoardObjectType, event?: MouseEvent]
-  'object-contextmenu': [obj: BoardObjectType, anchor: { left: number; top: number; right: number; bottom: number } | null]
+  'object-contextmenu': [
+    obj: BoardObjectType,
+    anchor: { left: number; top: number; right: number; bottom: number } | null,
+  ]
   'object-dblclick': [obj: BoardObjectType]
   'object-delete': [obj: BoardObjectType]
   'object-duplicate': [obj: BoardObjectType]
@@ -192,20 +222,34 @@ watch(
   () => props.config.background_image,
   (bg) => {
     bgImageFailed.value = false
-    if (!bg) { bgImageSize.value = null; return }
+    if (!bg) {
+      bgImageSize.value = null
+      return
+    }
     const img = new Image()
-    img.onload = () => { bgImageSize.value = { width: img.naturalWidth, height: img.naturalHeight } }
-    img.onerror = () => { bgImageFailed.value = true; bgImageSize.value = null }
+    img.onload = () => {
+      bgImageSize.value = { width: img.naturalWidth, height: img.naturalHeight }
+    }
+    img.onerror = () => {
+      bgImageFailed.value = true
+      bgImageSize.value = null
+    }
     img.src = `${import.meta.env.BASE_URL}boards/backgrounds/${bg}`
   },
   { immediate: true },
 )
 
 const canvasWidth = computed(() =>
-  props.config.objects.reduce((m, o) => Math.max(m, o.x + (o.type === 'graph' ? (o.graph_width ?? 400) : 150)), 800),
+  props.config.objects.reduce(
+    (m, o) => Math.max(m, o.x + (o.type === 'graph' ? (o.graph_width ?? 400) : 150)),
+    800,
+  ),
 )
 const canvasHeight = computed(() =>
-  props.config.objects.reduce((m, o) => Math.max(m, o.y + (o.type === 'graph' ? (o.graph_height ?? 200) : 150)), 600),
+  props.config.objects.reduce(
+    (m, o) => Math.max(m, o.y + (o.type === 'graph' ? (o.graph_height ?? 200) : 150)),
+    600,
+  ),
 )
 
 // Canvas style: with background → fill parent absolutely; without → fixed pixel size
@@ -234,20 +278,20 @@ const canvasStyle = computed(() => {
   return pixelSize
 })
 
-const nonLineObjects = computed(() =>
-  props.config.objects.filter((o) => o.type !== 'line'),
-)
-const lineObjects = computed(() =>
-  props.config.objects.filter((o) => o.type === 'line'),
-)
+const nonLineObjects = computed(() => props.config.objects.filter((o) => o.type !== 'line'))
+const lineObjects = computed(() => props.config.objects.filter((o) => o.type === 'line'))
 
 function objectWrapperStyle(obj: BoardObjectType) {
   const pos = localDragPositions[obj.id] ?? { x: obj.x, y: obj.y }
   const isMap = obj.type === 'map'
   const canDrag = props.editMode || props.isAdmin
   const cursor = canDrag
-    ? (_dragId.value === obj.id ? 'grabbing' : 'grab')
-    : (isMap || obj.url || !!buildCheckmkUrl(obj) ? 'pointer' : 'default')
+    ? _dragId.value === obj.id
+      ? 'grabbing'
+      : 'grab'
+    : isMap || obj.url || !!buildCheckmkUrl(obj)
+      ? 'pointer'
+      : 'default'
   const zIndex = _dragId.value === obj.id ? 100 : (obj.z ?? 1)
 
   if (bgImageSize.value) {
@@ -272,7 +316,7 @@ function objectWrapperStyle(obj: BoardObjectType) {
 // ---- Pointer-capture drag handlers ----
 
 function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
-  if (event.button === 2) return  // right-click: let contextmenu event fire normally
+  if (event.button === 2) return // right-click: let contextmenu event fire normally
   _suppressNextCanvasClick.value = false
   event.preventDefault()
   if (!(props.editMode || props.isAdmin)) return
@@ -280,8 +324,8 @@ function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
   if (!canvas) return
   canvas.setPointerCapture(event.pointerId)
   const rect = canvas.getBoundingClientRect()
-  _dragOffX.value = (event.clientX - rect.left) - obj.x
-  _dragOffY.value = (event.clientY - rect.top) - obj.y
+  _dragOffX.value = event.clientX - rect.left - obj.x
+  _dragOffY.value = event.clientY - rect.top - obj.y
   _dragInitX.value = obj.x
   _dragInitY.value = obj.y
   _didMove.value = false
@@ -316,7 +360,10 @@ function onCanvasPointerMove(event: PointerEvent) {
   const rect = canvasEl.value.getBoundingClientRect()
   const x = Math.max(0, _snap(Math.round(event.clientX - rect.left - _dragOffX.value)))
   const y = Math.max(0, _snap(Math.round(event.clientY - rect.top - _dragOffY.value)))
-  if (!_didMove.value && (Math.abs(x - _dragInitX.value) > 4 || Math.abs(y - _dragInitY.value) > 4)) {
+  if (
+    !_didMove.value &&
+    (Math.abs(x - _dragInitX.value) > 4 || Math.abs(y - _dragInitY.value) > 4)
+  ) {
     _didMove.value = true
   }
   localDragPositions[id] = { x, y }
@@ -361,20 +408,25 @@ function buildCheckmkUrl(obj: BoardObjectType): string | null {
   const p: Record<string, string> = {}
   if (site) p.site = site
 
-  if ((obj.type === 'host') && obj.host_name) {
-    p.view_name = 'hoststatus'; p.host = obj.host_name
+  if (obj.type === 'host' && obj.host_name) {
+    p.view_name = 'hoststatus'
+    p.host = obj.host_name
     return `${base}/check_mk/view.py?${new URLSearchParams(p)}`
   }
   if (obj.type === 'service' && obj.host_name && obj.service_description) {
-    p.view_name = 'service'; p.host = obj.host_name; p.service = obj.service_description
+    p.view_name = 'service'
+    p.host = obj.host_name
+    p.service = obj.service_description
     return `${base}/check_mk/view.py?${new URLSearchParams(p)}`
   }
   if (obj.type === 'hostgroup' && obj.group_name) {
-    p.view_name = 'hostgroup'; p.hostgroup = obj.group_name
+    p.view_name = 'hostgroup'
+    p.hostgroup = obj.group_name
     return `${base}/check_mk/view.py?${new URLSearchParams(p)}`
   }
   if (obj.type === 'servicegroup' && obj.group_name) {
-    p.view_name = 'servicegroup'; p.servicegroup = obj.group_name
+    p.view_name = 'servicegroup'
+    p.servicegroup = obj.group_name
     return `${base}/check_mk/view.py?${new URLSearchParams(p)}`
   }
   return null
@@ -406,9 +458,10 @@ function onObjectContextMenu(event: MouseEvent, obj: BoardObjectType) {
     // Get the bounding rect of the clicked element (wrapper div or SVG element)
     const el = (event.currentTarget ?? event.target) as Element | null
     const r = el?.getBoundingClientRect?.()
-    const anchor = r && (r.width > 0 || r.height > 0)
-      ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
-      : { left: event.clientX, top: event.clientY, right: event.clientX, bottom: event.clientY }
+    const anchor =
+      r && (r.width > 0 || r.height > 0)
+        ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
+        : { left: event.clientX, top: event.clientY, right: event.clientX, bottom: event.clientY }
     emit('object-contextmenu', obj, anchor)
   } else {
     openContextMenu(event, obj)
@@ -429,12 +482,14 @@ function onCanvasClick(event: MouseEvent) {
 const hoverMenu = reactive({
   visible: false,
   object: null as BoardObjectType | null,
-  x: 0, y: 0,
+  x: 0,
+  y: 0,
 })
 const contextMenu = reactive({
   visible: false,
   object: null as BoardObjectType | null,
-  x: 0, y: 0,
+  x: 0,
+  y: 0,
 })
 
 function openHoverMenu(event: MouseEvent, obj: BoardObjectType) {

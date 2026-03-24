@@ -1,4 +1,5 @@
 import { watch } from 'vue'
+
 import { useAuthStore } from '@/stores/auth'
 
 export function applyTheme(theme: string, ssoActive: boolean, cmkTheme?: string | null) {
@@ -12,7 +13,6 @@ export function applyTheme(theme: string, ssoActive: boolean, cmkTheme?: string 
     dark = cmkTheme !== 'light'
   }
 
-
   const root = document.documentElement
   if (dark) {
     root.classList.remove('light')
@@ -21,7 +21,6 @@ export function applyTheme(theme: string, ssoActive: boolean, cmkTheme?: string 
     root.classList.remove('dark')
     root.classList.add('light')
   }
-
 }
 
 export function useTheme() {

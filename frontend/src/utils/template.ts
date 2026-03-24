@@ -53,7 +53,7 @@ export function interpolateTemplate(
     object.label?.text ||
     (object.host_name && object.service_description
       ? `${object.host_name} / ${object.service_description}`
-      : object.host_name ?? object.group_name ?? object.id)
+      : (object.host_name ?? object.group_name ?? object.id))
 
   const perfRaw = state?.perf_data ?? ''
   const metrics = parsePerfData(perfRaw)
@@ -73,8 +73,10 @@ export function interpolateTemplate(
     in_downtime: state?.in_downtime ? 'true' : 'false',
     stale: state?.stale ? 'true' : 'false',
     state_type: state?.state_type ?? '',
-    attempts: (state?.current_attempt && state?.max_attempts)
-      ? `${state.current_attempt}/${state.max_attempts}` : '',
+    attempts:
+      state?.current_attempt && state?.max_attempts
+        ? `${state.current_attempt}/${state.max_attempts}`
+        : '',
     last_check: _fmtTs(state?.last_check),
     last_state_change: _fmtTs(state?.last_state_change),
     state_duration: _fmtDuration(state?.last_state_change),
@@ -87,7 +89,7 @@ export function interpolateTemplate(
     // {{metric:LABEL}} – look up a named perf metric
     if (key.startsWith('metric:')) {
       const label = key.slice(7)
-      const m = metrics.find(x => x.label === label)
+      const m = metrics.find((x) => x.label === label)
       return m ? String(m.value) + m.unit : ''
     }
     return vars[key] ?? ''

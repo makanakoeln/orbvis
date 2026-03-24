@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import BoardCanvas from './BoardCanvas.vue'
+import { describe, expect, it } from 'vitest'
+
 import type { BoardConfig, ObjectState } from '@/types/api'
+
+import BoardCanvas from './BoardCanvas.vue'
 
 const sampleConfig: BoardConfig = {
   name: 'test',
@@ -19,7 +21,8 @@ const sampleConfig: BoardConfig = {
       host_name: 'localhost',
       label: { show: true, x: 0, y: 0, size: 10, color: '#ffffff', background: 'transparent' },
       display: { mode: 'icon' },
-      url_target: '_blank', z: 1,
+      url_target: '_blank',
+      z: 1,
     },
   ],
 }

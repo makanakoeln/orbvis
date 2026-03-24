@@ -4,17 +4,17 @@
 
 import type {
   BackendConfig,
-  GlobalSettings,
-  ImageEntry,
   BoardConfig,
   BoardObject,
   BoardPermissions,
   BoardRead,
+  GlobalSettings,
+  ImageEntry,
   MapStates,
+  PermissionRead,
+  RoleRead,
   TokenResponse,
   UserRead,
-  RoleRead,
-  PermissionRead,
 } from '@/types/api'
 
 // import.meta.env.BASE_URL is '/' in dev and '/heute/orbvis/' when built with --base
@@ -33,11 +33,7 @@ class ApiError extends Error {
 
 const METHOD_OVERRIDE = new Set(['PATCH', 'PUT', 'DELETE'])
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-  token?: string,
-): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   const declaredMethod = ((options.method ?? 'GET') as string).toUpperCase()
   const needsOverride = METHOD_OVERRIDE.has(declaredMethod)
 
@@ -63,7 +59,11 @@ async function request<T>(
   if (!response.ok) {
     const detail = await response.json().catch(() => null)
     const msg = detail?.detail ?? detail?.message ?? `HTTP ${response.status}`
-    throw new ApiError(response.status, typeof msg === 'string' ? msg : `HTTP ${response.status}`, detail)
+    throw new ApiError(
+      response.status,
+      typeof msg === 'string' ? msg : `HTTP ${response.status}`,
+      detail,
+    )
   }
 
   if (response.status === 204) return undefined as T
@@ -85,26 +85,30 @@ export const authApi = {
       body: JSON.stringify({ refresh_token: refreshToken }),
     }),
 
-  sso: (): Promise<TokenResponse> =>
-    request('/auth/sso', {}),
+  sso: (): Promise<TokenResponse> => request('/auth/sso', {}),
 
-  me: (token: string): Promise<UserRead> =>
-    request('/auth/me', {}, token),
+  me: (token: string): Promise<UserRead> => request('/auth/me', {}, token),
 
-  logout: (token: string): Promise<void> =>
-    request('/auth/logout', { method: 'POST' }, token),
+  logout: (token: string): Promise<void> => request('/auth/logout', { method: 'POST' }, token),
 }
 
 // ---- Boards ----
 
 export const boardsApi = {
-  list: (token: string): Promise<BoardRead[]> =>
-    request('/boards', {}, token),
+  list: (token: string): Promise<BoardRead[]> => request('/boards', {}, token),
 
-  get: (name: string, token: string): Promise<BoardConfig> =>
-    request(`/boards/${name}`, {}, token),
+  get: (name: string, token: string): Promise<BoardConfig> => request(`/boards/${name}`, {}, token),
 
-  create: (data: { name: string; alias?: string; backend_id?: string; icon_size?: number; view?: Record<string, unknown> }, token: string): Promise<BoardConfig> =>
+  create: (
+    data: {
+      name: string
+      alias?: string
+      backend_id?: string
+      icon_size?: number
+      view?: Record<string, unknown>
+    },
+    token: string,
+  ): Promise<BoardConfig> =>
     request('/boards', { method: 'POST', body: JSON.stringify(data) }, token),
 
   update: (name: string, data: Record<string, unknown>, token: string): Promise<BoardConfig> =>
@@ -125,7 +129,11 @@ export const boardsApi = {
     updates: Record<string, unknown>,
     token: string,
   ): Promise<BoardObject> =>
-    request(`/boards/${boardName}/objects/${objId}`, { method: 'PUT', body: JSON.stringify(updates) }, token),
+    request(
+      `/boards/${boardName}/objects/${objId}`,
+      { method: 'PUT', body: JSON.stringify(updates) },
+      token,
+    ),
 
   deleteObject: (boardName: string, objId: string, token: string): Promise<void> =>
     request(`/boards/${boardName}/objects/${objId}`, { method: 'DELETE' }, token),
@@ -133,7 +141,11 @@ export const boardsApi = {
   getPermissions: (name: string, token: string): Promise<BoardPermissions> =>
     request(`/boards/${name}/permissions`, {}, token),
 
-  uploadBackground: async (boardName: string, file: File, token: string): Promise<{ filename: string }> => {
+  uploadBackground: async (
+    boardName: string,
+    file: File,
+    token: string,
+  ): Promise<{ filename: string }> => {
     const form = new FormData()
     form.append('file', file)
     const response = await fetch(`${BASE_URL}/boards/${boardName}/background`, {
@@ -151,11 +163,19 @@ export const boardsApi = {
   deleteBackground: (boardName: string, token: string): Promise<void> =>
     request(`/boards/${boardName}/background`, { method: 'DELETE' }, token),
 
-  clone: (name: string, data: { new_name: string; alias?: string }, token: string): Promise<BoardConfig> =>
+  clone: (
+    name: string,
+    data: { new_name: string; alias?: string },
+    token: string,
+  ): Promise<BoardConfig> =>
     request(`/boards/${name}/clone`, { method: 'POST', body: JSON.stringify(data) }, token),
 
   importBoard: (data: BoardConfig, token: string, overwrite = false): Promise<BoardConfig> =>
-    request(`/boards/import?overwrite=${overwrite}`, { method: 'POST', body: JSON.stringify(data) }, token),
+    request(
+      `/boards/import?overwrite=${overwrite}`,
+      { method: 'POST', body: JSON.stringify(data) },
+      token,
+    ),
 
   importCfg: async (file: File, token: string, overwrite = false): Promise<BoardConfig> => {
     const form = new FormData()
@@ -188,17 +208,14 @@ export const boardsApi = {
 // ---- Users ----
 
 export const usersApi = {
-  list: (token: string): Promise<UserRead[]> =>
-    request('/users', {}, token),
+  list: (token: string): Promise<UserRead[]> => request('/users', {}, token),
 
-  get: (id: number, token: string): Promise<UserRead> =>
-    request(`/users/${id}`, {}, token),
+  get: (id: number, token: string): Promise<UserRead> => request(`/users/${id}`, {}, token),
 
   create: (
     data: { name: string; password: string; is_admin?: boolean; must_change_password?: boolean },
     token: string,
-  ): Promise<UserRead> =>
-    request('/users', { method: 'POST', body: JSON.stringify(data) }, token),
+  ): Promise<UserRead> => request('/users', { method: 'POST', body: JSON.stringify(data) }, token),
 
   update: (id: number, data: Record<string, unknown>, token: string): Promise<UserRead> =>
     request(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, token),
@@ -216,8 +233,7 @@ export const usersApi = {
 // ---- Roles ----
 
 export const rolesApi = {
-  list: (token: string): Promise<RoleRead[]> =>
-    request('/roles', {}, token),
+  list: (token: string): Promise<RoleRead[]> => request('/roles', {}, token),
 
   create: (name: string, token: string): Promise<RoleRead> =>
     request('/roles', { method: 'POST', body: JSON.stringify({ name }) }, token),
@@ -225,8 +241,17 @@ export const rolesApi = {
   delete: (id: number, token: string): Promise<void> =>
     request(`/roles/${id}`, { method: 'DELETE' }, token),
 
-  createPermission: (mod: string, act: string, obj: string, token: string): Promise<PermissionRead> =>
-    request('/roles/permissions/', { method: 'POST', body: JSON.stringify({ mod, act, obj }) }, token),
+  createPermission: (
+    mod: string,
+    act: string,
+    obj: string,
+    token: string,
+  ): Promise<PermissionRead> =>
+    request(
+      '/roles/permissions/',
+      { method: 'POST', body: JSON.stringify({ mod, act, obj }) },
+      token,
+    ),
 
   assignPermission: (roleId: number, permId: number, token: string): Promise<RoleRead> =>
     request(`/roles/${roleId}/permissions/${permId}`, { method: 'POST' }, token),
@@ -238,8 +263,7 @@ export const rolesApi = {
 // ---- Backends ----
 
 export const connectionsApi = {
-  list: (token: string): Promise<BackendConfig[]> =>
-    request('/backends', {}, token),
+  list: (token: string): Promise<BackendConfig[]> => request('/backends', {}, token),
 
   create: (data: BackendConfig, token: string): Promise<BackendConfig> =>
     request('/backends', { method: 'POST', body: JSON.stringify(data) }, token),
@@ -259,10 +283,23 @@ export const connectionsApi = {
   test: (backendId: string, token: string): Promise<{ ok: boolean; message: string }> =>
     request(`/backends/${backendId}/test`, {}, token),
 
-  topology: (backendId: string, token: string, includeServices = false): Promise<import('@/types/api').TopologyNode[]> =>
-    request(`/backends/${backendId}/topology${includeServices ? '?include_services=true' : ''}`, {}, token),
+  topology: (
+    backendId: string,
+    token: string,
+    includeServices = false,
+  ): Promise<import('@/types/api').TopologyNode[]> =>
+    request(
+      `/backends/${backendId}/topology${includeServices ? '?include_services=true' : ''}`,
+      {},
+      token,
+    ),
 
-  perfMetrics: (backendId: string, host: string, token: string, service?: string): Promise<string[]> => {
+  perfMetrics: (
+    backendId: string,
+    host: string,
+    token: string,
+    service?: string,
+  ): Promise<string[]> => {
     const params = new URLSearchParams({ host })
     if (service) params.set('service', service)
     return request(`/backends/${backendId}/perf-metrics?${params}`, {}, token)
@@ -280,21 +317,21 @@ export const connectionsApi = {
     return request(`/backends/${backendId}/metric-history?${params}`, {}, token)
   },
 
-  hostGeo: (backendId: string, host: string, token: string): Promise<{ lat: number; lng: number } | null> =>
+  hostGeo: (
+    backendId: string,
+    host: string,
+    token: string,
+  ): Promise<{ lat: number; lng: number } | null> =>
     request(`/backends/${backendId}/host-geo?host=${encodeURIComponent(host)}`, {}, token),
 
-  testConnection: (
-    data: BackendConfig,
-    token: string,
-  ): Promise<{ ok: boolean; message: string }> =>
+  testConnection: (data: BackendConfig, token: string): Promise<{ ok: boolean; message: string }> =>
     request('/backends/test-connection', { method: 'POST', body: JSON.stringify(data) }, token),
 }
 
 // ---- Images ----
 
 export const imagesApi = {
-  list: (token: string): Promise<ImageEntry[]> =>
-    request('/images', {}, token),
+  list: (token: string): Promise<ImageEntry[]> => request('/images', {}, token),
 
   upload: async (file: File, token: string): Promise<ImageEntry> => {
     const form = new FormData()
@@ -318,8 +355,7 @@ export const imagesApi = {
 // ---- Global Settings ----
 
 export const settingsApi = {
-  get: (token: string): Promise<GlobalSettings> =>
-    request('/settings', {}, token),
+  get: (token: string): Promise<GlobalSettings> => request('/settings', {}, token),
 
   update: (data: GlobalSettings, token: string): Promise<GlobalSettings> =>
     request('/settings', { method: 'PUT', body: JSON.stringify(data) }, token),
@@ -334,7 +370,7 @@ async function cmkRequest(baseUrl: string, path: string, body?: unknown): Promis
   const response = await fetch(url, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
   if (!response.ok) {
@@ -418,12 +454,18 @@ export const cmkApi = {
   },
 
   forceCheckHost(baseUrl: string, hostname: string): Promise<void> {
-    return cmkRequest(baseUrl, `/objects/host/${encodeURIComponent(hostname)}/actions/reschedule-active-checks/invoke`, { force: true })
+    return cmkRequest(
+      baseUrl,
+      `/objects/host/${encodeURIComponent(hostname)}/actions/reschedule-active-checks/invoke`,
+      { force: true },
+    )
   },
 
   forceCheckService(baseUrl: string, hostname: string, serviceDescription: string): Promise<void> {
     const id = `${encodeURIComponent(hostname)}~${encodeURIComponent(serviceDescription)}`
-    return cmkRequest(baseUrl, `/objects/service/${id}/actions/reschedule-active-checks/invoke`, { force: true })
+    return cmkRequest(baseUrl, `/objects/service/${id}/actions/reschedule-active-checks/invoke`, {
+      force: true,
+    })
   },
 }
 
