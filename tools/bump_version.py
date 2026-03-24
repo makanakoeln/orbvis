@@ -100,7 +100,7 @@ def build_entry(version: str, commits: list[tuple[str, str]]) -> str:
 
 
 def open_in_editor(content: str) -> str:
-    editor = os.environ.get("EDITOR", "nano")
+    editor = os.environ.get("EDITOR", "vi")
     with tempfile.NamedTemporaryFile(suffix=".md", mode="w", delete=False) as f:
         f.write(content)
         tmp = f.name
