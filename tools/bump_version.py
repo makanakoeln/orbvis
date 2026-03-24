@@ -165,10 +165,11 @@ def main() -> None:
     prepend_to_changelog(edited)
 
     print(f"\nDone. VERSION={new_version}, CHANGELOG.md updated.")
-    print(f"\nNext steps:")
+    print(f"\nNext steps — copy & paste:\n")
     print(f"  git add VERSION CHANGELOG.md")
     print(f"  git commit -m 'version: bump to {new_version}'")
     print(f"  git tag v{new_version}")
+    print(f"  git push && git push --tags")
 
 
 if __name__ == "__main__":
