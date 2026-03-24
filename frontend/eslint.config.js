@@ -1,9 +1,9 @@
 import js from '@eslint/js'
-import ts from 'typescript-eslint'
-import pluginVue from 'eslint-plugin-vue'
-import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import prettier from 'eslint-config-prettier'
+import simpleImportSort from 'eslint-plugin-simple-import-sort'
+import pluginVue from 'eslint-plugin-vue'
 import globals from 'globals'
+import ts from 'typescript-eslint'
 
 export default [
   js.configs.recommended,
@@ -48,7 +48,10 @@ export default [
       'vue/no-mutating-props': 'warn', // wird schrittweise refactored
       'no-empty': ['error', { allowEmptyCatch: true }],
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
   },
 

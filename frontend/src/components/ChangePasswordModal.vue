@@ -96,7 +96,7 @@ const props = defineProps<{
   userName: string
 }>()
 
-const emit = defineEmits<{ close: [] }>()
+defineEmits<{ close: [] }>()
 
 const { t } = useI18n()
 const auth = useAuthStore()

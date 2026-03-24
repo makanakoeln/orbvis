@@ -1,14 +1,14 @@
 <template>
   <aside
     class="shrink-0 bg-[var(--bg-surface)] border-r border-[var(--border)] flex flex-col h-full overflow-hidden transition-all duration-200"
-    :class="collapsed ? 'w-14' : 'w-56'"
+    :class="sidebarCollapsed ? 'w-14' : 'w-56'"
   >
     <!-- Brand -->
     <div
       class="px-2 py-3 border-b border-[var(--border)] shrink-0 flex items-center"
-      :class="collapsed ? 'justify-center' : 'justify-between px-3'"
+      :class="sidebarCollapsed ? 'justify-center' : 'justify-between px-3'"
     >
-      <router-link v-if="!collapsed" to="/" class="flex items-center gap-2.5 group min-w-0">
+      <router-link v-if="!sidebarCollapsed" to="/" class="flex items-center gap-2.5 group min-w-0">
         <div
           class="w-7 h-7 rounded-lg bg-indigo-600/20 ring-1 ring-indigo-500/30 flex items-center justify-center shrink-0"
         >
@@ -39,12 +39,12 @@
           >OrbVis</span
         >
       </router-link>
-      <!-- Expand button when collapsed -->
+      <!-- Expand button when sidebarCollapsed -->
       <button
-        v-if="collapsed"
+        v-if="sidebarCollapsed"
         class="w-7 h-7 rounded-lg bg-indigo-600/20 ring-1 ring-indigo-500/30 flex items-center justify-center text-indigo-400 hover:bg-indigo-600/30 transition-all"
         :title="t('nav.expandSidebar')"
-        @click="collapsed = false"
+        @click="sidebarCollapsed = false"
       >
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -52,10 +52,10 @@
       </button>
       <!-- Collapse toggle — in header, far from logout -->
       <button
-        v-if="!collapsed"
+        v-if="!sidebarCollapsed"
         class="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all shrink-0"
         :title="t('nav.collapseSidebar')"
-        @click="collapsed = !collapsed"
+        @click="sidebarCollapsed = !sidebarCollapsed"
       >
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -66,7 +66,7 @@
     <!-- Navigation -->
     <nav data-tour="sidebar-nav" class="flex-1 overflow-y-auto p-2 space-y-0.5">
       <!-- Overview -->
-      <NavItem to="/" :exact="true" :label="t('nav.overview')" :collapsed="collapsed">
+      <NavItem to="/" :exact="true" :label="t('nav.overview')" :collapsed="sidebarCollapsed">
         <template #icon>
           <path
             stroke-linecap="round"
@@ -80,13 +80,13 @@
       <template v-if="auth.isAdmin">
         <div class="mx-2 mt-4 mb-2 border-t border-[var(--border)]" />
         <p
-          v-if="!collapsed"
+          v-if="!sidebarCollapsed"
           class="px-3 pb-1 text-xs font-semibold text-zinc-500 uppercase tracking-wider select-none"
         >
           {{ t('nav.administration') }}
         </p>
 
-        <NavItem to="/admin/connections" :label="t('admin.connections')" :collapsed="collapsed">
+        <NavItem to="/admin/connections" :label="t('admin.connections')" :collapsed="sidebarCollapsed">
           <template #icon>
             <path
               stroke-linecap="round"
@@ -96,7 +96,7 @@
           </template>
         </NavItem>
 
-        <NavItem to="/admin/icons" :label="t('admin.icons')" :collapsed="collapsed">
+        <NavItem to="/admin/icons" :label="t('admin.icons')" :collapsed="sidebarCollapsed">
           <template #icon>
             <path
               stroke-linecap="round"
@@ -106,7 +106,7 @@
           </template>
         </NavItem>
 
-        <NavItem to="/admin/users" :label="t('admin.users')" :collapsed="collapsed">
+        <NavItem to="/admin/users" :label="t('admin.users')" :collapsed="sidebarCollapsed">
           <template #icon>
             <path
               stroke-linecap="round"
@@ -116,7 +116,7 @@
           </template>
         </NavItem>
 
-        <NavItem to="/admin/roles" :label="t('admin.rolesAndPermissions')" :collapsed="collapsed">
+        <NavItem to="/admin/roles" :label="t('admin.rolesAndPermissions')" :collapsed="sidebarCollapsed">
           <template #icon>
             <path
               stroke-linecap="round"
@@ -126,7 +126,7 @@
           </template>
         </NavItem>
 
-        <NavItem to="/admin/settings" :label="t('admin.settings')" :collapsed="collapsed">
+        <NavItem to="/admin/settings" :label="t('admin.settings')" :collapsed="sidebarCollapsed">
           <template #icon>
             <path
               stroke-linecap="round"
@@ -148,8 +148,8 @@
       <!-- User info + settings (combined clickable row) -->
       <button
         class="w-full flex items-center rounded-lg hover:bg-[var(--bg-hover)] transition-all duration-150 group"
-        :class="collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-2 py-2'"
-        :title="collapsed ? auth.user?.name : t('nav.userSettings')"
+        :class="sidebarCollapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-2 py-2'"
+        :title="sidebarCollapsed ? auth.user?.name : t('nav.userSettings')"
         @click="showSettings = true"
       >
         <div
@@ -157,7 +157,7 @@
         >
           {{ auth.user?.name?.[0] }}
         </div>
-        <div v-if="!collapsed" class="flex-1 min-w-0 text-left">
+        <div v-if="!sidebarCollapsed" class="flex-1 min-w-0 text-left">
           <p class="text-sm font-medium text-[var(--text)] truncate leading-tight">
             {{ auth.user?.name }}
           </p>
@@ -173,8 +173,8 @@
       <button
         v-if="!auth.ssoActive"
         class="w-full flex items-center rounded-lg text-sm text-zinc-500 hover:text-red-400 hover:bg-red-500/5 transition-all duration-150"
-        :class="collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'"
-        :title="collapsed ? t('auth.logout') : undefined"
+        :class="sidebarCollapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'"
+        :title="sidebarCollapsed ? t('auth.logout') : undefined"
         @click="auth.logout()"
       >
         <svg
@@ -190,12 +190,12 @@
             d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"
           />
         </svg>
-        <span v-if="!collapsed">{{ t('auth.logout') }}</span>
+        <span v-if="!sidebarCollapsed">{{ t('auth.logout') }}</span>
       </button>
 
       <!-- Version -->
       <button
-        v-if="!collapsed"
+        v-if="!sidebarCollapsed"
         class="w-full text-left px-3 py-1 text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
         @click="showChangelog = true"
       >
@@ -219,7 +219,7 @@
 <script setup lang="ts">
 import { defineComponent, h, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RouterLink, useLink, useRoute } from 'vue-router'
+import { RouterLink, useLink } from 'vue-router'
 
 import ChangelogModal from '@/components/ChangelogModal.vue'
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
@@ -227,15 +227,14 @@ import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
 const auth = useAuthStore()
-const route = useRoute()
 const showSettings = ref(false)
 const showChangelog = ref(false)
 const appVersion = __APP_VERSION__
 
 const LS_KEY = 'orbvis_sidebar_collapsed'
-const collapsed = ref(localStorage.getItem(LS_KEY) === '1')
+const sidebarCollapsed = ref(localStorage.getItem(LS_KEY) === '1')
 
-watch(collapsed, (val) => {
+watch(sidebarCollapsed, (val) => {
   localStorage.setItem(LS_KEY, val ? '1' : '0')
 })
 
@@ -247,8 +246,10 @@ const NavItem = defineComponent({
     exact: { type: Boolean, default: false },
     collapsed: { type: Boolean, default: false },
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   slots: Object as any,
   setup(props, { slots }) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { isActive, isExactActive } = useLink({ to: props.to } as any)
     return () => {
       const active = props.exact ? isExactActive.value : isActive.value
