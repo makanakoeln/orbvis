@@ -62,7 +62,9 @@
       </template>
 
       <template v-else-if="draft.type === 'graph'">
-        <input v-model="draft.graph_url" :placeholder="t('boardSettings.graphUrl')" class="field font-mono" />
+        <AutocompleteInput v-model="draft.host_name" :suggestions="addObjects" :loading="loadingAddObjects" :placeholder="t('boardSettings.hostname')" @change="onHostChange" />
+        <AutocompleteInput v-model="draft.service_description" :suggestions="addServices" :loading="loadingAddServices" :placeholder="t('boardSettings.serviceOptional')" />
+        <input v-model="draft.graph_url" :placeholder="t('boardSettings.graphUrl') + ' (optional)'" class="field font-mono text-xs" />
       </template>
 
       <!-- Grid snap -->
@@ -153,7 +155,7 @@ const loadingAddObjects = ref(false)
 const loadingAddServices = ref(false)
 
 async function fetchAddObjects(type: string) {
-  if (!props.backendId || !type || type === 'line' || type === 'textbox' || type === 'map' || type === 'image' || type === 'graph') {
+  if (!props.backendId || !type || type === 'line' || type === 'textbox' || type === 'map' || type === 'image') {
     addObjects.value = []; return
   }
   loadingAddObjects.value = true
@@ -176,7 +178,7 @@ function onTypeChange() {
   props.draft.host_name = ''
   props.draft.service_description = ''
   addObjects.value = []; addServices.value = []
-  const fetchType = props.draft.type === 'service' || props.draft.type === 'line' ? 'host' : props.draft.type
+  const fetchType = props.draft.type === 'service' || props.draft.type === 'line' || props.draft.type === 'graph' ? 'host' : props.draft.type
   fetchAddObjects(fetchType)
 }
 

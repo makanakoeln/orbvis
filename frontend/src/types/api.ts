@@ -83,6 +83,7 @@ export interface BoardObject {
   graph_width?: number | null
   graph_height?: number | null
   graph_refresh_interval?: number | null
+  graph_metric?: string | null
   line_color?: string | null
   line_color_border?: string | null
   url?: string | null

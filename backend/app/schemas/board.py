@@ -109,6 +109,7 @@ class BoardObject(BaseModel):
     graph_width: int = 400
     graph_height: int = 200
     graph_refresh_interval: int = 0
+    graph_metric: str | None = None
     # Line custom colors
     line_color: str | None = None
     line_color_border: str | None = None

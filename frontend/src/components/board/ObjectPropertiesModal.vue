@@ -102,13 +102,37 @@
           </div>
         </section>
 
-        <!-- === GRAPH === -->
+        <!-- === GRAPH: Metric Source === -->
         <section v-if="object.type === 'graph'">
-          <p class="section-title">{{ t('boardSettings.graphSection') }}</p>
+          <p class="section-title">{{ t('boardSettings.graphMetricSource') }}</p>
+          <div class="space-y-3">
+            <div class="field-row">
+              <label class="field-label">{{ t('boardSettings.hostname') }}</label>
+              <AutocompleteInput v-model="form.host_name" :suggestions="hosts" :loading="loadingHosts" placeholder="hostname" class="flex-1" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">{{ t('boardSettings.typeService') }}</label>
+              <AutocompleteInput v-model="form.service_description" :suggestions="services" :loading="loadingServices" placeholder="service description" class="flex-1" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">{{ t('boardSettings.graphMetric') }}</label>
+              <AutocompleteInput
+                v-model="form.graph_metric"
+                :suggestions="metricSuggestions"
+                :placeholder="t('boardSettings.graphMetricAuto')"
+                class="flex-1"
+              />
+            </div>
+          </div>
+        </section>
+
+        <!-- === GRAPH: URL Embed === -->
+        <section v-if="object.type === 'graph'">
+          <p class="section-title">{{ t('boardSettings.graphUrlEmbed') }}</p>
           <div class="space-y-3">
             <div class="field-row">
               <label class="field-label">{{ t('boardSettings.graphUrl') }}</label>
-              <input v-model="form.graph_url" class="field flex-1 font-mono" placeholder="https://…" />
+              <input v-model="form.graph_url" class="field flex-1 font-mono" placeholder="https://… (optional)" />
             </div>
             <div class="field-row">
               <label class="field-label">{{ t('boardSettings.graphEmbedType') }}</label>
@@ -570,6 +594,7 @@ const form = reactive({
   graph_width: 400,
   graph_height: 200,
   graph_refresh_interval: 0,
+  graph_metric: '',
   display: {
     mode: 'icon' as 'icon' | 'text' | 'gadget',
     image: '',
@@ -631,6 +656,7 @@ watch(() => props.object, (obj) => {
   form.graph_width = obj.graph_width ?? 400
   form.graph_height = obj.graph_height ?? 200
   form.graph_refresh_interval = obj.graph_refresh_interval ?? 0
+  form.graph_metric = obj.graph_metric ?? ''
   form.display.mode = obj.display?.mode ?? 'icon'
   form.display.image = obj.display?.image ?? ''
   form.display.image_size = obj.display?.image_size ?? null
@@ -670,11 +696,11 @@ const loadingGroups = ref(false)
 async function loadAutocomplete() {
   if (!props.backendId) return
   const type = props.object.type
-  if (type === 'host' || type === 'service' || type === 'line') {
+  if (type === 'host' || type === 'service' || type === 'line' || type === 'graph') {
     loadingHosts.value = true
     hosts.value = await connectionsApi.objects(props.backendId, 'host', auth.accessToken!).catch(() => [])
     loadingHosts.value = false
-    if ((type === 'service' || type === 'line') && form.host_name) {
+    if ((type === 'service' || type === 'line' || type === 'graph') && form.host_name) {
       loadingServices.value = true
       services.value = await connectionsApi.objects(props.backendId, 'service', auth.accessToken!, form.host_name).catch(() => [])
       loadingServices.value = false
@@ -702,7 +728,7 @@ watch(() => [form.host_name, form.service_description], ([host, svc]) => {
 })
 
 watch(() => form.host_name, async (host) => {
-  if ((props.object.type === 'service' || props.object.type === 'line') && host) {
+  if ((props.object.type === 'service' || props.object.type === 'line' || props.object.type === 'graph') && host) {
     loadingServices.value = true
     services.value = await connectionsApi.objects(props.backendId, 'service', auth.accessToken!, host).catch(() => [])
     loadingServices.value = false
@@ -755,6 +781,7 @@ async function save() {
       graph_width: form.graph_width,
       graph_height: form.graph_height,
       graph_refresh_interval: form.graph_refresh_interval,
+      graph_metric: form.graph_metric || null,
       line_style: form.line_style,
       line_color: form.line_color || null,
       line_color_border: form.line_color_border || null,
@@ -776,6 +803,10 @@ async function save() {
       updates.recognize_services = form.recognize_services
     if (props.object.type === 'service')
       updates.service_description = form.service_description || null
+    if (props.object.type === 'graph') {
+      updates.host_name = form.host_name || null
+      updates.service_description = form.service_description || null
+    }
     if (props.object.type === 'hostgroup' || props.object.type === 'servicegroup')
       updates.group_name = form.group_name || null
     if (props.object.type === 'map')

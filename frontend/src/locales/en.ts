@@ -228,6 +228,11 @@ export default {
     graphRefreshOff: '0 = off',
     graphLoadFailed: 'Load failed',
     graphNoUrl: 'No URL configured',
+    graphMetric: 'Metric',
+    graphMetricAuto: 'auto (first metric)',
+    graphMetricSource: 'Metric Source',
+    graphUrlEmbed: 'URL Embed',
+    graphWaitingData: 'Waiting for data…',
   },
   contextMenu: {
     hostInCheckmk: 'Host in Checkmk',

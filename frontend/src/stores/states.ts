@@ -5,6 +5,7 @@ import { boardsApi } from '@/api/client'
 import { parsePerfData, utilPercent } from '@/utils/perf'
 
 export interface MetricSnapshot { ts: number; pct: number }
+export interface MetricPoint { ts: number; value: number; unit: string }
 const HISTORY_MAX = 20
 
 // Base path without trailing slash, e.g. '/heute/orbvis' or ''
@@ -35,6 +36,7 @@ function _notifyStateChange(obj: ObjectState, prev: ObjectState | undefined) {
 export const useStatesStore = defineStore('states', () => {
   const states = ref<Record<string, ObjectState>>({})  // keyed by object_id
   const history = ref<Record<string, MetricSnapshot[]>>({})
+  const metricValues = ref<Record<string, Record<string, MetricPoint[]>>>({})
   const connected = ref(false)
   const lastUpdate = ref<number | null>(null)
   const _LS_NOTIF = 'orbvis_notifications'
@@ -67,6 +69,15 @@ export const useStatesStore = defineStore('states', () => {
     arr.push({ ts, pct: utilPercent(metrics[0]) })
     if (arr.length > HISTORY_MAX) arr.splice(0, arr.length - HISTORY_MAX)
     history.value[objectId] = arr
+    // Per-metric value history
+    const mv = metricValues.value[objectId] ?? {}
+    for (const m of metrics) {
+      const mArr = mv[m.label] ?? []
+      mArr.push({ ts, value: m.value, unit: m.unit })
+      if (mArr.length > HISTORY_MAX) mArr.splice(0, mArr.length - HISTORY_MAX)
+      mv[m.label] = mArr
+    }
+    metricValues.value[objectId] = mv
   }
 
   let ws: WebSocket | null = null
@@ -179,6 +190,7 @@ export const useStatesStore = defineStore('states', () => {
     connected.value = false
     states.value = {}
     history.value = {}
+    metricValues.value = {}
     currentMap = null
     currentToken = undefined
   }
@@ -187,5 +199,5 @@ export const useStatesStore = defineStore('states', () => {
     return states.value[objectId]
   }
 
-  return { states, history, connected, lastUpdate, notificationsEnabled, connectToMap, disconnect, getState, toggleNotifications }
+  return { states, history, metricValues, connected, lastUpdate, notificationsEnabled, connectToMap, disconnect, getState, toggleNotifications }
 })

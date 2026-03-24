@@ -1,5 +1,5 @@
 <template>
-  <!-- Graph embed -->
+  <!-- Graph embed / native chart -->
   <div
     v-if="object.type === 'graph'"
     class="relative select-none"
@@ -8,28 +8,50 @@
     @mouseleave="$emit('hover-leave')"
     @contextmenu.prevent="$emit('context-menu', $event)"
   >
-    <!-- Placeholder: no URL or load error -->
-    <div v-if="!object.graph_url || graphLoadFailed"
-      class="w-full h-full flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-zinc-600 rounded-lg text-zinc-500">
-      <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-      </svg>
-      <span class="text-xs">{{ object.graph_url ? t('boardSettings.graphLoadFailed') : t('boardSettings.graphNoUrl') }}</span>
-    </div>
-    <!-- img embed -->
-    <img v-else-if="object.graph_embed_type !== 'iframe'"
-      :src="graphSrc"
-      class="block w-full h-full object-fill rounded-lg"
-      draggable="false"
-      @error="graphLoadFailed = true"
-      @load="graphLoadFailed = false"
-    />
-    <!-- iframe embed -->
-    <iframe v-else
-      :src="object.graph_url"
-      class="block w-full h-full border-0 rounded-lg"
-      sandbox="allow-scripts allow-same-origin"
-    />
+    <!-- Native chart mode (host linked) -->
+    <template v-if="isNativeChart">
+      <!-- Waiting for first data point -->
+      <div v-if="!chartData.length"
+        class="w-full h-full flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-zinc-600 rounded-lg text-zinc-500">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+        </svg>
+        <span class="text-xs">{{ t('boardSettings.graphWaitingData') }}</span>
+      </div>
+      <!-- D3 chart -->
+      <div v-else class="w-full h-full flex flex-col bg-zinc-900/60 rounded-lg overflow-hidden">
+        <div class="flex items-center justify-between px-2 pt-1.5 pb-0.5 shrink-0">
+          <span class="text-[10px] text-zinc-400 truncate">{{ activeMetricName }}</span>
+          <span class="text-[10px] font-mono text-zinc-300 shrink-0 ml-2">{{ latestPoint?.value }} {{ latestPoint?.unit }}</span>
+        </div>
+        <svg ref="chartSvgRef" class="w-full flex-1" style="overflow: visible" />
+      </div>
+    </template>
+    <!-- URL embed mode -->
+    <template v-else>
+      <!-- Placeholder: no URL or load error -->
+      <div v-if="!object.graph_url || graphLoadFailed"
+        class="w-full h-full flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-zinc-600 rounded-lg text-zinc-500">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+        </svg>
+        <span class="text-xs">{{ object.graph_url ? t('boardSettings.graphLoadFailed') : t('boardSettings.graphNoUrl') }}</span>
+      </div>
+      <!-- img embed -->
+      <img v-else-if="object.graph_embed_type !== 'iframe'"
+        :src="graphSrc"
+        class="block w-full h-full object-fill rounded-lg"
+        draggable="false"
+        @error="graphLoadFailed = true"
+        @load="graphLoadFailed = false"
+      />
+      <!-- iframe embed -->
+      <iframe v-else
+        :src="object.graph_url"
+        class="block w-full h-full border-0 rounded-lg"
+        sandbox="allow-scripts allow-same-origin"
+      />
+    </template>
     <!-- Optional caption label -->
     <div v-if="object.label?.show && object.label?.text"
       class="absolute -bottom-5 left-0 right-0 text-center text-xs pointer-events-none px-1.5 py-0.5 rounded"
@@ -189,7 +211,9 @@ import { useI18n } from 'vue-i18n'
 import type { BoardObject, ObjectState } from '@/types/api'
 import GadgetRenderer from './GadgetRenderer.vue'
 import { useArcRing } from '@/composables/useArcRing'
+import { useMetricChart } from '@/composables/useMetricChart'
 import { parsePerfData, utilPercent, utilColor as _utilColor } from '@/utils/perf'
+import { useStatesStore } from '@/stores/states'
 
 const BASE_URL = import.meta.env.BASE_URL
 const RING_PAD = 6
@@ -212,13 +236,45 @@ defineEmits<{
   'graph-resize-start': [evt: PointerEvent]
 }>()
 
+const statesStore = useStatesStore()
+
 // Single arc ring SVG — always a separate overlay SVG that D3 owns exclusively.
 // pointer-events="none" on the SVG element (SVG attribute, not CSS) ensures it
 // never intercepts mousedown/click events, preserving drag behaviour in edit mode.
 const arcSvgEl = ref<SVGSVGElement | null>(null)
 const imgLoadFailed = ref(false)
 
-// ---- Graph embed ----
+// ---- Graph: native chart mode ----
+const chartSvgRef = ref<SVGSVGElement | null>(null)
+const isNativeChart = computed(() => props.object.type === 'graph' && !!props.object.host_name)
+
+const chartData = computed(() => {
+  if (!isNativeChart.value) return []
+  const mv = statesStore.metricValues[props.object.id]
+  if (!mv) return []
+  const key = props.object.graph_metric || Object.keys(mv)[0]
+  return key ? (mv[key] ?? []) : []
+})
+
+const activeMetricName = computed(() => {
+  if (!isNativeChart.value) return ''
+  const mv = statesStore.metricValues[props.object.id]
+  return props.object.graph_metric || (mv ? Object.keys(mv)[0] : '') || ''
+})
+
+const latestPoint = computed(() => chartData.value.at(-1) ?? null)
+
+const graphW = computed(() => props.resizeOverride?.width ?? props.object.graph_width ?? 400)
+const graphH = computed(() => props.resizeOverride?.height ?? props.object.graph_height ?? 200)
+
+useMetricChart(
+  chartSvgRef,
+  chartData,
+  () => graphW.value,
+  () => Math.max(30, graphH.value - 28),
+)
+
+// ---- Graph: URL embed ----
 const graphLoadFailed = ref(false)
 const refreshTick = ref(0)
 
@@ -245,8 +301,8 @@ const graphSrc = computed(() => {
 })
 
 const graphWrapperStyle = computed(() => ({
-  width: `${props.resizeOverride?.width ?? props.object.graph_width ?? 400}px`,
-  height: `${props.resizeOverride?.height ?? props.object.graph_height ?? 200}px`,
+  width: `${graphW.value}px`,
+  height: `${graphH.value}px`,
 }))
 
 const svgSize = computed(() => props.iconSize + RING_PAD * 2)

@@ -71,7 +71,7 @@ async def get_board_states(cfg: BoardConfig) -> MapStates:
     # Determine backend health using only monitoring-object states.
     # Non-monitoring types (shape, textbox, map) always return PENDING without stale=True,
     # so including them would mask a genuinely unreachable backend.
-    _monitoring_types = {"host", "service", "hostgroup", "servicegroup", "line"}
+    _monitoring_types = {"host", "service", "hostgroup", "servicegroup", "line", "graph"}
     monitoring_states = [s for s in states if s.type in _monitoring_types]
     if monitoring_states:
         # Backend is considered down only if ALL monitoring queries raised exceptions (stale=True).
@@ -103,6 +103,10 @@ async def _get_board_states_batched(
             (hosts_hard if obj.only_hard_states else hosts_soft).append(obj)
         elif obj.type == "service" and obj.host_name and obj.service_description:
             (svcs_hard if obj.only_hard_states else svcs_soft).append(obj)
+        elif obj.type == "graph" and obj.host_name and obj.service_description:
+            svcs_soft.append(obj)
+        elif obj.type == "graph" and obj.host_name:
+            hosts_soft.append(obj)
         elif obj.type == "line":
             lines.append(obj)
         else:
@@ -199,6 +203,10 @@ async def _get_object_state(backend: "BackendBase", obj: BoardObject) -> ObjectS
         elif obj.type == "line" and obj.host_name and obj.service_description:
             state = await backend.get_service_state(obj.host_name, obj.service_description)
         elif obj.type == "line" and obj.host_name:
+            state = await backend.get_host_state(obj.host_name)
+        elif obj.type == "graph" and obj.host_name and obj.service_description:
+            state = await backend.get_service_state(obj.host_name, obj.service_description)
+        elif obj.type == "graph" and obj.host_name:
             state = await backend.get_host_state(obj.host_name)
         else:
             state = ObjectState(object_id=obj.id, type=obj.type, state="PENDING")
