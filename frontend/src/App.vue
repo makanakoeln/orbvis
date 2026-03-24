@@ -10,9 +10,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, ref } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTheme } from '@/composables/useTheme'
+import { useChangelog } from '@/composables/useChangelog'
 import { useAuthStore } from '@/stores/auth'
 import AppSidebar from '@/components/AppSidebar.vue'
 import ChangelogModal from '@/components/ChangelogModal.vue'
@@ -25,17 +26,7 @@ const showShell = computed(() =>
   auth.user !== null && !['login', 'change-password'].includes(route.name as string)
 )
 
-const LS_KEY = 'orbvis_changelog_seen'
-const showChangelog = ref(false)
+const { changelogVisible: showChangelog, checkChangelog, dismissChangelog } = useChangelog()
 
-watch(showShell, (val) => {
-  if (val && localStorage.getItem(LS_KEY) !== __APP_VERSION__) {
-    showChangelog.value = true
-  }
-}, { immediate: true })
-
-function dismissChangelog() {
-  localStorage.setItem(LS_KEY, __APP_VERSION__)
-  showChangelog.value = false
-}
+watch(showShell, (val) => { if (val) checkChangelog() }, { immediate: true })
 </script>

@@ -413,9 +413,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useChangelog } from '@/composables/useChangelog'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
 import { boardsApi } from '@/api/client'
@@ -431,6 +432,7 @@ const baseUrl = import.meta.env.BASE_URL
 const auth = useAuthStore()
 const boardsStore = useBoardsStore()
 const router = useRouter()
+const { changelogVisible } = useChangelog()
 const showCreate = ref(false)
 const showOnboarding = ref(false)
 const confirmDelete = ref<{ name: string; alias: string } | null>(null)
@@ -576,7 +578,14 @@ function worldmapZoom(map: BoardRead) {
 onMounted(() => {
   boardsStore.fetchBoards()
   if (auth.user && !localStorage.getItem(`orbvis_onboarded_${auth.user.user_id}`)) {
-    showOnboarding.value = true
+    if (changelogVisible.value) {
+      // Show onboarding only after the changelog is dismissed
+      const stop = watch(changelogVisible, (val) => {
+        if (!val) { showOnboarding.value = true; stop() }
+      })
+    } else {
+      showOnboarding.value = true
+    }
   }
 })
 </script>
