@@ -157,7 +157,7 @@ _DEMO_BG_SVG = """\
   <text x="1092" y="40" text-anchor="middle"
         font-family="monospace" font-size="9" font-weight="bold" letter-spacing="2"
         fill="#fbbf24">GROUPS</text>
-  <!-- Section: Shape + Map -->
+  <!-- Section: Image + Map -->
   <rect x="1195" y="16" width="205" height="610" rx="10"
         fill="#a78bfa" fill-opacity="0.05" stroke="#a78bfa" stroke-opacity="0.2" stroke-width="1"/>
   <text x="1297" y="40" text-anchor="middle"
@@ -192,8 +192,8 @@ def _seed_demo_map() -> None:
 
     # Layout overview (x: 150–900, y: 50–530)
     #
-    #  [HOSTS]                     [SERVICES]       [GROUPS]     [SHAPE/MAP]
-    #  localhost ─── router01      HTTP  PING        linux-srv    shape
+    #  [HOSTS]                     [SERVICES]       [GROUPS]     [IMAGE/MAP]
+    #  localhost ─── router01      HTTP  PING        linux-srv    image
     #       \       /              CPU▓  Disk▓       web-svc      map →
     #        fileserver
     #  ══ weathermap lines ══
@@ -332,13 +332,13 @@ def _seed_demo_map() -> None:
                 label=LabelConfig(show=True, text="web-services", x=0, y=34, size=11),
             ),
 
-            # ── Shape & Map link ────────────────────────────────────────────
+            # ── Image & Map link ────────────────────────────────────────────
             BoardObject(
-                id="shape-logo",
+                id="image-logo",
                 type="image",
                 x=1265, y=190,
                 display=DisplayConfig(mode="icon"),
-                label=LabelConfig(show=True, text="shape", x=0, y=34, size=10),
+                label=LabelConfig(show=True, text="image", x=0, y=34, size=10),
             ),
             BoardObject(
                 id="map-self",

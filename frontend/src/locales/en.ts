@@ -135,7 +135,7 @@ export default {
     typeMap: 'Map link',
     typeLine: 'Line',
     typeTextbox: 'Textbox',
-    typeShape: 'Shape',
+    typeImage: 'Image',
     iconName: 'Icon filename',
     searchIcons: 'Search icons…',
     uploadIconHint: 'Upload icons to get started',

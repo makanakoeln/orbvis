@@ -25,7 +25,7 @@
         <option value="map">{{ t('boardSettings.typeMap') }}</option>
         <option value="line">{{ t('boardSettings.typeLine') }}</option>
         <option value="textbox">{{ t('boardSettings.typeTextbox') }}</option>
-        <option value="image">{{ t('boardSettings.typeShape') }}</option>
+        <option value="image">{{ t('boardSettings.typeImage') }}</option>
         <option value="graph">{{ t('boardSettings.typeGraph') }}</option>
       </select>
 

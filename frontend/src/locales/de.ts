@@ -135,7 +135,7 @@ export default {
     typeMap: 'Kartenlink',
     typeLine: 'Linie',
     typeTextbox: 'Textfeld',
-    typeShape: 'Shape',
+    typeImage: 'Bild',
     iconName: 'Icon-Dateiname',
     searchIcons: 'Icons suchen…',
     uploadIconHint: 'Zuerst Icons hochladen',

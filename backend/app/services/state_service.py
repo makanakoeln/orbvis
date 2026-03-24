@@ -69,7 +69,7 @@ async def get_board_states(cfg: BoardConfig) -> MapStates:
     states = list(state_map.values())
 
     # Determine backend health using only monitoring-object states.
-    # Non-monitoring types (shape, textbox, map) always return PENDING without stale=True,
+    # Non-monitoring types (image, textbox, map) always return PENDING without stale=True,
     # so including them would mask a genuinely unreachable backend.
     _monitoring_types = {"host", "service", "hostgroup", "servicegroup", "line", "graph"}
     monitoring_states = [s for s in states if s.type in _monitoring_types]
