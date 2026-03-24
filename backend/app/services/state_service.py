@@ -116,6 +116,7 @@ async def _get_board_states_batched(
         try:
             batch = await backend.get_hosts_states([o.host_name for o in host_group], only_hard=only_hard)  # type: ignore[misc]
         except Exception:
+            logger.warning("Batch host state query failed (only_hard=%s)", only_hard, exc_info=True)
             batch = {}
         for obj in host_group:
             s = batch.get(obj.host_name) or ObjectState(object_id=obj.id, type="host", state="PENDING", stale=True)  # type: ignore[arg-type]
@@ -128,6 +129,7 @@ async def _get_board_states_batched(
         try:
             svc_batch = await backend.get_hosts_services_batch(rs_names)  # type: ignore[arg-type]
         except Exception:
+            logger.warning("Batch host-services query failed", exc_info=True)
             svc_batch = {}
         for obj in rs_objs:
             results[obj.id] = _aggregate_host_with_services_from_data(
@@ -141,6 +143,7 @@ async def _get_board_states_batched(
         try:
             batch = await backend.get_services_states(pairs, only_hard=only_hard)  # type: ignore[arg-type]
         except Exception:
+            logger.warning("Batch service state query failed (only_hard=%s)", only_hard, exc_info=True)
             batch = {}
         for obj in svc_group:
             s = batch.get((obj.host_name, obj.service_description)) or ObjectState(object_id=obj.id, type="service", state="PENDING", stale=True)  # type: ignore[arg-type]
@@ -214,21 +217,7 @@ async def _aggregate_host_with_services(
         services = await backend.get_host_services(hostname)
     except Exception:
         return host_state
-    if not services:
-        return host_state
-    all_states = [host_state.state] + [s.get("state", "PENDING") for s in services]
-    worst = max(all_states, key=lambda s: _COMBINED_SEVERITY.get(s, 0))
-    if worst == host_state.state:
-        return host_state
-    return ObjectState(
-        object_id=host_state.object_id,
-        type="host",
-        state=worst,
-        output=host_state.output,
-        perf_data=host_state.perf_data,
-        acknowledged=host_state.acknowledged,
-        in_downtime=host_state.in_downtime,
-    )
+    return _aggregate_host_with_services_from_data(host_state, services)
 
 
 async def _get_radar_states(cfg: "BoardConfig", backend: "BackendBase") -> MapStates:

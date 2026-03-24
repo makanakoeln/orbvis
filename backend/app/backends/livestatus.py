@@ -255,11 +255,10 @@ class LivestatusBackend(BackendBase):
             f"Filter: host_name = {_ls_escape(hostname)}\n"
             "Columns: description state plugin_output\n"
         )
-        state_map = ["OK", "WARNING", "CRITICAL", "UNKNOWN"]
         return [
             {
                 "name": r[0],
-                "state": state_map[int(r[1])] if str(r[1]).isdigit() and int(r[1]) < 4 else "UNKNOWN",
+                "state": _SERVICE_STATE_MAP.get(int(r[1]), "UNKNOWN"),
                 "output": r[2],
             }
             for r in rows
@@ -391,16 +390,13 @@ class LivestatusBackend(BackendBase):
             f"Columns: host_name description state plugin_output\n"
             f"{filters}"
         )
-        state_map = ["OK", "WARNING", "CRITICAL", "UNKNOWN"]
         results: dict[str, list[dict]] = {h: [] for h in hostnames}
         for r in rows:
-            host = str(r[0])
-            if host in results:
-                results[host].append({
-                    "name": r[1],
-                    "state": state_map[int(r[2])] if str(r[2]).isdigit() and int(r[2]) < 4 else "UNKNOWN",
-                    "output": r[3],
-                })
+            results[str(r[0])].append({
+                "name": r[1],
+                "state": _SERVICE_STATE_MAP.get(int(r[2]), "UNKNOWN"),
+                "output": r[3],
+            })
         return results
 
     # ------------------------------------------------------------------
