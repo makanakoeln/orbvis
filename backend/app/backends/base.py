@@ -91,6 +91,20 @@ class BackendBase(ABC):
         """Return (lat, lng) from orbvis_lat/orbvis_lng host labels, or None if not set."""
         return None
 
+    async def get_metric_history(
+        self,
+        host: str,
+        service: str | None,
+        start: int,
+        end: int,
+    ) -> dict[str, list[tuple[float, float, str]]]:
+        """Return historical metric data as {label: [(ts, value, unit), ...]}.
+
+        Default implementation returns empty dict (not all backends support this).
+        Checkmk/Livestatus backends override this using the rrddata column.
+        """
+        return {}
+
     @abstractmethod
     async def is_available(self) -> bool:
         """Check whether the backend is reachable."""

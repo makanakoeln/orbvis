@@ -110,6 +110,7 @@ class BoardObject(BaseModel):
     graph_height: int = 200
     graph_refresh_interval: int = 0
     graph_metric: str | None = None
+    graph_time_window: int | None = None  # minutes; None = all stored history
     # Line custom colors
     line_color: str | None = None
     line_color_border: str | None = None

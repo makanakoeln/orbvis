@@ -268,6 +268,18 @@ export const connectionsApi = {
     return request(`/backends/${backendId}/perf-metrics?${params}`, {}, token)
   },
 
+  metricHistory: (
+    backendId: string,
+    host: string,
+    service: string | null,
+    minutes: number,
+    token: string,
+  ): Promise<Record<string, Array<{ ts: number; value: number; unit: string }>>> => {
+    const params = new URLSearchParams({ host, minutes: String(minutes) })
+    if (service) params.set('service', service)
+    return request(`/backends/${backendId}/metric-history?${params}`, {}, token)
+  },
+
   hostGeo: (backendId: string, host: string, token: string): Promise<{ lat: number; lng: number } | null> =>
     request(`/backends/${backendId}/host-geo?host=${encodeURIComponent(host)}`, {}, token),
 

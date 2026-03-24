@@ -104,7 +104,10 @@
 
         <!-- === GRAPH: Metric Source === -->
         <section v-if="object.type === 'graph'">
-          <p class="section-title">{{ t('boardSettings.graphMetricSource') }}</p>
+          <div class="flex items-center gap-2 mb-3">
+            <p class="section-title !mb-0">{{ t('boardSettings.graphMetricSource') }}</p>
+            <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25 shrink-0">experimental</span>
+          </div>
           <div class="space-y-3">
             <div class="field-row">
               <label class="field-label">{{ t('boardSettings.hostname') }}</label>
@@ -122,6 +125,16 @@
                 :placeholder="t('boardSettings.graphMetricAuto')"
                 class="flex-1"
               />
+            </div>
+            <div class="field-row">
+              <label class="field-label">{{ t('boardSettings.graphTimeWindow') }}</label>
+              <select v-model="form.graph_time_window" class="field flex-1">
+                <option :value="60">1 h</option>
+                <option :value="240">4 h</option>
+                <option :value="720">12 h</option>
+                <option :value="1440">24 h</option>
+                <option :value="10080">7 d</option>
+              </select>
             </div>
           </div>
         </section>
@@ -595,6 +608,7 @@ const form = reactive({
   graph_height: 200,
   graph_refresh_interval: 0,
   graph_metric: '',
+  graph_time_window: 60 as number,
   display: {
     mode: 'icon' as 'icon' | 'text' | 'gadget',
     image: '',
@@ -657,6 +671,7 @@ watch(() => props.object, (obj) => {
   form.graph_height = obj.graph_height ?? 200
   form.graph_refresh_interval = obj.graph_refresh_interval ?? 0
   form.graph_metric = obj.graph_metric ?? ''
+  form.graph_time_window = obj.graph_time_window ?? 60
   form.display.mode = obj.display?.mode ?? 'icon'
   form.display.image = obj.display?.image ?? ''
   form.display.image_size = obj.display?.image_size ?? null
@@ -782,6 +797,7 @@ async function save() {
       graph_height: form.graph_height,
       graph_refresh_interval: form.graph_refresh_interval,
       graph_metric: form.graph_metric || null,
+      graph_time_window: form.graph_time_window,
       line_style: form.line_style,
       line_color: form.line_color || null,
       line_color_border: form.line_color_border || null,

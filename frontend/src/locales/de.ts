@@ -233,6 +233,7 @@ export default {
     graphMetricSource: 'Metrikquelle',
     graphUrlEmbed: 'URL-Einbettung',
     graphWaitingData: 'Warte auf Daten…',
+    graphTimeWindow: 'Zeitfenster',
   },
   contextMenu: {
     hostInCheckmk: 'Host in Checkmk',

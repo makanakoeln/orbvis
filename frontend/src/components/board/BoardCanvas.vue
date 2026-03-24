@@ -61,6 +61,7 @@
         :selected="selectedObjectId === obj.id"
         :edit-mode="editMode"
         :resize-override="localResizeDimensions[obj.id]"
+        :backend-id="config.backend_id"
         @hover="!editMode && openHoverMenu($event, obj)"
         @hover-leave="!editMode && closeHoverMenu()"
         @graph-resize-start="onGraphResizeStart($event, obj)"

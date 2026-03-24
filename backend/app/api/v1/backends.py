@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import re
+import time
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
@@ -131,12 +134,38 @@ async def get_perf_metrics(
 
 
 def _parse_metric_names(perf_data: str) -> list[str]:
-    import re
-    names = []
-    for part in re.findall(r"(?:'[^']+'|[^\s]+)=[^\s]*", perf_data):
-        eq = part.index("=")
-        names.append(part[:eq].strip("'"))
-    return names
+    return [part[:part.index("=")].strip("'")
+            for part in re.findall(r"(?:'[^']+'|[^\s]+)=[^\s]*", perf_data)]
+
+
+class MetricPoint(BaseModel):
+    ts: float
+    value: float
+    unit: str
+
+
+@router.get("/{backend_id}/metric-history", response_model=dict[str, list[MetricPoint]])
+async def get_metric_history(
+    backend_id: str,
+    host: str = Query(...),
+    service: str | None = Query(None),
+    minutes: int = Query(60, ge=1, le=10080),
+    _: object = Depends(get_current_user),
+):
+    """Return RRD metric history for a host/service using Livestatus rrddata (Checkmk only)."""
+    backend = get_backend(backend_id)
+    if backend is None:
+        return {}
+    end = int(time.time())
+    start = end - minutes * 60
+    try:
+        raw = await backend.get_metric_history(host, service, start, end)
+    except Exception:
+        return {}
+    return {
+        label: [MetricPoint(ts=ts, value=v, unit=u) for ts, v, u in pts]
+        for label, pts in raw.items()
+    }
 
 
 class HostGeo(BaseModel):

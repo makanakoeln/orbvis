@@ -4,18 +4,27 @@ import { select } from 'd3-selection'
 import { line, area, curveMonotoneX } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 import { min, max } from 'd3-array'
-import { transition } from 'd3-transition'
+import 'd3-transition'
 import { easeQuadInOut } from 'd3-ease'
 import type { MetricPoint } from '@/stores/states'
 import { utilColor } from '@/utils/perf'
-
-// d3-transition side-effects
-void transition
 
 export const CHART_PALETTE = [
   '#6366f1', '#10b981', '#f59e0b', '#ef4444',
   '#8b5cf6', '#06b6d4', '#f97316', '#ec4899',
 ]
+
+const TIME_H = 14  // px reserved at bottom for time axis
+const PAD_X = 6
+const PAD_Y = 8
+
+function _fmtRelTime(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = Math.round(seconds % 60)
+  if (m === 0) return `-${s}s`
+  if (s === 0) return `-${m}m`
+  return `-${m}m ${s}s`
+}
 
 export function useMetricChart(
   svgRef: Ref<SVGSVGElement | null>,
@@ -23,9 +32,6 @@ export function useMetricChart(
   getWidth: () => number,
   getHeight: () => number,
 ) {
-  const PAD_X = 6
-  const PAD_Y = 8
-
   function render(animate = false) {
     const svg = svgRef.value
     const series = data.value
@@ -52,12 +58,14 @@ export function useMetricChart(
     const valMax = max(allPts, d => d.value) ?? 1
     const range = valMax - valMin || 1
 
+    const HC = H - TIME_H  // chart area height (reserve bottom for time axis)
+
     const xScale = scaleLinear()
       .domain([tsMin, tsMax === tsMin ? tsMin + 1 : tsMax])
       .range([PAD_X, W - PAD_X])
     const yScale = scaleLinear()
       .domain([Math.max(0, valMin - range * 0.15), valMax + range * 0.15])
-      .range([H - PAD_Y, PAD_Y])
+      .range([HC - PAD_Y, PAD_Y])
 
     const multiSeries = labels.length > 1
 
@@ -88,6 +96,11 @@ export function useMetricChart(
       .attr('stroke-dasharray', '2,4')
     gridLines.exit().remove()
 
+    const lineGen = line<MetricPoint>()
+      .x(d => xScale(d.ts))
+      .y(d => yScale(d.value))
+      .curve(curveMonotoneX)
+
     // Data join for series groups
     const groups = root.selectAll<SVGGElement, string>('g.mc-series')
       .data(labels, d => d)
@@ -96,7 +109,6 @@ export function useMetricChart(
     entered.append('path').attr('class', 'mc-area')
     entered.append('path').attr('class', 'mc-line')
       .attr('fill', 'none').attr('stroke-width', '2').attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
-    // dot: white ring + colored fill for visibility
     entered.append('circle').attr('class', 'mc-dot-ring').attr('r', '5').attr('fill', 'none').attr('stroke-width', '1.5')
     entered.append('circle').attr('class', 'mc-dot').attr('r', '3')
 
@@ -109,29 +121,18 @@ export function useMetricChart(
       const pts = series[label]
       if (!pts || pts.length === 0) return
 
-      let color: string
-      if (multiSeries) {
-        color = CHART_PALETTE[i % CHART_PALETTE.length]
-      } else {
-        const latest = pts[pts.length - 1]
-        const pct = valMax > 0 ? Math.min(100, (latest.value / valMax) * 100) : 0
-        color = utilColor(pct)
-      }
-
-      const lineGen = line<MetricPoint>()
-        .x(d => xScale(d.ts))
-        .y(d => yScale(d.value))
-        .curve(curveMonotoneX)
+      const latest = pts[pts.length - 1]
+      const color = multiSeries
+        ? CHART_PALETTE[i % CHART_PALETTE.length]
+        : utilColor(valMax > 0 ? Math.min(100, (latest.value / valMax) * 100) : 0)
 
       const pathD = lineGen(pts)!
-      const latest = pts[pts.length - 1]
 
-      // Area fill: only for single-series, with gradient
       const areaEl = g.select<SVGPathElement>('.mc-area')
       if (!multiSeries) {
         const areaGen = area<MetricPoint>()
           .x(d => xScale(d.ts))
-          .y0(H - PAD_Y)
+          .y0(HC - PAD_Y)
           .y1(d => yScale(d.value))
           .curve(curveMonotoneX)
         const areaD = areaGen(pts)!
@@ -161,6 +162,33 @@ export function useMetricChart(
         g.select<SVGPathElement>('.mc-line').attr('d', pathD)
       }
     })
+
+    // Time axis
+    const timeDiffSec = tsMax - tsMin
+    const hasRange = timeDiffSec > 1
+
+    root.selectAll<SVGLineElement, number>('line.mc-t-sep').data([0])
+      .join('line').attr('class', 'mc-t-sep')
+      .attr('x1', PAD_X).attr('x2', W - PAD_X)
+      .attr('y1', HC + 1).attr('y2', HC + 1)
+      .attr('stroke', 'rgba(255,255,255,0.07)')
+
+    root.selectAll<SVGTextElement, string>('text.mc-t-left')
+      .data(hasRange ? [_fmtRelTime(timeDiffSec)] : [''])
+      .join('text').attr('class', 'mc-t-left')
+      .attr('x', PAD_X).attr('y', H - 3)
+      .attr('fill', 'rgba(255,255,255,0.28)').attr('font-size', '9')
+      .attr('font-family', 'ui-monospace,monospace')
+      .text(d => d)
+
+    root.selectAll<SVGTextElement, string>('text.mc-t-right')
+      .data(['now'])
+      .join('text').attr('class', 'mc-t-right')
+      .attr('x', W - PAD_X).attr('y', H - 3)
+      .attr('text-anchor', 'end')
+      .attr('fill', 'rgba(255,255,255,0.28)').attr('font-size', '9')
+      .attr('font-family', 'ui-monospace,monospace')
+      .text('now')
   }
 
   onMounted(() => render(false))

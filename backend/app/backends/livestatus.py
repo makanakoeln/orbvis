@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json as _json
 import logging
+import re as _re
 
 from app.backends.base import BackendBase
 from app.core.config import settings
@@ -58,6 +59,20 @@ def _parse_extra(row: list, offset: int = 5, *, include_address: bool = False) -
     if include_address:
         result["address"] = address
     return result
+
+
+def _parse_metrics_from_perf(perf_data: str) -> list[dict]:
+    """Parse perf_data string into [{label, unit}] for rrddata queries."""
+    results = []
+    for part in _re.findall(r"(?:'[^']+'|[^\s]+)=\S*", perf_data):
+        eq = part.index("=")
+        label = part[:eq].strip("'")
+        rest = part[eq + 1:]
+        # Extract unit from the value part (digits/dots/minus, then unit letters)
+        m = _re.match(r"[-\d.]+([a-zA-Z%]*)", rest.split(";")[0])
+        unit = m.group(1) if m else ""
+        results.append({"label": label, "unit": unit})
+    return results
 
 
 class LivestatusBackend(BackendBase):
@@ -290,6 +305,97 @@ class LivestatusBackend(BackendBase):
             return float(cv["LAT"]), float(cv["LONG"])
         except (KeyError, TypeError, ValueError):
             return None
+
+    async def get_metric_history(
+        self,
+        host: str,
+        service: str | None,
+        start: int,
+        end: int,
+    ) -> dict[str, list[tuple[float, float, str]]]:
+        """Fetch metric history via Livestatus rrddata column (Checkmk extension).
+
+        Returns {label: [(ts, value, unit), ...]} with ~60-point resolution.
+        Returns empty dict if the backend doesn't support rrddata or no data exists.
+        """
+        # Step 1: get current state to discover metric names + units from perf_data
+        try:
+            if service:
+                state = await self.get_service_state(host, service)
+            else:
+                state = await self.get_host_state(host)
+        except Exception:
+            return {}
+
+        metrics = _parse_metrics_from_perf(state.perf_data or "")
+        if not metrics:
+            return {}
+
+        # Choose a step that matches one of Checkmk's standard RRD consolidation periods:
+        # 60s (raw, ~2d), 300s (5min, ~10d), 1800s (30min, ~90d), 21600s (6h, ~4y)
+        window = end - start
+        if window <= 7_200:
+            step = 60
+        elif window <= 172_800:
+            step = 300
+        elif window <= 1_296_000:
+            step = 1_800
+        else:
+            step = 21_600
+
+        # Step 2: one rrddata column per metric in a single query
+        rrd_cols = " ".join(
+            f"rrddata:{_ls_escape(m['label'])}:{start}:{end}:{step}"
+            for m in metrics
+        )
+        if service:
+            query = (
+                f"GET services\n"
+                f"Columns: {rrd_cols}\n"
+                f"Filter: host_name = {_ls_escape(host)}\n"
+                f"Filter: description = {_ls_escape(service)}\n"
+            )
+        else:
+            query = (
+                f"GET hosts\n"
+                f"Columns: {rrd_cols}\n"
+                f"Filter: name = {_ls_escape(host)}\n"
+            )
+
+        try:
+            rows = await self._query(query)
+        except Exception as exc:
+            logger.debug("rrddata query failed (backend may not support it): %s", exc)
+            return {}
+
+        if not rows or not rows[0]:
+            return {}
+
+        result: dict[str, list[tuple[float, float, str]]] = {}
+        row = rows[0]
+        for i, m in enumerate(metrics):
+            if i >= len(row):
+                continue
+            rrd = row[i]
+            if not rrd or not isinstance(rrd, list) or len(rrd) < 2:
+                continue
+            try:
+                meta = rrd[0]
+                values = rrd[1]
+                actual_start = float(meta[0])
+                actual_step = float(meta[2])
+                unit = m["unit"]
+                points: list[tuple[float, float, str]] = []
+                for j, v in enumerate(values):
+                    if v is not None:
+                        ts = actual_start + j * actual_step
+                        points.append((ts, float(v), unit))
+                if points:
+                    result[m["label"]] = points
+            except (IndexError, TypeError, ValueError):
+                continue
+
+        return result
 
     async def is_available(self) -> bool:
         try:

@@ -26,7 +26,7 @@
         <option value="line">{{ t('boardSettings.typeLine') }}</option>
         <option value="textbox">{{ t('boardSettings.typeTextbox') }}</option>
         <option value="image">{{ t('boardSettings.typeImage') }}</option>
-        <option value="graph">{{ t('boardSettings.typeGraph') }}</option>
+        <option value="graph">{{ t('boardSettings.typeGraph') }} (experimental)</option>
       </select>
 
       <template v-if="draft.type === 'host'">

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 
 from app.backends.base import BackendBase
 from app.schemas.state import ObjectState
@@ -105,6 +106,54 @@ class TestBackend(BackendBase):
         for svc in _DEMO_SERVICES:
             state = await self.get_service_state(hostname, svc)
             result.append({"name": svc, "state": state.state, "output": state.output})
+        return result
+
+    async def get_metric_history(
+        self,
+        host: str,
+        service: str | None,
+        start: int,
+        end: int,
+    ) -> dict[str, list[tuple[float, float, str]]]:
+        """Generate synthetic time-varying metric history for development."""
+        svc_key = f"{host}:{service or ''}"
+        base_val = (abs(hash(f"{svc_key}val")) % 60 + 20) / 100  # 0.2 – 0.8
+
+        step = max(60, (end - start) // 60)
+        num_points = (end - start) // step
+
+        # Determine metrics from service name (same logic as get_service_state)
+        if service and ("CPU" in service or "Load" in service or "load" in service):
+            metric_defs = [
+                ("load1",  0.0, ""),
+                ("load5",  1.0, ""),
+                ("load15", 2.0, ""),
+            ]
+        elif service and ("Memory" in service or "Mem" in service):
+            metric_defs = [("used", 0.0, "%")]
+        elif service and "Disk" in service:
+            metric_defs = [("used", 0.0, "%")]
+        elif service and "HTTP" in service:
+            metric_defs = [("time", 0.0, "ms")]
+        elif service and "PING" in service.upper():
+            metric_defs = [("rta", 0.0, "ms"), ("pl", math.pi, "%")]
+        else:
+            metric_defs = [("value", 0.0, "")]
+
+        result: dict[str, list[tuple[float, float, str]]] = {}
+        for label, phase, unit in metric_defs:
+            amplitude = base_val * 0.3
+            points: list[tuple[float, float, str]] = []
+            for j in range(num_points):
+                ts = float(start + j * step)
+                # Sine wave + slower trend + tiny noise
+                wave = math.sin(ts / 600 + phase) * amplitude
+                trend = math.sin(ts / 3600) * amplitude * 0.5
+                noise = ((hash(f"{ts:.0f}{label}") % 200) - 100) / 10000
+                value = round(max(0.0, base_val + wave + trend + noise), 4)
+                points.append((ts, value, unit))
+            result[label] = points
+
         return result
 
     async def is_available(self) -> bool:

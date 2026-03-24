@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ObjectState, WebSocketStateUpdate } from '@/types/api'
-import { boardsApi } from '@/api/client'
+import { boardsApi, connectionsApi } from '@/api/client'
 import { parsePerfData, utilPercent } from '@/utils/perf'
 
 export interface MetricSnapshot { ts: number; pct: number }
 export interface MetricPoint { ts: number; value: number; unit: string }
-const HISTORY_MAX = 20
+const HISTORY_MAX = 10080  // up to 7d at 1min resolution
 
 // Base path without trailing slash, e.g. '/heute/orbvis' or ''
 const _base = import.meta.env.BASE_URL.replace(/\/$/, '')
@@ -67,15 +67,13 @@ export const useStatesStore = defineStore('states', () => {
     if (!metrics.length) return
     const arr = history.value[objectId] ?? []
     arr.push({ ts, pct: utilPercent(metrics[0]) })
-    if (arr.length > HISTORY_MAX) arr.splice(0, arr.length - HISTORY_MAX)
-    history.value[objectId] = arr
+    history.value[objectId] = arr.length > HISTORY_MAX ? arr.slice(-HISTORY_MAX) : arr
     // Per-metric value history
     const mv = metricValues.value[objectId] ?? {}
     for (const m of metrics) {
       const mArr = mv[m.label] ?? []
       mArr.push({ ts, value: m.value, unit: m.unit })
-      if (mArr.length > HISTORY_MAX) mArr.splice(0, mArr.length - HISTORY_MAX)
-      mv[m.label] = mArr
+      mv[m.label] = mArr.length > HISTORY_MAX ? mArr.slice(-HISTORY_MAX) : mArr
     }
     metricValues.value[objectId] = mv
   }
@@ -199,5 +197,33 @@ export const useStatesStore = defineStore('states', () => {
     return states.value[objectId]
   }
 
-  return { states, history, metricValues, connected, lastUpdate, notificationsEnabled, connectToMap, disconnect, getState, toggleNotifications }
+  async function prefillMetricHistory(
+    objectId: string,
+    backendId: string,
+    host: string,
+    service: string | null,
+    timeWindowMinutes: number,
+    accessToken: string,
+  ): Promise<void> {
+    try {
+      const data = await connectionsApi.metricHistory(backendId, host, service, timeWindowMinutes, accessToken)
+      if (!data || !Object.keys(data).length) return
+      // Merge: historical points first, live WebSocket points on top (deduplicated by ts)
+      const mv: Record<string, MetricPoint[]> = { ...(metricValues.value[objectId] ?? {}) }
+      for (const [label, pts] of Object.entries(data)) {
+        const existing = mv[label] ?? []
+        const existingTs = new Set(existing.map(p => p.ts))
+        const merged = [
+          ...pts.filter(p => !existingTs.has(p.ts)),
+          ...existing,
+        ].sort((a, b) => a.ts - b.ts).slice(-HISTORY_MAX)
+        mv[label] = merged
+      }
+      metricValues.value[objectId] = mv
+    } catch {
+      // Backend doesn't support metric history (plain Nagios) — silently ignore
+    }
+  }
+
+  return { states, history, metricValues, connected, lastUpdate, notificationsEnabled, connectToMap, disconnect, getState, toggleNotifications, prefillMetricHistory }
 })
