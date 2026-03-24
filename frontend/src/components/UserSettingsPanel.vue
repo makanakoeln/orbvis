@@ -154,7 +154,7 @@ import { useI18n } from 'vue-i18n'
 import { usersApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { applyTheme } from '@/composables/useTheme'
-import { i18n } from '@/main'
+import { i18n } from '@/i18n'
 import type { UserRead, RoleRead } from '@/types/api'
 
 const { t } = useI18n()

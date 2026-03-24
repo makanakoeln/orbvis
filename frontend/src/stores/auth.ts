@@ -4,7 +4,7 @@ import { authApi } from '@/api/client'
 import type { UserRead } from '@/types/api'
 import router from '@/router'
 import type { RouteLocationRaw } from 'vue-router'
-import { i18n } from '@/main'
+import { i18n } from '@/i18n'
 import { useSettingsStore } from '@/stores/settings'
 
 const ACCESS_TOKEN_KEY = 'orbvis_access_token'

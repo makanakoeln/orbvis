@@ -11,22 +11,24 @@
     @pointerup="onCanvasPointerUp"
     @pointercancel="onCanvasPointerUp"
   >
-    <!-- SVG overlay for grid + lines -->
+    <!-- Grid overlay — always in CSS pixel space so it's visible regardless of bg-image scale -->
+    <svg v-if="editMode && (snapGrid ?? 0) > 0"
+      class="absolute inset-0 w-full h-full pointer-events-none"
+    >
+      <defs>
+        <pattern :id="`grid-${snapGrid}`" :width="snapGrid" :height="snapGrid" patternUnits="userSpaceOnUse">
+          <path :d="`M ${snapGrid} 0 L 0 0 0 ${snapGrid}`" fill="none" stroke="rgba(99,102,241,0.6)" stroke-width="1" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" :fill="`url(#grid-${snapGrid})`" />
+    </svg>
+
+    <!-- SVG overlay for lines -->
     <svg
       class="absolute inset-0 w-full h-full"
       :viewBox="bgImageSize ? `0 0 ${bgImageSize.width} ${bgImageSize.height}` : undefined"
       :preserveAspectRatio="bgImageSize ? 'none' : undefined"
     >
-      <!-- Grid crosshairs (edit mode only) -->
-      <template v-if="editMode && (snapGrid ?? 0) > 0">
-        <defs>
-          <pattern :id="`grid-${snapGrid}`" :width="snapGrid" :height="snapGrid" patternUnits="userSpaceOnUse">
-            <line x1="0" :y1="-Math.round((snapGrid ?? 0) * 0.2)" x2="0" :y2="Math.round((snapGrid ?? 0) * 0.2)" stroke="rgba(99,102,241,0.55)" stroke-width="1" />
-            <line :x1="-Math.round((snapGrid ?? 0) * 0.2)" y1="0" :x2="Math.round((snapGrid ?? 0) * 0.2)" y2="0" stroke="rgba(99,102,241,0.55)" stroke-width="1" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" :fill="`url(#grid-${snapGrid})`" pointer-events="none" />
-      </template>
 
       <BoardLine
         v-for="line in lineObjects"
