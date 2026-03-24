@@ -7,7 +7,7 @@
   --color-down: #f00;
   --color-unreachable: #f80;
   --color-ok: #0f0;
-  --color-warning: #ff0;
+  --color-warning: #ffd000;
   --color-critical: #f00;
   --color-unknown: #f80;
   --color-pending: #aaa;
@@ -23,6 +23,15 @@
   --text-muted: #71717a;
   --accent: #6366f1;
   --gauge-track: #3f3f46;
+
+  /* Gadget-Tokens — Gadgets sind intentional immer dunkel (hardware look), kein .light-Override */
+  --gadget-bg: rgb(0 0 0 / 55%);
+  --gadget-ring: rgb(255 255 255 / 15%);
+  --gadget-bar-bg: rgb(0 0 0 / 50%);
+  --gadget-track: rgb(255 255 255 / 20%);
+  --gadget-text: #f4f4f5;
+  --gadget-text-dim: rgb(255 255 255 / 70%);
+  --shadow-text: 0 1px 3px rgb(0 0 0 / 90%);
 }
 
 /* Override browser autofill yellow highlight */

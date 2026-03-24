@@ -156,6 +156,7 @@ import { computed } from 'vue'
 
 import type { BoardObject, ObjectState } from '@/types/api'
 import { getMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
+import { STATE_COLORS } from '@/utils/stateColors'
 
 const props = defineProps<{
   object: BoardObject
@@ -174,16 +175,7 @@ const y1 = computed(() => props.dragCoords?.y ?? props.object.y)
 const x2 = computed(() => props.dragCoords?.x2 ?? props.object.x2 ?? props.object.x + 50)
 const y2 = computed(() => props.dragCoords?.y2 ?? props.object.y2 ?? props.object.y + 50)
 
-const STATE_COLORS: Record<string, string> = {
-  UP: '#4ade80',
-  OK: '#4ade80',
-  DOWN: '#f87171',
-  CRITICAL: '#f87171',
-  UNREACHABLE: '#fb923c',
-  UNKNOWN: '#fb923c',
-  WARNING: '#ffd000',
-  PENDING: '#9ca3af',
-}
+
 const lineColor = computed(
   () =>
     props.object.line_color ??

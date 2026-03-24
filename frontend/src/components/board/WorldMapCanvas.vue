@@ -14,6 +14,7 @@ import type {
   ObjectState,
   WorldmapView,
 } from '@/types/api'
+import { STATE_COLORS } from '@/utils/stateColors'
 
 const props = defineProps<{
   config: BoardConfig
@@ -42,23 +43,7 @@ const DEFAULT_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 
 function stateColor(id: string): string {
   const s = props.states[id]?.state
-  if (!s) return '#6b7280'
-  switch (s) {
-    case 'UP':
-    case 'OK':
-      return '#22c55e'
-    case 'DOWN':
-    case 'CRITICAL':
-      return '#ef4444'
-    case 'WARNING':
-      return '#ffd000'
-    case 'UNKNOWN':
-      return '#f97316'
-    case 'UNREACHABLE':
-      return '#a855f7'
-    default:
-      return '#6b7280'
-  }
+  return STATE_COLORS[s ?? ''] ?? STATE_COLORS['PENDING']
 }
 
 function escapeHtml(s: string): string {

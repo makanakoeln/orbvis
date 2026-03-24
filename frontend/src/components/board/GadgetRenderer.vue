@@ -3,7 +3,7 @@
   <div
     v-if="type === 'trafficlight'"
     class="flex flex-col items-center rounded-xl ring-1"
-    style="background: rgb(0 0 0 / 55%); border-color: rgb(255 255 255 / 15%)"
+    style="background: var(--gadget-bg); border-color: var(--gadget-ring)"
     :style="{ gap: `${Math.max(2, size * 0.08)}px`, padding: `${Math.max(4, size * 0.12)}px` }"
   >
     <div
@@ -40,10 +40,10 @@
   >
     <div
       class="relative w-full rounded-full overflow-hidden ring-1"
-      style="background: rgb(0 0 0 / 50%); ring-color: rgb(255 255 255 / 15%)"
+      style="background: var(--gadget-bar-bg)"
       :style="{
         height: Math.max(10, Math.round(size * 0.22)) + 'px',
-        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.15)',
+        boxShadow: 'inset 0 0 0 1px var(--gadget-ring)',
       }"
     >
       <div
@@ -52,13 +52,13 @@
       />
       <span
         class="absolute inset-0 flex items-center justify-center font-bold"
-        style="color: #f4f4f5; text-shadow: 0 1px 3px rgb(0 0 0 / 90%)"
+        style="color: var(--gadget-text); text-shadow: var(--shadow-text)"
         :style="{ fontSize: Math.max(8, Math.round(size * 0.13)) + 'px' }"
         >{{ pct.toFixed(0) }}%</span
       >
     </div>
     <span
-      style="color: rgb(255 255 255 / 70%); text-shadow: 0 1px 3px rgb(0 0 0 / 90%)"
+      style="color: var(--gadget-text-dim); text-shadow: var(--shadow-text)"
       class="truncate w-full text-center"
       :style="{ fontSize: Math.max(8, Math.round(size * 0.13)) + 'px' }"
       >{{ valueLabel }}</span
@@ -71,7 +71,7 @@
       <path
         :d="bgArc"
         fill="none"
-        stroke="rgba(255,255,255,0.2)"
+        :stroke="`var(--gadget-track)`"
         stroke-width="8"
         stroke-linecap="round"
       />
@@ -89,14 +89,14 @@
         text-anchor="middle"
         :font-size="size * 0.18"
         font-weight="700"
-        fill="white"
+        fill="var(--gadget-text)"
         style="filter: drop-shadow(0 1px 3px rgb(0 0 0 / 90%))"
       >
         {{ pct.toFixed(0) }}%
       </text>
     </svg>
     <span
-      style="color: rgb(255 255 255 / 70%); text-shadow: 0 1px 3px rgb(0 0 0 / 90%)"
+      style="color: var(--gadget-text-dim); text-shadow: var(--shadow-text)"
       class="truncate"
       :style="{ fontSize: '9px', maxWidth: size + 'px' }"
       >{{ valueLabel }}</span

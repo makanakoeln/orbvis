@@ -138,7 +138,7 @@ const STATE_BG: Record<string, string> = {
   CRITICAL: 'bg-red-500',
   UNREACHABLE: 'bg-orange-400',
   UNKNOWN: 'bg-orange-400',
-  WARNING: 'bg-[#ffd000]',
+  WARNING: 'bg-warning',
   PENDING: 'bg-zinc-500',
 }
 const STATE_TEXT: Record<string, string> = {
@@ -148,7 +148,7 @@ const STATE_TEXT: Record<string, string> = {
   CRITICAL: 'text-red-600 dark:text-red-400',
   UNREACHABLE: 'text-orange-600 dark:text-orange-400',
   UNKNOWN: 'text-orange-600 dark:text-orange-400',
-  WARNING: 'text-amber-600 dark:text-[#ffd000]',
+  WARNING: 'text-amber-600 dark:text-warning',
   PENDING: 'text-[var(--text-muted)]',
 }
 
