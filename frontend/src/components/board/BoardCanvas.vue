@@ -59,8 +59,11 @@
         :state="states[obj.id]"
         :icon-size="obj.display?.image_size ?? (obj.display?.mode === 'gadget' ? 60 : (iconSizeOverride ?? config.icon_size))"
         :selected="selectedObjectId === obj.id"
+        :edit-mode="editMode"
+        :resize-override="localResizeDimensions[obj.id]"
         @hover="!editMode && openHoverMenu($event, obj)"
         @hover-leave="!editMode && closeHoverMenu()"
+        @graph-resize-start="onGraphResizeStart($event, obj)"
       />
     </div>
 
@@ -149,6 +152,7 @@ const emit = defineEmits<{
   'object-duplicate': [obj: BoardObjectType]
   'line-drag-start': [event: MouseEvent, obj: BoardObjectType, mode: 'move' | 'start' | 'end']
   'canvas-click': [event: MouseEvent]
+  'graph-resize-end': [id: string, width: number, height: number]
 }>()
 
 const router = useRouter()
@@ -167,6 +171,14 @@ const localDragPositions = reactive<Record<string, { x: number; y: number }>>({}
 // the synthetic click to the canvas div. Suppress that canvas-click so it doesn't
 // deselect the just-selected object.
 const _suppressNextCanvasClick = ref(false)
+
+// Graph resize state
+const _resizeId = ref<string | null>(null)
+const _resizeInitW = ref(0)
+const _resizeInitH = ref(0)
+const _resizeStartX = ref(0)
+const _resizeStartY = ref(0)
+const localResizeDimensions = reactive<Record<string, { width: number; height: number }>>({})
 
 function _snap(v: number): number {
   if (!props.snapGrid) return v
@@ -189,10 +201,10 @@ watch(
 )
 
 const canvasWidth = computed(() =>
-  props.config.objects.reduce((m, o) => Math.max(m, o.x + 150), 800),
+  props.config.objects.reduce((m, o) => Math.max(m, o.x + (o.type === 'graph' ? (o.graph_width ?? 400) : 150)), 800),
 )
 const canvasHeight = computed(() =>
-  props.config.objects.reduce((m, o) => Math.max(m, o.y + 150), 600),
+  props.config.objects.reduce((m, o) => Math.max(m, o.y + (o.type === 'graph' ? (o.graph_height ?? 200) : 150)), 600),
 )
 
 // Canvas style: with background → fill parent absolutely; without → fixed pixel size
@@ -277,7 +289,27 @@ function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
   if (props.editMode) emit('object-click', obj) // select on pointerdown (no event = no action bar)
 }
 
+function onGraphResizeStart(event: PointerEvent, obj: BoardObjectType) {
+  if (!canvasEl.value) return
+  canvasEl.value.setPointerCapture(event.pointerId)
+  _resizeId.value = obj.id
+  _resizeInitW.value = obj.graph_width ?? 400
+  _resizeInitH.value = obj.graph_height ?? 200
+  _resizeStartX.value = event.clientX
+  _resizeStartY.value = event.clientY
+  localResizeDimensions[obj.id] = { width: _resizeInitW.value, height: _resizeInitH.value }
+}
+
 function onCanvasPointerMove(event: PointerEvent) {
+  // Handle graph resize
+  const rid = _resizeId.value
+  if (rid) {
+    const w = Math.max(50, _resizeInitW.value + (event.clientX - _resizeStartX.value))
+    const h = Math.max(30, _resizeInitH.value + (event.clientY - _resizeStartY.value))
+    localResizeDimensions[rid] = { width: Math.round(w), height: Math.round(h) }
+    return
+  }
+
   const id = _dragId.value
   if (!id || !canvasEl.value) return
   const rect = canvasEl.value.getBoundingClientRect()
@@ -290,6 +322,16 @@ function onCanvasPointerMove(event: PointerEvent) {
 }
 
 function onCanvasPointerUp(event: PointerEvent) {
+  // Finalize graph resize
+  const rid = _resizeId.value
+  if (rid) {
+    _resizeId.value = null
+    const dims = localResizeDimensions[rid]
+    delete localResizeDimensions[rid]
+    if (dims) emit('graph-resize-end', rid, dims.width, dims.height)
+    return
+  }
+
   const id = _dragId.value
   _dragId.value = null
 

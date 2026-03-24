@@ -14,6 +14,7 @@ export type ObjectType =
   | 'line'
   | 'textbox'
   | 'cmk_label'
+  | 'graph'
 
 export interface LabelConfig {
   show: boolean
@@ -77,6 +78,11 @@ export interface BoardObject {
   textbox_border?: string | null
   textbox_width?: number | null
   textbox_height?: number | null
+  graph_url?: string | null
+  graph_embed_type?: 'img' | 'iframe'
+  graph_width?: number | null
+  graph_height?: number | null
+  graph_refresh_interval?: number | null
   line_color?: string | null
   line_color_border?: string | null
   url?: string | null

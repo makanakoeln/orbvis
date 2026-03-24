@@ -1,7 +1,57 @@
 <template>
+  <!-- Graph embed -->
+  <div
+    v-if="object.type === 'graph'"
+    class="relative select-none"
+    :style="graphWrapperStyle"
+    @mouseenter="$emit('hover', $event)"
+    @mouseleave="$emit('hover-leave')"
+    @contextmenu.prevent="$emit('context-menu', $event)"
+  >
+    <!-- Placeholder: no URL or load error -->
+    <div v-if="!object.graph_url || graphLoadFailed"
+      class="w-full h-full flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-zinc-600 rounded-lg text-zinc-500">
+      <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+      </svg>
+      <span class="text-xs">{{ object.graph_url ? t('boardSettings.graphLoadFailed') : t('boardSettings.graphNoUrl') }}</span>
+    </div>
+    <!-- img embed -->
+    <img v-else-if="object.graph_embed_type !== 'iframe'"
+      :src="graphSrc"
+      class="block w-full h-full object-fill rounded-lg"
+      draggable="false"
+      @error="graphLoadFailed = true"
+      @load="graphLoadFailed = false"
+    />
+    <!-- iframe embed -->
+    <iframe v-else
+      :src="object.graph_url"
+      class="block w-full h-full border-0 rounded-lg"
+      sandbox="allow-scripts allow-same-origin"
+    />
+    <!-- Optional caption label -->
+    <div v-if="object.label?.show && object.label?.text"
+      class="absolute -bottom-5 left-0 right-0 text-center text-xs pointer-events-none px-1.5 py-0.5 rounded"
+      :style="labelStyle">
+      {{ object.label.text }}
+    </div>
+    <!-- Resize handle (edit mode only) -->
+    <div v-if="editMode"
+      @pointerdown.stop="$emit('graph-resize-start', $event)"
+      class="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize bg-indigo-500/70 hover:bg-indigo-400 rounded-tl flex items-center justify-center transition-colors"
+      title="Resize">
+      <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15M19.5 4.5v6m0-6h-6" />
+      </svg>
+    </div>
+    <!-- Selection ring -->
+    <div v-if="selected" class="absolute inset-0 rounded-lg ring-2 ring-indigo-400 ring-offset-1 ring-offset-zinc-950 pointer-events-none" />
+  </div>
+
   <!-- Textbox -->
   <div
-    v-if="object.type === 'textbox'"
+    v-else-if="object.type === 'textbox'"
     class="px-2.5 py-1.5 rounded-lg text-sm font-medium whitespace-pre-wrap pointer-events-none ring-1 transition-all overflow-auto"
     :class="selected ? 'ring-indigo-400' : 'ring-[var(--border)]'"
     :style="textboxStyle"
@@ -134,7 +184,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, watchEffect, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { BoardObject, ObjectState } from '@/types/api'
 import GadgetRenderer from './GadgetRenderer.vue'
 import { useArcRing } from '@/composables/useArcRing'
@@ -143,17 +194,22 @@ import { parsePerfData, utilPercent, utilColor as _utilColor } from '@/utils/per
 const BASE_URL = import.meta.env.BASE_URL
 const RING_PAD = 6
 
+const { t } = useI18n()
+
 const props = defineProps<{
   object: BoardObject
   state: ObjectState | undefined
   iconSize: number
   selected?: boolean
+  editMode?: boolean
+  resizeOverride?: { width: number; height: number }
 }>()
 
 defineEmits<{
   hover: [event: MouseEvent]
   'hover-leave': []
   'context-menu': [event: MouseEvent]
+  'graph-resize-start': [evt: PointerEvent]
 }>()
 
 // Single arc ring SVG — always a separate overlay SVG that D3 owns exclusively.
@@ -161,6 +217,37 @@ defineEmits<{
 // never intercepts mousedown/click events, preserving drag behaviour in edit mode.
 const arcSvgEl = ref<SVGSVGElement | null>(null)
 const imgLoadFailed = ref(false)
+
+// ---- Graph embed ----
+const graphLoadFailed = ref(false)
+const refreshTick = ref(0)
+
+watch(() => props.object.graph_url, () => { graphLoadFailed.value = false })
+let _refreshTimer: ReturnType<typeof setInterval> | null = null
+
+watchEffect(() => {
+  if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null }
+  const interval = props.object.graph_refresh_interval ?? 0
+  if (props.object.type === 'graph' && interval > 0) {
+    _refreshTimer = setInterval(() => { refreshTick.value++ }, interval * 1000)
+  }
+})
+onUnmounted(() => { if (_refreshTimer) clearInterval(_refreshTimer) })
+
+const graphSrc = computed(() => {
+  const url = props.object.graph_url
+  if (!url) return ''
+  if ((props.object.graph_refresh_interval ?? 0) > 0) {
+    const sep = url.includes('?') ? '&' : '?'
+    return `${url}${sep}_t=${refreshTick.value}`
+  }
+  return url
+})
+
+const graphWrapperStyle = computed(() => ({
+  width: `${props.resizeOverride?.width ?? props.object.graph_width ?? 400}px`,
+  height: `${props.resizeOverride?.height ?? props.object.graph_height ?? 200}px`,
+}))
 
 const svgSize = computed(() => props.iconSize + RING_PAD * 2)
 

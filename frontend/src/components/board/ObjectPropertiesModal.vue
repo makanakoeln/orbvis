@@ -32,7 +32,7 @@
       <div class="overflow-y-auto overflow-x-hidden flex-1 px-6 py-5 space-y-6">
 
         <!-- === MONITORING OBJECT === -->
-        <section v-if="object.type !== 'textbox' && object.type !== 'line'">
+        <section v-if="object.type !== 'textbox' && object.type !== 'line' && object.type !== 'graph'">
           <p class="section-title">{{ t('boardSettings.monitoringObject') }}</p>
           <div class="space-y-3">
             <template v-if="object.type === 'host' || object.type === 'service'">
@@ -98,6 +98,41 @@
             <div class="field-row">
               <label class="field-label">{{ t('boardSettings.borderColor') }}</label>
               <ColorInput v-model="form.textbox_border" none-label="default" default-color="#e5e5e5" />
+            </div>
+          </div>
+        </section>
+
+        <!-- === GRAPH === -->
+        <section v-if="object.type === 'graph'">
+          <p class="section-title">{{ t('boardSettings.graphSection') }}</p>
+          <div class="space-y-3">
+            <div class="field-row">
+              <label class="field-label">{{ t('boardSettings.graphUrl') }}</label>
+              <input v-model="form.graph_url" class="field flex-1 font-mono" placeholder="https://…" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">{{ t('boardSettings.graphEmbedType') }}</label>
+              <select v-model="form.graph_embed_type" class="field flex-1">
+                <option value="img">{{ t('boardSettings.graphEmbedImg') }}</option>
+                <option value="iframe">{{ t('boardSettings.graphEmbedIframe') }}</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="field-row">
+                <label class="field-label">{{ t('boardSettings.width') }}</label>
+                <NumberInput v-model="form.graph_width" min="50" class="flex-1" />
+              </div>
+              <div class="field-row">
+                <label class="field-label">{{ t('boardSettings.height') }}</label>
+                <NumberInput v-model="form.graph_height" min="30" class="flex-1" />
+              </div>
+            </div>
+            <div class="field-row">
+              <label class="field-label">{{ t('boardSettings.graphRefresh') }}</label>
+              <div class="flex items-center gap-2 flex-1">
+                <NumberInput v-model="form.graph_refresh_interval" min="0" class="flex-1" />
+                <span class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.graphRefreshOff') }}</span>
+              </div>
             </div>
           </div>
         </section>
@@ -275,7 +310,7 @@
         </section>
 
         <!-- === APPEARANCE === -->
-        <section v-if="object.type !== 'line' && object.type !== 'textbox'">
+        <section v-if="object.type !== 'line' && object.type !== 'textbox' && object.type !== 'graph'">
           <p class="section-title">{{ t('boardSettings.appearance') }}</p>
           <div class="space-y-3">
             <div class="field-row">
@@ -530,6 +565,11 @@ const form = reactive({
   textbox_border: null as string | null,
   textbox_width: null as number | null,
   textbox_height: null as number | null,
+  graph_url: '',
+  graph_embed_type: 'img' as 'img' | 'iframe',
+  graph_width: 400,
+  graph_height: 200,
+  graph_refresh_interval: 0,
   display: {
     mode: 'icon' as 'icon' | 'text' | 'gadget',
     image: '',
@@ -586,6 +626,11 @@ watch(() => props.object, (obj) => {
   form.textbox_border = obj.textbox_border ?? null
   form.textbox_width = obj.textbox_width ?? null
   form.textbox_height = obj.textbox_height ?? null
+  form.graph_url = obj.graph_url ?? ''
+  form.graph_embed_type = obj.graph_embed_type ?? 'img'
+  form.graph_width = obj.graph_width ?? 400
+  form.graph_height = obj.graph_height ?? 200
+  form.graph_refresh_interval = obj.graph_refresh_interval ?? 0
   form.display.mode = obj.display?.mode ?? 'icon'
   form.display.image = obj.display?.image ?? ''
   form.display.image_size = obj.display?.image_size ?? null
@@ -683,7 +728,7 @@ async function save() {
   saving.value = true
   try {
     const updates: Record<string, unknown> = {
-      display: {
+      display: props.object.type === 'graph' || props.object.type === 'line' ? null : {
         mode: form.display.mode,
         image: form.display.image || null,
         image_size: form.display.image_size ?? null,
@@ -705,6 +750,11 @@ async function save() {
       textbox_border: form.textbox_border || null,
       textbox_width: form.textbox_width ?? null,
       textbox_height: form.textbox_height ?? null,
+      graph_url: form.graph_url || null,
+      graph_embed_type: form.graph_embed_type,
+      graph_width: form.graph_width,
+      graph_height: form.graph_height,
+      graph_refresh_interval: form.graph_refresh_interval,
       line_style: form.line_style,
       line_color: form.line_color || null,
       line_color_border: form.line_color_border || null,

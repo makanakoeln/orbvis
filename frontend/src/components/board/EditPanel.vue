@@ -26,6 +26,7 @@
         <option value="line">{{ t('boardSettings.typeLine') }}</option>
         <option value="textbox">{{ t('boardSettings.typeTextbox') }}</option>
         <option value="image">{{ t('boardSettings.typeShape') }}</option>
+        <option value="graph">{{ t('boardSettings.typeGraph') }}</option>
       </select>
 
       <template v-if="draft.type === 'host'">
@@ -58,6 +59,10 @@
       <template v-else-if="draft.type === 'image'">
         <ImagePicker v-model="draft.image_src" />
         <input v-model="draft.label_text" :placeholder="t('boardSettings.labelOptional')" class="field" />
+      </template>
+
+      <template v-else-if="draft.type === 'graph'">
+        <input v-model="draft.graph_url" :placeholder="t('boardSettings.graphUrl')" class="field font-mono" />
       </template>
 
       <!-- Grid snap -->
@@ -129,7 +134,8 @@ const canPlace = computed(() => {
     case 'map':          return !!d.board_name
     case 'line':
     case 'textbox':
-    case 'image':        return true
+    case 'image':
+    case 'graph':        return true
     default:             return false
   }
 })
@@ -147,7 +153,7 @@ const loadingAddObjects = ref(false)
 const loadingAddServices = ref(false)
 
 async function fetchAddObjects(type: string) {
-  if (!props.backendId || !type || type === 'line' || type === 'textbox' || type === 'map' || type === 'image') {
+  if (!props.backendId || !type || type === 'line' || type === 'textbox' || type === 'map' || type === 'image' || type === 'graph') {
     addObjects.value = []; return
   }
   loadingAddObjects.value = true

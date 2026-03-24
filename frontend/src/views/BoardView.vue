@@ -181,6 +181,7 @@
             @object-duplicate="onObjectDuplicate"
             @line-drag-start="onLineDragStart"
             @canvas-click="onCanvasClick"
+            @graph-resize-end="onGraphResizeEnd"
           />
         </template>
         <div v-else class="flex items-center justify-center h-full text-zinc-600">{{ t('board.boardNotFound') }}</div>
@@ -597,6 +598,12 @@ async function onContainerClick(event: MouseEvent) {
 function onLineDragStart(event: MouseEvent, obj: BoardObject, mode: LineDragMode) {
   const canvas = canvasRef.value?.getCanvasEl()
   if (canvas) editor.startLineDrag(event, obj, mode, canvas)
+}
+
+async function onGraphResizeEnd(id: string, width: number, height: number) {
+  const obj = boardConfig.value?.objects.find(o => o.id === id)
+  if (obj) { obj.graph_width = width; obj.graph_height = height }
+  await editor.updateObjectProperties(id, { graph_width: width, graph_height: height })
 }
 
 // ---- Worldmap event handlers ----

@@ -16,6 +16,7 @@ export interface NewObjectDraft {
   board_name: string
   label_text: string
   image_src: string
+  graph_url: string
 }
 
 interface LineCoords { x: number; y: number; x2: number; y2: number }
@@ -196,7 +197,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
   // --- Place new object ---
   const placing = ref(false)
   const draft = reactive<NewObjectDraft>({
-    type: '', host_name: '', service_description: '', group_name: '', board_name: '', label_text: '', image_src: '',
+    type: '', host_name: '', service_description: '', group_name: '', board_name: '', label_text: '', image_src: '', graph_url: '',
   })
 
   function startPlacing() {
@@ -225,7 +226,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         x: s.label_x, y: s.label_y,
         size: s.label_size, color: s.label_color, background: s.label_background,
       },
-      display: draft.type === 'line' ? null : {
+      display: (draft.type === 'line' || draft.type === 'graph') ? null : {
         mode: s.view_type as 'icon' | 'text' | 'gadget',
         image: draft.image_src || null,
         image_size: s.icon_size,
@@ -233,6 +234,11 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       image_src: draft.type === 'image' ? (draft.image_src || null) : undefined,
       url_target: s.url_target, z: s.z,
       ...(draft.type === 'line' ? { x2: _snap(Math.round(x)) + 150, y2: _snap(Math.round(y)), line_style: s.line_style ?? 'plain' } : {}),
+      ...(draft.type === 'graph' ? {
+        graph_url: draft.graph_url || null,
+        graph_width: 400, graph_height: 200,
+        graph_embed_type: 'img', graph_refresh_interval: 0,
+      } : {}),
     }
     try {
       const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!)
@@ -303,6 +309,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     draft.board_name = ''
     draft.label_text = ''
     draft.image_src = ''
+    draft.graph_url = ''
     Object.keys(lineDragPositions).forEach(k => delete lineDragPositions[k])
   }
 

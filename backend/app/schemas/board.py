@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 ObjectType = Literal[
     "host", "service", "hostgroup", "servicegroup",
-    "map", "image", "line", "textbox", "cmk_label",
+    "map", "image", "line", "textbox", "cmk_label", "graph",
 ]
 
 LineStyle = Literal["plain", "arrow_end", "arrow_start", "arrow_both", "dashed", "weathermap"]
@@ -103,6 +103,12 @@ class BoardObject(BaseModel):
     textbox_border: str | None = None
     textbox_width: int | None = None
     textbox_height: int | None = None
+    # Graph embed
+    graph_url: str | None = None
+    graph_embed_type: Literal["img", "iframe"] = "img"
+    graph_width: int = 400
+    graph_height: int = 200
+    graph_refresh_interval: int = 0
     # Line custom colors
     line_color: str | None = None
     line_color_border: str | None = None
