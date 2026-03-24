@@ -9,7 +9,10 @@
       <div class="text-center mb-8">
         <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600/15 ring-1 ring-indigo-500/25 mb-4">
           <svg class="w-7 h-7 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2 12C5 7 19 7 22 12C19 17 5 17 2 12Z" />
+            <circle cx="12" cy="12" r="3.5" stroke-width="1" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M9.5 13.5L11 11L12.5 12.5L14 10" />
+            <circle cx="14" cy="10" r="0.8" fill="currentColor" stroke="none" />
           </svg>
         </div>
         <h1 class="text-2xl font-bold text-[var(--text)] tracking-tight">OrbVis</h1>
