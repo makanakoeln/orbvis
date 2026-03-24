@@ -42,7 +42,7 @@ const error = ref('')
 
 onMounted(async () => {
   try {
-    const res = await fetch('/api/changelog')
+    const res = await fetch(`${import.meta.env.BASE_URL}api/changelog`)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     content.value = await res.text()
   } catch (e) {
