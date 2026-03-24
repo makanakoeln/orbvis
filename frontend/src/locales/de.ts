@@ -7,6 +7,7 @@ export default {
     close: 'Schließen',
     delete: 'Löschen',
     edit: 'Bearbeiten',
+    view: 'Ansehen',
     create: 'Erstellen',
     add: 'Hinzufügen',
     discard: 'Verwerfen',

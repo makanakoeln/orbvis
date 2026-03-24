@@ -17,7 +17,7 @@
 
       <!-- Object defaults -->
       <section class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-6">
-        <h3 class="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-5">
+        <h3 class="text-sm font-semibold text-zinc-400 mb-5">
           {{ t('settings.objectDefaults') }}
         </h3>
 
@@ -80,7 +80,7 @@
 
       <!-- Label defaults -->
       <section class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-6">
-        <h3 class="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-5">
+        <h3 class="text-sm font-semibold text-zinc-400 mb-5">
           {{ t('settings.labelDefaults') }}
         </h3>
 
@@ -148,7 +148,7 @@
 
       <!-- New board defaults -->
       <section class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-6">
-        <h3 class="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-5">
+        <h3 class="text-sm font-semibold text-zinc-400 mb-5">
           {{ t('settings.newBoardDefaults') }}
         </h3>
 
@@ -181,7 +181,7 @@
 
       <!-- Templates -->
       <section class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-6">
-        <h3 class="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-1">
+        <h3 class="text-sm font-semibold text-zinc-400 mb-1">
           {{ t('settings.templates') }}
         </h3>
         <p class="text-xs text-zinc-600 mb-5">{{ t('settings.templatesSubtitle') }}</p>

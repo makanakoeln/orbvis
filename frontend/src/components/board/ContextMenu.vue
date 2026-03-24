@@ -6,7 +6,7 @@
     <!-- Header -->
     <div class="px-3.5 py-2 border-b border-[var(--border)] mb-1">
       <p class="text-xs font-semibold text-[var(--text)] truncate max-w-52">{{ displayName }}</p>
-      <p class="text-[10px] text-[var(--text-muted)] mt-0.5 uppercase tracking-wide">{{ object.type }}</p>
+      <p class="text-[10px] text-[var(--text-muted)] mt-0.5 capitalize">{{ object.type }}</p>
     </div>
 
     <!-- Custom template block -->

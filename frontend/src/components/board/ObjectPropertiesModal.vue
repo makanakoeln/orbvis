@@ -15,7 +15,7 @@
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
         <div class="flex items-center gap-3">
-          <span class="text-xs font-bold px-2 py-1 rounded-lg bg-[var(--bg-input)] ring-1 ring-zinc-700 text-zinc-400 uppercase tracking-wider">
+          <span class="text-xs font-bold px-2 py-1 rounded-lg bg-[var(--bg-input)] ring-1 ring-zinc-700 text-zinc-400 capitalize">
             {{ object.type }}
           </span>
           <span class="font-bold text-[var(--text)]">{{ displayName }}</span>
@@ -757,7 +757,7 @@ async function save() {
 
 <style scoped>
 .section-title {
-  @apply text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 leading-none;
+  @apply text-[11px] font-semibold text-zinc-400 tracking-wide mb-3 leading-none;
 }
 .field-row {
   @apply flex items-center gap-3;

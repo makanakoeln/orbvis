@@ -224,7 +224,7 @@
           leave-active-class="transition-all duration-100 ease-in">
           <div v-if="editor.editMode.value && editor.selectedObjectId.value && selectedObject"
             class="flex items-center gap-1 px-2 py-1.5 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/40 backdrop-blur-md">
-            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-1.5">{{ selectedObject.type }}</span>
+            <span class="text-[10px] font-bold text-zinc-500 capitalize px-1.5">{{ selectedObject.type }}</span>
             <div class="w-px h-4 bg-zinc-700 mx-0.5" />
             <button @click="openPropsModal(selectedObject!)" title="Edit properties"
               class="p-2 rounded-lg text-zinc-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-all">

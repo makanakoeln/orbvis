@@ -216,9 +216,9 @@
               <table class="w-full text-sm">
                 <thead>
                   <tr class="border-b border-[var(--border)]">
-                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.role') }}</th>
-                    <th class="px-3 py-2.5 text-center text-xs font-semibold text-zinc-500 uppercase tracking-wider w-20">View</th>
-                    <th class="px-3 py-2.5 text-center text-xs font-semibold text-zinc-500 uppercase tracking-wider w-20">Edit</th>
+                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-zinc-500 tracking-wider">{{ t('admin.role') }}</th>
+                    <th class="px-3 py-2.5 text-center text-xs font-semibold text-zinc-500 tracking-wider w-20">{{ t('common.view') }}</th>
+                    <th class="px-3 py-2.5 text-center text-xs font-semibold text-zinc-500 tracking-wider w-20">{{ t('common.edit') }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-[var(--border)]">

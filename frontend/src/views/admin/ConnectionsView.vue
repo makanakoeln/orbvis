@@ -36,12 +36,12 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-[var(--border)]">
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.status') }}</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">ID</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.displayLabel') }}</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.type') }}</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.connection') }}</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-zinc-500 uppercase tracking-wider">{{ t('admin.actions') }}</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 tracking-wider">{{ t('admin.status') }}</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 tracking-wider">ID</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 tracking-wider">{{ t('admin.displayLabel') }}</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 tracking-wider">{{ t('admin.type') }}</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 tracking-wider">{{ t('admin.connection') }}</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-zinc-500 tracking-wider">{{ t('admin.actions') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[var(--border)]">
