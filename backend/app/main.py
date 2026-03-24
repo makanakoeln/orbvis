@@ -592,8 +592,13 @@ async def health_check():
 
 @app.get("/api/changelog")
 async def get_changelog():
-    path = Path(__file__).parent.parent.parent / "CHANGELOG.md"
-    return PlainTextResponse(path.read_text())
+    for candidate in [
+        Path(__file__).parent.parent.parent / "CHANGELOG.md",
+        Path(__file__).parent.parent / "CHANGELOG.md",
+    ]:
+        if candidate.is_file():
+            return PlainTextResponse(candidate.read_text())
+    return PlainTextResponse("")
 
 
 # Serve background images uploaded via the API
