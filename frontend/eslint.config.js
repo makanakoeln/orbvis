@@ -45,7 +45,8 @@ export default [
       'simple-import-sort/exports': 'warn',
       'vue/multi-word-component-names': 'off',
       'vue/no-unused-vars': 'warn',
-      'vue/no-mutating-props': 'warn', // wird schrittweise refactored
+      'vue/no-mutating-props': 'off', // EditPanel nutzt intentionale Prop-Mutation — Refactor ausstehend
+      'vue/no-v-html': 'off', // v-html wird für vertrauenswürdige Inhalte (Textbox, Templates) genutzt
       'no-empty': ['error', { allowEmptyCatch: true }],
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': [
