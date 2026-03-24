@@ -6,8 +6,8 @@
 
     <div class="relative w-full max-w-sm mx-4">
       <!-- Logo -->
-      <div class="text-center mb-8">
-        <svg class="w-12 h-12 text-indigo-400 mb-4 mx-auto block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+      <div class="text-center mb-5">
+        <svg class="w-9 h-9 text-indigo-400 mb-2 mx-auto block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M2 12C5 7 19 7 22 12C19 17 5 17 2 12Z" />
           <circle cx="12" cy="12" r="3.5" stroke-width="1" />
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M9.5 13.5L11 11L12.5 12.5L14 10" />
