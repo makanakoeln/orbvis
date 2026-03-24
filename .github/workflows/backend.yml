@@ -12,6 +12,9 @@ on:
       - 'backend/**'
       - '.github/workflows/backend.yml'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   backend:
     runs-on: ubuntu-latest
