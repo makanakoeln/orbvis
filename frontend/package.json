@@ -72,7 +72,7 @@
     "@typescript-eslint/eslint-plugin": "^8.57.2",
     "@typescript-eslint/parser": "^8.57.2",
     "@vitejs/plugin-vue": "^6.0.5",
-    "@vitest/ui": "^4.1.1",
+    "@vitest/ui": "^4.0.18",
     "@vue/test-utils": "^2.4.6",
     "autoprefixer": "^10.4.27",
     "eslint": "^10.1.0",
@@ -95,7 +95,7 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.57.2",
     "vite": "^8.0.2",
-    "vitest": "^4.1.1",
+    "vitest": "^4.0.18",
     "vue-tsc": "^3.2.6"
   }
 }
