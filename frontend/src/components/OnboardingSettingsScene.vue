@@ -1,25 +1,89 @@
 <template>
   <div v-if="canvasStyle" class="fixed pointer-events-none overflow-hidden" :style="canvasStyle">
-    <!-- Background image fades in/out to illustrate a background being applied -->
+    <!-- Background image fades in/out -->
     <div class="absolute inset-0 rounded-[10px] bg-layer" />
 
-    <!-- Floating "background.png" label that appears with the background -->
-    <div class="absolute bg-label">
-      <div
-        class="flex items-center gap-1.5 rounded-lg bg-black/70 px-2.5 py-1.5 text-xs font-mono font-medium text-indigo-300 ring-1 ring-indigo-500/40"
-      >
-        <svg class="h-3 w-3 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-          <path
-            fill-rule="evenodd"
-            d="M1 5.25A2.25 2.25 0 013.25 3h13.5A2.25 2.25 0 0119 5.25v9.5A2.25 2.25 0 0116.75 17H3.25A2.25 2.25 0 011 14.75v-9.5zm16.5 0a.75.75 0 00-.75-.75H3.25a.75.75 0 00-.75.75v6.268l3.162-3.162a.75.75 0 011.06 0l3.913 3.913 1.612-1.612a.75.75 0 011.06 0l3.693 3.693V5.25zm-2.47 9.25H3.25a.75.75 0 01-.75-.75v-.432l3.693-3.692 3.912 3.912a.75.75 0 001.06 0l1.612-1.612 3.223 3.224a.75.75 0 01-.72.34z"
-            clip-rule="evenodd"
-          />
-        </svg>
-        background.png
+    <!-- Connection lines (rendered below objects) -->
+    <svg class="absolute inset-0 h-full w-full">
+      <!-- web-server-01 → HTTP -->
+      <line
+        class="flow-line"
+        :x1="px(22)"
+        :y1="py(29)"
+        :x2="px(70)"
+        :y2="py(26)"
+        stroke="rgb(74,222,128)"
+        stroke-width="2"
+        stroke-dasharray="8 4"
+      />
+      <!-- web-server-01 → db-server -->
+      <line
+        class="flow-line-slow"
+        :x1="px(22)"
+        :y1="py(30)"
+        :x2="px(34)"
+        :y2="py(52)"
+        stroke="rgb(148,163,184)"
+        stroke-width="1.5"
+        stroke-dasharray="6 4"
+      />
+      <!-- db-server → Production -->
+      <line
+        class="flow-line"
+        :x1="px(34)"
+        :y1="py(52)"
+        :x2="px(63)"
+        :y2="py(53)"
+        stroke="rgb(248,113,113)"
+        stroke-width="2"
+        stroke-dasharray="8 4"
+      />
+      <!-- Production → backup -->
+      <line
+        class="flow-line-slow"
+        :x1="px(64)"
+        :y1="py(53)"
+        :x2="px(80)"
+        :y2="py(71)"
+        stroke="rgb(251,146,60)"
+        stroke-width="1.5"
+        stroke-dasharray="6 4"
+      />
+    </svg>
+
+    <!-- Sparkline graph: CPU Load near db-server -->
+    <div class="absolute graph-panel" :style="graphStyle">
+      <div class="mb-1 flex items-center justify-between gap-3">
+        <span class="text-[9px] font-semibold uppercase tracking-wide text-zinc-400">CPU Load</span>
+        <span class="text-[10px] font-bold text-red-400">94%</span>
       </div>
+      <svg width="110" height="36" class="overflow-visible">
+        <!-- Area fill -->
+        <defs>
+          <linearGradient id="cpu-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="rgb(248,113,113)" stop-opacity="0.35" />
+            <stop offset="100%" stop-color="rgb(248,113,113)" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M0,30 L9,26 L18,22 L27,18 L36,14 L45,10 L54,8 L63,6 L72,4 L81,3 L90,2 L99,1 L110,1 L110,36 L0,36 Z"
+          fill="url(#cpu-grad)"
+        />
+        <!-- Line -->
+        <polyline
+          points="0,30 9,26 18,22 27,18 36,14 45,10 54,8 63,6 72,4 81,3 90,2 99,1 110,1"
+          fill="none"
+          stroke="rgb(248,113,113)"
+          stroke-width="1.5"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+        />
+        <!-- Current value dot -->
+        <circle cx="110" cy="1" r="3" fill="rgb(248,113,113)" class="pulse-dot" />
+      </svg>
     </div>
 
-    <!-- Demo monitoring objects (static states, no cycling) -->
+    <!-- Monitoring objects -->
     <div
       v-for="(obj, i) in demoObjects"
       :key="obj.id"
@@ -48,13 +112,29 @@
         {{ obj.name }}
       </div>
     </div>
+
+    <!-- Floating "background.png" label -->
+    <div class="absolute bg-label">
+      <div
+        class="flex items-center gap-1.5 rounded-lg bg-black/70 px-2.5 py-1.5 text-xs font-mono font-medium text-indigo-300 ring-1 ring-indigo-500/40"
+      >
+        <svg class="h-3 w-3 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M1 5.25A2.25 2.25 0 013.25 3h13.5A2.25 2.25 0 0119 5.25v9.5A2.25 2.25 0 0116.75 17H3.25A2.25 2.25 0 011 14.75v-9.5zm16.5 0a.75.75 0 00-.75-.75H3.25a.75.75 0 00-.75.75v6.268l3.162-3.162a.75.75 0 011.06 0l3.913 3.913 1.612-1.612a.75.75 0 011.06 0l3.693 3.693V5.25zm-2.47 9.25H3.25a.75.75 0 01-.75-.75v-.432l3.693-3.692 3.912 3.912a.75.75 0 001.06 0l1.612-1.612 3.223 3.224a.75.75 0 01-.72.34z"
+            clip-rule="evenodd"
+          />
+        </svg>
+        background.png
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 
-const SZ = 48;
+const SZ = 44;
 const PAD = 10;
 
 // ─── Locate canvas via DOM ────────────────────────────────────────────────────
@@ -113,34 +193,34 @@ function glowClass(obj: DemoObj): string {
   );
 }
 
-// ─── Demo objects (static states — no cycling, less distraction) ──────────────
+// ─── Demo objects — positioned to match the Data Center background ────────────
 
 interface DemoObj {
   id: string;
   type: 'host' | 'service' | 'hostgroup';
   name: string;
   state: string;
-  px: number;
-  py: number;
+  px: number; // % of overlay width
+  py: number; // % of overlay height
 }
 
 const demoObjects: DemoObj[] = [
-  { id: 'h1', type: 'host', name: 'web-server-01', state: 'OK', px: 25, py: 32 },
-  { id: 's1', type: 'service', name: 'HTTP', state: 'WARNING', px: 65, py: 32 },
-  { id: 'h2', type: 'host', name: 'db-server', state: 'CRITICAL', px: 25, py: 68 },
-  { id: 'hg', type: 'hostgroup', name: 'Production', state: 'OK', px: 65, py: 68 },
-  { id: 's2', type: 'service', name: 'backup', state: 'UNKNOWN', px: 45, py: 50 },
+  { id: 'h1', type: 'host', name: 'web-server-01', state: 'OK', px: 22, py: 29 },
+  { id: 's1', type: 'service', name: 'HTTP', state: 'WARNING', px: 70, py: 26 },
+  { id: 'h2', type: 'host', name: 'db-server', state: 'CRITICAL', px: 34, py: 52 },
+  { id: 'hg', type: 'hostgroup', name: 'Production', state: 'OK', px: 63, py: 53 },
+  { id: 's2', type: 'service', name: 'backup', state: 'UNKNOWN', px: 80, py: 71 },
 ];
 
 // ─── Position helpers ─────────────────────────────────────────────────────────
 
-function pxCoord(pct: number): number {
+function px(pct: number): number {
   const r = canvasRect.value;
   if (!r) return 0;
   return (pct / 100) * (r.width + PAD * 2);
 }
 
-function pyCoord(pct: number): number {
+function py(pct: number): number {
   const r = canvasRect.value;
   if (!r) return 0;
   return (pct / 100) * (r.height + PAD * 2);
@@ -148,24 +228,20 @@ function pyCoord(pct: number): number {
 
 function entryStyle(index: number, obj: DemoObj) {
   return {
-    left: `${pxCoord(obj.px)}px`,
-    top: `${pyCoord(obj.py)}px`,
+    left: `${px(obj.px)}px`,
+    top: `${py(obj.py)}px`,
     transform: 'translate(-50%, -50%)',
-    animation: `demo-fade-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both ${index * 180}ms`,
+    animation: `demo-fade-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both ${index * 150}ms`,
   };
 }
 
-// ─── Background label position ────────────────────────────────────────────────
-
-const bgLabelStyle = computed(() => {
-  const r = canvasRect.value;
-  if (!r) return {};
-  return {
-    bottom: `${PAD + 20}px`,
-    left: '50%',
-    transform: 'translateX(-50%)',
-  };
-});
+// Graph positioned between db-server and Production
+const graphStyle = computed(() => ({
+  left: `${px(43)}px`,
+  top: `${py(60)}px`,
+  transform: 'translate(-50%, -50%)',
+  animation: 'demo-fade-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both 600ms',
+}));
 </script>
 
 <style scoped>
@@ -182,7 +258,7 @@ const bgLabelStyle = computed(() => {
   }
 }
 
-/* ─── Background image layer ─────────────────────────────────────────────── */
+/* ─── Background image ───────────────────────────────────────────────────── */
 .bg-layer {
   background-image: url('/demo-bg.png');
   background-size: cover;
@@ -215,6 +291,50 @@ const bgLabelStyle = computed(() => {
 
   100% {
     opacity: 0;
+  }
+}
+
+/* ─── Sparkline graph panel ──────────────────────────────────────────────── */
+.graph-panel {
+  background: rgb(0 0 0 / 70%);
+  border: 1px solid rgb(248 113 113 / 30%);
+  border-radius: 8px;
+  padding: 6px 8px;
+  width: 130px;
+  backdrop-filter: blur(4px);
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    r: 3;
+  }
+
+  50% {
+    opacity: 0.4;
+    r: 2;
+  }
+}
+
+/* ─── Line flow animations ───────────────────────────────────────────────── */
+.flow-line {
+  stroke-dashoffset: 0;
+  animation: flow 1.2s linear infinite;
+}
+
+.flow-line-slow {
+  stroke-dashoffset: 0;
+  animation: flow 2.2s linear infinite;
+}
+
+@keyframes flow {
+  to {
+    stroke-dashoffset: -24;
   }
 }
 
