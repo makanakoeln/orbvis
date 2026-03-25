@@ -42,5 +42,11 @@ jobs:
       - name: Type check
         run: mypy app/
 
+      - name: Security scan (bandit)
+        run: bandit -r app/ -x tests/ -ll
+
+      - name: Dependency audit (pip-audit)
+        run: pip install pip-audit && pip-audit
+
       - name: Test
         run: pytest --cov=app --cov-report=term-missing

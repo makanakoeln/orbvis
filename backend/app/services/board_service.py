@@ -7,13 +7,12 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any
-
 from app.core.config import settings
 from app.schemas.board import (
     BoardConfig,
     BoardCreate,
     BoardObject,
+    BoardObjectUpdate,
     BoardRead,
     BoardUpdate,
 )
@@ -111,15 +110,14 @@ def add_object(name: str, obj: BoardObject) -> BoardConfig | None:
     return cfg
 
 
-def update_object(board_name: str, obj_id: str, updates: dict[str, Any]) -> BoardObject | None:
+def update_object(board_name: str, obj_id: str, updates: BoardObjectUpdate) -> BoardObject | None:
     cfg = get_board(board_name)
     if cfg is None:
         return None
     for obj in cfg.objects:
         if obj.id == obj_id:
-            for key, value in updates.items():
-                if hasattr(obj, key):
-                    setattr(obj, key, value)
+            for key, value in updates.model_dump(exclude_unset=True).items():
+                setattr(obj, key, value)
             _save_board_file(cfg)
             return obj
     return None

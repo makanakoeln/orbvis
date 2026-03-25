@@ -17,8 +17,9 @@ class ConnectionManager:
         # map_name -> set of websockets
         self._connections: dict[str, set[WebSocket]] = {}
 
-    async def connect(self, map_name: str, websocket: WebSocket) -> None:
-        await websocket.accept()
+    async def connect(self, map_name: str, websocket: WebSocket, *, already_accepted: bool = False) -> None:
+        if not already_accepted:
+            await websocket.accept()
         self._connections.setdefault(map_name, set()).add(websocket)
         logger.info(
             "WS connected for map '%s' (total: %d)",

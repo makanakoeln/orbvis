@@ -184,6 +184,54 @@ class BoardRead(BaseModel):
     context_template: str | None = None
 
 
+class BoardObjectUpdate(BaseModel):
+    """Allowed fields for a partial object update — id and type are immutable."""
+
+    x: int | float | None = None
+    y: int | float | None = None
+    lat: float | None = None
+    lng: float | None = None
+    z: int | None = None
+    host_name: str | None = None
+    service_description: str | None = None
+    group_name: str | None = None
+    map_name: str | None = None
+    image_src: str | None = None
+    x2: int | float | None = None
+    y2: int | float | None = None
+    line_style: LineStyle | None = None
+    weathermap_metric: str | None = None
+    cmk_label_name: str | None = None
+    cmk_label_value: str | None = None
+    cmk_label_target: Literal["hosts", "services"] | None = None
+    only_hard_states: bool | None = None
+    recognize_services: bool | None = None
+    exclude_members: str | None = None
+    exclude_member_states: str | None = None
+    label: LabelConfig | None = None
+    display: DisplayConfig | None = None
+    label_border: str | None = None
+    label_maxlen: int | None = None
+    textbox_background: str | None = None
+    textbox_border: str | None = None
+    textbox_width: int | None = None
+    textbox_height: int | None = None
+    graph_url: str | None = None
+    graph_embed_type: Literal["img", "iframe"] | None = None
+    graph_width: int | None = None
+    graph_height: int | None = None
+    graph_refresh_interval: int | None = None
+    graph_metric: str | None = None
+    graph_time_window: int | None = None
+    line_color: str | None = None
+    line_color_border: str | None = None
+    url: str | None = None
+    url_target: str | None = None
+    hover_url: str | None = None
+    hover_template: str | None = None
+    context_template: str | None = None
+
+
 class BoardClone(BaseModel):
     new_name: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-zA-Z0-9_\-]+$")
     alias: str | None = None

@@ -141,14 +141,15 @@ export const useStatesStore = defineStore('states', () => {
   function _connect() {
     if (!currentMap || !currentToken) return;
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    // Token is passed as a query parameter – the Authorization header is unavailable
-    // after the WebSocket upgrade handshake.
-    const url = `${protocol}://${window.location.host}${_base}/api/v1/ws/boards/${currentMap}?token=${encodeURIComponent(currentToken)}`;
+    // Token is sent as the first message after the handshake — never in the URL —
+    // to prevent it from leaking into server logs and browser history.
+    const url = `${protocol}://${window.location.host}${_base}/api/v1/ws/boards/${currentMap}`;
     ws = new WebSocket(url);
     let opened = false;
 
     ws.onopen = () => {
       opened = true;
+      ws?.send(JSON.stringify({ type: 'auth', token: currentToken }));
       // Do NOT set connected=true here. The first state_update message sets
       // connected via msg.states.backend_ok, which correctly reflects whether the
       // monitoring backend is reachable – not just whether the WS handshake succeeded.

@@ -5,11 +5,12 @@ from __future__ import annotations
 import asyncio
 import logging
 
+import json
+
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    Query,
     WebSocket,
     status,
 )
@@ -65,12 +66,25 @@ async def get_board_states(name: str, _: User = Depends(get_current_user)) -> Ma
 async def websocket_board_states(
     name: str,
     websocket: WebSocket,
-    token: str | None = Query(default=None),
 ) -> None:
-    """WebSocket endpoint: streams state updates for a board."""
-    if not token:
+    """WebSocket endpoint: streams state updates for a board.
+
+    Authentication: the client must send {"type": "auth", "token": "<access_token>"}
+    as the very first message after the connection is opened. The token is never
+    passed in the URL to avoid leaking it into server logs and browser history.
+    """
+    await websocket.accept()
+    try:
+        raw = await asyncio.wait_for(websocket.receive_text(), timeout=10.0)
+        msg = json.loads(raw)
+        if msg.get("type") != "auth" or not isinstance(msg.get("token"), str):
+            await websocket.close(code=4001)
+            return
+        token: str = msg["token"]
+    except Exception:
         await websocket.close(code=4001)
         return
+
     try:
         payload = decode_token(token)
         if payload.get("type") != "access":
@@ -94,7 +108,7 @@ async def websocket_board_states(
         await websocket.close(code=4004)
         return
 
-    await manager.connect(name, websocket)
+    await manager.connect(name, websocket, already_accepted=True)
 
     if name not in _broadcast_tasks or _broadcast_tasks[name].done():
         _broadcast_tasks[name] = asyncio.create_task(_broadcast_loop(name))

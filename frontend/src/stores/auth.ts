@@ -65,8 +65,8 @@ export const useAuthStore = defineStore('auth', () => {
     if (ssoTokens) {
       accessToken.value = ssoTokens.access_token;
       refreshToken.value = ssoTokens.refresh_token;
-      localStorage.setItem(ACCESS_TOKEN_KEY, ssoTokens.access_token);
-      localStorage.setItem(REFRESH_TOKEN_KEY, ssoTokens.refresh_token);
+      sessionStorage.setItem(ACCESS_TOKEN_KEY, ssoTokens.access_token);
+      sessionStorage.setItem(REFRESH_TOKEN_KEY, ssoTokens.refresh_token);
       sessionStorage.setItem(SSO_ACTIVE_KEY, '1');
       ssoActive.value = true;
       await fetchCurrentUser();
@@ -75,8 +75,8 @@ export const useAuthStore = defineStore('auth', () => {
 
     ssoActive.value = false;
     sessionStorage.removeItem(SSO_ACTIVE_KEY);
-    accessToken.value = localStorage.getItem(ACCESS_TOKEN_KEY);
-    refreshToken.value = localStorage.getItem(REFRESH_TOKEN_KEY);
+    accessToken.value = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    refreshToken.value = sessionStorage.getItem(REFRESH_TOKEN_KEY);
     if (accessToken.value) {
       await fetchCurrentUser();
     } else if (refreshToken.value) {
@@ -131,8 +131,8 @@ export const useAuthStore = defineStore('auth', () => {
       const tokens = await authApi.login(username, password);
       accessToken.value = tokens.access_token;
       refreshToken.value = tokens.refresh_token;
-      localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
-      localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+      sessionStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
+      sessionStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
       await fetchCurrentUser();
       const redirect = router.currentRoute.value.query.redirect as string | undefined;
       const target: RouteLocationRaw = redirect ? { path: redirect } : { name: 'home' };
@@ -166,7 +166,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const tokens = await authApi.refresh(refreshToken.value);
       accessToken.value = tokens.access_token;
-      localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
+      sessionStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
       return true;
     } catch {
       clearAuth();
@@ -180,8 +180,8 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null;
     ssoActive.value = false;
     _initPromise = null; // allow re-init after logout
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
     sessionStorage.removeItem(SSO_ACTIVE_KEY);
   }
 

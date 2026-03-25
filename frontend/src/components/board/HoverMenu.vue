@@ -3,7 +3,7 @@
     <div
       class="bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-xl p-3.5 min-w-52 max-w-72"
     >
-      <!-- Custom template -->
+      <!-- Custom template — sanitized via DOMPurify before rendering -->
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div v-if="renderedTemplate" class="text-sm text-[var(--text)]" v-html="renderedTemplate" />
 
@@ -98,12 +98,18 @@
 </template>
 
 <script setup lang="ts">
+import DOMPurify from 'dompurify';
 import { computed, ref } from 'vue';
 
 import { useSparkline } from '@/composables/useSparkline';
 import { useStatesStore } from '@/stores/states';
 import type { BoardObject, ObjectState } from '@/types/api';
 import { interpolateTemplate } from '@/utils/template';
+
+const _PURIFY_CONFIG = {
+  ALLOWED_TAGS: ['b', 'i', 'u', 'em', 'strong', 'span', 'div', 'p', 'br', 'a', 'ul', 'ol', 'li'],
+  ALLOWED_ATTR: ['href', 'class', 'style', 'target', 'rel'],
+} as const satisfies DOMPurify.Config;
 
 const props = defineProps<{
   object: BoardObject;
@@ -120,9 +126,11 @@ const sparkData = computed(() => statesStore.history[props.object.id] ?? []);
 
 useSparkline({ svgRef: sparkSvgRef, data: sparkData });
 
-const renderedTemplate = computed(() =>
-  props.template ? interpolateTemplate(props.template, props.object, props.state) : null,
-);
+const renderedTemplate = computed(() => {
+  if (!props.template) return null;
+  const html = interpolateTemplate(props.template, props.object, props.state);
+  return DOMPurify.sanitize(html, _PURIFY_CONFIG);
+});
 
 const displayName = computed(() => {
   if (props.object.label?.text) return props.object.label.text;

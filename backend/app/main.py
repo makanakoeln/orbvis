@@ -19,6 +19,32 @@ _version_candidates = [
 APP_VERSION = next((p.read_text().strip() for p in _version_candidates if p.is_file()), "0.0.0")
 
 
+class SecurityHeadersMiddleware:
+    """Add security-related HTTP headers to every response."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message: Any) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers += [
+                    (b"x-content-type-options", b"nosniff"),
+                    (b"x-frame-options", b"SAMEORIGIN"),
+                    (b"referrer-policy", b"strict-origin-when-cross-origin"),
+                    (b"x-xss-protection", b"1; mode=block"),
+                ]
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
+
+
 class MethodOverrideMiddleware:
     """Tunnel PATCH/PUT/DELETE through POST via X-HTTP-Method-Override header.
 
@@ -563,6 +589,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from app.services import backend_service
     from app.services.state_service import register_backend
 
+    if settings.secret_key == "change-me-in-production":
+        logger.critical(
+            "SECURITY: SECRET_KEY is set to the default insecure value! "
+            "Set a strong SECRET_KEY environment variable before running in production."
+        )
+
     logger.info("Starting OrbVis backend…")
     sep = "=" * 60
     print(f"\n{sep}", flush=True)
@@ -640,6 +672,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(MethodOverrideMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(boards.router, prefix="/api/v1/boards", tags=["boards"])

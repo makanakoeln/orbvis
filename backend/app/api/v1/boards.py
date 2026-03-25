@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import tempfile
 from pathlib import Path
-from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
@@ -21,6 +20,7 @@ from app.schemas.board import (
     BoardConfig,
     BoardCreate,
     BoardObject,
+    BoardObjectUpdate,
     BoardPermissionsRead,
     BoardRead,
     BoardUpdate,
@@ -281,7 +281,10 @@ async def add_object(
 
 @router.put("/{name}/objects/{obj_id}", response_model=BoardObject)
 async def update_object(
-    name: str, obj_id: str, updates: dict[str, Any], current_user: User = Depends(get_current_user)
+    name: str,
+    obj_id: str,
+    updates: BoardObjectUpdate,
+    current_user: User = Depends(get_current_user),
 ) -> BoardObject:
     _require_board_edit(name, current_user)
     _require_not_readonly(name)

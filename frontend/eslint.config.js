@@ -1,5 +1,6 @@
 import js from '@eslint/js'
 import prettier from 'eslint-config-prettier'
+import security from 'eslint-plugin-security'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import pluginVue from 'eslint-plugin-vue'
 import globals from 'globals'
@@ -7,6 +8,7 @@ import ts from 'typescript-eslint'
 
 export default [
   js.configs.recommended,
+  security.configs.recommended,
 
   // TypeScript-Unterstützung (Plugin + Basis-Regeln für alle Dateien)
   ...ts.configs.recommended,
