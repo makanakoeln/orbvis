@@ -51,35 +51,131 @@
       />
     </svg>
 
-    <!-- Sparkline graph: CPU Load near db-server -->
-    <div class="absolute graph-panel" :style="graphStyle">
-      <div class="mb-1 flex items-center justify-between gap-3">
-        <span class="text-[9px] font-semibold uppercase tracking-wide text-zinc-400">CPU Load</span>
-        <span class="text-[10px] font-bold text-red-400">94%</span>
+    <!-- Performance graph (mimics real graph object with D3 chart) -->
+    <div class="absolute graph-gadget" :style="graphStyle">
+      <!-- Legend row — same structure as real BoardObject graph -->
+      <div class="flex flex-wrap gap-x-3 gap-y-0.5 px-2.5 pt-1 pb-1.5 border-b border-white/5">
+        <div class="flex min-w-0 items-center gap-1.5">
+          <span
+            class="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+            style="background: #6366f1"
+          />
+          <span class="truncate text-[10px] text-zinc-500">cpu_load</span>
+          <span class="shrink-0 font-mono text-[10px] font-semibold text-indigo-500">94.00</span>
+        </div>
       </div>
-      <svg width="110" height="36" class="overflow-visible">
-        <!-- Area fill -->
+      <!-- Chart SVG — paddings match useMetricChart constants -->
+      <svg width="240" height="160" viewBox="0 0 240 160">
         <defs>
-          <linearGradient id="cpu-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="rgb(248,113,113)" stop-opacity="0.35" />
-            <stop offset="100%" stop-color="rgb(248,113,113)" stop-opacity="0" />
+          <linearGradient id="mc-area-grad" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="rgb(239,68,68)" stop-opacity="0.25" />
+            <stop offset="100%" stop-color="rgb(239,68,68)" stop-opacity="0.02" />
           </linearGradient>
         </defs>
+        <!-- Horizontal grid lines -->
+        <line x1="34" y1="8" x2="234" y2="8" stroke="rgba(255,255,255,0.18)" />
+        <line x1="34" y1="76" x2="234" y2="76" stroke="rgba(255,255,255,0.18)" />
+        <line x1="34" y1="144" x2="234" y2="144" stroke="rgba(255,255,255,0.18)" />
+        <!-- Y-axis vertical line -->
+        <line x1="34" y1="8" x2="34" y2="144" stroke="rgba(255,255,255,0.30)" />
+        <!-- Y-axis tick marks -->
+        <line x1="31" y1="8" x2="34" y2="8" stroke="rgba(255,255,255,0.40)" />
+        <line x1="31" y1="76" x2="34" y2="76" stroke="rgba(255,255,255,0.40)" />
+        <line x1="31" y1="144" x2="34" y2="144" stroke="rgba(255,255,255,0.40)" />
+        <!-- Y-axis labels (monospace, same as D3 chart) -->
+        <text
+          x="31"
+          y="11"
+          text-anchor="end"
+          font-size="8"
+          fill="rgba(255,255,255,0.60)"
+          font-family="ui-monospace,monospace"
+        >
+          108
+        </text>
+        <text
+          x="31"
+          y="79"
+          text-anchor="end"
+          font-size="8"
+          fill="rgba(255,255,255,0.60)"
+          font-family="ui-monospace,monospace"
+        >
+          66
+        </text>
+        <text
+          x="31"
+          y="147"
+          text-anchor="end"
+          font-size="8"
+          fill="rgba(255,255,255,0.60)"
+          font-family="ui-monospace,monospace"
+        >
+          25
+        </text>
+        <!-- Area fill -->
         <path
-          d="M0,30 L9,26 L18,22 L27,18 L36,14 L45,10 L54,8 L63,6 L72,4 L81,3 L90,2 L99,1 L110,1 L110,36 L0,36 Z"
-          fill="url(#cpu-grad)"
+          d="M 34,128 L 51,119 L 68,111 L 84,100 L 101,87 L 118,74 L 134,64 L 151,54 L 168,47 L 184,41 L 201,36 L 217,33 L 234,31 L 234,144 L 34,144 Z"
+          fill="url(#mc-area-grad)"
         />
-        <!-- Line -->
+        <!-- Line (stroke-width=2 matching D3 chart) -->
         <polyline
-          points="0,30 9,26 18,22 27,18 36,14 45,10 54,8 63,6 72,4 81,3 90,2 99,1 110,1"
+          points="34,128 51,119 68,111 84,100 101,87 118,74 134,64 151,54 168,47 184,41 201,36 217,33 234,31"
           fill="none"
-          stroke="rgb(248,113,113)"
-          stroke-width="1.5"
-          stroke-linejoin="round"
+          stroke="rgb(239,68,68)"
+          stroke-width="2"
           stroke-linecap="round"
+          stroke-linejoin="round"
         />
-        <!-- Current value dot -->
-        <circle cx="110" cy="1" r="3" fill="rgb(248,113,113)" class="pulse-dot" />
+        <!-- Dot ring (r=5, opacity=0.35) -->
+        <circle
+          cx="234"
+          cy="31"
+          r="5"
+          fill="none"
+          stroke="rgb(239,68,68)"
+          stroke-width="1.5"
+          opacity="0.35"
+        />
+        <!-- Current value dot (r=3) -->
+        <circle cx="234" cy="31" r="3" fill="rgb(239,68,68)" class="pulse-dot" />
+        <!-- Time axis separator -->
+        <line x1="34" y1="145" x2="234" y2="145" stroke="rgba(255,255,255,0.20)" />
+        <!-- Time axis tick marks -->
+        <line x1="34" y1="145" x2="34" y2="148" stroke="rgba(255,255,255,0.35)" />
+        <line x1="134" y1="145" x2="134" y2="148" stroke="rgba(255,255,255,0.35)" />
+        <line x1="234" y1="145" x2="234" y2="148" stroke="rgba(255,255,255,0.35)" />
+        <!-- Time axis labels -->
+        <text
+          x="34"
+          y="158"
+          text-anchor="start"
+          font-size="9"
+          fill="rgba(255,255,255,0.60)"
+          font-family="ui-monospace,monospace"
+        >
+          09:00
+        </text>
+        <text
+          x="134"
+          y="158"
+          text-anchor="middle"
+          font-size="9"
+          fill="rgba(255,255,255,0.60)"
+          font-family="ui-monospace,monospace"
+        >
+          09:30
+        </text>
+        <text
+          x="234"
+          y="158"
+          text-anchor="end"
+          font-size="9"
+          fill="rgba(255,255,255,0.60)"
+          font-family="ui-monospace,monospace"
+        >
+          10:00
+        </text>
       </svg>
     </div>
 
@@ -262,7 +358,7 @@ const graphStyle = computed(() => ({
 .bg-layer {
   background-image: url('/demo-bg.png');
   background-size: cover;
-  background-position: center;
+  background-position: top center;
   opacity: 0;
   animation: bg-reveal 4s ease-in-out 0.5s infinite;
 }
@@ -294,14 +390,13 @@ const graphStyle = computed(() => ({
   }
 }
 
-/* ─── Sparkline graph panel ──────────────────────────────────────────────── */
-.graph-panel {
-  background: rgb(0 0 0 / 70%);
-  border: 1px solid rgb(248 113 113 / 30%);
+/* ─── Graph object (mimics real graph object container) ──────────────────── */
+.graph-gadget {
+  background: rgb(9 9 11 / 90%);
+  border: 1px solid rgb(255 255 255 / 10%);
   border-radius: 8px;
-  padding: 6px 8px;
-  width: 130px;
-  backdrop-filter: blur(4px);
+  overflow: hidden;
+  width: 240px;
 }
 
 .pulse-dot {

@@ -13,7 +13,7 @@
         beaconStyle,
         { boxShadow: '0 0 0 2px rgb(99 102 241 / 0.8), 0 0 20px 4px rgb(99 102 241 / 0.3)' },
       ]"
-      style="z-index: 9999"
+      style="z-index: 10000"
     >
       <div
         class="absolute inset-0 rounded-[10px] animate-ping"
