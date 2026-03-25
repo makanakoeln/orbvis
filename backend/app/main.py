@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import TypedDict
 
 from fastapi import FastAPI
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 _version_candidates = [
     Path(__file__).parent.parent.parent / "VERSION",  # repo root or $ORBVIS_DIR
