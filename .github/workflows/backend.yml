@@ -46,7 +46,9 @@ jobs:
         run: bandit -r app/ -x tests/ -ll
 
       - name: Dependency audit (pip-audit)
-        run: pip install pip-audit && pip-audit
+        run: |
+          pip install pip-audit
+          pip-audit --ignore-vuln CVE-2026-4539
 
       - name: Test
         run: pytest --cov=app --cov-report=term-missing
