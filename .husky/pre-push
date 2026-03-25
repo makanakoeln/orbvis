@@ -13,6 +13,8 @@ if ! git rev-parse @{u} >/dev/null 2>&1; then
 fi
 
 if [ -n "$PUSHED_FRONTEND" ]; then
+  echo "pre-push: running npm audit..."
+  cd "$ROOT/frontend" && npm audit --audit-level=high
   echo "pre-push: running frontend tests..."
   cd "$ROOT/frontend" && npx vitest run
 fi
