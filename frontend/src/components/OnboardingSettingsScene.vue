@@ -51,132 +51,149 @@
       />
     </svg>
 
-    <!-- Performance graph (mimics real graph object with D3 chart) -->
+    <!-- Performance graph: CPU Load (76% = WARNING, with warn/crit threshold lines) -->
     <div class="absolute graph-gadget" :style="graphStyle">
-      <!-- Legend row — same structure as real BoardObject graph -->
-      <div class="flex flex-wrap gap-x-3 gap-y-0.5 px-2.5 pt-1 pb-1.5 border-b border-white/5">
-        <div class="flex min-w-0 items-center gap-1.5">
-          <span
-            class="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
-            style="background: #6366f1"
-          />
-          <span class="truncate text-[10px] text-zinc-500">cpu_load</span>
-          <span class="shrink-0 font-mono text-[10px] font-semibold text-indigo-500">94.00</span>
-        </div>
+      <!-- Header -->
+      <div class="mb-1 flex items-center justify-between">
+        <span class="text-[9px] font-semibold uppercase tracking-wide text-zinc-400">CPU Load</span>
+        <span class="text-[10px] font-bold text-amber-400">76%</span>
       </div>
-      <!-- Chart SVG — paddings match useMetricChart constants -->
-      <svg width="240" height="160" viewBox="0 0 240 160">
+      <!-- Chart: Y-axis 0–100, warn@75%, crit@90% -->
+      <svg width="175" height="92" viewBox="0 0 175 92">
         <defs>
-          <linearGradient id="mc-area-grad" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stop-color="rgb(239,68,68)" stop-opacity="0.25" />
-            <stop offset="100%" stop-color="rgb(239,68,68)" stop-opacity="0.02" />
+          <linearGradient id="cpu-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="rgb(245,158,11)" stop-opacity="0.40" />
+            <stop offset="100%" stop-color="rgb(245,158,11)" stop-opacity="0.03" />
           </linearGradient>
         </defs>
-        <!-- Horizontal grid lines -->
-        <line x1="34" y1="8" x2="234" y2="8" stroke="rgba(255,255,255,0.18)" />
-        <line x1="34" y1="76" x2="234" y2="76" stroke="rgba(255,255,255,0.18)" />
-        <line x1="34" y1="144" x2="234" y2="144" stroke="rgba(255,255,255,0.18)" />
-        <!-- Y-axis vertical line -->
-        <line x1="34" y1="8" x2="34" y2="144" stroke="rgba(255,255,255,0.30)" />
-        <!-- Y-axis tick marks -->
-        <line x1="31" y1="8" x2="34" y2="8" stroke="rgba(255,255,255,0.40)" />
-        <line x1="31" y1="76" x2="34" y2="76" stroke="rgba(255,255,255,0.40)" />
-        <line x1="31" y1="144" x2="34" y2="144" stroke="rgba(255,255,255,0.40)" />
-        <!-- Y-axis labels (monospace, same as D3 chart) -->
+        <!-- Horizontal grid lines at 0, 25, 50, 75, 100 % -->
+        <line x1="30" y1="8" x2="169" y2="8" stroke="rgba(255,255,255,0.12)" />
+        <line x1="30" y1="24.5" x2="169" y2="24.5" stroke="rgba(255,255,255,0.12)" />
+        <line x1="30" y1="41" x2="169" y2="41" stroke="rgba(255,255,255,0.12)" />
+        <line x1="30" y1="57.5" x2="169" y2="57.5" stroke="rgba(255,255,255,0.12)" />
+        <line x1="30" y1="74" x2="169" y2="74" stroke="rgba(255,255,255,0.12)" />
+        <!-- Y-axis line + ticks -->
+        <line x1="30" y1="8" x2="30" y2="74" stroke="rgba(255,255,255,0.25)" />
+        <line x1="27" y1="8" x2="30" y2="8" stroke="rgba(255,255,255,0.35)" />
+        <line x1="27" y1="24.5" x2="30" y2="24.5" stroke="rgba(255,255,255,0.35)" />
+        <line x1="27" y1="41" x2="30" y2="41" stroke="rgba(255,255,255,0.35)" />
+        <line x1="27" y1="57.5" x2="30" y2="57.5" stroke="rgba(255,255,255,0.35)" />
+        <line x1="27" y1="74" x2="30" y2="74" stroke="rgba(255,255,255,0.35)" />
+        <!-- Y-axis labels -->
         <text
-          x="31"
+          x="26"
           y="11"
           text-anchor="end"
-          font-size="8"
-          fill="rgba(255,255,255,0.60)"
-          font-family="ui-monospace,monospace"
+          font-size="7"
+          fill="rgba(255,255,255,0.50)"
+          font-family="system-ui,sans-serif"
         >
-          108
+          100
         </text>
         <text
-          x="31"
-          y="79"
+          x="26"
+          y="27.5"
           text-anchor="end"
-          font-size="8"
-          fill="rgba(255,255,255,0.60)"
-          font-family="ui-monospace,monospace"
+          font-size="7"
+          fill="rgba(255,255,255,0.50)"
+          font-family="system-ui,sans-serif"
         >
-          66
+          75
         </text>
         <text
-          x="31"
-          y="147"
+          x="26"
+          y="44"
           text-anchor="end"
-          font-size="8"
-          fill="rgba(255,255,255,0.60)"
-          font-family="ui-monospace,monospace"
+          font-size="7"
+          fill="rgba(255,255,255,0.50)"
+          font-family="system-ui,sans-serif"
+        >
+          50
+        </text>
+        <text
+          x="26"
+          y="60.5"
+          text-anchor="end"
+          font-size="7"
+          fill="rgba(255,255,255,0.50)"
+          font-family="system-ui,sans-serif"
         >
           25
         </text>
-        <!-- Area fill -->
-        <path
-          d="M 34,128 L 51,119 L 68,111 L 84,100 L 101,87 L 118,74 L 134,64 L 151,54 L 168,47 L 184,41 L 201,36 L 217,33 L 234,31 L 234,144 L 34,144 Z"
-          fill="url(#mc-area-grad)"
-        />
-        <!-- Line (stroke-width=2 matching D3 chart) -->
-        <polyline
-          points="34,128 51,119 68,111 84,100 101,87 118,74 134,64 151,54 168,47 184,41 201,36 217,33 234,31"
-          fill="none"
-          stroke="rgb(239,68,68)"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        <!-- Dot ring (r=5, opacity=0.35) -->
-        <circle
-          cx="234"
-          cy="31"
-          r="5"
-          fill="none"
-          stroke="rgb(239,68,68)"
-          stroke-width="1.5"
-          opacity="0.35"
-        />
-        <!-- Current value dot (r=3) -->
-        <circle cx="234" cy="31" r="3" fill="rgb(239,68,68)" class="pulse-dot" />
-        <!-- Time axis separator -->
-        <line x1="34" y1="145" x2="234" y2="145" stroke="rgba(255,255,255,0.20)" />
-        <!-- Time axis tick marks -->
-        <line x1="34" y1="145" x2="34" y2="148" stroke="rgba(255,255,255,0.35)" />
-        <line x1="134" y1="145" x2="134" y2="148" stroke="rgba(255,255,255,0.35)" />
-        <line x1="234" y1="145" x2="234" y2="148" stroke="rgba(255,255,255,0.35)" />
-        <!-- Time axis labels -->
         <text
-          x="34"
-          y="158"
-          text-anchor="start"
-          font-size="9"
-          fill="rgba(255,255,255,0.60)"
-          font-family="ui-monospace,monospace"
-        >
-          09:00
-        </text>
-        <text
-          x="134"
-          y="158"
-          text-anchor="middle"
-          font-size="9"
-          fill="rgba(255,255,255,0.60)"
-          font-family="ui-monospace,monospace"
-        >
-          09:30
-        </text>
-        <text
-          x="234"
-          y="158"
+          x="26"
+          y="77"
           text-anchor="end"
-          font-size="9"
-          fill="rgba(255,255,255,0.60)"
-          font-family="ui-monospace,monospace"
+          font-size="7"
+          fill="rgba(255,255,255,0.50)"
+          font-family="system-ui,sans-serif"
         >
-          10:00
+          0
         </text>
+        <!-- Critical threshold at 90% (y≈14.6) -->
+        <line
+          x1="30"
+          y1="15"
+          x2="169"
+          y2="15"
+          stroke="rgb(248,113,113)"
+          stroke-width="1"
+          stroke-dasharray="4 3"
+          opacity="0.75"
+        />
+        <text
+          x="171"
+          y="18"
+          font-size="6"
+          fill="rgb(248,113,113)"
+          font-family="system-ui,sans-serif"
+          opacity="0.85"
+        >
+          C
+        </text>
+        <!-- Warning threshold at 75% (y≈24.5) -->
+        <line
+          x1="30"
+          y1="25"
+          x2="169"
+          y2="25"
+          stroke="rgb(255,208,0)"
+          stroke-width="1"
+          stroke-dasharray="4 3"
+          opacity="0.75"
+        />
+        <text
+          x="171"
+          y="28"
+          font-size="6"
+          fill="rgb(255,208,0)"
+          font-family="system-ui,sans-serif"
+          opacity="0.85"
+        >
+          W
+        </text>
+        <!-- Area fill (76%, rising from ~42%) -->
+        <path
+          d="M 30,46 L 42,44 L 53,42 L 65,41 L 76,39 L 88,38 L 100,36 L 111,33 L 123,31 L 134,29 L 146,27 L 157,25 L 169,24 L 169,74 L 30,74 Z"
+          fill="url(#cpu-grad)"
+        />
+        <!-- Line -->
+        <polyline
+          points="30,46 42,44 53,42 65,41 76,39 88,38 100,36 111,33 123,31 134,29 146,27 157,25 169,24"
+          fill="none"
+          stroke="rgb(245,158,11)"
+          stroke-width="1.5"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+        />
+        <!-- Current value dot -->
+        <circle cx="169" cy="24" r="3" fill="rgb(245,158,11)" class="pulse-dot" />
       </svg>
+      <!-- Footer time labels -->
+      <div class="mt-0.5 flex items-center justify-between">
+        <span class="text-[7px] text-zinc-600">1h ago</span>
+        <span class="text-[7px] text-zinc-600">now</span>
+      </div>
     </div>
 
     <!-- Monitoring objects -->
@@ -331,10 +348,10 @@ function entryStyle(index: number, obj: DemoObj) {
   };
 }
 
-// Graph positioned between db-server and Production
+// Graph positioned below the central server cluster
 const graphStyle = computed(() => ({
-  left: `${px(43)}px`,
-  top: `${py(60)}px`,
+  left: `${px(51)}px`,
+  top: `${py(68)}px`,
   transform: 'translate(-50%, -50%)',
   animation: 'demo-fade-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both 600ms',
 }));
@@ -396,7 +413,8 @@ const graphStyle = computed(() => ({
   border: 1px solid rgb(255 255 255 / 10%);
   border-radius: 8px;
   overflow: hidden;
-  width: 240px;
+  padding: 6px 8px 5px;
+  width: 195px;
 }
 
 .pulse-dot {
