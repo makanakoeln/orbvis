@@ -175,7 +175,6 @@ const y1 = computed(() => props.dragCoords?.y ?? props.object.y)
 const x2 = computed(() => props.dragCoords?.x2 ?? props.object.x2 ?? props.object.x + 50)
 const y2 = computed(() => props.dragCoords?.y2 ?? props.object.y2 ?? props.object.y + 50)
 
-
 const lineColor = computed(
   () =>
     props.object.line_color ??

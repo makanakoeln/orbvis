@@ -86,7 +86,11 @@
           {{ t('nav.administration') }}
         </p>
 
-        <NavItem to="/admin/connections" :label="t('admin.connections')" :collapsed="sidebarCollapsed">
+        <NavItem
+          to="/admin/connections"
+          :label="t('admin.connections')"
+          :collapsed="sidebarCollapsed"
+        >
           <template #icon>
             <path
               stroke-linecap="round"
@@ -116,7 +120,11 @@
           </template>
         </NavItem>
 
-        <NavItem to="/admin/roles" :label="t('admin.rolesAndPermissions')" :collapsed="sidebarCollapsed">
+        <NavItem
+          to="/admin/roles"
+          :label="t('admin.rolesAndPermissions')"
+          :collapsed="sidebarCollapsed"
+        >
           <template #icon>
             <path
               stroke-linecap="round"

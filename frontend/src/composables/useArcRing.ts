@@ -166,7 +166,6 @@ function addPulse(svg: SVGSVGElement, iconSize: number, stateColor: string) {
   void size // suppress unused warning
 }
 
-
 export function useArcRing(opts: ArcRingOptions) {
   function render() {
     const svg = opts.svgRef.value
