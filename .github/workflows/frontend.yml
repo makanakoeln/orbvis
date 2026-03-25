@@ -62,7 +62,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build frontend image
-        run: docker build ./frontend --tag orbvis-frontend:test
+        run: docker build . -f frontend/Dockerfile --tag orbvis-frontend:test
 
       - name: Smoke test frontend image
         run: docker run --rm orbvis-frontend:test nginx -t

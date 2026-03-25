@@ -21,7 +21,9 @@ services:
       retries: 3
 
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
     ports:
       - "${ORBVIS_PORT:-8741}:80"
     depends_on:
