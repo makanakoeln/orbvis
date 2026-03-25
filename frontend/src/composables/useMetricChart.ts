@@ -153,7 +153,7 @@ export function useMetricChart(
 
     // Y-axis labels + grid lines
     const [yDomLo, yDomHi] = yScale.domain();
-    const yTickVals = [0.0, 0.5, 1.0].map((f) => yDomLo + (yDomHi - yDomLo) * f);
+    const yTickVals = [0.0, 0.25, 0.5, 0.75, 1.0].map((f) => yDomLo + (yDomHi - yDomLo) * f);
     let gridG = root.select<SVGGElement>('g.mc-grid');
     if (gridG.empty()) gridG = root.insert('g', 'g.mc-series').attr('class', 'mc-grid');
 
