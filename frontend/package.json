@@ -18,7 +18,20 @@
     "lint:css": "stylelint 'src/**/*.{css,vue}'",
     "format": "prettier --write 'src/**/*.{ts,vue,css}'",
     "format:check": "prettier --check 'src/**/*.{ts,vue,css}'",
-    "copy-builtin-icons": "node scripts/copy-builtin-icons.js"
+    "copy-builtin-icons": "node scripts/copy-builtin-icons.js",
+    "prepare": "cd .. && husky"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,vue}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "src/**/*.css": [
+      "prettier --write"
+    ],
+    "src/**/*.{vue,css}": [
+      "stylelint --fix"
+    ]
   },
   "dependencies": {
     "@types/leaflet": "^1.9.21",
@@ -64,7 +77,9 @@
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-vue": "^10.8.0",
     "globals": "^17.4.0",
+    "husky": "^9.1.7",
     "jsdom": "^25.0.0",
+    "lint-staged": "^16.4.0",
     "openapi-typescript": "^7.4.0",
     "postcss": "^8.4.0",
     "postcss-html": "^1.8.1",
