@@ -1,10 +1,7 @@
 <template>
   <div v-if="canvasStyle" class="fixed pointer-events-none overflow-hidden" :style="canvasStyle">
-    <!-- Animated background grid that fades in/out to illustrate a background image being applied -->
-    <div class="absolute inset-0 rounded-[10px] bg-scene-grid" />
-
-    <!-- Fading background layer -->
-    <div class="absolute inset-0 rounded-[10px] bg-reveal" />
+    <!-- Background image fades in/out to illustrate a background being applied -->
+    <div class="absolute inset-0 rounded-[10px] bg-layer" />
 
     <!-- Floating "background.png" label that appears with the background -->
     <div class="absolute bg-label">
@@ -185,30 +182,11 @@ const bgLabelStyle = computed(() => {
   }
 }
 
-/* ─── Background grid (always visible, subtle) ───────────────────────────── */
-.bg-scene-grid {
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 39px,
-      rgb(99 102 241 / 10%) 39px,
-      rgb(99 102 241 / 10%) 40px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 39px,
-      rgb(99 102 241 / 10%) 39px,
-      rgb(99 102 241 / 10%) 40px
-    );
-  opacity: 0;
-  animation: bg-reveal 4s ease-in-out 0.5s infinite;
-}
-
-/* ─── Background fill layer ──────────────────────────────────────────────── */
-.bg-reveal {
-  background: rgb(15 15 30 / 70%);
+/* ─── Background image layer ─────────────────────────────────────────────── */
+.bg-layer {
+  background-image: url('/demo-bg.png');
+  background-size: cover;
+  background-position: center;
   opacity: 0;
   animation: bg-reveal 4s ease-in-out 0.5s infinite;
 }
