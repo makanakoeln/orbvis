@@ -308,7 +308,7 @@ export default {
     deleteBoardTitle: 'Board löschen',
     deleteBoardConfirm:
       'Soll „{name}" wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.',
-    deleteBackend: 'Backend „{id}" löschen?',
+    deleteConnection: 'Connection „{id}" löschen?',
     noPermissions: 'Keine Berechtigungen zugewiesen',
     noPermissionsYet: 'Noch keine Berechtigungen zugewiesen',
     noRoles: 'Noch keine Rollen definiert',
