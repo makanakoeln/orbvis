@@ -3,11 +3,12 @@ cd frontend && npx lint-staged
 # Run ruff format + lint on staged backend Python files
 STAGED_PY=$(git diff --cached --name-only --diff-filter=ACM | grep '^backend/.*\.py$' || true)
 if [ -n "$STAGED_PY" ]; then
-  RUFF=$(command -v ruff || echo "")
-  if [ -z "$RUFF" ]; then
-    echo "warning: ruff not found in PATH — skipping Python checks"
-  else
-    echo "$STAGED_PY" | xargs $RUFF format --check
-    echo "$STAGED_PY" | xargs $RUFF check
+  ROOT=$(git rev-parse --show-toplevel)
+  RUFF=$(command -v ruff 2>/dev/null || echo "$ROOT/backend/.venv/bin/ruff")
+  if [ ! -x "$RUFF" ]; then
+    echo "error: ruff not found (checked PATH and $ROOT/backend/.venv/bin/ruff)"
+    exit 1
   fi
+  echo "$STAGED_PY" | xargs "$RUFF" format --check
+  echo "$STAGED_PY" | xargs "$RUFF" check
 fi
