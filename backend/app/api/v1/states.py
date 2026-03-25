@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 
+import jwt
 from fastapi import (
     APIRouter,
     Depends,
@@ -13,7 +14,6 @@ from fastapi import (
     WebSocket,
     status,
 )
-from jose import JWTError
 
 from app.api.v1.deps import get_current_user, user_has_permission
 from app.core.config import settings
@@ -88,8 +88,8 @@ async def websocket_board_states(
         payload = decode_token(token)
         if payload.get("type") != "access":
             raise ValueError("not an access token")
-        user_id = int(payload["sub"])
-    except (JWTError, KeyError, ValueError):
+        user_id = int(str(payload["sub"]))
+    except (jwt.PyJWTError, KeyError, ValueError):
         await websocket.close(code=4001)
         return
 

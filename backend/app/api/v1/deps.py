@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -28,8 +28,8 @@ async def get_current_user(
         payload = decode_token(credentials.credentials)
         if payload.get("type") != "access":
             raise credentials_exception
-        user_id: int = int(payload["sub"])
-    except (JWTError, KeyError, ValueError):
+        user_id: int = int(str(payload["sub"]))
+    except (jwt.PyJWTError, KeyError, ValueError):
         raise credentials_exception from None
 
     user = await get_user_by_id(db, user_id)

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import get_current_user
@@ -51,8 +51,8 @@ async def refresh_token(data: RefreshRequest, db: AsyncSession = Depends(get_db)
         payload = decode_token(data.refresh_token)
         if payload.get("type") != "refresh":
             raise credentials_exception
-        user_id = int(payload["sub"])
-    except (JWTError, KeyError, ValueError):
+        user_id = int(str(payload["sub"]))
+    except (jwt.PyJWTError, KeyError, ValueError):
         raise credentials_exception from None
 
     user = await get_user_by_id(db, user_id)

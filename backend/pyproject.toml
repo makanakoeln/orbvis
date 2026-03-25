@@ -13,7 +13,7 @@ dependencies = [
     "asyncpg>=0.30.0",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.7.0",
-    "python-jose[cryptography]>=3.3.0",
+    "PyJWT[crypto]>=2.8.0",
     "bcrypt>=4.0.0",
     "python-multipart>=0.0.20",
     "httpx>=0.28.0",
@@ -27,7 +27,6 @@ dev = [
     "httpx>=0.28.0",
     "ruff>=0.4.0",
     "mypy>=1.10.0",
-    "types-python-jose>=3.3.0",
     "bandit>=1.8.0",
 ]
 
