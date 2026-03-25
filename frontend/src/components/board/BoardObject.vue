@@ -335,7 +335,7 @@ import { useAuthStore } from '@/stores/auth';
 import type { MetricPoint } from '@/stores/states';
 import { useStatesStore } from '@/stores/states';
 import type { BoardObject, ObjectState } from '@/types/api';
-import { parsePerfData, utilColor as _utilColor, utilPercent } from '@/utils/perf';
+import { getMetric, parsePerfData, utilColor as _utilColor, utilPercent } from '@/utils/perf';
 
 import GadgetRenderer from './GadgetRenderer.vue';
 
@@ -432,12 +432,20 @@ const chartLatestValues = computed(() =>
 const graphW = computed(() => props.resizeOverride?.width ?? props.object.graph_width ?? 400);
 const graphH = computed(() => props.resizeOverride?.height ?? props.object.graph_height ?? 200);
 
+const chartThresholds = computed(() => {
+  if (!isNativeChart.value) return null;
+  const ms = parsePerfData(props.state?.perf_data ?? '');
+  const m = getMetric(ms, props.object.graph_metric);
+  return m ? { warn: m.warn, crit: m.crit } : null;
+});
+
 useMetricChart(
   chartSvgRef,
   chartData,
   () => graphW.value,
   () => Math.max(30, graphH.value - 28),
   () => (props.object.graph_time_window ?? 60) * 60,
+  () => chartThresholds.value,
 );
 
 // ---- Graph: URL embed ----

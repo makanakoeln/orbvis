@@ -55,7 +55,9 @@
     <div class="absolute graph-gadget" :style="graphStyle">
       <!-- Header -->
       <div class="mb-1 flex items-center justify-between">
-        <span class="text-[9px] font-semibold uppercase tracking-wide text-zinc-400">CPU Load</span>
+        <span class="text-[9px] font-semibold uppercase tracking-wide text-zinc-400"
+          >CPU Utilization</span
+        >
         <span class="text-[10px] font-bold text-amber-400">76%</span>
       </div>
       <!-- Chart: Y-axis 0–100, warn@75%, crit@90% -->
@@ -172,14 +174,14 @@
         >
           W
         </text>
-        <!-- Area fill (76%, rising from ~42%) -->
+        <!-- Area fill (76%, jagged upward trend from ~42%) -->
         <path
-          d="M 30,46 L 42,44 L 53,42 L 65,41 L 76,39 L 88,38 L 100,36 L 111,33 L 123,31 L 134,29 L 146,27 L 157,25 L 169,24 L 169,74 L 30,74 Z"
+          d="M 30,46 L 42,41 L 53,45 L 65,39 L 76,42 L 88,36 L 100,40 L 111,34 L 123,31 L 134,35 L 146,29 L 157,26 L 169,24 L 169,74 L 30,74 Z"
           fill="url(#cpu-grad)"
         />
         <!-- Line -->
         <polyline
-          points="30,46 42,44 53,42 65,41 76,39 88,38 100,36 111,33 123,31 134,29 146,27 157,25 169,24"
+          points="30,46 42,41 53,45 65,39 76,42 88,36 100,40 111,34 123,31 134,35 146,29 157,26 169,24"
           fill="none"
           stroke="rgb(245,158,11)"
           stroke-width="1.5"

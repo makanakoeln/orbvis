@@ -55,6 +55,7 @@ export function useMetricChart(
   getWidth: () => number,
   getHeight: () => number,
   getWindowSecs?: () => number,
+  getThresholds?: () => { warn: number | null; crit: number | null } | null,
 ) {
   function render(animate = false) {
     const svg = svgRef.value;
@@ -119,8 +120,16 @@ export function useMetricChart(
     const xScale = scaleLinear()
       .domain([tsMin, tsMax === tsMin ? tsMin + 1 : tsMax])
       .range([PAD_LEFT, W - PAD_RIGHT]);
+
+    // Extend Y-domain upward so threshold lines are always visible in the chart
+    const thresholds = getThresholds?.() ?? null;
+    const tVals = (thresholds ? [thresholds.warn, thresholds.crit] : []).filter(
+      (v): v is number => v !== null,
+    );
+    const yHiRaw = valMax + range * 0.15;
+    const yHi = tVals.length > 0 ? Math.max(yHiRaw, ...tVals) : yHiRaw;
     const yScale = scaleLinear()
-      .domain([Math.max(0, valMin - range * 0.15), valMax + range * 0.15])
+      .domain([Math.max(0, valMin - range * 0.15), yHi])
       .range([HC - PAD_Y, PAD_Y]);
 
     const multiSeries = labels.length > 1;
@@ -143,8 +152,8 @@ export function useMetricChart(
     }
 
     // Y-axis labels + grid lines
-    const [yLo, yHi] = yScale.domain();
-    const yTickVals = [0.0, 0.5, 1.0].map((f) => yLo + (yHi - yLo) * f);
+    const [yDomLo, yDomHi] = yScale.domain();
+    const yTickVals = [0.0, 0.5, 1.0].map((f) => yDomLo + (yDomHi - yDomLo) * f);
     let gridG = root.select<SVGGElement>('g.mc-grid');
     if (gridG.empty()) gridG = root.insert('g', 'g.mc-series').attr('class', 'mc-grid');
 
@@ -196,6 +205,41 @@ export function useMetricChart(
       .attr('font-size', '8')
       .attr('font-family', 'ui-monospace,monospace')
       .text((d) => _fmtVal(d));
+
+    // Threshold lines (warn/crit from perf_data, single-series only)
+    let threshG = root.select<SVGGElement>('g.mc-thresholds');
+    if (threshG.empty()) threshG = root.insert('g', 'g.mc-series').attr('class', 'mc-thresholds');
+
+    const warnData: number[] = !multiSeries && thresholds?.warn != null ? [thresholds.warn] : [];
+    const critData: number[] = !multiSeries && thresholds?.crit != null ? [thresholds.crit] : [];
+
+    threshG
+      .selectAll<SVGLineElement, number>('line.mc-warn')
+      .data(warnData)
+      .join('line')
+      .attr('class', 'mc-warn')
+      .attr('x1', PAD_LEFT)
+      .attr('x2', W - PAD_RIGHT)
+      .attr('y1', (d) => yScale(d))
+      .attr('y2', (d) => yScale(d))
+      .attr('stroke', 'rgb(255,208,0)')
+      .attr('stroke-width', '1')
+      .attr('stroke-dasharray', '4 3')
+      .attr('opacity', '0.75');
+
+    threshG
+      .selectAll<SVGLineElement, number>('line.mc-crit')
+      .data(critData)
+      .join('line')
+      .attr('class', 'mc-crit')
+      .attr('x1', PAD_LEFT)
+      .attr('x2', W - PAD_RIGHT)
+      .attr('y1', (d) => yScale(d))
+      .attr('y2', (d) => yScale(d))
+      .attr('stroke', 'rgb(248,113,113)')
+      .attr('stroke-width', '1')
+      .attr('stroke-dasharray', '4 3')
+      .attr('opacity', '0.75');
 
     const lineGen = line<MetricPoint>()
       .x((d) => xScale(d.ts))
