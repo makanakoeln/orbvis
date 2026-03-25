@@ -33,51 +33,51 @@
       <!-- D3 chart -->
       <div
         v-else
-        class="w-full h-full flex flex-col rounded-lg overflow-hidden border dark:bg-zinc-950/90 dark:border-white/10 bg-white border-zinc-200 pb-1"
-        style="
-          box-shadow:
-            0 1px 3px rgb(0 0 0 / 8%),
-            0 4px 16px rgb(0 0 0 / 6%);
-        "
+        class="w-full h-full flex flex-col overflow-hidden rounded-lg border dark:bg-zinc-950/90 dark:border-white/10 bg-white border-zinc-200"
+        style="padding: 6px 8px 5px"
       >
-        <!-- Title row: service / host -->
-        <div class="flex items-center justify-between px-2.5 pt-2 pb-0 shrink-0">
-          <span class="text-[11px] font-medium dark:text-zinc-300 text-zinc-700 truncate">
-            {{ object.service_description || object.host_name }}
+        <!-- Header: metric label + current value -->
+        <div class="mb-1 flex items-center justify-between shrink-0">
+          <span class="text-[9px] font-semibold uppercase tracking-wide text-zinc-400 truncate">
+            {{
+              isSingleMetric
+                ? object.graph_metric || chartMetricLabels[0]
+                : object.service_description || object.host_name
+            }}
           </span>
           <span
-            class="text-[9px] dark:text-zinc-600 text-zinc-400 shrink-0 ml-2 uppercase tracking-wide"
+            v-if="isSingleMetric"
+            class="text-[10px] font-bold shrink-0 ml-1"
+            :style="{ color: singleMetricColor }"
+            >{{ singleMetricValueStr }}</span
+          >
+          <span v-else class="text-[9px] text-zinc-500 shrink-0 ml-1 uppercase tracking-wide"
             >live</span
           >
         </div>
-        <!-- Metric legend -->
-        <div
-          class="flex flex-wrap gap-x-3 gap-y-0.5 px-2.5 pt-1 pb-1.5 shrink-0 border-b dark:border-white/5 border-zinc-100"
-        >
+        <!-- Multi-metric legend -->
+        <div v-if="!isSingleMetric" class="flex flex-wrap gap-x-2.5 gap-y-0.5 mb-1 shrink-0">
           <div
             v-for="(label, idx) in chartMetricLabels.slice(0, 6)"
             :key="label"
-            class="flex items-center gap-1.5 min-w-0"
+            class="flex items-center gap-1 min-w-0"
             style="max-width: 50%"
           >
             <span
               class="inline-block w-1.5 h-1.5 rounded-full shrink-0"
               :style="{ background: CHART_PALETTE[idx % CHART_PALETTE.length] }"
             />
-            <span class="text-[10px] dark:text-zinc-500 text-zinc-500 truncate">{{ label }}</span>
+            <span class="text-[9px] dark:text-zinc-500 text-zinc-500 truncate">{{ label }}</span>
             <span
-              class="text-[10px] font-mono font-semibold shrink-0"
+              class="text-[9px] font-mono font-semibold shrink-0"
               :style="{ color: CHART_PALETTE[idx % CHART_PALETTE.length] }"
-            >
-              {{ chartLatestValues[label]?.value != null ? chartLatestValues[label]?.value : ''
-              }}<span class="dark:text-zinc-600 text-zinc-400 ml-0.5 font-normal">{{
+              >{{ fmtMetricVal(chartLatestValues[label]?.value ?? 0)
+              }}<span class="text-zinc-600 ml-0.5 font-normal">{{
                 chartLatestValues[label]?.unit
-              }}</span>
-            </span>
+              }}</span></span
+            >
           </div>
-          <span
-            v-if="chartMetricLabels.length > 6"
-            class="text-[10px] dark:text-zinc-600 text-zinc-400 self-center"
+          <span v-if="chartMetricLabels.length > 6" class="text-[9px] text-zinc-600 self-center"
             >+{{ chartMetricLabels.length - 6 }}</span
           >
         </div>
@@ -330,7 +330,7 @@ import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { useArcRing } from '@/composables/useArcRing';
-import { CHART_PALETTE, useMetricChart } from '@/composables/useMetricChart';
+import { CHART_PALETTE, fmtMetricVal, useMetricChart } from '@/composables/useMetricChart';
 import { useAuthStore } from '@/stores/auth';
 import type { MetricPoint } from '@/stores/states';
 import { useStatesStore } from '@/stores/states';
@@ -437,6 +437,24 @@ const chartThresholds = computed(() => {
   const ms = parsePerfData(props.state?.perf_data ?? '');
   const m = getMetric(ms, props.object.graph_metric);
   return m ? { warn: m.warn, crit: m.crit } : null;
+});
+
+const isSingleMetric = computed(() => chartMetricLabels.value.length === 1);
+
+const singleMetricValueStr = computed(() => {
+  if (!isSingleMetric.value) return '';
+  const label = chartMetricLabels.value[0];
+  const pt = chartLatestValues.value[label];
+  if (!pt) return '';
+  return `${fmtMetricVal(pt.value)}${pt.unit ?? ''}`;
+});
+
+const singleMetricColor = computed(() => {
+  const ms = parsePerfData(props.state?.perf_data ?? '');
+  const label = props.object.graph_metric || chartMetricLabels.value[0];
+  const m = getMetric(ms, label);
+  if (!m) return CHART_PALETTE[0];
+  return _utilColor(utilPercent(m));
 });
 
 useMetricChart(

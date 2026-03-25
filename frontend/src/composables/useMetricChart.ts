@@ -42,7 +42,7 @@ function _fmtTime(ts: number): string {
   return `${dd}.${mo} ${hh}:${mm}`;
 }
 
-function _fmtVal(v: number): string {
+export function fmtMetricVal(v: number): string {
   if (Math.abs(v) >= 1000) return `${(v / 1000).toFixed(1)}k`;
   if (Math.abs(v) >= 100) return v.toFixed(0);
   if (Math.abs(v) >= 10) return v.toFixed(1);
@@ -204,7 +204,7 @@ export function useMetricChart(
       .attr('fill', c.label)
       .attr('font-size', '8')
       .attr('font-family', 'ui-monospace,monospace')
-      .text((d) => _fmtVal(d));
+      .text((d) => fmtMetricVal(d));
 
     // Threshold lines (warn/crit from perf_data, single-series only)
     let threshG = root.select<SVGGElement>('g.mc-thresholds');
