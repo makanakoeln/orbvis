@@ -1035,6 +1035,16 @@ watchEffect(async () => {
   await boardsStore.fetchBoard(name);
   statesStore.connectToMap(name, auth.accessToken ?? undefined);
   scheduleRotation(boardsStore.currentBoard?.rotation_interval ?? 0);
+
+  const cfg = boardsStore.currentBoard;
+  if (
+    auth.user &&
+    cfg &&
+    !cfg.readonly &&
+    !localStorage.getItem(`orbvis_board_toured_${auth.user.user_id}`)
+  ) {
+    showBoardTour.value = true;
+  }
 });
 
 function onKeyDown(e: KeyboardEvent) {
@@ -1058,9 +1068,6 @@ function onKeyDown(e: KeyboardEvent) {
 onMounted(() => {
   if (auth.isAdmin) connectionsStore.fetchBackends();
   document.addEventListener('keydown', onKeyDown);
-  if (auth.user && !localStorage.getItem(`orbvis_board_toured_${auth.user.user_id}`)) {
-    showBoardTour.value = true;
-  }
 });
 
 onUnmounted(() => {
