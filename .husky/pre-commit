@@ -1,5 +1,16 @@
 ROOT=$(git rev-parse --show-toplevel)
 
+# Run shellcheck on staged shell scripts
+STAGED_SH=$(git -C "$ROOT" diff --cached --name-only --diff-filter=ACM | grep '\.sh$' || true)
+if [ -n "$STAGED_SH" ]; then
+  SHELLCHECK=$(command -v shellcheck 2>/dev/null || true)
+  if [ -z "$SHELLCHECK" ]; then
+    echo "warning: shellcheck not found — skipping shell script checks (install with: sudo apt-get install shellcheck)"
+  else
+    echo "$STAGED_SH" | sed "s|^|$ROOT/|" | xargs "$SHELLCHECK"
+  fi
+fi
+
 cd "$ROOT/frontend" && npx lint-staged
 
 # Run ruff and mypy on staged backend Python files

@@ -65,7 +65,7 @@ if [[ "$ACTION" == "remove" ]]; then
 
   if [[ -L "$NGINX_ENABLED" ]]; then
     sudo rm -f "$NGINX_ENABLED"
-    sudo nginx -t 2>/dev/null && sudo systemctl reload nginx || true
+    if sudo nginx -t 2>/dev/null; then sudo systemctl reload nginx; fi
   fi
   sudo rm -f "$NGINX_CONF"
 
