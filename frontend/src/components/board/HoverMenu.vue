@@ -98,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import DOMPurify from 'dompurify';
+import DOMPurify, { type Config as DOMPurifyConfig } from 'dompurify';
 import { computed, ref } from 'vue';
 
 import { useSparkline } from '@/composables/useSparkline';
@@ -109,7 +109,7 @@ import { interpolateTemplate } from '@/utils/template';
 const _PURIFY_CONFIG = {
   ALLOWED_TAGS: ['b', 'i', 'u', 'em', 'strong', 'span', 'div', 'p', 'br', 'a', 'ul', 'ol', 'li'],
   ALLOWED_ATTR: ['href', 'class', 'style', 'target', 'rel'],
-} as const satisfies DOMPurify.Config;
+} as const satisfies DOMPurifyConfig;
 
 const props = defineProps<{
   object: BoardObject;

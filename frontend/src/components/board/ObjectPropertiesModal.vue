@@ -1131,6 +1131,8 @@ async function save() {
 </script>
 
 <style scoped>
+@reference "tailwindcss";
+
 .section-title {
   @apply text-[11px] font-semibold text-zinc-400 tracking-wide mb-3 leading-none;
 }

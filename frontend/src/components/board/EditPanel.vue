@@ -312,6 +312,8 @@ watch(
 </script>
 
 <style scoped>
+@reference "tailwindcss";
+
 .field {
   @apply w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150;
 }

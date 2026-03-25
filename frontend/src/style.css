@@ -1,6 +1,18 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-warning: #ffd000;
+  --color-state-up: #00ff00;
+  --color-state-down: #ff0000;
+  --color-state-unreachable: #ff8800;
+  --color-state-ok: #00ff00;
+  --color-state-warning: #ffd000;
+  --color-state-critical: #ff0000;
+  --color-state-unknown: #ff8800;
+  --color-state-pending: #aaaaaa;
+}
 
 :root {
   --color-up: #0f0;
