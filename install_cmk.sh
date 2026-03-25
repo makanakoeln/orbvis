@@ -146,8 +146,11 @@ done
 if ! sudo test -f "$BOARDS_DIR/backgrounds/demo.svg"; then
   quietly sudo cp "$SCRIPT_DIR/backend/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
 fi
-[[ $NEW_BOARDS -gt 0 ]] && ok "Directories ready ($NEW_BOARDS demo board(s) installed)" \
-                         || ok "Directories ready (demo boards already present)"
+if [[ $NEW_BOARDS -gt 0 ]]; then
+  ok "Directories ready ($NEW_BOARDS demo board(s) installed)"
+else
+  ok "Directories ready (demo boards already present)"
+fi
 
 # 3. Python virtualenv + dependencies
 step "Setting up Python environment"

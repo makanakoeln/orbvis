@@ -1,5 +1,14 @@
 ROOT=$(git rev-parse --show-toplevel)
 
+# Always run shellcheck on all shell scripts in the repo
+SHELLCHECK=$(command -v shellcheck 2>/dev/null || true)
+if [ -z "$SHELLCHECK" ]; then
+  echo "warning: shellcheck not found — skipping shell script checks (install with: sudo apt-get install shellcheck)"
+else
+  echo "pre-push: running shellcheck..."
+  find "$ROOT" -maxdepth 1 -name '*.sh' | xargs "$SHELLCHECK"
+fi
+
 # Determine which paths are being pushed
 PUSHED_PY=$(git diff --name-only HEAD @{u} 2>/dev/null | grep '^backend/.*\.py$' || true)
 PUSHED_FRONTEND=$(git diff --name-only HEAD @{u} 2>/dev/null | grep '^frontend/' || true)
