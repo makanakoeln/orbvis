@@ -80,7 +80,7 @@ def _load_user_fallback(username: str) -> dict[str, Any]:
         users_mk = omd_root / "etc" / "check_mk" / "multisite.d" / "wato" / "users.mk"
         ns: dict = {"multisite_users": {}}
         if users_mk.is_file():
-            exec(compile(users_mk.read_bytes(), str(users_mk), "exec"), ns)
+            exec(compile(users_mk.read_bytes(), str(users_mk), "exec"), ns)  # nosec B102 — Checkmk .mk files use Python syntax; no safe alternative to exec()
         user_data: dict = dict(ns["multisite_users"].get(username, {}))
 
         # Per-user runtime attrs override wato data (plain-text .mk files)

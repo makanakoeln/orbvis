@@ -185,7 +185,9 @@ def _verify_htpasswd(username: str, password: str) -> bool:
             # MD5/APR1 ($apr1$), or SHA-crypt ($5$/$6$) via crypt(3).
             try:
                 if hashed.startswith("{SHA}"):
-                    digest = base64.b64encode(hashlib.sha1(password.encode()).digest()).decode()
+                    digest = base64.b64encode(
+                        hashlib.sha1(password.encode(), usedforsecurity=False).digest()
+                    ).decode()
                     return f"{{SHA}}{digest}" == hashed
                 # bcrypt ($2y$ or $2b$)
                 if hashed.startswith("$2y$") or hashed.startswith("$2b$"):
@@ -284,7 +286,7 @@ def _is_checkmk_admin(username: str) -> bool:
         return False
     try:
         ns: dict = {"multisite_users": {}}
-        exec(compile(users_mk.read_text(encoding="utf-8"), str(users_mk), "exec"), ns)
+        exec(compile(users_mk.read_text(encoding="utf-8"), str(users_mk), "exec"), ns)  # nosec B102 — Checkmk .mk files use Python syntax; no safe alternative to exec()
         user_cfg = ns["multisite_users"].get(username, {})
         is_admin = "admin" in user_cfg.get("roles", [])
         logger.debug(

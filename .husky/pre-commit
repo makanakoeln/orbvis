@@ -7,6 +7,7 @@ STAGED_PY=$(git -C "$ROOT" diff --cached --name-only --diff-filter=ACM | grep '^
 if [ -n "$STAGED_PY" ]; then
   RUFF=$(command -v ruff 2>/dev/null || echo "$ROOT/backend/.venv/bin/ruff")
   MYPY=$(command -v mypy 2>/dev/null || echo "$ROOT/backend/.venv/bin/mypy")
+  BANDIT=$(command -v bandit 2>/dev/null || echo "$ROOT/backend/.venv/bin/bandit")
   if [ ! -x "$RUFF" ]; then
     echo "error: ruff not found (checked PATH and $ROOT/backend/.venv/bin/ruff)"
     exit 1
@@ -15,8 +16,13 @@ if [ -n "$STAGED_PY" ]; then
     echo "error: mypy not found (checked PATH and $ROOT/backend/.venv/bin/mypy)"
     exit 1
   fi
+  if [ ! -x "$BANDIT" ]; then
+    echo "error: bandit not found (checked PATH and $ROOT/backend/.venv/bin/bandit)"
+    exit 1
+  fi
   STAGED_ABS=$(echo "$STAGED_PY" | sed "s|^|$ROOT/|")
   echo "$STAGED_ABS" | xargs "$RUFF" format --check
   echo "$STAGED_ABS" | xargs "$RUFF" check
   cd "$ROOT/backend" && "$MYPY" app/
+  echo "$STAGED_ABS" | xargs "$BANDIT" -ll
 fi

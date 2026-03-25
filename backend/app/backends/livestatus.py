@@ -94,6 +94,7 @@ class LivestatusBackend(BackendBase):
         checkmk_url: str | None = None,
         automation_user: str | None = None,
         automation_secret: str | None = None,
+        verify_ssl: bool = True,
     ) -> None:
         self._socket_path = socket_path
         self._host = host
@@ -102,6 +103,7 @@ class LivestatusBackend(BackendBase):
         self._checkmk_url = checkmk_url
         self._automation_user = automation_user
         self._automation_secret = automation_secret
+        self._verify_ssl = verify_ssl
         self._semaphore = asyncio.Semaphore(settings.backend_max_connections)
 
     # ------------------------------------------------------------------
@@ -359,7 +361,7 @@ class LivestatusBackend(BackendBase):
 
         result: dict[str, list[tuple[float, float, str]]] = {}
         try:
-            async with httpx.AsyncClient(verify=False, timeout=self._timeout) as client:
+            async with httpx.AsyncClient(verify=self._verify_ssl, timeout=self._timeout) as client:
                 for metric_id in metric_names[:5]:
                     body = {
                         "time_range": {"start": start_dt, "end": end_dt},
@@ -441,7 +443,7 @@ class LivestatusBackend(BackendBase):
             + f"?host_name={host}&columns=metrics&columns=description"
         )
         try:
-            async with httpx.AsyncClient(verify=False, timeout=self._timeout) as client:
+            async with httpx.AsyncClient(verify=self._verify_ssl, timeout=self._timeout) as client:
                 resp = await client.get(
                     url,
                     headers={"Authorization": auth_header, "Accept": "application/json"},
