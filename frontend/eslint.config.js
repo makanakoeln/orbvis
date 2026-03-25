@@ -41,6 +41,18 @@ export default [
   },
 
   {
+    // Disable security rules with prohibitively high false-positive rates in TypeScript:
+    // detect-object-injection fires on every obj[key] bracket access (extremely common in TS).
+    // detect-non-literal-fs-filename fires on build scripts with computed paths (expected).
+    // detect-unsafe-regex triggers on safe regex patterns (no actual catastrophic backtracking).
+    rules: {
+      'security/detect-object-injection': 'off',
+      'security/detect-non-literal-fs-filename': 'off',
+      'security/detect-unsafe-regex': 'off',
+    },
+  },
+
+  {
     plugins: { 'simple-import-sort': simpleImportSort },
     rules: {
       'simple-import-sort/imports': 'warn',
