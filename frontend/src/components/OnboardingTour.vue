@@ -23,7 +23,7 @@
 
     <!-- 3. Demo scene on canvas step -->
     <OnboardingDemoScene
-      v-if="currentStep.selector === '[data-tour=\'board-canvas\']' && targetRect"
+      v-if="currentStep.selector?.includes('board-canvas') && targetRect"
       :canvas-rect="targetRect"
       style="z-index: 9999"
     />
