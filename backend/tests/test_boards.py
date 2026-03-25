@@ -63,6 +63,7 @@ async def _create(client, token, tmp_path, monkeypatch, name="src-board"):
 
 # ---- Clone ----
 
+
 @pytest.mark.asyncio
 async def test_clone_board(client, admin_token, tmp_path, monkeypatch):
     await _create(client, admin_token, tmp_path, monkeypatch)
@@ -107,6 +108,7 @@ async def test_clone_nonexistent_board(client, admin_token, tmp_path, monkeypatc
 
 
 # ---- Import / Export ----
+
 
 @pytest.mark.asyncio
 async def test_import_board(client, admin_token, tmp_path, monkeypatch):
@@ -153,6 +155,7 @@ async def test_import_board_overwrite(client, admin_token, tmp_path, monkeypatch
 
 # ---- Background delete ----
 
+
 @pytest.mark.asyncio
 async def test_delete_background(client, admin_token, tmp_path, monkeypatch):
     await _create(client, admin_token, tmp_path, monkeypatch)
@@ -164,8 +167,9 @@ async def test_delete_background(client, admin_token, tmp_path, monkeypatch):
     bg_file.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)  # fake PNG magic
 
     # Manually set background_image in the board
-    from app.services import board_service
     from app.schemas.board import BoardUpdate
+    from app.services import board_service
+
     board_service.update_board("src-board", BoardUpdate(background_image="src-board.png"))
 
     resp = await client.delete(

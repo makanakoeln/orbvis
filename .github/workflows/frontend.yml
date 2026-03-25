@@ -51,3 +51,18 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  docker-build-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build frontend image
+        run: docker build ./frontend --tag orbvis-frontend:test
+
+      - name: Smoke test frontend image
+        run: docker run --rm orbvis-frontend:test nginx -t
