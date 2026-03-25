@@ -21,10 +21,17 @@
       />
     </div>
 
-    <!-- 3. Click-away backdrop (skip on click) -->
+    <!-- 3. Demo scene on canvas step -->
+    <OnboardingDemoScene
+      v-if="currentStep.selector === '[data-tour=\'board-canvas\']' && targetRect"
+      :canvas-rect="targetRect"
+      style="z-index: 9999"
+    />
+
+    <!-- 4. Click-away backdrop (skip on click) -->
     <div class="fixed inset-0" style="z-index: 10000" @click="skip" />
 
-    <!-- 4. Tooltip card -->
+    <!-- 5. Tooltip card -->
     <Transition name="tour-card">
       <div
         :key="step"
@@ -109,7 +116,7 @@
       </div>
     </Transition>
 
-    <!-- 5. Transparent click-catcher over target element (advances step) -->
+    <!-- 6. Transparent click-catcher over target element (advances step) -->
     <div
       v-if="currentStep.selector && targetRect && step < TOTAL"
       class="fixed cursor-pointer rounded-[10px]"
@@ -118,7 +125,7 @@
       @click="onClickCatcher"
     />
 
-    <!-- 6. Completion animation overlay -->
+    <!-- 7. Completion animation overlay -->
     <Transition name="completion">
       <div
         v-if="showCompletion"
@@ -150,6 +157,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import OnboardingDemoScene from '@/components/OnboardingDemoScene.vue';
 import type { TourStep } from '@/types/tour';
 
 const { t } = useI18n();
