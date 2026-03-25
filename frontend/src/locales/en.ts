@@ -408,6 +408,8 @@ export default {
     langEnglish: 'English',
     langGerman: 'Deutsch',
     changePassword: 'Change password',
+    resetTour: 'Reset onboarding tour',
+    tourResetDone: 'Tour will show again on next visit',
     newPassword: 'New password',
     confirmPassword: 'Confirm password',
     changePasswordBtn: 'Change password',

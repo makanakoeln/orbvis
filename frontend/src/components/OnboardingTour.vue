@@ -194,13 +194,32 @@ function onResize() {
   measureTarget();
 }
 
+function onKeyDown(e: KeyboardEvent) {
+  if (showCompletion.value) return;
+  if (e.key === 'ArrowRight' || e.key === 'Enter') {
+    e.preventDefault();
+    if (step.value < TOTAL.value) {
+      if (currentStep.value.selector && targetRect.value) emit('stepClick', step.value);
+      next();
+    } else {
+      finish();
+    }
+  } else if (e.key === 'ArrowLeft') {
+    if (step.value > 1) prev();
+  } else if (e.key === 'Escape') {
+    skip();
+  }
+}
+
 onMounted(() => {
   measureTarget();
   window.addEventListener('resize', onResize);
+  document.addEventListener('keydown', onKeyDown);
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', onResize);
+  document.removeEventListener('keydown', onKeyDown);
 });
 
 // ─── SVG overlay path ────────────────────────────────────────────────────────

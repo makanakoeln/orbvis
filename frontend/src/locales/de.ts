@@ -411,6 +411,8 @@ export default {
     langEnglish: 'English',
     langGerman: 'Deutsch',
     changePassword: 'Passwort ändern',
+    resetTour: 'Onboarding-Tour zurücksetzen',
+    tourResetDone: 'Tour wird beim nächsten Besuch wieder angezeigt',
     newPassword: 'Neues Passwort',
     confirmPassword: 'Passwort bestätigen',
     changePasswordBtn: 'Passwort ändern',

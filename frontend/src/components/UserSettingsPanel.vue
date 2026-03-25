@@ -180,6 +180,20 @@
           </form>
         </div>
 
+        <!-- Tour reset (self only) -->
+        <div v-if="isSelf" class="border-t border-[var(--border)] pt-3">
+          <p v-if="tourResetDone" class="text-xs text-green-400">
+            {{ t('userSettings.tourResetDone') }}
+          </p>
+          <button
+            v-else
+            class="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+            @click="resetTour"
+          >
+            {{ t('userSettings.resetTour') }}
+          </button>
+        </div>
+
         <!-- Save error -->
         <p v-if="saveError || adminError" class="text-red-400 text-xs px-1">
           {{ saveError || adminError }}
@@ -392,6 +406,16 @@ function discardAndClose() {
   selectedTheme.value = savedTheme.value;
   selectedLanguage.value = savedLanguage.value;
   emit('close');
+}
+
+// ---- Tour reset ----
+
+const tourResetDone = ref(false);
+
+function resetTour() {
+  localStorage.removeItem(`orbvis_onboarded_${props.userId}`);
+  localStorage.removeItem(`orbvis_board_toured_${props.userId}`);
+  tourResetDone.value = true;
 }
 
 // ---- Password ----
