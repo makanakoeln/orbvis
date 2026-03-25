@@ -89,7 +89,7 @@
             <td class="px-4 py-3 text-zinc-500 text-xs">
               <template v-if="user.roles.length">
                 <span
-                  v-for="(r, i) in user.roles"
+                  v-for="r in user.roles"
                   :key="r.role_id"
                   class="inline-block px-1.5 py-0.5 rounded bg-[var(--bg-input)] ring-1 ring-zinc-700 text-zinc-400 mr-1 mb-0.5"
                 >

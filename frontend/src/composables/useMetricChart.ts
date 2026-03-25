@@ -149,19 +149,16 @@ export function useMetricChart(
     if (gridG.empty()) gridG = root.insert('g', 'g.mc-series').attr('class', 'mc-grid')
 
     // Horizontal grid lines
-    const gridLines = gridG.selectAll<SVGLineElement, number>('line.mc-hline').data(yTickVals)
-    gridLines
-      .enter()
-      .append('line')
+    gridG
+      .selectAll<SVGLineElement, number>('line.mc-hline')
+      .data(yTickVals)
+      .join('line')
       .attr('class', 'mc-hline')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .merge(gridLines as any)
       .attr('x1', PAD_LEFT)
       .attr('x2', W - PAD_RIGHT)
       .attr('y1', (d) => yScale(d))
       .attr('y2', (d) => yScale(d))
       .attr('stroke', c.grid)
-    gridLines.exit().remove()
 
     // Y-axis vertical separator line
     gridG
@@ -176,27 +173,22 @@ export function useMetricChart(
       .attr('stroke', c.axis)
 
     // Y-axis tick marks
-    const yTicks = gridG.selectAll<SVGLineElement, number>('line.mc-ytick').data(yTickVals)
-    yTicks
-      .enter()
-      .append('line')
+    gridG
+      .selectAll<SVGLineElement, number>('line.mc-ytick')
+      .data(yTickVals)
+      .join('line')
       .attr('class', 'mc-ytick')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .merge(yTicks as any)
       .attr('x1', PAD_LEFT - 3)
       .attr('x2', PAD_LEFT)
       .attr('y1', (d) => yScale(d))
       .attr('y2', (d) => yScale(d))
       .attr('stroke', c.tick)
-    yTicks.exit().remove()
 
-    const yLabels = gridG.selectAll<SVGTextElement, number>('text.mc-ylabel').data(yTickVals)
-    yLabels
-      .enter()
-      .append('text')
+    gridG
+      .selectAll<SVGTextElement, number>('text.mc-ylabel')
+      .data(yTickVals)
+      .join('text')
       .attr('class', 'mc-ylabel')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .merge(yLabels as any)
       .attr('x', PAD_LEFT - 5)
       .attr('y', (d) => yScale(d) + 3)
       .attr('text-anchor', 'end')
@@ -204,7 +196,6 @@ export function useMetricChart(
       .attr('font-size', '8')
       .attr('font-family', 'ui-monospace,monospace')
       .text((d) => _fmtVal(d))
-    yLabels.exit().remove()
 
     const lineGen = line<MetricPoint>()
       .x((d) => xScale(d.ts))
@@ -212,29 +203,26 @@ export function useMetricChart(
       .curve(curveMonotoneX)
 
     // Data join for series groups
-    const groups = root.selectAll<SVGGElement, string>('g.mc-series').data(labels, (d) => d)
-
-    const entered = groups.enter().append('g').attr('class', 'mc-series')
-    entered.append('path').attr('class', 'mc-area')
-    entered
-      .append('path')
-      .attr('class', 'mc-line')
-      .attr('fill', 'none')
-      .attr('stroke-width', '2')
-      .attr('stroke-linecap', 'round')
-      .attr('stroke-linejoin', 'round')
-    entered
-      .append('circle')
-      .attr('class', 'mc-dot-ring')
-      .attr('r', '5')
-      .attr('fill', 'none')
-      .attr('stroke-width', '1.5')
-    entered.append('circle').attr('class', 'mc-dot').attr('r', '3')
-
-    groups.exit().remove()
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const merged = entered.merge(groups as any)
+    const merged = root
+      .selectAll<SVGGElement, string>('g.mc-series')
+      .data(labels, (d) => d)
+      .join((enter) => {
+        const g = enter.append('g').attr('class', 'mc-series')
+        g.append('path').attr('class', 'mc-area')
+        g.append('path')
+          .attr('class', 'mc-line')
+          .attr('fill', 'none')
+          .attr('stroke-width', '2')
+          .attr('stroke-linecap', 'round')
+          .attr('stroke-linejoin', 'round')
+        g.append('circle')
+          .attr('class', 'mc-dot-ring')
+          .attr('r', '5')
+          .attr('fill', 'none')
+          .attr('stroke-width', '1.5')
+        g.append('circle').attr('class', 'mc-dot').attr('r', '3')
+        return g
+      })
 
     merged.each(function (label, i) {
       const g = select(this)

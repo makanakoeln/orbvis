@@ -906,7 +906,6 @@ const serviceLayoutOptions = computed(() => [
   { value: 'row' as ServiceLayout, label: t('board.serviceLayoutRow') },
 ])
 const showSettings = ref(false)
-const showUserSettings = ref(false)
 const settingsWorldmapView = ref<{ lat: number; lng: number; zoom: number } | null>(null)
 
 function openSettings() {
