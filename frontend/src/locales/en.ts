@@ -458,10 +458,14 @@ export default {
       body: 'Each object represents a monitored host, service, or group and shows its current state.',
     },
     boardStep3: {
+      title: 'Board settings',
+      body: 'Use the gear icon to open board settings — upload a background image, set a name, and configure auto-rotation.',
+    },
+    boardStep4: {
       title: 'Edit mode',
       body: 'Click the pencil to enter edit mode and start placing monitoring objects on the board.',
     },
-    boardStep4: {
+    boardStep5: {
       title: 'Add objects',
       body: 'Choose an object type, configure it, and click "Place on board" to position it on the canvas.',
     },

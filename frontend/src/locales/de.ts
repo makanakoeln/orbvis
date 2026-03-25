@@ -461,10 +461,14 @@ export default {
       body: 'Jedes Objekt repräsentiert einen überwachten Host, Service oder eine Gruppe und zeigt seinen aktuellen Status.',
     },
     boardStep3: {
+      title: 'Board-Einstellungen',
+      body: 'Über das Zahnrad-Symbol öffnest du die Board-Einstellungen — hier lädst du ein Hintergrundbild hoch, vergibst einen Namen und konfigurierst eine Auto-Rotation.',
+    },
+    boardStep4: {
       title: 'Bearbeitungsmodus',
       body: 'Klicke auf den Stift, um den Bearbeitungsmodus zu öffnen und Monitoring-Objekte auf dem Board zu platzieren.',
     },
-    boardStep4: {
+    boardStep5: {
       title: 'Objekte hinzufügen',
       body: 'Wähle einen Objekttyp, konfiguriere ihn und klicke auf „Auf Board platzieren", um ihn auf dem Canvas zu positionieren.',
     },

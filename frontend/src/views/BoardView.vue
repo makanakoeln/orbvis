@@ -152,6 +152,7 @@
         <!-- Settings button (admin only) -->
         <button
           v-if="auth.isAdmin"
+          data-tour="board-settings"
           class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
           :title="t('board.boardSettings')"
           @click="openSettings"
@@ -698,21 +699,26 @@ const boardTourSteps = computed<TourStep[]>(() => {
   return [
     ...base,
     {
-      selector: '[data-tour="edit-fab"]',
+      selector: '[data-tour="board-settings"]',
       title: t('onboarding.boardStep3.title'),
       body: t('onboarding.boardStep3.body'),
     },
     {
-      selector: '[data-tour="edit-panel"]',
+      selector: '[data-tour="edit-fab"]',
       title: t('onboarding.boardStep4.title'),
       body: t('onboarding.boardStep4.body'),
+    },
+    {
+      selector: '[data-tour="edit-panel"]',
+      title: t('onboarding.boardStep5.title'),
+      body: t('onboarding.boardStep5.body'),
     },
   ];
 });
 
 function onBoardTourStepClick(step: number) {
-  // Step 3 = FAB — activate edit mode so EditPanel renders for step 4
-  if (auth.isAdmin && step === 3) {
+  // Step 4 = FAB — activate edit mode so EditPanel renders for step 5
+  if (auth.isAdmin && step === 4) {
     editor.toggleEditMode();
   }
 }

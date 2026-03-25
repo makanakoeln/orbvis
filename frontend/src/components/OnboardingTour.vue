@@ -28,6 +28,12 @@
       style="z-index: 9999"
     />
 
+    <!-- 3b. Settings scene on board-settings step -->
+    <OnboardingSettingsScene
+      v-if="currentStep.selector?.includes('board-settings') && targetRect"
+      style="z-index: 9999"
+    />
+
     <!-- 4. Click-away backdrop (skip on click) -->
     <div class="fixed inset-0" style="z-index: 10000" @click="skip" />
 
@@ -158,6 +164,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import OnboardingDemoScene from '@/components/OnboardingDemoScene.vue';
+import OnboardingSettingsScene from '@/components/OnboardingSettingsScene.vue';
 import type { TourStep } from '@/types/tour';
 
 const { t } = useI18n();
