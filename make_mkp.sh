@@ -71,9 +71,10 @@ tar czf "$TMPDIR/lib/orbvis/htdocs.tar.gz" -C "$SCRIPT_DIR/frontend/dist" .
 tar czf "$TMPDIR/lib/orbvis/server.tar.gz" -C "$SCRIPT_DIR/backend" .
 
 # Demo boards: tarball → lib/orbvis/boards.tar.gz
+mapfile -t _BOARD_FILES < <(cd "$SCRIPT_DIR/backend" && find boards -name "demo*.json" -o -name "demo.svg" 2>/dev/null | sort)
 tar czf "$TMPDIR/lib/orbvis/boards.tar.gz" \
   -C "$SCRIPT_DIR/backend" \
-  $(cd "$SCRIPT_DIR/backend" && find boards -name "demo*.json" -o -name "demo.svg" 2>/dev/null | sort)
+  "${_BOARD_FILES[@]}"
 
 ok "Files staged (frontend + backend + boards bundled as tarballs)"
 
@@ -375,7 +376,7 @@ py_list() { printf "'%s', " "$@"; }
 {
   echo "{"
   echo "  'author': 'OrbVis Project',"
-  echo "  'description': 'OrbVis monitoring visualization.\\n\\nAfter install run: su - <SITE> -c orbvis-setup',"
+  printf "  'description': 'OrbVis monitoring visualization.\\n\\nAfter install run: su - <SITE> -c orbvis-setup',\n"
   echo "  'download_url': '',"
   echo "  'files': {"
   echo "    'bin': [$(py_list "${BIN_FILES[@]}")],"
