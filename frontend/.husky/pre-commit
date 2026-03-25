@@ -1,0 +1,13 @@
+cd frontend && npx lint-staged
+
+# Run ruff format + lint on staged backend Python files
+STAGED_PY=$(git diff --cached --name-only --diff-filter=ACM | grep '^backend/.*\.py$' || true)
+if [ -n "$STAGED_PY" ]; then
+  RUFF=$(command -v ruff || echo "")
+  if [ -z "$RUFF" ]; then
+    echo "warning: ruff not found in PATH — skipping Python checks"
+  else
+    echo "$STAGED_PY" | xargs $RUFF format --check
+    echo "$STAGED_PY" | xargs $RUFF check
+  fi
+fi
