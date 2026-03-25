@@ -2,15 +2,6 @@
 
 Monitoring visualization platform built with **Python FastAPI** + **Vue.js 3 + TypeScript**.
 
-<p align="center">
-  <img src="docs/screenshots/login.png" width="340" alt="Login screen" />
-  &nbsp;&nbsp;
-  <img src="docs/screenshots/boards.png" width="340" alt="Boards overview" />
-</p>
-<p align="center">
-  <img src="docs/screenshots/chart.png" width="700" alt="Live performance chart" />
-</p>
-
 ## Requirements
 
 - Python 3.12 or newer
