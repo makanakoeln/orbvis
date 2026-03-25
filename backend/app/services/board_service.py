@@ -7,6 +7,7 @@ import logging
 import os
 import re
 from pathlib import Path
+
 from app.core.config import settings
 from app.schemas.board import (
     BoardConfig,
