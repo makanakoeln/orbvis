@@ -175,74 +175,74 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { connectionsApi } from '@/api/client'
-import type { NewObjectDraft } from '@/composables/useBoardEditor'
-import { useAuthStore } from '@/stores/auth'
+import { connectionsApi } from '@/api/client';
+import type { NewObjectDraft } from '@/composables/useBoardEditor';
+import { useAuthStore } from '@/stores/auth';
 
-import AutocompleteInput from './AutocompleteInput.vue'
-import ImagePicker from './ImagePicker.vue'
+import AutocompleteInput from './AutocompleteInput.vue';
+import ImagePicker from './ImagePicker.vue';
 
-const { t } = useI18n()
+const { t } = useI18n();
 
 const props = defineProps<{
-  draft: NewObjectDraft
-  placing: boolean
-  backendId: string
-  snapGrid: number
-}>()
+  draft: NewObjectDraft;
+  placing: boolean;
+  backendId: string;
+  snapGrid: number;
+}>();
 
 defineEmits<{
-  'start-placing': []
-  'update:snapGrid': [value: number]
-  'close-edit-mode': []
-}>()
+  'start-placing': [];
+  'update:snapGrid': [value: number];
+  'close-edit-mode': [];
+}>();
 
-const auth = useAuthStore()
+const auth = useAuthStore();
 
 const MISSING_FIELD_KEY: Record<string, string> = {
   host: 'boardSettings.hostname',
   hostgroup: 'boardSettings.groupName',
   servicegroup: 'boardSettings.groupName',
   map: 'boardSettings.boardName',
-}
+};
 
 const canPlace = computed(() => {
-  const d = props.draft
+  const d = props.draft;
   switch (d.type) {
     case 'host':
-      return !!d.host_name
+      return !!d.host_name;
     case 'service':
-      return !!d.host_name && !!d.service_description
+      return !!d.host_name && !!d.service_description;
     case 'hostgroup':
     case 'servicegroup':
-      return !!d.group_name
+      return !!d.group_name;
     case 'map':
-      return !!d.board_name
+      return !!d.board_name;
     case 'line':
     case 'textbox':
     case 'image':
     case 'graph':
-      return true
+      return true;
     default:
-      return false
+      return false;
   }
-})
+});
 
 const missingFieldHint = computed(() => {
-  if (canPlace.value) return ''
-  const d = props.draft
+  if (canPlace.value) return '';
+  const d = props.draft;
   if (d.type === 'service')
-    return `↑ ${t(d.host_name ? 'boardSettings.serviceDescription' : 'boardSettings.hostname')}`
-  return MISSING_FIELD_KEY[d.type] ? `↑ ${t(MISSING_FIELD_KEY[d.type])}` : ''
-})
+    return `↑ ${t(d.host_name ? 'boardSettings.serviceDescription' : 'boardSettings.hostname')}`;
+  return MISSING_FIELD_KEY[d.type] ? `↑ ${t(MISSING_FIELD_KEY[d.type])}` : '';
+});
 
-const addObjects = ref<string[]>([])
-const addServices = ref<string[]>([])
-const loadingAddObjects = ref(false)
-const loadingAddServices = ref(false)
+const addObjects = ref<string[]>([]);
+const addServices = ref<string[]>([]);
+const loadingAddObjects = ref(false);
+const loadingAddServices = ref(false);
 
 async function fetchAddObjects(type: string) {
   if (
@@ -253,62 +253,62 @@ async function fetchAddObjects(type: string) {
     type === 'map' ||
     type === 'image'
   ) {
-    addObjects.value = []
-    return
+    addObjects.value = [];
+    return;
   }
-  loadingAddObjects.value = true
+  loadingAddObjects.value = true;
   try {
-    addObjects.value = await connectionsApi.objects(props.backendId, type, auth.accessToken!)
+    addObjects.value = await connectionsApi.objects(props.backendId, type, auth.accessToken!);
   } catch {
-    addObjects.value = []
+    addObjects.value = [];
   } finally {
-    loadingAddObjects.value = false
+    loadingAddObjects.value = false;
   }
 }
 
 async function fetchAddServices(host: string) {
   if (!host || !props.backendId) {
-    addServices.value = []
-    return
+    addServices.value = [];
+    return;
   }
-  loadingAddServices.value = true
+  loadingAddServices.value = true;
   try {
     addServices.value = await connectionsApi.objects(
       props.backendId,
       'service',
       auth.accessToken!,
       host,
-    )
+    );
   } catch {
-    addServices.value = []
+    addServices.value = [];
   } finally {
-    loadingAddServices.value = false
+    loadingAddServices.value = false;
   }
 }
 
 function onTypeChange() {
-  props.draft.host_name = ''
-  props.draft.service_description = ''
-  addObjects.value = []
-  addServices.value = []
+  props.draft.host_name = '';
+  props.draft.service_description = '';
+  addObjects.value = [];
+  addServices.value = [];
   const fetchType =
     props.draft.type === 'service' || props.draft.type === 'line' || props.draft.type === 'graph'
       ? 'host'
-      : props.draft.type
-  fetchAddObjects(fetchType)
+      : props.draft.type;
+  fetchAddObjects(fetchType);
 }
 
 function onHostChange() {
-  fetchAddServices(props.draft.host_name)
+  fetchAddServices(props.draft.host_name);
 }
 
 watch(
   () => props.draft.host_name,
   (host) => {
     if (props.draft.type === 'service' && host && addObjects.value.includes(host))
-      fetchAddServices(host)
+      fetchAddServices(host);
   },
-)
+);
 </script>
 
 <style scoped>

@@ -49,55 +49,55 @@
 </template>
 
 <script setup lang="ts">
-import type { ClassValue } from 'vue'
-import { computed, useAttrs } from 'vue'
+import type { ClassValue } from 'vue';
+import { computed, useAttrs } from 'vue';
 
 const props = defineProps<{
-  modelValue: number | null | undefined
-  precision?: number
-}>()
+  modelValue: number | null | undefined;
+  precision?: number;
+}>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: number | null]
-}>()
+  'update:modelValue': [value: number | null];
+}>();
 
-defineOptions({ inheritAttrs: false })
+defineOptions({ inheritAttrs: false });
 
-const attrs = useAttrs()
+const attrs = useAttrs();
 
-const wrapperClass = computed<ClassValue>(() => attrs.class as ClassValue)
+const wrapperClass = computed<ClassValue>(() => attrs.class as ClassValue);
 
 const inputAttrs = computed(() => {
-  const { class: _, ...rest } = attrs
-  return rest
-})
+  const { class: _, ...rest } = attrs;
+  return rest;
+});
 
 const displayValue = computed(() => {
-  if (props.modelValue == null) return ''
-  if (props.precision !== undefined) return Number(props.modelValue.toFixed(props.precision))
-  return props.modelValue
-})
+  if (props.modelValue == null) return '';
+  if (props.precision !== undefined) return Number(props.modelValue.toFixed(props.precision));
+  return props.modelValue;
+});
 
 const stepSize = computed(() => {
-  const s = attrs.step as string | undefined
-  if (!s || s === 'any') return 1
-  return Number(s)
-})
+  const s = attrs.step as string | undefined;
+  if (!s || s === 'any') return 1;
+  return Number(s);
+});
 
-const minVal = computed(() => (attrs.min !== undefined ? Number(attrs.min) : undefined))
-const maxVal = computed(() => (attrs.max !== undefined ? Number(attrs.max) : undefined))
+const minVal = computed(() => (attrs.min !== undefined ? Number(attrs.min) : undefined));
+const maxVal = computed(() => (attrs.max !== undefined ? Number(attrs.max) : undefined));
 
 function onInput(e: Event) {
-  const val = (e.target as HTMLInputElement).value
-  emit('update:modelValue', val === '' ? null : Number(val))
+  const val = (e.target as HTMLInputElement).value;
+  emit('update:modelValue', val === '' ? null : Number(val));
 }
 
 function step(dir: 1 | -1) {
-  const current = props.modelValue ?? 0
-  let next = current + dir * stepSize.value
-  if (minVal.value !== undefined) next = Math.max(minVal.value, next)
-  if (maxVal.value !== undefined) next = Math.min(maxVal.value, next)
-  const decimals = stepSize.value < 1 ? (stepSize.value.toString().split('.')[1]?.length ?? 0) : 0
-  emit('update:modelValue', Number(next.toFixed(decimals)))
+  const current = props.modelValue ?? 0;
+  let next = current + dir * stepSize.value;
+  if (minVal.value !== undefined) next = Math.max(minVal.value, next);
+  if (maxVal.value !== undefined) next = Math.min(maxVal.value, next);
+  const decimals = stepSize.value < 1 ? (stepSize.value.toString().split('.')[1]?.length ?? 0) : 0;
+  emit('update:modelValue', Number(next.toFixed(decimals)));
 }
 </script>

@@ -152,75 +152,75 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
-import type { BoardObject, ObjectState } from '@/types/api'
-import { getMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
-import { STATE_COLORS } from '@/utils/stateColors'
+import type { BoardObject, ObjectState } from '@/types/api';
+import { getMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf';
+import { STATE_COLORS } from '@/utils/stateColors';
 
 const props = defineProps<{
-  object: BoardObject
-  state: ObjectState | undefined
-  editMode: boolean
-  dragCoords?: { x: number; y: number; x2: number; y2: number }
-}>()
+  object: BoardObject;
+  state: ObjectState | undefined;
+  editMode: boolean;
+  dragCoords?: { x: number; y: number; x2: number; y2: number };
+}>();
 
 defineEmits<{
-  'line-drag-start': [event: MouseEvent, mode: 'move' | 'start' | 'end']
-  'context-menu': [event: MouseEvent]
-}>()
+  'line-drag-start': [event: MouseEvent, mode: 'move' | 'start' | 'end'];
+  'context-menu': [event: MouseEvent];
+}>();
 
-const x1 = computed(() => props.dragCoords?.x ?? props.object.x)
-const y1 = computed(() => props.dragCoords?.y ?? props.object.y)
-const x2 = computed(() => props.dragCoords?.x2 ?? props.object.x2 ?? props.object.x + 50)
-const y2 = computed(() => props.dragCoords?.y2 ?? props.object.y2 ?? props.object.y + 50)
+const x1 = computed(() => props.dragCoords?.x ?? props.object.x);
+const y1 = computed(() => props.dragCoords?.y ?? props.object.y);
+const x2 = computed(() => props.dragCoords?.x2 ?? props.object.x2 ?? props.object.x + 50);
+const y2 = computed(() => props.dragCoords?.y2 ?? props.object.y2 ?? props.object.y + 50);
 
 const lineColor = computed(
   () =>
     props.object.line_color ??
     STATE_COLORS[props.state?.state ?? 'PENDING'] ??
     STATE_COLORS['PENDING'],
-)
-const lineColorBorder = computed(() => props.object.line_color_border ?? null)
+);
+const lineColorBorder = computed(() => props.object.line_color_border ?? null);
 
-const isWeathermap = computed(() => props.object.line_style === 'weathermap')
-const isDashed = computed(() => props.object.line_style === 'dashed')
+const isWeathermap = computed(() => props.object.line_style === 'weathermap');
+const isDashed = computed(() => props.object.line_style === 'dashed');
 const hasEndArrow = computed(
   () => props.object.line_style === 'arrow_end' || props.object.line_style === 'arrow_both',
-)
+);
 const hasStartArrow = computed(
   () => props.object.line_style === 'arrow_start' || props.object.line_style === 'arrow_both',
-)
+);
 
 function arrowPoints(tx: number, ty: number, fx: number, fy: number): string {
-  const angle = Math.atan2(ty - fy, tx - fx)
+  const angle = Math.atan2(ty - fy, tx - fx);
   const len = 12,
-    w = 6
-  const p1x = tx - len * Math.cos(angle) + w * Math.sin(angle)
-  const p1y = ty - len * Math.sin(angle) - w * Math.cos(angle)
-  const p2x = tx - len * Math.cos(angle) - w * Math.sin(angle)
-  const p2y = ty - len * Math.sin(angle) + w * Math.cos(angle)
-  return `${tx},${ty} ${p1x},${p1y} ${p2x},${p2y}`
+    w = 6;
+  const p1x = tx - len * Math.cos(angle) + w * Math.sin(angle);
+  const p1y = ty - len * Math.sin(angle) - w * Math.cos(angle);
+  const p2x = tx - len * Math.cos(angle) - w * Math.sin(angle);
+  const p2y = ty - len * Math.sin(angle) + w * Math.cos(angle);
+  return `${tx},${ty} ${p1x},${p1y} ${p2x},${p2y}`;
 }
 
 // Weathermap
-const gradientId = computed(() => `wm-grad-${props.object.id}`)
+const gradientId = computed(() => `wm-grad-${props.object.id}`);
 
-const wmMetrics = computed(() => parsePerfData(props.state?.perf_data ?? ''))
+const wmMetrics = computed(() => parsePerfData(props.state?.perf_data ?? ''));
 const wmMetric = computed(() =>
   getMetric(wmMetrics.value, props.object.weathermap_metric ?? undefined),
-)
-const wmPct = computed(() => (wmMetric.value ? utilPercent(wmMetric.value) : 0))
-const wmColor = computed(() => utilColor(wmPct.value))
+);
+const wmPct = computed(() => (wmMetric.value ? utilPercent(wmMetric.value) : 0));
+const wmColor = computed(() => utilColor(wmPct.value));
 const wmLabel = computed(() => {
-  if (!wmMetric.value) return ''
-  const m = wmMetric.value
+  if (!wmMetric.value) return '';
+  const m = wmMetric.value;
   const val =
     m.unit === '%'
       ? `${m.value.toFixed(0)}%`
       : m.unit
         ? `${m.value.toFixed(1)} ${m.unit}`
-        : `${m.value.toFixed(0)}`
-  return `${val} (${wmPct.value.toFixed(0)}%)`
-})
+        : `${m.value.toFixed(0)}`;
+  return `${val} (${wmPct.value.toFixed(0)}%)`;
+});
 </script>

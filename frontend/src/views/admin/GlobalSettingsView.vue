@@ -281,69 +281,69 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import NumberInput from '@/components/NumberInput.vue'
-import { useConnectionsStore } from '@/stores/connections'
-import { useSettingsStore } from '@/stores/settings'
-import type { GlobalSettings } from '@/types/api'
+import NumberInput from '@/components/NumberInput.vue';
+import { useConnectionsStore } from '@/stores/connections';
+import { useSettingsStore } from '@/stores/settings';
+import type { GlobalSettings } from '@/types/api';
 
-const { t } = useI18n()
-const store = useSettingsStore()
-const connectionsStore = useConnectionsStore()
+const { t } = useI18n();
+const store = useSettingsStore();
+const connectionsStore = useConnectionsStore();
 
-const form = reactive<GlobalSettings>({ ...store.settings })
-const saving = ref(false)
-const saveError = ref('')
-const savedOk = ref(false)
-let savedOkTimer: ReturnType<typeof setTimeout> | null = null
+const form = reactive<GlobalSettings>({ ...store.settings });
+const saving = ref(false);
+const saveError = ref('');
+const savedOk = ref(false);
+let savedOkTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Sync form when store finishes loading
 watch(
   () => store.settings,
   (val) => Object.assign(form, val),
   { deep: true },
-)
+);
 
 function resetForm() {
-  Object.assign(form, store.settings)
-  savedOk.value = false
-  saveError.value = ''
+  Object.assign(form, store.settings);
+  savedOk.value = false;
+  saveError.value = '';
 }
 
 async function handleSave() {
-  saving.value = true
-  saveError.value = ''
-  savedOk.value = false
+  saving.value = true;
+  saveError.value = '';
+  savedOk.value = false;
   try {
-    await store.save({ ...form })
-    savedOk.value = true
-    if (savedOkTimer) clearTimeout(savedOkTimer)
+    await store.save({ ...form });
+    savedOk.value = true;
+    if (savedOkTimer) clearTimeout(savedOkTimer);
     savedOkTimer = setTimeout(() => {
-      savedOk.value = false
-    }, 3000)
+      savedOk.value = false;
+    }, 3000);
   } catch {
-    saveError.value = t('admin.saveFailed')
+    saveError.value = t('admin.saveFailed');
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 
 onUnmounted(() => {
-  if (savedOkTimer) clearTimeout(savedOkTimer)
-})
+  if (savedOkTimer) clearTimeout(savedOkTimer);
+});
 
 onMounted(async () => {
-  await Promise.all([store.load(), connectionsStore.fetchBackends()])
-  Object.assign(form, store.settings)
+  await Promise.all([store.load(), connectionsStore.fetchBackends()]);
+  Object.assign(form, store.settings);
   // Force the connection <select> to pick up the value after options are rendered
-  await nextTick()
-  const saved = form.default_backend_id
-  form.default_backend_id = ''
-  await nextTick()
-  form.default_backend_id = saved
-})
+  await nextTick();
+  const saved = form.default_backend_id;
+  form.default_backend_id = '';
+  await nextTick();
+  form.default_backend_id = saved;
+});
 </script>
 
 <style scoped>

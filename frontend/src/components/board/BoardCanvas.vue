@@ -141,130 +141,130 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, reactive, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 
-import { cmkApi } from '@/api/client'
-import { useSettingsStore } from '@/stores/settings'
-import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api'
-import { resolveTemplate } from '@/utils/template'
+import { cmkApi } from '@/api/client';
+import { useSettingsStore } from '@/stores/settings';
+import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api';
+import { resolveTemplate } from '@/utils/template';
 
-import AckModal from './AckModal.vue'
-import BoardLine from './BoardLine.vue'
-import BoardObject from './BoardObject.vue'
-import ContextMenu from './ContextMenu.vue'
-import DowntimeModal from './DowntimeModal.vue'
-import HoverMenu from './HoverMenu.vue'
+import AckModal from './AckModal.vue';
+import BoardLine from './BoardLine.vue';
+import BoardObject from './BoardObject.vue';
+import ContextMenu from './ContextMenu.vue';
+import DowntimeModal from './DowntimeModal.vue';
+import HoverMenu from './HoverMenu.vue';
 
-const settingsStore = useSettingsStore()
+const settingsStore = useSettingsStore();
 
 const props = defineProps<{
-  config: BoardConfig
-  states: Record<string, ObjectState>
-  editMode: boolean
-  placing: boolean
-  lineDragPositions: Record<string, { x: number; y: number; x2: number; y2: number }>
-  selectedObjectId: string | null
-  checkmkUrl?: string | null
-  iconSizeOverride?: number
-  isAdmin?: boolean
-  snapGrid?: number
-}>()
+  config: BoardConfig;
+  states: Record<string, ObjectState>;
+  editMode: boolean;
+  placing: boolean;
+  lineDragPositions: Record<string, { x: number; y: number; x2: number; y2: number }>;
+  selectedObjectId: string | null;
+  checkmkUrl?: string | null;
+  iconSizeOverride?: number;
+  isAdmin?: boolean;
+  snapGrid?: number;
+}>();
 
 const emit = defineEmits<{
-  'object-drag-end': [id: string, x: number, y: number]
-  'object-click': [obj: BoardObjectType, event?: MouseEvent]
+  'object-drag-end': [id: string, x: number, y: number];
+  'object-click': [obj: BoardObjectType, event?: MouseEvent];
   'object-contextmenu': [
     obj: BoardObjectType,
     anchor: { left: number; top: number; right: number; bottom: number } | null,
-  ]
-  'object-dblclick': [obj: BoardObjectType]
-  'object-delete': [obj: BoardObjectType]
-  'object-duplicate': [obj: BoardObjectType]
-  'line-drag-start': [event: MouseEvent, obj: BoardObjectType, mode: 'move' | 'start' | 'end']
-  'canvas-click': [event: MouseEvent]
-  'graph-resize-end': [id: string, width: number, height: number]
-}>()
+  ];
+  'object-dblclick': [obj: BoardObjectType];
+  'object-delete': [obj: BoardObjectType];
+  'object-duplicate': [obj: BoardObjectType];
+  'line-drag-start': [event: MouseEvent, obj: BoardObjectType, mode: 'move' | 'start' | 'end'];
+  'canvas-click': [event: MouseEvent];
+  'graph-resize-end': [id: string, width: number, height: number];
+}>();
 
-const router = useRouter()
-const canvasEl = ref<HTMLDivElement | null>(null)
-const bgImageSize = ref<{ width: number; height: number } | null>(null)
+const router = useRouter();
+const canvasEl = ref<HTMLDivElement | null>(null);
+const bgImageSize = ref<{ width: number; height: number } | null>(null);
 
 // Local pointer-capture drag state
-const _dragId = ref<string | null>(null)
-const _dragOffX = ref(0)
-const _dragOffY = ref(0)
-const _dragInitX = ref(0)
-const _dragInitY = ref(0)
-const _didMove = ref(false)
-const localDragPositions = reactive<Record<string, { x: number; y: number }>>({})
+const _dragId = ref<string | null>(null);
+const _dragOffX = ref(0);
+const _dragOffY = ref(0);
+const _dragInitX = ref(0);
+const _dragInitY = ref(0);
+const _didMove = ref(false);
+const localDragPositions = reactive<Record<string, { x: number; y: number }>>({});
 // When the user taps an object (no drag, no placing), pointer capture redirects
 // the synthetic click to the canvas div. Suppress that canvas-click so it doesn't
 // deselect the just-selected object.
-const _suppressNextCanvasClick = ref(false)
+const _suppressNextCanvasClick = ref(false);
 
 // Graph resize state
-const _resizeId = ref<string | null>(null)
-const _resizeInitW = ref(0)
-const _resizeInitH = ref(0)
-const _resizeStartX = ref(0)
-const _resizeStartY = ref(0)
-const localResizeDimensions = reactive<Record<string, { width: number; height: number }>>({})
+const _resizeId = ref<string | null>(null);
+const _resizeInitW = ref(0);
+const _resizeInitH = ref(0);
+const _resizeStartX = ref(0);
+const _resizeStartY = ref(0);
+const localResizeDimensions = reactive<Record<string, { width: number; height: number }>>({});
 
 function _snap(v: number): number {
-  if (!props.snapGrid) return v
-  return Math.round(v / props.snapGrid) * props.snapGrid
+  if (!props.snapGrid) return v;
+  return Math.round(v / props.snapGrid) * props.snapGrid;
 }
 
-const bgImageFailed = ref(false)
+const bgImageFailed = ref(false);
 
 watch(
   () => props.config.background_image,
   (bg) => {
-    bgImageFailed.value = false
+    bgImageFailed.value = false;
     if (!bg) {
-      bgImageSize.value = null
-      return
+      bgImageSize.value = null;
+      return;
     }
-    const img = new Image()
+    const img = new Image();
     img.onload = () => {
-      bgImageSize.value = { width: img.naturalWidth, height: img.naturalHeight }
-    }
+      bgImageSize.value = { width: img.naturalWidth, height: img.naturalHeight };
+    };
     img.onerror = () => {
-      bgImageFailed.value = true
-      bgImageSize.value = null
-    }
-    img.src = `${import.meta.env.BASE_URL}boards/backgrounds/${bg}`
+      bgImageFailed.value = true;
+      bgImageSize.value = null;
+    };
+    img.src = `${import.meta.env.BASE_URL}boards/backgrounds/${bg}`;
   },
   { immediate: true },
-)
+);
 
 const canvasWidth = computed(() =>
   props.config.objects.reduce(
     (m, o) => Math.max(m, o.x + (o.type === 'graph' ? (o.graph_width ?? 400) : 150)),
     800,
   ),
-)
+);
 const canvasHeight = computed(() =>
   props.config.objects.reduce(
     (m, o) => Math.max(m, o.y + (o.type === 'graph' ? (o.graph_height ?? 200) : 150)),
     600,
   ),
-)
+);
 
 // Canvas style: with background → fill parent absolutely; without → fixed pixel size
 const canvasStyle = computed(() => {
-  const bg = props.config.background_image
+  const bg = props.config.background_image;
   const pixelSize = {
     minWidth: `max(${canvasWidth.value}px, 100%)`,
     minHeight: `max(${canvasHeight.value}px, 100%)`,
-  }
+  };
   if (bg && bgImageSize.value) {
     return {
       backgroundImage: `url(${import.meta.env.BASE_URL}boards/backgrounds/${bg})`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: '100% 100%',
-    }
+    };
   }
   if (bg && !bgImageFailed.value) {
     // Image still loading — reserve pixel space so SVG overlay doesn't collapse
@@ -273,26 +273,26 @@ const canvasStyle = computed(() => {
       backgroundImage: `url(${import.meta.env.BASE_URL}boards/backgrounds/${bg})`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: '100% 100%',
-    }
+    };
   }
-  return pixelSize
-})
+  return pixelSize;
+});
 
-const nonLineObjects = computed(() => props.config.objects.filter((o) => o.type !== 'line'))
-const lineObjects = computed(() => props.config.objects.filter((o) => o.type === 'line'))
+const nonLineObjects = computed(() => props.config.objects.filter((o) => o.type !== 'line'));
+const lineObjects = computed(() => props.config.objects.filter((o) => o.type === 'line'));
 
 function objectWrapperStyle(obj: BoardObjectType) {
-  const pos = localDragPositions[obj.id] ?? { x: obj.x, y: obj.y }
-  const isMap = obj.type === 'map'
-  const canDrag = props.editMode || props.isAdmin
+  const pos = localDragPositions[obj.id] ?? { x: obj.x, y: obj.y };
+  const isMap = obj.type === 'map';
+  const canDrag = props.editMode || props.isAdmin;
   const cursor = canDrag
     ? _dragId.value === obj.id
       ? 'grabbing'
       : 'grab'
     : isMap || obj.url || !!buildCheckmkUrl(obj)
       ? 'pointer'
-      : 'default'
-  const zIndex = _dragId.value === obj.id ? 100 : (obj.z ?? 1)
+      : 'default';
+  const zIndex = _dragId.value === obj.id ? 100 : (obj.z ?? 1);
 
   if (bgImageSize.value) {
     // Percentage positions relative to native image dimensions
@@ -302,7 +302,7 @@ function objectWrapperStyle(obj: BoardObjectType) {
       transform: 'translate(-50%, -50%)',
       cursor,
       zIndex,
-    }
+    };
   }
   return {
     left: `${pos.x}px`,
@@ -310,171 +310,171 @@ function objectWrapperStyle(obj: BoardObjectType) {
     transform: 'translate(-50%, -50%)',
     cursor,
     zIndex,
-  }
+  };
 }
 
 // ---- Pointer-capture drag handlers ----
 
 function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
-  if (event.button === 2) return // right-click: let contextmenu event fire normally
-  _suppressNextCanvasClick.value = false
-  event.preventDefault()
-  if (!(props.editMode || props.isAdmin)) return
-  const canvas = canvasEl.value
-  if (!canvas) return
-  canvas.setPointerCapture(event.pointerId)
-  const rect = canvas.getBoundingClientRect()
-  _dragOffX.value = event.clientX - rect.left - obj.x
-  _dragOffY.value = event.clientY - rect.top - obj.y
-  _dragInitX.value = obj.x
-  _dragInitY.value = obj.y
-  _didMove.value = false
-  _dragId.value = obj.id
-  localDragPositions[obj.id] = { x: obj.x, y: obj.y }
-  if (props.editMode) emit('object-click', obj) // select on pointerdown (no event = no action bar)
+  if (event.button === 2) return; // right-click: let contextmenu event fire normally
+  _suppressNextCanvasClick.value = false;
+  event.preventDefault();
+  if (!(props.editMode || props.isAdmin)) return;
+  const canvas = canvasEl.value;
+  if (!canvas) return;
+  canvas.setPointerCapture(event.pointerId);
+  const rect = canvas.getBoundingClientRect();
+  _dragOffX.value = event.clientX - rect.left - obj.x;
+  _dragOffY.value = event.clientY - rect.top - obj.y;
+  _dragInitX.value = obj.x;
+  _dragInitY.value = obj.y;
+  _didMove.value = false;
+  _dragId.value = obj.id;
+  localDragPositions[obj.id] = { x: obj.x, y: obj.y };
+  if (props.editMode) emit('object-click', obj); // select on pointerdown (no event = no action bar)
 }
 
 function onGraphResizeStart(event: PointerEvent, obj: BoardObjectType) {
-  if (!canvasEl.value) return
-  canvasEl.value.setPointerCapture(event.pointerId)
-  _resizeId.value = obj.id
-  _resizeInitW.value = obj.graph_width ?? 400
-  _resizeInitH.value = obj.graph_height ?? 200
-  _resizeStartX.value = event.clientX
-  _resizeStartY.value = event.clientY
-  localResizeDimensions[obj.id] = { width: _resizeInitW.value, height: _resizeInitH.value }
+  if (!canvasEl.value) return;
+  canvasEl.value.setPointerCapture(event.pointerId);
+  _resizeId.value = obj.id;
+  _resizeInitW.value = obj.graph_width ?? 400;
+  _resizeInitH.value = obj.graph_height ?? 200;
+  _resizeStartX.value = event.clientX;
+  _resizeStartY.value = event.clientY;
+  localResizeDimensions[obj.id] = { width: _resizeInitW.value, height: _resizeInitH.value };
 }
 
 function onCanvasPointerMove(event: PointerEvent) {
   // Handle graph resize
-  const rid = _resizeId.value
+  const rid = _resizeId.value;
   if (rid) {
-    const w = Math.max(50, _resizeInitW.value + (event.clientX - _resizeStartX.value))
-    const h = Math.max(30, _resizeInitH.value + (event.clientY - _resizeStartY.value))
-    localResizeDimensions[rid] = { width: Math.round(w), height: Math.round(h) }
-    return
+    const w = Math.max(50, _resizeInitW.value + (event.clientX - _resizeStartX.value));
+    const h = Math.max(30, _resizeInitH.value + (event.clientY - _resizeStartY.value));
+    localResizeDimensions[rid] = { width: Math.round(w), height: Math.round(h) };
+    return;
   }
 
-  const id = _dragId.value
-  if (!id || !canvasEl.value) return
-  const rect = canvasEl.value.getBoundingClientRect()
-  const x = Math.max(0, _snap(Math.round(event.clientX - rect.left - _dragOffX.value)))
-  const y = Math.max(0, _snap(Math.round(event.clientY - rect.top - _dragOffY.value)))
+  const id = _dragId.value;
+  if (!id || !canvasEl.value) return;
+  const rect = canvasEl.value.getBoundingClientRect();
+  const x = Math.max(0, _snap(Math.round(event.clientX - rect.left - _dragOffX.value)));
+  const y = Math.max(0, _snap(Math.round(event.clientY - rect.top - _dragOffY.value)));
   if (
     !_didMove.value &&
     (Math.abs(x - _dragInitX.value) > 4 || Math.abs(y - _dragInitY.value) > 4)
   ) {
-    _didMove.value = true
+    _didMove.value = true;
   }
-  localDragPositions[id] = { x, y }
+  localDragPositions[id] = { x, y };
 }
 
 function onCanvasPointerUp(event: PointerEvent) {
   // Finalize graph resize
-  const rid = _resizeId.value
+  const rid = _resizeId.value;
   if (rid) {
-    _resizeId.value = null
-    const dims = localResizeDimensions[rid]
-    delete localResizeDimensions[rid]
-    if (dims) emit('graph-resize-end', rid, dims.width, dims.height)
-    return
+    _resizeId.value = null;
+    const dims = localResizeDimensions[rid];
+    delete localResizeDimensions[rid];
+    if (dims) emit('graph-resize-end', rid, dims.width, dims.height);
+    return;
   }
 
-  const id = _dragId.value
-  _dragId.value = null
+  const id = _dragId.value;
+  _dragId.value = null;
 
   if (!id) {
-    if (props.placing) emit('canvas-click', event as unknown as MouseEvent)
-    return
+    if (props.placing) emit('canvas-click', event as unknown as MouseEvent);
+    return;
   }
-  const pos = localDragPositions[id]
-  delete localDragPositions[id]
+  const pos = localDragPositions[id];
+  delete localDragPositions[id];
   if (_didMove.value && pos) {
-    emit('object-drag-end', id, pos.x, pos.y)
+    emit('object-drag-end', id, pos.x, pos.y);
   } else if (!_didMove.value && props.placing) {
-    emit('canvas-click', event as unknown as MouseEvent)
+    emit('canvas-click', event as unknown as MouseEvent);
   } else if (!_didMove.value) {
-    _suppressNextCanvasClick.value = true
+    _suppressNextCanvasClick.value = true;
   }
 }
 
 // ---- Event delegation ----
 
 function buildCheckmkUrl(obj: BoardObjectType): string | null {
-  const base = props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
-  if (!base) return null
-  const parts = base.split('/')
-  const site = parts[parts.length - 1] || null
-  const p: Record<string, string> = {}
-  if (site) p.site = site
+  const base = props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
+  if (!base) return null;
+  const parts = base.split('/');
+  const site = parts[parts.length - 1] || null;
+  const p: Record<string, string> = {};
+  if (site) p.site = site;
 
   if (obj.type === 'host' && obj.host_name) {
-    p.view_name = 'hoststatus'
-    p.host = obj.host_name
-    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`
+    p.view_name = 'hoststatus';
+    p.host = obj.host_name;
+    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
   }
   if (obj.type === 'service' && obj.host_name && obj.service_description) {
-    p.view_name = 'service'
-    p.host = obj.host_name
-    p.service = obj.service_description
-    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`
+    p.view_name = 'service';
+    p.host = obj.host_name;
+    p.service = obj.service_description;
+    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
   }
   if (obj.type === 'hostgroup' && obj.group_name) {
-    p.view_name = 'hostgroup'
-    p.hostgroup = obj.group_name
-    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`
+    p.view_name = 'hostgroup';
+    p.hostgroup = obj.group_name;
+    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
   }
   if (obj.type === 'servicegroup' && obj.group_name) {
-    p.view_name = 'servicegroup'
-    p.servicegroup = obj.group_name
-    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`
+    p.view_name = 'servicegroup';
+    p.servicegroup = obj.group_name;
+    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
   }
-  return null
+  return null;
 }
 
 function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
   if (props.editMode) {
-    if (!_didMove.value) emit('object-click', obj, event)
-    return
+    if (!_didMove.value) emit('object-click', obj, event);
+    return;
   }
   // Suppress navigation click if the pointer just completed a real drag move
-  if (_didMove.value) return
+  if (_didMove.value) return;
   if (obj.url) {
-    window.open(obj.url, obj.url_target || '_blank')
-    return
+    window.open(obj.url, obj.url_target || '_blank');
+    return;
   }
   if (obj.type === 'map' && obj.map_name) {
-    router.push({ name: 'map', params: { name: obj.map_name } })
-    return
+    router.push({ name: 'map', params: { name: obj.map_name } });
+    return;
   }
-  const cmkUrl = buildCheckmkUrl(obj)
+  const cmkUrl = buildCheckmkUrl(obj);
   if (cmkUrl) {
-    window.open(cmkUrl, '_blank')
+    window.open(cmkUrl, '_blank');
   }
 }
 
 function onObjectContextMenu(event: MouseEvent, obj: BoardObjectType) {
   if (props.editMode) {
     // Get the bounding rect of the clicked element (wrapper div or SVG element)
-    const el = (event.currentTarget ?? event.target) as Element | null
-    const r = el?.getBoundingClientRect?.()
+    const el = (event.currentTarget ?? event.target) as Element | null;
+    const r = el?.getBoundingClientRect?.();
     const anchor =
       r && (r.width > 0 || r.height > 0)
         ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
-        : { left: event.clientX, top: event.clientY, right: event.clientX, bottom: event.clientY }
-    emit('object-contextmenu', obj, anchor)
+        : { left: event.clientX, top: event.clientY, right: event.clientX, bottom: event.clientY };
+    emit('object-contextmenu', obj, anchor);
   } else {
-    openContextMenu(event, obj)
+    openContextMenu(event, obj);
   }
 }
 
 function onCanvasClick(event: MouseEvent) {
   if (_suppressNextCanvasClick.value) {
-    _suppressNextCanvasClick.value = false
-    return
+    _suppressNextCanvasClick.value = false;
+    return;
   }
-  closeMenus()
-  emit('canvas-click', event)
+  closeMenus();
+  emit('canvas-click', event);
 }
 
 // ---- Hover / Context menus (view mode only) ----
@@ -484,78 +484,78 @@ const hoverMenu = reactive({
   object: null as BoardObjectType | null,
   x: 0,
   y: 0,
-})
+});
 const contextMenu = reactive({
   visible: false,
   object: null as BoardObjectType | null,
   x: 0,
   y: 0,
-})
+});
 
 function openHoverMenu(event: MouseEvent, obj: BoardObjectType) {
-  hoverMenu.object = obj
-  hoverMenu.x = event.pageX + 12
-  hoverMenu.y = event.pageY + 12
-  hoverMenu.visible = true
+  hoverMenu.object = obj;
+  hoverMenu.x = event.pageX + 12;
+  hoverMenu.y = event.pageY + 12;
+  hoverMenu.visible = true;
 }
 
 function closeHoverMenu() {
-  hoverMenu.visible = false
+  hoverMenu.visible = false;
 }
 
 function openContextMenu(event: MouseEvent, obj: BoardObjectType) {
-  contextMenu.object = obj
-  contextMenu.x = event.pageX
-  contextMenu.y = event.pageY
-  contextMenu.visible = true
+  contextMenu.object = obj;
+  contextMenu.x = event.pageX;
+  contextMenu.y = event.pageY;
+  contextMenu.visible = true;
 }
 
 function onContextMenuEdit() {
-  const obj = contextMenu.object
-  const x = contextMenu.x
-  const y = contextMenu.y
-  closeMenus()
-  if (obj) emit('object-contextmenu', obj, { left: x, top: y, right: x, bottom: y })
+  const obj = contextMenu.object;
+  const x = contextMenu.x;
+  const y = contextMenu.y;
+  closeMenus();
+  if (obj) emit('object-contextmenu', obj, { left: x, top: y, right: x, bottom: y });
 }
 
 function onContextMenuDelete() {
-  const obj = contextMenu.object
-  closeMenus()
-  if (obj) emit('object-delete', obj)
+  const obj = contextMenu.object;
+  closeMenus();
+  if (obj) emit('object-delete', obj);
 }
 
 function onContextMenuDuplicate() {
-  const obj = contextMenu.object
-  closeMenus()
-  if (obj) emit('object-duplicate', obj)
+  const obj = contextMenu.object;
+  closeMenus();
+  if (obj) emit('object-duplicate', obj);
 }
 
 // ---- CMK actions from context menu ----
 
-const ackModalObject = ref<BoardObjectType | null>(null)
-const downtimeModalObject = ref<BoardObjectType | null>(null)
+const ackModalObject = ref<BoardObjectType | null>(null);
+const downtimeModalObject = ref<BoardObjectType | null>(null);
 
 function onContextMenuAck() {
-  const obj = contextMenu.object
-  closeMenus()
-  if (obj) ackModalObject.value = obj
+  const obj = contextMenu.object;
+  closeMenus();
+  if (obj) ackModalObject.value = obj;
 }
 
 function onContextMenuDowntime() {
-  const obj = contextMenu.object
-  closeMenus()
-  if (obj) downtimeModalObject.value = obj
+  const obj = contextMenu.object;
+  closeMenus();
+  if (obj) downtimeModalObject.value = obj;
 }
 
 async function onContextMenuForceCheck() {
-  const obj = contextMenu.object
-  closeMenus()
-  if (!obj || !props.checkmkUrl) return
+  const obj = contextMenu.object;
+  closeMenus();
+  if (!obj || !props.checkmkUrl) return;
   try {
     if (obj.type === 'service' && obj.host_name && obj.service_description) {
-      await cmkApi.forceCheckService(props.checkmkUrl, obj.host_name, obj.service_description)
+      await cmkApi.forceCheckService(props.checkmkUrl, obj.host_name, obj.service_description);
     } else if (obj.host_name) {
-      await cmkApi.forceCheckHost(props.checkmkUrl, obj.host_name)
+      await cmkApi.forceCheckHost(props.checkmkUrl, obj.host_name);
     }
   } catch {
     // Silently ignore — user will see updated state on next poll
@@ -563,26 +563,26 @@ async function onContextMenuForceCheck() {
 }
 
 function closeMenus() {
-  hoverMenu.visible = false
-  contextMenu.visible = false
+  hoverMenu.visible = false;
+  contextMenu.visible = false;
 }
 
 function getMapPosition(event: MouseEvent): { x: number; y: number } {
-  if (!canvasEl.value) return { x: 0, y: 0 }
-  const rect = canvasEl.value.getBoundingClientRect()
+  if (!canvasEl.value) return { x: 0, y: 0 };
+  const rect = canvasEl.value.getBoundingClientRect();
   if (bgImageSize.value) {
     // Canvas fills container — convert screen coords to native image coords
     return {
       x: ((event.clientX - rect.left) / rect.width) * bgImageSize.value.width,
       y: ((event.clientY - rect.top) / rect.height) * bgImageSize.value.height,
-    }
+    };
   }
-  const parent = canvasEl.value.parentElement!
+  const parent = canvasEl.value.parentElement!;
   return {
     x: event.clientX - rect.left + parent.scrollLeft,
     y: event.clientY - rect.top + parent.scrollTop,
-  }
+  };
 }
 
-defineExpose({ getCanvasEl: () => canvasEl.value, getMapPosition })
+defineExpose({ getCanvasEl: () => canvasEl.value, getMapPosition });
 </script>

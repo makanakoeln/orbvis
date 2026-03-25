@@ -40,64 +40,64 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref } from 'vue';
 
 const props = defineProps<{
-  modelValue: string
-  suggestions: string[]
-  placeholder?: string
-  loading?: boolean
-  disabled?: boolean
-}>()
+  modelValue: string;
+  suggestions: string[];
+  placeholder?: string;
+  loading?: boolean;
+  disabled?: boolean;
+}>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string]
-  change: [value: string]
-}>()
+  'update:modelValue': [value: string];
+  change: [value: string];
+}>();
 
-const open = ref(false)
-const activeIndex = ref(-1)
+const open = ref(false);
+const activeIndex = ref(-1);
 
 const filtered = computed(() => {
-  const q = props.modelValue.toLowerCase()
+  const q = props.modelValue.toLowerCase();
   const list = q
     ? props.suggestions.filter((s) => s.toLowerCase().includes(q))
-    : props.suggestions.slice()
-  return list.sort((a, b) => a.localeCompare(b)).slice(0, 50)
-})
+    : props.suggestions.slice();
+  return list.sort((a, b) => a.localeCompare(b)).slice(0, 50);
+});
 
 function onInput(e: Event) {
-  emit('update:modelValue', (e.target as HTMLInputElement).value)
-  open.value = true
-  activeIndex.value = -1
+  emit('update:modelValue', (e.target as HTMLInputElement).value);
+  open.value = true;
+  activeIndex.value = -1;
 }
 
 function onBlur() {
   // small delay so mousedown on option fires first
   setTimeout(() => {
-    open.value = false
-    activeIndex.value = -1
-  }, 150)
+    open.value = false;
+    activeIndex.value = -1;
+  }, 150);
 }
 
 function select(item: string) {
-  emit('update:modelValue', item)
-  emit('change', item)
-  open.value = false
-  activeIndex.value = -1
+  emit('update:modelValue', item);
+  emit('change', item);
+  open.value = false;
+  activeIndex.value = -1;
 }
 
 function moveDown() {
-  activeIndex.value = Math.min(activeIndex.value + 1, filtered.value.length - 1)
+  activeIndex.value = Math.min(activeIndex.value + 1, filtered.value.length - 1);
 }
 
 function moveUp() {
-  activeIndex.value = Math.max(activeIndex.value - 1, -1)
+  activeIndex.value = Math.max(activeIndex.value - 1, -1);
 }
 
 function confirmSelection() {
   if (activeIndex.value >= 0 && filtered.value[activeIndex.value]) {
-    select(filtered.value[activeIndex.value])
+    select(filtered.value[activeIndex.value]);
   }
 }
 </script>

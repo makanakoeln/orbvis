@@ -98,38 +98,38 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref } from 'vue';
 
-import { useSparkline } from '@/composables/useSparkline'
-import { useStatesStore } from '@/stores/states'
-import type { BoardObject, ObjectState } from '@/types/api'
-import { interpolateTemplate } from '@/utils/template'
+import { useSparkline } from '@/composables/useSparkline';
+import { useStatesStore } from '@/stores/states';
+import type { BoardObject, ObjectState } from '@/types/api';
+import { interpolateTemplate } from '@/utils/template';
 
 const props = defineProps<{
-  object: BoardObject
-  state: ObjectState | undefined
-  x: number
-  y: number
-  template?: string | null
-}>()
+  object: BoardObject;
+  state: ObjectState | undefined;
+  x: number;
+  y: number;
+  template?: string | null;
+}>();
 
-const statesStore = useStatesStore()
+const statesStore = useStatesStore();
 
-const sparkSvgRef = ref<SVGSVGElement | null>(null)
-const sparkData = computed(() => statesStore.history[props.object.id] ?? [])
+const sparkSvgRef = ref<SVGSVGElement | null>(null);
+const sparkData = computed(() => statesStore.history[props.object.id] ?? []);
 
-useSparkline({ svgRef: sparkSvgRef, data: sparkData })
+useSparkline({ svgRef: sparkSvgRef, data: sparkData });
 
 const renderedTemplate = computed(() =>
   props.template ? interpolateTemplate(props.template, props.object, props.state) : null,
-)
+);
 
 const displayName = computed(() => {
-  if (props.object.label?.text) return props.object.label.text
+  if (props.object.label?.text) return props.object.label.text;
   if (props.object.host_name && props.object.service_description)
-    return `${props.object.host_name} / ${props.object.service_description}`
-  return props.object.host_name ?? props.object.group_name ?? props.object.id
-})
+    return `${props.object.host_name} / ${props.object.service_description}`;
+  return props.object.host_name ?? props.object.group_name ?? props.object.id;
+});
 
 const STATE_BG: Record<string, string> = {
   UP: 'bg-green-400',
@@ -140,7 +140,7 @@ const STATE_BG: Record<string, string> = {
   UNKNOWN: 'bg-orange-400',
   WARNING: 'bg-warning',
   PENDING: 'bg-zinc-500',
-}
+};
 const STATE_TEXT: Record<string, string> = {
   UP: 'text-green-600 dark:text-green-400',
   OK: 'text-green-600 dark:text-green-400',
@@ -150,10 +150,10 @@ const STATE_TEXT: Record<string, string> = {
   UNKNOWN: 'text-orange-600 dark:text-orange-400',
   WARNING: 'text-amber-600 dark:text-warning',
   PENDING: 'text-[var(--text-muted)]',
-}
+};
 
-const stateColor = computed(() => STATE_BG[props.state?.state ?? 'PENDING'] ?? 'bg-zinc-500')
+const stateColor = computed(() => STATE_BG[props.state?.state ?? 'PENDING'] ?? 'bg-zinc-500');
 const stateTextColor = computed(
   () => STATE_TEXT[props.state?.state ?? 'PENDING'] ?? 'text-zinc-500',
-)
+);
 </script>

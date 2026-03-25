@@ -334,139 +334,139 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { rolesApi } from '@/api/client'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import { useAuthStore } from '@/stores/auth'
-import type { PermissionRead, RoleRead } from '@/types/api'
+import { rolesApi } from '@/api/client';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import { useAuthStore } from '@/stores/auth';
+import type { PermissionRead, RoleRead } from '@/types/api';
 
-const { t } = useI18n()
-const auth = useAuthStore()
-const roles = ref<RoleRead[]>([])
-const loading = ref(false)
-const showCreate = ref(false)
-const newRoleName = ref('')
+const { t } = useI18n();
+const auth = useAuthStore();
+const roles = ref<RoleRead[]>([]);
+const loading = ref(false);
+const showCreate = ref(false);
+const newRoleName = ref('');
 
-const editRole = ref<RoleRead | null>(null)
+const editRole = ref<RoleRead | null>(null);
 
 // Draft state: local copies that have not yet been persisted
-const draftPerms = ref<PermissionRead[]>([])
-const removedPermIds = ref<number[]>([]) // existing perm_ids to remove on save
-let draftCounter = -1 // negative IDs for new draft entries
+const draftPerms = ref<PermissionRead[]>([]);
+const removedPermIds = ref<number[]>([]); // existing perm_ids to remove on save
+let draftCounter = -1; // negative IDs for new draft entries
 
-const newPerm = ref({ mod: '', act: '', obj: '*' })
-const permSaving = ref(false)
-const permSaveError = ref('')
-const permError = ref('')
-const permPreset = ref('')
-const needsMapName = computed(() => permPreset.value.endsWith(':custom'))
+const newPerm = ref({ mod: '', act: '', obj: '*' });
+const permSaving = ref(false);
+const permSaveError = ref('');
+const permError = ref('');
+const permPreset = ref('');
+const needsMapName = computed(() => permPreset.value.endsWith(':custom'));
 
 function applyPreset() {
-  if (!permPreset.value) return
+  if (!permPreset.value) return;
   if (permPreset.value.endsWith(':custom')) {
-    const [mod, act] = permPreset.value.split(':')
-    newPerm.value = { mod, act, obj: '' }
-    return
+    const [mod, act] = permPreset.value.split(':');
+    newPerm.value = { mod, act, obj: '' };
+    return;
   }
-  const [mod, act, obj] = permPreset.value.split(':')
-  newPerm.value = { mod, act, obj }
+  const [mod, act, obj] = permPreset.value.split(':');
+  newPerm.value = { mod, act, obj };
 }
 
 async function fetchRoles() {
-  loading.value = true
+  loading.value = true;
   try {
-    roles.value = await rolesApi.list(auth.accessToken!)
+    roles.value = await rolesApi.list(auth.accessToken!);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function createRole() {
-  await rolesApi.create(newRoleName.value, auth.accessToken!)
-  showCreate.value = false
-  newRoleName.value = ''
-  await fetchRoles()
+  await rolesApi.create(newRoleName.value, auth.accessToken!);
+  showCreate.value = false;
+  newRoleName.value = '';
+  await fetchRoles();
 }
 
-const deleteTargetId = ref<number | null>(null)
+const deleteTargetId = ref<number | null>(null);
 
 async function confirmDeleteRole() {
-  const id = deleteTargetId.value
-  if (id === null) return
-  deleteTargetId.value = null
-  await rolesApi.delete(id, auth.accessToken!)
-  await fetchRoles()
+  const id = deleteTargetId.value;
+  if (id === null) return;
+  deleteTargetId.value = null;
+  await rolesApi.delete(id, auth.accessToken!);
+  await fetchRoles();
 }
 
 function openEdit(role: RoleRead) {
-  editRole.value = { ...role, permissions: [...role.permissions] }
-  draftPerms.value = [...role.permissions]
-  removedPermIds.value = []
-  newPerm.value = { mod: '', act: '', obj: '*' }
-  permPreset.value = ''
-  permError.value = ''
-  permSaveError.value = ''
+  editRole.value = { ...role, permissions: [...role.permissions] };
+  draftPerms.value = [...role.permissions];
+  removedPermIds.value = [];
+  newPerm.value = { mod: '', act: '', obj: '*' };
+  permPreset.value = '';
+  permError.value = '';
+  permSaveError.value = '';
 }
 
 function cancelEdit() {
-  editRole.value = null
+  editRole.value = null;
 }
 
 function addDraftPerm() {
-  if (!editRole.value || !permPreset.value) return
-  permError.value = ''
-  let mod = newPerm.value.mod
-  let act = newPerm.value.act
-  let obj = newPerm.value.obj || '*'
+  if (!editRole.value || !permPreset.value) return;
+  permError.value = '';
+  let mod = newPerm.value.mod;
+  let act = newPerm.value.act;
+  let obj = newPerm.value.obj || '*';
   if (!permPreset.value.endsWith(':custom')) {
-    const parts = permPreset.value.split(':')
-    mod = parts[0]
-    act = parts[1]
-    obj = parts[2]
+    const parts = permPreset.value.split(':');
+    mod = parts[0];
+    act = parts[1];
+    obj = parts[2];
   }
   if (!mod || !act || !obj) {
-    permError.value = t('admin.boardNameLabel')
-    return
+    permError.value = t('admin.boardNameLabel');
+    return;
   }
   // Avoid duplicates in draft
-  const exists = draftPerms.value.some((p) => p.mod === mod && p.act === act && p.obj === obj)
-  if (exists) return
-  draftPerms.value.push({ perm_id: draftCounter--, mod, act, obj })
-  permPreset.value = ''
-  newPerm.value = { mod: '', act: '', obj: '*' }
+  const exists = draftPerms.value.some((p) => p.mod === mod && p.act === act && p.obj === obj);
+  if (exists) return;
+  draftPerms.value.push({ perm_id: draftCounter--, mod, act, obj });
+  permPreset.value = '';
+  newPerm.value = { mod: '', act: '', obj: '*' };
 }
 
 function removeDraftPerm(permId: number) {
   if (permId > 0) {
     // existing server perm — mark for removal
-    removedPermIds.value.push(permId)
+    removedPermIds.value.push(permId);
   }
-  draftPerms.value = draftPerms.value.filter((p) => p.perm_id !== permId)
+  draftPerms.value = draftPerms.value.filter((p) => p.perm_id !== permId);
 }
 
 async function savePermissions() {
-  if (!editRole.value) return
-  permSaving.value = true
-  permSaveError.value = ''
+  if (!editRole.value) return;
+  permSaving.value = true;
+  permSaveError.value = '';
   try {
-    const roleId = editRole.value.role_id
+    const roleId = editRole.value.role_id;
     // Remove permissions that were deleted in draft
     for (const permId of removedPermIds.value) {
-      await rolesApi.removePermission(roleId, permId, auth.accessToken!)
+      await rolesApi.removePermission(roleId, permId, auth.accessToken!);
     }
     // Add new permissions (draft entries with negative perm_id)
     for (const perm of draftPerms.value) {
       if (perm.perm_id < 0) {
-        let existing: PermissionRead | null = null
+        let existing: PermissionRead | null = null;
         for (const r of roles.value) {
           const p = r.permissions.find(
             (p) => p.mod === perm.mod && p.act === perm.act && p.obj === perm.obj,
-          )
+          );
           if (p) {
-            existing = p
-            break
+            existing = p;
+            break;
           }
         }
         if (!existing) {
@@ -475,19 +475,19 @@ async function savePermissions() {
             perm.act,
             perm.obj,
             auth.accessToken!,
-          )
+          );
         }
-        await rolesApi.assignPermission(roleId, existing.perm_id, auth.accessToken!)
+        await rolesApi.assignPermission(roleId, existing.perm_id, auth.accessToken!);
       }
     }
-    await fetchRoles()
-    editRole.value = null
+    await fetchRoles();
+    editRole.value = null;
   } catch (e: unknown) {
-    permSaveError.value = e instanceof Error ? e.message : t('admin.failedToAddPermission')
+    permSaveError.value = e instanceof Error ? e.message : t('admin.failedToAddPermission');
   } finally {
-    permSaving.value = false
+    permSaving.value = false;
   }
 }
 
-onMounted(fetchRoles)
+onMounted(fetchRoles);
 </script>

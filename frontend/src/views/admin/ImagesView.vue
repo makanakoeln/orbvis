@@ -128,61 +128,61 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { imagesApi } from '@/api/client'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import { useAuthStore } from '@/stores/auth'
-import type { ImageEntry } from '@/types/api'
+import { imagesApi } from '@/api/client';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import { useAuthStore } from '@/stores/auth';
+import type { ImageEntry } from '@/types/api';
 
-const BASE_URL = import.meta.env.BASE_URL
-const { t } = useI18n()
-const auth = useAuthStore()
+const BASE_URL = import.meta.env.BASE_URL;
+const { t } = useI18n();
+const auth = useAuthStore();
 
-const fileInputEl = ref<HTMLInputElement | null>(null)
-const icons = ref<ImageEntry[]>([])
-const loading = ref(false)
-const uploadError = ref('')
+const fileInputEl = ref<HTMLInputElement | null>(null);
+const icons = ref<ImageEntry[]>([]);
+const loading = ref(false);
+const uploadError = ref('');
 
 async function fetchIcons() {
-  loading.value = true
+  loading.value = true;
   try {
-    icons.value = await imagesApi.list(auth.accessToken!)
+    icons.value = await imagesApi.list(auth.accessToken!);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function uploadIcons(event: Event) {
-  const files = (event.target as HTMLInputElement).files
-  if (!files?.length) return
-  uploadError.value = ''
+  const files = (event.target as HTMLInputElement).files;
+  if (!files?.length) return;
+  uploadError.value = '';
   try {
     for (const file of Array.from(files)) {
-      await imagesApi.upload(file, auth.accessToken!)
+      await imagesApi.upload(file, auth.accessToken!);
     }
-    await fetchIcons()
+    await fetchIcons();
   } catch (e: unknown) {
-    uploadError.value = e instanceof Error ? e.message : 'Upload failed'
+    uploadError.value = e instanceof Error ? e.message : 'Upload failed';
   }
   // Reset file input
-  ;(event.target as HTMLInputElement).value = ''
+  (event.target as HTMLInputElement).value = '';
 }
 
-const deleteTargetName = ref<string | null>(null)
+const deleteTargetName = ref<string | null>(null);
 
 async function confirmDeleteIcon() {
-  const name = deleteTargetName.value
-  if (!name) return
-  deleteTargetName.value = null
+  const name = deleteTargetName.value;
+  if (!name) return;
+  deleteTargetName.value = null;
   try {
-    await imagesApi.delete(name, auth.accessToken!)
-    icons.value = icons.value.filter((i) => i.name !== name)
+    await imagesApi.delete(name, auth.accessToken!);
+    icons.value = icons.value.filter((i) => i.name !== name);
   } catch (e: unknown) {
-    uploadError.value = e instanceof Error ? e.message : 'Delete failed'
+    uploadError.value = e instanceof Error ? e.message : 'Delete failed';
   }
 }
 
-onMounted(fetchIcons)
+onMounted(fetchIcons);
 </script>

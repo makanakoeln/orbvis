@@ -459,12 +459,12 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, reactive, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { nextTick, onMounted, reactive, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { boardsApi, connectionsApi, rolesApi } from '@/api/client'
-import NumberInput from '@/components/NumberInput.vue'
-import { useAuthStore } from '@/stores/auth'
+import { boardsApi, connectionsApi, rolesApi } from '@/api/client';
+import NumberInput from '@/components/NumberInput.vue';
+import { useAuthStore } from '@/stores/auth';
 import type {
   BackendConfig,
   BoardRead,
@@ -472,22 +472,22 @@ import type {
   RadarView,
   RoleRead,
   WorldmapView,
-} from '@/types/api'
+} from '@/types/api';
 
 const props = defineProps<{
-  board: BoardRead
-  worldmapView?: { lat: number; lng: number; zoom: number } | null
-}>()
-const emit = defineEmits<{ close: []; updated: [] }>()
+  board: BoardRead;
+  worldmapView?: { lat: number; lng: number; zoom: number } | null;
+}>();
+const emit = defineEmits<{ close: []; updated: [] }>();
 
-const { t } = useI18n()
-const auth = useAuthStore()
+const { t } = useI18n();
+const auth = useAuthStore();
 
 const tabs: { id: 'general' | 'permissions'; label: string }[] = [
   { id: 'general', label: t('admin.settings') },
   { id: 'permissions', label: t('admin.boardPermissions') },
-]
-const activeTab = ref<'general' | 'permissions'>('general')
+];
+const activeTab = ref<'general' | 'permissions'>('general');
 
 // ── General ────────────────────────────────────────────────────────────────
 
@@ -497,18 +497,18 @@ function initWorldmapCoords() {
       lat: props.worldmapView.lat,
       lng: props.worldmapView.lng,
       zoom: props.worldmapView.zoom,
-    }
+    };
   }
   if (props.board.view.type === 'worldmap') {
-    const wv = props.board.view as WorldmapView
-    return { lat: wv.lat, lng: wv.lng, zoom: wv.zoom }
+    const wv = props.board.view as WorldmapView;
+    return { lat: wv.lat, lng: wv.lng, zoom: wv.zoom };
   }
-  return { lat: 51.0, lng: 10.0, zoom: 5 }
+  return { lat: 51.0, lng: 10.0, zoom: 5 };
 }
 
-const wm = initWorldmapCoords()
-const rv = props.board.view.type === 'radar' ? (props.board.view as RadarView) : null
-const wmv = props.board.view.type === 'worldmap' ? (props.board.view as WorldmapView) : null
+const wm = initWorldmapCoords();
+const rv = props.board.view.type === 'radar' ? (props.board.view as RadarView) : null;
+const wmv = props.board.view.type === 'worldmap' ? (props.board.view as WorldmapView) : null;
 
 const form = ref({
   alias: props.board.alias,
@@ -527,23 +527,23 @@ const form = ref({
   hover_template: props.board.hover_template ?? '',
   context_template: props.board.context_template ?? '',
   background_image: props.board.background_image ?? '',
-})
+});
 
-const backends = ref<BackendConfig[]>([])
-const saving = ref(false)
-const saveError = ref('')
-const uploadError = ref('')
-const uploadOk = ref(false)
+const backends = ref<BackendConfig[]>([]);
+const saving = ref(false);
+const saveError = ref('');
+const uploadError = ref('');
+const uploadOk = ref(false);
 
 async function save() {
-  saving.value = true
-  saveError.value = ''
+  saving.value = true;
+  saveError.value = '';
   try {
     // Always save any pending permission changes
     if (permDraft.size > 0) {
-      await savePermissions()
+      await savePermissions();
     }
-    let view: Record<string, unknown>
+    let view: Record<string, unknown>;
     if (form.value.map_type === 'worldmap') {
       view = {
         type: 'worldmap',
@@ -552,15 +552,15 @@ async function save() {
         zoom: form.value.worldmap_zoom,
         tile_url: form.value.worldmap_tile_url || null,
         tile_saturate: form.value.worldmap_tile_saturate,
-      }
+      };
     } else if (form.value.map_type === 'radar') {
       view = {
         type: 'radar',
         filter: form.value.radar_filter,
         filter_value: form.value.radar_filter_value,
-      }
+      };
     } else {
-      view = { type: form.value.map_type }
+      view = { type: form.value.map_type };
     }
     await boardsApi.update(
       props.board.name,
@@ -576,97 +576,97 @@ async function save() {
         context_template: form.value.context_template || null,
       },
       auth.accessToken!,
-    )
-    emit('updated')
-    emit('close')
+    );
+    emit('updated');
+    emit('close');
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : 'An error occurred'
+    saveError.value = e instanceof Error ? e.message : 'An error occurred';
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 
 async function uploadBackground(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  uploadError.value = ''
-  uploadOk.value = false
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+  uploadError.value = '';
+  uploadOk.value = false;
   try {
-    const result = await boardsApi.uploadBackground(props.board.name, file, auth.accessToken!)
-    form.value.background_image = result.filename
-    uploadOk.value = true
+    const result = await boardsApi.uploadBackground(props.board.name, file, auth.accessToken!);
+    form.value.background_image = result.filename;
+    uploadOk.value = true;
   } catch (e: unknown) {
-    uploadError.value = e instanceof Error ? e.message : 'Upload failed'
+    uploadError.value = e instanceof Error ? e.message : 'Upload failed';
   }
 }
 
 async function deleteBackground() {
-  uploadError.value = ''
+  uploadError.value = '';
   try {
-    await boardsApi.deleteBackground(props.board.name, auth.accessToken!)
-    form.value.background_image = ''
+    await boardsApi.deleteBackground(props.board.name, auth.accessToken!);
+    form.value.background_image = '';
   } catch (e: unknown) {
-    uploadError.value = e instanceof Error ? e.message : 'Delete failed'
+    uploadError.value = e instanceof Error ? e.message : 'Delete failed';
   }
 }
 
 // ── Permissions ────────────────────────────────────────────────────────────
-const permRoles = ref<RoleRead[]>([])
-const permLoading = ref(false)
+const permRoles = ref<RoleRead[]>([]);
+const permLoading = ref(false);
 // Draft: key = `${role_id}-${act}`, value = desired checked state (undefined = use server state)
-const permDraft = reactive(new Map<string, boolean>())
+const permDraft = reactive(new Map<string, boolean>());
 
 async function loadPermissions() {
-  permLoading.value = true
+  permLoading.value = true;
   try {
-    permRoles.value = await rolesApi.list(auth.accessToken!)
-    permDraft.clear()
+    permRoles.value = await rolesApi.list(auth.accessToken!);
+    permDraft.clear();
   } finally {
-    permLoading.value = false
+    permLoading.value = false;
   }
 }
 
 function hasWildcard(role: RoleRead, act: string): boolean {
-  return role.permissions.some((p) => p.mod === 'map' && p.act === act && p.obj === '*')
+  return role.permissions.some((p) => p.mod === 'map' && p.act === act && p.obj === '*');
 }
 
 function hasDirectPerm(role: RoleRead, act: string): boolean {
   return role.permissions.some(
     (p) => p.mod === 'map' && p.act === act && p.obj === props.board.name,
-  )
+  );
 }
 
 function hasDraftPerm(role: RoleRead, act: string): boolean {
-  const key = `${role.role_id}-${act}`
-  if (permDraft.has(key)) return permDraft.get(key)!
-  return hasDirectPerm(role, act) || hasWildcard(role, act)
+  const key = `${role.role_id}-${act}`;
+  if (permDraft.has(key)) return permDraft.get(key)!;
+  return hasDirectPerm(role, act) || hasWildcard(role, act);
 }
 
 function toggleDraftPerm(role: RoleRead, act: string) {
-  if (hasWildcard(role, act)) return
-  const key = `${role.role_id}-${act}`
-  const current = hasDraftPerm(role, act)
-  permDraft.set(key, !current)
+  if (hasWildcard(role, act)) return;
+  const key = `${role.role_id}-${act}`;
+  const current = hasDraftPerm(role, act);
+  permDraft.set(key, !current);
 }
 
 async function savePermissions() {
   for (const role of permRoles.value) {
     for (const act of ['view', 'edit'] as const) {
-      if (hasWildcard(role, act)) continue
-      const key = `${role.role_id}-${act}`
-      if (!permDraft.has(key)) continue // no change
-      const desired = permDraft.get(key)!
-      const hasServer = hasDirectPerm(role, act)
+      if (hasWildcard(role, act)) continue;
+      const key = `${role.role_id}-${act}`;
+      if (!permDraft.has(key)) continue; // no change
+      const desired = permDraft.get(key)!;
+      const hasServer = hasDirectPerm(role, act);
       if (desired && !hasServer) {
         // add
-        let existingPerm: PermissionRead | null = null
+        let existingPerm: PermissionRead | null = null;
         for (const r of permRoles.value) {
           const p = r.permissions.find(
             (p) => p.mod === 'map' && p.act === act && p.obj === props.board.name,
-          )
+          );
           if (p) {
-            existingPerm = p
-            break
+            existingPerm = p;
+            break;
           }
         }
         if (!existingPerm) {
@@ -675,29 +675,29 @@ async function savePermissions() {
             act,
             props.board.name,
             auth.accessToken!,
-          )
+          );
         }
-        await rolesApi.assignPermission(role.role_id, existingPerm.perm_id, auth.accessToken!)
+        await rolesApi.assignPermission(role.role_id, existingPerm.perm_id, auth.accessToken!);
       } else if (!desired && hasServer) {
         // remove
         const perm = role.permissions.find(
           (p) => p.mod === 'map' && p.act === act && p.obj === props.board.name,
-        )!
-        await rolesApi.removePermission(role.role_id, perm.perm_id, auth.accessToken!)
+        )!;
+        await rolesApi.removePermission(role.role_id, perm.perm_id, auth.accessToken!);
       }
     }
   }
-  permDraft.clear()
+  permDraft.clear();
 }
 
 onMounted(async () => {
-  const [bs] = await Promise.all([connectionsApi.list(auth.accessToken!), loadPermissions()])
-  backends.value = bs
+  const [bs] = await Promise.all([connectionsApi.list(auth.accessToken!), loadPermissions()]);
+  backends.value = bs;
   // Re-apply backend_id after options are rendered (browser may reset select with no options)
-  await nextTick()
-  const saved = form.value.backend_id
-  form.value.backend_id = ''
-  await nextTick()
-  form.value.backend_id = saved
-})
+  await nextTick();
+  const saved = form.value.backend_id;
+  form.value.backend_id = '';
+  await nextTick();
+  form.value.backend_id = saved;
+});
 </script>

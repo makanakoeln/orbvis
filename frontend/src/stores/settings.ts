@@ -1,12 +1,12 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
 
-import { settingsApi } from '@/api/client'
-import { useAuthStore } from '@/stores/auth'
-import type { GlobalSettings } from '@/types/api'
+import { settingsApi } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
+import type { GlobalSettings } from '@/types/api';
 
 function token() {
-  return useAuthStore().accessToken ?? ''
+  return useAuthStore().accessToken ?? '';
 }
 
 export const SETTINGS_DEFAULTS: GlobalSettings = {
@@ -25,27 +25,27 @@ export const SETTINGS_DEFAULTS: GlobalSettings = {
   default_map_type: 'static',
   hover_template: null,
   context_template: null,
-}
+};
 
 export const useSettingsStore = defineStore('settings', () => {
-  const settings = ref<GlobalSettings>({ ...SETTINGS_DEFAULTS })
-  const loading = ref(false)
+  const settings = ref<GlobalSettings>({ ...SETTINGS_DEFAULTS });
+  const loading = ref(false);
 
   async function load(): Promise<void> {
-    if (!token()) return
-    loading.value = true
+    if (!token()) return;
+    loading.value = true;
     try {
-      settings.value = await settingsApi.get(token())
+      settings.value = await settingsApi.get(token());
     } catch {
       // Fall back to built-in defaults
     } finally {
-      loading.value = false
+      loading.value = false;
     }
   }
 
   async function save(data: GlobalSettings): Promise<void> {
-    settings.value = await settingsApi.update(data, token())
+    settings.value = await settingsApi.update(data, token());
   }
 
-  return { settings, loading, load, save }
-})
+  return { settings, loading, load, save };
+});

@@ -1,9 +1,9 @@
-import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { mount } from '@vue/test-utils';
+import { describe, expect, it } from 'vitest';
 
-import type { BoardConfig, ObjectState } from '@/types/api'
+import type { BoardConfig, ObjectState } from '@/types/api';
 
-import BoardCanvas from './BoardCanvas.vue'
+import BoardCanvas from './BoardCanvas.vue';
 
 const sampleConfig: BoardConfig = {
   name: 'test',
@@ -25,7 +25,7 @@ const sampleConfig: BoardConfig = {
       z: 1,
     },
   ],
-}
+};
 
 const sampleStates: Record<string, ObjectState> = {
   '1': {
@@ -38,7 +38,7 @@ const sampleStates: Record<string, ObjectState> = {
     in_downtime: false,
     stale: false,
   },
-}
+};
 
 const baseProps = {
   config: sampleConfig,
@@ -47,16 +47,16 @@ const baseProps = {
   placing: false,
   lineDragPositions: {},
   selectedObjectId: null,
-}
+};
 
 describe('BoardCanvas', () => {
   it('renders without errors', () => {
     const wrapper = mount(BoardCanvas, {
       props: baseProps,
       global: { stubs: { HoverMenu: true, ContextMenu: true, BoardObject: true } },
-    })
-    expect(wrapper.exists()).toBe(true)
-  })
+    });
+    expect(wrapper.exists()).toBe(true);
+  });
 
   it('renders the correct number of objects', () => {
     const wrapper = mount(BoardCanvas, {
@@ -64,8 +64,8 @@ describe('BoardCanvas', () => {
       global: {
         stubs: { HoverMenu: true, ContextMenu: true, BoardLine: true, BoardObject: true },
       },
-    })
-    const objects = wrapper.findAllComponents({ name: 'BoardObject' })
-    expect(objects).toHaveLength(1)
-  })
-})
+    });
+    const objects = wrapper.findAllComponents({ name: 'BoardObject' });
+    expect(objects).toHaveLength(1);
+  });
+});

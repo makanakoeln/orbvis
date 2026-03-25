@@ -722,8 +722,8 @@
               :message="t('board.cannotBeUndone')"
               :confirm-label="t('common.delete')"
               @confirm="
-                confirmDelete = false
-                $emit('delete')
+                confirmDelete = false;
+                $emit('delete');
               "
               @cancel="confirmDelete = false"
             />
@@ -751,77 +751,77 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { connectionsApi } from '@/api/client'
-import ColorInput from '@/components/ColorInput.vue'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import NumberInput from '@/components/NumberInput.vue'
-import { useAuthStore } from '@/stores/auth'
-import type { BoardObject, ObjectState } from '@/types/api'
-import { parsePerfData } from '@/utils/perf'
+import { connectionsApi } from '@/api/client';
+import ColorInput from '@/components/ColorInput.vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import NumberInput from '@/components/NumberInput.vue';
+import { useAuthStore } from '@/stores/auth';
+import type { BoardObject, ObjectState } from '@/types/api';
+import { parsePerfData } from '@/utils/perf';
 
-import AutocompleteInput from './AutocompleteInput.vue'
+import AutocompleteInput from './AutocompleteInput.vue';
 
-const { t } = useI18n()
+const { t } = useI18n();
 
 const props = defineProps<{
-  object: BoardObject
-  state?: ObjectState
-  backendId: string
-  mapType?: string
-  anchorRect?: { left: number; top: number; right: number; bottom: number } | null
-}>()
+  object: BoardObject;
+  state?: ObjectState;
+  backendId: string;
+  mapType?: string;
+  anchorRect?: { left: number; top: number; right: number; bottom: number } | null;
+}>();
 
 const emit = defineEmits<{
-  close: []
-  save: [updates: Record<string, unknown>]
-  delete: []
-}>()
+  close: [];
+  save: [updates: Record<string, unknown>];
+  delete: [];
+}>();
 
-const auth = useAuthStore()
+const auth = useAuthStore();
 
 // Popover vs centered modal
-const isPopover = computed(() => !!props.anchorRect)
+const isPopover = computed(() => !!props.anchorRect);
 const popoverStyle = computed(() => {
-  const r = props.anchorRect
-  if (!r) return {}
-  const margin = 12
-  const cardW = 400
-  const cardMaxH = window.innerHeight * 0.75 // matches max-h-[75vh]
+  const r = props.anchorRect;
+  if (!r) return {};
+  const margin = 12;
+  const cardW = 400;
+  const cardMaxH = window.innerHeight * 0.75; // matches max-h-[75vh]
 
   // Horizontal: prefer right of object, fall back to left
-  let left: number
+  let left: number;
   if (r.right + margin + cardW <= window.innerWidth) {
-    left = r.right + margin
+    left = r.right + margin;
   } else {
-    left = Math.max(margin, r.left - margin - cardW)
+    left = Math.max(margin, r.left - margin - cardW);
   }
 
   // Vertical: align top of card with top of object, clamp to viewport
-  let top = r.top
+  let top = r.top;
   // If the card would overflow the bottom, push it up
   if (top + cardMaxH + margin > window.innerHeight) {
-    top = window.innerHeight - cardMaxH - margin
+    top = window.innerHeight - cardMaxH - margin;
   }
-  top = Math.max(margin, top)
+  top = Math.max(margin, top);
 
-  return { left: `${left}px`, top: `${top}px` }
-})
+  return { left: `${left}px`, top: `${top}px` };
+});
 
-const fetchedMetrics = ref<string[]>([])
+const fetchedMetrics = ref<string[]>([]);
 
 const metricSuggestions = computed(() => {
-  if (fetchedMetrics.value.length) return fetchedMetrics.value
-  return parsePerfData(props.state?.perf_data ?? '').map((m) => m.label)
-})
+  if (fetchedMetrics.value.length) return fetchedMetrics.value;
+  return parsePerfData(props.state?.perf_data ?? '').map((m) => m.label);
+});
 
 async function fetchMetrics(host: string, service?: string) {
-  if (!props.backendId || !host) return
+  if (!props.backendId || !host) return;
   fetchedMetrics.value = await connectionsApi
     .perfMetrics(props.backendId, host, auth.accessToken!, service || undefined)
-    .catch(() => [])
+    .catch(() => []);
 }
 
 // ---- Form state ----
@@ -880,131 +880,131 @@ const form = reactive({
   z: 1,
   x2: 0,
   y2: 0,
-})
+});
 
-const saving = ref(false)
-const saveError = ref('')
-const confirmDelete = ref(false)
-const showLink = ref(!!props.object.url)
-const showLabelAdvanced = ref(false)
+const saving = ref(false);
+const saveError = ref('');
+const confirmDelete = ref(false);
+const showLink = ref(!!props.object.url);
+const showLabelAdvanced = ref(false);
 const showTemplates = ref(
   !!(props.object.hover_template || props.object.context_template || props.object.hover_url),
-)
-const showFilter = ref(!!(props.object.exclude_members || props.object.exclude_member_states))
+);
+const showFilter = ref(!!(props.object.exclude_members || props.object.exclude_member_states));
 
 // Initialize form from object
 watch(
   () => props.object,
   (obj) => {
-    form.host_name = obj.host_name ?? ''
-    form.service_description = obj.service_description ?? ''
-    form.group_name = obj.group_name ?? ''
-    form.map_name = obj.map_name ?? ''
-    form.line_style = obj.line_style ?? null
-    form.line_color = obj.line_color ?? null
-    form.line_color_border = obj.line_color_border ?? null
-    form.label.show = obj.label?.show ?? true
-    form.label.text = obj.label?.text ?? ''
-    form.label.x = obj.label?.x ?? 0
-    form.label.y = obj.label?.y ?? 0
-    form.label.size = obj.label?.size ?? 11
-    form.label.color = obj.label?.color ?? '#ffffff'
-    form.label.background = obj.label?.background ?? 'transparent'
-    form.label_border = obj.label_border ?? null
-    form.label_maxlen = obj.label_maxlen ?? null
-    form.textbox_background = obj.textbox_background ?? null
-    form.textbox_border = obj.textbox_border ?? null
-    form.textbox_width = obj.textbox_width ?? null
-    form.textbox_height = obj.textbox_height ?? null
-    form.graph_url = obj.graph_url ?? ''
-    form.graph_embed_type = obj.graph_embed_type ?? 'img'
-    form.graph_width = obj.graph_width ?? 400
-    form.graph_height = obj.graph_height ?? 200
-    form.graph_refresh_interval = obj.graph_refresh_interval ?? 0
-    form.graph_metric = obj.graph_metric ?? ''
-    form.graph_time_window = obj.graph_time_window ?? 60
-    form.display.mode = obj.display?.mode ?? 'icon'
-    form.display.image = obj.display?.image ?? ''
-    form.display.image_size = obj.display?.image_size ?? null
-    form.display.gadget_type = obj.display?.gadget_type ?? 'gauge'
-    form.display.gadget_metric = obj.display?.gadget_metric ?? ''
-    form.weathermap_metric = obj.weathermap_metric ?? ''
-    form.only_hard_states = obj.only_hard_states ?? false
-    form.recognize_services = obj.recognize_services ?? false
-    form.exclude_members = obj.exclude_members ?? ''
-    form.exclude_member_states = obj.exclude_member_states ?? ''
-    form.url = obj.url ?? ''
-    form.url_target = obj.url_target ?? '_blank'
-    form.hover_url = obj.hover_url ?? ''
-    form.hover_template = obj.hover_template ?? ''
-    form.context_template = obj.context_template ?? ''
-    form.x = obj.x ?? 0
-    form.y = obj.y ?? 0
-    form.lat = obj.lat ?? 0
-    form.lng = obj.lng ?? 0
-    form.z = obj.z ?? 1
-    form.x2 = obj.x2 ?? obj.x + 150
-    form.y2 = obj.y2 ?? obj.y
-    showLabelAdvanced.value = false
-    showTemplates.value = !!(obj.hover_template || obj.context_template || obj.hover_url)
-    showFilter.value = !!(obj.exclude_members || obj.exclude_member_states)
+    form.host_name = obj.host_name ?? '';
+    form.service_description = obj.service_description ?? '';
+    form.group_name = obj.group_name ?? '';
+    form.map_name = obj.map_name ?? '';
+    form.line_style = obj.line_style ?? null;
+    form.line_color = obj.line_color ?? null;
+    form.line_color_border = obj.line_color_border ?? null;
+    form.label.show = obj.label?.show ?? true;
+    form.label.text = obj.label?.text ?? '';
+    form.label.x = obj.label?.x ?? 0;
+    form.label.y = obj.label?.y ?? 0;
+    form.label.size = obj.label?.size ?? 11;
+    form.label.color = obj.label?.color ?? '#ffffff';
+    form.label.background = obj.label?.background ?? 'transparent';
+    form.label_border = obj.label_border ?? null;
+    form.label_maxlen = obj.label_maxlen ?? null;
+    form.textbox_background = obj.textbox_background ?? null;
+    form.textbox_border = obj.textbox_border ?? null;
+    form.textbox_width = obj.textbox_width ?? null;
+    form.textbox_height = obj.textbox_height ?? null;
+    form.graph_url = obj.graph_url ?? '';
+    form.graph_embed_type = obj.graph_embed_type ?? 'img';
+    form.graph_width = obj.graph_width ?? 400;
+    form.graph_height = obj.graph_height ?? 200;
+    form.graph_refresh_interval = obj.graph_refresh_interval ?? 0;
+    form.graph_metric = obj.graph_metric ?? '';
+    form.graph_time_window = obj.graph_time_window ?? 60;
+    form.display.mode = obj.display?.mode ?? 'icon';
+    form.display.image = obj.display?.image ?? '';
+    form.display.image_size = obj.display?.image_size ?? null;
+    form.display.gadget_type = obj.display?.gadget_type ?? 'gauge';
+    form.display.gadget_metric = obj.display?.gadget_metric ?? '';
+    form.weathermap_metric = obj.weathermap_metric ?? '';
+    form.only_hard_states = obj.only_hard_states ?? false;
+    form.recognize_services = obj.recognize_services ?? false;
+    form.exclude_members = obj.exclude_members ?? '';
+    form.exclude_member_states = obj.exclude_member_states ?? '';
+    form.url = obj.url ?? '';
+    form.url_target = obj.url_target ?? '_blank';
+    form.hover_url = obj.hover_url ?? '';
+    form.hover_template = obj.hover_template ?? '';
+    form.context_template = obj.context_template ?? '';
+    form.x = obj.x ?? 0;
+    form.y = obj.y ?? 0;
+    form.lat = obj.lat ?? 0;
+    form.lng = obj.lng ?? 0;
+    form.z = obj.z ?? 1;
+    form.x2 = obj.x2 ?? obj.x + 150;
+    form.y2 = obj.y2 ?? obj.y;
+    showLabelAdvanced.value = false;
+    showTemplates.value = !!(obj.hover_template || obj.context_template || obj.hover_url);
+    showFilter.value = !!(obj.exclude_members || obj.exclude_member_states);
   },
   { immediate: true },
-)
+);
 
 // ---- Autocomplete ----
 
-const hosts = ref<string[]>([])
-const services = ref<string[]>([])
-const groups = ref<string[]>([])
-const loadingHosts = ref(false)
-const loadingServices = ref(false)
-const loadingGroups = ref(false)
+const hosts = ref<string[]>([]);
+const services = ref<string[]>([]);
+const groups = ref<string[]>([]);
+const loadingHosts = ref(false);
+const loadingServices = ref(false);
+const loadingGroups = ref(false);
 
 async function loadAutocomplete() {
-  if (!props.backendId) return
-  const type = props.object.type
+  if (!props.backendId) return;
+  const type = props.object.type;
   if (type === 'host' || type === 'service' || type === 'line' || type === 'graph') {
-    loadingHosts.value = true
+    loadingHosts.value = true;
     hosts.value = await connectionsApi
       .objects(props.backendId, 'host', auth.accessToken!)
-      .catch(() => [])
-    loadingHosts.value = false
+      .catch(() => []);
+    loadingHosts.value = false;
     if ((type === 'service' || type === 'line' || type === 'graph') && form.host_name) {
-      loadingServices.value = true
+      loadingServices.value = true;
       services.value = await connectionsApi
         .objects(props.backendId, 'service', auth.accessToken!, form.host_name)
-        .catch(() => [])
-      loadingServices.value = false
+        .catch(() => []);
+      loadingServices.value = false;
     }
   } else if (type === 'hostgroup') {
-    loadingGroups.value = true
+    loadingGroups.value = true;
     groups.value = await connectionsApi
       .objects(props.backendId, 'hostgroup', auth.accessToken!)
-      .catch(() => [])
-    loadingGroups.value = false
+      .catch(() => []);
+    loadingGroups.value = false;
   } else if (type === 'servicegroup') {
-    loadingGroups.value = true
+    loadingGroups.value = true;
     groups.value = await connectionsApi
       .objects(props.backendId, 'servicegroup', auth.accessToken!)
-      .catch(() => [])
-    loadingGroups.value = false
+      .catch(() => []);
+    loadingGroups.value = false;
   }
 }
 
-loadAutocomplete()
+loadAutocomplete();
 
 onMounted(() => {
-  if (form.host_name) fetchMetrics(form.host_name, form.service_description || undefined)
-})
+  if (form.host_name) fetchMetrics(form.host_name, form.service_description || undefined);
+});
 
 watch(
   () => [form.host_name, form.service_description],
   ([host, svc]) => {
-    if (host) fetchMetrics(host, svc || undefined)
-    else fetchedMetrics.value = []
+    if (host) fetchMetrics(host, svc || undefined);
+    else fetchedMetrics.value = [];
   },
-)
+);
 
 watch(
   () => form.host_name,
@@ -1015,33 +1015,33 @@ watch(
         props.object.type === 'graph') &&
       host
     ) {
-      loadingServices.value = true
+      loadingServices.value = true;
       services.value = await connectionsApi
         .objects(props.backendId, 'service', auth.accessToken!, host)
-        .catch(() => [])
-      loadingServices.value = false
+        .catch(() => []);
+      loadingServices.value = false;
     }
   },
-)
+);
 
 // ---- Display name ----
 
 const displayName = (() => {
-  const obj = props.object
-  if (obj.label?.text) return obj.label.text
-  if (obj.type === 'host') return obj.host_name ?? obj.id
+  const obj = props.object;
+  if (obj.label?.text) return obj.label.text;
+  if (obj.type === 'host') return obj.host_name ?? obj.id;
   if (obj.type === 'service')
-    return obj.service_description ? `${obj.host_name}/${obj.service_description}` : obj.id
-  if (obj.type === 'map') return obj.map_name ?? obj.id
-  if (obj.group_name) return obj.group_name
-  return obj.id
-})()
+    return obj.service_description ? `${obj.host_name}/${obj.service_description}` : obj.id;
+  if (obj.type === 'map') return obj.map_name ?? obj.id;
+  if (obj.group_name) return obj.group_name;
+  return obj.id;
+})();
 
 // ---- Save ----
 
 async function save() {
-  saveError.value = ''
-  saving.value = true
+  saveError.value = '';
+  saving.value = true;
   try {
     const updates: Record<string, unknown> = {
       display:
@@ -1088,44 +1088,44 @@ async function save() {
       exclude_members: form.exclude_members || null,
       exclude_member_states: form.exclude_member_states || null,
       z: form.z,
-    }
+    };
 
     if (props.object.type === 'host' || props.object.type === 'service') {
-      updates.host_name = form.host_name || null
-      updates.only_hard_states = form.only_hard_states
+      updates.host_name = form.host_name || null;
+      updates.only_hard_states = form.only_hard_states;
     }
-    if (props.object.type === 'host') updates.recognize_services = form.recognize_services
+    if (props.object.type === 'host') updates.recognize_services = form.recognize_services;
     if (props.object.type === 'service')
-      updates.service_description = form.service_description || null
+      updates.service_description = form.service_description || null;
     if (props.object.type === 'graph') {
-      updates.host_name = form.host_name || null
-      updates.service_description = form.service_description || null
+      updates.host_name = form.host_name || null;
+      updates.service_description = form.service_description || null;
     }
     if (props.object.type === 'hostgroup' || props.object.type === 'servicegroup')
-      updates.group_name = form.group_name || null
-    if (props.object.type === 'map') updates.map_name = form.map_name || null
+      updates.group_name = form.group_name || null;
+    if (props.object.type === 'map') updates.map_name = form.map_name || null;
 
     if (props.object.type === 'line') {
-      updates.x = form.x
-      updates.y = form.y
-      updates.host_name = form.host_name || null
-      updates.service_description = form.service_description || null
-      updates.x2 = form.x2
-      updates.y2 = form.y2
+      updates.x = form.x;
+      updates.y = form.y;
+      updates.host_name = form.host_name || null;
+      updates.service_description = form.service_description || null;
+      updates.x2 = form.x2;
+      updates.y2 = form.y2;
       if (form.line_style === 'weathermap')
-        updates.weathermap_metric = form.weathermap_metric || null
+        updates.weathermap_metric = form.weathermap_metric || null;
     } else if (props.mapType === 'worldmap') {
-      updates.lat = form.lat
-      updates.lng = form.lng
+      updates.lat = form.lat;
+      updates.lng = form.lng;
     } else {
-      updates.x = form.x
-      updates.y = form.y
+      updates.x = form.x;
+      updates.y = form.y;
     }
 
-    emit('save', updates)
+    emit('save', updates);
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : t('boardSettings.saveFailed')
-    saving.value = false
+    saveError.value = e instanceof Error ? e.message : t('boardSettings.saveFailed');
+    saving.value = false;
   }
 }
 </script>

@@ -66,49 +66,49 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { cmkApi } from '@/api/client'
-import type { BoardObject } from '@/types/api'
+import { cmkApi } from '@/api/client';
+import type { BoardObject } from '@/types/api';
 
-const { t } = useI18n()
+const { t } = useI18n();
 
 const props = defineProps<{
-  object: BoardObject
-  checkmkUrl: string
-}>()
+  object: BoardObject;
+  checkmkUrl: string;
+}>();
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: [] }>();
 
 function toLocalDatetimeString(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-const now = new Date()
-const oneHourLater = new Date(now.getTime() + 3600_000)
+const now = new Date();
+const oneHourLater = new Date(now.getTime() + 3600_000);
 
-const startTime = ref(toLocalDatetimeString(now))
-const endTime = ref(toLocalDatetimeString(oneHourLater))
-const comment = ref('')
-const submitting = ref(false)
-const error = ref('')
-const success = ref(false)
+const startTime = ref(toLocalDatetimeString(now));
+const endTime = ref(toLocalDatetimeString(oneHourLater));
+const comment = ref('');
+const submitting = ref(false);
+const error = ref('');
+const success = ref(false);
 
 const displayName = computed(() => {
   if (props.object.host_name && props.object.service_description)
-    return `${props.object.host_name} / ${props.object.service_description}`
-  return props.object.host_name ?? props.object.group_name ?? props.object.id
-})
+    return `${props.object.host_name} / ${props.object.service_description}`;
+  return props.object.host_name ?? props.object.group_name ?? props.object.id;
+});
 
 async function submit() {
-  if (!comment.value.trim() || submitting.value) return
-  submitting.value = true
-  error.value = ''
+  if (!comment.value.trim() || submitting.value) return;
+  submitting.value = true;
+  error.value = '';
   try {
-    const start = new Date(startTime.value).toISOString()
-    const end = new Date(endTime.value).toISOString()
+    const start = new Date(startTime.value).toISOString();
+    const end = new Date(endTime.value).toISOString();
     if (
       props.object.type === 'service' &&
       props.object.host_name &&
@@ -121,16 +121,22 @@ async function submit() {
         start,
         end,
         comment.value,
-      )
+      );
     } else if (props.object.host_name) {
-      await cmkApi.downtimeHost(props.checkmkUrl, props.object.host_name, start, end, comment.value)
+      await cmkApi.downtimeHost(
+        props.checkmkUrl,
+        props.object.host_name,
+        start,
+        end,
+        comment.value,
+      );
     }
-    success.value = true
-    setTimeout(() => emit('close'), 1200)
+    success.value = true;
+    setTimeout(() => emit('close'), 1200);
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : t('downtime.error')
+    error.value = e instanceof Error ? e.message : t('downtime.error');
   } finally {
-    submitting.value = false
+    submitting.value = false;
   }
 }
 </script>

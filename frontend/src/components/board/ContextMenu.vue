@@ -218,87 +218,87 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import type { BoardObject, ObjectState } from '@/types/api'
-import { interpolateTemplate } from '@/utils/template'
+import type { BoardObject, ObjectState } from '@/types/api';
+import { interpolateTemplate } from '@/utils/template';
 
-const { t } = useI18n()
+const { t } = useI18n();
 
 const props = defineProps<{
-  object: BoardObject
-  state?: ObjectState
-  x: number
-  y: number
-  checkmkUrl?: string | null
-  showEdit?: boolean
-  template?: string | null
-}>()
+  object: BoardObject;
+  state?: ObjectState;
+  x: number;
+  y: number;
+  checkmkUrl?: string | null;
+  showEdit?: boolean;
+  template?: string | null;
+}>();
 
 defineEmits<{
-  close: []
-  edit: []
-  duplicate: []
-  delete: []
-  acknowledge: []
-  scheduleDowntime: []
-  forceCheck: []
-}>()
+  close: [];
+  edit: [];
+  duplicate: [];
+  delete: [];
+  acknowledge: [];
+  scheduleDowntime: [];
+  forceCheck: [];
+}>();
 
 const renderedTemplate = computed(() =>
   props.template ? interpolateTemplate(props.template, props.object, props.state) : null,
-)
+);
 
 // ACK is only meaningful for problem states
-const _OK_STATES = new Set(['UP', 'OK', 'PENDING'])
+const _OK_STATES = new Set(['UP', 'OK', 'PENDING']);
 const isProblematic = computed(
   () => props.state !== undefined && !_OK_STATES.has(props.state.state),
-)
+);
 
 const displayName = computed(() => {
-  if (props.object.label?.text) return props.object.label.text
+  if (props.object.label?.text) return props.object.label.text;
   if (props.object.host_name && props.object.service_description)
-    return `${props.object.host_name} / ${props.object.service_description}`
-  return props.object.host_name ?? props.object.group_name ?? props.object.id
-})
+    return `${props.object.host_name} / ${props.object.service_description}`;
+  return props.object.host_name ?? props.object.group_name ?? props.object.id;
+});
 
 const base = computed(() => {
   // Strip trailing /check_mk or /check_mk/ so we can safely append /check_mk/view.py
-  return props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '') ?? null
-})
+  return props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '') ?? null;
+});
 
 // Extract site name from last path segment, e.g. "http://host/heute" → "heute"
 const site = computed(() => {
-  if (!base.value) return null
-  const parts = base.value.split('/')
-  return parts[parts.length - 1] || null
-})
+  if (!base.value) return null;
+  const parts = base.value.split('/');
+  return parts[parts.length - 1] || null;
+});
 
 const hostUrl = computed(() => {
-  if (!base.value || !props.object.host_name) return null
-  const p: Record<string, string> = { view_name: 'hoststatus', host: props.object.host_name }
-  if (site.value) p.site = site.value
-  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`
-})
+  if (!base.value || !props.object.host_name) return null;
+  const p: Record<string, string> = { view_name: 'hoststatus', host: props.object.host_name };
+  if (site.value) p.site = site.value;
+  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`;
+});
 
 const serviceUrl = computed(() => {
-  if (!base.value || !props.object.host_name || !props.object.service_description) return null
+  if (!base.value || !props.object.host_name || !props.object.service_description) return null;
   const p: Record<string, string> = {
     view_name: 'service',
     host: props.object.host_name,
     service: props.object.service_description,
-  }
-  if (site.value) p.site = site.value
-  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`
-})
+  };
+  if (site.value) p.site = site.value;
+  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`;
+});
 
 const groupUrl = computed(() => {
-  if (!base.value || !props.object.group_name) return null
-  const view = props.object.type === 'hostgroup' ? 'hostgroup' : 'servicegroup'
-  const key = props.object.type === 'hostgroup' ? 'hostgroup' : 'servicegroup'
-  const p: Record<string, string> = { view_name: view, [key]: props.object.group_name }
-  if (site.value) p.site = site.value
-  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`
-})
+  if (!base.value || !props.object.group_name) return null;
+  const view = props.object.type === 'hostgroup' ? 'hostgroup' : 'servicegroup';
+  const key = props.object.type === 'hostgroup' ? 'hostgroup' : 'servicegroup';
+  const p: Record<string, string> = { view_name: view, [key]: props.object.group_name };
+  if (site.value) p.site = site.value;
+  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`;
+});
 </script>

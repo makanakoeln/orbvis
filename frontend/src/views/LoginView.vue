@@ -157,24 +157,24 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import ChangelogModal from '@/components/ChangelogModal.vue'
-import { useAuthStore } from '@/stores/auth'
+import ChangelogModal from '@/components/ChangelogModal.vue';
+import { useAuthStore } from '@/stores/auth';
 
-const { t } = useI18n()
-const authStore = useAuthStore()
-const username = ref('')
-const password = ref('')
-const showPassword = ref(false)
-const showChangelog = ref(false)
-const appVersion = __APP_VERSION__
-const usernameEl = ref<HTMLInputElement | null>(null)
+const { t } = useI18n();
+const authStore = useAuthStore();
+const username = ref('');
+const password = ref('');
+const showPassword = ref(false);
+const showChangelog = ref(false);
+const appVersion = __APP_VERSION__;
+const usernameEl = ref<HTMLInputElement | null>(null);
 
-onMounted(() => usernameEl.value?.focus())
+onMounted(() => usernameEl.value?.focus());
 
 async function handleLogin() {
-  await authStore.login(username.value, password.value)
+  await authStore.login(username.value, password.value);
 }
 </script>

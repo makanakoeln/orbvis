@@ -12,8 +12,8 @@ export const STATE_COLORS: Record<string, string> = {
   UNKNOWN: '#fb923c',
   WARNING: '#ffd000',
   PENDING: '#9ca3af',
-}
+};
 
 export function stateColor(state: string | undefined): string {
-  return STATE_COLORS[state ?? 'PENDING'] ?? STATE_COLORS['PENDING']
+  return STATE_COLORS[state ?? 'PENDING'] ?? STATE_COLORS['PENDING'];
 }

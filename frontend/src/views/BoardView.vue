@@ -532,8 +532,8 @@
                     : 'text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
                 "
                 @click="
-                  serviceLayout = opt.value
-                  serviceLayoutOpen = false
+                  serviceLayout = opt.value;
+                  serviceLayoutOpen = false;
                 "
               >
                 {{ opt.label }}
@@ -628,46 +628,46 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watchEffect } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onMounted, onUnmounted, reactive, ref, watchEffect } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 
-import { connectionsApi } from '@/api/client'
-import AutomapCanvas from '@/components/board/AutomapCanvas.vue'
-import BoardCanvas from '@/components/board/BoardCanvas.vue'
-import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue'
-import ContextMenu from '@/components/board/ContextMenu.vue'
-import EditPanel from '@/components/board/EditPanel.vue'
-import HoverMenu from '@/components/board/HoverMenu.vue'
-import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue'
-import RadarCanvas from '@/components/board/RadarCanvas.vue'
-import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import { useBoardEditor } from '@/composables/useBoardEditor'
-import { useAuthStore } from '@/stores/auth'
-import { useBoardsStore } from '@/stores/boards'
-import { useConnectionsStore } from '@/stores/connections'
-import { useSettingsStore } from '@/stores/settings'
-import { useStatesStore } from '@/stores/states'
-import type { BoardObject } from '@/types/api'
-import { resolveTemplate } from '@/utils/template'
+import { connectionsApi } from '@/api/client';
+import AutomapCanvas from '@/components/board/AutomapCanvas.vue';
+import BoardCanvas from '@/components/board/BoardCanvas.vue';
+import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue';
+import ContextMenu from '@/components/board/ContextMenu.vue';
+import EditPanel from '@/components/board/EditPanel.vue';
+import HoverMenu from '@/components/board/HoverMenu.vue';
+import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue';
+import RadarCanvas from '@/components/board/RadarCanvas.vue';
+import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import { useBoardEditor } from '@/composables/useBoardEditor';
+import { useAuthStore } from '@/stores/auth';
+import { useBoardsStore } from '@/stores/boards';
+import { useConnectionsStore } from '@/stores/connections';
+import { useSettingsStore } from '@/stores/settings';
+import { useStatesStore } from '@/stores/states';
+import type { BoardObject } from '@/types/api';
+import { resolveTemplate } from '@/utils/template';
 
-type LineDragMode = 'move' | 'start' | 'end'
+type LineDragMode = 'move' | 'start' | 'end';
 
-const { t } = useI18n()
-const route = useRoute()
-const router = useRouter()
-const auth = useAuthStore()
-const boardsStore = useBoardsStore()
-const statesStore = useStatesStore()
-const connectionsStore = useConnectionsStore()
-const settingsStore = useSettingsStore()
+const { t } = useI18n();
+const route = useRoute();
+const router = useRouter();
+const auth = useAuthStore();
+const boardsStore = useBoardsStore();
+const statesStore = useStatesStore();
+const connectionsStore = useConnectionsStore();
+const settingsStore = useSettingsStore();
 
-const boardName = computed(() => route.params.name as string)
-const boardConfig = computed(() => boardsStore.currentBoard)
+const boardName = computed(() => route.params.name as string);
+const boardConfig = computed(() => boardsStore.currentBoard);
 const boardConfigAsRead = computed<import('@/types/api').BoardRead | null>(() => {
-  const cfg = boardsStore.currentBoard
-  if (!cfg) return null
+  const cfg = boardsStore.currentBoard;
+  if (!cfg) return null;
   return {
     name: cfg.name,
     alias: cfg.alias,
@@ -681,331 +681,336 @@ const boardConfigAsRead = computed<import('@/types/api').BoardRead | null>(() =>
     readonly: cfg.readonly,
     hover_template: cfg.hover_template,
     context_template: cfg.context_template,
-  }
-})
-const canvasRef = ref<InstanceType<typeof BoardCanvas> | null>(null)
-const worldmapCanvasRef = ref<InstanceType<typeof WorldMapCanvas> | null>(null)
+  };
+});
+const canvasRef = ref<InstanceType<typeof BoardCanvas> | null>(null);
+const worldmapCanvasRef = ref<InstanceType<typeof WorldMapCanvas> | null>(null);
 
-const isWorldmap = computed(() => boardConfig.value?.view.type === 'worldmap')
-const isAutomap = computed(() => boardConfig.value?.view.type === 'automap')
-const isRadar = computed(() => boardConfig.value?.view.type === 'radar')
+const isWorldmap = computed(() => boardConfig.value?.view.type === 'worldmap');
+const isAutomap = computed(() => boardConfig.value?.view.type === 'automap');
+const isRadar = computed(() => boardConfig.value?.view.type === 'radar');
 
 const checkmkUrl = computed(() => {
-  const bid = boardConfig.value?.backend_id
-  if (!bid) return null
-  return connectionsStore.backends.find((b) => b.id === bid)?.checkmk_url ?? null
-})
+  const bid = boardConfig.value?.backend_id;
+  if (!bid) return null;
+  return connectionsStore.backends.find((b) => b.id === bid)?.checkmk_url ?? null;
+});
 
 async function reloadBoard() {
-  await boardsStore.fetchBoard(boardName.value)
+  await boardsStore.fetchBoard(boardName.value);
 }
 
-const editor = useBoardEditor(boardName, reloadBoard)
+const editor = useBoardEditor(boardName, reloadBoard);
 
 // ---- Object properties modal (right-click in view mode) ----
 
-type AnchorRect = { left: number; top: number; right: number; bottom: number }
+type AnchorRect = { left: number; top: number; right: number; bottom: number };
 
-const propsModalObject = ref<BoardObject | null>(null)
-const propsModalAnchor = ref<AnchorRect | null>(null)
-const deleteTargetObject = ref<BoardObject | null>(null)
+const propsModalObject = ref<BoardObject | null>(null);
+const propsModalAnchor = ref<AnchorRect | null>(null);
+const deleteTargetObject = ref<BoardObject | null>(null);
 
 function openPropsModal(obj: BoardObject, anchor?: AnchorRect | null) {
-  editor.selectObject(obj.id)
-  propsModalAnchor.value = anchor ?? null
-  propsModalObject.value = obj
+  editor.selectObject(obj.id);
+  propsModalAnchor.value = anchor ?? null;
+  propsModalObject.value = obj;
 }
 
 function onObjectContextMenu(obj: BoardObject, anchor?: AnchorRect | null) {
-  openPropsModal(obj, anchor)
+  openPropsModal(obj, anchor);
 }
 
 function onObjectDblclick(obj: BoardObject) {
-  openPropsModal(obj)
+  openPropsModal(obj);
 }
 
 function onObjectDuplicate(obj: BoardObject) {
-  editor.selectObject(obj.id)
-  editor.duplicateSelected()
+  editor.selectObject(obj.id);
+  editor.duplicateSelected();
 }
 
 // ---- Worldmap hover & context menu ----
 
-const worldmapHover = reactive({ visible: false, object: null as BoardObject | null, x: 0, y: 0 })
-const worldmapCtxMenu = reactive({ visible: false, object: null as BoardObject | null, x: 0, y: 0 })
+const worldmapHover = reactive({ visible: false, object: null as BoardObject | null, x: 0, y: 0 });
+const worldmapCtxMenu = reactive({
+  visible: false,
+  object: null as BoardObject | null,
+  x: 0,
+  y: 0,
+});
 
 function onWorldmapHover(obj: BoardObject, event: MouseEvent) {
-  worldmapHover.object = obj
-  worldmapHover.x = event.pageX + 12
-  worldmapHover.y = event.pageY + 12
-  worldmapHover.visible = true
+  worldmapHover.object = obj;
+  worldmapHover.x = event.pageX + 12;
+  worldmapHover.y = event.pageY + 12;
+  worldmapHover.visible = true;
 }
 
 function onWorldmapHoverLeave() {
-  worldmapHover.visible = false
+  worldmapHover.visible = false;
 }
 
 function onWorldmapContextMenuView(obj: BoardObject, x: number, y: number) {
-  editor.selectObject(obj.id)
-  worldmapCtxMenu.object = obj
-  worldmapCtxMenu.x = x
-  worldmapCtxMenu.y = y
-  worldmapCtxMenu.visible = true
+  editor.selectObject(obj.id);
+  worldmapCtxMenu.object = obj;
+  worldmapCtxMenu.x = x;
+  worldmapCtxMenu.y = y;
+  worldmapCtxMenu.visible = true;
 }
 
 function onWorldmapCtxEdit() {
-  const obj = worldmapCtxMenu.object
-  const x = worldmapCtxMenu.x
-  const y = worldmapCtxMenu.y
-  worldmapCtxMenu.visible = false
-  if (obj) openPropsModal(obj, { left: x, top: y, right: x, bottom: y })
+  const obj = worldmapCtxMenu.object;
+  const x = worldmapCtxMenu.x;
+  const y = worldmapCtxMenu.y;
+  worldmapCtxMenu.visible = false;
+  if (obj) openPropsModal(obj, { left: x, top: y, right: x, bottom: y });
 }
 
 function onWorldmapCtxDelete() {
-  if (boardConfig.value?.readonly) return
-  const obj = worldmapCtxMenu.object
-  worldmapCtxMenu.visible = false
+  if (boardConfig.value?.readonly) return;
+  const obj = worldmapCtxMenu.object;
+  worldmapCtxMenu.visible = false;
   if (obj) {
-    editor.selectObject(obj.id)
-    editor.deleteSelected()
+    editor.selectObject(obj.id);
+    editor.deleteSelected();
   }
 }
 
 function closeWorldmapMenus() {
-  worldmapHover.visible = false
-  worldmapCtxMenu.visible = false
+  worldmapHover.visible = false;
+  worldmapCtxMenu.visible = false;
 }
 
 function _closePropsModal() {
-  propsModalObject.value = null
-  propsModalAnchor.value = null
+  propsModalObject.value = null;
+  propsModalAnchor.value = null;
 }
 
 async function onPropsModalSave(updates: Record<string, unknown>) {
   if (propsModalObject.value)
-    await editor.updateObjectProperties(propsModalObject.value.id, updates)
-  _closePropsModal()
+    await editor.updateObjectProperties(propsModalObject.value.id, updates);
+  _closePropsModal();
 }
 
 async function onPropsModalDelete() {
-  const obj = propsModalObject.value
-  _closePropsModal()
+  const obj = propsModalObject.value;
+  _closePropsModal();
   if (obj) {
-    editor.selectObject(obj.id)
-    await editor.deleteSelected()
+    editor.selectObject(obj.id);
+    await editor.deleteSelected();
   }
 }
 
 function onToggleEditMode() {
-  editor.toggleEditMode()
+  editor.toggleEditMode();
 }
 
 function onObjectDelete(obj: BoardObject) {
-  deleteTargetObject.value = obj
+  deleteTargetObject.value = obj;
 }
 
 async function confirmObjectDelete() {
-  const obj = deleteTargetObject.value
-  deleteTargetObject.value = null
+  const obj = deleteTargetObject.value;
+  deleteTargetObject.value = null;
   if (obj) {
-    editor.selectObject(obj.id)
-    await editor.deleteSelected()
+    editor.selectObject(obj.id);
+    await editor.deleteSelected();
   }
 }
 
 const selectedObject = computed<BoardObject | null>(() => {
-  if (!editor.selectedObjectId.value || !boardConfig.value) return null
-  return boardConfig.value.objects.find((o) => o.id === editor.selectedObjectId.value) ?? null
-})
+  if (!editor.selectedObjectId.value || !boardConfig.value) return null;
+  return boardConfig.value.objects.find((o) => o.id === editor.selectedObjectId.value) ?? null;
+});
 
 // ---- Static map event handlers ----
 
 async function onObjectDragEnd(id: string, x: number, y: number) {
-  await editor.saveObjectPosition(id, x, y)
+  await editor.saveObjectPosition(id, x, y);
 }
 
 function onObjectClick(obj: BoardObject, _event?: MouseEvent) {
-  editor.selectObject(obj.id)
+  editor.selectObject(obj.id);
 }
 
 async function onCanvasClick(event: MouseEvent) {
-  if (!editor.editMode.value) return
+  if (!editor.editMode.value) return;
   if (!editor.placing.value) {
-    editor.selectObject(null)
-    return
+    editor.selectObject(null);
+    return;
   }
-  const pos = canvasRef.value?.getMapPosition(event)
+  const pos = canvasRef.value?.getMapPosition(event);
   if (pos) {
-    await editor.placeAt(pos.x, pos.y)
-    if (selectedObject.value) openPropsModal(selectedObject.value)
+    await editor.placeAt(pos.x, pos.y);
+    if (selectedObject.value) openPropsModal(selectedObject.value);
   }
 }
 
 // Clicks on the scroll container outside the canvas bounds also trigger placing.
 async function onContainerClick(event: MouseEvent) {
-  if (!editor.editMode.value || !editor.placing.value) return
-  const pos = canvasRef.value?.getMapPosition(event)
+  if (!editor.editMode.value || !editor.placing.value) return;
+  const pos = canvasRef.value?.getMapPosition(event);
   if (pos) {
-    await editor.placeAt(pos.x, pos.y)
-    if (selectedObject.value) openPropsModal(selectedObject.value)
+    await editor.placeAt(pos.x, pos.y);
+    if (selectedObject.value) openPropsModal(selectedObject.value);
   }
 }
 
 function onLineDragStart(event: MouseEvent, obj: BoardObject, mode: LineDragMode) {
-  const canvas = canvasRef.value?.getCanvasEl()
-  if (canvas) editor.startLineDrag(event, obj, mode, canvas)
+  const canvas = canvasRef.value?.getCanvasEl();
+  if (canvas) editor.startLineDrag(event, obj, mode, canvas);
 }
 
 async function onGraphResizeEnd(id: string, width: number, height: number) {
-  const obj = boardConfig.value?.objects.find((o) => o.id === id)
+  const obj = boardConfig.value?.objects.find((o) => o.id === id);
   if (obj) {
-    obj.graph_width = width
-    obj.graph_height = height
+    obj.graph_width = width;
+    obj.graph_height = height;
   }
-  await editor.updateObjectProperties(id, { graph_width: width, graph_height: height })
+  await editor.updateObjectProperties(id, { graph_width: width, graph_height: height });
 }
 
 // ---- Worldmap event handlers ----
 
 async function onStartPlacing() {
-  const d = editor.draft
-  const backendId = boardConfig.value?.backend_id
+  const d = editor.draft;
+  const backendId = boardConfig.value?.backend_id;
   if (boardConfig.value?.view.type === 'worldmap' && backendId && d.host_name) {
     try {
-      const geo = await connectionsApi.hostGeo(backendId, d.host_name, auth.accessToken!)
+      const geo = await connectionsApi.hostGeo(backendId, d.host_name, auth.accessToken!);
       if (geo) {
-        editor.startPlacing()
-        await editor.placeAtLatLng(geo.lat, geo.lng)
-        if (selectedObject.value) openPropsModal(selectedObject.value)
-        return
+        editor.startPlacing();
+        await editor.placeAtLatLng(geo.lat, geo.lng);
+        if (selectedObject.value) openPropsModal(selectedObject.value);
+        return;
       }
     } catch {}
   }
-  editor.startPlacing()
+  editor.startPlacing();
 }
 
 async function onCanvasLatLngClick(lat: number, lng: number) {
-  if (!editor.editMode.value || !editor.placing.value) return
-  await editor.placeAtLatLng(lat, lng)
-  if (selectedObject.value) openPropsModal(selectedObject.value)
+  if (!editor.editMode.value || !editor.placing.value) return;
+  await editor.placeAtLatLng(lat, lng);
+  if (selectedObject.value) openPropsModal(selectedObject.value);
 }
 
 function onLatLngDragEnd(id: string, lat: number, lng: number) {
-  editor.moveObjectToLatLng(id, lat, lng)
+  editor.moveObjectToLatLng(id, lat, lng);
 }
 
 // ---- Map Settings ----
 
-type ServiceLayout = 'off' | 'fan' | 'row' | 'orbit'
-const serviceLayout = ref<ServiceLayout>('off')
-const serviceLayoutOpen = ref(false)
+type ServiceLayout = 'off' | 'fan' | 'row' | 'orbit';
+const serviceLayout = ref<ServiceLayout>('off');
+const serviceLayoutOpen = ref(false);
 const serviceLayoutOptions = computed(() => [
   { value: 'off' as ServiceLayout, label: t('board.serviceLayoutOff') },
   { value: 'fan' as ServiceLayout, label: t('board.serviceLayoutFan') },
   { value: 'orbit' as ServiceLayout, label: t('board.serviceLayoutOrbit') },
   { value: 'row' as ServiceLayout, label: t('board.serviceLayoutRow') },
-])
-const showSettings = ref(false)
-const settingsWorldmapView = ref<{ lat: number; lng: number; zoom: number } | null>(null)
+]);
+const showSettings = ref(false);
+const settingsWorldmapView = ref<{ lat: number; lng: number; zoom: number } | null>(null);
 
 function openSettings() {
-  if (!boardConfig.value) return
-  const cfg = boardConfig.value
+  if (!boardConfig.value) return;
+  const cfg = boardConfig.value;
   if (cfg.view.type === 'worldmap' && worldmapCanvasRef.value) {
-    settingsWorldmapView.value = worldmapCanvasRef.value.getView() ?? null
+    settingsWorldmapView.value = worldmapCanvasRef.value.getView() ?? null;
   } else {
-    settingsWorldmapView.value = null
+    settingsWorldmapView.value = null;
   }
-  showSettings.value = true
+  showSettings.value = true;
 }
 
 async function onSettingsUpdated() {
-  await reloadBoard()
-  stopRotation()
-  scheduleRotation(boardsStore.currentBoard?.rotation_interval ?? 0)
+  await reloadBoard();
+  stopRotation();
+  scheduleRotation(boardsStore.currentBoard?.rotation_interval ?? 0);
 }
 
 // ---- Rotation ----
 
-let rotationTimer: ReturnType<typeof setInterval> | null = null
-const rotationCountdown = ref(0)
-const rotationPaused = ref(false)
+let rotationTimer: ReturnType<typeof setInterval> | null = null;
+const rotationCountdown = ref(0);
+const rotationPaused = ref(false);
 
 function stopRotation() {
   if (rotationTimer !== null) {
-    clearInterval(rotationTimer)
-    rotationTimer = null
+    clearInterval(rotationTimer);
+    rotationTimer = null;
   }
-  rotationCountdown.value = 0
+  rotationCountdown.value = 0;
 }
 
 async function goToNextBoard() {
-  if (boardsStore.boards.length === 0) await boardsStore.fetchBoards()
-  const pool = boardsStore.boards.filter((b) => (b.rotation_interval ?? 0) > 0)
-  if (pool.length < 2) return
-  const idx = pool.findIndex((b) => b.name === boardName.value)
-  const next = pool[(idx + 1) % pool.length]
-  router.push({ name: 'board', params: { name: next.name } })
+  if (boardsStore.boards.length === 0) await boardsStore.fetchBoards();
+  const pool = boardsStore.boards.filter((b) => (b.rotation_interval ?? 0) > 0);
+  if (pool.length < 2) return;
+  const idx = pool.findIndex((b) => b.name === boardName.value);
+  const next = pool[(idx + 1) % pool.length];
+  router.push({ name: 'board', params: { name: next.name } });
 }
 
 function scheduleRotation(intervalSeconds: number) {
-  stopRotation()
-  rotationPaused.value = false
-  if (intervalSeconds <= 0 || editor.editMode.value) return
-  rotationCountdown.value = intervalSeconds
+  stopRotation();
+  rotationPaused.value = false;
+  if (intervalSeconds <= 0 || editor.editMode.value) return;
+  rotationCountdown.value = intervalSeconds;
   rotationTimer = setInterval(() => {
-    if (rotationPaused.value || editor.editMode.value) return
-    rotationCountdown.value--
+    if (rotationPaused.value || editor.editMode.value) return;
+    rotationCountdown.value--;
     if (rotationCountdown.value <= 0) {
-      stopRotation()
-      goToNextBoard()
+      stopRotation();
+      goToNextBoard();
     }
-  }, 1000)
+  }, 1000);
 }
 
 function toggleRotationPause() {
-  rotationPaused.value = !rotationPaused.value
+  rotationPaused.value = !rotationPaused.value;
 }
 
 // Re-run whenever the map name changes (component is reused by Vue Router between maps).
 // Reset all edit state so edit mode, selection, and unsaved changes from Map A
 // don't carry over when navigating to Map B.
 watchEffect(async () => {
-  const name = boardName.value
-  stopRotation()
-  editor.resetForNewMap()
+  const name = boardName.value;
+  stopRotation();
+  editor.resetForNewMap();
 
-  await boardsStore.fetchBoard(name)
-  statesStore.connectToMap(name, auth.accessToken ?? undefined)
-  scheduleRotation(boardsStore.currentBoard?.rotation_interval ?? 0)
-})
+  await boardsStore.fetchBoard(name);
+  statesStore.connectToMap(name, auth.accessToken ?? undefined);
+  scheduleRotation(boardsStore.currentBoard?.rotation_interval ?? 0);
+});
 
 function onKeyDown(e: KeyboardEvent) {
-  if (!editor.editMode.value) return
-  const target = e.target as HTMLElement
+  if (!editor.editMode.value) return;
+  const target = e.target as HTMLElement;
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')
-    return
+    return;
   if (e.key === 'Escape') {
-    e.preventDefault()
-    if (editor.placing.value) editor.cancelPlacing()
-    else editor.selectObject(null)
+    e.preventDefault();
+    if (editor.placing.value) editor.cancelPlacing();
+    else editor.selectObject(null);
   } else if ((e.key === 'Delete' || e.key === 'Backspace') && editor.selectedObjectId.value) {
-    e.preventDefault()
-    editor.deleteSelected()
+    e.preventDefault();
+    editor.deleteSelected();
   } else if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
-    e.preventDefault()
-    editor.duplicateSelected()
+    e.preventDefault();
+    editor.duplicateSelected();
   }
 }
 
 onMounted(() => {
-  if (auth.isAdmin) connectionsStore.fetchBackends()
-  document.addEventListener('keydown', onKeyDown)
-})
+  if (auth.isAdmin) connectionsStore.fetchBackends();
+  document.addEventListener('keydown', onKeyDown);
+});
 
 onUnmounted(() => {
-  statesStore.disconnect()
-  stopRotation()
-  document.removeEventListener('keydown', onKeyDown)
-})
+  statesStore.disconnect();
+  stopRotation();
+  document.removeEventListener('keydown', onKeyDown);
+});
 </script>

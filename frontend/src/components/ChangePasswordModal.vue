@@ -85,45 +85,45 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { usersApi } from '@/api/client'
-import { useAuthStore } from '@/stores/auth'
+import { usersApi } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps<{
-  userId: number
-  userName: string
-}>()
+  userId: number;
+  userName: string;
+}>();
 
-defineEmits<{ close: [] }>()
+defineEmits<{ close: [] }>();
 
-const { t } = useI18n()
-const auth = useAuthStore()
-const password = ref('')
-const confirm = ref('')
-const saving = ref(false)
-const error = ref('')
-const success = ref(false)
+const { t } = useI18n();
+const auth = useAuthStore();
+const password = ref('');
+const confirm = ref('');
+const saving = ref(false);
+const error = ref('');
+const success = ref(false);
 
 async function save() {
-  error.value = ''
+  error.value = '';
   if (password.value !== confirm.value) {
-    error.value = t('userSettings.passwordMismatch')
-    return
+    error.value = t('userSettings.passwordMismatch');
+    return;
   }
-  saving.value = true
+  saving.value = true;
   try {
-    await usersApi.update(props.userId, { password: password.value }, auth.accessToken!)
-    success.value = true
+    await usersApi.update(props.userId, { password: password.value }, auth.accessToken!);
+    success.value = true;
     // Only refresh own user data — changing another user's password doesn't affect current session
-    if (props.userId === auth.user?.user_id) await auth.fetchCurrentUser()
-    password.value = ''
-    confirm.value = ''
+    if (props.userId === auth.user?.user_id) await auth.fetchCurrentUser();
+    password.value = '';
+    confirm.value = '';
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : t('userSettings.failedToChange')
+    error.value = e instanceof Error ? e.message : t('userSettings.failedToChange');
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 </script>

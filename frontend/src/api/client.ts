@@ -15,10 +15,10 @@ import type {
   RoleRead,
   TokenResponse,
   UserRead,
-} from '@/types/api'
+} from '@/types/api';
 
 // import.meta.env.BASE_URL is '/' in dev and '/heute/orbvis/' when built with --base
-const BASE_URL = `${import.meta.env.BASE_URL}api/v1`
+const BASE_URL = `${import.meta.env.BASE_URL}api/v1`;
 
 class ApiError extends Error {
   constructor(
@@ -26,48 +26,48 @@ class ApiError extends Error {
     message: string,
     public detail?: unknown,
   ) {
-    super(message)
-    this.name = 'ApiError'
+    super(message);
+    this.name = 'ApiError';
   }
 }
 
-const METHOD_OVERRIDE = new Set(['PATCH', 'PUT', 'DELETE'])
+const METHOD_OVERRIDE = new Set(['PATCH', 'PUT', 'DELETE']);
 
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
-  const declaredMethod = ((options.method ?? 'GET') as string).toUpperCase()
-  const needsOverride = METHOD_OVERRIDE.has(declaredMethod)
+  const declaredMethod = ((options.method ?? 'GET') as string).toUpperCase();
+  const needsOverride = METHOD_OVERRIDE.has(declaredMethod);
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
-  }
+  };
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`
+    headers['Authorization'] = `Bearer ${token}`;
   }
   // Tunnel PATCH/PUT/DELETE through POST so restrictive proxies (e.g. OMD Apache) don't block them.
   // The backend MethodOverrideMiddleware restores the original method before routing.
   if (needsOverride) {
-    headers['X-HTTP-Method-Override'] = declaredMethod
+    headers['X-HTTP-Method-Override'] = declaredMethod;
   }
 
   const response = await fetch(`${BASE_URL}${path}`, {
     ...options,
     method: needsOverride ? 'POST' : declaredMethod,
     headers,
-  })
+  });
 
   if (!response.ok) {
-    const detail = await response.json().catch(() => null)
-    const msg = detail?.detail ?? detail?.message ?? `HTTP ${response.status}`
+    const detail = await response.json().catch(() => null);
+    const msg = detail?.detail ?? detail?.message ?? `HTTP ${response.status}`;
     throw new ApiError(
       response.status,
       typeof msg === 'string' ? msg : `HTTP ${response.status}`,
       detail,
-    )
+    );
   }
 
-  if (response.status === 204) return undefined as T
-  return response.json()
+  if (response.status === 204) return undefined as T;
+  return response.json();
 }
 
 // ---- Auth ----
@@ -90,7 +90,7 @@ export const authApi = {
   me: (token: string): Promise<UserRead> => request('/auth/me', {}, token),
 
   logout: (token: string): Promise<void> => request('/auth/logout', { method: 'POST' }, token),
-}
+};
 
 // ---- Boards ----
 
@@ -101,11 +101,11 @@ export const boardsApi = {
 
   create: (
     data: {
-      name: string
-      alias?: string
-      backend_id?: string
-      icon_size?: number
-      view?: Record<string, unknown>
+      name: string;
+      alias?: string;
+      backend_id?: string;
+      icon_size?: number;
+      view?: Record<string, unknown>;
     },
     token: string,
   ): Promise<BoardConfig> =>
@@ -146,18 +146,18 @@ export const boardsApi = {
     file: File,
     token: string,
   ): Promise<{ filename: string }> => {
-    const form = new FormData()
-    form.append('file', file)
+    const form = new FormData();
+    form.append('file', file);
     const response = await fetch(`${BASE_URL}/boards/${boardName}/background`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: form,
-    })
+    });
     if (!response.ok) {
-      const detail = await response.json().catch(() => null)
-      throw new ApiError(response.status, `HTTP ${response.status}`, detail)
+      const detail = await response.json().catch(() => null);
+      throw new ApiError(response.status, `HTTP ${response.status}`, detail);
     }
-    return response.json()
+    return response.json();
   },
 
   deleteBackground: (boardName: string, token: string): Promise<void> =>
@@ -178,32 +178,32 @@ export const boardsApi = {
     ),
 
   importCfg: async (file: File, token: string, overwrite = false): Promise<BoardConfig> => {
-    const form = new FormData()
-    form.append('file', file)
-    const BASE_URL = `${import.meta.env.BASE_URL}api/v1`
+    const form = new FormData();
+    form.append('file', file);
+    const BASE_URL = `${import.meta.env.BASE_URL}api/v1`;
     const res = await fetch(`${BASE_URL}/boards/import/cfg?overwrite=${overwrite}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: form,
-    })
+    });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }))
-      throw new Error(err.detail ?? res.statusText)
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail ?? res.statusText);
     }
-    return res.json()
+    return res.json();
   },
 
   exportBoard: async (name: string, token: string): Promise<void> => {
-    const cfg = await request<BoardConfig>(`/boards/${name}`, {}, token)
-    const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${name}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    const cfg = await request<BoardConfig>(`/boards/${name}`, {}, token);
+    const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   },
-}
+};
 
 // ---- Users ----
 
@@ -228,7 +228,7 @@ export const usersApi = {
 
   removeRole: (userId: number, roleId: number, token: string): Promise<void> =>
     request(`/users/${userId}/roles/${roleId}`, { method: 'DELETE' }, token),
-}
+};
 
 // ---- Roles ----
 
@@ -258,7 +258,7 @@ export const rolesApi = {
 
   removePermission: (roleId: number, permId: number, token: string): Promise<void> =>
     request(`/roles/${roleId}/permissions/${permId}`, { method: 'DELETE' }, token),
-}
+};
 
 // ---- Backends ----
 
@@ -275,9 +275,9 @@ export const connectionsApi = {
     request(`/backends/${id}`, { method: 'DELETE' }, token),
 
   objects: (backendId: string, type: string, token: string, host?: string): Promise<string[]> => {
-    const params = new URLSearchParams({ type })
-    if (host) params.set('host', host)
-    return request(`/backends/${backendId}/objects?${params}`, {}, token)
+    const params = new URLSearchParams({ type });
+    if (host) params.set('host', host);
+    return request(`/backends/${backendId}/objects?${params}`, {}, token);
   },
 
   test: (backendId: string, token: string): Promise<{ ok: boolean; message: string }> =>
@@ -300,9 +300,9 @@ export const connectionsApi = {
     token: string,
     service?: string,
   ): Promise<string[]> => {
-    const params = new URLSearchParams({ host })
-    if (service) params.set('service', service)
-    return request(`/backends/${backendId}/perf-metrics?${params}`, {}, token)
+    const params = new URLSearchParams({ host });
+    if (service) params.set('service', service);
+    return request(`/backends/${backendId}/perf-metrics?${params}`, {}, token);
   },
 
   metricHistory: (
@@ -312,9 +312,9 @@ export const connectionsApi = {
     minutes: number,
     token: string,
   ): Promise<Record<string, Array<{ ts: number; value: number; unit: string }>>> => {
-    const params = new URLSearchParams({ host, minutes: String(minutes) })
-    if (service) params.set('service', service)
-    return request(`/backends/${backendId}/metric-history?${params}`, {}, token)
+    const params = new URLSearchParams({ host, minutes: String(minutes) });
+    if (service) params.set('service', service);
+    return request(`/backends/${backendId}/metric-history?${params}`, {}, token);
   },
 
   hostGeo: (
@@ -326,7 +326,7 @@ export const connectionsApi = {
 
   testConnection: (data: BackendConfig, token: string): Promise<{ ok: boolean; message: string }> =>
     request('/backends/test-connection', { method: 'POST', body: JSON.stringify(data) }, token),
-}
+};
 
 // ---- Images ----
 
@@ -334,23 +334,23 @@ export const imagesApi = {
   list: (token: string): Promise<ImageEntry[]> => request('/images', {}, token),
 
   upload: async (file: File, token: string): Promise<ImageEntry> => {
-    const form = new FormData()
-    form.append('file', file)
+    const form = new FormData();
+    form.append('file', file);
     const response = await fetch(`${BASE_URL}/images`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: form,
-    })
+    });
     if (!response.ok) {
-      const detail = await response.json().catch(() => null)
-      throw new ApiError(response.status, `HTTP ${response.status}`, detail)
+      const detail = await response.json().catch(() => null);
+      throw new ApiError(response.status, `HTTP ${response.status}`, detail);
     }
-    return response.json()
+    return response.json();
   },
 
   delete: (name: string, token: string): Promise<void> =>
     request(`/images/${encodeURIComponent(name)}`, { method: 'DELETE' }, token),
-}
+};
 
 // ---- Global Settings ----
 
@@ -359,24 +359,24 @@ export const settingsApi = {
 
   update: (data: GlobalSettings, token: string): Promise<GlobalSettings> =>
     request('/settings', { method: 'PUT', body: JSON.stringify(data) }, token),
-}
+};
 
 // ---- Checkmk REST API (direct browser → CMK, same-origin session) ----
 
 async function cmkRequest(baseUrl: string, path: string, body?: unknown): Promise<void> {
   // baseUrl e.g. "http://host/site" → API at "http://host/site/check_mk/api/1.0"
-  const base = baseUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
-  const url = `${base}/check_mk/api/1.0${path}`
+  const base = baseUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
+  const url = `${base}/check_mk/api/1.0${path}`;
   const response = await fetch(url, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  });
   if (!response.ok) {
-    const detail = await response.json().catch(() => null)
-    const msg = detail?.detail ?? detail?.title ?? `HTTP ${response.status}`
-    throw new Error(typeof msg === 'string' ? msg : `HTTP ${response.status}`)
+    const detail = await response.json().catch(() => null);
+    const msg = detail?.detail ?? detail?.title ?? `HTTP ${response.status}`;
+    throw new Error(typeof msg === 'string' ? msg : `HTTP ${response.status}`);
   }
 }
 
@@ -396,7 +396,7 @@ export const cmkApi = {
       sticky,
       notify,
       persistent,
-    })
+    });
   },
 
   acknowledgeService(
@@ -416,7 +416,7 @@ export const cmkApi = {
       sticky,
       notify,
       persistent,
-    })
+    });
   },
 
   downtimeHost(
@@ -432,7 +432,7 @@ export const cmkApi = {
       start_time: startTime,
       end_time: endTime,
       comment,
-    })
+    });
   },
 
   downtimeService(
@@ -450,7 +450,7 @@ export const cmkApi = {
       start_time: startTime,
       end_time: endTime,
       comment,
-    })
+    });
   },
 
   forceCheckHost(baseUrl: string, hostname: string): Promise<void> {
@@ -458,15 +458,15 @@ export const cmkApi = {
       baseUrl,
       `/objects/host/${encodeURIComponent(hostname)}/actions/reschedule-active-checks/invoke`,
       { force: true },
-    )
+    );
   },
 
   forceCheckService(baseUrl: string, hostname: string, serviceDescription: string): Promise<void> {
-    const id = `${encodeURIComponent(hostname)}~${encodeURIComponent(serviceDescription)}`
+    const id = `${encodeURIComponent(hostname)}~${encodeURIComponent(serviceDescription)}`;
     return cmkRequest(baseUrl, `/objects/service/${id}/actions/reschedule-active-checks/invoke`, {
       force: true,
-    })
+    });
   },
-}
+};
 
-export { ApiError }
+export { ApiError };

@@ -43,24 +43,24 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue';
 
-defineEmits<{ close: [] }>()
+defineEmits<{ close: [] }>();
 
-const appVersion = __APP_VERSION__
-const content = ref('')
-const loading = ref(true)
-const error = ref('')
+const appVersion = __APP_VERSION__;
+const content = ref('');
+const loading = ref(true);
+const error = ref('');
 
 onMounted(async () => {
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}api/changelog`)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    content.value = await res.text()
+    const res = await fetch(`${import.meta.env.BASE_URL}api/changelog`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    content.value = await res.text();
   } catch (e) {
-    error.value = String(e)
+    error.value = String(e);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-})
+});
 </script>

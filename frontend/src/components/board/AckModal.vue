@@ -66,44 +66,44 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { cmkApi } from '@/api/client'
-import type { BoardObject } from '@/types/api'
+import { cmkApi } from '@/api/client';
+import type { BoardObject } from '@/types/api';
 
-const { t } = useI18n()
+const { t } = useI18n();
 
 const props = defineProps<{
-  object: BoardObject
-  checkmkUrl: string
-}>()
+  object: BoardObject;
+  checkmkUrl: string;
+}>();
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: [] }>();
 
-const comment = ref('')
-const sticky = ref(true)
-const notify = ref(true)
-const persistent = ref(false)
-const submitting = ref(false)
-const error = ref('')
-const success = ref(false)
-const commentEl = ref<HTMLInputElement | null>(null)
+const comment = ref('');
+const sticky = ref(true);
+const notify = ref(true);
+const persistent = ref(false);
+const submitting = ref(false);
+const error = ref('');
+const success = ref(false);
+const commentEl = ref<HTMLInputElement | null>(null);
 
 onMounted(() => {
-  commentEl.value?.focus()
-})
+  commentEl.value?.focus();
+});
 
 const displayName = computed(() => {
   if (props.object.host_name && props.object.service_description)
-    return `${props.object.host_name} / ${props.object.service_description}`
-  return props.object.host_name ?? props.object.group_name ?? props.object.id
-})
+    return `${props.object.host_name} / ${props.object.service_description}`;
+  return props.object.host_name ?? props.object.group_name ?? props.object.id;
+});
 
 async function submit() {
-  if (!comment.value.trim() || submitting.value) return
-  submitting.value = true
-  error.value = ''
+  if (!comment.value.trim() || submitting.value) return;
+  submitting.value = true;
+  error.value = '';
   try {
     if (
       props.object.type === 'service' &&
@@ -118,7 +118,7 @@ async function submit() {
         sticky.value,
         notify.value,
         persistent.value,
-      )
+      );
     } else if (props.object.host_name) {
       await cmkApi.acknowledgeHost(
         props.checkmkUrl,
@@ -127,14 +127,14 @@ async function submit() {
         sticky.value,
         notify.value,
         persistent.value,
-      )
+      );
     }
-    success.value = true
-    setTimeout(() => emit('close'), 1200)
+    success.value = true;
+    setTimeout(() => emit('close'), 1200);
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : t('ack.error')
+    error.value = e instanceof Error ? e.message : t('ack.error');
   } finally {
-    submitting.value = false
+    submitting.value = false;
   }
 }
 </script>

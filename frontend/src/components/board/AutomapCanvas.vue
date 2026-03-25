@@ -92,9 +92,9 @@
 </template>
 
 <script setup lang="ts">
-import 'd3-transition'
+import 'd3-transition';
 
-import { drag } from 'd3-drag'
+import { drag } from 'd3-drag';
 import {
   forceCollide,
   forceLink,
@@ -104,45 +104,45 @@ import {
   forceY,
   type SimulationLinkDatum,
   type SimulationNodeDatum,
-} from 'd3-force'
-import { select } from 'd3-selection'
-import { zoom, zoomIdentity } from 'd3-zoom'
-import { onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+} from 'd3-force';
+import { select } from 'd3-selection';
+import { zoom, zoomIdentity } from 'd3-zoom';
+import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
-import { connectionsApi } from '@/api/client'
-import { useAuthStore } from '@/stores/auth'
-import type { TopologyNode } from '@/types/api'
+import { connectionsApi } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
+import type { TopologyNode } from '@/types/api';
 
-const props = defineProps<{ backendId: string; serviceLayout: 'off' | 'fan' | 'row' | 'orbit' }>()
-const auth = useAuthStore()
+const props = defineProps<{ backendId: string; serviceLayout: 'off' | 'fan' | 'row' | 'orbit' }>();
+const auth = useAuthStore();
 
-const NODE_R = 18
-const SVC_R_MAX = 11 // service node radius at low service count
-const ORBIT_R_MIN = 80 // minimum orbit/fan radius
+const NODE_R = 18;
+const SVC_R_MAX = 11; // service node radius at low service count
+const ORBIT_R_MIN = 80; // minimum orbit/fan radius
 
 // Scale service node radius down when a host has many services
 function svcR(N: number): number {
-  if (N <= 6) return SVC_R_MAX
-  if (N <= 12) return 9
-  if (N <= 20) return 7
-  return 6
+  if (N <= 6) return SVC_R_MAX;
+  if (N <= 12) return 9;
+  if (N <= 20) return 7;
+  return 6;
 }
 
 // Scale orbit radius up so service circles don't overlap.
 // Full circle circumference = 2π·R must fit N circles of diameter 2r+gap.
 function orbitR(N: number): number {
-  const r = svcR(N)
-  return Math.max(ORBIT_R_MIN, Math.ceil((N * (r * 2 + 3)) / (2 * Math.PI)))
+  const r = svcR(N);
+  return Math.max(ORBIT_R_MIN, Math.ceil((N * (r * 2 + 3)) / (2 * Math.PI)));
 }
 
 // Show labels only when few enough services per host
 function showSvcLabel(N: number): boolean {
-  return N <= 10
+  return N <= 10;
 }
-const svgEl = ref<SVGSVGElement | null>(null)
-const nodes = ref<TopologyNode[]>([])
-const loading = ref(true)
-const error = ref('')
+const svgEl = ref<SVGSVGElement | null>(null);
+const nodes = ref<TopologyNode[]>([]);
+const loading = ref(true);
+const error = ref('');
 const tooltip = reactive({
   visible: false,
   x: 0,
@@ -152,8 +152,8 @@ const tooltip = reactive({
   output: '',
   state: '',
   stateColor: '',
-})
-let timer: ReturnType<typeof setInterval> | null = null
+});
+let timer: ReturnType<typeof setInterval> | null = null;
 
 // ---- Fetch ----
 async function fetchTopology() {
@@ -162,11 +162,11 @@ async function fetchTopology() {
       props.backendId,
       auth.accessToken!,
       props.serviceLayout !== 'off',
-    )
+    );
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load topology'
+    error.value = e instanceof Error ? e.message : 'Failed to load topology';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
@@ -175,32 +175,32 @@ watch(
   () => props.serviceLayout,
   (newVal, oldVal) => {
     for (const k of nodeCache.keys()) {
-      if (k.includes('::')) nodeCache.delete(k)
+      if (k.includes('::')) nodeCache.delete(k);
     }
     // When enabling services, reset host positions so the simulation can spread them out
     // from scratch rather than starting from a cramped no-service layout.
     if (newVal !== 'off' && oldVal === 'off') {
       for (const node of nodeCache.values()) {
-        node.x = undefined
-        node.y = undefined
-        node.vx = undefined
-        node.vy = undefined
+        node.x = undefined;
+        node.y = undefined;
+        node.vx = undefined;
+        node.vy = undefined;
       }
     }
-    _hasFitOnce = false
-    fetchTopology()
+    _hasFitOnce = false;
+    fetchTopology();
   },
-)
+);
 
 onMounted(() => {
-  fetchTopology()
-  timer = setInterval(fetchTopology, 15000)
-})
+  fetchTopology();
+  timer = setInterval(fetchTopology, 15000);
+});
 onUnmounted(() => {
-  if (timer) clearInterval(timer)
-  simulation?.stop()
-  if (svgEl.value) select(svgEl.value).selectAll('*').remove()
-})
+  if (timer) clearInterval(timer);
+  simulation?.stop();
+  if (svgEl.value) select(svgEl.value).selectAll('*').remove();
+});
 
 // ---- Color ----
 function stateColor(state: string): string {
@@ -212,150 +212,150 @@ function stateColor(state: string): string {
     UNREACHABLE: '#f97316',
     UNKNOWN: '#f97316',
     WARNING: '#ffd000',
-  }
-  return map[state] ?? '#6b7280'
+  };
+  return map[state] ?? '#6b7280';
 }
 
 // ---- D3 force types ----
 interface FNode extends SimulationNodeDatum {
-  id: string
-  state: string
-  output: string
-  bfsLevel: number
-  nodeType: 'host' | 'service'
-  hostId?: string
-  svcTotalCount?: number // total services for this host (set on service nodes for label visibility)
+  id: string;
+  state: string;
+  output: string;
+  bfsLevel: number;
+  nodeType: 'host' | 'service';
+  hostId?: string;
+  svcTotalCount?: number; // total services for this host (set on service nodes for label visibility)
   // d3-force sets x/y/vx/vy
 }
 interface FLink extends SimulationLinkDatum<FNode> {
-  source: FNode
-  target: FNode
-  sourceState: string
-  isServiceLink: boolean
+  source: FNode;
+  target: FNode;
+  sourceState: string;
+  isServiceLink: boolean;
 }
 
-let simulation: ReturnType<typeof forceSimulation<FNode>> | null = null
-let zoomBeh: ReturnType<typeof zoom<SVGSVGElement, unknown>> | null = null
-let lastFNodes: FNode[] = []
-let _hasFitOnce = false
+let simulation: ReturnType<typeof forceSimulation<FNode>> | null = null;
+let zoomBeh: ReturnType<typeof zoom<SVGSVGElement, unknown>> | null = null;
+let lastFNodes: FNode[] = [];
+let _hasFitOnce = false;
 
 // Reset auto-fit when switching boards
 watch(
   () => props.backendId,
   () => {
-    _hasFitOnce = false
+    _hasFitOnce = false;
   },
-)
+);
 
 // Stable node map — keeps d3 positions across topology refreshes
-const nodeCache = new Map<string, FNode>()
+const nodeCache = new Map<string, FNode>();
 
 // ---- BFS level (loose — for forceY only) ----
 function bfsLevels(topoNodes: TopologyNode[]): Map<string, number> {
-  const nameSet = new Set(topoNodes.map((n) => n.name))
-  const levels = new Map<string, number>()
+  const nameSet = new Set(topoNodes.map((n) => n.name));
+  const levels = new Map<string, number>();
   const roots = topoNodes.filter(
     (n) => !n.parents.length || n.parents.every((p) => !nameSet.has(p)),
-  )
-  const queue: string[] = roots.map((r) => r.name)
-  roots.forEach((r) => levels.set(r.name, 0))
+  );
+  const queue: string[] = roots.map((r) => r.name);
+  roots.forEach((r) => levels.set(r.name, 0));
   while (queue.length) {
-    const name = queue.shift()!
-    const lvl = levels.get(name)!
+    const name = queue.shift()!;
+    const lvl = levels.get(name)!;
     for (const n of topoNodes) {
       if (n.parents.includes(name) && !levels.has(n.name)) {
-        levels.set(n.name, lvl + 1)
-        queue.push(n.name)
+        levels.set(n.name, lvl + 1);
+        queue.push(n.name);
       }
     }
   }
-  topoNodes.filter((n) => !levels.has(n.name)).forEach((n) => levels.set(n.name, levels.size))
-  return levels
+  topoNodes.filter((n) => !levels.has(n.name)).forEach((n) => levels.set(n.name, levels.size));
+  return levels;
 }
 
 // ---- Zoom controls ----
 function fitView() {
-  const svg = svgEl.value
-  if (!svg || !zoomBeh || !lastFNodes.length) return
-  const W = svg.clientWidth || 900
-  const H = svg.clientHeight || 600
-  const PAD = 64
-  const xs = lastFNodes.map((n) => n.x ?? n.fx ?? 0)
-  const ys = lastFNodes.map((n) => n.y ?? n.fy ?? 0)
-  const minX = Math.min(...xs) - NODE_R - PAD
-  const maxX = Math.max(...xs) + NODE_R + PAD
-  const minY = Math.min(...ys) - NODE_R - PAD
-  const maxY = Math.max(...ys) + NODE_R + PAD
-  const scale = Math.min(3, Math.max(0.15, Math.min(W / (maxX - minX), H / (maxY - minY))))
-  const tx = W / 2 - scale * ((minX + maxX) / 2)
-  const ty = H / 2 - scale * ((minY + maxY) / 2)
+  const svg = svgEl.value;
+  if (!svg || !zoomBeh || !lastFNodes.length) return;
+  const W = svg.clientWidth || 900;
+  const H = svg.clientHeight || 600;
+  const PAD = 64;
+  const xs = lastFNodes.map((n) => n.x ?? n.fx ?? 0);
+  const ys = lastFNodes.map((n) => n.y ?? n.fy ?? 0);
+  const minX = Math.min(...xs) - NODE_R - PAD;
+  const maxX = Math.max(...xs) + NODE_R + PAD;
+  const minY = Math.min(...ys) - NODE_R - PAD;
+  const maxY = Math.max(...ys) + NODE_R + PAD;
+  const scale = Math.min(3, Math.max(0.15, Math.min(W / (maxX - minX), H / (maxY - minY))));
+  const tx = W / 2 - scale * ((minX + maxX) / 2);
+  const ty = H / 2 - scale * ((minY + maxY) / 2);
   select(svg)
     .transition()
     .duration(500)
-    .call(zoomBeh.transform, zoomIdentity.translate(tx, ty).scale(scale))
+    .call(zoomBeh.transform, zoomIdentity.translate(tx, ty).scale(scale));
 }
 
 function zoomIn() {
-  if (!svgEl.value || !zoomBeh) return
-  select(svgEl.value).transition().duration(200).call(zoomBeh.scaleBy, 1.4)
+  if (!svgEl.value || !zoomBeh) return;
+  select(svgEl.value).transition().duration(200).call(zoomBeh.scaleBy, 1.4);
 }
 
 function zoomOut() {
-  if (!svgEl.value || !zoomBeh) return
+  if (!svgEl.value || !zoomBeh) return;
   select(svgEl.value)
     .transition()
     .duration(200)
-    .call(zoomBeh.scaleBy, 1 / 1.4)
+    .call(zoomBeh.scaleBy, 1 / 1.4);
 }
 
 // ---- D3 rendering ----
 watch(
   [nodes, svgEl],
   () => {
-    const svg = svgEl.value
-    if (!svg || !nodes.value.length) return
-    render(svg, nodes.value)
+    const svg = svgEl.value;
+    if (!svg || !nodes.value.length) return;
+    render(svg, nodes.value);
   },
   { flush: 'post' },
-)
+);
 
 function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
-  const el = select(svg)
-  const W = svg.clientWidth || 900
-  const H = svg.clientHeight || 600
+  const el = select(svg);
+  const W = svg.clientWidth || 900;
+  const H = svg.clientHeight || 600;
 
   // --- Ensure static containers exist (created once) ---
-  let gZoom = el.select<SVGGElement>('g.zoom-layer')
+  let gZoom = el.select<SVGGElement>('g.zoom-layer');
   if (gZoom.empty()) {
-    gZoom = el.append('g').attr('class', 'zoom-layer')
-    gZoom.append('g').attr('class', 'links')
-    gZoom.append('g').attr('class', 'nodes')
+    gZoom = el.append('g').attr('class', 'zoom-layer');
+    gZoom.append('g').attr('class', 'links');
+    gZoom.append('g').attr('class', 'nodes');
   }
 
   // --- Zoom behaviour (attached once) ---
   if (!(el.node() as SVGSVGElement & { __zoom_attached?: boolean }).__zoom_attached) {
-    ;(el.node() as SVGSVGElement & { __zoom_attached?: boolean }).__zoom_attached = true
+    (el.node() as SVGSVGElement & { __zoom_attached?: boolean }).__zoom_attached = true;
     zoomBeh = zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.15, 3])
       .on('zoom', (event) => {
-        gZoom.attr('transform', event.transform)
-      })
-    el.call(zoomBeh)
+        gZoom.attr('transform', event.transform);
+      });
+    el.call(zoomBeh);
     // Center immediately so nodes don't flash at top-left on first render
-    el.call(zoomBeh.transform, zoomIdentity.translate(W / 2, H / 2))
+    el.call(zoomBeh.transform, zoomIdentity.translate(W / 2, H / 2));
   }
 
   // --- Build FNode list (reuse cached positions) ---
-  const levels = bfsLevels(topoNodes)
-  const maxLvl = Math.max(0, ...levels.values())
+  const levels = bfsLevels(topoNodes);
+  const maxLvl = Math.max(0, ...levels.values());
   // When services are visible, increase vertical spacing to fit orbit rings
-  const maxSvcN = Math.max(0, ...[...(nodes.value ?? []).map((n) => n.services?.length ?? 0)])
-  const minVSpacing = props.serviceLayout !== 'off' && maxSvcN > 0 ? orbitR(maxSvcN) * 2 + 50 : 0
-  const vSpacing = Math.max(minVSpacing, Math.min(130, (H * 0.8) / Math.max(1, maxLvl + 1)))
+  const maxSvcN = Math.max(0, ...[...(nodes.value ?? []).map((n) => n.services?.length ?? 0)]);
+  const minVSpacing = props.serviceLayout !== 'off' && maxSvcN > 0 ? orbitR(maxSvcN) * 2 + 50 : 0;
+  const vSpacing = Math.max(minVSpacing, Math.min(130, (H * 0.8) / Math.max(1, maxLvl + 1)));
 
   // Host nodes first
   const fNodes: FNode[] = topoNodes.map((n) => {
-    const cached = nodeCache.get(n.name)
+    const cached = nodeCache.get(n.name);
     const node: FNode = cached
       ? {
           ...cached,
@@ -370,20 +370,20 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
           output: n.output,
           bfsLevel: levels.get(n.name) ?? 0,
           nodeType: 'host',
-        }
-    nodeCache.set(n.name, node)
-    return node
-  })
+        };
+    nodeCache.set(n.name, node);
+    return node;
+  });
 
   // Service nodes appended after host nodes
   if (props.serviceLayout !== 'off') {
     for (const n of topoNodes) {
-      if (!n.services) continue
-      const hostLevel = levels.get(n.name) ?? 0
-      const N = n.services.length
+      if (!n.services) continue;
+      const hostLevel = levels.get(n.name) ?? 0;
+      const N = n.services.length;
       for (const svc of n.services) {
-        const svcId = `${n.name}::${svc.name}`
-        const cached = nodeCache.get(svcId)
+        const svcId = `${n.name}::${svc.name}`;
+        const cached = nodeCache.get(svcId);
         const svcNode: FNode = cached
           ? {
               ...cached,
@@ -402,119 +402,119 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
               nodeType: 'service',
               hostId: n.name,
               svcTotalCount: N,
-            }
-        nodeCache.set(svcId, svcNode)
-        fNodes.push(svcNode)
+            };
+        nodeCache.set(svcId, svcNode);
+        fNodes.push(svcNode);
       }
     }
   }
 
   // Remove stale cached nodes
-  const activeIds = new Set(fNodes.map((n) => n.id))
+  const activeIds = new Set(fNodes.map((n) => n.id));
   for (const k of nodeCache.keys()) {
-    if (!activeIds.has(k)) nodeCache.delete(k)
+    if (!activeIds.has(k)) nodeCache.delete(k);
   }
 
-  const nodeById = new Map(fNodes.map((n) => [n.id, n]))
+  const nodeById = new Map(fNodes.map((n) => [n.id, n]));
 
-  const fLinks: FLink[] = []
+  const fLinks: FLink[] = [];
   // Host-to-host links
   for (const n of topoNodes) {
     for (const p of n.parents) {
-      const src = nodeById.get(p)
-      const tgt = nodeById.get(n.name)
+      const src = nodeById.get(p);
+      const tgt = nodeById.get(n.name);
       if (src && tgt)
-        fLinks.push({ source: src, target: tgt, sourceState: src.state, isServiceLink: false })
+        fLinks.push({ source: src, target: tgt, sourceState: src.state, isServiceLink: false });
     }
   }
   // Host-to-service links
   if (props.serviceLayout !== 'off') {
     for (const n of topoNodes) {
-      if (!n.services) continue
-      const hostNode = nodeById.get(n.name)
-      if (!hostNode) continue
+      if (!n.services) continue;
+      const hostNode = nodeById.get(n.name);
+      if (!hostNode) continue;
       for (const svc of n.services) {
-        const svcNode = nodeById.get(`${n.name}::${svc.name}`)
+        const svcNode = nodeById.get(`${n.name}::${svc.name}`);
         if (svcNode)
           fLinks.push({
             source: hostNode,
             target: svcNode,
             sourceState: hostNode.state,
             isServiceLink: true,
-          })
+          });
       }
     }
   }
 
   // Pre-compute service groups per host for fan layout
-  const servicesByHost = new Map<string, FNode[]>()
+  const servicesByHost = new Map<string, FNode[]>();
   for (const n of fNodes) {
     if (n.nodeType === 'service' && n.hostId) {
-      const arr = servicesByHost.get(n.hostId) ?? []
-      arr.push(n)
-      servicesByHost.set(n.hostId, arr)
+      const arr = servicesByHost.get(n.hostId) ?? [];
+      arr.push(n);
+      servicesByHost.set(n.hostId, arr);
     }
   }
 
   // Measured row spacings per host (populated after first DOM render)
-  const rowSpacings = new Map<string, number>()
+  const rowSpacings = new Map<string, number>();
 
   // Service positioning
   function updateFanPositions() {
     for (const [hostId, services] of servicesByHost) {
-      const host = nodeById.get(hostId)
-      if (!host) continue
-      const hx = host.x ?? 0
-      const hy = host.y ?? 0
-      const N = services.length
-      const R = orbitR(N)
+      const host = nodeById.get(hostId);
+      if (!host) continue;
+      const hx = host.x ?? 0;
+      const hy = host.y ?? 0;
+      const N = services.length;
+      const R = orbitR(N);
 
       if (props.serviceLayout === 'fan' && N <= 8) {
         // Small fan: semicircle below host, evenly spaced
-        const spread = N > 1 ? Math.PI * 0.9 : 0
+        const spread = N > 1 ? Math.PI * 0.9 : 0;
         services.forEach((svc, i) => {
-          const angle = Math.PI / 2 + (N > 1 ? -spread / 2 + (i * spread) / (N - 1) : 0)
-          svc.fx = hx + R * Math.cos(angle)
-          svc.fy = hy + R * Math.sin(angle)
-        })
+          const angle = Math.PI / 2 + (N > 1 ? -spread / 2 + (i * spread) / (N - 1) : 0);
+          svc.fx = hx + R * Math.cos(angle);
+          svc.fy = hy + R * Math.sin(angle);
+        });
       } else if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit') {
         // Full circle — fan auto-upgrades to orbit when N > 8 to avoid overlap
         services.forEach((svc, i) => {
-          const angle = (2 * Math.PI * i) / N - Math.PI / 2
-          svc.fx = hx + R * Math.cos(angle)
-          svc.fy = hy + R * Math.sin(angle)
-        })
+          const angle = (2 * Math.PI * i) / N - Math.PI / 2;
+          svc.fx = hx + R * Math.cos(angle);
+          svc.fy = hy + R * Math.sin(angle);
+        });
       } else {
         // Row: compact grid with automatic wrapping
-        const r = svcR(N)
-        const cols = Math.min(N, Math.max(4, Math.ceil(Math.sqrt(N * 1.5))))
-        const measured = rowSpacings.get(hostId)
+        const r = svcR(N);
+        const cols = Math.min(N, Math.max(4, Math.ceil(Math.sqrt(N * 1.5))));
+        const measured = rowSpacings.get(hostId);
         const fallback = services.reduce(
           (max, svc) => {
-            const label = svc.id.split('::').at(-1) ?? svc.id
-            return Math.max(max, label.length * 5.5 + 8)
+            const label = svc.id.split('::').at(-1) ?? svc.id;
+            return Math.max(max, label.length * 5.5 + 8);
           },
           r * 2 + 14,
-        )
-        const spacingX = measured ?? fallback
-        const spacingY = r * 2 + (showSvcLabel(N) ? 26 : 6)
-        const yOffset = NODE_R + r + 22
+        );
+        const spacingX = measured ?? fallback;
+        const spacingY = r * 2 + (showSvcLabel(N) ? 26 : 6);
+        const yOffset = NODE_R + r + 22;
         services.forEach((svc, i) => {
-          const col = i % cols
-          const row = Math.floor(i / cols)
-          svc.fx = hx + (col - (cols - 1) / 2) * spacingX
-          svc.fy = hy + yOffset + row * spacingY
-        })
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          svc.fx = hx + (col - (cols - 1) / 2) * spacingX;
+          svc.fy = hy + yOffset + row * spacingY;
+        });
       }
     }
   }
-  updateFanPositions()
-  lastFNodes = fNodes
+  updateFanPositions();
+  lastFNodes = fNodes;
 
   // --- Update simulation ---
-  if (simulation) simulation.stop()
+  if (simulation) simulation.stop();
 
-  const hostLinks = fLinks.filter((l) => !l.isServiceLink)
+  const hostLinks = fLinks.filter((l) => !l.isServiceLink);
 
   simulation = forceSimulation<FNode>(fNodes)
     .force(
@@ -523,20 +523,20 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .id((d) => d.id)
         .distance((d) => {
           // Space hosts far enough apart that their service rings don't overlap
-          const srcN = servicesByHost.get((d.source as FNode).id)?.length ?? 0
-          const tgtN = servicesByHost.get((d.target as FNode).id)?.length ?? 0
-          if (srcN === 0 && tgtN === 0) return 160
-          return Math.max(200, orbitR(srcN) + orbitR(tgtN) + 60)
+          const srcN = servicesByHost.get((d.source as FNode).id)?.length ?? 0;
+          const tgtN = servicesByHost.get((d.target as FNode).id)?.length ?? 0;
+          if (srcN === 0 && tgtN === 0) return 160;
+          return Math.max(200, orbitR(srcN) + orbitR(tgtN) + 60);
         })
         .strength(0.4),
     )
     .force(
       'charge',
       forceManyBody<FNode>().strength((d) => {
-        if (d.nodeType === 'service') return 0
-        const N = servicesByHost.get(d.id)?.length ?? 0
+        if (d.nodeType === 'service') return 0;
+        const N = servicesByHost.get(d.id)?.length ?? 0;
         // Modest extra repulsion so service rings don't crowd; collision handles the hard min
-        return N > 0 ? -Math.max(700, orbitR(N) * 9) : -600
+        return N > 0 ? -Math.max(700, orbitR(N) * 9) : -600;
       }),
     )
     .force(
@@ -546,16 +546,16 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     .force(
       'collide',
       forceCollide<FNode>((d) => {
-        if (d.nodeType === 'service') return 0
-        const svcs = servicesByHost.get(d.id) ?? []
-        const N = svcs.length
-        if (N === 0 || props.serviceLayout === 'off') return NODE_R + 10
+        if (d.nodeType === 'service') return 0;
+        const svcs = servicesByHost.get(d.id) ?? [];
+        const N = svcs.length;
+        if (N === 0 || props.serviceLayout === 'off') return NODE_R + 10;
         if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit')
-          return orbitR(N) + svcR(N) + 20
+          return orbitR(N) + svcR(N) + 20;
         // Row grid
-        const cols = Math.min(N, Math.max(4, Math.ceil(Math.sqrt(N * 1.5))))
-        const spacingX = rowSpacings.get(d.id) ?? 60
-        return (cols / 2) * spacingX + svcR(N) + 10
+        const cols = Math.min(N, Math.max(4, Math.ceil(Math.sqrt(N * 1.5))));
+        const spacingX = rowSpacings.get(d.id) ?? 60;
+        return (cols / 2) * spacingX + svcR(N) + 10;
       }).iterations(3),
     )
     .force(
@@ -565,43 +565,43 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
       ),
     )
     .alphaDecay(0.03)
-    .stop()
+    .stop();
 
   // --- Drag behaviour ---
   const dragBehavior = drag<SVGGElement, FNode>()
     .on('start', (event, d) => {
-      if (!event.active) simulation!.alphaTarget(0.3).restart()
-      d.fx = d.x
-      d.fy = d.y
+      if (!event.active) simulation!.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
     })
     .on('drag', (event, d) => {
-      d.fx = event.x
-      d.fy = event.y
+      d.fx = event.x;
+      d.fy = event.y;
     })
     .on('end', (event, d) => {
-      if (!event.active) simulation!.alphaTarget(0)
-      d.fx = d.x
-      d.fy = d.y
-    })
+      if (!event.active) simulation!.alphaTarget(0);
+      d.fx = d.x;
+      d.fy = d.y;
+    });
 
   // --- Links ---
-  const gLinks = gZoom.select<SVGGElement>('g.links')
+  const gLinks = gZoom.select<SVGGElement>('g.links');
   const linkSel = gLinks
     .selectAll<SVGLineElement, FLink>('line')
-    .data(fLinks, (d) => `${(d.source as FNode).id}→${(d.target as FNode).id}`)
-  linkSel.exit().remove()
-  const linkEnter = linkSel.enter().append('line')
+    .data(fLinks, (d) => `${(d.source as FNode).id}→${(d.target as FNode).id}`);
+  linkSel.exit().remove();
+  const linkEnter = linkSel.enter().append('line');
   const linkMerge = linkEnter
     .merge(linkSel)
     .attr('stroke', (d) => stateColor((d.source as FNode).state))
     .attr('stroke-opacity', (d) => (d.isServiceLink ? 0.3 : 0.45))
     .attr('stroke-width', (d) => (d.isServiceLink ? 1 : 1.5))
-    .attr('stroke-dasharray', (d) => (d.isServiceLink ? '3,3' : null))
+    .attr('stroke-dasharray', (d) => (d.isServiceLink ? '3,3' : null));
 
   // --- Nodes ---
-  const gNodes = gZoom.select<SVGGElement>('g.nodes')
-  const nodeSel = gNodes.selectAll<SVGGElement, FNode>('g.node').data(fNodes, (d) => d.id)
-  nodeSel.exit().remove()
+  const gNodes = gZoom.select<SVGGElement>('g.nodes');
+  const nodeSel = gNodes.selectAll<SVGGElement, FNode>('g.node').data(fNodes, (d) => d.id);
+  nodeSel.exit().remove();
 
   const nodeEnter = nodeSel
     .enter()
@@ -609,37 +609,37 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     .attr('class', 'node')
     .attr('cursor', (d) => (d.nodeType === 'host' ? 'grab' : 'default'))
     .on('click', (_event, d) => {
-      void d
+      void d;
     })
     .on('mouseenter', (event: MouseEvent, d) => {
-      if (d.nodeType !== 'service') return
-      const nodeRect = (event.currentTarget as SVGGElement).getBoundingClientRect()
+      if (d.nodeType !== 'service') return;
+      const nodeRect = (event.currentTarget as SVGGElement).getBoundingClientRect();
       const parentRect = (event.currentTarget as Element)
         .closest('.absolute')!
-        .getBoundingClientRect()
-      tooltip.visible = true
-      tooltip.x = nodeRect.right - parentRect.left
-      tooltip.y = nodeRect.top - parentRect.top
-      tooltip.title = d.id.split('::')[1]
-      tooltip.hostName = d.hostId ?? ''
-      tooltip.output = d.output
-      tooltip.state = d.state
-      tooltip.stateColor = stateColor(d.state)
+        .getBoundingClientRect();
+      tooltip.visible = true;
+      tooltip.x = nodeRect.right - parentRect.left;
+      tooltip.y = nodeRect.top - parentRect.top;
+      tooltip.title = d.id.split('::')[1];
+      tooltip.hostName = d.hostId ?? '';
+      tooltip.output = d.output;
+      tooltip.state = d.state;
+      tooltip.stateColor = stateColor(d.state);
     })
     .on('mouseleave', () => {
-      tooltip.visible = false
-    })
+      tooltip.visible = false;
+    });
 
   // Drag only on host nodes
-  nodeEnter.filter((d) => d.nodeType === 'host').call(dragBehavior as never)
+  nodeEnter.filter((d) => d.nodeType === 'host').call(dragBehavior as never);
 
   // Host nodes
-  const hostEnter = nodeEnter.filter((d) => d.nodeType === 'host')
+  const hostEnter = nodeEnter.filter((d) => d.nodeType === 'host');
   hostEnter
     .append('circle')
     .attr('r', NODE_R)
     .attr('stroke', 'rgba(0,0,0,0.4)')
-    .attr('stroke-width', 1.5)
+    .attr('stroke-width', 1.5);
   hostEnter
     .append('text')
     .attr('class', 'type-char')
@@ -649,7 +649,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     .attr('font-size', 11)
     .attr('font-weight', '700')
     .attr('pointer-events', 'none')
-    .text('H')
+    .text('H');
   hostEnter
     .append('text')
     .attr('class', 'node-label')
@@ -659,15 +659,15 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     .attr('font-weight', '500')
     .attr('pointer-events', 'none')
     .style('fill', 'var(--text)')
-    .attr('y', NODE_R + 5)
+    .attr('y', NODE_R + 5);
 
   // Service nodes
-  const svcEnter = nodeEnter.filter((d) => d.nodeType === 'service')
+  const svcEnter = nodeEnter.filter((d) => d.nodeType === 'service');
   svcEnter
     .append('circle')
     .attr('r', (d) => svcR(d.svcTotalCount ?? 1))
     .attr('stroke', 'rgba(0,0,0,0.4)')
-    .attr('stroke-width', 1)
+    .attr('stroke-width', 1);
   svcEnter
     .append('text')
     .attr('class', 'type-char')
@@ -677,7 +677,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     .attr('font-size', (d) => (svcR(d.svcTotalCount ?? 1) <= 7 ? 6 : 8))
     .attr('font-weight', '700')
     .attr('pointer-events', 'none')
-    .text('S')
+    .text('S');
   svcEnter
     .append('text')
     .attr('class', 'node-label')
@@ -688,72 +688,72 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     .attr('pointer-events', 'none')
     .style('fill', 'var(--text)')
     .attr('y', (d) => svcR(d.svcTotalCount ?? 1) + 4)
-    .style('display', (d) => (showSvcLabel(d.svcTotalCount ?? 1) ? null : 'none'))
+    .style('display', (d) => (showSvcLabel(d.svcTotalCount ?? 1) ? null : 'none'));
 
-  const nodeMerge = nodeEnter.merge(nodeSel)
-  nodeMerge.select('circle').attr('fill', (d) => stateColor(d.state))
+  const nodeMerge = nodeEnter.merge(nodeSel);
+  nodeMerge.select('circle').attr('fill', (d) => stateColor(d.state));
   nodeMerge.select('text.node-label').text((d) => {
     if (d.nodeType === 'service') {
-      const parts = d.id.split('::')
-      return parts[parts.length - 1]
+      const parts = d.id.split('::');
+      return parts[parts.length - 1];
     }
-    return d.id
-  })
+    return d.id;
+  });
   // Refresh service label visibility — may change when switching layout or on re-render
   nodeMerge
     .filter((d) => d.nodeType === 'service')
     .select('text.node-label')
-    .style('display', (d) => (showSvcLabel(d.svcTotalCount ?? 1) ? null : 'none'))
+    .style('display', (d) => (showSvcLabel(d.svcTotalCount ?? 1) ? null : 'none'));
 
   // --- Tick handler ---
   function ticked() {
-    updateFanPositions()
+    updateFanPositions();
     linkMerge
       .attr('x1', (d) => (d.source as FNode).x!)
       .attr('y1', (d) => (d.source as FNode).y!)
       .attr('x2', (d) => (d.target as FNode).x!)
       .attr('y2', (d) => (d.target as FNode).y!)
-      .attr('stroke', (d) => stateColor((d.source as FNode).state))
+      .attr('stroke', (d) => stateColor((d.source as FNode).state));
 
     nodeMerge
       .attr('transform', (d) => `translate(${d.x ?? 0},${d.y ?? 0})`)
       .select('circle')
-      .attr('fill', (d) => stateColor(d.state))
+      .attr('fill', (d) => stateColor(d.state));
   }
 
   // Pre-tick to near-settled positions, render once, fit immediately, then animate remainder
-  simulation.tick(props.serviceLayout !== 'off' ? 250 : 150)
-  updateFanPositions()
-  ticked()
+  simulation.tick(props.serviceLayout !== 'off' ? 250 : 150);
+  updateFanPositions();
+  ticked();
 
   // For row layout: measure actual label widths from DOM, re-layout with exact spacing
   if (props.serviceLayout === 'row') {
     for (const [hostId, services] of servicesByHost) {
-      const N = services.length
+      const N = services.length;
       if (!showSvcLabel(N)) {
         // No labels — use diameter + gap as spacing
-        rowSpacings.set(hostId, svcR(N) * 2 + 6)
-        continue
+        rowSpacings.set(hostId, svcR(N) * 2 + 6);
+        continue;
       }
-      let maxW = 0
+      let maxW = 0;
       for (const svc of services) {
         const g = gNodes
           .selectAll<SVGGElement, FNode>('g.node')
           .filter((d) => d.id === svc.id)
-          .node()
-        const textEl = g?.querySelector<SVGTextElement>('text.node-label')
-        if (textEl) maxW = Math.max(maxW, textEl.getComputedTextLength())
+          .node();
+        const textEl = g?.querySelector<SVGTextElement>('text.node-label');
+        if (textEl) maxW = Math.max(maxW, textEl.getComputedTextLength());
       }
-      if (maxW > 0) rowSpacings.set(hostId, maxW + 10)
+      if (maxW > 0) rowSpacings.set(hostId, maxW + 10);
     }
-    updateFanPositions()
-    ticked()
+    updateFanPositions();
+    ticked();
   }
 
   if (!_hasFitOnce) {
-    _hasFitOnce = true
-    fitView()
+    _hasFitOnce = true;
+    fitView();
   }
-  simulation.on('tick', ticked).restart()
+  simulation.on('tick', ticked).restart();
 }
 </script>

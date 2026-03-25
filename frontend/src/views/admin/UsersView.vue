@@ -282,91 +282,91 @@
       :user-read="editUser"
       :available-roles="availableRoles"
       @close="
-        editUser = null
-        fetchUsers()
+        editUser = null;
+        fetchUsers();
       "
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { rolesApi, usersApi } from '@/api/client'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
-import { useAuthStore } from '@/stores/auth'
-import type { RoleRead, UserRead } from '@/types/api'
+import { rolesApi, usersApi } from '@/api/client';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import UserSettingsPanel from '@/components/UserSettingsPanel.vue';
+import { useAuthStore } from '@/stores/auth';
+import type { RoleRead, UserRead } from '@/types/api';
 
-const { t } = useI18n()
-const auth = useAuthStore()
-const users = ref<UserRead[]>([])
-const loading = ref(false)
-const showCreate = ref(false)
-const creating = ref(false)
-const createError = ref('')
-const newUser = ref({ name: '', password: '', is_admin: false, must_change_password: false })
-const editUser = ref<UserRead | null>(null)
-const availableRoles = ref<RoleRead[]>([])
-const selectedRoleIds = ref<number[]>([])
+const { t } = useI18n();
+const auth = useAuthStore();
+const users = ref<UserRead[]>([]);
+const loading = ref(false);
+const showCreate = ref(false);
+const creating = ref(false);
+const createError = ref('');
+const newUser = ref({ name: '', password: '', is_admin: false, must_change_password: false });
+const editUser = ref<UserRead | null>(null);
+const availableRoles = ref<RoleRead[]>([]);
+const selectedRoleIds = ref<number[]>([]);
 
 watch(showCreate, (open) => {
-  if (!open) return
-  selectedRoleIds.value = []
-})
+  if (!open) return;
+  selectedRoleIds.value = [];
+});
 const canEditUsers = computed(
   () =>
     auth.user?.is_admin ||
     (auth.user?.permissions?.some((p) => p.mod === 'user' && p.act === 'edit' && p.obj === '*') ??
       false),
-)
+);
 
 async function fetchUsers() {
-  loading.value = true
+  loading.value = true;
   try {
-    users.value = await usersApi.list(auth.accessToken!)
+    users.value = await usersApi.list(auth.accessToken!);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function createUser() {
-  creating.value = true
-  createError.value = ''
+  creating.value = true;
+  createError.value = '';
   try {
-    const created = await usersApi.create(newUser.value, auth.accessToken!)
+    const created = await usersApi.create(newUser.value, auth.accessToken!);
     await Promise.all(
       selectedRoleIds.value.map((rid) =>
         usersApi.assignRole(created.user_id, rid, auth.accessToken!),
       ),
-    )
-    showCreate.value = false
-    newUser.value = { name: '', password: '', is_admin: false, must_change_password: false }
-    await fetchUsers()
+    );
+    showCreate.value = false;
+    newUser.value = { name: '', password: '', is_admin: false, must_change_password: false };
+    await fetchUsers();
   } catch (e: unknown) {
-    createError.value = e instanceof Error ? e.message : t('admin.saveFailed')
+    createError.value = e instanceof Error ? e.message : t('admin.saveFailed');
   } finally {
-    creating.value = false
+    creating.value = false;
   }
 }
 
-const deleteTargetId = ref<number | null>(null)
+const deleteTargetId = ref<number | null>(null);
 
 async function confirmDeleteUser() {
-  const id = deleteTargetId.value
-  if (id === null) return
-  deleteTargetId.value = null
-  await usersApi.delete(id, auth.accessToken!)
-  await fetchUsers()
+  const id = deleteTargetId.value;
+  if (id === null) return;
+  deleteTargetId.value = null;
+  await usersApi.delete(id, auth.accessToken!);
+  await fetchUsers();
 }
 
 async function loadRoles() {
-  availableRoles.value = await rolesApi.list(auth.accessToken!)
+  availableRoles.value = await rolesApi.list(auth.accessToken!);
 }
 
 onMounted(() => {
-  fetchUsers()
-  loadRoles()
-})
+  fetchUsers();
+  loadRoles();
+});
 </script>

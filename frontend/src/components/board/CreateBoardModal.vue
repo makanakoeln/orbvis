@@ -178,49 +178,49 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { useBoardsStore } from '@/stores/boards'
-import { useConnectionsStore } from '@/stores/connections'
-import { useSettingsStore } from '@/stores/settings'
-import { sanitizeBoardName, slugToTitleCase } from '@/utils/naming'
+import { useBoardsStore } from '@/stores/boards';
+import { useConnectionsStore } from '@/stores/connections';
+import { useSettingsStore } from '@/stores/settings';
+import { sanitizeBoardName, slugToTitleCase } from '@/utils/naming';
 
-const emit = defineEmits<{ close: []; created: [name: string] }>()
+const emit = defineEmits<{ close: []; created: [name: string] }>();
 
-const { t } = useI18n()
-const boardsStore = useBoardsStore()
-const connectionsStore = useConnectionsStore()
-const settingsStore = useSettingsStore()
+const { t } = useI18n();
+const boardsStore = useBoardsStore();
+const connectionsStore = useConnectionsStore();
+const settingsStore = useSettingsStore();
 
-const form = ref({ name: '', alias: '', backend_id: '', view_type: 'static' })
-const aliasTouched = ref(false)
+const form = ref({ name: '', alias: '', backend_id: '', view_type: 'static' });
+const aliasTouched = ref(false);
 
-const _NAME_RE = /^[a-zA-Z0-9_-]+$/
+const _NAME_RE = /^[a-zA-Z0-9_-]+$/;
 const nameError = computed(() => {
-  if (!form.value.name) return ''
-  if (!_NAME_RE.test(form.value.name)) return t('admin.boardIdInvalid')
-  return ''
-})
+  if (!form.value.name) return '';
+  if (!_NAME_RE.test(form.value.name)) return t('admin.boardIdInvalid');
+  return '';
+});
 
 function onNameInput(e: Event) {
-  form.value.name = sanitizeBoardName((e.target as HTMLInputElement).value)
+  form.value.name = sanitizeBoardName((e.target as HTMLInputElement).value);
   if (!aliasTouched.value) {
-    form.value.alias = slugToTitleCase(form.value.name)
+    form.value.alias = slugToTitleCase(form.value.name);
   }
 }
 
 function pickBackendId() {
-  const ids = connectionsStore.backends.map((b) => b.id)
-  const preferred = settingsStore.settings.default_backend_id
-  return (preferred && ids.includes(preferred) ? preferred : ids[0]) ?? ''
+  const ids = connectionsStore.backends.map((b) => b.id);
+  const preferred = settingsStore.settings.default_backend_id;
+  return (preferred && ids.includes(preferred) ? preferred : ids[0]) ?? '';
 }
 
 onMounted(async () => {
-  await Promise.all([connectionsStore.fetchBackends(), settingsStore.load()])
-  form.value.backend_id = pickBackendId()
-  form.value.view_type = settingsStore.settings.default_map_type || 'static'
-})
+  await Promise.all([connectionsStore.fetchBackends(), settingsStore.load()]);
+  form.value.backend_id = pickBackendId();
+  form.value.view_type = settingsStore.settings.default_map_type || 'static';
+});
 
 async function submit() {
   await boardsStore.createBoard(
@@ -229,14 +229,14 @@ async function submit() {
     form.value.backend_id,
     form.value.view_type,
     settingsStore.settings.icon_size,
-  )
-  const created = form.value.name
+  );
+  const created = form.value.name;
   form.value = {
     name: '',
     alias: '',
     backend_id: pickBackendId(),
     view_type: settingsStore.settings.default_map_type || 'static',
-  }
-  emit('created', created)
+  };
+  emit('created', created);
 }
 </script>

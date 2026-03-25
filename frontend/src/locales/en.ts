@@ -455,4 +455,4 @@ export default {
     failedToChange: 'Failed to change password.',
     loggedInAs: 'Logged in as',
   },
-}
+};

@@ -326,47 +326,47 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { useArcRing } from '@/composables/useArcRing'
-import { CHART_PALETTE, useMetricChart } from '@/composables/useMetricChart'
-import { useAuthStore } from '@/stores/auth'
-import type { MetricPoint } from '@/stores/states'
-import { useStatesStore } from '@/stores/states'
-import type { BoardObject, ObjectState } from '@/types/api'
-import { parsePerfData, utilColor as _utilColor, utilPercent } from '@/utils/perf'
+import { useArcRing } from '@/composables/useArcRing';
+import { CHART_PALETTE, useMetricChart } from '@/composables/useMetricChart';
+import { useAuthStore } from '@/stores/auth';
+import type { MetricPoint } from '@/stores/states';
+import { useStatesStore } from '@/stores/states';
+import type { BoardObject, ObjectState } from '@/types/api';
+import { parsePerfData, utilColor as _utilColor, utilPercent } from '@/utils/perf';
 
-import GadgetRenderer from './GadgetRenderer.vue'
+import GadgetRenderer from './GadgetRenderer.vue';
 
-const BASE_URL = import.meta.env.BASE_URL
-const RING_PAD = 6
+const BASE_URL = import.meta.env.BASE_URL;
+const RING_PAD = 6;
 
-const { t } = useI18n()
+const { t } = useI18n();
 
 const props = defineProps<{
-  object: BoardObject
-  state: ObjectState | undefined
-  iconSize: number
-  selected?: boolean
-  editMode?: boolean
-  resizeOverride?: { width: number; height: number }
-  backendId?: string
-}>()
+  object: BoardObject;
+  state: ObjectState | undefined;
+  iconSize: number;
+  selected?: boolean;
+  editMode?: boolean;
+  resizeOverride?: { width: number; height: number };
+  backendId?: string;
+}>();
 
 defineEmits<{
-  hover: [event: MouseEvent]
-  'hover-leave': []
-  'context-menu': [event: MouseEvent]
-  'graph-resize-start': [evt: PointerEvent]
-}>()
+  hover: [event: MouseEvent];
+  'hover-leave': [];
+  'context-menu': [event: MouseEvent];
+  'graph-resize-start': [evt: PointerEvent];
+}>();
 
-const statesStore = useStatesStore()
-const authStore = useAuthStore()
+const statesStore = useStatesStore();
+const authStore = useAuthStore();
 
 function _triggerHistoryPrefill() {
-  if (props.object.type !== 'graph' || !props.object.host_name || !props.backendId) return
-  const windowMins = props.object.graph_time_window ?? 60
+  if (props.object.type !== 'graph' || !props.object.host_name || !props.backendId) return;
+  const windowMins = props.object.graph_time_window ?? 60;
   statesStore.prefillMetricHistory(
     props.object.id,
     props.backendId,
@@ -374,63 +374,63 @@ function _triggerHistoryPrefill() {
     props.object.service_description ?? null,
     windowMins,
     authStore.accessToken!,
-  )
+  );
 }
 
-onMounted(_triggerHistoryPrefill)
-watch(() => props.object.graph_time_window, _triggerHistoryPrefill)
+onMounted(_triggerHistoryPrefill);
+watch(() => props.object.graph_time_window, _triggerHistoryPrefill);
 // Re-trigger when token becomes available (e.g. after async SSO login)
 watch(
   () => authStore.accessToken,
   (token, prev) => {
-    if (token && !prev) _triggerHistoryPrefill()
+    if (token && !prev) _triggerHistoryPrefill();
   },
-)
+);
 
 // Single arc ring SVG — always a separate overlay SVG that D3 owns exclusively.
 // pointer-events="none" on the SVG element (SVG attribute, not CSS) ensures it
 // never intercepts mousedown/click events, preserving drag behaviour in edit mode.
-const arcSvgEl = ref<SVGSVGElement | null>(null)
-const imgLoadFailed = ref(false)
+const arcSvgEl = ref<SVGSVGElement | null>(null);
+const imgLoadFailed = ref(false);
 
 // ---- Graph: native chart mode ----
-const chartSvgRef = ref<SVGSVGElement | null>(null)
-const isNativeChart = computed(() => props.object.type === 'graph' && !!props.object.host_name)
+const chartSvgRef = ref<SVGSVGElement | null>(null);
+const isNativeChart = computed(() => props.object.type === 'graph' && !!props.object.host_name);
 
 const chartData = computed((): Record<string, MetricPoint[]> => {
-  if (!isNativeChart.value) return {}
-  const mv = statesStore.metricValues[props.object.id]
-  if (!mv) return {}
+  if (!isNativeChart.value) return {};
+  const mv = statesStore.metricValues[props.object.id];
+  if (!mv) return {};
 
-  const windowMins = props.object.graph_time_window ?? 60
-  const windowSecs = windowMins * 60
-  const now = Date.now() / 1000
-  const cutoff = now - windowSecs
+  const windowMins = props.object.graph_time_window ?? 60;
+  const windowSecs = windowMins * 60;
+  const now = Date.now() / 1000;
+  const cutoff = now - windowSecs;
 
   const applyWindow = (pts: MetricPoint[]) => {
-    const filtered = pts.filter((p) => p.ts >= cutoff)
+    const filtered = pts.filter((p) => p.ts >= cutoff);
     // If nothing falls in the window yet, show last point as baseline
-    return filtered.length ? [...filtered] : pts.length ? [pts[pts.length - 1]] : []
-  }
+    return filtered.length ? [...filtered] : pts.length ? [pts[pts.length - 1]] : [];
+  };
 
   if (props.object.graph_metric) {
-    const pts = mv[props.object.graph_metric]
-    return pts ? { [props.object.graph_metric]: applyWindow(pts) } : {}
+    const pts = mv[props.object.graph_metric];
+    return pts ? { [props.object.graph_metric]: applyWindow(pts) } : {};
   }
-  return Object.fromEntries(Object.entries(mv).map(([k, v]) => [k, applyWindow(v)]))
-})
+  return Object.fromEntries(Object.entries(mv).map(([k, v]) => [k, applyWindow(v)]));
+});
 
-const chartMetricLabels = computed(() => Object.keys(chartData.value))
+const chartMetricLabels = computed(() => Object.keys(chartData.value));
 const hasChartData = computed(() =>
   chartMetricLabels.value.some((k) => chartData.value[k].length > 0),
-)
+);
 
 const chartLatestValues = computed(() =>
   Object.fromEntries(chartMetricLabels.value.map((k) => [k, chartData.value[k].at(-1) ?? null])),
-)
+);
 
-const graphW = computed(() => props.resizeOverride?.width ?? props.object.graph_width ?? 400)
-const graphH = computed(() => props.resizeOverride?.height ?? props.object.graph_height ?? 200)
+const graphW = computed(() => props.resizeOverride?.width ?? props.object.graph_width ?? 400);
+const graphH = computed(() => props.resizeOverride?.height ?? props.object.graph_height ?? 200);
 
 useMetricChart(
   chartSvgRef,
@@ -438,57 +438,57 @@ useMetricChart(
   () => graphW.value,
   () => Math.max(30, graphH.value - 28),
   () => (props.object.graph_time_window ?? 60) * 60,
-)
+);
 
 // ---- Graph: URL embed ----
-const graphLoadFailed = ref(false)
-const refreshTick = ref(0)
+const graphLoadFailed = ref(false);
+const refreshTick = ref(0);
 
 watch(
   () => props.object.graph_url,
   () => {
-    graphLoadFailed.value = false
+    graphLoadFailed.value = false;
   },
-)
-let _refreshTimer: ReturnType<typeof setInterval> | null = null
+);
+let _refreshTimer: ReturnType<typeof setInterval> | null = null;
 
 watchEffect(() => {
   if (_refreshTimer) {
-    clearInterval(_refreshTimer)
-    _refreshTimer = null
+    clearInterval(_refreshTimer);
+    _refreshTimer = null;
   }
-  const interval = props.object.graph_refresh_interval ?? 0
+  const interval = props.object.graph_refresh_interval ?? 0;
   if (props.object.type === 'graph' && interval > 0) {
     _refreshTimer = setInterval(() => {
-      refreshTick.value++
-    }, interval * 1000)
+      refreshTick.value++;
+    }, interval * 1000);
   }
-})
+});
 onUnmounted(() => {
-  if (_refreshTimer) clearInterval(_refreshTimer)
-})
+  if (_refreshTimer) clearInterval(_refreshTimer);
+});
 
 const graphSrc = computed(() => {
-  const url = props.object.graph_url
-  if (!url) return ''
+  const url = props.object.graph_url;
+  if (!url) return '';
   if ((props.object.graph_refresh_interval ?? 0) > 0) {
-    const sep = url.includes('?') ? '&' : '?'
-    return `${url}${sep}_t=${refreshTick.value}`
+    const sep = url.includes('?') ? '&' : '?';
+    return `${url}${sep}_t=${refreshTick.value}`;
   }
-  return url
-})
+  return url;
+});
 
 const graphWrapperStyle = computed(() => ({
   width: `${graphW.value}px`,
   height: `${graphH.value}px`,
-}))
+}));
 
-const svgSize = computed(() => props.iconSize + RING_PAD * 2)
+const svgSize = computed(() => props.iconSize + RING_PAD * 2);
 
 const iconStyle = computed(() => ({
   width: `${props.iconSize}px`,
   height: `${props.iconSize}px`,
-}))
+}));
 
 const STATE_RGB: Record<string, string> = {
   UP: 'rgb(34,197,94)',
@@ -499,31 +499,31 @@ const STATE_RGB: Record<string, string> = {
   UNKNOWN: 'rgb(249,115,22)',
   WARNING: 'rgb(255,208,0)',
   PENDING: 'rgb(113,113,122)',
-}
+};
 const stateColorRgb = computed(
   () => STATE_RGB[props.state?.state ?? 'PENDING'] ?? STATE_RGB['PENDING'],
-)
+);
 
 const firstMetricPct = computed(() => {
-  const metrics = parsePerfData(props.state?.perf_data ?? '')
-  return metrics.length ? utilPercent(metrics[0]) : null
-})
+  const metrics = parsePerfData(props.state?.perf_data ?? '');
+  return metrics.length ? utilPercent(metrics[0]) : null;
+});
 
 const ringUtilColor = computed(() =>
   firstMetricPct.value !== null ? _utilColor(firstMetricPct.value) : stateColorRgb.value,
-)
+);
 
 const isSvgIcon = computed(() => {
-  const icon = props.object.display?.image ?? props.object.image_src
-  return icon?.toLowerCase().endsWith('.svg') ?? false
-})
+  const icon = props.object.display?.image ?? props.object.image_src;
+  return icon?.toLowerCase().endsWith('.svg') ?? false;
+});
 
 const shouldShowRing = computed(
   () =>
     !['textbox', 'line'].includes(props.object.type) &&
     props.object.display?.mode !== 'gadget' &&
     !(props.object.type === 'image' && imgLoadFailed.value),
-)
+);
 
 useArcRing({
   svgRef: arcSvgEl,
@@ -532,7 +532,7 @@ useArcRing({
   stateColor: stateColorRgb,
   utilColor: ringUtilColor,
   enabled: shouldShowRing,
-})
+});
 
 const STATE_GLOWS: Record<string, string> = {
   UP: 'drop-shadow(0 0 5px rgba(34,197,94,0.55))',
@@ -543,14 +543,14 @@ const STATE_GLOWS: Record<string, string> = {
   UNKNOWN: 'drop-shadow(0 0 5px rgba(249,115,22,0.55))',
   WARNING: 'drop-shadow(0 0 5px rgba(255,208,0,0.55))',
   PENDING: 'none',
-}
-const stateGlow = computed(() => STATE_GLOWS[props.state?.state ?? 'PENDING'] ?? 'none')
+};
+const stateGlow = computed(() => STATE_GLOWS[props.state?.state ?? 'PENDING'] ?? 'none');
 
 const charFontSize = computed(() => {
-  const n = typeChar.value.length
-  const factor = n === 1 ? 0.44 : n === 2 ? 0.31 : 0.26
-  return Math.max(9, Math.round(props.iconSize * factor))
-})
+  const n = typeChar.value.length;
+  const factor = n === 1 ? 0.44 : n === 2 ? 0.31 : 0.26;
+  return Math.max(9, Math.round(props.iconSize * factor));
+});
 
 const TYPE_CHARS: Record<string, string> = {
   host: 'H',
@@ -560,8 +560,8 @@ const TYPE_CHARS: Record<string, string> = {
   map: 'M',
   image: '◆',
   line: '—',
-}
-const typeChar = computed(() => TYPE_CHARS[props.object.type] ?? '?')
+};
+const typeChar = computed(() => TYPE_CHARS[props.object.type] ?? '?');
 
 const textboxStyle = computed(() => ({
   backdropFilter: 'blur(4px)',
@@ -570,10 +570,10 @@ const textboxStyle = computed(() => ({
   color: 'var(--text)',
   width: props.object.textbox_width ? `${props.object.textbox_width}px` : undefined,
   height: props.object.textbox_height ? `${props.object.textbox_height}px` : undefined,
-}))
+}));
 
 const labelStyle = computed(() => {
-  const bg = props.object.label?.background
+  const bg = props.object.label?.background;
   return {
     fontSize: `${props.object.label?.size ?? 11}px`,
     color: props.object.label?.color ?? '#e4e4e7',
@@ -583,20 +583,20 @@ const labelStyle = computed(() => {
     outline: props.object.label_border
       ? `1px solid ${props.object.label_border}`
       : '1px solid rgba(255,255,255,0.12)',
-  }
-})
+  };
+});
 
 const displayName = computed(() => {
-  let name = props.object.group_name ?? props.object.id
-  if (props.object.label?.text) name = props.object.label.text
-  else if (props.object.type === 'host') name = props.object.host_name ?? props.object.id
+  let name = props.object.group_name ?? props.object.id;
+  if (props.object.label?.text) name = props.object.label.text;
+  else if (props.object.type === 'host') name = props.object.host_name ?? props.object.id;
   else if (props.object.type === 'service')
-    name = props.object.service_description ?? props.object.id
-  else if (props.object.type === 'map') name = props.object.map_name ?? props.object.id
-  const maxlen = props.object.label_maxlen
-  if (maxlen && maxlen > 0 && name.length > maxlen) return name.slice(0, maxlen) + '…'
-  return name
-})
+    name = props.object.service_description ?? props.object.id;
+  else if (props.object.type === 'map') name = props.object.map_name ?? props.object.id;
+  const maxlen = props.object.label_maxlen;
+  if (maxlen && maxlen > 0 && name.length > maxlen) return name.slice(0, maxlen) + '…';
+  return name;
+});
 </script>
 
 <style scoped>

@@ -491,47 +491,47 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { onMounted, reactive, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { connectionsApi } from '@/api/client'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import NumberInput from '@/components/NumberInput.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useConnectionsStore } from '@/stores/connections'
-import type { BackendConfig } from '@/types/api'
+import { connectionsApi } from '@/api/client';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import NumberInput from '@/components/NumberInput.vue';
+import { useAuthStore } from '@/stores/auth';
+import { useConnectionsStore } from '@/stores/connections';
+import type { BackendConfig } from '@/types/api';
 
-const { t } = useI18n()
-const store = useConnectionsStore()
-const auth = useAuthStore()
+const { t } = useI18n();
+const store = useConnectionsStore();
+const auth = useAuthStore();
 
-const statuses = reactive<Record<string, boolean>>({})
-const statusMessages = reactive<Record<string, string>>({})
-const statusLoading = reactive<Record<string, boolean>>({})
+const statuses = reactive<Record<string, boolean>>({});
+const statusMessages = reactive<Record<string, string>>({});
+const statusLoading = reactive<Record<string, boolean>>({});
 
 async function testExisting(id: string) {
-  statusLoading[id] = true
+  statusLoading[id] = true;
   try {
-    const result = await connectionsApi.test(id, auth.accessToken!)
-    statuses[id] = result.ok
-    statusMessages[id] = result.message
+    const result = await connectionsApi.test(id, auth.accessToken!);
+    statuses[id] = result.ok;
+    statusMessages[id] = result.message;
   } catch (e: unknown) {
-    statuses[id] = false
-    statusMessages[id] = e instanceof Error ? e.message : 'Error'
+    statuses[id] = false;
+    statusMessages[id] = e instanceof Error ? e.message : 'Error';
   } finally {
-    statusLoading[id] = false
+    statusLoading[id] = false;
   }
 }
 
 async function testAll() {
-  for (const b of store.backends) testExisting(b.id)
+  for (const b of store.backends) testExisting(b.id);
 }
 
-const deleteTarget = ref<string | null>(null)
-const dialog = reactive({ open: false, mode: 'create' as 'create' | 'edit', editId: '' })
-const saving = ref(false)
-const formError = ref('')
-const dialogTest = reactive({ loading: false, ran: false, ok: false, message: '' })
+const deleteTarget = ref<string | null>(null);
+const dialog = reactive({ open: false, mode: 'create' as 'create' | 'edit', editId: '' });
+const saving = ref(false);
+const formError = ref('');
+const dialogTest = reactive({ loading: false, ran: false, ok: false, message: '' });
 
 const emptyForm = (): BackendConfig => ({
   id: '',
@@ -548,73 +548,73 @@ const emptyForm = (): BackendConfig => ({
   icinga2_username: null,
   icinga2_password: null,
   icinga2_verify_ssl: true,
-})
-const form = reactive<BackendConfig>(emptyForm())
+});
+const form = reactive<BackendConfig>(emptyForm());
 
 function openCreate() {
-  Object.assign(form, emptyForm())
-  Object.assign(dialogTest, { loading: false, ran: false, ok: false, message: '' })
-  formError.value = ''
-  dialog.mode = 'create'
-  dialog.open = true
+  Object.assign(form, emptyForm());
+  Object.assign(dialogTest, { loading: false, ran: false, ok: false, message: '' });
+  formError.value = '';
+  dialog.mode = 'create';
+  dialog.open = true;
 }
 
 function openEdit(b: BackendConfig) {
-  Object.assign(form, { ...b })
-  Object.assign(dialogTest, { loading: false, ran: false, ok: false, message: '' })
-  formError.value = ''
-  dialog.mode = 'edit'
-  dialog.editId = b.id
-  dialog.open = true
+  Object.assign(form, { ...b });
+  Object.assign(dialogTest, { loading: false, ran: false, ok: false, message: '' });
+  formError.value = '';
+  dialog.mode = 'edit';
+  dialog.editId = b.id;
+  dialog.open = true;
 }
 
 async function testDialog() {
-  dialogTest.loading = true
-  dialogTest.ran = false
+  dialogTest.loading = true;
+  dialogTest.ran = false;
   try {
-    const result = await connectionsApi.testConnection({ ...form }, auth.accessToken!)
-    dialogTest.ok = result.ok
-    dialogTest.message = result.message
-    dialogTest.ran = true
+    const result = await connectionsApi.testConnection({ ...form }, auth.accessToken!);
+    dialogTest.ok = result.ok;
+    dialogTest.message = result.message;
+    dialogTest.ran = true;
   } catch (e: unknown) {
-    dialogTest.ok = false
-    dialogTest.message = e instanceof Error ? e.message : 'Error'
-    dialogTest.ran = true
+    dialogTest.ok = false;
+    dialogTest.message = e instanceof Error ? e.message : 'Error';
+    dialogTest.ran = true;
   } finally {
-    dialogTest.loading = false
+    dialogTest.loading = false;
   }
 }
 
 async function save() {
-  formError.value = ''
-  saving.value = true
+  formError.value = '';
+  saving.value = true;
   try {
     if (dialog.mode === 'create') {
-      await store.createBackend({ ...form })
+      await store.createBackend({ ...form });
     } else {
-      const { id: _id, ...rest } = form
-      await store.updateBackend(dialog.editId, rest)
+      const { id: _id, ...rest } = form;
+      await store.updateBackend(dialog.editId, rest);
     }
-    dialog.open = false
-    testAll()
+    dialog.open = false;
+    testAll();
   } catch (e: unknown) {
-    formError.value = e instanceof Error ? e.message : t('admin.saveFailed')
+    formError.value = e instanceof Error ? e.message : t('admin.saveFailed');
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 
 async function confirmRemove() {
-  const id = deleteTarget.value
-  if (!id) return
-  deleteTarget.value = null
-  await store.deleteBackend(id)
-  delete statuses[id]
-  delete statusMessages[id]
+  const id = deleteTarget.value;
+  if (!id) return;
+  deleteTarget.value = null;
+  await store.deleteBackend(id);
+  delete statuses[id];
+  delete statusMessages[id];
 }
 
 onMounted(async () => {
-  await store.fetchBackends()
-  testAll()
-})
+  await store.fetchBackends();
+  testAll();
+});
 </script>

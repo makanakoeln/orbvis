@@ -81,32 +81,32 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth';
 
-const { t } = useI18n()
-const auth = useAuthStore()
+const { t } = useI18n();
+const auth = useAuthStore();
 
 const props = defineProps<{
-  userId: number
-  isAdmin: boolean
-}>()
+  userId: number;
+  isAdmin: boolean;
+}>();
 
 const emit = defineEmits<{
-  close: []
-  createBoard: []
-}>()
+  close: [];
+  createBoard: [];
+}>();
 
 // ─── Steps ───────────────────────────────────────────────────────────────────
 
-const step = ref(1)
+const step = ref(1);
 
 interface TourStep {
-  selector: string | null // data-tour="…"
-  title: string
-  body: string
+  selector: string | null; // data-tour="…"
+  title: string;
+  body: string;
 }
 
 const steps = computed<TourStep[]>(() => {
@@ -131,131 +131,131 @@ const steps = computed<TourStep[]>(() => {
       title: t('onboarding.step4.title'),
       body: props.isAdmin ? t('onboarding.step4.bodyAdmin') : t('onboarding.step4.bodyUser'),
     },
-  ]
+  ];
   return auth.ssoActive || auth.isCheckmkDeployment
     ? all.filter((s) => s.selector !== '[data-tour="sidebar-nav"]')
-    : all
-})
+    : all;
+});
 
-const TOTAL = computed(() => steps.value.length)
-const currentStep = computed(() => steps.value[step.value - 1])
+const TOTAL = computed(() => steps.value.length);
+const currentStep = computed(() => steps.value[step.value - 1]);
 
 // ─── Target rect ─────────────────────────────────────────────────────────────
 
-const targetRect = ref<DOMRect | null>(null)
+const targetRect = ref<DOMRect | null>(null);
 
 function measureTarget() {
-  const sel = currentStep.value.selector
+  const sel = currentStep.value.selector;
   if (!sel) {
-    targetRect.value = null
-    return
+    targetRect.value = null;
+    return;
   }
-  const el = document.querySelector(sel)
-  targetRect.value = el ? el.getBoundingClientRect() : null
+  const el = document.querySelector(sel);
+  targetRect.value = el ? el.getBoundingClientRect() : null;
 }
 
 watch(step, () => {
   // Tiny delay so Vue renders any v-if changes before we measure
-  requestAnimationFrame(measureTarget)
-})
+  requestAnimationFrame(measureTarget);
+});
 
 function onResize() {
-  measureTarget()
+  measureTarget();
 }
 
 onMounted(() => {
-  measureTarget()
-  window.addEventListener('resize', onResize)
-})
+  measureTarget();
+  window.addEventListener('resize', onResize);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('resize', onResize)
-})
+  window.removeEventListener('resize', onResize);
+});
 
 // ─── SVG overlay path ────────────────────────────────────────────────────────
 
-const PAD = 10 // px padding around the highlight
-const R = 10 // border-radius of the hole
+const PAD = 10; // px padding around the highlight
+const R = 10; // border-radius of the hole
 
 function roundedRectPath(x: number, y: number, w: number, h: number, r: number) {
-  return `M${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x + r} Q${x},${y + h} ${x},${y + h - r} V${y + r} Q${x},${y} ${x + r},${y} Z`
+  return `M${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x + r} Q${x},${y + h} ${x},${y + h - r} V${y + r} Q${x},${y} ${x + r},${y} Z`;
 }
 
 const overlayPath = computed(() => {
-  const vw = window.innerWidth
-  const vh = window.innerHeight
-  const outer = `M0,0 H${vw} V${vh} H0 Z`
-  const rect = targetRect.value
-  if (!rect) return outer
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const outer = `M0,0 H${vw} V${vh} H0 Z`;
+  const rect = targetRect.value;
+  if (!rect) return outer;
 
-  const x = Math.max(0, rect.left - PAD)
-  const y = Math.max(0, rect.top - PAD)
-  const w = Math.min(vw - x, rect.width + PAD * 2)
-  const h = Math.min(vh - y, rect.height + PAD * 2)
-  return `${outer} ${roundedRectPath(x, y, w, h, R)}`
-})
+  const x = Math.max(0, rect.left - PAD);
+  const y = Math.max(0, rect.top - PAD);
+  const w = Math.min(vw - x, rect.width + PAD * 2);
+  const h = Math.min(vh - y, rect.height + PAD * 2);
+  return `${outer} ${roundedRectPath(x, y, w, h, R)}`;
+});
 
 // ─── Tooltip position ────────────────────────────────────────────────────────
 
-const CARD_W = 320
-const CARD_H = 200 // conservative estimate
-const MARGIN = 16
+const CARD_W = 320;
+const CARD_H = 200; // conservative estimate
+const MARGIN = 16;
 
 const cardStyle = computed(() => {
-  const rect = targetRect.value
+  const rect = targetRect.value;
   if (!rect) {
-    return { top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }
+    return { top: '50%', left: '50%', transform: 'translate(-50%,-50%)' };
   }
-  const vw = window.innerWidth
-  const vh = window.innerHeight
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
 
-  let left: number, top: number
+  let left: number, top: number;
 
   if (rect.right + MARGIN + CARD_W <= vw) {
     // Right of target
-    left = rect.right + MARGIN
-    top = rect.top
+    left = rect.right + MARGIN;
+    top = rect.top;
   } else if (rect.left - MARGIN - CARD_W >= 0) {
     // Left of target
-    left = rect.left - MARGIN - CARD_W
-    top = rect.top
+    left = rect.left - MARGIN - CARD_W;
+    top = rect.top;
   } else if (rect.bottom + MARGIN + CARD_H <= vh) {
     // Below target
-    left = Math.max(MARGIN, rect.left)
-    top = rect.bottom + MARGIN
+    left = Math.max(MARGIN, rect.left);
+    top = rect.bottom + MARGIN;
   } else {
     // Above target
-    left = Math.max(MARGIN, rect.left)
-    top = rect.top - MARGIN - CARD_H
+    left = Math.max(MARGIN, rect.left);
+    top = rect.top - MARGIN - CARD_H;
   }
 
-  top = Math.max(MARGIN, Math.min(vh - CARD_H - MARGIN, top))
-  left = Math.max(MARGIN, Math.min(vw - CARD_W - MARGIN, left))
-  return { top: `${top}px`, left: `${left}px`, transform: 'none' }
-})
+  top = Math.max(MARGIN, Math.min(vh - CARD_H - MARGIN, top));
+  left = Math.max(MARGIN, Math.min(vw - CARD_W - MARGIN, left));
+  return { top: `${top}px`, left: `${left}px`, transform: 'none' };
+});
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
 
 function markDone() {
-  localStorage.setItem(`orbvis_onboarded_${props.userId}`, '1')
+  localStorage.setItem(`orbvis_onboarded_${props.userId}`, '1');
 }
 
 function next() {
-  step.value++
+  step.value++;
 }
 function prev() {
-  step.value--
+  step.value--;
 }
 function skip() {
-  markDone()
-  emit('close')
+  markDone();
+  emit('close');
 }
 function finish() {
-  markDone()
-  emit('close')
+  markDone();
+  emit('close');
 }
 function createBoard() {
-  markDone()
-  emit('createBoard')
+  markDone();
+  emit('createBoard');
 }
 </script>

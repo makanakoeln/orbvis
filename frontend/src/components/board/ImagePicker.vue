@@ -274,70 +274,70 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { imagesApi } from '@/api/client'
-import { useAuthStore } from '@/stores/auth'
-import type { ImageEntry } from '@/types/api'
+import { imagesApi } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
+import type { ImageEntry } from '@/types/api';
 
-const BASE_URL = import.meta.env.BASE_URL
+const BASE_URL = import.meta.env.BASE_URL;
 
-const { t } = useI18n()
-const auth = useAuthStore()
+const { t } = useI18n();
+const auth = useAuthStore();
 
-defineProps<{ modelValue: string }>()
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+defineProps<{ modelValue: string }>();
+const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
-const open = ref(false)
-const query = ref('')
-const images = ref<ImageEntry[]>([])
-const loading = ref(false)
-const uploading = ref(false)
-const uploadError = ref('')
+const open = ref(false);
+const query = ref('');
+const images = ref<ImageEntry[]>([]);
+const loading = ref(false);
+const uploading = ref(false);
+const uploadError = ref('');
 
 const filtered = computed(() =>
   query.value
     ? images.value.filter((i) => i.name.toLowerCase().includes(query.value.toLowerCase()))
     : images.value,
-)
+);
 
 async function fetchImages() {
-  loading.value = true
+  loading.value = true;
   try {
-    images.value = await imagesApi.list(auth.accessToken!)
+    images.value = await imagesApi.list(auth.accessToken!);
   } catch {
-    images.value = []
+    images.value = [];
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function uploadImages(event: Event) {
-  const files = (event.target as HTMLInputElement).files
-  if (!files?.length) return
-  uploadError.value = ''
-  uploading.value = true
+  const files = (event.target as HTMLInputElement).files;
+  if (!files?.length) return;
+  uploadError.value = '';
+  uploading.value = true;
   try {
     for (const file of Array.from(files)) {
-      await imagesApi.upload(file, auth.accessToken!)
+      await imagesApi.upload(file, auth.accessToken!);
     }
-    await fetchImages()
+    await fetchImages();
   } catch (e: unknown) {
-    uploadError.value = e instanceof Error ? e.message : 'Upload failed'
+    uploadError.value = e instanceof Error ? e.message : 'Upload failed';
   } finally {
-    uploading.value = false
-    ;(event.target as HTMLInputElement).value = ''
+    uploading.value = false;
+    (event.target as HTMLInputElement).value = '';
   }
 }
 
 function select(name: string) {
-  emit('update:modelValue', name)
-  open.value = false
-  query.value = ''
+  emit('update:modelValue', name);
+  open.value = false;
+  query.value = '';
 }
 
 watch(open, (isOpen) => {
-  if (isOpen && !images.value.length) fetchImages()
-})
+  if (isOpen && !images.value.length) fetchImages();
+});
 </script>

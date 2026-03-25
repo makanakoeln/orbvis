@@ -105,34 +105,34 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
-import type { ObjectState } from '@/types/api'
-import { getMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
+import type { ObjectState } from '@/types/api';
+import { getMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf';
 
 const props = defineProps<{
-  type: string // 'gauge' | 'bar' | 'trafficlight'
-  metric?: string | null
-  state: ObjectState | undefined
-  size: number
-}>()
+  type: string; // 'gauge' | 'bar' | 'trafficlight'
+  metric?: string | null;
+  state: ObjectState | undefined;
+  size: number;
+}>();
 
-const metrics = computed(() => parsePerfData(props.state?.perf_data ?? ''))
-const m = computed(() => getMetric(metrics.value, props.metric))
-const pct = computed(() => (m.value ? utilPercent(m.value) : 0))
-const color = computed(() => utilColor(pct.value))
+const metrics = computed(() => parsePerfData(props.state?.perf_data ?? ''));
+const m = computed(() => getMetric(metrics.value, props.metric));
+const pct = computed(() => (m.value ? utilPercent(m.value) : 0));
+const color = computed(() => utilColor(pct.value));
 
 const valueLabel = computed(() => {
-  if (!m.value) return '—'
-  const { value, unit } = m.value
-  return unit ? `${value.toFixed(1)} ${unit}` : value.toFixed(1)
-})
+  if (!m.value) return '—';
+  const { value, unit } = m.value;
+  return unit ? `${value.toFixed(1)} ${unit}` : value.toFixed(1);
+});
 
 // Traffic light state
-const monState = computed(() => props.state?.state ?? 'PENDING')
-const isRed = computed(() => ['DOWN', 'CRITICAL'].includes(monState.value))
-const isAmber = computed(() => ['WARNING', 'UNKNOWN', 'UNREACHABLE'].includes(monState.value))
-const isGreen = computed(() => ['UP', 'OK'].includes(monState.value))
+const monState = computed(() => props.state?.state ?? 'PENDING');
+const isRed = computed(() => ['DOWN', 'CRITICAL'].includes(monState.value));
+const isAmber = computed(() => ['WARNING', 'UNKNOWN', 'UNREACHABLE'].includes(monState.value));
+const isGreen = computed(() => ['UP', 'OK'].includes(monState.value));
 
 // Bulb style: lit = solid colored glow; unlit = slightly lighter than the dark housing + colored ring
 // The bulbs always sit inside the dark housing (rgba(0,0,0,0.55)), so contrast against
@@ -142,40 +142,40 @@ function bulbStyle(active: boolean, rgb: string): Record<string, string> {
     return {
       background: `rgb(${rgb})`,
       boxShadow: `0 0 10px 2px rgba(${rgb},0.7)`,
-    }
+    };
   }
   return {
     background: 'rgba(255,255,255,0.07)',
     boxShadow: `inset 0 0 0 1.5px rgba(${rgb},0.55), inset 0 0 6px rgba(${rgb},0.2)`,
-  }
+  };
 }
 
 // Gauge arc helpers (180° sweep from left to right)
-const R = computed(() => props.size * 0.4)
-const cx = computed(() => props.size / 2)
-const cy = computed(() => props.size * 0.55)
+const R = computed(() => props.size * 0.4);
+const cx = computed(() => props.size / 2);
+const cy = computed(() => props.size * 0.55);
 
 function polarX(angle: number) {
-  return cx.value + R.value * Math.cos((angle * Math.PI) / 180)
+  return cx.value + R.value * Math.cos((angle * Math.PI) / 180);
 }
 function polarY(angle: number) {
-  return cy.value + R.value * Math.sin((angle * Math.PI) / 180)
+  return cy.value + R.value * Math.sin((angle * Math.PI) / 180);
 }
 
-const START = 180
-const SWEEP = 180
+const START = 180;
+const SWEEP = 180;
 
 const bgArc = computed(() => {
   const ex = polarX(START + SWEEP),
-    ey = polarY(START + SWEEP)
-  return `M ${polarX(START)} ${polarY(START)} A ${R.value} ${R.value} 0 0 1 ${ex} ${ey}`
-})
+    ey = polarY(START + SWEEP);
+  return `M ${polarX(START)} ${polarY(START)} A ${R.value} ${R.value} 0 0 1 ${ex} ${ey}`;
+});
 
 const valArc = computed(() => {
-  const sweep = (pct.value / 100) * SWEEP
-  if (sweep < 1) return ''
+  const sweep = (pct.value / 100) * SWEEP;
+  if (sweep < 1) return '';
   const ex = polarX(START + sweep),
-    ey = polarY(START + sweep)
-  return `M ${polarX(START)} ${polarY(START)} A ${R.value} ${R.value} 0 0 1 ${ex} ${ey}`
-})
+    ey = polarY(START + sweep);
+  return `M ${polarX(START)} ${polarY(START)} A ${R.value} ${R.value} 0 0 1 ${ex} ${ey}`;
+});
 </script>

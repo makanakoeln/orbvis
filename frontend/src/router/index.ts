@@ -1,6 +1,6 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router';
 
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth';
 
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
@@ -66,32 +66,32 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
   ],
-})
+});
 
 router.beforeEach(async (to) => {
-  const auth = useAuthStore()
-  await auth.init()
+  const auth = useAuthStore();
+  await auth.init();
 
   // In Checkmk mode the CMK theme can change at any time (ajax_ui_theme).
   // Re-fetch the user profile on every navigation so the theme stays in sync.
   // Use isCheckmkDeployment (URL-based) so this also runs when SSO temporarily
   // failed and the user logged in manually.
   if (auth.ssoActive || auth.isCheckmkDeployment) {
-    auth.fetchCurrentUser()
+    auth.fetchCurrentUser();
   }
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    return { name: 'login', query: { redirect: to.fullPath } }
+    return { name: 'login', query: { redirect: to.fullPath } };
   }
   if (to.meta.requiresAdmin && !auth.isAdmin) {
-    return { name: 'home' }
+    return { name: 'home' };
   }
   if (auth.isAuthenticated && auth.user?.must_change_password && to.name !== 'change-password') {
-    return { name: 'change-password' }
+    return { name: 'change-password' };
   }
   if (to.name === 'login' && auth.isAuthenticated) {
-    return { name: 'home' }
+    return { name: 'home' };
   }
-})
+});
 
-export default router
+export default router;

@@ -1,21 +1,21 @@
-import type { BoardObject as MapObject, ObjectState } from '@/types/api'
-import { parsePerfData } from '@/utils/perf'
+import type { BoardObject as MapObject, ObjectState } from '@/types/api';
+import { parsePerfData } from '@/utils/perf';
 
 function _fmtTs(ts: number | null | undefined): string {
-  if (!ts) return ''
-  return new Date(ts * 1000).toLocaleString()
+  if (!ts) return '';
+  return new Date(ts * 1000).toLocaleString();
 }
 
 function _fmtDuration(ts: number | null | undefined): string {
-  if (!ts) return ''
-  const s = Math.max(0, Math.floor(Date.now() / 1000 - ts))
-  if (s < 60) return `${s}s`
-  const m = Math.floor(s / 60)
-  if (m < 60) return `${m}m ${s % 60}s`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ${m % 60}m`
-  const d = Math.floor(h / 24)
-  return `${d}d ${h % 24}h`
+  if (!ts) return '';
+  const s = Math.max(0, Math.floor(Date.now() / 1000 - ts));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ${s % 60}s`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${m % 60}m`;
+  const d = Math.floor(h / 24);
+  return `${d}d ${h % 24}h`;
 }
 
 /**
@@ -53,11 +53,11 @@ export function interpolateTemplate(
     object.label?.text ||
     (object.host_name && object.service_description
       ? `${object.host_name} / ${object.service_description}`
-      : (object.host_name ?? object.group_name ?? object.id))
+      : (object.host_name ?? object.group_name ?? object.id));
 
-  const perfRaw = state?.perf_data ?? ''
-  const metrics = parsePerfData(perfRaw)
-  const firstMetric = metrics[0]
+  const perfRaw = state?.perf_data ?? '';
+  const metrics = parsePerfData(perfRaw);
+  const firstMetric = metrics[0];
 
   const vars: Record<string, string> = {
     name: displayName,
@@ -83,17 +83,17 @@ export function interpolateTemplate(
     perf_data: perfRaw,
     metric: firstMetric ? String(firstMetric.value) + firstMetric.unit : '',
     metric_unit: firstMetric?.unit ?? '',
-  }
+  };
 
   return template.replace(/\{\{(\w+(?::\w+)?)\}\}/g, (_, key: string) => {
     // {{metric:LABEL}} – look up a named perf metric
     if (key.startsWith('metric:')) {
-      const label = key.slice(7)
-      const m = metrics.find((x) => x.label === label)
-      return m ? String(m.value) + m.unit : ''
+      const label = key.slice(7);
+      const m = metrics.find((x) => x.label === label);
+      return m ? String(m.value) + m.unit : '';
     }
-    return vars[key] ?? ''
-  })
+    return vars[key] ?? '';
+  });
 }
 
 /** Resolve template priority: object → map globals → global settings */
@@ -102,5 +102,5 @@ export function resolveTemplate(
   mapTpl: string | null | undefined,
   globalTpl: string | null | undefined,
 ): string | null {
-  return objectTpl || mapTpl || globalTpl || null
+  return objectTpl || mapTpl || globalTpl || null;
 }

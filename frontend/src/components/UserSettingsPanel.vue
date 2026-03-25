@@ -234,41 +234,41 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, h, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-import { usersApi } from '@/api/client'
-import { applyTheme } from '@/composables/useTheme'
-import { i18n } from '@/i18n'
-import { useAuthStore } from '@/stores/auth'
-import type { RoleRead, UserRead } from '@/types/api'
+import { usersApi } from '@/api/client';
+import { applyTheme } from '@/composables/useTheme';
+import { i18n } from '@/i18n';
+import { useAuthStore } from '@/stores/auth';
+import type { RoleRead, UserRead } from '@/types/api';
 
-const { t } = useI18n()
+const { t } = useI18n();
 
 const props = defineProps<{
-  userId: number
-  userName: string
-  isSelf: boolean
-  userRead?: UserRead
-  availableRoles?: RoleRead[]
-}>()
+  userId: number;
+  userName: string;
+  isSelf: boolean;
+  userRead?: UserRead;
+  availableRoles?: RoleRead[];
+}>();
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: [] }>();
 
-const auth = useAuthStore()
+const auth = useAuthStore();
 
 // ---- Admin settings (non-self) ----
 
-const adminIsAdmin = ref(props.userRead?.is_admin ?? false)
-const adminIsActive = ref(props.userRead?.is_active ?? true)
-const adminMustChange = ref(props.userRead?.must_change_password ?? false)
-const adminRoleIds = ref<number[]>(props.userRead?.roles.map((r) => r.role_id) ?? [])
-const adminSaving = ref(false)
-const adminError = ref('')
+const adminIsAdmin = ref(props.userRead?.is_admin ?? false);
+const adminIsActive = ref(props.userRead?.is_active ?? true);
+const adminMustChange = ref(props.userRead?.must_change_password ?? false);
+const adminRoleIds = ref<number[]>(props.userRead?.roles.map((r) => r.role_id) ?? []);
+const adminSaving = ref(false);
+const adminError = ref('');
 
 async function saveAdminSettings() {
-  adminSaving.value = true
-  adminError.value = ''
+  adminSaving.value = true;
+  adminError.value = '';
   try {
     await usersApi.update(
       props.userId,
@@ -278,43 +278,43 @@ async function saveAdminSettings() {
         must_change_password: adminMustChange.value,
       },
       auth.accessToken!,
-    )
-    const currentIds = props.userRead?.roles.map((r) => r.role_id) ?? []
-    const toAdd = adminRoleIds.value.filter((id) => !currentIds.includes(id))
-    const toRemove = currentIds.filter((id) => !adminRoleIds.value.includes(id))
+    );
+    const currentIds = props.userRead?.roles.map((r) => r.role_id) ?? [];
+    const toAdd = adminRoleIds.value.filter((id) => !currentIds.includes(id));
+    const toRemove = currentIds.filter((id) => !adminRoleIds.value.includes(id));
     await Promise.all([
       ...toAdd.map((rid) => usersApi.assignRole(props.userId, rid, auth.accessToken!)),
       ...toRemove.map((rid) => usersApi.removeRole(props.userId, rid, auth.accessToken!)),
-    ])
-    emit('close')
+    ]);
+    emit('close');
   } catch (e: unknown) {
-    adminError.value = e instanceof Error ? e.message : 'Save failed.'
+    adminError.value = e instanceof Error ? e.message : 'Save failed.';
   } finally {
-    adminSaving.value = false
+    adminSaving.value = false;
   }
 }
 
 // ---- Theme ----
 
-const savedTheme = ref(auth.user?.theme ?? 'system')
-const selectedTheme = ref(auth.user?.theme ?? 'system')
+const savedTheme = ref(auth.user?.theme ?? 'system');
+const selectedTheme = ref(auth.user?.theme ?? 'system');
 
 // ---- Language ----
 
-const savedLanguage = ref(auth.user?.language ?? 'en')
-const selectedLanguage = ref(auth.user?.language ?? 'en')
+const savedLanguage = ref(auth.user?.language ?? 'en');
+const selectedLanguage = ref(auth.user?.language ?? 'en');
 
 const languageOptions = [
   { value: 'en', label: 'English' },
   { value: 'de', label: 'Deutsch' },
-]
+];
 
 const isDirty = computed(
   () => selectedTheme.value !== savedTheme.value || selectedLanguage.value !== savedLanguage.value,
-)
-const showUnsavedWarning = ref(false)
-const saving = ref(false)
-const saveError = ref('')
+);
+const showUnsavedWarning = ref(false);
+const saving = ref(false);
+const saveError = ref('');
 
 const SunIcon = () =>
   h('svg', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '2' }, [
@@ -323,7 +323,7 @@ const SunIcon = () =>
       'stroke-linejoin': 'round',
       d: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z',
     }),
-  ])
+  ]);
 const MoonIcon = () =>
   h('svg', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '2' }, [
     h('path', {
@@ -331,7 +331,7 @@ const MoonIcon = () =>
       'stroke-linejoin': 'round',
       d: 'M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z',
     }),
-  ])
+  ]);
 const SystemIcon = () =>
   h('svg', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '2' }, [
     h('path', {
@@ -339,90 +339,90 @@ const SystemIcon = () =>
       'stroke-linejoin': 'round',
       d: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
     }),
-  ])
+  ]);
 
 const themeOptions = computed(() => [
   { value: 'dark', label: t('userSettings.themeDark'), icon: MoonIcon },
   { value: 'light', label: t('userSettings.themeLight'), icon: SunIcon },
   { value: 'system', label: t('userSettings.themeAuto'), icon: SystemIcon },
-])
+]);
 
 function selectTheme(theme: string) {
-  selectedTheme.value = theme
-  showUnsavedWarning.value = false
+  selectedTheme.value = theme;
+  showUnsavedWarning.value = false;
   // Preview immediately in DOM without persisting
-  if (props.isSelf) applyTheme(theme, auth.ssoActive, auth.user?.cmk_theme)
+  if (props.isSelf) applyTheme(theme, auth.ssoActive, auth.user?.cmk_theme);
 }
 
 async function save() {
-  saving.value = true
-  saveError.value = ''
+  saving.value = true;
+  saveError.value = '';
   try {
     await usersApi.update(
       props.userId,
       { theme: selectedTheme.value, language: selectedLanguage.value },
       auth.accessToken!,
-    )
-    savedTheme.value = selectedTheme.value
-    savedLanguage.value = selectedLanguage.value
+    );
+    savedTheme.value = selectedTheme.value;
+    savedLanguage.value = selectedLanguage.value;
     if (props.isSelf) {
-      i18n.global.locale.value = selectedLanguage.value as 'en' | 'de'
-      await auth.fetchCurrentUser()
+      i18n.global.locale.value = selectedLanguage.value as 'en' | 'de';
+      await auth.fetchCurrentUser();
     }
-    showUnsavedWarning.value = false
-    emit('close')
+    showUnsavedWarning.value = false;
+    emit('close');
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : 'Save failed.'
+    saveError.value = e instanceof Error ? e.message : 'Save failed.';
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 
 function tryClose() {
   if (props.isSelf && isDirty.value) {
-    showUnsavedWarning.value = true
+    showUnsavedWarning.value = true;
   } else {
-    emit('close')
+    emit('close');
   }
 }
 
 function discardAndClose() {
   // Revert theme preview to saved value
-  if (props.isSelf) applyTheme(savedTheme.value, auth.ssoActive, auth.user?.cmk_theme)
-  selectedTheme.value = savedTheme.value
-  selectedLanguage.value = savedLanguage.value
-  emit('close')
+  if (props.isSelf) applyTheme(savedTheme.value, auth.ssoActive, auth.user?.cmk_theme);
+  selectedTheme.value = savedTheme.value;
+  selectedLanguage.value = savedLanguage.value;
+  emit('close');
 }
 
 // ---- Password ----
 
 const showPasswordSection = computed(
   () => !(props.isSelf && (auth.ssoActive || auth.isCheckmkDeployment)),
-)
+);
 
-const password = ref('')
-const confirm = ref('')
-const pwSaving = ref(false)
-const pwError = ref('')
-const pwSuccess = ref(false)
+const password = ref('');
+const confirm = ref('');
+const pwSaving = ref(false);
+const pwError = ref('');
+const pwSuccess = ref(false);
 
 async function savePassword() {
-  pwError.value = ''
+  pwError.value = '';
   if (password.value !== confirm.value) {
-    pwError.value = t('userSettings.passwordMismatch')
-    return
+    pwError.value = t('userSettings.passwordMismatch');
+    return;
   }
-  pwSaving.value = true
+  pwSaving.value = true;
   try {
-    await usersApi.update(props.userId, { password: password.value }, auth.accessToken!)
-    pwSuccess.value = true
-    if (props.isSelf) await auth.fetchCurrentUser()
-    password.value = ''
-    confirm.value = ''
+    await usersApi.update(props.userId, { password: password.value }, auth.accessToken!);
+    pwSuccess.value = true;
+    if (props.isSelf) await auth.fetchCurrentUser();
+    password.value = '';
+    confirm.value = '';
   } catch (e: unknown) {
-    pwError.value = e instanceof Error ? e.message : t('userSettings.failedToChange')
+    pwError.value = e instanceof Error ? e.message : t('userSettings.failedToChange');
   } finally {
-    pwSaving.value = false
+    pwSaving.value = false;
   }
 }
 </script>

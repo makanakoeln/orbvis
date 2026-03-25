@@ -51,10 +51,10 @@
 
 <script setup lang="ts">
 defineProps<{
-  title: string
-  message?: string
-  confirmLabel?: string
-}>()
+  title: string;
+  message?: string;
+  confirmLabel?: string;
+}>();
 
-defineEmits<{ confirm: []; cancel: [] }>()
+defineEmits<{ confirm: []; cancel: [] }>();
 </script>

@@ -22,26 +22,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 const props = defineProps<{
-  modelValue: string | null | undefined
-  noneLabel: string
-  defaultColor: string
+  modelValue: string | null | undefined;
+  noneLabel: string;
+  defaultColor: string;
   /** Sentinel stored when "none" — null (default) or a string like 'transparent'. */
-  noneValue?: string | null
-}>()
+  noneValue?: string | null;
+}>();
 
-const emit = defineEmits<{ 'update:modelValue': [string | null] }>()
+const emit = defineEmits<{ 'update:modelValue': [string | null] }>();
 
 const isNone = computed(() => {
-  const v = props.modelValue
-  const none = props.noneValue ?? null
-  return none === null ? v == null : v == null || v === none
-})
+  const v = props.modelValue;
+  const none = props.noneValue ?? null;
+  return none === null ? v == null : v == null || v === none;
+});
 
 function toggle(e: Event) {
-  const checked = (e.target as HTMLInputElement).checked
-  emit('update:modelValue', checked ? (props.noneValue ?? null) : props.defaultColor)
+  const checked = (e.target as HTMLInputElement).checked;
+  emit('update:modelValue', checked ? (props.noneValue ?? null) : props.defaultColor);
 }
 </script>

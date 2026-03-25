@@ -990,204 +990,204 @@
     :is-admin="auth.isAdmin"
     @close="showOnboarding = false"
     @create-board="
-      showOnboarding = false
-      showCreate = true
+      showOnboarding = false;
+      showCreate = true;
     "
   />
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 
-import { boardsApi } from '@/api/client'
-import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue'
-import CreateBoardModal from '@/components/board/CreateBoardModal.vue'
-import OnboardingTour from '@/components/OnboardingTour.vue'
-import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue'
-import { useChangelog } from '@/composables/useChangelog'
-import { useAuthStore } from '@/stores/auth'
-import { useBoardsStore } from '@/stores/boards'
-import type { BoardConfig, BoardRead, WorldmapView } from '@/types/api'
-import { sanitizeBoardName } from '@/utils/naming'
+import { boardsApi } from '@/api/client';
+import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue';
+import CreateBoardModal from '@/components/board/CreateBoardModal.vue';
+import OnboardingTour from '@/components/OnboardingTour.vue';
+import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue';
+import { useChangelog } from '@/composables/useChangelog';
+import { useAuthStore } from '@/stores/auth';
+import { useBoardsStore } from '@/stores/boards';
+import type { BoardConfig, BoardRead, WorldmapView } from '@/types/api';
+import { sanitizeBoardName } from '@/utils/naming';
 
-const { t } = useI18n()
-const baseUrl = import.meta.env.BASE_URL
-const auth = useAuthStore()
-const boardsStore = useBoardsStore()
-const router = useRouter()
-const { changelogVisible } = useChangelog()
-const showCreate = ref(false)
-const showOnboarding = ref(false)
-const confirmDelete = ref<{ name: string; alias: string } | null>(null)
+const { t } = useI18n();
+const baseUrl = import.meta.env.BASE_URL;
+const auth = useAuthStore();
+const boardsStore = useBoardsStore();
+const router = useRouter();
+const { changelogVisible } = useChangelog();
+const showCreate = ref(false);
+const showOnboarding = ref(false);
+const confirmDelete = ref<{ name: string; alias: string } | null>(null);
 
 function onCreated(name: string) {
-  showCreate.value = false
-  router.push(`/boards/${name}`)
+  showCreate.value = false;
+  router.push(`/boards/${name}`);
 }
 
 function deleteBoard(map: { name: string; alias: string }) {
-  confirmDelete.value = map
+  confirmDelete.value = map;
 }
 
 async function doDelete() {
-  if (!confirmDelete.value) return
-  await boardsStore.deleteBoard(confirmDelete.value.name)
-  confirmDelete.value = null
+  if (!confirmDelete.value) return;
+  await boardsStore.deleteBoard(confirmDelete.value.name);
+  confirmDelete.value = null;
 }
 
-const importConflict = ref<{ name: string; action: () => Promise<unknown> } | null>(null)
+const importConflict = ref<{ name: string; action: () => Promise<unknown> } | null>(null);
 
 async function importBoard(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file) return;
   try {
     if (file.name.toLowerCase().endsWith('.cfg')) {
       try {
-        await boardsApi.importCfg(file, auth.accessToken!, false)
+        await boardsApi.importCfg(file, auth.accessToken!, false);
       } catch (e: unknown) {
         if (e instanceof Error && e.message.includes('already exists')) {
-          const name = file.name.replace(/\.cfg$/i, '')
+          const name = file.name.replace(/\.cfg$/i, '');
           importConflict.value = {
             name,
             action: () => boardsApi.importCfg(file, auth.accessToken!, true),
-          }
-          return
+          };
+          return;
         } else {
-          throw e
+          throw e;
         }
       }
     } else {
-      const text = await file.text()
-      const data: BoardConfig = JSON.parse(text)
+      const text = await file.text();
+      const data: BoardConfig = JSON.parse(text);
       try {
-        await boardsApi.importBoard(data, auth.accessToken!, false)
+        await boardsApi.importBoard(data, auth.accessToken!, false);
       } catch (e: unknown) {
         if (e instanceof Error && e.message.includes('already exists')) {
           importConflict.value = {
             name: data.name,
             action: () => boardsApi.importBoard(data, auth.accessToken!, true),
-          }
-          return
+          };
+          return;
         } else {
-          throw e
+          throw e;
         }
       }
     }
-    await boardsStore.fetchBoards()
+    await boardsStore.fetchBoards();
   } catch (e: unknown) {
-    alert(e instanceof Error ? e.message : t('admin.importFailed'))
+    alert(e instanceof Error ? e.message : t('admin.importFailed'));
   } finally {
-    ;(event.target as HTMLInputElement).value = ''
+    (event.target as HTMLInputElement).value = '';
   }
 }
 
 async function confirmImportOverwrite() {
-  if (!importConflict.value) return
-  const action = importConflict.value.action
-  importConflict.value = null
+  if (!importConflict.value) return;
+  const action = importConflict.value.action;
+  importConflict.value = null;
   try {
-    await action()
-    await boardsStore.fetchBoards()
+    await action();
+    await boardsStore.fetchBoards();
   } catch (e: unknown) {
-    alert(e instanceof Error ? e.message : t('admin.importFailed'))
+    alert(e instanceof Error ? e.message : t('admin.importFailed'));
   }
 }
 
 async function exportBoard(name: string) {
-  await boardsApi.exportBoard(name, auth.accessToken!)
+  await boardsApi.exportBoard(name, auth.accessToken!);
 }
 
-const confirmClone = ref<string | null>(null)
-const cloneNewName = ref('')
-const cloneAlias = ref('')
-const cloneError = ref('')
-const cloneInputEl = ref<HTMLInputElement | null>(null)
+const confirmClone = ref<string | null>(null);
+const cloneNewName = ref('');
+const cloneAlias = ref('');
+const cloneError = ref('');
+const cloneInputEl = ref<HTMLInputElement | null>(null);
 
 function cloneBoard(map: BoardRead) {
-  confirmClone.value = map.name
-  cloneNewName.value = `${map.name}_copy`
-  cloneAlias.value = map.alias ? `${map.alias} (Copy)` : ''
-  cloneError.value = ''
+  confirmClone.value = map.name;
+  cloneNewName.value = `${map.name}_copy`;
+  cloneAlias.value = map.alias ? `${map.alias} (Copy)` : '';
+  cloneError.value = '';
   nextTick(() => {
-    cloneInputEl.value?.select()
-  })
+    cloneInputEl.value?.select();
+  });
 }
 
 function onCloneNameInput(e: Event) {
-  cloneNewName.value = sanitizeBoardName((e.target as HTMLInputElement).value)
+  cloneNewName.value = sanitizeBoardName((e.target as HTMLInputElement).value);
 }
 
 async function doClone() {
-  if (!confirmClone.value || !cloneNewName.value) return
+  if (!confirmClone.value || !cloneNewName.value) return;
   try {
     await boardsApi.clone(
       confirmClone.value,
       { new_name: cloneNewName.value, alias: cloneAlias.value || undefined },
       auth.accessToken!,
-    )
-    await boardsStore.fetchBoards()
-    confirmClone.value = null
+    );
+    await boardsStore.fetchBoards();
+    confirmClone.value = null;
   } catch (e: unknown) {
-    cloneError.value = e instanceof Error ? e.message : t('admin.cloneFailed')
+    cloneError.value = e instanceof Error ? e.message : t('admin.cloneFailed');
   }
 }
 
-const settingsBoard = ref<BoardRead | null>(null)
+const settingsBoard = ref<BoardRead | null>(null);
 
 function openSettings(map: BoardRead) {
-  settingsBoard.value = map
+  settingsBoard.value = map;
 }
 
-const searchQuery = ref('')
+const searchQuery = ref('');
 
 const visibleBoards = computed(() =>
   auth.isAdmin ? boardsStore.boards : boardsStore.boards.filter((m) => m.show_in_lists !== false),
-)
+);
 
 const filteredBoards = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return visibleBoards.value
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) return visibleBoards.value;
   return visibleBoards.value.filter(
     (m) => m.name.toLowerCase().includes(q) || m.alias.toLowerCase().includes(q),
-  )
-})
+  );
+});
 
 const TYPE_LABELS: Record<string, string> = {
   static: 'Static',
   worldmap: 'Geo Board',
   automap: 'Flow Board',
   radar: 'Radar',
-}
+};
 function boardTypeLabel(type: string) {
-  return TYPE_LABELS[type] ?? type
+  return TYPE_LABELS[type] ?? type;
 }
 
 function worldmapLat(map: BoardRead) {
-  return map.view.type === 'worldmap' ? (map.view as WorldmapView).lat : 51
+  return map.view.type === 'worldmap' ? (map.view as WorldmapView).lat : 51;
 }
 function worldmapLng(map: BoardRead) {
-  return map.view.type === 'worldmap' ? (map.view as WorldmapView).lng : 10
+  return map.view.type === 'worldmap' ? (map.view as WorldmapView).lng : 10;
 }
 function worldmapZoom(map: BoardRead) {
-  return map.view.type === 'worldmap' ? (map.view as WorldmapView).zoom : 5
+  return map.view.type === 'worldmap' ? (map.view as WorldmapView).zoom : 5;
 }
 
 onMounted(() => {
-  boardsStore.fetchBoards()
+  boardsStore.fetchBoards();
   if (auth.user && !localStorage.getItem(`orbvis_onboarded_${auth.user.user_id}`)) {
     if (changelogVisible.value) {
       // Show onboarding only after the changelog is dismissed
       const stop = watch(changelogVisible, (val) => {
         if (!val) {
-          showOnboarding.value = true
-          stop()
+          showOnboarding.value = true;
+          stop();
         }
-      })
+      });
     } else {
-      showOnboarding.value = true
+      showOnboarding.value = true;
     }
   }
-})
+});
 </script>

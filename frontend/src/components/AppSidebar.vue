@@ -225,26 +225,26 @@
 </template>
 
 <script setup lang="ts">
-import { defineComponent, h, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { RouterLink, useLink } from 'vue-router'
+import { defineComponent, h, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { RouterLink, useLink } from 'vue-router';
 
-import ChangelogModal from '@/components/ChangelogModal.vue'
-import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
-import { useAuthStore } from '@/stores/auth'
+import ChangelogModal from '@/components/ChangelogModal.vue';
+import UserSettingsPanel from '@/components/UserSettingsPanel.vue';
+import { useAuthStore } from '@/stores/auth';
 
-const { t } = useI18n()
-const auth = useAuthStore()
-const showSettings = ref(false)
-const showChangelog = ref(false)
-const appVersion = __APP_VERSION__
+const { t } = useI18n();
+const auth = useAuthStore();
+const showSettings = ref(false);
+const showChangelog = ref(false);
+const appVersion = __APP_VERSION__;
 
-const LS_KEY = 'orbvis_sidebar_collapsed'
-const sidebarCollapsed = ref(localStorage.getItem(LS_KEY) === '1')
+const LS_KEY = 'orbvis_sidebar_collapsed';
+const sidebarCollapsed = ref(localStorage.getItem(LS_KEY) === '1');
 
 watch(sidebarCollapsed, (val) => {
-  localStorage.setItem(LS_KEY, val ? '1' : '0')
-})
+  localStorage.setItem(LS_KEY, val ? '1' : '0');
+});
 
 // NavItem: router-link wrapper with icon slot + active styling + collapsed mode
 const NavItem = defineComponent({
@@ -258,9 +258,9 @@ const NavItem = defineComponent({
   slots: Object as any,
   setup(props, { slots }) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { isActive, isExactActive } = useLink({ to: props.to } as any)
+    const { isActive, isExactActive } = useLink({ to: props.to } as any);
     return () => {
-      const active = props.exact ? isExactActive.value : isActive.value
+      const active = props.exact ? isExactActive.value : isActive.value;
       return h(
         RouterLink,
         {
@@ -288,8 +288,8 @@ const NavItem = defineComponent({
           ),
           !props.collapsed ? h('span', { class: 'truncate' }, props.label) : null,
         ],
-      )
-    }
+      );
+    };
   },
-})
+});
 </script>

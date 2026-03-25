@@ -78,36 +78,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 
-import { usersApi } from '@/api/client'
-import { useAuthStore } from '@/stores/auth'
+import { usersApi } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
 
-const { t } = useI18n()
-const auth = useAuthStore()
-const router = useRouter()
-const password = ref('')
-const confirm = ref('')
-const saving = ref(false)
-const error = ref('')
+const { t } = useI18n();
+const auth = useAuthStore();
+const router = useRouter();
+const password = ref('');
+const confirm = ref('');
+const saving = ref(false);
+const error = ref('');
 
 async function save() {
-  error.value = ''
+  error.value = '';
   if (password.value !== confirm.value) {
-    error.value = t('changePassword.passwordMismatch')
-    return
+    error.value = t('changePassword.passwordMismatch');
+    return;
   }
-  saving.value = true
+  saving.value = true;
   try {
-    await usersApi.update(auth.user!.user_id, { password: password.value }, auth.accessToken!)
-    await auth.fetchCurrentUser()
-    router.push({ name: 'home' })
+    await usersApi.update(auth.user!.user_id, { password: password.value }, auth.accessToken!);
+    await auth.fetchCurrentUser();
+    router.push({ name: 'home' });
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : t('changePassword.failedToChange')
+    error.value = e instanceof Error ? e.message : t('changePassword.failedToChange');
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 </script>

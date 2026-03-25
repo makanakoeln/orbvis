@@ -458,4 +458,4 @@ export default {
     failedToChange: 'Passwort konnte nicht geändert werden.',
     loggedInAs: 'Angemeldet als',
   },
-}
+};
