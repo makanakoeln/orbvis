@@ -52,12 +52,12 @@ To uninstall:
 ### With Docker Compose
 
 ```bash
-mkdir -p data/maps
+mkdir -p data/boards
 docker compose up --build
 ```
 
-- Frontend: http://localhost:3000
-- API docs: http://localhost:8000/api/docs
+- Frontend: http://localhost:8741
+- API docs: http://localhost:8742/api/docs
 
 Default credentials: `admin` / printed in the backend container log on first start.
 
@@ -86,7 +86,7 @@ Copy `backend/.env.example` to `backend/.env` and adjust:
 |---------------------------|-----------------------------|------------------------------------|
 | `DATABASE_URL`            | `sqlite+aiosqlite:///...`   | SQLAlchemy async database URL      |
 | `SECRET_KEY`              | *(must be set)*             | JWT signing key (`secrets.token_hex(32)`) |
-| `MAPS_DIR`                | `./maps`                    | Directory where map JSON files live |
+| `BOARDS_DIR`              | `./boards`                  | Directory where board JSON files live |
 | `BACKENDS_FILE`           | `./backends.json`           | Backend definitions                |
 | `STATE_REFRESH_INTERVAL`  | `15`                        | Seconds between state refreshes    |
 | `ALLOWED_ORIGINS`         | `http://localhost:5173`     | CORS allowed origins               |
