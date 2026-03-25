@@ -5,9 +5,10 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
 
 from fastapi import FastAPI
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -22,15 +23,15 @@ APP_VERSION = next((p.read_text().strip() for p in _version_candidates if p.is_f
 class SecurityHeadersMiddleware:
     """Add security-related HTTP headers to every response."""
 
-    def __init__(self, app: Any) -> None:
+    def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
-    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
-        async def send_with_headers(message: Any) -> None:
+        async def send_with_headers(message: Message) -> None:
             if message["type"] == "http.response.start":
                 headers = list(message.get("headers", []))
                 headers += [
@@ -56,10 +57,10 @@ class MethodOverrideMiddleware:
 
     _ALLOWED = frozenset(("PATCH", "PUT", "DELETE"))
 
-    def __init__(self, app: Any) -> None:
+    def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
-    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http" and scope["method"] == "POST":
             headers = {k.lower(): v for k, v in scope.get("headers", [])}
             override = headers.get(b"x-http-method-override", b"").decode().upper()
@@ -129,7 +130,16 @@ async def _seed_default_roles() -> None:
     from app.models.permission import Permission
     from app.models.role import Role
 
-    defaults = [
+    class _PermDef(TypedDict):
+        mod: str
+        act: str
+        obj: str
+
+    class _RoleDef(TypedDict):
+        name: str
+        permissions: list[_PermDef]
+
+    defaults: list[_RoleDef] = [
         {
             "name": "Administrators",
             "permissions": [

@@ -51,8 +51,8 @@ def _parse_blocks(text: str) -> list[tuple[str, dict[str, str]]]:
 
 def _int(v: str | None, default: int = 0) -> int:
     try:
-        return int(v)  # type: ignore[arg-type]
-    except (ValueError, TypeError):
+        return int(v) if v is not None else default
+    except ValueError:
         return default
 
 

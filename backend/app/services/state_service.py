@@ -125,47 +125,55 @@ async def _get_board_states_batched(
             continue
         try:
             batch = await backend.get_hosts_states(
-                [o.host_name for o in host_group], only_hard=only_hard
-            )  # type: ignore[misc]
+                [o.host_name for o in host_group if o.host_name is not None],
+                only_hard=only_hard,
+            )
         except Exception:
             logger.warning("Batch host state query failed (only_hard=%s)", only_hard, exc_info=True)
             batch = {}
         for obj in host_group:
+            assert obj.host_name is not None
             s = batch.get(obj.host_name) or ObjectState(
                 object_id=obj.id, type="host", state="PENDING", stale=True
-            )  # type: ignore[arg-type]
+            )
             s.object_id = obj.id
             results[obj.id] = s
 
     rs_objs = [o for o in hosts_soft + hosts_hard if o.recognize_services]
     if rs_objs:
-        rs_names = list({o.host_name for o in rs_objs})  # type: ignore[misc]
+        rs_names = list({o.host_name for o in rs_objs if o.host_name is not None})
         try:
-            svc_batch = await backend.get_hosts_services_batch(rs_names)  # type: ignore[arg-type]
+            rs_svc_batch = await backend.get_hosts_services_batch(rs_names)
         except Exception:
             logger.warning("Batch host-services query failed", exc_info=True)
-            svc_batch = {}
+            rs_svc_batch = {}
         for obj in rs_objs:
+            assert obj.host_name is not None
             results[obj.id] = _aggregate_host_with_services_from_data(
                 results[obj.id],
-                svc_batch.get(obj.host_name, []),  # type: ignore[arg-type]
+                rs_svc_batch.get(obj.host_name, []),
             )
 
     for svc_group, only_hard in [(svcs_soft, False), (svcs_hard, True)]:
         if not svc_group:
             continue
-        pairs = [(o.host_name, o.service_description) for o in svc_group]
+        pairs = [
+            (o.host_name, o.service_description)
+            for o in svc_group
+            if o.host_name is not None and o.service_description is not None
+        ]
         try:
-            batch = await backend.get_services_states(pairs, only_hard=only_hard)  # type: ignore[arg-type]
+            svc_batch = await backend.get_services_states(pairs, only_hard=only_hard)
         except Exception:
             logger.warning(
                 "Batch service state query failed (only_hard=%s)", only_hard, exc_info=True
             )
-            batch = {}
+            svc_batch = {}
         for obj in svc_group:
-            s = batch.get((obj.host_name, obj.service_description)) or ObjectState(
+            assert obj.host_name is not None and obj.service_description is not None
+            s = svc_batch.get((obj.host_name, obj.service_description)) or ObjectState(
                 object_id=obj.id, type="service", state="PENDING", stale=True
-            )  # type: ignore[arg-type]
+            )
             s.object_id = obj.id
             results[obj.id] = s
 
@@ -251,7 +259,11 @@ async def _get_radar_states(cfg: BoardConfig, backend: BackendBase) -> MapStates
         return MapStates(map_name=cfg.name, states=[], generated_at=time.time(), backend_ok=True)
 
     host_members = [m for m in members if ";" not in m]
-    svc_members = [(m, *m.split(";", 1)) for m in members if ";" in m]  # type: ignore[misc]
+    svc_members: list[tuple[str, str, str]] = []
+    for m in members:
+        if ";" in m:
+            host, svc = m.split(";", 1)
+            svc_members.append((m, host, svc))
 
     states: list[ObjectState] = []
 
@@ -268,13 +280,13 @@ async def _get_radar_states(cfg: BoardConfig, backend: BackendBase) -> MapStates
     if svc_members:
         pairs = [(host, svc) for (_, host, svc) in svc_members]
         try:
-            batch = await backend.get_services_states(pairs)  # type: ignore[arg-type]
+            svc_batch = await backend.get_services_states(pairs)
         except Exception:
-            batch = {}
+            svc_batch = {}
         for member_id, host, svc in svc_members:
-            s = batch.get((host, svc)) or ObjectState(
+            s = svc_batch.get((host, svc)) or ObjectState(
                 object_id=member_id, type="service", state="PENDING", stale=True
-            )  # type: ignore[arg-type]
+            )
             s.object_id = member_id
             states.append(s)
 

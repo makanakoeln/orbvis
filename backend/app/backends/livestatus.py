@@ -338,6 +338,7 @@ class LivestatusBackend(BackendBase):
         """Fetch metric history via Checkmk 2.x REST API (works with Nagios/Raw core)."""
         from datetime import datetime
 
+        assert self._checkmk_url is not None
         cmk_url = self._checkmk_url.rstrip("/")
         if cmk_url.startswith("/"):
             cmk_url = "http://127.0.0.1" + cmk_url

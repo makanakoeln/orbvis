@@ -1,6 +1,11 @@
 """User schemas."""
 
+from typing import TYPE_CHECKING, Union
+
 from pydantic import BaseModel, Field, model_validator
+
+if TYPE_CHECKING:
+    from app.models.user import User as UserModel
 
 
 class RoleRef(BaseModel):
@@ -53,7 +58,9 @@ class UserRead(UserBase):
 
     @model_validator(mode="before")
     @classmethod
-    def _collect_permissions(cls, data: object) -> object:
+    def _collect_permissions(
+        cls, data: "Union[dict[str, object], UserModel]"
+    ) -> "Union[dict[str, object], UserModel]":
         """Flatten permissions from all assigned roles into a deduplicated list."""
         if isinstance(data, dict):
             return data
