@@ -154,6 +154,7 @@ export function useMetricChart(
       .enter()
       .append('line')
       .attr('class', 'mc-hline')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .merge(gridLines as any)
       .attr('x1', PAD_LEFT)
       .attr('x2', W - PAD_RIGHT)
@@ -180,6 +181,7 @@ export function useMetricChart(
       .enter()
       .append('line')
       .attr('class', 'mc-ytick')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .merge(yTicks as any)
       .attr('x1', PAD_LEFT - 3)
       .attr('x2', PAD_LEFT)
@@ -193,6 +195,7 @@ export function useMetricChart(
       .enter()
       .append('text')
       .attr('class', 'mc-ylabel')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .merge(yLabels as any)
       .attr('x', PAD_LEFT - 5)
       .attr('y', (d) => yScale(d) + 3)
@@ -230,6 +233,7 @@ export function useMetricChart(
 
     groups.exit().remove()
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const merged = entered.merge(groups as any)
 
     merged.each(function (label, i) {

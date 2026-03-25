@@ -628,7 +628,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -643,7 +643,6 @@ import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue'
 import RadarCanvas from '@/components/board/RadarCanvas.vue'
 import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
 import { useBoardEditor } from '@/composables/useBoardEditor'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
@@ -893,11 +892,6 @@ async function onCanvasLatLngClick(lat: number, lng: number) {
 
 function onLatLngDragEnd(id: string, lat: number, lng: number) {
   editor.moveObjectToLatLng(id, lat, lng)
-}
-
-async function onSaveProperties(updates: Record<string, unknown>) {
-  if (editor.selectedObjectId.value)
-    await editor.updateObjectProperties(editor.selectedObjectId.value, updates)
 }
 
 // ---- Map Settings ----

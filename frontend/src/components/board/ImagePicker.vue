@@ -286,7 +286,7 @@ const BASE_URL = import.meta.env.BASE_URL
 const { t } = useI18n()
 const auth = useAuthStore()
 
-const props = defineProps<{ modelValue: string }>()
+defineProps<{ modelValue: string }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
 const open = ref(false)

@@ -166,12 +166,6 @@ function addPulse(svg: SVGSVGElement, iconSize: number, stateColor: string) {
   void size // suppress unused warning
 }
 
-const PULSE_STATES = new Set(['DOWN', 'CRITICAL', 'UNREACHABLE'])
-
-function stateFromRgb(rgb: string): string {
-  // Reverse-lookup: we check if the color matches known bad states by comparison
-  return rgb
-}
 
 export function useArcRing(opts: ArcRingOptions) {
   function render() {
