@@ -1,0 +1,28 @@
+ROOT=$(git rev-parse --show-toplevel)
+
+# Determine which paths are being pushed
+PUSHED_PY=$(git diff --name-only HEAD @{u} 2>/dev/null | grep '^backend/.*\.py$' || true)
+PUSHED_FRONTEND=$(git diff --name-only HEAD @{u} 2>/dev/null | grep '^frontend/' || true)
+
+# If no upstream yet, compare against all committed changes
+if ! git rev-parse @{u} >/dev/null 2>&1; then
+  PUSHED_PY=$(git diff --name-only HEAD 2>/dev/null | grep '^backend/.*\.py$' || true)
+  # Run both suites when pushing a new branch
+  PUSHED_FRONTEND=1
+  PUSHED_PY=1
+fi
+
+if [ -n "$PUSHED_FRONTEND" ]; then
+  echo "pre-push: running frontend tests..."
+  cd "$ROOT/frontend" && npx vitest run
+fi
+
+if [ -n "$PUSHED_PY" ]; then
+  echo "pre-push: running backend tests..."
+  PYTEST=$(command -v pytest 2>/dev/null || echo "$ROOT/backend/.venv/bin/pytest")
+  if [ ! -x "$PYTEST" ]; then
+    echo "error: pytest not found (checked PATH and $ROOT/backend/.venv/bin/pytest)"
+    exit 1
+  fi
+  cd "$ROOT/backend" && "$PYTEST"
+fi
