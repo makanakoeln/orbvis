@@ -71,7 +71,8 @@
             <span
               class="text-[9px] font-mono font-semibold shrink-0"
               :style="{ color: CHART_PALETTE[idx % CHART_PALETTE.length] }"
-              >{{ fmtMetricVal(chartLatestValues[label]?.value ?? 0)
+              >{{
+                fmtMetricVal(chartLatestValues[label]?.value ?? 0, chartLatestValues[label]?.unit)
               }}<span class="text-zinc-600 ml-0.5 font-normal">{{
                 chartLatestValues[label]?.unit
               }}</span></span
@@ -446,7 +447,7 @@ const singleMetricValueStr = computed(() => {
   const label = chartMetricLabels.value[0];
   const pt = chartLatestValues.value[label];
   if (!pt) return '';
-  return `${fmtMetricVal(pt.value)}${pt.unit ?? ''}`;
+  return `${fmtMetricVal(pt.value, pt.unit)}${pt.unit ?? ''}`;
 });
 
 const singleMetricColor = computed(() => {
