@@ -444,6 +444,25 @@ export default {
       bodyUser:
         'Your administrator can create boards and grant you access. Once a board is available it will appear here.',
     },
+    clickToContinue: 'Click the highlighted element →',
+    complete: "You're all set!",
+    completeSubtitle: 'Start exploring OrbVis',
+    boardStep1: {
+      title: 'Welcome to your board',
+      body: 'This is where your monitoring landscape comes to life. Objects update in real time.',
+    },
+    boardStep2: {
+      title: 'The canvas',
+      body: 'Each object represents a monitored host, service, or group and shows its current state.',
+    },
+    boardStep3: {
+      title: 'Edit mode',
+      body: 'Click the pencil to enter edit mode and start placing monitoring objects on the board.',
+    },
+    boardStep4: {
+      title: 'Add objects',
+      body: 'Choose an object type, configure it, and click "Place on board" to position it on the canvas.',
+    },
   },
   changePassword: {
     title: 'Change your password',

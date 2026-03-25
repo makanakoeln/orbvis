@@ -1,82 +1,148 @@
 <template>
   <Teleport to="body">
-    <!-- Spotlight overlay (pointer-events none so underlying page stays readable) -->
+    <!-- 1. SVG overlay (dimming) -->
     <svg class="fixed inset-0 w-full h-full pointer-events-none" style="z-index: 9998">
       <path fill-rule="evenodd" fill="rgba(0,0,0,0.65)" :d="overlayPath" />
     </svg>
 
-    <!-- Full-screen click-away layer (below tooltip) -->
-    <div class="fixed inset-0" style="z-index: 9999" @click="skip" />
-
-    <!-- Tooltip card -->
+    <!-- 2. Pulsing beacon ring around target element -->
     <div
-      class="fixed w-80 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden transition-[top,left] duration-200 ease-out"
-      style="z-index: 10000"
-      :style="cardStyle"
-      @click.stop
+      v-if="targetRect"
+      class="fixed rounded-[10px] pointer-events-none"
+      :style="[
+        beaconStyle,
+        { boxShadow: '0 0 0 2px rgb(99 102 241 / 0.8), 0 0 20px 4px rgb(99 102 241 / 0.3)' },
+      ]"
+      style="z-index: 9999"
     >
-      <!-- Progress bar -->
-      <div class="h-0.5 bg-[var(--border)]">
-        <div
-          class="h-full bg-indigo-500 transition-all duration-300"
-          :style="{ width: `${(step / TOTAL) * 100}%` }"
-        />
-      </div>
+      <div
+        class="absolute inset-0 rounded-[10px] animate-ping"
+        style="box-shadow: 0 0 0 2px rgb(129 140 248 / 60%)"
+      />
+    </div>
 
-      <div class="px-5 pt-4 pb-3">
-        <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1.5">
-          {{ step }} / {{ TOTAL }}
-        </p>
-        <h3 class="font-bold text-[var(--text)] text-base mb-1.5">{{ currentStep.title }}</h3>
-        <p class="text-sm text-zinc-400 leading-relaxed">{{ currentStep.body }}</p>
-      </div>
+    <!-- 3. Click-away backdrop (skip on click) -->
+    <div class="fixed inset-0" style="z-index: 10000" @click="skip" />
 
-      <div class="flex items-center justify-between px-5 pb-4">
-        <button class="text-xs text-zinc-600 hover:text-zinc-400 transition-colors" @click="skip">
-          {{ t('onboarding.skip') }}
-        </button>
-        <div class="flex items-center gap-1.5">
-          <button
-            v-if="step > 1"
-            class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-            @click="prev"
-          >
-            {{ t('onboarding.back') }}
+    <!-- 4. Tooltip card -->
+    <Transition name="tour-card">
+      <div
+        :key="step"
+        class="fixed w-80 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
+        style="z-index: 10001"
+        :style="cardStyle"
+        @click.stop
+      >
+        <!-- Step dots -->
+        <div class="flex justify-center gap-2 pt-4 pb-1">
+          <div
+            v-for="i in TOTAL"
+            :key="i"
+            class="rounded-full transition-all duration-300"
+            :class="
+              i < step
+                ? 'w-2 h-2 bg-indigo-500'
+                : i === step
+                  ? 'w-2.5 h-2.5 bg-indigo-400 ring-2 ring-indigo-400/40'
+                  : 'w-2 h-2 bg-zinc-600'
+            "
+          />
+        </div>
+
+        <div class="px-5 pt-2 pb-3">
+          <h3 class="font-bold text-[var(--text)] text-base mb-1.5">{{ currentStep.title }}</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">{{ currentStep.body }}</p>
+        </div>
+
+        <div class="flex items-center justify-between px-5 pb-4">
+          <button class="text-xs text-zinc-600 hover:text-zinc-400 transition-colors" @click="skip">
+            {{ t('onboarding.skip') }}
           </button>
-          <!-- Last step admin: two actions -->
-          <template v-if="step === TOTAL && isAdmin">
+          <div class="flex items-center gap-1.5">
             <button
+              v-if="step > 1"
               class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+              @click="prev"
+            >
+              {{ t('onboarding.back') }}
+            </button>
+            <!-- Last step with create-board action -->
+            <template v-if="step === TOTAL && showCreateBoard">
+              <button
+                class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+                @click="finish"
+              >
+                {{ t('onboarding.finish') }}
+              </button>
+              <button
+                class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
+                @click="createBoard"
+              >
+                {{ t('onboarding.createFirstBoard') }}
+              </button>
+            </template>
+            <!-- Last step without create-board -->
+            <button
+              v-else-if="step === TOTAL"
+              class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
               @click="finish"
             >
               {{ t('onboarding.finish') }}
             </button>
-            <button
-              class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
-              @click="createBoard"
+            <!-- Intermediate step with selector: click-to-continue hint -->
+            <span
+              v-else-if="currentStep.selector && targetRect"
+              class="text-xs text-indigo-400 animate-pulse select-none"
             >
-              {{ t('onboarding.createFirstBoard') }}
+              {{ t('onboarding.clickToContinue') }}
+            </span>
+            <!-- Intermediate step without selector (or target not found): Next button -->
+            <button
+              v-else
+              class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
+              @click="next"
+            >
+              {{ t('onboarding.next') }}
             </button>
-          </template>
-          <!-- Last step non-admin -->
-          <button
-            v-else-if="step === TOTAL"
-            class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
-            @click="finish"
-          >
-            {{ t('onboarding.finish') }}
-          </button>
-          <!-- Not last step -->
-          <button
-            v-else
-            class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
-            @click="next"
-          >
-            {{ t('onboarding.next') }}
-          </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
+
+    <!-- 5. Transparent click-catcher over target element (advances step) -->
+    <div
+      v-if="currentStep.selector && targetRect && step < TOTAL"
+      class="fixed cursor-pointer rounded-[10px]"
+      :style="beaconStyle"
+      style="z-index: 10002"
+      @click="onClickCatcher"
+    />
+
+    <!-- 6. Completion animation overlay -->
+    <Transition name="completion">
+      <div
+        v-if="showCompletion"
+        class="fixed inset-0 flex items-center justify-center bg-black/70"
+        style="z-index: 10003"
+      >
+        <div class="text-center">
+          <div class="check-circle mx-auto mb-5">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <p class="text-2xl font-bold text-white">{{ t('onboarding.complete') }}</p>
+          <p class="text-sm text-zinc-400 mt-1">{{ t('onboarding.completeSubtitle') }}</p>
+        </div>
+      </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -84,61 +150,27 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { useAuthStore } from '@/stores/auth';
+import type { TourStep } from '@/types/tour';
 
 const { t } = useI18n();
-const auth = useAuthStore();
 
 const props = defineProps<{
-  userId: number;
-  isAdmin: boolean;
+  steps: TourStep[];
+  storageKey: string;
+  showCreateBoard?: boolean;
 }>();
 
 const emit = defineEmits<{
   close: [];
   createBoard: [];
+  stepClick: [step: number];
 }>();
 
 // ─── Steps ───────────────────────────────────────────────────────────────────
 
 const step = ref(1);
-
-interface TourStep {
-  selector: string | null; // data-tour="…"
-  title: string;
-  body: string;
-}
-
-const steps = computed<TourStep[]>(() => {
-  const all: TourStep[] = [
-    {
-      selector: null,
-      title: t('onboarding.step1.title'),
-      body: t('onboarding.step1.body'),
-    },
-    {
-      selector: '[data-tour="sidebar-nav"]',
-      title: t('onboarding.step2.title'),
-      body: props.isAdmin ? t('onboarding.step2.bodyAdmin') : t('onboarding.step2.bodyUser'),
-    },
-    {
-      selector: '[data-tour="boards-grid"]',
-      title: t('onboarding.step3.title'),
-      body: t('onboarding.step3.body'),
-    },
-    {
-      selector: props.isAdmin ? '[data-tour="new-board"]' : null,
-      title: t('onboarding.step4.title'),
-      body: props.isAdmin ? t('onboarding.step4.bodyAdmin') : t('onboarding.step4.bodyUser'),
-    },
-  ];
-  return auth.ssoActive || auth.isCheckmkDeployment
-    ? all.filter((s) => s.selector !== '[data-tour="sidebar-nav"]')
-    : all;
-});
-
-const TOTAL = computed(() => steps.value.length);
-const currentStep = computed(() => steps.value[step.value - 1]);
+const TOTAL = computed(() => props.steps.length);
+const currentStep = computed(() => props.steps[step.value - 1]);
 
 // ─── Target rect ─────────────────────────────────────────────────────────────
 
@@ -155,7 +187,6 @@ function measureTarget() {
 }
 
 watch(step, () => {
-  // Tiny delay so Vue renders any v-if changes before we measure
   requestAnimationFrame(measureTarget);
 });
 
@@ -174,8 +205,8 @@ onUnmounted(() => {
 
 // ─── SVG overlay path ────────────────────────────────────────────────────────
 
-const PAD = 10; // px padding around the highlight
-const R = 10; // border-radius of the hole
+const PAD = 10;
+const R = 10;
 
 function roundedRectPath(x: number, y: number, w: number, h: number, r: number) {
   return `M${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x + r} Q${x},${y + h} ${x},${y + h - r} V${y + r} Q${x},${y} ${x + r},${y} Z`;
@@ -195,10 +226,23 @@ const overlayPath = computed(() => {
   return `${outer} ${roundedRectPath(x, y, w, h, R)}`;
 });
 
+// ─── Beacon / click-catcher style ────────────────────────────────────────────
+
+const beaconStyle = computed(() => {
+  const rect = targetRect.value;
+  if (!rect) return {};
+  return {
+    top: `${Math.max(0, rect.top - PAD)}px`,
+    left: `${Math.max(0, rect.left - PAD)}px`,
+    width: `${rect.width + PAD * 2}px`,
+    height: `${rect.height + PAD * 2}px`,
+  };
+});
+
 // ─── Tooltip position ────────────────────────────────────────────────────────
 
 const CARD_W = 320;
-const CARD_H = 200; // conservative estimate
+const CARD_H = 200;
 const MARGIN = 16;
 
 const cardStyle = computed(() => {
@@ -212,19 +256,15 @@ const cardStyle = computed(() => {
   let left: number, top: number;
 
   if (rect.right + MARGIN + CARD_W <= vw) {
-    // Right of target
     left = rect.right + MARGIN;
     top = rect.top;
   } else if (rect.left - MARGIN - CARD_W >= 0) {
-    // Left of target
     left = rect.left - MARGIN - CARD_W;
     top = rect.top;
   } else if (rect.bottom + MARGIN + CARD_H <= vh) {
-    // Below target
     left = Math.max(MARGIN, rect.left);
     top = rect.bottom + MARGIN;
   } else {
-    // Above target
     left = Math.max(MARGIN, rect.left);
     top = rect.top - MARGIN - CARD_H;
   }
@@ -234,10 +274,22 @@ const cardStyle = computed(() => {
   return { top: `${top}px`, left: `${left}px`, transform: 'none' };
 });
 
+// ─── Completion animation ─────────────────────────────────────────────────────
+
+const showCompletion = ref(false);
+
+function showAndClose(callback: () => void) {
+  showCompletion.value = true;
+  setTimeout(() => {
+    showCompletion.value = false;
+    setTimeout(callback, 200);
+  }, 1400);
+}
+
 // ─── Navigation ──────────────────────────────────────────────────────────────
 
 function markDone() {
-  localStorage.setItem(`orbvis_onboarded_${props.userId}`, '1');
+  localStorage.setItem(props.storageKey, '1');
 }
 
 function next() {
@@ -246,16 +298,79 @@ function next() {
 function prev() {
   step.value--;
 }
+function onClickCatcher() {
+  emit('stepClick', step.value);
+  next();
+}
 function skip() {
   markDone();
   emit('close');
 }
 function finish() {
   markDone();
-  emit('close');
+  showAndClose(() => emit('close'));
 }
 function createBoard() {
   markDone();
-  emit('createBoard');
+  showAndClose(() => emit('createBoard'));
 }
 </script>
+
+<style scoped>
+/* ─── Tour card slide-in ─────────────────────────────────────────────────── */
+.tour-card-enter-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.tour-card-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+/* ─── Completion overlay ─────────────────────────────────────────────────── */
+.completion-enter-active,
+.completion-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.completion-enter-from,
+.completion-leave-to {
+  opacity: 0;
+}
+
+/* ─── Check circle ───────────────────────────────────────────────────────── */
+.check-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  animation: check-bounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.check-circle svg {
+  width: 36px;
+  height: 36px;
+}
+
+@keyframes check-bounce {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+</style>

@@ -986,8 +986,9 @@
   <CreateBoardModal v-if="showCreate" @close="showCreate = false" @created="onCreated" />
   <OnboardingTour
     v-if="showOnboarding && auth.user"
-    :user-id="auth.user.user_id"
-    :is-admin="auth.isAdmin"
+    :steps="tourSteps"
+    :storage-key="`orbvis_onboarded_${auth.user.user_id}`"
+    :show-create-board="auth.isAdmin"
     @close="showOnboarding = false"
     @create-board="
       showOnboarding = false;
@@ -1010,6 +1011,7 @@ import { useChangelog } from '@/composables/useChangelog';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
 import type { BoardConfig, BoardRead, WorldmapView } from '@/types/api';
+import type { TourStep } from '@/types/tour';
 import { sanitizeBoardName } from '@/utils/naming';
 
 const { t } = useI18n();
@@ -1020,6 +1022,30 @@ const router = useRouter();
 const { changelogVisible } = useChangelog();
 const showCreate = ref(false);
 const showOnboarding = ref(false);
+
+const tourSteps = computed<TourStep[]>(() => {
+  const all: TourStep[] = [
+    { selector: null, title: t('onboarding.step1.title'), body: t('onboarding.step1.body') },
+    {
+      selector: '[data-tour="sidebar-nav"]',
+      title: t('onboarding.step2.title'),
+      body: auth.isAdmin ? t('onboarding.step2.bodyAdmin') : t('onboarding.step2.bodyUser'),
+    },
+    {
+      selector: '[data-tour="boards-grid"]',
+      title: t('onboarding.step3.title'),
+      body: t('onboarding.step3.body'),
+    },
+    {
+      selector: auth.isAdmin ? '[data-tour="new-board"]' : null,
+      title: t('onboarding.step4.title'),
+      body: auth.isAdmin ? t('onboarding.step4.bodyAdmin') : t('onboarding.step4.bodyUser'),
+    },
+  ];
+  return auth.ssoActive || auth.isCheckmkDeployment
+    ? all.filter((s) => s.selector !== '[data-tour="sidebar-nav"]')
+    : all;
+});
 const confirmDelete = ref<{ name: string; alias: string } | null>(null);
 
 function onCreated(name: string) {

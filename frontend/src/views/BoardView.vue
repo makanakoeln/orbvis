@@ -179,7 +179,7 @@
     </div>
 
     <!-- Map area + optional edit panel -->
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-hidden" data-tour="board-canvas">
       <!-- Worldmap -->
       <div
         v-if="isWorldmap"
@@ -347,6 +347,7 @@
           <div
             v-if="editor.editMode.value"
             class="w-72 max-h-[calc(100vh-10rem)] flex flex-col overflow-hidden bg-[var(--bg-surface)] backdrop-blur-xl ring-1 ring-white/8 shadow-2xl shadow-black/60 rounded-2xl"
+            data-tour="edit-panel"
           >
             <EditPanel
               :draft="editor.draft"
@@ -437,6 +438,7 @@
 
         <!-- FAB: Edit toggle -->
         <button
+          data-tour="edit-fab"
           class="w-12 h-12 rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1"
           :class="
             editor.editMode.value
@@ -624,6 +626,14 @@
       @close="showSettings = false"
       @updated="onSettingsUpdated"
     />
+
+    <OnboardingTour
+      v-if="showBoardTour && auth.user"
+      :steps="boardTourSteps"
+      :storage-key="`orbvis_board_toured_${auth.user.user_id}`"
+      @close="showBoardTour = false"
+      @step-click="onBoardTourStepClick"
+    />
   </div>
 </template>
 
@@ -643,6 +653,7 @@ import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue'
 import RadarCanvas from '@/components/board/RadarCanvas.vue';
 import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import OnboardingTour from '@/components/OnboardingTour.vue';
 import { useBoardEditor } from '@/composables/useBoardEditor';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
@@ -650,6 +661,7 @@ import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
 import type { BoardObject } from '@/types/api';
+import type { TourStep } from '@/types/tour';
 import { resolveTemplate } from '@/utils/template';
 
 type LineDragMode = 'move' | 'start' | 'end';
@@ -664,6 +676,46 @@ const connectionsStore = useConnectionsStore();
 const settingsStore = useSettingsStore();
 
 const boardName = computed(() => route.params.name as string);
+
+// ─── Board tour ───────────────────────────────────────────────────────────────
+
+const showBoardTour = ref(false);
+
+const boardTourSteps = computed<TourStep[]>(() => {
+  const base: TourStep[] = [
+    {
+      selector: null,
+      title: t('onboarding.boardStep1.title'),
+      body: t('onboarding.boardStep1.body'),
+    },
+    {
+      selector: '[data-tour="board-canvas"]',
+      title: t('onboarding.boardStep2.title'),
+      body: t('onboarding.boardStep2.body'),
+    },
+  ];
+  if (!auth.isAdmin) return base;
+  return [
+    ...base,
+    {
+      selector: '[data-tour="edit-fab"]',
+      title: t('onboarding.boardStep3.title'),
+      body: t('onboarding.boardStep3.body'),
+    },
+    {
+      selector: '[data-tour="edit-panel"]',
+      title: t('onboarding.boardStep4.title'),
+      body: t('onboarding.boardStep4.body'),
+    },
+  ];
+});
+
+function onBoardTourStepClick(step: number) {
+  // Step 3 = FAB — activate edit mode so EditPanel renders for step 4
+  if (auth.isAdmin && step === 3) {
+    editor.toggleEditMode();
+  }
+}
 const boardConfig = computed(() => boardsStore.currentBoard);
 const boardConfigAsRead = computed<import('@/types/api').BoardRead | null>(() => {
   const cfg = boardsStore.currentBoard;
@@ -1006,6 +1058,9 @@ function onKeyDown(e: KeyboardEvent) {
 onMounted(() => {
   if (auth.isAdmin) connectionsStore.fetchBackends();
   document.addEventListener('keydown', onKeyDown);
+  if (auth.user && !localStorage.getItem(`orbvis_board_toured_${auth.user.user_id}`)) {
+    showBoardTour.value = true;
+  }
 });
 
 onUnmounted(() => {

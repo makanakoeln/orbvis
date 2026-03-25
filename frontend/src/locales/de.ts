@@ -447,6 +447,25 @@ export default {
       bodyUser:
         'Dein Administrator kann Boards anlegen und dir Zugriff gewähren. Sobald ein Board verfügbar ist, erscheint es hier.',
     },
+    clickToContinue: 'Klicke auf das markierte Element →',
+    complete: 'Alles bereit!',
+    completeSubtitle: 'Viel Spaß mit OrbVis',
+    boardStep1: {
+      title: 'Willkommen auf deinem Board',
+      body: 'Hier wird deine Monitoring-Landschaft lebendig. Objekte aktualisieren sich in Echtzeit.',
+    },
+    boardStep2: {
+      title: 'Der Canvas',
+      body: 'Jedes Objekt repräsentiert einen überwachten Host, Service oder eine Gruppe und zeigt seinen aktuellen Status.',
+    },
+    boardStep3: {
+      title: 'Bearbeitungsmodus',
+      body: 'Klicke auf den Stift, um den Bearbeitungsmodus zu öffnen und Monitoring-Objekte auf dem Board zu platzieren.',
+    },
+    boardStep4: {
+      title: 'Objekte hinzufügen',
+      body: 'Wähle einen Objekttyp, konfiguriere ihn und klicke auf „Auf Board platzieren", um ihn auf dem Canvas zu positionieren.',
+    },
   },
   changePassword: {
     title: 'Passwort ändern',
