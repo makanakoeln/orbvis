@@ -53,7 +53,7 @@ describe('BoardCanvas', () => {
   it('renders without errors', () => {
     const wrapper = mount(BoardCanvas, {
       props: baseProps,
-      global: { stubs: { HoverMenu: true, ContextMenu: true } },
+      global: { stubs: { HoverMenu: true, ContextMenu: true, BoardObject: true } },
     })
     expect(wrapper.exists()).toBe(true)
   })
@@ -61,7 +61,9 @@ describe('BoardCanvas', () => {
   it('renders the correct number of objects', () => {
     const wrapper = mount(BoardCanvas, {
       props: baseProps,
-      global: { stubs: { HoverMenu: true, ContextMenu: true, BoardLine: true } },
+      global: {
+        stubs: { HoverMenu: true, ContextMenu: true, BoardLine: true, BoardObject: true },
+      },
     })
     const objects = wrapper.findAllComponents({ name: 'BoardObject' })
     expect(objects).toHaveLength(1)
