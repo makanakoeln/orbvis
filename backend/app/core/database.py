@@ -40,27 +40,3 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
-
-
-async def init_db() -> None:
-    """Create all tables on startup and apply lightweight column migrations."""
-    # Import all models so metadata is populated
-    import app.models  # noqa: F401
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        # Add columns introduced after initial schema (SQLite has no IF NOT EXISTS for columns)
-        await _add_column_if_missing(
-            conn, "users", "theme", "VARCHAR(10) NOT NULL DEFAULT 'system'"
-        )
-        await _add_column_if_missing(conn, "users", "language", "VARCHAR(10) NOT NULL DEFAULT 'en'")
-
-
-async def _add_column_if_missing(conn, table: str, column: str, definition: str) -> None:
-    """Add a column to an existing table if it does not yet exist (SQLite-compatible)."""
-    from sqlalchemy import text
-
-    result = await conn.execute(text(f"PRAGMA table_info({table})"))
-    existing = {row[1] for row in result.fetchall()}
-    if column not in existing:
-        await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
