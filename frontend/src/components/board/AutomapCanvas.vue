@@ -110,6 +110,7 @@ import { zoom, zoomIdentity } from 'd3-zoom';
 import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 import { connectionsApi } from '@/api/client';
+import { useD3Cleanup } from '@/composables/useD3Cleanup';
 import { useAuthStore } from '@/stores/auth';
 import type { TopologyNode } from '@/types/api';
 
@@ -140,6 +141,7 @@ function showSvcLabel(N: number): boolean {
   return N <= 10;
 }
 const svgEl = ref<SVGSVGElement | null>(null);
+useD3Cleanup(svgEl);
 const nodes = ref<TopologyNode[]>([]);
 const loading = ref(true);
 const error = ref('');

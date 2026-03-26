@@ -646,9 +646,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if not settings.checkmk_omd_root:
         await _ensure_admin_user()
     await _seed_default_roles()
-    _seed_demo_map()
-    _seed_demo_worldmap()
-    seed_builtin_images(Path(settings.boards_dir).parent / "images")
+    await loop.run_in_executor(None, _seed_demo_map)
+    await loop.run_in_executor(None, _seed_demo_worldmap)
+    await loop.run_in_executor(
+        None, seed_builtin_images, Path(settings.boards_dir).parent / "images"
+    )
 
     yield
     logger.info("Shutting down OrbVis backend.")
