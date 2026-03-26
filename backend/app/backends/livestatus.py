@@ -8,35 +8,32 @@ import json as _json
 import logging
 import pkgutil
 import re as _re
-import sys
 from datetime import UTC
+from functools import lru_cache
 from pathlib import Path
 
 import httpx
 
 from app.backends.base import BackendBase, MetricHistoryResult
 from app.core.config import settings
+from app.integrations import checkmk as _cmk_integration
 from app.schemas.state import ObjectState
 
 logger = logging.getLogger(__name__)
 
-# Lazily populated on first use: metric_name → human-readable title
-_CMK_METRIC_TITLES: dict[str, str] | None = None
+
+def _identity(x: str) -> str:
+    return x
 
 
+@lru_cache(maxsize=1)
 def _load_cmk_metric_titles() -> dict[str, str]:
-    """Discover metric titles from CMK graphing plugin definitions.
+    """Discover metric titles from all ``cmk.plugins.*.graphing`` submodules.
 
-    Scans all ``cmk.plugins.*.graphing`` submodules for ``metric_*`` variables
-    that are ``cmk.graphing.v1.metrics.Metric`` instances and collects their
-    human-readable titles.  Returns an empty dict when CMK plugins are not
-    available (plain Nagios / Icinga environments).
+    Returns an empty dict in non-CMK environments.
     """
-    omd_root = settings.checkmk_omd_root
-    if omd_root:
-        cmk_lib = str(Path(omd_root) / "lib" / "python3")
-        if cmk_lib not in sys.path:
-            sys.path.insert(0, cmk_lib)
+    if not _cmk_integration.available:
+        return {}
 
     try:
         import cmk.plugins as _cmk_plugins
@@ -46,24 +43,20 @@ def _load_cmk_metric_titles() -> dict[str, str]:
 
     titles: dict[str, str] = {}
 
-    # Enumerate plugin package directories on disk to handle both regular
-    # packages (with __init__.py, found by walk_packages) and namespace
-    # packages without __init__.py (like "collection") which walk_packages
-    # does not recurse into automatically.
-    plugin_dirs: set[str] = set()
+    # Enumerate plugin directories directly: walk_packages does not recurse into
+    # namespace packages without __init__.py (e.g. "collection"), so we iterate
+    # subdirectories on disk and import each *.graphing package explicitly.
+    plugin_dirs: set[Path] = set()
     for p in _cmk_plugins.__path__:
         try:
-            plugin_dirs.update(str(d) for d in Path(p).iterdir() if d.is_dir())
+            plugin_dirs.update(d for d in Path(p).iterdir() if d.is_dir())
         except OSError:
             pass
 
-    for plugin_dir in sorted(plugin_dirs):
-        plugin_name = Path(plugin_dir).name
-        graphing_pkg = f"cmk.plugins.{plugin_name}.graphing"
+    for plugin_dir in plugin_dirs:
+        graphing_pkg = f"cmk.plugins.{plugin_dir.name}.graphing"
         try:
             graphing_mod = importlib.import_module(graphing_pkg)
-        except ImportError:
-            continue
         except Exception:
             continue
 
@@ -81,7 +74,7 @@ def _load_cmk_metric_titles() -> dict[str, str]:
                 if not isinstance(obj, _gm.Metric):
                     continue
                 try:
-                    titles[obj.name] = obj.title.localize(lambda x: x)
+                    titles[obj.name] = obj.title.localize(_identity)
                 except Exception:
                     pass
 
@@ -90,11 +83,9 @@ def _load_cmk_metric_titles() -> dict[str, str]:
 
 
 def _cmk_metric_title(label: str) -> str:
-    """Return the CMK canonical title for *label*, falling back to auto-formatting."""
-    global _CMK_METRIC_TITLES
-    if _CMK_METRIC_TITLES is None:
-        _CMK_METRIC_TITLES = _load_cmk_metric_titles()
-    return _CMK_METRIC_TITLES.get(label) or " ".join(w.capitalize() for w in label.split("_"))
+    return _load_cmk_metric_titles().get(label) or " ".join(
+        w.capitalize() for w in label.split("_")
+    )
 
 
 def _ls_escape(value: str) -> str:
