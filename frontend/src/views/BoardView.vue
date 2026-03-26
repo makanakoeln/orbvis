@@ -195,9 +195,12 @@
         </div>
         <div
           v-else-if="boardsStore.error"
-          class="absolute inset-0 flex items-center justify-center text-red-400 z-10 text-sm"
+          class="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 text-sm"
         >
-          {{ boardsStore.error }}
+          <span class="text-red-400">{{ boardsStore.error }}</span>
+          <router-link to="/" class="text-zinc-500 hover:text-zinc-300 transition-colors text-xs">
+            {{ t('board.backToOverview') }}
+          </router-link>
         </div>
         <WorldMapCanvas
           v-else-if="boardConfig"
@@ -239,9 +242,12 @@
         </button>
         <div
           v-else-if="!boardConfig"
-          class="absolute inset-0 flex items-center justify-center text-zinc-600"
+          class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-zinc-600"
         >
-          {{ t('board.boardNotFound') }}
+          <span>{{ t('board.boardNotFound') }}</span>
+          <router-link to="/" class="text-zinc-500 hover:text-zinc-300 transition-colors text-xs">
+            {{ t('board.backToOverview') }}
+          </router-link>
         </div>
       </div>
 
@@ -275,9 +281,12 @@
         </div>
         <div
           v-else-if="boardsStore.error"
-          class="flex items-center justify-center h-full text-red-400 text-sm"
+          class="flex flex-col items-center justify-center h-full gap-3 text-sm"
         >
-          {{ boardsStore.error }}
+          <span class="text-red-400">{{ boardsStore.error }}</span>
+          <router-link to="/" class="text-zinc-500 hover:text-zinc-300 transition-colors text-xs">
+            {{ t('board.backToOverview') }}
+          </router-link>
         </div>
         <template v-else-if="boardConfig">
           <!-- Empty board hint -->
@@ -326,8 +335,11 @@
             @graph-resize-end="onGraphResizeEnd"
           />
         </template>
-        <div v-else class="flex items-center justify-center h-full text-zinc-600">
-          {{ t('board.boardNotFound') }}
+        <div v-else class="flex flex-col items-center justify-center h-full gap-3 text-zinc-600">
+          <span>{{ t('board.boardNotFound') }}</span>
+          <router-link to="/" class="text-zinc-500 hover:text-zinc-300 transition-colors text-xs">
+            {{ t('board.backToOverview') }}
+          </router-link>
         </div>
       </div>
     </div>

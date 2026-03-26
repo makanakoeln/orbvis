@@ -198,6 +198,30 @@
               <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
 
+            <div class="space-y-1.5">
+              <label class="text-xs font-medium text-zinc-400">{{
+                t('userSettings.confirmPassword')
+              }}</label>
+              <input
+                v-model="newUserConfirmPassword"
+                type="password"
+                required
+                autocomplete="new-password"
+                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 transition-all"
+                :class="
+                  newUserConfirmPassword && newUser.password !== newUserConfirmPassword
+                    ? 'ring-red-500/60 focus:ring-red-500'
+                    : 'ring-zinc-700 focus:ring-indigo-500'
+                "
+              />
+              <p
+                v-if="newUserConfirmPassword && newUser.password !== newUserConfirmPassword"
+                class="text-xs text-red-400"
+              >
+                {{ t('userSettings.passwordMismatch') }}
+              </p>
+            </div>
+
             <div class="border-t border-[var(--border)] pt-3 space-y-3">
               <label class="flex items-start gap-3 cursor-pointer group select-none">
                 <input
@@ -254,7 +278,7 @@
               </button>
               <button
                 type="submit"
-                :disabled="creating"
+                :disabled="creating || newUser.password !== newUserConfirmPassword"
                 class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all"
               >
                 {{ creating ? t('common.saving') : t('common.create') }}
@@ -309,6 +333,7 @@ const showCreate = ref(false);
 const creating = ref(false);
 const createError = ref('');
 const newUser = ref({ name: '', password: '', is_admin: false, must_change_password: false });
+const newUserConfirmPassword = ref('');
 const editUser = ref<UserRead | null>(null);
 const availableRoles = ref<RoleRead[]>([]);
 const selectedRoleIds = ref<number[]>([]);
@@ -316,6 +341,7 @@ const selectedRoleIds = ref<number[]>([]);
 watch(showCreate, (open) => {
   if (!open) return;
   selectedRoleIds.value = [];
+  newUserConfirmPassword.value = '';
 });
 const canEditUsers = computed(
   () =>
@@ -334,6 +360,7 @@ async function fetchUsers() {
 }
 
 async function createUser() {
+  if (newUser.value.password !== newUserConfirmPassword.value) return;
   creating.value = true;
   createError.value = '';
   try {

@@ -62,6 +62,7 @@ export default {
     boardSettings: 'Board settings',
     loadingBoard: 'Loading board…',
     boardNotFound: 'Board not found',
+    backToOverview: '← Back to overview',
     emptyBoard: 'This board has no objects yet',
     emptyBoardAdmin: 'No objects yet — click ✏ Edit to add some',
     noConnectionConfigured: 'No connection configured for this board.',
