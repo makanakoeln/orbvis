@@ -34,6 +34,26 @@ class ApiError extends Error {
 
 const METHOD_OVERRIDE = new Set(['PATCH', 'PUT', 'DELETE']);
 
+async function uploadFile<T>(path: string, file: File, token: string): Promise<T> {
+  const form = new FormData();
+  form.append('file', file);
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null);
+    const msg = detail?.detail ?? detail?.message ?? `HTTP ${response.status}`;
+    throw new ApiError(
+      response.status,
+      typeof msg === 'string' ? msg : `HTTP ${response.status}`,
+      detail,
+    );
+  }
+  return response.json();
+}
+
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   const declaredMethod = ((options.method ?? 'GET') as string).toUpperCase();
   const needsOverride = METHOD_OVERRIDE.has(declaredMethod);
@@ -142,24 +162,8 @@ export const boardsApi = {
   getPermissions: (name: string, token: string): Promise<BoardPermissions> =>
     request(`/boards/${name}/permissions`, {}, token),
 
-  uploadBackground: async (
-    boardName: string,
-    file: File,
-    token: string,
-  ): Promise<{ filename: string }> => {
-    const form = new FormData();
-    form.append('file', file);
-    const response = await fetch(`${BASE_URL}/boards/${boardName}/background`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-    });
-    if (!response.ok) {
-      const detail = await response.json().catch(() => null);
-      throw new ApiError(response.status, `HTTP ${response.status}`, detail);
-    }
-    return response.json();
-  },
+  uploadBackground: (boardName: string, file: File, token: string): Promise<{ filename: string }> =>
+    uploadFile(`/boards/${boardName}/background`, file, token),
 
   deleteBackground: (boardName: string, token: string): Promise<void> =>
     request(`/boards/${boardName}/background`, { method: 'DELETE' }, token),
@@ -178,20 +182,8 @@ export const boardsApi = {
       token,
     ),
 
-  importCfg: async (file: File, token: string, overwrite = false): Promise<BoardConfig> => {
-    const form = new FormData();
-    form.append('file', file);
-    const res = await fetch(`${BASE_URL}/boards/import/cfg?overwrite=${overwrite}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail ?? res.statusText);
-    }
-    return res.json();
-  },
+  importCfg: (file: File, token: string, overwrite = false): Promise<BoardConfig> =>
+    uploadFile(`/boards/import/cfg?overwrite=${overwrite}`, file, token),
 
   exportBoard: async (name: string, token: string): Promise<void> => {
     const cfg = await request<BoardConfig>(`/boards/${name}`, {}, token);
@@ -336,20 +328,7 @@ export const connectionsApi = {
 export const imagesApi = {
   list: (token: string): Promise<ImageEntry[]> => request('/images', {}, token),
 
-  upload: async (file: File, token: string): Promise<ImageEntry> => {
-    const form = new FormData();
-    form.append('file', file);
-    const response = await fetch(`${BASE_URL}/images`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-    });
-    if (!response.ok) {
-      const detail = await response.json().catch(() => null);
-      throw new ApiError(response.status, `HTTP ${response.status}`, detail);
-    }
-    return response.json();
-  },
+  upload: (file: File, token: string): Promise<ImageEntry> => uploadFile('/images', file, token),
 
   delete: (name: string, token: string): Promise<void> =>
     request(`/images/${encodeURIComponent(name)}`, { method: 'DELETE' }, token),

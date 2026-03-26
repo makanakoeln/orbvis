@@ -83,8 +83,7 @@ def update_board(name: str, data: BoardUpdate) -> BoardConfig | None:
     update_data = data.model_dump(exclude_unset=True)
     if not update_data:
         return cfg
-    for key, value in update_data.items():
-        setattr(cfg, key, value)
+    cfg = cfg.model_copy(update=update_data)
     _save_board_file(cfg)
     return cfg
 
@@ -116,12 +115,12 @@ def update_object(board_name: str, obj_id: str, updates: BoardObjectUpdate) -> B
     cfg = get_board(board_name)
     if cfg is None:
         return None
-    for obj in cfg.objects:
+    for i, obj in enumerate(cfg.objects):
         if obj.id == obj_id:
-            for key, value in updates.model_dump(exclude_unset=True).items():
-                setattr(obj, key, value)
+            new_obj = obj.model_copy(update=updates.model_dump(exclude_unset=True))
+            cfg.objects[i] = new_obj
             _save_board_file(cfg)
-            return obj
+            return new_obj
     return None
 
 
