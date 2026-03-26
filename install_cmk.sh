@@ -103,6 +103,8 @@ if [[ "$ACTION" == "remove" ]]; then
   quietly sudo rm -f "$APACHE_CONF" "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis"
   quietly sudo -u "$SITE" "$PYTHON3" -m pip uninstall -y orbvis-cmk 2>/dev/null || true
   quietly sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$CMK_PLUGINS_DST" "$DB_FILE" "$ENV_FILE" "$BACKENDS_FILE"
+  quietly sudo rm -f "$SITE_ROOT/local/share/check_mk/web/htdocs/cmk-frontend-vue/assets/icon-orbvis.js" \
+                     "$SITE_ROOT/local/share/check_mk/web/htdocs/cmk-frontend-vue/assets/main.js-"*.js
   ok "Files removed"
 
   step "Reloading Apache"
@@ -352,6 +354,44 @@ quietly sudo cp -r "$CMK_PLUGINS_SRC/." "$CMK_PLUGINS_DST/"
 quietly sudo chown -R "$SITE:$SITE" "$CMK_PLUGINS_DST"
 quietly sudo -u "$SITE" "$PYTHON3" -m pip install --quiet -e "$CMK_PLUGINS_DST"
 ok "Checkmk GUI plugins installed"
+
+# 7b. CMK 2.6+ Vue bundle: inject save_dashboard icon as nav-bar icon for OrbVis
+#   The CMK master nav bar uses item.id as the icon name and loads it from a Vite
+#   bundle chunk map baked into main.js-HASH.js. We create icon-orbvis.js with the
+#   save_dashboard SVG (adapted to use CSS variables) and inject a module-map entry
+#   into a local copy of the main bundle. Rerunning install refreshes the patch.
+VUE_VERSION_ASSETS="$SITE_ROOT/version/share/check_mk/web/htdocs/cmk-frontend-vue/assets"
+MAIN_JS_FILE=$(for f in "$VUE_VERSION_ASSETS"/main.js-*.js; do [[ "$f" == *.map ]] || { echo "$f"; break; }; done 2>/dev/null || true)
+if [[ -n "$MAIN_JS_FILE" ]]; then
+  step "Injecting OrbVis icon into CMK 2.6 Vue bundle"
+  LOCAL_VUE_ASSETS="$SITE_ROOT/local/share/check_mk/web/htdocs/cmk-frontend-vue/assets"
+  quietly sudo mkdir -p "$LOCAL_VUE_ASSETS"
+
+  # Remove any stale local main.js copies (old CMK version hash)
+  quietly sudo rm -f "$LOCAL_VUE_ASSETS"/main.js-*.js
+
+  # Build icon-orbvis.js: save_dashboard SVG with CSS-variable fills for multitone system
+  SVG_SRC="$SITE_ROOT/version/share/check_mk/web/htdocs/themes/facelift/images/icon_save_dashboard.svg"
+  export SVG_SRC
+  quietly sudo -E "$PYTHON3" - <<'PYEOF' | sudo tee "$LOCAL_VUE_ASSETS/icon-orbvis.js" > /dev/null
+import re, os
+svg = open(os.environ['SVG_SRC']).read()
+svg = re.sub(r'<style[^>]*>.*?</style>', '', svg, flags=re.DOTALL)
+svg = svg.replace('class="st0"', 'class="icon-primary-color"')
+svg = svg.replace('class="st1"', 'class="icon-secondary-color"')
+svg = svg.replace('`', '\\`').strip()
+print('const t=`' + svg + '`;export{t as default};')
+PYEOF
+
+  # Patch main bundle: inject icon-orbvis module-map entry before icon-monitoring
+  LOCAL_MAIN="$LOCAL_VUE_ASSETS/$(basename "$MAIN_JS_FILE")"
+  quietly sudo cp "$MAIN_JS_FILE" "$LOCAL_MAIN"
+  quietly sudo sed -i \
+    's|"../../assets/icons/icon-monitoring\.svg":|"../../assets/icons/icon-orbvis.svg":()=>import("./icon-orbvis.js"),"../../assets/icons/icon-monitoring.svg":|' \
+    "$LOCAL_MAIN"
+  quietly sudo chown "$SITE:$SITE" "$LOCAL_VUE_ASSETS/icon-orbvis.js" "$LOCAL_MAIN"
+  ok "OrbVis icon injected into Vue bundle"
+fi
 
 # 8. Ownership
 step "Setting file permissions"
