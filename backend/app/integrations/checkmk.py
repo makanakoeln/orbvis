@@ -16,11 +16,13 @@ log = logging.getLogger(__name__)
 
 # True after setup() succeeded and cmk.* modules are importable
 available = False
+# True when cmk.gui.userdb.store is importable (some CMK versions lack transitive deps)
+_userdb_store_available = False
 
 
 def setup() -> None:
     """Call once at startup (before any cmk imports elsewhere)."""
-    global available
+    global available, _userdb_store_available
     if not settings.checkmk_omd_root:
         return
     lib_path = str(Path(settings.checkmk_omd_root) / "lib" / "python3")
@@ -33,6 +35,13 @@ def setup() -> None:
         log.info("Checkmk Python modules available (%s)", lib_path)
     except ImportError as e:
         log.warning("Checkmk Python modules not importable: %s", e)
+        return
+    try:
+        from cmk.gui.userdb.store import load_user as _  # noqa: F401
+
+        _userdb_store_available = True
+    except Exception as e:
+        log.debug("cmk.gui.userdb.store not available (%s) — using file fallback", e)
 
 
 def get_monitoring_core() -> str | None:
@@ -68,28 +77,22 @@ def load_user(username: str) -> dict[str, Any]:
     """
     if not available or not settings.checkmk_omd_root:
         return {}
-    try:
-        from cmk.gui.userdb.store import (
-            load_custom_attr as _load_custom_attr,
-        )
-        from cmk.gui.userdb.store import (
-            load_user as _load_user,
-        )
+    if _userdb_store_available:
+        try:
+            from cmk.gui.userdb.store import load_custom_attr as _load_custom_attr
+            from cmk.gui.userdb.store import load_user as _load_user
 
-        # Wato user spec contains language, roles, alias, email, …
-        data = dict(_load_user(username))
-        # Per-user custom attrs (written by ajax_ui_theme etc.) override wato data.
-        # Only enumerate the attrs we care about to avoid touching unrelated files.
-        for key in ("ui_theme",):
-            val = _load_custom_attr(user_id=username, key=key, parser=lambda x: x)
-            if val is not None:
-                data[key] = val
-        return data
-    except Exception as e:
-        log.warning(
-            "load_user(%s) via cmk.gui.userdb.store failed (%s) — using fallback", username, e
-        )
-        return _load_user_fallback(username)
+            data = dict(_load_user(username))
+            for key in ("ui_theme",):
+                val = _load_custom_attr(user_id=username, key=key, parser=lambda x: x)
+                if val is not None:
+                    data[key] = val
+            return data
+        except Exception as e:
+            log.debug(
+                "load_user(%s) via cmk.gui.userdb.store failed (%s) — using fallback", username, e
+            )
+    return _load_user_fallback(username)
 
 
 def _load_user_fallback(username: str) -> dict[str, Any]:
