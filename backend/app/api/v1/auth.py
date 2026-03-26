@@ -44,7 +44,7 @@ async def login(
     data: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)
 ) -> TokenResponse:
     client_ip = request.client.host if request.client else "unknown"
-    if not login_limiter.is_allowed(client_ip):
+    if login_limiter.is_blocked(client_ip):
         retry = login_limiter.retry_after(client_ip)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -53,6 +53,7 @@ async def login(
         )
     user = await authenticate_user(db, data.username, data.password)
     if user is None:
+        login_limiter.record(client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
