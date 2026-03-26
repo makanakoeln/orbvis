@@ -25,9 +25,19 @@ def setup() -> None:
     global available, _userdb_store_available
     if not settings.checkmk_omd_root:
         return
-    lib_path = str(Path(settings.checkmk_omd_root) / "lib" / "python3")
+    omd_lib = Path(settings.checkmk_omd_root) / "lib"
+
+    # Add lib/python3 (traditional cmk.gui, cmk.base, …)
+    lib_path = str(omd_lib / "python3")
     if lib_path not in sys.path:
         sys.path.insert(0, lib_path)
+
+    # Add lib/pythonX.Y/site-packages (cmk.trace, cmk.livestatus_client, … since CMK 2.4)
+    for candidate in sorted(omd_lib.glob("python3.*/site-packages"), reverse=True):
+        p = str(candidate)
+        if p not in sys.path:
+            sys.path.insert(0, p)
+
     try:
         import cmk.utils.paths  # noqa: F401 — smoke test
 
