@@ -6,7 +6,7 @@
     <!-- Header -->
     <div class="px-3.5 py-2 border-b border-[var(--border)] mb-1">
       <p class="text-xs font-semibold text-[var(--text)] truncate max-w-52">{{ displayName }}</p>
-      <p class="text-[10px] text-[var(--text-muted)] mt-0.5 capitalize">{{ object.type }}</p>
+      <p class="text-[10px] text-[var(--text-muted)] mt-0.5">{{ getObjectTypeLabel(object) }}</p>
     </div>
 
     <!-- Custom template block -->
@@ -222,7 +222,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import type { BoardObject, ObjectState } from '@/types/api';
-import { getBoardObjectName } from '@/utils/naming';
+import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming';
 import { interpolateTemplate } from '@/utils/template';
 
 const { t } = useI18n();

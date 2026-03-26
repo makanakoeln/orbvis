@@ -16,7 +16,7 @@
             <div class="font-semibold text-[var(--text)] text-sm leading-tight truncate">
               {{ displayName }}
             </div>
-            <div class="text-xs text-[var(--text-muted)] mt-0.5">{{ object.type }}</div>
+            <div class="text-xs text-[var(--text-muted)] mt-0.5">{{ hoverTypeLabel }}</div>
           </div>
         </div>
 
@@ -85,11 +85,7 @@
 
         <!-- Sparkline trend chart -->
         <div v-if="sparkData.length > 1" class="mt-3 pt-2 border-t border-[var(--border)]">
-          <div
-            class="text-[10px] text-[var(--text-muted)] mb-1 uppercase tracking-wide font-medium"
-          >
-            Trend
-          </div>
+          <div class="text-[10px] text-[var(--text-muted)] mb-1 font-medium">Trend</div>
           <svg ref="sparkSvgRef" width="120" height="40" class="w-full" style="overflow: visible" />
         </div>
       </template>
@@ -104,7 +100,7 @@ import { computed, ref } from 'vue';
 import { useSparkline } from '@/composables/useSparkline';
 import { useStatesStore } from '@/stores/states';
 import type { BoardObject, ObjectState } from '@/types/api';
-import { getBoardObjectName } from '@/utils/naming';
+import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming';
 import { interpolateTemplate } from '@/utils/template';
 
 const _PURIFY_CONFIG = {
@@ -134,6 +130,8 @@ const renderedTemplate = computed(() => {
 });
 
 const displayName = computed(() => getBoardObjectName(props.object));
+
+const hoverTypeLabel = computed(() => getObjectTypeLabel(props.object));
 
 const STATE_BG: Record<string, string> = {
   UP: 'bg-green-400',

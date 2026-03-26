@@ -46,11 +46,7 @@
         <!-- Header: metric label + current value -->
         <div class="mb-1 flex items-center justify-between shrink-0">
           <span class="text-[9px] font-semibold tracking-wide text-zinc-400 truncate">
-            {{
-              isSingleMetric
-                ? object.graph_metric || chartMetricLabels[0]
-                : object.service_description || object.host_name
-            }}
+            {{ isSingleMetric ? object.graph_metric || chartMetricLabels[0] : chartHeaderName }}
           </span>
           <span
             v-if="isSingleMetric"
@@ -463,6 +459,12 @@ const chartData = computed((): Record<string, MetricPoint[]> => {
 });
 
 const chartMetricLabels = computed(() => Object.keys(chartData.value));
+// Always show the monitored entity (host/service) in the chart header, not a cosmetic label
+const chartHeaderName = computed(() => {
+  const o = props.object;
+  if (o.host_name && o.service_description) return `${o.host_name} / ${o.service_description}`;
+  return o.service_description ?? o.host_name ?? '';
+});
 const hiddenMetricLabels = computed(() =>
   chartMetricLabels.value.slice(MAX_VISIBLE_SERIES).join(', '),
 );

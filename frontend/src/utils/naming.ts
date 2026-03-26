@@ -1,5 +1,18 @@
 import type { BoardObject } from '@/types/api';
 
+/**
+ * Return a human-readable type label for a board object.
+ * Graph objects are labelled by what they monitor ('service' or 'host'),
+ * not by their OrbVis object type ('graph').
+ */
+export function getObjectTypeLabel(object: BoardObject): string {
+  if (object.type === 'graph') {
+    if (object.service_description) return 'service';
+    if (object.host_name) return 'host';
+  }
+  return object.type;
+}
+
 /** Return the display name for a board object (label > host/service > host/group/map > id). */
 export function getBoardObjectName(object: BoardObject): string {
   if (object.label?.text) return object.label.text;
