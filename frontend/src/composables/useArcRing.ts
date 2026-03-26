@@ -20,6 +20,11 @@ interface ArcRingOptions {
 
 const START_ANGLE = -Math.PI / 2; // 12 o'clock
 
+const STATE_PULSE_COLORS = new Set([
+  'rgb(239,68,68)', // DOWN / CRITICAL
+  'rgb(249,115,22)', // UNREACHABLE
+]);
+
 function buildRing(
   svg: SVGSVGElement,
   iconSize: number,
@@ -212,11 +217,6 @@ export function useArcRing(opts: ArcRingOptions) {
     (color) => {
       const svg = opts.svgRef.value;
       if (!svg || !opts.enabled.value) return;
-      // Detect if current state is a pulse state via color match
-      const STATE_PULSE_COLORS = new Set([
-        'rgb(239,68,68)', // DOWN / CRITICAL
-        'rgb(249,115,22)', // UNREACHABLE
-      ]);
       const g = select(svg).select<SVGGElement>('g.arc-root');
       if (g.empty()) return;
       g.select('circle.pulse-ring').remove();

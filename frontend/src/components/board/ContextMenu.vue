@@ -222,6 +222,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import type { BoardObject, ObjectState } from '@/types/api';
+import { getBoardObjectName } from '@/utils/naming';
 import { interpolateTemplate } from '@/utils/template';
 
 const { t } = useI18n();
@@ -256,12 +257,7 @@ const isProblematic = computed(
   () => props.state !== undefined && !_OK_STATES.has(props.state.state),
 );
 
-const displayName = computed(() => {
-  if (props.object.label?.text) return props.object.label.text;
-  if (props.object.host_name && props.object.service_description)
-    return `${props.object.host_name} / ${props.object.service_description}`;
-  return props.object.host_name ?? props.object.group_name ?? props.object.id;
-});
+const displayName = computed(() => getBoardObjectName(props.object));
 
 const base = computed(() => {
   // Strip trailing /check_mk or /check_mk/ so we can safely append /check_mk/view.py

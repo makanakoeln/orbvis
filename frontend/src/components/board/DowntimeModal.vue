@@ -71,6 +71,7 @@ import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
 import type { BoardObject } from '@/types/api';
+import { getBoardObjectName } from '@/utils/naming';
 
 const { t } = useI18n();
 
@@ -96,11 +97,7 @@ const submitting = ref(false);
 const error = ref('');
 const success = ref(false);
 
-const displayName = computed(() => {
-  if (props.object.host_name && props.object.service_description)
-    return `${props.object.host_name} / ${props.object.service_description}`;
-  return props.object.host_name ?? props.object.group_name ?? props.object.id;
-});
+const displayName = computed(() => getBoardObjectName(props.object));
 
 async function submit() {
   if (!comment.value.trim() || submitting.value) return;

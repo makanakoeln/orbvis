@@ -760,6 +760,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { useAuthStore } from '@/stores/auth';
 import type { BoardObject, ObjectState } from '@/types/api';
+import { getBoardObjectName } from '@/utils/naming';
 import { parsePerfData } from '@/utils/perf';
 
 import AutocompleteInput from './AutocompleteInput.vue';
@@ -1024,18 +1025,7 @@ watch(
   },
 );
 
-// ---- Display name ----
-
-const displayName = (() => {
-  const obj = props.object;
-  if (obj.label?.text) return obj.label.text;
-  if (obj.type === 'host') return obj.host_name ?? obj.id;
-  if (obj.type === 'service')
-    return obj.service_description ? `${obj.host_name}/${obj.service_description}` : obj.id;
-  if (obj.type === 'map') return obj.map_name ?? obj.id;
-  if (obj.group_name) return obj.group_name;
-  return obj.id;
-})();
+const displayName = computed(() => getBoardObjectName(props.object));
 
 // ---- Save ----
 

@@ -1,4 +1,5 @@
 import type { BoardObject as MapObject, ObjectState } from '@/types/api';
+import { getBoardObjectName } from '@/utils/naming';
 import { parsePerfData } from '@/utils/perf';
 
 function _fmtTs(ts: number | null | undefined): string {
@@ -49,11 +50,7 @@ export function interpolateTemplate(
   object: MapObject,
   state: ObjectState | undefined,
 ): string {
-  const displayName =
-    object.label?.text ||
-    (object.host_name && object.service_description
-      ? `${object.host_name} / ${object.service_description}`
-      : (object.host_name ?? object.group_name ?? object.id));
+  const displayName = getBoardObjectName(object);
 
   const perfRaw = state?.perf_data ?? '';
   const metrics = parsePerfData(perfRaw);

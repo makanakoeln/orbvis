@@ -14,6 +14,7 @@ import type {
   ObjectState,
   WorldmapView,
 } from '@/types/api';
+import { getBoardObjectName } from '@/utils/naming';
 import { STATE_COLORS } from '@/utils/stateColors';
 
 const props = defineProps<{
@@ -54,17 +55,10 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function displayName(obj: BoardObjectType): string {
-  if (obj.label?.text) return obj.label.text;
-  if (obj.host_name && obj.service_description)
-    return `${obj.host_name}/${obj.service_description}`;
-  return obj.host_name ?? obj.group_name ?? obj.map_name ?? obj.id;
-}
-
 function makeDivIcon(obj: BoardObjectType): L.DivIcon {
   const color = stateColor(obj.id);
   const size = obj.display?.image_size ?? props.config.icon_size ?? 30;
-  const label = obj.label?.show !== false ? escapeHtml(displayName(obj)) : '';
+  const label = obj.label?.show !== false ? escapeHtml(getBoardObjectName(obj)) : '';
   const selected = props.selectedObjectId === obj.id;
 
   const TYPE_CHARS: Record<string, string> = {

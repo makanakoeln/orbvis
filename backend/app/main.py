@@ -569,7 +569,7 @@ def _run_migrations() -> None:
         if "users" in tables:
             # Existing tables — check whether migration history is present and valid
             needs_stamp = "alembic_version" not in tables
-            if not needs_stamp and "alembic_version" in tables:
+            if not needs_stamp:
                 with engine.connect() as conn:
                     row = conn.execute(
                         text("SELECT version_num FROM alembic_version LIMIT 1")

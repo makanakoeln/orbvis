@@ -104,6 +104,7 @@ import { computed, ref } from 'vue';
 import { useSparkline } from '@/composables/useSparkline';
 import { useStatesStore } from '@/stores/states';
 import type { BoardObject, ObjectState } from '@/types/api';
+import { getBoardObjectName } from '@/utils/naming';
 import { interpolateTemplate } from '@/utils/template';
 
 const _PURIFY_CONFIG = {
@@ -132,12 +133,7 @@ const renderedTemplate = computed(() => {
   return DOMPurify.sanitize(html, _PURIFY_CONFIG);
 });
 
-const displayName = computed(() => {
-  if (props.object.label?.text) return props.object.label.text;
-  if (props.object.host_name && props.object.service_description)
-    return `${props.object.host_name} / ${props.object.service_description}`;
-  return props.object.host_name ?? props.object.group_name ?? props.object.id;
-});
+const displayName = computed(() => getBoardObjectName(props.object));
 
 const STATE_BG: Record<string, string> = {
   UP: 'bg-green-400',

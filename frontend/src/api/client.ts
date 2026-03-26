@@ -181,7 +181,6 @@ export const boardsApi = {
   importCfg: async (file: File, token: string, overwrite = false): Promise<BoardConfig> => {
     const form = new FormData();
     form.append('file', file);
-    const BASE_URL = `${import.meta.env.BASE_URL}api/v1`;
     const res = await fetch(`${BASE_URL}/boards/import/cfg?overwrite=${overwrite}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },

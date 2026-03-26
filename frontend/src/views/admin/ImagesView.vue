@@ -159,10 +159,14 @@ async function uploadIcons(event: Event) {
   if (!files?.length) return;
   uploadError.value = '';
   try {
-    for (const file of Array.from(files)) {
-      await imagesApi.upload(file, auth.accessToken!);
-    }
+    const results = await Promise.allSettled(
+      Array.from(files).map((file) => imagesApi.upload(file, auth.accessToken!)),
+    );
     await fetchIcons();
+    const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+    if (failed) {
+      uploadError.value = failed.reason instanceof Error ? failed.reason.message : 'Upload failed';
+    }
   } catch (e: unknown) {
     uploadError.value = e instanceof Error ? e.message : 'Upload failed';
   }
