@@ -64,6 +64,15 @@ export function isSingleCharSIPrefix(unit: string | null | undefined): boolean {
   return !!unit && unit.length === 1 && _SI_MULT[unit] !== undefined;
 }
 
+// Returns the base unit after stripping any SI prefix that fmtMetricVal absorbs.
+// Examples: "MB" → "B", "k" → "", "%" → "%", "" → ""
+export function baseUnit(unit: string | null | undefined): string {
+  if (!unit) return '';
+  if (isSingleCharSIPrefix(unit)) return '';
+  if (/^[kKmMgGtT]/.test(unit) && unit.length > 1) return unit.slice(1);
+  return unit;
+}
+
 function _fmtMagnitude(v: number): string {
   const a = Math.abs(v);
   if (a >= 1e12) return `${(v / 1e12).toFixed(1)}T`;
@@ -77,12 +86,10 @@ export function fmtMetricVal(v: number, unit?: string): string {
   // Single-char SI prefix units (e.g. "k" = kilobytes): scale to base unit so the
   // magnitude formatting produces the correct combined prefix (116200 k → "116.2M").
   if (isSingleCharSIPrefix(unit)) return _fmtMagnitude(v * _SI_MULT[unit!]);
-  // Skip magnitude scaling when unit already carries an SI prefix (e.g. "MB", "kB")
   if (!unit || !/^[kKmMgGtT]/.test(unit)) return _fmtMagnitude(v);
-  const abs = Math.abs(v);
-  if (abs >= 100) return v.toFixed(0);
-  if (abs >= 10) return v.toFixed(1);
-  return v.toFixed(2);
+  // Multi-char prefixed unit (e.g. "MB", "kB"): scale by SI prefix factor so magnitude
+  // formatting produces a readable combined value ("116130 MB" → "116.1G" + base "B").
+  return _fmtMagnitude(v * (_SI_MULT[unit[0]] ?? 1));
 }
 
 export function useMetricChart(
@@ -92,6 +99,7 @@ export function useMetricChart(
   getHeight: () => number,
   getWindowSecs?: () => number,
   getThresholds?: () => { warn: number | null; crit: number | null } | null,
+  getUnit?: () => string | undefined,
 ) {
   function render(animate = false) {
     const svg = svgRef.value;
@@ -174,7 +182,7 @@ export function useMetricChart(
     const yHiRaw = valMax + range * 0.15;
     const yHi = tVals.length > 0 ? Math.max(yHiRaw, ...tVals) : yHiRaw;
     const yScale = scaleLinear()
-      .domain([Math.max(0, valMin - range * 0.15), yHi])
+      .domain([valMin - range * 0.15, yHi])
       .range([HC - PAD_Y, PAD_Y]);
 
     // Defs: gradient for single-series area fill
@@ -248,6 +256,21 @@ export function useMetricChart(
       .attr('font-size', '8')
       .attr('font-family', 'ui-monospace,monospace')
       .text((d) => fmtMetricVal(d));
+
+    // Y-axis unit label (e.g. "B", "%") above the top tick
+    const unitLabel = baseUnit(getUnit?.());
+    gridG
+      .selectAll<SVGTextElement, string>('text.mc-yunit')
+      .data(unitLabel ? [unitLabel] : [])
+      .join('text')
+      .attr('class', 'mc-yunit')
+      .attr('x', PAD_LEFT - 5)
+      .attr('y', PAD_Y - 2)
+      .attr('text-anchor', 'end')
+      .attr('fill', c.label)
+      .attr('font-size', '8')
+      .attr('font-family', 'ui-monospace,monospace')
+      .text((d) => d);
 
     // Threshold lines (warn/crit from perf_data, single-series only)
     let threshG = root.select<SVGGElement>('g.mc-thresholds');

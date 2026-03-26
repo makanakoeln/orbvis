@@ -77,12 +77,9 @@
               >{{
                 fmtMetricVal(chartLatestValues[label]?.value ?? 0, chartLatestValues[label]?.unit)
               }}<span
-                v-if="
-                  chartLatestValues[label]?.unit &&
-                  !isSingleCharSIPrefix(chartLatestValues[label]?.unit)
-                "
+                v-if="baseUnit(chartLatestValues[label]?.unit)"
                 class="text-zinc-600 ml-0.5 font-normal"
-                >{{ chartLatestValues[label]?.unit }}</span
+                >{{ baseUnit(chartLatestValues[label]?.unit) }}</span
               ></span
             >
           </div>
@@ -343,9 +340,9 @@ import { useI18n } from 'vue-i18n';
 
 import { useArcRing } from '@/composables/useArcRing';
 import {
+  baseUnit,
   CHART_PALETTE,
   fmtMetricVal,
-  isSingleCharSIPrefix,
   MAX_VISIBLE_SERIES,
   useMetricChart,
 } from '@/composables/useMetricChart';
@@ -504,7 +501,7 @@ const singleMetricValueStr = computed(() => {
   const label = chartMetricLabels.value[0];
   const pt = chartLatestValues.value[label];
   if (!pt) return '';
-  return `${fmtMetricVal(pt.value, pt.unit)}${pt.unit ?? ''}`;
+  return `${fmtMetricVal(pt.value, pt.unit)}${baseUnit(pt.unit)}`;
 });
 
 const singleMetricColor = computed(() => {
@@ -515,6 +512,11 @@ const singleMetricColor = computed(() => {
   return _utilColor(utilPercent(m));
 });
 
+const chartUnit = computed(() => {
+  const firstKey = chartMetricKeys.value[0];
+  return firstKey ? (chartData.value[firstKey]?.at(-1)?.unit ?? undefined) : undefined;
+});
+
 useMetricChart(
   chartSvgRef,
   chartData,
@@ -522,6 +524,7 @@ useMetricChart(
   () => Math.max(30, graphH.value - 28),
   () => (props.object.graph_time_window ?? 60) * 60,
   () => chartThresholds.value,
+  () => chartUnit.value,
 );
 
 // ---- Graph: URL embed ----
