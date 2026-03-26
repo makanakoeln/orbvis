@@ -131,18 +131,23 @@ export function useMetricChart(
       .domain([tsMin, tsMax === tsMin ? tsMin + 1 : tsMax])
       .range([PAD_LEFT, W - PAD_RIGHT]);
 
-    // Extend Y-domain upward so threshold lines are always visible in the chart
-    const thresholds = getThresholds?.() ?? null;
-    const tVals = (thresholds ? [thresholds.warn, thresholds.crit] : []).filter(
-      (v): v is number => v !== null,
-    );
+    const multiSeries = labels.length > 1;
+
+    // Extend Y-domain upward so threshold lines are always visible in the chart.
+    // Only applies to single-series: multi-series charts don't draw threshold lines
+    // so including threshold values (e.g. warn=80 for CPU load) would collapse the
+    // visible data range to near-zero.
+    const thresholds = !multiSeries ? (getThresholds?.() ?? null) : null;
+    const tVals = multiSeries
+      ? []
+      : (thresholds ? [thresholds.warn, thresholds.crit] : []).filter(
+          (v): v is number => v !== null,
+        );
     const yHiRaw = valMax + range * 0.15;
     const yHi = tVals.length > 0 ? Math.max(yHiRaw, ...tVals) : yHiRaw;
     const yScale = scaleLinear()
       .domain([Math.max(0, valMin - range * 0.15), yHi])
       .range([HC - PAD_Y, PAD_Y]);
-
-    const multiSeries = labels.length > 1;
 
     // Defs: gradient for single-series area fill
     let defs = root.select<SVGDefsElement>('defs');
