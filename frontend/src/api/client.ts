@@ -12,6 +12,7 @@ import type {
   GlobalSettings,
   ImageEntry,
   MapStates,
+  MetricHistoryResponse,
   PermissionRead,
   RoleRead,
   TokenResponse,
@@ -303,7 +304,7 @@ export const connectionsApi = {
     service: string | null,
     minutes: number,
     token: string,
-  ): Promise<Record<string, Array<{ ts: number; value: number; unit: string }>>> => {
+  ): Promise<MetricHistoryResponse> => {
     const params = new URLSearchParams({ host, minutes: String(minutes) });
     if (service) params.set('service', service);
     return request(`/backends/${backendId}/metric-history?${params}`, {}, token);

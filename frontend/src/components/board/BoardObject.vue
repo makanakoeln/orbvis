@@ -458,7 +458,12 @@ const chartData = computed((): Record<string, MetricPoint[]> => {
   return Object.fromEntries(Object.entries(mv).map(([k, v]) => [k, applyWindow(v)]));
 });
 
-const chartMetricLabels = computed(() => Object.keys(chartData.value));
+// Raw metric IDs as they appear in chartData (used for data access)
+const chartMetricKeys = computed(() => Object.keys(chartData.value));
+// Display labels: human-readable titles when available, raw ID as fallback
+const chartMetricLabels = computed(() =>
+  chartMetricKeys.value.map((key) => statesStore.metricTitles[props.object.id]?.[key] ?? key),
+);
 // Always show the monitored entity (host/service) in the chart header, not a cosmetic label
 const chartHeaderName = computed(() => {
   const o = props.object;
@@ -469,11 +474,17 @@ const hiddenMetricLabels = computed(() =>
   chartMetricLabels.value.slice(MAX_VISIBLE_SERIES).join(', '),
 );
 const hasChartData = computed(() =>
-  chartMetricLabels.value.some((k) => chartData.value[k].length > 0),
+  chartMetricKeys.value.some((k) => chartData.value[k].length > 0),
 );
 
+// Keyed by display label (title) so the template can use v-for labels as keys
 const chartLatestValues = computed(() =>
-  Object.fromEntries(chartMetricLabels.value.map((k) => [k, chartData.value[k].at(-1) ?? null])),
+  Object.fromEntries(
+    chartMetricKeys.value.map((k, i) => [
+      chartMetricLabels.value[i],
+      chartData.value[k].at(-1) ?? null,
+    ]),
+  ),
 );
 
 const graphW = computed(() => props.resizeOverride?.width ?? props.object.graph_width ?? 400);
@@ -498,7 +509,7 @@ const singleMetricValueStr = computed(() => {
 
 const singleMetricColor = computed(() => {
   const ms = parsePerfData(props.state?.perf_data ?? '');
-  const label = props.object.graph_metric || chartMetricLabels.value[0];
+  const label = props.object.graph_metric || chartMetricKeys.value[0];
   const m = getMetric(ms, label);
   if (!m) return CHART_PALETTE[0];
   return _utilColor(utilPercent(m));

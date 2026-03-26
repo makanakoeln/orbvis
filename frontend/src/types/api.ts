@@ -283,3 +283,14 @@ export interface BoardPermissions {
   view: string[];
   edit: string[];
 }
+
+export interface MetricPoint {
+  ts: number;
+  value: number;
+  unit: string;
+}
+
+export interface MetricHistoryResponse {
+  series: Record<string, MetricPoint[]>;
+  titles: Record<string, string>;
+}

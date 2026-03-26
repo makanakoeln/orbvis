@@ -49,6 +49,7 @@ export const useStatesStore = defineStore('states', () => {
   const states = ref<Record<string, ObjectState>>({}); // keyed by object_id
   const history = ref<Record<string, MetricSnapshot[]>>({});
   const metricValues = ref<Record<string, Record<string, MetricPoint[]>>>({});
+  const metricTitles = ref<Record<string, Record<string, string>>>({}); // objectId → metricId → title
   const connected = ref(false);
   const lastUpdate = ref<number | null>(null);
   const _LS_NOTIF = 'orbvis_notifications';
@@ -216,6 +217,7 @@ export const useStatesStore = defineStore('states', () => {
     states.value = {};
     history.value = {};
     metricValues.value = {};
+    metricTitles.value = {};
     currentMap = null;
     currentToken = undefined;
   }
@@ -240,10 +242,14 @@ export const useStatesStore = defineStore('states', () => {
         timeWindowMinutes,
         accessToken,
       );
-      if (!data || !Object.keys(data).length) return;
+      if (!data || !Object.keys(data.series).length) return;
+      // Store titles (overwrite — server always has the authoritative title)
+      if (Object.keys(data.titles).length) {
+        metricTitles.value[objectId] = { ...data.titles };
+      }
       // Merge: historical points first, live WebSocket points on top (deduplicated by ts)
       const mv: Record<string, MetricPoint[]> = { ...(metricValues.value[objectId] ?? {}) };
-      for (const [label, pts] of Object.entries(data)) {
+      for (const [label, pts] of Object.entries(data.series)) {
         const existing = mv[label] ?? [];
         const existingTs = new Set(existing.map((p) => p.ts));
         const merged = [...pts.filter((p) => !existingTs.has(p.ts)), ...existing]
@@ -265,6 +271,7 @@ export const useStatesStore = defineStore('states', () => {
     states,
     history,
     metricValues,
+    metricTitles,
     connected,
     lastUpdate,
     notificationsEnabled,
