@@ -610,7 +610,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     print("  OrbVis is starting up.", flush=True)
     print(f"  Open in your browser: http://localhost{host_port}/orbvis", flush=True)
     print(f"{sep}\n", flush=True)
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, _run_migrations)
     logger.info("Database initialized.")
 
@@ -646,10 +646,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if not settings.checkmk_omd_root:
         await _ensure_admin_user()
     await _seed_default_roles()
-    await loop.run_in_executor(None, _seed_demo_map)
-    await loop.run_in_executor(None, _seed_demo_worldmap)
-    await loop.run_in_executor(
-        None, seed_builtin_images, Path(settings.boards_dir).parent / "images"
+    await asyncio.gather(
+        loop.run_in_executor(None, _seed_demo_map),
+        loop.run_in_executor(None, _seed_demo_worldmap),
+        loop.run_in_executor(
+            None, seed_builtin_images, Path(settings.boards_dir).parent / "images"
+        ),
     )
 
     yield

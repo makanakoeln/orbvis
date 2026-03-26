@@ -92,7 +92,9 @@ async def upload_image(
         Path(tmp_path).unlink(missing_ok=True)
         raise
 
-    return JSONResponse({"name": filename, "url": f"images/{filename}"}, status_code=201)
+    return JSONResponse(
+        {"name": filename, "url": f"images/{filename}"}, status_code=status.HTTP_201_CREATED
+    )
 
 
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT)
