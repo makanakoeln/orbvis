@@ -35,6 +35,27 @@ def setup() -> None:
         log.warning("Checkmk Python modules not importable: %s", e)
 
 
+def get_monitoring_core() -> str | None:
+    """Return 'cmc', 'nagios', or None (not in OMD or file unreadable).
+
+    Reads CONFIG_CORE from $OMD_ROOT/etc/omd/site.conf — stable across CMK 2.3–master.
+    Never raises; fails safe (returns None) so callers can show all UI fields.
+    """
+    if not settings.checkmk_omd_root:
+        return None
+    site_conf = Path(settings.checkmk_omd_root) / "etc" / "omd" / "site.conf"
+    try:
+        text = site_conf.read_text(encoding="utf-8")
+    except OSError as exc:
+        log.debug("get_monitoring_core: cannot read %s: %s", site_conf, exc)
+        return None
+    for line in text.splitlines():
+        if line.strip().startswith("CONFIG_CORE="):
+            return line.split("=", 1)[1].strip().strip("'\"")
+    log.debug("get_monitoring_core: CONFIG_CORE not found in %s", site_conf)
+    return None
+
+
 def load_user(username: str) -> dict[str, Any]:
     """Load all available Checkmk attributes for a user.
 

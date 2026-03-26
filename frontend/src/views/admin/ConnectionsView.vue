@@ -341,30 +341,33 @@
                   />
                   <p class="text-xs text-zinc-600">{{ t('admin.contextLinks') }}</p>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                  <div class="space-y-1.5">
-                    <label class="text-xs font-medium text-zinc-400">{{
-                      t('admin.automationUser')
-                    }}</label>
-                    <input
-                      v-model="form.automation_user"
-                      placeholder="automation"
-                      class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                    />
+                <template v-if="!isCmc">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                      <label class="text-xs font-medium text-zinc-400">{{
+                        t('admin.automationUser')
+                      }}</label>
+                      <input
+                        v-model="form.automation_user"
+                        placeholder="automation"
+                        class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      />
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="text-xs font-medium text-zinc-400">{{
+                        t('admin.automationSecret')
+                      }}</label>
+                      <input
+                        v-model="form.automation_secret"
+                        type="password"
+                        placeholder="••••••••"
+                        class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      />
+                    </div>
                   </div>
-                  <div class="space-y-1.5">
-                    <label class="text-xs font-medium text-zinc-400">{{
-                      t('admin.automationSecret')
-                    }}</label>
-                    <input
-                      v-model="form.automation_secret"
-                      type="password"
-                      placeholder="••••••••"
-                      class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                    />
-                  </div>
-                </div>
-                <p class="text-xs text-zinc-600">{{ t('admin.automationHint') }}</p>
+                  <p class="text-xs text-zinc-600">{{ t('admin.automationHint') }}</p>
+                </template>
+                <p v-else class="text-xs text-zinc-500">{{ t('admin.automationHintCmc') }}</p>
                 <div class="space-y-1.5">
                   <label class="text-xs font-medium text-zinc-400">{{ t('admin.timeout') }}</label>
                   <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-28" />
@@ -491,7 +494,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
@@ -527,6 +530,19 @@ async function testAll() {
   for (const b of store.backends) testExisting(b.id);
 }
 
+const monitoringCore = ref<'cmc' | 'nagios' | null>(null);
+const isCmc = computed(() => monitoringCore.value === 'cmc');
+
+async function fetchContext(backendId: string) {
+  monitoringCore.value = null;
+  try {
+    const ctx = await connectionsApi.context(backendId, auth.accessToken!);
+    monitoringCore.value = ctx.monitoring_core;
+  } catch {
+    // fail safe: alle Felder anzeigen
+  }
+}
+
 const deleteTarget = ref<string | null>(null);
 const dialog = reactive({ open: false, mode: 'create' as 'create' | 'edit', editId: '' });
 const saving = ref(false);
@@ -557,6 +573,7 @@ function openCreate() {
   formError.value = '';
   dialog.mode = 'create';
   dialog.open = true;
+  if (store.backends.length > 0) fetchContext(store.backends[0].id);
 }
 
 function openEdit(b: BackendConfig) {
@@ -566,6 +583,7 @@ function openEdit(b: BackendConfig) {
   dialog.mode = 'edit';
   dialog.editId = b.id;
   dialog.open = true;
+  fetchContext(b.id);
 }
 
 async function testDialog() {

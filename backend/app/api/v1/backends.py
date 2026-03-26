@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from app.api.v1.deps import get_current_user, require_admin
+from app.core.config import settings
 from app.schemas.backend import BackendConfig, BackendCreate, BackendUpdate
 from app.services import backend_service
 from app.services.state_service import get_backend, get_backend_objects
@@ -54,6 +55,27 @@ async def update_backend(
 async def delete_backend(backend_id: str, _: object = Depends(require_admin)):
     if not backend_service.delete(backend_id):
         raise HTTPException(status_code=404, detail="Backend not found")
+
+
+class BackendContext(BaseModel):
+    monitoring_core: str | None  # 'cmc', 'nagios', or None
+    omd_site: str | None
+
+
+@router.get("/{backend_id}/context", response_model=BackendContext)
+async def get_backend_context(backend_id: str, _: object = Depends(require_admin)):
+    """Return OMD/CMC context for the connection settings UI.
+
+    Only meaningful for Livestatus backends inside an OMD site. Returns nulls
+    for non-OMD setups. The backend_id is accepted for future multi-site use;
+    currently core detection is always local.
+    """
+    from app.integrations import checkmk as cmk_integration
+
+    return BackendContext(
+        monitoring_core=cmk_integration.get_monitoring_core(),
+        omd_site=settings.checkmk_site or None,
+    )
 
 
 @router.get("/{backend_id}/test", response_model=TestResult)

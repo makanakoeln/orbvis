@@ -4,6 +4,7 @@
 
 import type {
   BackendConfig,
+  BackendContext,
   BoardConfig,
   BoardObject,
   BoardPermissions,
@@ -323,6 +324,9 @@ export const connectionsApi = {
     token: string,
   ): Promise<{ lat: number; lng: number } | null> =>
     request(`/backends/${backendId}/host-geo?host=${encodeURIComponent(host)}`, {}, token),
+
+  context: (backendId: string, token: string): Promise<BackendContext> =>
+    request(`/backends/${backendId}/context`, {}, token),
 
   testConnection: (data: BackendConfig, token: string): Promise<{ ok: boolean; message: string }> =>
     request('/backends/test-connection', { method: 'POST', body: JSON.stringify(data) }, token),

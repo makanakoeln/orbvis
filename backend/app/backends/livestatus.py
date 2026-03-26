@@ -26,6 +26,16 @@ def _ls_escape(value: str) -> str:
     return value.replace("\r", "").replace("\n", "")
 
 
+def _rrd_metric_id(label: str) -> str:
+    """Sanitize a perf_data metric label for use in a Livestatus rrddata column spec.
+
+    CMC stores metrics with underscores in place of spaces and colons (matching the
+    NagVis convention). The column name must not contain spaces or colons because those
+    are delimiters in the LQL Columns header.
+    """
+    return label.replace(" ", "_").replace(":", "_")
+
+
 # Livestatus state code → string mapping
 _HOST_STATE_MAP = {0: "UP", 1: "DOWN", 2: "UNREACHABLE"}
 _SERVICE_STATE_MAP = {0: "OK", 1: "WARNING", 2: "CRITICAL", 3: "UNKNOWN"}
@@ -468,16 +478,20 @@ class LivestatusBackend(BackendBase):
         end: int,
     ) -> dict[str, list[tuple[float, float, str]]]:
         """Fetch metric history via Livestatus rrddata column (Checkmk Enterprise/CMC only)."""
+        logger.debug("rrddata fetch: host=%r service=%r start=%d end=%d", host, service, start, end)
+
         try:
             if service:
                 state = await self.get_service_state(host, service)
             else:
                 state = await self.get_host_state(host)
-        except Exception:
+        except Exception as exc:
+            logger.warning("rrddata: failed to get state for %r/%r: %s", host, service, exc)
             return {}
 
         metrics = _parse_metrics_from_perf(state.perf_data or "")
         if not metrics:
+            logger.debug("rrddata: no metrics in perf_data for %r/%r", host, service)
             return {}
 
         # Choose a step that matches one of Checkmk's standard RRD consolidation periods:
@@ -493,7 +507,7 @@ class LivestatusBackend(BackendBase):
             step = 21_600
 
         rrd_cols = " ".join(
-            f"rrddata:{_ls_escape(m['label'])}:{start}:{end}:{step}" for m in metrics
+            f"rrddata:{_rrd_metric_id(m['label'])}:{start}:{end}:{step}" for m in metrics
         )
         if service:
             query = (
@@ -508,10 +522,21 @@ class LivestatusBackend(BackendBase):
         try:
             rows = await self._query(query)
         except Exception as exc:
-            logger.debug("rrddata query failed (backend may not support it): %s", exc)
+            logger.warning(
+                "rrddata query failed for %r/%r (CMC/Enterprise required): %s",
+                host,
+                service,
+                exc,
+            )
+            logger.debug("rrddata failed query was:\n%s", query)
             return {}
 
         if not rows or not rows[0]:
+            logger.info(
+                "rrddata: empty result for %r/%r (no rrddata support or no data in range)",
+                host,
+                service,
+            )
             return {}
 
         result: dict[str, list[tuple[float, float, str]]] = {}
@@ -535,9 +560,11 @@ class LivestatusBackend(BackendBase):
                         points.append((ts, float(v), unit))
                 if points:
                     result[m["label"]] = points
-            except (IndexError, TypeError, ValueError):
+            except (IndexError, TypeError, ValueError) as exc:
+                logger.debug("rrddata: failed to parse metric %r: %s, raw=%r", m["label"], exc, rrd)
                 continue
 
+        logger.debug("rrddata: returning %d metrics for %r/%r", len(result), host, service)
         return result
 
     async def is_available(self) -> bool:

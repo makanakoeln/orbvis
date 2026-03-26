@@ -245,6 +245,11 @@ export interface BackendConfig {
   icinga2_verify_ssl?: boolean;
 }
 
+export interface BackendContext {
+  monitoring_core: 'cmc' | 'nagios' | null;
+  omd_site: string | null;
+}
+
 export interface GlobalSettings {
   icon_size: number;
   view_type: string;

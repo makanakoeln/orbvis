@@ -360,6 +360,8 @@ export default {
     automationSecret: 'Automation-Secret',
     automationHint:
       'Erforderlich für Metrik-Historie bei Nutzung von Nagios/Checkmk Raw als Monitoring-Core (kein rrddata via Livestatus).',
+    automationHintCmc:
+      'Nicht erforderlich: CMC erkannt — Metrik-Historie wird direkt per Livestatus rrddata abgerufen.',
     timeout: 'Timeout (s)',
     connectionTypeLivestatus: 'MK Livestatus',
     connectionTypeIcinga2: 'Icinga2 REST API',
