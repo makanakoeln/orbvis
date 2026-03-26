@@ -377,7 +377,13 @@ const dataTimedOut = ref(false);
 let dataTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
 
 function _triggerHistoryPrefill() {
-  if (props.object.type !== 'graph' || !props.object.host_name || !props.backendId) return;
+  if (
+    props.object.type !== 'graph' ||
+    !props.object.host_name ||
+    !props.backendId ||
+    !authStore.accessToken
+  )
+    return;
   dataTimedOut.value = false;
   if (dataTimeoutTimer) clearTimeout(dataTimeoutTimer);
   dataTimeoutTimer = setTimeout(() => {
