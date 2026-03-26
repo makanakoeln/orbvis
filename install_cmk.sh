@@ -40,6 +40,10 @@ fi
 SITE_ROOT="/omd/sites/$SITE"
 [[ -d "$SITE_ROOT" ]] || die "OMD site '$SITE' not found."
 
+# Detect CMK version from site symlink (e.g. ../../versions/2.4.0p24.cre → 2.4.0p24)
+CMK_VERSION_RAW=$(readlink "$SITE_ROOT/version" 2>/dev/null || true)
+CMK_VERSION=$(basename "${CMK_VERSION_RAW}" | sed 's/\.[a-z]*$//' 2>/dev/null || echo "unknown")
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -118,6 +122,7 @@ fi
 # ---------------------------------------------------------------------------
 header "Installing OrbVis into Checkmk site '$SITE'"
 echo "  Site:    $SITE_ROOT"
+echo "  CMK:     $CMK_VERSION"
 echo "  URL:     https://$(hostname -f 2>/dev/null || hostname)$BASE_PATH/"
 : > "$LOG_FILE"
 
