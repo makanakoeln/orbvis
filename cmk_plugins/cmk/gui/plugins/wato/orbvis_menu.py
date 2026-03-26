@@ -5,10 +5,26 @@ import os
 
 _SITE = os.environ.get("OMD_SITE", "")
 
+
+class _SelfActive(str):
+    """str subclass where appending '_active' returns the icon itself.
+
+    CMK constructs the nav-bar active-state icon as ``popup_trigger.icon + "_active"``.
+    Using this class as the icon name makes that expression return the original icon
+    instead of a non-existing ``*_active`` variant, avoiding the placeholder fallback.
+    """
+
+    def __add__(self, other: object) -> "_SelfActive":
+        if other == "_active":
+            return self
+        return type(self)(str.__add__(self, str(other)))
+
+
 try:
     # Checkmk 2.4
     from cmk.gui.i18n import _
     from cmk.gui.main_menu import mega_menu_registry
+    from cmk.gui.sidebar.main_menu import MainMenuRenderer as _Renderer24
     from cmk.gui.type_defs import MegaMenu, TopicMenuItem, TopicMenuTopic
 
     def _orbvis_topics_24() -> list:
@@ -60,12 +76,23 @@ try:
         )
     )
 
+    _orig_get_items_24 = _Renderer24._get_main_menu_items
+
+    def _patched_get_items_24(self):  # type: ignore[no-untyped-def]
+        return [
+            item._replace(icon=_SelfActive(str(item.icon))) if item.name == "orbvis" else item
+            for item in _orig_get_items_24(self)
+        ]
+
+    _Renderer24._get_main_menu_items = _patched_get_items_24  # type: ignore[method-assign]
+
 except ImportError:
     try:
         # Checkmk 2.5
         from cmk.gui.i18n import _
         from cmk.gui.main_menu import main_menu_registry
         from cmk.gui.main_menu_types import MainMenu, MainMenuItem, MainMenuTopic
+        from cmk.gui.sidebar.main_menu import MainMenuRenderer as _Renderer25
         from cmk.gui.type_defs import IconNames, StaticIcon
         from cmk.gui.utils.roles import UserPermissions
 
@@ -117,6 +144,17 @@ except ImportError:
                 topics=_orbvis_topics_25,
             )
         )
+
+        _orig_show_25 = _Renderer25._show_main_menu_content
+
+        def _patched_show_25(self, user_permissions: UserPermissions, popup_triggers: list) -> None:  # type: ignore[no-untyped-def]
+            patched = [
+                pt._replace(icon=_SelfActive(str(pt.icon))) if pt.name == "orbvis" else pt
+                for pt in popup_triggers
+            ]
+            _orig_show_25(self, user_permissions, patched)
+
+        _Renderer25._show_main_menu_content = _patched_show_25  # type: ignore[method-assign]
 
     except ImportError:
         pass  # Checkmk 2.6+ uses a different plugin mechanism; sidebar snapin still works
