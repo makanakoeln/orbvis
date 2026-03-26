@@ -65,7 +65,7 @@
         <!-- Multi-metric legend -->
         <div v-if="!isSingleMetric" class="flex flex-wrap gap-x-2.5 gap-y-0.5 mb-1 shrink-0">
           <div
-            v-for="(label, idx) in chartMetricLabels.slice(0, 6)"
+            v-for="(label, idx) in chartMetricLabels.slice(0, MAX_VISIBLE_SERIES)"
             :key="label"
             class="flex items-center gap-1 min-w-0"
             style="max-width: 50%"
@@ -80,13 +80,21 @@
               :style="{ color: CHART_PALETTE[idx % CHART_PALETTE.length] }"
               >{{
                 fmtMetricVal(chartLatestValues[label]?.value ?? 0, chartLatestValues[label]?.unit)
-              }}<span class="text-zinc-600 ml-0.5 font-normal">{{
-                chartLatestValues[label]?.unit
-              }}</span></span
+              }}<span
+                v-if="
+                  chartLatestValues[label]?.unit &&
+                  !isSingleCharSIPrefix(chartLatestValues[label]?.unit)
+                "
+                class="text-zinc-600 ml-0.5 font-normal"
+                >{{ chartLatestValues[label]?.unit }}</span
+              ></span
             >
           </div>
-          <span v-if="chartMetricLabels.length > 6" class="text-[9px] text-zinc-600 self-center"
-            >+{{ chartMetricLabels.length - 6 }}</span
+          <span
+            v-if="chartMetricLabels.length > MAX_VISIBLE_SERIES"
+            class="text-[9px] text-zinc-600 self-center cursor-default"
+            :title="hiddenMetricLabels"
+            >+{{ chartMetricLabels.length - MAX_VISIBLE_SERIES }}</span
           >
         </div>
         <svg ref="chartSvgRef" class="w-full flex-1" />
@@ -338,7 +346,13 @@ import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { useArcRing } from '@/composables/useArcRing';
-import { CHART_PALETTE, fmtMetricVal, useMetricChart } from '@/composables/useMetricChart';
+import {
+  CHART_PALETTE,
+  fmtMetricVal,
+  isSingleCharSIPrefix,
+  MAX_VISIBLE_SERIES,
+  useMetricChart,
+} from '@/composables/useMetricChart';
 import { useAuthStore } from '@/stores/auth';
 import type { MetricPoint } from '@/stores/states';
 import { useStatesStore } from '@/stores/states';
@@ -449,6 +463,9 @@ const chartData = computed((): Record<string, MetricPoint[]> => {
 });
 
 const chartMetricLabels = computed(() => Object.keys(chartData.value));
+const hiddenMetricLabels = computed(() =>
+  chartMetricLabels.value.slice(MAX_VISIBLE_SERIES).join(', '),
+);
 const hasChartData = computed(() =>
   chartMetricLabels.value.some((k) => chartData.value[k].length > 0),
 );

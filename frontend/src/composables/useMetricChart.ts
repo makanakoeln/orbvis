@@ -24,6 +24,9 @@ export const CHART_PALETTE = [
   '#ec4899',
 ];
 
+// Max series shown in the legend and used for Y-domain calculation
+export const MAX_VISIBLE_SERIES = 6;
+
 const TIME_H = 16; // px reserved at bottom for time axis
 const PAD_LEFT = 34; // px for y-axis labels
 const PAD_RIGHT = 6;
@@ -44,16 +47,39 @@ function _fmtTime(ts: number): string {
   return `${dd}.${mo} ${hh}:${mm}`;
 }
 
+// Multiplier for single-char SI prefix units (e.g. "k" = kilobytes in Checkmk perf_data)
+const _SI_MULT: Record<string, number> = {
+  k: 1e3,
+  K: 1e3,
+  m: 1e6,
+  M: 1e6,
+  g: 1e9,
+  G: 1e9,
+  t: 1e12,
+  T: 1e12,
+};
+
+// True when the unit is a bare SI magnitude prefix that fmtMetricVal absorbs into its output
+export function isSingleCharSIPrefix(unit: string | null | undefined): boolean {
+  return !!unit && unit.length === 1 && _SI_MULT[unit] !== undefined;
+}
+
+function _fmtMagnitude(v: number): string {
+  const a = Math.abs(v);
+  if (a >= 1e12) return `${(v / 1e12).toFixed(1)}T`;
+  if (a >= 1e9) return `${(v / 1e9).toFixed(1)}G`;
+  if (a >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+  if (a >= 1e3) return `${(v / 1e3).toFixed(1)}k`;
+  return a >= 100 ? v.toFixed(0) : a >= 10 ? v.toFixed(1) : v.toFixed(2);
+}
+
 export function fmtMetricVal(v: number, unit?: string): string {
+  // Single-char SI prefix units (e.g. "k" = kilobytes): scale to base unit so the
+  // magnitude formatting produces the correct combined prefix (116200 k → "116.2M").
+  if (isSingleCharSIPrefix(unit)) return _fmtMagnitude(v * _SI_MULT[unit!]);
+  // Skip magnitude scaling when unit already carries an SI prefix (e.g. "MB", "kB")
+  if (!unit || !/^[kKmMgGtT]/.test(unit)) return _fmtMagnitude(v);
   const abs = Math.abs(v);
-  // Only apply magnitude scaling when the unit has no existing SI prefix (kMGTP)
-  // e.g. skip scaling if unit is already "MB", "GB", "KB" etc.
-  if (!unit || !/^[kKmMgGtT]/.test(unit)) {
-    if (abs >= 1e12) return `${(v / 1e12).toFixed(1)}T`;
-    if (abs >= 1e9) return `${(v / 1e9).toFixed(1)}G`;
-    if (abs >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
-    if (abs >= 1e3) return `${(v / 1e3).toFixed(1)}k`;
-  }
   if (abs >= 100) return v.toFixed(0);
   if (abs >= 10) return v.toFixed(1);
   return v.toFixed(2);
@@ -107,7 +133,11 @@ export function useMetricChart(
       return;
     }
 
-    const allPts = labels.flatMap((l) => series[l]);
+    // Only visible labels contribute to Y-domain in multi-series mode so that
+    // hidden metrics with extreme values (e.g. mem_total) don't collapse the visible range.
+    const multiSeries = labels.length > 1;
+    const domainLabels = multiSeries ? labels.slice(0, MAX_VISIBLE_SERIES) : labels;
+    const allPts = domainLabels.flatMap((l) => series[l]);
     if (allPts.length === 0) {
       root.selectAll('*').remove();
       return;
@@ -130,8 +160,6 @@ export function useMetricChart(
     const xScale = scaleLinear()
       .domain([tsMin, tsMax === tsMin ? tsMin + 1 : tsMax])
       .range([PAD_LEFT, W - PAD_RIGHT]);
-
-    const multiSeries = labels.length > 1;
 
     // Extend Y-domain upward so threshold lines are always visible in the chart.
     // Only applies to single-series: multi-series charts don't draw threshold lines
