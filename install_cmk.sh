@@ -164,6 +164,11 @@ if sudo test -d "$VENV_DIR"; then
 else
   quietly sudo "$PYTHON3" -m venv "$VENV_DIR"
 fi
+if ! sudo test -f "$VENV_DIR/bin/pip"; then
+  # CMK 2.5+ builds Python without ensurepip wheel; bootstrap pip from site
+  quietly sudo "$SITE_ROOT/bin/pip3" install --prefix="$VENV_DIR" pip \
+    || die "Cannot install pip into virtualenv (tried $SITE_ROOT/bin/pip3)."
+fi
 step "Installing backend dependencies"
 quietly sudo "$VENV_DIR/bin/pip" install --quiet --upgrade pip
 quietly sudo cp -r "$SCRIPT_DIR/backend/." "$ORBVIS_DIR/src/"
