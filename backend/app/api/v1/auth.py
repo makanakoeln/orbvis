@@ -101,7 +101,7 @@ async def sso_login(request: Request, db: AsyncSession = Depends(get_db)) -> Tok
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="No valid Checkmk session"
         )
-    logger.info("SSO: login successful for user %r", username)
+    logger.debug("SSO: login successful for user %r", username)
 
     user = await get_or_create_sso_user(db, username)
     return create_tokens(user)
