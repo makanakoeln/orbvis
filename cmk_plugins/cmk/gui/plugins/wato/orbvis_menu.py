@@ -157,4 +157,34 @@ except ImportError:
         _Renderer25._show_main_menu_content = _patched_show_25  # type: ignore[method-assign]
 
     except ImportError:
-        pass  # Checkmk 2.6+ uses a different plugin mechanism; sidebar snapin still works
+        try:
+            # Checkmk 2.6+
+            from cmk.gui.i18n import _
+            from cmk.gui.main_menu import main_menu_registry
+            from cmk.gui.main_menu_types import MainMenuLinkItem
+            from cmk.shared_typing.main_menu import NavItemIdEnum, NavItemShortcut
+
+            # NavItemIdEnum is a closed str-Enum; extend it at runtime so that
+            # NavItemIdEnum("orbvis") succeeds inside _get_nav_item_from_main_menu_item.
+            _id = "orbvis"
+            _member = str.__new__(NavItemIdEnum, _id)
+            _member._name_ = _id  # type: ignore[attr-defined]
+            _member._value_ = _id  # type: ignore[attr-defined]
+            NavItemIdEnum._value2member_map_[_id] = _member  # type: ignore[attr-defined]
+            NavItemIdEnum._member_map_[_id] = _member  # type: ignore[attr-defined]
+            NavItemIdEnum._member_names_.append(_id)  # type: ignore[attr-defined]
+            type.__setattr__(NavItemIdEnum, _id, _member)
+
+            main_menu_registry.register(
+                MainMenuLinkItem(
+                    id=NavItemIdEnum(_id),
+                    title=_("OrbVis"),
+                    sort_index=16,
+                    shortcut=NavItemShortcut(key="o", alt=True),
+                    url=f"/{_SITE}/orbvis/",
+                    target="main",
+                )
+            )
+
+        except ImportError:
+            pass
