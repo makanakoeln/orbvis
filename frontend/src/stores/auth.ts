@@ -98,7 +98,7 @@ export const useAuthStore = defineStore('auth', () => {
       // Load global settings so they're available for new map/object creation
       useSettingsStore()
         .load()
-        .catch(() => {});
+        .catch((e) => console.warn('[OrbVis] Failed to load settings:', e));
     } catch {
       // Access token may be expired — try refresh before giving up
       if (refreshToken.value) {
@@ -113,7 +113,7 @@ export const useAuthStore = defineStore('auth', () => {
             i18n.global.locale.value = lang2 as 'en' | 'de';
             useSettingsStore()
               .load()
-              .catch(() => {});
+              .catch((e) => console.warn('[OrbVis] Failed to load settings:', e));
             return;
           } catch {
             /* fall through to clearAuth */
@@ -147,7 +147,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout() {
     if (accessToken.value) {
-      await authApi.logout(accessToken.value).catch(() => {});
+      await authApi
+        .logout(accessToken.value)
+        .catch((e) => console.warn('[OrbVis] Logout failed:', e));
     }
     clearAuth();
     if (ssoActive.value) {

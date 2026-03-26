@@ -175,6 +175,7 @@ const usernameEl = ref<HTMLInputElement | null>(null);
 onMounted(() => usernameEl.value?.focus());
 
 async function handleLogin() {
+  authStore.error = null;
   await authStore.login(username.value, password.value);
 }
 </script>

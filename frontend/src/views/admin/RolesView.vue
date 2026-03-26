@@ -339,11 +339,13 @@ import { useI18n } from 'vue-i18n';
 
 import { rolesApi } from '@/api/client';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import type { PermissionRead, RoleRead } from '@/types/api';
 
 const { t } = useI18n();
 const auth = useAuthStore();
+const toast = useToast();
 const roles = ref<RoleRead[]>([]);
 const loading = ref(false);
 const showCreate = ref(false);
@@ -384,10 +386,15 @@ async function fetchRoles() {
 }
 
 async function createRole() {
-  await rolesApi.create(newRoleName.value, auth.accessToken!);
-  showCreate.value = false;
-  newRoleName.value = '';
-  await fetchRoles();
+  try {
+    await rolesApi.create(newRoleName.value, auth.accessToken!);
+    showCreate.value = false;
+    newRoleName.value = '';
+    toast.success(t('admin.roleCreated'));
+    await fetchRoles();
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : t('admin.saveFailed'));
+  }
 }
 
 const deleteTargetId = ref<number | null>(null);
@@ -396,8 +403,13 @@ async function confirmDeleteRole() {
   const id = deleteTargetId.value;
   if (id === null) return;
   deleteTargetId.value = null;
-  await rolesApi.delete(id, auth.accessToken!);
-  await fetchRoles();
+  try {
+    await rolesApi.delete(id, auth.accessToken!);
+    toast.success(t('admin.roleDeleted'));
+    await fetchRoles();
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : t('admin.deleteFailed'));
+  }
 }
 
 function openEdit(role: RoleRead) {

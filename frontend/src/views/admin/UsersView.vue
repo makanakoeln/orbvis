@@ -296,11 +296,13 @@ import { useI18n } from 'vue-i18n';
 import { rolesApi, usersApi } from '@/api/client';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue';
+import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import type { RoleRead, UserRead } from '@/types/api';
 
 const { t } = useI18n();
 const auth = useAuthStore();
+const toast = useToast();
 const users = ref<UserRead[]>([]);
 const loading = ref(false);
 const showCreate = ref(false);
@@ -343,6 +345,7 @@ async function createUser() {
     );
     showCreate.value = false;
     newUser.value = { name: '', password: '', is_admin: false, must_change_password: false };
+    toast.success(t('admin.userCreated', { name: created.name }));
     await fetchUsers();
   } catch (e: unknown) {
     createError.value = e instanceof Error ? e.message : t('admin.saveFailed');
@@ -357,8 +360,13 @@ async function confirmDeleteUser() {
   const id = deleteTargetId.value;
   if (id === null) return;
   deleteTargetId.value = null;
-  await usersApi.delete(id, auth.accessToken!);
-  await fetchUsers();
+  try {
+    await usersApi.delete(id, auth.accessToken!);
+    toast.success(t('admin.userDeleted'));
+    await fetchUsers();
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : t('admin.deleteFailed'));
+  }
 }
 
 async function loadRoles() {

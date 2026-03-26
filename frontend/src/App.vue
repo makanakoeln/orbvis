@@ -7,6 +7,7 @@
     <ChangelogModal v-if="showChangelog" @close="dismissChangelog" />
   </div>
   <router-view v-else />
+  <ToastContainer />
 </template>
 
 <script setup lang="ts">
@@ -15,6 +16,7 @@ import { useRoute } from 'vue-router';
 
 import AppSidebar from '@/components/AppSidebar.vue';
 import ChangelogModal from '@/components/ChangelogModal.vue';
+import ToastContainer from '@/components/ToastContainer.vue';
 import { useChangelog } from '@/composables/useChangelog';
 import { useTheme } from '@/composables/useTheme';
 import { useAuthStore } from '@/stores/auth';

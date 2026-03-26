@@ -298,6 +298,7 @@ const saving = ref(false);
 const saveError = ref('');
 const savedOk = ref(false);
 let savedOkTimer: ReturnType<typeof setTimeout> | null = null;
+let saveErrorTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Sync form when store finishes loading
 watch(
@@ -325,6 +326,10 @@ async function handleSave() {
     }, 3000);
   } catch {
     saveError.value = t('admin.saveFailed');
+    if (saveErrorTimer) clearTimeout(saveErrorTimer);
+    saveErrorTimer = setTimeout(() => {
+      saveError.value = '';
+    }, 5000);
   } finally {
     saving.value = false;
   }
@@ -332,6 +337,7 @@ async function handleSave() {
 
 onUnmounted(() => {
   if (savedOkTimer) clearTimeout(savedOkTimer);
+  if (saveErrorTimer) clearTimeout(saveErrorTimer);
 });
 
 onMounted(async () => {

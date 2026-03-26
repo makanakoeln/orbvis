@@ -35,7 +35,7 @@
             class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
             @click="$emit('cancel')"
           >
-            Cancel
+            {{ t('common.cancel') }}
           </button>
           <button
             class="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-500 text-white transition-all"
@@ -50,6 +50,8 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
 defineProps<{
   title: string;
   message?: string;
@@ -57,4 +59,6 @@ defineProps<{
 }>();
 
 defineEmits<{ confirm: []; cancel: [] }>();
+
+const { t } = useI18n();
 </script>

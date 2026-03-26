@@ -500,6 +500,7 @@ import { useI18n } from 'vue-i18n';
 import { connectionsApi } from '@/api/client';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import NumberInput from '@/components/NumberInput.vue';
+import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import { useConnectionsStore } from '@/stores/connections';
 import type { BackendConfig } from '@/types/api';
@@ -507,6 +508,7 @@ import type { BackendConfig } from '@/types/api';
 const { t } = useI18n();
 const store = useConnectionsStore();
 const auth = useAuthStore();
+const toast = useToast();
 
 const statuses = reactive<Record<string, boolean>>({});
 const statusMessages = reactive<Record<string, string>>({});
@@ -609,9 +611,11 @@ async function save() {
   try {
     if (dialog.mode === 'create') {
       await store.createBackend({ ...form });
+      toast.success(t('admin.connectionCreated'));
     } else {
       const { id: _id, ...rest } = form;
       await store.updateBackend(dialog.editId, rest);
+      toast.success(t('admin.connectionUpdated'));
     }
     dialog.open = false;
     testAll();
@@ -626,9 +630,14 @@ async function confirmRemove() {
   const id = deleteTarget.value;
   if (!id) return;
   deleteTarget.value = null;
-  await store.deleteBackend(id);
-  delete statuses[id];
-  delete statusMessages[id];
+  try {
+    await store.deleteBackend(id);
+    delete statuses[id];
+    delete statusMessages[id];
+    toast.success(t('admin.connectionDeleted'));
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : t('admin.deleteFailed'));
+  }
 }
 
 onMounted(async () => {
