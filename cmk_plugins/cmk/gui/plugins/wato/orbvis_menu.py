@@ -181,7 +181,7 @@ except ImportError:
                     title=_("OrbVis"),
                     sort_index=16,
                     shortcut=NavItemShortcut(key="o", alt=True),
-                    url=f"/{_SITE}/orbvis/",
+                    get_url=lambda req: f"/{_SITE}/orbvis/",
                     target="main",
                 )
             )
