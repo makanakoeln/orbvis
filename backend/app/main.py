@@ -610,8 +610,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     print("  OrbVis is starting up.", flush=True)
     print(f"  Open in your browser: http://localhost{host_port}/orbvis", flush=True)
     print(f"{sep}\n", flush=True)
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, _run_migrations)
+    await asyncio.to_thread(_run_migrations)
     logger.info("Database initialized.")
 
     # Always provide the built-in test backend (no config needed)
@@ -647,11 +646,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await _ensure_admin_user()
     await _seed_default_roles()
     await asyncio.gather(
-        loop.run_in_executor(None, _seed_demo_map),
-        loop.run_in_executor(None, _seed_demo_worldmap),
-        loop.run_in_executor(
-            None, seed_builtin_images, Path(settings.boards_dir).parent / "images"
-        ),
+        asyncio.to_thread(_seed_demo_map),
+        asyncio.to_thread(_seed_demo_worldmap),
+        asyncio.to_thread(seed_builtin_images, Path(settings.boards_dir).parent / "images"),
     )
 
     yield
