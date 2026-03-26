@@ -54,7 +54,17 @@ BOARDS_DIR="$ORBVIS_DIR/boards"
 ENV_FILE="$ORBVIS_DIR/.env"
 BACKENDS_FILE="$ORBVIS_DIR/backends.json"
 DB_FILE="$ORBVIS_DIR/orbvis.db"
-BACKEND_PORT=8420
+# Determine port: reuse existing from .env, otherwise find a free one from 8420 upward
+BACKEND_PORT=""
+if sudo test -f "$ENV_FILE" 2>/dev/null; then
+  BACKEND_PORT=$(sudo grep -E '^ORBVIS_PORT=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)
+fi
+if [[ -z "$BACKEND_PORT" ]]; then
+  BACKEND_PORT=8420
+  while ss -tlnp 2>/dev/null | grep -q ":${BACKEND_PORT} "; do
+    (( BACKEND_PORT++ ))
+  done
+fi
 BASE_PATH="/$SITE/orbvis"
 LIVESTATUS_SOCKET="$SITE_ROOT/tmp/run/live"
 VENV_DIR="$ORBVIS_DIR/venv"
@@ -194,6 +204,7 @@ STATE_REFRESH_INTERVAL=15
 CHECKMK_HTPASSWD=$SITE_ROOT/etc/htpasswd
 CHECKMK_OMD_ROOT=$SITE_ROOT
 CHECKMK_SITE=$SITE
+ORBVIS_PORT=$BACKEND_PORT
 EOF
 
 if sudo test -f "$BACKENDS_FILE"; then
@@ -285,7 +296,6 @@ PIDFILE="\$OMD_ROOT/tmp/run/orbvis.pid"
 LOGFILE="\$OMD_ROOT/var/log/orbvis.log"
 VENV="$VENV_DIR"
 APP="app.main:app"
-PORT=$BACKEND_PORT
 ENV_FILE="$ENV_FILE"
 
 case "\$1" in
@@ -296,10 +306,11 @@ case "\$1" in
     fi
     echo -n "Starting orbvis..."
     set -a; source "\$ENV_FILE"; set +a
+    PORT="\${ORBVIS_PORT:-8420}"
     cd "$ORBVIS_DIR/src"
     "\$VENV/bin/python3" -m alembic upgrade head >> "\$LOGFILE" 2>&1
     "\$VENV/bin/uvicorn" \$APP \\
-      --host 127.0.0.1 --port \$PORT \\
+      --host 127.0.0.1 --port "\$PORT" \\
       --log-level warning \\
       >> "\$LOGFILE" 2>&1 &
     echo \$! > "\$PIDFILE"
