@@ -237,6 +237,7 @@ export default {
     graphMetricSource: 'Metrikquelle',
     graphUrlEmbed: 'URL-Einbettung',
     graphWaitingData: 'Warte auf Daten…',
+    graphNotFound: 'Keine Daten für „{service}" auf {host}',
     graphTimeWindow: 'Zeitfenster',
   },
   contextMenu: {

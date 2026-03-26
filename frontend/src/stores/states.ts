@@ -257,6 +257,10 @@ export const useStatesStore = defineStore('states', () => {
     }
   }
 
+  function clearMetricValues(objectId: string): void {
+    metricValues.value[objectId] = {};
+  }
+
   return {
     states,
     history,
@@ -269,5 +273,6 @@ export const useStatesStore = defineStore('states', () => {
     getState,
     toggleNotifications,
     prefillMetricHistory,
+    clearMetricValues,
   };
 });

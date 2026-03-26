@@ -10,10 +10,11 @@
   >
     <!-- Native chart mode (host linked) -->
     <template v-if="isNativeChart">
-      <!-- Waiting for first data point -->
+      <!-- Waiting for first data point / not found -->
       <div
         v-if="!hasChartData"
-        class="w-full h-full flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-zinc-600 rounded-lg text-zinc-500"
+        class="w-full h-full flex flex-col items-center justify-center gap-1.5 rounded-lg text-zinc-500"
+        :class="editMode ? 'border-2 border-dashed border-zinc-600' : 'border border-zinc-800/40'"
       >
         <svg
           class="w-6 h-6"
@@ -28,7 +29,13 @@
             d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
           />
         </svg>
-        <span class="text-xs">{{ t('boardSettings.graphWaitingData') }}</span>
+        <span v-if="dataTimedOut" class="text-xs text-center px-3">{{
+          t('boardSettings.graphNotFound', {
+            service: object.service_description || object.host_name,
+            host: object.host_name,
+          })
+        }}</span>
+        <span v-else class="text-xs">{{ t('boardSettings.graphWaitingData') }}</span>
       </div>
       <!-- D3 chart -->
       <div
@@ -38,7 +45,7 @@
       >
         <!-- Header: metric label + current value -->
         <div class="mb-1 flex items-center justify-between shrink-0">
-          <span class="text-[9px] font-semibold uppercase tracking-wide text-zinc-400 truncate">
+          <span class="text-[9px] font-semibold tracking-wide text-zinc-400 truncate">
             {{
               isSingleMetric
                 ? object.graph_metric || chartMetricLabels[0]
@@ -365,8 +372,17 @@ defineEmits<{
 const statesStore = useStatesStore();
 const authStore = useAuthStore();
 
+const GRAPH_DATA_TIMEOUT_MS = 15_000;
+const dataTimedOut = ref(false);
+let dataTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+
 function _triggerHistoryPrefill() {
   if (props.object.type !== 'graph' || !props.object.host_name || !props.backendId) return;
+  dataTimedOut.value = false;
+  if (dataTimeoutTimer) clearTimeout(dataTimeoutTimer);
+  dataTimeoutTimer = setTimeout(() => {
+    if (!hasChartData.value) dataTimedOut.value = true;
+  }, GRAPH_DATA_TIMEOUT_MS);
   const windowMins = props.object.graph_time_window ?? 60;
   statesStore.prefillMetricHistory(
     props.object.id,
@@ -380,6 +396,11 @@ function _triggerHistoryPrefill() {
 
 onMounted(_triggerHistoryPrefill);
 watch(() => props.object.graph_time_window, _triggerHistoryPrefill);
+// Clear stale metric data and re-fetch when host or service changes
+watch([() => props.object.host_name, () => props.object.service_description], () => {
+  statesStore.clearMetricValues(props.object.id);
+  _triggerHistoryPrefill();
+});
 // Re-trigger when token becomes available (e.g. after async SSO login)
 watch(
   () => authStore.accessToken,
@@ -493,6 +514,7 @@ watchEffect(() => {
 });
 onUnmounted(() => {
   if (_refreshTimer) clearInterval(_refreshTimer);
+  if (dataTimeoutTimer) clearTimeout(dataTimeoutTimer);
 });
 
 const graphSrc = computed(() => {
