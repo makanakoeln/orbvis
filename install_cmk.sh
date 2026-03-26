@@ -162,7 +162,7 @@ step "Setting up Python environment"
 if sudo test -d "$VENV_DIR"; then
   ok "Virtualenv already exists, skipping creation"
 else
-  quietly sudo "$PYTHON3" -m venv --copies "$VENV_DIR"
+  quietly sudo "$PYTHON3" -m venv "$VENV_DIR"
 fi
 step "Installing backend dependencies"
 quietly sudo "$VENV_DIR/bin/pip" install --quiet --upgrade pip
