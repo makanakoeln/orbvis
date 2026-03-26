@@ -161,8 +161,9 @@ except ImportError:
             # Checkmk 2.6+
             from cmk.gui.i18n import _
             from cmk.gui.main_menu import main_menu_registry
-            from cmk.gui.main_menu_types import MainMenuLinkItem
-            from cmk.shared_typing.main_menu import NavItemIdEnum, NavItemShortcut
+            from cmk.gui.main_menu_types import MainMenuItem
+            from cmk.gui.utils.roles import UserPermissions
+            from cmk.shared_typing.main_menu import NavItemIdEnum, NavItemShortcut, NavItemTopic, NavItemTopicEntry
 
             # NavItemIdEnum is a closed str-Enum; extend it at runtime so that
             # NavItemIdEnum("orbvis") succeeds inside _get_nav_item_from_main_menu_item.
@@ -175,14 +176,52 @@ except ImportError:
             NavItemIdEnum._member_names_.append(_id)  # type: ignore[attr-defined]
             type.__setattr__(NavItemIdEnum, _id, _member)
 
+            def _orbvis_topics_26(user_permissions: UserPermissions) -> list:
+                return [
+                    NavItemTopic(
+                        id="orbvis",
+                        title=_("OrbVis"),
+                        sort_index=10,
+                        entries=[
+                            NavItemTopicEntry(
+                                id="orbvis_boards",
+                                title=_("Boards"),
+                                url=f"/{_SITE}/orbvis/",
+                                target="main",
+                                sort_index=10,
+                            ),
+                            NavItemTopicEntry(
+                                id="orbvis_settings",
+                                title=_("Settings"),
+                                url=f"/{_SITE}/orbvis/#/admin/settings",
+                                target="main",
+                                sort_index=20,
+                            ),
+                            NavItemTopicEntry(
+                                id="orbvis_connections",
+                                title=_("Connections"),
+                                url=f"/{_SITE}/orbvis/#/admin/connections",
+                                target="main",
+                                sort_index=30,
+                            ),
+                            NavItemTopicEntry(
+                                id="orbvis_images",
+                                title=_("Images"),
+                                url=f"/{_SITE}/orbvis/#/admin/icons",
+                                target="main",
+                                sort_index=40,
+                            ),
+                        ],
+                    )
+                ]
+
             main_menu_registry.register(
-                MainMenuLinkItem(
+                MainMenuItem(
                     id=NavItemIdEnum(_id),
                     title=_("OrbVis"),
                     sort_index=16,
                     shortcut=NavItemShortcut(key="o", alt=True),
-                    get_url=lambda req: f"/{_SITE}/orbvis/",
-                    target="main",
+                    get_topics=_orbvis_topics_26,
                 )
             )
 
