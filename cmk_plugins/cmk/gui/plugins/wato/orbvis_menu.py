@@ -139,7 +139,7 @@ except ImportError:
             MainMenu(
                 name="orbvis",
                 title=_("OrbVis"),
-                icon=StaticIcon(IconNames.main_customize),
+                icon=StaticIcon(IconNames.save_dashboard),
                 sort_index=16,
                 topics=_orbvis_topics_25,
             )
