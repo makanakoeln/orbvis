@@ -494,20 +494,16 @@ class LivestatusBackend(BackendBase):
             logger.debug("rrddata: no metrics in perf_data for %r/%r", host, service)
             return {}
 
-        # Choose a step that matches one of Checkmk's standard RRD consolidation periods:
-        # 60s (raw, ~2d), 300s (5min, ~10d), 1800s (30min, ~90d), 21600s (6h, ~4y)
+        # CMC/CEE rrddata column format:
+        #   rrddata:m1:{metric}.average:{start}:{end}:{step}:{max_entries}
+        # step=1 lets CMC pick the finest available RRD archive automatically.
+        # max_entries caps the number of returned data points.
         window = end - start
-        if window <= 7_200:
-            step = 60
-        elif window <= 172_800:
-            step = 300
-        elif window <= 1_296_000:
-            step = 1_800
-        else:
-            step = 21_600
+        max_entries = min(max(window // 60, 60), 500)
 
         rrd_cols = " ".join(
-            f"rrddata:{_rrd_metric_id(m['label'])}:{start}:{end}:{step}" for m in metrics
+            f"rrddata:m1:{_rrd_metric_id(m['label'])}.average:{start}:{end}:1:{max_entries}"
+            for m in metrics
         )
         if service:
             query = (
@@ -539,19 +535,21 @@ class LivestatusBackend(BackendBase):
             )
             return {}
 
+        # CMC returns each rrddata column as a flat list:
+        #   [actual_start, actual_end, actual_step, v0, v1, ..., vN]
+        # A value of None means no RRD file / metric exists for this column.
         result: dict[str, list[tuple[float, float, str]]] = {}
         row = rows[0]
         for i, m in enumerate(metrics):
             if i >= len(row):
                 continue
             rrd = row[i]
-            if not rrd or not isinstance(rrd, list) or len(rrd) < 2:
+            if not rrd or not isinstance(rrd, list) or len(rrd) < 4:
                 continue
             try:
-                meta = rrd[0]
-                values = rrd[1]
-                actual_start = float(meta[0])
-                actual_step = float(meta[2])
+                actual_start = float(rrd[0])
+                actual_step = float(rrd[2])
+                values = rrd[3:]
                 unit = m["unit"]
                 points: list[tuple[float, float, str]] = []
                 for j, v in enumerate(values):
