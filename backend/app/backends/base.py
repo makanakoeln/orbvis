@@ -3,8 +3,21 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 
 from app.schemas.state import ObjectState
+
+
+@dataclass
+class MetricHistoryResult:
+    """Combined result of a metric history fetch.
+
+    series: metric_id → list of (timestamp, value, unit) tuples
+    titles: metric_id → human-readable display name
+    """
+
+    series: dict[str, list[tuple[float, float, str]]] = field(default_factory=dict)
+    titles: dict[str, str] = field(default_factory=dict)
 
 
 class BackendBase(ABC):
@@ -101,13 +114,13 @@ class BackendBase(ABC):
         service: str | None,
         start: int,
         end: int,
-    ) -> dict[str, list[tuple[float, float, str]]]:
-        """Return historical metric data as {label: [(ts, value, unit), ...]}.
+    ) -> MetricHistoryResult:
+        """Return historical metric data as MetricHistoryResult.
 
-        Default implementation returns empty dict (not all backends support this).
+        Default implementation returns empty result (not all backends support this).
         Checkmk/Livestatus backends override this using the rrddata column.
         """
-        return {}
+        return MetricHistoryResult()
 
     @abstractmethod
     async def is_available(self) -> bool:

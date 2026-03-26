@@ -10,7 +10,7 @@ from datetime import UTC
 
 import httpx
 
-from app.backends.base import BackendBase
+from app.backends.base import BackendBase, MetricHistoryResult
 from app.core.config import settings
 from app.schemas.state import ObjectState
 
@@ -329,7 +329,7 @@ class LivestatusBackend(BackendBase):
         service: str | None,
         start: int,
         end: int,
-    ) -> dict[str, list[tuple[float, float, str]]]:
+    ) -> MetricHistoryResult:
         """Fetch metric history.
 
         Uses Checkmk Web API (webapi.py) when automation credentials are configured
@@ -346,7 +346,7 @@ class LivestatusBackend(BackendBase):
         service: str | None,
         start: int,
         end: int,
-    ) -> dict[str, list[tuple[float, float, str]]]:
+    ) -> MetricHistoryResult:
         """Fetch metric history via Checkmk 2.x REST API (works with Nagios/Raw core)."""
         from datetime import datetime
 
@@ -364,12 +364,13 @@ class LivestatusBackend(BackendBase):
         if not metric_names:
             metric_names = await self._get_cmk_metric_names(host, service, base_url, auth_header)
         if not metric_names:
-            return {}
+            return MetricHistoryResult()
 
         start_dt = datetime.fromtimestamp(start, tz=UTC).isoformat()
         end_dt = datetime.fromtimestamp(end, tz=UTC).isoformat()
 
-        result: dict[str, list[tuple[float, float, str]]] = {}
+        series: dict[str, list[tuple[float, float, str]]] = {}
+        titles: dict[str, str] = {}
         try:
             async with httpx.AsyncClient(verify=self._verify_ssl, timeout=self._timeout) as client:
                 for metric_id in metric_names[:5]:
@@ -404,17 +405,22 @@ class LivestatusBackend(BackendBase):
                         ts_start = float(start)
 
                     for metric in data.get("metrics", []):
+                        unit_obj = metric.get("unit", {}) or {}
+                        unit = unit_obj.get("symbol", "") or ""
                         points: list[tuple[float, float, str]] = [
-                            (ts_start + i * step, float(v), "")
+                            (ts_start + i * step, float(v), unit)
                             for i, v in enumerate(metric.get("data_points", []))
                             if v is not None
                         ]
                         if points:
-                            result[metric_id] = points
+                            series[metric_id] = points
+                            title = metric.get("title", "") or ""
+                            if title:
+                                titles[metric_id] = title
                             break
         except Exception as exc:
             logger.warning("CMK REST API metric history failed: %s", exc)
-        return result
+        return MetricHistoryResult(series=series, titles=titles)
 
     async def _get_perf_metric_names(self, host: str, service: str | None) -> list[str]:
         """Get metric names from Livestatus perf_data for a host/service."""
@@ -476,7 +482,7 @@ class LivestatusBackend(BackendBase):
         service: str | None,
         start: int,
         end: int,
-    ) -> dict[str, list[tuple[float, float, str]]]:
+    ) -> MetricHistoryResult:
         """Fetch metric history via Livestatus rrddata column (Checkmk Enterprise/CMC only)."""
         logger.debug("rrddata fetch: host=%r service=%r start=%d end=%d", host, service, start, end)
 
@@ -487,12 +493,12 @@ class LivestatusBackend(BackendBase):
                 state = await self.get_host_state(host)
         except Exception as exc:
             logger.warning("rrddata: failed to get state for %r/%r: %s", host, service, exc)
-            return {}
+            return MetricHistoryResult()
 
         metrics = _parse_metrics_from_perf(state.perf_data or "")
         if not metrics:
             logger.debug("rrddata: no metrics in perf_data for %r/%r", host, service)
-            return {}
+            return MetricHistoryResult()
 
         # CMC/CEE rrddata column format:
         #   rrddata:m1:{metric}.average:{start}:{end}:{step}:{max_entries}
@@ -525,7 +531,7 @@ class LivestatusBackend(BackendBase):
                 exc,
             )
             logger.debug("rrddata failed query was:\n%s", query)
-            return {}
+            return MetricHistoryResult()
 
         if not rows or not rows[0]:
             logger.info(
@@ -533,12 +539,13 @@ class LivestatusBackend(BackendBase):
                 host,
                 service,
             )
-            return {}
+            return MetricHistoryResult()
 
         # CMC returns each rrddata column as a flat list:
         #   [actual_start, actual_end, actual_step, v0, v1, ..., vN]
         # A value of None means no RRD file / metric exists for this column.
-        result: dict[str, list[tuple[float, float, str]]] = {}
+        series: dict[str, list[tuple[float, float, str]]] = {}
+        titles: dict[str, str] = {}
         row = rows[0]
         for i, m in enumerate(metrics):
             if i >= len(row):
@@ -557,13 +564,15 @@ class LivestatusBackend(BackendBase):
                         ts = actual_start + j * actual_step
                         points.append((ts, float(v), unit))
                 if points:
-                    result[m["label"]] = points
+                    label = m["label"]
+                    series[label] = points
+                    titles[label] = " ".join(w.capitalize() for w in label.split("_"))
             except (IndexError, TypeError, ValueError) as exc:
                 logger.debug("rrddata: failed to parse metric %r: %s, raw=%r", m["label"], exc, rrd)
                 continue
 
-        logger.debug("rrddata: returning %d metrics for %r/%r", len(result), host, service)
-        return result
+        logger.debug("rrddata: returning %d metrics for %r/%r", len(series), host, service)
+        return MetricHistoryResult(series=series, titles=titles)
 
     async def is_available(self) -> bool:
         try:

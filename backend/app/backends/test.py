@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from app.backends.base import BackendBase
+from app.backends.base import BackendBase, MetricHistoryResult
 from app.schemas.state import ObjectState
 
 _HOST_STATES = ["UP", "DOWN", "UNREACHABLE"]
@@ -119,7 +119,7 @@ class TestBackend(BackendBase):
         service: str | None,
         start: int,
         end: int,
-    ) -> dict[str, list[tuple[float, float, str]]]:
+    ) -> MetricHistoryResult:
         """Generate synthetic time-varying metric history for development."""
         svc_key = f"{host}:{service or ''}"
         base_val = (abs(hash(f"{svc_key}val")) % 60 + 20) / 100  # 0.2 – 0.8
@@ -145,7 +145,8 @@ class TestBackend(BackendBase):
         else:
             metric_defs = [("value", 0.0, "")]
 
-        result: dict[str, list[tuple[float, float, str]]] = {}
+        series: dict[str, list[tuple[float, float, str]]] = {}
+        titles: dict[str, str] = {}
         for label, phase, unit in metric_defs:
             amplitude = base_val * 0.3
             points: list[tuple[float, float, str]] = []
@@ -157,9 +158,10 @@ class TestBackend(BackendBase):
                 noise = ((hash(f"{ts:.0f}{label}") % 200) - 100) / 10000
                 value = round(max(0.0, base_val + wave + trend + noise), 4)
                 points.append((ts, value, unit))
-            result[label] = points
+            series[label] = points
+            titles[label] = " ".join(w.capitalize() for w in label.split("_"))
 
-        return result
+        return MetricHistoryResult(series=series, titles=titles)
 
     async def is_available(self) -> bool:
         return True

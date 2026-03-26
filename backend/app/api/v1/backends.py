@@ -171,7 +171,12 @@ class MetricPoint(BaseModel):
     unit: str
 
 
-@router.get("/{backend_id}/metric-history", response_model=dict[str, list[MetricPoint]])
+class MetricHistoryResponse(BaseModel):
+    series: dict[str, list[MetricPoint]]
+    titles: dict[str, str]
+
+
+@router.get("/{backend_id}/metric-history", response_model=MetricHistoryResponse)
 async def get_metric_history(
     backend_id: str,
     host: str = Query(...),
@@ -182,18 +187,24 @@ async def get_metric_history(
     """Return RRD metric history for a host/service using Livestatus rrddata (Checkmk only)."""
     backend = get_backend(backend_id)
     if backend is None:
-        return {}
+        return MetricHistoryResponse(series={}, titles={})
     end = int(time.time())
     start = end - minutes * 60
     try:
         raw = await backend.get_metric_history(host, service, start, end)
     except Exception as exc:
         logger.error("metric-history error: %s", exc, exc_info=True)
-        return {"_error": [MetricPoint(ts=0, value=0, unit=str(exc))]}
-    return {
-        label: [MetricPoint(ts=ts, value=v, unit=u) for ts, v, u in pts]
-        for label, pts in raw.items()
-    }
+        return MetricHistoryResponse(
+            series={"_error": [MetricPoint(ts=0, value=0, unit=str(exc))]},
+            titles={},
+        )
+    return MetricHistoryResponse(
+        series={
+            label: [MetricPoint(ts=ts, value=v, unit=u) for ts, v, u in pts]
+            for label, pts in raw.series.items()
+        },
+        titles=raw.titles,
+    )
 
 
 class HostGeo(BaseModel):
