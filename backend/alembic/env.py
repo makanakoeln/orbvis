@@ -2,21 +2,19 @@
 
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import create_engine, pool
-
-from app.core.config import settings
-from app.core.database import Base
 
 # Import all models so Alembic can detect them
 import app.models  # noqa: F401
+from alembic import context
+from app.core.config import settings
+from app.core.database import Base
 
 config = context.config
 
 # Use the synchronous URL for migrations — alembic doesn't need async drivers,
 # and using aiosqlite here causes a deadlock when called from run_in_executor.
-_sync_url = settings.database_url.replace("+aiosqlite", "").replace("+asyncpg", "")
-config.set_main_option("sqlalchemy.url", _sync_url)
+config.set_main_option("sqlalchemy.url", settings.sync_database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

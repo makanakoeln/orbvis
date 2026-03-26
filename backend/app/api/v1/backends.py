@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from app.api.v1.deps import get_current_user, require_admin
 from app.core.config import settings
+from app.integrations import checkmk as cmk_integration
 from app.schemas.backend import BackendConfig, BackendCreate, BackendUpdate
 from app.services import backend_service
 from app.services.state_service import get_backend, get_backend_objects
@@ -70,8 +71,6 @@ async def get_backend_context(backend_id: str, _: object = Depends(require_admin
     for non-OMD setups. The backend_id is accepted for future multi-site use;
     currently core detection is always local.
     """
-    from app.integrations import checkmk as cmk_integration
-
     return BackendContext(
         monitoring_core=cmk_integration.get_monitoring_core(),
         omd_site=settings.checkmk_site or None,

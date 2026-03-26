@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import os
@@ -165,8 +166,6 @@ def clone_board(name: str, new_name: str, alias: str | None = None) -> BoardConf
     dest_path = _board_path(new_name)
     if dest_path.exists():
         raise ValueError(f"Board '{new_name}' already exists")
-    import copy
-
     cfg = copy.deepcopy(src)
     cfg.name = new_name
     cfg.readonly = False  # clones are always editable

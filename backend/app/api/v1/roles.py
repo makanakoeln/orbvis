@@ -100,11 +100,11 @@ async def assign_permission(
     role_result = await db.execute(select(Role).where(Role.role_id == role_id))
     role = role_result.scalar_one_or_none()
     if role is None:
-        raise HTTPException(status_code=404, detail="Role not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     perm_result = await db.execute(select(Permission).where(Permission.perm_id == perm_id))
     perm = perm_result.scalar_one_or_none()
     if perm is None:
-        raise HTTPException(status_code=404, detail="Permission not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Permission not found")
     if perm not in role.permissions:
         role.permissions.append(perm)
     await db.flush()
@@ -122,5 +122,5 @@ async def remove_permission(
     role_result = await db.execute(select(Role).where(Role.role_id == role_id))
     role = role_result.scalar_one_or_none()
     if role is None:
-        raise HTTPException(status_code=404, detail="Role not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     role.permissions = [p for p in role.permissions if p.perm_id != perm_id]

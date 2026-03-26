@@ -2,22 +2,34 @@
 
 import asyncio
 import logging
+import os
+import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TypedDict
 
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import create_engine, inspect, select, text
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+from alembic import command
 
 _version_candidates = [
     Path(__file__).parent.parent.parent / "VERSION",  # repo root or $ORBVIS_DIR
     Path(__file__).parent.parent / "VERSION",  # inside backend/
 ]
 APP_VERSION = next((p.read_text().strip() for p in _version_candidates if p.is_file()), "0.0.0")
+
+_changelog_candidates = [
+    Path(__file__).parent.parent.parent / "CHANGELOG.md",
+    Path(__file__).parent.parent / "CHANGELOG.md",
+]
+_CHANGELOG = next((p.read_text() for p in _changelog_candidates if p.is_file()), "")
 
 
 class SecurityHeadersMiddleware:
@@ -81,8 +93,28 @@ from app.api.v1 import (
 from app.api.v1 import (
     settings as settings_api,
 )
+from app.backends.test import TestBackend
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.core.security import hash_password
+from app.integrations import checkmk as cmk_integration
+from app.models.permission import Permission
+from app.models.role import Role
+from app.models.user import User
+from app.schemas.backend import BackendConfig
+from app.schemas.board import (
+    BoardConfig,
+    BoardObject,
+    BoardUpdate,
+    DisplayConfig,
+    LabelConfig,
+    StaticView,
+    WorldmapView,
+)
+from app.seed_images import seed_builtin_images
+from app.services import backend_service
+from app.services.board_service import _board_path, _save_board_file, get_board, update_board
+from app.services.state_service import register_backend
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -93,17 +125,10 @@ logger = logging.getLogger(__name__)
 
 async def _ensure_admin_user() -> None:
     """Create default admin user with a random password if no users exist yet."""
-    import secrets as _secrets
-
-    from sqlalchemy import select
-
-    from app.core.security import hash_password
-    from app.models.user import User
-
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(User).limit(1))
         if result.scalar_one_or_none() is None:
-            password = _secrets.token_urlsafe(16)
+            password = secrets.token_urlsafe(16)
             admin = User(
                 name="admin",
                 password=hash_password(password),
@@ -125,10 +150,6 @@ async def _ensure_admin_user() -> None:
 
 async def _seed_default_roles() -> None:
     """Create default roles with permissions idempotently on startup."""
-    from sqlalchemy import select
-
-    from app.models.permission import Permission
-    from app.models.role import Role
 
     class _PermDef(TypedDict):
         mod: str
@@ -225,16 +246,6 @@ _DEMO_BG_SVG = """\
 
 def _seed_demo_map() -> None:
     """Write the built-in demo map to disk if it doesn't already exist."""
-    from app.schemas.board import (
-        BoardConfig,
-        BoardObject,
-        BoardUpdate,
-        DisplayConfig,
-        LabelConfig,
-        StaticView,
-    )
-    from app.services.board_service import _board_path, _save_board_file, get_board, update_board
-
     # Always ensure the background SVG is present on disk
     bg_dir = Path(settings.boards_dir) / "backgrounds"
     bg_dir.mkdir(parents=True, exist_ok=True)
@@ -433,9 +444,6 @@ def _seed_demo_map() -> None:
 
 def _seed_demo_worldmap() -> None:
     """Write the built-in world demo map to disk if it doesn't already exist."""
-    from app.schemas.board import BoardConfig, BoardObject, DisplayConfig, LabelConfig, WorldmapView
-    from app.services.board_service import _board_path, _save_board_file
-
     if _board_path("demo-world").exists():
         return
 
@@ -555,13 +563,8 @@ def _run_migrations() -> None:
     - Partial migration: ``alembic_version`` table empty (DDL ran but version
       row was never committed) → stamp at head.
     """
-    from alembic.config import Config
-    from sqlalchemy import create_engine, inspect, text
-
-    from alembic import command
-
     alembic_ini = Path(__file__).parent.parent / "alembic.ini"
-    sync_url = settings.database_url.replace("+aiosqlite", "").replace("+asyncpg", "")
+    sync_url = settings.sync_database_url
 
     engine = create_engine(sync_url)
     try:
@@ -591,13 +594,7 @@ def _run_migrations() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: startup and shutdown."""
-    from app.integrations import checkmk as cmk_integration
-
     cmk_integration.setup()
-
-    from app.backends.test import TestBackend
-    from app.services import backend_service
-    from app.services.state_service import register_backend
 
     if settings.secret_key == "change-me-in-production":
         logger.critical(
@@ -608,9 +605,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("Starting OrbVis backend…")
     sep = "=" * 60
     print(f"\n{sep}", flush=True)
-    import os as _os
-
-    port = _os.environ.get("ORBVIS_PORT", "8082")
+    port = os.environ.get("ORBVIS_PORT", "8082")
     host_port = "" if port == "80" else f":{port}"
     print("  OrbVis is starting up.", flush=True)
     print(f"  Open in your browser: http://localhost{host_port}/orbvis", flush=True)
@@ -629,8 +624,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if settings.checkmk_omd_root and settings.checkmk_site:
         conn_id = f"cmk_{settings.checkmk_site}"
         if not backend_service.load_all():
-            from app.schemas.backend import BackendConfig
-
             socket_path = str(Path(settings.checkmk_omd_root) / "tmp" / "run" / "live")
             cfg = BackendConfig(
                 id=conn_id,
@@ -655,9 +648,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await _seed_default_roles()
     _seed_demo_map()
     _seed_demo_worldmap()
-
-    from app.seed_images import seed_builtin_images
-
     seed_builtin_images(Path(settings.boards_dir).parent / "images")
 
     yield
@@ -701,13 +691,7 @@ async def health_check():
 
 @app.get("/api/changelog")
 async def get_changelog():
-    for candidate in [
-        Path(__file__).parent.parent.parent / "CHANGELOG.md",
-        Path(__file__).parent.parent / "CHANGELOG.md",
-    ]:
-        if candidate.is_file():
-            return PlainTextResponse(candidate.read_text())
-    return PlainTextResponse("")
+    return PlainTextResponse(_CHANGELOG)
 
 
 # Serve background images uploaded via the API

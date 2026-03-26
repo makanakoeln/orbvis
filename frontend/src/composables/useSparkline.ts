@@ -5,10 +5,12 @@ import { select } from 'd3-selection';
 import { area, curveMonotoneX, line } from 'd3-shape';
 import { transition } from 'd3-transition';
 import type { Ref } from 'vue';
-import { onMounted, onUnmounted, watch } from 'vue';
+import { onMounted, watch } from 'vue';
 
 import type { MetricSnapshot } from '@/stores/states';
 import { utilColor } from '@/utils/perf';
+
+import { useD3Cleanup } from './useD3Cleanup';
 
 // d3-transition side-effects
 void transition;
@@ -109,8 +111,5 @@ export function useSparkline(opts: SparklineOptions) {
 
   watch(opts.data, () => render(true), { flush: 'post' });
 
-  onUnmounted(() => {
-    const svg = opts.svgRef.value;
-    if (svg) select(svg).selectAll('*').interrupt();
-  });
+  useD3Cleanup(opts.svgRef);
 }

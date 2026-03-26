@@ -6,10 +6,12 @@ import { scaleLinear } from 'd3-scale';
 import { select } from 'd3-selection';
 import { area, curveMonotoneX, line } from 'd3-shape';
 import type { Ref } from 'vue';
-import { onMounted, onUnmounted, watch } from 'vue';
+import { onMounted, watch } from 'vue';
 
 import type { MetricPoint } from '@/stores/states';
 import { utilColor } from '@/utils/perf';
+
+import { useD3Cleanup } from './useD3Cleanup';
 
 export const CHART_PALETTE = [
   '#6366f1',
@@ -381,8 +383,5 @@ export function useMetricChart(
 
   onMounted(() => render(false));
   watch(data, () => render(true), { flush: 'post' });
-  onUnmounted(() => {
-    const svg = svgRef.value;
-    if (svg) select(svg).selectAll('*').interrupt();
-  });
+  useD3Cleanup(svgRef);
 }

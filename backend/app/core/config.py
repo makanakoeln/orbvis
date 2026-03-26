@@ -4,7 +4,7 @@ import secrets
 import warnings
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -55,6 +55,11 @@ class Settings(BaseSettings):
 
     # CORS
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def sync_database_url(self) -> str:
+        return self.database_url.replace("+aiosqlite", "").replace("+asyncpg", "")
 
     @field_validator("secret_key", mode="after")
     @classmethod

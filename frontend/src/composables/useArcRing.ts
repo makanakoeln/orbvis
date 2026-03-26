@@ -4,7 +4,9 @@ import { select } from 'd3-selection';
 import { arc } from 'd3-shape';
 import { transition } from 'd3-transition';
 import type { Ref } from 'vue';
-import { onMounted, onUnmounted, watch } from 'vue';
+import { onMounted, watch } from 'vue';
+
+import { useD3Cleanup } from './useD3Cleanup';
 
 // d3-transition side-effects must be imported for .transition() to work on selections
 void transition;
@@ -227,8 +229,5 @@ export function useArcRing(opts: ArcRingOptions) {
     { flush: 'post', immediate: false },
   );
 
-  onUnmounted(() => {
-    const svg = opts.svgRef.value;
-    if (svg) select(svg).selectAll('*').interrupt();
-  });
+  useD3Cleanup(opts.svgRef);
 }
