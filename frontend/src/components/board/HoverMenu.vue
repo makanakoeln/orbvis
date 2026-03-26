@@ -11,7 +11,11 @@
       <template v-else>
         <!-- Header -->
         <div class="flex items-start gap-2 mb-2">
-          <span class="w-2 h-2 rounded-full mt-1 shrink-0" :class="stateColor" />
+          <span
+            v-if="hasMonitoring"
+            class="w-2 h-2 rounded-full mt-1 shrink-0"
+            :class="stateColor"
+          />
           <div class="min-w-0">
             <div class="font-semibold text-[var(--text)] text-sm leading-tight truncate">
               {{ displayName }}
@@ -20,74 +24,82 @@
           </div>
         </div>
 
-        <!-- State -->
-        <div v-if="state" class="text-xs font-semibold mt-1" :class="stateTextColor">
-          {{ state.state }}
-        </div>
+        <template v-if="hasMonitoring">
+          <!-- State -->
+          <div v-if="state" class="text-xs font-semibold mt-1" :class="stateTextColor">
+            {{ state.state }}
+          </div>
 
-        <!-- Output -->
-        <div
-          v-if="state?.output"
-          class="text-xs text-[var(--text-muted)] mt-2 leading-snug line-clamp-3 break-words"
-        >
-          {{ state.output }}
-        </div>
-
-        <!-- Badges -->
-        <div
-          v-if="state?.acknowledged || state?.in_downtime || state?.stale"
-          class="flex gap-1.5 mt-2.5 flex-wrap"
-        >
-          <span
-            v-if="state.acknowledged"
-            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/20 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/40 dark:ring-amber-500/25"
+          <!-- Output -->
+          <div
+            v-if="state?.output"
+            class="text-xs text-[var(--text-muted)] mt-2 leading-snug line-clamp-3 break-words"
           >
-            <svg
-              class="w-2.5 h-2.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="3"
+            {{ state.output }}
+          </div>
+
+          <!-- Badges -->
+          <div
+            v-if="state?.acknowledged || state?.in_downtime || state?.stale"
+            class="flex gap-1.5 mt-2.5 flex-wrap"
+          >
+            <span
+              v-if="state.acknowledged"
+              class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/20 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/40 dark:ring-amber-500/25"
             >
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
-            ACK
-          </span>
-          <span
-            v-if="state.in_downtime"
-            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/20 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 ring-1 ring-blue-500/40 dark:ring-blue-500/25"
-          >
-            <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-            </svg>
-            DOWNTIME
-          </span>
-          <span
-            v-if="state.stale"
-            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-zinc-500/20 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-500/40 dark:ring-zinc-500/25"
-          >
-            <svg
-              class="w-2.5 h-2.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2.5"
+              <svg
+                class="w-2.5 h-2.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="3"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+              ACK
+            </span>
+            <span
+              v-if="state.in_downtime"
+              class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/20 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 ring-1 ring-blue-500/40 dark:ring-blue-500/25"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            STALE
-          </span>
-        </div>
+              <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+              </svg>
+              DOWNTIME
+            </span>
+            <span
+              v-if="state.stale"
+              class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-zinc-500/20 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-500/40 dark:ring-zinc-500/25"
+            >
+              <svg
+                class="w-2.5 h-2.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              STALE
+            </span>
+          </div>
 
-        <!-- Sparkline trend chart -->
-        <div v-if="sparkData.length > 1" class="mt-3 pt-2 border-t border-[var(--border)]">
-          <div class="text-[10px] text-[var(--text-muted)] mb-1 font-medium">Trend</div>
-          <svg ref="sparkSvgRef" width="120" height="40" class="w-full" style="overflow: visible" />
-        </div>
+          <!-- Sparkline trend chart -->
+          <div v-if="sparkData.length > 1" class="mt-3 pt-2 border-t border-[var(--border)]">
+            <div class="text-[10px] text-[var(--text-muted)] mb-1 font-medium">Trend</div>
+            <svg
+              ref="sparkSvgRef"
+              width="120"
+              height="40"
+              class="w-full"
+              style="overflow: visible"
+            />
+          </div>
+        </template>
       </template>
     </div>
   </div>
@@ -100,7 +112,7 @@ import { computed, ref } from 'vue';
 import { useSparkline } from '@/composables/useSparkline';
 import { useStatesStore } from '@/stores/states';
 import type { BoardObject, ObjectState } from '@/types/api';
-import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming';
+import { getBoardObjectName, getObjectTypeLabel, VISUAL_ONLY_TYPES } from '@/utils/naming';
 import { interpolateTemplate } from '@/utils/template';
 
 const _PURIFY_CONFIG = {
@@ -132,6 +144,10 @@ const renderedTemplate = computed(() => {
 const displayName = computed(() => getBoardObjectName(props.object));
 
 const hoverTypeLabel = computed(() => getObjectTypeLabel(props.object));
+
+const hasMonitoring = computed(
+  () => !(VISUAL_ONLY_TYPES as readonly string[]).includes(props.object.type),
+);
 
 const STATE_BG: Record<string, string> = {
   UP: 'bg-green-400',

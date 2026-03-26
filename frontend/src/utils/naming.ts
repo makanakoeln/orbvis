@@ -1,4 +1,7 @@
-import type { BoardObject } from '@/types/api';
+import type { BoardObject, ObjectType } from '@/types/api';
+
+/** Object types that are purely decorative and carry no monitoring state. */
+export const VISUAL_ONLY_TYPES: readonly ObjectType[] = ['image', 'textbox', 'line'];
 
 /**
  * Return a human-readable type label for a board object.
