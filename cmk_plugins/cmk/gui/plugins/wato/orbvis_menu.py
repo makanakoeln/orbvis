@@ -66,6 +66,7 @@ except ImportError:
         from cmk.gui.i18n import _
         from cmk.gui.main_menu import main_menu_registry
         from cmk.gui.main_menu_types import MainMenu, MainMenuItem, MainMenuTopic
+        from cmk.gui.type_defs import IconNames, StaticIcon
         from cmk.gui.utils.roles import UserPermissions
 
         def _orbvis_topics_25(user_permissions: UserPermissions) -> list:
@@ -73,35 +74,35 @@ except ImportError:
                 MainMenuTopic(
                     name="orbvis",
                     title=_("OrbVis"),
-                    icon="save_dashboard",
+                    icon=StaticIcon(IconNames.save_dashboard),
                     entries=[
                         MainMenuItem(
                             name="orbvis_boards",
                             title=_("Boards"),
                             url=f"/{_SITE}/orbvis/",
                             sort_index=10,
-                            icon="save_dashboard",
+                            icon=StaticIcon(IconNames.save_dashboard),
                         ),
                         MainMenuItem(
                             name="orbvis_settings",
                             title=_("Settings"),
                             url=f"/{_SITE}/orbvis/#/admin/settings",
                             sort_index=20,
-                            icon="configuration",
+                            icon=StaticIcon(IconNames.configuration),
                         ),
                         MainMenuItem(
                             name="orbvis_connections",
                             title=_("Connections"),
                             url=f"/{_SITE}/orbvis/#/admin/connections",
                             sort_index=30,
-                            icon="sites",
+                            icon=StaticIcon(IconNames.sites),
                         ),
                         MainMenuItem(
                             name="orbvis_images",
                             title=_("Images"),
                             url=f"/{_SITE}/orbvis/#/admin/icons",
                             sort_index=40,
-                            icon="icons",
+                            icon=StaticIcon(IconNames.icons),
                         ),
                     ],
                 )
@@ -111,7 +112,7 @@ except ImportError:
             MainMenu(
                 name="orbvis",
                 title=_("OrbVis"),
-                icon="save_dashboard",
+                icon=StaticIcon(IconNames.save_dashboard),
                 sort_index=16,
                 topics=_orbvis_topics_25,
             )
