@@ -7,10 +7,10 @@ from datetime import UTC, datetime
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.deps import get_current_user
+from app.api.v1.deps import bearer, get_current_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.ratelimit import login_limiter
@@ -36,7 +36,6 @@ from app.services.auth_service import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-bearer = HTTPBearer()
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -134,11 +133,11 @@ async def logout(
 ) -> None:
     try:
         payload = decode_token(credentials.credentials)
-        jti = str(payload.get("jti", ""))
+        jti = payload.get("jti", "")
         exp = payload.get("exp")
         expiry = datetime.fromtimestamp(float(str(exp)), tz=UTC) if exp else datetime.now(UTC)
         if jti:
-            blocklist_token(jti, expiry)
-    except Exception:
-        pass
+            blocklist_token(str(jti), expiry)
+    except Exception as exc:
+        logger.warning("logout: failed to blocklist token: %s", exc)
     return None

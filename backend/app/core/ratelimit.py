@@ -19,28 +19,31 @@ class RateLimiter:
         self._calls: dict[str, deque[float]] = defaultdict(deque)
         self._lock = Lock()
 
+    def _prune(self, q: deque[float], cutoff: float) -> None:
+        """Remove timestamps older than cutoff. Must be called under self._lock."""
+        while q and q[0] < cutoff:
+            q.popleft()
+
     def is_blocked(self, key: str) -> bool:
         """Return True if the key has exceeded the limit (check only, does not record)."""
         now = time.monotonic()
-        cutoff = now - self._window
         with self._lock:
-            q = self._calls[key]
-            while q and q[0] < cutoff:
-                q.popleft()
+            q = self._calls.get(key)
+            if not q:
+                return False
+            self._prune(q, now - self._window)
             return len(q) >= self._max
 
     def record(self, key: str) -> None:
-        """Record one event for key (call after a failed attempt)."""
+        """Record one failed attempt for key."""
         now = time.monotonic()
-        cutoff = now - self._window
         with self._lock:
             q = self._calls[key]
-            while q and q[0] < cutoff:
-                q.popleft()
+            self._prune(q, now - self._window)
             q.append(now)
 
     def retry_after(self, key: str) -> float:
-        """Seconds until the oldest call in the window expires."""
+        """Seconds until the oldest recorded attempt falls outside the window."""
         now = time.monotonic()
         with self._lock:
             q = self._calls.get(key)
