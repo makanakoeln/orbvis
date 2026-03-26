@@ -3,15 +3,23 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import create_access_token, create_refresh_token, decode_token
+from app.core.ratelimit import login_limiter
+from app.core.security import (
+    blocklist_token,
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+)
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse
 from app.schemas.user import UserRead
@@ -28,10 +36,21 @@ from app.services.auth_service import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+bearer = HTTPBearer()
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+async def login(
+    data: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)
+) -> TokenResponse:
+    client_ip = request.client.host if request.client else "unknown"
+    if not login_limiter.is_allowed(client_ip):
+        retry = login_limiter.retry_after(client_ip)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many login attempts. Try again in {int(retry) + 1}s.",
+            headers={"Retry-After": str(int(retry) + 1)},
+        )
     user = await authenticate_user(db, data.username, data.password)
     if user is None:
         raise HTTPException(
@@ -108,7 +127,17 @@ async def sso_login(request: Request, db: AsyncSession = Depends(get_db)) -> Tok
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout(_: User = Depends(get_current_user)) -> None:
-    # JWT is stateless; client discards the token.
-    # For server-side invalidation, add a token blocklist here.
+async def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer),
+    _: User = Depends(get_current_user),
+) -> None:
+    try:
+        payload = decode_token(credentials.credentials)
+        jti = str(payload.get("jti", ""))
+        exp = payload.get("exp")
+        expiry = datetime.fromtimestamp(float(str(exp)), tz=UTC) if exp else datetime.now(UTC)
+        if jti:
+            blocklist_token(jti, expiry)
+    except Exception:
+        pass
     return None

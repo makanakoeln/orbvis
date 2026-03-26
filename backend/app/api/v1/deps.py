@@ -8,7 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import decode_token
+from app.core.security import decode_token, is_token_blocked
 from app.models.user import User
 from app.services.auth_service import get_user_by_id
 
@@ -29,8 +29,12 @@ async def get_current_user(
         if payload.get("type") != "access":
             raise credentials_exception
         user_id: int = int(str(payload["sub"]))
+        jti = str(payload.get("jti", ""))
     except (jwt.PyJWTError, KeyError, ValueError):
         raise credentials_exception from None
+
+    if jti and is_token_blocked(jti):
+        raise credentials_exception
 
     user = await get_user_by_id(db, user_id)
     if user is None or not user.is_active:

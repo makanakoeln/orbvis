@@ -12,6 +12,12 @@ from app.schemas.state import ObjectState
 
 logger = logging.getLogger(__name__)
 
+
+def _iq(value: str) -> str:
+    """Escape a value for use inside an Icinga2 filter string literal."""
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
 # Icinga2 host state integers → OrbVis strings
 _HOST_STATE_MAP = {0: "UP", 1: "DOWN", 2: "UNREACHABLE"}
 # Icinga2 service state integers → OrbVis strings
@@ -86,7 +92,7 @@ class Icinga2Backend(BackendBase):
         try:
             results = await self._get_results(
                 "objects/hosts",
-                params={"filter": f'host.name=="{hostname}"'},
+                params={"filter": f'host.name=="{_iq(hostname)}"'},
             )
         except Exception as exc:
             logger.warning("Icinga2 get_host_state(%s) failed: %s", hostname, exc)
@@ -117,7 +123,9 @@ class Icinga2Backend(BackendBase):
         try:
             results = await self._get_results(
                 "objects/services",
-                params={"filter": f'service.host_name=="{host}" && service.name=="{service}"'},
+                params={
+                    "filter": f'service.host_name=="{_iq(host)}" && service.name=="{_iq(service)}"'
+                },
             )
         except Exception as exc:
             logger.warning("Icinga2 get_service_state(%s/%s) failed: %s", host, service, exc)
@@ -150,7 +158,7 @@ class Icinga2Backend(BackendBase):
         try:
             results = await self._get_results(
                 "objects/hosts",
-                params={"filter": f'"{group}" in host.groups'},
+                params={"filter": f'"{_iq(group)}" in host.groups'},
             )
         except Exception as exc:
             logger.warning("Icinga2 get_hostgroup_states(%s) failed: %s", group, exc)
@@ -179,7 +187,7 @@ class Icinga2Backend(BackendBase):
         try:
             results = await self._get_results(
                 "objects/services",
-                params={"filter": f'"{group}" in service.groups'},
+                params={"filter": f'"{_iq(group)}" in service.groups'},
             )
         except Exception as exc:
             logger.warning("Icinga2 get_servicegroup_states(%s) failed: %s", group, exc)
@@ -231,14 +239,14 @@ class Icinga2Backend(BackendBase):
             if group_type == "hostgroup":
                 results = await self._get_results(
                     "objects/hosts",
-                    params={"filter": f'"{group_name}" in host.groups', "attrs": "name"},
+                    params={"filter": f'"{_iq(group_name)}" in host.groups', "attrs": "name"},
                 )
                 return [r["attrs"]["name"] for r in results]
             if group_type == "servicegroup":
                 results = await self._get_results(
                     "objects/services",
                     params={
-                        "filter": f'"{group_name}" in service.groups',
+                        "filter": f'"{_iq(group_name)}" in service.groups',
                         "attrs": "host_name,name",
                     },
                 )
@@ -282,7 +290,7 @@ class Icinga2Backend(BackendBase):
             results = await self._get_results(
                 "objects/services",
                 params={
-                    "filter": f'service.host_name=="{hostname}"',
+                    "filter": f'service.host_name=="{_iq(hostname)}"',
                     "attrs": "name,state,last_check_result",
                 },
             )
