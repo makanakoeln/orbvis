@@ -150,9 +150,29 @@
           {{ rotationCountdown }}{{ t('board.rotationSuffix') }}
         </button>
 
-        <!-- Fullscreen / kiosk button (hidden in Checkmk — browser fullscreen can't hide CMK chrome) -->
+        <!-- Fullscreen: browser fullscreen in standalone, new-tab kiosk in Checkmk -->
         <button
-          v-if="!auth.ssoActive && !auth.isCheckmkDeployment"
+          v-if="auth.ssoActive || auth.isCheckmkDeployment"
+          class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+          :title="t('board.openInNewTab')"
+          @click="openKioskInNewTab"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+            />
+          </svg>
+        </button>
+        <button
+          v-else
           class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
           :title="t('board.fullscreen')"
           @click="enterFullscreen"
@@ -730,6 +750,11 @@ const settingsStore = useSettingsStore();
 
 const boardName = computed(() => route.params.name as string);
 const isKiosk = computed(() => !!route.meta.kiosk);
+
+function openKioskInNewTab() {
+  const url = router.resolve({ name: 'board-kiosk', params: { name: boardName.value } }).href;
+  window.open(url, '_blank');
+}
 
 function enterFullscreen() {
   router.push({ name: 'board-kiosk', params: { name: boardName.value } });

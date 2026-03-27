@@ -125,6 +125,7 @@ export default {
     sparklineTrend: 'Utilization (24h)',
     fullscreen: 'Full screen',
     exitFullscreen: 'Exit full screen',
+    openInNewTab: 'Open in new tab (full screen)',
     utilizationRing: 'Utilization ring (first metric)',
   },
   boardSettings: {

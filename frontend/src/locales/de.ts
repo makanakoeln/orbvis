@@ -127,6 +127,7 @@ export default {
     sparklineTrend: 'Auslastung (24h)',
     fullscreen: 'Vollbild',
     exitFullscreen: 'Vollbild beenden',
+    openInNewTab: 'In neuem Tab öffnen (Vollbild)',
     utilizationRing: 'Auslastungsring (erste Metrik)',
   },
   boardSettings: {
