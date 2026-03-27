@@ -437,6 +437,18 @@ function onLineClick(line: BoardObjectType) {
   if (props.editMode) emit('object-click', line);
 }
 
+function _openUrl(url: string, target: string) {
+  // Use a real <a> click so the browser doesn't treat it as a popup (important
+  // when OrbVis runs inside a Checkmk iframe — window.open gets popup-blocked).
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = target;
+  a.rel = 'noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
   if (props.editMode) {
     if (!_didMove.value) emit('object-click', obj, event);
@@ -445,7 +457,7 @@ function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
   // Suppress navigation click if the pointer just completed a real drag move
   if (_didMove.value) return;
   if (obj.url) {
-    window.open(obj.url, obj.url_target || '_blank');
+    _openUrl(obj.url, obj.url_target || '_blank');
     return;
   }
   if (obj.type === 'map' && obj.map_name) {
@@ -454,7 +466,7 @@ function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
   }
   const cmkUrl = buildCheckmkUrl(obj);
   if (cmkUrl) {
-    window.open(cmkUrl, '_blank');
+    _openUrl(cmkUrl, '_blank');
   }
 }
 

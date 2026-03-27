@@ -754,7 +754,13 @@ const isKiosk = computed(() => !!route.meta.kiosk);
 
 function openKioskInNewTab() {
   const url = router.resolve({ name: 'board-kiosk', params: { name: boardName.value } }).href;
-  window.open(url, '_blank');
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 function enterFullscreen() {
