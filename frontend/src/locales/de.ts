@@ -204,6 +204,7 @@ export default {
     link: 'Link',
     url: 'URL',
     target: 'Ziel',
+    urlAutoHint: 'Automatisch aus Checkmk-URL abgeleitet wenn leer',
     targetNewTab: 'Neuer Tab',
     targetSameTab: 'Gleicher Tab',
     targetTopFrame: 'Übergeordneter Frame',

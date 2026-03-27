@@ -645,9 +645,18 @@
               </svg>
             </button>
             <div v-if="showLink" class="space-y-3">
-              <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.url') }}</label>
-                <input v-model="form.url" class="field flex-1 font-mono" placeholder="https://…" />
+              <div class="field-row items-start">
+                <label class="field-label mt-2">{{ t('boardSettings.url') }}</label>
+                <div class="flex-1 space-y-1">
+                  <input
+                    v-model="form.url"
+                    class="field w-full font-mono"
+                    :placeholder="autoUrl ?? 'https://…'"
+                  />
+                  <p v-if="autoUrl && !form.url" class="text-[10px] text-zinc-600">
+                    {{ t('boardSettings.urlAutoHint') }}
+                  </p>
+                </div>
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.target') }}</label>
@@ -830,6 +839,7 @@ const props = defineProps<{
   state?: ObjectState;
   backendId: string;
   mapType?: string;
+  checkmkUrl?: string | null;
   anchorRect?: { left: number; top: number; right: number; bottom: number } | null;
 }>();
 
@@ -841,6 +851,32 @@ const emit = defineEmits<{
 
 const auth = useAuthStore();
 const statesStore = useStatesStore();
+
+// Auto-derived Checkmk URL for the current object (used as placeholder / hint in the URL field)
+const autoUrl = computed((): string | null => {
+  const base = props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
+  if (!base) return null;
+  const site = base.split('/').at(-1) || null;
+  const p: Record<string, string> = {};
+  if (site) p.site = site;
+  const { type } = props.object;
+  const host = form.host_name;
+  const svc = form.service_description;
+  const grp = form.group_name;
+  if (type === 'host' && host) {
+    return `${base}/check_mk/view.py?${new URLSearchParams({ ...p, view_name: 'hoststatus', host })}`;
+  }
+  if (type === 'service' && host && svc) {
+    return `${base}/check_mk/view.py?${new URLSearchParams({ ...p, view_name: 'service', host, service: svc })}`;
+  }
+  if (type === 'hostgroup' && grp) {
+    return `${base}/check_mk/view.py?${new URLSearchParams({ ...p, view_name: 'hostgroup', hostgroup: grp })}`;
+  }
+  if (type === 'servicegroup' && grp) {
+    return `${base}/check_mk/view.py?${new URLSearchParams({ ...p, view_name: 'servicegroup', servicegroup: grp })}`;
+  }
+  return null;
+});
 
 // Popover vs centered modal
 const isPopover = computed(() => !!props.anchorRect);

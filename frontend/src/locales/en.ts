@@ -204,6 +204,7 @@ export default {
     target: 'Target',
     targetNewTab: 'New tab',
     targetSameTab: 'Same tab',
+    urlAutoHint: 'Automatically derived from Checkmk URL when left empty',
     targetTopFrame: 'Top frame',
     saveFailed: 'Save failed',
     templates: 'Templates',

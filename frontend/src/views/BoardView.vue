@@ -683,6 +683,7 @@
         :state="statesStore.states[propsModalObject.id]"
         :backend-id="boardConfig?.backend_id ?? ''"
         :map-type="boardConfig?.view.type"
+        :checkmk-url="checkmkUrl"
         :anchor-rect="propsModalAnchor"
         @close="_closePropsModal()"
         @save="onPropsModalSave"
