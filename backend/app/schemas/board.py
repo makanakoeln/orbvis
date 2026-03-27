@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 ObjectType = Literal[
     "host",
@@ -117,8 +117,18 @@ class BoardObject(BaseModel):
     graph_width: int = 400
     graph_height: int = 200
     graph_refresh_interval: int = 0
-    graph_metric: str | None = None
+    graph_metric: list[str] | None = None
+    graph_id: str | None = None
     graph_time_window: int | None = None  # minutes; None = all stored history
+
+    @field_validator("graph_metric", mode="before")
+    @classmethod
+    def _coerce_graph_metric(cls, v: object) -> list[str] | None:
+        # Backward compat: old saved configs may have a plain string value
+        if isinstance(v, str):
+            return [v] if v else None
+        return v  # type: ignore[return-value]
+
     # Line custom colors
     line_color: str | None = None
     line_color_border: str | None = None
@@ -221,7 +231,8 @@ class BoardObjectUpdate(BaseModel):
     graph_width: int | None = None
     graph_height: int | None = None
     graph_refresh_interval: int | None = None
-    graph_metric: str | None = None
+    graph_metric: list[str] | None = None
+    graph_id: str | None = None
     graph_time_window: int | None = None
     line_color: str | None = None
     line_color_border: str | None = None

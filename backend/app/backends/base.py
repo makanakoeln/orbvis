@@ -9,15 +9,26 @@ from app.schemas.state import ObjectState
 
 
 @dataclass
+class GraphGroup:
+    """A named group of metrics that share a common Y-axis (derived from a CMK graph template)."""
+
+    id: str
+    title: str
+    metrics: list[str]  # ordered metric labels
+
+
+@dataclass
 class MetricHistoryResult:
     """Combined result of a metric history fetch.
 
     series: metric_id → list of (timestamp, value, unit) tuples
     titles: metric_id → human-readable display name
+    graphs: CMK graph template groups (empty for non-CMK backends)
     """
 
     series: dict[str, list[tuple[float, float, str]]] = field(default_factory=dict)
     titles: dict[str, str] = field(default_factory=dict)
+    graphs: list[GraphGroup] = field(default_factory=list)
 
 
 class BackendBase(ABC):
@@ -107,6 +118,13 @@ class BackendBase(ABC):
     async def get_host_geo(self, hostname: str) -> tuple[float, float] | None:
         """Return (lat, lng) from orbvis_lat/orbvis_lng host labels, or None if not set."""
         return None
+
+    async def get_graph_templates(self, host: str, service: str | None) -> list[GraphGroup]:
+        """Return applicable CMK graph template groups for a host/service.
+
+        Default: empty list (non-CMK backends don't have graph templates).
+        """
+        return []
 
     async def get_metric_history(
         self,

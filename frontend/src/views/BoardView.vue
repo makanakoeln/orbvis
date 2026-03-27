@@ -2,6 +2,7 @@
   <div class="flex flex-col flex-1 overflow-hidden bg-[var(--bg)]">
     <!-- Slim map-specific topbar -->
     <div
+      v-if="!isKiosk"
       class="bg-[var(--bg-surface)] border-b border-[var(--border)] px-4 py-2 flex items-center justify-between shrink-0 z-30"
     >
       <!-- Left: back link (Checkmk/SSO mode) + board name -->
@@ -147,6 +148,27 @@
             />
           </svg>
           {{ rotationCountdown }}{{ t('board.rotationSuffix') }}
+        </button>
+
+        <!-- Fullscreen / kiosk button -->
+        <button
+          class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+          :title="t('board.fullscreen')"
+          @click="router.push({ name: 'board-kiosk', params: { name: boardName } })"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"
+            />
+          </svg>
         </button>
 
         <!-- Settings button (admin only) -->
@@ -690,6 +712,7 @@ const connectionsStore = useConnectionsStore();
 const settingsStore = useSettingsStore();
 
 const boardName = computed(() => route.params.name as string);
+const isKiosk = computed(() => !!route.meta.kiosk);
 
 // ─── Board tour ───────────────────────────────────────────────────────────────
 

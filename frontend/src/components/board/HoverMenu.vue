@@ -90,7 +90,9 @@
 
           <!-- Sparkline trend chart -->
           <div v-if="sparkData.length > 1" class="mt-3 pt-2 border-t border-[var(--border)]">
-            <div class="text-[10px] text-[var(--text-muted)] mb-1 font-medium">Trend</div>
+            <div class="text-[10px] text-[var(--text-muted)] mb-1 font-medium">
+              {{ t('board.sparklineTrend') }}
+            </div>
             <svg
               ref="sparkSvgRef"
               width="120"
@@ -108,6 +110,7 @@
 <script setup lang="ts">
 import DOMPurify, { type Config as DOMPurifyConfig } from 'dompurify';
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import { useSparkline } from '@/composables/useSparkline';
 import { useStatesStore } from '@/stores/states';
@@ -128,6 +131,7 @@ const props = defineProps<{
   template?: string | null;
 }>();
 
+const { t } = useI18n();
 const statesStore = useStatesStore();
 
 const sparkSvgRef = ref<SVGSVGElement | null>(null);

@@ -8,13 +8,15 @@ import json as _json
 import logging
 import pkgutil
 import re as _re
+import types
+from collections.abc import Iterator
 from datetime import UTC
 from functools import lru_cache
 from pathlib import Path
 
 import httpx
 
-from app.backends.base import BackendBase, MetricHistoryResult
+from app.backends.base import BackendBase, GraphGroup, MetricHistoryResult
 from app.core.config import settings
 from app.integrations import checkmk as _cmk_integration
 from app.schemas.state import ObjectState
@@ -27,59 +29,155 @@ def _identity(x: str) -> str:
 
 
 @lru_cache(maxsize=1)
-def _load_cmk_metric_titles() -> dict[str, str]:
-    """Discover metric titles from all ``cmk.plugins.*.graphing`` submodules.
+def _get_plugin_dirs() -> set[Path]:
+    """Return all cmk.plugins sub-package directories.
 
-    Returns an empty dict in non-CMK environments.
+    walk_packages does not recurse into namespace packages without __init__.py
+    (e.g. ``collection``), so we enumerate subdirectories on disk directly.
     """
-    if not _cmk_integration.available:
-        return {}
-
     try:
-        import cmk.plugins as _cmk_plugins
-        from cmk.graphing.v1 import metrics as _gm
+        import cmk.plugins as _p
     except ImportError:
-        return {}
-
-    titles: dict[str, str] = {}
-
-    # Enumerate plugin directories directly: walk_packages does not recurse into
-    # namespace packages without __init__.py (e.g. "collection"), so we iterate
-    # subdirectories on disk and import each *.graphing package explicitly.
-    plugin_dirs: set[Path] = set()
-    for p in _cmk_plugins.__path__:
+        return set()
+    dirs: set[Path] = set()
+    for p in _p.__path__:
         try:
-            plugin_dirs.update(d for d in Path(p).iterdir() if d.is_dir())
+            dirs.update(d for d in Path(p).iterdir() if d.is_dir())
         except OSError:
             pass
+    return dirs
 
+
+def _iter_graphing_modules(plugin_dirs: set[Path]) -> Iterator[types.ModuleType]:
+    """Yield imported graphing submodules for all plugin directories."""
     for plugin_dir in plugin_dirs:
         graphing_pkg = f"cmk.plugins.{plugin_dir.name}.graphing"
         try:
             graphing_mod = importlib.import_module(graphing_pkg)
         except Exception:
             continue
-
         for _finder, submod_name, _ispkg in pkgutil.iter_modules(
             graphing_mod.__path__, f"{graphing_pkg}."
         ):
             try:
-                mod = importlib.import_module(submod_name)
+                yield importlib.import_module(submod_name)
             except Exception:
                 continue
-            for attr in dir(mod):
-                if not attr.startswith("metric_"):
-                    continue
-                obj = getattr(mod, attr)
-                if not isinstance(obj, _gm.Metric):
-                    continue
+
+
+def _extract_quantity_metrics(qty: object) -> Iterator[str]:
+    """Recursively yield metric names from a CMK graphing Quantity expression."""
+    if isinstance(qty, str):
+        yield qty
+        return
+    # WarningOf, CriticalOf, MinimumOf, MaximumOf — all have .metric_name: str
+    metric_name = getattr(qty, "metric_name", None)
+    if isinstance(metric_name, str):
+        yield metric_name
+        return
+    # Sum (.summands), Product (.factors)
+    for field in ("summands", "factors"):
+        items = getattr(qty, field, None)
+        if items is not None:
+            for item in items:
+                yield from _extract_quantity_metrics(item)
+            return
+    # Difference (.minuend + .subtrahend), Fraction (.dividend + .divisor)
+    for a_attr, b_attr in (("minuend", "subtrahend"), ("dividend", "divisor")):
+        a = getattr(qty, a_attr, None)
+        b = getattr(qty, b_attr, None)
+        if a is not None and b is not None:
+            yield from _extract_quantity_metrics(a)
+            yield from _extract_quantity_metrics(b)
+            return
+    # Constant or unknown — no metric
+
+
+@lru_cache(maxsize=1)
+def _load_cmk_graphing_data() -> tuple[
+    dict[str, str], dict[str, tuple[str, list[str], frozenset[str]]]
+]:
+    """Single-pass loader for CMK metric titles and graph templates.
+
+    Returns (titles, graphs) where graphs maps graph_id to
+    (title, compound_metrics, conflicting_metrics).
+    """
+    if not _cmk_integration.available:
+        return {}, {}
+    try:
+        from cmk.graphing.v1 import graphs as _gg
+        from cmk.graphing.v1 import metrics as _gm
+    except ImportError:
+        return {}, {}
+    titles: dict[str, str] = {}
+    graphs: dict[str, tuple[str, list[str], frozenset[str]]] = {}
+    for mod in _iter_graphing_modules(_get_plugin_dirs()):
+        for attr in dir(mod):
+            obj = getattr(mod, attr)
+            if attr.startswith("metric_") and isinstance(obj, _gm.Metric):
                 try:
                     titles[obj.name] = obj.title.localize(_identity)
                 except Exception:
                     pass
+            elif attr.startswith("graph_") and isinstance(obj, _gg.Graph):
+                names = _extract_graph_metric_names(obj)
+                if names:
+                    try:
+                        conflicting: frozenset[str] = frozenset(getattr(obj, "conflicting", ()))
+                        graphs[obj.name] = (obj.title.localize(_identity), names, conflicting)
+                    except Exception:
+                        pass
+    logger.debug("Loaded %d CMK metric titles, %d graph templates", len(titles), len(graphs))
+    return titles, graphs
 
-    logger.debug("Loaded %d CMK metric titles", len(titles))
-    return titles
+
+def _extract_graph_metric_names(graph: object) -> list[str]:
+    """Extract metric names from compound_lines only (the actual data series).
+
+    Recursively handles complex Quantity expressions (Sum, WarningOf, …).
+    simple_lines are excluded — they contain threshold/overlay lines derived
+    from compound metrics and would cause false-positive matches.
+    """
+    seen: set[str] = set()
+    names: list[str] = []
+    for item in getattr(graph, "compound_lines", ()):
+        for name in _extract_quantity_metrics(item):
+            if name not in seen:
+                seen.add(name)
+                names.append(name)
+    return names
+
+
+def _load_cmk_metric_titles() -> dict[str, str]:
+    return _load_cmk_graphing_data()[0]
+
+
+def _load_cmk_graphs() -> dict[str, tuple[str, list[str], frozenset[str]]]:
+    return _load_cmk_graphing_data()[1]
+
+
+def _match_graphs(available: set[str]) -> list[GraphGroup]:
+    """Return CMK graph groups whose compound metrics overlap with ``available``.
+
+    Graphs with conflicting metrics present in ``available`` are excluded.
+    When multiple graphs share the same title, only the best-matching one
+    (most metrics covered) is kept.
+    """
+    candidates: list[GraphGroup] = []
+    for graph_id, (title, metrics, conflicting) in _load_cmk_graphs().items():
+        if conflicting & available:
+            continue
+        matching = [m for m in metrics if m in available]
+        if matching:
+            candidates.append(GraphGroup(id=graph_id, title=title, metrics=matching))
+
+    # Deduplicate by title: keep the group with the most matching metrics
+    best: dict[str, GraphGroup] = {}
+    for g in candidates:
+        existing = best.get(g.title)
+        if existing is None or len(g.metrics) > len(existing.metrics):
+            best[g.title] = g
+    return list(best.values())
 
 
 def _cmk_metric_title(label: str) -> str:
@@ -394,6 +492,20 @@ class LivestatusBackend(BackendBase):
         except (KeyError, TypeError, ValueError):
             return None
 
+    async def get_graph_templates(self, host: str, service: str | None) -> list[GraphGroup]:
+        try:
+            if service:
+                state = await self.get_service_state(host, service)
+            else:
+                state = await self.get_host_state(host)
+            metrics = {
+                part[: part.index("=")].strip("'")
+                for part in _re.findall(r"(?:'[^']+'|[^\s]+)=[^\s]*", state.perf_data)
+            }
+            return _match_graphs(metrics)
+        except Exception:
+            return []
+
     async def get_metric_history(
         self,
         host: str,
@@ -643,7 +755,11 @@ class LivestatusBackend(BackendBase):
                 continue
 
         logger.debug("rrddata: returning %d metrics for %r/%r", len(series), host, service)
-        return MetricHistoryResult(series=series, titles=titles)
+        return MetricHistoryResult(
+            series=series,
+            titles=titles,
+            graphs=_match_graphs(set(series.keys())),
+        )
 
     async def is_available(self) -> bool:
         try:

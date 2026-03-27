@@ -104,7 +104,8 @@ export interface BoardObject {
   graph_width?: number | null;
   graph_height?: number | null;
   graph_refresh_interval?: number | null;
-  graph_metric?: string | null;
+  graph_metric?: string[] | null;
+  graph_id?: string | null;
   graph_time_window?: number | null;
   line_color?: string | null;
   line_color_border?: string | null;
@@ -290,7 +291,14 @@ export interface MetricPoint {
   unit: string;
 }
 
+export interface MetricGraphGroup {
+  id: string;
+  title: string;
+  metrics: string[];
+}
+
 export interface MetricHistoryResponse {
   series: Record<string, MetricPoint[]>;
   titles: Record<string, string>;
+  graphs: MetricGraphGroup[];
 }

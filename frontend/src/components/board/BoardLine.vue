@@ -11,7 +11,7 @@
       :style="editMode ? 'cursor: move' : 'cursor: default'"
       @mousedown.prevent.stop="editMode ? $emit('line-drag-start', $event, 'move') : undefined"
       @contextmenu.prevent.stop="$emit('context-menu', $event)"
-      @click.stop
+      @click.stop="editMode && $emit('line-click')"
     />
 
     <!-- Weathermap line -->
@@ -47,7 +47,7 @@
         font-size="11"
         font-weight="600"
         :fill="wmColor"
-        style="text-shadow: 0 1px 3px rgb(0 0 0 / 80%)"
+        style="paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round"
         pointer-events="none"
         >{{ wmLabel }}</text
       >
@@ -168,6 +168,7 @@ const props = defineProps<{
 defineEmits<{
   'line-drag-start': [event: MouseEvent, mode: 'move' | 'start' | 'end'];
   'context-menu': [event: MouseEvent];
+  'line-click': [];
 }>();
 
 const x1 = computed(() => props.dragCoords?.x ?? props.object.x);

@@ -24,6 +24,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/boards/:name/view',
+      name: 'board-kiosk',
+      component: () => import('@/views/BoardView.vue'),
+      meta: { requiresAuth: true, kiosk: true },
+    },
+    {
       path: '/admin',
       component: () => import('@/views/AdminLayout.vue'),
       meta: { requiresAuth: true, requiresAdmin: true },

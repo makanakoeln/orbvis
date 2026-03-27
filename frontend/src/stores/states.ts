@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
 import { boardsApi, connectionsApi } from '@/api/client';
-import type { ObjectState, WebSocketStateUpdate } from '@/types/api';
+import type { MetricGraphGroup, ObjectState, WebSocketStateUpdate } from '@/types/api';
 import { parsePerfData, utilPercent } from '@/utils/perf';
 
 export interface MetricSnapshot {
@@ -50,6 +50,7 @@ export const useStatesStore = defineStore('states', () => {
   const history = ref<Record<string, MetricSnapshot[]>>({});
   const metricValues = ref<Record<string, Record<string, MetricPoint[]>>>({});
   const metricTitles = ref<Record<string, Record<string, string>>>({}); // objectId → metricId → title
+  const metricGraphs = ref<Record<string, MetricGraphGroup[]>>({}); // objectId → graph groups
   const connected = ref(false);
   const lastUpdate = ref<number | null>(null);
   const _LS_NOTIF = 'orbvis_notifications';
@@ -218,6 +219,7 @@ export const useStatesStore = defineStore('states', () => {
     history.value = {};
     metricValues.value = {};
     metricTitles.value = {};
+    metricGraphs.value = {};
     currentMap = null;
     currentToken = undefined;
   }
@@ -247,6 +249,9 @@ export const useStatesStore = defineStore('states', () => {
       if (Object.keys(data.titles).length) {
         metricTitles.value[objectId] = { ...data.titles };
       }
+      if (data.graphs?.length) {
+        metricGraphs.value[objectId] = data.graphs;
+      }
       // Merge: historical points first, live WebSocket points on top (deduplicated by ts)
       const mv: Record<string, MetricPoint[]> = { ...(metricValues.value[objectId] ?? {}) };
       for (const [label, pts] of Object.entries(data.series)) {
@@ -265,6 +270,7 @@ export const useStatesStore = defineStore('states', () => {
 
   function clearMetricValues(objectId: string): void {
     metricValues.value[objectId] = {};
+    delete metricGraphs.value[objectId];
   }
 
   return {
@@ -272,6 +278,7 @@ export const useStatesStore = defineStore('states', () => {
     history,
     metricValues,
     metricTitles,
+    metricGraphs,
     connected,
     lastUpdate,
     notificationsEnabled,

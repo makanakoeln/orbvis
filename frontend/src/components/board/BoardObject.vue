@@ -90,7 +90,17 @@
             >+{{ chartMetricLabels.length - MAX_VISIBLE_SERIES }}</span
           >
         </div>
-        <svg ref="chartSvgRef" class="w-full flex-1" />
+        <div class="flex flex-col w-full flex-1 min-h-0">
+          <template v-for="group in chartGroups" :key="group.id">
+            <div
+              v-if="group.title"
+              class="text-[9px] text-zinc-500 px-1 pt-0.5 leading-none truncate shrink-0"
+            >
+              {{ group.title }}
+            </div>
+            <svg :ref="(el) => registerChartRef(group.id, el)" class="w-full flex-1 min-h-0" />
+          </template>
+        </div>
       </div>
     </template>
     <!-- URL embed mode -->
@@ -274,6 +284,7 @@
         pointer-events="none"
         class="absolute pointer-events-none"
         :style="{ top: `-${RING_PAD}px`, left: `-${RING_PAD}px`, pointerEvents: 'none' }"
+        :title="t('board.utilizationRing')"
       />
 
       <!-- Stale data badge -->
@@ -335,6 +346,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ComponentPublicInstance } from 'vue';
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -344,7 +356,7 @@ import {
   CHART_PALETTE,
   fmtMetricVal,
   MAX_VISIBLE_SERIES,
-  useMetricChart,
+  renderMetricChart,
 } from '@/composables/useMetricChart';
 import { useAuthStore } from '@/stores/auth';
 import type { MetricPoint } from '@/stores/states';
@@ -429,7 +441,6 @@ const arcSvgEl = ref<SVGSVGElement | null>(null);
 const imgLoadFailed = ref(false);
 
 // ---- Graph: native chart mode ----
-const chartSvgRef = ref<SVGSVGElement | null>(null);
 const isNativeChart = computed(() => props.object.type === 'graph' && !!props.object.host_name);
 
 const chartData = computed((): Record<string, MetricPoint[]> => {
@@ -448,9 +459,19 @@ const chartData = computed((): Record<string, MetricPoint[]> => {
     return filtered.length ? [...filtered] : pts.length ? [pts[pts.length - 1]] : [];
   };
 
-  if (props.object.graph_metric) {
-    const pts = mv[props.object.graph_metric];
-    return pts ? { [props.object.graph_metric]: applyWindow(pts) } : {};
+  if (props.object.graph_metric?.length) {
+    return Object.fromEntries(
+      props.object.graph_metric.filter((m) => mv[m]).map((m) => [m, applyWindow(mv[m])]),
+    );
+  }
+  const graphId = props.object.graph_id;
+  if (graphId) {
+    const group = (statesStore.metricGraphs[props.object.id] ?? []).find((g) => g.id === graphId);
+    if (group) {
+      return Object.fromEntries(
+        group.metrics.filter((m) => mv[m]).map((m) => [m, applyWindow(mv[m])]),
+      );
+    }
   }
   return Object.fromEntries(Object.entries(mv).map(([k, v]) => [k, applyWindow(v)]));
 });
@@ -490,7 +511,7 @@ const graphH = computed(() => props.resizeOverride?.height ?? props.object.graph
 const chartThresholds = computed(() => {
   if (!isNativeChart.value) return null;
   const ms = parsePerfData(props.state?.perf_data ?? '');
-  const m = getMetric(ms, props.object.graph_metric);
+  const m = getMetric(ms, props.object.graph_metric?.[0]);
   return m ? { warn: m.warn, crit: m.crit } : null;
 });
 
@@ -506,25 +527,66 @@ const singleMetricValueStr = computed(() => {
 
 const singleMetricColor = computed(() => {
   const ms = parsePerfData(props.state?.perf_data ?? '');
-  const label = props.object.graph_metric || chartMetricKeys.value[0];
+  const label = props.object.graph_metric?.[0] || chartMetricKeys.value[0];
   const m = getMetric(ms, label);
   if (!m) return CHART_PALETTE[0];
   return _utilColor(utilPercent(m));
 });
 
-const chartUnit = computed(() => {
-  const firstKey = chartMetricKeys.value[0];
-  return firstKey ? (chartData.value[firstKey]?.at(-1)?.unit ?? undefined) : undefined;
+const chartGroups = computed(() => {
+  const groups = statesStore.metricGraphs[props.object.id] ?? [];
+  // graph_metric and graph_id filtering is already applied in chartData.
+  // If no template groups, render chartData as a single ungrouped chart.
+  if (!groups.length || props.object.graph_id || props.object.graph_metric?.length) {
+    return [{ id: '_all', title: '', data: chartData.value }];
+  }
+  const covered = new Set(groups.flatMap((g) => g.metrics));
+  const result = groups
+    .map((g) => ({
+      id: g.id,
+      title: g.title,
+      data: Object.fromEntries(
+        g.metrics.filter((m) => chartData.value[m]).map((m) => [m, chartData.value[m]]),
+      ),
+    }))
+    .filter((g) => Object.keys(g.data).length > 0);
+  const ungrouped = Object.fromEntries(
+    Object.entries(chartData.value).filter(([k]) => !covered.has(k)),
+  );
+  if (Object.keys(ungrouped).length > 0) result.push({ id: '_misc', title: '', data: ungrouped });
+  return result;
 });
 
-useMetricChart(
-  chartSvgRef,
-  chartData,
-  () => graphW.value,
-  () => Math.max(30, graphH.value - 28),
-  () => (props.object.graph_time_window ?? 60) * 60,
-  () => chartThresholds.value,
-  () => chartUnit.value,
+// Plain (non-reactive) map: SVG element mutations must not trigger re-renders.
+// watchEffect re-runs when chartGroups changes; by flush:'post' all SVGs are
+// already mounted before the effect runs, so the map is always up to date.
+const chartSvgEls = new Map<string, SVGSVGElement>();
+function registerChartRef(id: string, el: Element | ComponentPublicInstance | null) {
+  if (el instanceof SVGSVGElement) chartSvgEls.set(id, el);
+  else chartSvgEls.delete(id);
+}
+
+watchEffect(
+  () => {
+    const windowSecs = (props.object.graph_time_window ?? 60) * 60;
+    for (const group of chartGroups.value) {
+      const svgEl = chartSvgEls.get(group.id);
+      if (!svgEl) continue;
+      const firstKey = Object.keys(group.data)[0];
+      const isFilled = !!props.object.graph_id || (group.id !== '_all' && group.id !== '_misc');
+      renderMetricChart(
+        svgEl,
+        group.data,
+        graphW.value,
+        Math.max(30, graphH.value - 28),
+        windowSecs,
+        chartThresholds.value,
+        firstKey ? group.data[firstKey]?.at(-1)?.unit : undefined,
+        isFilled,
+      );
+    }
+  },
+  { flush: 'post' },
 );
 
 // ---- Graph: URL embed ----
@@ -554,6 +616,7 @@ watchEffect(() => {
 onUnmounted(() => {
   if (_refreshTimer) clearInterval(_refreshTimer);
   if (dataTimeoutTimer) clearTimeout(dataTimeoutTimer);
+  chartSvgEls.clear();
 });
 
 const graphSrc = computed(() => {

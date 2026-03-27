@@ -116,7 +116,12 @@
               <template v-if="object.type === 'map'">
                 <div class="field-row">
                   <label class="field-label">{{ t('boardSettings.targetMap') }}</label>
-                  <input v-model="form.map_name" class="field flex-1" placeholder="map-name" />
+                  <AutocompleteInput
+                    v-model="form.map_name"
+                    :suggestions="boardNames"
+                    placeholder="map-name"
+                    class="flex-1"
+                  />
                 </div>
               </template>
             </div>
@@ -200,13 +205,65 @@
                 />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.graphMetric') }}</label>
-                <AutocompleteInput
-                  v-model="form.graph_metric"
-                  :suggestions="metricSuggestions"
-                  :placeholder="t('boardSettings.graphMetricAuto')"
-                  class="flex-1"
-                />
+                <label class="field-label">{{ t('boardSettings.graphSource') }}</label>
+                <div class="flex gap-1 flex-1">
+                  <button
+                    v-for="mode in ['auto', 'metrics', 'template'] as const"
+                    :key="mode"
+                    class="px-2 py-1 rounded text-xs transition-all"
+                    :class="
+                      graphSource === mode
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-[var(--bg-input)] text-zinc-400 hover:text-zinc-200'
+                    "
+                    @click="setGraphSource(mode)"
+                  >
+                    {{ t(`boardSettings.graphSource_${mode}`) }}
+                  </button>
+                </div>
+              </div>
+              <div v-if="graphSource === 'metrics'" class="field-row items-start">
+                <label class="field-label mt-1.5">{{ t('boardSettings.graphMetric') }}</label>
+                <div class="flex-1 space-y-1.5">
+                  <div v-if="form.graph_metric.length" class="flex flex-wrap gap-1">
+                    <span
+                      v-for="m in form.graph_metric"
+                      :key="m"
+                      class="flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--bg-input)] text-xs text-zinc-300 ring-1 ring-zinc-700"
+                    >
+                      {{ metricIdToTitle[m] ?? m }}
+                      <button
+                        class="text-zinc-500 hover:text-red-400"
+                        @click="form.graph_metric = form.graph_metric.filter((x) => x !== m)"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  </div>
+                  <div ref="metricAddEl">
+                    <AutocompleteInput
+                      v-model="metricInput"
+                      :suggestions="
+                        metricSuggestions.filter(
+                          (title) =>
+                            !form.graph_metric.includes(metricTitleToId.get(title) ?? title),
+                        )
+                      "
+                      :placeholder="t('boardSettings.graphMetricAdd')"
+                      class="w-full"
+                      @change="addMetric"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div v-if="graphSource === 'template' && graphTemplates.length" class="field-row">
+                <label class="field-label">{{ t('boardSettings.graphTemplate') }}</label>
+                <select v-model="form.graph_id" class="field flex-1">
+                  <option :value="null">—</option>
+                  <option v-for="tpl in graphTemplates" :key="tpl.id" :value="tpl.id">
+                    {{ tpl.title }}
+                  </option>
+                </select>
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.graphTimeWindow') }}</label>
@@ -751,15 +808,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { connectionsApi } from '@/api/client';
+import { boardsApi, connectionsApi } from '@/api/client';
 import ColorInput from '@/components/ColorInput.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { useAuthStore } from '@/stores/auth';
-import type { BoardObject, ObjectState } from '@/types/api';
+import { useStatesStore } from '@/stores/states';
+import type { BoardObject, MetricGraphGroup, ObjectState } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';
 import { parsePerfData } from '@/utils/perf';
 
@@ -782,6 +840,7 @@ const emit = defineEmits<{
 }>();
 
 const auth = useAuthStore();
+const statesStore = useStatesStore();
 
 // Popover vs centered modal
 const isPopover = computed(() => !!props.anchorRect);
@@ -812,17 +871,80 @@ const popoverStyle = computed(() => {
 });
 
 const fetchedMetrics = ref<string[]>([]);
+const graphTemplates = ref<MetricGraphGroup[]>([]);
+const boardNames = ref<string[]>([]);
 
-const metricSuggestions = computed(() => {
+// Metric IDs available for suggestions
+const metricIdSuggestions = computed((): string[] => {
   if (fetchedMetrics.value.length) return fetchedMetrics.value;
   return parsePerfData(props.state?.perf_data ?? '').map((m) => m.label);
 });
+
+// Map metric ID → human-readable title (falls back to the ID itself)
+const metricIdToTitle = computed((): Record<string, string> => {
+  return statesStore.metricTitles[props.object.id] ?? {};
+});
+
+// Map display title → metric ID (for reverse lookup when user selects a suggestion)
+const metricTitleToId = computed((): Map<string, string> => {
+  const m = new Map<string, string>();
+  for (const id of metricIdSuggestions.value) {
+    m.set(metricIdToTitle.value[id] ?? id, id);
+  }
+  return m;
+});
+
+// Display titles for autocomplete (unique: prefer title over ID)
+const metricSuggestions = computed((): string[] =>
+  metricIdSuggestions.value.map((id) => metricIdToTitle.value[id] ?? id),
+);
 
 async function fetchMetrics(host: string, service?: string) {
   if (!props.backendId || !host) return;
   fetchedMetrics.value = await connectionsApi
     .perfMetrics(props.backendId, host, auth.accessToken!, service || undefined)
     .catch(() => []);
+}
+
+async function fetchGraphTemplates(host: string, service?: string) {
+  if (!props.backendId || !host || props.object.type !== 'graph') return;
+  graphTemplates.value = await connectionsApi
+    .graphTemplates(props.backendId, host, service ?? null, auth.accessToken!)
+    .catch(() => []);
+}
+
+async function fetchBoardNames() {
+  if (props.object.type !== 'map' || !auth.accessToken) return;
+  const boards = await boardsApi.list(auth.accessToken).catch(() => []);
+  boardNames.value = boards.map((b) => b.name);
+}
+
+// ---- Graph source mode ----
+
+function _deriveGraphSource(obj: BoardObject): 'auto' | 'metrics' | 'template' {
+  if (obj.graph_id) return 'template';
+  if (obj.graph_metric?.length) return 'metrics';
+  return 'auto';
+}
+
+const graphSource = ref<'auto' | 'metrics' | 'template'>(_deriveGraphSource(props.object));
+
+function setGraphSource(mode: 'auto' | 'metrics' | 'template') {
+  graphSource.value = mode;
+  if (mode !== 'template') form.graph_id = null;
+  if (mode !== 'metrics') form.graph_metric = [];
+}
+
+const metricInput = ref('');
+const metricAddEl = ref<HTMLElement | null>(null);
+
+async function addMetric(value: string) {
+  const title = value.trim();
+  const id = metricTitleToId.value.get(title) ?? title;
+  if (id && !form.graph_metric.includes(id)) form.graph_metric.push(id);
+  metricInput.value = '';
+  await nextTick();
+  metricAddEl.value?.querySelector('input')?.focus();
 }
 
 // ---- Form state ----
@@ -855,7 +977,8 @@ const form = reactive({
   graph_width: 400,
   graph_height: 200,
   graph_refresh_interval: 0,
-  graph_metric: '',
+  graph_metric: [] as string[],
+  graph_id: null as string | null,
   graph_time_window: 60 as number,
   display: {
     mode: 'icon' as 'icon' | 'text' | 'gadget',
@@ -922,7 +1045,9 @@ watch(
     form.graph_width = obj.graph_width ?? 400;
     form.graph_height = obj.graph_height ?? 200;
     form.graph_refresh_interval = obj.graph_refresh_interval ?? 0;
-    form.graph_metric = obj.graph_metric ?? '';
+    form.graph_metric = obj.graph_metric ?? [];
+    form.graph_id = obj.graph_id ?? null;
+    graphSource.value = _deriveGraphSource(obj);
     form.graph_time_window = obj.graph_time_window ?? 60;
     form.display.mode = obj.display?.mode ?? 'icon';
     form.display.image = obj.display?.image ?? '';
@@ -996,14 +1121,23 @@ async function loadAutocomplete() {
 loadAutocomplete();
 
 onMounted(() => {
-  if (form.host_name) fetchMetrics(form.host_name, form.service_description || undefined);
+  if (form.host_name) {
+    fetchMetrics(form.host_name, form.service_description || undefined);
+    fetchGraphTemplates(form.host_name, form.service_description || undefined);
+  }
+  if (props.object.type === 'map') fetchBoardNames();
 });
 
 watch(
   () => [form.host_name, form.service_description],
   ([host, svc]) => {
-    if (host) fetchMetrics(host, svc || undefined);
-    else fetchedMetrics.value = [];
+    if (host) {
+      fetchMetrics(host, svc || undefined);
+      fetchGraphTemplates(host, svc || undefined);
+    } else {
+      fetchedMetrics.value = [];
+      graphTemplates.value = [];
+    }
   },
 );
 
@@ -1065,7 +1199,8 @@ async function save() {
       graph_width: form.graph_width,
       graph_height: form.graph_height,
       graph_refresh_interval: form.graph_refresh_interval,
-      graph_metric: form.graph_metric || null,
+      graph_metric: form.graph_metric.length ? form.graph_metric : null,
+      graph_id: form.graph_id || null,
       graph_time_window: form.graph_time_window,
       line_style: form.line_style,
       line_color: form.line_color || null,

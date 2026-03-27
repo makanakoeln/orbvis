@@ -12,6 +12,7 @@ import type {
   GlobalSettings,
   ImageEntry,
   MapStates,
+  MetricGraphGroup,
   MetricHistoryResponse,
   PermissionRead,
   RoleRead,
@@ -296,6 +297,17 @@ export const connectionsApi = {
     const params = new URLSearchParams({ host });
     if (service) params.set('service', service);
     return request(`/backends/${backendId}/perf-metrics?${params}`, {}, token);
+  },
+
+  graphTemplates: (
+    backendId: string,
+    host: string,
+    service: string | null,
+    token: string,
+  ): Promise<MetricGraphGroup[]> => {
+    const params = new URLSearchParams({ host });
+    if (service) params.set('service', service);
+    return request(`/backends/${backendId}/graph-templates?${params}`, {}, token);
   },
 
   metricHistory: (

@@ -269,7 +269,14 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       map_name: draft.board_name || undefined,
       label: {
         show: s.label_show,
-        text: draft.label_text || null,
+        text:
+          draft.label_text ||
+          (draft.type === 'image' && draft.image_src
+            ? (draft.image_src
+                .split('/')
+                .pop()
+                ?.replace(/\.[^/.]+$/, '') ?? null)
+            : null),
         x: s.label_x,
         y: s.label_y,
         size: s.label_size,

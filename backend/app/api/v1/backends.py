@@ -171,9 +171,16 @@ class MetricPoint(BaseModel):
     unit: str
 
 
+class GraphGroupResponse(BaseModel):
+    id: str
+    title: str
+    metrics: list[str]
+
+
 class MetricHistoryResponse(BaseModel):
     series: dict[str, list[MetricPoint]]
     titles: dict[str, str]
+    graphs: list[GraphGroupResponse] = []
 
 
 @router.get("/{backend_id}/metric-history", response_model=MetricHistoryResponse)
@@ -204,6 +211,7 @@ async def get_metric_history(
             for label, pts in raw.series.items()
         },
         titles=raw.titles,
+        graphs=[GraphGroupResponse(id=g.id, title=g.title, metrics=g.metrics) for g in raw.graphs],
     )
 
 
@@ -224,6 +232,21 @@ async def get_host_geo(
         return None
     result = await backend.get_host_geo(host)
     return HostGeo(lat=result[0], lng=result[1]) if result else None
+
+
+@router.get("/{backend_id}/graph-templates", response_model=list[GraphGroupResponse])
+async def get_graph_templates_for_object(
+    backend_id: str,
+    host: str = Query(...),
+    service: str | None = Query(None),
+    _: object = Depends(get_current_user),
+):
+    """Return applicable CMK graph template groups for a host/service (for graph object properties)."""
+    backend = get_backend(backend_id)
+    if backend is None:
+        return []
+    groups = await backend.get_graph_templates(host, service)
+    return [GraphGroupResponse(id=g.id, title=g.title, metrics=g.metrics) for g in groups]
 
 
 @router.get("/{backend_id}/objects", response_model=list[str])

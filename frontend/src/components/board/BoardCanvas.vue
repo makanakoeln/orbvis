@@ -49,6 +49,7 @@
         :drag-coords="lineDragPositions[line.id]"
         @line-drag-start="(evt, mode) => $emit('line-drag-start', evt, line, mode)"
         @context-menu="(evt) => onObjectContextMenu(evt, line)"
+        @line-click="onLineClick(line)"
       />
     </svg>
 
@@ -430,6 +431,10 @@ function buildCheckmkUrl(obj: BoardObjectType): string | null {
     return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
   }
   return null;
+}
+
+function onLineClick(line: BoardObjectType) {
+  if (props.editMode) emit('object-click', line);
 }
 
 function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {

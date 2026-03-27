@@ -26,7 +26,10 @@ const route = useRoute();
 const auth = useAuthStore();
 
 const showShell = computed(
-  () => auth.user !== null && !['login', 'change-password'].includes(route.name as string),
+  () =>
+    auth.user !== null &&
+    !['login', 'change-password'].includes(route.name as string) &&
+    !route.meta.kiosk,
 );
 
 const { changelogVisible: showChangelog, checkChangelog, dismissChangelog } = useChangelog();
