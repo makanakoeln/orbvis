@@ -150,8 +150,9 @@
           {{ rotationCountdown }}{{ t('board.rotationSuffix') }}
         </button>
 
-        <!-- Fullscreen / kiosk button -->
+        <!-- Fullscreen / kiosk button (hidden in Checkmk — browser fullscreen can't hide CMK chrome) -->
         <button
+          v-if="!auth.ssoActive && !auth.isCheckmkDeployment"
           class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
           :title="t('board.fullscreen')"
           @click="enterFullscreen"
@@ -204,7 +205,7 @@
     <!-- Kiosk exit button (top-right, visible on hover) -->
     <button
       v-if="isKiosk"
-      class="fixed top-3 right-3 z-50 p-1.5 rounded-lg bg-black/40 text-white/60 opacity-0 hover:opacity-100 transition-opacity duration-200"
+      class="fixed top-3 right-3 z-50 p-1.5 rounded-lg bg-black/40 text-white/60 hover:text-white hover:bg-black/60 transition-colors duration-150"
       :title="t('board.exitFullscreen')"
       @click="exitFullscreen"
     >
@@ -818,8 +819,10 @@ const isRadar = computed(() => boardConfig.value?.view.type === 'radar');
 
 const checkmkUrl = computed(() => {
   const bid = boardConfig.value?.backend_id;
-  if (!bid) return null;
-  return connectionsStore.backends.find((b) => b.id === bid)?.checkmk_url ?? null;
+  const connUrl = bid
+    ? (connectionsStore.backends.find((b) => b.id === bid)?.checkmk_url ?? null)
+    : null;
+  return connUrl ?? settingsStore.settings.checkmk_url ?? null;
 });
 
 async function reloadBoard() {

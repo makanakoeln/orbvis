@@ -619,6 +619,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Load and activate all persisted backend configs
     backend_service.activate_all()
 
+    # In Checkmk/OMD mode: auto-set global checkmk_url if not configured yet
+    if settings.checkmk_omd_root and settings.checkmk_site:
+        from app.services import settings_service as _ss
+
+        _gs = _ss.get_settings()
+        if not _gs.checkmk_url:
+            _gs.checkmk_url = f"/{settings.checkmk_site}"
+            _ss.save_settings(_gs)
+            logger.info("Auto-set global checkmk_url to /%s", settings.checkmk_site)
+
     # In Checkmk/OMD mode: auto-create a Livestatus connection if none exists yet
     if settings.checkmk_omd_root and settings.checkmk_site:
         conn_id = f"cmk_{settings.checkmk_site}"

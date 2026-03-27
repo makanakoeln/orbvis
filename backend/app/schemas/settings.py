@@ -23,3 +23,6 @@ class GlobalSettings(BaseModel):
     default_map_type: str = "static"
     hover_template: str | None = None
     context_template: str | None = None
+    # Global Checkmk URL used as fallback when a connection has no checkmk_url set.
+    # In Checkmk/OMD deployments this is auto-populated by the backend on first boot.
+    checkmk_url: str | None = None

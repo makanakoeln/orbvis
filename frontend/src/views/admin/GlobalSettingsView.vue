@@ -240,6 +240,25 @@
         </div>
       </section>
 
+      <!-- Checkmk integration -->
+      <section class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-6">
+        <h3 class="text-sm font-semibold text-zinc-400 mb-1">
+          {{ t('settings.checkmkIntegration') }}
+        </h3>
+        <p class="text-xs text-zinc-600 mb-5">{{ t('settings.checkmkIntegrationSubtitle') }}</p>
+
+        <label class="block">
+          <span class="text-xs text-zinc-400 mb-1 block">{{ t('admin.checkmkUrl') }}</span>
+          <input
+            v-model="form.checkmk_url"
+            type="text"
+            placeholder="https://checkmk.example.com/mysite"
+            class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+          <p class="text-xs text-zinc-600 mt-1.5">{{ t('settings.checkmkUrlHint') }}</p>
+        </label>
+      </section>
+
       <p v-if="saveError" class="text-sm text-red-400">{{ saveError }}</p>
 
       <div class="flex items-center justify-end gap-3">

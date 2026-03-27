@@ -267,6 +267,7 @@ export interface GlobalSettings {
   default_map_type: string;
   hover_template?: string | null;
   context_template?: string | null;
+  checkmk_url?: string | null;
 }
 
 export interface WebSocketStateUpdate {

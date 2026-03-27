@@ -422,6 +422,10 @@ export default {
     hoverTemplate: 'Hover-Template',
     contextTemplate: 'Kontext-Template',
     zHint: 'Stapelreihenfolge – höherer Wert = weiter vorne',
+    checkmkIntegration: 'Checkmk-Integration',
+    checkmkIntegrationSubtitle:
+      'Globale Checkmk-URL als Fallback für alle Verbindungen ohne eigene URL',
+    checkmkUrlHint: 'Wird automatisch gesetzt wenn OrbVis innerhalb von Checkmk/OMD betrieben wird',
   },
   userSettings: {
     title: 'Benutzereinstellungen',

@@ -419,6 +419,10 @@ export default {
     hoverTemplate: 'Hover template',
     contextTemplate: 'Context template',
     zHint: 'Stacking order – higher = in front',
+    checkmkIntegration: 'Checkmk Integration',
+    checkmkIntegrationSubtitle:
+      'Global Checkmk URL used as fallback for connections without their own URL',
+    checkmkUrlHint: 'Set automatically when OrbVis runs inside a Checkmk/OMD installation',
   },
   userSettings: {
     title: 'User Settings',
