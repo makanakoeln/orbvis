@@ -154,7 +154,7 @@
         <button
           class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
           :title="t('board.fullscreen')"
-          @click="router.push({ name: 'board-kiosk', params: { name: boardName } })"
+          @click="enterFullscreen"
         >
           <svg
             class="w-4 h-4"
@@ -200,6 +200,22 @@
         </button>
       </div>
     </div>
+
+    <!-- Kiosk exit button (top-right, visible on hover) -->
+    <button
+      v-if="isKiosk"
+      class="fixed top-3 right-3 z-50 p-1.5 rounded-lg bg-black/40 text-white/60 opacity-0 hover:opacity-100 transition-opacity duration-200"
+      :title="t('board.exitFullscreen')"
+      @click="exitFullscreen"
+    >
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"
+        />
+      </svg>
+    </button>
 
     <!-- Map area + optional edit panel -->
     <div class="flex flex-1 overflow-hidden" data-tour="board-canvas">
@@ -714,6 +730,16 @@ const settingsStore = useSettingsStore();
 const boardName = computed(() => route.params.name as string);
 const isKiosk = computed(() => !!route.meta.kiosk);
 
+function enterFullscreen() {
+  router.push({ name: 'board-kiosk', params: { name: boardName.value } });
+  document.documentElement.requestFullscreen().catch(() => {});
+}
+
+function exitFullscreen() {
+  router.push({ name: 'board', params: { name: boardName.value } });
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+
 // ─── Board tour ───────────────────────────────────────────────────────────────
 
 const showBoardTour = ref(false);
@@ -1113,14 +1139,22 @@ function onKeyDown(e: KeyboardEvent) {
   }
 }
 
+function onFullscreenChange() {
+  if (!document.fullscreenElement && isKiosk.value) {
+    router.push({ name: 'board', params: { name: boardName.value } });
+  }
+}
+
 onMounted(() => {
   if (auth.isAdmin) connectionsStore.fetchBackends();
   document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('fullscreenchange', onFullscreenChange);
 });
 
 onUnmounted(() => {
   statesStore.disconnect();
   stopRotation();
   document.removeEventListener('keydown', onKeyDown);
+  document.removeEventListener('fullscreenchange', onFullscreenChange);
 });
 </script>
