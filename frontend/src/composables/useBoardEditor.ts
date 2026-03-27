@@ -1,7 +1,7 @@
 /**
  * Map edit-mode state: drag & drop, line editing, object selection, placing new objects.
  */
-import { reactive, type Ref, ref } from 'vue';
+import { reactive, type Ref, ref, toRaw } from 'vue';
 
 import { boardsApi } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
@@ -391,7 +391,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     draft.label_text = '';
     draft.image_src = '';
     draft.graph_url = '';
-    Object.keys(lineDragPositions).forEach((k) => delete lineDragPositions[k]);
+    Object.keys(toRaw(lineDragPositions)).forEach((k) => delete lineDragPositions[k]);
   }
 
   // --- Delete ---
