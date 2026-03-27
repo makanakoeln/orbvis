@@ -49,7 +49,12 @@
         <div class="overflow-y-auto overflow-x-hidden flex-1 px-6 py-5 space-y-6">
           <!-- === MONITORING OBJECT === -->
           <section
-            v-if="object.type !== 'textbox' && object.type !== 'line' && object.type !== 'graph'"
+            v-if="
+              object.type !== 'textbox' &&
+              object.type !== 'line' &&
+              object.type !== 'graph' &&
+              object.type !== 'image'
+            "
           >
             <p class="section-title">{{ t('boardSettings.monitoringObject') }}</p>
             <div class="space-y-3">
@@ -115,7 +120,7 @@
               </template>
               <template v-if="object.type === 'map'">
                 <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.targetMap') }}</label>
+                  <label class="field-label">{{ t('boardSettings.boardName') }}</label>
                   <AutocompleteInput
                     v-model="form.map_name"
                     :suggestions="boardNames"

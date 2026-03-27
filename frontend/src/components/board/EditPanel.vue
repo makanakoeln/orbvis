@@ -75,7 +75,11 @@
       </template>
 
       <template v-else-if="draft.type === 'map'">
-        <input v-model="draft.board_name" :placeholder="t('boardSettings.mapName')" class="field" />
+        <input
+          v-model="draft.board_name"
+          :placeholder="t('boardSettings.boardName')"
+          class="field"
+        />
         <input
           v-model="draft.label_text"
           :placeholder="t('boardSettings.labelOptional')"
@@ -289,6 +293,11 @@ async function fetchAddServices(host: string) {
 function onTypeChange() {
   props.draft.host_name = '';
   props.draft.service_description = '';
+  props.draft.group_name = '';
+  props.draft.board_name = '';
+  props.draft.label_text = '';
+  props.draft.image_src = '';
+  props.draft.graph_url = '';
   addObjects.value = [];
   addServices.value = [];
   const fetchType =
