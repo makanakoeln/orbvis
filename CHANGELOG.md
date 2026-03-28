@@ -10,15 +10,16 @@ Initial public release. OrbVis is a ground-up rewrite of NagVis as a modern
 monitoring visualization platform — Vue 3 frontend, FastAPI backend, real-time
 WebSocket state delivery, and native Checkmk integration.
 
-### Added
-
 **Board editor**
 - SVG canvas with pixel-accurate drag-and-drop object placement and multi-select
 - Inline edit panel and per-object properties modal
-- Object types: host, service, hostgroup, servicegroup, board link, line, textbox, worldmap, graph
+- Object types: host, service, hostgroup, servicegroup, board link, line, textbox, image, graph
 - Image/icon objects with configurable size, rotation, and arc ring state indicator
 - Textbox objects with raw HTML rendering
-- Connection lines with custom colors
+- Connection lines (plain and weathermap style with bandwidth/metric overlay)
+- Metric gadgets: gauge, bar, and traffic-light display modes for service objects
+- Per-object URL field; Checkmk host/service URL auto-derived as placeholder
+- Board link objects show aggregated worst state from the referenced board
 - Stale state indicator when monitoring data is outdated
 - Configurable hover template and context menu template per object
 - `only_hard_states` and `recognize_services` options per object
@@ -27,7 +28,7 @@ WebSocket state delivery, and native Checkmk integration.
 - Board settings modal (connection, refresh interval, background, permissions)
 - Default icon size setting applied to newly placed objects
 - Kiosk mode for unattended display with rotation countdown and pause/resume
-- Board board-link rotation with configurable interval
+- Board-link rotation with configurable interval
 
 **Monitoring**
 - Real-time state updates via WebSocket (configurable refresh interval)
@@ -54,6 +55,10 @@ WebSocket state delivery, and native Checkmk integration.
 - Force-directed network topology board type derived from Livestatus `parents` column
 - Host spacing with configurable repulsion, optional service nodes
 - Auto-fit zoom when service layout changes
+
+**Radar board**
+- Card-grid board type listing all monitored objects sorted by severity
+- State summary bar with per-state counts; color-coded cards by state
 
 **Worldmap**
 - Leaflet-based worldmap board type
