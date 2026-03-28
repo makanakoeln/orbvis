@@ -42,12 +42,19 @@ jobs:
           VERSION="$VERSION" nfpm package --packager deb --target dist/
           VERSION="$VERSION" nfpm package --packager rpm --target dist/
 
-      - name: Create GitHub Release
+      - name: Create or update GitHub Release
         run: |
-          gh release create "v${VERSION}" \
-            --title "OrbVis ${VERSION}" \
-            --notes-file CHANGELOG.md \
-            dist/*.deb \
-            dist/*.rpm
+          if gh release view "v${VERSION}" > /dev/null 2>&1; then
+            gh release edit "v${VERSION}" \
+              --title "OrbVis ${VERSION}" \
+              --notes-file CHANGELOG.md
+            gh release upload "v${VERSION}" dist/*.deb dist/*.rpm --clobber
+          else
+            gh release create "v${VERSION}" \
+              --title "OrbVis ${VERSION}" \
+              --notes-file CHANGELOG.md \
+              dist/*.deb \
+              dist/*.rpm
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
