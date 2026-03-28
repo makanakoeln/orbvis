@@ -60,9 +60,9 @@ WebSocket state delivery, and native Checkmk integration.
 - Card-grid board type listing all monitored objects sorted by severity
 - State summary bar with per-state counts; color-coded cards by state
 
-**Worldmap**
-- Leaflet-based worldmap board type
-- NagVis-compatible geo features: host geo lookup from Livestatus custom variables
+**Geo board**
+- Leaflet-based geo board type showing hosts at their geographic coordinates
+- NagVis-compatible: host geo lookup from Livestatus custom variables
 - ARC ring overlay on map markers
 
 **Actions**
