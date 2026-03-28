@@ -3,18 +3,23 @@
     <div
       class="bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-xl p-3.5 min-w-52 max-w-72"
     >
+      <!-- No permission: skip all templates and show only this -->
+      <div v-if="isNoPermission" class="text-sm text-[var(--text-muted)] italic">
+        {{ t('board.noPermission') }}
+      </div>
+
       <!-- Custom template — sanitized via DOMPurify before rendering -->
       <!-- eslint-disable-next-line vue/no-v-html -->
-      <div v-if="renderedTemplate" class="text-sm text-[var(--text)]" v-html="renderedTemplate" />
+      <div
+        v-else-if="renderedTemplate"
+        class="text-sm text-[var(--text)]"
+        v-html="renderedTemplate"
+      />
 
       <!-- Default content -->
       <template v-else>
-        <div v-if="isNoPermission" class="text-sm text-[var(--text-muted)] italic">
-          {{ t('board.noPermission') }}
-        </div>
-
         <!-- Header -->
-        <div v-else class="flex items-start gap-2 mb-2">
+        <div class="flex items-start gap-2 mb-2">
           <span
             v-if="hasMonitoring"
             class="w-2 h-2 rounded-full mt-1 shrink-0"
@@ -28,7 +33,7 @@
           </div>
         </div>
 
-        <template v-if="hasMonitoring && !isNoPermission">
+        <template v-if="hasMonitoring">
           <!-- State -->
           <div v-if="state" class="text-xs font-semibold mt-1" :class="stateTextColor">
             {{ state.state }}
