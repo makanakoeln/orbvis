@@ -146,7 +146,7 @@
     </template>
     <!-- Optional caption label -->
     <div
-      v-if="object.label?.show && object.label?.text"
+      v-if="object.label?.show && object.label?.text && state?.state !== 'NO_PERMISSION'"
       class="absolute -bottom-5 left-0 right-0 text-center text-xs pointer-events-none px-1.5 py-0.5 rounded"
       :style="labelStyle"
     >
@@ -213,7 +213,7 @@
       />
     </div>
     <div
-      v-if="object.label?.show"
+      v-if="object.label?.show && state?.state !== 'NO_PERMISSION'"
       class="mt-1 font-medium whitespace-nowrap pointer-events-none px-1.5 py-0.5 rounded"
       :style="labelStyle"
     >
