@@ -380,7 +380,7 @@
             :line-drag-positions="editor.lineDragPositions"
             :selected-object-id="editor.selectedObjectId.value"
             :checkmk-url="checkmkUrl"
-            :is-admin="auth.isAdmin"
+            :is-admin="auth.isAdmin && !isKiosk"
             :icon-size-override="undefined"
             :snap-grid="editor.snapGrid.value"
             @object-drag-end="onObjectDragEnd"
@@ -406,7 +406,9 @@
     <!-- FAB + Add Object panel + action bar (all bottom-right) -->
     <Teleport to="body">
       <div
-        v-if="auth.isAdmin && boardConfig && !boardConfig.readonly && !isAutomap && !isRadar"
+        v-if="
+          auth.isAdmin && !isKiosk && boardConfig && !boardConfig.readonly && !isAutomap && !isRadar
+        "
         class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3"
       >
         <!-- Add Object panel — expands upward from FAB -->
