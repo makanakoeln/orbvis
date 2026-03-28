@@ -2,22 +2,46 @@
 
 Monitoring visualization platform built with **Python FastAPI** + **Vue.js 3 + TypeScript**.
 
-## Requirements
-
-- Python 3.12 or newer
-- Node.js 18 or newer (for building the frontend)
-- systemd (for the standalone install)
-
 ## Installation
 
-### Standalone (without Checkmk/OMD)
+### From package (recommended)
 
-Installs to `/opt/orbvis`, creates a system user, sets up a Python virtualenv, builds the
-frontend, and configures a systemd service. nginx is configured automatically if present.
+Download the latest `.deb` or `.rpm` from the [Releases](../../releases) page and install it:
+
+```bash
+# Debian / Ubuntu
+sudo dpkg -i orbvis_X.Y.Z_amd64.deb
+
+# RHEL / Rocky / AlmaLinux / SUSE
+sudo rpm -i orbvis-X.Y.Z.x86_64.rpm
+```
+
+No Node.js or npm required — the package includes a pre-built frontend.
+
+**With Checkmk / OMD** — deploy into a site after installing the package:
+
+```bash
+sudo orbvis-setup <site-name>
+```
+
+**Standalone** — set up a systemd service with nginx or Apache:
+
+```bash
+sudo orbvis-install
+```
+
+### From source
+
+Requirements: Python 3.12+, Node.js 18+, systemd (standalone only).
+
+**Standalone:**
 
 ```bash
 ./install.sh
 ```
+
+Installs to `/opt/orbvis`, creates a system user, builds the frontend, and configures a
+systemd service. nginx or Apache is configured automatically if present.
 
 The default admin password is printed once on first start:
 
@@ -31,17 +55,17 @@ To uninstall (user data is kept):
 ./install.sh remove
 ```
 
-### With Checkmk / OMD
+**With Checkmk / OMD:**
 
-Tested with **Checkmk 2.4**. Deploys OrbVis into an existing OMD site, wires up the site's
-Apache and registers an OMD init script so `omd start/stop orbvis` works.
+Tested with **Checkmk 2.3 and 2.4**. Deploys OrbVis into an existing OMD site, wires up the
+site's Apache and registers an OMD init script so `omd start/stop orbvis` works.
 
 ```bash
 ./install_cmk.sh <site-name>
 ```
 
 OrbVis will be available at `https://<host>/<site>/orbvis/`.
-Add the **OrbVis Maps** sidebar snapin via *Edit sidebar → OrbVis Maps*.
+Add the **OrbVis Boards** sidebar snapin via *Edit sidebar → OrbVis Boards*.
 
 To uninstall:
 
@@ -97,11 +121,15 @@ Backend connections are defined in `backends.json` (see `backends.json.example`)
 
 ```
 orbvis/
-├── backend/        Python 3.12 + FastAPI + SQLAlchemy 2.0 (async)
-├── frontend/       Vue 3 + TypeScript + Vite + Tailwind CSS
-├── tools/          cfg_importer.py – converts legacy NagVis .cfg maps to JSON
-├── install.sh      Standalone install/remove (systemd + optional nginx)
-├── install_cmk.sh  Checkmk/OMD install/remove
+├── backend/          Python 3.12 + FastAPI + SQLAlchemy 2.0 (async)
+├── frontend/         Vue 3 + TypeScript + Vite + Tailwind CSS
+├── cmk_plugins/      Checkmk 2.4+ GUI plugins (sidebar, WATO permissions, menu)
+├── cmk_plugins_23/   Checkmk 2.3 GUI plugins
+├── scripts/          orbvis-setup / orbvis-install wrapper commands (in packages)
+├── tools/            cfg_importer.py – converts legacy NagVis .cfg maps to JSON
+├── install.sh        Standalone install/remove (systemd + optional nginx/Apache)
+├── install_cmk.sh    Checkmk/OMD install/remove
+├── nfpm.yaml         Package definition (.deb/.rpm via nfpm)
 └── docker-compose.yml
 ```
 
