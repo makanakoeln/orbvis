@@ -105,6 +105,126 @@ def load_user(username: str) -> dict[str, Any]:
     return _load_user_fallback(username)
 
 
+# ---------------------------------------------------------------------------
+# Permission checking via Checkmk roles
+# ---------------------------------------------------------------------------
+
+# Default roles that have each OrbVis permission (mirrors cmk_plugins declarations).
+_ORBVIS_PERM_DEFAULTS: dict[str, frozenset[str]] = {
+    "orbvis.use": frozenset({"admin", "user"}),
+    "orbvis.view_all": frozenset({"admin", "user"}),
+    "orbvis.edit_all": frozenset({"admin"}),
+}
+_ORBVIS_VIEW_DEFAULTS: frozenset[str] = frozenset({"admin", "user"})
+_ORBVIS_EDIT_DEFAULTS: frozenset[str] = frozenset({"admin"})
+
+
+def _orbvis_perm_defaults(perm_name: str) -> frozenset[str]:
+    if perm_name in _ORBVIS_PERM_DEFAULTS:
+        return _ORBVIS_PERM_DEFAULTS[perm_name]
+    if perm_name.startswith("orbvis.edit_"):
+        return _ORBVIS_EDIT_DEFAULTS
+    if perm_name.startswith("orbvis.view_"):
+        return _ORBVIS_VIEW_DEFAULTS
+    return frozenset()
+
+
+_roles_cache: dict[str, Any] = {}
+_roles_cache_mtime: float = -1.0
+
+
+def _load_roles() -> dict[str, Any]:
+    """Load Checkmk role configuration from roles.mk (mtime-cached).
+
+    Returns the ``roles`` dict mapping role-id → role-spec.
+    Returns an empty dict on error or when OMD_ROOT is not set.
+    """
+    global _roles_cache, _roles_cache_mtime
+    if not settings.checkmk_omd_root:
+        return {}
+    roles_mk = (
+        Path(settings.checkmk_omd_root) / "etc" / "check_mk" / "multisite.d" / "wato" / "roles.mk"
+    )
+    try:
+        mtime = roles_mk.stat().st_mtime if roles_mk.is_file() else 0.0
+        if mtime == _roles_cache_mtime:
+            return _roles_cache
+        ns: dict[str, Any] = {"roles": {}}
+        if roles_mk.is_file():
+            exec(compile(roles_mk.read_bytes(), str(roles_mk), "exec"), ns)  # nosec B102 — Checkmk .mk files use Python syntax; no safe alternative to exec()
+        _roles_cache = ns.get("roles", {})
+        _roles_cache_mtime = mtime
+        return _roles_cache
+    except Exception as exc:
+        log.warning("_load_roles: %s", exc)
+        return {}
+
+
+def _has_permission(user_data: dict[str, Any], role_config: dict[str, Any], perm_name: str) -> bool:
+    """Return True if the user (described by *user_data*) has *perm_name*."""
+    roles: list[str] = list(user_data.get("roles", ["user"]))
+    defaults = _orbvis_perm_defaults(perm_name)
+    for role_id in roles:
+        role = role_config.get(role_id, {})
+        explicit = role.get("permissions", {}).get(perm_name)
+        if explicit is True:
+            return True
+        if explicit is False:
+            continue
+        # Not explicitly set → fall back to permission defaults for the base role.
+        base_role = role.get("basedon", role_id)
+        if base_role in defaults:
+            return True
+    return False
+
+
+def check_checkmk_permission(username: str, perm_name: str) -> bool:
+    """Return True if the Checkmk user *username* has *perm_name*.
+
+    Returns False when CHECKMK_OMD_ROOT is not configured.
+    """
+    if not settings.checkmk_omd_root:
+        return False
+    user_data = load_user(username) if available else _load_user_fallback(username)
+    return _has_permission(user_data, _load_roles(), perm_name)
+
+
+def check_board_permission(username: str, board_name: str, action: str) -> bool:
+    """Return True if the Checkmk user may view or edit an OrbVis board.
+
+    *action* must be ``'view'`` or ``'edit'``.
+    Always returns False when CHECKMK_OMD_ROOT is not configured.
+    """
+    if not settings.checkmk_omd_root:
+        return False
+    user_data = load_user(username) if available else _load_user_fallback(username)
+    role_config = _load_roles()
+    if not _has_permission(user_data, role_config, "orbvis.use"):
+        return False
+    if action == "view":
+        return _has_permission(user_data, role_config, "orbvis.view_all") or _has_permission(
+            user_data, role_config, f"orbvis.view_{board_name}"
+        )
+    if action == "edit":
+        return _has_permission(user_data, role_config, "orbvis.edit_all") or _has_permission(
+            user_data, role_config, f"orbvis.edit_{board_name}"
+        )
+    return False
+
+
+def get_user_contact_groups(username: str) -> list[str]:
+    """Return the contact groups a Checkmk user belongs to.
+
+    Returns an empty list when CHECKMK_OMD_ROOT is not configured or the user
+    has no contact groups assigned.
+    """
+    if not settings.checkmk_omd_root:
+        return []
+    user_data = load_user(username) if available else _load_user_fallback(username)
+    cgs = user_data.get("contactgroups", [])
+    return list(cgs) if isinstance(cgs, (list, tuple)) else []
+
+
 def _load_user_fallback(username: str) -> dict[str, Any]:
     """Direct file fallback when cmk.gui.userdb.store is unavailable."""
     try:

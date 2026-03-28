@@ -7,8 +7,10 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import decode_token, is_token_blocked
+from app.integrations import checkmk as cmk_integration
 from app.models.user import User
 from app.services.auth_service import get_user_by_id
 
@@ -46,6 +48,32 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return current_user
+
+
+def can_view_board(user: User, board_name: str) -> bool:
+    """Return True if the user may view the given board.
+
+    When CHECKMK_OMD_ROOT is configured, delegates to the Checkmk permission
+    system. Falls back to the OrbVis DB role/permission system otherwise.
+    """
+    if settings.checkmk_omd_root:
+        return user.is_admin or cmk_integration.check_board_permission(
+            user.name, board_name, "view"
+        )
+    return user_has_permission(user, "map", "view", board_name)
+
+
+def can_edit_board(user: User, board_name: str) -> bool:
+    """Return True if the user may edit the given board.
+
+    When CHECKMK_OMD_ROOT is configured, delegates to the Checkmk permission
+    system. Falls back to the OrbVis DB role/permission system otherwise.
+    """
+    if settings.checkmk_omd_root:
+        return user.is_admin or cmk_integration.check_board_permission(
+            user.name, board_name, "edit"
+        )
+    return user_has_permission(user, "map", "edit", board_name)
 
 
 def user_has_permission(

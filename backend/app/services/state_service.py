@@ -7,6 +7,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from app.core.config import settings
 from app.schemas.board import BoardConfig, BoardObject, RadarView
 from app.schemas.state import MapStates, ObjectState
 
@@ -52,8 +53,13 @@ async def get_backend_objects(backend_id: str, obj_type: str, host: str | None =
     return raw
 
 
-async def get_board_states(cfg: BoardConfig) -> MapStates:
-    """Fetch current states for all objects in a board."""
+async def get_board_states(cfg: BoardConfig, auth_user: str | None = None) -> MapStates:
+    """Fetch current states for all objects in a board.
+
+    When *auth_user* is provided and CHECKMK_OMD_ROOT is configured, Livestatus
+    queries are scoped to that user's contact groups so they only see objects
+    they are authorised for.
+    """
     backend_id = cfg.backend_id
     backend = get_backend(backend_id)
 
@@ -66,6 +72,14 @@ async def get_board_states(cfg: BoardConfig) -> MapStates:
             map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=False
         )
 
+    if auth_user is not None and settings.checkmk_omd_root and hasattr(backend, "with_auth_user"):
+        async with backend.with_auth_user(auth_user):
+            return await _execute_board_states(cfg, backend)
+    return await _execute_board_states(cfg, backend)
+
+
+async def _execute_board_states(cfg: BoardConfig, backend: BackendBase) -> MapStates:
+    """Inner state-fetch implementation; must be called with auth context already set."""
     if cfg.view.type == "radar":
         return await _get_radar_states(cfg, backend)
 

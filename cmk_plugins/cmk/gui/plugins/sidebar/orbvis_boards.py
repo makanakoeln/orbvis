@@ -10,6 +10,26 @@ from cmk.gui.i18n import _
 from cmk.gui.sidebar._snapin import SidebarSnapin, snapin_registry
 from cmk.gui.sidebar._snapin._helpers import footnotelinks
 
+try:
+    from cmk.gui.globals import user as _cmk_user
+
+    _HAS_CMK_USER = True
+except ImportError:
+    _HAS_CMK_USER = False
+
+
+def _user_may_view_board(name: str) -> bool:
+    """Return True if the current Checkmk user may view this board."""
+    if not _HAS_CMK_USER:
+        return True
+    try:
+        return _cmk_user.may("orbvis.use") and (
+            _cmk_user.may("orbvis.view_all") or _cmk_user.may(f"orbvis.view_{name}")
+        )
+    except Exception:
+        return True
+
+
 _BOARDS_DIR = pathlib.Path(os.environ.get("OMD_ROOT", "")) / "local" / "share" / "orbvis" / "boards"
 _SITE = os.environ.get("OMD_SITE", "")
 _BASE_URL = f"/{_SITE}/orbvis/#/boards"
@@ -52,7 +72,7 @@ class OrbVisBoardsSnapin(SidebarSnapin):
         return ["admin", "user", "guest"]
 
     def show(self) -> None:
-        maps = _get_maps()
+        maps = [(n, a) for n, a in _get_maps() if _user_may_view_board(n)]
         if not maps:
             html.p(_("No OrbVis boards found."))
         else:

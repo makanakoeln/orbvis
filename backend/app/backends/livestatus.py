@@ -10,6 +10,8 @@ import pkgutil
 import re as _re
 import types
 from collections.abc import Iterator
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from datetime import UTC
 from functools import lru_cache
 from pathlib import Path
@@ -22,6 +24,11 @@ from app.integrations import checkmk as _cmk_integration
 from app.schemas.state import ObjectState
 
 logger = logging.getLogger(__name__)
+
+# When set, every Livestatus query in the current asyncio task includes
+# ``AuthUser: <username>`` so Livestatus only returns objects the user
+# is a contact for (contact-group filtering).
+_auth_user_ctx: ContextVar[str | None] = ContextVar("_auth_user_ctx", default=None)
 
 
 def _identity(x: str) -> str:
@@ -284,6 +291,20 @@ class LivestatusBackend(BackendBase):
         self._automation_secret = automation_secret
         self._verify_ssl = verify_ssl
         self._semaphore = asyncio.Semaphore(settings.backend_max_connections)
+
+    @asynccontextmanager
+    async def with_auth_user(self, username: str):  # type: ignore[return]
+        """Context manager: scope Livestatus queries to *username*'s contact groups.
+
+        While active, every ``_query_raw`` call in this asyncio task appends
+        ``AuthUser: <username>`` to the LQL request so Livestatus only returns
+        hosts/services the user is a contact for.
+        """
+        token = _auth_user_ctx.set(username)
+        try:
+            yield
+        finally:
+            _auth_user_ctx.reset(token)
 
     # ------------------------------------------------------------------
     # Public interface
@@ -881,7 +902,11 @@ class LivestatusBackend(BackendBase):
 
     async def _query_raw(self, query: str) -> list[list]:
         """Send a Livestatus query and return parsed rows."""
-        lql = query.rstrip("\n") + "\nOutputFormat: json\nResponseHeader: fixed16\n\n"
+        lql = query.rstrip("\n") + "\nOutputFormat: json\nResponseHeader: fixed16\n"
+        auth_user = _auth_user_ctx.get()
+        if auth_user:
+            lql += f"AuthUser: {auth_user}\n"
+        lql += "\n"
 
         if self._host:
             reader, writer = await asyncio.wait_for(

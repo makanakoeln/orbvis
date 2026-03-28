@@ -11,7 +11,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.deps import get_current_user, get_db, require_admin, user_has_permission
+from app.api.v1.deps import (
+    can_edit_board,
+    can_view_board,
+    get_current_user,
+    get_db,
+    require_admin,
+)
 from app.core.config import settings
 from app.models.role import Role
 from app.models.user import User
@@ -56,14 +62,14 @@ def _is_valid_image(content: bytes) -> bool:
 
 
 def _require_board_view(name: str, user: User) -> None:
-    if not user_has_permission(user, "map", "view", name):
+    if not can_view_board(user, name):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="No view permission for this board"
         )
 
 
 def _require_board_edit(name: str, user: User) -> None:
-    if not user_has_permission(user, "map", "edit", name):
+    if not can_edit_board(user, name):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="No edit permission for this board"
         )
@@ -80,7 +86,7 @@ async def list_boards(current_user: User = Depends(get_current_user)) -> list[Bo
     all_boards = board_service.list_boards()
     if current_user.is_admin:
         return all_boards
-    return [m for m in all_boards if user_has_permission(current_user, "map", "view", m.name)]
+    return [m for m in all_boards if can_view_board(current_user, m.name)]
 
 
 @router.post("", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
