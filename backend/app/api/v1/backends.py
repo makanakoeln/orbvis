@@ -123,7 +123,7 @@ async def get_topology(
     include_services: bool = Query(False),
     _: object = Depends(get_current_user),
 ):
-    """Return host topology for automap rendering."""
+    """Return host topology for flow board rendering."""
     backend = get_backend(backend_id)
     if backend is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backend not registered")

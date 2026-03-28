@@ -313,12 +313,13 @@
       <!-- Radar -->
       <RadarCanvas v-else-if="isRadar" :states="statesStore.states" />
 
-      <!-- Automap -->
-      <div v-else-if="isAutomap" class="flex-1 relative overflow-hidden">
-        <AutomapCanvas
+      <!-- Flowmap -->
+      <div v-else-if="isFlowmap" class="flex-1 relative overflow-hidden">
+        <FlowBoard
           v-if="boardConfig?.backend_id"
           :backend-id="boardConfig.backend_id"
           :service-layout="serviceLayout"
+          :readonly="isKiosk || boardConfig?.readonly"
         />
         <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">
           {{ t('board.noConnectionConfigured') }}
@@ -407,7 +408,7 @@
     <Teleport to="body">
       <div
         v-if="
-          auth.isAdmin && !isKiosk && boardConfig && !boardConfig.readonly && !isAutomap && !isRadar
+          auth.isAdmin && !isKiosk && boardConfig && !boardConfig.readonly && !isFlowmap && !isRadar
         "
         class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3"
       >
@@ -552,7 +553,7 @@
 
     <!-- Bottom row: Services toggle (Flow Board only) -->
     <Teleport to="body">
-      <div v-if="isAutomap" class="fixed bottom-6 right-6 z-40">
+      <div v-if="isFlowmap" class="fixed bottom-6 right-6 z-40">
         <div class="relative">
           <!-- Backdrop to close dropdown on outside click -->
           <div
@@ -719,11 +720,11 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
 import { connectionsApi } from '@/api/client';
-import AutomapCanvas from '@/components/board/AutomapCanvas.vue';
 import BoardCanvas from '@/components/board/BoardCanvas.vue';
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue';
 import ContextMenu from '@/components/board/ContextMenu.vue';
 import EditPanel from '@/components/board/EditPanel.vue';
+import FlowBoard from '@/components/board/FlowBoard.vue';
 import HoverMenu from '@/components/board/HoverMenu.vue';
 import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue';
 import RadarCanvas from '@/components/board/RadarCanvas.vue';
@@ -848,7 +849,7 @@ const canvasRef = ref<InstanceType<typeof BoardCanvas> | null>(null);
 const worldmapCanvasRef = ref<InstanceType<typeof WorldMapCanvas> | null>(null);
 
 const isWorldmap = computed(() => boardConfig.value?.view.type === 'worldmap');
-const isAutomap = computed(() => boardConfig.value?.view.type === 'automap');
+const isFlowmap = computed(() => boardConfig.value?.view.type === 'flow');
 const isRadar = computed(() => boardConfig.value?.view.type === 'radar');
 
 const checkmkUrl = computed(() => {

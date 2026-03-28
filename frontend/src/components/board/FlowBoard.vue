@@ -113,8 +113,13 @@ import { connectionsApi } from '@/api/client';
 import { useD3Cleanup } from '@/composables/useD3Cleanup';
 import { useAuthStore } from '@/stores/auth';
 import type { TopologyNode } from '@/types/api';
+import { stateColor } from '@/utils/stateColors';
 
-const props = defineProps<{ backendId: string; serviceLayout: 'off' | 'fan' | 'row' | 'orbit' }>();
+const props = defineProps<{
+  backendId: string;
+  serviceLayout: 'off' | 'fan' | 'row' | 'orbit';
+  readonly?: boolean;
+}>();
 const auth = useAuthStore();
 
 const NODE_R = 18;
@@ -203,20 +208,6 @@ onUnmounted(() => {
   simulation?.stop();
   if (svgEl.value) select(svgEl.value).selectAll('*').remove();
 });
-
-// ---- Color ----
-function stateColor(state: string): string {
-  const map: Record<string, string> = {
-    UP: '#22c55e',
-    OK: '#22c55e',
-    DOWN: '#ef4444',
-    CRITICAL: '#ef4444',
-    UNREACHABLE: '#f97316',
-    UNKNOWN: '#f97316',
-    WARNING: '#ffd000',
-  };
-  return map[state] ?? '#6b7280';
-}
 
 // ---- D3 force types ----
 interface FNode extends SimulationNodeDatum {
@@ -609,12 +600,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     .enter()
     .append('g')
     .attr('class', 'node')
-    .attr('cursor', (d) => (d.nodeType === 'host' ? 'grab' : 'default'))
+    .attr('cursor', (d) => (d.nodeType === 'host' && !props.readonly ? 'grab' : 'default'))
     .on('click', (_event, d) => {
       void d;
     })
     .on('mouseenter', (event: MouseEvent, d) => {
-      if (d.nodeType !== 'service') return;
       const nodeRect = (event.currentTarget as SVGGElement).getBoundingClientRect();
       const parentRect = (event.currentTarget as Element)
         .closest('.absolute')!
@@ -622,8 +612,13 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
       tooltip.visible = true;
       tooltip.x = nodeRect.right - parentRect.left;
       tooltip.y = nodeRect.top - parentRect.top;
-      tooltip.title = d.id.split('::')[1];
-      tooltip.hostName = d.hostId ?? '';
+      if (d.nodeType === 'service') {
+        tooltip.title = d.id.split('::')[1];
+        tooltip.hostName = d.hostId ?? '';
+      } else {
+        tooltip.title = d.id;
+        tooltip.hostName = '';
+      }
       tooltip.output = d.output;
       tooltip.state = d.state;
       tooltip.stateColor = stateColor(d.state);
@@ -632,8 +627,10 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
       tooltip.visible = false;
     });
 
-  // Drag only on host nodes
-  nodeEnter.filter((d) => d.nodeType === 'host').call(dragBehavior as never);
+  // Drag only on host nodes when not in readonly/kiosk mode
+  if (!props.readonly) {
+    nodeEnter.filter((d) => d.nodeType === 'host').call(dragBehavior as never);
+  }
 
   // Host nodes
   const hostEnter = nodeEnter.filter((d) => d.nodeType === 'host');

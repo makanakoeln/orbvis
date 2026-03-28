@@ -120,7 +120,7 @@
                 >
                   <option value="static">{{ t('board.boardTypeStatic') }}</option>
                   <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
-                  <option value="automap">{{ t('board.boardTypeFlowBoard') }}</option>
+                  <option value="flow">{{ t('board.boardTypeFlowBoard') }}</option>
                   <option value="radar">{{ t('board.boardTypeRadar') }}</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">

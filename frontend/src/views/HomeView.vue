@@ -161,7 +161,7 @@
               />
               <!-- Flow Board thumbnail -->
               <svg
-                v-else-if="map.view.type === 'automap'"
+                v-else-if="map.view.type === 'flow'"
                 viewBox="0 0 256 128"
                 class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none"
               >
@@ -672,7 +672,7 @@
                       ? 'bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/30'
                       : map.view.type === 'radar'
                         ? 'bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30'
-                        : map.view.type === 'automap'
+                        : map.view.type === 'flow'
                           ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30'
                           : 'bg-zinc-800/70 text-zinc-400 ring-1 ring-zinc-700/60'
                   "
@@ -722,7 +722,7 @@
                 <span class="font-mono truncate">{{ map.backend_id }}</span>
                 <span class="text-zinc-600">·</span>
                 <span
-                  v-if="map.readonly || ['automap', 'radar', 'worldmap'].includes(map.view.type)"
+                  v-if="map.readonly || ['flow', 'radar', 'worldmap'].includes(map.view.type)"
                   class="italic"
                   >{{ t('home.dynamicObjects') }}</span
                 >
@@ -1183,7 +1183,7 @@ const filteredBoards = computed(() => {
 const TYPE_LABELS: Record<string, string> = {
   static: 'Static',
   worldmap: 'Geo Board',
-  automap: 'Flow Board',
+  flow: 'Flow Board',
   radar: 'Radar',
 };
 function boardTypeLabel(type: string) {

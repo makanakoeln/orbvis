@@ -199,7 +199,7 @@
             <select v-model="form.default_map_type" class="select w-44">
               <option value="static">{{ t('board.boardTypeStatic') }}</option>
               <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
-              <option value="automap">{{ t('board.boardTypeFlowBoard') }}</option>
+              <option value="flow">{{ t('board.boardTypeFlowBoard') }}</option>
               <option value="radar">{{ t('board.boardTypeRadar') }}</option>
             </select>
           </label>

@@ -57,12 +57,12 @@ class RadarView(BaseModel):
     filter_value: str = ""
 
 
-class AutomapView(BaseModel):
-    type: Literal["automap"] = "automap"
+class FlowView(BaseModel):
+    type: Literal["flow"] = "flow"
 
 
 BoardView = Annotated[
-    StaticView | WorldmapView | RadarView | AutomapView,
+    StaticView | WorldmapView | RadarView | FlowView,
     Field(discriminator="type"),
 ]
 

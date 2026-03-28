@@ -58,10 +58,10 @@ export interface RadarView {
   filter: string;
   filter_value: string;
 }
-export interface AutomapView {
-  type: 'automap';
+export interface FlowView {
+  type: 'flow';
 }
-export type BoardView = StaticView | WorldmapView | RadarView | AutomapView;
+export type BoardView = StaticView | WorldmapView | RadarView | FlowView;
 
 export type HostState = 'UP' | 'DOWN' | 'UNREACHABLE' | 'PENDING';
 export type ServiceState = 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN' | 'PENDING';

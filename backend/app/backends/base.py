@@ -68,7 +68,7 @@ class BackendBase(ABC):
 
     @abstractmethod
     async def get_topology(self) -> list[dict]:
-        """Return host topology as [{name, parents, state, output}] for automap."""
+        """Return host topology as [{name, parents, state, output}] for flow board."""
         ...
 
     @abstractmethod
