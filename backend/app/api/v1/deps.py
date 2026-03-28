@@ -63,6 +63,17 @@ def can_view_board(user: User, board_name: str) -> bool:
     return user_has_permission(user, "map", "view", board_name)
 
 
+def can_view_board_by_name(username: str, board_name: str) -> bool:
+    """Check board view permission using only a username string (for background tasks).
+
+    Only applicable when CHECKMK_OMD_ROOT is configured; returns True otherwise
+    (non-CMK setups require a User object for OrbVis RBAC checks).
+    """
+    if settings.checkmk_omd_root:
+        return cmk_integration.check_board_permission(username, board_name, "view")
+    return True
+
+
 def can_edit_board(user: User, board_name: str) -> bool:
     """Return True if the user may edit the given board.
 

@@ -15,7 +15,9 @@ from fastapi import (
     status,
 )
 
-from app.api.v1.deps import can_view_board, get_current_user
+from app.api.v1.deps import can_view_board as _can_view_board
+from app.api.v1.deps import can_view_board_by_name as _can_view_board_by_name
+from app.api.v1.deps import get_current_user
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.security import decode_token
@@ -49,7 +51,14 @@ async def _broadcast_loop(board_name: str) -> None:
                 if settings.checkmk_omd_root:
                     grouped = manager.get_connections_grouped(board_name)
                     for auth_user, connections in grouped.items():
-                        states = await state_service.get_board_states(cfg, auth_user=auth_user)
+                        can_view = (
+                            (lambda u: lambda n: _can_view_board_by_name(u, n))(auth_user)
+                            if auth_user is not None
+                            else None
+                        )
+                        states = await state_service.get_board_states(
+                            cfg, auth_user=auth_user, can_view_board=can_view
+                        )
                         msg = json.dumps(
                             {
                                 "type": "state_update",
@@ -79,7 +88,11 @@ async def get_board_states(name: str, current_user: User = Depends(get_current_u
     auth_user = (
         current_user.name if settings.checkmk_omd_root and not current_user.is_admin else None
     )
-    return await state_service.get_board_states(cfg, auth_user=auth_user)
+    return await state_service.get_board_states(
+        cfg,
+        auth_user=auth_user,
+        can_view_board=lambda n: _can_view_board(current_user, n),
+    )
 
 
 @router.websocket("/ws/boards/{name}")
@@ -119,7 +132,7 @@ async def websocket_board_states(
         if user is None or not user.is_active:
             await websocket.close(code=4001)
             return
-        if not can_view_board(user, name):
+        if not _can_view_board(user, name):
             await websocket.close(code=4003)
             return
         ws_auth_user = user.name if not user.is_admin else None

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from app.core.config import settings
@@ -56,7 +57,11 @@ async def get_backend_objects(backend_id: str, obj_type: str, host: str | None =
     return raw
 
 
-async def get_board_states(cfg: BoardConfig, auth_user: str | None = None) -> MapStates:
+async def get_board_states(
+    cfg: BoardConfig,
+    auth_user: str | None = None,
+    can_view_board: Callable[[str], bool] | None = None,
+) -> MapStates:
     """Fetch current states for all objects in a board.
 
     When *auth_user* is provided and CHECKMK_OMD_ROOT is configured, Livestatus
@@ -77,18 +82,25 @@ async def get_board_states(cfg: BoardConfig, auth_user: str | None = None) -> Ma
 
     if auth_user is not None and settings.checkmk_omd_root and hasattr(backend, "with_auth_user"):
         async with backend.with_auth_user(auth_user):
-            return await _execute_board_states(cfg, backend, auth_user=auth_user)
-    return await _execute_board_states(cfg, backend)
+            return await _execute_board_states(
+                cfg, backend, auth_user=auth_user, can_view_board=can_view_board
+            )
+    return await _execute_board_states(cfg, backend, can_view_board=can_view_board)
 
 
 async def _execute_board_states(
-    cfg: BoardConfig, backend: BackendBase, auth_user: str | None = None
+    cfg: BoardConfig,
+    backend: BackendBase,
+    auth_user: str | None = None,
+    can_view_board: Callable[[str], bool] | None = None,
 ) -> MapStates:
     """Inner state-fetch implementation; must be called with auth context already set."""
     if cfg.view.type == "radar":
         return await _get_radar_states(cfg, backend)
 
-    state_map = await _get_board_states_batched(backend, cfg.objects, auth_user=auth_user)
+    state_map = await _get_board_states_batched(
+        backend, cfg.objects, auth_user=auth_user, can_view_board=can_view_board
+    )
     states = list(state_map.values())
 
     # Determine backend health using only monitoring-object states.
@@ -114,6 +126,7 @@ async def _get_board_states_batched(
     backend: BackendBase,
     objects: list[BoardObject],
     auth_user: str | None = None,
+    can_view_board: Callable[[str], bool] | None = None,
 ) -> dict[str, ObjectState]:
     """Fetch states for all board objects using batch queries where supported."""
     hosts_soft: list[BoardObject] = []
@@ -226,8 +239,12 @@ async def _get_board_states_batched(
         from app.services import board_service
 
         # Load each unique referenced board once (avoid N reads for N map-link objects)
-        board_states: dict[str, dict[str, ObjectState]] = {}
+        # Maps without view permission are recorded as None to produce NO_PERMISSION state.
+        board_states: dict[str, dict[str, ObjectState] | None] = {}
         for map_name in {o.map_name for o in map_objects if o.map_name}:
+            if can_view_board is not None and not can_view_board(map_name):
+                board_states[map_name] = None
+                continue
             ref_cfg = board_service.get_board(map_name)
             if ref_cfg is None:
                 continue
@@ -243,7 +260,12 @@ async def _get_board_states_batched(
                 pass
         for obj in map_objects:
             assert obj.map_name is not None
-            sub = board_states.get(obj.map_name, {})
+            entry = board_states.get(obj.map_name)
+            if entry is None and obj.map_name in board_states:
+                # Explicitly None → no permission for the referenced board
+                results[obj.id] = ObjectState(object_id=obj.id, type="map", state="NO_PERMISSION")
+                continue
+            sub = entry or {}
             mon = [s for s in sub.values() if s.type in _MONITORING_TYPES]
             if mon:
                 real = [s for s in mon if s.state != "NO_PERMISSION"]
