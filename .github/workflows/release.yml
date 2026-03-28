@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm install --silent
+          npm run build -- --base=./
+
+      - name: Read version
+        run: echo "VERSION=$(cat VERSION)" >> "$GITHUB_ENV"
+
+      - name: Install nfpm
+        run: |
+          curl -sfL \
+            "https://github.com/goreleaser/nfpm/releases/latest/download/nfpm_amd64.deb" \
+            -o /tmp/nfpm.deb
+          sudo dpkg -i /tmp/nfpm.deb
+
+      - name: Build packages
+        run: |
+          mkdir -p dist
+          VERSION="$VERSION" nfpm package --packager deb --target dist/
+          VERSION="$VERSION" nfpm package --packager rpm --target dist/
+
+      - name: Create GitHub Release
+        run: |
+          gh release create "v${VERSION}" \
+            --title "OrbVis ${VERSION}" \
+            --notes-file CHANGELOG.md \
+            "dist/orbvis_${VERSION}_amd64.deb" \
+            "dist/orbvis-${VERSION}.x86_64.rpm"
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -94,19 +94,21 @@ INIT_SCRIPT="$SITE_ROOT/etc/init.d/orbvis"
 # ---------------------------------------------------------------------------
 # Prerequisites
 # ---------------------------------------------------------------------------
-NPM="$(command -v npm 2>/dev/null || true)"
-if [[ -z "$NPM" ]]; then
-  case "$OS_FAMILY" in
-    rhel) NODE_HINT="sudo dnf module enable nodejs:20 && sudo dnf install nodejs" ;;
-    suse) NODE_HINT="sudo zypper install nodejs20" ;;
-    *)    NODE_HINT="sudo apt install nodejs npm" ;;
-  esac
-  die "npm not found. Install Node.js >= 18:\n  $NODE_HINT"
+NPM=""
+if [[ ! -d "$SCRIPT_DIR/htdocs" ]]; then
+  NPM="$(command -v npm 2>/dev/null || true)"
+  if [[ -z "$NPM" ]]; then
+    case "$OS_FAMILY" in
+      rhel) NODE_HINT="sudo dnf module enable nodejs:20 && sudo dnf install nodejs" ;;
+      suse) NODE_HINT="sudo zypper install nodejs20" ;;
+      *)    NODE_HINT="sudo apt install nodejs npm" ;;
+    esac
+    die "npm not found. Install Node.js >= 18:\n  $NODE_HINT"
+  fi
+  NODE_MAJOR="$(node --version 2>/dev/null | sed 's/v\([0-9]*\).*/\1/')"
+  [[ -z "$NODE_MAJOR" || "$NODE_MAJOR" -lt 18 ]] && \
+    die "Node.js >= 18 required (found: $(node --version 2>/dev/null || echo none))."
 fi
-
-NODE_MAJOR="$(node --version 2>/dev/null | sed 's/v\([0-9]*\).*/\1/')"
-[[ -z "$NODE_MAJOR" || "$NODE_MAJOR" -lt 18 ]] && \
-  die "Node.js >= 18 required (found: $(node --version 2>/dev/null || echo none))."
 
 if [[ -x "$SITE_ROOT/bin/python3" ]]; then
   PYTHON3="$SITE_ROOT/bin/python3"
@@ -162,14 +164,22 @@ echo "  URL:     https://$(hostname -f 2>/dev/null || hostname)$BASE_PATH/"
 : > "$LOG_FILE"
 
 # 1. Frontend
-step "Building frontend"
-cd "$SCRIPT_DIR/frontend"
-quietly "$NPM" install
-quietly "$NPM" run build -- --base="$BASE_PATH/"
-quietly sudo rm -rf "$HTDOCS_DIR"
-quietly sudo mkdir -p "$HTDOCS_DIR"
-quietly sudo cp -r "$SCRIPT_DIR/frontend/dist/." "$HTDOCS_DIR/"
-ok "Frontend built and deployed"
+if [[ -d "$SCRIPT_DIR/htdocs" ]]; then
+  step "Deploying pre-built frontend"
+  quietly sudo rm -rf "$HTDOCS_DIR"
+  quietly sudo mkdir -p "$HTDOCS_DIR"
+  quietly sudo cp -r "$SCRIPT_DIR/htdocs/." "$HTDOCS_DIR/"
+  ok "Frontend deployed"
+else
+  step "Building frontend"
+  cd "$SCRIPT_DIR/frontend"
+  quietly "$NPM" install
+  quietly "$NPM" run build -- --base="$BASE_PATH/"
+  quietly sudo rm -rf "$HTDOCS_DIR"
+  quietly sudo mkdir -p "$HTDOCS_DIR"
+  quietly sudo cp -r "$SCRIPT_DIR/frontend/dist/." "$HTDOCS_DIR/"
+  ok "Frontend built and deployed"
+fi
 
 # 2. Data directories + demo boards
 step "Setting up data directories"

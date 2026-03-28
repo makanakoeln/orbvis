@@ -1,0 +1,4 @@
+#!/bin/bash
+# orbvis-setup – deploy OrbVis into a Checkmk/OMD site
+# Usage: orbvis-setup <site-name> [install|remove]
+exec /opt/orbvis/install_cmk.sh "$@"

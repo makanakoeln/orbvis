@@ -7,6 +7,7 @@ on:
       - 'install.sh'
       - 'install_cmk.sh'
       - 'make_mkp.sh'
+      - 'scripts/**'
       - '.github/workflows/scripts.yml'
   pull_request:
     branches: [main]
@@ -14,6 +15,7 @@ on:
       - 'install.sh'
       - 'install_cmk.sh'
       - 'make_mkp.sh'
+      - 'scripts/**'
       - '.github/workflows/scripts.yml'
 
 env:
@@ -37,3 +39,9 @@ jobs:
 
       - name: Lint make_mkp.sh
         run: shellcheck make_mkp.sh
+
+      - name: Lint scripts/orbvis-setup
+        run: shellcheck scripts/orbvis-setup
+
+      - name: Lint scripts/orbvis-install
+        run: shellcheck scripts/orbvis-install

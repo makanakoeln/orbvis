@@ -73,6 +73,8 @@ fi
 
 PYTHON3="$(command -v python3 2>/dev/null || true)"
 NPM="$(command -v npm 2>/dev/null || true)"
+PREBUILT_FRONTEND=false
+[[ -d "$SCRIPT_DIR/htdocs" ]] && PREBUILT_FRONTEND=true
 NGINX="$(command -v nginx 2>/dev/null || true)"
 APACHE2="$(command -v apache2 2>/dev/null || command -v httpd 2>/dev/null || true)"
 NOLOGIN="$(command -v nologin 2>/dev/null || echo /sbin/nologin)"
@@ -126,7 +128,7 @@ if [[ -z "$PYTHON3" ]]; then
   esac
   exit 1
 fi
-if [[ -z "$NPM" ]]; then
+if [[ "$PREBUILT_FRONTEND" == "false" && -z "$NPM" ]]; then
   echo "Error: npm not found. Install Node.js 18 or newer:" >&2
   case "$OS_FAMILY" in
     rhel) echo "  sudo dnf module enable nodejs:20 && sudo dnf install nodejs" >&2 ;;
@@ -180,18 +182,24 @@ sudo mkdir -p "$INSTALL_DIR" "$BOARDS_DIR" "$IMAGES_DIR"
 sudo chown "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR" "$BOARDS_DIR" "$IMAGES_DIR"
 
 # ---------------------------------------------------------------------------
-# 3. Build frontend
+# 3. Build/deploy frontend
 # ---------------------------------------------------------------------------
-echo "==> Building Vue frontend (base=$BASE_PATH/)..."
-cd "$SCRIPT_DIR/frontend"
-"$NPM" install --silent
-"$NPM" run build -- --base="$BASE_PATH/"
+if [[ "$PREBUILT_FRONTEND" == "true" ]]; then
+  echo "==> Using pre-built frontend (already at $HTDOCS_DIR)"
+  # $SCRIPT_DIR/htdocs == $HTDOCS_DIR when installed from package — nothing to copy
+  sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$HTDOCS_DIR"
+else
+  echo "==> Building Vue frontend (base=$BASE_PATH/)..."
+  cd "$SCRIPT_DIR/frontend"
+  "$NPM" install --silent
+  "$NPM" run build -- --base="$BASE_PATH/"
 
-echo "==> Deploying frontend to $HTDOCS_DIR..."
-sudo rm -rf "$HTDOCS_DIR"
-sudo mkdir -p "$HTDOCS_DIR"
-sudo cp -r "$SCRIPT_DIR/frontend/dist/." "$HTDOCS_DIR/"
-sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$HTDOCS_DIR"
+  echo "==> Deploying frontend to $HTDOCS_DIR..."
+  sudo rm -rf "$HTDOCS_DIR"
+  sudo mkdir -p "$HTDOCS_DIR"
+  sudo cp -r "$SCRIPT_DIR/frontend/dist/." "$HTDOCS_DIR/"
+  sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$HTDOCS_DIR"
+fi
 
 # ---------------------------------------------------------------------------
 # 4. Python virtualenv + backend

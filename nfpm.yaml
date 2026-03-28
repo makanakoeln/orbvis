@@ -1,0 +1,55 @@
+name: orbvis
+arch: amd64
+platform: linux
+version: ${VERSION}
+maintainer: OrbVis Project
+description: |
+  OrbVis monitoring visualization.
+
+  Deploy into a Checkmk/OMD site:
+    orbvis-setup <SITE_NAME>
+
+  Standalone installation (systemd + nginx/apache):
+    orbvis-install
+
+contents:
+  - src: frontend/dist/
+    dst: /opt/orbvis/htdocs/
+
+  - src: backend/
+    dst: /opt/orbvis/backend/
+    type: dir
+
+  - src: cmk_plugins/
+    dst: /opt/orbvis/cmk_plugins/
+    type: dir
+
+  - src: cmk_plugins_23/
+    dst: /opt/orbvis/cmk_plugins_23/
+    type: dir
+
+  - src: install_cmk.sh
+    dst: /opt/orbvis/install_cmk.sh
+    file_info:
+      mode: 0755
+
+  - src: install.sh
+    dst: /opt/orbvis/install.sh
+    file_info:
+      mode: 0755
+
+  - src: VERSION
+    dst: /opt/orbvis/VERSION
+
+  - src: CHANGELOG.md
+    dst: /opt/orbvis/CHANGELOG.md
+
+  - src: scripts/orbvis-setup
+    dst: /usr/bin/orbvis-setup
+    file_info:
+      mode: 0755
+
+  - src: scripts/orbvis-install
+    dst: /usr/bin/orbvis-install
+    file_info:
+      mode: 0755
