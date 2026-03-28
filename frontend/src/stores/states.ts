@@ -17,7 +17,11 @@ export interface MetricPoint {
 const HISTORY_MAX = 10080; // up to 7d at 1min resolution
 
 // Base path without trailing slash, e.g. '/heute/orbvis' or ''
-const _base = import.meta.env.BASE_URL.replace(/\/$/, '');
+// When built with --base=./ (relative), fall back to window.location.pathname
+// because WebSocket requires an absolute path.
+const _base = import.meta.env.BASE_URL.startsWith('.')
+  ? window.location.pathname.replace(/\/+$/, '')
+  : import.meta.env.BASE_URL.replace(/\/$/, '');
 
 // States considered "bad" (descending severity)
 const _BAD_STATES = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN']);
