@@ -47,7 +47,7 @@ jobs:
           gh release create "v${VERSION}" \
             --title "OrbVis ${VERSION}" \
             --notes-file CHANGELOG.md \
-            "dist/orbvis_${VERSION}_amd64.deb" \
-            "dist/orbvis-${VERSION}.x86_64.rpm"
+            dist/*.deb \
+            dist/*.rpm
         env:
           GH_TOKEN: ${{ github.token }}
