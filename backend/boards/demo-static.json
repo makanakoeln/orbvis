@@ -158,7 +158,7 @@
       "x": 1265,
       "y": 190,
       "z": 1,
-      "label": { "show": true, "text": "shape", "x": 0, "y": 34, "size": 10, "color": "#ffffff", "background": "transparent" }
+      "label": { "show": true, "text": "image", "x": 0, "y": 34, "size": 10, "color": "#ffffff", "background": "transparent" }
     },
     {
       "id": "map-self",
@@ -166,8 +166,8 @@
       "x": 1265,
       "y": 380,
       "z": 1,
-      "map_name": "demo",
-      "label": { "show": true, "text": "map \u2192 demo", "x": 0, "y": 34, "size": 10, "color": "#ffffff", "background": "transparent" },
+      "map_name": "demo-radar",
+      "label": { "show": true, "text": "map \u2192 Radar", "x": 0, "y": 34, "size": 10, "color": "#ffffff", "background": "transparent" },
       "display": { "mode": "icon" }
     }
   ]

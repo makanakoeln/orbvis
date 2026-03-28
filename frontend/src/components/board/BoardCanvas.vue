@@ -319,8 +319,8 @@ function objectWrapperStyle(obj: BoardObjectType) {
 function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
   if (event.button === 2) return; // right-click: let contextmenu event fire normally
   _suppressNextCanvasClick.value = false;
+  if (!props.editMode) return;
   event.preventDefault();
-  if (!(props.editMode || props.isAdmin)) return;
   const canvas = canvasEl.value;
   if (!canvas) return;
   canvas.setPointerCapture(event.pointerId);
@@ -461,7 +461,7 @@ function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
     return;
   }
   if (obj.type === 'map' && obj.map_name) {
-    router.push({ name: 'map', params: { name: obj.map_name } });
+    router.push({ name: 'board', params: { name: obj.map_name } });
     return;
   }
   const cmkUrl = buildCheckmkUrl(obj);

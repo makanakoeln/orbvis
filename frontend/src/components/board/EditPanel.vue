@@ -75,10 +75,12 @@
       </template>
 
       <template v-else-if="draft.type === 'map'">
-        <input
+        <AutocompleteInput
           v-model="draft.board_name"
+          :suggestions="boardNames"
+          :display-labels="boardLabels"
+          :loading="boardsStore.loading"
           :placeholder="t('boardSettings.boardName')"
-          class="field"
         />
         <input
           v-model="draft.label_text"
@@ -185,6 +187,7 @@ import { useI18n } from 'vue-i18n';
 import { connectionsApi } from '@/api/client';
 import type { NewObjectDraft } from '@/composables/useBoardEditor';
 import { useAuthStore } from '@/stores/auth';
+import { useBoardsStore } from '@/stores/boards';
 
 import AutocompleteInput from './AutocompleteInput.vue';
 import ImagePicker from './ImagePicker.vue';
@@ -205,6 +208,9 @@ defineEmits<{
 }>();
 
 const auth = useAuthStore();
+const boardsStore = useBoardsStore();
+const boardNames = computed(() => boardsStore.boards.map((b) => b.name));
+const boardLabels = computed(() => boardsStore.boards.map((b) => b.alias || b.name));
 
 const MISSING_FIELD_KEY: Record<string, string> = {
   host: 'boardSettings.hostname',
@@ -300,6 +306,10 @@ function onTypeChange() {
   props.draft.graph_url = '';
   addObjects.value = [];
   addServices.value = [];
+  if (props.draft.type === 'map') {
+    if (boardsStore.boards.length === 0) boardsStore.fetchBoards();
+    return;
+  }
   const fetchType =
     props.draft.type === 'service' || props.draft.type === 'line' || props.draft.type === 'graph'
       ? 'host'

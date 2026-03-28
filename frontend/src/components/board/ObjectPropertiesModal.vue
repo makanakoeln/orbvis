@@ -124,6 +124,7 @@
                   <AutocompleteInput
                     v-model="form.map_name"
                     :suggestions="boardNames"
+                    :display-labels="boardLabels"
                     placeholder="map-name"
                     class="flex-1"
                   />
@@ -914,6 +915,7 @@ const popoverStyle = computed(() => {
 const fetchedMetrics = ref<string[]>([]);
 const graphTemplates = ref<MetricGraphGroup[]>([]);
 const boardNames = ref<string[]>([]);
+const boardLabels = ref<string[]>([]);
 
 // Metric IDs available for suggestions
 const metricIdSuggestions = computed((): string[] => {
@@ -958,6 +960,7 @@ async function fetchBoardNames() {
   if (props.object.type !== 'map' || !auth.accessToken) return;
   const boards = await boardsApi.list(auth.accessToken).catch(() => []);
   boardNames.value = boards.map((b) => b.name);
+  boardLabels.value = boards.map((b) => b.alias || b.name);
 }
 
 // ---- Graph source mode ----

@@ -22,6 +22,9 @@ _COMBINED_SEVERITY: dict[str, int] = {
     "DOWN": 3,
     "CRITICAL": 4,
 }
+_MONITORING_TYPES: frozenset[str] = frozenset(
+    {"host", "service", "hostgroup", "servicegroup", "line", "graph"}
+)
 
 if TYPE_CHECKING:
     from app.backends.base import BackendBase
@@ -89,8 +92,7 @@ async def _execute_board_states(cfg: BoardConfig, backend: BackendBase) -> MapSt
     # Determine backend health using only monitoring-object states.
     # Non-monitoring types (image, textbox, map) always return PENDING without stale=True,
     # so including them would mask a genuinely unreachable backend.
-    _monitoring_types = {"host", "service", "hostgroup", "servicegroup", "line", "graph"}
-    monitoring_states = [s for s in states if s.type in _monitoring_types]
+    monitoring_states = [s for s in states if s.type in _MONITORING_TYPES]
     if monitoring_states:
         # Backend is considered down only if ALL monitoring queries raised exceptions (stale=True).
         backend_ok = not all(s.stale for s in monitoring_states)
@@ -116,6 +118,7 @@ async def _get_board_states_batched(
     svcs_soft: list[BoardObject] = []
     svcs_hard: list[BoardObject] = []
     lines: list[BoardObject] = []
+    map_objects: list[BoardObject] = []
     others: list[BoardObject] = []
 
     for obj in objects:
@@ -129,6 +132,8 @@ async def _get_board_states_batched(
             hosts_soft.append(obj)
         elif obj.type == "line":
             lines.append(obj)
+        elif obj.type == "map" and obj.map_name:
+            map_objects.append(obj)
         else:
             others.append(obj)
 
@@ -194,6 +199,33 @@ async def _get_board_states_batched(
     individual = [_get_object_state(backend, obj) for obj in lines + others]
     for state in await asyncio.gather(*individual):
         results[state.object_id] = state
+
+    if map_objects:
+        from app.services import board_service
+
+        # Load each unique referenced board once (avoid N reads for N map-link objects)
+        board_states: dict[str, dict[str, ObjectState]] = {}
+        for map_name in {o.map_name for o in map_objects if o.map_name}:
+            ref_cfg = board_service.get_board(map_name)
+            if ref_cfg is None:
+                continue
+            ref_backend = get_backend(ref_cfg.backend_id)
+            if ref_backend is None:
+                continue
+            non_map_objs = [o for o in ref_cfg.objects if o.type != "map"]
+            try:
+                board_states[map_name] = await _get_board_states_batched(ref_backend, non_map_objs)
+            except Exception:
+                pass
+        for obj in map_objects:
+            assert obj.map_name is not None
+            sub = board_states.get(obj.map_name, {})
+            mon = [s for s in sub.values() if s.type in _MONITORING_TYPES]
+            if mon:
+                worst = max(mon, key=lambda s: _COMBINED_SEVERITY.get(s.state, 0))
+                results[obj.id] = ObjectState(object_id=obj.id, type="map", state=worst.state)
+            else:
+                results[obj.id] = ObjectState(object_id=obj.id, type="map", state="PENDING")
 
     return results
 

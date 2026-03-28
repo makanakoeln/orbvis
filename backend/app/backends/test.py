@@ -12,6 +12,8 @@ _SERVICE_STATES = ["OK", "WARNING", "CRITICAL", "UNKNOWN"]
 
 _DEMO_HOSTS = ["localhost", "router01", "switch01", "fileserver", "mailserver"]
 _DEMO_SERVICES = ["HTTP", "PING", "Disk /", "Memory", "CPU Load", "SSH"]
+_DEMO_HOSTGROUPS = ["linux-servers", "windows-servers", "network-devices"]
+_DEMO_SERVICEGROUPS = ["web-services", "storage", "system-checks"]
 
 
 class TestBackend(BackendBase):
@@ -85,6 +87,10 @@ class TestBackend(BackendBase):
             return list(_DEMO_HOSTS)
         if obj_type == "service":
             return [f"{h};{s}" for h in _DEMO_HOSTS for s in _DEMO_SERVICES]
+        if obj_type == "hostgroup":
+            return list(_DEMO_HOSTGROUPS)
+        if obj_type == "servicegroup":
+            return list(_DEMO_SERVICEGROUPS)
         return []
 
     async def get_group_members(self, group_type: str, group_name: str) -> list[str]:
