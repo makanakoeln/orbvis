@@ -264,6 +264,7 @@ export default {
     acknowledge: 'Quittieren…',
     scheduleDowntime: 'Downtime planen…',
     forceCheck: 'Check erzwingen',
+    forceCheckFailed: 'Check erzwingen fehlgeschlagen',
   },
   ack: {
     title: 'Problem quittieren',

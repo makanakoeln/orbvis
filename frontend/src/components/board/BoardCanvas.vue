@@ -143,9 +143,11 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
 import { cmkApi } from '@/api/client';
+import { useToast } from '@/composables/useToast';
 import { useSettingsStore } from '@/stores/settings';
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api';
 import { resolveTemplate } from '@/utils/template';
@@ -157,6 +159,8 @@ import ContextMenu from './ContextMenu.vue';
 import DowntimeModal from './DowntimeModal.vue';
 import HoverMenu from './HoverMenu.vue';
 
+const { t } = useI18n();
+const toast = useToast();
 const settingsStore = useSettingsStore();
 
 const props = defineProps<{
@@ -575,7 +579,7 @@ async function onContextMenuForceCheck() {
       await cmkApi.forceCheckHost(props.checkmkUrl, obj.host_name);
     }
   } catch {
-    // Silently ignore — user will see updated state on next poll
+    toast.error(t('contextMenu.forceCheckFailed'));
   }
 }
 

@@ -262,6 +262,7 @@ export default {
     acknowledge: 'Acknowledge…',
     scheduleDowntime: 'Schedule downtime…',
     forceCheck: 'Force check',
+    forceCheckFailed: 'Force check failed',
   },
   ack: {
     title: 'Acknowledge problem',
