@@ -15,6 +15,24 @@
 # Optional:     nginx or apache2 (for serving on port 80)
 set -euo pipefail
 
+# ---------------------------------------------------------------------------
+# OS detection
+# ---------------------------------------------------------------------------
+_detect_os() {
+  OS_FAMILY="unknown"
+  if [[ -f /etc/os-release ]]; then
+    local id
+    # shellcheck source=/dev/null
+    id="$(. /etc/os-release; echo "${ID:-}")"
+    case "$id" in
+      ubuntu|debian)                  OS_FAMILY=debian ;;
+      rhel|centos|rocky|almalinux|ol) OS_FAMILY=rhel ;;
+      sles|opensuse*|suse)            OS_FAMILY=suse ;;
+    esac
+  fi
+}
+_detect_os
+
 ACTION="${1:-install}"
 
 if [[ "$ACTION" != "install" && "$ACTION" != "remove" ]]; then
@@ -43,14 +61,21 @@ BACKEND_PORT=8420
 BASE_PATH="/orbvis"
 SERVICE_USER="orbvis"
 SYSTEMD_UNIT="/etc/systemd/system/orbvis.service"
-NGINX_CONF="/etc/nginx/sites-available/orbvis"
-NGINX_ENABLED="/etc/nginx/sites-enabled/orbvis"
-APACHE_CONF="/etc/apache2/sites-available/orbvis.conf"
+if [[ "$OS_FAMILY" == "debian" ]]; then
+  NGINX_CONF="/etc/nginx/sites-available/orbvis"
+  NGINX_ENABLED="/etc/nginx/sites-enabled/orbvis"
+  APACHE_CONF="/etc/apache2/sites-available/orbvis.conf"
+else
+  NGINX_CONF="/etc/nginx/conf.d/orbvis.conf"
+  NGINX_ENABLED=""
+  APACHE_CONF="/etc/httpd/conf.d/orbvis.conf"
+fi
 
 PYTHON3="$(command -v python3 2>/dev/null || true)"
 NPM="$(command -v npm 2>/dev/null || true)"
 NGINX="$(command -v nginx 2>/dev/null || true)"
-APACHE2="$(command -v apache2 2>/dev/null || true)"
+APACHE2="$(command -v apache2 2>/dev/null || command -v httpd 2>/dev/null || true)"
+NOLOGIN="$(command -v nologin 2>/dev/null || echo /sbin/nologin)"
 
 # ---------------------------------------------------------------------------
 # REMOVE
@@ -70,9 +95,13 @@ if [[ "$ACTION" == "remove" ]]; then
   sudo rm -f "$NGINX_CONF"
 
   if [[ -f "$APACHE_CONF" ]]; then
-    sudo a2dissite orbvis 2>/dev/null || true
+    if [[ "$OS_FAMILY" == "debian" ]]; then
+      sudo a2dissite orbvis 2>/dev/null || true
+      sudo systemctl reload apache2 2>/dev/null || true
+    else
+      sudo systemctl reload httpd 2>/dev/null || true
+    fi
     sudo rm -f "$APACHE_CONF"
-    sudo systemctl reload apache2 2>/dev/null || true
   fi
 
   sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR"
@@ -90,12 +119,20 @@ fi
 # ---------------------------------------------------------------------------
 if [[ -z "$PYTHON3" ]]; then
   echo "Error: python3 not found. Install Python 3.12 or newer:" >&2
-  echo "  sudo apt install python3.12 python3.12-venv" >&2
+  case "$OS_FAMILY" in
+    rhel) echo "  sudo dnf install python3.12" >&2 ;;
+    suse) echo "  sudo zypper install python312" >&2 ;;
+    *)    echo "  sudo apt install python3.12 python3.12-venv" >&2 ;;
+  esac
   exit 1
 fi
 if [[ -z "$NPM" ]]; then
-  echo "Error: npm not found. Install Node.js:" >&2
-  echo "  sudo apt install nodejs npm" >&2
+  echo "Error: npm not found. Install Node.js 18 or newer:" >&2
+  case "$OS_FAMILY" in
+    rhel) echo "  sudo dnf module enable nodejs:20 && sudo dnf install nodejs" >&2 ;;
+    suse) echo "  sudo zypper install nodejs20" >&2 ;;
+    *)    echo "  sudo apt install nodejs npm" >&2 ;;
+  esac
   exit 1
 fi
 
@@ -103,7 +140,11 @@ PYTHON_VERSION=$("$PYTHON3" -c 'import sys; print(f"{sys.version_info.major}.{sy
 PYTHON_MINOR=$("$PYTHON3" -c 'import sys; print(sys.version_info.minor)')
 if [[ "$("$PYTHON3" -c 'import sys; print(sys.version_info.major)')" -lt 3 ]] || [[ "$PYTHON_MINOR" -lt 12 ]]; then
   echo "Error: Python 3.12 or newer is required (found $PYTHON_VERSION)." >&2
-  echo "  sudo apt install python3.12 python3.12-venv" >&2
+  case "$OS_FAMILY" in
+    rhel) echo "  sudo dnf install python3.12" >&2 ;;
+    suse) echo "  sudo zypper install python312" >&2 ;;
+    *)    echo "  sudo apt install python3.12 python3.12-venv" >&2 ;;
+  esac
   exit 1
 fi
 
@@ -117,7 +158,7 @@ echo "    Base path:    $BASE_PATH"
 if [[ -n "$NGINX" ]]; then
   echo "    Web server:   nginx found – will configure reverse proxy"
 elif [[ -n "$APACHE2" ]]; then
-  echo "    Web server:   apache2 found – will configure reverse proxy"
+  echo "    Web server:   apache2/httpd found – will configure reverse proxy"
 else
   echo "    Web server:   none found – backend will be accessible directly on port $BACKEND_PORT"
 fi
@@ -128,7 +169,7 @@ echo ""
 # ---------------------------------------------------------------------------
 if ! id "$SERVICE_USER" &>/dev/null; then
   echo "==> Creating system user '$SERVICE_USER'..."
-  sudo useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
+  sudo useradd --system --no-create-home --shell "$NOLOGIN" "$SERVICE_USER"
 fi
 
 # ---------------------------------------------------------------------------
@@ -285,7 +326,9 @@ server {
 }
 EOF
 
-  sudo ln -sf "$NGINX_CONF" "$NGINX_ENABLED"
+  if [[ -n "$NGINX_ENABLED" ]]; then
+    sudo ln -sf "$NGINX_CONF" "$NGINX_ENABLED"
+  fi
   if sudo nginx -t; then
     sudo systemctl reload nginx
     WEB_OK=true
@@ -294,7 +337,7 @@ EOF
   fi
 
 elif [[ -n "$APACHE2" ]]; then
-  echo "==> Writing apache2 config: $APACHE_CONF..."
+  echo "==> Writing apache config: $APACHE_CONF..."
   sudo tee "$APACHE_CONF" > /dev/null <<EOF
 # OrbVis – static frontend + API reverse proxy
 # Auto-generated by install.sh
@@ -333,13 +376,22 @@ Alias $BASE_PATH/boards/backgrounds/ $BOARDS_DIR/backgrounds/
 </Directory>
 EOF
 
-  sudo a2enmod proxy proxy_http proxy_wstunnel rewrite 2>/dev/null
-  sudo a2ensite orbvis
-  if sudo apache2ctl configtest; then
-    sudo systemctl reload apache2
-    WEB_OK=true
+  if [[ "$OS_FAMILY" == "debian" ]]; then
+    sudo a2enmod proxy proxy_http proxy_wstunnel rewrite 2>/dev/null
+    sudo a2ensite orbvis
+    if sudo apache2ctl configtest; then
+      sudo systemctl reload apache2
+      WEB_OK=true
+    else
+      echo "Warning: apache2 config test failed – check $APACHE_CONF manually." >&2
+    fi
   else
-    echo "Warning: apache2 config test failed – check $APACHE_CONF manually." >&2
+    if sudo apachectl configtest; then
+      sudo systemctl reload httpd
+      WEB_OK=true
+    else
+      echo "Warning: httpd config test failed – check $APACHE_CONF manually." >&2
+    fi
   fi
 fi
 
@@ -357,8 +409,12 @@ if [[ "$WEB_OK" == "true" ]]; then
 else
   echo "  Backend:   http://$HOST:$BACKEND_PORT/api/docs"
   echo ""
-  echo "  No web server was configured. To serve the frontend, install nginx or apache2 and re-run:"
-  echo "    sudo apt install nginx"
+  echo "  No web server was configured. To serve the frontend, install nginx and re-run:"
+  case "$OS_FAMILY" in
+    rhel) echo "    sudo dnf install nginx" ;;
+    suse) echo "    sudo zypper install nginx" ;;
+    *)    echo "    sudo apt install nginx" ;;
+  esac
   echo "  Or serve $HTDOCS_DIR manually and proxy $BASE_PATH/api/ to port $BACKEND_PORT."
 fi
 echo ""

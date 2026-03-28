@@ -25,6 +25,24 @@ LOG_FILE="/tmp/orbvis_install_${1:-unknown}.log"
 quietly() { "$@" >> "$LOG_FILE" 2>&1; }
 
 # ---------------------------------------------------------------------------
+# OS detection
+# ---------------------------------------------------------------------------
+_detect_os() {
+  OS_FAMILY="unknown"
+  if [[ -f /etc/os-release ]]; then
+    local id
+    # shellcheck source=/dev/null
+    id="$(. /etc/os-release; echo "${ID:-}")"
+    case "$id" in
+      ubuntu|debian)                  OS_FAMILY=debian ;;
+      rhel|centos|rocky|almalinux|ol) OS_FAMILY=rhel ;;
+      sles|opensuse*|suse)            OS_FAMILY=suse ;;
+    esac
+  fi
+}
+_detect_os
+
+# ---------------------------------------------------------------------------
 # Arguments
 # ---------------------------------------------------------------------------
 SITE="${1:-}"
@@ -77,7 +95,14 @@ INIT_SCRIPT="$SITE_ROOT/etc/init.d/orbvis"
 # Prerequisites
 # ---------------------------------------------------------------------------
 NPM="$(command -v npm 2>/dev/null || true)"
-[[ -z "$NPM" ]] && die "npm not found. Install Node.js >= 18:\n  sudo apt install nodejs npm"
+if [[ -z "$NPM" ]]; then
+  case "$OS_FAMILY" in
+    rhel) NODE_HINT="sudo dnf module enable nodejs:20 && sudo dnf install nodejs" ;;
+    suse) NODE_HINT="sudo zypper install nodejs20" ;;
+    *)    NODE_HINT="sudo apt install nodejs npm" ;;
+  esac
+  die "npm not found. Install Node.js >= 18:\n  $NODE_HINT"
+fi
 
 NODE_MAJOR="$(node --version 2>/dev/null | sed 's/v\([0-9]*\).*/\1/')"
 [[ -z "$NODE_MAJOR" || "$NODE_MAJOR" -lt 18 ]] && \
