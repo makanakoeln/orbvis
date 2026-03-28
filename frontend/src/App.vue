@@ -6,7 +6,9 @@
     </div>
     <ChangelogModal v-if="showChangelog" @close="dismissChangelog" />
   </div>
-  <router-view v-else />
+  <div v-else class="flex flex-col h-screen w-screen overflow-hidden">
+    <router-view />
+  </div>
   <ToastContainer />
 </template>
 
