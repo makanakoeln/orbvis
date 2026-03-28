@@ -205,9 +205,9 @@ def _ls_escape(value: str) -> str:
 def _rrd_metric_id(label: str) -> str:
     """Sanitize a perf_data metric label for use in a Livestatus rrddata column spec.
 
-    CMC stores metrics with underscores in place of spaces and colons (matching the
-    NagVis convention). The column name must not contain spaces or colons because those
-    are delimiters in the LQL Columns header.
+    CMC stores metrics with underscores in place of spaces and colons. The column
+    name must not contain spaces or colons because those are delimiters in the LQL
+    Columns header.
     """
     return label.replace(" ", "_").replace(":", "_")
 
@@ -504,7 +504,7 @@ class LivestatusBackend(BackendBase):
         except (KeyError, TypeError, ValueError):
             pass
 
-        # 2. NagVis-compatible custom variables: LAT / LONG
+        # 2. Legacy custom variables: LAT / LONG
         try:
             names: list = r[1] if isinstance(r[1], list) else []
             values: list = r[2] if isinstance(r[2], list) else []

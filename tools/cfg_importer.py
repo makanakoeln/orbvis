@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-NagVis .cfg to OrbVis JSON importer.
+Legacy .cfg to OrbVis JSON importer.
 
-Parses legacy NagVis 1.x map configuration files and converts them
+Parses legacy map configuration files and converts them
 to the OrbVis v2 board JSON format.
 
 Usage:
@@ -22,7 +22,7 @@ from typing import Any
 
 
 # ---------------------------------------------------------------------------
-# NagVis line_type integer → OrbVis line_style string
+# Legacy line_type integer → OrbVis line_style string
 # ---------------------------------------------------------------------------
 LINE_TYPE_MAP: dict[int, str] = {
     10: "plain",
@@ -33,7 +33,7 @@ LINE_TYPE_MAP: dict[int, str] = {
     20: "weathermap",
 }
 
-# Rough icon_size from NagVis iconset name
+# Rough icon_size from legacy iconset name
 ICONSET_SIZE: dict[str, int] = {
     "std_big":    30,
     "std_medium": 24,
@@ -41,7 +41,7 @@ ICONSET_SIZE: dict[str, int] = {
     "std_small":  16,
 }
 
-# NagVis url_target values that reference the old CMK frameset — remap to _blank
+# Legacy url_target values that reference the old CMK frameset — remap to _blank
 _FRAMESET_TARGETS = {"main", "frames", "main_window"}
 
 
@@ -56,7 +56,7 @@ class CfgBlock:
 
 
 def parse_cfg_file(path: Path) -> list[CfgBlock]:
-    """Parse a NagVis .cfg file into a list of define blocks."""
+    """Parse a legacy .cfg file into a list of define blocks."""
     text = path.read_text(encoding="utf-8", errors="replace")
 
     # Strip line comments (but NOT inline # inside colour values like #rrggbb).
@@ -105,8 +105,8 @@ def _bool(value: str | None, default: bool = False) -> bool:
 def _parse_coord(value: str) -> tuple[int, str | None]:
     """Return (resolved_int, original_if_relative).
 
-    NagVis absolute coord  → int, None
-    NagVis relative "ref%offset" → offset as int, original string
+    Legacy absolute coord  → int, None
+    Legacy relative "ref%offset" → offset as int, original string
     """
     v = value.strip()
     if v.lstrip("-").isdigit():
@@ -118,9 +118,9 @@ def _parse_coord(value: str) -> tuple[int, str | None]:
 
 
 def _parse_line_coords(p: dict[str, str]) -> tuple[int, int, int, int]:
-    """Parse NagVis line coords.
+    """Parse legacy line coords.
 
-    NagVis encodes both endpoints in x and y as comma-separated values:
+    Legacy format encodes both endpoints in x and y as comma-separated values:
         x=x1,x2   y=y1,y2
 
     Falls back to separate x2/y2 keys (non-standard but tolerated).
@@ -148,7 +148,7 @@ def _parse_line_coords(p: dict[str, str]) -> tuple[int, int, int, int]:
 
 
 def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
-    """Build a LabelConfig dict from NagVis properties."""
+    """Build a LabelConfig dict from legacy properties."""
     return {
         "show":       _bool(p.get("label_show"), show_default),
         "text":       p.get("label_text") or None,
@@ -161,7 +161,7 @@ def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
 
 
 def _display(p: dict[str, str]) -> dict[str, Any]:
-    """Build a DisplayConfig dict from NagVis properties."""
+    """Build a DisplayConfig dict from legacy properties."""
     mode = p.get("view_type", "icon")
     if mode not in ("icon", "text", "gadget"):
         mode = "icon"
@@ -179,7 +179,7 @@ def _url_target(raw: str | None) -> str:
 # ---------------------------------------------------------------------------
 
 def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any]:
-    """Convert parsed NagVis blocks into an OrbVis v2 board JSON dict."""
+    """Convert parsed legacy blocks into an OrbVis v2 board JSON dict."""
 
     # Board-level defaults (populated from define global)
     board: dict[str, Any] = {
@@ -222,11 +222,11 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
             continue
 
         counter += 1
-        nagvis_type = block.block_type
+        legacy_type = block.block_type
         raw_id = p.get("object_id", str(counter))
 
         # ── line ────────────────────────────────────────────────────────────
-        if nagvis_type == "line":
+        if legacy_type == "line":
             x, y, x2, y2 = _parse_line_coords(p)
             line_type = _int(p.get("line_type", "10"))
             line_style = LINE_TYPE_MAP.get(line_type, "plain")
@@ -252,7 +252,7 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
             continue
 
         # ── shape → image ───────────────────────────────────────────────────
-        if nagvis_type == "shape":
+        if legacy_type == "shape":
             x, _ = _parse_coord(p.get("x", "0"))
             y, _ = _parse_coord(p.get("y", "0"))
             objects.append({
@@ -266,8 +266,8 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
             continue
 
         # ── textbox ─────────────────────────────────────────────────────────
-        if nagvis_type == "textbox":
-            # NagVis textbox x/y is top-left; OrbVis centers objects — offset by half w/h
+        if legacy_type == "textbox":
+            # legacy textbox x/y is top-left; OrbVis centers objects — offset by half w/h
             x, _ = _parse_coord(p.get("x", "0"))
             y, _ = _parse_coord(p.get("y", "0"))
             x += _int(p.get("w"), 200) // 2
@@ -296,8 +296,8 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
         x, _ = _parse_coord(p.get("x", "0"))
         y, _ = _parse_coord(p.get("y", "0"))
 
-        # Map NagVis type to OrbVis type
-        orbvis_type = nagvis_type  # host/service/hostgroup/servicegroup/map all identical
+        # Map legacy type to OrbVis type
+        orbvis_type = legacy_type  # host/service/hostgroup/servicegroup/map all identical
 
         obj = {
             "id": f"{orbvis_type}_{raw_id}",
@@ -309,22 +309,22 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
         }
 
         # Type-specific identity fields
-        if nagvis_type == "host":
+        if legacy_type == "host":
             obj["host_name"] = p.get("host_name")
             if _bool(p.get("only_hard_states")):
                 obj["only_hard_states"] = True
             if _bool(p.get("recognize_services")):
                 obj["recognize_services"] = True
-        elif nagvis_type == "service":
+        elif legacy_type == "service":
             obj["host_name"] = p.get("host_name")
             obj["service_description"] = p.get("service_description")
             if _bool(p.get("only_hard_states")):
                 obj["only_hard_states"] = True
-        elif nagvis_type == "hostgroup":
+        elif legacy_type == "hostgroup":
             obj["group_name"] = p.get("hostgroup_name") or p.get("group_name")
-        elif nagvis_type == "servicegroup":
+        elif legacy_type == "servicegroup":
             obj["group_name"] = p.get("servicegroup_name") or p.get("group_name")
-        elif nagvis_type == "map":
+        elif legacy_type == "map":
             obj["map_name"] = p.get("map_name")
 
         # Optional link
@@ -357,7 +357,7 @@ def convert_file(cfg_path: Path, output_dir: Path) -> Path:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Import NagVis 1.x .cfg maps to OrbVis JSON")
+    parser = argparse.ArgumentParser(description="Import legacy .cfg maps to OrbVis JSON")
     parser.add_argument("input", help=".cfg file or maps directory (with --batch)")
     parser.add_argument("output", nargs="?", default="./maps", help="Output directory (default: ./maps)")
     parser.add_argument("--batch", action="store_true", help="Import all .cfg files in a directory")

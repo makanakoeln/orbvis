@@ -1,4 +1,4 @@
-"""Tests for the NagVis .cfg parser."""
+"""Tests for the legacy .cfg map parser."""
 
 from __future__ import annotations
 

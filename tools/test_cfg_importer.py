@@ -138,7 +138,7 @@ def test_textbox_text(tmp_path: Path):
         define textbox {
             x=50
             y=50
-            text=Hello NagVis World
+            text=Hello OrbVis World
             object_id=1
         }
     """)
@@ -148,7 +148,7 @@ def test_textbox_text(tmp_path: Path):
     result = blocks_to_map_json(blocks, "textbox")
     obj = result["objects"][0]
     assert obj["type"] == "textbox"
-    assert obj["label_text"] == "Hello NagVis World"
+    assert obj["label_text"] == "Hello OrbVis World"
 
 
 def test_relative_coords(tmp_path: Path):

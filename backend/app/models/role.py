@@ -1,4 +1,4 @@
-"""Role model – mirrors the legacy NagVis roles table."""
+"""Role model."""
 
 from __future__ import annotations
 

@@ -155,7 +155,7 @@ async def import_cfg(
     overwrite: bool = False,
     _: User = Depends(require_admin),
 ) -> BoardConfig:
-    """Import a NagVis .cfg map file and convert it to an OrbVis board."""
+    """Import a legacy .cfg map file and convert it to an OrbVis board."""
     if not file.filename or not file.filename.lower().endswith(".cfg"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Only .cfg files are accepted"

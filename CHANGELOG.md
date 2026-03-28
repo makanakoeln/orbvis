@@ -6,9 +6,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [0.1.0] - 2026-03-28
 
-Initial public release. OrbVis is a ground-up rewrite of NagVis as a modern
-monitoring visualization platform — Vue 3 frontend, FastAPI backend, real-time
-WebSocket state delivery, and native Checkmk integration.
+Initial public release. OrbVis is a modern monitoring visualization platform —
+Vue 3 frontend, FastAPI backend, real-time WebSocket state delivery, and native
+Checkmk integration.
 
 **Board editor**
 - SVG canvas with pixel-accurate drag-and-drop object placement and multi-select
@@ -62,7 +62,7 @@ WebSocket state delivery, and native Checkmk integration.
 
 **Geo board**
 - Leaflet-based geo board type showing hosts at their geographic coordinates
-- NagVis-compatible: host geo lookup from Livestatus custom variables
+- Host geo lookup from Livestatus custom variables (`LAT` / `LONG`)
 - ARC ring overlay on map markers
 
 **Actions**
@@ -80,9 +80,8 @@ WebSocket state delivery, and native Checkmk integration.
 - Main menu entry (compatible with CMK 2.4/2.5/2.6 menu APIs)
 - MKP packaging for Checkmk 2.3+ extension marketplace
 
-**NagVis import**
-- `.cfg` import: upload a NagVis map file directly in the board editor
-- Batch importer (`tools/cfg_importer.py`) converts entire NagVis map directories
+**Map import**
+- Upload a legacy `.cfg` map file directly in the board editor
 - Supports nested label/display fields, line coordinates, shape→image mapping
 
 **Authentication & access control**

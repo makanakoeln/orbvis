@@ -126,21 +126,21 @@ orbvis/
 ├── cmk_plugins/      Checkmk 2.4+ GUI plugins (sidebar, WATO permissions, menu)
 ├── cmk_plugins_23/   Checkmk 2.3 GUI plugins
 ├── scripts/          orbvis-setup / orbvis-install wrapper commands (in packages)
-├── tools/            cfg_importer.py – converts legacy NagVis .cfg maps to JSON
+├── tools/            cfg_importer.py – converts legacy .cfg maps to OrbVis JSON
 ├── install.sh        Standalone install/remove (systemd + optional nginx/Apache)
 ├── install_cmk.sh    Checkmk/OMD install/remove
 ├── nfpm.yaml         Package definition (.deb/.rpm via nfpm)
 └── docker-compose.yml
 ```
 
-## Import legacy NagVis maps
+## Import legacy maps
 
 ```bash
 # Single file
-python tools/cfg_importer.py /path/to/nagvis1/etc/maps/mymap.cfg ./data/maps
+python tools/cfg_importer.py /path/to/maps/mymap.cfg ./data/maps
 
 # Batch import entire maps directory
-python tools/cfg_importer.py --batch /path/to/nagvis1/etc/maps/ ./data/maps
+python tools/cfg_importer.py --batch /path/to/maps/ ./data/maps
 ```
 
 ## API Reference

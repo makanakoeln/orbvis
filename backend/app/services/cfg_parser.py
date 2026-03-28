@@ -1,4 +1,4 @@
-"""Parse NagVis .cfg map content and convert it to an OrbVis board dict.
+"""Parse legacy .cfg map content and convert it to an OrbVis board dict.
 
 Used by the import API endpoint; the standalone CLI (tools/cfg_importer.py)
 contains its own copy of the same logic so it stays dependency-free.
@@ -101,7 +101,7 @@ def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
 
 
 def cfg_to_board(content: str, map_name: str) -> dict[str, Any]:
-    """Convert NagVis .cfg text to an OrbVis board JSON dict."""
+    """Convert legacy .cfg text to an OrbVis board JSON dict."""
     board: dict[str, Any] = {
         "name": map_name,
         "alias": map_name,
@@ -186,7 +186,7 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, Any]:
             if raw_text:
                 raw_text = re.sub(r"<br\s*/?>", "\n", raw_text, flags=re.IGNORECASE)
                 raw_text = re.sub(r"<[^>]+>", "", raw_text)
-            # NagVis textbox x/y is top-left; OrbVis centers objects — offset by half w/h
+            # legacy textbox x/y is top-left; OrbVis centers objects — offset by half w/h
             tx = _coord(p.get("x", "0")) + _int(p.get("w"), 200) // 2
             ty = _coord(p.get("y", "0")) + _int(p.get("h"), 40) // 2
             objects.append(

@@ -1,4 +1,4 @@
-"""Permission model – mod/act/obj triplet, mirrors legacy NagVis schema."""
+"""Permission model – mod/act/obj triplet."""
 
 from __future__ import annotations
 

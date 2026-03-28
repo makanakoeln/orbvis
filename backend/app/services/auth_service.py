@@ -304,7 +304,7 @@ def _is_checkmk_admin(username: str) -> bool:
 async def get_or_create_sso_user(db: AsyncSession, username: str) -> User:
     """Find existing user by name or create a new one for SSO login.
 
-    Admin status is determined by the user's Checkmk role (mirrors NagVis behaviour).
+    Admin status is determined by the user's Checkmk role.
     Existing users' admin flag is updated on every login in case their role changed.
     """
     is_admin = _is_checkmk_admin(username)
