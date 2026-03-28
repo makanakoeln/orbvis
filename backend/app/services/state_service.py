@@ -77,16 +77,18 @@ async def get_board_states(cfg: BoardConfig, auth_user: str | None = None) -> Ma
 
     if auth_user is not None and settings.checkmk_omd_root and hasattr(backend, "with_auth_user"):
         async with backend.with_auth_user(auth_user):
-            return await _execute_board_states(cfg, backend)
+            return await _execute_board_states(cfg, backend, auth_user=auth_user)
     return await _execute_board_states(cfg, backend)
 
 
-async def _execute_board_states(cfg: BoardConfig, backend: BackendBase) -> MapStates:
+async def _execute_board_states(
+    cfg: BoardConfig, backend: BackendBase, auth_user: str | None = None
+) -> MapStates:
     """Inner state-fetch implementation; must be called with auth context already set."""
     if cfg.view.type == "radar":
         return await _get_radar_states(cfg, backend)
 
-    state_map = await _get_board_states_batched(backend, cfg.objects)
+    state_map = await _get_board_states_batched(backend, cfg.objects, auth_user=auth_user)
     states = list(state_map.values())
 
     # Determine backend health using only monitoring-object states.
@@ -111,6 +113,7 @@ async def _execute_board_states(cfg: BoardConfig, backend: BackendBase) -> MapSt
 async def _get_board_states_batched(
     backend: BackendBase,
     objects: list[BoardObject],
+    auth_user: str | None = None,
 ) -> dict[str, ObjectState]:
     """Fetch states for all board objects using batch queries where supported."""
     hosts_soft: list[BoardObject] = []
@@ -142,6 +145,7 @@ async def _get_board_states_batched(
     for host_group, only_hard in [(hosts_soft, False), (hosts_hard, True)]:
         if not host_group:
             continue
+        batch_ok = True
         try:
             batch = await backend.get_hosts_states(
                 [o.host_name for o in host_group if o.host_name is not None],
@@ -150,15 +154,25 @@ async def _get_board_states_batched(
         except Exception:
             logger.warning("Batch host state query failed (only_hard=%s)", only_hard, exc_info=True)
             batch = {}
+            batch_ok = False
         for obj in host_group:
             assert obj.host_name is not None
-            s = batch.get(obj.host_name) or ObjectState(
-                object_id=obj.id, type="host", state="PENDING", stale=True
-            )
-            s.object_id = obj.id
-            results[obj.id] = s
+            if batch_ok and auth_user is not None and obj.host_name not in batch:
+                results[obj.id] = ObjectState(object_id=obj.id, type="host", state="NO_PERMISSION")
+            else:
+                s = batch.get(obj.host_name) or ObjectState(
+                    object_id=obj.id, type="host", state="PENDING", stale=True
+                )
+                s.object_id = obj.id
+                results[obj.id] = s
 
-    rs_objs = [o for o in hosts_soft + hosts_hard if o.recognize_services]
+    rs_objs = [
+        o
+        for o in hosts_soft + hosts_hard
+        if o.recognize_services
+        and results.get(o.id) is not None
+        and results[o.id].state != "NO_PERMISSION"
+    ]
     if rs_objs:
         rs_names = list({o.host_name for o in rs_objs if o.host_name is not None})
         try:
@@ -181,6 +195,7 @@ async def _get_board_states_batched(
             for o in svc_group
             if o.host_name is not None and o.service_description is not None
         ]
+        batch_ok = True
         try:
             svc_batch = await backend.get_services_states(pairs, only_hard=only_hard)
         except Exception:
@@ -188,13 +203,20 @@ async def _get_board_states_batched(
                 "Batch service state query failed (only_hard=%s)", only_hard, exc_info=True
             )
             svc_batch = {}
+            batch_ok = False
         for obj in svc_group:
             assert obj.host_name is not None and obj.service_description is not None
-            s = svc_batch.get((obj.host_name, obj.service_description)) or ObjectState(
-                object_id=obj.id, type="service", state="PENDING", stale=True
-            )
-            s.object_id = obj.id
-            results[obj.id] = s
+            key = (obj.host_name, obj.service_description)
+            if batch_ok and auth_user is not None and key not in svc_batch:
+                results[obj.id] = ObjectState(
+                    object_id=obj.id, type="service", state="NO_PERMISSION"
+                )
+            else:
+                s = svc_batch.get(key) or ObjectState(
+                    object_id=obj.id, type="service", state="PENDING", stale=True
+                )
+                s.object_id = obj.id
+                results[obj.id] = s
 
     individual = [_get_object_state(backend, obj) for obj in lines + others]
     for state in await asyncio.gather(*individual):

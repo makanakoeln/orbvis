@@ -336,7 +336,7 @@
     </div>
     <!-- Label -->
     <div
-      v-if="object.label?.show"
+      v-if="object.label?.show && state?.state !== 'NO_PERMISSION'"
       class="mt-1.5 font-medium whitespace-nowrap pointer-events-none px-1.5 py-0.5 rounded"
       :style="labelStyle"
     >

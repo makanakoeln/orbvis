@@ -525,6 +525,7 @@ function closeHoverMenu() {
 }
 
 function openContextMenu(event: MouseEvent, obj: BoardObjectType) {
+  if (props.states[obj.id]?.state === 'NO_PERMISSION') return;
   contextMenu.object = obj;
   contextMenu.x = event.pageX;
   contextMenu.y = event.pageY;

@@ -125,6 +125,7 @@ export default {
     showInLists: 'Im Board-Verzeichnis anzeigen',
     showInListsHint: 'Wenn deaktiviert, wird dieses Board für reguläre Benutzer ausgeblendet',
     sparklineTrend: 'Auslastung (24h)',
+    noPermission: 'Keine Berechtigung',
     fullscreen: 'Vollbild',
     exitFullscreen: 'Vollbild beenden',
     openInNewTab: 'In neuem Tab öffnen (Vollbild)',

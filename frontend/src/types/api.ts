@@ -65,7 +65,7 @@ export type BoardView = StaticView | WorldmapView | RadarView | AutomapView;
 
 export type HostState = 'UP' | 'DOWN' | 'UNREACHABLE' | 'PENDING';
 export type ServiceState = 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN' | 'PENDING';
-export type MonitoringState = HostState | ServiceState;
+export type MonitoringState = HostState | ServiceState | 'NO_PERMISSION';
 
 export interface BoardObject {
   id: string;

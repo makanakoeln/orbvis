@@ -123,6 +123,7 @@ export default {
     showInLists: 'Show in board list',
     showInListsHint: 'When disabled, this board is hidden from regular users',
     sparklineTrend: 'Utilization (24h)',
+    noPermission: 'No permission',
     fullscreen: 'Full screen',
     exitFullscreen: 'Exit full screen',
     openInNewTab: 'Open in new tab (full screen)',

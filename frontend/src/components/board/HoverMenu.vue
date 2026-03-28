@@ -9,8 +9,12 @@
 
       <!-- Default content -->
       <template v-else>
+        <div v-if="isNoPermission" class="text-sm text-[var(--text-muted)] italic">
+          {{ t('board.noPermission') }}
+        </div>
+
         <!-- Header -->
-        <div class="flex items-start gap-2 mb-2">
+        <div v-else class="flex items-start gap-2 mb-2">
           <span
             v-if="hasMonitoring"
             class="w-2 h-2 rounded-full mt-1 shrink-0"
@@ -24,7 +28,7 @@
           </div>
         </div>
 
-        <template v-if="hasMonitoring">
+        <template v-if="hasMonitoring && !isNoPermission">
           <!-- State -->
           <div v-if="state" class="text-xs font-semibold mt-1" :class="stateTextColor">
             {{ state.state }}
@@ -152,6 +156,8 @@ const hoverTypeLabel = computed(() => getObjectTypeLabel(props.object));
 const hasMonitoring = computed(
   () => !(VISUAL_ONLY_TYPES as readonly string[]).includes(props.object.type),
 );
+
+const isNoPermission = computed(() => props.state?.state === 'NO_PERMISSION');
 
 const STATE_BG: Record<string, string> = {
   UP: 'bg-green-400',
