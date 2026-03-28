@@ -87,7 +87,7 @@ class BackendBase(ABC):
     async def get_hosts_states(
         self, hostnames: list[str], only_hard: bool = False
     ) -> dict[str, ObjectState]:
-        """Return states for multiple hosts. Default: one call per host."""
+        """Return states for multiple hosts. Result may be a partial dict (callers handle missing keys)."""
         results: dict[str, ObjectState] = {}
         for h in hostnames:
             results[h] = await (
@@ -98,7 +98,7 @@ class BackendBase(ABC):
     async def get_services_states(
         self, pairs: list[tuple[str, str]], only_hard: bool = False
     ) -> dict[tuple[str, str], ObjectState]:
-        """Return states for multiple (host, service) pairs. Default: one call per pair."""
+        """Return states for multiple (host, service) pairs. Result may be a partial dict (callers handle missing keys)."""
         results: dict[tuple[str, str], ObjectState] = {}
         for host, svc in pairs:
             results[(host, svc)] = await (

@@ -822,9 +822,6 @@ class LivestatusBackend(BackendBase):
                 in_downtime=int(r[5]) > 0,
                 **_parse_extra(r, offset=6, include_address=True),
             )
-        for h in hostnames:
-            if h not in results:
-                results[h] = ObjectState(object_id="", type="host", state="PENDING")
         return results
 
     async def get_services_states(
@@ -863,9 +860,6 @@ class LivestatusBackend(BackendBase):
                 in_downtime=int(r[6]) > 0,
                 **_parse_extra(r, offset=7),
             )
-        for pair in pairs:
-            if pair not in results:
-                results[pair] = ObjectState(object_id="", type="service", state="PENDING")
         return results
 
     async def get_hosts_services_batch(self, hostnames: list[str]) -> dict[str, list[dict]]:
