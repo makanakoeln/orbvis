@@ -8,8 +8,14 @@
     @mouseleave="$emit('hover-leave')"
     @contextmenu.prevent="$emit('context-menu', $event)"
   >
+    <!-- No permission: render silent empty box -->
+    <div
+      v-if="state?.state === 'NO_PERMISSION'"
+      class="w-full h-full rounded-lg border border-zinc-800/30 bg-zinc-900/20"
+    />
+
     <!-- Native chart mode (host linked) -->
-    <template v-if="isNativeChart">
+    <template v-else-if="isNativeChart">
       <!-- Waiting for first data point / not found -->
       <div
         v-if="!hasChartData"

@@ -236,7 +236,9 @@ async def _get_board_states_batched(
                 continue
             non_map_objs = [o for o in ref_cfg.objects if o.type != "map"]
             try:
-                board_states[map_name] = await _get_board_states_batched(ref_backend, non_map_objs)
+                board_states[map_name] = await _get_board_states_batched(
+                    ref_backend, non_map_objs, auth_user=auth_user
+                )
             except Exception:
                 pass
         for obj in map_objects:
@@ -244,8 +246,14 @@ async def _get_board_states_batched(
             sub = board_states.get(obj.map_name, {})
             mon = [s for s in sub.values() if s.type in _MONITORING_TYPES]
             if mon:
-                worst = max(mon, key=lambda s: _COMBINED_SEVERITY.get(s.state, 0))
-                results[obj.id] = ObjectState(object_id=obj.id, type="map", state=worst.state)
+                real = [s for s in mon if s.state != "NO_PERMISSION"]
+                if not real:
+                    results[obj.id] = ObjectState(
+                        object_id=obj.id, type="map", state="NO_PERMISSION"
+                    )
+                else:
+                    worst = max(real, key=lambda s: _COMBINED_SEVERITY.get(s.state, 0))
+                    results[obj.id] = ObjectState(object_id=obj.id, type="map", state=worst.state)
             else:
                 results[obj.id] = ObjectState(object_id=obj.id, type="map", state="PENDING")
 
