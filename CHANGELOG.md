@@ -4,8 +4,6 @@ All notable changes to OrbVis are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
-
 ## [0.1.0] - 2026-03-28
 
 Initial public release. OrbVis is a ground-up rewrite of NagVis as a modern
