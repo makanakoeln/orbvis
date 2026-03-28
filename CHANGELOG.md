@@ -71,7 +71,7 @@ Checkmk integration.
 - Acknowledgement and active downtime badges on object icons
 
 **Checkmk integration**
-- Supports Checkmk 2.4, 2.5, and 2.6
+- Supports Checkmk 2.3, 2.4, 2.5, and 2.6
 - Native WATO permissions: `orbvis.use`, `orbvis.view_all`, `orbvis.edit_all`,
   per-board `orbvis.view_<name>` / `orbvis.edit_<name>`
 - SSO via Checkmk OMD session cookie (HMAC verification compatible with CMK 2.4 and 2.5)
