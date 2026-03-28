@@ -76,7 +76,9 @@ async def get_board_states(name: str, current_user: User = Depends(get_current_u
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
         )
-    auth_user = current_user.name if settings.checkmk_omd_root else None
+    auth_user = (
+        current_user.name if settings.checkmk_omd_root and not current_user.is_admin else None
+    )
     return await state_service.get_board_states(cfg, auth_user=auth_user)
 
 
@@ -120,7 +122,7 @@ async def websocket_board_states(
         if not can_view_board(user, name):
             await websocket.close(code=4003)
             return
-        ws_auth_user = user.name
+        ws_auth_user = user.name if not user.is_admin else None
 
     cfg = board_service.get_board(name)
     if cfg is None:
