@@ -155,6 +155,8 @@ export interface ObjectState {
   acknowledged: boolean;
   in_downtime: boolean;
   stale: boolean;
+  notifications_enabled?: boolean;
+  active_checks_enabled?: boolean;
   address?: string;
   last_check?: number | null;
   state_type?: string;

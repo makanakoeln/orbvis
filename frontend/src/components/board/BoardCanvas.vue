@@ -119,8 +119,14 @@
       @duplicate="onContextMenuDuplicate"
       @delete="onContextMenuDelete"
       @acknowledge="onContextMenuAck"
+      @remove-ack="onContextMenuRemoveAck"
       @schedule-downtime="onContextMenuDowntime"
       @force-check="onContextMenuForceCheck"
+      @add-comment="onContextMenuAddComment"
+      @enable-notifications="onContextMenuToggleNotifications(true)"
+      @disable-notifications="onContextMenuToggleNotifications(false)"
+      @enable-checks="onContextMenuToggleChecks(true)"
+      @disable-checks="onContextMenuToggleChecks(false)"
     />
   </div>
 
@@ -130,6 +136,14 @@
     :object="ackModalObject"
     :checkmk-url="checkmkUrl"
     @close="ackModalObject = null"
+  />
+
+  <!-- Comment modal -->
+  <CommentModal
+    v-if="commentModalObject && checkmkUrl"
+    :object="commentModalObject"
+    :checkmk-url="checkmkUrl"
+    @close="commentModalObject = null"
   />
 
   <!-- Downtime modal -->
@@ -155,6 +169,7 @@ import { resolveTemplate } from '@/utils/template';
 import AckModal from './AckModal.vue';
 import BoardLine from './BoardLine.vue';
 import BoardObject from './BoardObject.vue';
+import CommentModal from './CommentModal.vue';
 import ContextMenu from './ContextMenu.vue';
 import DowntimeModal from './DowntimeModal.vue';
 import HoverMenu from './HoverMenu.vue';
@@ -556,6 +571,7 @@ function onContextMenuDuplicate() {
 
 const ackModalObject = ref<BoardObjectType | null>(null);
 const downtimeModalObject = ref<BoardObjectType | null>(null);
+const commentModalObject = ref<BoardObjectType | null>(null);
 
 function onContextMenuAck() {
   const obj = contextMenu.object;
@@ -567,6 +583,75 @@ function onContextMenuDowntime() {
   const obj = contextMenu.object;
   closeMenus();
   if (obj) downtimeModalObject.value = obj;
+}
+
+function onContextMenuAddComment() {
+  const obj = contextMenu.object;
+  closeMenus();
+  if (obj) commentModalObject.value = obj;
+}
+
+async function onContextMenuRemoveAck() {
+  const obj = contextMenu.object;
+  closeMenus();
+  if (!obj || !props.checkmkUrl) return;
+  try {
+    if (obj.type === 'service' && obj.host_name && obj.service_description) {
+      await cmkApi.removeAcknowledgementService(
+        props.checkmkUrl,
+        obj.host_name,
+        obj.service_description,
+      );
+    } else if (obj.host_name) {
+      await cmkApi.removeAcknowledgementHost(props.checkmkUrl, obj.host_name);
+    }
+  } catch {
+    toast.error(t('contextMenu.removeAckFailed'));
+  }
+}
+
+async function onContextMenuToggleNotifications(enable: boolean) {
+  const obj = contextMenu.object;
+  closeMenus();
+  if (!obj || !props.checkmkUrl) return;
+  try {
+    if (obj.type === 'service' && obj.host_name && obj.service_description) {
+      await (enable ? cmkApi.enableNotificationsService : cmkApi.disableNotificationsService)(
+        props.checkmkUrl,
+        obj.host_name,
+        obj.service_description,
+      );
+    } else if (obj.host_name) {
+      await (enable ? cmkApi.enableNotificationsHost : cmkApi.disableNotificationsHost)(
+        props.checkmkUrl,
+        obj.host_name,
+      );
+    }
+  } catch {
+    toast.error(t('contextMenu.toggleNotificationsFailed'));
+  }
+}
+
+async function onContextMenuToggleChecks(enable: boolean) {
+  const obj = contextMenu.object;
+  closeMenus();
+  if (!obj || !props.checkmkUrl) return;
+  try {
+    if (obj.type === 'service' && obj.host_name && obj.service_description) {
+      await (enable ? cmkApi.enableChecksService : cmkApi.disableChecksService)(
+        props.checkmkUrl,
+        obj.host_name,
+        obj.service_description,
+      );
+    } else if (obj.host_name) {
+      await (enable ? cmkApi.enableChecksHost : cmkApi.disableChecksHost)(
+        props.checkmkUrl,
+        obj.host_name,
+      );
+    }
+  } catch {
+    toast.error(t('contextMenu.toggleChecksFailed'));
+  }
 }
 
 async function onContextMenuForceCheck() {

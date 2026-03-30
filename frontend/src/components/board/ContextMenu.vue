@@ -88,7 +88,7 @@
       {{ t('contextMenu.noCheckmkUrl') }}
     </div>
 
-    <!-- CMK actions: ACK / Downtime / Force-check -->
+    <!-- CMK actions: ACK / Downtime / Force-check / Comment / Remove ACK / Notifications / Checks -->
     <template v-if="checkmkUrl && (object.type === 'host' || object.type === 'service')">
       <div class="border-t border-[var(--border)] mt-1 pt-1">
         <button
@@ -110,6 +110,26 @@
             />
           </svg>
           <span>{{ t('contextMenu.acknowledge') }}</span>
+        </button>
+        <button
+          v-if="state?.acknowledged"
+          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+          @click="$emit('removeAck')"
+        >
+          <svg
+            class="w-3.5 h-3.5 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>{{ t('contextMenu.removeAck') }}</span>
         </button>
         <button
           class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
@@ -148,6 +168,105 @@
             />
           </svg>
           <span>{{ t('contextMenu.forceCheck') }}</span>
+        </button>
+        <button
+          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+          @click="$emit('addComment')"
+        >
+          <svg
+            class="w-3.5 h-3.5 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
+            />
+          </svg>
+          <span>{{ t('contextMenu.addComment') }}</span>
+        </button>
+        <button
+          v-if="state?.notifications_enabled !== false"
+          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+          @click="$emit('disableNotifications')"
+        >
+          <svg
+            class="w-3.5 h-3.5 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9.143 17.082a24.248 24.248 0 003.844.148m-3.844-.148a23.856 23.856 0 01-5.455-1.31 8.964 8.964 0 002.3-5.542m3.155 6.852a3 3 0 005.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 003.536-1.003A8.967 8.967 0 0118 9.75V9A6 6 0 006.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53"
+            />
+          </svg>
+          <span>{{ t('contextMenu.disableNotifications') }}</span>
+        </button>
+        <button
+          v-if="state?.notifications_enabled === false"
+          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+          @click="$emit('enableNotifications')"
+        >
+          <svg
+            class="w-3.5 h-3.5 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+            />
+          </svg>
+          <span>{{ t('contextMenu.enableNotifications') }}</span>
+        </button>
+        <button
+          v-if="state?.active_checks_enabled !== false"
+          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+          @click="$emit('disableChecks')"
+        >
+          <svg
+            class="w-3.5 h-3.5 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+            />
+          </svg>
+          <span>{{ t('contextMenu.disableChecks') }}</span>
+        </button>
+        <button
+          v-if="state?.active_checks_enabled === false"
+          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+          @click="$emit('enableChecks')"
+        >
+          <svg
+            class="w-3.5 h-3.5 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M5.636 5.636a9 9 0 1012.728 12.728M5.636 5.636a9 9 0 0112.728 12.728m-12.728 0L5.636 5.636"
+            />
+          </svg>
+          <span>{{ t('contextMenu.enableChecks') }}</span>
         </button>
       </div>
     </template>
@@ -243,8 +362,14 @@ defineEmits<{
   duplicate: [];
   delete: [];
   acknowledge: [];
+  removeAck: [];
   scheduleDowntime: [];
   forceCheck: [];
+  addComment: [];
+  enableNotifications: [];
+  disableNotifications: [];
+  enableChecks: [];
+  disableChecks: [];
 }>();
 
 const renderedTemplate = computed(() =>

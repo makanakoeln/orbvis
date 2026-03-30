@@ -375,6 +375,24 @@ async function cmkRequest(baseUrl: string, path: string, body?: unknown): Promis
   }
 }
 
+function cmkHostAction(baseUrl: string, hostname: string, action: string): Promise<void> {
+  return cmkRequest(
+    baseUrl,
+    `/objects/host/${encodeURIComponent(hostname)}/actions/${action}/invoke`,
+    {},
+  );
+}
+
+function cmkServiceAction(
+  baseUrl: string,
+  hostname: string,
+  serviceDescription: string,
+  action: string,
+): Promise<void> {
+  const id = `${encodeURIComponent(hostname)}~${encodeURIComponent(serviceDescription)}`;
+  return cmkRequest(baseUrl, `/objects/service/${id}/actions/${action}/invoke`, {});
+}
+
 export const cmkApi = {
   acknowledgeHost(
     baseUrl: string,
@@ -462,6 +480,64 @@ export const cmkApi = {
       force: true,
     });
   },
+
+  addCommentHost(baseUrl: string, hostname: string, comment: string): Promise<void> {
+    return cmkRequest(baseUrl, '/domain-types/comment/collections/host', {
+      comment_type: 'host',
+      host_name: hostname,
+      comment,
+    });
+  },
+
+  addCommentService(
+    baseUrl: string,
+    hostname: string,
+    serviceDescription: string,
+    comment: string,
+  ): Promise<void> {
+    return cmkRequest(baseUrl, '/domain-types/comment/collections/service', {
+      comment_type: 'service',
+      host_name: hostname,
+      service_description: serviceDescription,
+      comment,
+    });
+  },
+
+  removeAcknowledgementHost(baseUrl: string, hostname: string): Promise<void> {
+    return cmkHostAction(baseUrl, hostname, 'remove-all-acknowledgements');
+  },
+
+  removeAcknowledgementService(
+    baseUrl: string,
+    hostname: string,
+    serviceDescription: string,
+  ): Promise<void> {
+    return cmkServiceAction(baseUrl, hostname, serviceDescription, 'remove-all-acknowledgements');
+  },
+
+  enableNotificationsHost: (baseUrl: string, hostname: string) =>
+    cmkHostAction(baseUrl, hostname, 'enable-notifications'),
+
+  disableNotificationsHost: (baseUrl: string, hostname: string) =>
+    cmkHostAction(baseUrl, hostname, 'disable-notifications'),
+
+  enableNotificationsService: (baseUrl: string, hostname: string, serviceDescription: string) =>
+    cmkServiceAction(baseUrl, hostname, serviceDescription, 'enable-notifications'),
+
+  disableNotificationsService: (baseUrl: string, hostname: string, serviceDescription: string) =>
+    cmkServiceAction(baseUrl, hostname, serviceDescription, 'disable-notifications'),
+
+  enableChecksHost: (baseUrl: string, hostname: string) =>
+    cmkHostAction(baseUrl, hostname, 'enable-active-checks'),
+
+  disableChecksHost: (baseUrl: string, hostname: string) =>
+    cmkHostAction(baseUrl, hostname, 'disable-active-checks'),
+
+  enableChecksService: (baseUrl: string, hostname: string, serviceDescription: string) =>
+    cmkServiceAction(baseUrl, hostname, serviceDescription, 'enable-active-checks'),
+
+  disableChecksService: (baseUrl: string, hostname: string, serviceDescription: string) =>
+    cmkServiceAction(baseUrl, hostname, serviceDescription, 'disable-active-checks'),
 };
 
 export { ApiError };
