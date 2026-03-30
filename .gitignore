@@ -1,3 +1,6 @@
+# Local system config (machine-specific, install manually)
+etc/
+
 # Data
 data/
 *.db
