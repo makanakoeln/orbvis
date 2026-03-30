@@ -286,6 +286,9 @@ sudo tee "$APACHE_CONF" > /dev/null <<EOF
 <IfModule !mod_proxy_http.c>
     LoadModule proxy_http_module $APACHE_MODULES_DIR/mod_proxy_http.so
 </IfModule>
+<IfModule !mod_proxy_wstunnel.c>
+    LoadModule proxy_wstunnel_module $APACHE_MODULES_DIR/mod_proxy_wstunnel.so
+</IfModule>
 
 Alias /$SITE/orbvis $HTDOCS_DIR
 
@@ -300,6 +303,12 @@ Alias /$SITE/orbvis $HTDOCS_DIR
     Require all granted
     FallbackResource /$SITE/orbvis/index.html
 </Directory>
+
+# WebSocket proxy (must come before the /api block)
+<Location /$SITE/orbvis/api/v1/ws>
+    ProxyPass        ws://127.0.0.1:$BACKEND_PORT/api/v1/ws
+    ProxyPassReverse ws://127.0.0.1:$BACKEND_PORT/api/v1/ws
+</Location>
 
 <Location /$SITE/orbvis/api>
     <IfModule mod_allowmethods.c>
