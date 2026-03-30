@@ -18,6 +18,7 @@
     "lint:css": "stylelint 'src/**/*.{css,vue}'",
     "format": "prettier --write 'src/**/*.{ts,vue,css}'",
     "format:check": "prettier --check 'src/**/*.{ts,vue,css}'",
+    "deploy:cmc": "npm run build && sudo /home/ronny/git/orbvis/deploy-cmc.sh",
     "copy-builtin-icons": "node scripts/copy-builtin-icons.js",
     "prepare": "cd .. && husky"
   },

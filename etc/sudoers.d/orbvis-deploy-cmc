@@ -1,0 +1,2 @@
+# Allows ronny to deploy OrbVis to the CMC OMD site without password.
+ronny ALL=(ALL) NOPASSWD: /home/ronny/git/orbvis/deploy-cmc.sh
