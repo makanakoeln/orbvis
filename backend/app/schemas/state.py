@@ -19,6 +19,8 @@ class ObjectState(BaseModel):
     acknowledged: bool = False
     in_downtime: bool = False
     stale: bool = False
+    notifications_enabled: bool = True
+    active_checks_enabled: bool = True
     address: str = ""
     last_check: float | None = None
     state_type: str = ""  # "HARD" | "SOFT" | ""

@@ -223,8 +223,12 @@ _STATE_TYPE_MAP = {0: "SOFT", 1: "HARD"}
 
 _HOST_EXTRA_COLS = (
     "address last_check state_type current_attempt max_check_attempts last_state_change"
+    " notifications_enabled active_checks_enabled"
 )
-_SVC_EXTRA_COLS = "last_check state_type current_attempt max_check_attempts last_state_change"
+_SVC_EXTRA_COLS = (
+    "last_check state_type current_attempt max_check_attempts last_state_change"
+    " notifications_enabled active_checks_enabled"
+)
 
 
 def _parse_extra(row: list, offset: int = 5, *, include_address: bool = False) -> dict:
@@ -238,6 +242,8 @@ def _parse_extra(row: list, offset: int = 5, *, include_address: bool = False) -
         attempt = int(row[col + 2]) if len(row) > col + 2 else 0
         max_att = int(row[col + 3]) if len(row) > col + 3 else 0
         lsc = float(row[col + 4]) if len(row) > col + 4 else 0.0
+        notif = bool(int(row[col + 5])) if len(row) > col + 5 else True
+        active = bool(int(row[col + 6])) if len(row) > col + 6 else True
     except (ValueError, TypeError):
         return {}
     result = {
@@ -246,6 +252,8 @@ def _parse_extra(row: list, offset: int = 5, *, include_address: bool = False) -
         "current_attempt": attempt,
         "max_attempts": max_att,
         "last_state_change": lsc if lsc > 0 else None,
+        "notifications_enabled": notif,
+        "active_checks_enabled": active,
     }
     if include_address:
         result["address"] = address
