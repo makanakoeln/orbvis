@@ -97,9 +97,12 @@ try:
     _orig_get_items_24 = _Renderer24._get_main_menu_items
 
     def _patched_get_items_24(self):  # type: ignore[no-untyped-def]
+        items = _orig_get_items_24(self)
+        if not _user_may_use():
+            return [item for item in items if item.name != "orbvis"]
         return [
             item._replace(icon=_SelfActive(str(item.icon))) if item.name == "orbvis" else item
-            for item in _orig_get_items_24(self)
+            for item in items
         ]
 
     _Renderer24._get_main_menu_items = _patched_get_items_24  # type: ignore[method-assign]
@@ -168,11 +171,14 @@ except ImportError:
         _orig_show_25 = _Renderer25._show_main_menu_content
 
         def _patched_show_25(self, user_permissions: UserPermissions, popup_triggers: list) -> None:  # type: ignore[no-untyped-def]
-            patched = [
-                pt._replace(icon=_SelfActive(str(pt.icon))) if pt.name == "orbvis" else pt
-                for pt in popup_triggers
-            ]
-            _orig_show_25(self, user_permissions, patched)
+            if _user_may_use():
+                popup_triggers = [
+                    pt._replace(icon=_SelfActive(str(pt.icon))) if pt.name == "orbvis" else pt
+                    for pt in popup_triggers
+                ]
+            else:
+                popup_triggers = [pt for pt in popup_triggers if pt.name != "orbvis"]
+            _orig_show_25(self, user_permissions, popup_triggers)
 
         _Renderer25._show_main_menu_content = _patched_show_25  # type: ignore[method-assign]
 
