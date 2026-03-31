@@ -31,6 +31,7 @@
               :value="form.name"
               placeholder="my-board"
               required
+              autofocus
               class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 transition-all"
               :class="
                 nameError
