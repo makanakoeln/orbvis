@@ -9,10 +9,16 @@ _SITE = os.environ.get("OMD_SITE", "")
 
 try:
     # CMK 2.3 / 2.4
+    from cmk.gui.globals import user as _cmk_user
     from cmk.gui.main_menu import mega_menu_registry
     from cmk.gui.type_defs import MegaMenu, TopicMenuItem, TopicMenuTopic
 
     def _orbvis_topics() -> list:
+        try:
+            if not _cmk_user.may("orbvis.use"):
+                return []
+        except Exception:
+            pass
         return [
             TopicMenuTopic(
                 name="orbvis",
