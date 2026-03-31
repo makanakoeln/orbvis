@@ -21,19 +21,31 @@ class _SelfActive(str):
 
 
 try:
+    from cmk.gui.globals import user as _cmk_user
+    _HAS_CMK_USER = True
+except ImportError:
+    _HAS_CMK_USER = False
+
+
+def _user_may_use() -> bool:
+    if not _HAS_CMK_USER:
+        return True
+    try:
+        return _cmk_user.may("orbvis.use")
+    except Exception:
+        return True
+
+
+try:
     # Checkmk 2.4
-    from cmk.gui.globals import user as _cmk_user_24
     from cmk.gui.i18n import _
     from cmk.gui.main_menu import mega_menu_registry
     from cmk.gui.sidebar.main_menu import MainMenuRenderer as _Renderer24
     from cmk.gui.type_defs import MegaMenu, TopicMenuItem, TopicMenuTopic
 
     def _orbvis_topics_24() -> list:
-        try:
-            if not _cmk_user_24.may("orbvis.use"):
-                return []
-        except Exception:
-            pass
+        if not _user_may_use():
+            return []
         return [
             TopicMenuTopic(
                 name="orbvis",
@@ -103,11 +115,8 @@ except ImportError:
         from cmk.gui.utils.roles import UserPermissions
 
         def _orbvis_topics_25(user_permissions: UserPermissions) -> list:
-            try:
-                if not user_permissions.may("orbvis.use"):
-                    return []
-            except Exception:
-                pass
+            if not _user_may_use():
+                return []
             return [
                 MainMenuTopic(
                     name="orbvis",
@@ -188,11 +197,8 @@ except ImportError:
             type.__setattr__(NavItemIdEnum, _id, _member)
 
             def _orbvis_topics_26(user_permissions: UserPermissions) -> list:
-                try:
-                    if not user_permissions.may("orbvis.use"):
-                        return []
-                except Exception:
-                    pass
+                if not _user_may_use():
+                    return []
                 return [
                     NavItemTopic(
                         id="orbvis",

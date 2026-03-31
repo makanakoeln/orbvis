@@ -8,17 +8,29 @@ from cmk.gui.i18n import _
 _SITE = os.environ.get("OMD_SITE", "")
 
 try:
-    # CMK 2.3 / 2.4
     from cmk.gui.globals import user as _cmk_user
+    _HAS_CMK_USER = True
+except ImportError:
+    _HAS_CMK_USER = False
+
+
+def _user_may_use() -> bool:
+    if not _HAS_CMK_USER:
+        return True
+    try:
+        return _cmk_user.may("orbvis.use")
+    except Exception:
+        return True
+
+
+try:
+    # CMK 2.3 / 2.4
     from cmk.gui.main_menu import mega_menu_registry
     from cmk.gui.type_defs import MegaMenu, TopicMenuItem, TopicMenuTopic
 
     def _orbvis_topics() -> list:
-        try:
-            if not _cmk_user.may("orbvis.use"):
-                return []
-        except Exception:
-            pass
+        if not _user_may_use():
+            return []
         return [
             TopicMenuTopic(
                 name="orbvis",
