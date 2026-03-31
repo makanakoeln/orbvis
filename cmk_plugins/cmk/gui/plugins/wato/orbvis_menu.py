@@ -21,10 +21,14 @@ class _SelfActive(str):
 
 
 try:
-    from cmk.gui.globals import user as _cmk_user
+    from cmk.gui.logged_in import user as _cmk_user
     _HAS_CMK_USER = True
 except ImportError:
-    _HAS_CMK_USER = False
+    try:
+        from cmk.gui.globals import user as _cmk_user  # type: ignore[no-redef]
+        _HAS_CMK_USER = True
+    except ImportError:
+        _HAS_CMK_USER = False
 
 
 def _user_may_use() -> bool:
