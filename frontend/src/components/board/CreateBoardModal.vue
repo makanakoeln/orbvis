@@ -179,9 +179,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import { ApiError } from '@/api/client';
 import { useBoardsStore } from '@/stores/boards';
 import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';
@@ -198,14 +199,11 @@ const form = ref({ name: '', alias: '', backend_id: '', view_type: 'static' });
 const aliasTouched = ref(false);
 
 const _NAME_RE = /^[a-zA-Z0-9_-]+$/;
-const nameError = computed(() => {
-  if (!form.value.name) return '';
-  if (!_NAME_RE.test(form.value.name)) return t('admin.boardIdInvalid');
-  return '';
-});
+const nameError = ref('');
 
 function onNameInput(e: Event) {
   form.value.name = sanitizeBoardName((e.target as HTMLInputElement).value);
+  nameError.value = _NAME_RE.test(form.value.name) ? '' : t('admin.boardIdInvalid');
   if (!aliasTouched.value) {
     form.value.alias = slugToTitleCase(form.value.name);
   }
@@ -224,13 +222,21 @@ onMounted(async () => {
 });
 
 async function submit() {
-  await boardsStore.createBoard(
-    form.value.name,
-    form.value.alias,
-    form.value.backend_id,
-    form.value.view_type,
-    settingsStore.settings.icon_size,
-  );
+  nameError.value = '';
+  try {
+    await boardsStore.createBoard(
+      form.value.name,
+      form.value.alias,
+      form.value.backend_id,
+      form.value.view_type,
+      settingsStore.settings.icon_size,
+    );
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 409) {
+      nameError.value = t('admin.boardIdTaken');
+    }
+    return;
+  }
   const created = form.value.name;
   form.value = {
     name: '',

@@ -369,6 +369,7 @@ export default {
     boardIdHint:
       'Buchstaben, Ziffern, Bindestriche und Unterstriche — Leerzeichen werden automatisch zu Bindestrichen',
     boardIdInvalid: 'Nur Buchstaben, Ziffern, Bindestriche (-) und Unterstriche (_) erlaubt',
+    boardIdTaken: 'Ein Board mit dieser ID existiert bereits',
     alias: 'Anzeigename',
     type: 'Typ',
     alias2: 'Alias',

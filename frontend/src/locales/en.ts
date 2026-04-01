@@ -366,6 +366,7 @@ export default {
     boardIdHint:
       'Letters, digits, hyphens and underscores only — spaces become hyphens automatically',
     boardIdInvalid: 'Only letters, digits, hyphens (-) and underscores (_) allowed',
+    boardIdTaken: 'A board with this ID already exists',
     alias: 'Display name',
     type: 'Type',
     alias2: 'Alias',
