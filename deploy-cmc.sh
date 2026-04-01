@@ -16,6 +16,13 @@ fi
 # Backend
 rsync -a --delete "$REPO/backend/" "$SITE_DIR/src/"
 
+# Demo boards + backgrounds (live data dir, separate from src/)
+BOARDS_DIR="$SITE_DIR/boards"
+if [[ -d "$BOARDS_DIR" ]]; then
+  rsync -a "$REPO/backend/boards/demo"*.json "$BOARDS_DIR/"
+  rsync -a "$REPO/backend/boards/backgrounds/" "$BOARDS_DIR/backgrounds/"
+fi
+
 # Ensure outer Apache WebSocket tunnel config exists (direct ws:// → orbvis backend)
 BACKEND_PORT=$(grep -oP -- '--port \K[0-9]+' /omd/sites/CMC/etc/init.d/orbvis 2>/dev/null | head -1 || true)
 BACKEND_PORT=${BACKEND_PORT:-8421}

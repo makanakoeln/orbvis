@@ -237,11 +237,19 @@ function _snap(v: number): number {
 }
 
 const bgImageFailed = ref(false);
+const bgImageCacheKey = ref(Date.now());
+
+const bgImageUrl = computed(() => {
+  const bg = props.config.background_image;
+  if (!bg) return null;
+  return `${import.meta.env.BASE_URL}boards/backgrounds/${bg}?v=${bgImageCacheKey.value}`;
+});
 
 watch(
   () => props.config.background_image,
   (bg) => {
     bgImageFailed.value = false;
+    bgImageCacheKey.value = Date.now();
     if (!bg) {
       bgImageSize.value = null;
       return;
@@ -254,7 +262,7 @@ watch(
       bgImageFailed.value = true;
       bgImageSize.value = null;
     };
-    img.src = `${import.meta.env.BASE_URL}boards/backgrounds/${bg}`;
+    img.src = bgImageUrl.value!;
   },
   { immediate: true },
 );
@@ -275,13 +283,14 @@ const canvasHeight = computed(() =>
 // Canvas style: with background → fill parent absolutely; without → fixed pixel size
 const canvasStyle = computed(() => {
   const bg = props.config.background_image;
+  const url = bgImageUrl.value;
   const pixelSize = {
     minWidth: `max(${canvasWidth.value}px, 100%)`,
     minHeight: `max(${canvasHeight.value}px, 100%)`,
   };
   if (bg && bgImageSize.value) {
     return {
-      backgroundImage: `url(${import.meta.env.BASE_URL}boards/backgrounds/${bg})`,
+      backgroundImage: `url(${url})`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: '100% 100%',
     };
@@ -290,7 +299,7 @@ const canvasStyle = computed(() => {
     // Image still loading — reserve pixel space so SVG overlay doesn't collapse
     return {
       ...pixelSize,
-      backgroundImage: `url(${import.meta.env.BASE_URL}boards/backgrounds/${bg})`,
+      backgroundImage: `url(${url})`,
       backgroundRepeat: 'no-repeat',
       backgroundSize: '100% 100%',
     };
