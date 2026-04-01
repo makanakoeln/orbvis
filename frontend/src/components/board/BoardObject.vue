@@ -52,7 +52,9 @@
         <!-- Header: metric label + current value -->
         <div class="mb-1 flex items-center justify-between shrink-0">
           <span class="text-[9px] font-semibold tracking-wide text-zinc-400 truncate">
-            {{ isSingleMetric ? object.graph_metric || chartMetricLabels[0] : chartHeaderName }}
+            {{
+              isSingleMetric ? chartMetricLabels[0] || object.graph_metric?.[0] : chartHeaderName
+            }}
           </span>
           <span
             v-if="isSingleMetric"

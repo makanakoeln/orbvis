@@ -174,8 +174,10 @@ export function renderMetricChart(
       );
   const yHiRaw = valMax + range * 0.15;
   const yHi = tVals.length > 0 ? Math.max(yHiRaw, ...tVals) : yHiRaw;
+  // Never push the Y-domain below zero for non-negative metrics (e.g. disk usage %, bytes).
+  const yLo = valMin >= 0 ? Math.max(0, valMin - range * 0.15) : valMin - range * 0.15;
   const yScale = scaleLinear()
-    .domain([valMin - range * 0.15, yHi])
+    .domain([yLo, yHi])
     .range([HC - PAD_Y, PAD_Y]);
 
   // Defs: gradient for single-series area fill
@@ -248,7 +250,7 @@ export function renderMetricChart(
     .attr('fill', c.label)
     .attr('font-size', '8')
     .attr('font-family', 'ui-monospace,monospace')
-    .text((d) => fmtMetricVal(d));
+    .text((d) => fmtMetricVal(d, unit));
 
   // Y-axis unit label (e.g. "B", "%") above the top tick
   const unitLabel = baseUnit(unit);
@@ -337,7 +339,9 @@ export function renderMetricChart(
     const latest = pts[pts.length - 1];
     const color = multiSeries
       ? CHART_PALETTE[i % CHART_PALETTE.length]
-      : utilColor(valMax > 0 ? Math.min(100, (latest.value / valMax) * 100) : 0);
+      : resolvedThresholds?.crit != null && resolvedThresholds.crit > 0
+        ? utilColor(Math.min(100, Math.max(0, (latest.value / resolvedThresholds.crit) * 100)))
+        : CHART_PALETTE[0];
 
     const pathD = lineGen(pts)!;
 
