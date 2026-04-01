@@ -1,6 +1,6 @@
 # OrbVis
 
-Monitoring visualization platform built with **FastAPI** · **SQLAlchemy 2.0** · **Vue 3** · **TypeScript** · **Vite** · **Pinia** · **Tailwind CSS**.
+Monitoring visualization platform built with **FastAPI** · **SQLAlchemy 2.0** · **Vue 3** · **TypeScript** · **Vite** · **Pinia** · **Tailwind CSS** · **D3.js**.
 
 ## Installation
 
