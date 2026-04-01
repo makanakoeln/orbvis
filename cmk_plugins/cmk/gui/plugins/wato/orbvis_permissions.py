@@ -11,6 +11,7 @@ try:
         declare_dynamic_permissions,
         declare_permission,
         declare_permission_section,
+        permission_registry,
     )
 
     _BOARDS_DIR = (
@@ -38,8 +39,16 @@ try:
         ["admin"],
     )
 
+    _declared_board_perms: set[str] = set()
+
     def _declare_board_permissions() -> None:
         """Declare per-board view/edit permissions dynamically at load time."""
+        # Unregister only previously declared per-board permissions so deleted
+        # boards disappear from the WATO roles UI without an Apache restart.
+        for key in _declared_board_perms:
+            permission_registry.unregister(key)
+        _declared_board_perms.clear()
+
         if not _BOARDS_DIR.is_dir():
             return
         for p in sorted(_BOARDS_DIR.glob("*.json")):
@@ -64,6 +73,8 @@ try:
                 f"Grants write access to the OrbVis board '{alias}'.",
                 ["admin"],
             )
+            _declared_board_perms.add(f"orbvis.view_{name}")
+            _declared_board_perms.add(f"orbvis.edit_{name}")
 
     declare_dynamic_permissions(_declare_board_permissions)
 
