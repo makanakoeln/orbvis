@@ -100,12 +100,6 @@
         </div>
         <div class="flex flex-col w-full flex-1 min-h-0">
           <template v-for="group in chartGroups" :key="group.id">
-            <div
-              v-if="group.title"
-              class="text-[9px] text-zinc-500 px-1 pt-0.5 leading-none truncate shrink-0"
-            >
-              {{ group.title }}
-            </div>
             <svg :ref="(el) => registerChartRef(group.id, el)" class="w-full flex-1 min-h-0" />
           </template>
         </div>
@@ -490,9 +484,12 @@ const chartMetricKeys = computed(() => Object.keys(chartData.value));
 const chartMetricLabels = computed(() =>
   chartMetricKeys.value.map((key) => statesStore.metricTitles[props.object.id]?.[key] ?? key),
 );
-// Always show the monitored entity (host/service) in the chart header, not a cosmetic label
 const chartHeaderName = computed(() => {
   const o = props.object;
+  // Prefer the graph template group title (e.g. "RAM (Total, cached, buffers)") over host/service
+  // when exactly one group is shown — mirrors how CMK labels its graphs.
+  const g = chartGroups.value;
+  if (g.length === 1 && g[0].title) return g[0].title;
   if (o.host_name && o.service_description) return `${o.host_name} / ${o.service_description}`;
   return o.service_description ?? o.host_name ?? '';
 });
@@ -548,21 +545,18 @@ const chartGroups = computed(() => {
   if (!groups.length || props.object.graph_id || props.object.graph_metric?.length) {
     return [{ id: '_all', title: '', data: chartData.value }];
   }
-  const covered = new Set(groups.flatMap((g) => g.metrics));
-  const result = groups
-    .map((g) => ({
-      id: g.id,
-      title: g.title,
-      data: Object.fromEntries(
-        g.metrics.filter((m) => chartData.value[m]).map((m) => [m, chartData.value[m]]),
-      ),
-    }))
-    .filter((g) => Object.keys(g.data).length > 0);
-  const ungrouped = Object.fromEntries(
-    Object.entries(chartData.value).filter(([k]) => !covered.has(k)),
-  );
-  if (Object.keys(ungrouped).length > 0) result.push({ id: '_misc', title: '', data: ungrouped });
-  return result;
+  // When multiple graph template groups exist but no specific group is pinned via
+  // graph_id, show only the first group that has data. Showing all groups at once
+  // squishes them into unreadably small sub-charts. Users can pin a group via graph_id.
+  for (const g of groups) {
+    const data = Object.fromEntries(
+      g.metrics.filter((m) => chartData.value[m]).map((m) => [m, chartData.value[m]]),
+    );
+    if (Object.keys(data).length > 0) {
+      return [{ id: g.id, title: g.title, data }];
+    }
+  }
+  return [{ id: '_all', title: '', data: chartData.value }];
 });
 
 // Plain (non-reactive) map: SVG element mutations must not trigger re-renders.
@@ -581,7 +575,7 @@ watchEffect(
       const svgEl = chartSvgEls.get(group.id);
       if (!svgEl) continue;
       const firstKey = Object.keys(group.data)[0];
-      const isFilled = !!props.object.graph_id || (group.id !== '_all' && group.id !== '_misc');
+      const isFilled = !!props.object.graph_id || group.id !== '_all';
       renderMetricChart(
         svgEl,
         group.data,
