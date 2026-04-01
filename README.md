@@ -1,6 +1,6 @@
 # OrbVis
 
-Monitoring visualization platform built with **Python FastAPI** + **Vue.js 3 + TypeScript**.
+Monitoring visualization platform built with **FastAPI** · **SQLAlchemy 2.0** · **Vue 3** · **TypeScript** · **Vite** · **Pinia** · **Tailwind CSS**.
 
 ## Installation
 
@@ -57,7 +57,7 @@ To uninstall (user data is kept):
 
 **With Checkmk / OMD:**
 
-Tested with **Checkmk 2.3 and 2.4**. Deploys OrbVis into an existing OMD site, wires up the
+Tested with **Checkmk 2.3 – 2.6**. Deploys OrbVis into an existing OMD site, wires up the
 site's Apache and registers an OMD init script so `omd start/stop orbvis` works.
 
 ```bash
