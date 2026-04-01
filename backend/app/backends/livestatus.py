@@ -12,6 +12,7 @@ import types
 from collections.abc import Iterator
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
+from dataclasses import dataclass, field
 from datetime import UTC
 from functools import lru_cache
 from pathlib import Path
@@ -83,8 +84,8 @@ def _extract_quantity_metrics(qty: object) -> Iterator[str]:
         yield metric_name
         return
     # Sum (.summands), Product (.factors)
-    for field in ("summands", "factors"):
-        items = getattr(qty, field, None)
+    for seq_attr in ("summands", "factors"):
+        items = getattr(qty, seq_attr, None)
         if items is not None:
             for item in items:
                 yield from _extract_quantity_metrics(item)
@@ -100,30 +101,34 @@ def _extract_quantity_metrics(qty: object) -> Iterator[str]:
     # Constant or unknown — no metric
 
 
-@lru_cache(maxsize=1)
-def _load_cmk_graphing_data() -> tuple[
-    dict[str, str], dict[str, tuple[str, list[str], frozenset[str]]]
-]:
-    """Single-pass loader for CMK metric titles and graph templates.
+@dataclass
+class _CMKGraphingData:
+    titles: dict[str, str] = field(default_factory=dict)
+    graphs: dict[str, tuple[str, list[str], frozenset[str]]] = field(default_factory=dict)
+    units: dict[str, str] = field(default_factory=dict)
+    # scale factor per source metric name (0.0 = conflict sentinel → don't scale)
+    scales: dict[str, float] = field(default_factory=dict)
 
-    Returns (titles, graphs) where graphs maps graph_id to
-    (title, compound_metrics, conflicting_metrics).
-    """
+
+@lru_cache(maxsize=1)
+def _load_cmk_graphing_data() -> _CMKGraphingData:
+    """Single-pass loader for CMK metric titles, graph templates, unit symbols, and scale factors."""
     if not _cmk_integration.available:
-        return {}, {}
+        return _CMKGraphingData()
     try:
         from cmk.graphing.v1 import graphs as _gg
         from cmk.graphing.v1 import metrics as _gm
+        from cmk.graphing.v1 import translations as _gt
     except ImportError:
-        return {}, {}
-    titles: dict[str, str] = {}
-    graphs: dict[str, tuple[str, list[str], frozenset[str]]] = {}
+        return _CMKGraphingData()
+    data = _CMKGraphingData()
     for mod in _iter_graphing_modules(_get_plugin_dirs()):
         for attr in dir(mod):
             obj = getattr(mod, attr)
             if attr.startswith("metric_") and isinstance(obj, _gm.Metric):
                 try:
-                    titles[obj.name] = obj.title.localize(_identity)
+                    data.titles[obj.name] = obj.title.localize(_identity)
+                    data.units[obj.name] = getattr(obj.unit.notation, "symbol", "")
                 except Exception:
                     pass
             elif attr.startswith("graph_") and isinstance(obj, _gg.Graph):
@@ -131,11 +136,29 @@ def _load_cmk_graphing_data() -> tuple[
                 if names:
                     try:
                         conflicting: frozenset[str] = frozenset(getattr(obj, "conflicting", ()))
-                        graphs[obj.name] = (obj.title.localize(_identity), names, conflicting)
+                        data.graphs[obj.name] = (obj.title.localize(_identity), names, conflicting)
                     except Exception:
                         pass
-    logger.debug("Loaded %d CMK metric titles, %d graph templates", len(titles), len(graphs))
-    return titles, graphs
+            elif attr.startswith("translation_") and hasattr(obj, "translations"):
+                try:
+                    for src_metric, trans in obj.translations.items():
+                        if src_metric.startswith("~"):
+                            continue
+                        if isinstance(trans, (_gt.ScaleBy, _gt.RenameToAndScaleBy)):
+                            factor = float(trans.factor)
+                            if src_metric in data.scales and data.scales[src_metric] != factor:
+                                data.scales[src_metric] = 0.0  # conflict: two different factors
+                            elif src_metric not in data.scales:
+                                data.scales[src_metric] = factor
+                except Exception:
+                    pass
+    logger.debug(
+        "Loaded %d CMK metric titles, %d graph templates, %d scale factors",
+        len(data.titles),
+        len(data.graphs),
+        len(data.scales),
+    )
+    return data
 
 
 def _extract_graph_metric_names(graph: object) -> list[str]:
@@ -156,11 +179,19 @@ def _extract_graph_metric_names(graph: object) -> list[str]:
 
 
 def _load_cmk_metric_titles() -> dict[str, str]:
-    return _load_cmk_graphing_data()[0]
+    return _load_cmk_graphing_data().titles
 
 
 def _load_cmk_graphs() -> dict[str, tuple[str, list[str], frozenset[str]]]:
-    return _load_cmk_graphing_data()[1]
+    return _load_cmk_graphing_data().graphs
+
+
+def _load_cmk_metric_units() -> dict[str, str]:
+    return _load_cmk_graphing_data().units
+
+
+def _load_cmk_metric_scales() -> dict[str, float]:
+    return _load_cmk_graphing_data().scales
 
 
 def _match_graphs(available: set[str]) -> list[GraphGroup]:
@@ -756,6 +787,8 @@ class LivestatusBackend(BackendBase):
         # CMC returns each rrddata column as a flat list:
         #   [actual_start, actual_end, actual_step, v0, v1, ..., vN]
         # A value of None means no RRD file / metric exists for this column.
+        metric_scales = _load_cmk_metric_scales()
+        metric_units = _load_cmk_metric_units()
         series: dict[str, list[tuple[float, float, str]]] = {}
         titles: dict[str, str] = {}
         row = rows[0]
@@ -769,14 +802,25 @@ class LivestatusBackend(BackendBase):
                 actual_start = float(rrd[0])
                 actual_step = float(rrd[2])
                 values = rrd[3:]
-                unit = m["unit"]
+                label = m["label"]
+                perf_unit = m["unit"]
+                # CMK translations (e.g. ScaleBy(1048576) for fs_used) convert check-plugin
+                # units (MiB) to the canonical graphing unit (bytes) at display time; apply
+                # the same factor here. Guard: values ≥1e9 are already in bytes (Linux mem
+                # checks), so skip scaling even when a Windows translation matches the name.
+                scale = metric_scales.get(label, 0.0) if perf_unit == "" else 0.0
+                if scale > 0:
+                    first = next((float(v) for v in values if v is not None), None)
+                    if first is not None and abs(first) >= 1e9:
+                        scale = 0.0
+                unit = metric_units.get(label, perf_unit) if perf_unit == "" else perf_unit
                 points: list[tuple[float, float, str]] = []
                 for j, v in enumerate(values):
                     if v is not None:
                         ts = actual_start + j * actual_step
-                        points.append((ts, float(v), unit))
+                        val = float(v) * scale if scale > 0 else float(v)
+                        points.append((ts, val, unit))
                 if points:
-                    label = m["label"]
                     series[label] = points
                     titles[label] = _cmk_metric_title(label)
             except (IndexError, TypeError, ValueError) as exc:
