@@ -169,6 +169,34 @@
       "map_name": "demo-radar",
       "label": { "show": true, "text": "map \u2192 Radar", "x": 0, "y": 34, "size": 10, "color": "#ffffff", "background": "transparent" },
       "display": { "mode": "icon" }
+    },
+    {
+      "id": "graph-cpu",
+      "type": "graph",
+      "x": 1445,
+      "y": 165,
+      "z": 1,
+      "host_name": "localhost",
+      "service_description": "CPU Load",
+      "graph_metric": ["load"],
+      "graph_time_window": 60,
+      "graph_width": 185,
+      "graph_height": 120,
+      "label": { "show": true, "text": "CPU Load", "x": 0, "y": 126, "size": 10, "color": "#ffffff", "background": "transparent" }
+    },
+    {
+      "id": "graph-disk",
+      "type": "graph",
+      "x": 1445,
+      "y": 355,
+      "z": 1,
+      "host_name": "fileserver",
+      "service_description": "Disk /",
+      "graph_metric": ["used"],
+      "graph_time_window": 60,
+      "graph_width": 185,
+      "graph_height": 120,
+      "label": { "show": true, "text": "Disk /", "x": 0, "y": 126, "size": 10, "color": "#ffffff", "background": "transparent" }
     }
   ]
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="640">
-  <rect width="1440" height="640" fill="#09090b"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="640">
+  <rect width="1680" height="640" fill="#09090b"/>
   <!-- Section: Hosts + Lines -->
   <rect x="190" y="16" width="470" height="610" rx="10"
         fill="#4f46e5" fill-opacity="0.08" stroke="#4f46e5" stroke-opacity="0.35" stroke-width="1"/>
@@ -25,6 +25,12 @@
   <text x="1297" y="40" text-anchor="middle"
         font-family="monospace" font-size="9" font-weight="bold" letter-spacing="2"
         fill="#c4b5fd">SHAPE + MAP</text>
+  <!-- Section: Graphs -->
+  <rect x="1425" y="16" width="225" height="610" rx="10"
+        fill="#06b6d4" fill-opacity="0.07" stroke="#06b6d4" stroke-opacity="0.35" stroke-width="1"/>
+  <text x="1537" y="40" text-anchor="middle"
+        font-family="monospace" font-size="9" font-weight="bold" letter-spacing="2"
+        fill="#22d3ee">GRAPHS</text>
   <!-- Row type labels in left margin -->
   <text x="95" y="194" text-anchor="middle" font-family="monospace" font-size="8" fill="#6b7280">icon view</text>
   <text x="95" y="359" text-anchor="middle" font-family="monospace" font-size="8" fill="#6b7280">gauge / bar</text>
