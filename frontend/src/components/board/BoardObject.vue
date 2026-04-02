@@ -100,7 +100,15 @@
         </div>
         <div class="flex flex-col w-full flex-1 min-h-0">
           <template v-for="group in chartGroups" :key="group.id">
-            <svg :ref="(el) => registerChartRef(group.id, el)" class="w-full flex-1 min-h-0" />
+            <MetricChart
+              class="w-full flex-1 min-h-0"
+              :data="group.data"
+              :metric-keys="Object.keys(group.data)"
+              :window-secs="(object.graph_time_window ?? 60) * 60"
+              :thresholds="chartThresholds"
+              :unit="Object.values(group.data)[0]?.at(-1)?.unit"
+              :dark="isDark"
+            />
           </template>
         </div>
       </div>
@@ -348,7 +356,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ComponentPublicInstance } from 'vue';
+import { useMutationObserver } from '@vueuse/core';
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -358,7 +366,6 @@ import {
   CHART_PALETTE,
   fmtMetricVal,
   MAX_VISIBLE_SERIES,
-  renderMetricChart,
 } from '@/composables/useMetricChart';
 import { useAuthStore } from '@/stores/auth';
 import type { MetricPoint } from '@/stores/states';
@@ -367,6 +374,7 @@ import type { BoardObject, ObjectState } from '@/types/api';
 import { getMetric, parsePerfData, utilColor as _utilColor, utilPercent } from '@/utils/perf';
 
 import GadgetRenderer from './GadgetRenderer.vue';
+import MetricChart from './MetricChart.vue';
 
 const BASE_URL = import.meta.env.BASE_URL;
 const RING_PAD = 6;
@@ -434,6 +442,15 @@ watch(
   (token, prev) => {
     if (token && !prev) _triggerHistoryPrefill();
   },
+);
+
+const isDark = ref(document.documentElement.classList.contains('dark'));
+useMutationObserver(
+  document.documentElement,
+  () => {
+    isDark.value = document.documentElement.classList.contains('dark');
+  },
+  { attributes: true, attributeFilter: ['class'] },
 );
 
 // Single arc ring SVG — always a separate overlay SVG that D3 owns exclusively.
@@ -559,38 +576,6 @@ const chartGroups = computed(() => {
   return [{ id: '_all', title: '', data: chartData.value }];
 });
 
-// Plain (non-reactive) map: SVG element mutations must not trigger re-renders.
-// watchEffect re-runs when chartGroups changes; by flush:'post' all SVGs are
-// already mounted before the effect runs, so the map is always up to date.
-const chartSvgEls = new Map<string, SVGSVGElement>();
-function registerChartRef(id: string, el: Element | ComponentPublicInstance | null) {
-  if (el instanceof SVGSVGElement) chartSvgEls.set(id, el);
-  else chartSvgEls.delete(id);
-}
-
-watchEffect(
-  () => {
-    const windowSecs = (props.object.graph_time_window ?? 60) * 60;
-    for (const group of chartGroups.value) {
-      const svgEl = chartSvgEls.get(group.id);
-      if (!svgEl) continue;
-      const firstKey = Object.keys(group.data)[0];
-      const isFilled = !!props.object.graph_id || group.id !== '_all';
-      renderMetricChart(
-        svgEl,
-        group.data,
-        graphW.value,
-        Math.max(30, graphH.value - 28),
-        windowSecs,
-        chartThresholds.value,
-        firstKey ? group.data[firstKey]?.at(-1)?.unit : undefined,
-        isFilled,
-      );
-    }
-  },
-  { flush: 'post' },
-);
-
 // ---- Graph: URL embed ----
 const graphLoadFailed = ref(false);
 const refreshTick = ref(0);
@@ -618,7 +603,6 @@ watchEffect(() => {
 onUnmounted(() => {
   if (_refreshTimer) clearInterval(_refreshTimer);
   if (dataTimeoutTimer) clearTimeout(dataTimeoutTimer);
-  chartSvgEls.clear();
 });
 
 const graphSrc = computed(() => {
