@@ -965,6 +965,8 @@ class LivestatusBackend(BackendBase):
                 timeout=self._timeout,
             )
 
+        # asyncio.shield() prevents a second CancelledError from aborting
+        # wait_closed() when the caller cancels this coroutine mid-cleanup.
         try:
             writer.write(lql.encode())
             await writer.drain()
@@ -1000,6 +1002,6 @@ class LivestatusBackend(BackendBase):
         finally:
             writer.close()
             try:
-                await writer.wait_closed()
+                await asyncio.shield(writer.wait_closed())
             except Exception:
                 pass
