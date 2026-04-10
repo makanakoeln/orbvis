@@ -60,7 +60,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@tabler/icons": "^3.40.0",
+    "@tabler/icons": "^3.41.1",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/d3-array": "^3.2.2",
     "@types/d3-drag": "^3.0.7",
