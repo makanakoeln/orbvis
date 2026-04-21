@@ -6,7 +6,7 @@
         <p class="text-sm text-zinc-500 mt-1">{{ t('admin.usersSubtitle') }}</p>
       </div>
       <button
-        class="flex items-center gap-2 px-4 py-2 ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
+        class="flex items-center gap-2 px-4 py-2 ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
         @click="showCreate = true"
       >
         <svg
@@ -23,7 +23,11 @@
     </div>
 
     <div v-if="loading" class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center">
-      <svg class="animate-spin w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24">
+      <svg
+        class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
         <path
           class="opacity-75"
@@ -91,7 +95,7 @@
                 <span
                   v-for="r in user.roles"
                   :key="r.role_id"
-                  class="inline-block px-1.5 py-0.5 rounded bg-[var(--bg-input)] ring-1 ring-zinc-700 text-zinc-400 mr-1 mb-0.5"
+                  class="inline-block px-1.5 py-0.5 rounded bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-zinc-400 mr-1 mb-0.5"
                 >
                   {{ r.name }}
                 </span>
@@ -103,7 +107,7 @@
                 <template v-if="user.user_id !== auth.user?.user_id">
                   <button
                     v-if="canEditUsers"
-                    class="p-1.5 rounded-md text-zinc-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+                    class="p-1.5 rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
                     :title="t('common.edit')"
                     @click="editUser = user"
                   >
@@ -181,7 +185,7 @@
                 placeholder="john"
                 required
                 autocomplete="off"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
             </div>
 
@@ -193,7 +197,7 @@
                 required
                 minlength="6"
                 autocomplete="new-password"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
               <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
@@ -207,11 +211,11 @@
                 type="password"
                 required
                 autocomplete="new-password"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 transition-all"
+                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 transition-all"
                 :class="
                   newUserConfirmPassword && newUser.password !== newUserConfirmPassword
                     ? 'ring-red-500/60 focus:ring-red-500'
-                    : 'ring-zinc-700 focus:ring-indigo-500'
+                    : 'ring-[var(--default-form-element-border-color)] focus:ring-[var(--color-corporate-green-50)]'
                 "
               />
               <p
@@ -227,7 +231,7 @@
                 <input
                   v-model="newUser.is_admin"
                   type="checkbox"
-                  class="rounded accent-indigo-500 w-4 h-4 mt-0.5 shrink-0"
+                  class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 mt-0.5 shrink-0"
                 />
                 <div>
                   <p class="text-sm text-zinc-300 group-hover:text-[var(--text)] transition-colors">
@@ -241,7 +245,7 @@
                 <input
                   v-model="newUser.must_change_password"
                   type="checkbox"
-                  class="rounded accent-indigo-500 w-4 h-4 shrink-0"
+                  class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 shrink-0"
                 />
                 <p class="text-sm text-zinc-400">{{ t('admin.mustChangePassword') }}</p>
               </label>
@@ -261,7 +265,7 @@
                   v-model="selectedRoleIds"
                   type="checkbox"
                   :value="role.role_id"
-                  class="rounded accent-indigo-500 w-4 h-4 shrink-0"
+                  class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 shrink-0"
                 />
                 <p class="text-sm text-zinc-400">{{ role.name }}</p>
               </label>
@@ -279,7 +283,7 @@
               <button
                 type="submit"
                 :disabled="creating || newUser.password !== newUserConfirmPassword"
-                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all"
+                class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
               >
                 {{ creating ? t('common.saving') : t('common.create') }}
               </button>

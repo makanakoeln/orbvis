@@ -9,7 +9,11 @@
       v-if="store.loading"
       class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center"
     >
-      <svg class="animate-spin w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24">
+      <svg
+        class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
         <path
           class="opacity-75"
@@ -96,7 +100,7 @@
             <input
               v-model="form.label_show"
               type="checkbox"
-              class="w-4 h-4 rounded accent-indigo-500"
+              class="w-4 h-4 rounded accent-[var(--color-corporate-green-50)]"
             />
             <span class="text-sm text-[var(--text)]">{{ t('boardSettings.showLabel') }}</span>
           </label>
@@ -128,7 +132,7 @@
                     v-model="form.label_color"
                     type="text"
                     placeholder="#ffffff"
-                    class="w-28 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    class="w-28 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)]"
                   />
                 </div>
               </label>
@@ -151,7 +155,7 @@
                     v-model="form.label_background"
                     type="text"
                     placeholder="transparent"
-                    class="w-32 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    class="w-32 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)]"
                   />
                 </div>
               </label>
@@ -221,7 +225,7 @@
               v-model="form.hover_template"
               type="text"
               :placeholder="t('board.templatePlaceholder')"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)]"
             />
           </label>
 
@@ -234,7 +238,7 @@
               v-model="form.context_template"
               type="text"
               :placeholder="t('board.templatePlaceholder')"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)]"
             />
           </label>
         </div>
@@ -253,7 +257,7 @@
             v-model="form.checkmk_url"
             type="text"
             placeholder="https://checkmk.example.com/mysite"
-            class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)]"
           />
           <p class="text-xs text-zinc-600 mt-1.5">{{ t('settings.checkmkUrlHint') }}</p>
         </label>
@@ -289,7 +293,7 @@
         </button>
         <button
           :disabled="saving"
-          class="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-indigo-900/20"
+          class="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all duration-150 shadow-lg shadow-[var(--color-corporate-green-100)]/20"
           @click="handleSave"
         >
           {{ saving ? t('common.saving') : t('common.save') }}
@@ -375,6 +379,6 @@ onMounted(async () => {
 @reference "tailwindcss";
 
 .select {
-  @apply bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500;
+  @apply bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)];
 }
 </style>

@@ -37,7 +37,7 @@
             class="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
             :class="
               activeTab === tab.id
-                ? 'bg-indigo-600/20 text-indigo-300'
+                ? 'bg-[var(--color-corporate-green-50)]/20 text-[var(--color-corporate-green-40)]'
                 : 'text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)]'
             "
             @click="activeTab = tab.id"
@@ -55,7 +55,7 @@
               <label class="text-xs font-medium text-zinc-400">{{ t('board.displayName') }}</label>
               <input
                 v-model="form.alias"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
             </div>
 
@@ -66,7 +66,7 @@
                 <div class="relative">
                   <select
                     v-model="form.backend_id"
-                    class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                   >
                     <option v-for="b in backends" :key="b.id" :value="b.id">
                       {{ b.label || b.id }}
@@ -116,7 +116,7 @@
               <div class="relative">
                 <select
                   v-model="form.map_type"
-                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                 >
                   <option value="static">{{ t('board.boardTypeStatic') }}</option>
                   <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
@@ -174,7 +174,7 @@
                 <input
                   v-model="form.worldmap_tile_url"
                   :placeholder="t('board.tileUrlPlaceholder')"
-                  class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-500 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-500 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                 />
               </div>
               <div class="space-y-1.5">
@@ -203,7 +203,7 @@
                   <div class="relative">
                     <select
                       v-model="form.radar_filter"
-                      class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                     >
                       <option value="hostgroup">{{ t('board.filterTypeHostgroup') }}</option>
                       <option value="servicegroup">{{ t('board.filterTypeServicegroup') }}</option>
@@ -237,7 +237,7 @@
                   <input
                     v-model="form.radar_filter_value"
                     placeholder="e.g. linux-servers"
-                    class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                   />
                 </div>
               </div>
@@ -252,7 +252,7 @@
               <input
                 v-model="form.hover_template"
                 :placeholder="t('board.templatePlaceholder')"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
               <label class="text-xs text-zinc-400 block mt-2">{{
                 t('board.contextTemplate')
@@ -260,7 +260,7 @@
               <input
                 v-model="form.context_template"
                 :placeholder="t('board.templatePlaceholder')"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
               <p class="text-xs text-zinc-600">{{ t('board.templateHint') }}</p>
             </div>
@@ -278,7 +278,7 @@
               <button
                 type="button"
                 class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-200"
-                :class="form.show_in_lists ? 'bg-indigo-600' : 'bg-zinc-700'"
+                :class="form.show_in_lists ? 'bg-[var(--color-corporate-green-50)]' : 'bg-zinc-700'"
                 @click="form.show_in_lists = !form.show_in_lists"
               >
                 <span
@@ -300,10 +300,10 @@
                 <input
                   v-model="form.background_image"
                   placeholder="filename.png"
-                  class="flex-1 px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  class="flex-1 px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                 />
                 <label
-                  class="flex items-center px-3 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all shrink-0"
+                  class="flex items-center px-3 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all shrink-0"
                 >
                   {{ t('common.upload') }}
                   <input type="file" accept="image/*" class="hidden" @change="uploadBackground" />
@@ -311,7 +311,7 @@
                 <button
                   v-if="form.background_image"
                   type="button"
-                  class="px-3 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 hover:ring-red-500 rounded-lg text-sm text-zinc-500 hover:text-red-400 transition-all shrink-0"
+                  class="px-3 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-red-500 rounded-lg text-sm text-zinc-500 hover:text-red-400 transition-all shrink-0"
                   :title="t('board.deleteBackground')"
                   @click="deleteBackground"
                 >
@@ -396,7 +396,7 @@
                           type="checkbox"
                           :checked="hasDraftPerm(role, 'view')"
                           :disabled="hasWildcard(role, 'view')"
-                          class="accent-indigo-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          class="accent-[var(--color-corporate-green-50)] w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           @change="toggleDraftPerm(role, 'view')"
                         />
                         <span
@@ -413,7 +413,7 @@
                           type="checkbox"
                           :checked="hasDraftPerm(role, 'edit')"
                           :disabled="hasWildcard(role, 'edit')"
-                          class="accent-indigo-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          class="accent-[var(--color-corporate-green-50)] w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           @change="toggleDraftPerm(role, 'edit')"
                         />
                         <span
@@ -447,7 +447,7 @@
           </button>
           <button
             :disabled="saving"
-            class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-white transition-all"
+            class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
             @click="save"
           >
             {{ saving ? t('common.saving') : t('common.save') }}

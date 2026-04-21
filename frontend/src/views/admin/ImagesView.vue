@@ -6,7 +6,7 @@
         <p class="text-sm text-zinc-500 mt-1">{{ t('admin.iconsSubtitle') }}</p>
       </div>
       <button
-        class="flex items-center gap-2 px-4 py-2 ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
+        class="flex items-center gap-2 px-4 py-2 ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
         @click="fileInputEl?.click()"
       >
         <svg
@@ -52,7 +52,11 @@
     </div>
 
     <div v-if="loading" class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center">
-      <svg class="animate-spin w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24">
+      <svg
+        class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
         <path
           class="opacity-75"
@@ -84,7 +88,7 @@
       <div
         v-for="icon in icons"
         :key="icon.name"
-        class="group relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-3 flex flex-col items-center gap-2 hover:ring-zinc-600 transition-all"
+        class="group relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-3 flex flex-col items-center gap-2 hover:ring-[var(--default-form-element-border-color)] transition-all"
       >
         <img
           :src="`${BASE_URL}${icon.url}`"

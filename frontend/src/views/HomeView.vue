@@ -11,7 +11,7 @@
           <button
             v-if="auth.isAdmin"
             data-tour="new-board"
-            class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
+            class="flex items-center gap-2 px-4 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
             @click="showCreate = true"
           >
             <svg
@@ -42,7 +42,7 @@
             <input
               v-model="searchQuery"
               :placeholder="t('home.search')"
-              class="w-full pl-8 py-2 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              class="w-full pl-8 py-2 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               :class="searchQuery ? 'pr-7' : 'pr-3'"
             />
             <button
@@ -70,7 +70,11 @@
         v-if="boardsStore.loading"
         class="flex items-center gap-3 text-zinc-500 text-sm py-12 justify-center"
       >
-        <svg class="animate-spin w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24">
+        <svg
+          class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
           <circle
             class="opacity-25"
             cx="12"
@@ -102,7 +106,7 @@
         class="flex flex-col items-center justify-center py-24 text-center"
       >
         <div
-          class="w-14 h-14 rounded-2xl bg-[var(--bg-input)] ring-1 ring-zinc-700 flex items-center justify-center mb-5"
+          class="w-14 h-14 rounded-2xl bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] flex items-center justify-center mb-5"
         >
           <svg
             class="w-7 h-7 text-zinc-600"
@@ -120,7 +124,9 @@
         </div>
         <p class="text-zinc-300 font-semibold">{{ t('home.noBoardsTitle') }}</p>
         <p class="text-zinc-600 text-sm mt-1.5">
-          <span v-if="auth.isAdmin" class="text-indigo-400">{{ t('home.noBoardsAdmin') }}</span>
+          <span v-if="auth.isAdmin" class="text-[var(--color-corporate-green-50)]">{{
+            t('home.noBoardsAdmin')
+          }}</span>
           <span v-else>{{ t('home.noBoardsUser') }}</span>
         </p>
       </div>
@@ -140,11 +146,13 @@
         <div
           v-for="map in filteredBoards"
           :key="map.name"
-          class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-indigo-500/40 rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-900/10"
+          class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-[var(--color-corporate-green-50)]/40 rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-[var(--color-corporate-green-100)]/10"
         >
           <router-link :to="`/boards/${map.name}`" class="block">
             <!-- Thumbnail -->
-            <div class="relative w-full h-32 overflow-hidden bg-[var(--bg-input)]">
+            <div
+              class="relative w-full h-32 overflow-hidden bg-[var(--default-form-element-bg-color)]"
+            >
               <img
                 v-if="map.background_image && !map.name.startsWith('demo-')"
                 :src="`${baseUrl}boards/backgrounds/${map.background_image}`"
@@ -674,7 +682,7 @@
                         ? 'bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30'
                         : map.view.type === 'flow'
                           ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30'
-                          : 'bg-zinc-800/70 text-zinc-400 ring-1 ring-zinc-700/60'
+                          : 'bg-zinc-800/70 text-zinc-400 ring-1 ring-[var(--default-border-color)]/60'
                   "
                 >
                   {{ boardTypeLabel(map.view.type) }}
@@ -683,7 +691,7 @@
               <div class="absolute top-2 right-2 flex items-center gap-1.5">
                 <span
                   v-if="map.show_in_lists === false && auth.isAdmin"
-                  class="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-zinc-800/80 text-zinc-500 ring-1 ring-zinc-700/60 backdrop-blur-sm"
+                  class="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-zinc-800/80 text-zinc-500 ring-1 ring-[var(--default-border-color)]/60 backdrop-blur-sm"
                   :title="t('home.hiddenBoard')"
                 >
                   {{ t('home.hidden') }}
@@ -738,7 +746,7 @@
           >
             <!-- Settings -->
             <button
-              class="p-1 rounded-md text-zinc-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+              class="p-1 rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
               :title="t('board.settingsTitle')"
               @click.stop="openSettings(map)"
             >
@@ -888,7 +896,7 @@
           <input
             ref="cloneInputEl"
             :value="cloneNewName"
-            class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+            class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] font-mono"
             spellcheck="false"
             @input="onCloneNameInput"
             @keydown.enter="doClone"
@@ -902,7 +910,7 @@
           }}</label>
           <input
             v-model="cloneAlias"
-            class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
             spellcheck="false"
           />
         </div>
@@ -916,7 +924,7 @@
           </button>
           <button
             :disabled="!cloneNewName"
-            class="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-all"
+            class="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed text-[var(--button-primary-text-color,#000)] transition-all"
             @click="doClone"
           >
             {{ t('admin.cloneBoardAction') }}

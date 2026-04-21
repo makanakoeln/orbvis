@@ -6,7 +6,7 @@
       class="flex flex-col items-center justify-center h-full text-center"
     >
       <div
-        class="w-14 h-14 rounded-2xl bg-[var(--bg-input)] ring-1 ring-[var(--border)] flex items-center justify-center mb-4"
+        class="w-14 h-14 rounded-2xl bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] flex items-center justify-center mb-4"
       >
         <svg
           class="w-7 h-7 text-zinc-600"
@@ -172,7 +172,7 @@ function cardClass(state: string): string {
     case 'OK':
       return 'bg-green-500/8 ring-green-500/20 hover:shadow-green-900/20';
     default:
-      return 'bg-[var(--bg-input)] ring-[var(--border)]';
+      return 'bg-[var(--default-form-element-bg-color)] ring-[var(--border)]';
   }
 }
 

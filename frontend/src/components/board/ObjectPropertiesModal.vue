@@ -23,7 +23,7 @@
         >
           <div class="flex items-center gap-3">
             <span
-              class="text-xs font-bold px-2 py-1 rounded-lg bg-[var(--bg-input)] ring-1 ring-zinc-700 text-zinc-400 capitalize"
+              class="text-xs font-bold px-2 py-1 rounded-lg bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-zinc-400 capitalize"
             >
               {{ object.type }}
             </span>
@@ -89,7 +89,7 @@
                   <input
                     v-model="form.only_hard_states"
                     type="checkbox"
-                    class="rounded accent-indigo-500 w-4 h-4"
+                    class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4"
                   />
                   {{ t('boardSettings.onlyHardStates') }}
                 </label>
@@ -101,7 +101,7 @@
                   <input
                     v-model="form.recognize_services"
                     type="checkbox"
-                    class="rounded accent-indigo-500 w-4 h-4"
+                    class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4"
                   />
                   {{ t('boardSettings.recognizeServices') }}
                 </label>
@@ -139,7 +139,7 @@
             <textarea
               v-model="form.label.text"
               rows="3"
-              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none mb-3"
+              class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all resize-none mb-3"
               :placeholder="t('boardSettings.textContent') + '…'"
             />
             <div class="space-y-3">
@@ -219,8 +219,8 @@
                     class="px-2 py-1 rounded text-xs transition-all"
                     :class="
                       graphSource === mode
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-[var(--bg-input)] text-zinc-400 hover:text-zinc-200'
+                        ? 'bg-[var(--color-corporate-green-50)] text-[var(--button-primary-text-color,#000)]'
+                        : 'bg-[var(--default-form-element-bg-color)] text-zinc-400 hover:text-zinc-200'
                     "
                     @click="setGraphSource(mode)"
                   >
@@ -235,7 +235,7 @@
                     <span
                       v-for="m in form.graph_metric"
                       :key="m"
-                      class="flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--bg-input)] text-xs text-zinc-300 ring-1 ring-zinc-700"
+                      class="flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--default-form-element-bg-color)] text-xs text-zinc-300 ring-1 ring-[var(--default-border-color)]"
                     >
                       {{ metricIdToTitle[m] ?? m }}
                       <button
@@ -413,7 +413,11 @@
               <!-- Label -->
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.showLabel') }}</label>
-                <input v-model="form.label.show" type="checkbox" class="accent-indigo-500" />
+                <input
+                  v-model="form.label.show"
+                  type="checkbox"
+                  class="accent-[var(--color-corporate-green-50)]"
+                />
               </div>
               <div v-if="form.label.show" class="field-row">
                 <label class="field-label">{{ t('boardSettings.labelText') }}</label>
@@ -467,7 +471,7 @@
                 <input
                   v-model="form.label.show"
                   type="checkbox"
-                  class="rounded accent-indigo-500 w-4 h-4"
+                  class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4"
                 />
                 {{ t('boardSettings.showLabel') }}
               </label>
@@ -632,7 +636,7 @@
               <p class="section-title mb-0">{{ t('boardSettings.link') }}</p>
               <span
                 v-if="form.url"
-                class="text-[10px] text-indigo-400 font-mono truncate max-w-[12rem]"
+                class="text-[10px] text-[var(--color-corporate-green-50)] font-mono truncate max-w-[12rem]"
                 >{{ form.url }}</span
               >
               <svg
@@ -810,7 +814,7 @@
             </button>
             <button
               :disabled="saving"
-              class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all"
+              class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
               @click="save"
             >
               {{ saving ? t('common.saving') : t('common.save') }}
@@ -1315,7 +1319,7 @@ async function save() {
 }
 
 .field {
-  @apply w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150;
+  @apply w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150;
 
   appearance: textfield;
 }

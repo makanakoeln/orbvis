@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="px-4 py-3 border-b border-white/8 flex items-center gap-2 shrink-0">
       <svg
-        class="w-4 h-4 text-indigo-400 shrink-0"
+        class="w-4 h-4 text-[var(--color-corporate-green-50)] shrink-0"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -25,7 +25,7 @@
     <div class="p-4 space-y-2.5">
       <select
         v-model="draft.type"
-        class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+        class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
         @change="onTypeChange"
       >
         <option value="">{{ t('boardSettings.selectType') }}</option>
@@ -148,7 +148,7 @@
         <label class="text-xs text-zinc-500 select-none">{{ t('boardSettings.grid') }}</label>
         <select
           :value="snapGrid"
-          class="bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-md px-2 py-1.5 text-xs text-zinc-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer"
+          class="bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-md px-2 py-1.5 text-xs text-zinc-300 focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)] transition-all cursor-pointer"
           @change="$emit('update:snapGrid', +($event.target as HTMLSelectElement).value)"
         >
           <option value="0">{{ t('boardSettings.gridOff') }}</option>
@@ -166,8 +166,8 @@
           placing
             ? 'bg-[#ffd000]/15 text-[#ffd000] ring-1 ring-[#ffd000]/30 animate-pulse'
             : canPlace
-              ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
-              : 'bg-indigo-600 text-white'
+              ? 'bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] text-[var(--button-primary-text-color,#000)]'
+              : 'bg-[var(--color-corporate-green-50)] text-[var(--button-primary-text-color,#000)]'
         "
         @click="canPlace && $emit('start-placing')"
       >
@@ -334,6 +334,6 @@ watch(
 @reference "tailwindcss";
 
 .field {
-  @apply w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150;
+  @apply w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150;
 }
 </style>

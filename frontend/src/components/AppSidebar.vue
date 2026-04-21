@@ -10,10 +10,10 @@
     >
       <router-link v-if="!sidebarCollapsed" to="/" class="flex items-center gap-2.5 group min-w-0">
         <div
-          class="w-7 h-7 rounded-lg bg-indigo-600/20 ring-1 ring-indigo-500/30 flex items-center justify-center shrink-0"
+          class="w-7 h-7 rounded-lg bg-[var(--color-corporate-green-50)]/20 ring-1 ring-[var(--color-corporate-green-50)]/30 flex items-center justify-center shrink-0"
         >
           <svg
-            class="w-4 h-4 text-indigo-400"
+            class="w-4 h-4 text-[var(--color-corporate-green-50)]"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -42,7 +42,7 @@
       <!-- Expand button when sidebarCollapsed -->
       <button
         v-if="sidebarCollapsed"
-        class="w-7 h-7 rounded-lg bg-indigo-600/20 ring-1 ring-indigo-500/30 flex items-center justify-center text-indigo-400 hover:bg-indigo-600/30 transition-all"
+        class="w-7 h-7 rounded-lg bg-[var(--color-corporate-green-50)]/20 ring-1 ring-[var(--color-corporate-green-50)]/30 flex items-center justify-center text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/30 transition-all"
         :title="t('nav.expandSidebar')"
         @click="sidebarCollapsed = false"
       >
@@ -161,7 +161,7 @@
         @click="showSettings = true"
       >
         <div
-          class="w-7 h-7 rounded-full bg-indigo-600/20 ring-1 ring-indigo-500/30 flex items-center justify-center shrink-0 text-xs font-bold text-indigo-300 uppercase"
+          class="w-7 h-7 rounded-full bg-[var(--color-corporate-green-50)]/20 ring-1 ring-[var(--color-corporate-green-50)]/30 flex items-center justify-center shrink-0 text-xs font-bold text-[var(--color-corporate-green-40)] uppercase"
         >
           {{ auth.user?.name?.[0] }}
         </div>
@@ -270,7 +270,7 @@ const NavItem = defineComponent({
             'flex items-center rounded-lg text-sm transition-all duration-150',
             props.collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2',
             active
-              ? 'text-indigo-300 bg-indigo-500/10 ring-1 ring-indigo-500/20'
+              ? 'text-[var(--color-corporate-green-40)] bg-[var(--color-corporate-green-50)]/10 ring-1 ring-[var(--color-corporate-green-50)]/20'
               : 'text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)]',
           ],
         },

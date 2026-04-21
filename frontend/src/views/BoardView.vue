@@ -81,7 +81,7 @@
         <!-- Read-only badge -->
         <span
           v-if="boardConfig?.readonly"
-          class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-zinc-700/50 text-zinc-400 ring-1 ring-zinc-700"
+          class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-zinc-700/50 text-zinc-400 ring-1 ring-[var(--default-border-color)]"
         >
           <svg
             class="w-3 h-3"
@@ -127,8 +127,8 @@
           class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ring-1 transition-all"
           :class="
             rotationPaused
-              ? 'bg-zinc-700/50 ring-zinc-700 text-zinc-400'
-              : 'bg-indigo-500/8 ring-indigo-500/20 text-indigo-400'
+              ? 'bg-zinc-700/50 ring-[var(--default-border-color)] text-zinc-400'
+              : 'bg-[var(--color-corporate-green-50)]/8 ring-[var(--color-corporate-green-50)]/20 text-[var(--color-corporate-green-50)]'
           "
           @click="toggleRotationPause"
         >
@@ -453,7 +453,7 @@
             <div class="w-px h-4 bg-zinc-700 mx-0.5" />
             <button
               title="Edit properties"
-              class="p-2 rounded-lg text-zinc-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-all"
+              class="p-2 rounded-lg text-zinc-400 hover:text-[var(--color-corporate-green-40)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
               @click="openPropsModal(selectedObject!)"
             >
               <svg
@@ -517,7 +517,7 @@
           class="w-12 h-12 rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1"
           :class="
             editor.editMode.value
-              ? 'bg-zinc-700 hover:bg-zinc-600 ring-zinc-600 text-zinc-200 hover:text-white'
+              ? 'bg-zinc-700 hover:bg-zinc-600 ring-[var(--default-border-color)] text-zinc-200 hover:text-white'
               : 'bg-[var(--bg-surface)]/80 hover:bg-[var(--bg-surface)] ring-[var(--border)] text-zinc-500 hover:text-zinc-300'
           "
           :title="editor.editMode.value ? t('board.editing') : t('board.edit')"
@@ -566,7 +566,7 @@
             class="relative z-10 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium ring-1 shadow-lg shadow-black/30 transition-all duration-200"
             :class="
               serviceLayout !== 'off'
-                ? 'bg-indigo-500/15 text-indigo-300 ring-indigo-500/40'
+                ? 'bg-[var(--color-corporate-green-50)]/15 text-[var(--color-corporate-green-40)] ring-[var(--color-corporate-green-50)]/40'
                 : 'bg-[var(--bg-surface)]/80 text-zinc-400 ring-[var(--border)] hover:text-[var(--text)] hover:bg-[var(--bg-surface)]'
             "
             @click="serviceLayoutOpen = !serviceLayoutOpen"
@@ -605,7 +605,7 @@
                 class="w-full flex items-center justify-between px-3 py-2 text-xs transition-colors"
                 :class="
                   serviceLayout === opt.value
-                    ? 'text-indigo-300 bg-indigo-500/10'
+                    ? 'text-[var(--color-corporate-green-40)] bg-[var(--color-corporate-green-50)]/10'
                     : 'text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
                 "
                 @click="

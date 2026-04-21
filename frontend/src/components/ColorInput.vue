@@ -1,7 +1,12 @@
 <template>
   <div class="flex gap-2 flex-1 items-center">
     <label class="flex items-center gap-1.5 text-xs text-zinc-400 cursor-pointer shrink-0">
-      <input type="checkbox" :checked="isNone" class="accent-indigo-500" @change="toggle" />
+      <input
+        type="checkbox"
+        :checked="isNone"
+        class="accent-[var(--color-corporate-green-50)]"
+        @change="toggle"
+      />
       {{ noneLabel }}
     </label>
     <template v-if="!isNone">

@@ -165,7 +165,7 @@
     <!-- Resize handle (edit mode only) -->
     <div
       v-if="editMode"
-      class="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize bg-indigo-500/70 hover:bg-indigo-400 rounded-tl flex items-center justify-center transition-colors"
+      class="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize bg-[var(--color-corporate-green-50)]/70 hover:bg-[var(--color-corporate-green-50)] rounded-tl flex items-center justify-center transition-colors"
       title="Resize"
       @pointerdown.stop="$emit('graph-resize-start', $event)"
     >
@@ -186,7 +186,7 @@
     <!-- Selection ring -->
     <div
       v-if="selected"
-      class="absolute inset-0 rounded-lg ring-2 ring-indigo-400 ring-offset-1 ring-offset-zinc-950 pointer-events-none"
+      class="absolute inset-0 rounded-lg ring-2 ring-[var(--color-corporate-green-50)] ring-offset-1 ring-offset-zinc-950 pointer-events-none"
     />
   </div>
 
@@ -194,7 +194,7 @@
   <div
     v-else-if="object.type === 'textbox'"
     class="px-2.5 py-1.5 rounded-lg text-sm font-medium whitespace-pre-wrap pointer-events-none ring-1 transition-all overflow-auto"
-    :class="selected ? 'ring-indigo-400' : 'ring-[var(--border)]'"
+    :class="selected ? 'ring-[var(--color-corporate-green-50)]' : 'ring-[var(--border)]'"
     :style="textboxStyle"
     @mouseenter="$emit('hover', $event)"
     @mouseleave="$emit('hover-leave')"
@@ -212,7 +212,9 @@
   >
     <div
       :class="
-        selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded-xl' : ''
+        selected
+          ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-zinc-950 rounded-xl'
+          : ''
       "
     >
       <GadgetRenderer
@@ -251,7 +253,9 @@
         class="object-contain transition-all duration-300 select-none"
         :class="[
           isSvgIcon ? 'svg-icon' : '',
-          selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 rounded' : '',
+          selected
+            ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-zinc-950 rounded'
+            : '',
         ]"
         @error="imgLoadFailed = true"
       />
@@ -264,7 +268,11 @@
         :viewBox="`0 0 ${iconSize} ${iconSize}`"
         overflow="visible"
         class="block select-none transition-all duration-300 rounded-full"
-        :class="selected ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950' : ''"
+        :class="
+          selected
+            ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-zinc-950'
+            : ''
+        "
         :style="{ filter: stateGlow }"
       >
         <circle :cx="iconSize / 2" :cy="iconSize / 2" :r="iconSize / 2" :fill="stateColorRgb" />

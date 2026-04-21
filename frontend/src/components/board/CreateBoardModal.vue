@@ -32,11 +32,11 @@
               placeholder="my-board"
               required
               autofocus
-              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 transition-all"
+              class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 transition-all"
               :class="
                 nameError
                   ? 'ring-red-500/60 focus:ring-red-500'
-                  : 'ring-zinc-700 focus:ring-indigo-500'
+                  : 'ring-[var(--default-form-element-border-color)] focus:ring-[var(--color-corporate-green-50)]'
               "
               @input="onNameInput"
             />
@@ -48,7 +48,7 @@
             <input
               v-model="form.alias"
               placeholder="My Board"
-              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               @input="aliasTouched = true"
             />
           </div>
@@ -59,7 +59,7 @@
                 <select
                   v-model="form.backend_id"
                   required
-                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                 >
                   <option value="" disabled>{{ t('admin.selectConnection') }}</option>
                   <option v-for="b in connectionsStore.backends" :key="b.id" :value="b.id">
@@ -118,7 +118,7 @@
             <div class="relative">
               <select
                 v-model="form.view_type"
-                class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               >
                 <option value="static">{{ t('board.boardTypeStatic') }}</option>
                 <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
@@ -167,7 +167,7 @@
             <button
               type="submit"
               :disabled="!form.name || !!nameError || !form.backend_id"
-              class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-white transition-all"
+              class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
             >
               {{ t('common.create') }}
             </button>

@@ -16,7 +16,7 @@
             <input
               ref="commentEl"
               v-model="comment"
-              class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
               :placeholder="t('ack.comment') + '…'"
               @keydown.enter="submit"
               @keydown.esc="$emit('close')"
@@ -25,19 +25,31 @@
           <label
             class="flex items-center gap-2.5 text-sm text-[var(--text-muted)] cursor-pointer select-none"
           >
-            <input v-model="sticky" type="checkbox" class="rounded accent-indigo-500 w-4 h-4" />
+            <input
+              v-model="sticky"
+              type="checkbox"
+              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4"
+            />
             {{ t('ack.sticky') }}
           </label>
           <label
             class="flex items-center gap-2.5 text-sm text-[var(--text-muted)] cursor-pointer select-none"
           >
-            <input v-model="notify" type="checkbox" class="rounded accent-indigo-500 w-4 h-4" />
+            <input
+              v-model="notify"
+              type="checkbox"
+              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4"
+            />
             {{ t('ack.notify') }}
           </label>
           <label
             class="flex items-center gap-2.5 text-sm text-[var(--text-muted)] cursor-pointer select-none"
           >
-            <input v-model="persistent" type="checkbox" class="rounded accent-indigo-500 w-4 h-4" />
+            <input
+              v-model="persistent"
+              type="checkbox"
+              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4"
+            />
             {{ t('ack.persistent') }}
           </label>
         </div>
@@ -54,7 +66,7 @@
           </button>
           <button
             :disabled="submitting || !comment.trim()"
-            class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-white transition-all"
+            class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
             @click="submit"
           >
             {{ submitting ? t('ack.submitting') : t('ack.submit') }}

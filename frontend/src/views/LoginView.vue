@@ -4,17 +4,17 @@
   >
     <!-- Background glow -->
     <div
-      class="absolute inset-0 bg-gradient-to-br from-indigo-950/50 via-zinc-950 to-zinc-950 pointer-events-none"
+      class="absolute inset-0 bg-gradient-to-br from-[var(--color-corporate-green-100)]/30 via-zinc-950 to-zinc-950 pointer-events-none"
     />
     <div
-      class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/8 rounded-full blur-3xl pointer-events-none"
+      class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[var(--color-corporate-green-50)]/8 rounded-full blur-3xl pointer-events-none"
     />
 
     <div class="relative w-full max-w-sm mx-4">
       <!-- Logo -->
       <div class="text-center mb-5">
         <svg
-          class="w-9 h-9 text-indigo-400 mb-2 mx-auto block"
+          class="w-9 h-9 text-[var(--color-corporate-green-50)] mb-2 mx-auto block"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -60,7 +60,7 @@
               type="text"
               autocomplete="username"
               required
-              class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-600 rounded-lg text-[var(--text)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 transition-all duration-150"
+              class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-[var(--text)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] focus:ring-offset-0 transition-all duration-150"
             />
           </div>
           <div class="space-y-1.5">
@@ -74,7 +74,7 @@
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
                 required
-                class="w-full px-3.5 py-2.5 pr-10 bg-[var(--bg-input)] ring-1 ring-zinc-600 rounded-lg text-[var(--text)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150"
+                class="w-full px-3.5 py-2.5 pr-10 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-[var(--text)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150"
               />
               <button
                 type="button"
@@ -144,7 +144,7 @@
           <button
             type="submit"
             :disabled="authStore.loading"
-            class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-all duration-150 shadow-lg shadow-indigo-900/30"
+            class="w-full py-2.5 px-4 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] active:bg-[var(--color-corporate-green-70)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--button-primary-text-color,#000)] text-sm font-semibold rounded-lg transition-all duration-150"
           >
             {{ authStore.loading ? t('auth.signingIn') : t('auth.signIn') }}
           </button>

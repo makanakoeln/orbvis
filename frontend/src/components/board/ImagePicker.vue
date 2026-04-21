@@ -3,7 +3,7 @@
     <!-- Selected image preview + clear -->
     <div
       v-if="modelValue"
-      class="flex items-center gap-2 px-3 py-2 bg-[var(--bg-input)] ring-1 ring-indigo-500/50 rounded-lg"
+      class="flex items-center gap-2 px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--color-corporate-green-50)]/50 rounded-lg"
     >
       <img
         :src="`${BASE_URL}images/${modelValue}`"
@@ -31,7 +31,7 @@
     <!-- Toggle button -->
     <button
       type="button"
-      class="w-full px-3 py-2 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-left flex items-center gap-2 hover:ring-zinc-600 transition-all focus:outline-none focus:ring-indigo-500"
+      class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-left flex items-center gap-2 hover:ring-[var(--default-form-element-border-color)] transition-all focus:outline-none focus:ring-[var(--color-corporate-green-50)]"
       @click="open = !open"
     >
       <svg
@@ -71,14 +71,14 @@
     >
       <div
         v-if="open"
-        class="rounded-lg ring-1 ring-zinc-700 bg-[var(--bg-surface)] overflow-hidden"
+        class="rounded-lg ring-1 ring-[var(--default-border-color)] bg-[var(--bg-surface)] overflow-hidden"
       >
         <!-- Search -->
         <div class="p-2 border-b border-zinc-700/60">
           <input
             v-model="query"
             :placeholder="t('boardSettings.searchIcons')"
-            class="w-full px-2.5 py-1.5 text-xs bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-md text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-indigo-500 transition-all"
+            class="w-full px-2.5 py-1.5 text-xs bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-md text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-[var(--color-corporate-green-50)] transition-all"
           />
         </div>
 
@@ -87,7 +87,11 @@
           v-if="loading"
           class="flex items-center justify-center py-6 text-zinc-600 text-xs gap-2"
         >
-          <svg class="animate-spin w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24">
+          <svg
+            class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
             <circle
               class="opacity-25"
               cx="12"
@@ -123,7 +127,7 @@
             </svg>
             <p class="text-xs text-zinc-500 mb-3">{{ t('admin.noIcons') }}</p>
             <label
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-semibold text-white transition-all cursor-pointer"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded-lg text-xs font-semibold text-[var(--button-primary-text-color,#000)] transition-all cursor-pointer"
             >
               <svg
                 class="w-3.5 h-3.5"
@@ -162,7 +166,7 @@
                 class="flex items-center gap-2 text-xs text-zinc-400 justify-center py-1"
               >
                 <svg
-                  class="animate-spin w-3.5 h-3.5 text-indigo-400"
+                  class="animate-spin w-3.5 h-3.5 text-[var(--color-corporate-green-50)]"
                   fill="none"
                   viewBox="0 0 24 24"
                 >
@@ -202,7 +206,11 @@
               :key="image.name"
               type="button"
               class="flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all hover:bg-zinc-700/60"
-              :class="modelValue === image.name ? 'ring-1 ring-indigo-500 bg-indigo-500/10' : ''"
+              :class="
+                modelValue === image.name
+                  ? 'ring-1 ring-[var(--color-corporate-green-50)] bg-[var(--color-corporate-green-50)]/10'
+                  : ''
+              "
               :title="image.name"
               @click="select(image.name)"
             >
@@ -250,7 +258,11 @@
               />
             </label>
             <div v-if="uploading" class="flex items-center gap-1 text-[10px] text-zinc-500">
-              <svg class="animate-spin w-3 h-3 text-indigo-400" fill="none" viewBox="0 0 24 24">
+              <svg
+                class="animate-spin w-3 h-3 text-[var(--color-corporate-green-50)]"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
                 <circle
                   class="opacity-25"
                   cx="12"

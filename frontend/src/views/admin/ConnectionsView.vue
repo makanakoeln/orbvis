@@ -8,7 +8,7 @@
         <p class="text-sm text-zinc-500 mt-1">{{ t('admin.connectionsSubtitle') }}</p>
       </div>
       <button
-        class="flex items-center gap-2 px-4 py-2 ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
+        class="flex items-center gap-2 px-4 py-2 ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
         @click="openCreate"
       >
         <svg
@@ -28,7 +28,11 @@
       v-if="store.loading"
       class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center"
     >
-      <svg class="animate-spin w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24">
+      <svg
+        class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
         <path
           class="opacity-75"
@@ -140,10 +144,10 @@
                 class="text-xs px-2 py-0.5 rounded-full font-medium ring-1"
                 :class="
                   b.type === 'livestatus'
-                    ? 'bg-indigo-500/10 text-indigo-400 ring-indigo-500/20'
+                    ? 'bg-[var(--color-corporate-green-50)]/10 text-[var(--color-corporate-green-50)] ring-[var(--color-corporate-green-50)]/20'
                     : b.type === 'icinga2'
                       ? 'bg-amber-500/10 text-amber-400 ring-amber-500/20'
-                      : 'bg-zinc-700/50 text-zinc-500 ring-zinc-700'
+                      : 'bg-zinc-700/50 text-zinc-500 ring-[var(--default-border-color)]'
                 "
               >
                 {{ b.type }}
@@ -161,7 +165,7 @@
             <td class="px-4 py-3 text-right">
               <div class="flex items-center justify-end gap-1">
                 <button
-                  class="p-1.5 rounded-md text-zinc-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+                  class="p-1.5 rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
                   :title="t('common.edit')"
                   @click="openEdit(b)"
                 >
@@ -251,7 +255,7 @@
                 required
                 pattern="[a-zA-Z0-9_-]+"
                 placeholder="cmk_heute"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
               <p class="text-xs text-zinc-600">{{ t('admin.connectionIdHint') }}</p>
             </div>
@@ -261,7 +265,7 @@
               <input
                 v-model="form.label"
                 placeholder="Checkmk heute"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
             </div>
 
@@ -270,7 +274,7 @@
               <div class="relative">
                 <select
                   v-model="form.type"
-                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                 >
                   <option value="livestatus">{{ t('admin.connectionTypeLivestatus') }}</option>
                   <option value="icinga2">{{ t('admin.connectionTypeIcinga2') }}</option>
@@ -301,7 +305,7 @@
                 <input
                   v-model="form.socket_path"
                   placeholder="/omd/sites/heute/tmp/run/live"
-                  class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                 />
               </div>
 
@@ -319,7 +323,7 @@
                   <input
                     v-model="form.host"
                     placeholder="192.168.1.10"
-                    class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                   />
                 </div>
                 <div class="space-y-1.5">
@@ -337,7 +341,7 @@
                   <input
                     v-model="form.checkmk_url"
                     placeholder="http://localhost/heute"
-                    class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                   />
                   <p class="text-xs text-zinc-600">{{ t('admin.contextLinks') }}</p>
                 </div>
@@ -350,7 +354,7 @@
                       <input
                         v-model="form.automation_user"
                         placeholder="automation"
-                        class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                       />
                     </div>
                     <div class="space-y-1.5">
@@ -361,7 +365,7 @@
                         v-model="form.automation_secret"
                         type="password"
                         placeholder="••••••••"
-                        class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                       />
                     </div>
                   </div>
@@ -382,7 +386,7 @@
                 <input
                   v-model="form.icinga2_url"
                   placeholder="https://localhost:5665"
-                  class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                 />
               </div>
 
@@ -394,7 +398,7 @@
                   <input
                     v-model="form.icinga2_username"
                     placeholder="root"
-                    class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                   />
                 </div>
                 <div class="space-y-1.5">
@@ -404,7 +408,7 @@
                   <input
                     v-model="form.icinga2_password"
                     type="password"
-                    class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                   />
                 </div>
               </div>
@@ -414,7 +418,7 @@
                   id="verify-ssl"
                   v-model="form.icinga2_verify_ssl"
                   type="checkbox"
-                  class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-zinc-900"
+                  class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-[var(--color-corporate-green-50)] focus:ring-[var(--color-corporate-green-50)] focus:ring-offset-zinc-900"
                 />
                 <label for="verify-ssl" class="text-sm text-zinc-400 cursor-pointer select-none">
                   {{ t('admin.icinga2VerifySsl') }}
@@ -473,7 +477,7 @@
               <button
                 type="button"
                 :disabled="dialogTest.loading"
-                class="px-4 py-2 ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm text-zinc-300 hover:text-[var(--text)] disabled:opacity-50 transition-all"
+                class="px-4 py-2 ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-zinc-300 hover:text-[var(--text)] disabled:opacity-50 transition-all"
                 @click="testDialog"
               >
                 {{ dialogTest.loading ? t('common.testing') : t('common.test') }}
@@ -481,7 +485,7 @@
               <button
                 type="submit"
                 :disabled="saving"
-                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-all"
+                class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
               >
                 {{ saving ? t('common.saving') : t('common.save') }}
               </button>

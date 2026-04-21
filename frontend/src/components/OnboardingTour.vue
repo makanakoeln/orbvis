@@ -54,9 +54,9 @@
             class="rounded-full transition-all duration-300"
             :class="
               i < step
-                ? 'w-2 h-2 bg-indigo-500'
+                ? 'w-2 h-2 bg-[var(--color-corporate-green-50)]'
                 : i === step
-                  ? 'w-2.5 h-2.5 bg-indigo-400 ring-2 ring-indigo-400/40'
+                  ? 'w-2.5 h-2.5 bg-[var(--color-corporate-green-50)] ring-2 ring-[var(--color-corporate-green-50)]/40'
                   : 'w-2 h-2 bg-zinc-600'
             "
           />
@@ -82,7 +82,7 @@
             <!-- Last step with create-board action -->
             <template v-if="step === TOTAL && showCreateBoard">
               <button
-                class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
+                class="px-4 py-1.5 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
                 @click="createBoard"
               >
                 {{ t('onboarding.createFirstBoard') }}
@@ -91,18 +91,20 @@
             <!-- Last step without create-board -->
             <button
               v-else-if="step === TOTAL"
-              class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
+              class="px-4 py-1.5 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
               @click="finish"
             >
               {{ t('onboarding.finish') }}
             </button>
             <!-- Intermediate step with selector: click-to-continue hint + Next button -->
             <template v-else-if="currentStep.selector && targetRect">
-              <span class="text-xs text-indigo-400 animate-pulse select-none">
+              <span
+                class="text-xs text-[var(--color-corporate-green-50)] animate-pulse select-none"
+              >
                 {{ t('onboarding.clickToContinue') }}
               </span>
               <button
-                class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
+                class="px-4 py-1.5 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
                 @click="onClickNext"
               >
                 {{ t('onboarding.next') }}
@@ -111,7 +113,7 @@
             <!-- Intermediate step without selector (or target not found): Next button -->
             <button
               v-else
-              class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
+              class="px-4 py-1.5 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
               @click="onClickNext"
             >
               {{ t('onboarding.next') }}

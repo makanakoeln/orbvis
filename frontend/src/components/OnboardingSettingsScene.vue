@@ -231,7 +231,7 @@
     <!-- Floating "background.png" label -->
     <div class="absolute bg-label">
       <div
-        class="flex items-center gap-1.5 rounded-lg bg-black/70 px-2.5 py-1.5 text-xs font-mono font-medium text-indigo-300 ring-1 ring-indigo-500/40"
+        class="flex items-center gap-1.5 rounded-lg bg-black/70 px-2.5 py-1.5 text-xs font-mono font-medium text-[var(--color-corporate-green-40)] ring-1 ring-[var(--color-corporate-green-50)]/40"
       >
         <svg class="h-3 w-3 shrink-0" viewBox="0 0 20 20" fill="currentColor">
           <path

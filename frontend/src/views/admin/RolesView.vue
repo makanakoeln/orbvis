@@ -8,7 +8,7 @@
         <p class="text-sm text-zinc-500 mt-1">{{ t('admin.rolesSubtitle') }}</p>
       </div>
       <button
-        class="flex items-center gap-2 px-4 py-2 ring-1 ring-zinc-700 hover:ring-zinc-500 rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
+        class="flex items-center gap-2 px-4 py-2 ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
         @click="showCreate = true"
       >
         <svg
@@ -25,7 +25,11 @@
     </div>
 
     <div v-if="loading" class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center">
-      <svg class="animate-spin w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24">
+      <svg
+        class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
         <path
           class="opacity-75"
@@ -47,7 +51,7 @@
             <div class="flex items-center gap-2.5 mb-1">
               <span class="font-semibold text-[var(--text)]">{{ role.name }}</span>
               <span
-                class="text-xs px-1.5 py-0.5 rounded bg-[var(--bg-input)] ring-1 ring-zinc-700 text-zinc-500"
+                class="text-xs px-1.5 py-0.5 rounded bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-zinc-500"
               >
                 {{ role.permissions.length }} {{ t('admin.permissions') }}
               </span>
@@ -56,7 +60,7 @@
               <span
                 v-for="perm in role.permissions"
                 :key="perm.perm_id"
-                class="text-xs bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-md px-2 py-0.5 text-zinc-400 font-mono"
+                class="text-xs bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-md px-2 py-0.5 text-zinc-400 font-mono"
                 >{{ perm.mod }}/{{ perm.act }}/{{ perm.obj }}</span
               >
             </div>
@@ -64,7 +68,7 @@
           </div>
           <div class="flex items-center gap-1 shrink-0">
             <button
-              class="p-1.5 rounded-md text-zinc-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+              class="p-1.5 rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
               :title="t('common.edit')"
               @click="openEdit(role)"
             >
@@ -141,7 +145,7 @@
                 v-model="newRoleName"
                 placeholder="e.g. operators"
                 required
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
             </div>
             <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
@@ -154,7 +158,7 @@
               </button>
               <button
                 type="submit"
-                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold text-white transition-all"
+                class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
               >
                 {{ t('common.create') }}
               </button>
@@ -176,7 +180,7 @@
           >
             <h3 class="text-base font-bold text-[var(--text)]">
               {{ t('admin.permissionsTitle') }} –
-              <span class="text-indigo-400">{{ editRole.name }}</span>
+              <span class="text-[var(--color-corporate-green-50)]">{{ editRole.name }}</span>
             </h3>
             <button
               class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
@@ -206,12 +210,14 @@
                   v-for="perm in draftPerms"
                   :key="perm.perm_id"
                   class="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-[var(--bg-hover)] transition-colors"
-                  :class="perm.perm_id < 0 ? 'bg-indigo-500/5' : ''"
+                  :class="perm.perm_id < 0 ? 'bg-[var(--color-corporate-green-50)]/5' : ''"
                 >
                   <span class="text-xs font-mono text-zinc-300"
                     >{{ perm.mod }}/{{ perm.act }}/{{ perm.obj }}</span
                   >
-                  <span v-if="perm.perm_id < 0" class="text-[10px] text-indigo-400 shrink-0"
+                  <span
+                    v-if="perm.perm_id < 0"
+                    class="text-[10px] text-[var(--color-corporate-green-50)] shrink-0"
                     >new</span
                   >
                   <button
@@ -247,7 +253,7 @@
                   <div class="relative">
                     <select
                       v-model="permPreset"
-                      class="w-full appearance-none px-3 py-2.5 pr-9 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      class="w-full appearance-none px-3 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                       @change="applyPreset"
                     >
                       <option value="">{{ t('admin.choosePreset') }}</option>
@@ -282,7 +288,7 @@
                     v-model="newPerm.obj"
                     placeholder="my-board"
                     required
-                    class="w-full px-3 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    class="w-full px-3 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                   />
                 </div>
                 <p v-if="permError" class="text-red-400 text-xs">{{ permError }}</p>
@@ -290,7 +296,7 @@
                   <button
                     type="submit"
                     :disabled="!permPreset"
-                    class="px-4 py-2 bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] ring-1 ring-zinc-700 hover:ring-zinc-500 disabled:opacity-50 rounded-lg text-sm font-medium text-zinc-300 transition-all"
+                    class="px-4 py-2 bg-[var(--default-form-element-bg-color)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-zinc-300 transition-all"
                   >
                     {{ t('admin.add') }}
                   </button>
@@ -312,7 +318,7 @@
             </button>
             <button
               :disabled="permSaving"
-              class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-white transition-all"
+              class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
               @click="savePermissions"
             >
               {{ permSaving ? t('common.saving') : t('common.save') }}

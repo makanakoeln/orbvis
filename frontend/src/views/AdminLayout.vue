@@ -31,7 +31,7 @@
         class="px-3 py-1.5 rounded-lg text-sm transition-colors"
         :class="
           isActive(item.to)
-            ? 'text-indigo-300 bg-indigo-500/10 ring-1 ring-indigo-500/20'
+            ? 'text-[var(--color-corporate-green-40)] bg-[var(--color-corporate-green-50)]/10 ring-1 ring-[var(--color-corporate-green-50)]/20'
             : 'text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
         "
       >

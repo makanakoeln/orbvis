@@ -16,6 +16,21 @@
 }
 
 :root {
+  /* CMK button token defaults (active before Vue sets body[data-theme]) */
+  --default-button-primary-color: rgb(21 209 160);
+  --button-primary-border-color: rgb(21 209 160);
+  --button-primary-text-color: rgb(0 0 0);
+  --default-button-danger-color: rgb(229 63 63);
+  --button-danger-border-color: rgb(229 63 63);
+  --button-danger-text-color: rgb(255 255 255);
+  --default-form-element-bg-color: #27272a;
+  --default-form-element-border-color: #71717a;
+  --font-color: #f4f4f5;
+  --font-color-dimmed: #71717a;
+  --default-bg-color: #09090b;
+  --default-nav-bg-color: #111827;
+  --default-nav-border-color: #27272a;
+  --default-border-color: rgb(255 255 255 / 6%);
   --color-up: #0f0;
   --color-down: #f00;
   --color-unreachable: #f80;
@@ -25,15 +40,15 @@
   --color-unknown: #f80;
   --color-pending: #aaa;
 
-  /* Dark theme (default) */
-  --bg: #09090b;
-  --bg-surface: #18181b;
-  --bg-input: #27272a;
+  /* OrbVis semantic tokens — mapped to CMK variables, fallback = modern-dark defaults */
+  --bg: var(--default-bg-color, #09090b);
+  --bg-surface: var(--ux-theme-3, #18181b);
+  --bg-input: var(--default-form-element-bg-color, #27272a);
   --bg-glass: rgb(24 24 27 / 92%);
-  --bg-hover: rgb(39 39 42 / 60%);
-  --border: rgb(255 255 255 / 6%);
-  --text: #f4f4f5;
-  --text-muted: #71717a;
+  --bg-hover: var(--input-hover-bg-color, rgb(39 39 42 / 60%));
+  --border: var(--default-border-color, rgb(255 255 255 / 6%));
+  --text: var(--font-color, #f4f4f5);
+  --text-muted: var(--font-color-dimmed, #71717a);
   --accent: var(--color-corporate-green-50, rgb(21 209 160));
   --gauge-track: #3f3f46;
 

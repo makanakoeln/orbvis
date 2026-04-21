@@ -37,7 +37,7 @@
             <input
               v-model="adminIsAdmin"
               type="checkbox"
-              class="rounded accent-indigo-500 w-4 h-4 mt-0.5 shrink-0"
+              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 mt-0.5 shrink-0"
             />
             <div>
               <p class="text-sm text-zinc-300 group-hover:text-[var(--text)] transition-colors">
@@ -51,7 +51,7 @@
             <input
               v-model="adminIsActive"
               type="checkbox"
-              class="rounded accent-indigo-500 w-4 h-4 shrink-0"
+              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 shrink-0"
             />
             <p class="text-sm text-zinc-400">{{ t('admin.active') }}</p>
           </label>
@@ -60,7 +60,7 @@
             <input
               v-model="adminMustChange"
               type="checkbox"
-              class="rounded accent-indigo-500 w-4 h-4 shrink-0"
+              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 shrink-0"
             />
             <p class="text-sm text-zinc-400">{{ t('admin.mustChangePassword') }}</p>
           </label>
@@ -81,7 +81,7 @@
               v-model="adminRoleIds"
               type="checkbox"
               :value="role.role_id"
-              class="rounded accent-indigo-500 w-4 h-4 shrink-0"
+              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 shrink-0"
             />
             <p class="text-sm text-zinc-400">{{ role.name }}</p>
           </label>
@@ -98,7 +98,7 @@
               :class="
                 selectedTheme === opt.value
                   ? 'bg-zinc-600 border-zinc-500 text-zinc-100'
-                  : 'bg-[var(--bg-input)] border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                  : 'bg-[var(--default-form-element-bg-color)] border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
               "
               @click="selectTheme(opt.value)"
             >
@@ -119,7 +119,7 @@
               :class="
                 selectedLanguage === opt.value
                   ? 'bg-zinc-600 border-zinc-500 text-zinc-100'
-                  : 'bg-[var(--bg-input)] border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                  : 'bg-[var(--default-form-element-bg-color)] border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
               "
               @click="selectedLanguage = opt.value"
             >
@@ -146,7 +146,7 @@
                 autocomplete="new-password"
                 required
                 minlength="6"
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
               <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
@@ -159,7 +159,7 @@
                 type="password"
                 autocomplete="new-password"
                 required
-                class="w-full px-3.5 py-2.5 bg-[var(--bg-input)] ring-1 ring-zinc-700 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
             </div>
 
@@ -172,7 +172,7 @@
               <button
                 type="submit"
                 :disabled="pwSaving"
-                class="px-4 py-2 ring-1 ring-zinc-700 hover:ring-zinc-500 disabled:opacity-50 rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all"
+                class="px-4 py-2 ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all"
               >
                 {{ pwSaving ? t('common.saving') : t('userSettings.changePasswordBtn') }}
               </button>
@@ -236,7 +236,7 @@
           </button>
           <button
             :disabled="isSelf ? saving || !isDirty : adminSaving"
-            class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded-lg text-sm font-semibold text-white transition-all"
+            class="flex-1 px-4 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
             @click="isSelf ? save() : saveAdminSettings()"
           >
             {{ (isSelf ? saving : adminSaving) ? t('common.saving') : t('common.save') }}
