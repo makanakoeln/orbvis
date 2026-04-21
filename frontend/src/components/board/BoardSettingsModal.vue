@@ -133,7 +133,8 @@
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                   <svg
-                    class="w-4 h-4 text-zinc-400"
+                    style="width: 12px; height: 12px"
+                    class="text-zinc-400"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
