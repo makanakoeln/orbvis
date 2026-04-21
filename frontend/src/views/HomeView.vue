@@ -1,7 +1,7 @@
 <template>
   <div class="flex-1 min-h-0 overflow-y-auto bg-[var(--bg)]">
-    <main class="py-5 px-6 pb-10">
-      <div class="flex items-center max-w-5xl mx-auto" style="margin-bottom: 20px; gap: 8px">
+    <main style="padding: 20px 24px 40px">
+      <div class="flex items-center" style="margin-bottom: 20px; gap: 8px">
         <h2
           class="text-sm font-semibold text-[var(--text)] tracking-tight"
           style="margin-right: 8px"
@@ -71,7 +71,8 @@
       <!-- Loading -->
       <div
         v-if="boardsStore.loading"
-        class="flex items-center gap-3 text-zinc-500 text-sm py-12 justify-center"
+        class="flex items-center text-zinc-500 text-sm justify-center"
+        style="gap: 8px; padding: 48px 0"
       >
         <svg
           class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
@@ -98,7 +99,8 @@
       <!-- Error -->
       <div
         v-else-if="boardsStore.error"
-        class="flex items-center gap-2 px-4 py-3 bg-red-500/8 ring-1 ring-red-500/20 rounded-xl text-red-400 text-sm"
+        class="flex items-center bg-red-500/8 ring-1 ring-red-500/20 rounded-xl text-red-400 text-sm"
+        style="gap: 6px; padding: 8px 12px"
       >
         {{ boardsStore.error }}
       </div>
@@ -106,13 +108,16 @@
       <!-- Empty state -->
       <div
         v-else-if="boardsStore.boards.length === 0"
-        class="flex flex-col items-center justify-center py-24 text-center"
+        class="flex flex-col items-center justify-center text-center"
+        style="padding: 80px 0"
       >
         <div
-          class="w-14 h-14 rounded-xl bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] flex items-center justify-center mb-5"
+          class="rounded-xl bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] flex items-center justify-center"
+          style="width: 40px; height: 40px; margin-bottom: 16px"
         >
           <svg
-            class="w-7 h-7 text-zinc-600"
+            class="text-zinc-600"
+            style="width: 22px; height: 22px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -126,7 +131,7 @@
           </svg>
         </div>
         <p class="text-zinc-300 font-semibold">{{ t('home.noBoardsTitle') }}</p>
-        <p class="text-zinc-600 text-sm mt-1.5">
+        <p class="text-zinc-600 text-sm" style="margin-top: 6px">
           <span v-if="auth.isAdmin" class="text-[var(--color-corporate-green-50)]">{{
             t('home.noBoardsAdmin')
           }}</span>
@@ -138,19 +143,20 @@
       <div
         v-else
         data-tour="boards-grid"
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto"
+        class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))]"
         style="gap: 16px"
       >
         <p
           v-if="searchQuery && !filteredBoards.length"
-          class="col-span-full text-center py-12 text-zinc-600 text-sm"
+          class="col-span-full text-center text-zinc-600 text-sm"
+          style="padding: 40px 0"
         >
           {{ t('home.noSearchResults', { q: searchQuery }) }}
         </p>
         <div
           v-for="map in filteredBoards"
           :key="map.name"
-          class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-[var(--color-corporate-green-50)]/40 rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[var(--color-corporate-green-100)]/10"
+          class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-[var(--color-corporate-green-50)]/40 rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-[2px] hover:shadow-lg hover:shadow-[var(--color-corporate-green-100)]/10"
         >
           <router-link :to="`/boards/${map.name}`" class="block">
             <!-- Thumbnail -->
@@ -697,7 +703,8 @@
               <div class="absolute flex items-center" style="top: 8px; right: 8px; gap: 5px">
                 <span
                   v-if="map.show_in_lists === false && auth.isAdmin"
-                  class="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-zinc-800/80 text-zinc-500 ring-1 ring-[var(--default-border-color)]/60 backdrop-blur-sm"
+                  class="text-[10px] rounded-md font-medium bg-zinc-800/80 text-zinc-500 ring-1 ring-[var(--default-border-color)]/60 backdrop-blur-sm"
+                  style="padding: 2px 5px"
                   :title="t('home.hiddenBoard')"
                 >
                   {{ t('home.hidden') }}
@@ -848,23 +855,26 @@
     <div v-if="confirmDelete" class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="confirmDelete = null" />
       <div
-        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-80"
+        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl"
+        style="padding: 16px; width: 320px"
       >
-        <h3 class="text-base font-bold text-[var(--text)] mb-1">
+        <h3 class="text-base font-bold text-[var(--text)]" style="margin-bottom: 4px">
           {{ t('admin.deleteBoardTitle') }}
         </h3>
-        <p class="text-sm text-zinc-400 mb-5">
+        <p class="text-sm text-zinc-400" style="margin-bottom: 16px">
           {{ t('admin.deleteBoardConfirm', { name: confirmDelete.alias || confirmDelete.name }) }}
         </p>
-        <div class="flex gap-3 justify-end">
+        <div class="flex justify-end" style="gap: 8px">
           <button
-            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            style="padding: 5px 12px"
             @click="confirmDelete = null"
           >
             {{ t('common.cancel') }}
           </button>
           <button
-            class="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-500 text-white transition-all"
+            class="rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-500 text-white transition-all"
+            style="padding: 5px 12px"
             @click="doDelete"
           >
             {{ t('common.delete') }}
@@ -879,16 +889,18 @@
     <div v-if="confirmClone" class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="confirmClone = null" />
       <div
-        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-80 space-y-3"
+        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl"
+        style="padding: 16px; width: 320px"
       >
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between" style="margin-bottom: 12px">
           <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.cloneBoard') }}</h3>
           <button
-            class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+            class="rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+            style="padding: 5px"
             @click="confirmClone = null"
           >
             <svg
-              class="w-4 h-4"
+              style="width: 14px; height: 14px"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -898,14 +910,15 @@
             </svg>
           </button>
         </div>
-        <div>
-          <label class="block text-xs font-medium text-zinc-400 mb-1.5">{{
+        <div style="margin-bottom: 10px">
+          <label class="block text-xs font-medium text-zinc-400" style="margin-bottom: 4px">{{
             t('admin.boardId')
           }}</label>
           <input
             ref="cloneInputEl"
             :value="cloneNewName"
-            class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] font-mono"
+            class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] font-mono"
+            style="padding: 5px 10px"
             spellcheck="false"
             @input="onCloneNameInput"
             @keydown.enter="doClone"
@@ -913,27 +926,35 @@
             @focus="($event.target as HTMLInputElement).select()"
           />
         </div>
-        <div>
-          <label class="block text-xs font-medium text-zinc-400 mb-1.5">{{
+        <div style="margin-bottom: 10px">
+          <label class="block text-xs font-medium text-zinc-400" style="margin-bottom: 4px">{{
             t('admin.alias')
           }}</label>
           <input
             v-model="cloneAlias"
-            class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
+            class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
+            style="padding: 5px 10px"
             spellcheck="false"
           />
         </div>
-        <p v-if="cloneError" class="text-xs text-red-400">{{ cloneError }}</p>
-        <div class="flex gap-3 justify-end pt-1 border-t border-[var(--border)]">
+        <p v-if="cloneError" class="text-xs text-red-400" style="margin-bottom: 8px">
+          {{ cloneError }}
+        </p>
+        <div
+          class="flex justify-end border-t border-[var(--border)]"
+          style="gap: 8px; padding-top: 10px"
+        >
           <button
-            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            style="padding: 5px 12px"
             @click="confirmClone = null"
           >
             {{ t('common.cancel') }}
           </button>
           <button
             :disabled="!cloneNewName"
-            class="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed text-[var(--button-primary-text-color,#000)] transition-all"
+            class="rounded-lg text-sm font-semibold bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed text-[var(--button-primary-text-color,#000)] transition-all"
+            style="padding: 5px 12px"
             @click="doClone"
           >
             {{ t('admin.cloneBoardAction') }}
@@ -978,21 +999,26 @@
     <div v-if="importConflict" class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="importConflict = null" />
       <div
-        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-96"
+        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl"
+        style="padding: 16px; width: 360px"
       >
-        <h3 class="text-base font-bold text-[var(--text)] mb-1">{{ t('admin.importBoard') }}</h3>
-        <p class="text-sm text-zinc-400 mb-5">
+        <h3 class="text-base font-bold text-[var(--text)]" style="margin-bottom: 4px">
+          {{ t('admin.importBoard') }}
+        </h3>
+        <p class="text-sm text-zinc-400" style="margin-bottom: 16px">
           {{ t('admin.importOverwrite', { name: importConflict.name }) }}
         </p>
-        <div class="flex gap-3 justify-end">
+        <div class="flex justify-end" style="gap: 8px">
           <button
-            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            style="padding: 5px 12px"
             @click="importConflict = null"
           >
             {{ t('common.cancel') }}
           </button>
           <button
-            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg text-sm font-semibold text-white transition-all"
+            class="bg-amber-600 hover:bg-amber-500 rounded-lg text-sm font-semibold text-white transition-all"
+            style="padding: 5px 12px"
             @click="confirmImportOverwrite"
           >
             {{ t('common.overwrite') }}
