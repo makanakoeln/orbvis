@@ -1,7 +1,7 @@
 <template>
   <div class="flex-1 min-h-0 overflow-y-auto bg-[var(--bg)]">
     <main style="padding: 20px 24px 40px">
-      <div class="flex items-center" style="margin-bottom: 20px; gap: 8px">
+      <div class="flex items-center" style="max-width: 960px; margin: 0 auto 20px; gap: 8px">
         <h2
           class="text-sm font-semibold text-[var(--text)] tracking-tight"
           style="margin-right: 8px"
@@ -143,8 +143,8 @@
       <div
         v-else
         data-tour="boards-grid"
-        class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))]"
-        style="gap: 16px"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+        style="max-width: 960px; margin: 0 auto; gap: 16px"
       >
         <p
           v-if="searchQuery && !filteredBoards.length"
