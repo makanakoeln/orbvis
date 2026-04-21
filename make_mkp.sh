@@ -162,6 +162,10 @@ uninstall)
   echo "  Remove manually if no longer needed:"
   echo "    rm -rf $ORBVIS_DIR"
   echo ""
+  echo -e "  ${YELLOW}${BOLD}Next step: remove the MKP package from Checkmk:${RESET}"
+  echo "    mkp disable orbvis"
+  echo "    mkp remove orbvis"
+  echo ""
   ;;
 
 # ---------------------------------------------------------------------------
