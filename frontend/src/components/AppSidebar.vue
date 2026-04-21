@@ -1,11 +1,11 @@
 <template>
   <aside
-    class="shrink-0 bg-[var(--bg-surface)] border-r border-[var(--border)] flex flex-col h-full overflow-hidden transition-all duration-200"
+    class="shrink-0 bg-[var(--default-nav-bg-color)] border-r border-[var(--default-nav-border-color)] flex flex-col h-full overflow-hidden transition-all duration-200"
     :class="sidebarCollapsed ? 'w-14' : 'w-56'"
   >
     <!-- Brand -->
     <div
-      class="px-2 py-3 border-b border-[var(--border)] shrink-0 flex items-center"
+      class="px-2 py-3 border-b border-[var(--default-nav-border-color)] shrink-0 flex items-center"
       :class="sidebarCollapsed ? 'justify-center' : 'justify-between px-3'"
     >
       <router-link v-if="!sidebarCollapsed" to="/" class="flex items-center gap-2.5 group min-w-0">
@@ -78,7 +78,7 @@
 
       <!-- Admin section -->
       <template v-if="auth.isAdmin">
-        <div class="mx-2 mt-4 mb-2 border-t border-[var(--border)]" />
+        <div class="mx-2 mt-4 mb-2 border-t border-[var(--default-nav-border-color)]" />
         <p
           v-if="!sidebarCollapsed"
           class="px-3 pb-1 text-xs font-semibold text-zinc-500 uppercase tracking-wider select-none"
@@ -152,7 +152,7 @@
     </nav>
 
     <!-- User section -->
-    <div class="border-t border-[var(--border)] p-2 shrink-0 space-y-0.5">
+    <div class="border-t border-[var(--default-nav-border-color)] p-2 shrink-0 space-y-0.5">
       <!-- User info + settings (combined clickable row) -->
       <button
         class="w-full flex items-center rounded-lg hover:bg-[var(--bg-hover)] transition-all duration-150 group"
@@ -270,8 +270,8 @@ const NavItem = defineComponent({
             'flex items-center rounded-lg text-sm transition-all duration-150',
             props.collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2',
             active
-              ? 'text-[var(--color-corporate-green-40)] bg-[var(--color-corporate-green-50)]/10 ring-1 ring-[var(--color-corporate-green-50)]/20'
-              : 'text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)]',
+              ? 'text-[var(--success)] bg-[var(--ux-theme-1,#18181b)] border-l-2 border-[var(--success)] pl-[calc(0.75rem-2px)]'
+              : 'text-[var(--font-color-dimmed,#71717a)] hover:text-[var(--font-color,#f4f4f5)] hover:bg-[var(--input-hover-bg-color,rgb(39_39_42/0.6))]',
           ],
         },
         () => [
