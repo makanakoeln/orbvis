@@ -13,45 +13,16 @@
             <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{{
               t('ack.comment')
             }}</label>
-            <input
+            <CmkInput
               ref="commentEl"
               v-model="comment"
-              class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
+              field-size="FILL"
               :placeholder="t('ack.comment') + '…'"
-              @keydown.enter="submit"
-              @keydown.esc="$emit('close')"
             />
           </div>
-          <label
-            class="flex items-center gap-2.5 text-sm text-[var(--text-muted)] cursor-pointer select-none"
-          >
-            <input
-              v-model="sticky"
-              type="checkbox"
-              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4"
-            />
-            {{ t('ack.sticky') }}
-          </label>
-          <label
-            class="flex items-center gap-2.5 text-sm text-[var(--text-muted)] cursor-pointer select-none"
-          >
-            <input
-              v-model="notify"
-              type="checkbox"
-              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4"
-            />
-            {{ t('ack.notify') }}
-          </label>
-          <label
-            class="flex items-center gap-2.5 text-sm text-[var(--text-muted)] cursor-pointer select-none"
-          >
-            <input
-              v-model="persistent"
-              type="checkbox"
-              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4"
-            />
-            {{ t('ack.persistent') }}
-          </label>
+          <CmkCheckbox v-model="sticky" :label="t('ack.sticky')" />
+          <CmkCheckbox v-model="notify" :label="t('ack.notify')" />
+          <CmkCheckbox v-model="persistent" :label="t('ack.persistent')" />
         </div>
 
         <p v-if="error" class="text-xs text-red-400">{{ error }}</p>
@@ -72,14 +43,14 @@
 
 <script setup lang="ts">
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
+import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
 import type { BoardObject } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';
-
-const { t } = useI18n();
 
 const props = defineProps<{
   object: BoardObject;
@@ -88,6 +59,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>();
 
+const { t } = useI18n();
 const comment = ref('');
 const sticky = ref(true);
 const notify = ref(true);
@@ -97,11 +69,9 @@ const error = ref('');
 const success = ref(false);
 const commentEl = ref<HTMLInputElement | null>(null);
 
-onMounted(() => {
-  commentEl.value?.focus();
-});
-
 const displayName = computed(() => getBoardObjectName(props.object));
+
+onMounted(() => commentEl.value?.focus());
 
 async function submit() {
   if (!comment.value.trim() || submitting.value) return;
@@ -134,8 +104,8 @@ async function submit() {
     }
     success.value = true;
     setTimeout(() => emit('close'), 1200);
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : t('ack.error');
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e);
   } finally {
     submitting.value = false;
   }

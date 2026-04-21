@@ -292,3 +292,62 @@ body {
 .light * {
   scrollbar-color: #d4d4d8 transparent;
 }
+
+/* ── CMK component shims ────────────────────────────────────────────────────
+   In production, Checkmk's own stylesheet provides these styles.
+   These rules make CMK components visible in standalone dev mode.
+   ──────────────────────────────────────────────────────────────────────── */
+
+input.cmk-input {
+  background: var(--default-form-element-bg-color);
+  border: 1px solid var(--default-form-element-border-color);
+  border-radius: 6px;
+  color: var(--font-color);
+  padding: 5px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  outline: none;
+  transition: box-shadow 0.15s;
+}
+
+input.cmk-input:focus {
+  box-shadow: 0 0 0 2px var(--color-corporate-green-50);
+  border-color: var(--color-corporate-green-50);
+}
+
+input.cmk-input::placeholder {
+  color: var(--font-color-dimmed);
+}
+
+input.cmk-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cmk-checkbox__button {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--default-form-element-border-color);
+  border-radius: 3px;
+  background: var(--default-form-element-bg-color);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  accent-color: var(--color-corporate-green-50);
+}
+
+.cmk-checkbox__button[data-state='checked'] {
+  background: var(--color-corporate-green-50);
+  border-color: var(--color-corporate-green-50);
+}
+
+.cmk-checkbox__indicator {
+  color: #000;
+}
+
+.cmk-checkbox__label {
+  color: var(--font-color);
+  font-size: 13px;
+}
