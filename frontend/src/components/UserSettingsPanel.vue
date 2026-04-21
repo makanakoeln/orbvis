@@ -3,7 +3,8 @@
     <div class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="tryClose" />
       <div
-        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-80 space-y-5"
+        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl space-y-[12px]"
+        style="padding: 16px; width: 300px"
       >
         <!-- Header -->
         <div class="flex items-center justify-between">
@@ -11,14 +12,16 @@
             <h3 class="text-base font-bold text-[var(--text)]">
               {{ isSelf ? t('userSettings.title') : t('admin.editUser', { name: userName }) }}
             </h3>
-            <p v-if="isSelf" class="text-xs text-zinc-500 mt-0.5">{{ userName }}</p>
+            <p v-if="isSelf" class="text-xs text-zinc-500" style="margin-top: 2px">
+              {{ userName }}
+            </p>
           </div>
           <button
-            class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+            class="p-[4px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
             @click="tryClose"
           >
             <svg
-              class="w-4 h-4"
+              style="width: 14px; height: 14px"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -30,37 +33,42 @@
         </div>
 
         <!-- Admin settings (non-self editing) -->
-        <div v-if="!isSelf && userRead" class="space-y-3">
+        <div v-if="!isSelf && userRead" class="space-y-[8px]">
           <p class="text-xs font-medium text-zinc-400">{{ t('admin.settings') }}</p>
 
-          <label class="flex items-start gap-3 cursor-pointer group select-none">
+          <label class="flex items-start gap-[8px] cursor-pointer group select-none">
             <input
               v-model="adminIsAdmin"
               type="checkbox"
-              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 mt-0.5 shrink-0"
+              class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
+              style="width: 14px; height: 14px; margin-top: 2px"
             />
             <div>
               <p class="text-sm text-zinc-300 group-hover:text-[var(--text)] transition-colors">
                 {{ t('admin.administrator') }}
               </p>
-              <p class="text-xs text-zinc-600 mt-0.5">{{ t('admin.administratorHint') }}</p>
+              <p class="text-xs text-zinc-600" style="margin-top: 2px">
+                {{ t('admin.administratorHint') }}
+              </p>
             </div>
           </label>
 
-          <label class="flex items-center gap-3 cursor-pointer select-none">
+          <label class="flex items-center gap-[8px] cursor-pointer select-none">
             <input
               v-model="adminIsActive"
               type="checkbox"
-              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 shrink-0"
+              class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
+              style="width: 14px; height: 14px"
             />
             <p class="text-sm text-zinc-400">{{ t('admin.active') }}</p>
           </label>
 
-          <label class="flex items-center gap-3 cursor-pointer select-none">
+          <label class="flex items-center gap-[8px] cursor-pointer select-none">
             <input
               v-model="adminMustChange"
               type="checkbox"
-              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 shrink-0"
+              class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
+              style="width: 14px; height: 14px"
             />
             <p class="text-sm text-zinc-400">{{ t('admin.mustChangePassword') }}</p>
           </label>
@@ -69,32 +77,34 @@
         <!-- Role assignment (non-self editing) -->
         <div
           v-if="!isSelf && userRead && availableRoles?.length"
-          class="border-t border-[var(--border)] pt-3 space-y-2"
+          class="border-t border-[var(--border)] pt-[8px] space-y-[6px]"
         >
           <p class="text-xs font-medium text-zinc-400">{{ t('admin.roles') }}</p>
           <label
             v-for="role in availableRoles"
             :key="role.role_id"
-            class="flex items-center gap-3 cursor-pointer select-none"
+            class="flex items-center gap-[8px] cursor-pointer select-none"
           >
             <input
               v-model="adminRoleIds"
               type="checkbox"
               :value="role.role_id"
-              class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 shrink-0"
+              class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
+              style="width: 14px; height: 14px"
             />
             <p class="text-sm text-zinc-400">{{ role.name }}</p>
           </label>
         </div>
 
         <!-- Theme selector (only for self) -->
-        <div v-if="isSelf" class="space-y-2">
+        <div v-if="isSelf" class="space-y-[6px]">
           <label class="text-xs font-medium text-zinc-400">{{ t('userSettings.theme') }}</label>
-          <div class="flex gap-2">
+          <div class="flex gap-[6px]">
             <button
               v-for="opt in themeOptions"
               :key="opt.value"
-              class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all border"
+              class="flex-1 flex items-center justify-center rounded-lg text-xs font-medium transition-all border"
+              style="gap: 5px; padding: 6px 8px"
               :class="
                 selectedTheme === opt.value
                   ? 'bg-zinc-600 border-zinc-500 text-zinc-100'
@@ -102,20 +112,21 @@
               "
               @click="selectTheme(opt.value)"
             >
-              <component :is="opt.icon" class="w-3.5 h-3.5" />
+              <component :is="opt.icon" style="width: 13px; height: 13px" />
               {{ opt.label }}
             </button>
           </div>
         </div>
 
         <!-- Language selector (only for self, not in SSO mode where CMK controls it) -->
-        <div v-if="isSelf && !auth.ssoActive && !auth.isCheckmkDeployment" class="space-y-2">
+        <div v-if="isSelf && !auth.ssoActive && !auth.isCheckmkDeployment" class="space-y-[6px]">
           <label class="text-xs font-medium text-zinc-400">{{ t('userSettings.language') }}</label>
-          <div class="flex gap-2">
+          <div class="flex gap-[6px]">
             <button
               v-for="opt in languageOptions"
               :key="opt.value"
-              class="flex-1 flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium transition-all border"
+              class="flex-1 flex items-center justify-center rounded-lg text-xs font-medium transition-all border"
+              style="padding: 6px 8px"
               :class="
                 selectedLanguage === opt.value
                   ? 'bg-zinc-600 border-zinc-500 text-zinc-100'
@@ -131,12 +142,12 @@
         <!-- Password change (hidden in SSO+self) -->
         <div
           v-if="showPasswordSection"
-          class="space-y-3"
-          :class="isSelf ? 'pt-4 border-t border-[var(--border)]' : ''"
+          class="space-y-[8px]"
+          :class="isSelf ? 'pt-[12px] border-t border-[var(--border)]' : ''"
         >
           <p class="text-xs font-medium text-zinc-400">{{ t('userSettings.changePassword') }}</p>
-          <form class="space-y-3" @submit.prevent="savePassword">
-            <div class="space-y-1.5">
+          <form class="space-y-[8px]" @submit.prevent="savePassword">
+            <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{
                 t('userSettings.newPassword')
               }}</label>
@@ -146,11 +157,12 @@
                 autocomplete="new-password"
                 required
                 minlength="6"
-                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                style="padding: 7px 10px"
               />
               <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
-            <div class="space-y-1.5">
+            <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{
                 t('userSettings.confirmPassword')
               }}</label>
@@ -159,7 +171,8 @@
                 type="password"
                 autocomplete="new-password"
                 required
-                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                style="padding: 7px 10px"
               />
             </div>
 
@@ -172,7 +185,8 @@
               <button
                 type="submit"
                 :disabled="pwSaving"
-                class="px-4 py-2 ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all"
+                class="ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all"
+                style="padding: 5px 10px; font-size: 12px"
               >
                 {{ pwSaving ? t('common.saving') : t('userSettings.changePasswordBtn') }}
               </button>
@@ -181,7 +195,7 @@
         </div>
 
         <!-- Tour reset (self only) -->
-        <div v-if="isSelf" class="border-t border-[var(--border)] pt-3">
+        <div v-if="isSelf" class="border-t border-[var(--border)] pt-[8px]">
           <p v-if="tourResetDone" class="text-xs text-green-400">
             {{ t('userSettings.tourResetDone') }}
           </p>
@@ -202,10 +216,12 @@
         <!-- Unsaved changes warning -->
         <div
           v-if="showUnsavedWarning"
-          class="flex items-center gap-2 px-3 py-2 bg-amber-500/10 ring-1 ring-amber-500/30 rounded-lg text-amber-400 text-xs"
+          class="flex items-center gap-[6px] bg-amber-500/10 ring-1 ring-amber-500/30 rounded-lg text-amber-400 text-xs"
+          style="padding: 6px 10px"
         >
           <svg
-            class="w-3.5 h-3.5 shrink-0"
+            class="shrink-0"
+            style="width: 13px; height: 13px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -226,17 +242,19 @@
         <!-- Footer: Save / Cancel -->
         <div
           v-if="isSelf || (!isSelf && userRead)"
-          class="flex gap-2 pt-1 border-t border-[var(--border)]"
+          class="flex gap-[6px] pt-[8px] border-t border-[var(--border)]"
         >
           <button
-            class="flex-1 px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            class="flex-1 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            style="padding: 5px 10px; font-size: 12px"
             @click="discardAndClose"
           >
             {{ t('common.cancel') }}
           </button>
           <button
             :disabled="isSelf ? saving || !isDirty : adminSaving"
-            class="flex-1 px-4 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+            class="flex-1 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+            style="padding: 5px 10px; font-size: 12px"
             @click="isSelf ? save() : saveAdminSettings()"
           >
             {{ (isSelf ? saving : adminSaving) ? t('common.saving') : t('common.save') }}

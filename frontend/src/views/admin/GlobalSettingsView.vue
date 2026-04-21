@@ -43,14 +43,14 @@
               <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('board.iconSize')
               }}</span>
-              <NumberInput v-model="form.icon_size" min="8" max="256" class="w-20" />
+              <NumberInput v-model="form.icon_size" min="8" max="256" class="w-[80px]" />
             </label>
 
             <label class="block">
               <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.viewType')
               }}</span>
-              <select v-model="form.view_type" class="select w-40">
+              <select v-model="form.view_type" class="select w-[160px]">
                 <option value="icon">{{ t('boardSettings.viewTypeIcon') }}</option>
                 <option value="text">{{ t('boardSettings.viewTypeText') }}</option>
                 <option value="gadget">{{ t('boardSettings.viewTypeGadget') }}</option>
@@ -61,7 +61,7 @@
               <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.z')
               }}</span>
-              <NumberInput v-model="form.z" min="1" max="999" class="w-20" />
+              <NumberInput v-model="form.z" min="1" max="999" class="w-[80px]" />
               <p class="text-xs text-zinc-600 mt-1">{{ t('settings.zHint') }}</p>
             </label>
           </div>
@@ -74,7 +74,7 @@
               <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.lineStyle')
               }}</span>
-              <select v-model="form.line_style" class="select w-44">
+              <select v-model="form.line_style" class="select w-[176px]">
                 <option :value="null">{{ t('boardSettings.lineDefault') }}</option>
                 <option value="plain">{{ t('boardSettings.lineSimple') }}</option>
                 <option value="arrow_end">{{ t('boardSettings.lineArrowRight') }}</option>
@@ -89,7 +89,7 @@
               <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.target')
               }}</span>
-              <select v-model="form.url_target" class="select w-40">
+              <select v-model="form.url_target" class="select w-[160px]">
                 <option value="_blank">{{ t('boardSettings.targetNewTab') }}</option>
                 <option value="_self">{{ t('boardSettings.targetSameTab') }}</option>
                 <option value="_top">{{ t('boardSettings.targetTopFrame') }}</option>
@@ -114,7 +114,8 @@
             <input
               v-model="form.label_show"
               type="checkbox"
-              class="w-4 h-4 rounded accent-[var(--color-corporate-green-50)]"
+              class="rounded accent-[var(--color-corporate-green-50)]"
+              style="width: 14px; height: 14px"
             />
             <span class="text-sm text-[var(--text)]">{{ t('boardSettings.showLabel') }}</span>
           </label>
@@ -131,7 +132,7 @@
                 <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px"
                   >{{ t('boardSettings.size') }} (px)</span
                 >
-                <NumberInput v-model="form.label_size" min="6" max="72" class="w-20" />
+                <NumberInput v-model="form.label_size" min="6" max="72" class="w-[80px]" />
               </label>
 
               <label class="block">
@@ -149,7 +150,7 @@
                     v-model="form.label_color"
                     type="text"
                     placeholder="#ffffff"
-                    class="w-28 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)]"
+                    class="w-[112px] bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)]"
                   />
                 </div>
               </label>
@@ -184,13 +185,13 @@
                 <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                   t('boardSettings.offsetX')
                 }}</span>
-                <NumberInput v-model="form.label_x" class="w-20" />
+                <NumberInput v-model="form.label_x" class="w-[80px]" />
               </label>
               <label class="block">
                 <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                   t('boardSettings.offsetY')
                 }}</span>
-                <NumberInput v-model="form.label_y" class="w-20" />
+                <NumberInput v-model="form.label_y" class="w-[80px]" />
               </label>
             </div>
           </div>
@@ -225,7 +226,7 @@
             <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
               t('board.boardType')
             }}</span>
-            <select v-model="form.default_map_type" class="select w-44">
+            <select v-model="form.default_map_type" class="select w-[176px]">
               <option value="static">{{ t('board.boardTypeStatic') }}</option>
               <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
               <option value="flow">{{ t('board.boardTypeFlowBoard') }}</option>

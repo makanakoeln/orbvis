@@ -4,13 +4,15 @@
       type="number"
       :value="displayValue"
       v-bind="inputAttrs"
-      class="w-full px-3 py-2 pr-7 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:hidden [&::-webkit-inner-spin-button]:hidden"
+      class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:hidden [&::-webkit-inner-spin-button]:hidden"
+      style="padding: 5px 24px 5px 8px"
       @input="onInput"
       @keydown.up.prevent="step(1)"
       @keydown.down.prevent="step(-1)"
     />
     <div
-      class="absolute right-0 inset-y-0 w-6 flex flex-col border-l border-zinc-700/60 rounded-r-lg overflow-hidden"
+      class="absolute right-0 inset-y-0 flex flex-col border-l border-zinc-700/60 rounded-r-lg overflow-hidden"
+      style="width: 20px"
     >
       <button
         type="button"
@@ -19,7 +21,7 @@
         @mousedown.prevent="step(1)"
       >
         <svg
-          class="w-2.5 h-2.5"
+          style="width: 8px; height: 8px"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -35,7 +37,7 @@
         @mousedown.prevent="step(-1)"
       >
         <svg
-          class="w-2.5 h-2.5"
+          style="width: 8px; height: 8px"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
