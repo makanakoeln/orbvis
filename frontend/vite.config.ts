@@ -43,6 +43,17 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          d3: ['d3'],
+          echarts: ['echarts', 'vue-echarts'],
+        },
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,
