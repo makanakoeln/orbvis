@@ -240,9 +240,6 @@ CHECKMK_SITE=$SITE
 EOF
 
   if [[ ! -f "$BACKENDS_FILE" ]]; then
-    if omd config show LIVEPROXYD 2>/dev/null | grep -qi "^on$"; then
-      LIVESTATUS_SOCKET="$ROOT/tmp/run/liveproxyd/$SITE.sock"
-    fi
     cat > "$BACKENDS_FILE" << EOF
 [
   {
