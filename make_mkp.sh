@@ -86,13 +86,11 @@ step "Generating orbvis-setup"
 mkdir -p "$TMPDIR/bin"
 cat > "$TMPDIR/bin/orbvis-setup" << 'SETUP_SCRIPT'
 #!/bin/bash
-# orbvis-setup – finalize OrbVis installation after MKP install
+# orbvis-setup – manage OrbVis installation
 #
-# Run as the OMD site user:
-#   su - <SITE> -c "orbvis-setup"
-#
-# Or if already logged in as the site user:
-#   orbvis-setup
+# Commands (run as the OMD site user):
+#   orbvis-setup           – install / upgrade OrbVis
+#   orbvis-setup uninstall – remove OrbVis (boards and database are kept)
 #
 set -euo pipefail
 
@@ -102,14 +100,11 @@ ok()    { echo -e "  ${GREEN}✓ $*${RESET}"; }
 warn()  { echo -e "  ${YELLOW}⚠ $*${RESET}"; }
 die()   { echo -e "\n${RED}Error: $*${RESET}\n" >&2; exit 1; }
 
-# Must run as the site user
 SITE="${OMD_SITE:-}"
 ROOT="${OMD_ROOT:-}"
 [[ -z "$SITE" || -z "$ROOT" ]] && die "Run as the OMD site user (OMD_SITE / OMD_ROOT must be set).\nExample: su - <SITE> -c 'orbvis-setup'"
 
 MKP_LIB="$ROOT/local/lib/orbvis"
-[[ -d "$MKP_LIB" ]] || die "MKP library not found at $MKP_LIB\nDid you install the orbvis MKP first?"
-
 ORBVIS_DIR="$ROOT/local/share/orbvis"
 HTDOCS_DIR="$ORBVIS_DIR/htdocs"
 BOARDS_DIR="$ORBVIS_DIR/boards"
@@ -122,62 +117,114 @@ INIT_SCRIPT="$ROOT/etc/init.d/orbvis"
 BACKEND_PORT=8420
 LIVESTATUS_SOCKET="$ROOT/tmp/run/live"
 
-echo ""
-echo -e "${BOLD}OrbVis Post-Install Setup${RESET}"
-echo "  Site: $SITE  ($ROOT)"
-echo ""
+CMD="${1:-setup}"
 
-# 1. Frontend: extract pre-built tarball
-step "Deploying frontend"
-mkdir -p "$HTDOCS_DIR"
-rm -rf "${HTDOCS_DIR:?}"/*
-tar xzf "$MKP_LIB/htdocs.tar.gz" -C "$HTDOCS_DIR"
-ok "Frontend deployed to $HTDOCS_DIR"
+case "$CMD" in
 
-# 2. Backend source: extract tarball
-step "Extracting backend source"
-mkdir -p "$MKP_LIB/server"
-tar xzf "$MKP_LIB/server.tar.gz" -C "$MKP_LIB/server"
-ok "Backend source extracted"
+# ---------------------------------------------------------------------------
+uninstall)
+# ---------------------------------------------------------------------------
+  echo ""
+  echo -e "${BOLD}OrbVis Uninstall${RESET}"
+  echo "  Site: $SITE  ($ROOT)"
+  echo ""
 
-# 3. Demo boards (extract, skip existing files)
-step "Setting up board data"
-mkdir -p "$BOARDS_DIR/backgrounds"
-TMPBOARDS="$(mktemp -d)"
-tar xzf "$MKP_LIB/boards.tar.gz" -C "$TMPBOARDS"
-NEW_BOARDS=0
-for f in "$TMPBOARDS/boards/"*.json; do
-  [[ -f "$f" ]] || continue
-  fname="$(basename "$f")"
-  if [[ ! -f "$BOARDS_DIR/$fname" ]]; then
-    cp "$f" "$BOARDS_DIR/$fname"
-    NEW_BOARDS=$(( NEW_BOARDS + 1 ))
+  step "Stopping OrbVis"
+  omd stop orbvis 2>/dev/null || true
+  ok "OrbVis stopped"
+
+  step "Removing OMD service"
+  rm -f "$ROOT/etc/rc.d/85-orbvis"
+  rm -f "$INIT_SCRIPT"
+  ok "OMD service removed"
+
+  step "Removing Apache configuration"
+  rm -f "$APACHE_CONF"
+  omd reload apache
+  ok "Apache configuration removed"
+
+  step "Removing frontend and backend"
+  rm -rf "$HTDOCS_DIR"
+  rm -rf "$VENV_DIR"
+  rm -rf "$MKP_LIB/server"
+  ok "Frontend, venv and backend source removed"
+
+  echo ""
+  echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+  echo -e "${GREEN}${BOLD}  OrbVis uninstalled.${RESET}"
+  echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+  echo ""
+  echo "  Kept (user data):  $BOARDS_DIR"
+  echo "                     $DB_FILE"
+  echo "                     $ENV_FILE"
+  echo "                     $BACKENDS_FILE"
+  echo ""
+  echo "  Remove manually if no longer needed:"
+  echo "    rm -rf $ORBVIS_DIR"
+  echo ""
+  ;;
+
+# ---------------------------------------------------------------------------
+setup)
+# ---------------------------------------------------------------------------
+  [[ -d "$MKP_LIB" ]] || die "MKP library not found at $MKP_LIB\nDid you install the orbvis MKP first?"
+
+  echo ""
+  echo -e "${BOLD}OrbVis Post-Install Setup${RESET}"
+  echo "  Site: $SITE  ($ROOT)"
+  echo ""
+
+  # 1. Frontend: extract pre-built tarball
+  step "Deploying frontend"
+  mkdir -p "$HTDOCS_DIR"
+  rm -rf "${HTDOCS_DIR:?}"/*
+  tar xzf "$MKP_LIB/htdocs.tar.gz" -C "$HTDOCS_DIR"
+  ok "Frontend deployed to $HTDOCS_DIR"
+
+  # 2. Backend source: extract tarball
+  step "Extracting backend source"
+  mkdir -p "$MKP_LIB/server"
+  tar xzf "$MKP_LIB/server.tar.gz" -C "$MKP_LIB/server"
+  ok "Backend source extracted"
+
+  # 3. Demo boards (extract, skip existing files)
+  step "Setting up board data"
+  mkdir -p "$BOARDS_DIR/backgrounds"
+  TMPBOARDS="$(mktemp -d)"
+  tar xzf "$MKP_LIB/boards.tar.gz" -C "$TMPBOARDS"
+  NEW_BOARDS=0
+  for f in "$TMPBOARDS/boards/"*.json; do
+    [[ -f "$f" ]] || continue
+    fname="$(basename "$f")"
+    if [[ ! -f "$BOARDS_DIR/$fname" ]]; then
+      cp "$f" "$BOARDS_DIR/$fname"
+      NEW_BOARDS=$(( NEW_BOARDS + 1 ))
+    fi
+  done
+  [[ -f "$TMPBOARDS/boards/backgrounds/demo.svg" && ! -f "$BOARDS_DIR/backgrounds/demo.svg" ]] && \
+    cp "$TMPBOARDS/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
+  rm -rf "$TMPBOARDS"
+  ok "Boards ready ($NEW_BOARDS new demo boards)"
+
+  # 4. Python virtualenv + backend
+  step "Setting up Python environment"
+  PYTHON3="$ROOT/bin/python3"
+  [[ -x "$PYTHON3" ]] || PYTHON3="$(command -v python3)"
+  if [[ ! -d "$VENV_DIR" ]]; then
+    "$PYTHON3" -m venv --copies "$VENV_DIR"
   fi
-done
-[[ -f "$TMPBOARDS/boards/backgrounds/demo.svg" && ! -f "$BOARDS_DIR/backgrounds/demo.svg" ]] && \
-  cp "$TMPBOARDS/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
-rm -rf "$TMPBOARDS"
-ok "Boards ready ($NEW_BOARDS new demo boards)"
+  step "Installing backend dependencies"
+  "$VENV_DIR/bin/pip" install --quiet --upgrade pip
+  "$VENV_DIR/bin/pip" install --quiet "$MKP_LIB/server"
+  ok "Backend installed"
 
-# 3. Python virtualenv + backend
-step "Setting up Python environment"
-PYTHON3="$ROOT/bin/python3"
-[[ -x "$PYTHON3" ]] || PYTHON3="$(command -v python3)"
-if [[ ! -d "$VENV_DIR" ]]; then
-  "$PYTHON3" -m venv --copies "$VENV_DIR"
-fi
-step "Installing backend dependencies"
-"$VENV_DIR/bin/pip" install --quiet --upgrade pip
-"$VENV_DIR/bin/pip" install --quiet "$MKP_LIB/server"
-ok "Backend installed"
+  # 5. Configuration
+  step "Writing configuration"
+  EXISTING_SECRET=""
+  [[ -f "$ENV_FILE" ]] && EXISTING_SECRET=$(grep -E '^SECRET_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)
+  SECRET_KEY="${EXISTING_SECRET:-$("$PYTHON3" -c 'import secrets; print(secrets.token_hex(32))')}"
 
-# 4. Configuration
-step "Writing configuration"
-EXISTING_SECRET=""
-[[ -f "$ENV_FILE" ]] && EXISTING_SECRET=$(grep -E '^SECRET_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)
-SECRET_KEY="${EXISTING_SECRET:-$("$PYTHON3" -c 'import secrets; print(secrets.token_hex(32))')}"
-
-cat > "$ENV_FILE" << EOF
+  cat > "$ENV_FILE" << EOF
 BOARDS_DIR=$BOARDS_DIR
 BACKENDS_FILE=$BACKENDS_FILE
 DATABASE_URL=sqlite+aiosqlite:///$DB_FILE
@@ -188,11 +235,11 @@ CHECKMK_OMD_ROOT=$ROOT
 CHECKMK_SITE=$SITE
 EOF
 
-if [[ ! -f "$BACKENDS_FILE" ]]; then
-  if omd config show LIVEPROXYD 2>/dev/null | grep -qi "^on$"; then
-    LIVESTATUS_SOCKET="$ROOT/tmp/run/liveproxyd/$SITE.sock"
-  fi
-  cat > "$BACKENDS_FILE" << EOF
+  if [[ ! -f "$BACKENDS_FILE" ]]; then
+    if omd config show LIVEPROXYD 2>/dev/null | grep -qi "^on$"; then
+      LIVESTATUS_SOCKET="$ROOT/tmp/run/liveproxyd/$SITE.sock"
+    fi
+    cat > "$BACKENDS_FILE" << EOF
 [
   {
     "id": "live_1",
@@ -203,35 +250,35 @@ if [[ ! -f "$BACKENDS_FILE" ]]; then
   }
 ]
 EOF
-  ok "Configuration written"
-else
-  ok "Configuration written (existing backends.json kept)"
-fi
-
-# 5. Apache configuration
-step "Writing Apache configuration"
-
-# Locate mod_proxy.so — CMK 2.4 bundles its own, CMK 2.3 uses the system Apache binary
-# and therefore needs the system module path (Ubuntu/Debian: /usr/lib/apache2/modules/).
-PROXY_SO=""
-PROXY_HTTP_SO=""
-for _dir in \
-    "$ROOT/lib/apache/modules" \
-    "/usr/lib/apache2/modules" \
-    "/usr/lib64/httpd/modules" \
-    "/usr/lib/httpd/modules"; do
-  if [[ -f "$_dir/mod_proxy.so" && -f "$_dir/mod_proxy_http.so" ]]; then
-    PROXY_SO="$_dir/mod_proxy.so"
-    PROXY_HTTP_SO="$_dir/mod_proxy_http.so"
-    break
+    ok "Configuration written"
+  else
+    ok "Configuration written (existing backends.json kept)"
   fi
-done
 
-if [[ -z "$PROXY_SO" ]]; then
-  warn "mod_proxy.so not found — API proxy will be disabled. Backend API will be unreachable."
-fi
+  # 6. Apache configuration
+  step "Writing Apache configuration"
 
-cat > "$APACHE_CONF" << EOF
+  # Locate mod_proxy.so — CMK 2.4 bundles its own, CMK 2.3 uses the system Apache binary
+  # and therefore needs the system module path (Ubuntu/Debian: /usr/lib/apache2/modules/).
+  PROXY_SO=""
+  PROXY_HTTP_SO=""
+  for _dir in \
+      "$ROOT/lib/apache/modules" \
+      "/usr/lib/apache2/modules" \
+      "/usr/lib64/httpd/modules" \
+      "/usr/lib/httpd/modules"; do
+    if [[ -f "$_dir/mod_proxy.so" && -f "$_dir/mod_proxy_http.so" ]]; then
+      PROXY_SO="$_dir/mod_proxy.so"
+      PROXY_HTTP_SO="$_dir/mod_proxy_http.so"
+      break
+    fi
+  done
+
+  if [[ -z "$PROXY_SO" ]]; then
+    warn "mod_proxy.so not found — API proxy will be disabled. Backend API will be unreachable."
+  fi
+
+  cat > "$APACHE_CONF" << EOF
 # OrbVis – static frontend + backend proxy
 # Auto-generated by orbvis-setup
 
@@ -272,11 +319,11 @@ Alias /$SITE/orbvis $HTDOCS_DIR
     ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/boards/backgrounds
 </Location>
 EOF
-ok "Apache configuration written"
+  ok "Apache configuration written"
 
-# 6. OMD init script
-step "Registering OrbVis as OMD service"
-cat > "$INIT_SCRIPT" << EOF
+  # 7. OMD init script
+  step "Registering OrbVis as OMD service"
+  cat > "$INIT_SCRIPT" << EOF
 #!/bin/bash
 # OMD init script for OrbVis backend
 
@@ -328,28 +375,34 @@ case "\$1" in
   *) echo "Usage: \$0 {start|stop|restart|status}"; exit 1 ;;
 esac
 EOF
-chmod +x "$INIT_SCRIPT"
-ln -sf "$INIT_SCRIPT" "$ROOT/etc/rc.d/85-orbvis" 2>/dev/null || true
-ok "OrbVis registered as OMD service"
+  chmod +x "$INIT_SCRIPT"
+  ln -sf "$INIT_SCRIPT" "$ROOT/etc/rc.d/85-orbvis" 2>/dev/null || true
+  ok "OrbVis registered as OMD service"
 
-# 7. Start services
-step "Reloading Apache"
-omd reload apache
-ok "Apache reloaded"
+  # 8. Start services
+  step "Reloading Apache"
+  omd reload apache
+  ok "Apache reloaded"
 
-step "Starting OrbVis"
-omd restart orbvis
-ok "OrbVis started"
+  step "Starting OrbVis"
+  omd restart orbvis
+  ok "OrbVis started"
 
-# Done
-HOST="$(hostname -f 2>/dev/null || hostname)"
-echo ""
-echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-echo -e "${GREEN}${BOLD}  OrbVis setup complete!${RESET}"
-echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-echo ""
-echo "  Open in browser:  http://$HOST/$SITE/orbvis/"
-echo ""
+  HOST="$(hostname -f 2>/dev/null || hostname)"
+  echo ""
+  echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+  echo -e "${GREEN}${BOLD}  OrbVis setup complete!${RESET}"
+  echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+  echo ""
+  echo "  Open in browser:  http://$HOST/$SITE/orbvis/"
+  echo ""
+  ;;
+
+*)
+  die "Unknown command: $CMD\nUsage: orbvis-setup [setup|uninstall]"
+  ;;
+
+esac
 SETUP_SCRIPT
 chmod +x "$TMPDIR/bin/orbvis-setup"
 ok "orbvis-setup generated"
