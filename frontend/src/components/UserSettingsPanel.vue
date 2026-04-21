@@ -12,7 +12,7 @@
             <h3 class="text-base font-bold text-[var(--text)]">
               {{ isSelf ? t('userSettings.title') : t('admin.editUser', { name: userName }) }}
             </h3>
-            <p v-if="isSelf" class="text-xs text-zinc-500" style="margin-top: 2px">
+            <p v-if="isSelf" class="text-sm text-zinc-500" style="margin-top: 2px">
               {{ userName }}
             </p>
           </div>
@@ -34,11 +34,11 @@
 
         <!-- Admin settings (non-self editing) -->
         <div v-if="!isSelf && userRead" class="space-y-[8px]">
-          <p class="text-xs font-medium text-zinc-400">{{ t('admin.settings') }}</p>
+          <p class="text-sm font-medium text-zinc-400">{{ t('admin.settings') }}</p>
 
           <div class="flex items-start gap-[8px]">
             <CmkCheckbox v-model="adminIsAdmin" :label="t('admin.administrator')" />
-            <p class="text-xs text-zinc-600" style="margin-top: 2px">
+            <p class="text-sm text-zinc-600" style="margin-top: 2px">
               {{ t('admin.administratorHint') }}
             </p>
           </div>
@@ -53,7 +53,7 @@
           v-if="!isSelf && userRead && availableRoles?.length"
           class="border-t border-[var(--border)] pt-[8px] space-y-[6px]"
         >
-          <p class="text-xs font-medium text-zinc-400">{{ t('admin.roles') }}</p>
+          <p class="text-sm font-medium text-zinc-400">{{ t('admin.roles') }}</p>
           <div v-for="role in availableRoles" :key="role.role_id">
             <CmkCheckbox
               :model-value="adminRoleIds.includes(role.role_id)"
@@ -70,7 +70,7 @@
 
         <!-- Theme selector (only for self) -->
         <div v-if="isSelf" class="space-y-[6px]">
-          <label class="text-xs font-medium text-zinc-400">{{ t('userSettings.theme') }}</label>
+          <label class="text-sm font-medium text-zinc-400">{{ t('userSettings.theme') }}</label>
           <div class="flex gap-[6px]">
             <button
               v-for="opt in themeOptions"
@@ -92,7 +92,7 @@
 
         <!-- Language selector (only for self, not in SSO mode where CMK controls it) -->
         <div v-if="isSelf && !auth.ssoActive && !auth.isCheckmkDeployment" class="space-y-[6px]">
-          <label class="text-xs font-medium text-zinc-400">{{ t('userSettings.language') }}</label>
+          <label class="text-sm font-medium text-zinc-400">{{ t('userSettings.language') }}</label>
           <div class="flex gap-[6px]">
             <button
               v-for="opt in languageOptions"
@@ -117,10 +117,10 @@
           class="space-y-[8px]"
           :class="isSelf ? 'pt-[12px] border-t border-[var(--border)]' : ''"
         >
-          <p class="text-xs font-medium text-zinc-400">{{ t('userSettings.changePassword') }}</p>
+          <p class="text-sm font-medium text-zinc-400">{{ t('userSettings.changePassword') }}</p>
           <form class="space-y-[8px]" @submit.prevent="savePassword">
             <div class="space-y-[4px]">
-              <label class="text-xs font-medium text-zinc-400">{{
+              <label class="text-sm font-medium text-zinc-400">{{
                 t('userSettings.newPassword')
               }}</label>
               <CmkInput
@@ -129,10 +129,10 @@
                 autocomplete="new-password"
                 field-size="FILL"
               />
-              <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
+              <p class="text-sm text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
             <div class="space-y-[4px]">
-              <label class="text-xs font-medium text-zinc-400">{{
+              <label class="text-sm font-medium text-zinc-400">{{
                 t('userSettings.confirmPassword')
               }}</label>
               <CmkInput
@@ -143,8 +143,8 @@
               />
             </div>
 
-            <p v-if="pwError" class="text-red-400 text-xs">{{ pwError }}</p>
-            <p v-if="pwSuccess" class="text-green-400 text-xs">
+            <p v-if="pwError" class="text-red-400 text-sm">{{ pwError }}</p>
+            <p v-if="pwSuccess" class="text-green-400 text-sm">
               {{ t('userSettings.passwordChanged') }}
             </p>
 
@@ -163,12 +163,12 @@
 
         <!-- Tour reset (self only) -->
         <div v-if="isSelf" class="border-t border-[var(--border)] pt-[8px]">
-          <p v-if="tourResetDone" class="text-xs text-green-400">
+          <p v-if="tourResetDone" class="text-sm text-green-400">
             {{ t('userSettings.tourResetDone') }}
           </p>
           <button
             v-else
-            class="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+            class="text-sm text-zinc-600 hover:text-zinc-400 transition-colors"
             @click="resetTour"
           >
             {{ t('userSettings.resetTour') }}
@@ -176,7 +176,7 @@
         </div>
 
         <!-- Save error -->
-        <p v-if="saveError || adminError" class="text-red-400 text-xs px-1">
+        <p v-if="saveError || adminError" class="text-red-400 text-sm px-1">
           {{ saveError || adminError }}
         </p>
 

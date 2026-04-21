@@ -331,7 +331,7 @@
                 <label class="field-label">{{ t('boardSettings.graphRefresh') }}</label>
                 <div class="flex items-center gap-[8px] flex-1">
                   <NumberInput v-model="form.graph_refresh_interval" min="0" class="flex-1" />
-                  <span class="text-xs text-zinc-500 shrink-0">{{
+                  <span class="text-sm text-zinc-500 shrink-0">{{
                     t('boardSettings.graphRefreshOff')
                   }}</span>
                 </div>
@@ -456,26 +456,26 @@
             <div class="grid grid-cols-3 gap-[8px]">
               <template v-if="mapType === 'worldmap'">
                 <div class="flex items-center gap-[8px]">
-                  <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.lat') }}</label>
+                  <label class="text-sm text-zinc-500 shrink-0">{{ t('boardSettings.lat') }}</label>
                   <NumberInput v-model="form.lat" step="any" class="flex-1" />
                 </div>
                 <div class="flex items-center gap-[8px]">
-                  <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.lng') }}</label>
+                  <label class="text-sm text-zinc-500 shrink-0">{{ t('boardSettings.lng') }}</label>
                   <NumberInput v-model="form.lng" step="any" class="flex-1" />
                 </div>
               </template>
               <template v-else>
                 <div class="flex items-center gap-[8px]">
-                  <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.x') }}</label>
+                  <label class="text-sm text-zinc-500 shrink-0">{{ t('boardSettings.x') }}</label>
                   <NumberInput v-model="form.x" class="flex-1" />
                 </div>
                 <div class="flex items-center gap-[8px]">
-                  <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.y') }}</label>
+                  <label class="text-sm text-zinc-500 shrink-0">{{ t('boardSettings.y') }}</label>
                   <NumberInput v-model="form.y" class="flex-1" />
                 </div>
               </template>
               <div class="flex items-center gap-[8px]">
-                <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.z') }}</label>
+                <label class="text-sm text-zinc-500 shrink-0">{{ t('boardSettings.z') }}</label>
                 <NumberInput v-model="form.z" min="1" max="999" class="flex-1" />
               </div>
             </div>
@@ -741,7 +741,7 @@
                   class="flex-1"
                 />
               </div>
-              <p class="text-xs text-zinc-600 pl-[6.75rem]">{{ t('boardSettings.excludeHint') }}</p>
+              <p class="text-sm text-zinc-600 pl-[6.75rem]">{{ t('boardSettings.excludeHint') }}</p>
             </div>
           </section>
 
@@ -796,7 +796,7 @@
                   class="flex-1"
                 />
               </div>
-              <p class="text-xs text-zinc-600 pl-[6.75rem]">{{ t('board.templateHint') }}</p>
+              <p class="text-sm text-zinc-600 pl-[6.75rem]">{{ t('board.templateHint') }}</p>
             </div>
           </section>
 
@@ -828,7 +828,7 @@
             />
           </div>
           <div class="flex items-center" style="gap: 8px">
-            <p v-if="saveError" class="text-red-400 text-xs">{{ saveError }}</p>
+            <p v-if="saveError" class="text-red-400 text-sm">{{ saveError }}</p>
             <CmkButton variant="secondary" @click="$emit('close')">{{
               t('common.cancel')
             }}</CmkButton>
@@ -1328,7 +1328,7 @@ async function save() {
 @reference "tailwindcss";
 
 .section-title {
-  @apply text-[10px] font-semibold text-zinc-500 tracking-wider uppercase mb-[6px] leading-none;
+  @apply text-xs font-semibold text-zinc-500 tracking-wider uppercase mb-[6px] leading-none;
 }
 
 .field-row {
@@ -1336,7 +1336,7 @@ async function save() {
 }
 
 .field-label {
-  @apply text-xs text-zinc-500 shrink-0;
+  @apply text-sm text-zinc-500 shrink-0;
 
   width: 88px;
 }

@@ -3,7 +3,7 @@
     <main style="padding: 20px 24px 40px">
       <div class="flex items-center" style="max-width: 960px; margin: 0 auto 20px; gap: 8px">
         <h2
-          class="text-sm font-semibold text-[var(--text)] tracking-tight"
+          class="text-base font-semibold text-[var(--text)] tracking-tight"
           style="margin-right: 8px"
         >
           {{ t('home.title') }}
@@ -743,16 +743,16 @@
                     d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z"
                   />
                 </svg>
-                <span class="text-xs text-zinc-500 font-mono truncate" :title="map.backend_id">{{
+                <span class="text-sm text-zinc-500 font-mono truncate" :title="map.backend_id">{{
                   map.backend_id
                 }}</span>
                 <span class="text-zinc-700 shrink-0">·</span>
                 <span
                   v-if="map.readonly || ['flow', 'radar', 'worldmap'].includes(map.view.type)"
-                  class="text-xs text-zinc-500 shrink-0 italic"
+                  class="text-sm text-zinc-500 shrink-0 italic"
                   >{{ t('home.dynamicObjects') }}</span
                 >
-                <span v-else class="text-xs text-zinc-500 shrink-0">{{
+                <span v-else class="text-sm text-zinc-500 shrink-0">{{
                   t('common.objects', map.object_count)
                 }}</span>
               </div>
@@ -911,7 +911,7 @@
           </button>
         </div>
         <div style="margin-bottom: 10px">
-          <label class="block text-xs font-medium text-zinc-400" style="margin-bottom: 4px">{{
+          <label class="block text-sm font-medium text-zinc-400" style="margin-bottom: 4px">{{
             t('admin.boardId')
           }}</label>
           <input
@@ -927,7 +927,7 @@
           />
         </div>
         <div style="margin-bottom: 10px">
-          <label class="block text-xs font-medium text-zinc-400" style="margin-bottom: 4px">{{
+          <label class="block text-sm font-medium text-zinc-400" style="margin-bottom: 4px">{{
             t('admin.alias')
           }}</label>
           <input
@@ -937,7 +937,7 @@
             spellcheck="false"
           />
         </div>
-        <p v-if="cloneError" class="text-xs text-red-400" style="margin-bottom: 8px">
+        <p v-if="cloneError" class="text-sm text-red-400" style="margin-bottom: 8px">
           {{ cloneError }}
         </p>
         <div

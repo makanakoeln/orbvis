@@ -2,7 +2,7 @@
   <div class="max-w-4xl">
     <div class="flex justify-between items-center" style="margin-bottom: 16px">
       <div>
-        <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
+        <h2 class="text-lg font-bold text-[var(--text)] tracking-tight">
           {{ t('admin.users') }}
         </h2>
         <p class="text-sm text-zinc-500" style="margin-top: 3px">{{ t('admin.usersSubtitle') }}</p>
@@ -33,31 +33,31 @@
         <thead>
           <tr class="border-b border-[var(--border)]">
             <th
-              class="text-left text-xs font-semibold text-zinc-500 tracking-wider"
+              class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
               style="padding: 6px 12px"
             >
               {{ t('admin.name') }}
             </th>
             <th
-              class="text-left text-xs font-semibold text-zinc-500 tracking-wider"
+              class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
               style="padding: 6px 12px"
             >
               {{ t('admin.type') }}
             </th>
             <th
-              class="text-left text-xs font-semibold text-zinc-500 tracking-wider"
+              class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
               style="padding: 6px 12px"
             >
               {{ t('admin.status') }}
             </th>
             <th
-              class="text-left text-xs font-semibold text-zinc-500 tracking-wider"
+              class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
               style="padding: 6px 12px"
             >
               {{ t('admin.roles') }}
             </th>
             <th
-              class="text-right text-xs font-semibold text-zinc-500 tracking-wider"
+              class="text-right text-sm font-semibold text-zinc-500 tracking-wider"
               style="padding: 6px 12px"
             >
               {{ t('admin.actions') }}
@@ -81,7 +81,7 @@
               >
                 {{ t('admin.admin') }}
               </span>
-              <span v-else class="text-xs text-zinc-600">{{ t('admin.user') }}</span>
+              <span v-else class="text-sm text-zinc-600">{{ t('admin.user') }}</span>
             </td>
             <td style="padding: 6px 12px">
               <span
@@ -96,7 +96,7 @@
                 {{ user.is_active ? t('admin.active') : t('admin.inactive') }}
               </span>
             </td>
-            <td class="text-zinc-500 text-xs" style="padding: 6px 12px">
+            <td class="text-zinc-500 text-sm" style="padding: 6px 12px">
               <template v-if="user.roles.length">
                 <span
                   v-for="r in user.roles"
@@ -187,7 +187,7 @@
           </div>
           <form class="space-y-[10px]" @submit.prevent="createUser">
             <div class="space-y-[4px]">
-              <label class="text-xs font-medium text-zinc-400">{{ t('auth.username') }}</label>
+              <label class="text-sm font-medium text-zinc-400">{{ t('auth.username') }}</label>
               <CmkInput
                 v-model="newUser.name"
                 placeholder="john"
@@ -197,18 +197,18 @@
             </div>
 
             <div class="space-y-[4px]">
-              <label class="text-xs font-medium text-zinc-400">{{ t('auth.password') }}</label>
+              <label class="text-sm font-medium text-zinc-400">{{ t('auth.password') }}</label>
               <CmkInput
                 v-model="newUser.password"
                 type="password"
                 autocomplete="new-password"
                 field-size="FILL"
               />
-              <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
+              <p class="text-sm text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
 
             <div class="space-y-[4px]">
-              <label class="text-xs font-medium text-zinc-400">{{
+              <label class="text-sm font-medium text-zinc-400">{{
                 t('userSettings.confirmPassword')
               }}</label>
               <CmkInput
@@ -228,7 +228,7 @@
             <div class="border-t border-[var(--border)] pt-[10px] space-y-[10px]">
               <div class="flex items-start gap-[8px]">
                 <CmkCheckbox v-model="newUser.is_admin" :label="t('admin.administrator')" />
-                <p class="text-xs text-zinc-600 mt-0.5">{{ t('admin.administratorHint') }}</p>
+                <p class="text-sm text-zinc-600 mt-0.5">{{ t('admin.administratorHint') }}</p>
               </div>
 
               <CmkCheckbox
@@ -241,7 +241,7 @@
               v-if="availableRoles.length"
               class="border-t border-[var(--border)] pt-[10px] space-y-[8px]"
             >
-              <p class="text-xs font-medium text-zinc-400">{{ t('admin.roles') }}</p>
+              <p class="text-sm font-medium text-zinc-400">{{ t('admin.roles') }}</p>
               <div v-for="role in availableRoles" :key="role.role_id">
                 <CmkCheckbox
                   :model-value="selectedRoleIds.includes(role.role_id)"

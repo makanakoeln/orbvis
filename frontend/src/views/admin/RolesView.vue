@@ -2,7 +2,7 @@
   <div class="max-w-3xl">
     <div class="flex justify-between items-center" style="margin-bottom: 16px">
       <div>
-        <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
+        <h2 class="text-lg font-bold text-[var(--text)] tracking-tight">
           {{ t('admin.rolesAndPermissions') }}
         </h2>
         <p class="text-sm text-zinc-500" style="margin-top: 3px">{{ t('admin.rolesSubtitle') }}</p>
@@ -56,7 +56,7 @@
                 >{{ perm.mod }}/{{ perm.act }}/{{ perm.obj }}</span
               >
             </div>
-            <p v-else class="text-xs text-zinc-600" style="margin-top: 6px">
+            <p v-else class="text-sm text-zinc-600" style="margin-top: 6px">
               {{ t('admin.noPermissions') }}
             </p>
           </div>
@@ -135,7 +135,7 @@
           </div>
           <form class="space-y-[10px]" @submit.prevent="createRole">
             <div class="space-y-[4px]">
-              <label class="text-xs font-medium text-zinc-400">{{ t('admin.roleName') }}</label>
+              <label class="text-sm font-medium text-zinc-400">{{ t('admin.roleName') }}</label>
               <CmkInput v-model="newRoleName" placeholder="e.g. operators" field-size="FILL" />
             </div>
             <div class="flex gap-[8px] justify-end pt-[10px] border-t border-[var(--border)]">
@@ -183,7 +183,7 @@
           <div class="overflow-y-auto flex-1 space-y-[16px]" style="padding: 10px 16px">
             <!-- Current permissions -->
             <div>
-              <p class="text-xs font-medium text-zinc-500" style="margin-bottom: 6px">
+              <p class="text-sm font-medium text-zinc-500" style="margin-bottom: 6px">
                 {{ t('admin.assigned') }}
               </p>
               <div
@@ -226,17 +226,17 @@
                   </button>
                 </div>
               </div>
-              <p v-else class="text-xs text-zinc-600">{{ t('admin.noPermissionsYet') }}</p>
+              <p v-else class="text-sm text-zinc-600">{{ t('admin.noPermissionsYet') }}</p>
             </div>
 
             <!-- Add permission form -->
             <div class="border-t border-[var(--border)] pt-[12px]">
-              <p class="text-xs font-medium text-zinc-500" style="margin-bottom: 6px">
+              <p class="text-sm font-medium text-zinc-500" style="margin-bottom: 6px">
                 {{ t('admin.addPermission') }}
               </p>
               <form class="space-y-[10px]" @submit.prevent="addDraftPerm">
                 <div class="space-y-[4px]">
-                  <label class="text-xs font-medium text-zinc-400">{{ t('admin.preset') }}</label>
+                  <label class="text-sm font-medium text-zinc-400">{{ t('admin.preset') }}</label>
                   <AppSelect
                     :model-value="permPreset"
                     :options="[
@@ -256,7 +256,7 @@
                   />
                 </div>
                 <div v-if="needsMapName" class="space-y-[4px]">
-                  <label class="text-xs font-medium text-zinc-400">{{
+                  <label class="text-sm font-medium text-zinc-400">{{
                     t('admin.boardNameLabel')
                   }}</label>
                   <CmkInput v-model="newPerm.obj" placeholder="my-board" field-size="FILL" />

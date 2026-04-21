@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-2xl">
     <div style="margin-bottom: 16px">
-      <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
+      <h2 class="text-lg font-bold text-[var(--text)] tracking-tight">
         {{ t('settings.title') }}
       </h2>
       <p class="text-sm text-zinc-500" style="margin-top: 3px">{{ t('settings.subtitle') }}</p>
@@ -17,7 +17,7 @@
         class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
         style="padding: 14px 16px"
       >
-        <h3 class="text-sm font-semibold text-zinc-400" style="margin-bottom: 10px">
+        <h3 class="text-base font-semibold text-zinc-400" style="margin-bottom: 10px">
           {{ t('settings.objectDefaults') }}
         </h3>
 
@@ -25,14 +25,14 @@
           <!-- Appearance -->
           <div class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start">
             <label class="block">
-              <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+              <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('board.iconSize')
               }}</span>
               <NumberInput v-model="form.icon_size" min="8" max="256" class="w-[80px]" />
             </label>
 
             <label class="block">
-              <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+              <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.viewType')
               }}</span>
               <AppSelect
@@ -47,11 +47,11 @@
             </label>
 
             <label class="block">
-              <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+              <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.z')
               }}</span>
               <NumberInput v-model="form.z" min="1" max="999" class="w-[80px]" />
-              <p class="text-xs text-zinc-600" style="margin-top: 4px">{{ t('settings.zHint') }}</p>
+              <p class="text-sm text-zinc-600" style="margin-top: 4px">{{ t('settings.zHint') }}</p>
             </label>
           </div>
 
@@ -60,7 +60,7 @@
             class="border-t border-[var(--border)] pt-[12px] flex flex-wrap gap-x-[12px] gap-y-[8px] items-start"
           >
             <label class="block">
-              <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+              <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.lineStyle')
               }}</span>
               <AppSelect
@@ -84,7 +84,7 @@
             </label>
 
             <label class="block">
-              <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+              <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.target')
               }}</span>
               <AppSelect
@@ -106,7 +106,7 @@
         class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
         style="padding: 14px 16px"
       >
-        <h3 class="text-sm font-semibold text-zinc-400" style="margin-bottom: 10px">
+        <h3 class="text-base font-semibold text-zinc-400" style="margin-bottom: 10px">
           {{ t('settings.labelDefaults') }}
         </h3>
 
@@ -123,14 +123,14 @@
           >
             <div class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start">
               <label class="block">
-                <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px"
+                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px"
                   >{{ t('boardSettings.size') }} (px)</span
                 >
                 <NumberInput v-model="form.label_size" min="6" max="72" class="w-[80px]" />
               </label>
 
               <label class="block">
-                <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
                   t('boardSettings.color')
                 }}</span>
                 <div class="flex gap-[8px]">
@@ -143,7 +143,7 @@
               </label>
 
               <label class="block">
-                <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
                   t('boardSettings.background')
                 }}</span>
                 <div class="flex gap-[8px]">
@@ -164,13 +164,13 @@
 
             <div class="border-t border-[var(--border)] pt-[12px] flex gap-[12px] items-start">
               <label class="block">
-                <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
                   t('boardSettings.offsetX')
                 }}</span>
                 <NumberInput v-model="form.label_x" class="w-[80px]" />
               </label>
               <label class="block">
-                <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
                   t('boardSettings.offsetY')
                 }}</span>
                 <NumberInput v-model="form.label_y" class="w-[80px]" />
@@ -185,14 +185,14 @@
         class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
         style="padding: 14px 16px"
       >
-        <h3 class="text-sm font-semibold text-zinc-400" style="margin-bottom: 10px">
+        <h3 class="text-base font-semibold text-zinc-400" style="margin-bottom: 10px">
           {{ t('settings.newBoardDefaults') }}
         </h3>
 
         <div class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start">
           <!-- Default backend -->
           <label class="block">
-            <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
               t('board.connection')
             }}</span>
             <AppSelect
@@ -208,7 +208,7 @@
 
           <!-- Default board type -->
           <label class="block">
-            <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
               t('board.boardType')
             }}</span>
             <AppSelect
@@ -230,17 +230,17 @@
         class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
         style="padding: 14px 16px"
       >
-        <h3 class="text-sm font-semibold text-zinc-400" style="margin-bottom: 4px">
+        <h3 class="text-base font-semibold text-zinc-400" style="margin-bottom: 4px">
           {{ t('settings.templates') }}
         </h3>
-        <p class="text-xs text-zinc-600" style="margin-bottom: 10px">
+        <p class="text-sm text-zinc-600" style="margin-bottom: 10px">
           {{ t('settings.templatesSubtitle') }}
         </p>
 
         <div class="space-y-[10px]">
           <!-- Hover template -->
           <label class="block">
-            <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
               t('settings.hoverTemplate')
             }}</span>
             <CmkInput
@@ -252,7 +252,7 @@
 
           <!-- Context template -->
           <label class="block">
-            <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
               t('settings.contextTemplate')
             }}</span>
             <CmkInput
@@ -269,15 +269,15 @@
         class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
         style="padding: 14px 16px"
       >
-        <h3 class="text-sm font-semibold text-zinc-400" style="margin-bottom: 4px">
+        <h3 class="text-base font-semibold text-zinc-400" style="margin-bottom: 4px">
           {{ t('settings.checkmkIntegration') }}
         </h3>
-        <p class="text-xs text-zinc-600" style="margin-bottom: 10px">
+        <p class="text-sm text-zinc-600" style="margin-bottom: 10px">
           {{ t('settings.checkmkIntegrationSubtitle') }}
         </p>
 
         <label class="block">
-          <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
+          <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
             t('admin.checkmkUrl')
           }}</span>
           <CmkInput
@@ -285,7 +285,7 @@
             placeholder="https://checkmk.example.com/mysite"
             field-size="FILL"
           />
-          <p class="text-xs text-zinc-600" style="margin-top: 6px">
+          <p class="text-sm text-zinc-600" style="margin-top: 6px">
             {{ t('settings.checkmkUrlHint') }}
           </p>
         </label>

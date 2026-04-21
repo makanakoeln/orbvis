@@ -12,7 +12,7 @@
         >
           <div>
             <h3 class="text-base font-bold text-[var(--text)]">{{ t('board.settingsTitle') }}</h3>
-            <p class="text-xs text-zinc-500 font-mono mt-[2px]">{{ board.name }}</p>
+            <p class="text-sm text-zinc-500 font-mono mt-[2px]">{{ board.name }}</p>
           </div>
           <button
             class="p-[5px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
@@ -54,31 +54,31 @@
           <div v-if="activeTab === 'general'" class="space-y-[10px]">
             <!-- Alias -->
             <div class="space-y-[4px]">
-              <label class="text-xs font-medium text-zinc-400">{{ t('board.displayName') }}</label>
+              <label class="text-sm font-medium text-zinc-400">{{ t('board.displayName') }}</label>
               <CmkInput v-model="form.alias" field-size="FILL" />
             </div>
 
             <!-- Connection + Icon size -->
             <div class="grid grid-cols-[1fr_7rem] gap-[8px]">
               <div class="space-y-[4px]">
-                <label class="text-xs font-medium text-zinc-400">{{ t('board.connection') }}</label>
+                <label class="text-sm font-medium text-zinc-400">{{ t('board.connection') }}</label>
                 <AppSelect
                   v-model="form.backend_id"
                   :options="backends.map((b) => ({ value: b.id, label: b.label || b.id }))"
                 />
               </div>
               <div class="space-y-[4px]">
-                <label class="text-xs font-medium text-zinc-400">{{ t('board.iconSize') }}</label>
+                <label class="text-sm font-medium text-zinc-400">{{ t('board.iconSize') }}</label>
                 <div class="flex items-center gap-[5px]">
                   <NumberInput v-model="form.icon_size" min="12" max="96" class="w-full" />
-                  <span class="text-xs text-zinc-500 shrink-0">px</span>
+                  <span class="text-sm text-zinc-500 shrink-0">px</span>
                 </div>
               </div>
             </div>
 
             <!-- Rotation interval -->
             <div class="space-y-[4px]">
-              <label class="text-xs font-medium text-zinc-400">{{
+              <label class="text-sm font-medium text-zinc-400">{{
                 t('board.rotationInterval')
               }}</label>
               <div class="flex items-center gap-[6px]">
@@ -88,14 +88,14 @@
                   max="3600"
                   class="w-[100px]"
                 />
-                <span class="text-xs text-zinc-500 shrink-0">{{ t('board.rotationSuffix') }}</span>
+                <span class="text-sm text-zinc-500 shrink-0">{{ t('board.rotationSuffix') }}</span>
               </div>
-              <p class="text-xs text-zinc-600">{{ t('board.rotationIntervalHint') }}</p>
+              <p class="text-sm text-zinc-600">{{ t('board.rotationIntervalHint') }}</p>
             </div>
 
             <!-- Board type -->
             <div class="space-y-[4px]">
-              <label class="text-xs font-medium text-zinc-400">{{ t('board.boardType') }}</label>
+              <label class="text-sm font-medium text-zinc-400">{{ t('board.boardType') }}</label>
               <AppSelect
                 v-model="form.map_type"
                 :options="[
@@ -111,7 +111,7 @@
             <template v-if="form.map_type === 'worldmap'">
               <div class="grid grid-cols-3 gap-[8px]">
                 <div class="space-y-[4px]">
-                  <label class="text-xs font-medium text-zinc-400">{{ t('board.latitude') }}</label>
+                  <label class="text-sm font-medium text-zinc-400">{{ t('board.latitude') }}</label>
                   <NumberInput
                     v-model="form.worldmap_lat"
                     step="any"
@@ -120,7 +120,7 @@
                   />
                 </div>
                 <div class="space-y-[4px]">
-                  <label class="text-xs font-medium text-zinc-400">{{
+                  <label class="text-sm font-medium text-zinc-400">{{
                     t('board.longitude')
                   }}</label>
                   <NumberInput
@@ -131,12 +131,12 @@
                   />
                 </div>
                 <div class="space-y-[4px]">
-                  <label class="text-xs font-medium text-zinc-400">{{ t('board.zoom') }}</label>
+                  <label class="text-sm font-medium text-zinc-400">{{ t('board.zoom') }}</label>
                   <NumberInput v-model="form.worldmap_zoom" min="1" max="18" class="w-full" />
                 </div>
               </div>
               <div class="space-y-[4px]">
-                <label class="text-xs font-medium text-zinc-400">{{ t('board.tileUrl') }}</label>
+                <label class="text-sm font-medium text-zinc-400">{{ t('board.tileUrl') }}</label>
                 <CmkInput
                   v-model="form.worldmap_tile_url"
                   :placeholder="t('board.tileUrlPlaceholder')"
@@ -144,7 +144,7 @@
                 />
               </div>
               <div class="space-y-[4px]">
-                <label class="text-xs font-medium text-zinc-400">{{
+                <label class="text-sm font-medium text-zinc-400">{{
                   t('board.tileSaturate')
                 }}</label>
                 <NumberInput
@@ -156,14 +156,14 @@
                   class="w-full"
                 />
               </div>
-              <p class="text-xs text-zinc-600">{{ t('board.worldmapHint') }}</p>
+              <p class="text-sm text-zinc-600">{{ t('board.worldmapHint') }}</p>
             </template>
 
             <!-- Radar settings -->
             <template v-if="form.map_type === 'radar'">
               <div class="grid grid-cols-2 gap-[8px]">
                 <div class="space-y-[4px]">
-                  <label class="text-xs font-medium text-zinc-400">{{
+                  <label class="text-sm font-medium text-zinc-400">{{
                     t('board.filterType')
                   }}</label>
                   <AppSelect
@@ -180,7 +180,7 @@
                   v-if="form.radar_filter === 'hostgroup' || form.radar_filter === 'servicegroup'"
                   class="space-y-[4px]"
                 >
-                  <label class="text-xs font-medium text-zinc-400">{{
+                  <label class="text-sm font-medium text-zinc-400">{{
                     t('board.groupName')
                   }}</label>
                   <CmkInput
@@ -194,10 +194,10 @@
 
             <!-- Templates -->
             <div class="space-y-[4px] border-t border-[var(--border)]" style="padding-top: 8px">
-              <label class="text-xs font-medium text-zinc-400 block mt-[6px]">{{
+              <label class="text-sm font-medium text-zinc-400 block mt-[6px]">{{
                 t('boardSettings.templates')
               }}</label>
-              <label class="text-xs text-zinc-400 block mt-[8px]">{{
+              <label class="text-sm text-zinc-400 block mt-[8px]">{{
                 t('board.hoverTemplate')
               }}</label>
               <CmkInput
@@ -205,7 +205,7 @@
                 :placeholder="t('board.templatePlaceholder')"
                 field-size="FILL"
               />
-              <label class="text-xs text-zinc-400 block mt-[6px]">{{
+              <label class="text-sm text-zinc-400 block mt-[6px]">{{
                 t('board.contextTemplate')
               }}</label>
               <CmkInput
@@ -213,7 +213,7 @@
                 :placeholder="t('board.templatePlaceholder')"
                 field-size="FILL"
               />
-              <p class="text-xs text-zinc-600">{{ t('board.templateHint') }}</p>
+              <p class="text-sm text-zinc-600">{{ t('board.templateHint') }}</p>
             </div>
 
             <!-- Show in lists toggle -->
@@ -225,7 +225,7 @@
                 <div class="text-sm font-medium text-[var(--text)]">
                   {{ t('board.showInLists') }}
                 </div>
-                <div class="text-xs text-zinc-500 mt-[2px]">{{ t('board.showInListsHint') }}</div>
+                <div class="text-sm text-zinc-500 mt-[2px]">{{ t('board.showInListsHint') }}</div>
               </div>
               <CmkSwitch v-model:data="form.show_in_lists" />
             </div>
@@ -236,7 +236,7 @@
               class="space-y-[4px] border-t border-[var(--border)]"
               style="padding-top: 8px"
             >
-              <label class="text-xs font-medium text-zinc-400 block mt-[6px]">{{
+              <label class="text-sm font-medium text-zinc-400 block mt-[6px]">{{
                 t('board.backgroundImage')
               }}</label>
               <div class="flex gap-[6px] mt-[4px]">
@@ -275,7 +275,7 @@
                   </svg>
                 </button>
               </div>
-              <p v-if="uploadError" class="text-red-400 text-xs">{{ uploadError }}</p>
+              <p v-if="uploadError" class="text-red-400 text-sm">{{ uploadError }}</p>
               <p v-if="uploadOk" class="text-green-400 text-xs">
                 {{ t('board.uploadedSuccessfully') }}
               </p>
@@ -294,19 +294,19 @@
                 <thead>
                   <tr class="border-b border-[var(--border)]">
                     <th
-                      class="text-left text-xs font-semibold text-zinc-500 tracking-wider"
+                      class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
                       style="padding: 4px 8px"
                     >
                       {{ t('admin.role') }}
                     </th>
                     <th
-                      class="text-center text-xs font-semibold text-zinc-500 tracking-wider w-20"
+                      class="text-center text-sm font-semibold text-zinc-500 tracking-wider w-20"
                       style="padding: 4px 8px"
                     >
                       {{ t('common.view') }}
                     </th>
                     <th
-                      class="text-center text-xs font-semibold text-zinc-500 tracking-wider w-20"
+                      class="text-center text-sm font-semibold text-zinc-500 tracking-wider w-20"
                       style="padding: 4px 8px"
                     >
                       {{ t('common.edit') }}
@@ -364,7 +364,7 @@
               <p v-if="!permRoles.length" class="text-center py-6 text-zinc-600 text-sm">
                 {{ t('admin.noRoles') }}
               </p>
-              <p class="text-xs text-zinc-600 mt-3 px-1">* {{ t('admin.wildcardNote') }}</p>
+              <p class="text-sm text-zinc-600 mt-3 px-1">* {{ t('admin.wildcardNote') }}</p>
             </div>
           </div>
         </div>
