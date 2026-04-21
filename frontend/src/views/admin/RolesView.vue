@@ -7,42 +7,22 @@
         </h2>
         <p class="text-sm text-zinc-500" style="margin-top: 3px">{{ t('admin.rolesSubtitle') }}</p>
       </div>
-      <button
-        class="flex items-center bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-        style="gap: 5px; padding: 5px 10px; font-size: 12px"
-        @click="showCreate = true"
-      >
+      <CmkButton variant="primary" @click="showCreate = true">
         <svg
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
           stroke-width="2.5"
-          style="width: 13px; height: 13px"
+          style="width: 13px; height: 13px; margin-right: 4px"
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
         {{ t('admin.newRole') }}
-      </button>
+      </CmkButton>
     </div>
 
-    <div
-      v-if="loading"
-      class="flex items-center gap-[8px] text-zinc-500 text-sm py-[32px] justify-center"
-    >
-      <svg
-        class="animate-spin text-[var(--color-corporate-green-50)]"
-        style="width: 14px; height: 14px"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-        />
-      </svg>
-      {{ t('common.loading') }}
+    <div v-if="loading" class="flex items-center justify-center py-8">
+      <CmkLoading />
     </div>
 
     <div v-else class="space-y-[8px]">
@@ -156,30 +136,13 @@
           <form class="space-y-[10px]" @submit.prevent="createRole">
             <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('admin.roleName') }}</label>
-              <input
-                v-model="newRoleName"
-                placeholder="e.g. operators"
-                required
-                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                style="padding: 8px 10px"
-              />
+              <CmkInput v-model="newRoleName" placeholder="e.g. operators" field-size="FILL" />
             </div>
             <div class="flex gap-[8px] justify-end pt-[10px] border-t border-[var(--border)]">
-              <button
-                type="button"
-                class="rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                style="padding: 5px 10px; font-size: 12px"
-                @click="showCreate = false"
-              >
-                {{ t('common.cancel') }}
-              </button>
-              <button
-                type="submit"
-                class="bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded-lg font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-                style="padding: 5px 10px; font-size: 12px"
-              >
-                {{ t('common.create') }}
-              </button>
+              <CmkButton variant="secondary" @click="showCreate = false">{{
+                t('common.cancel')
+              }}</CmkButton>
+              <CmkButton variant="primary" @click="createRole">{{ t('common.create') }}</CmkButton>
             </div>
           </form>
         </div>
@@ -274,52 +237,29 @@
               <form class="space-y-[10px]" @submit.prevent="addDraftPerm">
                 <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{ t('admin.preset') }}</label>
-                  <div class="relative">
-                    <select
-                      v-model="permPreset"
-                      class="w-full appearance-none bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                      style="padding: 5px 28px 5px 10px"
-                      @change="applyPreset"
-                    >
-                      <option value="">{{ t('admin.choosePreset') }}</option>
-                      <option value="map:view:*">{{ t('admin.presetViewAll') }}</option>
-                      <option value="map:edit:*">{{ t('admin.presetEditAll') }}</option>
-                      <option value="map:view:custom">{{ t('admin.presetViewCustom') }}</option>
-                      <option value="map:edit:custom">{{ t('admin.presetEditCustom') }}</option>
-                      <option value="user:edit:*">{{ t('admin.presetEditUsers') }}</option>
-                    </select>
-                    <div
-                      class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
-                      style="padding-right: 8px"
-                    >
-                      <svg
-                        style="width: 12px; height: 12px"
-                        class="text-zinc-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                        />
-                      </svg>
-                    </div>
-                  </div>
+                  <AppSelect
+                    :model-value="permPreset"
+                    :options="[
+                      { value: '', label: t('admin.choosePreset') },
+                      { value: 'map:view:*', label: t('admin.presetViewAll') },
+                      { value: 'map:edit:*', label: t('admin.presetEditAll') },
+                      { value: 'map:view:custom', label: t('admin.presetViewCustom') },
+                      { value: 'map:edit:custom', label: t('admin.presetEditCustom') },
+                      { value: 'user:edit:*', label: t('admin.presetEditUsers') },
+                    ]"
+                    @update:model-value="
+                      (v) => {
+                        permPreset = v;
+                        applyPreset();
+                      }
+                    "
+                  />
                 </div>
                 <div v-if="needsMapName" class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('admin.boardNameLabel')
                   }}</label>
-                  <input
-                    v-model="newPerm.obj"
-                    placeholder="my-board"
-                    required
-                    class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                    style="padding: 5px 10px"
-                  />
+                  <CmkInput v-model="newPerm.obj" placeholder="my-board" field-size="FILL" />
                 </div>
                 <p v-if="permError" class="text-red-400 text-xs">{{ permError }}</p>
                 <div class="flex justify-end">
@@ -342,21 +282,10 @@
             style="padding: 8px 16px"
           >
             <p v-if="permSaveError" class="text-red-400 text-xs flex-1">{{ permSaveError }}</p>
-            <button
-              class="rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-              style="padding: 5px 10px; font-size: 12px"
-              @click="cancelEdit"
-            >
-              {{ t('common.cancel') }}
-            </button>
-            <button
-              :disabled="permSaving"
-              class="bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-              style="padding: 5px 10px; font-size: 12px"
-              @click="savePermissions"
-            >
+            <CmkButton variant="secondary" @click="cancelEdit">{{ t('common.cancel') }}</CmkButton>
+            <CmkButton variant="primary" :disabled="permSaving" @click="savePermissions">
               {{ permSaving ? t('common.saving') : t('common.save') }}
-            </button>
+            </CmkButton>
           </div>
         </div>
       </div>
@@ -374,10 +303,14 @@
 </template>
 
 <script setup lang="ts">
+import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkLoading from '@cmk/components/CmkLoading.vue';
+import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { rolesApi } from '@/api/client';
+import AppSelect from '@/components/AppSelect.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';

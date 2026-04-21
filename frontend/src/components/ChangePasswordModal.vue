@@ -33,27 +33,13 @@
             <label class="text-xs font-medium text-zinc-400">{{
               t('userSettings.newPassword')
             }}</label>
-            <input
-              v-model="password"
-              type="password"
-              placeholder="••••••••"
-              required
-              minlength="6"
-              autofocus
-              class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-            />
+            <CmkInput v-model="password" type="password" placeholder="••••••••" field-size="FILL" />
           </div>
           <div class="space-y-1.5">
             <label class="text-xs font-medium text-zinc-400">{{
               t('userSettings.confirmPassword')
             }}</label>
-            <input
-              v-model="confirm"
-              type="password"
-              placeholder="••••••••"
-              required
-              class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-            />
+            <CmkInput v-model="confirm" type="password" placeholder="••••••••" field-size="FILL" />
           </div>
 
           <p v-if="error" class="text-red-400 text-xs">{{ error }}</p>
@@ -62,21 +48,12 @@
           </p>
 
           <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
-            <button
-              type="button"
-              class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-              @click="$emit('close')"
-            >
+            <CmkButton variant="secondary" @click="$emit('close')">
               {{ success ? t('common.close') : t('common.cancel') }}
-            </button>
-            <button
-              v-if="!success"
-              type="submit"
-              :disabled="saving"
-              class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-            >
+            </CmkButton>
+            <CmkButton v-if="!success" variant="primary" :disabled="saving" @click="save">
               {{ saving ? t('common.saving') : t('common.save') }}
-            </button>
+            </CmkButton>
           </div>
         </form>
       </div>
@@ -85,6 +62,8 @@
 </template>
 
 <script setup lang="ts">
+import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 

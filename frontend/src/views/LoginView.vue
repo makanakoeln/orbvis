@@ -59,15 +59,13 @@
             <label for="login-username" class="font-medium text-[13px] text-[var(--text)]">{{
               t('auth.username')
             }}</label>
-            <input
+            <CmkInput
               id="login-username"
-              ref="usernameEl"
               v-model="username"
               type="text"
               autocomplete="username"
               :placeholder="t('auth.username')"
-              required
-              class="w-full py-[10px] px-[12px] text-[14px] bg-[var(--bg-input)] ring-1 ring-[var(--default-form-element-border-color)]/50 rounded-lg text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150"
+              field-size="FILL"
             />
           </div>
 
@@ -76,14 +74,13 @@
               t('auth.password')
             }}</label>
             <div class="relative">
-              <input
+              <CmkInput
                 id="login-password"
                 v-model="password"
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
                 placeholder="••••••••"
-                required
-                class="w-full py-[10px] pl-[12px] pr-[40px] text-[14px] bg-[var(--bg-input)] ring-1 ring-[var(--default-form-element-border-color)]/50 rounded-lg text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150"
+                field-size="FILL"
               />
               <button
                 type="button"
@@ -128,33 +125,16 @@
             </div>
           </div>
 
-          <div
-            v-if="authStore.error"
-            class="flex items-start gap-[10px] px-[14px] py-[12px] text-[13px] bg-red-500/8 ring-1 ring-red-500/20 rounded-lg text-red-400"
-          >
-            <svg
-              class="w-4 h-4 shrink-0 mt-px"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-              />
-            </svg>
-            {{ authStore.error }}
-          </div>
+          <CmkAlertBox v-if="authStore.error" variant="error">{{ authStore.error }}</CmkAlertBox>
 
-          <button
-            type="submit"
+          <CmkButton
+            variant="primary"
+            class="w-full"
             :disabled="authStore.loading"
-            class="w-full py-[11px] px-[16px] text-[14px] bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] active:bg-[var(--color-corporate-green-70)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--button-primary-text-color,#000)] font-semibold rounded-lg transition-all duration-150"
+            @click="handleLogin"
           >
             {{ authStore.loading ? t('auth.signingIn') : t('auth.signIn') }}
-          </button>
+          </CmkButton>
         </form>
       </div>
 
@@ -174,7 +154,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
+import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkInput from '@cmk/components/user-input/CmkInput.vue';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import ChangelogModal from '@/components/ChangelogModal.vue';
@@ -187,9 +170,6 @@ const password = ref('');
 const showPassword = ref(false);
 const showChangelog = ref(false);
 const appVersion = __APP_VERSION__;
-const usernameEl = ref<HTMLInputElement | null>(null);
-
-onMounted(() => usernameEl.value?.focus());
 
 async function handleLogin() {
   authStore.error = null;

@@ -3,16 +3,17 @@
     <div class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('close')" />
       <div
-        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[26rem]"
+        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl w-[26rem]"
+        style="padding: 16px 20px"
       >
-        <div class="flex items-center justify-between mb-5">
+        <div class="flex items-center justify-between" style="margin-bottom: 12px">
           <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.createBoard') }}</h3>
           <button
-            class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+            class="p-[5px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
             @click="$emit('close')"
           >
             <svg
-              class="w-4 h-4"
+              style="width: 14px; height: 14px"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -22,66 +23,44 @@
             </svg>
           </button>
         </div>
-        <form class="space-y-4" @submit.prevent="submit">
-          <div class="space-y-1.5">
+        <form class="space-y-[10px]" @submit.prevent="submit">
+          <div class="space-y-[4px]">
             <label class="text-xs font-medium text-zinc-400">
               {{ t('admin.boardId') }}
             </label>
-            <input
-              :value="form.name"
+            <CmkInput
+              :model-value="form.name"
               placeholder="my-board"
-              required
-              autofocus
-              class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 transition-all"
-              :class="
-                nameError
-                  ? 'ring-red-500/60 focus:ring-red-500'
-                  : 'ring-[var(--default-form-element-border-color)] focus:ring-[var(--color-corporate-green-50)]'
+              field-size="FILL"
+              @update:model-value="
+                (v) => onNameInput({ target: { value: String(v ?? '') } } as unknown as Event)
               "
-              @input="onNameInput"
             />
             <p v-if="nameError" class="text-xs text-red-400">{{ nameError }}</p>
             <p v-else class="text-xs text-zinc-600">{{ t('admin.boardIdHint') }}</p>
           </div>
-          <div class="space-y-1.5">
+          <div class="space-y-[4px]">
             <label class="text-xs font-medium text-zinc-400">{{ t('admin.alias') }}</label>
-            <input
+            <CmkInput
               v-model="form.alias"
               placeholder="My Board"
-              class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-              @input="aliasTouched = true"
+              field-size="FILL"
+              @update:model-value="
+                () => {
+                  aliasTouched = true;
+                }
+              "
             />
           </div>
-          <div class="space-y-1.5">
+          <div class="space-y-[4px]">
             <label class="text-xs font-medium text-zinc-400">{{ t('board.connection') }}</label>
             <template v-if="connectionsStore.backends.length > 0">
-              <div class="relative">
-                <select
-                  v-model="form.backend_id"
-                  required
-                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                >
-                  <option value="" disabled>{{ t('admin.selectConnection') }}</option>
-                  <option v-for="b in connectionsStore.backends" :key="b.id" :value="b.id">
-                    {{ b.label || b.id }}
-                  </option>
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                  <svg
-                    class="w-4 h-4 text-zinc-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                    />
-                  </svg>
-                </div>
-              </div>
+              <AppSelect
+                v-model="form.backend_id"
+                :options="
+                  connectionsStore.backends.map((b) => ({ value: b.id, label: b.label || b.id }))
+                "
+              />
             </template>
             <template v-else>
               <div
@@ -113,34 +92,17 @@
               </div>
             </template>
           </div>
-          <div class="space-y-1.5">
+          <div class="space-y-[4px]">
             <label class="text-xs font-medium text-zinc-400">{{ t('board.boardType') }}</label>
-            <div class="relative">
-              <select
-                v-model="form.view_type"
-                class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-              >
-                <option value="static">{{ t('board.boardTypeStatic') }}</option>
-                <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
-                <option value="flow">{{ t('board.boardTypeFlowBoard') }}</option>
-                <option value="radar">{{ t('board.boardTypeRadar') }}</option>
-              </select>
-              <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                <svg
-                  class="w-4 h-4 text-zinc-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                  />
-                </svg>
-              </div>
-            </div>
+            <AppSelect
+              v-model="form.view_type"
+              :options="[
+                { value: 'static', label: t('board.boardTypeStatic') },
+                { value: 'worldmap', label: t('board.boardTypeGeoBoard') },
+                { value: 'flow', label: t('board.boardTypeFlowBoard') },
+                { value: 'radar', label: t('board.boardTypeRadar') },
+              ]"
+            />
             <p class="text-xs text-zinc-500">
               <template v-if="form.view_type === 'static'">{{
                 t('board.boardTypeStaticDesc')
@@ -156,21 +118,20 @@
               }}</template>
             </p>
           </div>
-          <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
-            <button
-              type="button"
-              class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-              @click="$emit('close')"
-            >
-              {{ t('common.cancel') }}
-            </button>
-            <button
-              type="submit"
+          <div
+            class="flex gap-[8px] justify-end border-t border-[var(--border)]"
+            style="padding-top: 10px"
+          >
+            <CmkButton variant="secondary" @click="$emit('close')">{{
+              t('common.cancel')
+            }}</CmkButton>
+            <CmkButton
+              variant="primary"
               :disabled="!form.name || !!nameError || !form.backend_id"
-              class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+              @click="submit"
             >
               {{ t('common.create') }}
-            </button>
+            </CmkButton>
           </div>
         </form>
       </div>
@@ -179,10 +140,13 @@
 </template>
 
 <script setup lang="ts">
+import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError } from '@/api/client';
+import AppSelect from '@/components/AppSelect.vue';
 import { useBoardsStore } from '@/stores/boards';
 import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';

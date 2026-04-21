@@ -36,42 +36,16 @@
         <div v-if="!isSelf && userRead" class="space-y-[8px]">
           <p class="text-xs font-medium text-zinc-400">{{ t('admin.settings') }}</p>
 
-          <label class="flex items-start gap-[8px] cursor-pointer group select-none">
-            <input
-              v-model="adminIsAdmin"
-              type="checkbox"
-              class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
-              style="width: 14px; height: 14px; margin-top: 2px"
-            />
-            <div>
-              <p class="text-sm text-zinc-300 group-hover:text-[var(--text)] transition-colors">
-                {{ t('admin.administrator') }}
-              </p>
-              <p class="text-xs text-zinc-600" style="margin-top: 2px">
-                {{ t('admin.administratorHint') }}
-              </p>
-            </div>
-          </label>
+          <div class="flex items-start gap-[8px]">
+            <CmkCheckbox v-model="adminIsAdmin" :label="t('admin.administrator')" />
+            <p class="text-xs text-zinc-600" style="margin-top: 2px">
+              {{ t('admin.administratorHint') }}
+            </p>
+          </div>
 
-          <label class="flex items-center gap-[8px] cursor-pointer select-none">
-            <input
-              v-model="adminIsActive"
-              type="checkbox"
-              class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
-              style="width: 14px; height: 14px"
-            />
-            <p class="text-sm text-zinc-400">{{ t('admin.active') }}</p>
-          </label>
+          <CmkCheckbox v-model="adminIsActive" :label="t('admin.active')" />
 
-          <label class="flex items-center gap-[8px] cursor-pointer select-none">
-            <input
-              v-model="adminMustChange"
-              type="checkbox"
-              class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
-              style="width: 14px; height: 14px"
-            />
-            <p class="text-sm text-zinc-400">{{ t('admin.mustChangePassword') }}</p>
-          </label>
+          <CmkCheckbox v-model="adminMustChange" :label="t('admin.mustChangePassword')" />
         </div>
 
         <!-- Role assignment (non-self editing) -->
@@ -80,20 +54,18 @@
           class="border-t border-[var(--border)] pt-[8px] space-y-[6px]"
         >
           <p class="text-xs font-medium text-zinc-400">{{ t('admin.roles') }}</p>
-          <label
-            v-for="role in availableRoles"
-            :key="role.role_id"
-            class="flex items-center gap-[8px] cursor-pointer select-none"
-          >
-            <input
-              v-model="adminRoleIds"
-              type="checkbox"
-              :value="role.role_id"
-              class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
-              style="width: 14px; height: 14px"
+          <div v-for="role in availableRoles" :key="role.role_id">
+            <CmkCheckbox
+              :model-value="adminRoleIds.includes(role.role_id)"
+              :label="role.name"
+              @update:model-value="
+                (v) => {
+                  if (v) adminRoleIds.push(role.role_id);
+                  else adminRoleIds = adminRoleIds.filter((id) => id !== role.role_id);
+                }
+              "
             />
-            <p class="text-sm text-zinc-400">{{ role.name }}</p>
-          </label>
+          </div>
         </div>
 
         <!-- Theme selector (only for self) -->
@@ -151,14 +123,11 @@
               <label class="text-xs font-medium text-zinc-400">{{
                 t('userSettings.newPassword')
               }}</label>
-              <input
+              <CmkInput
                 v-model="password"
                 type="password"
                 autocomplete="new-password"
-                required
-                minlength="6"
-                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                style="padding: 7px 10px"
+                field-size="FILL"
               />
               <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
@@ -166,13 +135,11 @@
               <label class="text-xs font-medium text-zinc-400">{{
                 t('userSettings.confirmPassword')
               }}</label>
-              <input
+              <CmkInput
                 v-model="confirm"
                 type="password"
                 autocomplete="new-password"
-                required
-                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                style="padding: 7px 10px"
+                field-size="FILL"
               />
             </div>
 
@@ -244,21 +211,17 @@
           v-if="isSelf || (!isSelf && userRead)"
           class="flex gap-[6px] pt-[8px] border-t border-[var(--border)]"
         >
-          <button
-            class="flex-1 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-            style="padding: 5px 10px; font-size: 12px"
-            @click="discardAndClose"
-          >
+          <CmkButton variant="secondary" class="flex-1" @click="discardAndClose">
             {{ t('common.cancel') }}
-          </button>
-          <button
+          </CmkButton>
+          <CmkButton
+            variant="primary"
+            class="flex-1"
             :disabled="isSelf ? saving || !isDirty : adminSaving"
-            class="flex-1 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-            style="padding: 5px 10px; font-size: 12px"
             @click="isSelf ? save() : saveAdminSettings()"
           >
             {{ (isSelf ? saving : adminSaving) ? t('common.saving') : t('common.save') }}
-          </button>
+          </CmkButton>
         </div>
       </div>
     </div>
@@ -266,6 +229,9 @@
 </template>
 
 <script setup lang="ts">
+import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
+import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, h, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 

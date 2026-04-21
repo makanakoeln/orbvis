@@ -7,13 +7,9 @@
         </h2>
         <p class="text-sm text-zinc-500" style="margin-top: 3px">{{ t('admin.iconsSubtitle') }}</p>
       </div>
-      <button
-        class="flex items-center bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-        style="gap: 5px; padding: 5px 10px; font-size: 12px"
-        @click="fileInputEl?.click()"
-      >
+      <CmkButton variant="primary" @click="fileInputEl?.click()">
         <svg
-          style="width: 13px; height: 13px"
+          style="width: 13px; height: 13px; margin-right: 4px"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -26,7 +22,7 @@
           />
         </svg>
         {{ t('admin.uploadIcon') }}
-      </button>
+      </CmkButton>
       <input
         ref="fileInputEl"
         type="file"
@@ -38,38 +34,10 @@
     </div>
 
     <!-- Upload feedback -->
-    <div
-      v-if="uploadError"
-      class="rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-400 text-sm flex items-center gap-[6px]"
-      style="margin-bottom: 10px; padding: 8px 12px"
-    >
-      <svg
-        class="shrink-0"
-        style="width: 14px; height: 14px"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-      {{ uploadError }}
-    </div>
+    <CmkAlertBox v-if="uploadError" variant="error">{{ uploadError }}</CmkAlertBox>
 
-    <div v-if="loading" class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center">
-      <svg
-        class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-        />
-      </svg>
-      {{ t('common.loading') }}
+    <div v-if="loading" class="flex items-center justify-center py-8">
+      <CmkLoading />
     </div>
 
     <div v-else-if="!icons.length" class="text-center py-[40px] text-zinc-600 text-sm">
@@ -141,6 +109,9 @@
 </template>
 
 <script setup lang="ts">
+import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
+import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkLoading from '@cmk/components/CmkLoading.vue';
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 

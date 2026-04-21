@@ -57,11 +57,17 @@ const { t } = useI18n();
 const auth = useAuthStore();
 const route = useRoute();
 
+const isCmk = auth.ssoActive || auth.isCheckmkDeployment;
+
 const adminNavItems = [
   { to: '/admin/connections', label: t('admin.connections') },
   { to: '/admin/icons', label: t('admin.icons') },
-  { to: '/admin/users', label: t('admin.users') },
-  { to: '/admin/roles', label: t('admin.rolesAndPermissions') },
+  ...(!isCmk
+    ? [
+        { to: '/admin/users', label: t('admin.users') },
+        { to: '/admin/roles', label: t('admin.rolesAndPermissions') },
+      ]
+    : []),
   { to: '/admin/settings', label: t('admin.settings') },
 ];
 

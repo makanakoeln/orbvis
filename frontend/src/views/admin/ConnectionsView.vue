@@ -9,51 +9,25 @@
           {{ t('admin.connectionsSubtitle') }}
         </p>
       </div>
-      <button
-        class="flex items-center bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-        style="gap: 5px; padding: 5px 10px; font-size: 12px"
-        @click="openCreate"
-      >
+      <CmkButton variant="primary" @click="openCreate">
         <svg
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
           stroke-width="2.5"
-          style="width: 13px; height: 13px"
+          style="width: 13px; height: 13px; margin-right: 4px"
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
         {{ t('admin.addConnection') }}
-      </button>
+      </CmkButton>
     </div>
 
-    <div
-      v-if="store.loading"
-      class="flex items-center gap-[8px] text-zinc-500 text-sm py-[24px] justify-center"
-    >
-      <svg
-        class="animate-spin text-[var(--color-corporate-green-50)]"
-        style="width: 14px; height: 14px"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-        />
-      </svg>
-      {{ t('common.loading') }}
+    <div v-if="store.loading" class="flex items-center justify-center py-8">
+      <CmkLoading />
     </div>
 
-    <div
-      v-else-if="store.error"
-      class="bg-red-500/8 ring-1 ring-red-500/20 rounded-xl text-red-400 text-sm"
-      style="padding: 8px 12px"
-    >
-      {{ store.error }}
-    </div>
+    <CmkAlertBox v-else-if="store.error" variant="error">{{ store.error }}</CmkAlertBox>
 
     <div
       v-else-if="store.backends.length === 0"
@@ -278,70 +252,35 @@
           <form class="space-y-[12px]" @submit.prevent="save">
             <div v-if="dialog.mode === 'create'" class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('admin.connectionId') }}</label>
-              <input
-                v-model="form.id"
-                required
-                pattern="[a-zA-Z0-9_-]+"
-                placeholder="cmk_heute"
-                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                style="padding: 5px 10px"
-              />
+              <CmkInput v-model="form.id" placeholder="cmk_heute" field-size="FILL" />
               <p class="text-xs text-zinc-600">{{ t('admin.connectionIdHint') }}</p>
             </div>
 
             <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('admin.displayLabel') }}</label>
-              <input
-                v-model="form.label"
-                placeholder="Checkmk heute"
-                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                style="padding: 5px 10px"
-              />
+              <CmkInput v-model="form.label" placeholder="Checkmk heute" field-size="FILL" />
             </div>
 
             <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('admin.type') }}</label>
-              <div class="relative">
-                <select
-                  v-model="form.type"
-                  class="w-full appearance-none bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                  style="padding: 5px 28px 5px 10px"
-                >
-                  <option value="livestatus">{{ t('admin.connectionTypeLivestatus') }}</option>
-                  <option value="icinga2">{{ t('admin.connectionTypeIcinga2') }}</option>
-                  <option value="test">{{ t('admin.connectionTypeTest') }}</option>
-                </select>
-                <div
-                  class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
-                  style="padding-right: 8px"
-                >
-                  <svg
-                    style="width: 12px; height: 12px"
-                    class="text-zinc-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                    />
-                  </svg>
-                </div>
-              </div>
+              <AppSelect
+                v-model="form.type"
+                :options="[
+                  { value: 'livestatus', label: t('admin.connectionTypeLivestatus') },
+                  { value: 'icinga2', label: t('admin.connectionTypeIcinga2') },
+                  { value: 'test', label: t('admin.connectionTypeTest') },
+                ]"
+              />
             </div>
 
             <template v-if="form.type === 'livestatus'">
               <!-- Unix socket -->
               <div class="space-y-[4px]">
                 <label class="text-xs font-medium text-zinc-400">{{ t('admin.unixSocket') }}</label>
-                <input
+                <CmkInput
                   v-model="form.socket_path"
                   placeholder="/omd/sites/heute/tmp/run/live"
-                  class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                  style="padding: 5px 10px"
+                  field-size="FILL"
                 />
               </div>
 
@@ -356,12 +295,7 @@
               <div class="grid grid-cols-[1fr_7rem] gap-[8px]">
                 <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{ t('admin.tcpHost') }}</label>
-                  <input
-                    v-model="form.host"
-                    placeholder="192.168.1.10"
-                    class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                    style="padding: 5px 10px"
-                  />
+                  <CmkInput v-model="form.host" placeholder="192.168.1.10" field-size="FILL" />
                 </div>
                 <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{ t('admin.port') }}</label>
@@ -375,11 +309,10 @@
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('admin.checkmkUrl')
                   }}</label>
-                  <input
+                  <CmkInput
                     v-model="form.checkmk_url"
                     placeholder="http://localhost/heute"
-                    class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                    style="padding: 5px 10px"
+                    field-size="FILL"
                   />
                   <p class="text-xs text-zinc-600">{{ t('admin.contextLinks') }}</p>
                 </div>
@@ -389,23 +322,21 @@
                       <label class="text-xs font-medium text-zinc-400">{{
                         t('admin.automationUser')
                       }}</label>
-                      <input
+                      <CmkInput
                         v-model="form.automation_user"
                         placeholder="automation"
-                        class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                        style="padding: 5px 10px"
+                        field-size="FILL"
                       />
                     </div>
                     <div class="space-y-[4px]">
                       <label class="text-xs font-medium text-zinc-400">{{
                         t('admin.automationSecret')
                       }}</label>
-                      <input
+                      <CmkInput
                         v-model="form.automation_secret"
                         type="password"
                         placeholder="••••••••"
-                        class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                        style="padding: 5px 10px"
+                        field-size="FILL"
                       />
                     </div>
                   </div>
@@ -429,11 +360,10 @@
             <template v-if="form.type === 'icinga2'">
               <div class="space-y-[4px]">
                 <label class="text-xs font-medium text-zinc-400">{{ t('admin.icinga2Url') }}</label>
-                <input
+                <CmkInput
                   v-model="form.icinga2_url"
                   placeholder="https://localhost:5665"
-                  class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                  style="padding: 5px 10px"
+                  field-size="FILL"
                 />
               </div>
 
@@ -442,37 +372,21 @@
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('admin.icinga2Username')
                   }}</label>
-                  <input
-                    v-model="form.icinga2_username"
-                    placeholder="root"
-                    class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                    style="padding: 5px 10px"
-                  />
+                  <CmkInput v-model="form.icinga2_username" placeholder="root" field-size="FILL" />
                 </div>
                 <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('admin.icinga2Password')
                   }}</label>
-                  <input
-                    v-model="form.icinga2_password"
-                    type="password"
-                    class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                    style="padding: 5px 10px"
-                  />
+                  <CmkInput v-model="form.icinga2_password" type="password" field-size="FILL" />
                 </div>
               </div>
 
               <div class="flex items-center gap-[8px]">
-                <input
-                  id="verify-ssl"
+                <CmkCheckbox
                   v-model="form.icinga2_verify_ssl"
-                  type="checkbox"
-                  class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
-                  style="width: 14px; height: 14px"
+                  :label="t('admin.icinga2VerifySsl')"
                 />
-                <label for="verify-ssl" class="text-sm text-zinc-400 cursor-pointer select-none">
-                  {{ t('admin.icinga2VerifySsl') }}
-                </label>
               </div>
 
               <div class="space-y-[4px]">
@@ -529,31 +443,15 @@
               class="flex gap-[8px] justify-end border-t border-[var(--border)]"
               style="padding-top: 10px"
             >
-              <button
-                type="button"
-                class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                style="padding: 5px 10px"
-                @click="dialog.open = false"
-              >
-                {{ t('common.cancel') }}
-              </button>
-              <button
-                type="button"
-                :disabled="dialogTest.loading"
-                class="ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-zinc-300 hover:text-[var(--text)] disabled:opacity-50 transition-all"
-                style="padding: 5px 10px"
-                @click="testDialog"
-              >
+              <CmkButton variant="secondary" @click="dialog.open = false">{{
+                t('common.cancel')
+              }}</CmkButton>
+              <CmkButton variant="optional" :disabled="dialogTest.loading" @click="testDialog">
                 {{ dialogTest.loading ? t('common.testing') : t('common.test') }}
-              </button>
-              <button
-                type="submit"
-                :disabled="saving"
-                class="bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-                style="padding: 5px 12px"
-              >
+              </CmkButton>
+              <CmkButton variant="primary" :disabled="saving" @click="save">
                 {{ saving ? t('common.saving') : t('common.save') }}
-              </button>
+              </CmkButton>
             </div>
           </form>
         </div>
@@ -563,10 +461,16 @@
 </template>
 
 <script setup lang="ts">
+import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
+import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkLoading from '@cmk/components/CmkLoading.vue';
+import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
+import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
+import AppSelect from '@/components/AppSelect.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { useToast } from '@/composables/useToast';

@@ -1,9 +1,13 @@
 <template>
   <div class="flex flex-col min-h-0 text-sm">
     <!-- Header -->
-    <div class="px-4 py-3 border-b border-white/8 flex items-center gap-2 shrink-0">
+    <div
+      class="border-b border-white/8 flex items-center gap-[8px] shrink-0"
+      style="padding: 10px 16px"
+    >
       <svg
-        class="w-4 h-4 text-[var(--color-corporate-green-50)] shrink-0"
+        class="text-[var(--color-corporate-green-50)] shrink-0"
+        style="width: 14px; height: 14px"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -15,30 +19,24 @@
         <div class="font-semibold text-[var(--text)] text-sm">
           {{ t('boardSettings.addObject') }}
         </div>
-        <div class="text-[10px] mt-0.5" :class="placing ? 'text-amber-400/70' : 'text-zinc-500'">
+        <div class="text-[10px] mt-[2px]" :class="placing ? 'text-amber-400/70' : 'text-zinc-500'">
           {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.dragObjects') }}
         </div>
       </div>
     </div>
 
     <!-- Add Object form -->
-    <div class="p-4 space-y-2.5">
-      <select
-        v-model="draft.type"
-        class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-        @change="onTypeChange"
-      >
-        <option value="">{{ t('boardSettings.selectType') }}</option>
-        <option value="host">{{ t('boardSettings.typeHost') }}</option>
-        <option value="service">{{ t('boardSettings.typeService') }}</option>
-        <option value="hostgroup">{{ t('boardSettings.typeHostgroup') }}</option>
-        <option value="servicegroup">{{ t('boardSettings.typeServicegroup') }}</option>
-        <option value="map">{{ t('boardSettings.typeMap') }}</option>
-        <option value="line">{{ t('boardSettings.typeLine') }}</option>
-        <option value="textbox">{{ t('boardSettings.typeTextbox') }}</option>
-        <option value="image">{{ t('boardSettings.typeImage') }}</option>
-        <option value="graph">{{ t('boardSettings.typeGraph') }} (experimental)</option>
-      </select>
+    <div class="space-y-[8px]" style="padding: 10px 16px">
+      <AppSelect
+        :model-value="draft.type"
+        :options="objectTypeOptions"
+        @update:model-value="
+          (v) => {
+            draft.type = v as ObjectType | '';
+            onTypeChange();
+          }
+        "
+      />
 
       <template v-if="draft.type === 'host'">
         <AutocompleteInput
@@ -144,35 +142,30 @@
       </template>
 
       <!-- Grid snap -->
-      <div class="flex items-center justify-between gap-2 pt-0.5">
+      <div class="flex items-center justify-between gap-[8px]">
         <label class="text-xs text-zinc-500 select-none">{{ t('boardSettings.grid') }}</label>
-        <select
-          :value="snapGrid"
-          class="bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-md px-2 py-1.5 text-xs text-zinc-300 focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)] transition-all cursor-pointer"
-          @change="$emit('update:snapGrid', +($event.target as HTMLSelectElement).value)"
-        >
-          <option value="0">{{ t('boardSettings.gridOff') }}</option>
-          <option value="10">10 px</option>
-          <option value="20">20 px</option>
-          <option value="50">50 px</option>
-        </select>
+        <AppSelect
+          :model-value="String(snapGrid)"
+          class="w-[96px]"
+          :options="[
+            { value: '0', label: t('boardSettings.gridOff') },
+            { value: '10', label: '10 px' },
+            { value: '20', label: '20 px' },
+            { value: '50', label: '50 px' },
+          ]"
+          @update:model-value="(v) => $emit('update:snapGrid', Number(v))"
+        />
       </div>
 
-      <button
+      <CmkButton
         v-if="draft.type"
+        :variant="placing ? 'warning' : 'primary'"
         :disabled="!canPlace"
-        class="w-full px-3 py-2 rounded-lg font-semibold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-        :class="
-          placing
-            ? 'bg-[#ffd000]/15 text-[#ffd000] ring-1 ring-[#ffd000]/30 animate-pulse'
-            : canPlace
-              ? 'bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] text-[var(--button-primary-text-color,#000)]'
-              : 'bg-[var(--color-corporate-green-50)] text-[var(--button-primary-text-color,#000)]'
-        "
+        :class="['w-full', placing ? 'animate-pulse' : '']"
         @click="canPlace && $emit('start-placing')"
       >
         {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.placeOnBoard') }}
-      </button>
+      </CmkButton>
       <p v-if="draft.type && !canPlace && !placing" class="text-xs text-zinc-500 text-center">
         {{ missingFieldHint }}
       </p>
@@ -181,18 +174,34 @@
 </template>
 
 <script setup lang="ts">
+import CmkButton from '@cmk/components/CmkButton.vue';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
+import AppSelect from '@/components/AppSelect.vue';
 import type { NewObjectDraft } from '@/composables/useBoardEditor';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
+import type { ObjectType } from '@/types/api';
 
 import AutocompleteInput from './AutocompleteInput.vue';
 import ImagePicker from './ImagePicker.vue';
 
 const { t } = useI18n();
+
+const objectTypeOptions = computed(() => [
+  { value: '', label: t('boardSettings.selectType') },
+  { value: 'host', label: t('boardSettings.typeHost') },
+  { value: 'service', label: t('boardSettings.typeService') },
+  { value: 'hostgroup', label: t('boardSettings.typeHostgroup') },
+  { value: 'servicegroup', label: t('boardSettings.typeServicegroup') },
+  { value: 'map', label: t('boardSettings.typeMap') },
+  { value: 'line', label: t('boardSettings.typeLine') },
+  { value: 'textbox', label: t('boardSettings.typeTextbox') },
+  { value: 'image', label: t('boardSettings.typeImage') },
+  { value: 'graph', label: `${t('boardSettings.typeGraph')} (experimental)` },
+]);
 
 const props = defineProps<{
   draft: NewObjectDraft;
@@ -334,6 +343,8 @@ watch(
 @reference "tailwindcss";
 
 .field {
-  @apply w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150;
+  @apply w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150;
+
+  padding: 5px 10px;
 }
 </style>

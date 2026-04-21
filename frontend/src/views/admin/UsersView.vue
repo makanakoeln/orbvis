@@ -7,42 +7,22 @@
         </h2>
         <p class="text-sm text-zinc-500" style="margin-top: 3px">{{ t('admin.usersSubtitle') }}</p>
       </div>
-      <button
-        class="flex items-center bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-        style="gap: 5px; padding: 5px 10px; font-size: 12px"
-        @click="showCreate = true"
-      >
+      <CmkButton variant="primary" @click="showCreate = true">
         <svg
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
           stroke-width="2.5"
-          style="width: 13px; height: 13px"
+          style="width: 13px; height: 13px; margin-right: 4px"
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
         {{ t('admin.newUser') }}
-      </button>
+      </CmkButton>
     </div>
 
-    <div
-      v-if="loading"
-      class="flex items-center gap-[8px] text-zinc-500 text-sm py-[32px] justify-center"
-    >
-      <svg
-        class="animate-spin text-[var(--color-corporate-green-50)]"
-        style="width: 14px; height: 14px"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-        />
-      </svg>
-      {{ t('common.loading') }}
+    <div v-if="loading" class="flex items-center justify-center py-8">
+      <CmkLoading />
     </div>
 
     <div
@@ -208,26 +188,21 @@
           <form class="space-y-[10px]" @submit.prevent="createUser">
             <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('auth.username') }}</label>
-              <input
+              <CmkInput
                 v-model="newUser.name"
                 placeholder="john"
-                required
                 autocomplete="off"
-                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                style="padding: 5px 10px"
+                field-size="FILL"
               />
             </div>
 
             <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('auth.password') }}</label>
-              <input
+              <CmkInput
                 v-model="newUser.password"
                 type="password"
-                required
-                minlength="6"
                 autocomplete="new-password"
-                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                style="padding: 5px 10px"
+                field-size="FILL"
               />
               <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
@@ -236,18 +211,11 @@
               <label class="text-xs font-medium text-zinc-400">{{
                 t('userSettings.confirmPassword')
               }}</label>
-              <input
+              <CmkInput
                 v-model="newUserConfirmPassword"
                 type="password"
-                required
                 autocomplete="new-password"
-                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 transition-all"
-                style="padding: 5px 10px"
-                :class="
-                  newUserConfirmPassword && newUser.password !== newUserConfirmPassword
-                    ? 'ring-red-500/60 focus:ring-red-500'
-                    : 'ring-[var(--default-form-element-border-color)] focus:ring-[var(--color-corporate-green-50)]'
-                "
+                field-size="FILL"
               />
               <p
                 v-if="newUserConfirmPassword && newUser.password !== newUserConfirmPassword"
@@ -258,30 +226,15 @@
             </div>
 
             <div class="border-t border-[var(--border)] pt-[10px] space-y-[10px]">
-              <label class="flex items-start gap-[8px] cursor-pointer group select-none">
-                <input
-                  v-model="newUser.is_admin"
-                  type="checkbox"
-                  class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
-                  style="width: 14px; height: 14px; margin-top: 2px"
-                />
-                <div>
-                  <p class="text-sm text-zinc-300 group-hover:text-[var(--text)] transition-colors">
-                    {{ t('admin.administrator') }}
-                  </p>
-                  <p class="text-xs text-zinc-600 mt-0.5">{{ t('admin.administratorHint') }}</p>
-                </div>
-              </label>
+              <div class="flex items-start gap-[8px]">
+                <CmkCheckbox v-model="newUser.is_admin" :label="t('admin.administrator')" />
+                <p class="text-xs text-zinc-600 mt-0.5">{{ t('admin.administratorHint') }}</p>
+              </div>
 
-              <label class="flex items-center gap-[8px] cursor-pointer select-none">
-                <input
-                  v-model="newUser.must_change_password"
-                  type="checkbox"
-                  class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
-                  style="width: 14px; height: 14px"
-                />
-                <p class="text-sm text-zinc-400">{{ t('admin.mustChangePassword') }}</p>
-              </label>
+              <CmkCheckbox
+                v-model="newUser.must_change_password"
+                :label="t('admin.mustChangePassword')"
+              />
             </div>
 
             <div
@@ -289,20 +242,18 @@
               class="border-t border-[var(--border)] pt-[10px] space-y-[8px]"
             >
               <p class="text-xs font-medium text-zinc-400">{{ t('admin.roles') }}</p>
-              <label
-                v-for="role in availableRoles"
-                :key="role.role_id"
-                class="flex items-center gap-[8px] cursor-pointer select-none"
-              >
-                <input
-                  v-model="selectedRoleIds"
-                  type="checkbox"
-                  :value="role.role_id"
-                  class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
-                  style="width: 14px; height: 14px"
+              <div v-for="role in availableRoles" :key="role.role_id">
+                <CmkCheckbox
+                  :model-value="selectedRoleIds.includes(role.role_id)"
+                  :label="role.name"
+                  @update:model-value="
+                    (v) => {
+                      if (v) selectedRoleIds.push(role.role_id);
+                      else selectedRoleIds = selectedRoleIds.filter((id) => id !== role.role_id);
+                    }
+                  "
                 />
-                <p class="text-sm text-zinc-400">{{ role.name }}</p>
-              </label>
+              </div>
             </div>
 
             <p v-if="createError" class="text-xs text-red-400">{{ createError }}</p>
@@ -310,22 +261,16 @@
               class="flex gap-[8px] justify-end border-t border-[var(--border)]"
               style="padding-top: 10px"
             >
-              <button
-                type="button"
-                class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                style="padding: 5px 10px"
-                @click="showCreate = false"
-              >
-                {{ t('common.cancel') }}
-              </button>
-              <button
-                type="submit"
+              <CmkButton variant="secondary" @click="showCreate = false">{{
+                t('common.cancel')
+              }}</CmkButton>
+              <CmkButton
+                variant="primary"
                 :disabled="creating || newUser.password !== newUserConfirmPassword"
-                class="bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-                style="padding: 5px 12px"
+                @click="createUser"
               >
                 {{ creating ? t('common.saving') : t('common.create') }}
-              </button>
+              </CmkButton>
             </div>
           </form>
         </div>
@@ -357,6 +302,10 @@
 </template>
 
 <script setup lang="ts">
+import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkLoading from '@cmk/components/CmkLoading.vue';
+import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
+import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 

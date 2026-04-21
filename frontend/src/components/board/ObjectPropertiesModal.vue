@@ -19,22 +19,23 @@
       >
         <!-- Header -->
         <div
-          class="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0"
+          class="flex items-center justify-between shrink-0 border-b border-[var(--border)]"
+          style="padding: 10px 16px"
         >
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-[8px]">
             <span
-              class="text-xs font-bold px-2 py-1 rounded-lg bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-zinc-400 capitalize"
+              class="text-xs font-semibold px-[6px] py-[2px] rounded-md bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-zinc-400 capitalize"
             >
               {{ object.type }}
             </span>
-            <span class="font-bold text-[var(--text)]">{{ displayName }}</span>
+            <span class="text-sm font-bold text-[var(--text)]">{{ displayName }}</span>
           </div>
           <button
-            class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+            class="p-[5px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
             @click="$emit('close')"
           >
             <svg
-              class="w-4 h-4"
+              style="width: 14px; height: 14px"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -46,7 +47,10 @@
         </div>
 
         <!-- Scrollable body -->
-        <div class="overflow-y-auto overflow-x-hidden flex-1 px-6 py-5 space-y-6">
+        <div
+          class="overflow-y-auto overflow-x-hidden flex-1 space-y-[2px]"
+          style="padding: 10px 16px"
+        >
           <!-- === MONITORING OBJECT === -->
           <section
             v-if="
@@ -57,7 +61,7 @@
             "
           >
             <p class="section-title">{{ t('boardSettings.monitoringObject') }}</p>
-            <div class="space-y-3">
+            <div class="space-y-[8px]">
               <template v-if="object.type === 'host' || object.type === 'service'">
                 <div class="field-row">
                   <label class="field-label">{{ t('boardSettings.hostname') }}</label>
@@ -83,28 +87,16 @@
                 </div>
               </template>
               <template v-if="object.type === 'host' || object.type === 'service'">
-                <label
-                  class="flex items-center gap-2.5 text-sm text-zinc-400 cursor-pointer select-none"
-                >
-                  <input
-                    v-model="form.only_hard_states"
-                    type="checkbox"
-                    class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4"
-                  />
-                  {{ t('boardSettings.onlyHardStates') }}
-                </label>
+                <CmkCheckbox
+                  v-model="form.only_hard_states"
+                  :label="t('boardSettings.onlyHardStates')"
+                />
               </template>
               <template v-if="object.type === 'host'">
-                <label
-                  class="flex items-center gap-2.5 text-sm text-zinc-400 cursor-pointer select-none"
-                >
-                  <input
-                    v-model="form.recognize_services"
-                    type="checkbox"
-                    class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4"
-                  />
-                  {{ t('boardSettings.recognizeServices') }}
-                </label>
+                <CmkCheckbox
+                  v-model="form.recognize_services"
+                  :label="t('boardSettings.recognizeServices')"
+                />
               </template>
               <template v-if="object.type === 'hostgroup' || object.type === 'servicegroup'">
                 <div class="field-row">
@@ -139,11 +131,12 @@
             <textarea
               v-model="form.label.text"
               rows="3"
-              class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all resize-none mb-3"
+              class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all resize-none mb-[8px]"
+              style="padding: 5px 10px"
               :placeholder="t('boardSettings.textContent') + '…'"
             />
-            <div class="space-y-3">
-              <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-[8px]">
+              <div class="grid grid-cols-2 gap-[8px]">
                 <div class="field-row">
                   <label class="field-label">{{ t('boardSettings.width') }}</label>
                   <NumberInput
@@ -182,14 +175,14 @@
 
           <!-- === GRAPH: Metric Source === -->
           <section v-if="object.type === 'graph'">
-            <div class="flex items-center gap-2 mb-3">
+            <div class="flex items-center gap-[8px] mb-[8px]">
               <p class="section-title !mb-0">{{ t('boardSettings.graphMetricSource') }}</p>
               <span
                 class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25 shrink-0"
                 >experimental</span
               >
             </div>
-            <div class="space-y-3">
+            <div class="space-y-[8px]">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.hostname') }}</label>
                 <AutocompleteInput
@@ -230,7 +223,7 @@
               </div>
               <div v-if="graphSource === 'metrics'" class="field-row items-start">
                 <label class="field-label mt-1.5">{{ t('boardSettings.graphMetric') }}</label>
-                <div class="flex-1 space-y-1.5">
+                <div class="flex-1 space-y-[6px]">
                   <div v-if="form.graph_metric.length" class="flex flex-wrap gap-1">
                     <span
                       v-for="m in form.graph_metric"
@@ -264,22 +257,38 @@
               </div>
               <div v-if="graphSource === 'template' && graphTemplates.length" class="field-row">
                 <label class="field-label">{{ t('boardSettings.graphTemplate') }}</label>
-                <select v-model="form.graph_id" class="field flex-1">
-                  <option :value="null">—</option>
-                  <option v-for="tpl in graphTemplates" :key="tpl.id" :value="tpl.id">
-                    {{ tpl.title }}
-                  </option>
-                </select>
+                <AppSelect
+                  :model-value="form.graph_id ?? ''"
+                  class="flex-1"
+                  :options="[
+                    { value: '', label: '—' },
+                    ...graphTemplates.map((tpl) => ({ value: tpl.id, label: tpl.title })),
+                  ]"
+                  @update:model-value="
+                    (v) => {
+                      form.graph_id = v || null;
+                    }
+                  "
+                />
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.graphTimeWindow') }}</label>
-                <select v-model="form.graph_time_window" class="field flex-1">
-                  <option :value="60">1 h</option>
-                  <option :value="240">4 h</option>
-                  <option :value="720">12 h</option>
-                  <option :value="1440">24 h</option>
-                  <option :value="10080">7 d</option>
-                </select>
+                <AppSelect
+                  :model-value="String(form.graph_time_window)"
+                  class="flex-1"
+                  :options="[
+                    { value: '60', label: '1 h' },
+                    { value: '240', label: '4 h' },
+                    { value: '720', label: '12 h' },
+                    { value: '1440', label: '24 h' },
+                    { value: '10080', label: '7 d' },
+                  ]"
+                  @update:model-value="
+                    (v) => {
+                      form.graph_time_window = Number(v);
+                    }
+                  "
+                />
               </div>
             </div>
           </section>
@@ -287,23 +296,28 @@
           <!-- === GRAPH: URL Embed === -->
           <section v-if="object.type === 'graph'">
             <p class="section-title">{{ t('boardSettings.graphUrlEmbed') }}</p>
-            <div class="space-y-3">
+            <div class="space-y-[8px]">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.graphUrl') }}</label>
-                <input
+                <CmkInput
                   v-model="form.graph_url"
-                  class="field flex-1 font-mono"
                   placeholder="https://… (optional)"
+                  field-size="FILL"
+                  class="flex-1"
                 />
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.graphEmbedType') }}</label>
-                <select v-model="form.graph_embed_type" class="field flex-1">
-                  <option value="img">{{ t('boardSettings.graphEmbedImg') }}</option>
-                  <option value="iframe">{{ t('boardSettings.graphEmbedIframe') }}</option>
-                </select>
+                <AppSelect
+                  v-model="form.graph_embed_type"
+                  class="flex-1"
+                  :options="[
+                    { value: 'img', label: t('boardSettings.graphEmbedImg') },
+                    { value: 'iframe', label: t('boardSettings.graphEmbedIframe') },
+                  ]"
+                />
               </div>
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-2 gap-[8px]">
                 <div class="field-row">
                   <label class="field-label">{{ t('boardSettings.width') }}</label>
                   <NumberInput v-model="form.graph_width" min="50" class="flex-1" />
@@ -315,7 +329,7 @@
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.graphRefresh') }}</label>
-                <div class="flex items-center gap-2 flex-1">
+                <div class="flex items-center gap-[8px] flex-1">
                   <NumberInput v-model="form.graph_refresh_interval" min="0" class="flex-1" />
                   <span class="text-xs text-zinc-500 shrink-0">{{
                     t('boardSettings.graphRefreshOff')
@@ -328,7 +342,7 @@
           <!-- === LINE CONFIG === -->
           <section v-if="object.type === 'line'">
             <p class="section-title">{{ t('boardSettings.monitoringObject') }}</p>
-            <div class="space-y-3">
+            <div class="space-y-[8px]">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.hostname') }}</label>
                 <AutocompleteInput
@@ -353,18 +367,27 @@
           </section>
           <section v-if="object.type === 'line'">
             <p class="section-title">{{ t('boardSettings.lineSection') }}</p>
-            <div class="space-y-3">
+            <div class="space-y-[8px]">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.lineStyle') }}</label>
-                <select v-model="form.line_style" class="field flex-1">
-                  <option :value="null">{{ t('boardSettings.lineDefault') }}</option>
-                  <option value="plain">{{ t('boardSettings.lineSimple') }}</option>
-                  <option value="arrow_end">{{ t('boardSettings.lineArrowRight') }}</option>
-                  <option value="arrow_start">{{ t('boardSettings.lineArrowLeft') }}</option>
-                  <option value="arrow_both">{{ t('boardSettings.lineDoubleArrow') }}</option>
-                  <option value="dashed">{{ t('boardSettings.lineDashed') }}</option>
-                  <option value="weathermap">{{ t('boardSettings.lineWeathermap') }}</option>
-                </select>
+                <AppSelect
+                  :model-value="form.line_style ?? ''"
+                  class="flex-1"
+                  :options="[
+                    { value: '', label: t('boardSettings.lineDefault') },
+                    { value: 'plain', label: t('boardSettings.lineSimple') },
+                    { value: 'arrow_end', label: t('boardSettings.lineArrowRight') },
+                    { value: 'arrow_start', label: t('boardSettings.lineArrowLeft') },
+                    { value: 'arrow_both', label: t('boardSettings.lineDoubleArrow') },
+                    { value: 'dashed', label: t('boardSettings.lineDashed') },
+                    { value: 'weathermap', label: t('boardSettings.lineWeathermap') },
+                  ]"
+                  @update:model-value="
+                    (v) => {
+                      form.line_style = v || null;
+                    }
+                  "
+                />
               </div>
               <!-- Weathermap metric -->
               <div v-if="form.line_style === 'weathermap'" class="field-row">
@@ -376,7 +399,7 @@
                   class="flex-1"
                 />
               </div>
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-2 gap-[8px]">
                 <div class="field-row col-span-2">
                   <label class="field-label">{{ t('boardSettings.lineColor') }}</label>
                   <ColorInput
@@ -413,18 +436,15 @@
               <!-- Label -->
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.showLabel') }}</label>
-                <input
-                  v-model="form.label.show"
-                  type="checkbox"
-                  class="accent-[var(--color-corporate-green-50)]"
-                />
+                <CmkCheckbox v-model="form.label.show" />
               </div>
               <div v-if="form.label.show" class="field-row">
                 <label class="field-label">{{ t('boardSettings.labelText') }}</label>
-                <input
+                <CmkInput
                   v-model="form.label.text"
-                  class="field flex-1"
                   :placeholder="t('boardSettings.labelOnLine')"
+                  field-size="FILL"
+                  class="flex-1"
                 />
               </div>
             </div>
@@ -433,28 +453,28 @@
           <!-- === POSITION === -->
           <section v-if="object.type !== 'line'">
             <p class="section-title">{{ t('boardSettings.position') }}</p>
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-3 gap-[8px]">
               <template v-if="mapType === 'worldmap'">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-[8px]">
                   <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.lat') }}</label>
                   <NumberInput v-model="form.lat" step="any" class="flex-1" />
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-[8px]">
                   <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.lng') }}</label>
                   <NumberInput v-model="form.lng" step="any" class="flex-1" />
                 </div>
               </template>
               <template v-else>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-[8px]">
                   <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.x') }}</label>
                   <NumberInput v-model="form.x" class="flex-1" />
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-[8px]">
                   <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.y') }}</label>
                   <NumberInput v-model="form.y" class="flex-1" />
                 </div>
               </template>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-[8px]">
                 <label class="text-xs text-zinc-500 shrink-0">{{ t('boardSettings.z') }}</label>
                 <NumberInput v-model="form.z" min="1" max="999" class="flex-1" />
               </div>
@@ -464,56 +484,46 @@
           <!-- === LABEL === -->
           <section v-if="object.type !== 'line'">
             <p class="section-title">{{ t('boardSettings.label') }}</p>
-            <div class="space-y-3">
-              <label
-                class="flex items-center gap-2.5 text-sm text-zinc-400 cursor-pointer select-none"
-              >
-                <input
-                  v-model="form.label.show"
-                  type="checkbox"
-                  class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4"
-                />
-                {{ t('boardSettings.showLabel') }}
-              </label>
+            <div class="space-y-[8px]">
+              <CmkCheckbox v-model="form.label.show" :label="t('boardSettings.showLabel')" />
               <div :class="!form.label.show ? 'opacity-40 pointer-events-none' : ''">
-                <div class="space-y-3">
+                <div class="space-y-[8px]">
                   <div v-if="object.type !== 'textbox'" class="field-row">
                     <label class="field-label">{{ t('boardSettings.labelText') }}</label>
-                    <input
+                    <CmkInput
                       v-model="form.label.text"
-                      class="field flex-1"
                       placeholder="(auto from object)"
+                      field-size="FILL"
+                      class="flex-1"
                     />
                   </div>
-                  <div class="grid grid-cols-2 gap-3">
+                  <div class="grid grid-cols-2 gap-[8px]">
                     <div class="field-row">
                       <label class="field-label">{{ t('boardSettings.size') }}</label>
                       <NumberInput v-model="form.label.size" min="8" max="72" class="flex-1" />
                     </div>
                     <div class="field-row">
                       <label class="field-label">{{ t('boardSettings.color') }}</label>
-                      <div class="flex gap-2 flex-1 items-center">
-                        <input
+                      <div class="flex gap-[8px] flex-1 items-center">
+                        <CmkColorPicker v-model:data="form.label.color" />
+                        <CmkInput
                           v-model="form.label.color"
-                          type="color"
-                          class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5"
-                        />
-                        <input
-                          v-model="form.label.color"
-                          class="field flex-1"
                           placeholder="#ffffff"
+                          field-size="FILL"
+                          class="flex-1"
                         />
                       </div>
                     </div>
                     <div class="col-span-2">
                       <button
                         type="button"
-                        class="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-400 transition-colors"
+                        class="flex items-center gap-[8px] w-full group"
                         @click="showLabelAdvanced = !showLabelAdvanced"
                       >
+                        <p class="section-title !mb-0">{{ t('boardSettings.labelAdvanced') }}</p>
                         <svg
-                          class="w-3 h-3 transition-transform"
-                          :class="showLabelAdvanced ? 'rotate-90' : ''"
+                          class="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-all ml-auto shrink-0"
+                          :class="showLabelAdvanced ? '' : '-rotate-90'"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -522,10 +532,9 @@
                           <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
-                            d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                            d="M19.5 8.25l-7.5 7.5-7.5-7.5"
                           />
                         </svg>
-                        {{ t('boardSettings.labelAdvanced') }}
                       </button>
                     </div>
                     <template v-if="showLabelAdvanced">
@@ -575,14 +584,18 @@
             v-if="object.type !== 'line' && object.type !== 'textbox' && object.type !== 'graph'"
           >
             <p class="section-title">{{ t('boardSettings.appearance') }}</p>
-            <div class="space-y-3">
+            <div class="space-y-[8px]">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.viewType') }}</label>
-                <select v-model="form.display.mode" class="field flex-1">
-                  <option value="icon">{{ t('boardSettings.viewTypeIcon') }}</option>
-                  <option value="text">{{ t('boardSettings.viewTypeText') }}</option>
-                  <option value="gadget">{{ t('boardSettings.viewTypeGadget') }}</option>
-                </select>
+                <AppSelect
+                  v-model="form.display.mode"
+                  class="flex-1"
+                  :options="[
+                    { value: 'icon', label: t('boardSettings.viewTypeIcon') },
+                    { value: 'text', label: t('boardSettings.viewTypeText') },
+                    { value: 'gadget', label: t('boardSettings.viewTypeGadget') },
+                  ]"
+                />
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.size') }}</label>
@@ -597,13 +610,15 @@
               <template v-if="form.display.mode === 'gadget'">
                 <div class="field-row">
                   <label class="field-label">{{ t('boardSettings.gadgetType') }}</label>
-                  <select v-model="form.display.gadget_type" class="field flex-1">
-                    <option value="gauge">{{ t('boardSettings.gadgetGauge') }}</option>
-                    <option value="bar">{{ t('boardSettings.gadgetBar') }}</option>
-                    <option value="trafficlight">
-                      {{ t('boardSettings.gadgetTrafficlight') }}
-                    </option>
-                  </select>
+                  <AppSelect
+                    v-model="form.display.gadget_type"
+                    class="flex-1"
+                    :options="[
+                      { value: 'gauge', label: t('boardSettings.gadgetGauge') },
+                      { value: 'bar', label: t('boardSettings.gadgetBar') },
+                      { value: 'trafficlight', label: t('boardSettings.gadgetTrafficlight') },
+                    ]"
+                  />
                 </div>
                 <div class="field-row">
                   <label class="field-label">{{ t('boardSettings.metric') }}</label>
@@ -617,10 +632,11 @@
               </template>
               <div v-if="form.display.mode !== 'gadget'" class="field-row">
                 <label class="field-label">{{ t('boardSettings.customIcon') }}</label>
-                <input
+                <CmkInput
                   v-model="form.display.image"
-                  class="field flex-1 font-mono"
                   placeholder="filename.png"
+                  field-size="FILL"
+                  class="flex-1"
                 />
               </div>
             </div>
@@ -630,7 +646,7 @@
           <section>
             <button
               type="button"
-              class="flex items-center gap-2 w-full group mb-3"
+              class="flex items-center gap-[8px] w-full group mb-[8px]"
               @click="showLink = !showLink"
             >
               <p class="section-title mb-0">{{ t('boardSettings.link') }}</p>
@@ -654,14 +670,14 @@
                 />
               </svg>
             </button>
-            <div v-if="showLink" class="space-y-3">
+            <div v-if="showLink" class="space-y-[8px]">
               <div class="field-row items-start">
                 <label class="field-label mt-2">{{ t('boardSettings.url') }}</label>
-                <div class="flex-1 space-y-1">
-                  <input
+                <div class="flex-1 space-y-[4px]">
+                  <CmkInput
                     v-model="form.url"
-                    class="field w-full font-mono"
                     :placeholder="autoUrl ?? 'https://…'"
+                    field-size="FILL"
                   />
                   <p v-if="autoUrl && !form.url" class="text-[10px] text-zinc-600">
                     {{ t('boardSettings.urlAutoHint') }}
@@ -670,11 +686,15 @@
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.target') }}</label>
-                <select v-model="form.url_target" class="field flex-1">
-                  <option value="_blank">{{ t('boardSettings.targetNewTab') }} (_blank)</option>
-                  <option value="_self">{{ t('boardSettings.targetSameTab') }} (_self)</option>
-                  <option value="_top">{{ t('boardSettings.targetTopFrame') }} (_top)</option>
-                </select>
+                <AppSelect
+                  v-model="form.url_target"
+                  class="flex-1"
+                  :options="[
+                    { value: '_blank', label: t('boardSettings.targetNewTab') + ' (_blank)' },
+                    { value: '_self', label: t('boardSettings.targetSameTab') + ' (_self)' },
+                    { value: '_top', label: t('boardSettings.targetTopFrame') + ' (_top)' },
+                  ]"
+                />
               </div>
             </div>
           </section>
@@ -683,7 +703,7 @@
           <section v-if="['host', 'hostgroup', 'servicegroup', 'map'].includes(object.type)">
             <button
               type="button"
-              class="flex items-center gap-2 w-full group mb-3"
+              class="flex items-center gap-[8px] w-full group mb-[8px]"
               @click="showFilter = !showFilter"
             >
               <p class="section-title mb-0">{{ t('boardSettings.filterSection') }}</p>
@@ -702,21 +722,23 @@
                 />
               </svg>
             </button>
-            <div v-if="showFilter" class="space-y-3">
+            <div v-if="showFilter" class="space-y-[8px]">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.excludeMembers') }}</label>
-                <input
+                <CmkInput
                   v-model="form.exclude_members"
-                  class="field flex-1 font-mono"
                   :placeholder="t('boardSettings.regexPlaceholder')"
+                  field-size="FILL"
+                  class="flex-1"
                 />
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.excludeStates') }}</label>
-                <input
+                <CmkInput
                   v-model="form.exclude_member_states"
-                  class="field flex-1 font-mono"
                   placeholder="DOWN,CRITICAL"
+                  field-size="FILL"
+                  class="flex-1"
                 />
               </div>
               <p class="text-xs text-zinc-600 pl-[6.75rem]">{{ t('boardSettings.excludeHint') }}</p>
@@ -727,7 +749,7 @@
           <section>
             <button
               type="button"
-              class="flex items-center gap-2 w-full group mb-3"
+              class="flex items-center gap-[8px] w-full group mb-[8px]"
               @click="showTemplates = !showTemplates"
             >
               <p class="section-title mb-0">{{ t('boardSettings.templates') }}</p>
@@ -746,29 +768,32 @@
                 />
               </svg>
             </button>
-            <div v-if="showTemplates" class="space-y-3">
+            <div v-if="showTemplates" class="space-y-[8px]">
               <div class="field-row">
                 <label class="field-label">{{ t('board.hoverTemplate') }}</label>
-                <input
+                <CmkInput
                   v-model="form.hover_template"
-                  class="field flex-1 font-mono"
                   :placeholder="t('board.templatePlaceholder')"
+                  field-size="FILL"
+                  class="flex-1"
                 />
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.hoverUrl') }}</label>
-                <input
+                <CmkInput
                   v-model="form.hover_url"
-                  class="field flex-1 font-mono"
                   placeholder="https://…"
+                  field-size="FILL"
+                  class="flex-1"
                 />
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('board.contextTemplate') }}</label>
-                <input
+                <CmkInput
                   v-model="form.context_template"
-                  class="field flex-1 font-mono"
                   :placeholder="t('board.templatePlaceholder')"
+                  field-size="FILL"
+                  class="flex-1"
                 />
               </div>
               <p class="text-xs text-zinc-600 pl-[6.75rem]">{{ t('board.templateHint') }}</p>
@@ -783,15 +808,13 @@
 
         <!-- Footer -->
         <div
-          class="flex items-center justify-between px-6 py-4 border-t border-[var(--border)] shrink-0"
+          class="flex items-center justify-between shrink-0 border-t border-[var(--border)]"
+          style="gap: 8px; padding: 10px 16px"
         >
           <div>
-            <button
-              class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-sm font-semibold text-white transition-all"
-              @click="confirmDelete = true"
-            >
-              {{ t('common.delete') }}
-            </button>
+            <CmkButton variant="danger" @click="confirmDelete = true">{{
+              t('common.delete')
+            }}</CmkButton>
             <ConfirmDialog
               v-if="confirmDelete"
               :title="t('board.deleteObject')"
@@ -804,21 +827,14 @@
               @cancel="confirmDelete = false"
             />
           </div>
-          <div class="flex gap-3">
-            <p v-if="saveError" class="text-red-400 text-xs self-center">{{ saveError }}</p>
-            <button
-              class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-              @click="$emit('close')"
-            >
-              {{ t('common.cancel') }}
-            </button>
-            <button
-              :disabled="saving"
-              class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-              @click="save"
-            >
+          <div class="flex items-center" style="gap: 8px">
+            <p v-if="saveError" class="text-red-400 text-xs">{{ saveError }}</p>
+            <CmkButton variant="secondary" @click="$emit('close')">{{
+              t('common.cancel')
+            }}</CmkButton>
+            <CmkButton variant="primary" :disabled="saving" @click="save">
               {{ saving ? t('common.saving') : t('common.save') }}
-            </button>
+            </CmkButton>
           </div>
         </div>
       </div>
@@ -827,10 +843,15 @@
 </template>
 
 <script setup lang="ts">
+import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkColorPicker from '@cmk/components/CmkColorPicker.vue';
+import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
+import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { boardsApi, connectionsApi } from '@/api/client';
+import AppSelect from '@/components/AppSelect.vue';
 import ColorInput from '@/components/ColorInput.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import NumberInput from '@/components/NumberInput.vue';
@@ -1307,34 +1328,28 @@ async function save() {
 @reference "tailwindcss";
 
 .section-title {
-  @apply text-[11px] font-semibold text-zinc-400 tracking-wide mb-3 leading-none;
+  @apply text-[10px] font-semibold text-zinc-500 tracking-wider uppercase mb-[6px] leading-none;
 }
 
 .field-row {
-  @apply flex items-center gap-3;
+  @apply flex items-center gap-[8px];
 }
 
 .field-label {
-  @apply text-xs text-zinc-500 w-24 shrink-0;
+  @apply text-xs text-zinc-500 shrink-0;
+
+  width: 88px;
 }
 
 .field {
-  @apply w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150;
+  @apply w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150;
 
+  padding: 5px 10px;
   appearance: textfield;
 }
 
 .field::-webkit-outer-spin-button,
 .field::-webkit-inner-spin-button {
   appearance: none;
-}
-
-select.field {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a1a1aa' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
-  background-size: 1rem;
-  padding-right: 2rem;
 }
 </style>

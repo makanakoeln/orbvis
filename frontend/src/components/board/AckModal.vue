@@ -58,19 +58,12 @@
         <p v-if="success" class="text-xs text-green-400">{{ t('ack.success') }}</p>
 
         <div class="flex gap-3 justify-end pt-1 border-t border-[var(--border)]">
-          <button
-            class="px-4 py-2 rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-            @click="$emit('close')"
-          >
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            :disabled="submitting || !comment.trim()"
-            class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-            @click="submit"
-          >
+          <CmkButton variant="secondary" @click="$emit('close')">{{
+            t('common.cancel')
+          }}</CmkButton>
+          <CmkButton variant="primary" :disabled="submitting || !comment.trim()" @click="submit">
             {{ submitting ? t('ack.submitting') : t('ack.submit') }}
-          </button>
+          </CmkButton>
         </div>
       </div>
     </div>
@@ -78,6 +71,7 @@
 </template>
 
 <script setup lang="ts">
+import CmkButton from '@cmk/components/CmkButton.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 

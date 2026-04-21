@@ -53,6 +53,7 @@
 
         <!-- Notification bell -->
         <button
+          v-if="!auth.ssoActive && !auth.isCheckmkDeployment"
           class="p-[5px] rounded-lg transition-all duration-150"
           :class="
             statesStore.notificationsEnabled
@@ -435,7 +436,7 @@
         >
           <div
             v-if="editor.editMode.value"
-            class="w-72 max-h-[calc(100vh-10rem)] flex flex-col overflow-hidden bg-[var(--bg-surface)] backdrop-blur-xl ring-1 ring-white/8 shadow-2xl shadow-black/60 rounded-2xl"
+            class="w-64 max-h-[calc(100vh-10rem)] flex flex-col overflow-hidden bg-[var(--bg-surface)] backdrop-blur-xl ring-1 ring-white/8 shadow-2xl shadow-black/60 rounded-2xl"
             data-tour="edit-panel"
           >
             <EditPanel

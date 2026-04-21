@@ -7,24 +7,8 @@
       <p class="text-sm text-zinc-500" style="margin-top: 3px">{{ t('settings.subtitle') }}</p>
     </div>
 
-    <div
-      v-if="store.loading"
-      class="flex items-center gap-[8px] text-zinc-500 text-sm py-[32px] justify-center"
-    >
-      <svg
-        class="animate-spin text-[var(--color-corporate-green-50)]"
-        style="width: 14px; height: 14px"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-        />
-      </svg>
-      {{ t('common.loading') }}
+    <div v-if="store.loading" class="flex items-center justify-center py-8">
+      <CmkLoading />
     </div>
 
     <div v-else class="space-y-[16px]">
@@ -51,32 +35,15 @@
               <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.viewType')
               }}</span>
-              <div class="relative">
-                <select v-model="form.view_type" class="select w-[160px]">
-                  <option value="icon">{{ t('boardSettings.viewTypeIcon') }}</option>
-                  <option value="text">{{ t('boardSettings.viewTypeText') }}</option>
-                  <option value="gadget">{{ t('boardSettings.viewTypeGadget') }}</option>
-                </select>
-                <div
-                  class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
-                  style="padding-right: 8px"
-                >
-                  <svg
-                    style="width: 12px; height: 12px"
-                    class="text-zinc-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                    />
-                  </svg>
-                </div>
-              </div>
+              <AppSelect
+                v-model="form.view_type"
+                class="w-[160px]"
+                :options="[
+                  { value: 'icon', label: t('boardSettings.viewTypeIcon') },
+                  { value: 'text', label: t('boardSettings.viewTypeText') },
+                  { value: 'gadget', label: t('boardSettings.viewTypeGadget') },
+                ]"
+              />
             </label>
 
             <label class="block">
@@ -96,68 +63,39 @@
               <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.lineStyle')
               }}</span>
-              <div class="relative">
-                <select v-model="form.line_style" class="select w-[176px]">
-                  <option :value="null">{{ t('boardSettings.lineDefault') }}</option>
-                  <option value="plain">{{ t('boardSettings.lineSimple') }}</option>
-                  <option value="arrow_end">{{ t('boardSettings.lineArrowRight') }}</option>
-                  <option value="arrow_start">{{ t('boardSettings.lineArrowLeft') }}</option>
-                  <option value="arrow_both">{{ t('boardSettings.lineDoubleArrow') }}</option>
-                  <option value="dashed">{{ t('boardSettings.lineDashed') }}</option>
-                  <option value="weathermap">{{ t('boardSettings.lineWeathermap') }}</option>
-                </select>
-                <div
-                  class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
-                  style="padding-right: 8px"
-                >
-                  <svg
-                    style="width: 12px; height: 12px"
-                    class="text-zinc-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                    />
-                  </svg>
-                </div>
-              </div>
+              <AppSelect
+                :model-value="form.line_style ?? ''"
+                class="w-[176px]"
+                :options="[
+                  { value: '', label: t('boardSettings.lineDefault') },
+                  { value: 'plain', label: t('boardSettings.lineSimple') },
+                  { value: 'arrow_end', label: t('boardSettings.lineArrowRight') },
+                  { value: 'arrow_start', label: t('boardSettings.lineArrowLeft') },
+                  { value: 'arrow_both', label: t('boardSettings.lineDoubleArrow') },
+                  { value: 'dashed', label: t('boardSettings.lineDashed') },
+                  { value: 'weathermap', label: t('boardSettings.lineWeathermap') },
+                ]"
+                @update:model-value="
+                  (v) => {
+                    form.line_style = (v as LineStyle) || null;
+                  }
+                "
+              />
             </label>
 
             <label class="block">
               <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.target')
               }}</span>
-              <div class="relative">
-                <select v-model="form.url_target" class="select w-[160px]">
-                  <option value="_blank">{{ t('boardSettings.targetNewTab') }}</option>
-                  <option value="_self">{{ t('boardSettings.targetSameTab') }}</option>
-                  <option value="_top">{{ t('boardSettings.targetTopFrame') }}</option>
-                </select>
-                <div
-                  class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
-                  style="padding-right: 8px"
-                >
-                  <svg
-                    style="width: 12px; height: 12px"
-                    class="text-zinc-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                    />
-                  </svg>
-                </div>
-              </div>
+              <AppSelect
+                v-model="form.url_target"
+                class="w-[160px]"
+                :options="[
+                  { value: '_blank', label: t('boardSettings.targetNewTab') },
+                  { value: '_self', label: t('boardSettings.targetSameTab') },
+                  { value: '_top', label: t('boardSettings.targetTopFrame') },
+                ]"
+              />
             </label>
           </div>
         </div>
@@ -174,15 +112,7 @@
 
         <div class="space-y-[12px]">
           <!-- Show label -->
-          <label class="flex items-center gap-[8px] cursor-pointer">
-            <input
-              v-model="form.label_show"
-              type="checkbox"
-              class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
-              style="width: 14px; height: 14px"
-            />
-            <span class="text-sm text-[var(--text)]">{{ t('boardSettings.showLabel') }}</span>
-          </label>
+          <CmkCheckbox v-model="form.label_show" :label="t('boardSettings.showLabel')" />
 
           <!-- Appearance + Position (grayed out when label hidden) -->
           <div
@@ -204,19 +134,11 @@
                   t('boardSettings.color')
                 }}</span>
                 <div class="flex gap-[8px]">
-                  <input
-                    v-model="form.label_color"
-                    type="color"
-                    class="rounded cursor-pointer bg-[var(--bg)] border border-[var(--border)]"
-                    style="width: 32px; height: 28px"
+                  <CmkColorPicker
+                    :data="form.label_color"
+                    @update:data="form.label_color = $event"
                   />
-                  <input
-                    v-model="form.label_color"
-                    type="text"
-                    placeholder="#ffffff"
-                    class="w-[112px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                    style="padding: 5px 10px"
-                  />
+                  <CmkInput v-model="form.label_color" placeholder="#ffffff" field-size="SMALL" />
                 </div>
               </label>
 
@@ -225,22 +147,16 @@
                   t('boardSettings.background')
                 }}</span>
                 <div class="flex gap-[8px]">
-                  <input
-                    type="color"
-                    :value="
+                  <CmkColorPicker
+                    :data="
                       form.label_background === 'transparent' ? '#000000' : form.label_background
                     "
-                    :disabled="form.label_background === 'transparent'"
-                    class="rounded cursor-pointer bg-[var(--bg)] border border-[var(--border)] disabled:opacity-40"
-                    style="width: 32px; height: 28px"
-                    @input="form.label_background = ($event.target as HTMLInputElement).value"
+                    @update:data="form.label_background = $event"
                   />
-                  <input
+                  <CmkInput
                     v-model="form.label_background"
-                    type="text"
                     placeholder="transparent"
-                    class="w-[128px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                    style="padding: 5px 10px"
+                    field-size="SMALL"
                   />
                 </div>
               </label>
@@ -279,33 +195,15 @@
             <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
               t('board.connection')
             }}</span>
-            <div class="relative">
-              <select v-model="form.default_backend_id" class="select w-[192px]">
-                <option v-for="b in connectionsStore.backends" :key="b.id" :value="b.id">
-                  {{ b.label || b.id }}
-                </option>
-                <option v-if="connectionsStore.backends.length === 0" value="live_1">live_1</option>
-              </select>
-              <div
-                class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
-                style="padding-right: 8px"
-              >
-                <svg
-                  style="width: 12px; height: 12px"
-                  class="text-zinc-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                  />
-                </svg>
-              </div>
-            </div>
+            <AppSelect
+              v-model="form.default_backend_id"
+              class="w-[192px]"
+              :options="
+                connectionsStore.backends.length
+                  ? connectionsStore.backends.map((b) => ({ value: b.id, label: b.label || b.id }))
+                  : [{ value: 'live_1', label: 'live_1' }]
+              "
+            />
           </label>
 
           <!-- Default board type -->
@@ -313,33 +211,16 @@
             <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
               t('board.boardType')
             }}</span>
-            <div class="relative">
-              <select v-model="form.default_map_type" class="select w-[176px]">
-                <option value="static">{{ t('board.boardTypeStatic') }}</option>
-                <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
-                <option value="flow">{{ t('board.boardTypeFlowBoard') }}</option>
-                <option value="radar">{{ t('board.boardTypeRadar') }}</option>
-              </select>
-              <div
-                class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
-                style="padding-right: 8px"
-              >
-                <svg
-                  style="width: 12px; height: 12px"
-                  class="text-zinc-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                  />
-                </svg>
-              </div>
-            </div>
+            <AppSelect
+              v-model="form.default_map_type"
+              class="w-[176px]"
+              :options="[
+                { value: 'static', label: t('board.boardTypeStatic') },
+                { value: 'worldmap', label: t('board.boardTypeGeoBoard') },
+                { value: 'flow', label: t('board.boardTypeFlowBoard') },
+                { value: 'radar', label: t('board.boardTypeRadar') },
+              ]"
+            />
           </label>
         </div>
       </section>
@@ -362,12 +243,10 @@
             <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
               t('settings.hoverTemplate')
             }}</span>
-            <input
+            <CmkInput
               v-model="form.hover_template"
-              type="text"
               :placeholder="t('board.templatePlaceholder')"
-              class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-              style="padding: 5px 10px"
+              field-size="FILL"
             />
           </label>
 
@@ -376,12 +255,10 @@
             <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
               t('settings.contextTemplate')
             }}</span>
-            <input
+            <CmkInput
               v-model="form.context_template"
-              type="text"
               :placeholder="t('board.templatePlaceholder')"
-              class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-              style="padding: 5px 10px"
+              field-size="FILL"
             />
           </label>
         </div>
@@ -403,12 +280,10 @@
           <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
             t('admin.checkmkUrl')
           }}</span>
-          <input
+          <CmkInput
             v-model="form.checkmk_url"
-            type="text"
             placeholder="https://checkmk.example.com/mysite"
-            class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-            style="padding: 5px 10px"
+            field-size="FILL"
           />
           <p class="text-xs text-zinc-600" style="margin-top: 6px">
             {{ t('settings.checkmkUrlHint') }}
@@ -438,34 +313,29 @@
             {{ t('common.saved') }}
           </span>
         </Transition>
-        <button
-          class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-          style="padding: 5px 10px"
-          @click="resetForm"
-        >
-          {{ t('common.cancel') }}
-        </button>
-        <button
-          :disabled="saving"
-          class="flex items-center gap-[6px] bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all duration-150 shadow-lg shadow-[var(--color-corporate-green-100)]/20"
-          style="padding: 5px 14px"
-          @click="handleSave"
-        >
+        <CmkButton variant="secondary" @click="resetForm">{{ t('common.cancel') }}</CmkButton>
+        <CmkButton variant="primary" :disabled="saving" @click="handleSave">
           {{ saving ? t('common.saving') : t('common.save') }}
-        </button>
+        </CmkButton>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkColorPicker from '@cmk/components/CmkColorPicker.vue';
+import CmkLoading from '@cmk/components/CmkLoading.vue';
+import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
+import CmkInput from '@cmk/components/user-input/CmkInput.vue';
+import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import AppSelect from '@/components/AppSelect.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';
-import type { GlobalSettings } from '@/types/api';
+import type { GlobalSettings, LineStyle } from '@/types/api';
 
 const { t } = useI18n();
 const store = useSettingsStore();
@@ -521,21 +391,5 @@ onUnmounted(() => {
 onMounted(async () => {
   await Promise.all([store.load(), connectionsStore.fetchBackends()]);
   Object.assign(form, store.settings);
-  // Force the connection <select> to pick up the value after options are rendered
-  await nextTick();
-  const saved = form.default_backend_id;
-  form.default_backend_id = '';
-  await nextTick();
-  form.default_backend_id = saved;
 });
 </script>
-
-<style scoped>
-@reference "tailwindcss";
-
-.select {
-  @apply appearance-none bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all;
-
-  padding: 5px 28px 5px 10px;
-}
-</style>

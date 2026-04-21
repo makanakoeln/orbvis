@@ -16,6 +16,9 @@
 }
 
 :root {
+  /* Restore Tailwind v4's --spacing after CMK variables.css overrides it with 10px */
+  --spacing: 0.25rem;
+
   /* CMK button token defaults (active before Vue sets body[data-theme]) */
   --default-button-primary-color: rgb(21 209 160);
   --button-primary-border-color: rgb(21 209 160);

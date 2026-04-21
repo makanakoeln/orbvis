@@ -55,42 +55,17 @@
             <!-- Alias -->
             <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('board.displayName') }}</label>
-              <input
-                v-model="form.alias"
-                class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-              />
+              <CmkInput v-model="form.alias" field-size="FILL" />
             </div>
 
             <!-- Connection + Icon size -->
             <div class="grid grid-cols-[1fr_7rem] gap-[8px]">
               <div class="space-y-[4px]">
                 <label class="text-xs font-medium text-zinc-400">{{ t('board.connection') }}</label>
-                <div class="relative">
-                  <select
-                    v-model="form.backend_id"
-                    class="w-full appearance-none px-[10px] py-[5px] pr-[28px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                  >
-                    <option v-for="b in backends" :key="b.id" :value="b.id">
-                      {{ b.label || b.id }}
-                    </option>
-                  </select>
-                  <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                    <svg
-                      style="width: 12px; height: 12px"
-                      class="text-zinc-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                      />
-                    </svg>
-                  </div>
-                </div>
+                <AppSelect
+                  v-model="form.backend_id"
+                  :options="backends.map((b) => ({ value: b.id, label: b.label || b.id }))"
+                />
               </div>
               <div class="space-y-[4px]">
                 <label class="text-xs font-medium text-zinc-400">{{ t('board.iconSize') }}</label>
@@ -121,33 +96,15 @@
             <!-- Board type -->
             <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('board.boardType') }}</label>
-              <div class="relative">
-                <select
-                  v-model="form.map_type"
-                  class="w-full appearance-none px-[10px] py-[5px] pr-[28px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                >
-                  <option value="static">{{ t('board.boardTypeStatic') }}</option>
-                  <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
-                  <option value="flow">{{ t('board.boardTypeFlowBoard') }}</option>
-                  <option value="radar">{{ t('board.boardTypeRadar') }}</option>
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                  <svg
-                    style="width: 12px; height: 12px"
-                    class="text-zinc-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                    />
-                  </svg>
-                </div>
-              </div>
+              <AppSelect
+                v-model="form.map_type"
+                :options="[
+                  { value: 'static', label: t('board.boardTypeStatic') },
+                  { value: 'worldmap', label: t('board.boardTypeGeoBoard') },
+                  { value: 'flow', label: t('board.boardTypeFlowBoard') },
+                  { value: 'radar', label: t('board.boardTypeRadar') },
+                ]"
+              />
             </div>
 
             <!-- Worldmap settings -->
@@ -180,10 +137,10 @@
               </div>
               <div class="space-y-[4px]">
                 <label class="text-xs font-medium text-zinc-400">{{ t('board.tileUrl') }}</label>
-                <input
+                <CmkInput
                   v-model="form.worldmap_tile_url"
                   :placeholder="t('board.tileUrlPlaceholder')"
-                  class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-500 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                  field-size="FILL"
                 />
               </div>
               <div class="space-y-[4px]">
@@ -209,33 +166,15 @@
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('board.filterType')
                   }}</label>
-                  <div class="relative">
-                    <select
-                      v-model="form.radar_filter"
-                      class="w-full appearance-none px-[10px] py-[5px] pr-[28px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                    >
-                      <option value="hostgroup">{{ t('board.filterTypeHostgroup') }}</option>
-                      <option value="servicegroup">{{ t('board.filterTypeServicegroup') }}</option>
-                      <option value="all_hosts">{{ t('board.filterTypeAllHosts') }}</option>
-                      <option value="all_services">{{ t('board.filterTypeAllServices') }}</option>
-                    </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                      <svg
-                        style="width: 12px; height: 12px"
-                        class="text-zinc-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                        />
-                      </svg>
-                    </div>
-                  </div>
+                  <AppSelect
+                    v-model="form.radar_filter"
+                    :options="[
+                      { value: 'hostgroup', label: t('board.filterTypeHostgroup') },
+                      { value: 'servicegroup', label: t('board.filterTypeServicegroup') },
+                      { value: 'all_hosts', label: t('board.filterTypeAllHosts') },
+                      { value: 'all_services', label: t('board.filterTypeAllServices') },
+                    ]"
+                  />
                 </div>
                 <div
                   v-if="form.radar_filter === 'hostgroup' || form.radar_filter === 'servicegroup'"
@@ -244,10 +183,10 @@
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('board.groupName')
                   }}</label>
-                  <input
+                  <CmkInput
                     v-model="form.radar_filter_value"
                     placeholder="e.g. linux-servers"
-                    class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    field-size="FILL"
                   />
                 </div>
               </div>
@@ -261,18 +200,18 @@
               <label class="text-xs text-zinc-400 block mt-[8px]">{{
                 t('board.hoverTemplate')
               }}</label>
-              <input
+              <CmkInput
                 v-model="form.hover_template"
                 :placeholder="t('board.templatePlaceholder')"
-                class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                field-size="FILL"
               />
               <label class="text-xs text-zinc-400 block mt-[6px]">{{
                 t('board.contextTemplate')
               }}</label>
-              <input
+              <CmkInput
                 v-model="form.context_template"
                 :placeholder="t('board.templatePlaceholder')"
-                class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                field-size="FILL"
               />
               <p class="text-xs text-zinc-600">{{ t('board.templateHint') }}</p>
             </div>
@@ -288,19 +227,7 @@
                 </div>
                 <div class="text-xs text-zinc-500 mt-[2px]">{{ t('board.showInListsHint') }}</div>
               </div>
-              <button
-                type="button"
-                class="relative inline-flex shrink-0 cursor-pointer rounded-full transition-colors duration-200"
-                style="height: 16px; width: 32px"
-                :class="form.show_in_lists ? 'bg-[var(--color-corporate-green-50)]' : 'bg-zinc-700'"
-                @click="form.show_in_lists = !form.show_in_lists"
-              >
-                <span
-                  class="absolute rounded-full bg-white shadow transition-transform duration-200"
-                  style="left: 2px; top: 2px; height: 12px; width: 12px"
-                  :class="form.show_in_lists ? 'translate-x-[16px]' : 'translate-x-0'"
-                />
-              </button>
+              <CmkSwitch v-model:data="form.show_in_lists" />
             </div>
 
             <!-- Background image (static only) -->
@@ -313,10 +240,10 @@
                 t('board.backgroundImage')
               }}</label>
               <div class="flex gap-[6px] mt-[4px]">
-                <input
+                <CmkInput
                   v-model="form.background_image"
                   placeholder="filename.png"
-                  class="flex-1 px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                  field-size="FILL"
                 />
                 <label
                   class="flex items-center bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all shrink-0"
@@ -359,32 +286,8 @@
 
           <!-- Permissions -->
           <div v-else-if="activeTab === 'permissions'">
-            <div
-              v-if="permLoading"
-              class="flex items-center justify-center text-zinc-500 text-sm gap-[6px]"
-              style="padding: 24px 0"
-            >
-              <svg
-                class="animate-spin"
-                style="width: 14px; height: 14px"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                />
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-              {{ t('common.loading') }}
+            <div v-if="permLoading" class="flex items-center justify-center py-8">
+              <CmkLoading />
             </div>
             <div v-else>
               <table class="w-full text-sm">
@@ -471,21 +374,12 @@
           class="flex items-center justify-end shrink-0 border-t border-[var(--border)]"
           style="gap: 8px; padding: 10px 16px"
         >
-          <button
-            class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-            style="padding: 5px 10px"
-            @click="$emit('close')"
-          >
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            :disabled="saving"
-            class="bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-            style="padding: 5px 12px"
-            @click="save"
-          >
+          <CmkButton variant="secondary" @click="$emit('close')">{{
+            t('common.cancel')
+          }}</CmkButton>
+          <CmkButton variant="primary" :disabled="saving" @click="save">
             {{ saving ? t('common.saving') : t('common.save') }}
-          </button>
+          </CmkButton>
         </div>
       </div>
     </div>
@@ -493,10 +387,15 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, reactive, ref } from 'vue';
+import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkLoading from '@cmk/components/CmkLoading.vue';
+import CmkSwitch from '@cmk/components/CmkSwitch.vue';
+import CmkInput from '@cmk/components/user-input/CmkInput.vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { boardsApi, connectionsApi, rolesApi } from '@/api/client';
+import AppSelect from '@/components/AppSelect.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { useAuthStore } from '@/stores/auth';
 import type {
@@ -517,10 +416,13 @@ const emit = defineEmits<{ close: []; updated: [] }>();
 const { t } = useI18n();
 const auth = useAuthStore();
 
-const tabs: { id: 'general' | 'permissions'; label: string }[] = [
-  { id: 'general', label: t('admin.settings') },
-  { id: 'permissions', label: t('admin.boardPermissions') },
-];
+const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => {
+  const isCmk = auth.ssoActive || auth.isCheckmkDeployment;
+  return [
+    { id: 'general', label: t('admin.settings') },
+    ...(!isCmk ? [{ id: 'permissions' as const, label: t('admin.boardPermissions') }] : []),
+  ];
+});
 const activeTab = ref<'general' | 'permissions'>('general');
 
 // ── General ────────────────────────────────────────────────────────────────
@@ -727,11 +629,5 @@ async function savePermissions() {
 onMounted(async () => {
   const [bs] = await Promise.all([connectionsApi.list(auth.accessToken!), loadPermissions()]);
   backends.value = bs;
-  // Re-apply backend_id after options are rendered (browser may reset select with no options)
-  await nextTick();
-  const saved = form.value.backend_id;
-  form.value.backend_id = '';
-  await nextTick();
-  form.value.backend_id = saved;
 });
 </script>

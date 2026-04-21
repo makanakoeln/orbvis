@@ -10,11 +10,9 @@
       {{ noneLabel }}
     </label>
     <template v-if="!isNone">
-      <input
-        type="color"
-        :value="modelValue ?? defaultColor"
-        class="w-9 h-9 rounded-lg border-0 bg-transparent cursor-pointer p-0.5 shrink-0"
-        @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+      <CmkColorPicker
+        :data="modelValue ?? defaultColor"
+        @update:data="emit('update:modelValue', $event)"
       />
       <input
         :value="modelValue ?? ''"
@@ -27,6 +25,7 @@
 </template>
 
 <script setup lang="ts">
+import CmkColorPicker from '@cmk/components/CmkColorPicker.vue';
 import { computed } from 'vue';
 
 const props = defineProps<{

@@ -33,20 +33,10 @@
         </div>
 
         <div class="flex justify-end" style="gap: 6px; margin-top: 12px">
-          <button
-            class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-            style="padding: 5px 10px"
-            @click="$emit('cancel')"
-          >
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            class="rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-500 text-white transition-all"
-            style="padding: 5px 10px"
-            @click="$emit('confirm')"
-          >
-            {{ confirmLabel }}
-          </button>
+          <CmkButton variant="secondary" @click="$emit('cancel')">{{
+            t('common.cancel')
+          }}</CmkButton>
+          <CmkButton variant="danger" @click="$emit('confirm')">{{ confirmLabel }}</CmkButton>
         </div>
       </div>
     </div>
@@ -54,6 +44,7 @@
 </template>
 
 <script setup lang="ts">
+import CmkButton from '@cmk/components/CmkButton.vue';
 import { useI18n } from 'vue-i18n';
 
 defineProps<{
