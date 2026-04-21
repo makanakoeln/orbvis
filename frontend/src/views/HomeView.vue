@@ -1,9 +1,9 @@
 <template>
   <div class="flex-1 overflow-y-auto bg-[var(--bg)]">
-    <main class="max-w-5xl mx-auto py-10 px-6 pb-24">
-      <div class="mb-8 flex items-center justify-between gap-4">
+    <main class="max-w-5xl mx-auto py-6 px-6 pb-10">
+      <div class="mb-5 flex items-center justify-between gap-4">
         <div>
-          <h2 class="text-2xl font-bold text-[var(--text)] tracking-tight">
+          <h2 class="text-lg font-bold text-[var(--text)] tracking-tight">
             {{ t('home.title') }}
           </h2>
         </div>
@@ -106,7 +106,7 @@
         class="flex flex-col items-center justify-center py-24 text-center"
       >
         <div
-          class="w-14 h-14 rounded-2xl bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] flex items-center justify-center mb-5"
+          class="w-14 h-14 rounded-xl bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] flex items-center justify-center mb-5"
         >
           <svg
             class="w-7 h-7 text-zinc-600"
@@ -146,12 +146,12 @@
         <div
           v-for="map in filteredBoards"
           :key="map.name"
-          class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-[var(--color-corporate-green-50)]/40 rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-[var(--color-corporate-green-100)]/10"
+          class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-[var(--color-corporate-green-50)]/40 rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[var(--color-corporate-green-100)]/10"
         >
           <router-link :to="`/boards/${map.name}`" class="block">
             <!-- Thumbnail -->
             <div
-              class="relative w-full h-32 overflow-hidden bg-[var(--default-form-element-bg-color)]"
+              class="relative w-full h-28 overflow-hidden bg-[var(--default-form-element-bg-color)]"
             >
               <img
                 v-if="map.background_image && !map.name.startsWith('demo-')"
@@ -839,7 +839,7 @@
     <div v-if="confirmDelete" class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="confirmDelete = null" />
       <div
-        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-80"
+        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-80"
       >
         <h3 class="text-base font-bold text-[var(--text)] mb-1">
           {{ t('admin.deleteBoardTitle') }}
@@ -870,7 +870,7 @@
     <div v-if="confirmClone" class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="confirmClone = null" />
       <div
-        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-80 space-y-3"
+        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-80 space-y-3"
       >
         <div class="flex items-center justify-between">
           <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.cloneBoard') }}</h3>
@@ -967,7 +967,7 @@
     <div v-if="importConflict" class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="importConflict = null" />
       <div
-        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-96"
+        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-96"
       >
         <h3 class="text-base font-bold text-[var(--text)] mb-1">{{ t('admin.importBoard') }}</h3>
         <p class="text-sm text-zinc-400 mb-5">

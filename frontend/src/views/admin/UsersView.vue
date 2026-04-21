@@ -1,8 +1,10 @@
 <template>
   <div class="max-w-4xl">
-    <div class="flex justify-between items-center mb-8">
+    <div class="flex justify-between items-center mb-5">
       <div>
-        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('admin.users') }}</h2>
+        <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
+          {{ t('admin.users') }}
+        </h2>
         <p class="text-sm text-zinc-500 mt-1">{{ t('admin.usersSubtitle') }}</p>
       </div>
       <button
@@ -158,7 +160,7 @@
       <div v-if="showCreate" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showCreate = false" />
         <div
-          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-96"
+          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-96"
         >
           <div class="flex items-center justify-between mb-5">
             <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.createUser') }}</h3>

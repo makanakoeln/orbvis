@@ -232,6 +232,10 @@ input:-webkit-autofill:focus {
   --tw-ring-offset-color: #fafafa;
 }
 
+html {
+  font-size: 13px;
+}
+
 body {
   background-color: var(--bg);
   color: var(--text);

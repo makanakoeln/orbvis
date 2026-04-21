@@ -1,8 +1,8 @@
 <template>
   <div class="max-w-5xl">
-    <div class="flex justify-between items-center mb-8">
+    <div class="flex justify-between items-center mb-5">
       <div>
-        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">
+        <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
           {{ t('admin.connectionsTitle') }}
         </h2>
         <p class="text-sm text-zinc-500 mt-1">{{ t('admin.connectionsSubtitle') }}</p>
@@ -223,7 +223,7 @@
       <div v-if="dialog.open" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="dialog.open = false" />
         <div
-          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-[30rem] max-h-[90vh] overflow-y-auto"
+          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-[30rem] max-h-[90vh] overflow-y-auto"
         >
           <div class="flex items-center justify-between mb-5">
             <h3 class="text-base font-bold text-[var(--text)]">

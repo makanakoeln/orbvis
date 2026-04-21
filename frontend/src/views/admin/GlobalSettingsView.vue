@@ -1,7 +1,9 @@
 <template>
   <div class="max-w-2xl">
-    <div class="mb-8">
-      <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('settings.title') }}</h2>
+    <div class="mb-5">
+      <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
+        {{ t('settings.title') }}
+      </h2>
       <p class="text-sm text-zinc-500 mt-1">{{ t('settings.subtitle') }}</p>
     </div>
 

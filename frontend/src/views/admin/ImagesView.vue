@@ -1,8 +1,10 @@
 <template>
   <div>
-    <div class="flex justify-between items-center mb-8">
+    <div class="flex justify-between items-center mb-5">
       <div>
-        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">{{ t('admin.icons') }}</h2>
+        <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
+          {{ t('admin.icons') }}
+        </h2>
         <p class="text-sm text-zinc-500 mt-1">{{ t('admin.iconsSubtitle') }}</p>
       </div>
       <button

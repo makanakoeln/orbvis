@@ -1,8 +1,8 @@
 <template>
   <div class="max-w-3xl">
-    <div class="flex justify-between items-center mb-8">
+    <div class="flex justify-between items-center mb-5">
       <div>
-        <h2 class="text-xl font-bold text-[var(--text)] tracking-tight">
+        <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
           {{ t('admin.rolesAndPermissions') }}
         </h2>
         <p class="text-sm text-zinc-500 mt-1">{{ t('admin.rolesSubtitle') }}</p>
@@ -119,7 +119,7 @@
       <div v-if="showCreate" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showCreate = false" />
         <div
-          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-80"
+          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-80"
         >
           <div class="flex items-center justify-between mb-5">
             <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.createRole') }}</h3>
@@ -173,7 +173,7 @@
       <div v-if="editRole" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="cancelEdit" />
         <div
-          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl w-[28rem] max-h-[90vh] flex flex-col overflow-hidden"
+          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl w-[28rem] max-h-[90vh] flex flex-col overflow-hidden"
         >
           <div
             class="flex items-center justify-between px-6 pt-5 pb-4 shrink-0 border-b border-[var(--border)]"
