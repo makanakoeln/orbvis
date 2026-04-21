@@ -7,18 +7,19 @@
       >
         <!-- Header -->
         <div
-          class="flex items-start justify-between px-6 pt-5 pb-4 shrink-0 border-b border-[var(--border)]"
+          class="flex items-start justify-between shrink-0 border-b border-[var(--border)]"
+          style="padding: 12px 16px"
         >
           <div>
             <h3 class="text-base font-bold text-[var(--text)]">{{ t('board.settingsTitle') }}</h3>
-            <p class="text-xs text-zinc-500 mt-0.5 font-mono">{{ board.name }}</p>
+            <p class="text-xs text-zinc-500 font-mono mt-[2px]">{{ board.name }}</p>
           </div>
           <button
-            class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+            class="p-[5px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
             @click="$emit('close')"
           >
             <svg
-              class="w-4 h-4"
+              style="width: 14px; height: 14px"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -30,11 +31,12 @@
         </div>
 
         <!-- Tabs -->
-        <div class="flex gap-1 px-6 pt-3 shrink-0">
+        <div class="flex shrink-0" style="gap: 3px; padding: 8px 16px 0">
           <button
             v-for="tab in tabs"
             :key="tab.id"
-            class="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+            class="rounded-md text-sm font-medium transition-all"
+            style="padding: 3px 8px"
             :class="
               activeTab === tab.id
                 ? 'bg-[var(--color-corporate-green-50)]/20 text-[var(--color-corporate-green-40)]'
@@ -47,26 +49,26 @@
         </div>
 
         <!-- Tab content -->
-        <div class="overflow-y-auto flex-1 px-6 py-4">
+        <div class="overflow-y-auto flex-1" style="padding: 10px 16px">
           <!-- General -->
-          <div v-if="activeTab === 'general'" class="space-y-4">
+          <div v-if="activeTab === 'general'" class="space-y-[10px]">
             <!-- Alias -->
-            <div class="space-y-1.5">
+            <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('board.displayName') }}</label>
               <input
                 v-model="form.alias"
-                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
             </div>
 
             <!-- Connection + Icon size -->
-            <div class="grid grid-cols-[1fr_7rem] gap-3">
-              <div class="space-y-1.5">
+            <div class="grid grid-cols-[1fr_7rem] gap-[8px]">
+              <div class="space-y-[4px]">
                 <label class="text-xs font-medium text-zinc-400">{{ t('board.connection') }}</label>
                 <div class="relative">
                   <select
                     v-model="form.backend_id"
-                    class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    class="w-full appearance-none px-[10px] py-[5px] pr-[28px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                   >
                     <option v-for="b in backends" :key="b.id" :value="b.id">
                       {{ b.label || b.id }}
@@ -74,7 +76,8 @@
                   </select>
                   <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                     <svg
-                      class="w-4 h-4 text-zinc-400"
+                      style="width: 12px; height: 12px"
+                      class="text-zinc-400"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -89,9 +92,9 @@
                   </div>
                 </div>
               </div>
-              <div class="space-y-1.5">
+              <div class="space-y-[4px]">
                 <label class="text-xs font-medium text-zinc-400">{{ t('board.iconSize') }}</label>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-[5px]">
                   <NumberInput v-model="form.icon_size" min="12" max="96" class="w-full" />
                   <span class="text-xs text-zinc-500 shrink-0">px</span>
                 </div>
@@ -99,24 +102,29 @@
             </div>
 
             <!-- Rotation interval -->
-            <div class="space-y-1.5">
+            <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{
                 t('board.rotationInterval')
               }}</label>
-              <div class="flex items-center gap-2">
-                <NumberInput v-model="form.rotation_interval" min="0" max="3600" class="w-32" />
+              <div class="flex items-center gap-[6px]">
+                <NumberInput
+                  v-model="form.rotation_interval"
+                  min="0"
+                  max="3600"
+                  class="w-[100px]"
+                />
                 <span class="text-xs text-zinc-500 shrink-0">{{ t('board.rotationSuffix') }}</span>
               </div>
               <p class="text-xs text-zinc-600">{{ t('board.rotationIntervalHint') }}</p>
             </div>
 
             <!-- Board type -->
-            <div class="space-y-1.5">
+            <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('board.boardType') }}</label>
               <div class="relative">
                 <select
                   v-model="form.map_type"
-                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                  class="w-full appearance-none px-[10px] py-[5px] pr-[28px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                 >
                   <option value="static">{{ t('board.boardTypeStatic') }}</option>
                   <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
@@ -143,8 +151,8 @@
 
             <!-- Worldmap settings -->
             <template v-if="form.map_type === 'worldmap'">
-              <div class="grid grid-cols-3 gap-3">
-                <div class="space-y-1.5">
+              <div class="grid grid-cols-3 gap-[8px]">
+                <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{ t('board.latitude') }}</label>
                   <NumberInput
                     v-model="form.worldmap_lat"
@@ -153,7 +161,7 @@
                     class="w-full"
                   />
                 </div>
-                <div class="space-y-1.5">
+                <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('board.longitude')
                   }}</label>
@@ -164,20 +172,20 @@
                     class="w-full"
                   />
                 </div>
-                <div class="space-y-1.5">
+                <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{ t('board.zoom') }}</label>
                   <NumberInput v-model="form.worldmap_zoom" min="1" max="18" class="w-full" />
                 </div>
               </div>
-              <div class="space-y-1.5">
+              <div class="space-y-[4px]">
                 <label class="text-xs font-medium text-zinc-400">{{ t('board.tileUrl') }}</label>
                 <input
                   v-model="form.worldmap_tile_url"
                   :placeholder="t('board.tileUrlPlaceholder')"
-                  class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-500 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                  class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-500 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                 />
               </div>
-              <div class="space-y-1.5">
+              <div class="space-y-[4px]">
                 <label class="text-xs font-medium text-zinc-400">{{
                   t('board.tileSaturate')
                 }}</label>
@@ -195,15 +203,15 @@
 
             <!-- Radar settings -->
             <template v-if="form.map_type === 'radar'">
-              <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1.5">
+              <div class="grid grid-cols-2 gap-[8px]">
+                <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('board.filterType')
                   }}</label>
                   <div class="relative">
                     <select
                       v-model="form.radar_filter"
-                      class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                      class="w-full appearance-none px-[10px] py-[5px] pr-[28px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                     >
                       <option value="hostgroup">{{ t('board.filterTypeHostgroup') }}</option>
                       <option value="servicegroup">{{ t('board.filterTypeServicegroup') }}</option>
@@ -212,7 +220,8 @@
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                       <svg
-                        class="w-4 h-4 text-zinc-400"
+                        style="width: 12px; height: 12px"
+                        class="text-zinc-400"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -229,7 +238,7 @@
                 </div>
                 <div
                   v-if="form.radar_filter === 'hostgroup' || form.radar_filter === 'servicegroup'"
-                  class="space-y-1.5"
+                  class="space-y-[4px]"
                 >
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('board.groupName')
@@ -237,53 +246,58 @@
                   <input
                     v-model="form.radar_filter_value"
                     placeholder="e.g. linux-servers"
-                    class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                   />
                 </div>
               </div>
             </template>
 
             <!-- Templates -->
-            <div class="space-y-1.5 pt-1 border-t border-[var(--border)]">
-              <label class="text-xs font-medium text-zinc-400 block mt-2">{{
+            <div class="space-y-[4px] border-t border-[var(--border)]" style="padding-top: 8px">
+              <label class="text-xs font-medium text-zinc-400 block mt-[6px]">{{
                 t('boardSettings.templates')
               }}</label>
-              <label class="text-xs text-zinc-400 block mt-3">{{ t('board.hoverTemplate') }}</label>
+              <label class="text-xs text-zinc-400 block mt-[8px]">{{
+                t('board.hoverTemplate')
+              }}</label>
               <input
                 v-model="form.hover_template"
                 :placeholder="t('board.templatePlaceholder')"
-                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
-              <label class="text-xs text-zinc-400 block mt-2">{{
+              <label class="text-xs text-zinc-400 block mt-[6px]">{{
                 t('board.contextTemplate')
               }}</label>
               <input
                 v-model="form.context_template"
                 :placeholder="t('board.templatePlaceholder')"
-                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
               />
               <p class="text-xs text-zinc-600">{{ t('board.templateHint') }}</p>
             </div>
 
             <!-- Show in lists toggle -->
             <div
-              class="flex items-center justify-between py-1 border-t border-[var(--border)] mt-1 pt-3"
+              class="flex items-center justify-between border-t border-[var(--border)]"
+              style="padding: 8px 0 4px"
             >
               <div>
                 <div class="text-sm font-medium text-[var(--text)]">
                   {{ t('board.showInLists') }}
                 </div>
-                <div class="text-xs text-zinc-500 mt-0.5">{{ t('board.showInListsHint') }}</div>
+                <div class="text-xs text-zinc-500 mt-[2px]">{{ t('board.showInListsHint') }}</div>
               </div>
               <button
                 type="button"
-                class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-200"
+                class="relative inline-flex shrink-0 cursor-pointer rounded-full transition-colors duration-200"
+                style="height: 16px; width: 32px"
                 :class="form.show_in_lists ? 'bg-[var(--color-corporate-green-50)]' : 'bg-zinc-700'"
                 @click="form.show_in_lists = !form.show_in_lists"
               >
                 <span
-                  class="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
-                  :class="form.show_in_lists ? 'translate-x-4' : 'translate-x-0'"
+                  class="absolute rounded-full bg-white shadow transition-transform duration-200"
+                  style="left: 2px; top: 2px; height: 12px; width: 12px"
+                  :class="form.show_in_lists ? 'translate-x-[16px]' : 'translate-x-0'"
                 />
               </button>
             </div>
@@ -291,19 +305,21 @@
             <!-- Background image (static only) -->
             <div
               v-if="form.map_type === 'static'"
-              class="space-y-1.5 pt-1 border-t border-[var(--border)]"
+              class="space-y-[4px] border-t border-[var(--border)]"
+              style="padding-top: 8px"
             >
-              <label class="text-xs font-medium text-zinc-400 block mt-2">{{
+              <label class="text-xs font-medium text-zinc-400 block mt-[6px]">{{
                 t('board.backgroundImage')
               }}</label>
-              <div class="flex gap-2 mt-1.5">
+              <div class="flex gap-[6px] mt-[4px]">
                 <input
                   v-model="form.background_image"
                   placeholder="filename.png"
-                  class="flex-1 px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                  class="flex-1 px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                 />
                 <label
-                  class="flex items-center px-3 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all shrink-0"
+                  class="flex items-center bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all shrink-0"
+                  style="padding: 5px 10px"
                 >
                   {{ t('common.upload') }}
                   <input type="file" accept="image/*" class="hidden" @change="uploadBackground" />
@@ -311,12 +327,13 @@
                 <button
                   v-if="form.background_image"
                   type="button"
-                  class="px-3 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-red-500 rounded-lg text-sm text-zinc-500 hover:text-red-400 transition-all shrink-0"
+                  class="bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-red-500 rounded-lg text-sm text-zinc-500 hover:text-red-400 transition-all shrink-0"
+                  style="padding: 5px 10px"
                   :title="t('board.deleteBackground')"
                   @click="deleteBackground"
                 >
                   <svg
-                    class="w-4 h-4"
+                    style="width: 14px; height: 14px"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -343,9 +360,15 @@
           <div v-else-if="activeTab === 'permissions'">
             <div
               v-if="permLoading"
-              class="flex items-center justify-center py-8 text-zinc-500 text-sm gap-2"
+              class="flex items-center justify-center text-zinc-500 text-sm gap-[6px]"
+              style="padding: 24px 0"
             >
-              <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <svg
+                class="animate-spin"
+                style="width: 14px; height: 14px"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
                 <circle
                   class="opacity-25"
                   cx="12"
@@ -367,17 +390,20 @@
                 <thead>
                   <tr class="border-b border-[var(--border)]">
                     <th
-                      class="px-3 py-2.5 text-left text-xs font-semibold text-zinc-500 tracking-wider"
+                      class="text-left text-xs font-semibold text-zinc-500 tracking-wider"
+                      style="padding: 4px 8px"
                     >
                       {{ t('admin.role') }}
                     </th>
                     <th
-                      class="px-3 py-2.5 text-center text-xs font-semibold text-zinc-500 tracking-wider w-20"
+                      class="text-center text-xs font-semibold text-zinc-500 tracking-wider w-20"
+                      style="padding: 4px 8px"
                     >
                       {{ t('common.view') }}
                     </th>
                     <th
-                      class="px-3 py-2.5 text-center text-xs font-semibold text-zinc-500 tracking-wider w-20"
+                      class="text-center text-xs font-semibold text-zinc-500 tracking-wider w-20"
+                      style="padding: 4px 8px"
                     >
                       {{ t('common.edit') }}
                     </th>
@@ -389,14 +415,17 @@
                     :key="role.role_id"
                     class="hover:bg-[var(--bg-hover)]"
                   >
-                    <td class="px-3 py-2.5 font-medium text-[var(--text)]">{{ role.name }}</td>
-                    <td class="px-3 py-2.5 text-center">
-                      <div class="flex items-center justify-center gap-1">
+                    <td class="font-medium text-[var(--text)]" style="padding: 4px 8px">
+                      {{ role.name }}
+                    </td>
+                    <td class="text-center" style="padding: 4px 8px">
+                      <div class="flex items-center justify-center gap-[3px]">
                         <input
                           type="checkbox"
                           :checked="hasDraftPerm(role, 'view')"
                           :disabled="hasWildcard(role, 'view')"
-                          class="accent-[var(--color-corporate-green-50)] w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          class="accent-[var(--color-corporate-green-50)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          style="width: 14px; height: 14px"
                           @change="toggleDraftPerm(role, 'view')"
                         />
                         <span
@@ -407,13 +436,14 @@
                         >
                       </div>
                     </td>
-                    <td class="px-3 py-2.5 text-center">
-                      <div class="flex items-center justify-center gap-1">
+                    <td class="text-center" style="padding: 4px 8px">
+                      <div class="flex items-center justify-center gap-[3px]">
                         <input
                           type="checkbox"
                           :checked="hasDraftPerm(role, 'edit')"
                           :disabled="hasWildcard(role, 'edit')"
-                          class="accent-[var(--color-corporate-green-50)] w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          class="accent-[var(--color-corporate-green-50)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          style="width: 14px; height: 14px"
                           @change="toggleDraftPerm(role, 'edit')"
                         />
                         <span
@@ -437,17 +467,20 @@
 
         <!-- Footer -->
         <div
-          class="flex items-center justify-end gap-3 px-6 py-4 shrink-0 border-t border-[var(--border)]"
+          class="flex items-center justify-end shrink-0 border-t border-[var(--border)]"
+          style="gap: 8px; padding: 10px 16px"
         >
           <button
-            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            style="padding: 5px 10px"
             @click="$emit('close')"
           >
             {{ t('common.cancel') }}
           </button>
           <button
             :disabled="saving"
-            class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+            class="bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+            style="padding: 5px 12px"
             @click="save"
           >
             {{ saving ? t('common.saving') : t('common.save') }}

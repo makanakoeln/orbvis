@@ -3,15 +3,17 @@
     <div class="fixed inset-0 z-[60] flex items-center justify-center">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('cancel')" />
       <div
-        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl p-6 w-80"
+        class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl"
+        style="padding: 16px; width: 300px"
       >
-        <!-- Icon -->
-        <div class="flex items-center gap-3 mb-3">
+        <div class="flex items-center" style="gap: 8px; margin-bottom: 8px">
           <div
-            class="w-9 h-9 rounded-full bg-red-500/15 ring-1 ring-red-500/25 flex items-center justify-center shrink-0"
+            class="rounded-full bg-red-500/15 ring-1 ring-red-500/25 flex items-center justify-center shrink-0"
+            style="width: 30px; height: 30px"
           >
             <svg
-              class="w-4.5 h-4.5 text-red-400"
+              style="width: 14px; height: 14px"
+              class="text-red-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -26,19 +28,21 @@
           </div>
           <div>
             <p class="font-semibold text-[var(--text)] text-sm">{{ title }}</p>
-            <p v-if="message" class="text-xs text-zinc-500 mt-0.5">{{ message }}</p>
+            <p v-if="message" class="text-xs text-zinc-500 mt-[2px]">{{ message }}</p>
           </div>
         </div>
 
-        <div class="flex gap-2 justify-end mt-5">
+        <div class="flex justify-end" style="gap: 6px; margin-top: 12px">
           <button
-            class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+            style="padding: 5px 10px"
             @click="$emit('cancel')"
           >
             {{ t('common.cancel') }}
           </button>
           <button
-            class="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-500 text-white transition-all"
+            class="rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-500 text-white transition-all"
+            style="padding: 5px 10px"
             @click="$emit('confirm')"
           >
             {{ confirmLabel }}

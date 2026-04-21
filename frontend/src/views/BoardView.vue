@@ -3,16 +3,17 @@
     <!-- Slim map-specific topbar -->
     <div
       v-if="!isKiosk"
-      class="bg-[var(--bg-surface)] border-b border-[var(--border)] px-4 py-2 flex items-center justify-between shrink-0 z-30"
+      class="bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center justify-between shrink-0 z-30"
+      style="padding: 0 16px; height: 36px"
     >
       <!-- Left: back link (Checkmk/SSO mode) + board name -->
-      <div class="flex items-center gap-2.5 min-w-0">
+      <div class="flex items-center gap-[10px] min-w-0">
         <router-link
           to="/"
-          class="shrink-0 flex items-center gap-1 text-zinc-500 hover:text-zinc-300 transition-colors"
+          class="shrink-0 flex items-center gap-[4px] text-zinc-500 hover:text-zinc-300 transition-colors"
         >
           <svg
-            class="w-3.5 h-3.5"
+            style="width: 12px; height: 12px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -31,10 +32,11 @@
         </span>
       </div>
 
-      <div class="flex items-center gap-1.5 shrink-0">
+      <div class="flex items-center gap-[5px] shrink-0">
         <!-- Connection status -->
         <div
-          class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 transition-all"
+          class="flex items-center rounded-full text-xs font-medium ring-1 transition-all"
+          style="gap: 4px; padding: 2px 7px"
           :class="
             statesStore.connected
               ? 'bg-green-500/8 ring-green-500/20 text-green-400'
@@ -42,7 +44,8 @@
           "
         >
           <span
-            class="w-1.5 h-1.5 rounded-full inline-block"
+            class="rounded-full inline-block"
+            style="width: 5px; height: 5px"
             :class="statesStore.connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'"
           />
           {{ statesStore.connected ? t('board.live') : t('board.offline') }}
@@ -50,7 +53,7 @@
 
         <!-- Notification bell -->
         <button
-          class="p-1.5 rounded-lg transition-all duration-150"
+          class="p-[5px] rounded-lg transition-all duration-150"
           :class="
             statesStore.notificationsEnabled
               ? 'text-amber-400 hover:bg-amber-500/10'
@@ -64,7 +67,7 @@
           @click="statesStore.toggleNotifications()"
         >
           <svg
-            class="w-4 h-4"
+            style="width: 14px; height: 14px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -81,10 +84,11 @@
         <!-- Read-only badge -->
         <span
           v-if="boardConfig?.readonly"
-          class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-zinc-700/50 text-zinc-400 ring-1 ring-[var(--default-border-color)]"
+          class="flex items-center rounded-lg text-xs font-semibold bg-zinc-700/50 text-zinc-400 ring-1 ring-[var(--default-border-color)]"
+          style="gap: 3px; padding: 2px 6px"
         >
           <svg
-            class="w-3 h-3"
+            style="width: 10px; height: 10px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -102,10 +106,11 @@
         <!-- Editing badge -->
         <span
           v-if="editor.editMode.value"
-          class="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20"
+          class="flex items-center rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20"
+          style="gap: 3px; padding: 2px 6px"
         >
           <svg
-            class="w-3 h-3"
+            style="width: 10px; height: 10px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -124,7 +129,8 @@
         <button
           v-if="boardConfig && boardConfig.rotation_interval > 0 && rotationCountdown > 0"
           :title="rotationPaused ? t('board.rotationResume') : t('board.rotationPause')"
-          class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ring-1 transition-all"
+          class="flex items-center rounded-full text-xs font-medium ring-1 transition-all"
+          style="gap: 3px; padding: 2px 7px"
           :class="
             rotationPaused
               ? 'bg-zinc-700/50 ring-[var(--default-border-color)] text-zinc-400'
@@ -133,9 +139,8 @@
           @click="toggleRotationPause"
         >
           <svg
-            class="w-3 h-3"
+            style="width: 10px; height: 10px; animation-duration: 3s"
             :class="rotationPaused ? '' : 'animate-spin'"
-            style="animation-duration: 3s"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -153,12 +158,12 @@
         <!-- Fullscreen: browser fullscreen in standalone, new-tab kiosk in Checkmk -->
         <button
           v-if="auth.ssoActive || auth.isCheckmkDeployment"
-          class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+          class="p-[5px] rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
           :title="t('board.openInNewTab')"
           @click="openKioskInNewTab"
         >
           <svg
-            class="w-4 h-4"
+            style="width: 14px; height: 14px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -173,12 +178,12 @@
         </button>
         <button
           v-else
-          class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+          class="p-[5px] rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
           :title="t('board.fullscreen')"
           @click="enterFullscreen"
         >
           <svg
-            class="w-4 h-4"
+            style="width: 14px; height: 14px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -196,12 +201,12 @@
         <button
           v-if="auth.isAdmin"
           data-tour="board-settings"
-          class="p-1.5 rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+          class="p-[5px] rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
           :title="t('board.boardSettings')"
           @click="openSettings"
         >
           <svg
-            class="w-4 h-4"
+            style="width: 14px; height: 14px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -225,11 +230,18 @@
     <!-- Kiosk exit button (top-right, visible on hover) -->
     <button
       v-if="isKiosk"
-      class="fixed top-3 right-3 z-50 p-1.5 rounded-lg bg-black/40 text-white/60 hover:text-white hover:bg-black/60 transition-colors duration-150"
+      class="fixed z-50 p-[5px] rounded-lg bg-black/40 text-white/60 hover:text-white hover:bg-black/60 transition-colors duration-150"
+      style="top: 12px; right: 12px"
       :title="t('board.exitFullscreen')"
       @click="exitFullscreen"
     >
-      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <svg
+        style="width: 14px; height: 14px"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+      >
         <path
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -281,12 +293,12 @@
         <button
           v-if="boardConfig && boardConfig.objects.some((o) => o.lat != null)"
           :title="t('board.fitAll')"
-          class="absolute z-[1000] leaflet-control-fit-all bg-white hover:bg-zinc-100 text-zinc-700 border border-zinc-300 rounded px-1.5 py-1 text-xs font-medium shadow transition-colors"
-          style="top: 80px; left: 10px"
+          class="absolute z-[1000] leaflet-control-fit-all bg-white hover:bg-zinc-100 text-zinc-700 border border-zinc-300 rounded text-xs font-medium shadow transition-colors"
+          style="padding: 2px 4px; top: 80px; left: 10px"
           @click.stop="worldmapCanvasRef?.fitAll()"
         >
           <svg
-            class="w-4 h-4"
+            style="width: 14px; height: 14px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -355,7 +367,8 @@
             class="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none select-none z-10"
           >
             <svg
-              class="w-10 h-10 text-zinc-700"
+              style="width: 32px; height: 32px"
+              class="text-zinc-700"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -410,7 +423,8 @@
         v-if="
           auth.isAdmin && !isKiosk && boardConfig && !boardConfig.readonly && !isFlowmap && !isRadar
         "
-        class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3"
+        class="fixed z-40 flex flex-col items-end gap-[10px]"
+        style="bottom: 24px; right: 24px"
       >
         <!-- Add Object panel — expands upward from FAB -->
         <Transition
@@ -445,19 +459,20 @@
         >
           <div
             v-if="editor.editMode.value && editor.selectedObjectId.value && selectedObject"
-            class="flex items-center gap-1 px-2 py-1.5 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/40 backdrop-blur-md"
+            class="flex items-center bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/40 backdrop-blur-md"
+            style="gap: 3px; padding: 4px 6px"
           >
-            <span class="text-[10px] font-bold text-zinc-500 capitalize px-1.5">{{
+            <span class="text-[10px] font-bold text-zinc-500 capitalize px-[4px]">{{
               selectedObject.type
             }}</span>
-            <div class="w-px h-4 bg-zinc-700 mx-0.5" />
+            <div class="bg-zinc-700" style="width: 1px; height: 14px; margin: 0 1px" />
             <button
               title="Edit properties"
-              class="p-2 rounded-lg text-zinc-400 hover:text-[var(--color-corporate-green-40)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+              class="p-[7px] rounded-lg text-zinc-400 hover:text-[var(--color-corporate-green-40)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
               @click="openPropsModal(selectedObject!)"
             >
               <svg
-                class="w-4 h-4"
+                style="width: 14px; height: 14px"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -472,11 +487,11 @@
             </button>
             <button
               title="Duplicate"
-              class="p-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60 transition-all"
+              class="p-[7px] rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60 transition-all"
               @click="editor.duplicateSelected()"
             >
               <svg
-                class="w-4 h-4"
+                style="width: 14px; height: 14px"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -491,11 +506,11 @@
             </button>
             <button
               title="Delete"
-              class="p-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              class="p-[7px] rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
               @click="deleteTargetObject = selectedObject"
             >
               <svg
-                class="w-4 h-4"
+                style="width: 14px; height: 14px"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -514,7 +529,8 @@
         <!-- FAB: Edit toggle -->
         <button
           data-tour="edit-fab"
-          class="w-12 h-12 rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1"
+          class="rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1"
+          style="width: 40px; height: 40px"
           :class="
             editor.editMode.value
               ? 'bg-zinc-700 hover:bg-zinc-600 ring-[var(--default-border-color)] text-zinc-200 hover:text-white'
@@ -525,7 +541,7 @@
         >
           <svg
             v-if="!editor.editMode.value"
-            class="w-5 h-5"
+            style="width: 18px; height: 18px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -539,7 +555,7 @@
           </svg>
           <svg
             v-else
-            class="w-4 h-4"
+            style="width: 14px; height: 14px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -553,7 +569,7 @@
 
     <!-- Bottom row: Services toggle (Flow Board only) -->
     <Teleport to="body">
-      <div v-if="isFlowmap" class="fixed bottom-6 right-6 z-40">
+      <div v-if="isFlowmap" class="fixed z-40" style="bottom: 24px; right: 24px">
         <div class="relative">
           <!-- Backdrop to close dropdown on outside click -->
           <div
@@ -563,7 +579,8 @@
           />
 
           <button
-            class="relative z-10 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium ring-1 shadow-lg shadow-black/30 transition-all duration-200"
+            class="relative z-10 flex items-center rounded-xl text-xs font-medium ring-1 shadow-lg shadow-black/30 transition-all duration-200"
+            style="gap: 5px; padding: 5px 10px"
             :class="
               serviceLayout !== 'off'
                 ? 'bg-[var(--color-corporate-green-50)]/15 text-[var(--color-corporate-green-40)] ring-[var(--color-corporate-green-50)]/40'
@@ -573,7 +590,8 @@
           >
             {{ t('board.services') }}
             <svg
-              class="w-3 h-3 transition-transform duration-150"
+              style="width: 10px; height: 10px"
+              class="transition-transform duration-150"
               :class="serviceLayoutOpen ? 'rotate-180' : ''"
               fill="none"
               viewBox="0 0 24 24"
@@ -597,12 +615,14 @@
           >
             <div
               v-if="serviceLayoutOpen"
-              class="absolute bottom-full mb-2 right-0 z-10 w-36 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
+              class="absolute bottom-full right-0 z-10 w-[120px] bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
+              style="margin-bottom: 6px"
             >
               <button
                 v-for="opt in serviceLayoutOptions"
                 :key="opt.value"
-                class="w-full flex items-center justify-between px-3 py-2 text-xs transition-colors"
+                class="w-full flex items-center justify-between text-xs transition-colors"
+                style="padding: 5px 10px"
                 :class="
                   serviceLayout === opt.value
                     ? 'text-[var(--color-corporate-green-40)] bg-[var(--color-corporate-green-50)]/10'
@@ -616,7 +636,7 @@
                 {{ opt.label }}
                 <svg
                   v-if="serviceLayout === opt.value"
-                  class="w-3.5 h-3.5"
+                  style="width: 12px; height: 12px"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
