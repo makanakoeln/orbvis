@@ -1,7 +1,7 @@
 <template>
   <div v-if="showShell" class="flex h-screen bg-[var(--bg)] overflow-hidden">
     <AppSidebar v-if="!auth.ssoActive && !auth.isCheckmkDeployment" />
-    <div class="flex-1 min-w-0 flex flex-col overflow-hidden">
+    <div class="flex-1 min-w-0 flex flex-col">
       <router-view />
     </div>
     <ChangelogModal v-if="showChangelog" @close="dismissChangelog" />

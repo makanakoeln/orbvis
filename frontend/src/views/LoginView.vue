@@ -1,56 +1,62 @@
 <template>
   <div
-    class="min-h-screen flex items-start justify-center bg-[var(--bg)] relative overflow-hidden pt-[18vh]"
+    class="min-h-screen flex items-center justify-center bg-[var(--bg)] relative overflow-hidden"
   >
-    <!-- Background glow -->
-    <div
-      class="absolute inset-0 bg-gradient-to-br from-[var(--color-corporate-green-100)]/30 via-zinc-950 to-zinc-950 pointer-events-none"
-    />
-    <div
-      class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[var(--color-corporate-green-50)]/8 rounded-full blur-3xl pointer-events-none"
-    />
+    <!-- Background -->
+    <div class="absolute inset-0 pointer-events-none">
+      <div
+        class="absolute -top-48 -left-48 w-[600px] h-[600px] rounded-full blur-3xl"
+        style="background: radial-gradient(circle, rgb(21 209 160 / 12%) 0%, transparent 70%)"
+      />
+      <div
+        class="absolute -bottom-48 -right-48 w-[500px] h-[500px] rounded-full blur-3xl"
+        style="background: radial-gradient(circle, rgb(21 209 160 / 6%) 0%, transparent 70%)"
+      />
+      <div
+        class="absolute inset-0"
+        style="
+          background-image:
+            linear-gradient(rgb(21 209 160 / 3%) 1px, transparent 1px),
+            linear-gradient(90deg, rgb(21 209 160 / 3%) 1px, transparent 1px);
+          background-size: 48px 48px;
+        "
+      />
+    </div>
 
-    <div class="relative w-full max-w-sm mx-4">
+    <div class="relative w-full max-w-[440px] mx-[24px]">
       <!-- Logo -->
-      <div class="text-center mb-5">
-        <svg
-          class="w-9 h-9 text-[var(--color-corporate-green-50)] mb-2 mx-auto block"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="1.5"
+      <div class="flex flex-col items-center mb-[32px]">
+        <div
+          class="inline-flex items-center justify-center w-[64px] h-[64px] bg-[rgb(21_209_160/10%)] ring-1 ring-[var(--color-corporate-green-50)]/40 rounded-2xl mb-[16px]"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M2 12C5 7 19 7 22 12C19 17 5 17 2 12Z"
-          />
-          <circle cx="12" cy="12" r="3.5" stroke-width="1" />
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="1.2"
-            d="M9.5 13.5L11 11L12.5 12.5L14 10"
-          />
-          <circle cx="14" cy="10" r="0.8" fill="currentColor" stroke="none" />
-        </svg>
-        <h1 class="text-2xl font-bold text-[var(--text)] tracking-tight">OrbVis</h1>
-        <button
-          class="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
-          @click="showChangelog = true"
-        >
-          v{{ appVersion }}
-        </button>
-        <p class="text-sm text-zinc-500 mt-1">{{ t('auth.monitoringVisualization') }}</p>
+          <svg
+            class="w-[32px] h-[32px] text-[var(--color-corporate-green-50)]"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M2 12C5.5 6.5 18.5 6.5 22 12C18.5 17.5 5.5 17.5 2 12Z"
+            />
+            <circle cx="12" cy="12" r="3.5" />
+            <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+            <circle cx="13.8" cy="10.2" r="0.6" fill="currentColor" stroke="none" />
+          </svg>
+        </div>
+        <h1 class="font-bold text-[22px] text-[var(--text)] mb-[4px]">OrbVis</h1>
+        <p class="text-[13px] text-[var(--text-muted)]">{{ t('auth.monitoringVisualization') }}</p>
       </div>
 
       <!-- Card -->
       <div
-        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-8"
+        class="bg-[var(--bg-surface)] ring-1 ring-white/8 shadow-2xl shadow-black/60 rounded-xl p-[32px]"
       >
-        <form class="space-y-5" @submit.prevent="handleLogin">
-          <div class="space-y-1.5">
-            <label for="login-username" class="text-xs font-medium text-zinc-300">{{
+        <form class="flex flex-col gap-[20px]" @submit.prevent="handleLogin">
+          <div class="flex flex-col gap-[6px]">
+            <label for="login-username" class="font-medium text-[13px] text-[var(--text)]">{{
               t('auth.username')
             }}</label>
             <input
@@ -59,12 +65,14 @@
               v-model="username"
               type="text"
               autocomplete="username"
+              :placeholder="t('auth.username')"
               required
-              class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-[var(--text)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] focus:ring-offset-0 transition-all duration-150"
+              class="w-full py-[10px] px-[12px] text-[14px] bg-[var(--bg-input)] ring-1 ring-[var(--default-form-element-border-color)]/50 rounded-lg text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150"
             />
           </div>
-          <div class="space-y-1.5">
-            <label for="login-password" class="text-xs font-medium text-zinc-300">{{
+
+          <div class="flex flex-col gap-[6px]">
+            <label for="login-password" class="font-medium text-[13px] text-[var(--text)]">{{
               t('auth.password')
             }}</label>
             <div class="relative">
@@ -73,8 +81,9 @@
                 v-model="password"
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
+                placeholder="••••••••"
                 required
-                class="w-full px-3.5 py-2.5 pr-10 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-[var(--text)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150"
+                class="w-full py-[10px] pl-[12px] pr-[40px] text-[14px] bg-[var(--bg-input)] ring-1 ring-[var(--default-form-element-border-color)]/50 rounded-lg text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150"
               />
               <button
                 type="button"
@@ -82,7 +91,6 @@
                 :title="showPassword ? t('auth.hidePassword') : t('auth.showPassword')"
                 @click="showPassword = !showPassword"
               >
-                <!-- Eye (show) -->
                 <svg
                   v-if="!showPassword"
                   class="w-4 h-4"
@@ -102,7 +110,6 @@
                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                <!-- Eye-slash (hide) -->
                 <svg
                   v-else
                   class="w-4 h-4"
@@ -123,10 +130,10 @@
 
           <div
             v-if="authStore.error"
-            class="flex items-start gap-2.5 px-3.5 py-3 bg-red-500/8 ring-1 ring-red-500/20 rounded-lg text-red-400 text-sm"
+            class="flex items-start gap-[10px] px-[14px] py-[12px] text-[13px] bg-red-500/8 ring-1 ring-red-500/20 rounded-lg text-red-400"
           >
             <svg
-              class="w-4 h-4 shrink-0 mt-0.5"
+              class="w-4 h-4 shrink-0 mt-px"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -144,11 +151,21 @@
           <button
             type="submit"
             :disabled="authStore.loading"
-            class="w-full py-2.5 px-4 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] active:bg-[var(--color-corporate-green-70)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--button-primary-text-color,#000)] text-sm font-semibold rounded-lg transition-all duration-150"
+            class="w-full py-[11px] px-[16px] text-[14px] bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] active:bg-[var(--color-corporate-green-70)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--button-primary-text-color,#000)] font-semibold rounded-lg transition-all duration-150"
           >
             {{ authStore.loading ? t('auth.signingIn') : t('auth.signIn') }}
           </button>
         </form>
+      </div>
+
+      <!-- Version footer -->
+      <div class="text-center mt-[16px]">
+        <button
+          class="text-[12px] text-zinc-600 hover:text-zinc-400 transition-colors"
+          @click="showChangelog = true"
+        >
+          v{{ appVersion }}
+        </button>
       </div>
     </div>
 

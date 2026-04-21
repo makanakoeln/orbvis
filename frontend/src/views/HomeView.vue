@@ -1,68 +1,71 @@
 <template>
-  <div class="flex-1 overflow-y-auto bg-[var(--bg)]">
-    <main class="max-w-5xl mx-auto py-6 px-6 pb-10">
-      <div class="mb-5 flex items-center justify-between gap-4">
-        <div>
-          <h2 class="text-lg font-bold text-[var(--text)] tracking-tight">
-            {{ t('home.title') }}
-          </h2>
-        </div>
-        <div class="flex items-center gap-3 shrink-0">
+  <div class="flex-1 min-h-0 overflow-y-auto bg-[var(--bg)]">
+    <main class="py-5 px-6 pb-10">
+      <div class="flex items-center max-w-5xl mx-auto" style="margin-bottom: 20px; gap: 8px">
+        <h2
+          class="text-sm font-semibold text-[var(--text)] tracking-tight"
+          style="margin-right: 8px"
+        >
+          {{ t('home.title') }}
+        </h2>
+        <div class="relative" style="width: 200px">
+          <svg
+            class="absolute top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
+            style="left: 8px; width: 13px; height: 13px"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+            />
+          </svg>
+          <input
+            v-model="searchQuery"
+            :placeholder="t('home.search')"
+            class="w-full bg-[var(--bg-input)] ring-1 ring-[var(--default-form-element-border-color)]/50 rounded text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+            style="font-size: 12px; padding: 5px 8px 5px 26px"
+            :style="searchQuery ? 'padding-right: 24px' : ''"
+          />
           <button
-            v-if="auth.isAdmin"
-            data-tour="new-board"
-            class="flex items-center gap-2 px-4 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-            @click="showCreate = true"
+            v-if="searchQuery"
+            class="absolute top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+            style="right: 6px"
+            :title="t('home.clearSearch')"
+            @click="searchQuery = ''"
           >
             <svg
-              class="w-4 h-4"
+              style="width: 12px; height: 12px"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
               stroke-width="2.5"
             >
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-            {{ t('admin.newBoard') }}
           </button>
-          <div class="relative w-56 shrink-0">
-            <svg
-              class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2.5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-              />
-            </svg>
-            <input
-              v-model="searchQuery"
-              :placeholder="t('home.search')"
-              class="w-full pl-8 py-2 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-              :class="searchQuery ? 'pr-7' : 'pr-3'"
-            />
-            <button
-              v-if="searchQuery"
-              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
-              :title="t('home.clearSearch')"
-              @click="searchQuery = ''"
-            >
-              <svg
-                class="w-3.5 h-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
         </div>
+        <button
+          v-if="auth.isAdmin"
+          data-tour="new-board"
+          class="flex items-center bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+          style="gap: 5px; padding: 5px 10px; font-size: 12px"
+          @click="showCreate = true"
+        >
+          <svg
+            style="width: 11px; height: 11px"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          {{ t('admin.newBoard') }}
+        </button>
       </div>
 
       <!-- Loading -->
@@ -135,7 +138,8 @@
       <div
         v-else
         data-tour="boards-grid"
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto"
+        style="gap: 16px"
       >
         <p
           v-if="searchQuery && !filteredBoards.length"
@@ -151,7 +155,8 @@
           <router-link :to="`/boards/${map.name}`" class="block">
             <!-- Thumbnail -->
             <div
-              class="relative w-full h-28 overflow-hidden bg-[var(--default-form-element-bg-color)]"
+              class="relative w-full overflow-hidden bg-[var(--default-form-element-bg-color)]"
+              style="height: 144px"
             >
               <img
                 v-if="map.background_image && !map.name.startsWith('demo-')"
@@ -672,9 +677,10 @@
                 </defs>
               </svg>
               <!-- Type + rotation badges overlaid on thumbnail -->
-              <div class="absolute bottom-2 left-2 flex items-center gap-1.5">
+              <div class="absolute flex items-center" style="bottom: 8px; left: 8px; gap: 5px">
                 <span
-                  class="text-[11px] px-1.5 py-0.5 rounded-md font-medium backdrop-blur-sm"
+                  class="rounded-md font-medium backdrop-blur-sm"
+                  style="font-size: 11px; padding: 2px 6px"
                   :class="
                     map.view.type === 'worldmap'
                       ? 'bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/30'
@@ -688,7 +694,7 @@
                   {{ boardTypeLabel(map.view.type) }}
                 </span>
               </div>
-              <div class="absolute top-2 right-2 flex items-center gap-1.5">
+              <div class="absolute flex items-center" style="top: 8px; right: 8px; gap: 5px">
                 <span
                   v-if="map.show_in_lists === false && auth.isAdmin"
                   class="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-zinc-800/80 text-zinc-500 ring-1 ring-[var(--default-border-color)]/60 backdrop-blur-sm"
@@ -698,7 +704,8 @@
                 </span>
                 <span
                   v-if="map.rotation_interval > 0"
-                  class="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30 backdrop-blur-sm"
+                  class="rounded-full font-medium bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30 backdrop-blur-sm"
+                  style="font-size: 11px; padding: 2px 6px"
                   :title="t('home.rotationBadgeTitle', { n: map.rotation_interval })"
                 >
                   ↻ {{ map.rotation_interval }}s
@@ -707,15 +714,17 @@
             </div>
 
             <!-- Card body -->
-            <div class="p-4">
+            <div style="padding: 10px 12px">
               <div
                 class="font-semibold text-[var(--text)] group-hover:text-white transition-colors truncate"
+                style="font-size: 13px; margin-bottom: 5px"
               >
                 {{ map.alias || map.name }}
               </div>
-              <div class="flex items-center gap-1.5 mt-1.5 text-xs text-zinc-500 truncate">
+              <div class="flex items-center min-w-0" style="gap: 6px">
                 <svg
-                  class="w-3 h-3 shrink-0 text-zinc-600"
+                  class="shrink-0 text-zinc-600"
+                  style="width: 12px; height: 12px"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -727,31 +736,34 @@
                     d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z"
                   />
                 </svg>
-                <span class="font-mono truncate">{{ map.backend_id }}</span>
-                <span class="text-zinc-600">·</span>
+                <span class="text-xs text-zinc-500 font-mono truncate" :title="map.backend_id">{{
+                  map.backend_id
+                }}</span>
+                <span class="text-zinc-700 shrink-0">·</span>
                 <span
                   v-if="map.readonly || ['flow', 'radar', 'worldmap'].includes(map.view.type)"
-                  class="italic"
+                  class="text-xs text-zinc-500 shrink-0 italic"
                   >{{ t('home.dynamicObjects') }}</span
                 >
-                <span v-else>{{ t('common.objects', map.object_count) }}</span>
+                <span v-else class="text-xs text-zinc-500 shrink-0">{{
+                  t('common.objects', map.object_count)
+                }}</span>
               </div>
             </div>
           </router-link>
 
-          <!-- Admin actions: absolute overlay, no height reservation -->
           <div
             v-if="auth.isAdmin"
-            class="absolute bottom-3 right-3 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all"
+            class="flex items-center justify-end border-t border-[var(--border)] max-h-0 overflow-hidden group-hover:max-h-[36px] transition-[max-height] duration-150"
+            style="gap: 2px; padding: 0 6px"
           >
-            <!-- Settings -->
             <button
-              class="p-1 rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+              class="p-1 rounded text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
               :title="t('board.settingsTitle')"
               @click.stop="openSettings(map)"
             >
               <svg
-                class="w-3.5 h-3.5"
+                style="width: 14px; height: 14px"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -769,14 +781,13 @@
                 />
               </svg>
             </button>
-            <!-- Clone -->
             <button
-              class="p-1 rounded-md text-zinc-600 hover:text-amber-400 hover:bg-amber-500/10 transition-all"
+              class="p-1 rounded text-zinc-600 hover:text-amber-400 hover:bg-amber-500/10 transition-all"
               :title="t('admin.cloneBoard')"
               @click.stop="cloneBoard(map)"
             >
               <svg
-                class="w-3.5 h-3.5"
+                style="width: 14px; height: 14px"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -789,14 +800,13 @@
                 />
               </svg>
             </button>
-            <!-- Export -->
             <button
-              class="p-1 rounded-md text-zinc-600 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+              class="p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-white/5 transition-all"
               :title="t('admin.exportBoard')"
               @click.stop="exportBoard(map.name)"
             >
               <svg
-                class="w-3.5 h-3.5"
+                style="width: 14px; height: 14px"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -809,14 +819,13 @@
                 />
               </svg>
             </button>
-            <!-- Delete -->
             <button
-              class="p-1 rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              class="p-1 rounded text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
               :title="t('admin.deleteBoard', { name: map.alias || map.name })"
               @click.stop="deleteBoard(map)"
             >
               <svg
-                class="w-3.5 h-3.5"
+                style="width: 14px; height: 14px"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -944,11 +953,13 @@
   <!-- Import FAB (admin only) -->
   <label
     v-if="auth.isAdmin"
-    class="group fixed bottom-6 right-6 z-40 flex items-center gap-2 h-10 pl-3 pr-3.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] shadow-lg text-zinc-400 hover:text-zinc-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+    class="group fixed z-40 flex items-center rounded bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] shadow-lg text-zinc-500 hover:text-zinc-300 transition-all cursor-pointer"
+    style="bottom: 20px; right: 20px; gap: 6px; padding: 6px 12px"
     :title="t('admin.importBoard')"
   >
     <svg
-      class="w-4 h-4 shrink-0"
+      class="shrink-0"
+      style="width: 14px; height: 14px"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -960,7 +971,7 @@
         d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
       />
     </svg>
-    <span class="text-sm font-medium">{{ t('admin.importBoard') }}</span>
+    <span class="text-xs font-medium">{{ t('admin.importBoard') }}</span>
     <input type="file" accept=".json,.cfg,application/json" class="hidden" @change="importBoard" />
   </label>
   <Teleport to="body">
