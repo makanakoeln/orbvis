@@ -25,9 +25,13 @@
       </button>
     </div>
 
-    <div v-if="loading" class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center">
+    <div
+      v-if="loading"
+      class="flex items-center gap-[8px] text-zinc-500 text-sm py-[32px] justify-center"
+    >
       <svg
-        class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
+        class="animate-spin text-[var(--color-corporate-green-50)]"
+        style="width: 14px; height: 14px"
         fill="none"
         viewBox="0 0 24 24"
       >
@@ -190,7 +194,8 @@
           class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl w-[28rem] max-h-[90vh] flex flex-col overflow-hidden"
         >
           <div
-            class="flex items-center justify-between px-6 pt-5 pb-4 shrink-0 border-b border-[var(--border)]"
+            class="flex items-center justify-between shrink-0 border-b border-[var(--border)]"
+            style="padding: 10px 16px"
           >
             <h3 class="text-base font-bold text-[var(--text)]">
               {{ t('admin.permissionsTitle') }} –
@@ -212,10 +217,12 @@
             </button>
           </div>
 
-          <div class="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+          <div class="overflow-y-auto flex-1 space-y-[16px]" style="padding: 10px 16px">
             <!-- Current permissions -->
             <div>
-              <p class="text-xs font-medium text-zinc-500 mb-3">{{ t('admin.assigned') }}</p>
+              <p class="text-xs font-medium text-zinc-500" style="margin-bottom: 6px">
+                {{ t('admin.assigned') }}
+              </p>
               <div
                 v-if="draftPerms.length"
                 class="divide-y divide-[var(--border)] rounded-lg ring-1 ring-[var(--border)] overflow-hidden"
@@ -223,7 +230,8 @@
                 <div
                   v-for="perm in draftPerms"
                   :key="perm.perm_id"
-                  class="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-[var(--bg-hover)] transition-colors"
+                  class="flex items-center justify-between gap-[8px] hover:bg-[var(--bg-hover)] transition-colors"
+                  style="padding: 5px 10px"
                   :class="perm.perm_id < 0 ? 'bg-[var(--color-corporate-green-50)]/5' : ''"
                 >
                   <span class="text-xs font-mono text-zinc-300"
@@ -240,7 +248,7 @@
                     @click="removeDraftPerm(perm.perm_id)"
                   >
                     <svg
-                      class="w-3.5 h-3.5"
+                      style="width: 12px; height: 12px"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -259,15 +267,18 @@
             </div>
 
             <!-- Add permission form -->
-            <div class="border-t border-[var(--border)] pt-4">
-              <p class="text-xs font-medium text-zinc-500 mb-3">{{ t('admin.addPermission') }}</p>
-              <form class="space-y-3" @submit.prevent="addDraftPerm">
-                <div class="space-y-1.5">
+            <div class="border-t border-[var(--border)] pt-[12px]">
+              <p class="text-xs font-medium text-zinc-500" style="margin-bottom: 6px">
+                {{ t('admin.addPermission') }}
+              </p>
+              <form class="space-y-[10px]" @submit.prevent="addDraftPerm">
+                <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{ t('admin.preset') }}</label>
                   <div class="relative">
                     <select
                       v-model="permPreset"
-                      class="w-full appearance-none px-3 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                      class="w-full appearance-none bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                      style="padding: 5px 28px 5px 10px"
                       @change="applyPreset"
                     >
                       <option value="">{{ t('admin.choosePreset') }}</option>
@@ -277,9 +288,13 @@
                       <option value="map:edit:custom">{{ t('admin.presetEditCustom') }}</option>
                       <option value="user:edit:*">{{ t('admin.presetEditUsers') }}</option>
                     </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                    <div
+                      class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
+                      style="padding-right: 8px"
+                    >
                       <svg
-                        class="w-4 h-4 text-zinc-400"
+                        style="width: 12px; height: 12px"
+                        class="text-zinc-400"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -294,7 +309,7 @@
                     </div>
                   </div>
                 </div>
-                <div v-if="needsMapName" class="space-y-1.5">
+                <div v-if="needsMapName" class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('admin.boardNameLabel')
                   }}</label>
@@ -302,7 +317,8 @@
                     v-model="newPerm.obj"
                     placeholder="my-board"
                     required
-                    class="w-full px-3 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    style="padding: 5px 10px"
                   />
                 </div>
                 <p v-if="permError" class="text-red-400 text-xs">{{ permError }}</p>
@@ -310,7 +326,8 @@
                   <button
                     type="submit"
                     :disabled="!permPreset"
-                    class="px-4 py-2 bg-[var(--default-form-element-bg-color)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-zinc-300 transition-all"
+                    class="bg-[var(--default-form-element-bg-color)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-zinc-300 transition-all"
+                    style="padding: 5px 10px"
                   >
                     {{ t('admin.add') }}
                   </button>
@@ -321,7 +338,8 @@
 
           <!-- Footer -->
           <div
-            class="flex items-center justify-end gap-3 px-6 py-4 shrink-0 border-t border-[var(--border)]"
+            class="flex items-center justify-end gap-[8px] shrink-0 border-t border-[var(--border)]"
+            style="padding: 8px 16px"
           >
             <p v-if="permSaveError" class="text-red-400 text-xs flex-1">{{ permSaveError }}</p>
             <button

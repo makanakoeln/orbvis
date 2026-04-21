@@ -29,10 +29,11 @@
 
     <div
       v-if="store.loading"
-      class="flex items-center gap-2 text-zinc-500 text-sm py-[24px] justify-center"
+      class="flex items-center gap-[8px] text-zinc-500 text-sm py-[24px] justify-center"
     >
       <svg
-        class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
+        class="animate-spin text-[var(--color-corporate-green-50)]"
+        style="width: 14px; height: 14px"
         fill="none"
         viewBox="0 0 24 24"
       >
@@ -48,7 +49,8 @@
 
     <div
       v-else-if="store.error"
-      class="px-4 py-3 bg-red-500/8 ring-1 ring-red-500/20 rounded-xl text-red-400 text-sm"
+      class="bg-red-500/8 ring-1 ring-red-500/20 rounded-xl text-red-400 text-sm"
+      style="padding: 8px 12px"
     >
       {{ store.error }}
     </div>
@@ -188,14 +190,14 @@
               <span v-else class="text-zinc-700">{{ t('admin.builtIn') }}</span>
             </td>
             <td class="text-right" style="padding: 6px 12px">
-              <div class="flex items-center justify-end gap-1">
+              <div class="flex items-center justify-end gap-[4px]">
                 <button
-                  class="p-1.5 rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                  class="p-[4px] rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
                   :title="t('common.edit')"
                   @click="openEdit(b)"
                 >
                   <svg
-                    class="w-3.5 h-3.5"
+                    style="width: 13px; height: 13px"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -209,12 +211,12 @@
                   </svg>
                 </button>
                 <button
-                  class="p-1.5 rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                  class="p-[4px] rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
                   :title="t('common.delete')"
                   @click="deleteTarget = b.id"
                 >
                   <svg
-                    class="w-3.5 h-3.5"
+                    style="width: 13px; height: 13px"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -248,7 +250,8 @@
       <div v-if="dialog.open" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="dialog.open = false" />
         <div
-          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-[30rem] max-h-[90vh] overflow-y-auto"
+          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl w-[30rem] max-h-[90vh] overflow-y-auto"
+          style="padding: 16px"
         >
           <div class="flex items-center justify-between" style="margin-bottom: 16px">
             <h3 class="text-base font-bold text-[var(--text)]">
@@ -257,11 +260,11 @@
               }}
             </h3>
             <button
-              class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+              class="p-[5px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
               @click="dialog.open = false"
             >
               <svg
-                class="w-4 h-4"
+                style="width: 14px; height: 14px"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -272,42 +275,49 @@
             </button>
           </div>
 
-          <form class="space-y-4" @submit.prevent="save">
-            <div v-if="dialog.mode === 'create'" class="space-y-1.5">
+          <form class="space-y-[12px]" @submit.prevent="save">
+            <div v-if="dialog.mode === 'create'" class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('admin.connectionId') }}</label>
               <input
                 v-model="form.id"
                 required
                 pattern="[a-zA-Z0-9_-]+"
                 placeholder="cmk_heute"
-                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                style="padding: 5px 10px"
               />
               <p class="text-xs text-zinc-600">{{ t('admin.connectionIdHint') }}</p>
             </div>
 
-            <div class="space-y-1.5">
+            <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('admin.displayLabel') }}</label>
               <input
                 v-model="form.label"
                 placeholder="Checkmk heute"
-                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                style="padding: 5px 10px"
               />
             </div>
 
-            <div class="space-y-1.5">
+            <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('admin.type') }}</label>
               <div class="relative">
                 <select
                   v-model="form.type"
-                  class="w-full appearance-none px-3.5 py-2.5 pr-9 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                  class="w-full appearance-none bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                  style="padding: 5px 28px 5px 10px"
                 >
                   <option value="livestatus">{{ t('admin.connectionTypeLivestatus') }}</option>
                   <option value="icinga2">{{ t('admin.connectionTypeIcinga2') }}</option>
                   <option value="test">{{ t('admin.connectionTypeTest') }}</option>
                 </select>
-                <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                <div
+                  class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
+                  style="padding-right: 8px"
+                >
                   <svg
-                    class="w-4 h-4 text-zinc-400"
+                    style="width: 12px; height: 12px"
+                    class="text-zinc-400"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -325,64 +335,68 @@
 
             <template v-if="form.type === 'livestatus'">
               <!-- Unix socket -->
-              <div class="space-y-1.5">
+              <div class="space-y-[4px]">
                 <label class="text-xs font-medium text-zinc-400">{{ t('admin.unixSocket') }}</label>
                 <input
                   v-model="form.socket_path"
                   placeholder="/omd/sites/heute/tmp/run/live"
-                  class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                  class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                  style="padding: 5px 10px"
                 />
               </div>
 
               <!-- OR divider -->
-              <div class="relative flex items-center gap-3">
+              <div class="relative flex items-center gap-[8px]">
                 <div class="flex-1 border-t border-[var(--border)]" />
                 <span class="text-xs text-zinc-600 shrink-0">{{ t('admin.orTcp') }}</span>
                 <div class="flex-1 border-t border-[var(--border)]" />
               </div>
 
               <!-- TCP Host + Port -->
-              <div class="grid grid-cols-[1fr_7rem] gap-3">
-                <div class="space-y-1.5">
+              <div class="grid grid-cols-[1fr_7rem] gap-[8px]">
+                <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{ t('admin.tcpHost') }}</label>
                   <input
                     v-model="form.host"
                     placeholder="192.168.1.10"
-                    class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    style="padding: 5px 10px"
                   />
                 </div>
-                <div class="space-y-1.5">
+                <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{ t('admin.port') }}</label>
                   <NumberInput v-model="form.port" min="1" max="65535" class="w-full" />
                 </div>
               </div>
 
               <!-- Checkmk URL + Automation + Timeout -->
-              <div class="border-t border-[var(--border)] pt-4 space-y-4">
-                <div class="space-y-1.5">
+              <div class="border-t border-[var(--border)] pt-[12px] space-y-[12px]">
+                <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('admin.checkmkUrl')
                   }}</label>
                   <input
                     v-model="form.checkmk_url"
                     placeholder="http://localhost/heute"
-                    class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    style="padding: 5px 10px"
                   />
                   <p class="text-xs text-zinc-600">{{ t('admin.contextLinks') }}</p>
                 </div>
                 <template v-if="!isCmc">
-                  <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1.5">
+                  <div class="grid grid-cols-2 gap-[8px]">
+                    <div class="space-y-[4px]">
                       <label class="text-xs font-medium text-zinc-400">{{
                         t('admin.automationUser')
                       }}</label>
                       <input
                         v-model="form.automation_user"
                         placeholder="automation"
-                        class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                        class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                        style="padding: 5px 10px"
                       />
                     </div>
-                    <div class="space-y-1.5">
+                    <div class="space-y-[4px]">
                       <label class="text-xs font-medium text-zinc-400">{{
                         t('admin.automationSecret')
                       }}</label>
@@ -390,69 +404,86 @@
                         v-model="form.automation_secret"
                         type="password"
                         placeholder="••••••••"
-                        class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                        class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                        style="padding: 5px 10px"
                       />
                     </div>
                   </div>
                   <p class="text-xs text-zinc-600">{{ t('admin.automationHint') }}</p>
                 </template>
                 <p v-else class="text-xs text-zinc-500">{{ t('admin.automationHintCmc') }}</p>
-                <div class="space-y-1.5">
+                <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{ t('admin.timeout') }}</label>
-                  <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-28" />
+                  <NumberInput
+                    v-model="form.timeout"
+                    min="1"
+                    max="120"
+                    step="0.5"
+                    class="w-[112px]"
+                  />
                   <p class="text-xs text-zinc-600">seconds</p>
                 </div>
               </div>
             </template>
 
             <template v-if="form.type === 'icinga2'">
-              <div class="space-y-1.5">
+              <div class="space-y-[4px]">
                 <label class="text-xs font-medium text-zinc-400">{{ t('admin.icinga2Url') }}</label>
                 <input
                   v-model="form.icinga2_url"
                   placeholder="https://localhost:5665"
-                  class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                  class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                  style="padding: 5px 10px"
                 />
               </div>
 
-              <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1.5">
+              <div class="grid grid-cols-2 gap-[8px]">
+                <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('admin.icinga2Username')
                   }}</label>
                   <input
                     v-model="form.icinga2_username"
                     placeholder="root"
-                    class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    style="padding: 5px 10px"
                   />
                 </div>
-                <div class="space-y-1.5">
+                <div class="space-y-[4px]">
                   <label class="text-xs font-medium text-zinc-400">{{
                     t('admin.icinga2Password')
                   }}</label>
                   <input
                     v-model="form.icinga2_password"
                     type="password"
-                    class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    style="padding: 5px 10px"
                   />
                 </div>
               </div>
 
-              <div class="flex items-center gap-2.5">
+              <div class="flex items-center gap-[8px]">
                 <input
                   id="verify-ssl"
                   v-model="form.icinga2_verify_ssl"
                   type="checkbox"
-                  class="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-[var(--color-corporate-green-50)] focus:ring-[var(--color-corporate-green-50)] focus:ring-offset-zinc-900"
+                  class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
+                  style="width: 14px; height: 14px"
                 />
                 <label for="verify-ssl" class="text-sm text-zinc-400 cursor-pointer select-none">
                   {{ t('admin.icinga2VerifySsl') }}
                 </label>
               </div>
 
-              <div class="space-y-1.5">
+              <div class="space-y-[4px]">
                 <label class="text-xs font-medium text-zinc-400">{{ t('admin.timeout') }}</label>
-                <NumberInput v-model="form.timeout" min="1" max="120" step="0.5" class="w-28" />
+                <NumberInput
+                  v-model="form.timeout"
+                  min="1"
+                  max="120"
+                  step="0.5"
+                  class="w-[112px]"
+                />
                 <p class="text-xs text-zinc-600">seconds</p>
               </div>
             </template>
@@ -460,7 +491,8 @@
             <!-- Test result -->
             <div
               v-if="dialogTest.ran"
-              class="flex items-start gap-2.5 px-3.5 py-3 rounded-lg ring-1 text-sm"
+              class="flex items-start gap-[8px] rounded-lg ring-1 text-sm"
+              style="padding: 8px 12px"
               :class="
                 dialogTest.ok
                   ? 'bg-green-500/8 ring-green-500/20 text-green-400'
@@ -468,15 +500,17 @@
               "
             >
               <span
-                class="w-2 h-2 rounded-full shrink-0 mt-1"
+                class="rounded-full shrink-0 mt-1"
+                style="width: 6px; height: 6px"
                 :class="dialogTest.ok ? 'bg-green-400' : 'bg-red-400'"
               />
               {{ dialogTest.message }}
             </div>
 
-            <p v-if="formError" class="text-red-400 text-xs flex items-center gap-1">
+            <p v-if="formError" class="text-red-400 text-xs flex items-center gap-[4px]">
               <svg
-                class="w-3.5 h-3.5 shrink-0"
+                class="shrink-0"
+                style="width: 12px; height: 12px"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -491,10 +525,14 @@
               {{ formError }}
             </p>
 
-            <div class="flex gap-2 justify-end pt-2 border-t border-[var(--border)]">
+            <div
+              class="flex gap-[8px] justify-end border-t border-[var(--border)]"
+              style="padding-top: 10px"
+            >
               <button
                 type="button"
-                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+                class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+                style="padding: 5px 10px"
                 @click="dialog.open = false"
               >
                 {{ t('common.cancel') }}
@@ -502,7 +540,8 @@
               <button
                 type="button"
                 :disabled="dialogTest.loading"
-                class="px-4 py-2 ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-zinc-300 hover:text-[var(--text)] disabled:opacity-50 transition-all"
+                class="ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-zinc-300 hover:text-[var(--text)] disabled:opacity-50 transition-all"
+                style="padding: 5px 10px"
                 @click="testDialog"
               >
                 {{ dialogTest.loading ? t('common.testing') : t('common.test') }}
@@ -510,7 +549,8 @@
               <button
                 type="submit"
                 :disabled="saving"
-                class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+                class="bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+                style="padding: 5px 12px"
               >
                 {{ saving ? t('common.saving') : t('common.save') }}
               </button>

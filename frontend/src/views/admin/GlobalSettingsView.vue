@@ -9,10 +9,11 @@
 
     <div
       v-if="store.loading"
-      class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center"
+      class="flex items-center gap-[8px] text-zinc-500 text-sm py-[32px] justify-center"
     >
       <svg
-        class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
+        class="animate-spin text-[var(--color-corporate-green-50)]"
+        style="width: 14px; height: 14px"
         fill="none"
         viewBox="0 0 24 24"
       >
@@ -50,11 +51,32 @@
               <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.viewType')
               }}</span>
-              <select v-model="form.view_type" class="select w-[160px]">
-                <option value="icon">{{ t('boardSettings.viewTypeIcon') }}</option>
-                <option value="text">{{ t('boardSettings.viewTypeText') }}</option>
-                <option value="gadget">{{ t('boardSettings.viewTypeGadget') }}</option>
-              </select>
+              <div class="relative">
+                <select v-model="form.view_type" class="select w-[160px]">
+                  <option value="icon">{{ t('boardSettings.viewTypeIcon') }}</option>
+                  <option value="text">{{ t('boardSettings.viewTypeText') }}</option>
+                  <option value="gadget">{{ t('boardSettings.viewTypeGadget') }}</option>
+                </select>
+                <div
+                  class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
+                  style="padding-right: 8px"
+                >
+                  <svg
+                    style="width: 12px; height: 12px"
+                    class="text-zinc-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                    />
+                  </svg>
+                </div>
+              </div>
             </label>
 
             <label class="block">
@@ -62,7 +84,7 @@
                 t('boardSettings.z')
               }}</span>
               <NumberInput v-model="form.z" min="1" max="999" class="w-[80px]" />
-              <p class="text-xs text-zinc-600 mt-1">{{ t('settings.zHint') }}</p>
+              <p class="text-xs text-zinc-600" style="margin-top: 4px">{{ t('settings.zHint') }}</p>
             </label>
           </div>
 
@@ -74,26 +96,68 @@
               <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.lineStyle')
               }}</span>
-              <select v-model="form.line_style" class="select w-[176px]">
-                <option :value="null">{{ t('boardSettings.lineDefault') }}</option>
-                <option value="plain">{{ t('boardSettings.lineSimple') }}</option>
-                <option value="arrow_end">{{ t('boardSettings.lineArrowRight') }}</option>
-                <option value="arrow_start">{{ t('boardSettings.lineArrowLeft') }}</option>
-                <option value="arrow_both">{{ t('boardSettings.lineDoubleArrow') }}</option>
-                <option value="dashed">{{ t('boardSettings.lineDashed') }}</option>
-                <option value="weathermap">{{ t('boardSettings.lineWeathermap') }}</option>
-              </select>
+              <div class="relative">
+                <select v-model="form.line_style" class="select w-[176px]">
+                  <option :value="null">{{ t('boardSettings.lineDefault') }}</option>
+                  <option value="plain">{{ t('boardSettings.lineSimple') }}</option>
+                  <option value="arrow_end">{{ t('boardSettings.lineArrowRight') }}</option>
+                  <option value="arrow_start">{{ t('boardSettings.lineArrowLeft') }}</option>
+                  <option value="arrow_both">{{ t('boardSettings.lineDoubleArrow') }}</option>
+                  <option value="dashed">{{ t('boardSettings.lineDashed') }}</option>
+                  <option value="weathermap">{{ t('boardSettings.lineWeathermap') }}</option>
+                </select>
+                <div
+                  class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
+                  style="padding-right: 8px"
+                >
+                  <svg
+                    style="width: 12px; height: 12px"
+                    class="text-zinc-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                    />
+                  </svg>
+                </div>
+              </div>
             </label>
 
             <label class="block">
               <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('boardSettings.target')
               }}</span>
-              <select v-model="form.url_target" class="select w-[160px]">
-                <option value="_blank">{{ t('boardSettings.targetNewTab') }}</option>
-                <option value="_self">{{ t('boardSettings.targetSameTab') }}</option>
-                <option value="_top">{{ t('boardSettings.targetTopFrame') }}</option>
-              </select>
+              <div class="relative">
+                <select v-model="form.url_target" class="select w-[160px]">
+                  <option value="_blank">{{ t('boardSettings.targetNewTab') }}</option>
+                  <option value="_self">{{ t('boardSettings.targetSameTab') }}</option>
+                  <option value="_top">{{ t('boardSettings.targetTopFrame') }}</option>
+                </select>
+                <div
+                  class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
+                  style="padding-right: 8px"
+                >
+                  <svg
+                    style="width: 12px; height: 12px"
+                    class="text-zinc-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                    />
+                  </svg>
+                </div>
+              </div>
             </label>
           </div>
         </div>
@@ -114,7 +178,7 @@
             <input
               v-model="form.label_show"
               type="checkbox"
-              class="rounded accent-[var(--color-corporate-green-50)]"
+              class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
               style="width: 14px; height: 14px"
             />
             <span class="text-sm text-[var(--text)]">{{ t('boardSettings.showLabel') }}</span>
@@ -150,7 +214,8 @@
                     v-model="form.label_color"
                     type="text"
                     placeholder="#ffffff"
-                    class="w-[112px] bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)]"
+                    class="w-[112px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    style="padding: 5px 10px"
                   />
                 </div>
               </label>
@@ -174,7 +239,8 @@
                     v-model="form.label_background"
                     type="text"
                     placeholder="transparent"
-                    class="w-32 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)]"
+                    class="w-[128px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                    style="padding: 5px 10px"
                   />
                 </div>
               </label>
@@ -213,12 +279,33 @@
             <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
               t('board.connection')
             }}</span>
-            <select v-model="form.default_backend_id" class="select w-48">
-              <option v-for="b in connectionsStore.backends" :key="b.id" :value="b.id">
-                {{ b.label || b.id }}
-              </option>
-              <option v-if="connectionsStore.backends.length === 0" value="live_1">live_1</option>
-            </select>
+            <div class="relative">
+              <select v-model="form.default_backend_id" class="select w-[192px]">
+                <option v-for="b in connectionsStore.backends" :key="b.id" :value="b.id">
+                  {{ b.label || b.id }}
+                </option>
+                <option v-if="connectionsStore.backends.length === 0" value="live_1">live_1</option>
+              </select>
+              <div
+                class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
+                style="padding-right: 8px"
+              >
+                <svg
+                  style="width: 12px; height: 12px"
+                  class="text-zinc-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                  />
+                </svg>
+              </div>
+            </div>
           </label>
 
           <!-- Default board type -->
@@ -226,12 +313,33 @@
             <span class="text-xs text-zinc-400 block" style="margin-bottom: 3px">{{
               t('board.boardType')
             }}</span>
-            <select v-model="form.default_map_type" class="select w-[176px]">
-              <option value="static">{{ t('board.boardTypeStatic') }}</option>
-              <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
-              <option value="flow">{{ t('board.boardTypeFlowBoard') }}</option>
-              <option value="radar">{{ t('board.boardTypeRadar') }}</option>
-            </select>
+            <div class="relative">
+              <select v-model="form.default_map_type" class="select w-[176px]">
+                <option value="static">{{ t('board.boardTypeStatic') }}</option>
+                <option value="worldmap">{{ t('board.boardTypeGeoBoard') }}</option>
+                <option value="flow">{{ t('board.boardTypeFlowBoard') }}</option>
+                <option value="radar">{{ t('board.boardTypeRadar') }}</option>
+              </select>
+              <div
+                class="pointer-events-none absolute inset-y-0 right-0 flex items-center"
+                style="padding-right: 8px"
+              >
+                <svg
+                  style="width: 12px; height: 12px"
+                  class="text-zinc-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                  />
+                </svg>
+              </div>
+            </div>
           </label>
         </div>
       </section>
@@ -241,7 +349,7 @@
         class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
         style="padding: 14px 16px"
       >
-        <h3 class="text-sm font-semibold text-zinc-400 mb-1">
+        <h3 class="text-sm font-semibold text-zinc-400" style="margin-bottom: 4px">
           {{ t('settings.templates') }}
         </h3>
         <p class="text-xs text-zinc-600" style="margin-bottom: 10px">
@@ -258,7 +366,8 @@
               v-model="form.hover_template"
               type="text"
               :placeholder="t('board.templatePlaceholder')"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)]"
+              class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+              style="padding: 5px 10px"
             />
           </label>
 
@@ -271,7 +380,8 @@
               v-model="form.context_template"
               type="text"
               :placeholder="t('board.templatePlaceholder')"
-              class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)]"
+              class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+              style="padding: 5px 10px"
             />
           </label>
         </div>
@@ -282,7 +392,7 @@
         class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
         style="padding: 14px 16px"
       >
-        <h3 class="text-sm font-semibold text-zinc-400 mb-1">
+        <h3 class="text-sm font-semibold text-zinc-400" style="margin-bottom: 4px">
           {{ t('settings.checkmkIntegration') }}
         </h3>
         <p class="text-xs text-zinc-600" style="margin-bottom: 10px">
@@ -297,9 +407,12 @@
             v-model="form.checkmk_url"
             type="text"
             placeholder="https://checkmk.example.com/mysite"
-            class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)]"
+            class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] font-mono placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+            style="padding: 5px 10px"
           />
-          <p class="text-xs text-zinc-600 mt-1.5">{{ t('settings.checkmkUrlHint') }}</p>
+          <p class="text-xs text-zinc-600" style="margin-top: 6px">
+            {{ t('settings.checkmkUrlHint') }}
+          </p>
         </label>
       </section>
 
@@ -314,7 +427,7 @@
         >
           <span v-if="savedOk" class="flex items-center gap-[5px] text-sm text-green-400">
             <svg
-              class="w-4 h-4"
+              style="width: 14px; height: 14px"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -326,7 +439,8 @@
           </span>
         </Transition>
         <button
-          class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+          class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+          style="padding: 5px 10px"
           @click="resetForm"
         >
           {{ t('common.cancel') }}
@@ -420,6 +534,8 @@ onMounted(async () => {
 @reference "tailwindcss";
 
 .select {
-  @apply bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-corporate-green-50)];
+  @apply appearance-none bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all;
+
+  padding: 5px 28px 5px 10px;
 }
 </style>

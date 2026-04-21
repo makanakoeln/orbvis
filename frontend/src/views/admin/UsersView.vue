@@ -25,9 +25,13 @@
       </button>
     </div>
 
-    <div v-if="loading" class="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center">
+    <div
+      v-if="loading"
+      class="flex items-center gap-[8px] text-zinc-500 text-sm py-[32px] justify-center"
+    >
       <svg
-        class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
+        class="animate-spin text-[var(--color-corporate-green-50)]"
+        style="width: 14px; height: 14px"
         fill="none"
         viewBox="0 0 24 24"
       >
@@ -181,16 +185,17 @@
       <div v-if="showCreate" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showCreate = false" />
         <div
-          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-96"
+          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl"
+          style="padding: 16px; width: 380px"
         >
           <div class="flex items-center justify-between" style="margin-bottom: 16px">
             <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.createUser') }}</h3>
             <button
-              class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+              class="p-[5px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
               @click="showCreate = false"
             >
               <svg
-                class="w-4 h-4"
+                style="width: 14px; height: 14px"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -200,19 +205,20 @@
               </svg>
             </button>
           </div>
-          <form class="space-y-3" @submit.prevent="createUser">
-            <div class="space-y-1.5">
+          <form class="space-y-[10px]" @submit.prevent="createUser">
+            <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('auth.username') }}</label>
               <input
                 v-model="newUser.name"
                 placeholder="john"
                 required
                 autocomplete="off"
-                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                style="padding: 5px 10px"
               />
             </div>
 
-            <div class="space-y-1.5">
+            <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('auth.password') }}</label>
               <input
                 v-model="newUser.password"
@@ -220,12 +226,13 @@
                 required
                 minlength="6"
                 autocomplete="new-password"
-                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                style="padding: 5px 10px"
               />
               <p class="text-xs text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
 
-            <div class="space-y-1.5">
+            <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{
                 t('userSettings.confirmPassword')
               }}</label>
@@ -234,7 +241,8 @@
                 type="password"
                 required
                 autocomplete="new-password"
-                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 transition-all"
+                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 transition-all"
+                style="padding: 5px 10px"
                 :class="
                   newUserConfirmPassword && newUser.password !== newUserConfirmPassword
                     ? 'ring-red-500/60 focus:ring-red-500'
@@ -249,12 +257,13 @@
               </p>
             </div>
 
-            <div class="border-t border-[var(--border)] pt-3 space-y-3">
-              <label class="flex items-start gap-3 cursor-pointer group select-none">
+            <div class="border-t border-[var(--border)] pt-[10px] space-y-[10px]">
+              <label class="flex items-start gap-[8px] cursor-pointer group select-none">
                 <input
                   v-model="newUser.is_admin"
                   type="checkbox"
-                  class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 mt-0.5 shrink-0"
+                  class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
+                  style="width: 14px; height: 14px; margin-top: 2px"
                 />
                 <div>
                   <p class="text-sm text-zinc-300 group-hover:text-[var(--text)] transition-colors">
@@ -264,11 +273,12 @@
                 </div>
               </label>
 
-              <label class="flex items-center gap-3 cursor-pointer select-none">
+              <label class="flex items-center gap-[8px] cursor-pointer select-none">
                 <input
                   v-model="newUser.must_change_password"
                   type="checkbox"
-                  class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 shrink-0"
+                  class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
+                  style="width: 14px; height: 14px"
                 />
                 <p class="text-sm text-zinc-400">{{ t('admin.mustChangePassword') }}</p>
               </label>
@@ -276,29 +286,34 @@
 
             <div
               v-if="availableRoles.length"
-              class="border-t border-[var(--border)] pt-3 space-y-2"
+              class="border-t border-[var(--border)] pt-[10px] space-y-[8px]"
             >
               <p class="text-xs font-medium text-zinc-400">{{ t('admin.roles') }}</p>
               <label
                 v-for="role in availableRoles"
                 :key="role.role_id"
-                class="flex items-center gap-3 cursor-pointer select-none"
+                class="flex items-center gap-[8px] cursor-pointer select-none"
               >
                 <input
                   v-model="selectedRoleIds"
                   type="checkbox"
                   :value="role.role_id"
-                  class="rounded accent-[var(--color-corporate-green-50)] w-4 h-4 shrink-0"
+                  class="rounded accent-[var(--color-corporate-green-50)] shrink-0"
+                  style="width: 14px; height: 14px"
                 />
                 <p class="text-sm text-zinc-400">{{ role.name }}</p>
               </label>
             </div>
 
             <p v-if="createError" class="text-xs text-red-400">{{ createError }}</p>
-            <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
+            <div
+              class="flex gap-[8px] justify-end border-t border-[var(--border)]"
+              style="padding-top: 10px"
+            >
               <button
                 type="button"
-                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+                class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+                style="padding: 5px 10px"
                 @click="showCreate = false"
               >
                 {{ t('common.cancel') }}
@@ -306,7 +321,8 @@
               <button
                 type="submit"
                 :disabled="creating || newUser.password !== newUserConfirmPassword"
-                class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+                class="bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+                style="padding: 5px 12px"
               >
                 {{ creating ? t('common.saving') : t('common.create') }}
               </button>
