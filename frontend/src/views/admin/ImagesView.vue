@@ -8,8 +8,8 @@
         <p class="text-sm text-zinc-500" style="margin-top: 3px">{{ t('admin.iconsSubtitle') }}</p>
       </div>
       <button
-        class="flex items-center ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
-        style="gap: 6px; padding: 5px 10px; font-size: 12px"
+        class="flex items-center bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+        style="gap: 5px; padding: 5px 10px; font-size: 12px"
         @click="fileInputEl?.click()"
       >
         <svg
