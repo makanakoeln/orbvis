@@ -17,9 +17,11 @@ export function applyTheme(theme: string, ssoActive: boolean, cmkTheme?: string 
   if (dark) {
     root.classList.remove('light');
     root.classList.add('dark');
+    document.body.dataset.theme = 'modern-dark';
   } else {
     root.classList.remove('dark');
     root.classList.add('light');
+    document.body.dataset.theme = 'facelift';
   }
 }
 

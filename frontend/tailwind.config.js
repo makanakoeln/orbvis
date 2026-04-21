@@ -5,7 +5,6 @@ export default {
   theme: {
     extend: {
       colors: {
-        // NagVis state colors und warning-Token für bg-warning / text-warning
         warning: '#ffd000',
         state: {
           up: '#00ff00',
@@ -17,6 +16,21 @@ export default {
           unknown: '#ff8800',
           pending: '#aaaaaa',
         },
+        // CMK brand colors (as CSS variable references)
+        'corporate-green': {
+          DEFAULT: 'var(--color-corporate-green-50)',
+          50: 'var(--color-corporate-green-50)',
+          60: 'var(--color-corporate-green-60)',
+          70: 'var(--color-corporate-green-70)',
+        },
+        'cmk-primary': 'var(--default-button-primary-color)',
+        'cmk-bg': 'var(--default-bg-color)',
+        'cmk-surface': 'var(--ux-theme-3)',
+        'cmk-nav': 'var(--default-nav-bg-color)',
+        'cmk-form': 'var(--default-form-element-bg-color)',
+        'cmk-border': 'var(--default-border-color)',
+        'cmk-text': 'var(--font-color)',
+        'cmk-text-dim': 'var(--font-color-dimmed)',
       },
     },
   },
