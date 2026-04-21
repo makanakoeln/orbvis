@@ -60,8 +60,9 @@ step "Staging MKP structure"
 mkdir -p "$TMPDIR/web/plugins/sidebar" "$TMPDIR/web/plugins/wato" "$TMPDIR/lib/orbvis"
 
 # GUI plugins (CMK 2.3 web/plugins/ layout)
-cp "$SCRIPT_DIR/cmk_plugins_23/orbvis_sidebar.py" "$TMPDIR/web/plugins/sidebar/orbvis_sidebar.py"
-cp "$SCRIPT_DIR/cmk_plugins_23/orbvis_menu.py"    "$TMPDIR/web/plugins/wato/orbvis_menu.py"
+cp "$SCRIPT_DIR/cmk_plugins_23/orbvis_sidebar.py"     "$TMPDIR/web/plugins/sidebar/orbvis_sidebar.py"
+cp "$SCRIPT_DIR/cmk_plugins_23/orbvis_menu.py"        "$TMPDIR/web/plugins/wato/orbvis_menu.py"
+cp "$SCRIPT_DIR/cmk_plugins_23/orbvis_permissions.py" "$TMPDIR/web/plugins/wato/orbvis_permissions.py"
 
 # Frontend: single tarball → lib/orbvis/htdocs.tar.gz
 # orbvis-setup extracts it to $OMD_ROOT/local/share/orbvis/htdocs/

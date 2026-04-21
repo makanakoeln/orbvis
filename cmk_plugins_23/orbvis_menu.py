@@ -1,4 +1,4 @@
-# OrbVis main navigation menu entry – compatible with Checkmk 2.3 and 2.4
+# OrbVis main navigation menu entry – compatible with Checkmk 2.3, 2.4 and 2.5
 # Installed via MKP to: local/share/check_mk/web/plugins/wato/orbvis_menu.py
 
 import os
@@ -27,62 +27,88 @@ def _user_may_use() -> bool:
         return True
 
 
-try:
-    # CMK 2.3 / 2.4
-    from cmk.gui.main_menu import mega_menu_registry
-    from cmk.gui.type_defs import MegaMenu, TopicMenuItem, TopicMenuTopic
+# (name, title, url-suffix, sort_index, icon)
+_ITEMS = [
+    ("orbvis_boards",      "Boards",      "",                    10, "save_dashboard"),
+    ("orbvis_settings",    "Settings",    "#/admin/settings",    20, "configuration"),
+    ("orbvis_connections", "Connections", "#/admin/connections", 30, "sites"),
+    ("orbvis_icons",       "Icons",       "#/admin/icons",       40, "icons"),
+]
 
-    def _orbvis_topics() -> list:
+
+try:
+    # CMK 2.5+
+    from cmk.gui.main_menu import main_menu_registry
+    from cmk.gui.main_menu_types import MainMenu, MainMenuItem, MainMenuTopic
+
+    def _orbvis_topics_25(_user_permissions: object) -> list:
         if not _user_may_use():
             return []
         return [
-            TopicMenuTopic(
+            MainMenuTopic(
                 name="orbvis",
                 title=_("OrbVis"),
                 icon="save_dashboard",
-                items=[
-                    TopicMenuItem(
-                        name="orbvis_boards",
-                        title=_("Boards"),
-                        url=f"/{_SITE}/orbvis/",
-                        sort_index=10,
-                        icon="save_dashboard",
-                    ),
-                    TopicMenuItem(
-                        name="orbvis_settings",
-                        title=_("Settings"),
-                        url=f"/{_SITE}/orbvis/#/admin/settings",
-                        sort_index=20,
-                        icon="configuration",
-                    ),
-                    TopicMenuItem(
-                        name="orbvis_connections",
-                        title=_("Connections"),
-                        url=f"/{_SITE}/orbvis/#/admin/connections",
-                        sort_index=30,
-                        icon="sites",
-                    ),
-                    TopicMenuItem(
-                        name="orbvis_icons",
-                        title=_("Icons"),
-                        url=f"/{_SITE}/orbvis/#/admin/icons",
-                        sort_index=40,
-                        icon="icons",
-                    ),
+                entries=[
+                    MainMenuItem(
+                        name=name,
+                        title=_(title),
+                        url=f"/{_SITE}/orbvis/{suffix}",
+                        sort_index=idx,
+                        icon=icon,
+                    )
+                    for name, title, suffix, idx, icon in _ITEMS
                 ],
             )
         ]
 
-    mega_menu_registry.register(
-        MegaMenu(
+    main_menu_registry.register(
+        MainMenu(
             name="orbvis",
             title=_("OrbVis"),
             icon="save_dashboard",
             sort_index=16,
-            topics=_orbvis_topics,
+            topics=_orbvis_topics_25,
+            search=None,
         )
     )
 
-except Exception:
-    # Graceful degradation if menu API unavailable
-    pass
+except ImportError:
+    try:
+        # CMK 2.3 / 2.4
+        from cmk.gui.main_menu import mega_menu_registry
+        from cmk.gui.type_defs import MegaMenu, TopicMenuItem, TopicMenuTopic
+
+        def _orbvis_topics_24() -> list:
+            if not _user_may_use():
+                return []
+            return [
+                TopicMenuTopic(
+                    name="orbvis",
+                    title=_("OrbVis"),
+                    icon="save_dashboard",
+                    items=[
+                        TopicMenuItem(
+                            name=name,
+                            title=_(title),
+                            url=f"/{_SITE}/orbvis/{suffix}",
+                            sort_index=idx,
+                            icon=icon,
+                        )
+                        for name, title, suffix, idx, icon in _ITEMS
+                    ],
+                )
+            ]
+
+        mega_menu_registry.register(
+            MegaMenu(
+                name="orbvis",
+                title=_("OrbVis"),
+                icon="save_dashboard",
+                sort_index=16,
+                topics=_orbvis_topics_24,
+            )
+        )
+
+    except ImportError:
+        pass
