@@ -28,6 +28,11 @@ from app.schemas.user import UserCreate
 
 logger = logging.getLogger(__name__)
 
+
+def _hmac_sha256_hex(secret: bytes, msg: bytes) -> str:
+    return _hmac.new(key=secret, msg=msg, digestmod=hashlib.sha256).digest().hex()
+
+
 # Checkmk usernames: letters, digits, @, dot, hyphen, underscore.
 # Validated before use in filesystem paths to prevent path traversal.
 _USERNAME_RE = re.compile(r"^[a-zA-Z0-9@._-]+$")
@@ -131,11 +136,14 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
             except ValueError:
                 logger.warning("SSO: could not parse serial from %s", serial_path)
 
-        # Checkmk 2.4 concatenates without separators.
-        # See installed cmk/gui/userdb/session.py :: generate_auth_hash()
-        msg = f"{username}{session_id}{serial}".encode()
-        expected = _hmac.new(key=secret, msg=msg, digestmod=hashlib.sha256).digest().hex()
-        if not _hmac.compare_digest(expected, cookie_hash):
+        # CMK 2.4: no separators; CMK 2.5+: colon-delimited. Try both.
+        # Bitwise | instead of `or` ensures both sides always execute (no short-circuit timing leak).
+        msg_25 = f"{username}:{session_id}:{serial}".encode()
+        msg_24 = f"{username}{session_id}{serial}".encode()
+        if not (
+            _hmac.compare_digest(_hmac_sha256_hex(secret, msg_25), cookie_hash)
+            | _hmac.compare_digest(_hmac_sha256_hex(secret, msg_24), cookie_hash)
+        ):
             logger.warning("SSO: HMAC mismatch for user %r (serial=%d)", username, serial)
             return None
         return username
