@@ -1,9 +1,14 @@
-import { max, min } from 'd3-array';
-import { easeQuadInOut } from 'd3-ease';
-import { scaleLinear } from 'd3-scale';
-import { select } from 'd3-selection';
-import { area, curveMonotoneX, line } from 'd3-shape';
-import { transition } from 'd3-transition';
+import {
+  area,
+  curveMonotoneX,
+  easeQuadInOut,
+  line,
+  max,
+  min,
+  scaleLinear,
+  select,
+  transition,
+} from 'd3';
 import type { Ref } from 'vue';
 import { onMounted, watch } from 'vue';
 

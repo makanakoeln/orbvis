@@ -1,8 +1,13 @@
-import { easeBackOut, easeCubicOut, easeQuadInOut } from 'd3-ease';
-import { interpolate, interpolateLab } from 'd3-interpolate';
-import { select } from 'd3-selection';
-import { arc } from 'd3-shape';
-import { transition } from 'd3-transition';
+import {
+  arc,
+  easeBackOut,
+  easeCubicOut,
+  easeQuadInOut,
+  interpolate,
+  interpolateLab,
+  select,
+  transition,
+} from 'd3';
 import type { Ref } from 'vue';
 import { onMounted, watch } from 'vue';
 

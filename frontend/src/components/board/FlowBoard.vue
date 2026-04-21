@@ -92,21 +92,20 @@
 </template>
 
 <script setup lang="ts">
-import 'd3-transition';
-
-import { drag } from 'd3-drag';
 import {
+  drag,
   forceCollide,
   forceLink,
   forceManyBody,
   forceSimulation,
   forceX,
   forceY,
+  select,
   type SimulationLinkDatum,
   type SimulationNodeDatum,
-} from 'd3-force';
-import { select } from 'd3-selection';
-import { zoom, zoomIdentity } from 'd3-zoom';
+  zoom,
+  zoomIdentity,
+} from 'd3';
 import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 import { connectionsApi } from '@/api/client';
