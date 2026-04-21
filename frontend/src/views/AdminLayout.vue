@@ -3,14 +3,16 @@
     <!-- Top nav bar — only visible when the sidebar is hidden (Checkmk deployment / SSO) -->
     <nav
       v-if="auth.ssoActive || auth.isCheckmkDeployment"
-      class="shrink-0 bg-[var(--bg-surface)] border-b border-[var(--border)] px-4 flex items-center gap-1 h-11"
+      class="shrink-0 bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center gap-[4px]"
+      style="padding: 0 16px; height: 40px"
     >
       <router-link
         to="/"
-        class="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-[var(--text)] transition-colors pr-3 mr-2 border-r border-[var(--border)]"
+        class="flex items-center gap-[6px] text-[13px] text-zinc-400 hover:text-[var(--text)] transition-colors border-r border-[var(--border)]"
+        style="padding-right: 10px; margin-right: 8px"
       >
         <svg
-          class="w-4 h-4 shrink-0"
+          style="width: 14px; height: 14px; flex-shrink: 0"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -28,7 +30,8 @@
         v-for="item in adminNavItems"
         :key="item.to"
         :to="item.to"
-        class="px-3 py-1.5 rounded-lg text-sm transition-colors"
+        class="rounded text-[13px] transition-colors"
+        style="padding: 4px 10px"
         :class="
           isActive(item.to)
             ? 'text-[var(--color-corporate-green-40)] bg-[var(--color-corporate-green-50)]/10 ring-1 ring-[var(--color-corporate-green-50)]/20'
@@ -38,7 +41,7 @@
         {{ item.label }}
       </router-link>
     </nav>
-    <main class="flex-1 overflow-auto p-8">
+    <main class="flex-1 overflow-auto" style="padding: 20px 24px">
       <router-view />
     </main>
   </div>

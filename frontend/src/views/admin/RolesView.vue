@@ -1,22 +1,23 @@
 <template>
   <div class="max-w-3xl">
-    <div class="flex justify-between items-center mb-5">
+    <div class="flex justify-between items-center" style="margin-bottom: 16px">
       <div>
         <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
           {{ t('admin.rolesAndPermissions') }}
         </h2>
-        <p class="text-sm text-zinc-500 mt-1">{{ t('admin.rolesSubtitle') }}</p>
+        <p class="text-sm text-zinc-500" style="margin-top: 3px">{{ t('admin.rolesSubtitle') }}</p>
       </div>
       <button
-        class="flex items-center gap-2 px-4 py-2 ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
+        class="flex items-center ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
+        style="gap: 6px; padding: 5px 10px; font-size: 12px"
         @click="showCreate = true"
       >
         <svg
-          class="w-4 h-4"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
           stroke-width="2.5"
+          style="width: 13px; height: 13px"
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
@@ -40,44 +41,53 @@
       {{ t('common.loading') }}
     </div>
 
-    <div v-else class="space-y-3">
+    <div v-else class="space-y-[8px]">
       <div
         v-for="role in roles"
         :key="role.role_id"
-        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-5 hover:ring-[var(--border)] transition-all"
+        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl hover:ring-[var(--border)] transition-all"
+        style="padding: 12px"
       >
-        <div class="flex justify-between items-start gap-4">
+        <div class="flex justify-between items-start gap-[12px]">
           <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2.5 mb-1">
+            <div class="flex items-center gap-[6px]" style="margin-bottom: 3px">
               <span class="font-semibold text-[var(--text)]">{{ role.name }}</span>
               <span
-                class="text-xs px-1.5 py-0.5 rounded bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-zinc-500"
+                class="text-xs rounded bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-zinc-500"
+                style="padding: 1px 5px"
               >
                 {{ role.permissions.length }} {{ t('admin.permissions') }}
               </span>
             </div>
-            <div v-if="role.permissions.length" class="flex flex-wrap gap-1.5 mt-2.5">
+            <div
+              v-if="role.permissions.length"
+              class="flex flex-wrap gap-[4px]"
+              style="margin-top: 8px"
+            >
               <span
                 v-for="perm in role.permissions"
                 :key="perm.perm_id"
-                class="text-xs bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-md px-2 py-0.5 text-zinc-400 font-mono"
+                class="text-xs bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-md text-zinc-400 font-mono"
+                style="padding: 1px 5px"
                 >{{ perm.mod }}/{{ perm.act }}/{{ perm.obj }}</span
               >
             </div>
-            <p v-else class="text-xs text-zinc-600 mt-2">{{ t('admin.noPermissions') }}</p>
+            <p v-else class="text-xs text-zinc-600" style="margin-top: 6px">
+              {{ t('admin.noPermissions') }}
+            </p>
           </div>
-          <div class="flex items-center gap-1 shrink-0">
+          <div class="flex items-center gap-[3px] shrink-0">
             <button
-              class="p-1.5 rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+              class="p-[4px] rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
               :title="t('common.edit')"
               @click="openEdit(role)"
             >
               <svg
-                class="w-3.5 h-3.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
                 stroke-width="2"
+                style="width: 13px; height: 13px"
               >
                 <path
                   stroke-linecap="round"
@@ -87,16 +97,16 @@
               </svg>
             </button>
             <button
-              class="p-1.5 rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              class="p-[4px] rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
               :title="t('common.delete')"
               @click="deleteTargetId = role.role_id"
             >
               <svg
-                class="w-3.5 h-3.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
                 stroke-width="2"
+                style="width: 13px; height: 13px"
               >
                 <path
                   stroke-linecap="round"
@@ -109,7 +119,7 @@
         </div>
       </div>
 
-      <div v-if="!roles.length" class="text-center py-12 text-zinc-600 text-sm">
+      <div v-if="!roles.length" class="text-center py-[32px] text-zinc-600 text-sm">
         {{ t('admin.noRoles') }}
       </div>
     </div>
@@ -119,16 +129,17 @@
       <div v-if="showCreate" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showCreate = false" />
         <div
-          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-80"
+          class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl w-80"
+          style="padding: 16px"
         >
-          <div class="flex items-center justify-between mb-5">
+          <div class="flex items-center justify-between" style="margin-bottom: 12px">
             <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.createRole') }}</h3>
             <button
-              class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+              class="p-[4px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
               @click="showCreate = false"
             >
               <svg
-                class="w-4 h-4"
+                style="width: 14px; height: 14px"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -138,27 +149,30 @@
               </svg>
             </button>
           </div>
-          <form class="space-y-4" @submit.prevent="createRole">
-            <div class="space-y-1.5">
+          <form class="space-y-[10px]" @submit.prevent="createRole">
+            <div class="space-y-[4px]">
               <label class="text-xs font-medium text-zinc-400">{{ t('admin.roleName') }}</label>
               <input
                 v-model="newRoleName"
                 placeholder="e.g. operators"
                 required
-                class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                style="padding: 8px 10px"
               />
             </div>
-            <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
+            <div class="flex gap-[8px] justify-end pt-[10px] border-t border-[var(--border)]">
               <button
                 type="button"
-                class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+                class="rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+                style="padding: 5px 10px; font-size: 12px"
                 @click="showCreate = false"
               >
                 {{ t('common.cancel') }}
               </button>
               <button
                 type="submit"
-                class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+                class="bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded-lg font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+                style="padding: 5px 10px; font-size: 12px"
               >
                 {{ t('common.create') }}
               </button>
@@ -183,15 +197,15 @@
               <span class="text-[var(--color-corporate-green-50)]">{{ editRole.name }}</span>
             </h3>
             <button
-              class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+              class="p-[4px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
               @click="cancelEdit"
             >
               <svg
-                class="w-4 h-4"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
                 stroke-width="2"
+                style="width: 14px; height: 14px"
               >
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -311,14 +325,16 @@
           >
             <p v-if="permSaveError" class="text-red-400 text-xs flex-1">{{ permSaveError }}</p>
             <button
-              class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+              class="rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+              style="padding: 5px 10px; font-size: 12px"
               @click="cancelEdit"
             >
               {{ t('common.cancel') }}
             </button>
             <button
               :disabled="permSaving"
-              class="px-5 py-2 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+              class="bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
+              style="padding: 5px 10px; font-size: 12px"
               @click="savePermissions"
             >
               {{ permSaving ? t('common.saving') : t('common.save') }}

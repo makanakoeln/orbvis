@@ -1,18 +1,19 @@
 <template>
   <div>
-    <div class="flex justify-between items-center mb-5">
+    <div class="flex justify-between items-center" style="margin-bottom: 16px">
       <div>
         <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
           {{ t('admin.icons') }}
         </h2>
-        <p class="text-sm text-zinc-500 mt-1">{{ t('admin.iconsSubtitle') }}</p>
+        <p class="text-sm text-zinc-500" style="margin-top: 3px">{{ t('admin.iconsSubtitle') }}</p>
       </div>
       <button
-        class="flex items-center gap-2 px-4 py-2 ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
+        class="flex items-center ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
+        style="gap: 6px; padding: 5px 10px; font-size: 12px"
         @click="fileInputEl?.click()"
       >
         <svg
-          class="w-4 h-4"
+          style="width: 13px; height: 13px"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -39,10 +40,12 @@
     <!-- Upload feedback -->
     <div
       v-if="uploadError"
-      class="mb-4 px-4 py-3 rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-400 text-sm flex items-center gap-2"
+      class="rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-400 text-sm flex items-center gap-[6px]"
+      style="margin-bottom: 10px; padding: 8px 12px"
     >
       <svg
-        class="w-4 h-4 shrink-0"
+        class="shrink-0"
+        style="width: 14px; height: 14px"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -69,9 +72,10 @@
       {{ t('common.loading') }}
     </div>
 
-    <div v-else-if="!icons.length" class="text-center py-16 text-zinc-600 text-sm">
+    <div v-else-if="!icons.length" class="text-center py-[40px] text-zinc-600 text-sm">
       <svg
-        class="w-10 h-10 mx-auto mb-3 text-zinc-700"
+        class="mx-auto text-zinc-700"
+        style="width: 32px; height: 32px; margin-bottom: 8px"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -86,16 +90,18 @@
       {{ t('admin.noIcons') }}
     </div>
 
-    <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
+    <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-[8px]">
       <div
         v-for="icon in icons"
         :key="icon.name"
-        class="group relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl p-3 flex flex-col items-center gap-2 hover:ring-[var(--default-form-element-border-color)] transition-all"
+        class="group relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl flex flex-col items-center gap-[6px] hover:ring-[var(--default-form-element-border-color)] transition-all"
+        style="padding: 8px"
       >
         <img
           :src="`${BASE_URL}${icon.url}`"
           :alt="icon.name"
-          class="w-12 h-12 object-contain"
+          class="object-contain"
+          style="width: 40px; height: 40px"
           :class="icon.name.endsWith('.svg') ? 'svg-icon' : ''"
         />
         <p
@@ -105,12 +111,13 @@
           {{ icon.name }}
         </p>
         <button
-          class="absolute top-1.5 right-1.5 w-5 h-5 rounded bg-red-500/0 hover:bg-red-500/20 text-zinc-700 hover:text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+          class="absolute rounded bg-red-500/0 hover:bg-red-500/20 text-zinc-700 hover:text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+          style="top: 4px; right: 4px; width: 18px; height: 18px"
           :title="t('common.delete')"
           @click="deleteTargetName = icon.name"
         >
           <svg
-            class="w-3.5 h-3.5"
+            style="width: 12px; height: 12px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

@@ -1,22 +1,23 @@
 <template>
   <div class="max-w-4xl">
-    <div class="flex justify-between items-center mb-5">
+    <div class="flex justify-between items-center" style="margin-bottom: 16px">
       <div>
         <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
           {{ t('admin.users') }}
         </h2>
-        <p class="text-sm text-zinc-500 mt-1">{{ t('admin.usersSubtitle') }}</p>
+        <p class="text-sm text-zinc-500" style="margin-top: 3px">{{ t('admin.usersSubtitle') }}</p>
       </div>
       <button
-        class="flex items-center gap-2 px-4 py-2 ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
+        class="flex items-center ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg font-medium text-zinc-300 hover:text-[var(--text)] transition-all duration-150"
+        style="gap: 6px; padding: 5px 10px; font-size: 12px"
         @click="showCreate = true"
       >
         <svg
-          class="w-4 h-4"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
           stroke-width="2.5"
+          style="width: 13px; height: 13px"
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
@@ -47,19 +48,34 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-[var(--border)]">
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 tracking-wider">
+            <th
+              class="text-left text-xs font-semibold text-zinc-500 tracking-wider"
+              style="padding: 6px 12px"
+            >
               {{ t('admin.name') }}
             </th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 tracking-wider">
+            <th
+              class="text-left text-xs font-semibold text-zinc-500 tracking-wider"
+              style="padding: 6px 12px"
+            >
               {{ t('admin.type') }}
             </th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 tracking-wider">
+            <th
+              class="text-left text-xs font-semibold text-zinc-500 tracking-wider"
+              style="padding: 6px 12px"
+            >
               {{ t('admin.status') }}
             </th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 tracking-wider">
+            <th
+              class="text-left text-xs font-semibold text-zinc-500 tracking-wider"
+              style="padding: 6px 12px"
+            >
               {{ t('admin.roles') }}
             </th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-zinc-500 tracking-wider">
+            <th
+              class="text-right text-xs font-semibold text-zinc-500 tracking-wider"
+              style="padding: 6px 12px"
+            >
               {{ t('admin.actions') }}
             </th>
           </tr>
@@ -70,55 +86,60 @@
             :key="user.user_id"
             class="hover:bg-[var(--bg-hover)] transition-colors"
           >
-            <td class="px-4 py-3 font-medium text-[var(--text)]">{{ user.name }}</td>
-            <td class="px-4 py-3">
+            <td class="font-medium text-[var(--text)]" style="padding: 6px 12px">
+              {{ user.name }}
+            </td>
+            <td style="padding: 6px 12px">
               <span
                 v-if="user.is_admin"
-                class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20"
+                class="inline-flex items-center text-xs font-semibold rounded-full bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20"
+                style="gap: 3px; padding: 1px 6px"
               >
                 {{ t('admin.admin') }}
               </span>
               <span v-else class="text-xs text-zinc-600">{{ t('admin.user') }}</span>
             </td>
-            <td class="px-4 py-3">
+            <td style="padding: 6px 12px">
               <span
-                class="inline-flex items-center gap-1.5 text-xs font-medium"
+                class="inline-flex items-center gap-[4px] text-xs font-medium"
                 :class="user.is_active ? 'text-green-400' : 'text-red-400'"
               >
                 <span
-                  class="w-1.5 h-1.5 rounded-full"
+                  class="rounded-full"
+                  style="width: 6px; height: 6px"
                   :class="user.is_active ? 'bg-green-400' : 'bg-red-400'"
                 />
                 {{ user.is_active ? t('admin.active') : t('admin.inactive') }}
               </span>
             </td>
-            <td class="px-4 py-3 text-zinc-500 text-xs">
+            <td class="text-zinc-500 text-xs" style="padding: 6px 12px">
               <template v-if="user.roles.length">
                 <span
                   v-for="r in user.roles"
                   :key="r.role_id"
-                  class="inline-block px-1.5 py-0.5 rounded bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-zinc-400 mr-1 mb-0.5"
+                  class="inline-block rounded bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-zinc-400 mr-1 mb-0.5"
+                  style="padding: 1px 5px"
                 >
                   {{ r.name }}
                 </span>
               </template>
               <span v-else class="text-zinc-700">—</span>
             </td>
-            <td class="px-4 py-3 text-right">
-              <div class="flex items-center justify-end gap-1">
+            <td class="text-right" style="padding: 6px 12px">
+              <div class="flex items-center justify-end gap-[3px]">
                 <template v-if="user.user_id !== auth.user?.user_id">
                   <button
                     v-if="canEditUsers"
-                    class="p-1.5 rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                    class="p-[4px] rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
                     :title="t('common.edit')"
                     @click="editUser = user"
                   >
                     <svg
-                      class="w-3.5 h-3.5"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                       stroke-width="2"
+                      style="width: 13px; height: 13px"
                     >
                       <path
                         stroke-linecap="round"
@@ -128,16 +149,16 @@
                     </svg>
                   </button>
                   <button
-                    class="p-1.5 rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                    class="p-[4px] rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
                     :title="t('common.delete')"
                     @click="deleteTargetId = user.user_id"
                   >
                     <svg
-                      class="w-3.5 h-3.5"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                       stroke-width="2"
+                      style="width: 13px; height: 13px"
                     >
                       <path
                         stroke-linecap="round"
@@ -162,7 +183,7 @@
         <div
           class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl p-6 w-96"
         >
-          <div class="flex items-center justify-between mb-5">
+          <div class="flex items-center justify-between" style="margin-bottom: 16px">
             <h3 class="text-base font-bold text-[var(--text)]">{{ t('admin.createUser') }}</h3>
             <button
               class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
