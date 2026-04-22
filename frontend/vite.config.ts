@@ -101,7 +101,10 @@ export default defineConfig({
     target: ['chrome88', 'edge88', 'firefox78', 'safari14'],
     chunkSizeWarningLimit: 600,
     rollupOptions: {
-      external: ['fs'],
+      onLog(level, log, handler) {
+        if (log.plugin === 'vite:resolve' && log.message.includes('pofile')) return
+        handler(level, log)
+      },
       output: {
         manualChunks: {
           d3: ['d3'],
