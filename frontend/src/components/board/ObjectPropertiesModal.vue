@@ -47,10 +47,7 @@
         </div>
 
         <!-- Scrollable body -->
-        <div
-          class="overflow-y-auto overflow-x-hidden flex-1 space-y-[2px]"
-          style="padding: 10px 16px"
-        >
+        <CmkScrollContainer class="flex-1 min-h-0 space-y-[2px]" style="padding: 10px 16px">
           <!-- === MONITORING OBJECT === -->
           <section
             v-if="
@@ -804,7 +801,7 @@
           <div class="text-xs text-zinc-700 font-mono pt-1 border-t border-[var(--border)]">
             ID: {{ object.id }}
           </div>
-        </div>
+        </CmkScrollContainer>
 
         <!-- Footer -->
         <div
@@ -845,6 +842,7 @@
 <script setup lang="ts">
 import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkColorPicker from '@cmk/components/CmkColorPicker.vue';
+import CmkScrollContainer from '@cmk/components/CmkScrollContainer.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';

@@ -14,281 +14,352 @@
     <div v-else class="space-y-[16px]">
       <!-- Object defaults -->
       <section
-        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
-        style="padding: 14px 16px"
+        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
       >
-        <h3 class="text-base font-semibold text-zinc-400" style="margin-bottom: 10px">
-          {{ t('settings.objectDefaults') }}
-        </h3>
+        <button
+          class="w-full flex items-center justify-between text-left"
+          style="padding: 14px 16px"
+          @click="sectionOpen.objectDefaults = !sectionOpen.objectDefaults"
+        >
+          <h3 class="text-base font-semibold text-zinc-400">{{ t('settings.objectDefaults') }}</h3>
+          <svg
+            style="width: 14px; height: 14px; flex-shrink: 0; transition: transform 200ms"
+            :style="{ transform: sectionOpen.objectDefaults ? 'rotate(180deg)' : '' }"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+        <CmkCollapsible :open="sectionOpen.objectDefaults">
+          <div class="space-y-[12px]" style="padding: 0 16px 14px">
+            <div class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start">
+              <label class="block">
+                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                  t('board.iconSize')
+                }}</span>
+                <NumberInput v-model="form.icon_size" min="8" max="256" class="w-[80px]" />
+              </label>
 
-        <div class="space-y-[12px]">
-          <!-- Appearance -->
-          <div class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start">
-            <label class="block">
-              <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                t('board.iconSize')
-              }}</span>
-              <NumberInput v-model="form.icon_size" min="8" max="256" class="w-[80px]" />
-            </label>
+              <label class="block">
+                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                  t('boardSettings.viewType')
+                }}</span>
+                <CmkToggleButtonGroup
+                  v-model="form.view_type"
+                  :options="[
+                    { value: 'icon', label: t('boardSettings.viewTypeIcon') },
+                    { value: 'text', label: t('boardSettings.viewTypeText') },
+                    { value: 'gadget', label: t('boardSettings.viewTypeGadget') },
+                  ]"
+                />
+              </label>
 
-            <label class="block">
-              <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                t('boardSettings.viewType')
-              }}</span>
-              <AppSelect
-                v-model="form.view_type"
-                class="w-[160px]"
-                :options="[
-                  { value: 'icon', label: t('boardSettings.viewTypeIcon') },
-                  { value: 'text', label: t('boardSettings.viewTypeText') },
-                  { value: 'gadget', label: t('boardSettings.viewTypeGadget') },
-                ]"
-              />
-            </label>
+              <label class="block">
+                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                  t('boardSettings.z')
+                }}</span>
+                <NumberInput v-model="form.z" min="1" max="999" class="w-[80px]" />
+                <p class="text-sm text-zinc-600" style="margin-top: 4px">
+                  {{ t('settings.zHint') }}
+                </p>
+              </label>
+            </div>
 
-            <label class="block">
-              <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                t('boardSettings.z')
-              }}</span>
-              <NumberInput v-model="form.z" min="1" max="999" class="w-[80px]" />
-              <p class="text-sm text-zinc-600" style="margin-top: 4px">{{ t('settings.zHint') }}</p>
-            </label>
+            <div
+              class="border-t border-[var(--border)] pt-[12px] flex flex-wrap gap-x-[12px] gap-y-[8px] items-start"
+            >
+              <label class="block">
+                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                  t('boardSettings.lineStyle')
+                }}</span>
+                <AppSelect
+                  :model-value="form.line_style ?? ''"
+                  class="w-[176px]"
+                  :options="[
+                    { value: '', label: t('boardSettings.lineDefault') },
+                    { value: 'plain', label: t('boardSettings.lineSimple') },
+                    { value: 'arrow_end', label: t('boardSettings.lineArrowRight') },
+                    { value: 'arrow_start', label: t('boardSettings.lineArrowLeft') },
+                    { value: 'arrow_both', label: t('boardSettings.lineDoubleArrow') },
+                    { value: 'dashed', label: t('boardSettings.lineDashed') },
+                    { value: 'weathermap', label: t('boardSettings.lineWeathermap') },
+                  ]"
+                  @update:model-value="
+                    (v) => {
+                      form.line_style = (v as LineStyle) || null;
+                    }
+                  "
+                />
+              </label>
+
+              <label class="block">
+                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                  t('boardSettings.target')
+                }}</span>
+                <CmkToggleButtonGroup
+                  v-model="form.url_target"
+                  :options="[
+                    { value: '_blank', label: t('boardSettings.targetNewTab') },
+                    { value: '_self', label: t('boardSettings.targetSameTab') },
+                    { value: '_top', label: t('boardSettings.targetTopFrame') },
+                  ]"
+                />
+              </label>
+            </div>
           </div>
+        </CmkCollapsible>
+      </section>
 
-          <!-- Line + Link -->
+      <!-- Label defaults -->
+      <section
+        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
+      >
+        <button
+          class="w-full flex items-center justify-between text-left"
+          style="padding: 14px 16px"
+          @click="sectionOpen.labelDefaults = !sectionOpen.labelDefaults"
+        >
+          <h3 class="text-base font-semibold text-zinc-400">{{ t('settings.labelDefaults') }}</h3>
+          <svg
+            style="width: 14px; height: 14px; flex-shrink: 0; transition: transform 200ms"
+            :style="{ transform: sectionOpen.labelDefaults ? 'rotate(180deg)' : '' }"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+        <CmkCollapsible :open="sectionOpen.labelDefaults">
+          <div class="space-y-[12px]" style="padding: 0 16px 14px">
+            <CmkCheckbox v-model="form.label_show" :label="t('boardSettings.showLabel')" />
+            <div
+              :class="[
+                'space-y-[12px] transition-opacity',
+                form.label_show ? '' : 'opacity-40 pointer-events-none',
+              ]"
+            >
+              <div class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start">
+                <label class="block">
+                  <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px"
+                    >{{ t('boardSettings.size') }} (px)</span
+                  >
+                  <NumberInput v-model="form.label_size" min="6" max="72" class="w-[80px]" />
+                </label>
+
+                <label class="block">
+                  <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                    t('boardSettings.color')
+                  }}</span>
+                  <div class="flex gap-[8px]">
+                    <CmkColorPicker
+                      :data="form.label_color"
+                      @update:data="form.label_color = $event"
+                    />
+                    <CmkInput v-model="form.label_color" placeholder="#ffffff" field-size="SMALL" />
+                  </div>
+                </label>
+
+                <label class="block">
+                  <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                    t('boardSettings.background')
+                  }}</span>
+                  <div class="flex gap-[8px]">
+                    <CmkColorPicker
+                      :data="
+                        form.label_background === 'transparent' ? '#000000' : form.label_background
+                      "
+                      @update:data="form.label_background = $event"
+                    />
+                    <CmkInput
+                      v-model="form.label_background"
+                      placeholder="transparent"
+                      field-size="SMALL"
+                    />
+                  </div>
+                </label>
+              </div>
+
+              <div class="border-t border-[var(--border)] pt-[12px] flex gap-[12px] items-start">
+                <label class="block">
+                  <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                    t('boardSettings.offsetX')
+                  }}</span>
+                  <NumberInput v-model="form.label_x" class="w-[80px]" />
+                </label>
+                <label class="block">
+                  <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                    t('boardSettings.offsetY')
+                  }}</span>
+                  <NumberInput v-model="form.label_y" class="w-[80px]" />
+                </label>
+              </div>
+            </div>
+          </div>
+        </CmkCollapsible>
+      </section>
+
+      <!-- New board defaults -->
+      <section
+        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
+      >
+        <button
+          class="w-full flex items-center justify-between text-left"
+          style="padding: 14px 16px"
+          @click="sectionOpen.newBoardDefaults = !sectionOpen.newBoardDefaults"
+        >
+          <h3 class="text-base font-semibold text-zinc-400">
+            {{ t('settings.newBoardDefaults') }}
+          </h3>
+          <svg
+            style="width: 14px; height: 14px; flex-shrink: 0; transition: transform 200ms"
+            :style="{ transform: sectionOpen.newBoardDefaults ? 'rotate(180deg)' : '' }"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+        <CmkCollapsible :open="sectionOpen.newBoardDefaults">
           <div
-            class="border-t border-[var(--border)] pt-[12px] flex flex-wrap gap-x-[12px] gap-y-[8px] items-start"
+            class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start"
+            style="padding: 0 16px 14px"
           >
             <label class="block">
               <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                t('boardSettings.lineStyle')
+                t('board.connection')
               }}</span>
               <AppSelect
-                :model-value="form.line_style ?? ''"
-                class="w-[176px]"
-                :options="[
-                  { value: '', label: t('boardSettings.lineDefault') },
-                  { value: 'plain', label: t('boardSettings.lineSimple') },
-                  { value: 'arrow_end', label: t('boardSettings.lineArrowRight') },
-                  { value: 'arrow_start', label: t('boardSettings.lineArrowLeft') },
-                  { value: 'arrow_both', label: t('boardSettings.lineDoubleArrow') },
-                  { value: 'dashed', label: t('boardSettings.lineDashed') },
-                  { value: 'weathermap', label: t('boardSettings.lineWeathermap') },
-                ]"
-                @update:model-value="
-                  (v) => {
-                    form.line_style = (v as LineStyle) || null;
-                  }
+                v-model="form.default_backend_id"
+                class="w-[192px]"
+                :options="
+                  connectionsStore.backends.length
+                    ? connectionsStore.backends.map((b) => ({
+                        value: b.id,
+                        label: b.label || b.id,
+                      }))
+                    : [{ value: 'live_1', label: 'live_1' }]
                 "
               />
             </label>
 
             <label class="block">
               <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                t('boardSettings.target')
+                t('board.boardType')
               }}</span>
               <AppSelect
-                v-model="form.url_target"
-                class="w-[160px]"
+                v-model="form.default_map_type"
+                class="w-[176px]"
                 :options="[
-                  { value: '_blank', label: t('boardSettings.targetNewTab') },
-                  { value: '_self', label: t('boardSettings.targetSameTab') },
-                  { value: '_top', label: t('boardSettings.targetTopFrame') },
+                  { value: 'static', label: t('board.boardTypeStatic') },
+                  { value: 'worldmap', label: t('board.boardTypeGeoBoard') },
+                  { value: 'flow', label: t('board.boardTypeFlowBoard') },
+                  { value: 'radar', label: t('board.boardTypeRadar') },
                 ]"
               />
             </label>
           </div>
-        </div>
-      </section>
-
-      <!-- Label defaults -->
-      <section
-        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
-        style="padding: 14px 16px"
-      >
-        <h3 class="text-base font-semibold text-zinc-400" style="margin-bottom: 10px">
-          {{ t('settings.labelDefaults') }}
-        </h3>
-
-        <div class="space-y-[12px]">
-          <!-- Show label -->
-          <CmkCheckbox v-model="form.label_show" :label="t('boardSettings.showLabel')" />
-
-          <!-- Appearance + Position (grayed out when label hidden) -->
-          <div
-            :class="[
-              'space-y-[12px] transition-opacity',
-              form.label_show ? '' : 'opacity-40 pointer-events-none',
-            ]"
-          >
-            <div class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start">
-              <label class="block">
-                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px"
-                  >{{ t('boardSettings.size') }} (px)</span
-                >
-                <NumberInput v-model="form.label_size" min="6" max="72" class="w-[80px]" />
-              </label>
-
-              <label class="block">
-                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                  t('boardSettings.color')
-                }}</span>
-                <div class="flex gap-[8px]">
-                  <CmkColorPicker
-                    :data="form.label_color"
-                    @update:data="form.label_color = $event"
-                  />
-                  <CmkInput v-model="form.label_color" placeholder="#ffffff" field-size="SMALL" />
-                </div>
-              </label>
-
-              <label class="block">
-                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                  t('boardSettings.background')
-                }}</span>
-                <div class="flex gap-[8px]">
-                  <CmkColorPicker
-                    :data="
-                      form.label_background === 'transparent' ? '#000000' : form.label_background
-                    "
-                    @update:data="form.label_background = $event"
-                  />
-                  <CmkInput
-                    v-model="form.label_background"
-                    placeholder="transparent"
-                    field-size="SMALL"
-                  />
-                </div>
-              </label>
-            </div>
-
-            <div class="border-t border-[var(--border)] pt-[12px] flex gap-[12px] items-start">
-              <label class="block">
-                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                  t('boardSettings.offsetX')
-                }}</span>
-                <NumberInput v-model="form.label_x" class="w-[80px]" />
-              </label>
-              <label class="block">
-                <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                  t('boardSettings.offsetY')
-                }}</span>
-                <NumberInput v-model="form.label_y" class="w-[80px]" />
-              </label>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- New board defaults -->
-      <section
-        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
-        style="padding: 14px 16px"
-      >
-        <h3 class="text-base font-semibold text-zinc-400" style="margin-bottom: 10px">
-          {{ t('settings.newBoardDefaults') }}
-        </h3>
-
-        <div class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start">
-          <!-- Default backend -->
-          <label class="block">
-            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-              t('board.connection')
-            }}</span>
-            <AppSelect
-              v-model="form.default_backend_id"
-              class="w-[192px]"
-              :options="
-                connectionsStore.backends.length
-                  ? connectionsStore.backends.map((b) => ({ value: b.id, label: b.label || b.id }))
-                  : [{ value: 'live_1', label: 'live_1' }]
-              "
-            />
-          </label>
-
-          <!-- Default board type -->
-          <label class="block">
-            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-              t('board.boardType')
-            }}</span>
-            <AppSelect
-              v-model="form.default_map_type"
-              class="w-[176px]"
-              :options="[
-                { value: 'static', label: t('board.boardTypeStatic') },
-                { value: 'worldmap', label: t('board.boardTypeGeoBoard') },
-                { value: 'flow', label: t('board.boardTypeFlowBoard') },
-                { value: 'radar', label: t('board.boardTypeRadar') },
-              ]"
-            />
-          </label>
-        </div>
+        </CmkCollapsible>
       </section>
 
       <!-- Templates -->
       <section
-        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
-        style="padding: 14px 16px"
+        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
       >
-        <h3 class="text-base font-semibold text-zinc-400" style="margin-bottom: 4px">
-          {{ t('settings.templates') }}
-        </h3>
-        <p class="text-sm text-zinc-600" style="margin-bottom: 10px">
-          {{ t('settings.templatesSubtitle') }}
-        </p>
+        <button
+          class="w-full flex items-center justify-between text-left"
+          style="padding: 14px 16px"
+          @click="sectionOpen.templates = !sectionOpen.templates"
+        >
+          <h3 class="text-base font-semibold text-zinc-400">{{ t('settings.templates') }}</h3>
+          <svg
+            style="width: 14px; height: 14px; flex-shrink: 0; transition: transform 200ms"
+            :style="{ transform: sectionOpen.templates ? 'rotate(180deg)' : '' }"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+        <CmkCollapsible :open="sectionOpen.templates">
+          <div class="space-y-[10px]" style="padding: 0 16px 14px">
+            <p class="text-sm text-zinc-600">{{ t('settings.templatesSubtitle') }}</p>
+            <label class="block">
+              <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                t('settings.hoverTemplate')
+              }}</span>
+              <CmkInput
+                v-model="form.hover_template"
+                :placeholder="t('board.templatePlaceholder')"
+                field-size="FILL"
+              />
+            </label>
 
-        <div class="space-y-[10px]">
-          <!-- Hover template -->
-          <label class="block">
-            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-              t('settings.hoverTemplate')
-            }}</span>
-            <CmkInput
-              v-model="form.hover_template"
-              :placeholder="t('board.templatePlaceholder')"
-              field-size="FILL"
-            />
-          </label>
-
-          <!-- Context template -->
-          <label class="block">
-            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-              t('settings.contextTemplate')
-            }}</span>
-            <CmkInput
-              v-model="form.context_template"
-              :placeholder="t('board.templatePlaceholder')"
-              field-size="FILL"
-            />
-          </label>
-        </div>
+            <label class="block">
+              <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                t('settings.contextTemplate')
+              }}</span>
+              <CmkInput
+                v-model="form.context_template"
+                :placeholder="t('board.templatePlaceholder')"
+                field-size="FILL"
+              />
+            </label>
+          </div>
+        </CmkCollapsible>
       </section>
 
       <!-- Checkmk integration -->
       <section
-        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
-        style="padding: 14px 16px"
+        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
       >
-        <h3 class="text-base font-semibold text-zinc-400" style="margin-bottom: 4px">
-          {{ t('settings.checkmkIntegration') }}
-        </h3>
-        <p class="text-sm text-zinc-600" style="margin-bottom: 10px">
-          {{ t('settings.checkmkIntegrationSubtitle') }}
-        </p>
-
-        <label class="block">
-          <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-            t('admin.checkmkUrl')
-          }}</span>
-          <CmkInput
-            v-model="form.checkmk_url"
-            placeholder="https://checkmk.example.com/mysite"
-            field-size="FILL"
-          />
-          <p class="text-sm text-zinc-600" style="margin-top: 6px">
-            {{ t('settings.checkmkUrlHint') }}
-          </p>
-        </label>
+        <button
+          class="w-full flex items-center justify-between text-left"
+          style="padding: 14px 16px"
+          @click="sectionOpen.checkmkIntegration = !sectionOpen.checkmkIntegration"
+        >
+          <h3 class="text-base font-semibold text-zinc-400">
+            {{ t('settings.checkmkIntegration') }}
+          </h3>
+          <svg
+            style="width: 14px; height: 14px; flex-shrink: 0; transition: transform 200ms"
+            :style="{ transform: sectionOpen.checkmkIntegration ? 'rotate(180deg)' : '' }"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+        <CmkCollapsible :open="sectionOpen.checkmkIntegration">
+          <div style="padding: 0 16px 14px">
+            <p class="text-sm text-zinc-600" style="margin-bottom: 10px">
+              {{ t('settings.checkmkIntegrationSubtitle') }}
+            </p>
+            <label class="block">
+              <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                t('admin.checkmkUrl')
+              }}</span>
+              <CmkInput
+                v-model="form.checkmk_url"
+                placeholder="https://checkmk.example.com/mysite"
+                field-size="FILL"
+              />
+              <p class="text-sm text-zinc-600" style="margin-top: 6px">
+                {{ t('settings.checkmkUrlHint') }}
+              </p>
+            </label>
+          </div>
+        </CmkCollapsible>
       </section>
 
       <p v-if="saveError" class="text-sm text-red-400">{{ saveError }}</p>
@@ -324,8 +395,10 @@
 
 <script setup lang="ts">
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkCollapsible from '@cmk/components/CmkCollapsible/CmkCollapsible.vue';
 import CmkColorPicker from '@cmk/components/CmkColorPicker.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
+import CmkToggleButtonGroup from '@cmk/components/CmkToggleButtonGroup.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
@@ -347,6 +420,14 @@ const saveError = ref('');
 const savedOk = ref(false);
 let savedOkTimer: ReturnType<typeof setTimeout> | null = null;
 let saveErrorTimer: ReturnType<typeof setTimeout> | null = null;
+
+const sectionOpen = reactive({
+  objectDefaults: true,
+  labelDefaults: true,
+  newBoardDefaults: true,
+  templates: true,
+  checkmkIntegration: true,
+});
 
 // Sync form when store finishes loading
 watch(

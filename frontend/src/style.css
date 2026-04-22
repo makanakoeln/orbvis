@@ -22,8 +22,32 @@
   /* CMK layout variables */
   --form-field-height: 24px;
   --font-weight-default: 400;
+  --font-weight-bold: 700;
   --font-size-normal: 13px;
   --font-size-xlarge: 15px;
+  --border-radius: 4px;
+
+  /* CMK ux-theme scale (dark/midnight-grey) */
+  --ux-theme-0: rgb(15 18 21);
+  --ux-theme-1: rgb(28 34 40);
+  --ux-theme-2: rgb(32 39 46);
+  --ux-theme-3: rgb(38 46 54);
+  --ux-theme-4: rgb(62 74 91);
+  --ux-theme-5: rgb(48 57 70);
+  --ux-theme-6: rgb(37 44 54);
+  --ux-theme-7: rgb(72 86 106);
+  --ux-theme-8: rgb(83 98 121);
+  --ux-theme-9: rgb(94 112 136);
+  --ux-theme-10: rgb(106 124 149);
+
+  /* CMK toggle button group */
+  --toggle-button-group-active-bg-color: var(--ux-theme-10);
+  --toggle-button-group-inactive-bg-color: var(--ux-theme-6);
+  --toggle-button-group-border-color: var(--ux-theme-7);
+  --toggle-button-group-active-text-color: #fff;
+  --toggle-button-group-inactive-text-color: rgb(160 168 176);
+  --toggle-button-group-disabled-text-color: rgb(80 88 96);
+  --toggle-button-group-hover-bg-color: var(--ux-theme-7);
 
   /* CMK button token defaults (active before Vue sets body[data-theme]) */
   --default-button-primary-color: rgb(21 209 160);

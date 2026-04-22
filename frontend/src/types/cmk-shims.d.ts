@@ -198,6 +198,68 @@ declare module '@cmk/components/CmkColorPicker.vue' {
   export default component;
 }
 
+declare module '@cmk/components/CmkScrollContainer.vue' {
+  import type { DefineComponent } from 'vue';
+  interface CmkScrollContainerProps {
+    maxHeight?: string;
+    height?: string;
+    type?: 'inner' | 'outer';
+  }
+  const component: DefineComponent<CmkScrollContainerProps>;
+  export default component;
+}
+
+declare module '@cmk/components/CmkToggleButtonGroup.vue' {
+  import type { DefineComponent } from 'vue';
+  interface ToggleButtonOption {
+    label: string;
+    value: string;
+    disabled?: boolean | string;
+  }
+  interface CmkToggleButtonGroupProps {
+    options: ToggleButtonOption[];
+    modelValue?: string | null;
+  }
+  const component: DefineComponent<
+    CmkToggleButtonGroupProps,
+    object,
+    object,
+    object,
+    object,
+    object,
+    object,
+    { 'update:modelValue': [value: string] }
+  >;
+  export default component;
+}
+
+declare module '@cmk/components/CmkTabs/CmkTabs.vue' {
+  import type { DefineComponent } from 'vue';
+  const component: DefineComponent<object>;
+  export default component;
+}
+
+declare module '@cmk/components/CmkTabs/CmkTab.vue' {
+  import type { DefineComponent } from 'vue';
+  interface CmkTabProps {
+    id: string;
+    disabled?: boolean;
+    variant?: 'default' | 'info' | 'success' | 'warning' | 'error';
+  }
+  const component: DefineComponent<CmkTabProps>;
+  export default component;
+}
+
+declare module '@cmk/components/CmkTabs/CmkTabContent.vue' {
+  import type { DefineComponent } from 'vue';
+  interface CmkTabContentProps {
+    id: string;
+    spacing?: 'default' | 'none';
+  }
+  const component: DefineComponent<CmkTabContentProps>;
+  export default component;
+}
+
 declare module '@cmk/components/CmkLabel.vue' {
   import type { DefineComponent } from 'vue';
   interface CmkLabelProps {

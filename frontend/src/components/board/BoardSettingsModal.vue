@@ -49,7 +49,7 @@
         </div>
 
         <!-- Tab content -->
-        <div class="overflow-y-auto flex-1" style="padding: 10px 16px">
+        <CmkScrollContainer class="flex-1 min-h-0" style="padding: 10px 16px">
           <!-- General -->
           <div v-if="activeTab === 'general'" class="space-y-[10px]">
             <!-- Alias -->
@@ -367,7 +367,7 @@
               <p class="text-sm text-zinc-600 mt-3 px-1">* {{ t('admin.wildcardNote') }}</p>
             </div>
           </div>
-        </div>
+        </CmkScrollContainer>
 
         <!-- Footer -->
         <div
@@ -389,6 +389,7 @@
 <script setup lang="ts">
 import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
+import CmkScrollContainer from '@cmk/components/CmkScrollContainer.vue';
 import CmkSwitch from '@cmk/components/CmkSwitch.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, reactive, ref } from 'vue';
