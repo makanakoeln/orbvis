@@ -240,7 +240,8 @@
                   <CmkDropdown
                     :selected-option="permPreset"
                     :options="permPresetOptions"
-                    label=""
+                    :width="'fill'"
+                    :label="t('admin.preset')"
                     @update:selected-option="
                       (v) => {
                         permPreset = v ?? '';

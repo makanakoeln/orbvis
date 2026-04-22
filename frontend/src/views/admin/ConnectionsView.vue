@@ -262,7 +262,8 @@
               <CmkDropdown
                 :selected-option="form.type || null"
                 :options="connectionTypeOptions"
-                label=""
+                :width="'fill'"
+                :label="t('admin.type')"
                 @update:selected-option="form.type = ($event ?? '') as typeof form.type"
               />
             </div>

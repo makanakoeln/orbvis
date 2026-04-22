@@ -30,7 +30,8 @@
       <CmkDropdown
         :selected-option="draft.type"
         :options="objectTypeOptions"
-        label=""
+        :width="'fill'"
+        :label="t('boardSettings.selectType')"
         @update:selected-option="
           (v) => {
             draft.type = v as ObjectType | '';

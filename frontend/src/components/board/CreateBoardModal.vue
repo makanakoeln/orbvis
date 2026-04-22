@@ -58,7 +58,8 @@
               <CmkDropdown
                 :selected-option="form.backend_id || null"
                 :options="backendOptions"
-                label=""
+                :width="'fill'"
+                :label="t('board.connection')"
                 @update:selected-option="form.backend_id = $event ?? ''"
               />
             </template>
@@ -97,7 +98,8 @@
             <CmkDropdown
               :selected-option="form.view_type || null"
               :options="mapTypeOptions"
-              label=""
+              :width="'fill'"
+              :label="t('board.boardType')"
               @update:selected-option="form.view_type = $event ?? ''"
             />
             <p class="text-xs text-zinc-500">

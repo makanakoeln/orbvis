@@ -65,7 +65,8 @@
                 <CmkDropdown
                   :selected-option="form.backend_id || null"
                   :options="backendOptions"
-                  label=""
+                  :width="'fill'"
+                  :label="t('board.connection')"
                   @update:selected-option="form.backend_id = $event ?? ''"
                 />
               </div>
@@ -99,7 +100,8 @@
               <CmkDropdown
                 :selected-option="form.map_type || null"
                 :options="mapTypeOptions"
-                label=""
+                :width="'fill'"
+                :label="t('board.boardType')"
                 @update:selected-option="form.map_type = ($event ?? '') as typeof form.map_type"
               />
             </div>
@@ -160,7 +162,8 @@
                   <CmkDropdown
                     :selected-option="form.radar_filter || null"
                     :options="radarFilterOptions"
-                    label=""
+                    :width="'fill'"
+                    :label="t('board.filterType')"
                     @update:selected-option="form.radar_filter = $event ?? ''"
                   />
                 </div>
