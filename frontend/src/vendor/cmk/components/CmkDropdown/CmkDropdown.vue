@@ -42,6 +42,9 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits<{ 'update:selectedOption': [value: string | null] }>();
 
+// list max-height (240) + search bar (~34) + borders
+const MENU_MAX_HEIGHT = 280;
+
 const open = ref(false);
 const query = ref('');
 const container = ref<HTMLElement | null>(null);
@@ -74,8 +77,7 @@ function updateMenuPosition() {
   if (!trigger.value) return;
   const r = trigger.value.getBoundingClientRect();
   const spaceBelow = window.innerHeight - r.bottom;
-  const estimatedMenuHeight = 260;
-  if (spaceBelow < estimatedMenuHeight && r.top > spaceBelow) {
+  if (spaceBelow < MENU_MAX_HEIGHT && r.top > spaceBelow) {
     menuStyle.value = {
       top: 'auto',
       bottom: `${window.innerHeight - r.top + 4}px`,
