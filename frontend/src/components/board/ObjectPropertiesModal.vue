@@ -684,9 +684,14 @@
                     :placeholder="autoUrl ?? 'https://…'"
                     field-size="FILL"
                   />
-                  <p v-if="autoUrl && !form.url" class="text-[10px] text-zinc-600">
-                    {{ t('boardSettings.urlAutoHint') }}
-                  </p>
+                  <button
+                    v-if="autoUrl && !form.url"
+                    type="button"
+                    class="text-[10px] text-zinc-500 hover:text-[var(--color-corporate-green-50)] hover:underline text-left transition-colors"
+                    @click="form.url = autoUrl!"
+                  >
+                    {{ t('boardSettings.urlAutoHint') }} →
+                  </button>
                 </div>
               </div>
               <div class="field-row">

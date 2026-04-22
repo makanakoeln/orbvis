@@ -120,6 +120,9 @@ export default {
     templatePlaceholder: "e.g. {'{'}{'{'}name{'}'}{'}'} is {'{'}{'{'}state{'}'}{'}'}",
     templateHint:
       "Available: {'{'}{'{'}name{'}'}{'}'}, {'{'}{'{'}state{'}'}{'}'}, {'{'}{'{'}output{'}'}{'}'}, {'{'}{'{'}host{'}'}{'}'}, {'{'}{'{'}service{'}'}{'}'}, {'{'}{'{'}address{'}'}{'}'}, {'{'}{'{'}state_type{'}'}{'}'}, {'{'}{'{'}attempts{'}'}{'}'}, {'{'}{'{'}last_check{'}'}{'}'}, {'{'}{'{'}state_duration{'}'}{'}'}, {'{'}{'{'}acknowledged{'}'}{'}'}, {'{'}{'{'}in_downtime{'}'}{'}'}, {'{'}{'{'}stale{'}'}{'}'}",
+    clickAction: 'Click action',
+    clickActionLink: 'Open link',
+    clickActionNone: 'No action',
     showInLists: 'Show in board list',
     showInListsHint: 'When disabled, this board is hidden from regular users',
     sparklineTrend: 'Utilization (24h)',
@@ -253,6 +256,7 @@ export default {
   },
   contextMenu: {
     hostInCheckmk: 'Host in Checkmk',
+    hostProblemServices: 'Problem services',
     serviceInCheckmk: 'Service in Checkmk',
     groupInCheckmk: 'Group in Checkmk',
     noCheckmkUrl: 'No Checkmk URL configured',
