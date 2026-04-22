@@ -137,23 +137,23 @@ span {
   margin: 0;
   vertical-align: middle; /* otherwise will jump without cmk-frontend styles when checked/unchecked */
 
-  .cmk-checkbox:not(.cmk-checkbox__disabled) & {
-    &:hover {
-      cursor: pointer;
-      background-color: var(--input-hover-bg-color);
-    }
-  }
-
-  .cmk-checkbox.cmk-checkbox__disabled & {
-    cursor: not-allowed;
-  }
-
-  .cmk-checkbox.cmk-checkbox__disabled & > .cmk-checkbox__label {
-    cursor: not-allowed;
-  }
-
   &.cmk-checkbox__button--error {
     border: 1px solid var(--inline-error-border-color);
   }
+}
+
+.cmk-checkbox:not(.cmk-checkbox__disabled) :deep(.cmk-checkbox__button) {
+  &:hover {
+    cursor: pointer;
+    background-color: var(--input-hover-bg-color);
+  }
+}
+
+.cmk-checkbox.cmk-checkbox__disabled :deep(.cmk-checkbox__button) {
+  cursor: not-allowed;
+}
+
+.cmk-checkbox.cmk-checkbox__disabled :deep(.cmk-checkbox__button) > .cmk-checkbox__label {
+  cursor: not-allowed;
 }
 </style>

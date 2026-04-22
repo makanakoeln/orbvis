@@ -98,8 +98,10 @@ export default defineConfig({
     },
   },
   build: {
+    target: ['chrome88', 'edge88', 'firefox78', 'safari14'],
     chunkSizeWarningLimit: 600,
     rollupOptions: {
+      external: ['fs'],
       output: {
         manualChunks: {
           d3: ['d3'],
