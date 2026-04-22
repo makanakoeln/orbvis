@@ -421,22 +421,24 @@
                     default-color="#000000"
                   />
                 </div>
-                <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.startX') }}</label>
-                  <NumberInput v-model="form.x" class="flex-1" />
-                </div>
-                <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.y') }}</label>
-                  <NumberInput v-model="form.y" class="flex-1" />
-                </div>
-                <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.endX') }}</label>
-                  <NumberInput v-model="form.x2" class="flex-1" />
-                </div>
-                <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.y') }}</label>
-                  <NumberInput v-model="form.y2" class="flex-1" />
-                </div>
+                <template v-if="mapType !== 'worldmap'">
+                  <div class="field-row">
+                    <label class="field-label">{{ t('boardSettings.startX') }}</label>
+                    <NumberInput v-model="form.x" class="flex-1" />
+                  </div>
+                  <div class="field-row">
+                    <label class="field-label">{{ t('boardSettings.y') }}</label>
+                    <NumberInput v-model="form.y" class="flex-1" />
+                  </div>
+                  <div class="field-row">
+                    <label class="field-label">{{ t('boardSettings.endX') }}</label>
+                    <NumberInput v-model="form.x2" class="flex-1" />
+                  </div>
+                  <div class="field-row">
+                    <label class="field-label">{{ t('boardSettings.y') }}</label>
+                    <NumberInput v-model="form.y2" class="flex-1" />
+                  </div>
+                </template>
               </div>
               <!-- Label -->
               <div class="field-row">
@@ -1332,14 +1334,16 @@ async function save() {
     if (props.object.type === 'map') updates.map_name = form.map_name || null;
 
     if (props.object.type === 'line') {
-      updates.x = form.x;
-      updates.y = form.y;
       updates.host_name = form.host_name || null;
       updates.service_description = form.service_description || null;
-      updates.x2 = form.x2;
-      updates.y2 = form.y2;
       if (form.line_style === 'weathermap')
         updates.weathermap_metric = form.weathermap_metric || null;
+      if (props.mapType !== 'worldmap') {
+        updates.x = form.x;
+        updates.y = form.y;
+        updates.x2 = form.x2;
+        updates.y2 = form.y2;
+      }
     } else if (props.mapType === 'worldmap') {
       updates.lat = form.lat;
       updates.lng = form.lng;
