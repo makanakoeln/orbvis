@@ -62,9 +62,11 @@
             <div class="grid grid-cols-[1fr_7rem] gap-[8px]">
               <div class="space-y-[4px]">
                 <CmkLabel>{{ t('board.connection') }}</CmkLabel>
-                <AppSelect
-                  v-model="form.backend_id"
-                  :options="backends.map((b) => ({ value: b.id, label: b.label || b.id }))"
+                <CmkDropdown
+                  :selected-option="form.backend_id || null"
+                  :options="backendOptions"
+                  label=""
+                  @update:selected-option="form.backend_id = $event ?? ''"
                 />
               </div>
               <div class="space-y-[4px]">
@@ -94,14 +96,11 @@
             <!-- Board type -->
             <div class="space-y-[4px]">
               <CmkLabel>{{ t('board.boardType') }}</CmkLabel>
-              <AppSelect
-                v-model="form.map_type"
-                :options="[
-                  { value: 'static', label: t('board.boardTypeStatic') },
-                  { value: 'worldmap', label: t('board.boardTypeGeoBoard') },
-                  { value: 'flow', label: t('board.boardTypeFlowBoard') },
-                  { value: 'radar', label: t('board.boardTypeRadar') },
-                ]"
+              <CmkDropdown
+                :selected-option="form.map_type || null"
+                :options="mapTypeOptions"
+                label=""
+                @update:selected-option="form.map_type = ($event ?? '') as typeof form.map_type"
               />
             </div>
 
@@ -158,14 +157,11 @@
               <div class="grid grid-cols-2 gap-[8px]">
                 <div class="space-y-[4px]">
                   <CmkLabel>{{ t('board.filterType') }}</CmkLabel>
-                  <AppSelect
-                    v-model="form.radar_filter"
-                    :options="[
-                      { value: 'hostgroup', label: t('board.filterTypeHostgroup') },
-                      { value: 'servicegroup', label: t('board.filterTypeServicegroup') },
-                      { value: 'all_hosts', label: t('board.filterTypeAllHosts') },
-                      { value: 'all_services', label: t('board.filterTypeAllServices') },
-                    ]"
+                  <CmkDropdown
+                    :selected-option="form.radar_filter || null"
+                    :options="radarFilterOptions"
+                    label=""
+                    @update:selected-option="form.radar_filter = $event ?? ''"
                   />
                 </div>
                 <div
@@ -378,6 +374,7 @@
 
 <script setup lang="ts">
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
 import CmkLabel from '@cmk/components/CmkLabel.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkScrollContainer from '@cmk/components/CmkScrollContainer.vue';
@@ -387,7 +384,6 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { boardsApi, connectionsApi, rolesApi } from '@/api/client';
-import AppSelect from '@/components/AppSelect.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { useAuthStore } from '@/stores/auth';
 import type {
@@ -398,6 +394,7 @@ import type {
   RoleRead,
   WorldmapView,
 } from '@/types/api';
+import { boardTypeOptions, lineStyleOptions } from '@/utils/dropdownOptions';
 
 const props = defineProps<{
   board: BoardRead;
@@ -459,6 +456,24 @@ const form = ref({
 
 const backends = ref<BackendConfig[]>([]);
 const saving = ref(false);
+
+const backendOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: backends.value.map((b) => ({ name: b.id, title: b.label || b.id })),
+}));
+const mapTypeOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: boardTypeOptions(t),
+}));
+const radarFilterOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'hostgroup', title: t('board.filterTypeHostgroup') },
+    { name: 'servicegroup', title: t('board.filterTypeServicegroup') },
+    { name: 'all_hosts', title: t('board.filterTypeAllHosts') },
+    { name: 'all_services', title: t('board.filterTypeAllServices') },
+  ],
+}));
 const saveError = ref('');
 const uploadError = ref('');
 const uploadOk = ref(false);

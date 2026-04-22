@@ -254,14 +254,18 @@
               </div>
               <div v-if="graphSource === 'template' && graphTemplates.length" class="field-row">
                 <label class="field-label">{{ t('boardSettings.graphTemplate') }}</label>
-                <AppSelect
-                  :model-value="form.graph_id ?? ''"
+                <CmkDropdown
                   class="flex-1"
-                  :options="[
-                    { value: '', label: '—' },
-                    ...graphTemplates.map((tpl) => ({ value: tpl.id, label: tpl.title })),
-                  ]"
-                  @update:model-value="
+                  :selected-option="form.graph_id ?? null"
+                  :options="{
+                    type: 'fixed',
+                    suggestions: [
+                      { name: '', title: '—' },
+                      ...graphTemplates.map((tpl) => ({ name: tpl.id, title: tpl.title })),
+                    ],
+                  }"
+                  label=""
+                  @update:selected-option="
                     (v) => {
                       form.graph_id = v || null;
                     }
@@ -270,17 +274,21 @@
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.graphTimeWindow') }}</label>
-                <AppSelect
-                  :model-value="String(form.graph_time_window)"
+                <CmkDropdown
                   class="flex-1"
-                  :options="[
-                    { value: '60', label: '1 h' },
-                    { value: '240', label: '4 h' },
-                    { value: '720', label: '12 h' },
-                    { value: '1440', label: '24 h' },
-                    { value: '10080', label: '7 d' },
-                  ]"
-                  @update:model-value="
+                  :selected-option="String(form.graph_time_window)"
+                  :options="{
+                    type: 'fixed',
+                    suggestions: [
+                      { name: '60', title: '1 h' },
+                      { name: '240', title: '4 h' },
+                      { name: '720', title: '12 h' },
+                      { name: '1440', title: '24 h' },
+                      { name: '10080', title: '7 d' },
+                    ],
+                  }"
+                  label=""
+                  @update:selected-option="
                     (v) => {
                       form.graph_time_window = Number(v);
                     }
@@ -305,13 +313,20 @@
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.graphEmbedType') }}</label>
-                <AppSelect
-                  v-model="form.graph_embed_type"
+                <CmkDropdown
                   class="flex-1"
-                  :options="[
-                    { value: 'img', label: t('boardSettings.graphEmbedImg') },
-                    { value: 'iframe', label: t('boardSettings.graphEmbedIframe') },
-                  ]"
+                  :selected-option="form.graph_embed_type || null"
+                  :options="{
+                    type: 'fixed',
+                    suggestions: [
+                      { name: 'img', title: t('boardSettings.graphEmbedImg') },
+                      { name: 'iframe', title: t('boardSettings.graphEmbedIframe') },
+                    ],
+                  }"
+                  label=""
+                  @update:selected-option="
+                    form.graph_embed_type = ($event ?? '') as typeof form.graph_embed_type
+                  "
                 />
               </div>
               <div class="grid grid-cols-2 gap-[8px]">
@@ -367,19 +382,12 @@
             <div class="space-y-[8px]">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.lineStyle') }}</label>
-                <AppSelect
-                  :model-value="form.line_style ?? ''"
+                <CmkDropdown
                   class="flex-1"
-                  :options="[
-                    { value: '', label: t('boardSettings.lineDefault') },
-                    { value: 'plain', label: t('boardSettings.lineSimple') },
-                    { value: 'arrow_end', label: t('boardSettings.lineArrowRight') },
-                    { value: 'arrow_start', label: t('boardSettings.lineArrowLeft') },
-                    { value: 'arrow_both', label: t('boardSettings.lineDoubleArrow') },
-                    { value: 'dashed', label: t('boardSettings.lineDashed') },
-                    { value: 'weathermap', label: t('boardSettings.lineWeathermap') },
-                  ]"
-                  @update:model-value="
+                  :selected-option="form.line_style ?? null"
+                  :options="lineStyleOpts"
+                  label=""
+                  @update:selected-option="
                     (v) => {
                       form.line_style = v || null;
                     }
@@ -584,14 +592,14 @@
             <div class="space-y-[8px]">
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.viewType') }}</label>
-                <AppSelect
-                  v-model="form.display.mode"
+                <CmkDropdown
                   class="flex-1"
-                  :options="[
-                    { value: 'icon', label: t('boardSettings.viewTypeIcon') },
-                    { value: 'text', label: t('boardSettings.viewTypeText') },
-                    { value: 'gadget', label: t('boardSettings.viewTypeGadget') },
-                  ]"
+                  :selected-option="form.display.mode || null"
+                  :options="displayModeOptions"
+                  label=""
+                  @update:selected-option="
+                    form.display.mode = ($event ?? '') as typeof form.display.mode
+                  "
                 />
               </div>
               <div class="field-row">
@@ -607,14 +615,12 @@
               <template v-if="form.display.mode === 'gadget'">
                 <div class="field-row">
                   <label class="field-label">{{ t('boardSettings.gadgetType') }}</label>
-                  <AppSelect
-                    v-model="form.display.gadget_type"
+                  <CmkDropdown
                     class="flex-1"
-                    :options="[
-                      { value: 'gauge', label: t('boardSettings.gadgetGauge') },
-                      { value: 'bar', label: t('boardSettings.gadgetBar') },
-                      { value: 'trafficlight', label: t('boardSettings.gadgetTrafficlight') },
-                    ]"
+                    :selected-option="form.display.gadget_type || null"
+                    :options="gadgetTypeOptions"
+                    label=""
+                    @update:selected-option="form.display.gadget_type = $event ?? ''"
                   />
                 </div>
                 <div class="field-row">
@@ -683,14 +689,12 @@
               </div>
               <div class="field-row">
                 <label class="field-label">{{ t('boardSettings.target') }}</label>
-                <AppSelect
-                  v-model="form.url_target"
+                <CmkDropdown
                   class="flex-1"
-                  :options="[
-                    { value: '_blank', label: t('boardSettings.targetNewTab') + ' (_blank)' },
-                    { value: '_self', label: t('boardSettings.targetSameTab') + ' (_self)' },
-                    { value: '_top', label: t('boardSettings.targetTopFrame') + ' (_top)' },
-                  ]"
+                  :selected-option="form.url_target || null"
+                  :options="urlTargetOptions"
+                  label=""
+                  @update:selected-option="form.url_target = $event ?? ''"
                 />
               </div>
             </div>
@@ -842,6 +846,7 @@
 <script setup lang="ts">
 import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkColorPicker from '@cmk/components/CmkColorPicker.vue';
+import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
 import CmkScrollContainer from '@cmk/components/CmkScrollContainer.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
@@ -849,13 +854,13 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { boardsApi, connectionsApi } from '@/api/client';
-import AppSelect from '@/components/AppSelect.vue';
 import ColorInput from '@/components/ColorInput.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useStatesStore } from '@/stores/states';
 import type { BoardObject, MetricGraphGroup, ObjectState } from '@/types/api';
+import { lineStyleOptions } from '@/utils/dropdownOptions';
 import { getBoardObjectName } from '@/utils/naming';
 import { parsePerfData } from '@/utils/perf';
 
@@ -939,6 +944,35 @@ const fetchedMetrics = ref<string[]>([]);
 const graphTemplates = ref<MetricGraphGroup[]>([]);
 const boardNames = ref<string[]>([]);
 const boardLabels = ref<string[]>([]);
+
+const lineStyleOpts = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: lineStyleOptions(t),
+}));
+const displayModeOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'icon', title: t('boardSettings.viewTypeIcon') },
+    { name: 'text', title: t('boardSettings.viewTypeText') },
+    { name: 'gadget', title: t('boardSettings.viewTypeGadget') },
+  ],
+}));
+const gadgetTypeOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'gauge', title: t('boardSettings.gadgetGauge') },
+    { name: 'bar', title: t('boardSettings.gadgetBar') },
+    { name: 'trafficlight', title: t('boardSettings.gadgetTrafficlight') },
+  ],
+}));
+const urlTargetOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: '_blank', title: t('boardSettings.targetNewTab') + ' (_blank)' },
+    { name: '_self', title: t('boardSettings.targetSameTab') + ' (_self)' },
+    { name: '_top', title: t('boardSettings.targetTopFrame') + ' (_top)' },
+  ],
+}));
 
 // Metric IDs available for suggestions
 const metricIdSuggestions = computed((): string[] => {

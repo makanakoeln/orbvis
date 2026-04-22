@@ -55,11 +55,11 @@
           <div class="space-y-[4px]">
             <label class="text-xs font-medium text-zinc-400">{{ t('board.connection') }}</label>
             <template v-if="connectionsStore.backends.length > 0">
-              <AppSelect
-                v-model="form.backend_id"
-                :options="
-                  connectionsStore.backends.map((b) => ({ value: b.id, label: b.label || b.id }))
-                "
+              <CmkDropdown
+                :selected-option="form.backend_id || null"
+                :options="backendOptions"
+                label=""
+                @update:selected-option="form.backend_id = $event ?? ''"
               />
             </template>
             <template v-else>
@@ -94,14 +94,11 @@
           </div>
           <div class="space-y-[4px]">
             <label class="text-xs font-medium text-zinc-400">{{ t('board.boardType') }}</label>
-            <AppSelect
-              v-model="form.view_type"
-              :options="[
-                { value: 'static', label: t('board.boardTypeStatic') },
-                { value: 'worldmap', label: t('board.boardTypeGeoBoard') },
-                { value: 'flow', label: t('board.boardTypeFlowBoard') },
-                { value: 'radar', label: t('board.boardTypeRadar') },
-              ]"
+            <CmkDropdown
+              :selected-option="form.view_type || null"
+              :options="mapTypeOptions"
+              label=""
+              @update:selected-option="form.view_type = $event ?? ''"
             />
             <p class="text-xs text-zinc-500">
               <template v-if="form.view_type === 'static'">{{
@@ -141,15 +138,16 @@
 
 <script setup lang="ts">
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError } from '@/api/client';
-import AppSelect from '@/components/AppSelect.vue';
 import { useBoardsStore } from '@/stores/boards';
 import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';
+import { boardTypeOptions } from '@/utils/dropdownOptions';
 import { sanitizeBoardName, slugToTitleCase } from '@/utils/naming';
 
 const emit = defineEmits<{ close: []; created: [name: string] }>();
@@ -161,6 +159,15 @@ const settingsStore = useSettingsStore();
 
 const form = ref({ name: '', alias: '', backend_id: '', view_type: 'static' });
 const aliasTouched = ref(false);
+
+const backendOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: connectionsStore.backends.map((b) => ({ name: b.id, title: b.label || b.id })),
+}));
+const mapTypeOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: boardTypeOptions(t),
+}));
 
 const _NAME_RE = /^[a-zA-Z0-9_-]+$/;
 const nameError = ref('');

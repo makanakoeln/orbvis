@@ -27,10 +27,11 @@
 
     <!-- Add Object form -->
     <div class="space-y-[8px]" style="padding: 10px 16px">
-      <AppSelect
-        :model-value="draft.type"
+      <CmkDropdown
+        :selected-option="draft.type"
         :options="objectTypeOptions"
-        @update:model-value="
+        label=""
+        @update:selected-option="
           (v) => {
             draft.type = v as ObjectType | '';
             onTypeChange();
@@ -144,16 +145,12 @@
       <!-- Grid snap -->
       <div class="flex items-center justify-between gap-[8px]">
         <label class="text-xs text-zinc-500 select-none">{{ t('boardSettings.grid') }}</label>
-        <AppSelect
-          :model-value="String(snapGrid)"
+        <CmkDropdown
           class="w-[96px]"
-          :options="[
-            { value: '0', label: t('boardSettings.gridOff') },
-            { value: '10', label: '10 px' },
-            { value: '20', label: '20 px' },
-            { value: '50', label: '50 px' },
-          ]"
-          @update:model-value="(v) => $emit('update:snapGrid', Number(v))"
+          :selected-option="String(snapGrid)"
+          :options="snapGridOptions"
+          label=""
+          @update:selected-option="(v) => $emit('update:snapGrid', Number(v))"
         />
       </div>
 
@@ -175,11 +172,11 @@
 
 <script setup lang="ts">
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
-import AppSelect from '@/components/AppSelect.vue';
 import type { NewObjectDraft } from '@/composables/useBoardEditor';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
@@ -190,18 +187,30 @@ import ImagePicker from './ImagePicker.vue';
 
 const { t } = useI18n();
 
-const objectTypeOptions = computed(() => [
-  { value: '', label: t('boardSettings.selectType') },
-  { value: 'host', label: t('boardSettings.typeHost') },
-  { value: 'service', label: t('boardSettings.typeService') },
-  { value: 'hostgroup', label: t('boardSettings.typeHostgroup') },
-  { value: 'servicegroup', label: t('boardSettings.typeServicegroup') },
-  { value: 'map', label: t('boardSettings.typeMap') },
-  { value: 'line', label: t('boardSettings.typeLine') },
-  { value: 'textbox', label: t('boardSettings.typeTextbox') },
-  { value: 'image', label: t('boardSettings.typeImage') },
-  { value: 'graph', label: `${t('boardSettings.typeGraph')} (experimental)` },
-]);
+const objectTypeOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: '', title: t('boardSettings.selectType') },
+    { name: 'host', title: t('boardSettings.typeHost') },
+    { name: 'service', title: t('boardSettings.typeService') },
+    { name: 'hostgroup', title: t('boardSettings.typeHostgroup') },
+    { name: 'servicegroup', title: t('boardSettings.typeServicegroup') },
+    { name: 'map', title: t('boardSettings.typeMap') },
+    { name: 'line', title: t('boardSettings.typeLine') },
+    { name: 'textbox', title: t('boardSettings.typeTextbox') },
+    { name: 'image', title: t('boardSettings.typeImage') },
+    { name: 'graph', title: `${t('boardSettings.typeGraph')} (experimental)` },
+  ],
+}));
+const snapGridOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: '0', title: t('boardSettings.gridOff') },
+    { name: '10', title: '10 px' },
+    { name: '20', title: '20 px' },
+    { name: '50', title: '50 px' },
+  ],
+}));
 
 const props = defineProps<{
   draft: NewObjectDraft;

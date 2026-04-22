@@ -259,13 +259,11 @@
 
             <div class="space-y-[4px]">
               <label class="text-sm font-medium text-zinc-400">{{ t('admin.type') }}</label>
-              <AppSelect
-                v-model="form.type"
-                :options="[
-                  { value: 'livestatus', label: t('admin.connectionTypeLivestatus') },
-                  { value: 'icinga2', label: t('admin.connectionTypeIcinga2') },
-                  { value: 'test', label: t('admin.connectionTypeTest') },
-                ]"
+              <CmkDropdown
+                :selected-option="form.type || null"
+                :options="connectionTypeOptions"
+                label=""
+                @update:selected-option="form.type = ($event ?? '') as typeof form.type"
               />
             </div>
 
@@ -460,6 +458,7 @@
 import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
 import CmkBadge from '@cmk/components/CmkBadge.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
@@ -467,7 +466,6 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
-import AppSelect from '@/components/AppSelect.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { useToast } from '@/composables/useToast';
@@ -538,6 +536,15 @@ const emptyForm = (): BackendConfig => ({
   icinga2_verify_ssl: true,
 });
 const form = reactive<BackendConfig>(emptyForm());
+
+const connectionTypeOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'livestatus', title: t('admin.connectionTypeLivestatus') },
+    { name: 'icinga2', title: t('admin.connectionTypeIcinga2') },
+    { name: 'test', title: t('admin.connectionTypeTest') },
+  ],
+}));
 
 function openCreate() {
   Object.assign(form, emptyForm());

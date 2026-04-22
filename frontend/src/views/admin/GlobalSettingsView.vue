@@ -75,19 +75,12 @@
                 <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
                   t('boardSettings.lineStyle')
                 }}</span>
-                <AppSelect
-                  :model-value="form.line_style ?? ''"
+                <CmkDropdown
                   class="w-[176px]"
-                  :options="[
-                    { value: '', label: t('boardSettings.lineDefault') },
-                    { value: 'plain', label: t('boardSettings.lineSimple') },
-                    { value: 'arrow_end', label: t('boardSettings.lineArrowRight') },
-                    { value: 'arrow_start', label: t('boardSettings.lineArrowLeft') },
-                    { value: 'arrow_both', label: t('boardSettings.lineDoubleArrow') },
-                    { value: 'dashed', label: t('boardSettings.lineDashed') },
-                    { value: 'weathermap', label: t('boardSettings.lineWeathermap') },
-                  ]"
-                  @update:model-value="
+                  :selected-option="form.line_style ?? null"
+                  :options="lineStyleOpts"
+                  label=""
+                  @update:selected-option="
                     (v) => {
                       form.line_style = (v as LineStyle) || null;
                     }
@@ -235,17 +228,12 @@
               <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('board.connection')
               }}</span>
-              <AppSelect
-                v-model="form.default_backend_id"
+              <CmkDropdown
                 class="w-[192px]"
-                :options="
-                  connectionsStore.backends.length
-                    ? connectionsStore.backends.map((b) => ({
-                        value: b.id,
-                        label: b.label || b.id,
-                      }))
-                    : [{ value: 'live_1', label: 'live_1' }]
-                "
+                :selected-option="form.default_backend_id || null"
+                :options="backendOptions"
+                label=""
+                @update:selected-option="form.default_backend_id = $event ?? ''"
               />
             </label>
 
@@ -253,15 +241,12 @@
               <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
                 t('board.boardType')
               }}</span>
-              <AppSelect
-                v-model="form.default_map_type"
+              <CmkDropdown
                 class="w-[176px]"
-                :options="[
-                  { value: 'static', label: t('board.boardTypeStatic') },
-                  { value: 'worldmap', label: t('board.boardTypeGeoBoard') },
-                  { value: 'flow', label: t('board.boardTypeFlowBoard') },
-                  { value: 'radar', label: t('board.boardTypeRadar') },
-                ]"
+                :selected-option="form.default_map_type || null"
+                :options="mapTypeOptions"
+                label=""
+                @update:selected-option="form.default_map_type = $event ?? ''"
               />
             </label>
           </div>
@@ -397,18 +382,19 @@
 import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkCollapsible from '@cmk/components/CmkCollapsible/CmkCollapsible.vue';
 import CmkColorPicker from '@cmk/components/CmkColorPicker.vue';
+import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkToggleButtonGroup from '@cmk/components/CmkToggleButtonGroup.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
-import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import AppSelect from '@/components/AppSelect.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';
 import type { GlobalSettings, LineStyle } from '@/types/api';
+import { boardTypeOptions, lineStyleOptions } from '@/utils/dropdownOptions';
 
 const { t } = useI18n();
 const store = useSettingsStore();
@@ -428,6 +414,21 @@ const sectionOpen = reactive({
   templates: true,
   checkmkIntegration: true,
 });
+
+const backendOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: connectionsStore.backends.length
+    ? connectionsStore.backends.map((b) => ({ name: b.id, title: b.label || b.id }))
+    : [{ name: 'live_1', title: 'live_1' }],
+}));
+const mapTypeOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: boardTypeOptions(t),
+}));
+const lineStyleOpts = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: lineStyleOptions(t),
+}));
 
 // Sync form when store finishes loading
 watch(

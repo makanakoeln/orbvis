@@ -237,19 +237,13 @@
               <form class="space-y-[10px]" @submit.prevent="addDraftPerm">
                 <div class="space-y-[4px]">
                   <label class="text-sm font-medium text-zinc-400">{{ t('admin.preset') }}</label>
-                  <AppSelect
-                    :model-value="permPreset"
-                    :options="[
-                      { value: '', label: t('admin.choosePreset') },
-                      { value: 'map:view:*', label: t('admin.presetViewAll') },
-                      { value: 'map:edit:*', label: t('admin.presetEditAll') },
-                      { value: 'map:view:custom', label: t('admin.presetViewCustom') },
-                      { value: 'map:edit:custom', label: t('admin.presetEditCustom') },
-                      { value: 'user:edit:*', label: t('admin.presetEditUsers') },
-                    ]"
-                    @update:model-value="
+                  <CmkDropdown
+                    :selected-option="permPreset"
+                    :options="permPresetOptions"
+                    label=""
+                    @update:selected-option="
                       (v) => {
-                        permPreset = v;
+                        permPreset = v ?? '';
                         applyPreset();
                       }
                     "
@@ -304,13 +298,13 @@
 
 <script setup lang="ts">
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { rolesApi } from '@/api/client';
-import AppSelect from '@/components/AppSelect.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
@@ -337,6 +331,17 @@ const permSaveError = ref('');
 const permError = ref('');
 const permPreset = ref('');
 const needsMapName = computed(() => permPreset.value.endsWith(':custom'));
+const permPresetOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: '', title: t('admin.choosePreset') },
+    { name: 'map:view:*', title: t('admin.presetViewAll') },
+    { name: 'map:edit:*', title: t('admin.presetEditAll') },
+    { name: 'map:view:custom', title: t('admin.presetViewCustom') },
+    { name: 'map:edit:custom', title: t('admin.presetEditCustom') },
+    { name: 'user:edit:*', title: t('admin.presetEditUsers') },
+  ],
+}));
 
 function applyPreset() {
   if (!permPreset.value) return;
