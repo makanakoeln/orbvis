@@ -351,6 +351,7 @@ case "\$1" in
     echo -n "Starting orbvis..."
     set -a; source "\$ENV_FILE"; set +a
     PORT="\${ORBVIS_PORT:-8420}"
+    export LD_LIBRARY_PATH="\$OMD_ROOT/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
     cd "$ORBVIS_DIR/src"
     "\$VENV/bin/python3" -m alembic upgrade head >> "\$LOGFILE" 2>&1
     "\$VENV/bin/uvicorn" \$APP \\
