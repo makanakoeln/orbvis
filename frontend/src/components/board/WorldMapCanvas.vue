@@ -6,7 +6,7 @@
 import 'leaflet/dist/leaflet.css';
 
 import L from 'leaflet';
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
 import type {
   BoardConfig,
@@ -234,6 +234,11 @@ watch(() => {
   const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null;
   return [wv?.tile_url, wv?.tile_saturate];
 }, applyTileSettings);
+
+watch(
+  () => props.editMode,
+  () => nextTick(() => leafletMap?.invalidateSize()),
+);
 
 function getView() {
   if (!leafletMap) return null;
