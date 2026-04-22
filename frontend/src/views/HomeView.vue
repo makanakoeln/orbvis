@@ -140,11 +140,14 @@
       </div>
 
       <!-- Board grid -->
-      <div
+      <VueDraggable
         v-else
+        v-model="draggableBoards"
+        :disabled="!isDragEnabled"
         data-tour="boards-grid"
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
         style="max-width: 960px; margin: 0 auto; gap: 16px"
+        @end="onDragEnd"
       >
         <p
           v-if="searchQuery && !filteredBoards.length"
@@ -154,8 +157,9 @@
           {{ t('home.noSearchResults', { q: searchQuery }) }}
         </p>
         <div
-          v-for="map in filteredBoards"
+          v-for="map in draggableBoards"
           :key="map.name"
+          :class="isDragEnabled ? 'cursor-grab active:cursor-grabbing' : ''"
           class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-[var(--color-corporate-green-50)]/40 rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-[2px] hover:shadow-lg hover:shadow-[var(--color-corporate-green-100)]/10"
         >
           <router-link :to="`/boards/${map.name}`" class="block">
@@ -847,7 +851,7 @@
             </button>
           </div>
         </div>
-      </div>
+      </VueDraggable>
     </main>
   </div>
   <!-- Delete confirmation -->
@@ -1044,6 +1048,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { VueDraggable } from 'vue-draggable-plus';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
@@ -1224,6 +1229,24 @@ const filteredBoards = computed(() => {
     (m) => m.name.toLowerCase().includes(q) || m.alias.toLowerCase().includes(q),
   );
 });
+
+const isDragEnabled = computed(() => auth.isAdmin && !searchQuery.value.trim());
+
+const draggableBoards = computed({
+  get: () => (isDragEnabled.value ? boardsStore.boards : filteredBoards.value),
+  set: (val) => {
+    boardsStore.boards.splice(0, boardsStore.boards.length, ...val);
+  },
+});
+
+async function onDragEnd() {
+  const order = boardsStore.boards.map((b, i) => ({ name: b.name, sort_order: i }));
+  try {
+    await boardsApi.reorder(order, auth.accessToken!);
+  } catch {
+    await boardsStore.fetchBoards();
+  }
+}
 
 const TYPE_LABELS: Record<string, string> = {
   static: 'Static',

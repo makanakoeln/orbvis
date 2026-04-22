@@ -137,6 +137,9 @@ export const boardsApi = {
   update: (name: string, data: Record<string, unknown>, token: string): Promise<BoardConfig> =>
     request(`/boards/${name}`, { method: 'PUT', body: JSON.stringify(data) }, token),
 
+  reorder: (order: { name: string; sort_order: number }[], token: string): Promise<void> =>
+    request('/boards/reorder', { method: 'POST', body: JSON.stringify(order) }, token),
+
   delete: (name: string, token: string): Promise<void> =>
     request(`/boards/${name}`, { method: 'DELETE' }, token),
 
