@@ -69,6 +69,7 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@cmk': CMK_SRC,
       'cmk-shared-typing': fileURLToPath(new URL('./src/cmk-stubs/cmk-shared-typing', import.meta.url)),
+      'pofile': fileURLToPath(new URL('./src/vendor/empty-module.ts', import.meta.url)),
     },
   },
   server: {
