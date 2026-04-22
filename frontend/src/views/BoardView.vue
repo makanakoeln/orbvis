@@ -289,6 +289,7 @@
           @object-hover-leave="onWorldmapHoverLeave"
           @canvas-latlng-click="onCanvasLatLngClick"
           @latlng-drag-end="onLatLngDragEnd"
+          @latlng2-drag-end="onLatLng2DragEnd"
         />
         <!-- Fit all button -->
         <button
@@ -1082,6 +1083,10 @@ async function onCanvasLatLngClick(lat: number, lng: number) {
 
 function onLatLngDragEnd(id: string, lat: number, lng: number) {
   editor.moveObjectToLatLng(id, lat, lng);
+}
+
+function onLatLng2DragEnd(id: string, lat: number, lng: number) {
+  editor.moveObjectToLatLng2(id, lat, lng);
 }
 
 // ---- Map Settings ----

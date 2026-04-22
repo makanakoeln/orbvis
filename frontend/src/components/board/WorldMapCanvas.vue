@@ -33,12 +33,16 @@ const emit = defineEmits<{
   'object-hover-leave': [];
   'canvas-latlng-click': [lat: number, lng: number];
   'latlng-drag-end': [id: string, lat: number, lng: number];
+  'latlng2-drag-end': [id: string, lat: number, lng: number];
 }>();
 
 const mapEl = ref<HTMLDivElement | null>(null);
 let leafletMap: L.Map | null = null;
 let tileLayer: L.TileLayer | null = null;
 const markers = new Map<string, L.Marker>();
+
+type LineEntry = { polyline: L.Polyline; handle1: L.Marker; handle2: L.Marker };
+const lines = new Map<string, LineEntry>();
 
 const DEFAULT_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
@@ -177,6 +181,93 @@ function syncMarkers() {
   }
 }
 
+const _handleIconCache = new Map<string, L.DivIcon>();
+function makeHandleIcon(color: string): L.DivIcon {
+  const cached = _handleIconCache.get(color);
+  if (cached) return cached;
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="width:10px;height:10px;background:${color};border:2px solid white;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.5)"></div>`,
+    iconSize: [10, 10],
+    iconAnchor: [5, 5],
+  });
+  _handleIconCache.set(color, icon);
+  return icon;
+}
+
+function syncLines() {
+  if (!leafletMap) return;
+  const lineObjs = props.config.objects.filter(
+    (o) => o.type === 'line' && o.lat != null && o.lng != null && o.lat2 != null && o.lng2 != null,
+  );
+  const currentIds = new Set(lineObjs.map((o) => o.id));
+
+  for (const obj of lineObjs) {
+    const color = stateColor(obj.id);
+    const p1: [number, number] = [obj.lat!, obj.lng!];
+    const p2: [number, number] = [obj.lat2!, obj.lng2!];
+
+    if (lines.has(obj.id)) {
+      const entry = lines.get(obj.id)!;
+      entry.polyline.setLatLngs([p1, p2]);
+      entry.polyline.setStyle({ color });
+      entry.handle1.setLatLng(p1);
+      entry.handle2.setLatLng(p2);
+      entry.handle1.setIcon(makeHandleIcon(color));
+      entry.handle2.setIcon(makeHandleIcon(color));
+      if (props.editMode) {
+        entry.handle1.dragging?.enable();
+        entry.handle2.dragging?.enable();
+      } else {
+        entry.handle1.dragging?.disable();
+        entry.handle2.dragging?.disable();
+      }
+    } else {
+      const polyline = L.polyline([p1, p2], { color, weight: 3 }).addTo(leafletMap!);
+      const handle1 = L.marker(p1, {
+        icon: makeHandleIcon(color),
+        draggable: props.editMode,
+      }).addTo(leafletMap!);
+      const handle2 = L.marker(p2, {
+        icon: makeHandleIcon(color),
+        draggable: props.editMode,
+      }).addTo(leafletMap!);
+
+      const objId = obj.id;
+      polyline.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        const cur = props.config.objects.find((o) => o.id === objId);
+        if (cur) emit('object-click', cur);
+      });
+      polyline.on('contextmenu', (e: L.LeafletMouseEvent) => {
+        L.DomEvent.stopPropagation(e);
+        const cur = props.config.objects.find((o) => o.id === objId);
+        if (!cur) return;
+        if (props.editMode) emit('object-contextmenu', cur);
+        else emit('object-contextmenu-view', cur, e.originalEvent.clientX, e.originalEvent.clientY);
+      });
+      handle1.on('dragend', () => {
+        const pos = handle1.getLatLng();
+        emit('latlng-drag-end', objId, pos.lat, pos.lng);
+      });
+      handle2.on('dragend', () => {
+        const pos = handle2.getLatLng();
+        emit('latlng2-drag-end', objId, pos.lat, pos.lng);
+      });
+      lines.set(objId, { polyline, handle1, handle2 });
+    }
+  }
+
+  for (const [id, entry] of lines) {
+    if (!currentIds.has(id)) {
+      entry.polyline.remove();
+      entry.handle1.remove();
+      entry.handle2.remove();
+      lines.delete(id);
+    }
+  }
+}
+
 function applyTileSettings() {
   if (!leafletMap) return;
   const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null;
@@ -217,6 +308,7 @@ onMounted(() => {
   });
   applyTileSettings();
   syncMarkers();
+  syncLines();
   resizeObserver = new ResizeObserver(() => leafletMap?.invalidateSize());
   resizeObserver.observe(mapEl.value);
 });
@@ -228,11 +320,15 @@ onUnmounted(() => {
   leafletMap = null;
   tileLayer = null;
   markers.clear();
+  lines.clear();
 });
 
 watch(
   () => [props.config.objects, props.states, props.selectedObjectId, props.editMode],
-  syncMarkers,
+  () => {
+    syncMarkers();
+    syncLines();
+  },
   { deep: true },
 );
 

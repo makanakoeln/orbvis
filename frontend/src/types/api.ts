@@ -82,6 +82,8 @@ export interface BoardObject {
   image_src?: string | null;
   x2?: number | null;
   y2?: number | null;
+  lat2?: number | null;
+  lng2?: number | null;
   line_style?: LineStyle | null;
   weathermap_metric?: string | null;
   cmk_label_name?: string | null;

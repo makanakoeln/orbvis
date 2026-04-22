@@ -85,9 +85,11 @@ class BoardObject(BaseModel):
     map_name: str | None = None
     # Image source (separate from display.image which is for monitoring objects)
     image_src: str | None = None
-    # Line endpoints
+    # Line endpoints (pixel for static, lat/lng for worldmap)
     x2: int | float | None = None
     y2: int | float | None = None
+    lat2: float | None = None
+    lng2: float | None = None
     line_style: LineStyle | None = None
     weathermap_metric: str | None = None
     # CMK label filter

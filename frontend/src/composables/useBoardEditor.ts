@@ -353,6 +353,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       },
       url_target: s.url_target,
       z: s.z,
+      ...(draft.type === 'line' ? { lat2: lat + 2, lng2: lng + 4 } : {}),
     };
     try {
       const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!);
@@ -363,18 +364,20 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     }
   }
 
-  async function moveObjectToLatLng(id: string, lat: number, lng: number) {
+  async function moveObjectToLatLng(id: string, lat: number, lng: number, endpoint: 1 | 2 = 1) {
+    const keys = endpoint === 2 ? ({ lat2: lat, lng2: lng } as const) : ({ lat, lng } as const);
     try {
-      await boardsApi.updateObject(mapName.value, id, { lat, lng }, auth.accessToken!);
+      await boardsApi.updateObject(mapName.value, id, keys, auth.accessToken!);
       const obj = boardsStore.currentBoard?.objects.find((o) => o.id === id);
-      if (obj) {
-        obj.lat = lat;
-        obj.lng = lng;
-      }
+      if (obj) Object.assign(obj, keys);
     } catch (e) {
       console.error('Failed to save lat/lng', e);
       await onMapChange();
     }
+  }
+
+  function moveObjectToLatLng2(id: string, lat: number, lng: number) {
+    return moveObjectToLatLng(id, lat, lng, 2);
   }
 
   // --- Reset all edit state when navigating to a different map ---
@@ -459,6 +462,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     placeAt,
     placeAtLatLng,
     moveObjectToLatLng,
+    moveObjectToLatLng2,
     deleteSelected,
     duplicateSelected,
     cancelPlacing,
