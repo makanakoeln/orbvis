@@ -173,10 +173,12 @@ async def _get_board_states_batched(
             if batch_ok and auth_user is not None and obj.host_name not in batch:
                 results[obj.id] = ObjectState(object_id=obj.id, type="host", state="NO_PERMISSION")
             else:
-                s = batch.get(obj.host_name) or ObjectState(
-                    object_id=obj.id, type="host", state="PENDING", stale=True
+                raw = batch.get(obj.host_name)
+                s = (
+                    ObjectState(**{**raw.model_dump(), "object_id": obj.id})
+                    if raw is not None
+                    else ObjectState(object_id=obj.id, type="host", state="PENDING", stale=True)
                 )
-                s.object_id = obj.id
                 results[obj.id] = s
 
     rs_objs = [
@@ -225,10 +227,12 @@ async def _get_board_states_batched(
                     object_id=obj.id, type="service", state="NO_PERMISSION"
                 )
             else:
-                s = svc_batch.get(key) or ObjectState(
-                    object_id=obj.id, type="service", state="PENDING", stale=True
+                raw = svc_batch.get(key)
+                s = (
+                    ObjectState(**{**raw.model_dump(), "object_id": obj.id})
+                    if raw is not None
+                    else ObjectState(object_id=obj.id, type="service", state="PENDING", stale=True)
                 )
-                s.object_id = obj.id
                 results[obj.id] = s
 
     individual = [_get_object_state(backend, obj) for obj in lines + others]
