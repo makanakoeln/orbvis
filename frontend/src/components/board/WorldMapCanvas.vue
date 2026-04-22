@@ -11,6 +11,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue';
 import type {
   BoardConfig,
   BoardObject as BoardObjectType,
+  LabelConfig,
   ObjectState,
   WorldmapView,
 } from '@/types/api';
@@ -41,7 +42,12 @@ let leafletMap: L.Map | null = null;
 let tileLayer: L.TileLayer | null = null;
 const markers = new Map<string, L.Marker>();
 
-type LineEntry = { polyline: L.Polyline; handle1: L.Marker; handle2: L.Marker };
+type LineEntry = {
+  polyline: L.Polyline;
+  handle1: L.Marker;
+  handle2: L.Marker;
+  label: L.Marker | null;
+};
 const lines = new Map<string, LineEntry>();
 
 const DEFAULT_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -195,6 +201,34 @@ function makeHandleIcon(color: string): L.DivIcon {
   return icon;
 }
 
+function makeLineLabelIcon(text: string, label: LabelConfig): L.DivIcon {
+  const color = label.color || 'white';
+  const size = label.size || 11;
+  const bg =
+    label.background && label.background !== 'transparent' ? label.background : 'transparent';
+  const shadow =
+    bg === 'transparent' ? 'text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);' : '';
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      color: ${color};
+      font-size: ${size}px;
+      font-weight: 500;
+      background: ${bg};
+      ${shadow}
+      white-space: nowrap;
+      pointer-events: none;
+      padding: ${bg === 'transparent' ? '0' : '1px 4px'};
+      border-radius: 2px;
+    ">${escapeHtml(text)}</div>`,
+    iconAnchor: [-label.x, -label.y],
+  });
+}
+
+function midpoint(p1: [number, number], p2: [number, number]): [number, number] {
+  return [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2];
+}
+
 function syncLines() {
   if (!leafletMap) return;
   const lineObjs = props.config.objects.filter(
@@ -206,6 +240,10 @@ function syncLines() {
     const color = stateColor(obj.id);
     const p1: [number, number] = [obj.lat!, obj.lng!];
     const p2: [number, number] = [obj.lat2!, obj.lng2!];
+
+    const labelCfg = obj.label;
+    const labelText = labelCfg?.show !== false ? (labelCfg?.text ?? '') : '';
+    const mid = midpoint(p1, p2);
 
     if (lines.has(obj.id)) {
       const entry = lines.get(obj.id)!;
@@ -222,6 +260,20 @@ function syncLines() {
         entry.handle1.dragging?.disable();
         entry.handle2.dragging?.disable();
       }
+      if (labelText && labelCfg) {
+        if (entry.label) {
+          entry.label.setLatLng(mid);
+          entry.label.setIcon(makeLineLabelIcon(labelText, labelCfg));
+        } else {
+          entry.label = L.marker(mid, {
+            icon: makeLineLabelIcon(labelText, labelCfg),
+            interactive: false,
+          }).addTo(leafletMap!);
+        }
+      } else if (entry.label) {
+        entry.label.remove();
+        entry.label = null;
+      }
     } else {
       const polyline = L.polyline([p1, p2], { color, weight: 3 }).addTo(leafletMap!);
       const handle1 = L.marker(p1, {
@@ -232,6 +284,13 @@ function syncLines() {
         icon: makeHandleIcon(color),
         draggable: props.editMode,
       }).addTo(leafletMap!);
+      const label =
+        labelText && labelCfg
+          ? L.marker(mid, {
+              icon: makeLineLabelIcon(labelText, labelCfg),
+              interactive: false,
+            }).addTo(leafletMap!)
+          : null;
 
       const objId = obj.id;
       polyline.on('click', (e) => {
@@ -254,7 +313,7 @@ function syncLines() {
         const pos = handle2.getLatLng();
         emit('latlng2-drag-end', objId, pos.lat, pos.lng);
       });
-      lines.set(objId, { polyline, handle1, handle2 });
+      lines.set(objId, { polyline, handle1, handle2, label });
     }
   }
 
@@ -263,6 +322,7 @@ function syncLines() {
       entry.polyline.remove();
       entry.handle1.remove();
       entry.handle2.remove();
+      entry.label?.remove();
       lines.delete(id);
     }
   }
