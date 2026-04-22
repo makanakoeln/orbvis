@@ -761,6 +761,7 @@ import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
 import type { BoardObject } from '@/types/api';
 import type { TourStep } from '@/types/tour';
+import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { resolveTemplate } from '@/utils/template';
 
 type LineDragMode = 'move' | 'start' | 'end';
@@ -1018,7 +1019,21 @@ async function onObjectDragEnd(id: string, x: number, y: number) {
 }
 
 function onObjectClick(obj: BoardObject, _event?: MouseEvent) {
-  editor.selectObject(obj.id);
+  if (editor.editMode.value) {
+    editor.selectObject(obj.id);
+    return;
+  }
+  if (boardConfig.value?.click_action === 'none') return;
+  if (obj.url) {
+    openUrl(obj.url, obj.url_target || '_blank');
+    return;
+  }
+  if (obj.type === 'map' && obj.map_name) {
+    void router.push({ name: 'board', params: { name: obj.map_name } });
+    return;
+  }
+  const cmkUrl = buildCheckmkUrl(obj, checkmkUrl.value);
+  if (cmkUrl) openUrl(cmkUrl, '_blank');
 }
 
 async function onCanvasClick(event: MouseEvent) {

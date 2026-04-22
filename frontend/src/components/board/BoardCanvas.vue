@@ -164,6 +164,7 @@ import { cmkApi } from '@/api/client';
 import { useToast } from '@/composables/useToast';
 import { useSettingsStore } from '@/stores/settings';
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api';
+import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { resolveTemplate } from '@/utils/template';
 
 import AckModal from './AckModal.vue';
@@ -315,7 +316,8 @@ function objectWrapperStyle(obj: BoardObjectType) {
   const isMap = obj.type === 'map';
   const canDrag = props.editMode || props.isAdmin;
   const clickable =
-    props.config.click_action !== 'none' && (isMap || obj.url || !!buildCheckmkUrl(obj));
+    props.config.click_action !== 'none' &&
+    (isMap || obj.url || !!buildCheckmkUrl(obj, props.checkmkUrl ?? null));
   const cursor = canDrag
     ? _dragId.value === obj.id
       ? 'grabbing'
@@ -431,52 +433,8 @@ function onCanvasPointerUp(event: PointerEvent) {
 
 // ---- Event delegation ----
 
-function buildCheckmkUrl(obj: BoardObjectType): string | null {
-  const base = props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
-  if (!base) return null;
-  const parts = base.split('/');
-  const site = parts[parts.length - 1] || null;
-  const p: Record<string, string> = {};
-  if (site) p.site = site;
-
-  if (obj.type === 'host' && obj.host_name) {
-    p.view_name = 'hoststatus';
-    p.host = obj.host_name;
-    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
-  }
-  if (obj.type === 'service' && obj.host_name && obj.service_description) {
-    p.view_name = 'service';
-    p.host = obj.host_name;
-    p.service = obj.service_description;
-    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
-  }
-  if (obj.type === 'hostgroup' && obj.group_name) {
-    p.view_name = 'hostgroup';
-    p.hostgroup = obj.group_name;
-    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
-  }
-  if (obj.type === 'servicegroup' && obj.group_name) {
-    p.view_name = 'servicegroup';
-    p.servicegroup = obj.group_name;
-    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
-  }
-  return null;
-}
-
 function onLineClick(line: BoardObjectType) {
   if (props.editMode) emit('object-click', line);
-}
-
-function _openUrl(url: string, target: string) {
-  // Use a real <a> click so the browser doesn't treat it as a popup (important
-  // when OrbVis runs inside a Checkmk iframe — window.open gets popup-blocked).
-  const a = document.createElement('a');
-  a.href = url;
-  a.target = target;
-  a.rel = 'noreferrer';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
 }
 
 function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
@@ -488,16 +446,16 @@ function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
   if (_didMove.value) return;
   if (props.config.click_action === 'none') return;
   if (obj.url) {
-    _openUrl(obj.url, obj.url_target || '_blank');
+    openUrl(obj.url, obj.url_target || '_blank');
     return;
   }
   if (obj.type === 'map' && obj.map_name) {
     router.push({ name: 'board', params: { name: obj.map_name } });
     return;
   }
-  const cmkUrl = buildCheckmkUrl(obj);
+  const cmkUrl = buildCheckmkUrl(obj, props.checkmkUrl ?? null);
   if (cmkUrl) {
-    _openUrl(cmkUrl, '_blank');
+    openUrl(cmkUrl, '_blank');
   }
 }
 
