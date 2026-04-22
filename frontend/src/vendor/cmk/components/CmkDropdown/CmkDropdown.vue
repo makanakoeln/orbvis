@@ -45,6 +45,12 @@ const emit = defineEmits<{ 'update:selectedOption': [value: string | null] }>();
 const open = ref(false);
 const query = ref('');
 const container = ref<HTMLElement | null>(null);
+const trigger = ref<HTMLElement | null>(null);
+const menuStyle = ref<{ top: string; left: string; minWidth: string }>({
+  top: '0px',
+  left: '0px',
+  minWidth: '0px',
+});
 
 const suggestions = computed((): Suggestion[] => {
   if (props.options.type === 'fixed') return props.options.suggestions;
@@ -63,10 +69,23 @@ const selectedTitle = computed(() => {
   return found ? found.title : (props.selectedOption ?? '');
 });
 
+function updateMenuPosition() {
+  if (!trigger.value) return;
+  const r = trigger.value.getBoundingClientRect();
+  menuStyle.value = {
+    top: `${r.bottom + 4}px`,
+    left: `${r.left}px`,
+    minWidth: `${r.width}px`,
+  };
+}
+
 function toggle() {
   if (props.disabled) return;
   open.value = !open.value;
-  if (open.value) query.value = '';
+  if (open.value) {
+    query.value = '';
+    updateMenuPosition();
+  }
 }
 
 function select(s: Suggestion) {
@@ -76,6 +95,7 @@ function select(s: Suggestion) {
 }
 
 function onClickOutside(e: MouseEvent) {
+  if (!open.value) return;
   if (container.value && !container.value.contains(e.target as Node)) {
     open.value = false;
   }
@@ -91,7 +111,13 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onClickOutside))
     class="cmk-dropdown"
     :class="[`cmk-dropdown--${width ?? 'default'}`, { 'cmk-dropdown--disabled': disabled }]"
   >
-    <button type="button" class="cmk-dropdown__trigger" :disabled="disabled" @click="toggle">
+    <button
+      ref="trigger"
+      type="button"
+      class="cmk-dropdown__trigger"
+      :disabled="disabled"
+      @click="toggle"
+    >
       <span class="cmk-dropdown__value">{{ selectedTitle || label || inputHint || '…' }}</span>
       <svg
         class="cmk-dropdown__chevron"
@@ -105,30 +131,32 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onClickOutside))
       </svg>
     </button>
 
-    <div v-if="open" class="cmk-dropdown__menu">
-      <input
-        v-if="options.type !== 'fixed' || suggestions.length > 8"
-        v-model="query"
-        class="cmk-dropdown__search"
-        type="text"
-        :placeholder="inputHint ?? ''"
-        @click.stop
-      />
-      <ul class="cmk-dropdown__list">
-        <li v-if="filtered.length === 0" class="cmk-dropdown__no-results">
-          {{ noResultsHint ?? noElementsText ?? 'No results' }}
-        </li>
-        <li
-          v-for="s in filtered"
-          :key="String(s.name)"
-          class="cmk-dropdown__item"
-          :class="{ 'cmk-dropdown__item--selected': s.name === selectedOption }"
-          @mousedown.prevent="select(s)"
-        >
-          {{ s.title }}
-        </li>
-      </ul>
-    </div>
+    <Teleport to="body">
+      <div v-if="open" class="cmk-dropdown__menu" :style="menuStyle">
+        <input
+          v-if="options.type !== 'fixed' || suggestions.length > 8"
+          v-model="query"
+          class="cmk-dropdown__search"
+          type="text"
+          :placeholder="inputHint ?? ''"
+          @click.stop
+        />
+        <ul class="cmk-dropdown__list">
+          <li v-if="filtered.length === 0" class="cmk-dropdown__no-results">
+            {{ noResultsHint ?? noElementsText ?? 'No results' }}
+          </li>
+          <li
+            v-for="s in filtered"
+            :key="String(s.name)"
+            class="cmk-dropdown__item"
+            :class="{ 'cmk-dropdown__item--selected': s.name === selectedOption }"
+            @mousedown.prevent="select(s)"
+          >
+            {{ s.title }}
+          </li>
+        </ul>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -189,11 +217,8 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onClickOutside))
 }
 
 .cmk-dropdown__menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  min-width: 100%;
-  z-index: 200;
+  position: fixed;
+  z-index: 9999;
   background: var(--bg-surface, #1e1e1e);
   border: 1px solid var(--border, #3a3a3a);
   border-radius: 4px;

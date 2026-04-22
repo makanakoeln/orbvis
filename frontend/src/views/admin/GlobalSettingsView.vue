@@ -171,7 +171,7 @@
                     <CmkInput
                       v-model="form.label_background"
                       placeholder="transparent"
-                      field-size="SMALL"
+                      field-size="MEDIUM"
                     />
                   </div>
                 </label>
