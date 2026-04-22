@@ -44,9 +44,12 @@ const markers = new Map<string, L.Marker>();
 
 type LineEntry = {
   polyline: L.Polyline;
+  border: L.Polyline | null;
   handle1: L.Marker;
   handle2: L.Marker;
   label: L.Marker | null;
+  arrowEnd: L.Marker | null;
+  arrowStart: L.Marker | null;
 };
 const lines = new Map<string, LineEntry>();
 
@@ -201,6 +204,28 @@ function makeHandleIcon(color: string): L.DivIcon {
   return icon;
 }
 
+function resolveLineColor(obj: BoardObjectType): string {
+  return obj.line_color ?? stateColor(obj.id);
+}
+
+function geoBearing(p1: [number, number], p2: [number, number]): number {
+  const lat1 = (p1[0] * Math.PI) / 180;
+  const lat2 = (p2[0] * Math.PI) / 180;
+  const dLng = ((p2[1] - p1[1]) * Math.PI) / 180;
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return (Math.atan2(y, x) * 180) / Math.PI;
+}
+
+function makeArrowIcon(color: string, deg: number): L.DivIcon {
+  return L.divIcon({
+    className: '',
+    html: `<svg width="12" height="12" viewBox="-6 -6 12 12" style="transform:rotate(${deg}deg);overflow:visible"><polygon points="0,-7 5,5 -5,5" fill="${escapeHtml(color)}"/></svg>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+  });
+}
+
 function makeLineLabelIcon(text: string, label: LabelConfig): L.DivIcon {
   const color = label.color || 'white';
   const size = label.size || 11;
@@ -237,9 +262,14 @@ function syncLines() {
   const currentIds = new Set(lineObjs.map((o) => o.id));
 
   for (const obj of lineObjs) {
-    const color = stateColor(obj.id);
+    const color = resolveLineColor(obj);
+    const borderColor = obj.line_color_border ?? null;
     const p1: [number, number] = [obj.lat!, obj.lng!];
     const p2: [number, number] = [obj.lat2!, obj.lng2!];
+    const style = obj.line_style ?? 'plain';
+    const dashArray = style === 'dashed' ? '8 6' : undefined;
+    const hasEnd = style === 'arrow_end' || style === 'arrow_both';
+    const hasStart = style === 'arrow_start' || style === 'arrow_both';
 
     const labelCfg = obj.label;
     const labelText = labelCfg?.show !== false ? (labelCfg?.text ?? '') : '';
@@ -247,8 +277,21 @@ function syncLines() {
 
     if (lines.has(obj.id)) {
       const entry = lines.get(obj.id)!;
+      if (entry.border) {
+        entry.border.setLatLngs([p1, p2]);
+        entry.border.setStyle({ color: borderColor ?? 'transparent', dashArray });
+        if (!borderColor) {
+          entry.border.remove();
+          entry.border = null;
+        }
+      } else if (borderColor) {
+        entry.border = L.polyline([p1, p2], { color: borderColor, weight: 5, dashArray }).addTo(
+          leafletMap!,
+        );
+        entry.polyline.bringToFront();
+      }
       entry.polyline.setLatLngs([p1, p2]);
-      entry.polyline.setStyle({ color });
+      entry.polyline.setStyle({ color, dashArray });
       entry.handle1.setLatLng(p1);
       entry.handle2.setLatLng(p2);
       entry.handle1.setIcon(makeHandleIcon(color));
@@ -274,8 +317,31 @@ function syncLines() {
         entry.label.remove();
         entry.label = null;
       }
+      if (hasEnd) {
+        const icon = makeArrowIcon(color, geoBearing(p1, p2));
+        if (entry.arrowEnd) {
+          entry.arrowEnd.setLatLng(p2);
+          entry.arrowEnd.setIcon(icon);
+        } else entry.arrowEnd = L.marker(p2, { icon, interactive: false }).addTo(leafletMap!);
+      } else if (entry.arrowEnd) {
+        entry.arrowEnd.remove();
+        entry.arrowEnd = null;
+      }
+      if (hasStart) {
+        const icon = makeArrowIcon(color, geoBearing(p2, p1));
+        if (entry.arrowStart) {
+          entry.arrowStart.setLatLng(p1);
+          entry.arrowStart.setIcon(icon);
+        } else entry.arrowStart = L.marker(p1, { icon, interactive: false }).addTo(leafletMap!);
+      } else if (entry.arrowStart) {
+        entry.arrowStart.remove();
+        entry.arrowStart = null;
+      }
     } else {
-      const polyline = L.polyline([p1, p2], { color, weight: 3 }).addTo(leafletMap!);
+      const border = borderColor
+        ? L.polyline([p1, p2], { color: borderColor, weight: 5, dashArray }).addTo(leafletMap!)
+        : null;
+      const polyline = L.polyline([p1, p2], { color, weight: 3, dashArray }).addTo(leafletMap!);
       const handle1 = L.marker(p1, {
         icon: makeHandleIcon(color),
         draggable: props.editMode,
@@ -291,6 +357,18 @@ function syncLines() {
               interactive: false,
             }).addTo(leafletMap!)
           : null;
+      const arrowEnd = hasEnd
+        ? L.marker(p2, {
+            icon: makeArrowIcon(color, geoBearing(p1, p2)),
+            interactive: false,
+          }).addTo(leafletMap!)
+        : null;
+      const arrowStart = hasStart
+        ? L.marker(p1, {
+            icon: makeArrowIcon(color, geoBearing(p2, p1)),
+            interactive: false,
+          }).addTo(leafletMap!)
+        : null;
 
       const objId = obj.id;
       polyline.on('click', (e) => {
@@ -313,16 +391,19 @@ function syncLines() {
         const pos = handle2.getLatLng();
         emit('latlng2-drag-end', objId, pos.lat, pos.lng);
       });
-      lines.set(objId, { polyline, handle1, handle2, label });
+      lines.set(objId, { polyline, border, handle1, handle2, label, arrowEnd, arrowStart });
     }
   }
 
   for (const [id, entry] of lines) {
     if (!currentIds.has(id)) {
+      entry.border?.remove();
       entry.polyline.remove();
       entry.handle1.remove();
       entry.handle2.remove();
       entry.label?.remove();
+      entry.arrowEnd?.remove();
+      entry.arrowStart?.remove();
       lines.delete(id);
     }
   }

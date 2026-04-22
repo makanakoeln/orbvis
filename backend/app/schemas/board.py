@@ -211,6 +211,8 @@ class BoardObjectUpdate(BaseModel):
     image_src: str | None = None
     x2: int | float | None = None
     y2: int | float | None = None
+    lat2: float | None = None
+    lng2: float | None = None
     line_style: LineStyle | None = None
     weathermap_metric: str | None = None
     cmk_label_name: str | None = None
