@@ -118,8 +118,16 @@ _ORBVIS_PERM_DEFAULTS: dict[str, frozenset[str]] = {
 _ORBVIS_VIEW_DEFAULTS: frozenset[str] = frozenset({"admin", "user"})
 _ORBVIS_EDIT_DEFAULTS: frozenset[str] = frozenset({"admin"})
 
+# Built-in CMK permission defaults not stored in roles.mk (only deviations are stored there).
+# Source: cmk/gui/default_permissions.py — keep in sync when adding new checks.
+_CMK_PERM_DEFAULTS: dict[str, frozenset[str]] = {
+    "general.see_all": frozenset({"admin", "guest"}),
+}
+
 
 def _orbvis_perm_defaults(perm_name: str) -> frozenset[str]:
+    if perm_name in _CMK_PERM_DEFAULTS:
+        return _CMK_PERM_DEFAULTS[perm_name]
     if perm_name in _ORBVIS_PERM_DEFAULTS:
         return _ORBVIS_PERM_DEFAULTS[perm_name]
     if perm_name.startswith("orbvis.edit_"):
