@@ -49,17 +49,17 @@ function isDisabled(option: ToggleButtonOption): boolean {
   display: inline-flex;
   border-radius: 4px;
   overflow: hidden;
-  border: 1px solid var(--border, #3a3a3a);
+  border: 1px solid var(--toggle-button-group-border-color, #3a3a3a);
 }
 
 .cmk-toggle-button {
   padding: 4px 10px;
   font-size: 12px;
   line-height: 1.5;
-  background: transparent;
-  color: var(--text, #ccc);
+  background: var(--toggle-button-group-inactive-bg-color, transparent);
+  color: var(--toggle-button-group-inactive-text-color, #ccc);
   border: none;
-  border-left: 1px solid var(--border, #3a3a3a);
+  border-left: 1px solid var(--toggle-button-group-border-color, #3a3a3a);
   cursor: pointer;
   transition:
     background 150ms,
@@ -71,19 +71,20 @@ function isDisabled(option: ToggleButtonOption): boolean {
 }
 
 .cmk-toggle-button:hover:not(:disabled) {
-  background: var(--bg-hover, rgba(255, 255, 255, 0.06));
+  background: var(--toggle-button-group-hover-bg-color, rgba(255, 255, 255, 0.06));
 }
 
 .cmk-toggle-button--active {
-  background: var(--color-corporate-green-50, #0f9b5e);
-  color: #fff;
+  background: var(--toggle-button-group-active-bg-color, #0f9b5e);
+  color: var(--toggle-button-group-active-text-color, #fff);
 }
 
 .cmk-toggle-button--active:hover:not(:disabled) {
-  background: var(--color-corporate-green-50, #0f9b5e);
+  background: var(--toggle-button-group-active-bg-color, #0f9b5e);
 }
 
 .cmk-toggle-button:disabled {
+  color: var(--toggle-button-group-disabled-text-color, #666);
   opacity: 0.4;
   cursor: not-allowed;
 }
