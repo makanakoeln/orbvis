@@ -295,6 +295,9 @@ sudo tee "$APACHE_CONF" > /dev/null <<EOF
 <IfModule !mod_proxy_wstunnel.c>
     LoadModule proxy_wstunnel_module $APACHE_MODULES_DIR/mod_proxy_wstunnel.so
 </IfModule>
+<IfModule !mod_headers.c>
+    LoadModule headers_module $APACHE_MODULES_DIR/mod_headers.so
+</IfModule>
 
 Alias /$SITE/orbvis $HTDOCS_DIR
 
@@ -308,6 +311,12 @@ Alias /$SITE/orbvis $HTDOCS_DIR
     AllowOverride None
     Require all granted
     FallbackResource /$SITE/orbvis/index.html
+    # Never cache index.html so browsers always fetch the latest asset hashes
+    <FilesMatch "^index\.html$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
 </Directory>
 
 # WebSocket proxy (must come before the /api block)

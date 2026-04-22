@@ -18,7 +18,7 @@ defineProps<{
 
 <style scoped>
 .cmk-collapsible {
-  display: grid;
+  display: grid !important;
   grid-template-rows: 0fr;
   overflow: hidden;
   transition: grid-template-rows 200ms ease;

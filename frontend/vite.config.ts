@@ -8,10 +8,9 @@ import { defineConfig } from 'vite'
 const appVersion = readFileSync(new URL('../VERSION', import.meta.url), 'utf-8').trim()
 
 const CMK_VENDOR = fileURLToPath(new URL('./src/vendor/cmk', import.meta.url))
-const CMK_DEV =
-  process.env.CMK_FRONTEND_VUE_SRC ??
-  path.join(process.env.HOME ?? '', 'git/checkmk/packages/cmk-frontend-vue/src')
-const CMK_SRC = existsSync(CMK_DEV) ? CMK_DEV : CMK_VENDOR
+const CMK_SRC = process.env.CMK_FRONTEND_VUE_SRC
+  ? path.resolve(process.env.CMK_FRONTEND_VUE_SRC)
+  : CMK_VENDOR
 
 const ORBVIS_SRC = fileURLToPath(new URL('./src', import.meta.url))
 
