@@ -46,8 +46,9 @@ const open = ref(false);
 const query = ref('');
 const container = ref<HTMLElement | null>(null);
 const trigger = ref<HTMLElement | null>(null);
-const menuStyle = ref<{ top: string; left: string; minWidth: string }>({
+const menuStyle = ref<{ top: string; bottom: string; left: string; minWidth: string }>({
   top: '0px',
+  bottom: 'auto',
   left: '0px',
   minWidth: '0px',
 });
@@ -72,11 +73,23 @@ const selectedTitle = computed(() => {
 function updateMenuPosition() {
   if (!trigger.value) return;
   const r = trigger.value.getBoundingClientRect();
-  menuStyle.value = {
-    top: `${r.bottom + 4}px`,
-    left: `${r.left}px`,
-    minWidth: `${r.width}px`,
-  };
+  const spaceBelow = window.innerHeight - r.bottom;
+  const estimatedMenuHeight = 260;
+  if (spaceBelow < estimatedMenuHeight && r.top > spaceBelow) {
+    menuStyle.value = {
+      top: 'auto',
+      bottom: `${window.innerHeight - r.top + 4}px`,
+      left: `${r.left}px`,
+      minWidth: `${r.width}px`,
+    };
+  } else {
+    menuStyle.value = {
+      top: `${r.bottom + 4}px`,
+      bottom: 'auto',
+      left: `${r.left}px`,
+      minWidth: `${r.width}px`,
+    };
+  }
 }
 
 function toggle() {
