@@ -314,11 +314,13 @@ function objectWrapperStyle(obj: BoardObjectType) {
   const pos = localDragPositions[obj.id] ?? { x: obj.x, y: obj.y };
   const isMap = obj.type === 'map';
   const canDrag = props.editMode || props.isAdmin;
+  const clickable =
+    props.config.click_action !== 'none' && (isMap || obj.url || !!buildCheckmkUrl(obj));
   const cursor = canDrag
     ? _dragId.value === obj.id
       ? 'grabbing'
       : 'grab'
-    : isMap || obj.url || !!buildCheckmkUrl(obj)
+    : clickable
       ? 'pointer'
       : 'default';
   const zIndex = _dragId.value === obj.id ? 100 : (obj.z ?? 1);
@@ -484,6 +486,7 @@ function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
   }
   // Suppress navigation click if the pointer just completed a real drag move
   if (_didMove.value) return;
+  if (props.config.click_action === 'none') return;
   if (obj.url) {
     _openUrl(obj.url, obj.url_target || '_blank');
     return;

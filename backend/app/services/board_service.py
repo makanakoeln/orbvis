@@ -47,7 +47,7 @@ def list_boards() -> list[BoardRead]:
             boards.append(_to_read(cfg))
         except Exception as exc:
             logger.warning("Skipping invalid board file %s: %s", path, exc)
-    return sorted(boards, key=lambda m: (not m.readonly, (m.alias or m.name).lower()))
+    return sorted(boards, key=lambda m: (m.sort_order, not m.readonly, (m.alias or m.name).lower()))
 
 
 def get_board(name: str) -> BoardConfig | None:
@@ -187,6 +187,16 @@ def import_board(data: dict, *, overwrite: bool = False) -> BoardConfig:
     return cfg
 
 
+def reorder_boards(order: list[tuple[str, int]]) -> None:
+    """Update sort_order for each named board. Unknown names are silently skipped."""
+    for name, sort_order in order:
+        cfg = get_board(name)
+        if cfg is None:
+            continue
+        cfg.sort_order = sort_order
+        _save_board_file(cfg)
+
+
 def _to_read(cfg: BoardConfig) -> BoardRead:
     return BoardRead(
         name=cfg.name,
@@ -198,6 +208,8 @@ def _to_read(cfg: BoardConfig) -> BoardRead:
         view=cfg.view,
         object_count=len(cfg.objects),
         rotation_interval=cfg.rotation_interval,
+        sort_order=cfg.sort_order,
+        click_action=cfg.click_action,
         readonly=cfg.readonly,
         hover_template=cfg.hover_template,
         context_template=cfg.context_template,

@@ -66,6 +66,8 @@ BoardView = Annotated[
     Field(discriminator="type"),
 ]
 
+ClickAction = Literal["link", "none"]
+
 
 class BoardObject(BaseModel):
     id: str
@@ -152,6 +154,8 @@ class BoardConfig(BaseModel):
     backend_id: str = "live_1"
     icon_size: int = 30
     rotation_interval: int = 0
+    sort_order: int = 0
+    click_action: ClickAction = "link"
     hover_template: str | None = None
     context_template: str | None = None
     background_image: str | None = None
@@ -174,6 +178,8 @@ class BoardUpdate(BaseModel):
     icon_size: int | None = None
     backend_id: str | None = None
     view: BoardView | None = None
+    sort_order: int | None = None
+    click_action: ClickAction | None = None
     hover_template: str | None = None
     context_template: str | None = None
     rotation_interval: int | None = None
@@ -190,6 +196,8 @@ class BoardRead(BaseModel):
     view: BoardView
     object_count: int
     rotation_interval: int
+    sort_order: int = 0
+    click_action: ClickAction = "link"
     readonly: bool = False
     show_in_lists: bool = True
     hover_template: str | None = None

@@ -11,6 +11,8 @@ const sampleConfig: BoardConfig = {
   icon_size: 30,
   backend_id: 'test',
   rotation_interval: 0,
+  sort_order: 0,
+  click_action: 'link',
   view: { type: 'static' },
   objects: [
     {

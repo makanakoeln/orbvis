@@ -118,6 +118,8 @@ export interface BoardObject {
   context_template?: string | null;
 }
 
+export type ClickAction = 'link' | 'none';
+
 export interface BoardConfig {
   name: string;
   alias: string;
@@ -125,6 +127,8 @@ export interface BoardConfig {
   backend_id: string;
   icon_size: number;
   rotation_interval: number;
+  sort_order: number;
+  click_action: ClickAction;
   hover_template?: string | null;
   context_template?: string | null;
   background_image?: string | null;
@@ -142,6 +146,8 @@ export interface BoardRead {
   view: BoardView;
   object_count: number;
   rotation_interval: number;
+  sort_order: number;
+  click_action: ClickAction;
   readonly?: boolean;
   show_in_lists?: boolean;
   hover_template?: string | null;

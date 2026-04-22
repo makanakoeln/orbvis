@@ -862,6 +862,8 @@ const boardConfigAsRead = computed<import('@/types/api').BoardRead | null>(() =>
     view: cfg.view,
     object_count: cfg.objects.length,
     rotation_interval: cfg.rotation_interval,
+    sort_order: cfg.sort_order,
+    click_action: cfg.click_action,
     readonly: cfg.readonly,
     hover_template: cfg.hover_template,
     context_template: cfg.context_template,

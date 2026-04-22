@@ -205,6 +205,19 @@
               <p class="text-sm text-zinc-600">{{ t('board.templateHint') }}</p>
             </div>
 
+            <!-- Click action -->
+            <div class="border-t border-[var(--border)]" style="padding-top: 8px">
+              <label class="text-sm font-medium text-zinc-400 block mb-[6px]">{{
+                t('board.clickAction')
+              }}</label>
+              <CmkDropdown
+                :selected-option="form.click_action"
+                :options="clickActionOptions"
+                label=""
+                @update:selected-option="form.click_action = ($event ?? 'link') as 'link' | 'none'"
+              />
+            </div>
+
             <!-- Show in lists toggle -->
             <div
               class="flex items-center justify-between border-t border-[var(--border)]"
@@ -443,6 +456,7 @@ const form = ref({
   backend_id: props.board.backend_id,
   icon_size: props.board.icon_size,
   rotation_interval: props.board.rotation_interval,
+  click_action: (props.board.click_action ?? 'link') as 'link' | 'none',
   show_in_lists: props.board.show_in_lists !== false,
   map_type: props.board.view.type,
   worldmap_lat: wm.lat,
@@ -475,6 +489,13 @@ const radarFilterOptions = computed(() => ({
     { name: 'servicegroup', title: t('board.filterTypeServicegroup') },
     { name: 'all_hosts', title: t('board.filterTypeAllHosts') },
     { name: 'all_services', title: t('board.filterTypeAllServices') },
+  ],
+}));
+const clickActionOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'link', title: t('board.clickActionLink') },
+    { name: 'none', title: t('board.clickActionNone') },
   ],
 }));
 const saveError = ref('');
@@ -515,6 +536,7 @@ async function save() {
         backend_id: form.value.backend_id,
         icon_size: form.value.icon_size,
         rotation_interval: form.value.rotation_interval,
+        click_action: form.value.click_action,
         show_in_lists: form.value.show_in_lists,
         background_image: form.value.background_image || null,
         view,
