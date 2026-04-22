@@ -408,11 +408,11 @@ let savedOkTimer: ReturnType<typeof setTimeout> | null = null;
 let saveErrorTimer: ReturnType<typeof setTimeout> | null = null;
 
 const sectionOpen = reactive({
-  objectDefaults: true,
-  labelDefaults: true,
-  newBoardDefaults: true,
-  templates: true,
-  checkmkIntegration: true,
+  objectDefaults: false,
+  labelDefaults: false,
+  newBoardDefaults: false,
+  templates: false,
+  checkmkIntegration: false,
 });
 
 const backendOptions = computed(() => ({
