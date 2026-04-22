@@ -1,5 +1,6 @@
 export default {
   extends: ['stylelint-config-standard', 'stylelint-config-html/vue'],
+  ignoreFiles: ['src/vendor/**'],
   rules: {
     // Tailwind-Direktiven (@tailwind, @apply, @layer) sowie Tailwind v4 (@theme, @custom-variant, @reference)
     'at-rule-no-unknown': [

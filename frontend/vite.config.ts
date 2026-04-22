@@ -7,13 +7,21 @@ import { defineConfig } from 'vite'
 
 const appVersion = readFileSync(new URL('../VERSION', import.meta.url), 'utf-8').trim()
 
-const CMK_SRC = '/home/ronny/git/checkmk/packages/cmk-frontend-vue/src'
+const CMK_VENDOR = fileURLToPath(new URL('./src/vendor/cmk', import.meta.url))
+const CMK_DEV =
+  process.env.CMK_FRONTEND_VUE_SRC ??
+  path.join(process.env.HOME ?? '', 'git/checkmk/packages/cmk-frontend-vue/src')
+const CMK_SRC = existsSync(CMK_DEV) ? CMK_DEV : CMK_VENDOR
+
 const ORBVIS_SRC = fileURLToPath(new URL('./src', import.meta.url))
 
 const CMK_STUBS: Record<string, string> = {
   [`${CMK_SRC}/components/CmkIcon`]: `${ORBVIS_SRC}/components/cmk-stubs/CmkIcon.vue`,
   [`${CMK_SRC}/components/CmkIcon/CmkMultitoneIcon.vue`]: `${ORBVIS_SRC}/components/cmk-stubs/CmkMultitoneIcon.vue`,
 }
+
+const isCmkFile = (id: string) =>
+  id.includes('cmk-frontend-vue') || id.startsWith(CMK_VENDOR + path.sep)
 
 export default defineConfig({
   plugins: [
@@ -22,9 +30,18 @@ export default defineConfig({
       name: 'cmk-alias-resolver',
       enforce: 'pre',
       resolveId(source, importer) {
-        if (!importer?.includes('cmk-frontend-vue')) return
+        if (!importer || !isCmkFile(importer)) return
         // Stub out CMK-internal components that have unbundleable dependencies
         if (source in CMK_STUBS) return { id: CMK_STUBS[source] }
+        // Relative imports from vendor files — resolve and check for stubs
+        if (source.startsWith('.')) {
+          const resolved = path.resolve(path.dirname(importer), source)
+          if (resolved in CMK_STUBS) return { id: CMK_STUBS[resolved] }
+          for (const ext of ['.ts', '.vue', '/index.ts', '/index.vue']) {
+            if (resolved + ext in CMK_STUBS) return { id: CMK_STUBS[resolved + ext] }
+          }
+          return
+        }
         // Case 1: raw @/ import (before Vite alias runs)
         if (source.startsWith('@/')) {
           const resolved = path.resolve(CMK_SRC, source.slice(2))
