@@ -13,7 +13,7 @@ export function boardTypeOptions(t: T) {
 
 export function lineStyleOptions(t: T) {
   return [
-    { name: '', title: t('boardSettings.lineDefault') },
+    { name: null, title: t('boardSettings.lineDefault') },
     { name: 'plain', title: t('boardSettings.lineSimple') },
     { name: 'arrow_end', title: t('boardSettings.lineArrowRight') },
     { name: 'arrow_start', title: t('boardSettings.lineArrowLeft') },
