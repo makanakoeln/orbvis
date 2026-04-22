@@ -357,4 +357,11 @@ watch(
 
   padding: 5px 10px;
 }
+
+/* Panel sits at the bottom of the viewport — force dropdowns to open upward */
+/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
+:deep(.cmk-suggestions) {
+  bottom: 100%;
+  top: auto;
+}
 </style>
