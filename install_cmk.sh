@@ -207,7 +207,13 @@ step "Setting up Python environment"
 if sudo test -d "$VENV_DIR"; then
   ok "Virtualenv already exists, skipping creation"
 else
-  quietly sudo "$PYTHON3" -m venv "$VENV_DIR"
+  quietly sudo "$PYTHON3" -m venv --symlinks "$VENV_DIR"
+fi
+# Ensure venv python3 is a symlink so the OMD Python's RPATH is preserved.
+# When venv copies the binary instead of symlinking, libpython3.13 can't be
+# found at runtime because the relative RPATH no longer resolves correctly.
+if [[ ! -L "$VENV_DIR/bin/python3" ]]; then
+  quietly sudo ln -sf "$PYTHON3" "$VENV_DIR/bin/python3"
 fi
 if ! sudo test -f "$VENV_DIR/bin/pip"; then
   # CMK 2.5+ builds Python without ensurepip wheel; bootstrap pip from site
