@@ -39,6 +39,27 @@
       <span>{{ t('contextMenu.hostInCheckmk') }}</span>
     </a>
     <a
+      v-if="hostServicesUrl"
+      :href="hostServicesUrl"
+      target="_blank"
+      class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+    >
+      <svg
+        class="w-3.5 h-3.5 shrink-0"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+        />
+      </svg>
+      <span>{{ t('contextMenu.hostProblemServices') }}</span>
+    </a>
+    <a
       v-if="serviceUrl"
       :href="serviceUrl"
       target="_blank"
@@ -82,7 +103,7 @@
     </a>
 
     <div
-      v-if="!hostUrl && !serviceUrl && !groupUrl && !checkmkUrl"
+      v-if="!hostUrl && !hostServicesUrl && !serviceUrl && !groupUrl && !checkmkUrl"
       class="px-3.5 py-2 text-xs text-[var(--text-muted)] italic"
     >
       {{ t('contextMenu.noCheckmkUrl') }}
@@ -419,6 +440,13 @@ const groupUrl = computed(() => {
   const view = props.object.type === 'hostgroup' ? 'hostgroup' : 'servicegroup';
   const key = props.object.type === 'hostgroup' ? 'hostgroup' : 'servicegroup';
   const p: Record<string, string> = { view_name: view, [key]: props.object.group_name };
+  if (site.value) p.site = site.value;
+  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`;
+});
+
+const hostServicesUrl = computed(() => {
+  if (!base.value || props.object.type !== 'host' || !props.object.host_name) return null;
+  const p: Record<string, string> = { view_name: 'host', host: props.object.host_name };
   if (site.value) p.site = site.value;
   return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`;
 });
