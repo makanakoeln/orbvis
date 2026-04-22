@@ -1,12 +1,12 @@
 <template>
-  <div ref="mapEl" class="absolute inset-0 z-0" :class="placing ? 'cursor-crosshair' : ''" />
+  <div ref="mapEl" class="absolute inset-0 z-0" />
 </template>
 
 <script setup lang="ts">
 import 'leaflet/dist/leaflet.css';
 
 import L from 'leaflet';
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 
 import type {
   BoardConfig,
@@ -201,6 +201,8 @@ function fitAll() {
   });
 }
 
+let resizeObserver: ResizeObserver | null = null;
+
 onMounted(() => {
   if (!mapEl.value) return;
   const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null;
@@ -215,9 +217,13 @@ onMounted(() => {
   });
   applyTileSettings();
   syncMarkers();
+  resizeObserver = new ResizeObserver(() => leafletMap?.invalidateSize());
+  resizeObserver.observe(mapEl.value);
 });
 
 onUnmounted(() => {
+  resizeObserver?.disconnect();
+  resizeObserver = null;
   leafletMap?.remove();
   leafletMap = null;
   tileLayer = null;
@@ -230,15 +236,17 @@ watch(
   { deep: true },
 );
 
+watch(
+  () => props.placing,
+  (v) => {
+    if (mapEl.value) mapEl.value.style.cursor = v ? 'crosshair' : '';
+  },
+);
+
 watch(() => {
   const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null;
   return [wv?.tile_url, wv?.tile_saturate];
 }, applyTileSettings);
-
-watch(
-  () => props.editMode,
-  () => nextTick(() => leafletMap?.invalidateSize()),
-);
 
 function getView() {
   if (!leafletMap) return null;
