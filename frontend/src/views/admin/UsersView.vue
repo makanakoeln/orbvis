@@ -74,13 +74,9 @@
               {{ user.name }}
             </td>
             <td style="padding: 6px 12px">
-              <span
-                v-if="user.is_admin"
-                class="inline-flex items-center text-xs font-semibold rounded-full bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20"
-                style="gap: 3px; padding: 1px 6px"
-              >
-                {{ t('admin.admin') }}
-              </span>
+              <CmkBadge v-if="user.is_admin" size="small" type="outline" color="warning">{{
+                t('admin.admin')
+              }}</CmkBadge>
               <span v-else class="text-sm text-zinc-600">{{ t('admin.user') }}</span>
             </td>
             <td style="padding: 6px 12px">
@@ -302,6 +298,7 @@
 </template>
 
 <script setup lang="ts">
+import CmkBadge from '@cmk/components/CmkBadge.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';

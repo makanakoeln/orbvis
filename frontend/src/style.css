@@ -19,6 +19,12 @@
   /* Restore Tailwind v4's --spacing after CMK variables.css overrides it with 10px */
   --spacing: 0.25rem;
 
+  /* CMK layout variables */
+  --form-field-height: 24px;
+  --font-weight-default: 400;
+  --font-size-normal: 13px;
+  --font-size-xlarge: 15px;
+
   /* CMK button token defaults (active before Vue sets body[data-theme]) */
   --default-button-primary-color: rgb(21 209 160);
   --button-primary-border-color: rgb(21 209 160);

@@ -141,18 +141,14 @@
             <td class="font-mono text-sm text-zinc-400" style="padding: 6px 12px">{{ b.id }}</td>
             <td class="text-zinc-300" style="padding: 6px 12px">{{ b.label || '—' }}</td>
             <td style="padding: 6px 12px">
-              <span
-                class="text-xs px-2 py-0.5 rounded-full font-medium ring-1"
-                :class="
-                  b.type === 'livestatus'
-                    ? 'bg-[var(--color-corporate-green-50)]/10 text-[var(--color-corporate-green-50)] ring-[var(--color-corporate-green-50)]/20'
-                    : b.type === 'icinga2'
-                      ? 'bg-amber-500/10 text-amber-400 ring-amber-500/20'
-                      : 'bg-zinc-700/50 text-zinc-500 ring-[var(--default-border-color)]'
+              <CmkBadge
+                size="small"
+                type="outline"
+                :color="
+                  b.type === 'livestatus' ? 'success' : b.type === 'icinga2' ? 'warning' : 'default'
                 "
+                >{{ b.type }}</CmkBadge
               >
-                {{ b.type }}
-              </span>
             </td>
             <td class="text-zinc-400 font-mono text-sm" style="padding: 6px 12px">
               <template v-if="b.type === 'livestatus'">
@@ -462,6 +458,7 @@
 
 <script setup lang="ts">
 import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
+import CmkBadge from '@cmk/components/CmkBadge.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';

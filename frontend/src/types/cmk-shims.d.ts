@@ -64,17 +64,28 @@ declare module '@cmk/components/user-input/CmkCheckbox.vue' {
 
 declare module '@cmk/components/CmkDropdown/CmkDropdown.vue' {
   import type { DefineComponent } from 'vue';
-  interface Suggestion {
-    name: string;
+  export interface Suggestion {
+    name: string | null;
     title: string;
   }
+  export interface SuggestionsFixed {
+    type: 'fixed';
+    suggestions: Suggestion[];
+  }
   interface CmkDropdownProps {
+    options:
+      | SuggestionsFixed
+      | { type: 'filtered'; suggestions: Suggestion[] }
+      | { type: 'callback-filtered'; querySuggestions: (q: string) => Promise<unknown> };
+    label: string;
     selectedOption?: string | null;
-    options?: Suggestion[] | ((value: string) => Promise<Suggestion[]>);
-    label?: string;
     disabled?: boolean;
-    noResultsText?: string;
-    placeholder?: string;
+    required?: boolean;
+    inputHint?: string;
+    noResultsHint?: string;
+    noElementsText?: string;
+    width?: 'default' | 'half' | 'fill';
+    formValidation?: boolean;
   }
   const component: DefineComponent<
     CmkDropdownProps,
@@ -86,6 +97,18 @@ declare module '@cmk/components/CmkDropdown/CmkDropdown.vue' {
     object,
     { 'update:selectedOption': [value: string | null] }
   >;
+  export default component;
+}
+
+declare module '@cmk/components/CmkBadge.vue' {
+  import type { DefineComponent } from 'vue';
+  interface CmkBadgeProps {
+    size?: 'small' | 'medium' | 'large';
+    color?: 'default' | 'success' | 'warning' | 'danger';
+    type?: 'fill' | 'outline';
+    shape?: 'default' | 'circle';
+  }
+  const component: DefineComponent<CmkBadgeProps>;
   export default component;
 }
 
