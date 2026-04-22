@@ -54,21 +54,21 @@
           <div v-if="activeTab === 'general'" class="space-y-[10px]">
             <!-- Alias -->
             <div class="space-y-[4px]">
-              <label class="text-sm font-medium text-zinc-400">{{ t('board.displayName') }}</label>
+              <CmkLabel>{{ t('board.displayName') }}</CmkLabel>
               <CmkInput v-model="form.alias" field-size="FILL" />
             </div>
 
             <!-- Connection + Icon size -->
             <div class="grid grid-cols-[1fr_7rem] gap-[8px]">
               <div class="space-y-[4px]">
-                <label class="text-sm font-medium text-zinc-400">{{ t('board.connection') }}</label>
+                <CmkLabel>{{ t('board.connection') }}</CmkLabel>
                 <AppSelect
                   v-model="form.backend_id"
                   :options="backends.map((b) => ({ value: b.id, label: b.label || b.id }))"
                 />
               </div>
               <div class="space-y-[4px]">
-                <label class="text-sm font-medium text-zinc-400">{{ t('board.iconSize') }}</label>
+                <CmkLabel>{{ t('board.iconSize') }}</CmkLabel>
                 <div class="flex items-center gap-[5px]">
                   <NumberInput v-model="form.icon_size" min="12" max="96" class="w-full" />
                   <span class="text-sm text-zinc-500 shrink-0">px</span>
@@ -78,9 +78,7 @@
 
             <!-- Rotation interval -->
             <div class="space-y-[4px]">
-              <label class="text-sm font-medium text-zinc-400">{{
-                t('board.rotationInterval')
-              }}</label>
+              <CmkLabel>{{ t('board.rotationInterval') }}</CmkLabel>
               <div class="flex items-center gap-[6px]">
                 <NumberInput
                   v-model="form.rotation_interval"
@@ -95,7 +93,7 @@
 
             <!-- Board type -->
             <div class="space-y-[4px]">
-              <label class="text-sm font-medium text-zinc-400">{{ t('board.boardType') }}</label>
+              <CmkLabel>{{ t('board.boardType') }}</CmkLabel>
               <AppSelect
                 v-model="form.map_type"
                 :options="[
@@ -111,7 +109,7 @@
             <template v-if="form.map_type === 'worldmap'">
               <div class="grid grid-cols-3 gap-[8px]">
                 <div class="space-y-[4px]">
-                  <label class="text-sm font-medium text-zinc-400">{{ t('board.latitude') }}</label>
+                  <CmkLabel>{{ t('board.latitude') }}</CmkLabel>
                   <NumberInput
                     v-model="form.worldmap_lat"
                     step="any"
@@ -120,9 +118,7 @@
                   />
                 </div>
                 <div class="space-y-[4px]">
-                  <label class="text-sm font-medium text-zinc-400">{{
-                    t('board.longitude')
-                  }}</label>
+                  <CmkLabel>{{ t('board.longitude') }}</CmkLabel>
                   <NumberInput
                     v-model="form.worldmap_lng"
                     step="any"
@@ -131,12 +127,12 @@
                   />
                 </div>
                 <div class="space-y-[4px]">
-                  <label class="text-sm font-medium text-zinc-400">{{ t('board.zoom') }}</label>
+                  <CmkLabel>{{ t('board.zoom') }}</CmkLabel>
                   <NumberInput v-model="form.worldmap_zoom" min="1" max="18" class="w-full" />
                 </div>
               </div>
               <div class="space-y-[4px]">
-                <label class="text-sm font-medium text-zinc-400">{{ t('board.tileUrl') }}</label>
+                <CmkLabel>{{ t('board.tileUrl') }}</CmkLabel>
                 <CmkInput
                   v-model="form.worldmap_tile_url"
                   :placeholder="t('board.tileUrlPlaceholder')"
@@ -144,9 +140,7 @@
                 />
               </div>
               <div class="space-y-[4px]">
-                <label class="text-sm font-medium text-zinc-400">{{
-                  t('board.tileSaturate')
-                }}</label>
+                <CmkLabel>{{ t('board.tileSaturate') }}</CmkLabel>
                 <NumberInput
                   v-model="form.worldmap_tile_saturate"
                   :min="0"
@@ -163,9 +157,7 @@
             <template v-if="form.map_type === 'radar'">
               <div class="grid grid-cols-2 gap-[8px]">
                 <div class="space-y-[4px]">
-                  <label class="text-sm font-medium text-zinc-400">{{
-                    t('board.filterType')
-                  }}</label>
+                  <CmkLabel>{{ t('board.filterType') }}</CmkLabel>
                   <AppSelect
                     v-model="form.radar_filter"
                     :options="[
@@ -180,9 +172,7 @@
                   v-if="form.radar_filter === 'hostgroup' || form.radar_filter === 'servicegroup'"
                   class="space-y-[4px]"
                 >
-                  <label class="text-sm font-medium text-zinc-400">{{
-                    t('board.groupName')
-                  }}</label>
+                  <CmkLabel>{{ t('board.groupName') }}</CmkLabel>
                   <CmkInput
                     v-model="form.radar_filter_value"
                     placeholder="e.g. linux-servers"
@@ -388,6 +378,7 @@
 
 <script setup lang="ts">
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkLabel from '@cmk/components/CmkLabel.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkScrollContainer from '@cmk/components/CmkScrollContainer.vue';
 import CmkSwitch from '@cmk/components/CmkSwitch.vue';

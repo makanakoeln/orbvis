@@ -70,7 +70,7 @@
 
         <!-- Theme selector (only for self) -->
         <div v-if="isSelf" class="space-y-[6px]">
-          <label class="text-sm font-medium text-zinc-400">{{ t('userSettings.theme') }}</label>
+          <CmkLabel>{{ t('userSettings.theme') }}</CmkLabel>
           <div class="flex gap-[6px]">
             <button
               v-for="opt in themeOptions"
@@ -92,7 +92,7 @@
 
         <!-- Language selector (only for self, not in SSO mode where CMK controls it) -->
         <div v-if="isSelf && !auth.ssoActive && !auth.isCheckmkDeployment" class="space-y-[6px]">
-          <label class="text-sm font-medium text-zinc-400">{{ t('userSettings.language') }}</label>
+          <CmkLabel>{{ t('userSettings.language') }}</CmkLabel>
           <div class="flex gap-[6px]">
             <button
               v-for="opt in languageOptions"
@@ -120,9 +120,7 @@
           <p class="text-sm font-medium text-zinc-400">{{ t('userSettings.changePassword') }}</p>
           <form class="space-y-[8px]" @submit.prevent="savePassword">
             <div class="space-y-[4px]">
-              <label class="text-sm font-medium text-zinc-400">{{
-                t('userSettings.newPassword')
-              }}</label>
+              <CmkLabel>{{ t('userSettings.newPassword') }}</CmkLabel>
               <CmkInput
                 v-model="password"
                 type="password"
@@ -132,9 +130,7 @@
               <p class="text-sm text-zinc-600">{{ t('userSettings.passwordMinLength') }}</p>
             </div>
             <div class="space-y-[4px]">
-              <label class="text-sm font-medium text-zinc-400">{{
-                t('userSettings.confirmPassword')
-              }}</label>
+              <CmkLabel>{{ t('userSettings.confirmPassword') }}</CmkLabel>
               <CmkInput
                 v-model="confirm"
                 type="password"
@@ -230,6 +226,7 @@
 
 <script setup lang="ts">
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkLabel from '@cmk/components/CmkLabel.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, h, ref } from 'vue';

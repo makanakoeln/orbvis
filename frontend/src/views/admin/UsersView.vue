@@ -183,7 +183,7 @@
           </div>
           <form class="space-y-[10px]" @submit.prevent="createUser">
             <div class="space-y-[4px]">
-              <label class="text-sm font-medium text-zinc-400">{{ t('auth.username') }}</label>
+              <CmkLabel>{{ t('auth.username') }}</CmkLabel>
               <CmkInput
                 v-model="newUser.name"
                 placeholder="john"
@@ -193,7 +193,7 @@
             </div>
 
             <div class="space-y-[4px]">
-              <label class="text-sm font-medium text-zinc-400">{{ t('auth.password') }}</label>
+              <CmkLabel>{{ t('auth.password') }}</CmkLabel>
               <CmkInput
                 v-model="newUser.password"
                 type="password"
@@ -204,9 +204,7 @@
             </div>
 
             <div class="space-y-[4px]">
-              <label class="text-sm font-medium text-zinc-400">{{
-                t('userSettings.confirmPassword')
-              }}</label>
+              <CmkLabel>{{ t('userSettings.confirmPassword') }}</CmkLabel>
               <CmkInput
                 v-model="newUserConfirmPassword"
                 type="password"
@@ -300,6 +298,7 @@
 <script setup lang="ts">
 import CmkBadge from '@cmk/components/CmkBadge.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkLabel from '@cmk/components/CmkLabel.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';

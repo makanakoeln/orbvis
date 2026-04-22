@@ -30,15 +30,11 @@
 
         <form class="space-y-4" @submit.prevent="save">
           <div class="space-y-1.5">
-            <label class="text-xs font-medium text-zinc-400">{{
-              t('userSettings.newPassword')
-            }}</label>
+            <CmkLabel>{{ t('userSettings.newPassword') }}</CmkLabel>
             <CmkInput v-model="password" type="password" placeholder="••••••••" field-size="FILL" />
           </div>
           <div class="space-y-1.5">
-            <label class="text-xs font-medium text-zinc-400">{{
-              t('userSettings.confirmPassword')
-            }}</label>
+            <CmkLabel>{{ t('userSettings.confirmPassword') }}</CmkLabel>
             <CmkInput v-model="confirm" type="password" placeholder="••••••••" field-size="FILL" />
           </div>
 
@@ -63,6 +59,7 @@
 
 <script setup lang="ts">
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkLabel from '@cmk/components/CmkLabel.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
