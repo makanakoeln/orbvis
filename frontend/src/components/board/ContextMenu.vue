@@ -447,11 +447,15 @@ const groupUrl = computed(() => {
 const hostServicesUrl = computed(() => {
   if (!base.value || props.object.type !== 'host' || !props.object.host_name) return null;
   if (!isProblematic.value) return null;
-  // svcproblems filtered to this host, excluding WARNING (st1=0)
   const p: Record<string, string> = {
-    view_name: 'svcproblems',
+    view_name: 'host',
     host: props.object.host_name,
-    st1: '0',
+    filled_in: 'filter',
+    _active: 'svcstate',
+    st1: 'on',
+    st2: 'on',
+    st3: 'on',
+    stp: 'on',
   };
   if (site.value) p.site = site.value;
   return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`;
