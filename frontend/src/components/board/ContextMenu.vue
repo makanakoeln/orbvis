@@ -454,7 +454,7 @@ const hostServicesUrl = computed(() => {
     view_name: 'host',
     host: props.object.host_name,
     filled_in: 'filter',
-    _active: 'svcstate',
+    _active: 'serviceregex;svcstate;host;siteopt',
     st1: 'on',
     st2: 'on',
     st3: 'on',
