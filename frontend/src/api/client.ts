@@ -471,7 +471,7 @@ export const cmkApi = {
 
   removeDowntimeHost(baseUrl: string, hostname: string): Promise<void> {
     return cmkRequest(baseUrl, '/domain-types/downtime/actions/delete/invoke', {
-      delete_type: 'by_host_name',
+      delete_type: 'params',
       host_name: hostname,
     });
   },
@@ -482,9 +482,9 @@ export const cmkApi = {
     serviceDescription: string,
   ): Promise<void> {
     return cmkRequest(baseUrl, '/domain-types/downtime/actions/delete/invoke', {
-      delete_type: 'by_host_name',
+      delete_type: 'params',
       host_name: hostname,
-      service_description: serviceDescription,
+      service_descriptions: [serviceDescription],
     });
   },
 
