@@ -289,6 +289,7 @@ export const useStatesStore = defineStore('states', () => {
     connectToMap,
     disconnect,
     getState,
+    refreshNow: _fetchStates,
     toggleNotifications,
     prefillMetricHistory,
     clearMetricValues,

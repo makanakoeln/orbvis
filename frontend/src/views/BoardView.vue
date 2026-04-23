@@ -706,20 +706,24 @@
       @add-comment="onWorldmapCtxAddComment"
       @enable-notifications="onWorldmapCtxToggleNotifications(true)"
       @disable-notifications="onWorldmapCtxToggleNotifications(false)"
-      @enable-checks="onWorldmapCtxToggleChecks(true)"
-      @disable-checks="onWorldmapCtxToggleChecks(false)"
     />
     <AckModal
       v-if="worldmapAckModal && checkmkUrl"
       :object="worldmapAckModal"
       :checkmk-url="checkmkUrl"
-      @close="worldmapAckModal = null"
+      @close="
+        worldmapAckModal = null;
+        void statesStore.refreshNow();
+      "
     />
     <DowntimeModal
       v-if="worldmapDowntimeModal && checkmkUrl"
       :object="worldmapDowntimeModal"
       :checkmk-url="checkmkUrl"
-      @close="worldmapDowntimeModal = null"
+      @close="
+        worldmapDowntimeModal = null;
+        void statesStore.refreshNow();
+      "
     />
     <CommentModal
       v-if="worldmapCommentModal && checkmkUrl"
@@ -1067,28 +1071,6 @@ async function onWorldmapCtxToggleNotifications(enable: boolean) {
     }
   } catch {
     toast.error(t('contextMenu.toggleNotificationsFailed'));
-  }
-}
-
-async function onWorldmapCtxToggleChecks(enable: boolean) {
-  const obj = worldmapCtxMenu.object;
-  worldmapCtxMenu.visible = false;
-  if (!obj || !checkmkUrl.value) return;
-  try {
-    if (obj.type === 'service' && obj.host_name && obj.service_description) {
-      await (enable ? cmkApi.enableChecksService : cmkApi.disableChecksService)(
-        checkmkUrl.value,
-        obj.host_name,
-        obj.service_description,
-      );
-    } else if (obj.host_name) {
-      await (enable ? cmkApi.enableChecksHost : cmkApi.disableChecksHost)(
-        checkmkUrl.value,
-        obj.host_name,
-      );
-    }
-  } catch {
-    toast.error(t('contextMenu.toggleChecksFailed'));
   }
 }
 

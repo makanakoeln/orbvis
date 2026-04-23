@@ -249,46 +249,6 @@
           </svg>
           <span>{{ t('contextMenu.enableNotifications') }}</span>
         </button>
-        <button
-          v-if="state?.active_checks_enabled !== false"
-          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
-          @click="$emit('disableChecks')"
-        >
-          <svg
-            class="w-3.5 h-3.5 shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-            />
-          </svg>
-          <span>{{ t('contextMenu.disableChecks') }}</span>
-        </button>
-        <button
-          v-if="state?.active_checks_enabled === false"
-          class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
-          @click="$emit('enableChecks')"
-        >
-          <svg
-            class="w-3.5 h-3.5 shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M5.636 5.636a9 9 0 1012.728 12.728M5.636 5.636a9 9 0 0112.728 12.728m-12.728 0L5.636 5.636"
-            />
-          </svg>
-          <span>{{ t('contextMenu.enableChecks') }}</span>
-        </button>
       </div>
     </template>
 
@@ -389,8 +349,6 @@ defineEmits<{
   addComment: [];
   enableNotifications: [];
   disableNotifications: [];
-  enableChecks: [];
-  disableChecks: [];
 }>();
 
 const renderedTemplate = computed(() =>

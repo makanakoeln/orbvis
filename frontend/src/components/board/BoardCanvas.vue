@@ -125,8 +125,6 @@
       @add-comment="onContextMenuAddComment"
       @enable-notifications="onContextMenuToggleNotifications(true)"
       @disable-notifications="onContextMenuToggleNotifications(false)"
-      @enable-checks="onContextMenuToggleChecks(true)"
-      @disable-checks="onContextMenuToggleChecks(false)"
     />
   </div>
 
@@ -135,7 +133,10 @@
     v-if="ackModalObject && checkmkUrl"
     :object="ackModalObject"
     :checkmk-url="checkmkUrl"
-    @close="ackModalObject = null"
+    @close="
+      ackModalObject = null;
+      void statesStore.refreshNow();
+    "
   />
 
   <!-- Comment modal -->
@@ -151,7 +152,10 @@
     v-if="downtimeModalObject && checkmkUrl"
     :object="downtimeModalObject"
     :checkmk-url="checkmkUrl"
-    @close="downtimeModalObject = null"
+    @close="
+      downtimeModalObject = null;
+      void statesStore.refreshNow();
+    "
   />
 </template>
 
@@ -163,6 +167,7 @@ import { useRouter } from 'vue-router';
 import { cmkApi } from '@/api/client';
 import { useToast } from '@/composables/useToast';
 import { useSettingsStore } from '@/stores/settings';
+import { useStatesStore } from '@/stores/states';
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { resolveTemplate } from '@/utils/template';
@@ -178,6 +183,7 @@ import HoverMenu from './HoverMenu.vue';
 const { t } = useI18n();
 const toast = useToast();
 const settingsStore = useSettingsStore();
+const statesStore = useStatesStore();
 
 const props = defineProps<{
   config: BoardConfig;
@@ -599,28 +605,6 @@ async function onContextMenuToggleNotifications(enable: boolean) {
     }
   } catch {
     toast.error(t('contextMenu.toggleNotificationsFailed'));
-  }
-}
-
-async function onContextMenuToggleChecks(enable: boolean) {
-  const obj = contextMenu.object;
-  closeMenus();
-  if (!obj || !props.checkmkUrl) return;
-  try {
-    if (obj.type === 'service' && obj.host_name && obj.service_description) {
-      await (enable ? cmkApi.enableChecksService : cmkApi.disableChecksService)(
-        props.checkmkUrl,
-        obj.host_name,
-        obj.service_description,
-      );
-    } else if (obj.host_name) {
-      await (enable ? cmkApi.enableChecksHost : cmkApi.disableChecksHost)(
-        props.checkmkUrl,
-        obj.host_name,
-      );
-    }
-  } catch {
-    toast.error(t('contextMenu.toggleChecksFailed'));
   }
 }
 

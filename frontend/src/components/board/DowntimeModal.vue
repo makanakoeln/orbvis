@@ -42,7 +42,7 @@
           </div>
         </div>
 
-        <p v-if="error" class="text-xs text-red-400">{{ error }}</p>
+        <CmkAlertBox v-if="error" variant="error" size="small">{{ error }}</CmkAlertBox>
         <p v-if="success" class="text-xs text-green-400">{{ t('downtime.success') }}</p>
 
         <div class="flex gap-3 justify-end pt-1 border-t border-[var(--border)]">
@@ -59,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';

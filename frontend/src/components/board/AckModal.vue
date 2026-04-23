@@ -25,7 +25,7 @@
           <CmkCheckbox v-model="persistent" :label="t('ack.persistent')" />
         </div>
 
-        <p v-if="error" class="text-xs text-red-400">{{ error }}</p>
+        <CmkAlertBox v-if="error" variant="error" size="small">{{ error }}</CmkAlertBox>
         <p v-if="success" class="text-xs text-green-400">{{ t('ack.success') }}</p>
 
         <div class="flex gap-3 justify-end pt-1 border-t border-[var(--border)]">
@@ -42,6 +42,7 @@
 </template>
 
 <script setup lang="ts">
+import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
