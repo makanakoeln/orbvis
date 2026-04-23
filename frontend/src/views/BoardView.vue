@@ -702,6 +702,7 @@
       @acknowledge="onWorldmapCtxAck"
       @remove-ack="onWorldmapCtxRemoveAck"
       @schedule-downtime="onWorldmapCtxDowntime"
+      @remove-downtime="onWorldmapCtxRemoveDowntime"
       @force-check="onWorldmapCtxForceCheck"
       @add-comment="onWorldmapCtxAddComment"
       @enable-notifications="onWorldmapCtxToggleNotifications(true)"
@@ -1019,6 +1020,22 @@ function onWorldmapCtxDowntime() {
   const obj = worldmapCtxMenu.object;
   worldmapCtxMenu.visible = false;
   if (obj) worldmapDowntimeModal.value = obj;
+}
+
+async function onWorldmapCtxRemoveDowntime() {
+  const obj = worldmapCtxMenu.object;
+  worldmapCtxMenu.visible = false;
+  if (!obj || !checkmkUrl.value) return;
+  try {
+    if (obj.type === 'service' && obj.host_name && obj.service_description) {
+      await cmkApi.removeDowntimeService(checkmkUrl.value, obj.host_name, obj.service_description);
+    } else if (obj.host_name) {
+      await cmkApi.removeDowntimeHost(checkmkUrl.value, obj.host_name);
+    }
+    void statesStore.refreshNow();
+  } catch {
+    toast.error(t('contextMenu.removeDowntimeFailed'));
+  }
 }
 
 function onWorldmapCtxAck() {

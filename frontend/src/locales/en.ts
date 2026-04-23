@@ -266,6 +266,8 @@ export default {
     close: 'Close',
     acknowledge: 'Acknowledge…',
     scheduleDowntime: 'Schedule downtime…',
+    removeDowntime: 'Remove downtime',
+    removeDowntimeFailed: 'Failed to remove downtime',
     forceCheck: 'Force check',
     forceCheckFailed: 'Force check failed',
     addComment: 'Add comment…',

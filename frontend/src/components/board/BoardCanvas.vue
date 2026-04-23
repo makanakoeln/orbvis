@@ -121,6 +121,7 @@
       @acknowledge="onContextMenuAck"
       @remove-ack="onContextMenuRemoveAck"
       @schedule-downtime="onContextMenuDowntime"
+      @remove-downtime="onContextMenuRemoveDowntime"
       @force-check="onContextMenuForceCheck"
       @add-comment="onContextMenuAddComment"
       @enable-notifications="onContextMenuToggleNotifications(true)"
@@ -559,6 +560,22 @@ function onContextMenuDowntime() {
   const obj = contextMenu.object;
   closeMenus();
   if (obj) downtimeModalObject.value = obj;
+}
+
+async function onContextMenuRemoveDowntime() {
+  const obj = contextMenu.object;
+  closeMenus();
+  if (!obj || !props.checkmkUrl) return;
+  try {
+    if (obj.type === 'service' && obj.host_name && obj.service_description) {
+      await cmkApi.removeDowntimeService(props.checkmkUrl, obj.host_name, obj.service_description);
+    } else if (obj.host_name) {
+      await cmkApi.removeDowntimeHost(props.checkmkUrl, obj.host_name);
+    }
+    void statesStore.refreshNow();
+  } catch {
+    toast.error(t('contextMenu.removeDowntimeFailed'));
+  }
 }
 
 function onContextMenuAddComment() {

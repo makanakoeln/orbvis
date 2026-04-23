@@ -469,6 +469,25 @@ export const cmkApi = {
     });
   },
 
+  removeDowntimeHost(baseUrl: string, hostname: string): Promise<void> {
+    return cmkRequest(baseUrl, '/domain-types/downtime/actions/delete/invoke', {
+      delete_type: 'by_host_name',
+      host_name: hostname,
+    });
+  },
+
+  removeDowntimeService(
+    baseUrl: string,
+    hostname: string,
+    serviceDescription: string,
+  ): Promise<void> {
+    return cmkRequest(baseUrl, '/domain-types/downtime/actions/delete/invoke', {
+      delete_type: 'by_host_name',
+      host_name: hostname,
+      service_description: serviceDescription,
+    });
+  },
+
   forceCheckHost(baseUrl: string, hostname: string): Promise<void> {
     return cmkRequest(
       baseUrl,

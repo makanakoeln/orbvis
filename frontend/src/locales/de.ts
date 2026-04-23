@@ -268,6 +268,8 @@ export default {
     close: 'Schließen',
     acknowledge: 'Quittieren…',
     scheduleDowntime: 'Downtime planen…',
+    removeDowntime: 'Downtime entfernen',
+    removeDowntimeFailed: 'Fehler beim Entfernen der Downtime',
     forceCheck: 'Check erzwingen',
     forceCheckFailed: 'Check erzwingen fehlgeschlagen',
     addComment: 'Kommentar hinzufügen…',
