@@ -29,6 +29,17 @@
               class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
             />
           </div>
+          <div>
+            <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{{
+              t('downtime.comment')
+            }}</label>
+            <input
+              v-model="comment"
+              class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
+              :placeholder="t('downtime.comment') + '…'"
+              @keydown.esc="$emit('close')"
+            />
+          </div>
         </div>
 
         <CmkAlertBox v-if="error" variant="error" size="small">{{ error }}</CmkAlertBox>
@@ -38,7 +49,7 @@
           <CmkButton variant="secondary" @click="$emit('close')">{{
             t('common.cancel')
           }}</CmkButton>
-          <CmkButton variant="primary" :disabled="submitting" @click="submit">
+          <CmkButton variant="primary" :disabled="submitting || !comment.trim()" @click="submit">
             {{ submitting ? t('downtime.submitting') : t('downtime.submit') }}
           </CmkButton>
         </div>
@@ -76,6 +87,7 @@ const oneHourLater = new Date(now.getTime() + 3600_000);
 
 const startTime = ref(toLocalDatetimeString(now));
 const endTime = ref(toLocalDatetimeString(oneHourLater));
+const comment = ref('');
 const submitting = ref(false);
 const error = ref('');
 const success = ref(false);
@@ -83,10 +95,10 @@ const success = ref(false);
 const displayName = computed(() => getBoardObjectName(props.object));
 
 async function submit() {
-  if (submitting.value) return;
+  if (!comment.value.trim() || submitting.value) return;
   submitting.value = true;
   error.value = '';
-  const commentText = 'Scheduled via OrbVis';
+  const commentText = comment.value;
   try {
     const start = new Date(startTime.value).toISOString();
     const end = new Date(endTime.value).toISOString();
