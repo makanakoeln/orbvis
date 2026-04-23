@@ -29,17 +29,6 @@
               class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
             />
           </div>
-          <div>
-            <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{{
-              t('downtime.comment')
-            }}</label>
-            <input
-              v-model="comment"
-              class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
-              :placeholder="t('downtime.comment') + '…'"
-              @keydown.esc="$emit('close')"
-            />
-          </div>
         </div>
 
         <CmkAlertBox v-if="error" variant="error" size="small">{{ error }}</CmkAlertBox>
@@ -49,7 +38,7 @@
           <CmkButton variant="secondary" @click="$emit('close')">{{
             t('common.cancel')
           }}</CmkButton>
-          <CmkButton variant="primary" :disabled="submitting || !comment.trim()" @click="submit">
+          <CmkButton variant="primary" :disabled="submitting" @click="submit">
             {{ submitting ? t('downtime.submitting') : t('downtime.submit') }}
           </CmkButton>
         </div>
@@ -87,7 +76,6 @@ const oneHourLater = new Date(now.getTime() + 3600_000);
 
 const startTime = ref(toLocalDatetimeString(now));
 const endTime = ref(toLocalDatetimeString(oneHourLater));
-const comment = ref('');
 const submitting = ref(false);
 const error = ref('');
 const success = ref(false);
@@ -95,9 +83,10 @@ const success = ref(false);
 const displayName = computed(() => getBoardObjectName(props.object));
 
 async function submit() {
-  if (!comment.value.trim() || submitting.value) return;
+  if (submitting.value) return;
   submitting.value = true;
   error.value = '';
+  const commentText = 'Scheduled via OrbVis';
   try {
     const start = new Date(startTime.value).toISOString();
     const end = new Date(endTime.value).toISOString();
@@ -112,16 +101,10 @@ async function submit() {
         props.object.service_description,
         start,
         end,
-        comment.value,
+        commentText,
       );
     } else if (props.object.host_name) {
-      await cmkApi.downtimeHost(
-        props.checkmkUrl,
-        props.object.host_name,
-        start,
-        end,
-        comment.value,
-      );
+      await cmkApi.downtimeHost(props.checkmkUrl, props.object.host_name, start, end, commentText);
     }
     success.value = true;
     setTimeout(() => emit('close'), 1200);
