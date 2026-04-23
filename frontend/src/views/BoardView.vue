@@ -698,6 +698,34 @@
       @close="closeWorldmapMenus"
       @edit="onWorldmapCtxEdit"
       @delete="onWorldmapCtxDelete"
+      @duplicate="onWorldmapCtxDuplicate"
+      @acknowledge="onWorldmapCtxAck"
+      @remove-ack="onWorldmapCtxRemoveAck"
+      @schedule-downtime="onWorldmapCtxDowntime"
+      @force-check="onWorldmapCtxForceCheck"
+      @add-comment="onWorldmapCtxAddComment"
+      @enable-notifications="onWorldmapCtxToggleNotifications(true)"
+      @disable-notifications="onWorldmapCtxToggleNotifications(false)"
+      @enable-checks="onWorldmapCtxToggleChecks(true)"
+      @disable-checks="onWorldmapCtxToggleChecks(false)"
+    />
+    <AckModal
+      v-if="worldmapAckModal && checkmkUrl"
+      :object="worldmapAckModal"
+      :checkmk-url="checkmkUrl"
+      @close="worldmapAckModal = null"
+    />
+    <DowntimeModal
+      v-if="worldmapDowntimeModal && checkmkUrl"
+      :object="worldmapDowntimeModal"
+      :checkmk-url="checkmkUrl"
+      @close="worldmapDowntimeModal = null"
+    />
+    <CommentModal
+      v-if="worldmapCommentModal && checkmkUrl"
+      :object="worldmapCommentModal"
+      :checkmk-url="checkmkUrl"
+      @close="worldmapCommentModal = null"
     />
 
     <!-- Object Properties Modal -->
@@ -741,10 +769,13 @@ import { computed, onMounted, onUnmounted, reactive, ref, watchEffect } from 'vu
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
-import { connectionsApi } from '@/api/client';
+import { cmkApi, connectionsApi } from '@/api/client';
+import AckModal from '@/components/board/AckModal.vue';
 import BoardCanvas from '@/components/board/BoardCanvas.vue';
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue';
+import CommentModal from '@/components/board/CommentModal.vue';
 import ContextMenu from '@/components/board/ContextMenu.vue';
+import DowntimeModal from '@/components/board/DowntimeModal.vue';
 import EditPanel from '@/components/board/EditPanel.vue';
 import FlowBoard from '@/components/board/FlowBoard.vue';
 import HoverMenu from '@/components/board/HoverMenu.vue';
@@ -754,6 +785,7 @@ import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import { useBoardEditor } from '@/composables/useBoardEditor';
+import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
 import { useConnectionsStore } from '@/stores/connections';
@@ -767,6 +799,7 @@ import { resolveTemplate } from '@/utils/template';
 type LineDragMode = 'move' | 'start' | 'end';
 
 const { t } = useI18n();
+const toast = useToast();
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
@@ -962,6 +995,115 @@ function onWorldmapCtxDelete() {
   if (obj) {
     editor.selectObject(obj.id);
     editor.deleteSelected();
+  }
+}
+
+function onWorldmapCtxDuplicate() {
+  const obj = worldmapCtxMenu.object;
+  worldmapCtxMenu.visible = false;
+  if (obj) {
+    editor.selectObject(obj.id);
+    editor.duplicateSelected();
+  }
+}
+
+const worldmapAckModal = ref<BoardObject | null>(null);
+const worldmapDowntimeModal = ref<BoardObject | null>(null);
+const worldmapCommentModal = ref<BoardObject | null>(null);
+
+function onWorldmapCtxDowntime() {
+  const obj = worldmapCtxMenu.object;
+  worldmapCtxMenu.visible = false;
+  if (obj) worldmapDowntimeModal.value = obj;
+}
+
+function onWorldmapCtxAck() {
+  const obj = worldmapCtxMenu.object;
+  worldmapCtxMenu.visible = false;
+  if (obj) worldmapAckModal.value = obj;
+}
+
+function onWorldmapCtxAddComment() {
+  const obj = worldmapCtxMenu.object;
+  worldmapCtxMenu.visible = false;
+  if (obj) worldmapCommentModal.value = obj;
+}
+
+async function onWorldmapCtxRemoveAck() {
+  const obj = worldmapCtxMenu.object;
+  worldmapCtxMenu.visible = false;
+  if (!obj || !checkmkUrl.value) return;
+  try {
+    if (obj.type === 'service' && obj.host_name && obj.service_description) {
+      await cmkApi.removeAcknowledgementService(
+        checkmkUrl.value,
+        obj.host_name,
+        obj.service_description,
+      );
+    } else if (obj.host_name) {
+      await cmkApi.removeAcknowledgementHost(checkmkUrl.value, obj.host_name);
+    }
+  } catch {
+    toast.error(t('contextMenu.removeAckFailed'));
+  }
+}
+
+async function onWorldmapCtxToggleNotifications(enable: boolean) {
+  const obj = worldmapCtxMenu.object;
+  worldmapCtxMenu.visible = false;
+  if (!obj || !checkmkUrl.value) return;
+  try {
+    if (obj.type === 'service' && obj.host_name && obj.service_description) {
+      await (enable ? cmkApi.enableNotificationsService : cmkApi.disableNotificationsService)(
+        checkmkUrl.value,
+        obj.host_name,
+        obj.service_description,
+      );
+    } else if (obj.host_name) {
+      await (enable ? cmkApi.enableNotificationsHost : cmkApi.disableNotificationsHost)(
+        checkmkUrl.value,
+        obj.host_name,
+      );
+    }
+  } catch {
+    toast.error(t('contextMenu.toggleNotificationsFailed'));
+  }
+}
+
+async function onWorldmapCtxToggleChecks(enable: boolean) {
+  const obj = worldmapCtxMenu.object;
+  worldmapCtxMenu.visible = false;
+  if (!obj || !checkmkUrl.value) return;
+  try {
+    if (obj.type === 'service' && obj.host_name && obj.service_description) {
+      await (enable ? cmkApi.enableChecksService : cmkApi.disableChecksService)(
+        checkmkUrl.value,
+        obj.host_name,
+        obj.service_description,
+      );
+    } else if (obj.host_name) {
+      await (enable ? cmkApi.enableChecksHost : cmkApi.disableChecksHost)(
+        checkmkUrl.value,
+        obj.host_name,
+      );
+    }
+  } catch {
+    toast.error(t('contextMenu.toggleChecksFailed'));
+  }
+}
+
+async function onWorldmapCtxForceCheck() {
+  const obj = worldmapCtxMenu.object;
+  worldmapCtxMenu.visible = false;
+  if (!obj || !checkmkUrl.value) return;
+  try {
+    if (obj.type === 'service' && obj.host_name && obj.service_description) {
+      await cmkApi.forceCheckService(checkmkUrl.value, obj.host_name, obj.service_description);
+    } else if (obj.host_name) {
+      await cmkApi.forceCheckHost(checkmkUrl.value, obj.host_name);
+    }
+  } catch {
+    toast.error(t('contextMenu.forceCheckFailed'));
   }
 }
 

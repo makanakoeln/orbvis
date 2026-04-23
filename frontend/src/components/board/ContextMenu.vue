@@ -446,7 +446,13 @@ const groupUrl = computed(() => {
 
 const hostServicesUrl = computed(() => {
   if (!base.value || props.object.type !== 'host' || !props.object.host_name) return null;
-  const p: Record<string, string> = { view_name: 'host', host: props.object.host_name };
+  if (!isProblematic.value) return null;
+  // svcproblems filtered to this host, excluding WARNING (st1=0)
+  const p: Record<string, string> = {
+    view_name: 'svcproblems',
+    host: props.object.host_name,
+    st1: '0',
+  };
   if (site.value) p.site = site.value;
   return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`;
 });
