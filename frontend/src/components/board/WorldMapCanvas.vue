@@ -104,10 +104,26 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
       "><span style="color:white;font-size:${charSize}px;font-weight:700;line-height:1;user-select:none;">${typeChar}</span></div>`;
   }
 
+  const state = props.states[obj.id];
+  const badgeStyle =
+    'position:absolute;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.5);';
+  const ackBadge = state?.acknowledged
+    ? `<span style="${badgeStyle}top:-6px;right:-6px;background:#f59e0b;color:#1c1917;" title="Acknowledged">
+        <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+       </span>`
+    : '';
+  const downtimeBadge = state?.in_downtime
+    ? `<span style="${badgeStyle}top:-6px;left:-6px;background:#3b82f6;color:white;" title="In downtime">
+        <svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+       </span>`
+    : '';
+
+  const wrappedIcon = `<div style="position:relative;display:inline-block;">${iconHtml}${ackBadge}${downtimeBadge}</div>`;
+
   return L.divIcon({
     className: '',
     html:
-      iconHtml +
+      wrappedIcon +
       (label
         ? `<div style="
         text-align: center;
