@@ -153,7 +153,6 @@
           <span>{{ t('contextMenu.removeAck') }}</span>
         </button>
         <button
-          v-if="!state?.in_downtime"
           class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
           @click="$emit('scheduleDowntime')"
         >
