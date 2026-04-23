@@ -447,6 +447,9 @@ const groupUrl = computed(() => {
 const hostServicesUrl = computed(() => {
   if (!base.value || props.object.type !== 'host' || !props.object.host_name) return null;
   if (!isProblematic.value) return null;
+  // When the host itself is down/unreachable, services can't be checked independently
+  const hostState = props.state?.state;
+  if (hostState === 'DOWN' || hostState === 'UNREACHABLE') return null;
   const p: Record<string, string> = {
     view_name: 'host',
     host: props.object.host_name,
