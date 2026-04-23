@@ -269,6 +269,7 @@ export default {
     acknowledge: 'Quittieren…',
     scheduleDowntime: 'Downtime planen…',
     removeDowntime: 'Downtime entfernen',
+    removeDowntimeSuccess: 'Downtime entfernt',
     removeDowntimeFailed: 'Fehler beim Entfernen der Downtime',
     forceCheck: 'Check erzwingen',
     forceCheckFailed: 'Check erzwingen fehlgeschlagen',

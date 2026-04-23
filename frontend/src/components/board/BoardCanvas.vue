@@ -136,7 +136,7 @@
     :checkmk-url="checkmkUrl"
     @close="
       ackModalObject = null;
-      void statesStore.refreshNow();
+      statesStore.refreshAfterCommand();
     "
   />
 
@@ -155,7 +155,7 @@
     :checkmk-url="checkmkUrl"
     @close="
       downtimeModalObject = null;
-      void statesStore.refreshNow();
+      statesStore.refreshAfterCommand();
     "
   />
 </template>
@@ -572,7 +572,8 @@ async function onContextMenuRemoveDowntime() {
     } else if (obj.host_name) {
       await cmkApi.removeDowntimeHost(props.checkmkUrl, obj.host_name);
     }
-    void statesStore.refreshNow();
+    toast.success(t('contextMenu.removeDowntimeSuccess'));
+    statesStore.refreshAfterCommand();
   } catch {
     toast.error(t('contextMenu.removeDowntimeFailed'));
   }

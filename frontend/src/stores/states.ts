@@ -290,6 +290,11 @@ export const useStatesStore = defineStore('states', () => {
     disconnect,
     getState,
     refreshNow: _fetchStates,
+    refreshAfterCommand(): void {
+      // CMK processes commands async — refresh immediately and again after a short delay
+      void _fetchStates();
+      setTimeout(() => void _fetchStates(), 1500);
+    },
     toggleNotifications,
     prefillMetricHistory,
     clearMetricValues,

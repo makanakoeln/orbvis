@@ -714,7 +714,7 @@
       :checkmk-url="checkmkUrl"
       @close="
         worldmapAckModal = null;
-        void statesStore.refreshNow();
+        statesStore.refreshAfterCommand();
       "
     />
     <DowntimeModal
@@ -723,7 +723,7 @@
       :checkmk-url="checkmkUrl"
       @close="
         worldmapDowntimeModal = null;
-        void statesStore.refreshNow();
+        statesStore.refreshAfterCommand();
       "
     />
     <CommentModal
@@ -1032,7 +1032,8 @@ async function onWorldmapCtxRemoveDowntime() {
     } else if (obj.host_name) {
       await cmkApi.removeDowntimeHost(checkmkUrl.value, obj.host_name);
     }
-    void statesStore.refreshNow();
+    toast.success(t('contextMenu.removeDowntimeSuccess'));
+    statesStore.refreshAfterCommand();
   } catch {
     toast.error(t('contextMenu.removeDowntimeFailed'));
   }

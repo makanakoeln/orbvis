@@ -267,6 +267,7 @@ export default {
     acknowledge: 'Acknowledge…',
     scheduleDowntime: 'Schedule downtime…',
     removeDowntime: 'Remove downtime',
+    removeDowntimeSuccess: 'Downtime removed',
     removeDowntimeFailed: 'Failed to remove downtime',
     forceCheck: 'Force check',
     forceCheckFailed: 'Force check failed',
