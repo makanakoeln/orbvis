@@ -47,8 +47,14 @@
       <div
         v-for="state in sortedStates"
         :key="state.object_id"
-        class="rounded-xl p-3.5 ring-1 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-default"
-        :class="cardClass(state.state)"
+        class="rounded-xl p-3.5 ring-1 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+        :class="[
+          cardClass(state.state),
+          buildCheckmkUrlFromState(state, props.checkmkUrl ?? null)
+            ? 'cursor-pointer'
+            : 'cursor-default',
+        ]"
+        @click="onCardClick(state)"
       >
         <!-- Name -->
         <div class="flex items-start justify-between gap-2 mb-2">
@@ -119,10 +125,17 @@
 import { computed } from 'vue';
 
 import type { ObjectState } from '@/types/api';
+import { buildCheckmkUrlFromState, openUrl } from '@/utils/boardNavigation';
 
 const props = defineProps<{
   states: Record<string, ObjectState>;
+  checkmkUrl?: string | null;
 }>();
+
+function onCardClick(state: ObjectState) {
+  const url = buildCheckmkUrlFromState(state, props.checkmkUrl ?? null);
+  if (url) openUrl(url, '_blank');
+}
 
 // State severity for sorting (worst first)
 const severity: Record<string, number> = {

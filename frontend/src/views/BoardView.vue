@@ -325,7 +325,7 @@
       </div>
 
       <!-- Radar -->
-      <RadarCanvas v-else-if="isRadar" :states="statesStore.states" />
+      <RadarCanvas v-else-if="isRadar" :states="statesStore.states" :checkmk-url="checkmkUrl" />
 
       <!-- Flowmap -->
       <div v-else-if="isFlowmap" class="flex-1 relative overflow-hidden">

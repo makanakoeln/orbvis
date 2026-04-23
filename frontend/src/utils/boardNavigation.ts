@@ -1,19 +1,28 @@
-import type { BoardObject } from '@/types/api';
+import type { BoardObject, ObjectState } from '@/types/api';
 
-export function buildCheckmkUrl(obj: BoardObject, checkmkUrl: string | null): string | null {
+function _baseAndSite(
+  checkmkUrl: string | null,
+): { base: string; p: Record<string, string> } | null {
   const base = checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
   if (!base) return null;
   const parts = base.split('/');
   const site = parts[parts.length - 1] || null;
   const p: Record<string, string> = {};
   if (site) p.site = site;
+  return { base, p };
+}
 
-  if (obj.type === 'host' && obj.host_name) {
+export function buildCheckmkUrl(obj: BoardObject, checkmkUrl: string | null): string | null {
+  const r = _baseAndSite(checkmkUrl);
+  if (!r) return null;
+  const { base, p } = r;
+
+  if ((obj.type === 'host' || obj.type === 'line') && obj.host_name && !obj.service_description) {
     p.view_name = 'hoststatus';
     p.host = obj.host_name;
     return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
   }
-  if (obj.type === 'service' && obj.host_name && obj.service_description) {
+  if ((obj.type === 'service' || obj.type === 'line') && obj.host_name && obj.service_description) {
     p.view_name = 'service';
     p.host = obj.host_name;
     p.service = obj.service_description;
@@ -27,6 +36,29 @@ export function buildCheckmkUrl(obj: BoardObject, checkmkUrl: string | null): st
   if (obj.type === 'servicegroup' && obj.group_name) {
     p.view_name = 'servicegroup';
     p.servicegroup = obj.group_name;
+    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
+  }
+  return null;
+}
+
+export function buildCheckmkUrlFromState(
+  state: ObjectState,
+  checkmkUrl: string | null,
+): string | null {
+  const r = _baseAndSite(checkmkUrl);
+  if (!r) return null;
+  const { base, p } = r;
+
+  if (state.type === 'service' && state.object_id.includes(';')) {
+    const [host, svc] = state.object_id.split(';', 2);
+    p.view_name = 'service';
+    p.host = host;
+    p.service = svc;
+    return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
+  }
+  if (state.type === 'host') {
+    p.view_name = 'hoststatus';
+    p.host = state.object_id;
     return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
   }
   return null;
