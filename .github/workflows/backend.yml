@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
+      - 'pyproject.toml'
       - '.github/workflows/backend.yml'
   pull_request:
     branches: [main]
     paths:
       - 'backend/**'
+      - 'pyproject.toml'
       - '.github/workflows/backend.yml'
 
 env:
@@ -40,7 +42,10 @@ jobs:
         run: ruff check app/
 
       - name: Type check
-        run: mypy app/
+        # mypy config lives in the repo-root pyproject.toml (checkmk-strict).
+        # Must run from the repo root so the correct config is discovered.
+        working-directory: ${{ github.workspace }}
+        run: mypy backend/app
 
       - name: Security scan (bandit)
         run: bandit -r app/ -x tests/ -ll
