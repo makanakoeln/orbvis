@@ -665,7 +665,7 @@ const isSvgIcon = computed(() => {
 
 const shouldShowRing = computed(
   () =>
-    !['textbox', 'line'].includes(props.object.type) &&
+    !['textbox', 'line', 'host'].includes(props.object.type) &&
     props.object.display?.mode !== 'gadget' &&
     !(props.object.type === 'image' && imgLoadFailed.value),
 );
