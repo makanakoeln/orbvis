@@ -10,6 +10,12 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # GITHUB_TOKEN scopes:
+    #   contents: write  → required by the final `gh release create/edit` step
+    #                      to attach the .deb/.rpm artefacts to the tag release.
+    # All other permissions (packages, pull-requests, actions, …) deliberately
+    # stay at their default `none` so a compromised dependency in this workflow
+    # can't escalate beyond writing to the release assets.
     permissions:
       contents: write
 
