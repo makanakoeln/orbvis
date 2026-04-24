@@ -23,6 +23,7 @@ htmlcov/
 # Node
 node_modules/
 frontend/dist/
+frontend/coverage/
 
 # Env files
 .env

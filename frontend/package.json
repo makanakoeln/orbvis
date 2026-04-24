@@ -2,7 +2,7 @@
   "name": "orbvis-frontend",
   "version": "2.0.0",
   "private": true,
-  "license": "BUSL-1.1",
+  "license": "GPL-2.0-only",
   "type": "module",
   "engines": {
     "node": ">=18.0.0"
@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "type-check": "vue-tsc --noEmit",
     "lint": "eslint . && stylelint 'src/**/*.{css,vue}'",
     "lint:css": "stylelint 'src/**/*.{css,vue}'",
@@ -64,6 +65,7 @@
     "@typescript-eslint/eslint-plugin": "^8.57.2",
     "@typescript-eslint/parser": "^8.57.2",
     "@vitejs/plugin-vue": "^5.2.4",
+    "@vitest/coverage-v8": "^4.1.5",
     "@vitest/ui": "^4.1.4",
     "@vue/test-utils": "^2.4.6",
     "autoprefixer": "^10.4.27",
