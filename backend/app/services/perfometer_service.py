@@ -349,6 +349,10 @@ def _compute_simple_side(
     if upper <= lower:
         return None
     pct = min(100.0, max(0.0, (total - lower) / (upper - lower) * 100))
+    # Keep a tiny fill visible when the metric is non-zero — otherwise
+    # sub-percent values round down to 0 and vanish in the browser.
+    if total > 0 and pct < 1.0:
+        pct = 1.0
     color = _metric_color(metrics[present[0]], pct)
     return (round(pct, 1), color)
 
