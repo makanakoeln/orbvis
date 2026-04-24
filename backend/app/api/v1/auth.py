@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -19,6 +19,7 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    is_token_blocked,
 )
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse
@@ -71,12 +72,27 @@ async def refresh_token(data: RefreshRequest, db: AsyncSession = Depends(get_db)
         if payload.get("type") != "refresh":
             raise credentials_exception
         user_id = int(str(payload["sub"]))
+        jti = str(payload.get("jti", ""))
+        exp = payload.get("exp")
     except (jwt.PyJWTError, KeyError, ValueError):
         raise credentials_exception from None
+
+    # Reject reuse of a refresh token that was already rotated or explicitly logged out.
+    if jti and is_token_blocked(jti):
+        raise credentials_exception
 
     user = await get_user_by_id(db, user_id)
     if user is None or not user.is_active:
         raise credentials_exception
+
+    # Rotate: invalidate the old refresh token so it cannot be used again.
+    if jti:
+        expiry = (
+            datetime.fromtimestamp(float(str(exp)), tz=UTC)
+            if exp
+            else datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
+        )
+        blocklist_token(jti, expiry)
 
     return TokenResponse(
         access_token=create_access_token(user.user_id),

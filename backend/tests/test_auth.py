@@ -49,3 +49,22 @@ async def test_refresh_token(client, admin_user):
     response = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert response.status_code == 200
     assert "access_token" in response.json()
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_rotation_invalidates_old(client, admin_user):
+    """A refresh token must not be reusable after rotation."""
+    login = await client.post(
+        "/api/v1/auth/login", json={"username": "admin", "password": "secret"}
+    )
+    old_refresh = login.json()["refresh_token"]
+    # First refresh rotates the token.
+    first = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
+    assert first.status_code == 200
+    # Using the old refresh token again must be rejected.
+    second = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
+    assert second.status_code == 401
+    # The newly issued refresh token should still work.
+    new_refresh = first.json()["refresh_token"]
+    third = await client.post("/api/v1/auth/refresh", json={"refresh_token": new_refresh})
+    assert third.status_code == 200
