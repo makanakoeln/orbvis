@@ -52,13 +52,31 @@ export const useBoardsStore = defineStore('boards', () => {
             { name, alias, backend_id: backendId, icon_size: iconSize, view: { type: boardType } },
             token(),
         );
-        await fetchBoards();
+        // In-place append instead of a full re-fetch. BoardRead is a projection of
+        // BoardConfig, so we build the list-shape from the returned config.
+        boards.value.push({
+            name: cfg.name,
+            alias: cfg.alias,
+            background_image: cfg.background_image ?? null,
+            icon_size: cfg.icon_size,
+            backend_id: cfg.backend_id,
+            view_type: cfg.view?.type ?? 'static',
+            view: cfg.view,
+            object_count: cfg.objects?.length ?? 0,
+            rotation_interval: cfg.rotation_interval,
+            sort_order: cfg.sort_order,
+            click_action: cfg.click_action,
+            readonly: cfg.readonly ?? false,
+            show_in_lists: true, // BoardConfig does not carry this; list endpoint defaults it
+            hover_template: cfg.hover_template ?? null,
+            context_template: cfg.context_template ?? null,
+        });
         return cfg;
     }
 
     async function deleteBoard(name: string) {
         await boardsApi.delete(name, token());
-        await fetchBoards();
+        boards.value = boards.value.filter((b) => b.name !== name);
     }
 
     return {

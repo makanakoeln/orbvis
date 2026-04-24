@@ -114,23 +114,29 @@ describe('useBoardsStore', () => {
         expect(store.currentBoard).toBeNull();
     });
 
-    it('createBoard() calls API and refreshes list', async () => {
+    it('createBoard() appends the new board in place without re-fetching', async () => {
         mockBoardsApi.create.mockResolvedValue(sampleConfig);
-        mockBoardsApi.list.mockResolvedValue(sampleBoards);
         const store = useBoardsStore();
         const result = await store.createBoard('board1', 'Board 1');
         expect(mockBoardsApi.create).toHaveBeenCalled();
-        expect(mockBoardsApi.list).toHaveBeenCalled();
+        // In-place append: no extra list() round-trip.
+        expect(mockBoardsApi.list).not.toHaveBeenCalled();
+        expect(store.boards).toHaveLength(1);
+        expect(store.boards[0].name).toBe('board1');
         expect(result).toEqual(sampleConfig);
     });
 
-    it('deleteBoard() calls API and refreshes list', async () => {
+    it('deleteBoard() removes the board in place without re-fetching', async () => {
+        mockBoardsApi.list.mockResolvedValue(sampleBoards);
         mockBoardsApi.delete.mockResolvedValue(undefined);
-        mockBoardsApi.list.mockResolvedValue([]);
         const store = useBoardsStore();
+        await store.fetchBoards();
+        mockBoardsApi.list.mockClear();
+
         await store.deleteBoard('board1');
         expect(mockBoardsApi.delete).toHaveBeenCalledWith('board1', expect.any(String));
-        expect(mockBoardsApi.list).toHaveBeenCalled();
+        // No extra list() round-trip — board is removed in place.
+        expect(mockBoardsApi.list).not.toHaveBeenCalled();
         expect(store.boards).toEqual([]);
     });
 });
