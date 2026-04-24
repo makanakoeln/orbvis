@@ -7,7 +7,7 @@ import logging
 import pkgutil
 import re
 import types
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -82,7 +82,8 @@ def _parse_perf_data(raw: str) -> dict[str, _RawMetric]:
 class _PluginData:
     # canonical_metric_name → (value, unit, warn, crit) after translation
     # perfometers: list of (Perfometer | Bidirectional | Stacked)
-    perfometers: list = field(default_factory=list)
+    # Perfometer / Bidirectional / Stacked instances from cmk.graphing.v1 (untyped from mypy's view)
+    perfometers: list[object] = field(default_factory=list)
     # check_plugin_name → {raw_metric_name → canonical_name}
     renames: dict[str, dict[str, str]] = field(default_factory=dict)
     # check_plugin_name → {raw_metric_name → scale_factor}
@@ -276,9 +277,11 @@ def _apply_translations(
 # ---------------------------------------------------------------------------
 
 
-def _get_segment_names(segments) -> list[str]:
+def _get_segment_names(segments: object) -> list[str]:
     """Extract canonical metric names from a perfometer's segments list."""
     names: list[str] = []
+    if not isinstance(segments, Iterable) or isinstance(segments, str | bytes):
+        return names
     for seg in segments:
         if isinstance(seg, str):
             names.append(seg)
@@ -290,12 +293,12 @@ def _get_segment_names(segments) -> list[str]:
                     continue
                 if isinstance(val, str):
                     names.append(val)
-                elif hasattr(val, "__iter__"):
+                elif isinstance(val, Iterable):
                     names.extend(_get_segment_names(val))
     return names
 
 
-def _perfometer_matches(perf, metrics: dict[str, _RawMetric]) -> bool:
+def _perfometer_matches(perf: object, metrics: dict[str, _RawMetric]) -> bool:
     """Return True if all required segment metrics are present."""
     try:
         from cmk.graphing.v1 import perfometers as pf_api
@@ -310,7 +313,7 @@ def _perfometer_matches(perf, metrics: dict[str, _RawMetric]) -> bool:
     return False
 
 
-def _resolve_quantity(q, metrics: dict[str, _RawMetric]) -> float:
+def _resolve_quantity(q: object, metrics: dict[str, _RawMetric]) -> float:
     """Resolve a cmk.graphing.v1 Quantity (literal, metric-ref, or expression) to a float."""
     if isinstance(q, (int, float)):
         return float(q)
@@ -345,8 +348,9 @@ def _resolve_quantity(q, metrics: dict[str, _RawMetric]) -> float:
     return 0.0
 
 
-def _resolve_bound(bound, metrics: dict[str, _RawMetric]) -> float:
-    return _resolve_quantity(bound.value, metrics)
+def _resolve_bound(bound: object, metrics: dict[str, _RawMetric]) -> float:
+    value = getattr(bound, "value", None)
+    return _resolve_quantity(value, metrics) if value is not None else 0.0
 
 
 _WARN_HEX = "#ffd000"
@@ -377,18 +381,21 @@ _REMAINDER_COLOR = "#52525b"  # zinc-600 — visible on dark glass cards
 
 
 def _compute_simple_side(
-    perf,
+    perf: object,
     metrics: dict[str, _RawMetric],
     colors: dict[str, str],
 ) -> tuple[float, str] | None:
     """Return (pct, color) for a single Perfometer — not a full row."""
-    names = _get_segment_names(perf.segments)
+    names = _get_segment_names(getattr(perf, "segments", ()))
     present = [n for n in names if n in metrics]
     if not present:
         return None
     total = sum(metrics[n].value for n in present)
-    lower = _resolve_bound(perf.focus_range.lower, metrics)
-    upper = _resolve_bound(perf.focus_range.upper, metrics)
+    focus_range = getattr(perf, "focus_range", None)
+    if focus_range is None:
+        return None
+    lower = _resolve_bound(getattr(focus_range, "lower", None), metrics)
+    upper = _resolve_bound(getattr(focus_range, "upper", None), metrics)
     if upper <= lower:
         return None
     pct = min(100.0, max(0.0, (total - lower) / (upper - lower) * 100))
@@ -401,7 +408,7 @@ def _compute_simple_side(
 
 
 def _compute_simple_row(
-    perf,
+    perf: object,
     metrics: dict[str, _RawMetric],
     colors: dict[str, str],
 ) -> list[PerfometerSegment]:
@@ -416,13 +423,13 @@ def _compute_simple_row(
 
 
 def _compute_bidirectional_row(
-    perf,
+    perf: object,
     metrics: dict[str, _RawMetric],
     colors: dict[str, str],
 ) -> list[PerfometerSegment] | None:
     """Single-row layout: [empty_left, left_fill, right_fill, empty_right], each half = 50%."""
-    left = _compute_simple_side(perf.left, metrics, colors)
-    right = _compute_simple_side(perf.right, metrics, colors)
+    left = _compute_simple_side(getattr(perf, "left", None), metrics, colors)
+    right = _compute_simple_side(getattr(perf, "right", None), metrics, colors)
     if left is None or right is None:
         return None
     left_pct, left_color = left
@@ -504,11 +511,11 @@ def _fmt_value(name: str, m: _RawMetric, units: dict[str, tuple[str, str]]) -> s
 
 
 def _label_from_segments(
-    perf,
+    perf: object,
     metrics: dict[str, _RawMetric],
     units: dict[str, tuple[str, str]],
 ) -> str:
-    names = _get_segment_names(perf.segments)
+    names = _get_segment_names(getattr(perf, "segments", ()))
     present = [n for n in names if n in metrics]
     if not present:
         return ""

@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import httpx
 
-from app.backends.base import BackendBase
+from app.backends.base import BackendBase, ServiceRow, TopologyRow
 from app.schemas.state import ObjectState
+
+# HTTP-Query-Parameter: Icinga2 akzeptiert str/int/float/bool — httpx serialisiert selbst
+IcingaParams = dict[str, str | int | float | bool | None]
+# Rohes Icinga2-API-Result-Objekt (heterogene JSON-Struktur, keys dynamisch)
+IcingaObject = dict[str, object]
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +40,43 @@ def _worst_svc(*states: str) -> str:
     return max(states, key=lambda s: _SVC_SEVERITY.get(s, 0))
 
 
-def _parse_icinga_extra(attrs: dict) -> dict:
-    lsc = attrs.get("last_state_change", 0) or 0
-    lc = attrs.get("last_check", 0) or 0
-    return {
-        "last_check": float(lc) if lc > 0 else None,
-        "state_type": "HARD" if attrs.get("state_type", 1) else "SOFT",
-        "current_attempt": int(attrs.get("check_attempt", 0)),
-        "max_attempts": int(attrs.get("max_check_attempts", 0)),
-        "last_state_change": float(lsc) if lsc > 0 else None,
-    }
+def _icinga_dict(obj: IcingaObject, key: str) -> IcingaObject:
+    """Type-safe nested dict access for Icinga2 API results."""
+    val = obj.get(key, {})
+    return val if isinstance(val, dict) else {}
+
+
+def _icinga_str(obj: IcingaObject, key: str, *, default: str = "") -> str:
+    val = obj.get(key, default)
+    return val if isinstance(val, str) else default
+
+
+def _icinga_int(obj: IcingaObject, key: str, *, default: int = 0) -> int:
+    val = obj.get(key, default)
+    if isinstance(val, bool):  # bool is a subclass of int; keep behavior explicit
+        return int(val)
+    if isinstance(val, int | float):
+        return int(val)
+    return default
+
+
+def _icinga_float(obj: IcingaObject, key: str) -> float | None:
+    val = obj.get(key, 0) or 0
+    if isinstance(val, bool):
+        return None
+    if isinstance(val, int | float):
+        return float(val) if val > 0 else None
+    return None
+
+
+def _apply_icinga_extra(state: ObjectState, attrs: IcingaObject) -> ObjectState:
+    """Fill the check_attempt/state_type/timing fields of an ObjectState from Icinga2 attrs."""
+    state.last_check = _icinga_float(attrs, "last_check")
+    state.last_state_change = _icinga_float(attrs, "last_state_change")
+    state.state_type = "HARD" if attrs.get("state_type", 1) else "SOFT"
+    state.current_attempt = _icinga_int(attrs, "check_attempt", default=0)
+    state.max_attempts = _icinga_int(attrs, "max_check_attempts", default=0)
+    return state
 
 
 class Icinga2Backend(BackendBase):
@@ -78,11 +109,14 @@ class Icinga2Backend(BackendBase):
             headers={"Accept": "application/json"},
         )
 
-    async def _get_results(self, path: str, params: dict[str, Any] | None = None) -> list[dict]:
+    async def _get_results(
+        self, path: str, params: IcingaParams | None = None
+    ) -> list[IcingaObject]:
         async with self._client() as client:
             resp = await client.get(f"{self._base}/{path.lstrip('/')}", params=params)
             resp.raise_for_status()
-            return resp.json().get("results", [])
+            results = resp.json().get("results", [])
+            return list(results) if results else []
 
     # ------------------------------------------------------------------
     # BackendBase implementation
@@ -106,18 +140,18 @@ class Icinga2Backend(BackendBase):
                 output=f"Host '{hostname}' not found in Icinga2",
             )
 
-        attrs = results[0].get("attrs", {})
-        state_int = int(attrs.get("state", 1))
-        return ObjectState(
+        attrs = _icinga_dict(results[0], "attrs")
+        state_int = _icinga_int(attrs, "state", default=1)
+        state = ObjectState(
             object_id="",
             type="host",
             state=_HOST_STATE_MAP.get(state_int, "UNREACHABLE"),
-            output=attrs.get("last_check_result", {}).get("output", ""),
-            acknowledged=bool(attrs.get("acknowledgement", 0)),
-            in_downtime=bool(attrs.get("downtime_depth", 0)),
-            address=attrs.get("address", ""),
-            **_parse_icinga_extra(attrs),
+            output=_icinga_str(_icinga_dict(attrs, "last_check_result"), "output"),
+            acknowledged=bool(_icinga_int(attrs, "acknowledgement", default=0)),
+            in_downtime=bool(_icinga_int(attrs, "downtime_depth", default=0)),
+            address=_icinga_str(attrs, "address"),
         )
+        return _apply_icinga_extra(state, attrs)
 
     async def get_service_state(self, host: str, service: str) -> ObjectState:
         try:
@@ -139,20 +173,25 @@ class Icinga2Backend(BackendBase):
                 output=f"Service '{service}' on '{host}' not found in Icinga2",
             )
 
-        attrs = results[0].get("attrs", {})
-        state_int = int(attrs.get("state", 3))
-        check_result = attrs.get("last_check_result", {})
-        perf_data = " ".join(check_result.get("performance_data", []))
-        return ObjectState(
+        attrs = _icinga_dict(results[0], "attrs")
+        state_int = _icinga_int(attrs, "state", default=3)
+        check_result = _icinga_dict(attrs, "last_check_result")
+        perf_data_raw = check_result.get("performance_data", [])
+        perf_data = (
+            " ".join(p for p in perf_data_raw if isinstance(p, str))
+            if isinstance(perf_data_raw, list)
+            else ""
+        )
+        state = ObjectState(
             object_id="",
             type="service",
             state=_SVC_STATE_MAP.get(state_int, "UNKNOWN"),
-            output=check_result.get("output", ""),
+            output=_icinga_str(check_result, "output"),
             perf_data=perf_data,
-            acknowledged=bool(attrs.get("acknowledgement", 0)),
-            in_downtime=bool(attrs.get("downtime_depth", 0)),
-            **_parse_icinga_extra(attrs),
+            acknowledged=bool(_icinga_int(attrs, "acknowledgement", default=0)),
+            in_downtime=bool(_icinga_int(attrs, "downtime_depth", default=0)),
         )
+        return _apply_icinga_extra(state, attrs)
 
     async def get_hostgroup_states(self, group: str) -> ObjectState:
         try:
@@ -173,7 +212,8 @@ class Icinga2Backend(BackendBase):
             )
 
         states = [
-            _HOST_STATE_MAP.get(int(r.get("attrs", {}).get("state", 0)), "UP") for r in results
+            _HOST_STATE_MAP.get(_icinga_int(_icinga_dict(r, "attrs"), "state", default=0), "UP")
+            for r in results
         ]
         worst = _worst_host(*states)
         return ObjectState(
@@ -202,7 +242,8 @@ class Icinga2Backend(BackendBase):
             )
 
         states = [
-            _SVC_STATE_MAP.get(int(r.get("attrs", {}).get("state", 0)), "OK") for r in results
+            _SVC_STATE_MAP.get(_icinga_int(_icinga_dict(r, "attrs"), "state", default=0), "OK")
+            for r in results
         ]
         worst = _worst_svc(*states)
         return ObjectState(
@@ -216,12 +257,16 @@ class Icinga2Backend(BackendBase):
         try:
             if obj_type == "host":
                 results = await self._get_results("objects/hosts", params={"attrs": "name"})
-                return [r["attrs"]["name"] for r in results]
+                return [_icinga_str(_icinga_dict(r, "attrs"), "name") for r in results]
             if obj_type == "service":
                 results = await self._get_results(
                     "objects/services", params={"attrs": "host_name,name"}
                 )
-                return [f"{r['attrs']['host_name']};{r['attrs']['name']}" for r in results]
+                return [
+                    f"{_icinga_str(_icinga_dict(r, 'attrs'), 'host_name')};"
+                    f"{_icinga_str(_icinga_dict(r, 'attrs'), 'name')}"
+                    for r in results
+                ]
         except Exception as exc:
             logger.warning("Icinga2 get_objects(%s) failed: %s", obj_type, exc)
         return []
@@ -230,18 +275,22 @@ class Icinga2Backend(BackendBase):
         try:
             if group_type == "all_hosts":
                 results = await self._get_results("objects/hosts", params={"attrs": "name"})
-                return [r["attrs"]["name"] for r in results]
+                return [_icinga_str(_icinga_dict(r, "attrs"), "name") for r in results]
             if group_type == "all_services":
                 results = await self._get_results(
                     "objects/services", params={"attrs": "host_name,name"}
                 )
-                return [f"{r['attrs']['host_name']};{r['attrs']['name']}" for r in results]
+                return [
+                    f"{_icinga_str(_icinga_dict(r, 'attrs'), 'host_name')};"
+                    f"{_icinga_str(_icinga_dict(r, 'attrs'), 'name')}"
+                    for r in results
+                ]
             if group_type == "hostgroup":
                 results = await self._get_results(
                     "objects/hosts",
                     params={"filter": f'"{_iq(group_name)}" in host.groups', "attrs": "name"},
                 )
-                return [r["attrs"]["name"] for r in results]
+                return [_icinga_str(_icinga_dict(r, "attrs"), "name") for r in results]
             if group_type == "servicegroup":
                 results = await self._get_results(
                     "objects/services",
@@ -250,14 +299,18 @@ class Icinga2Backend(BackendBase):
                         "attrs": "host_name,name",
                     },
                 )
-                return [f"{r['attrs']['host_name']};{r['attrs']['name']}" for r in results]
+                return [
+                    f"{_icinga_str(_icinga_dict(r, 'attrs'), 'host_name')};"
+                    f"{_icinga_str(_icinga_dict(r, 'attrs'), 'name')}"
+                    for r in results
+                ]
         except Exception as exc:
             logger.warning(
                 "Icinga2 get_group_members(%s/%s) failed: %s", group_type, group_name, exc
             )
         return []
 
-    async def get_topology(self) -> list[dict]:
+    async def get_topology(self) -> list[TopologyRow]:
         try:
             results = await self._get_results(
                 "objects/hosts",
@@ -267,25 +320,30 @@ class Icinga2Backend(BackendBase):
             logger.warning("Icinga2 get_topology() failed: %s", exc)
             return []
 
-        nodes = []
+        nodes: list[TopologyRow] = []
         for r in results:
-            attrs = r.get("attrs", {})
-            state_int = int(attrs.get("state", 0))
-            output = attrs.get("last_check_result", {}).get("output", "")
-            parents = attrs.get("vars", {}).get("parents", [])
-            if isinstance(parents, str):
-                parents = [parents]
+            attrs = _icinga_dict(r, "attrs")
+            state_int = _icinga_int(attrs, "state", default=0)
+            output = _icinga_str(_icinga_dict(attrs, "last_check_result"), "output", default="")
+            parents_raw = _icinga_dict(attrs, "vars").get("parents", [])
+            if isinstance(parents_raw, str):
+                parents: list[str] = [parents_raw]
+            elif isinstance(parents_raw, list):
+                parents = [p for p in parents_raw if isinstance(p, str)]
+            else:
+                parents = []
+            name_raw = attrs.get("name", "")
             nodes.append(
-                {
-                    "name": attrs["name"],
-                    "parents": parents,
-                    "state": _HOST_STATE_MAP.get(state_int, "UP"),
-                    "output": output,
-                }
+                TopologyRow(
+                    name=name_raw if isinstance(name_raw, str) else "",
+                    parents=parents,
+                    state=_HOST_STATE_MAP.get(state_int, "UP"),
+                    output=output,
+                )
             )
         return nodes
 
-    async def get_host_services(self, hostname: str) -> list[dict]:
+    async def get_host_services(self, hostname: str) -> list[ServiceRow]:
         try:
             results = await self._get_results(
                 "objects/services",
@@ -297,17 +355,17 @@ class Icinga2Backend(BackendBase):
         except Exception as exc:
             logger.warning("Icinga2 get_host_services(%s) failed: %s", hostname, exc)
             return []
-        out = []
+        out: list[ServiceRow] = []
         for r in results:
-            attrs = r.get("attrs", {})
-            state_int = int(attrs.get("state", 3))
-            output = attrs.get("last_check_result", {}).get("output", "")
+            attrs = _icinga_dict(r, "attrs")
+            state_int = _icinga_int(attrs, "state", default=3)
+            output = _icinga_str(_icinga_dict(attrs, "last_check_result"), "output", default="")
             out.append(
-                {
-                    "name": attrs.get("name", ""),
-                    "state": _SVC_STATE_MAP.get(state_int, "UNKNOWN"),
-                    "output": output,
-                }
+                ServiceRow(
+                    name=_icinga_str(attrs, "name", default=""),
+                    state=_SVC_STATE_MAP.get(state_int, "UNKNOWN"),
+                    output=output,
+                )
             )
         return out
 

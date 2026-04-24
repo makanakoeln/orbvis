@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import tempfile
 from pathlib import Path
+from typing import TypedDict
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
@@ -14,6 +15,12 @@ from app.core.config import settings
 from app.models.user import User
 
 router = APIRouter()
+
+
+class ImageListEntry(TypedDict):
+    name: str
+    url: str
+
 
 _ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/svg+xml", "image/webp"}
 _ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg", ".svg", ".webp"}
@@ -39,12 +46,12 @@ def _is_valid_icon(content: bytes) -> bool:
     return False
 
 
-@router.get("", response_model=list[dict])
+@router.get("", response_model=list[ImageListEntry])
 async def list_images(
     _current_user: User = Depends(get_current_user),
-) -> list[dict]:
+) -> list[ImageListEntry]:
     d = _images_dir()
-    result = []
+    result: list[ImageListEntry] = []
     for f in sorted(d.iterdir()):
         if f.is_file() and f.suffix.lower() in _ALLOWED_SUFFIXES:
             result.append({"name": f.name, "url": f"images/{f.name}"})

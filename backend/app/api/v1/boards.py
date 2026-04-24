@@ -15,10 +15,10 @@ from app.api.v1.deps import (
     can_edit_board,
     can_view_board,
     get_current_user,
-    get_db,
     require_admin,
 )
 from app.core.config import settings
+from app.core.database import get_db
 from app.models.role import Role
 from app.models.user import User
 from app.schemas.board import (
@@ -155,7 +155,7 @@ async def clone_board(name: str, data: BoardClone, _: User = Depends(require_adm
 
 @router.post("/import", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
 async def import_board(
-    data: dict, overwrite: bool = False, _: User = Depends(require_admin)
+    data: dict[str, object], overwrite: bool = False, _: User = Depends(require_admin)
 ) -> BoardConfig:
     try:
         return board_service.import_board(data, overwrite=overwrite)

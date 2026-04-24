@@ -174,7 +174,7 @@ def clone_board(name: str, new_name: str, alias: str | None = None) -> BoardConf
     return cfg
 
 
-def import_board(data: dict, *, overwrite: bool = False) -> BoardConfig:
+def import_board(data: dict[str, object], *, overwrite: bool = False) -> BoardConfig:
     cfg = BoardConfig.model_validate(data)
     path = _board_path(cfg.name)
     if path.exists():

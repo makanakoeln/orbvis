@@ -76,7 +76,7 @@ class Settings(BaseSettings):
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
-    def parse_origins(cls, v: str | list) -> list[str]:
+    def parse_origins(cls, v: str | list[str]) -> list[str]:
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",")]
         return v

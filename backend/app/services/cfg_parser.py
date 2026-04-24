@@ -7,7 +7,6 @@ contains its own copy of the same logic so it stays dependency-free.
 from __future__ import annotations
 
 import re
-from typing import Any
 
 LINE_TYPE_MAP: dict[int, str] = {
     10: "plain",
@@ -83,7 +82,7 @@ def _line_coords(p: dict[str, str]) -> tuple[int, int, int, int]:
     return x, y, x2, y2
 
 
-def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
+def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, object]:
     return {
         "show": _bool(p.get("label_show"), show_default),
         "text": p.get("label_text") or None,
@@ -100,9 +99,9 @@ def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def cfg_to_board(content: str, map_name: str) -> dict[str, Any]:
+def cfg_to_board(content: str, map_name: str) -> dict[str, object]:
     """Convert legacy .cfg text to an OrbVis board JSON dict."""
-    board: dict[str, Any] = {
+    board: dict[str, object] = {
         "name": map_name,
         "alias": map_name,
         "readonly": False,
@@ -115,7 +114,7 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, Any]:
         "view": {"type": "static"},
         "objects": [],
     }
-    objects: list[dict[str, Any]] = []
+    objects: list[dict[str, object]] = []
     counter = 0
 
     for block_type, p in _parse_blocks(content):
@@ -148,7 +147,7 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, Any]:
         if block_type == "line":
             x, y, x2, y2 = _line_coords(p)
             line_style = LINE_TYPE_MAP.get(_int(p.get("line_type", "10")), "plain")
-            obj: dict[str, Any] = {
+            obj: dict[str, object] = {
                 "id": f"line_{raw_id}",
                 "type": "line",
                 "x": x,

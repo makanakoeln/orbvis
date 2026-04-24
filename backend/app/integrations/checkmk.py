@@ -8,7 +8,6 @@ making cmk.* modules importable. Falls back gracefully when standalone.
 import logging
 import sys
 from pathlib import Path
-from typing import Any
 
 from app.core.config import settings
 
@@ -75,7 +74,7 @@ def get_monitoring_core() -> str | None:
     return None
 
 
-def load_user(username: str) -> dict[str, Any]:
+def load_user(username: str) -> dict[str, object]:
     """Load all available Checkmk attributes for a user.
 
     Tries cmk.gui.userdb.store (the proper CMK API) first:
@@ -137,11 +136,11 @@ def _orbvis_perm_defaults(perm_name: str) -> frozenset[str]:
     return frozenset()
 
 
-_roles_cache: dict[str, Any] = {}
+_roles_cache: dict[str, object] = {}
 _roles_cache_mtime: float = -1.0
 
 
-def _load_roles() -> dict[str, Any]:
+def _load_roles() -> dict[str, object]:
     """Load Checkmk role configuration from roles.mk (mtime-cached).
 
     Returns the ``roles`` dict mapping role-id → role-spec.
@@ -157,10 +156,11 @@ def _load_roles() -> dict[str, Any]:
         mtime = roles_mk.stat().st_mtime if roles_mk.is_file() else 0.0
         if mtime == _roles_cache_mtime:
             return _roles_cache
-        ns: dict[str, Any] = {"roles": {}}
+        ns: dict[str, object] = {"roles": {}}
         if roles_mk.is_file():
             exec(compile(roles_mk.read_bytes(), str(roles_mk), "exec"), ns)  # nosec B102 — Checkmk .mk files use Python syntax; no safe alternative to exec()
-        _roles_cache = ns.get("roles", {})
+        roles_val = ns.get("roles", {})
+        _roles_cache = roles_val if isinstance(roles_val, dict) else {}
         _roles_cache_mtime = mtime
         return _roles_cache
     except Exception as exc:
@@ -168,19 +168,27 @@ def _load_roles() -> dict[str, Any]:
         return {}
 
 
-def _has_permission(user_data: dict[str, Any], role_config: dict[str, Any], perm_name: str) -> bool:
+def _has_permission(
+    user_data: dict[str, object], role_config: dict[str, object], perm_name: str
+) -> bool:
     """Return True if the user (described by *user_data*) has *perm_name*."""
-    roles: list[str] = list(user_data.get("roles", ["user"]))
+    roles_raw = user_data.get("roles", ["user"])
+    roles: list[str] = (
+        [r for r in roles_raw if isinstance(r, str)] if isinstance(roles_raw, list) else ["user"]
+    )
     defaults = _orbvis_perm_defaults(perm_name)
     for role_id in roles:
-        role = role_config.get(role_id, {})
-        explicit = role.get("permissions", {}).get(perm_name)
+        role_raw = role_config.get(role_id, {})
+        if not isinstance(role_raw, dict):
+            continue
+        permissions = role_raw.get("permissions", {})
+        explicit = permissions.get(perm_name) if isinstance(permissions, dict) else None
         if explicit is True:
             return True
         if explicit is False:
             continue
         # Not explicitly set → fall back to permission defaults for the base role.
-        base_role = role.get("basedon", role_id)
+        base_role = role_raw.get("basedon", role_id)
         if base_role in defaults:
             return True
     return False
@@ -233,17 +241,19 @@ def get_user_contact_groups(username: str) -> list[str]:
     return list(cgs) if isinstance(cgs, (list, tuple)) else []
 
 
-def _load_user_fallback(username: str) -> dict[str, Any]:
+def _load_user_fallback(username: str) -> dict[str, object]:
     """Direct file fallback when cmk.gui.userdb.store is unavailable."""
     try:
         omd_root = Path(settings.checkmk_omd_root)
 
         # Static user config (roles, alias, email, language, …) via exec()
         users_mk = omd_root / "etc" / "check_mk" / "multisite.d" / "wato" / "users.mk"
-        ns: dict = {"multisite_users": {}}
+        ns: dict[str, object] = {"multisite_users": {}}
         if users_mk.is_file():
             exec(compile(users_mk.read_bytes(), str(users_mk), "exec"), ns)  # nosec B102 — Checkmk .mk files use Python syntax; no safe alternative to exec()
-        user_data: dict = dict(ns["multisite_users"].get(username, {}))
+        multisite_users = ns["multisite_users"]
+        raw_user = multisite_users.get(username, {}) if isinstance(multisite_users, dict) else {}
+        user_data: dict[str, object] = dict(raw_user) if isinstance(raw_user, dict) else {}
 
         # Per-user runtime attrs override wato data (plain-text .mk files)
         profile_dir = omd_root / "var" / "check_mk" / "web" / username

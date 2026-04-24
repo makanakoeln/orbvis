@@ -699,12 +699,12 @@ app.include_router(metrics_api.router, prefix="/api/v1", tags=["metrics"])
 
 
 @app.get("/api/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     return {"status": "ok", "version": APP_VERSION}
 
 
 @app.get("/api/changelog")
-async def get_changelog():
+async def get_changelog() -> PlainTextResponse:
     return PlainTextResponse(_CHANGELOG)
 
 

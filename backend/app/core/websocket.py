@@ -40,7 +40,7 @@ class ConnectionManager:
             self._connections.pop(map_name, None)
         logger.info("WS disconnected for map '%s'", map_name)
 
-    async def broadcast_map_states(self, map_name: str, states: dict) -> None:
+    async def broadcast_map_states(self, map_name: str, states: dict[str, object]) -> None:
         """Push state update to all clients subscribed to a map (no per-user filtering)."""
         connections = self._connections.get(map_name, {})
         if not connections:

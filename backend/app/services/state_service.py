@@ -8,6 +8,7 @@ import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from app.backends.base import ServiceRow
 from app.core.config import settings
 from app.schemas.board import BoardConfig, BoardObject, RadarView
 from app.schemas.state import MapStates, ObjectState
@@ -287,7 +288,7 @@ async def _get_board_states_batched(
 
 
 def _aggregate_host_with_services_from_data(
-    host_state: ObjectState, services: list[dict]
+    host_state: ObjectState, services: list[ServiceRow]
 ) -> ObjectState:
     """Aggregate a pre-fetched host state with its services (no I/O)."""
     if not services:

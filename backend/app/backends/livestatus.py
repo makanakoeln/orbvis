@@ -9,17 +9,18 @@ import logging
 import pkgutil
 import re as _re
 import types
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import UTC
 from functools import lru_cache
 from pathlib import Path
+from typing import Any  # TODO: replace with typed LivestatusRow helper — see row-parsing below
 
 import httpx
 
-from app.backends.base import BackendBase, GraphGroup, MetricHistoryResult
+from app.backends.base import BackendBase, GraphGroup, MetricHistoryResult, ServiceRow, TopologyRow
 from app.core.config import settings
 from app.integrations import checkmk as _cmk_integration
 from app.schemas.state import ObjectState
@@ -262,7 +263,9 @@ _SVC_EXTRA_COLS = (
 )
 
 
-def _parse_extra(row: list, offset: int = 5, *, include_address: bool = False) -> dict:
+def _parse_extra(
+    row: list[Any], offset: int = 5, *, include_address: bool = False
+) -> dict[str, Any]:
     try:
         col = offset
         address = str(row[col]) if include_address and len(row) > col else ""
@@ -291,7 +294,7 @@ def _parse_extra(row: list, offset: int = 5, *, include_address: bool = False) -
     return result
 
 
-def _parse_metrics_from_perf(perf_data: str) -> list[dict]:
+def _parse_metrics_from_perf(perf_data: str) -> list[dict[str, Any]]:
     """Parse perf_data string into [{label, unit}] for rrddata queries."""
     results = []
     for part in _re.findall(r"(?:'[^']+'|[^\s]+)=\S*", perf_data):
@@ -332,7 +335,7 @@ class LivestatusBackend(BackendBase):
         self._semaphore = asyncio.Semaphore(settings.backend_max_connections)
 
     @asynccontextmanager
-    async def with_auth_user(self, username: str):  # type: ignore[return]
+    async def with_auth_user(self, username: str) -> AsyncIterator[None]:
         """Context manager: scope Livestatus queries to *username*'s contact groups.
 
         While active, every ``_query_raw`` call in this asyncio task appends
@@ -503,39 +506,39 @@ class LivestatusBackend(BackendBase):
             return [f"{r[0]};{r[1]}" for r in rows]
         return []
 
-    async def get_topology(self) -> list[dict]:
+    async def get_topology(self) -> list[TopologyRow]:
         rows = await self._query("GET hosts\nColumns: name parents state plugin_output\n")
-        result = []
+        result: list[TopologyRow] = []
         for r in rows:
             if not r or not r[0]:
                 continue
             raw_parents = r[1] if len(r) > 1 else []
             if isinstance(raw_parents, list):
-                parents = [p for p in raw_parents if p]
+                parents = [str(p) for p in raw_parents if p]
             else:
-                parents = [p.strip() for p in (raw_parents or "").split(",") if p.strip()]
+                parents = [p.strip() for p in (str(raw_parents) or "").split(",") if p.strip()]
             result.append(
-                {
-                    "name": r[0],
-                    "parents": parents,
-                    "state": _HOST_STATE_MAP.get(int(r[2]), "UNKNOWN") if len(r) > 2 else "UNKNOWN",
-                    "output": r[3] if len(r) > 3 else "",
-                }
+                TopologyRow(
+                    name=str(r[0]),
+                    parents=parents,
+                    state=_HOST_STATE_MAP.get(int(r[2]), "UNKNOWN") if len(r) > 2 else "UNKNOWN",
+                    output=str(r[3]) if len(r) > 3 else "",
+                )
             )
         return result
 
-    async def get_host_services(self, hostname: str) -> list[dict]:
+    async def get_host_services(self, hostname: str) -> list[ServiceRow]:
         rows = await self._query(
             "GET services\n"
             f"Filter: host_name = {_ls_escape(hostname)}\n"
             "Columns: description state plugin_output\n"
         )
         return [
-            {
-                "name": r[0],
-                "state": _SERVICE_STATE_MAP.get(int(r[1]), "UNKNOWN"),
-                "output": r[2],
-            }
+            ServiceRow(
+                name=str(r[0]),
+                state=_SERVICE_STATE_MAP.get(int(r[1]), "UNKNOWN"),
+                output=str(r[2]),
+            )
             for r in rows
         ]
 
@@ -551,7 +554,7 @@ class LivestatusBackend(BackendBase):
         r = rows[0]
 
         # 1. OrbVis labels: orbvis_lat / orbvis_lng
-        labels: dict = r[0] if isinstance(r[0], dict) else {}
+        labels: dict[str, Any] = r[0] if isinstance(r[0], dict) else {}
         try:
             return float(labels["orbvis_lat"]), float(labels["orbvis_lng"])
         except (KeyError, TypeError, ValueError):
@@ -559,8 +562,8 @@ class LivestatusBackend(BackendBase):
 
         # 2. Legacy custom variables: LAT / LONG
         try:
-            names: list = r[1] if isinstance(r[1], list) else []
-            values: list = r[2] if isinstance(r[2], list) else []
+            names: list[Any] = r[1] if isinstance(r[1], list) else []
+            values: list[Any] = r[2] if isinstance(r[2], list) else []
             cv = dict(zip(names, values, strict=False))
             return float(cv["LAT"]), float(cv["LONG"])
         except (KeyError, TypeError, ValueError):
@@ -727,7 +730,8 @@ class LivestatusBackend(BackendBase):
                 for item in data.get("value", []):
                     ext = item.get("extensions", {})
                     if ext.get("description") == service:
-                        return ext.get("metrics", [])
+                        metrics = ext.get("metrics", [])
+                        return list(metrics) if metrics else []
                 return []
         except Exception as exc:
             logger.warning("CMK REST API metric names fallback failed: %s", exc)
@@ -928,7 +932,7 @@ class LivestatusBackend(BackendBase):
             )
         return results
 
-    async def get_hosts_services_batch(self, hostnames: list[str]) -> dict[str, list[dict]]:
+    async def get_hosts_services_batch(self, hostnames: list[str]) -> dict[str, list[ServiceRow]]:
         if not hostnames:
             return {}
         filters = "".join(f"Filter: host_name = {_ls_escape(h)}\n" for h in hostnames)
@@ -937,14 +941,14 @@ class LivestatusBackend(BackendBase):
         rows = await self._query(
             f"GET services\nColumns: host_name description state plugin_output\n{filters}"
         )
-        results: dict[str, list[dict]] = {h: [] for h in hostnames}
+        results: dict[str, list[ServiceRow]] = {h: [] for h in hostnames}
         for r in rows:
             results[str(r[0])].append(
-                {
-                    "name": r[1],
-                    "state": _SERVICE_STATE_MAP.get(int(r[2]), "UNKNOWN"),
-                    "output": r[3],
-                }
+                ServiceRow(
+                    name=str(r[1]),
+                    state=_SERVICE_STATE_MAP.get(int(r[2]), "UNKNOWN"),
+                    output=str(r[3]),
+                )
             )
         return results
 
@@ -952,7 +956,7 @@ class LivestatusBackend(BackendBase):
     # Low-level socket communication
     # ------------------------------------------------------------------
 
-    async def _query(self, query: str) -> list[list]:
+    async def _query(self, query: str) -> list[list[Any]]:
         """Acquire connection slot and run query with an overall timeout."""
         async with self._semaphore:
             return await asyncio.wait_for(
@@ -960,7 +964,7 @@ class LivestatusBackend(BackendBase):
                 timeout=settings.backend_query_timeout,
             )
 
-    async def _query_raw(self, query: str) -> list[list]:
+    async def _query_raw(self, query: str) -> list[list[Any]]:
         """Send a Livestatus query and return parsed rows."""
         lql = query.rstrip("\n") + "\nOutputFormat: json\nResponseHeader: fixed16\n"
         auth_user = _auth_user_ctx.get()
@@ -989,6 +993,8 @@ class LivestatusBackend(BackendBase):
             header = await asyncio.wait_for(reader.read(16), timeout=self._timeout)
             if not header:
                 return []
+            status = 0
+            length = 0
             try:
                 status = int(header[:3])
                 length = int(header[4:15].strip())
@@ -1012,7 +1018,8 @@ class LivestatusBackend(BackendBase):
             text = body.decode("utf-8").strip()
             if not text:
                 return []
-            return _json.loads(text)
+            parsed: list[list[Any]] = _json.loads(text)
+            return parsed
         finally:
             writer.close()
             try:

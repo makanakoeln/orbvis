@@ -4,8 +4,26 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import TypedDict
 
 from app.schemas.state import ObjectState
+
+
+class TopologyRow(TypedDict):
+    """One host in the topology view (parent-child flow-graph)."""
+
+    name: str
+    parents: list[str]
+    state: str
+    output: str
+
+
+class ServiceRow(TypedDict):
+    """One service attached to a host (used by get_host_services / batch APIs)."""
+
+    name: str
+    state: str
+    output: str
 
 
 @dataclass
@@ -67,12 +85,12 @@ class BackendBase(ABC):
         ...
 
     @abstractmethod
-    async def get_topology(self) -> list[dict]:
+    async def get_topology(self) -> list[TopologyRow]:
         """Return host topology as [{name, parents, state, output}] for flow board."""
         ...
 
     @abstractmethod
-    async def get_host_services(self, hostname: str) -> list[dict]:
+    async def get_host_services(self, hostname: str) -> list[ServiceRow]:
         """Return services for a host as [{name, state, output}]."""
         ...
 
@@ -108,9 +126,9 @@ class BackendBase(ABC):
             )
         return results
 
-    async def get_hosts_services_batch(self, hostnames: list[str]) -> dict[str, list[dict]]:
+    async def get_hosts_services_batch(self, hostnames: list[str]) -> dict[str, list[ServiceRow]]:
         """Return all services for multiple hosts. Default: one call per host."""
-        results: dict[str, list[dict]] = {}
+        results: dict[str, list[ServiceRow]] = {}
         for h in hostnames:
             results[h] = await self.get_host_services(h)
         return results

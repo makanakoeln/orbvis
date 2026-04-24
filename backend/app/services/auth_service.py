@@ -57,7 +57,8 @@ def get_cmk_language(username: str) -> str | None:
         return None
 
     if cmk_integration.available:
-        raw = cmk_integration.load_user(username).get("language")
+        raw_value = cmk_integration.load_user(username).get("language")
+        raw = raw_value if isinstance(raw_value, str) else None
     else:
         lang_file = (
             pathlib.Path(settings.checkmk_omd_root)
@@ -238,15 +239,14 @@ async def authenticate_user(db: AsyncSession, username: str, password: str) -> U
     if _verify_htpasswd(username, password):
         if user is None:
             user = await get_or_create_sso_user(db, username)
-        else:
-            # Sync admin flag for htpasswd users – only when CHECKMK_OMD_ROOT is configured.
-            # Without OMD_ROOT we cannot determine CMK roles, so we preserve the existing flag
-            # rather than incorrectly clearing admin status.
-            if settings.checkmk_omd_root:
-                is_admin = _is_checkmk_admin(username)
-                if user.is_admin != is_admin:
-                    user.is_admin = is_admin
-                    await db.flush()
+        # Sync admin flag for htpasswd users – only when CHECKMK_OMD_ROOT is configured.
+        # Without OMD_ROOT we cannot determine CMK roles, so we preserve the existing flag
+        # rather than incorrectly clearing admin status.
+        elif settings.checkmk_omd_root:
+            is_admin = _is_checkmk_admin(username)
+            if user.is_admin != is_admin:
+                user.is_admin = is_admin
+                await db.flush()
         return user
 
     return None
@@ -272,11 +272,12 @@ def _is_checkmk_admin(username: str) -> bool:
 
     if cmk_integration.available:
         user_data = cmk_integration.load_user(username)
-        is_admin = "admin" in user_data.get("roles", [])
+        roles = user_data.get("roles", [])
+        is_admin = isinstance(roles, list) and "admin" in roles
         logger.debug(
             "Checkmk role check for %s: roles=%s is_admin=%s",
             username,
-            user_data.get("roles"),
+            roles,
             is_admin,
         )
         return is_admin
@@ -293,14 +294,16 @@ def _is_checkmk_admin(username: str) -> bool:
         logger.warning("Checkmk users.mk not found at %s", users_mk)
         return False
     try:
-        ns: dict = {"multisite_users": {}}
+        ns: dict[str, object] = {"multisite_users": {}}
         exec(compile(users_mk.read_text(encoding="utf-8"), str(users_mk), "exec"), ns)  # nosec B102 — Checkmk .mk files use Python syntax; no safe alternative to exec()
-        user_cfg = ns["multisite_users"].get(username, {})
-        is_admin = "admin" in user_cfg.get("roles", [])
+        multisite_users = ns["multisite_users"]
+        user_cfg = multisite_users.get(username, {}) if isinstance(multisite_users, dict) else {}
+        roles = user_cfg.get("roles", []) if isinstance(user_cfg, dict) else []
+        is_admin = isinstance(roles, list) and "admin" in roles
         logger.debug(
             "Checkmk role check for %s: roles=%s is_admin=%s",
             username,
-            user_cfg.get("roles"),
+            roles,
             is_admin,
         )
         return is_admin

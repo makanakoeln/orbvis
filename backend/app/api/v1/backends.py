@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from app.api.v1.deps import get_current_user, require_admin
 from app.core.config import settings
 from app.integrations import checkmk as cmk_integration
+from app.models.user import User
 from app.schemas.backend import BackendConfig, BackendCreate, BackendUpdate
 from app.services import backend_service
 from app.services.state_service import get_backend, get_backend_objects
@@ -26,12 +27,12 @@ class TestResult(BaseModel):
 
 
 @router.get("", response_model=list[BackendConfig])
-async def list_backends(_: object = Depends(require_admin)):
+async def list_backends(_: User = Depends(require_admin)) -> list[BackendConfig]:
     return backend_service.load_all()
 
 
 @router.post("", response_model=BackendConfig, status_code=status.HTTP_201_CREATED)
-async def create_backend(data: BackendCreate, _: object = Depends(require_admin)):
+async def create_backend(data: BackendCreate, _: User = Depends(require_admin)) -> BackendConfig:
     # BackendCreate = BackendConfig (type alias), so data can be passed directly.
     try:
         return backend_service.create(data)
@@ -43,8 +44,8 @@ async def create_backend(data: BackendCreate, _: object = Depends(require_admin)
 async def update_backend(
     backend_id: str,
     data: BackendUpdate,
-    _: object = Depends(require_admin),
-):
+    _: User = Depends(require_admin),
+) -> BackendConfig:
     updated = BackendConfig(id=backend_id, **data.model_dump())
     result = backend_service.update(backend_id, updated)
     if result is None:
@@ -53,7 +54,7 @@ async def update_backend(
 
 
 @router.delete("/{backend_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_backend(backend_id: str, _: object = Depends(require_admin)):
+async def delete_backend(backend_id: str, _: User = Depends(require_admin)) -> None:
     if not backend_service.delete(backend_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backend not found")
 
@@ -64,7 +65,7 @@ class BackendContext(BaseModel):
 
 
 @router.get("/{backend_id}/context", response_model=BackendContext)
-async def get_backend_context(backend_id: str, _: object = Depends(require_admin)):
+async def get_backend_context(backend_id: str, _: User = Depends(require_admin)) -> BackendContext:
     """Return OMD/CMC context for the connection settings UI.
 
     Only meaningful for Livestatus backends inside an OMD site. Returns nulls
@@ -78,7 +79,7 @@ async def get_backend_context(backend_id: str, _: object = Depends(require_admin
 
 
 @router.get("/{backend_id}/test", response_model=TestResult)
-async def test_backend(backend_id: str, _: object = Depends(require_admin)):
+async def test_backend(backend_id: str, _: User = Depends(require_admin)) -> TestResult:
     """Test connectivity of a saved backend."""
     backend = get_backend(backend_id)
     if backend is None:
@@ -93,7 +94,7 @@ async def test_backend(backend_id: str, _: object = Depends(require_admin)):
 
 
 @router.post("/test-connection", response_model=TestResult)
-async def test_connection(data: BackendCreate, _: object = Depends(require_admin)):
+async def test_connection(data: BackendCreate, _: User = Depends(require_admin)) -> TestResult:
     """Test connection details without saving – used by the create/edit dialog."""
     try:
         backend = backend_service.build_instance(data)
@@ -121,15 +122,15 @@ class TopologyNode(BaseModel):
 async def get_topology(
     backend_id: str,
     include_services: bool = Query(False),
-    _: object = Depends(get_current_user),
-):
+    _: User = Depends(get_current_user),
+) -> list[TopologyNode]:
     """Return host topology for flow board rendering."""
     backend = get_backend(backend_id)
     if backend is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backend not registered")
     nodes = await backend.get_topology()
     if include_services:
-        result = []
+        result: list[TopologyNode] = []
         for node in nodes:
             svcs = await backend.get_host_services(node["name"])
             result.append(TopologyNode(**node, services=[ServiceNode(**s) for s in svcs]))
@@ -142,8 +143,8 @@ async def get_perf_metrics(
     backend_id: str,
     host: str = Query(...),
     service: str | None = Query(None),
-    _: object = Depends(get_current_user),
-):
+    _: User = Depends(get_current_user),
+) -> list[str]:
     """Return perf_data metric names for a host or service (for metric autocomplete)."""
     backend = get_backend(backend_id)
     if backend is None:
@@ -189,8 +190,8 @@ async def get_metric_history(
     host: str = Query(...),
     service: str | None = Query(None),
     minutes: int = Query(60, ge=1, le=10080),
-    _: object = Depends(get_current_user),
-):
+    _: User = Depends(get_current_user),
+) -> MetricHistoryResponse:
     """Return RRD metric history for a host/service using Livestatus rrddata (Checkmk only)."""
     backend = get_backend(backend_id)
     if backend is None:
@@ -224,8 +225,8 @@ class HostGeo(BaseModel):
 async def get_host_geo(
     backend_id: str,
     host: str = Query(...),
-    _: object = Depends(get_current_user),
-):
+    _: User = Depends(get_current_user),
+) -> HostGeo | None:
     """Return orbvis_lat/orbvis_lng coordinates for a host, or null if not set."""
     backend = get_backend(backend_id)
     if backend is None:
@@ -239,8 +240,8 @@ async def get_graph_templates_for_object(
     backend_id: str,
     host: str = Query(...),
     service: str | None = Query(None),
-    _: object = Depends(get_current_user),
-):
+    _: User = Depends(get_current_user),
+) -> list[GraphGroupResponse]:
     """Return applicable CMK graph template groups for a host/service (for graph object properties)."""
     backend = get_backend(backend_id)
     if backend is None:
@@ -254,7 +255,7 @@ async def list_backend_objects(
     backend_id: str,
     obj_type: str = Query(..., alias="type"),
     host: str | None = Query(None),
-    _: object = Depends(require_admin),
-):
+    _: User = Depends(require_admin),
+) -> list[str]:
     """Return available object names from a backend (for editor autocomplete)."""
     return await get_backend_objects(backend_id, obj_type, host)

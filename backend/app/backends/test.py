@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from app.backends.base import BackendBase, MetricHistoryResult
+from app.backends.base import BackendBase, MetricHistoryResult, ServiceRow, TopologyRow
 from app.schemas.state import ObjectState
 
 _HOST_STATES = ["UP", "DOWN", "UNREACHABLE"]
@@ -98,25 +98,25 @@ class TestBackend(BackendBase):
             return [f"{h};{s}" for h in _DEMO_HOSTS for s in _DEMO_SERVICES]
         return list(_DEMO_HOSTS)
 
-    async def get_topology(self) -> list[dict]:
+    async def get_topology(self) -> list[TopologyRow]:
         return [
-            {"name": "router01", "parents": [], "state": "UP", "output": ""},
-            {"name": "switch01", "parents": ["router01"], "state": "UP", "output": ""},
-            {"name": "localhost", "parents": ["router01"], "state": "UP", "output": ""},
-            {
-                "name": "fileserver",
-                "parents": ["switch01"],
-                "state": "DOWN",
-                "output": "Connection refused",
-            },
-            {"name": "mailserver", "parents": ["switch01"], "state": "UP", "output": ""},
+            TopologyRow(name="router01", parents=[], state="UP", output=""),
+            TopologyRow(name="switch01", parents=["router01"], state="UP", output=""),
+            TopologyRow(name="localhost", parents=["router01"], state="UP", output=""),
+            TopologyRow(
+                name="fileserver",
+                parents=["switch01"],
+                state="DOWN",
+                output="Connection refused",
+            ),
+            TopologyRow(name="mailserver", parents=["switch01"], state="UP", output=""),
         ]
 
-    async def get_host_services(self, hostname: str) -> list[dict]:
-        result = []
+    async def get_host_services(self, hostname: str) -> list[ServiceRow]:
+        result: list[ServiceRow] = []
         for svc in _DEMO_SERVICES:
             state = await self.get_service_state(hostname, svc)
-            result.append({"name": svc, "state": state.state, "output": state.output})
+            result.append(ServiceRow(name=svc, state=state.state, output=state.output))
         return result
 
     async def get_metric_history(
