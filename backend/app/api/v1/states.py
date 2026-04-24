@@ -6,7 +6,6 @@ import asyncio
 import json
 import logging
 
-import jwt
 from fastapi import (
     APIRouter,
     Depends,
@@ -22,15 +21,22 @@ from app.api.v1.types import BoardName
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.ratelimit import ws_connect_limiter
-from app.core.security import decode_token, is_token_blocked
 from app.core.websocket import manager
 from app.integrations import checkmk as _cmk_integration
 from app.models.user import User
 from app.schemas.state import MapStates
 from app.services import board_service, state_service
-from app.services.auth_service import get_user_by_id
+from app.services.auth_service import authenticate_bearer_token
 
 logger = logging.getLogger(__name__)
+
+# WebSocket close codes (application range 4000–4999, per RFC 6455).
+# 4001 is used uniformly for "auth failed" so clients can trigger a re-login
+# on any auth-related rejection without needing to distinguish reasons.
+_WS_CLOSE_AUTH_FAILED = 4001
+_WS_CLOSE_NO_PERMISSION = 4003
+_WS_CLOSE_NOT_FOUND = 4004
+_WS_CLOSE_RATE_LIMITED = 4008
 
 router = APIRouter()
 
@@ -131,7 +137,7 @@ async def websocket_board_states(
     client_ip = websocket.client.host if websocket.client else "unknown"
     if ws_connect_limiter.is_blocked(client_ip):
         # Too many connects from this IP in the recent window — reject without accept.
-        await websocket.close(code=4008)  # RFC 6455 policy-violation range
+        await websocket.close(code=_WS_CLOSE_RATE_LIMITED)
         return
     ws_connect_limiter.record(client_ip)
 
@@ -140,40 +146,26 @@ async def websocket_board_states(
         raw = await asyncio.wait_for(websocket.receive_text(), timeout=3.0)
         msg = json.loads(raw)
         if msg.get("type") != "auth" or not isinstance(msg.get("token"), str):
-            await websocket.close(code=4001)
+            await websocket.close(code=_WS_CLOSE_AUTH_FAILED)
             return
         token: str = msg["token"]
     except Exception:
-        await websocket.close(code=4001)
-        return
-
-    try:
-        payload = decode_token(token)
-        if payload.get("type") != "access":
-            raise ValueError("not an access token")
-        user_id = int(str(payload["sub"]))
-        jti = str(payload.get("jti", ""))
-    except (jwt.PyJWTError, KeyError, ValueError):
-        await websocket.close(code=4001)
-        return
-
-    if jti and is_token_blocked(jti):
-        await websocket.close(code=4001)
+        await websocket.close(code=_WS_CLOSE_AUTH_FAILED)
         return
 
     async with AsyncSessionLocal() as db:
-        user = await get_user_by_id(db, user_id)
-        if user is None or not user.is_active:
-            await websocket.close(code=4001)
+        user = await authenticate_bearer_token(db, token)
+        if user is None:
+            await websocket.close(code=_WS_CLOSE_AUTH_FAILED)
             return
         if not _can_view_board(user, name):
-            await websocket.close(code=4003)
+            await websocket.close(code=_WS_CLOSE_NO_PERMISSION)
             return
         ws_auth_user = _resolve_auth_user(user.name, user.is_admin)
 
     cfg = board_service.get_board(name)
     if cfg is None:
-        await websocket.close(code=4004)
+        await websocket.close(code=_WS_CLOSE_NOT_FOUND)
         return
 
     await manager.connect(name, websocket, already_accepted=True, auth_user=ws_auth_user)

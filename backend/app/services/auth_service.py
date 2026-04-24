@@ -270,6 +270,36 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
     return result.scalar_one_or_none()
 
 
+async def authenticate_bearer_token(db: AsyncSession, token: str) -> User | None:
+    """Decode a bearer JWT, verify it's an active access token, load the user.
+
+    Shared by FastAPI HTTP deps and the WebSocket handshake so both paths reject
+    non-access tokens, blocklisted tokens, and inactive users identically.
+    Returns ``None`` on any validation failure; callers translate that to the
+    protocol-appropriate error response.
+    """
+    import jwt as _jwt  # local import — core.security already re-exports these
+
+    from app.core.security import decode_token, is_token_blocked
+
+    try:
+        payload = decode_token(token)
+        if payload.get("type") != "access":
+            return None
+        user_id = int(str(payload["sub"]))
+        jti = str(payload.get("jti", ""))
+    except (_jwt.PyJWTError, KeyError, ValueError):
+        return None
+
+    if jti and is_token_blocked(jti):
+        return None
+
+    user = await get_user_by_id(db, user_id)
+    if user is None or not user.is_active:
+        return None
+    return user
+
+
 def _is_checkmk_admin(username: str) -> bool:
     """Check whether a Checkmk user has the 'admin' role."""
     if not settings.checkmk_omd_root:

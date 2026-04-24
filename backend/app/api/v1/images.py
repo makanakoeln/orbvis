@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1.deps import get_current_user, require_admin
 from app.core.config import settings
-from app.core.image_security import is_valid_image
+from app.core.image_security import ICON_MIME_TYPES, ICON_SUFFIXES, is_valid_image
 from app.models.user import User
 
 router = APIRouter()
@@ -23,8 +23,6 @@ class ImageListEntry(TypedDict):
     url: str
 
 
-_ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/svg+xml", "image/webp"}
-_ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg", ".svg", ".webp"}
 _MAX_ICON_BYTES = 2 * 1024 * 1024  # 2 MB
 
 
@@ -41,7 +39,7 @@ async def list_images(
     d = _images_dir()
     result: list[ImageListEntry] = []
     for f in sorted(d.iterdir()):
-        if f.is_file() and f.suffix.lower() in _ALLOWED_SUFFIXES:
+        if f.is_file() and f.suffix.lower() in ICON_SUFFIXES:
             result.append({"name": f.name, "url": f"images/{f.name}"})
     return result
 
@@ -51,7 +49,7 @@ async def upload_image(
     file: UploadFile = File(...),
     _: User = Depends(require_admin),
 ) -> JSONResponse:
-    if file.content_type not in _ALLOWED_IMAGE_TYPES:
+    if file.content_type not in ICON_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="Unsupported image type",
@@ -71,7 +69,7 @@ async def upload_image(
         )
 
     raw_suffix = Path(file.filename or "").suffix.lower()
-    suffix = raw_suffix if raw_suffix in _ALLOWED_SUFFIXES else ".png"
+    suffix = raw_suffix if raw_suffix in ICON_SUFFIXES else ".png"
     stem = Path(file.filename or "image").stem
     filename = stem + suffix
 

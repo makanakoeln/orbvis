@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import decode_token, is_token_blocked
 from app.integrations import checkmk as cmk_integration
 from app.models.user import User
-from app.services.auth_service import get_user_by_id
+from app.services.auth_service import authenticate_bearer_token
 
 bearer = HTTPBearer()
 
@@ -22,25 +20,12 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """Decode JWT and return the authenticated user."""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-    )
-    try:
-        payload = decode_token(credentials.credentials)
-        if payload.get("type") != "access":
-            raise credentials_exception
-        user_id: int = int(str(payload["sub"]))
-        jti = str(payload.get("jti", ""))
-    except (jwt.PyJWTError, KeyError, ValueError):
-        raise credentials_exception from None
-
-    if jti and is_token_blocked(jti):
-        raise credentials_exception
-
-    user = await get_user_by_id(db, user_id)
-    if user is None or not user.is_active:
-        raise credentials_exception
+    user = await authenticate_bearer_token(db, credentials.credentials)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )
     return user
 
 
@@ -50,17 +35,17 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
-def can_view_board(user: User, board_name: str) -> bool:
-    """Return True if the user may view the given board.
-
-    When CHECKMK_OMD_ROOT is configured, delegates to the Checkmk permission
-    system. Falls back to the OrbVis DB role/permission system otherwise.
-    """
+def _check_board_permission(user: User, board_name: str, action: str) -> bool:
+    """Central CMK-or-RBAC permission dispatch for board view/edit."""
     if settings.checkmk_omd_root:
         return user.is_admin or cmk_integration.check_board_permission(
-            user.name, board_name, "view"
+            user.name, board_name, action
         )
-    return user_has_permission(user, "map", "view", board_name)
+    return user_has_permission(user, "map", action, board_name)
+
+
+def can_view_board(user: User, board_name: str) -> bool:
+    return _check_board_permission(user, board_name, "view")
 
 
 def can_view_board_by_name(username: str, board_name: str) -> bool:
@@ -75,16 +60,7 @@ def can_view_board_by_name(username: str, board_name: str) -> bool:
 
 
 def can_edit_board(user: User, board_name: str) -> bool:
-    """Return True if the user may edit the given board.
-
-    When CHECKMK_OMD_ROOT is configured, delegates to the Checkmk permission
-    system. Falls back to the OrbVis DB role/permission system otherwise.
-    """
-    if settings.checkmk_omd_root:
-        return user.is_admin or cmk_integration.check_board_permission(
-            user.name, board_name, "edit"
-        )
-    return user_has_permission(user, "map", "edit", board_name)
+    return _check_board_permission(user, board_name, "edit")
 
 
 def user_has_permission(

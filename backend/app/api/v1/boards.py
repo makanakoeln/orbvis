@@ -21,7 +21,11 @@ from app.api.v1.deps import (
 from app.api.v1.types import BoardName
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.image_security import is_valid_image
+from app.core.image_security import (
+    BACKGROUND_MIME_TYPES,
+    BACKGROUND_SUFFIXES,
+    is_valid_image,
+)
 from app.models.role import Role
 from app.models.user import User
 from app.schemas.board import (
@@ -39,8 +43,6 @@ from app.services.cfg_parser import cfg_to_board
 
 router = APIRouter()
 
-_ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/gif", "image/svg+xml", "image/webp"}
-_ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
 _MAX_BACKGROUND_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
@@ -213,7 +215,7 @@ async def upload_background(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
         )
-    if file.content_type not in _ALLOWED_IMAGE_TYPES:
+    if file.content_type not in BACKGROUND_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Unsupported image type"
         )
@@ -231,7 +233,7 @@ async def upload_background(
         )
 
     raw_suffix = Path(file.filename or "").suffix.lower()
-    suffix = raw_suffix if raw_suffix in _ALLOWED_SUFFIXES else ".png"
+    suffix = raw_suffix if raw_suffix in BACKGROUND_SUFFIXES else ".png"
 
     bg_dir = Path(settings.boards_dir) / "backgrounds"
     bg_dir.mkdir(parents=True, exist_ok=True)

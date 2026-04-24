@@ -9,6 +9,18 @@ from __future__ import annotations
 from defusedxml import ElementTree as DefusedET
 from defusedxml.common import DefusedXmlException
 
+# Icons are rendered as-is in the board. GIF is intentionally excluded — we
+# don't want animated icons flickering in map overviews.
+ICON_MIME_TYPES = frozenset({"image/png", "image/jpeg", "image/svg+xml", "image/webp"})
+ICON_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".svg", ".webp"})
+
+# Background images of static boards may include GIF — a non-animated GIF is
+# a common legacy asset format for imported NagVis maps.
+BACKGROUND_MIME_TYPES = frozenset(
+    {"image/png", "image/jpeg", "image/gif", "image/svg+xml", "image/webp"}
+)
+BACKGROUND_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"})
+
 # Raster magic bytes
 _PNG_MAGIC = b"\x89PNG"
 _JPEG_MAGIC = b"\xff\xd8\xff"

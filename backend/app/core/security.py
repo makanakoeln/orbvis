@@ -31,6 +31,9 @@ def blocklist_token(jti: str, expiry: datetime) -> None:
 
 
 def is_token_blocked(jti: str) -> bool:
+    # Prune on read too — otherwise a process with many blocks and few logouts
+    # (typical prod: rare rotation, long uptime) never clears expired entries.
+    _prune_blocklist()
     with _blocklist_lock:
         return jti in _blocklist
 

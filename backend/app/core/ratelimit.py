@@ -19,35 +19,44 @@ class RateLimiter:
         self._calls: dict[str, deque[float]] = defaultdict(deque)
         self._lock = Lock()
 
-    def _prune(self, q: deque[float], cutoff: float) -> None:
-        """Remove timestamps older than cutoff. Must be called under self._lock."""
+    def _prune_key(self, key: str, cutoff: float) -> deque[float] | None:
+        """Drop timestamps older than cutoff; evict the key entirely when empty.
+
+        Must be called under self._lock. Returns the still-populated deque, or
+        None if the key has been evicted — preventing the _calls dict from
+        growing unbounded for bursty one-off sources (NAT-masked clients,
+        scanners, etc.).
+        """
+        q = self._calls.get(key)
+        if q is None:
+            return None
         while q and q[0] < cutoff:
             q.popleft()
+        if not q:
+            del self._calls[key]
+            return None
+        return q
 
     def is_blocked(self, key: str) -> bool:
         """Return True if the key has exceeded the limit (check only, does not record)."""
         now = time.monotonic()
         with self._lock:
-            q = self._calls.get(key)
-            if not q:
-                return False
-            self._prune(q, now - self._window)
-            return len(q) >= self._max
+            q = self._prune_key(key, now - self._window)
+            return q is not None and len(q) >= self._max
 
     def record(self, key: str) -> None:
         """Record one failed attempt for key."""
         now = time.monotonic()
         with self._lock:
-            q = self._calls[key]
-            self._prune(q, now - self._window)
-            q.append(now)
+            self._prune_key(key, now - self._window)
+            self._calls[key].append(now)
 
     def retry_after(self, key: str) -> float:
         """Seconds until the oldest recorded attempt falls outside the window."""
         now = time.monotonic()
         with self._lock:
-            q = self._calls.get(key)
-            if not q:
+            q = self._prune_key(key, now - self._window)
+            if q is None:
                 return 0.0
             return max(0.0, q[0] + self._window - now)
 
