@@ -73,4 +73,11 @@ jobs:
         run: docker build ./backend --tag orbvis-backend:test
 
       - name: Smoke test backend image
-        run: docker run --rm orbvis-backend:test python -c "from app.main import app; print('OK')"
+        # Run in testing mode so app.core.config's production-SECRET_KEY check
+        # doesn't abort. The smoke test only verifies `from app.main import app`
+        # succeeds — it never boots the server.
+        run: |
+          docker run --rm \
+            -e ENVIRONMENT=testing \
+            orbvis-backend:test \
+            python -c "from app.main import app; print('OK')"
