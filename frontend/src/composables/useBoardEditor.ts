@@ -1,7 +1,7 @@
 /**
  * Map edit-mode state: drag & drop, line editing, object selection, placing new objects.
  */
-import { reactive, type Ref, ref, toRaw } from 'vue';
+import { getCurrentInstance, onBeforeUnmount, reactive, type Ref, ref, toRaw } from 'vue';
 
 import { boardsApi } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
@@ -132,18 +132,41 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         }
     }
 
-    function _onDocMouseUp() {
+    // Track whether this composable has registered document listeners so the
+    // unmount cleanup can tear them down without double-removing (the capture
+    // flag has to match what was used at addEventListener time, hence the flag).
+    let _docListenersActive = false;
+
+    function _removeDocListeners() {
+        if (!_docListenersActive) return;
         document.removeEventListener('mousemove', _onDocMouseMove, { capture: true });
         document.removeEventListener('mouseup', _onDocMouseUp, { capture: true });
+        _docListenersActive = false;
+    }
+
+    function _onDocMouseUp() {
+        _removeDocListeners();
         endLineDrag();
     }
 
     function _startDocDrag(canvasEl: HTMLElement) {
         _canvasEl = canvasEl;
+        if (_docListenersActive) return;
         // Use capture phase so we receive events before any child element that may
         // call stopPropagation() (e.g. D3 internal handlers).
         document.addEventListener('mousemove', _onDocMouseMove, { capture: true });
         document.addEventListener('mouseup', _onDocMouseUp, { capture: true });
+        _docListenersActive = true;
+    }
+
+    // Critical cleanup: if the component using this composable unmounts while a
+    // drag is in flight (e.g. router navigation mid-drag), the document-level
+    // listeners would otherwise linger and hold references to stale state.
+    if (getCurrentInstance()) {
+        onBeforeUnmount(() => {
+            _removeDocListeners();
+            _canvasEl = null;
+        });
     }
 
     // --- Save object position (called from BoardCanvas object-drag-end event) ---
