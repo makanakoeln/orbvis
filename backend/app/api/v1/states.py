@@ -20,7 +20,8 @@ from app.api.v1.deps import can_view_board_by_name as _can_view_board_by_name
 from app.api.v1.deps import get_current_user
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
-from app.core.security import decode_token
+from app.core.ratelimit import ws_connect_limiter
+from app.core.security import decode_token, is_token_blocked
 from app.core.websocket import manager
 from app.integrations import checkmk as _cmk_integration
 from app.models.user import User
@@ -120,10 +121,20 @@ async def websocket_board_states(
     Authentication: the client must send {"type": "auth", "token": "<access_token>"}
     as the very first message after the connection is opened. The token is never
     passed in the URL to avoid leaking it into server logs and browser history.
+
+    Hardening: connects are rate-limited per client IP, and the auth-message
+    timeout is short (3 s) so stalled or silent connections don't tie up slots.
     """
+    client_ip = websocket.client.host if websocket.client else "unknown"
+    if ws_connect_limiter.is_blocked(client_ip):
+        # Too many connects from this IP in the recent window — reject without accept.
+        await websocket.close(code=4008)  # RFC 6455 policy-violation range
+        return
+    ws_connect_limiter.record(client_ip)
+
     await websocket.accept()
     try:
-        raw = await asyncio.wait_for(websocket.receive_text(), timeout=10.0)
+        raw = await asyncio.wait_for(websocket.receive_text(), timeout=3.0)
         msg = json.loads(raw)
         if msg.get("type") != "auth" or not isinstance(msg.get("token"), str):
             await websocket.close(code=4001)
@@ -138,7 +149,12 @@ async def websocket_board_states(
         if payload.get("type") != "access":
             raise ValueError("not an access token")
         user_id = int(str(payload["sub"]))
+        jti = str(payload.get("jti", ""))
     except (jwt.PyJWTError, KeyError, ValueError):
+        await websocket.close(code=4001)
+        return
+
+    if jti and is_token_blocked(jti):
         await websocket.close(code=4001)
         return
 

@@ -54,3 +54,7 @@ class RateLimiter:
 
 # 5 failed login attempts per 15 minutes per IP
 login_limiter = RateLimiter(max_calls=5, window_seconds=15 * 60)
+
+# 30 WebSocket handshakes per minute per IP — covers typical reconnect storms
+# (tab restore, laptop wake) but blocks scripted connection floods.
+ws_connect_limiter = RateLimiter(max_calls=30, window_seconds=60)
