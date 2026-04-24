@@ -55,7 +55,7 @@
             <div
               v-for="(row, ri) in cmkPerfometer.rows"
               :key="ri"
-              class="h-3 flex rounded overflow-hidden"
+              class="h-3 flex rounded overflow-hidden ring-1 ring-white/10"
             >
               <div
                 v-for="(seg, si) in row"

@@ -331,7 +331,7 @@ def _metric_color(m: _RawMetric, pct: float) -> str:
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
-_REMAINDER_COLOR = "#2a2a2a"
+_REMAINDER_COLOR = "#52525b"  # zinc-600 — visible on dark glass cards
 
 
 def _compute_simple_side(
