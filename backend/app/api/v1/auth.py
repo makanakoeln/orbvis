@@ -140,4 +140,3 @@ async def logout(
             blocklist_token(str(jti), expiry)
     except Exception as exc:
         logger.warning("logout: failed to blocklist token: %s", exc)
-    return None

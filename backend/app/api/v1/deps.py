@@ -99,6 +99,6 @@ def user_has_permission(
         return True
     for role in user.roles:
         for perm in role.permissions:
-            if perm.mod == mod and perm.act == act and (perm.obj == "*" or perm.obj == obj):
+            if perm.mod == mod and perm.act == act and perm.obj in ("*", obj):
                 return True
     return False

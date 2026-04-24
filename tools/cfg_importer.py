@@ -20,7 +20,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Legacy line_type integer → OrbVis line_style string
 # ---------------------------------------------------------------------------
@@ -35,10 +34,10 @@ LINE_TYPE_MAP: dict[int, str] = {
 
 # Rough icon_size from legacy iconset name
 ICONSET_SIZE: dict[str, int] = {
-    "std_big":    30,
+    "std_big": 30,
     "std_medium": 24,
-    "std":        22,
-    "std_small":  16,
+    "std": 22,
+    "std_small": 16,
 }
 
 # Legacy url_target values that reference the old CMK frameset — remap to _blank
@@ -48,6 +47,7 @@ _FRAMESET_TARGETS = {"main", "frames", "main_window"}
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class CfgBlock:
@@ -88,6 +88,7 @@ def parse_cfg_file(path: Path) -> list[CfgBlock]:
 # ---------------------------------------------------------------------------
 # Conversion helpers
 # ---------------------------------------------------------------------------
+
 
 def _int(value: str | None, default: int = 0) -> int:
     try:
@@ -150,12 +151,12 @@ def _parse_line_coords(p: dict[str, str]) -> tuple[int, int, int, int]:
 def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
     """Build a LabelConfig dict from legacy properties."""
     return {
-        "show":       _bool(p.get("label_show"), show_default),
-        "text":       p.get("label_text") or None,
-        "x":          _int(p.get("label_x")),
-        "y":          _int(p.get("label_y"), 34),
-        "size":       _int(p.get("label_size"), 11),
-        "color":      p.get("label_color", "#ffffff"),
+        "show": _bool(p.get("label_show"), show_default),
+        "text": p.get("label_text") or None,
+        "x": _int(p.get("label_x")),
+        "y": _int(p.get("label_y"), 34),
+        "size": _int(p.get("label_size"), 11),
+        "color": p.get("label_color", "#ffffff"),
         "background": p.get("label_background", "transparent"),
     }
 
@@ -177,6 +178,7 @@ def _url_target(raw: str | None) -> str:
 # ---------------------------------------------------------------------------
 # Main converter
 # ---------------------------------------------------------------------------
+
 
 def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any]:
     """Convert parsed legacy blocks into an OrbVis v2 board JSON dict."""
@@ -216,8 +218,14 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
 
         # ── skip unknown block types ────────────────────────────────────────
         if block.block_type not in (
-            "host", "service", "hostgroup", "servicegroup",
-            "map", "shape", "line", "textbox",
+            "host",
+            "service",
+            "hostgroup",
+            "servicegroup",
+            "map",
+            "shape",
+            "line",
+            "textbox",
         ):
             continue
 
@@ -234,9 +242,11 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
             obj: dict[str, Any] = {
                 "id": f"line_{raw_id}",
                 "type": "line",
-                "x": x, "y": y,
+                "x": x,
+                "y": y,
                 "z": _int(p.get("z"), 1),
-                "x2": x2, "y2": y2,
+                "x2": x2,
+                "y2": y2,
                 "line_style": line_style,
                 "label": {"show": False},
             }
@@ -255,14 +265,17 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
         if legacy_type == "shape":
             x, _ = _parse_coord(p.get("x", "0"))
             y, _ = _parse_coord(p.get("y", "0"))
-            objects.append({
-                "id": f"image_{raw_id}",
-                "type": "image",
-                "x": x, "y": y,
-                "z": _int(p.get("z"), 1),
-                "image_src": p.get("icon") or None,
-                "label": {"show": False},
-            })
+            objects.append(
+                {
+                    "id": f"image_{raw_id}",
+                    "type": "image",
+                    "x": x,
+                    "y": y,
+                    "z": _int(p.get("z"), 1),
+                    "image_src": p.get("icon") or None,
+                    "label": {"show": False},
+                }
+            )
             continue
 
         # ── textbox ─────────────────────────────────────────────────────────
@@ -274,22 +287,26 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
             y += _int(p.get("h"), 40) // 2
             raw_text = p.get("text") or None
             if raw_text:
-                raw_text = re.sub(r"<br\s*/?>", "\n", raw_text, re.IGNORECASE)
+                raw_text = re.sub(r"<br\s*/?>", "\n", raw_text, flags=re.IGNORECASE)
                 raw_text = re.sub(r"<[^>]+>", "", raw_text)
-            objects.append({
-                "id": f"textbox_{raw_id}",
-                "type": "textbox",
-                "x": x, "y": y,
-                "z": _int(p.get("z"), 1),
-                "label": {
-                    "show": True,
-                    "text": raw_text,
-                    "x": 0, "y": 0,
-                    "size": 11,
-                    "color": "#ffffff",
-                    "background": "transparent",
-                },
-            })
+            objects.append(
+                {
+                    "id": f"textbox_{raw_id}",
+                    "type": "textbox",
+                    "x": x,
+                    "y": y,
+                    "z": _int(p.get("z"), 1),
+                    "label": {
+                        "show": True,
+                        "text": raw_text,
+                        "x": 0,
+                        "y": 0,
+                        "size": 11,
+                        "color": "#ffffff",
+                        "background": "transparent",
+                    },
+                }
+            )
             continue
 
         # ── monitoring objects (host / service / hostgroup / servicegroup / map) ──
@@ -302,7 +319,8 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
         obj = {
             "id": f"{orbvis_type}_{raw_id}",
             "type": orbvis_type,
-            "x": x, "y": y,
+            "x": x,
+            "y": y,
             "z": _int(p.get("z"), 1),
             "label": _label(p),
             "display": _display(p),
@@ -343,6 +361,7 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def convert_file(cfg_path: Path, output_dir: Path) -> Path:
     map_name = cfg_path.stem
     blocks = parse_cfg_file(cfg_path)
@@ -359,7 +378,9 @@ def convert_file(cfg_path: Path, output_dir: Path) -> Path:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Import legacy .cfg maps to OrbVis JSON")
     parser.add_argument("input", help=".cfg file or maps directory (with --batch)")
-    parser.add_argument("output", nargs="?", default="./maps", help="Output directory (default: ./maps)")
+    parser.add_argument(
+        "output", nargs="?", default="./maps", help="Output directory (default: ./maps)"
+    )
     parser.add_argument("--batch", action="store_true", help="Import all .cfg files in a directory")
     args = parser.parse_args()
 

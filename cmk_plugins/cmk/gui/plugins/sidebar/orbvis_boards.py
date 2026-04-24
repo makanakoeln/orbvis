@@ -3,7 +3,6 @@
 import json
 import os
 import pathlib
-from typing import List, Tuple
 
 from cmk.gui.htmllib.html import html
 from cmk.gui.i18n import _
@@ -12,10 +11,12 @@ from cmk.gui.sidebar._snapin._helpers import footnotelinks
 
 try:
     from cmk.gui.logged_in import user as _cmk_user
+
     _HAS_CMK_USER = True
 except ImportError:
     try:
         from cmk.gui.globals import user as _cmk_user  # type: ignore[no-redef]
+
         _HAS_CMK_USER = True
     except ImportError:
         _HAS_CMK_USER = False
@@ -39,7 +40,7 @@ _BASE_URL = f"/{_SITE}/orbvis/#/boards"
 _EDIT_URL = f"/{_SITE}/orbvis/#/"
 
 
-def _get_maps() -> List[Tuple[str, str]]:
+def _get_maps() -> list[tuple[str, str]]:
     results = []
     if not _BOARDS_DIR.is_dir():
         return results

@@ -22,10 +22,12 @@ class _SelfActive(str):
 
 try:
     from cmk.gui.logged_in import user as _cmk_user
+
     _HAS_CMK_USER = True
 except ImportError:
     try:
         from cmk.gui.globals import user as _cmk_user  # type: ignore[no-redef]
+
         _HAS_CMK_USER = True
     except ImportError:
         _HAS_CMK_USER = False
@@ -215,7 +217,12 @@ except ImportError:
             from cmk.gui.main_menu import main_menu_registry
             from cmk.gui.main_menu_types import MainMenuItem
             from cmk.gui.utils.roles import UserPermissions
-            from cmk.shared_typing.main_menu import NavItemIdEnum, NavItemShortcut, NavItemTopic, NavItemTopicEntry
+            from cmk.shared_typing.main_menu import (
+                NavItemIdEnum,
+                NavItemShortcut,
+                NavItemTopic,
+                NavItemTopicEntry,
+            )
 
             # NavItemIdEnum is a closed str-Enum; extend it at runtime so that
             # NavItemIdEnum("orbvis") succeeds inside _get_nav_item_from_main_menu_item.

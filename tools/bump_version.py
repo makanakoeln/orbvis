@@ -10,11 +10,11 @@ Usage:
     python tools/bump_version.py 0.2.0
 """
 
+import os
 import re
 import subprocess
 import sys
 import tempfile
-import os
 from datetime import date
 from pathlib import Path
 
@@ -119,9 +119,7 @@ def prepend_to_changelog(entry: str) -> None:
     if idx == -1:
         CHANGELOG_FILE.write_text(original.rstrip() + "\n\n" + entry.strip() + "\n")
     else:
-        CHANGELOG_FILE.write_text(
-            original[:idx] + "\n\n" + entry.strip() + original[idx:]
-        )
+        CHANGELOG_FILE.write_text(original[:idx] + "\n\n" + entry.strip() + original[idx:])
 
 
 def main() -> None:
@@ -156,7 +154,9 @@ def main() -> None:
     print(edited.strip())
     print("-----------------------\n")
 
-    answer = input(f"Write VERSION={new_version} and prepend to CHANGELOG.md? [y/N] ").strip().lower()
+    answer = (
+        input(f"Write VERSION={new_version} and prepend to CHANGELOG.md? [y/N] ").strip().lower()
+    )
     if answer != "y":
         print("Aborted.")
         sys.exit(0)
@@ -165,11 +165,11 @@ def main() -> None:
     prepend_to_changelog(edited)
 
     print(f"\nDone. VERSION={new_version}, CHANGELOG.md updated.")
-    print(f"\nNext steps — copy & paste:\n")
-    print(f"  git add VERSION CHANGELOG.md")
+    print("\nNext steps — copy & paste:\n")
+    print("  git add VERSION CHANGELOG.md")
     print(f"  git commit -m 'version: bump to {new_version}'")
     print(f"  git tag v{new_version}")
-    print(f"  git push && git push --tags")
+    print("  git push && git push --tags")
 
 
 if __name__ == "__main__":

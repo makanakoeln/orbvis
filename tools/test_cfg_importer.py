@@ -4,10 +4,7 @@ import json
 import textwrap
 from pathlib import Path
 
-import pytest
-
 from cfg_importer import blocks_to_map_json, convert_file, parse_cfg_file
-
 
 SAMPLE_CFG = textwrap.dedent("""
     define global {
@@ -65,8 +62,6 @@ def test_parse_cfg_file(tmp_path: Path):
 
 
 def test_blocks_to_map_json():
-    from io import StringIO
-    import sys
 
     tmp = Path("/tmp/test_map.cfg")
     tmp.write_text(SAMPLE_CFG)

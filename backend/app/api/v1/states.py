@@ -69,7 +69,7 @@ async def _broadcast_loop(board_name: str) -> None:
                     grouped = manager.get_connections_grouped(board_name)
                     for auth_user, connections in grouped.items():
                         can_view = (
-                            (lambda u: lambda n: _can_view_board_by_name(u, n))(auth_user)
+                            (lambda n, u=auth_user: _can_view_board_by_name(u, n))
                             if auth_user is not None
                             else None
                         )

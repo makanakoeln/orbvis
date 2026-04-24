@@ -35,7 +35,9 @@ try:
     declare_permission(
         "orbvis.edit_all",
         _l("Edit all boards"),
-        _l("Grants write access to all OrbVis boards. Allows creating, modifying and deleting boards."),
+        _l(
+            "Grants write access to all OrbVis boards. Allows creating, modifying and deleting boards."
+        ),
         ["admin"],
     )
     declare_permission(
