@@ -128,8 +128,17 @@ async def _get_board_states_batched(
     objects: list[BoardObject],
     auth_user: str | None = None,
     can_view_board: Callable[[str], bool] | None = None,
+    board_cfg_cache: dict[str, BoardConfig | None] | None = None,
 ) -> dict[str, ObjectState]:
-    """Fetch states for all board objects using batch queries where supported."""
+    """Fetch states for all board objects using batch queries where supported.
+
+    ``board_cfg_cache`` memoises ``board_service.get_board`` across the full
+    map-link recursion so a board referenced by several sibling or nested maps
+    loads only once. The cache stores ``None`` for not-found boards to avoid
+    retrying missing names.
+    """
+    if board_cfg_cache is None:
+        board_cfg_cache = {}
     hosts_soft: list[BoardObject] = []
     hosts_hard: list[BoardObject] = []
     svcs_soft: list[BoardObject] = []
@@ -250,7 +259,9 @@ async def _get_board_states_batched(
             if can_view_board is not None and not can_view_board(map_name):
                 board_states[map_name] = None
                 continue
-            ref_cfg = board_service.get_board(map_name)
+            if map_name not in board_cfg_cache:
+                board_cfg_cache[map_name] = board_service.get_board(map_name)
+            ref_cfg = board_cfg_cache[map_name]
             if ref_cfg is None:
                 continue
             ref_backend = get_backend(ref_cfg.backend_id)
@@ -259,7 +270,10 @@ async def _get_board_states_batched(
             non_map_objs = [o for o in ref_cfg.objects if o.type != "map"]
             try:
                 board_states[map_name] = await _get_board_states_batched(
-                    ref_backend, non_map_objs, auth_user=auth_user
+                    ref_backend,
+                    non_map_objs,
+                    auth_user=auth_user,
+                    board_cfg_cache=board_cfg_cache,
                 )
             except Exception:
                 pass
