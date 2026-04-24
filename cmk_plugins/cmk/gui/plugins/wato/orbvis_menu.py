@@ -40,33 +40,18 @@ def _user_may_use() -> bool:
         return True
 
 
-def _user_is_admin() -> bool:
-    """Admin = builtin role 'admin' OR custom role based on 'admin'.
+def _user_may_configure() -> bool:
+    """Gate for the admin menu entries (Settings, Connections, Images).
 
-    We avoid relying on the `orbvis.edit_all` permission here because a user
-    might enable per-board edit permissions without expecting full admin menu
-    access. Role membership is the least-surprising intent check.
+    Checked against the dedicated `orbvis.configure` permission whose default
+    is `["admin"]` only. Any role can be toggled in WATO.
     """
     if not _HAS_CMK_USER:
         return False
     try:
-        role_ids = list(getattr(_cmk_user, "role_ids", []) or [])
+        return _cmk_user.may("orbvis.configure")
     except Exception:
         return False
-    if "admin" in role_ids:
-        return True
-    # Custom role inheriting from admin (basedon="admin").
-    try:
-        from cmk.gui.config import active_config  # type: ignore[import-not-found]
-
-        roles = getattr(active_config, "roles", {}) or {}
-        for rid in role_ids:
-            role = roles.get(rid) or {}
-            if not role.get("builtin") and role.get("basedon") == "admin":
-                return True
-    except Exception:
-        pass
-    return False
 
 
 try:
@@ -88,7 +73,7 @@ try:
                 icon="save_dashboard",
             ),
         ]
-        if _user_is_admin():
+        if _user_may_configure():
             items += [
                 TopicMenuItem(
                     name="orbvis_settings",
@@ -166,7 +151,7 @@ except ImportError:
                     icon=StaticIcon(IconNames.save_dashboard),
                 ),
             ]
-            if _user_is_admin():
+            if _user_may_configure():
                 entries += [
                     MainMenuItem(
                         name="orbvis_settings",
@@ -255,7 +240,7 @@ except ImportError:
                         sort_index=10,
                     ),
                 ]
-                if _user_is_admin():
+                if _user_may_configure():
                     entries += [
                         NavItemTopicEntry(
                             id="orbvis_settings",
