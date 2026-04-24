@@ -14,20 +14,22 @@ dependencies = [
     "pydantic>=2.10.0",
     "pydantic-settings>=2.7.0",
     "PyJWT[crypto]>=2.8.0",
+    "cryptography>=46.0.7",           # CVE-2026-34073 / CVE-2026-39892 via PyJWT[crypto]
     "bcrypt>=4.0.0",
-    "python-multipart>=0.0.20",
+    "python-multipart>=0.0.26",       # CVE-2026-40347
     "httpx>=0.28.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
+    "pytest>=9.0.3",                  # CVE-2025-71176
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
     "httpx>=0.28.0",
     "ruff>=0.4.0",
     "mypy>=1.10.0",
     "bandit>=1.8.0",
+    "pygments>=2.20.0",               # CVE-2026-4539 (transitive via pytest/rich)
     "pre-commit>=4.0.0",
 ]
 

@@ -53,7 +53,7 @@ jobs:
       - name: Dependency audit (pip-audit)
         run: |
           pip install pip-audit
-          pip-audit --ignore-vuln CVE-2026-4539
+          pip-audit
 
       - name: Test + coverage gate
         # Baseline ~50%; Folge-PRs heben die Schwelle stufenweise in Richtung 75%.
