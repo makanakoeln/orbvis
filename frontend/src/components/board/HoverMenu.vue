@@ -175,8 +175,14 @@ const authStore = useAuthStore();
 const cmkPerfometer = ref<PerfometerResult | null>(null);
 
 onMounted(() => {
+  // Perfometer only makes sense for an object linked to a specific service
+  // (either a `service` object or a line/graph pointing at one).
+  const isServiceLinked =
+    props.object.type === 'service' ||
+    ((props.object.type === 'line' || props.object.type === 'graph') &&
+      !!props.object.service_description);
   if (
-    props.object.type === 'service' &&
+    isServiceLinked &&
     props.object.host_name &&
     props.object.service_description &&
     props.backendId &&
@@ -243,7 +249,12 @@ const stateTextColor = computed(
 );
 
 const perfMetrics = computed((): PerfMetric[] => {
-  if (props.object.type !== 'service') return [];
+  // Same reasoning as `isServiceLinked` above — only service-linked objects have perf data.
+  const showPerf =
+    props.object.type === 'service' ||
+    ((props.object.type === 'line' || props.object.type === 'graph') &&
+      !!props.object.service_description);
+  if (!showPerf) return [];
   return parsePerfData(props.state?.perf_data ?? '').slice(0, 4);
 });
 
