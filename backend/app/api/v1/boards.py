@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.v1.deps import (
     can_edit_board,
@@ -177,7 +178,11 @@ async def get_board_permissions(
     db: AsyncSession = Depends(get_db),
 ) -> BoardPermissionsRead:
     """Return which roles have direct (non-wildcard) view/edit permissions on this board."""
-    result = await db.execute(select(Role))
+    # Eager-load the permissions so the subsequent `role.permissions` loop is
+    # one batched SELECT, not N+1 lazy loads. Role.permissions is already
+    # `lazy="selectin"` on the model, but stating the intent here keeps the
+    # query path explicit and survives future model-config changes.
+    result = await db.execute(select(Role).options(selectinload(Role.permissions)))
     roles = result.scalars().all()
 
     view_roles: list[str] = []
