@@ -55,8 +55,10 @@ jobs:
           pip install pip-audit
           pip-audit --ignore-vuln CVE-2026-4539
 
-      - name: Test
-        run: pytest --cov=app --cov-report=term-missing
+      - name: Test + coverage gate
+        # Baseline ~50%; Folge-PRs heben die Schwelle stufenweise in Richtung 75%.
+        # Gate bewusst unter dem aktuellen Stand, damit kein Zufallsbruch.
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=45
 
   docker-build-backend:
     runs-on: ubuntu-latest

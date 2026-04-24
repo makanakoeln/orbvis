@@ -117,5 +117,27 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      include: ['src/**/*.{ts,vue}'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/test-setup.ts',
+        'src/main.ts',
+        'src/vendor/**', // third-party CMK stubs
+        'src/cmk-stubs/**',
+      ],
+      // Baseline aus current state (~7% wenn Vue-Views mitgezaehlt werden —
+      // viele views/* und components/* sind komplett untested). Folge-PRs heben
+      // die Schwellen inkrementell an, Ziel 30%. Gate bewusst knapp unter dem
+      // aktuellen Stand, damit kein Zufallsbruch.
+      thresholds: {
+        lines: 7,
+        functions: 4,
+        branches: 3,
+        statements: 7,
+      },
+    },
   },
 })
