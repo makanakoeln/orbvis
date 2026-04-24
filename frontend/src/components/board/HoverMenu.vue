@@ -47,6 +47,47 @@
             {{ state.output }}
           </div>
 
+          <!-- CMK Perfometer (loaded async from backend) -->
+          <div v-if="cmkPerfometer" class="mt-2.5 space-y-1">
+            <div class="text-[10px] font-medium text-[var(--text)] mb-1">
+              {{ cmkPerfometer.label }}
+            </div>
+            <div
+              v-for="(row, ri) in cmkPerfometer.rows"
+              :key="ri"
+              class="h-3 flex rounded overflow-hidden"
+            >
+              <div
+                v-for="(seg, si) in row"
+                :key="si"
+                class="h-full transition-all"
+                :style="{ width: `${seg.pct}%`, backgroundColor: seg.color }"
+              />
+            </div>
+          </div>
+
+          <!-- Fallback: simple perf_data bars (shown while CMK perfometer loads or when no CMK backend) -->
+          <div v-else-if="perfMetrics.length" class="mt-2.5 space-y-1.5">
+            <template v-for="m in perfMetrics" :key="m.label">
+              <div class="flex justify-between items-baseline gap-1 text-[10px]">
+                <span class="text-[var(--text-muted)] truncate">{{ m.label }}</span>
+                <span class="text-[var(--text)] font-medium shrink-0">{{ fmtMetricValue(m) }}</span>
+              </div>
+              <div
+                v-if="utilPercent(m) > 0"
+                class="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden -mt-0.5"
+              >
+                <div
+                  class="h-full rounded-full"
+                  :style="{
+                    width: `${utilPercent(m)}%`,
+                    backgroundColor: utilColor(utilPercent(m)),
+                  }"
+                />
+              </div>
+            </template>
+          </div>
+
           <!-- Badges -->
           <div
             v-if="state?.acknowledged || state?.in_downtime || state?.stale"
@@ -96,20 +137,6 @@
               STALE
             </span>
           </div>
-
-          <!-- Sparkline trend chart -->
-          <div v-if="sparkData.length > 1" class="mt-3 pt-2 border-t border-[var(--border)]">
-            <div class="text-[10px] text-[var(--text-muted)] mb-1 font-medium">
-              {{ t('board.sparklineTrend') }}
-            </div>
-            <svg
-              ref="sparkSvgRef"
-              width="120"
-              height="40"
-              class="w-full"
-              style="overflow: visible"
-            />
-          </div>
         </template>
       </template>
     </div>
@@ -118,13 +145,14 @@
 
 <script setup lang="ts">
 import DOMPurify, { type Config as DOMPurifyConfig } from 'dompurify';
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { useSparkline } from '@/composables/useSparkline';
-import { useStatesStore } from '@/stores/states';
-import type { BoardObject, ObjectState } from '@/types/api';
+import { metricsApi } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
+import type { BoardObject, ObjectState, PerfometerResult } from '@/types/api';
 import { getBoardObjectName, getObjectTypeLabel, VISUAL_ONLY_TYPES } from '@/utils/naming';
+import { parsePerfData, type PerfMetric, utilColor, utilPercent } from '@/utils/perf';
 import { interpolateTemplate } from '@/utils/template';
 
 const _PURIFY_CONFIG = {
@@ -138,15 +166,35 @@ const props = defineProps<{
   x: number;
   y: number;
   template?: string | null;
+  backendId?: string | null;
 }>();
 
 const { t } = useI18n();
-const statesStore = useStatesStore();
+const authStore = useAuthStore();
 
-const sparkSvgRef = ref<SVGSVGElement | null>(null);
-const sparkData = computed(() => statesStore.history[props.object.id] ?? []);
+const cmkPerfometer = ref<PerfometerResult | null>(null);
 
-useSparkline({ svgRef: sparkSvgRef, data: sparkData });
+onMounted(() => {
+  if (
+    props.object.type === 'service' &&
+    props.object.host_name &&
+    props.object.service_description &&
+    props.backendId &&
+    authStore.accessToken
+  ) {
+    metricsApi
+      .getPerfometer(
+        props.backendId,
+        props.object.host_name,
+        props.object.service_description,
+        authStore.accessToken,
+      )
+      .then((r) => {
+        cmkPerfometer.value = r;
+      })
+      .catch(() => {});
+  }
+});
 
 const renderedTemplate = computed(() => {
   if (!props.template) return null;
@@ -189,4 +237,14 @@ const stateColor = computed(() => STATE_BG[props.state?.state ?? 'PENDING'] ?? '
 const stateTextColor = computed(
   () => STATE_TEXT[props.state?.state ?? 'PENDING'] ?? 'text-zinc-500',
 );
+
+const perfMetrics = computed((): PerfMetric[] => {
+  if (props.object.type !== 'service') return [];
+  return parsePerfData(props.state?.perf_data ?? '').slice(0, 4);
+});
+
+function fmtMetricValue(m: PerfMetric): string {
+  const v = Number.isInteger(m.value) ? String(m.value) : m.value.toFixed(2).replace(/\.?0+$/, '');
+  return `${v}${m.unit}`;
+}
 </script>

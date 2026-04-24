@@ -9,11 +9,13 @@ import type {
   BoardObject,
   BoardPermissions,
   BoardRead,
+  DowntimeEntry,
   GlobalSettings,
   ImageEntry,
   MapStates,
   MetricGraphGroup,
   MetricHistoryResponse,
+  PerfometerResult,
   PermissionRead,
   RoleRead,
   TokenResponse,
@@ -378,6 +380,51 @@ async function cmkRequest(baseUrl: string, path: string, body?: unknown): Promis
   }
 }
 
+interface CmkDowntimeItem {
+  id: string;
+  extensions: {
+    site_id: string;
+    host_name: string;
+    service_description?: string;
+    author: string;
+    comment: string;
+    start_time: string;
+    end_time: string;
+    is_service: boolean;
+  };
+}
+
+async function cmkGetDowntimes(
+  baseUrl: string,
+  params: Record<string, string>,
+): Promise<DowntimeEntry[]> {
+  const base = baseUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
+  const query = new URLSearchParams(params).toString();
+  const url = `${base}/check_mk/api/1.0/domain-types/downtime/collections/all?${query}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null);
+    const msg = detail?.detail ?? detail?.title ?? `HTTP ${response.status}`;
+    throw new Error(typeof msg === 'string' ? msg : `HTTP ${response.status}`);
+  }
+  const data: { value: CmkDowntimeItem[] } = await response.json();
+  return data.value.map((item) => ({
+    id: item.id,
+    site_id: item.extensions.site_id,
+    host_name: item.extensions.host_name,
+    service_description: item.extensions.service_description,
+    author: item.extensions.author,
+    comment: item.extensions.comment,
+    start_time: item.extensions.start_time,
+    end_time: item.extensions.end_time,
+    type: item.extensions.is_service ? 'service' : 'host',
+  }));
+}
+
 function cmkHostAction(baseUrl: string, hostname: string, action: string): Promise<void> {
   return cmkRequest(
     baseUrl,
@@ -385,6 +432,20 @@ function cmkHostAction(baseUrl: string, hostname: string, action: string): Promi
     {},
   );
 }
+
+// ---- Metrics (perfometer) ----
+
+export const metricsApi = {
+  getPerfometer(
+    backendId: string,
+    host: string,
+    service: string,
+    token: string,
+  ): Promise<PerfometerResult | null> {
+    const params = new URLSearchParams({ backend_id: backendId, host, service });
+    return request<PerfometerResult | null>(`/metrics/perfometer?${params}`, {}, token);
+  },
+};
 
 function cmkServiceAction(
   baseUrl: string,
@@ -485,6 +546,30 @@ export const cmkApi = {
       delete_type: 'params',
       host_name: hostname,
       service_descriptions: [serviceDescription],
+    });
+  },
+
+  listDowntimesHost(baseUrl: string, hostname: string): Promise<DowntimeEntry[]> {
+    return cmkGetDowntimes(baseUrl, { host_name: hostname, downtime_type: 'host' });
+  },
+
+  listDowntimesService(
+    baseUrl: string,
+    hostname: string,
+    serviceDescription: string,
+  ): Promise<DowntimeEntry[]> {
+    return cmkGetDowntimes(baseUrl, {
+      host_name: hostname,
+      service_description: serviceDescription,
+      downtime_type: 'service',
+    });
+  },
+
+  removeDowntimeById(baseUrl: string, downtimeId: string, siteId: string): Promise<void> {
+    return cmkRequest(baseUrl, '/domain-types/downtime/actions/delete/invoke', {
+      delete_type: 'by_id',
+      downtime_id: downtimeId,
+      site_id: siteId,
     });
   },
 

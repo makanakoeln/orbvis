@@ -89,6 +89,7 @@
       :state="states[hoverMenu.object.id]"
       :x="hoverMenu.x"
       :y="hoverMenu.y"
+      :backend-id="props.config.backend_id"
       :template="
         resolveTemplate(
           hoverMenu.object.hover_template,
@@ -158,6 +159,18 @@
       statesStore.refreshAfterCommand();
     "
   />
+
+  <!-- Remove downtime modal (multiple downtimes) -->
+  <RemoveDowntimeModal
+    v-if="removeDowntimeModal.visible && checkmkUrl"
+    :downtimes="removeDowntimeModal.downtimes"
+    :checkmk-url="checkmkUrl"
+    :object-name="removeDowntimeModal.objectName"
+    @close="
+      removeDowntimeModal.visible = false;
+      statesStore.refreshAfterCommand();
+    "
+  />
 </template>
 
 <script setup lang="ts">
@@ -169,7 +182,12 @@ import { cmkApi } from '@/api/client';
 import { useToast } from '@/composables/useToast';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
-import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api';
+import type {
+  BoardConfig,
+  BoardObject as BoardObjectType,
+  DowntimeEntry,
+  ObjectState,
+} from '@/types/api';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { resolveTemplate } from '@/utils/template';
 
@@ -180,6 +198,7 @@ import CommentModal from './CommentModal.vue';
 import ContextMenu from './ContextMenu.vue';
 import DowntimeModal from './DowntimeModal.vue';
 import HoverMenu from './HoverMenu.vue';
+import RemoveDowntimeModal from './RemoveDowntimeModal.vue';
 
 const { t } = useI18n();
 const toast = useToast();
@@ -549,6 +568,15 @@ function onContextMenuDuplicate() {
 const ackModalObject = ref<BoardObjectType | null>(null);
 const downtimeModalObject = ref<BoardObjectType | null>(null);
 const commentModalObject = ref<BoardObjectType | null>(null);
+const removeDowntimeModal = reactive<{
+  visible: boolean;
+  downtimes: DowntimeEntry[];
+  objectName: string;
+}>({
+  visible: false,
+  downtimes: [],
+  objectName: '',
+});
 
 function onContextMenuAck() {
   const obj = contextMenu.object;
@@ -566,12 +594,40 @@ async function onContextMenuRemoveDowntime() {
   const obj = contextMenu.object;
   closeMenus();
   if (!obj || !props.checkmkUrl) return;
+  let downtimes: DowntimeEntry[];
   try {
     if (obj.type === 'service' && obj.host_name && obj.service_description) {
-      await cmkApi.removeDowntimeService(props.checkmkUrl, obj.host_name, obj.service_description);
+      downtimes = await cmkApi.listDowntimesService(
+        props.checkmkUrl,
+        obj.host_name,
+        obj.service_description,
+      );
     } else if (obj.host_name) {
-      await cmkApi.removeDowntimeHost(props.checkmkUrl, obj.host_name);
+      downtimes = await cmkApi.listDowntimesHost(props.checkmkUrl, obj.host_name);
+    } else {
+      return;
     }
+  } catch {
+    toast.error(t('contextMenu.removeDowntimeFailed'));
+    return;
+  }
+  if (downtimes.length === 0) {
+    toast.error(t('contextMenu.noDowntimesFound'));
+    return;
+  }
+  if (downtimes.length === 1) {
+    await doRemoveDowntime(downtimes[0]);
+    return;
+  }
+  removeDowntimeModal.downtimes = downtimes;
+  removeDowntimeModal.objectName = obj.host_name ?? '';
+  removeDowntimeModal.visible = true;
+}
+
+async function doRemoveDowntime(dt: DowntimeEntry) {
+  if (!props.checkmkUrl) return;
+  try {
+    await cmkApi.removeDowntimeById(props.checkmkUrl, dt.id, dt.site_id);
     toast.success(t('contextMenu.removeDowntimeSuccess'));
     statesStore.refreshAfterCommand();
   } catch {

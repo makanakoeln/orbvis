@@ -91,6 +91,9 @@ from app.api.v1 import (
     users,
 )
 from app.api.v1 import (
+    metrics as metrics_api,
+)
+from app.api.v1 import (
     settings as settings_api,
 )
 from app.backends.test import TestBackend
@@ -693,6 +696,7 @@ app.include_router(roles.router, prefix="/api/v1/roles", tags=["roles"])
 app.include_router(backends.router, prefix="/api/v1/backends", tags=["backends"])
 app.include_router(settings_api.router, prefix="/api/v1/settings", tags=["settings"])
 app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
+app.include_router(metrics_api.router, prefix="/api/v1", tags=["metrics"])
 
 
 @app.get("/api/health")

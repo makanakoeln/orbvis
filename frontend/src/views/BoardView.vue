@@ -670,6 +670,7 @@
       :state="statesStore.states[worldmapHover.object.id]"
       :x="worldmapHover.x"
       :y="worldmapHover.y"
+      :backend-id="boardConfig?.backend_id"
       :template="
         resolveTemplate(
           worldmapHover.object.hover_template,
@@ -732,6 +733,16 @@
       :checkmk-url="checkmkUrl"
       @close="worldmapCommentModal = null"
     />
+    <RemoveDowntimeModal
+      v-if="worldmapRemoveDowntimeModal.visible && checkmkUrl"
+      :downtimes="worldmapRemoveDowntimeModal.downtimes"
+      :checkmk-url="checkmkUrl"
+      :object-name="worldmapRemoveDowntimeModal.objectName"
+      @close="
+        worldmapRemoveDowntimeModal.visible = false;
+        statesStore.refreshAfterCommand();
+      "
+    />
 
     <!-- Object Properties Modal -->
     <Teleport to="body">
@@ -786,6 +797,7 @@ import FlowBoard from '@/components/board/FlowBoard.vue';
 import HoverMenu from '@/components/board/HoverMenu.vue';
 import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue';
 import RadarCanvas from '@/components/board/RadarCanvas.vue';
+import RemoveDowntimeModal from '@/components/board/RemoveDowntimeModal.vue';
 import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
@@ -796,7 +808,7 @@ import { useBoardsStore } from '@/stores/boards';
 import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
-import type { BoardObject } from '@/types/api';
+import type { BoardObject, DowntimeEntry } from '@/types/api';
 import type { TourStep } from '@/types/tour';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { resolveTemplate } from '@/utils/template';
@@ -1015,6 +1027,15 @@ function onWorldmapCtxDuplicate() {
 const worldmapAckModal = ref<BoardObject | null>(null);
 const worldmapDowntimeModal = ref<BoardObject | null>(null);
 const worldmapCommentModal = ref<BoardObject | null>(null);
+const worldmapRemoveDowntimeModal = reactive<{
+  visible: boolean;
+  downtimes: DowntimeEntry[];
+  objectName: string;
+}>({
+  visible: false,
+  downtimes: [],
+  objectName: '',
+});
 
 function onWorldmapCtxDowntime() {
   const obj = worldmapCtxMenu.object;
@@ -1026,12 +1047,40 @@ async function onWorldmapCtxRemoveDowntime() {
   const obj = worldmapCtxMenu.object;
   worldmapCtxMenu.visible = false;
   if (!obj || !checkmkUrl.value) return;
+  let downtimes: DowntimeEntry[];
   try {
     if (obj.type === 'service' && obj.host_name && obj.service_description) {
-      await cmkApi.removeDowntimeService(checkmkUrl.value, obj.host_name, obj.service_description);
+      downtimes = await cmkApi.listDowntimesService(
+        checkmkUrl.value,
+        obj.host_name,
+        obj.service_description,
+      );
     } else if (obj.host_name) {
-      await cmkApi.removeDowntimeHost(checkmkUrl.value, obj.host_name);
+      downtimes = await cmkApi.listDowntimesHost(checkmkUrl.value, obj.host_name);
+    } else {
+      return;
     }
+  } catch {
+    toast.error(t('contextMenu.removeDowntimeFailed'));
+    return;
+  }
+  if (downtimes.length === 0) {
+    toast.error(t('contextMenu.noDowntimesFound'));
+    return;
+  }
+  if (downtimes.length === 1) {
+    await doWorldmapRemoveDowntime(downtimes[0]);
+    return;
+  }
+  worldmapRemoveDowntimeModal.downtimes = downtimes;
+  worldmapRemoveDowntimeModal.objectName = obj.host_name ?? '';
+  worldmapRemoveDowntimeModal.visible = true;
+}
+
+async function doWorldmapRemoveDowntime(dt: DowntimeEntry) {
+  if (!checkmkUrl.value) return;
+  try {
+    await cmkApi.removeDowntimeById(checkmkUrl.value, dt.id, dt.site_id);
     toast.success(t('contextMenu.removeDowntimeSuccess'));
     statesStore.refreshAfterCommand();
   } catch {

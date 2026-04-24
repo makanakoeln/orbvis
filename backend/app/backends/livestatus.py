@@ -392,6 +392,20 @@ class LivestatusBackend(BackendBase):
             **_parse_extra(r),
         )
 
+    async def get_service_perf_and_cmd(self, host: str, service: str) -> tuple[str, str]:
+        """Return (perf_data, check_command) for a single service."""
+        query = (
+            f"GET services\n"
+            f"Columns: perf_data check_command\n"
+            f"Filter: host_name = {_ls_escape(host)}\n"
+            f"Filter: description = {_ls_escape(service)}\n"
+        )
+        rows = await self._query(query)
+        if not rows:
+            return "", ""
+        r = rows[0]
+        return str(r[0]), str(r[1])
+
     async def get_host_hard_state(self, hostname: str) -> ObjectState:
         query = (
             f"GET hosts\n"
