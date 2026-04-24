@@ -152,7 +152,7 @@ def _load_plugins() -> _PluginData:
                     for src, rule in obj.translations.items():
                         if src.startswith("~"):
                             continue
-                        target = getattr(rule, "name", src) if hasattr(rule, "name") else src
+                        target = getattr(rule, "metric_name", src)
                         factor = float(getattr(rule, "factor", 1.0))
                         if target != src:
                             rn[src] = target
@@ -254,13 +254,43 @@ def _perfometer_matches(perf, metrics: dict[str, _RawMetric]) -> bool:
     return False
 
 
-def _resolve_bound(bound, metrics: dict[str, _RawMetric]) -> float:
-    """Resolve a FocusRange bound (Closed/Open) to a float value."""
-    val = bound.value
-    if isinstance(val, str):
-        m = metrics.get(val)
+def _resolve_quantity(q, metrics: dict[str, _RawMetric]) -> float:
+    """Resolve a cmk.graphing.v1 Quantity (literal, metric-ref, or expression) to a float."""
+    if isinstance(q, (int, float)):
+        return float(q)
+    if isinstance(q, str):
+        m = metrics.get(q)
         return m.value if m else 0.0
-    return float(val)
+    try:
+        from cmk.graphing.v1 import metrics as m_api
+    except ImportError:
+        return 0.0
+    if isinstance(q, m_api.MaximumOf):
+        m = metrics.get(q.metric_name)
+        return m.max if m and m.max is not None else 0.0
+    if isinstance(q, m_api.MinimumOf):
+        m = metrics.get(q.metric_name)
+        return m.min if m and m.min is not None else 0.0
+    if isinstance(q, m_api.WarningOf):
+        m = metrics.get(q.metric_name)
+        return m.warn if m and m.warn is not None else 0.0
+    if isinstance(q, m_api.CriticalOf):
+        m = metrics.get(q.metric_name)
+        return m.crit if m and m.crit is not None else 0.0
+    if isinstance(q, m_api.Constant):
+        return float(q.value)
+    if hasattr(q, "summands"):
+        return sum(_resolve_quantity(s, metrics) for s in q.summands)
+    if hasattr(q, "factors"):
+        result = 1.0
+        for f in q.factors:
+            result *= _resolve_quantity(f, metrics)
+        return result
+    return 0.0
+
+
+def _resolve_bound(bound, metrics: dict[str, _RawMetric]) -> float:
+    return _resolve_quantity(bound.value, metrics)
 
 
 def _metric_color(m: _RawMetric, pct: float) -> str:
