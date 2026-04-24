@@ -42,11 +42,11 @@ def _user_may_use() -> bool:
 
 def _user_is_admin() -> bool:
     if not _HAS_CMK_USER:
-        return True
+        return False
     try:
         return _cmk_user.may("orbvis.edit_all")
     except Exception:
-        return True
+        return False
 
 
 try:
