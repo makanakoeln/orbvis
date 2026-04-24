@@ -81,6 +81,70 @@ class MethodOverrideMiddleware:
         await self.app(scope, receive, send)
 
 
+class CSRFOriginMiddleware:
+    """Reject state-changing Cookie-authed requests from unexpected origins.
+
+    Bearer-token requests are CSRF-immune (browsers do not send the token
+    automatically). Cookie-authenticated state-changing requests, however,
+    CAN be triggered by a malicious third-party origin via a forged form or
+    fetch. We defend by requiring the Origin header to match one of the
+    configured allowed_origins for any POST/PUT/PATCH/DELETE that does not
+    carry an Authorization: Bearer header.
+
+    Paths excluded: /api/v1/auth/login (pre-auth; no session yet) and
+    /api/v1/auth/sso (Checkmk session cookie establishes the auth).
+    """
+
+    _STATE_CHANGING = frozenset(("POST", "PUT", "PATCH", "DELETE"))
+    _EXEMPT_PATHS = frozenset(("/api/v1/auth/login", "/api/v1/auth/sso"))
+
+    def __init__(self, app: ASGIApp, allowed_origins: list[str]) -> None:
+        self.app = app
+        self._allowed = frozenset(allowed_origins)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope["method"] not in self._STATE_CHANGING:
+            await self.app(scope, receive, send)
+            return
+        path = scope.get("path", "")
+        if path in self._EXEMPT_PATHS or not path.startswith("/api/"):
+            await self.app(scope, receive, send)
+            return
+
+        headers = {k.lower(): v for k, v in scope.get("headers", [])}
+        auth_hdr = headers.get(b"authorization", b"")
+        if auth_hdr.startswith(b"Bearer "):
+            # Bearer tokens are not sent automatically by browsers → no CSRF risk.
+            await self.app(scope, receive, send)
+            return
+        if not headers.get(b"cookie"):
+            # No ambient credentials → the request body is the only auth source
+            # and a forged form on another origin cannot synthesise it. This
+            # includes API clients hitting /api/v1/auth/refresh with a body.
+            await self.app(scope, receive, send)
+            return
+
+        origin = headers.get(b"origin", b"").decode("latin-1")
+        if origin and origin in self._allowed:
+            await self.app(scope, receive, send)
+            return
+
+        # Reject: missing or unexpected Origin on a cookie-authed mutation.
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 403,
+                "headers": [(b"content-type", b"application/json")],
+            }
+        )
+        await send(
+            {
+                "type": "http.response.body",
+                "body": b'{"detail":"Origin not allowed for this operation"}',
+            }
+        )
+
+
 from app.api.v1 import (
     auth,
     backends,
@@ -678,10 +742,21 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    # Explicit lists instead of "*" so CORS preflights only advertise surface
+    # we actually use. Keeps the attack surface minimal when the app is
+    # embedded or served from additional origins.
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Accept",
+        "Accept-Language",
+        "Authorization",
+        "Content-Language",
+        "Content-Type",
+        "X-HTTP-Method-Override",
+    ],
 )
 app.add_middleware(MethodOverrideMiddleware)
+app.add_middleware(CSRFOriginMiddleware, allowed_origins=settings.allowed_origins)
 app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
