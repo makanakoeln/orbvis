@@ -87,6 +87,8 @@ class _PluginData:
     renames: dict[str, dict[str, str]] = field(default_factory=dict)
     # check_plugin_name → {raw_metric_name → scale_factor}
     scales: dict[str, dict[str, float]] = field(default_factory=dict)
+    # metric_name → (notation_type_name, symbol) for formatting
+    units: dict[str, tuple[str, str]] = field(default_factory=dict)
 
 
 def _get_plugin_dirs() -> set[Path]:
@@ -138,6 +140,17 @@ def _load_plugins() -> _PluginData:
                 obj, (pf_api.Perfometer, pf_api.Bidirectional, pf_api.Stacked)
             ):
                 data.perfometers.append(obj)
+            elif (
+                attr.startswith("metric_")
+                and hasattr(obj, "name")
+                and hasattr(obj, "unit")
+                and hasattr(obj.unit, "notation")
+            ):
+                notation = obj.unit.notation
+                data.units[obj.name] = (
+                    type(notation).__name__,
+                    getattr(notation, "symbol", ""),
+                )
             elif (
                 attr.startswith("translation_")
                 and hasattr(obj, "translations")
@@ -321,29 +334,112 @@ def _metric_color(m: _RawMetric, pct: float) -> str:
 _REMAINDER_COLOR = "#2a2a2a"
 
 
-def _compute_simple_row(
+def _compute_simple_side(
     perf,
     metrics: dict[str, _RawMetric],
-) -> list[PerfometerSegment]:
+) -> tuple[float, str] | None:
+    """Return (pct, color) for a single Perfometer — not a full row."""
     names = _get_segment_names(perf.segments)
     present = [n for n in names if n in metrics]
     if not present:
-        return []
+        return None
     total = sum(metrics[n].value for n in present)
     lower = _resolve_bound(perf.focus_range.lower, metrics)
     upper = _resolve_bound(perf.focus_range.upper, metrics)
     if upper <= lower:
-        return []
+        return None
     pct = min(100.0, max(0.0, (total - lower) / (upper - lower) * 100))
-    first_metric = metrics[present[0]]
-    color = _metric_color(first_metric, pct)
+    color = _metric_color(metrics[present[0]], pct)
+    return (round(pct, 1), color)
+
+
+def _compute_simple_row(
+    perf,
+    metrics: dict[str, _RawMetric],
+) -> list[PerfometerSegment]:
+    side = _compute_simple_side(perf, metrics)
+    if side is None:
+        return []
+    pct, color = side
     return [
-        PerfometerSegment(pct=round(pct, 1), color=color),
+        PerfometerSegment(pct=pct, color=color),
         PerfometerSegment(pct=round(100 - pct, 1), color=_REMAINDER_COLOR),
     ]
 
 
-def _fmt_value(m: _RawMetric) -> str:
+def _compute_bidirectional_row(
+    perf,
+    metrics: dict[str, _RawMetric],
+) -> list[PerfometerSegment] | None:
+    """Single-row layout: [empty_left, left_fill, right_fill, empty_right], each half = 50%."""
+    left = _compute_simple_side(perf.left, metrics)
+    right = _compute_simple_side(perf.right, metrics)
+    if left is None or right is None:
+        return None
+    left_pct, left_color = left
+    right_pct, right_color = right
+    empty_left = 50 - 50 * left_pct / 100
+    fill_left = 50 * left_pct / 100
+    fill_right = 50 * right_pct / 100
+    empty_right = 50 - 50 * right_pct / 100
+    return [
+        PerfometerSegment(pct=round(empty_left, 1), color=_REMAINDER_COLOR),
+        PerfometerSegment(pct=round(fill_left, 1), color=left_color),
+        PerfometerSegment(pct=round(fill_right, 1), color=right_color),
+        PerfometerSegment(pct=round(empty_right, 1), color=_REMAINDER_COLOR),
+    ]
+
+
+def _format_si(value: float, symbol: str) -> str:
+    av = abs(value)
+    for prefix, factor in (
+        ("P", 1e15),
+        ("T", 1e12),
+        ("G", 1e9),
+        ("M", 1e6),
+        ("k", 1e3),
+    ):
+        if av >= factor:
+            return _trim(f"{value / factor:.2f}") + f" {prefix}{symbol}"
+    if av >= 1 or av == 0:
+        return _trim(f"{value:.2f}") + f" {symbol}"
+    for prefix, factor in (("m", 1e-3), ("µ", 1e-6), ("n", 1e-9)):
+        if av >= factor:
+            return _trim(f"{value / factor:.2f}") + f" {prefix}{symbol}"
+    return f"{value:.2e} {symbol}"
+
+
+def _format_iec(value: float, symbol: str) -> str:
+    av = abs(value)
+    for prefix, factor in (
+        ("Pi", 2**50),
+        ("Ti", 2**40),
+        ("Gi", 2**30),
+        ("Mi", 2**20),
+        ("Ki", 2**10),
+    ):
+        if av >= factor:
+            return _trim(f"{value / factor:.2f}") + f" {prefix}{symbol}"
+    return _trim(f"{value:.2f}") + f" {symbol}"
+
+
+def _trim(s: str) -> str:
+    """Trim trailing zeros after the decimal point: '5.00' → '5', '5.10' → '5.1'."""
+    return s.rstrip("0").rstrip(".") if "." in s else s
+
+
+def _fmt_value(name: str, m: _RawMetric, units: dict[str, tuple[str, str]]) -> str:
+    unit_info = units.get(name)
+    if unit_info:
+        notation_type, symbol = unit_info
+        if notation_type == "SINotation":
+            return _format_si(m.value, symbol)
+        if notation_type == "IECNotation":
+            return _format_iec(m.value, symbol)
+        if notation_type == "TimeNotation":
+            return _format_si(m.value, "s")
+        return _trim(f"{m.value:.2f}") + (f" {symbol}" if symbol else "")
+
     v = m.value
     unit = m.unit
     if unit in ("B", "bytes"):
@@ -355,15 +451,19 @@ def _fmt_value(m: _RawMetric) -> str:
         return f"{v:,.0f}{unit}"
     if v == int(v):
         return f"{int(v)}{unit}"
-    return f"{v:.2f}".rstrip("0").rstrip(".") + unit
+    return _trim(f"{v:.2f}") + unit
 
 
-def _label_from_segments(perf, metrics: dict[str, _RawMetric]) -> str:
+def _label_from_segments(
+    perf,
+    metrics: dict[str, _RawMetric],
+    units: dict[str, tuple[str, str]],
+) -> str:
     names = _get_segment_names(perf.segments)
     present = [n for n in names if n in metrics]
     if not present:
         return ""
-    return _fmt_value(metrics[present[0]])
+    return _fmt_value(present[0], metrics[present[0]], units)
 
 
 # ---------------------------------------------------------------------------
@@ -403,26 +503,20 @@ def compute_perfometer(perf_data_str: str, check_command: str) -> PerfometerResu
             if not row:
                 continue
             return PerfometerResult(
-                label=_label_from_segments(perf_def, metrics),
+                label=_label_from_segments(perf_def, metrics, plugins.units),
                 rows=[row],
             )
 
         if isinstance(perf_def, pf_api.Bidirectional):
-            rows = []
-            for side in (perf_def.left, perf_def.right):
-                if _perfometer_matches(side, metrics):
-                    row = _compute_simple_row(side, metrics)
-                    if row:
-                        rows.append(row)
-            if rows:
-                labels = []
-                for side in (perf_def.left, perf_def.right):
-                    if _perfometer_matches(side, metrics):
-                        labels.append(_label_from_segments(side, metrics))
-                return PerfometerResult(
-                    label=" / ".join(filter(None, labels)),
-                    rows=rows,
-                )
+            bi_row = _compute_bidirectional_row(perf_def, metrics)
+            if bi_row is None:
+                continue
+            left_label = _label_from_segments(perf_def.left, metrics, plugins.units)
+            right_label = _label_from_segments(perf_def.right, metrics, plugins.units)
+            return PerfometerResult(
+                label=" / ".join(filter(None, [left_label, right_label])),
+                rows=[bi_row],
+            )
 
         if isinstance(perf_def, pf_api.Stacked):
             rows = []
@@ -435,7 +529,7 @@ def compute_perfometer(perf_data_str: str, check_command: str) -> PerfometerResu
                 labels = []
                 for part in (perf_def.lower, perf_def.upper):
                     if _perfometer_matches(part, metrics):
-                        labels.append(_label_from_segments(part, metrics))
+                        labels.append(_label_from_segments(part, metrics, plugins.units))
                 return PerfometerResult(
                     label=" / ".join(filter(None, labels)),
                     rows=rows,
