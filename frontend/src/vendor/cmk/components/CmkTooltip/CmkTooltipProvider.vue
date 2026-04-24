@@ -7,16 +7,16 @@ conditions defined in the file COPYING, which is part of this source code packag
 import { TooltipProvider } from 'reka-ui';
 
 interface TooltipProviderProps {
-  delayDuration?: number;
+    delayDuration?: number;
 }
 
 const props = withDefaults(defineProps<TooltipProviderProps>(), {
-  delayDuration: 700,
+    delayDuration: 700,
 });
 </script>
 
 <template>
-  <TooltipProvider :delay-duration="props.delayDuration">
-    <slot />
-  </TooltipProvider>
+    <TooltipProvider :delay-duration="props.delayDuration">
+        <slot />
+    </TooltipProvider>
 </template>

@@ -13,26 +13,26 @@ defineEmits(['click']);
 </script>
 
 <template>
-  <button
-    type="button"
-    class="cmk-icon-button"
-    :title="title"
-    @click.prevent="
-      (e) => {
-        $emit('click', e);
-      }
-    "
-  >
-    <CmkIcon :name="name" :variant="variant" :size="size" :rotate="rotate" :title="title" />
-  </button>
+    <button
+        type="button"
+        class="cmk-icon-button"
+        :title="title"
+        @click.prevent="
+            (e) => {
+                $emit('click', e);
+            }
+        "
+    >
+        <CmkIcon :name="name" :variant="variant" :size="size" :rotate="rotate" :title="title" />
+    </button>
 </template>
 
 <style scoped>
 .cmk-icon-button {
-  margin: 0;
-  padding: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
 }
 </style>

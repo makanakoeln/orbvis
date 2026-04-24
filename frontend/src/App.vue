@@ -1,15 +1,15 @@
 <template>
-  <div v-if="showShell" class="flex h-screen bg-[var(--bg)] overflow-hidden">
-    <AppSidebar v-if="!auth.ssoActive && !auth.isCheckmkDeployment" />
-    <div class="flex-1 min-w-0 flex flex-col">
-      <router-view />
+    <div v-if="showShell" class="flex h-screen bg-[var(--bg)] overflow-hidden">
+        <AppSidebar v-if="!auth.ssoActive && !auth.isCheckmkDeployment" />
+        <div class="flex-1 min-w-0 flex flex-col">
+            <router-view />
+        </div>
+        <ChangelogModal v-if="showChangelog" @close="dismissChangelog" />
     </div>
-    <ChangelogModal v-if="showChangelog" @close="dismissChangelog" />
-  </div>
-  <div v-else class="flex flex-col h-screen w-screen overflow-hidden">
-    <router-view />
-  </div>
-  <ToastContainer />
+    <div v-else class="flex flex-col h-screen w-screen overflow-hidden">
+        <router-view />
+    </div>
+    <ToastContainer />
 </template>
 
 <script setup lang="ts">
@@ -28,19 +28,19 @@ const route = useRoute();
 const auth = useAuthStore();
 
 const showShell = computed(
-  () =>
-    auth.user !== null &&
-    !['login', 'change-password'].includes(route.name as string) &&
-    !route.meta.kiosk,
+    () =>
+        auth.user !== null &&
+        !['login', 'change-password'].includes(route.name as string) &&
+        !route.meta.kiosk,
 );
 
 const { changelogVisible: showChangelog, checkChangelog, dismissChangelog } = useChangelog();
 
 watch(
-  showShell,
-  (val) => {
-    if (val) checkChangelog();
-  },
-  { immediate: true },
+    showShell,
+    (val) => {
+        if (val) checkChangelog();
+    },
+    { immediate: true },
 );
 </script>

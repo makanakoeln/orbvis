@@ -5,15 +5,15 @@
  */
 
 :root {
-  --dimension-1: 1px;
-  --dimension-2: 2px;
-  --dimension-3: 4px;
-  --dimension-4: 8px;
-  --dimension-5: 12px;
-  --dimension-6: 16px;
-  --dimension-7: 20px;
-  --dimension-8: 24px;
-  --dimension-9: 28px;
-  --dimension-10: 32px;
-  --dimension-11: 36px;
+    --dimension-1: 1px;
+    --dimension-2: 2px;
+    --dimension-3: 4px;
+    --dimension-4: 8px;
+    --dimension-5: 12px;
+    --dimension-6: 16px;
+    --dimension-7: 20px;
+    --dimension-8: 24px;
+    --dimension-9: 28px;
+    --dimension-10: 32px;
+    --dimension-11: 36px;
 }

@@ -6,14 +6,14 @@ const LS_KEY = 'orbvis_changelog_seen';
 const visible = ref(false);
 
 export function useChangelog() {
-  function check() {
-    visible.value = localStorage.getItem(LS_KEY) !== __APP_VERSION__;
-  }
+    function check() {
+        visible.value = localStorage.getItem(LS_KEY) !== __APP_VERSION__;
+    }
 
-  function dismiss() {
-    localStorage.setItem(LS_KEY, __APP_VERSION__);
-    visible.value = false;
-  }
+    function dismiss() {
+        localStorage.setItem(LS_KEY, __APP_VERSION__);
+        visible.value = false;
+    }
 
-  return { changelogVisible: visible, checkChangelog: check, dismissChangelog: dismiss };
+    return { changelogVisible: visible, checkChangelog: check, dismissChangelog: dismiss };
 }

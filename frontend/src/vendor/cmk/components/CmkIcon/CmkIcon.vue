@@ -17,86 +17,86 @@ const { theme } = useTheme();
 const iconSrc = ref('');
 
 watchEffect(() => {
-  iconSrc.value = getIconPath(props.name, theme.value);
+    iconSrc.value = getIconPath(props.name, theme.value);
 });
 
 const getTransformRotate = () => {
-  return `rotate(${props.rotate || 0}deg)`;
+    return `rotate(${props.rotate || 0}deg)`;
 };
 </script>
 
 <template>
-  <img
-    class="cmk-icon"
-    :class="[
-      cmkIconVariants({
-        variant: props.variant,
-        colored: props.colored,
-        size: props.size || 'medium',
-      }),
-      { png: iconSrc.endsWith('.png') },
-    ]"
-    :src="iconSrc"
-    :title="title || undefined"
-    :alt="title || undefined"
-  />
+    <img
+        class="cmk-icon"
+        :class="[
+            cmkIconVariants({
+                variant: props.variant,
+                colored: props.colored,
+                size: props.size || 'medium',
+            }),
+            { png: iconSrc.endsWith('.png') },
+        ]"
+        :src="iconSrc"
+        :title="title || undefined"
+        :alt="title || undefined"
+    />
 </template>
 
 <style scoped>
 .cmk-icon {
-  margin: 0;
-  padding: 0;
-  vertical-align: baseline;
-  transform: v-bind('getTransformRotate()');
+    margin: 0;
+    padding: 0;
+    vertical-align: baseline;
+    transform: v-bind('getTransformRotate()');
 
-  &.cmk-icon--inline {
-    display: inline-block;
-    margin-right: var(--spacing-half);
-    vertical-align: middle;
-  }
+    &.cmk-icon--inline {
+        display: inline-block;
+        margin-right: var(--spacing-half);
+        vertical-align: middle;
+    }
 
-  &.cmk-icon--colorless {
-    filter: grayscale(100%);
-  }
+    &.cmk-icon--colorless {
+        filter: grayscale(100%);
+    }
 }
 
 .cmk-icon--xxsmall {
-  width: 8px;
-  height: 8px;
+    width: 8px;
+    height: 8px;
 }
 
 .cmk-icon--xsmall {
-  width: 10px;
-  height: 10px;
+    width: 10px;
+    height: 10px;
 }
 
 .cmk-icon--small {
-  width: 12px;
-  height: 12px;
+    width: 12px;
+    height: 12px;
 }
 
 .cmk-icon--medium {
-  width: 15px;
-  height: 15px;
+    width: 15px;
+    height: 15px;
 }
 
 .cmk-icon--large {
-  width: 18px;
-  height: 18px;
+    width: 18px;
+    height: 18px;
 }
 
 .cmk-icon--xlarge {
-  width: 20px;
-  height: 20px;
+    width: 20px;
+    height: 20px;
 }
 
 .cmk-icon--xxlarge {
-  width: 32px;
-  height: 32px;
+    width: 32px;
+    height: 32px;
 }
 
 .cmk-icon--xxxlarge {
-  width: 77px;
-  height: 77px;
+    width: 77px;
+    height: 77px;
 }
 </style>

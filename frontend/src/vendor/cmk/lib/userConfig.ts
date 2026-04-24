@@ -10,42 +10,42 @@ import { CmkSimpleError } from './error';
 const CONFIG_COOKIE = 'user_frontend_config';
 
 export function getUserFrontendConfig(): UserFrontendConfig | null {
-  const cookieValue = _getCookie(CONFIG_COOKIE);
+    const cookieValue = _getCookie(CONFIG_COOKIE);
 
-  if (cookieValue === null) {
-    return null;
-  }
+    if (cookieValue === null) {
+        return null;
+    }
 
-  try {
-    return JSON.parse(cookieValue);
-  } catch {
-    throw new CmkSimpleError('Failed to parse user frontend config cookie');
-  }
+    try {
+        return JSON.parse(cookieValue);
+    } catch {
+        throw new CmkSimpleError('Failed to parse user frontend config cookie');
+    }
 }
 
 export function isWarningDismissed(warning: string, deflt: boolean): boolean {
-  const config = getUserFrontendConfig();
-  if (config === null || !config.dismissed_warnings) {
-    return deflt;
-  }
-  return config.dismissed_warnings.includes(warning);
+    const config = getUserFrontendConfig();
+    if (config === null || !config.dismissed_warnings) {
+        return deflt;
+    }
+    return config.dismissed_warnings.includes(warning);
 }
 
 function _getCookie(cookieName: string): string | null {
-  if (document.cookie.length === 0) {
-    return null;
-  }
+    if (document.cookie.length === 0) {
+        return null;
+    }
 
-  let cookieStart = document.cookie.indexOf(`${cookieName}=`);
-  if (cookieStart === -1) {
-    return null;
-  }
+    let cookieStart = document.cookie.indexOf(`${cookieName}=`);
+    if (cookieStart === -1) {
+        return null;
+    }
 
-  cookieStart = cookieStart + cookieName.length + 1;
-  let cookieEnd = document.cookie.indexOf(';', cookieStart);
-  if (cookieEnd === -1) {
-    cookieEnd = document.cookie.length;
-  }
+    cookieStart = cookieStart + cookieName.length + 1;
+    let cookieEnd = document.cookie.indexOf(';', cookieStart);
+    if (cookieEnd === -1) {
+        cookieEnd = document.cookie.length;
+    }
 
-  return decodeURIComponent(document.cookie.substring(cookieStart, cookieEnd));
+    return decodeURIComponent(document.cookie.substring(cookieStart, cookieEnd));
 }

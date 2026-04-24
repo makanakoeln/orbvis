@@ -7,58 +7,58 @@ conditions defined in the file COPYING, which is part of this source code packag
 import { cva, type VariantProps } from 'class-variance-authority';
 
 const cmkSpaceVariants = cva('cmk-space', {
-  variants: {
-    direction: {
-      horizontal: 'cmk-space--direction-horizontal',
-      vertical: 'cmk-space--direction-vertical',
+    variants: {
+        direction: {
+            horizontal: 'cmk-space--direction-horizontal',
+            vertical: 'cmk-space--direction-vertical',
+        },
+        size: {
+            small: 'cmk-space--size-small',
+            medium: 'cmk-space--size-medium',
+        },
     },
-    size: {
-      small: 'cmk-space--size-small',
-      medium: 'cmk-space--size-medium',
+    defaultVariants: {
+        direction: 'horizontal',
+        size: 'medium',
     },
-  },
-  defaultVariants: {
-    direction: 'horizontal',
-    size: 'medium',
-  },
 });
 export type CmkSpaceVariants = VariantProps<typeof cmkSpaceVariants>;
 
 interface CmkSpaceProps {
-  size?: CmkSpaceVariants['size'];
-  direction?: CmkSpaceVariants['direction'];
+    size?: CmkSpaceVariants['size'];
+    direction?: CmkSpaceVariants['direction'];
 }
 defineProps<CmkSpaceProps>();
 </script>
 
 <template>
-  <div :class="cmkSpaceVariants({ size, direction })" />
+    <div :class="cmkSpaceVariants({ size, direction })" />
 </template>
 
 <style scoped>
 .cmk-space {
-  flex-shrink: 0;
+    flex-shrink: 0;
 }
 
 .cmk-space--direction-horizontal {
-  display: inline-block;
+    display: inline-block;
 
-  &.cmk-space--size-medium {
-    width: var(--spacing);
-  }
+    &.cmk-space--size-medium {
+        width: var(--spacing);
+    }
 
-  &.cmk-space--size-small {
-    width: var(--spacing-half);
-  }
+    &.cmk-space--size-small {
+        width: var(--spacing-half);
+    }
 }
 
 .cmk-space--direction-vertical {
-  &.cmk-space--size-medium {
-    height: var(--spacing);
-  }
+    &.cmk-space--size-medium {
+        height: var(--spacing);
+    }
 
-  &.cmk-space--size-small {
-    height: var(--spacing-half);
-  }
+    &.cmk-space--size-small {
+        height: var(--spacing-half);
+    }
 }
 </style>

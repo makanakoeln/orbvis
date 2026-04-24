@@ -8,53 +8,53 @@ import { TooltipContent, TooltipPortal, useForwardPropsEmits } from 'reka-ui';
 import { computed, type HTMLAttributes } from 'vue';
 
 defineOptions({
-  inheritAttrs: false,
+    inheritAttrs: false,
 });
 
 type TooltipContentEmits = {
-  escapeKeyDown: [event: KeyboardEvent];
-  pointerDownOutside: [event: Event];
+    escapeKeyDown: [event: KeyboardEvent];
+    pointerDownOutside: [event: Event];
 };
 
 const emits = defineEmits<TooltipContentEmits>();
 
 interface TooltipContentProps {
-  asChild?: boolean;
-  sideOffset?: number;
-  side?: 'right' | 'left' | 'top' | 'bottom';
-  align?: 'center' | 'end' | 'start';
-  class?: string;
-  avoidCollisions?: boolean;
-  usePortal?: boolean;
+    asChild?: boolean;
+    sideOffset?: number;
+    side?: 'right' | 'left' | 'top' | 'bottom';
+    align?: 'center' | 'end' | 'start';
+    class?: string;
+    avoidCollisions?: boolean;
+    usePortal?: boolean;
 }
 
 const props = withDefaults(
-  defineProps<TooltipContentProps & { class?: HTMLAttributes['class'] }>(),
-  {
-    sideOffset: 4,
-    class: '',
-    side: 'top',
-    align: 'center',
-    usePortal: false,
-  },
+    defineProps<TooltipContentProps & { class?: HTMLAttributes['class'] }>(),
+    {
+        sideOffset: 4,
+        class: '',
+        side: 'top',
+        align: 'center',
+        usePortal: false,
+    },
 );
 
 const delegatedProps = computed(() => {
-  const { class: _className, usePortal: _usePortal, ...delegated } = props;
+    const { class: _className, usePortal: _usePortal, ...delegated } = props;
 
-  return delegated;
+    return delegated;
 });
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>
-  <TooltipPortal :disabled="!usePortal">
-    <TooltipContent
-      v-bind="{ ...forwarded, avoidCollisions: avoidCollisions!!, asChild: asChild!! }"
-      :class="props.class"
-    >
-      <slot />
-    </TooltipContent>
-  </TooltipPortal>
+    <TooltipPortal :disabled="!usePortal">
+        <TooltipContent
+            v-bind="{ ...forwarded, avoidCollisions: avoidCollisions!!, asChild: asChild!! }"
+            :class="props.class"
+        >
+            <slot />
+        </TooltipContent>
+    </TooltipPortal>
 </template>

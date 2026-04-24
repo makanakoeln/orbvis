@@ -22,25 +22,25 @@ export type CmkMultitoneIconColor = VariantProps<typeof cmkMultitoneIconVariants
 export type IconSizeNames = keyof typeof iconSizes;
 
 export interface CustomIconColor {
-  custom: string;
+    custom: string;
 }
 
 export interface CmkIconProps {
-  /** @property {SimpleIcons} name - Name of the icon */
-  name: SimpleIcons;
+    /** @property {SimpleIcons} name - Name of the icon */
+    name: SimpleIcons;
 
-  /** @property {undefined | CmkIconVariants['variant']} variant - Styling variant of the icon */
-  variant?: CmkIconVariants['variant'] | undefined;
+    /** @property {undefined | CmkIconVariants['variant']} variant - Styling variant of the icon */
+    variant?: CmkIconVariants['variant'] | undefined;
 
-  /** @property {undefined | CmkIconVariants['size']} size - Width and height of the icon */
-  size?: IconSizeNames | undefined;
+    /** @property {undefined | CmkIconVariants['size']} size - Width and height of the icon */
+    size?: IconSizeNames | undefined;
 
-  /** @property {undefined | CmkIconVariants['colored']} colored - Whether the icon is colored or black and white */
-  colored?: CmkIconVariants['colored'] | undefined;
+    /** @property {undefined | CmkIconVariants['colored']} colored - Whether the icon is colored or black and white */
+    colored?: CmkIconVariants['colored'] | undefined;
 
-  /** @property {undefined | number} rotate - Transform rotate value in degrees */
-  rotate?: number | undefined;
+    /** @property {undefined | number} rotate - Transform rotate value in degrees */
+    rotate?: number | undefined;
 
-  /** @property {undefined | string} title - Title to be displayed on hover */
-  title?: string | undefined;
+    /** @property {undefined | string} title - Title to be displayed on hover */
+    title?: string | undefined;
 }

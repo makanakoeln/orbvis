@@ -6,32 +6,32 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 
 export function useTheme() {
-  const theme = ref(document.body.getAttribute('data-theme') || 'facelift');
+    const theme = ref(document.body.getAttribute('data-theme') || 'facelift');
 
-  let observer: MutationObserver | null = null;
+    let observer: MutationObserver | null = null;
 
-  onMounted(() => {
-    observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
-          theme.value = document.body.getAttribute('data-theme') || 'facelift';
+    onMounted(() => {
+        observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                    theme.value = document.body.getAttribute('data-theme') || 'facelift';
+                }
+            });
+        });
+
+        observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['data-theme'],
+        });
+    });
+
+    onUnmounted(() => {
+        if (observer) {
+            observer.disconnect();
         }
-      });
     });
 
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ['data-theme'],
-    });
-  });
-
-  onUnmounted(() => {
-    if (observer) {
-      observer.disconnect();
-    }
-  });
-
-  return {
-    theme,
-  };
+    return {
+        theme,
+    };
 }

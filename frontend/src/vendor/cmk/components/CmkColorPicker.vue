@@ -9,16 +9,16 @@ const data = defineModel('data', { type: String, default: '#ff0000' });
 </script>
 
 <template>
-  <input v-model="data" class="cmk-color-picker" type="color" />
+    <input v-model="data" class="cmk-color-picker" type="color" />
 </template>
 
 <style scoped>
 .cmk-color-picker {
-  margin-right: 10px;
-  width: 26px;
-  height: 30px;
-  padding: 0;
-  border: none;
-  background: transparent;
+    margin-right: 10px;
+    width: 26px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background: transparent;
 }
 </style>

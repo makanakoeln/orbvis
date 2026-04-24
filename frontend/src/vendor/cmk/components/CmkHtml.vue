@@ -8,36 +8,36 @@ import sanitizeHtml from 'sanitize-html';
 import { computed } from 'vue';
 
 const { allowedClasses } = defineProps<{
-  html: string | undefined;
-  allowedClasses?: sanitizeHtml.IOptions['allowedClasses'];
+    html: string | undefined;
+    allowedClasses?: sanitizeHtml.IOptions['allowedClasses'];
 }>();
 
 const options = computed<sanitizeHtml.IOptions>(() => ({
-  allowedClasses: allowedClasses,
-  // Following cmk/utils/escaping.py
-  allowedTags: [
-    'h1',
-    'h2',
-    'b',
-    'tt',
-    'i',
-    'u',
-    'hr',
-    'br',
-    'nobr',
-    'pre',
-    'sup',
-    'p',
-    'li',
-    'ul',
-    'ol',
-    'a',
-  ],
-  allowedSchemes: ['http', 'https', 'mailto'],
+    allowedClasses: allowedClasses,
+    // Following cmk/utils/escaping.py
+    allowedTags: [
+        'h1',
+        'h2',
+        'b',
+        'tt',
+        'i',
+        'u',
+        'hr',
+        'br',
+        'nobr',
+        'pre',
+        'sup',
+        'p',
+        'li',
+        'ul',
+        'ol',
+        'a',
+    ],
+    allowedSchemes: ['http', 'https', 'mailto'],
 }));
 </script>
 
 <template>
-  <!-- eslint-disable-next-line vue/no-v-html -->
-  <span v-if="html" v-html="sanitizeHtml(html, options)"></span>
+    <!-- eslint-disable-next-line vue/no-v-html -->
+    <span v-if="html" v-html="sanitizeHtml(html, options)"></span>
 </template>

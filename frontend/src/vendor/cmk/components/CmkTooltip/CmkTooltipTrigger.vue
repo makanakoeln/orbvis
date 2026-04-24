@@ -9,14 +9,14 @@ import { TooltipTrigger } from 'reka-ui';
 defineEmits(['click']);
 
 interface TooltipTriggerProps {
-  asChild?: boolean;
+    asChild?: boolean;
 }
 
 defineProps<TooltipTriggerProps>();
 </script>
 
 <template>
-  <TooltipTrigger :as-child="!!asChild" @click="(event: Event) => $emit('click', event)">
-    <slot />
-  </TooltipTrigger>
+    <TooltipTrigger :as-child="!!asChild" @click="(event: Event) => $emit('click', event)">
+        <slot />
+    </TooltipTrigger>
 </template>

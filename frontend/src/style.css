@@ -4,323 +4,323 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-warning: #ffd000;
-  --color-state-up: #00ff00;
-  --color-state-down: #ff0000;
-  --color-state-unreachable: #ff8800;
-  --color-state-ok: #00ff00;
-  --color-state-warning: #ffd000;
-  --color-state-critical: #ff0000;
-  --color-state-unknown: #ff8800;
-  --color-state-pending: #aaaaaa;
+    --color-warning: #ffd000;
+    --color-state-up: #00ff00;
+    --color-state-down: #ff0000;
+    --color-state-unreachable: #ff8800;
+    --color-state-ok: #00ff00;
+    --color-state-warning: #ffd000;
+    --color-state-critical: #ff0000;
+    --color-state-unknown: #ff8800;
+    --color-state-pending: #aaaaaa;
 }
 
 :root {
-  /* Restore Tailwind v4's --spacing after CMK variables.css overrides it with 10px */
-  --spacing: 0.25rem;
+    /* Restore Tailwind v4's --spacing after CMK variables.css overrides it with 10px */
+    --spacing: 0.25rem;
 
-  /* CMK layout variables */
-  --form-field-height: 24px;
-  --font-weight-default: 400;
-  --font-weight-bold: 700;
-  --font-size-normal: 13px;
-  --font-size-xlarge: 15px;
-  --border-radius: 4px;
+    /* CMK layout variables */
+    --form-field-height: 24px;
+    --font-weight-default: 400;
+    --font-weight-bold: 700;
+    --font-size-normal: 13px;
+    --font-size-xlarge: 15px;
+    --border-radius: 4px;
 
-  /* CMK ux-theme scale (dark/midnight-grey) */
-  --ux-theme-0: rgb(15 18 21);
-  --ux-theme-1: rgb(28 34 40);
-  --ux-theme-2: rgb(32 39 46);
-  --ux-theme-3: rgb(38 46 54);
-  --ux-theme-4: rgb(62 74 91);
-  --ux-theme-5: rgb(48 57 70);
-  --ux-theme-6: rgb(37 44 54);
-  --ux-theme-7: rgb(72 86 106);
-  --ux-theme-8: rgb(83 98 121);
-  --ux-theme-9: rgb(94 112 136);
-  --ux-theme-10: rgb(106 124 149);
+    /* CMK ux-theme scale (dark/midnight-grey) */
+    --ux-theme-0: rgb(15 18 21);
+    --ux-theme-1: rgb(28 34 40);
+    --ux-theme-2: rgb(32 39 46);
+    --ux-theme-3: rgb(38 46 54);
+    --ux-theme-4: rgb(62 74 91);
+    --ux-theme-5: rgb(48 57 70);
+    --ux-theme-6: rgb(37 44 54);
+    --ux-theme-7: rgb(72 86 106);
+    --ux-theme-8: rgb(83 98 121);
+    --ux-theme-9: rgb(94 112 136);
+    --ux-theme-10: rgb(106 124 149);
 
-  /* CMK toggle button group */
-  --toggle-button-group-active-bg-color: var(--ux-theme-10);
-  --toggle-button-group-inactive-bg-color: var(--ux-theme-6);
-  --toggle-button-group-border-color: var(--ux-theme-7);
-  --toggle-button-group-active-text-color: #fff;
-  --toggle-button-group-inactive-text-color: rgb(160 168 176);
-  --toggle-button-group-disabled-text-color: rgb(80 88 96);
-  --toggle-button-group-hover-bg-color: var(--ux-theme-7);
+    /* CMK toggle button group */
+    --toggle-button-group-active-bg-color: var(--ux-theme-10);
+    --toggle-button-group-inactive-bg-color: var(--ux-theme-6);
+    --toggle-button-group-border-color: var(--ux-theme-7);
+    --toggle-button-group-active-text-color: #fff;
+    --toggle-button-group-inactive-text-color: rgb(160 168 176);
+    --toggle-button-group-disabled-text-color: rgb(80 88 96);
+    --toggle-button-group-hover-bg-color: var(--ux-theme-7);
 
-  /* CMK button token defaults (active before Vue sets body[data-theme]) */
-  --default-button-primary-color: rgb(21 209 160);
-  --button-primary-border-color: rgb(21 209 160);
-  --button-primary-text-color: rgb(0 0 0);
-  --default-button-danger-color: rgb(229 63 63);
-  --button-danger-border-color: rgb(229 63 63);
-  --button-danger-text-color: rgb(255 255 255);
-  --default-form-element-bg-color: #27272a;
-  --default-form-element-border-color: #71717a;
-  --font-color: #f4f4f5;
-  --font-color-dimmed: #71717a;
-  --default-bg-color: #09090b;
-  --default-nav-bg-color: #111827;
-  --default-nav-border-color: #27272a;
-  --default-border-color: rgb(255 255 255 / 6%);
-  --color-up: #0f0;
-  --color-down: #f00;
-  --color-unreachable: #f80;
-  --color-ok: #0f0;
-  --color-warning: #ffd000;
-  --color-critical: #f00;
-  --color-unknown: #f80;
-  --color-pending: #aaa;
+    /* CMK button token defaults (active before Vue sets body[data-theme]) */
+    --default-button-primary-color: rgb(21 209 160);
+    --button-primary-border-color: rgb(21 209 160);
+    --button-primary-text-color: rgb(0 0 0);
+    --default-button-danger-color: rgb(229 63 63);
+    --button-danger-border-color: rgb(229 63 63);
+    --button-danger-text-color: rgb(255 255 255);
+    --default-form-element-bg-color: #27272a;
+    --default-form-element-border-color: #71717a;
+    --font-color: #f4f4f5;
+    --font-color-dimmed: #71717a;
+    --default-bg-color: #09090b;
+    --default-nav-bg-color: #111827;
+    --default-nav-border-color: #27272a;
+    --default-border-color: rgb(255 255 255 / 6%);
+    --color-up: #0f0;
+    --color-down: #f00;
+    --color-unreachable: #f80;
+    --color-ok: #0f0;
+    --color-warning: #ffd000;
+    --color-critical: #f00;
+    --color-unknown: #f80;
+    --color-pending: #aaa;
 
-  /* OrbVis semantic tokens — mapped to CMK variables, fallback = modern-dark defaults */
-  --bg: var(--default-bg-color, #09090b);
-  --bg-surface: var(--ux-theme-3, #18181b);
-  --bg-input: var(--default-form-element-bg-color, #27272a);
-  --bg-glass: rgb(24 24 27 / 92%);
-  --bg-hover: var(--input-hover-bg-color, rgb(39 39 42 / 60%));
-  --border: var(--default-border-color, rgb(255 255 255 / 6%));
-  --text: var(--font-color, #f4f4f5);
-  --text-muted: var(--font-color-dimmed, #71717a);
-  --accent: var(--color-corporate-green-50, rgb(21 209 160));
-  --gauge-track: #3f3f46;
+    /* OrbVis semantic tokens — mapped to CMK variables, fallback = modern-dark defaults */
+    --bg: var(--default-bg-color, #09090b);
+    --bg-surface: var(--ux-theme-3, #18181b);
+    --bg-input: var(--default-form-element-bg-color, #27272a);
+    --bg-glass: rgb(24 24 27 / 92%);
+    --bg-hover: var(--input-hover-bg-color, rgb(39 39 42 / 60%));
+    --border: var(--default-border-color, rgb(255 255 255 / 6%));
+    --text: var(--font-color, #f4f4f5);
+    --text-muted: var(--font-color-dimmed, #71717a);
+    --accent: var(--color-corporate-green-50, rgb(21 209 160));
+    --gauge-track: #3f3f46;
 
-  /* Gadget-Tokens — Gadgets sind intentional immer dunkel (hardware look), kein .light-Override */
-  --gadget-bg: rgb(0 0 0 / 55%);
-  --gadget-ring: rgb(255 255 255 / 15%);
-  --gadget-bar-bg: rgb(0 0 0 / 50%);
-  --gadget-track: rgb(255 255 255 / 20%);
-  --gadget-text: #f4f4f5;
-  --gadget-text-dim: rgb(255 255 255 / 70%);
-  --shadow-text: 0 1px 3px rgb(0 0 0 / 90%);
+    /* Gadget-Tokens — Gadgets sind intentional immer dunkel (hardware look), kein .light-Override */
+    --gadget-bg: rgb(0 0 0 / 55%);
+    --gadget-ring: rgb(255 255 255 / 15%);
+    --gadget-bar-bg: rgb(0 0 0 / 50%);
+    --gadget-track: rgb(255 255 255 / 20%);
+    --gadget-text: #f4f4f5;
+    --gadget-text-dim: rgb(255 255 255 / 70%);
+    --shadow-text: 0 1px 3px rgb(0 0 0 / 90%);
 }
 
 /* Override browser autofill yellow highlight */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
-  box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
-  -webkit-text-fill-color: var(--text) !important;
-  transition: background-color 5000s ease-in-out 0s;
+    box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+    -webkit-text-fill-color: var(--text) !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
 .light {
-  --bg: #fafafa;
-  --bg-surface: #fff;
-  --bg-input: #e4e4e7;
-  --bg-glass: rgb(255 255 255 / 92%);
-  --bg-hover: rgb(0 0 0 / 7%);
-  --border: rgb(0 0 0 / 15%);
-  --text: #18181b;
-  --text-muted: #52525b;
-  --accent: var(--color-corporate-green-50, rgb(21 209 160));
-  --gauge-track: #d4d4d8;
+    --bg: #fafafa;
+    --bg-surface: #fff;
+    --bg-input: #e4e4e7;
+    --bg-glass: rgb(255 255 255 / 92%);
+    --bg-hover: rgb(0 0 0 / 7%);
+    --border: rgb(0 0 0 / 15%);
+    --text: #18181b;
+    --text-muted: #52525b;
+    --accent: var(--color-corporate-green-50, rgb(21 209 160));
+    --gauge-track: #d4d4d8;
 }
 
 /* Light theme: remap dark-only zinc shades to readable equivalents */
 
 /* Text */
 .light .text-zinc-200 {
-  color: #27272a;
+    color: #27272a;
 }
 
 .light .text-zinc-300 {
-  color: #3f3f46;
+    color: #3f3f46;
 }
 
 .light .text-zinc-400 {
-  color: #52525b;
+    color: #52525b;
 }
 
 .light .text-zinc-500 {
-  color: #71717a;
+    color: #71717a;
 }
 
 .light .text-zinc-600 {
-  color: #52525b;
+    color: #52525b;
 }
 
 .light .text-zinc-700 {
-  color: #3f3f46;
+    color: #3f3f46;
 }
 
 .light .text-zinc-800 {
-  color: #27272a;
+    color: #27272a;
 }
 
 .light .text-zinc-900 {
-  color: #18181b;
+    color: #18181b;
 }
 
 .light .text-zinc-950 {
-  color: #09090b;
+    color: #09090b;
 }
 
 /* Hover text */
 .light .hover\:text-zinc-200:hover {
-  color: #18181b;
+    color: #18181b;
 }
 
 .light .hover\:text-zinc-300:hover {
-  color: #27272a;
+    color: #27272a;
 }
 
 .light .hover\:text-zinc-400:hover {
-  color: #3f3f46;
+    color: #3f3f46;
 }
 
 /* Backgrounds */
 .light .bg-zinc-700 {
-  background-color: #e4e4e7;
+    background-color: #e4e4e7;
 }
 
 .light .bg-zinc-800 {
-  background-color: #f4f4f5;
+    background-color: #f4f4f5;
 }
 
 .light .bg-zinc-900 {
-  background-color: #fafafa;
+    background-color: #fafafa;
 }
 
 .light .bg-zinc-950 {
-  background-color: #fff;
+    background-color: #fff;
 }
 
 .light .bg-zinc-700\/50 {
-  background-color: rgb(212 212 216 / 60%);
+    background-color: rgb(212 212 216 / 60%);
 }
 
 .light .bg-zinc-700\/60 {
-  background-color: rgb(212 212 216 / 75%);
+    background-color: rgb(212 212 216 / 75%);
 }
 
 .light .bg-zinc-800\/70 {
-  background-color: rgb(244 244 245 / 85%);
+    background-color: rgb(244 244 245 / 85%);
 }
 
 /* Hover backgrounds */
 .light .hover\:bg-zinc-700:hover {
-  background-color: #e4e4e7;
+    background-color: #e4e4e7;
 }
 
 .light .hover\:bg-zinc-700\/60:hover {
-  background-color: rgb(212 212 216 / 75%);
+    background-color: rgb(212 212 216 / 75%);
 }
 
 /* Borders */
 .light .border-zinc-500 {
-  border-color: #a1a1aa;
+    border-color: #a1a1aa;
 }
 
 .light .border-zinc-600 {
-  border-color: #a1a1aa;
+    border-color: #a1a1aa;
 }
 
 .light .border-zinc-700 {
-  border-color: #d4d4d8;
+    border-color: #d4d4d8;
 }
 
 .light .border-zinc-700\/60 {
-  border-color: rgb(212 212 216 / 70%);
+    border-color: rgb(212 212 216 / 70%);
 }
 
 /* Hover borders */
 .light .hover\:border-zinc-500:hover {
-  border-color: #71717a;
+    border-color: #71717a;
 }
 
 /* Rings */
 .light .ring-zinc-500 {
-  --tw-ring-color: #71717a;
+    --tw-ring-color: #71717a;
 }
 
 .light .ring-zinc-600 {
-  --tw-ring-color: #a1a1aa;
+    --tw-ring-color: #a1a1aa;
 }
 
 .light .ring-zinc-700 {
-  --tw-ring-color: #a1a1aa;
+    --tw-ring-color: #a1a1aa;
 }
 
 .light .ring-zinc-700\/60 {
-  --tw-ring-color: rgb(161 161 170 / 60%);
+    --tw-ring-color: rgb(161 161 170 / 60%);
 }
 
 /* Hover rings */
 .light .hover\:ring-zinc-500:hover {
-  --tw-ring-color: #71717a;
+    --tw-ring-color: #71717a;
 }
 
 .light .hover\:ring-zinc-600:hover {
-  --tw-ring-color: #a1a1aa;
+    --tw-ring-color: #a1a1aa;
 }
 
 /* Placeholder */
 .light .placeholder-zinc-600::placeholder {
-  color: #a1a1aa;
+    color: #a1a1aa;
 }
 
 /* ring-offset color (selection ring on icons) */
 .light .ring-offset-zinc-950 {
-  --tw-ring-offset-color: #fafafa;
+    --tw-ring-offset-color: #fafafa;
 }
 
 html {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 body {
-  background-color: var(--bg);
-  color: var(--text);
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  margin: 0;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    margin: 0;
 }
 
 /* SVG icons loaded as <img> lose currentColor — invert makes black strokes white in dark mode.
    Only apply to monochrome SVGs (Tabler Icons style), not to coloured bitmaps. */
 .dark .svg-icon {
-  filter: invert(1);
+    filter: invert(1);
 }
 
 /* Custom scrollbars — dark theme */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+    width: 6px;
+    height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #52525b;
-  border-radius: 3px;
+    background: #52525b;
+    border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #71717a;
+    background: #71717a;
 }
 
 ::-webkit-scrollbar-corner {
-  background: transparent;
+    background: transparent;
 }
 
 * {
-  scrollbar-width: thin;
-  scrollbar-color: #52525b transparent;
+    scrollbar-width: thin;
+    scrollbar-color: #52525b transparent;
 }
 
 /* Custom scrollbars — light theme */
 .light ::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
+    background: #d4d4d8;
 }
 
 .light ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1aa;
+    background: #a1a1aa;
 }
 
 .light * {
-  scrollbar-color: #d4d4d8 transparent;
+    scrollbar-color: #d4d4d8 transparent;
 }
 
 /* ── CMK component shims ────────────────────────────────────────────────────
@@ -329,55 +329,55 @@ body {
    ──────────────────────────────────────────────────────────────────────── */
 
 input.cmk-input {
-  background: var(--default-form-element-bg-color);
-  border: 1px solid var(--default-form-element-border-color);
-  border-radius: 6px;
-  color: var(--font-color);
-  padding: 5px 10px;
-  font-size: 13px;
-  line-height: 1.5;
-  outline: none;
-  transition: box-shadow 0.15s;
+    background: var(--default-form-element-bg-color);
+    border: 1px solid var(--default-form-element-border-color);
+    border-radius: 6px;
+    color: var(--font-color);
+    padding: 5px 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    outline: none;
+    transition: box-shadow 0.15s;
 }
 
 input.cmk-input:focus {
-  box-shadow: 0 0 0 2px var(--color-corporate-green-50);
-  border-color: var(--color-corporate-green-50);
+    box-shadow: 0 0 0 2px var(--color-corporate-green-50);
+    border-color: var(--color-corporate-green-50);
 }
 
 input.cmk-input::placeholder {
-  color: var(--font-color-dimmed);
+    color: var(--font-color-dimmed);
 }
 
 input.cmk-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .cmk-checkbox__button {
-  width: 14px;
-  height: 14px;
-  border: 1px solid var(--default-form-element-border-color);
-  border-radius: 3px;
-  background: var(--default-form-element-bg-color);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  accent-color: var(--color-corporate-green-50);
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--default-form-element-border-color);
+    border-radius: 3px;
+    background: var(--default-form-element-bg-color);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    accent-color: var(--color-corporate-green-50);
 }
 
 .cmk-checkbox__button[data-state='checked'] {
-  background: var(--color-corporate-green-50);
-  border-color: var(--color-corporate-green-50);
+    background: var(--color-corporate-green-50);
+    border-color: var(--color-corporate-green-50);
 }
 
 .cmk-checkbox__indicator {
-  color: #000;
+    color: #000;
 }
 
 .cmk-checkbox__label {
-  color: var(--font-color);
-  font-size: 13px;
+    color: var(--font-color);
+    font-size: 13px;
 }

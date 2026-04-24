@@ -7,11 +7,11 @@ conditions defined in the file COPYING, which is part of this source code packag
 import { TooltipRoot } from 'reka-ui';
 
 type TooltipEmits = {
-  'update:open': [value: boolean];
+    'update:open': [value: boolean];
 };
 interface TooltipProps {
-  open: boolean;
-  disableClosingTrigger?: boolean;
+    open: boolean;
+    disableClosingTrigger?: boolean;
 }
 
 defineProps<TooltipProps>();
@@ -19,11 +19,11 @@ const emit = defineEmits<TooltipEmits>();
 </script>
 
 <template>
-  <TooltipRoot
-    :open="open"
-    :disable-closing-trigger="disableClosingTrigger ?? false"
-    @update:open="emit('update:open', $event)"
-  >
-    <slot />
-  </TooltipRoot>
+    <TooltipRoot
+        :open="open"
+        :disable-closing-trigger="disableClosingTrigger ?? false"
+        @update:open="emit('update:open', $event)"
+    >
+        <slot />
+    </TooltipRoot>
 </template>

@@ -7,49 +7,52 @@ conditions defined in the file COPYING, which is part of this source code packag
 import { cva, type VariantProps } from 'class-variance-authority';
 
 const scrollContainerVariants = cva('', {
-  variants: {
-    type: {
-      inner: '', // Inner style is default and defined in global css via cmk-vue-app class
-      outer: 'cmk-scroll-container--outer',
+    variants: {
+        type: {
+            inner: '', // Inner style is default and defined in global css via cmk-vue-app class
+            outer: 'cmk-scroll-container--outer',
+        },
     },
-  },
-  defaultVariants: {
-    type: 'inner',
-  },
+    defaultVariants: {
+        type: 'inner',
+    },
 });
 
 export type ScrollContainerVariants = VariantProps<typeof scrollContainerVariants>;
 
 export interface ScrollContainerProps {
-  maxHeight?: string;
-  height?: string;
-  type?: ScrollContainerVariants['type'];
+    maxHeight?: string;
+    height?: string;
+    type?: ScrollContainerVariants['type'];
 }
 const { type, maxHeight = '100%', height = '100%' } = defineProps<ScrollContainerProps>();
 </script>
 
 <template>
-  <div :style="{ maxHeight, height, overflow: 'auto' }" :class="scrollContainerVariants({ type })">
-    <slot></slot>
-  </div>
+    <div
+        :style="{ maxHeight, height, overflow: 'auto' }"
+        :class="scrollContainerVariants({ type })"
+    >
+        <slot></slot>
+    </div>
 </template>
 
 <style scoped>
 .cmk-scroll-container--outer::-webkit-scrollbar {
-  width: 10px;
+    width: 10px;
 }
 
 .cmk-scroll-container--outer::-webkit-scrollbar-track {
-  background: transparent;
-  border-top-right-radius: 4px;
-  border-bottom-right-radius: 4px;
+    background: transparent;
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
 }
 
 .cmk-scroll-container--outer::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-color);
-  border-radius: 16px;
-  border: 3px solid transparent;
-  background-clip: content-box;
-  width: 8px;
+    background-color: var(--scrollbar-color);
+    border-radius: 16px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+    width: 8px;
 }
 </style>
