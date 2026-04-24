@@ -49,12 +49,12 @@ async def test_get_nonexistent_board(client, admin_token):
 @pytest.mark.parametrize(
     "bad_name",
     [
-        "../etc-passwd",    # path traversal attempt
-        "foo bar",          # whitespace
-        "foo/bar",          # slash
-        "foo.bar",          # dot (could match board.mk filename tricks)
-        "foo$",             # shell metacharacter
-        "x" * 101,          # over length limit
+        "../etc-passwd",  # path traversal attempt
+        "foo bar",  # whitespace
+        "foo/bar",  # slash
+        "foo.bar",  # dot (could match board.mk filename tricks)
+        "foo$",  # shell metacharacter
+        "x" * 101,  # over length limit
     ],
 )
 @pytest.mark.asyncio
