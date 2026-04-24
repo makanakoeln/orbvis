@@ -18,6 +18,7 @@ from fastapi import (
 from app.api.v1.deps import can_view_board as _can_view_board
 from app.api.v1.deps import can_view_board_by_name as _can_view_board_by_name
 from app.api.v1.deps import get_current_user
+from app.api.v1.types import BoardName
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.ratelimit import ws_connect_limiter
@@ -97,7 +98,9 @@ async def _broadcast_loop(board_name: str) -> None:
 
 
 @router.get("/boards/{name}/states", response_model=MapStates)
-async def get_board_states(name: str, current_user: User = Depends(get_current_user)) -> MapStates:
+async def get_board_states(
+    name: BoardName, current_user: User = Depends(get_current_user)
+) -> MapStates:
     cfg = board_service.get_board(name)
     if cfg is None:
         raise HTTPException(
@@ -113,7 +116,7 @@ async def get_board_states(name: str, current_user: User = Depends(get_current_u
 
 @router.websocket("/ws/boards/{name}")
 async def websocket_board_states(
-    name: str,
+    name: BoardName,
     websocket: WebSocket,
 ) -> None:
     """WebSocket endpoint: streams state updates for a board.

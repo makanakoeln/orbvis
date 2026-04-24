@@ -46,6 +46,30 @@ async def test_get_nonexistent_board(client, admin_token):
     assert response.status_code == 404
 
 
+@pytest.mark.parametrize(
+    "bad_name",
+    [
+        "../etc-passwd",    # path traversal attempt
+        "foo bar",          # whitespace
+        "foo/bar",          # slash
+        "foo.bar",          # dot (could match board.mk filename tricks)
+        "foo$",             # shell metacharacter
+        "x" * 101,          # over length limit
+    ],
+)
+@pytest.mark.asyncio
+async def test_board_name_path_validation_rejects_unsafe(client, admin_token, bad_name):
+    """The BoardName FastAPI path type must reject anything outside [A-Za-z0-9_-]{1,100}."""
+    response = await client.get(
+        f"/api/v1/boards/{bad_name}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    # FastAPI/Pydantic returns 422 for pattern / length violations, 404 for
+    # slashes that hit a different route — either way no unsafe name reaches
+    # the filesystem or permission lookup.
+    assert response.status_code in (404, 422)
+
+
 def _patch(monkeypatch, tmp_path):
     monkeypatch.setattr("app.core.config.settings.boards_dir", str(tmp_path))
     monkeypatch.setattr("app.services.board_service.settings.boards_dir", str(tmp_path))

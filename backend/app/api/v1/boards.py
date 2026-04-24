@@ -17,6 +17,7 @@ from app.api.v1.deps import (
     get_current_user,
     require_admin,
 )
+from app.api.v1.types import BoardName
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.role import Role
@@ -112,7 +113,7 @@ async def create_board(data: BoardCreate, _: User = Depends(require_admin)) -> B
 
 
 @router.get("/{name}", response_model=BoardConfig)
-async def get_board(name: str, current_user: User = Depends(get_current_user)) -> BoardConfig:
+async def get_board(name: BoardName, current_user: User = Depends(get_current_user)) -> BoardConfig:
     _require_board_view(name, current_user)
     cfg = board_service.get_board(name)
     if cfg is None:
@@ -124,7 +125,7 @@ async def get_board(name: str, current_user: User = Depends(get_current_user)) -
 
 @router.put("/{name}", response_model=BoardConfig)
 async def update_board(
-    name: str, data: BoardUpdate, current_user: User = Depends(get_current_user)
+    name: BoardName, data: BoardUpdate, current_user: User = Depends(get_current_user)
 ) -> BoardConfig:
     _require_board_edit(name, current_user)
     _require_not_readonly(name)
@@ -137,7 +138,7 @@ async def update_board(
 
 
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_board(name: str, _: User = Depends(require_admin)) -> None:
+async def delete_board(name: BoardName, _: User = Depends(require_admin)) -> None:
     if not board_service.delete_board(name):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
@@ -145,7 +146,9 @@ async def delete_board(name: str, _: User = Depends(require_admin)) -> None:
 
 
 @router.post("/{name}/clone", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
-async def clone_board(name: str, data: BoardClone, _: User = Depends(require_admin)) -> BoardConfig:
+async def clone_board(
+    name: BoardName, data: BoardClone, _: User = Depends(require_admin)
+) -> BoardConfig:
     try:
         return board_service.clone_board(name, data.new_name, data.alias)
     except ValueError as exc:
@@ -188,7 +191,7 @@ async def import_cfg(
 
 @router.get("/{name}/permissions", response_model=BoardPermissionsRead)
 async def get_board_permissions(
-    name: str,
+    name: BoardName,
     _: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> BoardPermissionsRead:
@@ -214,7 +217,7 @@ async def get_board_permissions(
 
 @router.post("/{name}/background")
 async def upload_background(
-    name: str,
+    name: BoardName,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
 ) -> JSONResponse:
@@ -266,7 +269,9 @@ async def upload_background(
 
 
 @router.delete("/{name}/background", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_background(name: str, current_user: User = Depends(get_current_user)) -> None:
+async def delete_background(
+    name: BoardName, current_user: User = Depends(get_current_user)
+) -> None:
     _require_board_edit(name, current_user)
     _require_not_readonly(name)
     if board_service.get_board(name) is None:
@@ -284,7 +289,7 @@ async def delete_background(name: str, current_user: User = Depends(get_current_
 
 @router.post("/{name}/objects", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
 async def add_object(
-    name: str, obj: BoardObject, current_user: User = Depends(get_current_user)
+    name: BoardName, obj: BoardObject, current_user: User = Depends(get_current_user)
 ) -> BoardConfig:
     _require_board_edit(name, current_user)
     _require_not_readonly(name)
@@ -301,7 +306,7 @@ async def add_object(
 
 @router.put("/{name}/objects/{obj_id}", response_model=BoardObject)
 async def update_object(
-    name: str,
+    name: BoardName,
     obj_id: str,
     updates: BoardObjectUpdate,
     current_user: User = Depends(get_current_user),
@@ -316,7 +321,7 @@ async def update_object(
 
 @router.delete("/{name}/objects/{obj_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_object(
-    name: str, obj_id: str, current_user: User = Depends(get_current_user)
+    name: BoardName, obj_id: str, current_user: User = Depends(get_current_user)
 ) -> None:
     _require_board_edit(name, current_user)
     _require_not_readonly(name)
