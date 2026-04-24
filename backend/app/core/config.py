@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     # CORS
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
+    # mypy's pydantic plugin doesn't model the @property-under-@computed_field
+    # stacking — the "prop-decorator" error-code is a known mypy limitation, not
+    # a real typing issue. Keep the ignore scoped to the exact code.
     @computed_field  # type: ignore[prop-decorator]
     @property
     def sync_database_url(self) -> str:

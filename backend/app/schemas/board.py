@@ -131,7 +131,11 @@ class BoardObject(BaseModel):
         # Backward compat: old saved configs may have a plain string value
         if isinstance(v, str):
             return [v] if v else None
-        return v  # type: ignore[return-value]
+        if v is None:
+            return None
+        if isinstance(v, list):
+            return [s for s in v if isinstance(s, str)]
+        return None
 
     # Line custom colors
     line_color: str | None = None
