@@ -325,7 +325,13 @@
       </div>
 
       <!-- Radar -->
-      <RadarCanvas v-else-if="isRadar" :states="statesStore.states" :checkmk-url="checkmkUrl" />
+      <RadarCanvas
+        v-else-if="isRadar"
+        :states="statesStore.states"
+        :checkmk-url="checkmkUrl"
+        :backend-id="boardConfig?.backend_id"
+        :readonly="isKiosk || boardConfig?.readonly"
+      />
 
       <!-- Flowmap -->
       <div v-else-if="isFlowmap" class="flex-1 relative overflow-hidden">
@@ -1214,7 +1220,7 @@ function onObjectClick(obj: BoardObject, _event?: MouseEvent) {
     editor.selectObject(obj.id);
     return;
   }
-  if (boardConfig.value?.click_action === 'none') return;
+  if (boardConfig.value?.readonly || boardConfig.value?.click_action === 'none') return;
   if (obj.url) {
     openUrl(obj.url, obj.url_target || '_blank');
     return;

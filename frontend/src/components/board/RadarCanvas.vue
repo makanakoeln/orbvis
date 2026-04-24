@@ -50,11 +50,15 @@
         class="rounded-xl p-3.5 ring-1 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
         :class="[
           cardClass(state.state),
-          buildCheckmkUrlFromState(state, props.checkmkUrl ?? null)
-            ? 'cursor-pointer'
-            : 'cursor-default',
+          props.readonly
+            ? 'cursor-default'
+            : buildCheckmkUrlFromState(state, props.checkmkUrl ?? null)
+              ? 'cursor-pointer'
+              : 'cursor-default',
         ]"
         @click="onCardClick(state)"
+        @mouseenter="onCardHover($event, state)"
+        @mouseleave="closeHoverMenu()"
       >
         <!-- Name -->
         <div class="flex items-start justify-between gap-2 mb-2">
@@ -118,23 +122,72 @@
         </p>
       </div>
     </div>
+
+    <!-- Hover popup -->
+    <HoverMenu
+      v-if="hoverMenu.visible && hoverMenu.object"
+      :object="hoverMenu.object"
+      :state="hoverMenu.state"
+      :x="hoverMenu.x"
+      :y="hoverMenu.y"
+      :backend-id="props.backendId ?? null"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, reactive } from 'vue';
 
-import type { ObjectState } from '@/types/api';
+import HoverMenu from '@/components/board/HoverMenu.vue';
+import type { BoardObject, ObjectState } from '@/types/api';
 import { buildCheckmkUrlFromState, openUrl } from '@/utils/boardNavigation';
 
 const props = defineProps<{
   states: Record<string, ObjectState>;
   checkmkUrl?: string | null;
+  backendId?: string | null;
+  readonly?: boolean;
 }>();
 
 function onCardClick(state: ObjectState) {
+  if (props.readonly) return;
   const url = buildCheckmkUrlFromState(state, props.checkmkUrl ?? null);
   if (url) openUrl(url, '_blank');
+}
+
+const hoverMenu = reactive<{
+  visible: boolean;
+  object: BoardObject | null;
+  state: ObjectState | undefined;
+  x: number;
+  y: number;
+}>({ visible: false, object: null, state: undefined, x: 0, y: 0 });
+
+function boardObjectFromState(state: ObjectState): BoardObject {
+  const [host, svc] = state.object_id.split(';', 2);
+  return {
+    id: state.object_id,
+    type: state.type === 'service' ? 'service' : 'host',
+    x: 0,
+    y: 0,
+    host_name: host ?? undefined,
+    service_description: svc ?? undefined,
+  } as BoardObject;
+}
+
+function onCardHover(event: MouseEvent, state: ObjectState) {
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  hoverMenu.object = boardObjectFromState(state);
+  hoverMenu.state = state;
+  hoverMenu.x = rect.right + 12;
+  hoverMenu.y = rect.top;
+  hoverMenu.visible = true;
+}
+
+function closeHoverMenu() {
+  hoverMenu.visible = false;
+  hoverMenu.object = null;
 }
 
 // State severity for sorting (worst first)

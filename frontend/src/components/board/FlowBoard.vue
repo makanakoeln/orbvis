@@ -64,48 +64,15 @@
       </button>
     </div>
 
-    <!-- Hover tooltip -->
-    <Transition
-      enter-from-class="opacity-0 scale-95 translate-y-1"
-      enter-active-class="transition-all duration-150 ease-out origin-bottom"
-      leave-to-class="opacity-0 scale-95 translate-y-1"
-      leave-active-class="transition-all duration-100 ease-in origin-bottom"
-    >
-      <div
-        v-if="tooltip.visible"
-        class="absolute z-50 pointer-events-none"
-        :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px', transform: 'translateX(8px)' }"
-      >
-        <div
-          class="bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-xl p-3.5 min-w-44 max-w-64"
-        >
-          <!-- Header: service name + host -->
-          <div class="flex items-start gap-2 mb-2">
-            <span
-              class="w-2 h-2 rounded-full mt-1 shrink-0"
-              :style="{ background: tooltip.stateColor }"
-            />
-            <div class="min-w-0">
-              <div class="font-semibold text-[var(--text)] text-sm leading-tight truncate">
-                {{ tooltip.title }}
-              </div>
-              <div class="text-xs text-zinc-500 mt-0.5 truncate">{{ tooltip.hostName }}</div>
-            </div>
-          </div>
-          <!-- State label -->
-          <div class="text-xs font-semibold" :style="{ color: tooltip.stateColor }">
-            {{ tooltip.state }}
-          </div>
-          <!-- Plugin output -->
-          <div
-            v-if="tooltip.output"
-            class="text-xs text-zinc-500 mt-2 leading-snug line-clamp-3 break-words"
-          >
-            {{ tooltip.output }}
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <!-- Hover popup -->
+    <HoverMenu
+      v-if="hoverMenu.visible && hoverMenu.object"
+      :object="hoverMenu.object"
+      :state="hoverMenu.state"
+      :x="hoverMenu.x"
+      :y="hoverMenu.y"
+      :backend-id="props.backendId"
+    />
   </div>
 </template>
 
@@ -127,9 +94,10 @@ import {
 import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 import { connectionsApi } from '@/api/client';
+import HoverMenu from '@/components/board/HoverMenu.vue';
 import { useD3Cleanup } from '@/composables/useD3Cleanup';
 import { useAuthStore } from '@/stores/auth';
-import type { TopologyNode } from '@/types/api';
+import type { BoardObject, ObjectState, TopologyNode } from '@/types/api';
 import { stateColor } from '@/utils/stateColors';
 
 const props = defineProps<{
@@ -167,16 +135,13 @@ useD3Cleanup(svgEl);
 const nodes = ref<TopologyNode[]>([]);
 const loading = ref(true);
 const error = ref('');
-const tooltip = reactive({
-  visible: false,
-  x: 0,
-  y: 0,
-  title: '',
-  hostName: '',
-  output: '',
-  state: '',
-  stateColor: '',
-});
+const hoverMenu = reactive<{
+  visible: boolean;
+  object: BoardObject | null;
+  state: ObjectState | undefined;
+  x: number;
+  y: number;
+}>({ visible: false, object: null, state: undefined, x: 0, y: 0 });
 let timer: ReturnType<typeof setInterval> | null = null;
 
 // ---- Fetch ----
@@ -242,6 +207,32 @@ interface FLink extends SimulationLinkDatum<FNode> {
   target: FNode;
   sourceState: string;
   isServiceLink: boolean;
+}
+
+function boardObjectFromFNode(d: FNode): BoardObject {
+  const isService = d.nodeType === 'service';
+  const svcName = isService ? d.id.split('::').slice(1).join('::') : undefined;
+  return {
+    id: d.id,
+    type: isService ? 'service' : 'host',
+    x: 0,
+    y: 0,
+    host_name: isService ? d.hostId : d.id,
+    service_description: svcName,
+  } as BoardObject;
+}
+
+function objectStateFromFNode(d: FNode): ObjectState {
+  return {
+    object_id: d.id,
+    type: d.nodeType,
+    state: d.state as ObjectState['state'],
+    output: d.output,
+    perf_data: '',
+    acknowledged: false,
+    in_downtime: false,
+    stale: false,
+  };
 }
 
 let simulation: ReturnType<typeof forceSimulation<FNode>> | null = null;
@@ -623,25 +614,15 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     })
     .on('mouseenter', (event: MouseEvent, d) => {
       const nodeRect = (event.currentTarget as SVGGElement).getBoundingClientRect();
-      const parentRect = (event.currentTarget as Element)
-        .closest('.absolute')!
-        .getBoundingClientRect();
-      tooltip.visible = true;
-      tooltip.x = nodeRect.right - parentRect.left;
-      tooltip.y = nodeRect.top - parentRect.top;
-      if (d.nodeType === 'service') {
-        tooltip.title = d.id.split('::')[1];
-        tooltip.hostName = d.hostId ?? '';
-      } else {
-        tooltip.title = d.id;
-        tooltip.hostName = '';
-      }
-      tooltip.output = d.output;
-      tooltip.state = d.state;
-      tooltip.stateColor = stateColor(d.state);
+      hoverMenu.object = boardObjectFromFNode(d);
+      hoverMenu.state = objectStateFromFNode(d);
+      hoverMenu.x = nodeRect.right + 8;
+      hoverMenu.y = nodeRect.top;
+      hoverMenu.visible = true;
     })
     .on('mouseleave', () => {
-      tooltip.visible = false;
+      hoverMenu.visible = false;
+      hoverMenu.object = null;
     });
 
   // Drag only on host nodes when not in readonly/kiosk mode

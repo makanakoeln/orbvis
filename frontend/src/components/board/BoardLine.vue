@@ -12,6 +12,8 @@
       @mousedown.prevent.stop="editMode ? $emit('line-drag-start', $event, 'move') : undefined"
       @contextmenu.prevent.stop="$emit('context-menu', $event)"
       @click.stop="editMode && $emit('line-click')"
+      @mouseenter="!editMode && $emit('hover', $event)"
+      @mouseleave="!editMode && $emit('hover-leave')"
     />
 
     <!-- Weathermap line -->
@@ -169,6 +171,8 @@ defineEmits<{
   'line-drag-start': [event: MouseEvent, mode: 'move' | 'start' | 'end'];
   'context-menu': [event: MouseEvent];
   'line-click': [];
+  hover: [event: MouseEvent];
+  'hover-leave': [];
 }>();
 
 const x1 = computed(() => props.dragCoords?.x ?? props.object.x);

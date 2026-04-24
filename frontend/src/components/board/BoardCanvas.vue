@@ -50,6 +50,8 @@
         @line-drag-start="(evt, mode) => $emit('line-drag-start', evt, line, mode)"
         @context-menu="(evt) => onObjectContextMenu(evt, line)"
         @line-click="onLineClick(line)"
+        @hover="openHoverMenu($event, line)"
+        @hover-leave="closeHoverMenu()"
       />
     </svg>
 
@@ -342,6 +344,7 @@ function objectWrapperStyle(obj: BoardObjectType) {
   const isMap = obj.type === 'map';
   const canDrag = props.editMode || props.isAdmin;
   const clickable =
+    !props.config.readonly &&
     props.config.click_action !== 'none' &&
     (isMap || obj.url || !!buildCheckmkUrl(obj, props.checkmkUrl ?? null));
   const cursor = canDrag
@@ -470,7 +473,7 @@ function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
   }
   // Suppress navigation click if the pointer just completed a real drag move
   if (_didMove.value) return;
-  if (props.config.click_action === 'none') return;
+  if (props.config.readonly || props.config.click_action === 'none') return;
   if (obj.url) {
     openUrl(obj.url, obj.url_target || '_blank');
     return;

@@ -399,6 +399,13 @@ function syncLines() {
         if (props.editMode) emit('object-contextmenu', cur);
         else emit('object-contextmenu-view', cur, e.originalEvent.clientX, e.originalEvent.clientY);
       });
+      polyline.on('mouseover', (e: L.LeafletMouseEvent) => {
+        const cur = props.config.objects.find((o) => o.id === objId);
+        if (cur) emit('object-hover', cur, e.originalEvent);
+      });
+      polyline.on('mouseout', () => {
+        emit('object-hover-leave');
+      });
       handle1.on('dragend', () => {
         const pos = handle1.getLatLng();
         emit('latlng-drag-end', objId, pos.lat, pos.lng);
