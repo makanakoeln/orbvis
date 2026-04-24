@@ -2,7 +2,7 @@
 name = "orbvis-backend"
 version = "0.1.0"
 description = "OrbVis Backend - FastAPI based monitoring visualization"
-license = { text = "BUSL-1.1" }
+license = { text = "GPL-2.0-only" }
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
@@ -28,6 +28,7 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.10.0",
     "bandit>=1.8.0",
+    "pre-commit>=4.0.0",
 ]
 
 [build-system]
@@ -36,35 +37,36 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+xfail_strict = true
+junit_logging = "all"
+addopts = [
+    "--log-cli-level=CRITICAL",
+    "--log-cli-format=%(asctime)s %(levelname)s %(message)s",
+    "-rs",           # summary of skipped tests
+    "--durations=20",
+    "-p no:faker",
+    "-p no:hypothesispytest",
+]
+markers = [
+    "slow: tests that take a long time to execute",
+]
+filterwarnings = [
+    # OrbVis: SECRET_KEY-Dev-Warning in conftest-gesetupten Tests ignorieren
+    "ignore:SECRET_KEY is not set:UserWarning",
+    # pkg_resources-Deprecations kommen ueber FastAPI/SQLAlchemy Abhaengigkeiten
+    "ignore:pkg_resources is deprecated:DeprecationWarning",
+    "ignore:Deprecated call to `pkg_resources\\.declare_namespace:DeprecationWarning",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 
 [tool.ruff]
+extend = "../pyproject.toml"
 target-version = "py312"
-line-length = 100
 
-[tool.ruff.lint]
-select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "RUF"]
-ignore = [
-    "E501",   # line-length vom Formatter gehandhabt
-    "B008",   # Depends()-Aufrufe in Default-Args (FastAPI-Pattern)
-    "E402",   # module-level import not at top — intentional in main.py (class before local imports)
-    "RUF001", # ambiguous EN DASH in strings — intentional prose
-    "RUF002", # ambiguous EN DASH in docstrings — intentional prose
-    "RUF003", # ambiguous EN DASH in comments — intentional prose
-]
-
-[tool.ruff.lint.isort]
-known-first-party = ["app"]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-
-[tool.mypy]
-python_version = "3.12"
-strict = false
-ignore_missing_imports = true
-exclude = ["tests/", "alembic/"]
+# [tool.mypy] wird zentral in ../pyproject.toml konfiguriert (Stufe 3).
+# Mypy-Aufrufe aus backend/ finden backend/pyproject.toml zuerst — daher KEINE
+# leere [tool.mypy]-Sektion hier (die wuerde die Root-Config verschatten).

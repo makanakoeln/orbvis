@@ -11,3 +11,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 namespaces = true
+
+[tool.ruff]
+extend = "../pyproject.toml"
+target-version = "py312"
