@@ -10,7 +10,9 @@ services:
     environment:
       - BOARDS_DIR=/app/boards
       - DATABASE_URL=sqlite+aiosqlite:////app/data/orbvis.db
-      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      # SECRET_KEY is mandatory — generate with `openssl rand -hex 32` and
+      # export it or put it in a .env file next to this compose file.
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required — run `openssl rand -hex 32` and set it}
       - ORBVIS_PORT=${ORBVIS_PORT:-8741}
       - ALLOWED_ORIGINS=["http://localhost"]
     restart: unless-stopped

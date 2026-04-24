@@ -1,11 +1,13 @@
 """Application configuration via pydantic-settings."""
 
+import logging
 import secrets
-import warnings
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import computed_field, field_validator
+from pydantic import computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -61,18 +63,26 @@ class Settings(BaseSettings):
     def sync_database_url(self) -> str:
         return self.database_url.replace("+aiosqlite", "").replace("+asyncpg", "")
 
-    @field_validator("secret_key", mode="after")
-    @classmethod
-    def _ensure_secret_key(cls, v: str) -> str:
-        if not v:
-            warnings.warn(
-                "SECRET_KEY is not set – using an ephemeral random key. "
-                "All JWTs will be invalidated on every restart. "
-                "Set SECRET_KEY=<hex64> in .env for production.",
-                stacklevel=2,
+    @model_validator(mode="after")
+    def _ensure_secret_key(self) -> Self:
+        if self.secret_key:
+            return self
+        if self.environment == "production":
+            # Never fall back silently in production. A server started without a
+            # persistent SECRET_KEY will invalidate every JWT on restart and is
+            # trivially rotatable by any crash-loop attacker.
+            raise ValueError(
+                "SECRET_KEY is required in production. "
+                "Set SECRET_KEY=<hex64> (e.g. `openssl rand -hex 32`) in the environment."
             )
-            return secrets.token_hex(32)
-        return v
+        logger.warning(
+            "SECRET_KEY is not set — using an ephemeral random key (env=%s). "
+            "All JWTs will be invalidated on every restart. "
+            "Set SECRET_KEY=<hex64> in .env for a stable key.",
+            self.environment,
+        )
+        self.secret_key = secrets.token_hex(32)
+        return self
 
     @field_validator("allowed_origins", mode="before")
     @classmethod

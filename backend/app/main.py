@@ -598,11 +598,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: startup and shutdown."""
     cmk_integration.setup()
 
-    if settings.secret_key == "change-me-in-production":
-        logger.critical(
-            "SECURITY: SECRET_KEY is set to the default insecure value! "
-            "Set a strong SECRET_KEY environment variable before running in production."
-        )
+    # SECRET_KEY enforcement lives in app.core.config — production-mode startup
+    # without a key already fails at Settings() instantiation.
 
     logger.info("Starting OrbVis backend…")
     sep = "=" * 60
