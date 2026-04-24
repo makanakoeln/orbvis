@@ -40,6 +40,20 @@ def _user_may_use() -> bool:
         return True
 
 
+def _user_may_configure() -> bool:
+    """Gate for the admin menu entries (Settings, Connections, Images).
+
+    Checked against the dedicated `orbvis.configure` permission whose default
+    is `["admin"]` only. Any role can be toggled in WATO.
+    """
+    if not _HAS_CMK_USER:
+        return False
+    try:
+        return _cmk_user.may("orbvis.configure")
+    except Exception:
+        return False
+
+
 try:
     # Checkmk 2.4
     from cmk.gui.i18n import _
@@ -50,41 +64,45 @@ try:
     def _orbvis_topics_24() -> list:
         if not _user_may_use():
             return []
+        items = [
+            TopicMenuItem(
+                name="orbvis_boards",
+                title=_("Boards"),
+                url=f"/{_SITE}/orbvis/",
+                sort_index=10,
+                icon="save_dashboard",
+            ),
+        ]
+        if _user_may_configure():
+            items += [
+                TopicMenuItem(
+                    name="orbvis_settings",
+                    title=_("Settings"),
+                    url=f"/{_SITE}/orbvis/#/admin/settings",
+                    sort_index=20,
+                    icon="configuration",
+                ),
+                TopicMenuItem(
+                    name="orbvis_connections",
+                    title=_("Connections"),
+                    url=f"/{_SITE}/orbvis/#/admin/connections",
+                    sort_index=30,
+                    icon="sites",
+                ),
+                TopicMenuItem(
+                    name="orbvis_images",
+                    title=_("Images"),
+                    url=f"/{_SITE}/orbvis/#/admin/icons",
+                    sort_index=40,
+                    icon="icons",
+                ),
+            ]
         return [
             TopicMenuTopic(
                 name="orbvis",
                 title=_("OrbVis"),
                 icon="save_dashboard",
-                items=[
-                    TopicMenuItem(
-                        name="orbvis_boards",
-                        title=_("Boards"),
-                        url=f"/{_SITE}/orbvis/",
-                        sort_index=10,
-                        icon="save_dashboard",
-                    ),
-                    TopicMenuItem(
-                        name="orbvis_settings",
-                        title=_("Settings"),
-                        url=f"/{_SITE}/orbvis/#/admin/settings",
-                        sort_index=20,
-                        icon="configuration",
-                    ),
-                    TopicMenuItem(
-                        name="orbvis_connections",
-                        title=_("Connections"),
-                        url=f"/{_SITE}/orbvis/#/admin/connections",
-                        sort_index=30,
-                        icon="sites",
-                    ),
-                    TopicMenuItem(
-                        name="orbvis_images",
-                        title=_("Images"),
-                        url=f"/{_SITE}/orbvis/#/admin/icons",
-                        sort_index=40,
-                        icon="icons",
-                    ),
-                ],
+                items=items,
             )
         ]
 
@@ -124,41 +142,45 @@ except ImportError:
         def _orbvis_topics_25(user_permissions: UserPermissions) -> list:
             if not _user_may_use():
                 return []
+            entries = [
+                MainMenuItem(
+                    name="orbvis_boards",
+                    title=_("Boards"),
+                    url=f"/{_SITE}/orbvis/",
+                    sort_index=10,
+                    icon=StaticIcon(IconNames.save_dashboard),
+                ),
+            ]
+            if _user_may_configure():
+                entries += [
+                    MainMenuItem(
+                        name="orbvis_settings",
+                        title=_("Settings"),
+                        url=f"/{_SITE}/orbvis/#/admin/settings",
+                        sort_index=20,
+                        icon=StaticIcon(IconNames.configuration),
+                    ),
+                    MainMenuItem(
+                        name="orbvis_connections",
+                        title=_("Connections"),
+                        url=f"/{_SITE}/orbvis/#/admin/connections",
+                        sort_index=30,
+                        icon=StaticIcon(IconNames.sites),
+                    ),
+                    MainMenuItem(
+                        name="orbvis_images",
+                        title=_("Images"),
+                        url=f"/{_SITE}/orbvis/#/admin/icons",
+                        sort_index=40,
+                        icon=StaticIcon(IconNames.icons),
+                    ),
+                ]
             return [
                 MainMenuTopic(
                     name="orbvis",
                     title=_("OrbVis"),
                     icon=StaticIcon(IconNames.save_dashboard),
-                    entries=[
-                        MainMenuItem(
-                            name="orbvis_boards",
-                            title=_("Boards"),
-                            url=f"/{_SITE}/orbvis/",
-                            sort_index=10,
-                            icon=StaticIcon(IconNames.save_dashboard),
-                        ),
-                        MainMenuItem(
-                            name="orbvis_settings",
-                            title=_("Settings"),
-                            url=f"/{_SITE}/orbvis/#/admin/settings",
-                            sort_index=20,
-                            icon=StaticIcon(IconNames.configuration),
-                        ),
-                        MainMenuItem(
-                            name="orbvis_connections",
-                            title=_("Connections"),
-                            url=f"/{_SITE}/orbvis/#/admin/connections",
-                            sort_index=30,
-                            icon=StaticIcon(IconNames.sites),
-                        ),
-                        MainMenuItem(
-                            name="orbvis_images",
-                            title=_("Images"),
-                            url=f"/{_SITE}/orbvis/#/admin/icons",
-                            sort_index=40,
-                            icon=StaticIcon(IconNames.icons),
-                        ),
-                    ],
+                    entries=entries,
                 )
             ]
 
@@ -209,41 +231,45 @@ except ImportError:
             def _orbvis_topics_26(user_permissions: UserPermissions) -> list:
                 if not _user_may_use():
                     return []
+                entries = [
+                    NavItemTopicEntry(
+                        id="orbvis_boards",
+                        title=_("Boards"),
+                        url=f"/{_SITE}/orbvis/",
+                        target="main",
+                        sort_index=10,
+                    ),
+                ]
+                if _user_may_configure():
+                    entries += [
+                        NavItemTopicEntry(
+                            id="orbvis_settings",
+                            title=_("Settings"),
+                            url=f"/{_SITE}/orbvis/#/admin/settings",
+                            target="main",
+                            sort_index=20,
+                        ),
+                        NavItemTopicEntry(
+                            id="orbvis_connections",
+                            title=_("Connections"),
+                            url=f"/{_SITE}/orbvis/#/admin/connections",
+                            target="main",
+                            sort_index=30,
+                        ),
+                        NavItemTopicEntry(
+                            id="orbvis_images",
+                            title=_("Images"),
+                            url=f"/{_SITE}/orbvis/#/admin/icons",
+                            target="main",
+                            sort_index=40,
+                        ),
+                    ]
                 return [
                     NavItemTopic(
                         id="orbvis",
                         title=_("OrbVis"),
                         sort_index=10,
-                        entries=[
-                            NavItemTopicEntry(
-                                id="orbvis_boards",
-                                title=_("Boards"),
-                                url=f"/{_SITE}/orbvis/",
-                                target="main",
-                                sort_index=10,
-                            ),
-                            NavItemTopicEntry(
-                                id="orbvis_settings",
-                                title=_("Settings"),
-                                url=f"/{_SITE}/orbvis/#/admin/settings",
-                                target="main",
-                                sort_index=20,
-                            ),
-                            NavItemTopicEntry(
-                                id="orbvis_connections",
-                                title=_("Connections"),
-                                url=f"/{_SITE}/orbvis/#/admin/connections",
-                                target="main",
-                                sort_index=30,
-                            ),
-                            NavItemTopicEntry(
-                                id="orbvis_images",
-                                title=_("Images"),
-                                url=f"/{_SITE}/orbvis/#/admin/icons",
-                                target="main",
-                                sort_index=40,
-                            ),
-                        ],
+                        entries=entries,
                     )
                 ]
 

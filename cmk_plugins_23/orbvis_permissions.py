@@ -38,6 +38,15 @@ try:
         _l("Grants write access to all OrbVis boards. Allows creating, modifying and deleting boards."),
         ["admin"],
     )
+    declare_permission(
+        "orbvis.configure",
+        _l("Configure OrbVis"),
+        _l(
+            "Grants access to OrbVis general settings, connections and images. "
+            "Shows the corresponding entries in the OrbVis main menu."
+        ),
+        ["admin"],
+    )
 
     _declared_board_perms: set[str] = set()
 
