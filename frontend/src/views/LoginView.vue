@@ -73,18 +73,21 @@
             <label for="login-password" class="font-medium text-[13px] text-[var(--text)]">{{
               t('auth.password')
             }}</label>
-            <div class="relative">
-              <CmkInput
+            <div
+              class="flex items-center w-full rounded-[4px] border border-[var(--border)] bg-[var(--bg-input,var(--bg-surface))] focus-within:border-[var(--color-corporate-green-50)] transition-colors"
+            >
+              <input
                 id="login-password"
                 v-model="password"
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
                 placeholder="••••••••"
-                field-size="FILL"
+                class="flex-1 min-w-0 bg-transparent px-[8px] py-[4px] text-[13px] text-[var(--text)] placeholder-[var(--text-muted)] outline-none"
+                @keydown.enter="handleLogin"
               />
               <button
                 type="button"
-                class="absolute inset-y-0 right-0 flex items-center px-3 text-zinc-500 hover:text-zinc-300 transition-colors"
+                class="shrink-0 flex items-center px-2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
                 :title="showPassword ? t('auth.hidePassword') : t('auth.showPassword')"
                 @click="showPassword = !showPassword"
               >
