@@ -5,7 +5,7 @@
   "backend_id": "test",
   "icon_size": 28,
   "rotation_interval": 0,
-  "hover_template": "{{name}}\nState: {{state}}\n{{output}}",
+  "hover_template": null,
   "context_template": null,
   "background_image": "demo.svg",
   "view": { "type": "static" },

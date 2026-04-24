@@ -278,10 +278,10 @@ def _seed_demo_map() -> None:
     cfg = BoardConfig(
         name="demo-static",
         alias="Static Board (Demo)",
+        readonly=True,
         icon_size=28,
         backend_id="test",
         view=StaticView(),
-        hover_template="{{name}}\nState: {{state}}\n{{output}}",
         background_image="demo.svg",
         objects=[
             # ── Hosts ───────────────────────────────────────────────────────
@@ -459,7 +459,6 @@ def _seed_demo_worldmap() -> None:
         backend_id="test",
         icon_size=28,
         view=WorldmapView(lat=50.5, lng=8.0, zoom=5),
-        hover_template="{{name}}\nState: {{state}}\n{{output}}",
         objects=[
             # ── Hosts ────────────────────────────────────────────────────────
             BoardObject(

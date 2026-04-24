@@ -329,7 +329,6 @@
         v-else-if="isRadar"
         :states="statesStore.states"
         :checkmk-url="checkmkUrl"
-        :backend-id="boardConfig?.backend_id"
         :readonly="isKiosk || boardConfig?.readonly"
       />
 

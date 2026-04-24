@@ -5,7 +5,7 @@
   "backend_id": "test",
   "icon_size": 28,
   "rotation_interval": 0,
-  "hover_template": "{{name}}\nState: {{state}}\n{{output}}",
+  "hover_template": null,
   "context_template": null,
   "background_image": null,
   "view": { "type": "worldmap", "lat": 51.3, "lng": 10.5, "zoom": 6 },
