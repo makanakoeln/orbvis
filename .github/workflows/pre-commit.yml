@@ -21,3 +21,9 @@ jobs:
           cache: 'pip'
 
       - uses: pre-commit/action@v3.0.1
+        env:
+          # Skip hooks that require a local venv or node_modules — these checks
+          # run in the dedicated backend.yml / frontend.yml workflows.
+          # Keeps pre-commit CI focused on portable hooks (ruff, gitleaks,
+          # bandit, shellcheck, whitespace/EOF/merge-conflict/yaml/toml).
+          SKIP: mypy,eslint,prettier,stylelint
