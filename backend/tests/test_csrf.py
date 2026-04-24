@@ -10,8 +10,12 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_bearer_authed_mutation_passes_without_origin(client, admin_token):
+async def test_bearer_authed_mutation_passes_without_origin(
+    client, admin_token, tmp_path, monkeypatch
+):
     """POST with Bearer token and no Origin header must succeed."""
+    monkeypatch.setattr("app.core.config.settings.boards_dir", str(tmp_path))
+    monkeypatch.setattr("app.services.board_service.settings.boards_dir", str(tmp_path))
     response = await client.post(
         "/api/v1/boards",
         json={"name": "csrf-bearer", "alias": "x"},

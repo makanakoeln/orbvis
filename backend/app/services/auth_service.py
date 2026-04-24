@@ -41,9 +41,15 @@ _USERNAME_RE = re.compile(r"^[a-zA-Z0-9@._-]+$")
 _SUPPORTED_LANGUAGES = {"en", "de"}
 
 # Pre-computed bcrypt hash used as a timing dummy when no DB user is found.
-# Computing it once at import time avoids an extra ~100 ms bcrypt round on
-# every failed login with an unknown username.
-_DUMMY_HASH: str = hash_password(secrets.token_hex(16))
+# Derived deterministically from SECRET_KEY so every worker in a multi-process
+# deployment uses the *same* dummy — otherwise response-timing could still
+# leak "which worker saw the login" and, more subtly, differ from a valid
+# user's verify cost when bcrypt cost parameters shift between dummy hashes.
+# The derived pre-image never appears on the wire; bcrypt salting ensures the
+# hash itself is still unique per-process even with the same pre-image.
+_DUMMY_HASH: str = hash_password(
+    hashlib.sha256(f"orbvis-dummy|{settings.secret_key}".encode()).hexdigest()
+)
 
 
 def get_cmk_language(username: str) -> str | None:
