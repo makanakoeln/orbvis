@@ -9,18 +9,22 @@ import os
 os.environ.setdefault("ENVIRONMENT", "testing")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
 
-from unittest.mock import AsyncMock, MagicMock  # noqa: E402
+from unittest.mock import AsyncMock, MagicMock
 
-import pytest  # noqa: E402
-import pytest_asyncio  # noqa: E402
-from httpx import ASGITransport, AsyncClient  # noqa: E402
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine  # noqa: E402
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
-from app.backends.base import BackendBase  # noqa: E402
-from app.core.database import Base, get_db  # noqa: E402
-from app.core.security import hash_password  # noqa: E402
-from app.main import app  # noqa: E402
-from app.models.user import User  # noqa: E402
+from app.backends.base import BackendBase
+from app.core.database import Base, get_db
+from app.core.security import hash_password
+from app.main import app
+from app.models.user import User
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
