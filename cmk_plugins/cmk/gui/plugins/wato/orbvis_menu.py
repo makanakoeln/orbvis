@@ -41,12 +41,32 @@ def _user_may_use() -> bool:
 
 
 def _user_is_admin() -> bool:
+    """Admin = builtin role 'admin' OR custom role based on 'admin'.
+
+    We avoid relying on the `orbvis.edit_all` permission here because a user
+    might enable per-board edit permissions without expecting full admin menu
+    access. Role membership is the least-surprising intent check.
+    """
     if not _HAS_CMK_USER:
         return False
     try:
-        return _cmk_user.may("orbvis.edit_all")
+        role_ids = list(getattr(_cmk_user, "role_ids", []) or [])
     except Exception:
         return False
+    if "admin" in role_ids:
+        return True
+    # Custom role inheriting from admin (basedon="admin").
+    try:
+        from cmk.gui.config import active_config  # type: ignore[import-not-found]
+
+        roles = getattr(active_config, "roles", {}) or {}
+        for rid in role_ids:
+            role = roles.get(rid) or {}
+            if not role.get("builtin") and role.get("basedon") == "admin":
+                return True
+    except Exception:
+        pass
+    return False
 
 
 try:
