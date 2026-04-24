@@ -109,13 +109,19 @@ async def delete_image(
     name: str,
     _: User = Depends(require_admin),
 ) -> None:
-    d = _images_dir()
-    # Prevent path traversal
-    path = (d / name).resolve()
-    if not str(path).startswith(str(d.resolve())):
+    d = _images_dir().resolve()
+    # Reject obvious traversal attempts before hitting the filesystem.
+    if "/" in name or "\\" in name or name in ("", ".", ".."):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
-    if not path.exists():
+    # Resolve both paths strictly and compare via is_relative_to so symlinks
+    # pointing outside the images dir are caught — str.startswith could be
+    # tricked by a symlink whose target lives above the images dir.
+    try:
+        path = (d / name).resolve(strict=True)
+    except (OSError, RuntimeError):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Image '{name}' not found"
-        )
+        ) from None
+    if not path.is_relative_to(d):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
     path.unlink()
