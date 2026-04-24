@@ -1,0 +1,11 @@
+# BUILD.bazel — populated when Bazel is introduced (Stage 2/6).
+# Target shape, modelled after cmk/gui/nagvis/BUILD:
+#
+#   load("@aspect_rules_py//py:defs.bzl", "py_library")
+#
+#   py_library(
+#       name = "orbvis",
+#       srcs = glob(["*.py"]),
+#       visibility = ["//cmk/gui:__subpackages__"],
+#       deps = [...],
+#   )
