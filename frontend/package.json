@@ -20,20 +20,7 @@
     "format": "prettier --write 'src/**/*.{ts,vue,css}'",
     "format:check": "prettier --check 'src/**/*.{ts,vue,css}'",
     "deploy:cmc": "VITE_BASE_PATH=/CMC/orbvis/ npm run build && sudo /home/ronny/git/orbvis/deploy-cmc.sh",
-    "copy-builtin-icons": "node scripts/copy-builtin-icons.js",
-    "prepare": "cd .. && husky"
-  },
-  "lint-staged": {
-    "src/**/*.{ts,vue}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "src/**/*.css": [
-      "prettier --write"
-    ],
-    "src/**/*.{vue,css}": [
-      "stylelint --fix"
-    ]
+    "copy-builtin-icons": "node scripts/copy-builtin-icons.js"
   },
   "dependencies": {
     "@types/dompurify": "^3.2.0",
@@ -75,9 +62,7 @@
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-vue": "^10.8.0",
     "globals": "^17.4.0",
-    "husky": "^9.1.7",
     "jsdom": "^29.0.1",
-    "lint-staged": "^16.4.0",
     "openapi-typescript": "^7.13.0",
     "postcss": "^8.5.8",
     "postcss-html": "^1.8.1",

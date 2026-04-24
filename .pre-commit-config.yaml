@@ -1,17 +1,22 @@
 # OrbVis — pre-commit configuration.
 #
-# Stage 5 (minimal): trailing-whitespace / EOF / YAML / TOML / merge-conflict,
-# gitleaks, ruff (check + format).
-# Stage 3 will add a mypy hook. Stage 7 will add the licence-header check.
+# This is the single source of truth for local git hooks. It replaces the
+# previous husky/lint-staged setup. Both pre-commit and pre-push stages are
+# defined here.
 #
 # Setup:
 #   pip install pre-commit
-#   pre-commit install
+#   pre-commit install --hook-type pre-commit --hook-type pre-push
+# or:
+#   make install-hooks
 
-default_install_hook_types: [pre-commit]
+default_install_hook_types: [pre-commit, pre-push]
 default_stages: [pre-commit, manual]
 
 repos:
+  # ------------------------------------------------------------------------
+  # Base hygiene
+  # ------------------------------------------------------------------------
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -26,9 +31,94 @@ repos:
     hooks:
       - id: gitleaks
 
+  # ------------------------------------------------------------------------
+  # Python: ruff (format + lint) — runs on every commit
+  # ------------------------------------------------------------------------
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.7
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+
+  # ------------------------------------------------------------------------
+  # Shell scripts
+  # ------------------------------------------------------------------------
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+
+  # ------------------------------------------------------------------------
+  # Python: bandit (security) — runs on every commit for backend/app
+  # ------------------------------------------------------------------------
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.0
+    hooks:
+      - id: bandit
+        args: [-ll]
+        files: ^backend/app/.*\.py$
+
+  # ------------------------------------------------------------------------
+  # Local hooks (tools pinned to the repo venv / node_modules)
+  # ------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      # ----- Python: mypy strict (checkmk-equivalent config from root) -----
+      - id: mypy
+        name: mypy (strict checkmk-equivalent)
+        entry: backend/.venv/bin/mypy
+        language: system
+        types: [python]
+        files: ^backend/app/
+        pass_filenames: false
+        args: [backend/app]
+
+      # ----- Frontend: eslint on changed TS/Vue files --------------------
+      - id: eslint
+        name: eslint (auto-fix)
+        entry: bash -c 'cd frontend && npx eslint --fix "${@#frontend/}"' --
+        language: system
+        files: ^frontend/src/.*\.(ts|vue)$
+        pass_filenames: true
+
+      # ----- Frontend: prettier on changed TS/Vue/CSS files --------------
+      - id: prettier
+        name: prettier (auto-format)
+        entry: bash -c 'cd frontend && npx prettier --write "${@#frontend/}"' --
+        language: system
+        files: ^frontend/src/.*\.(ts|vue|css)$
+        pass_filenames: true
+
+      # ----- Frontend: stylelint on changed Vue/CSS files ----------------
+      - id: stylelint
+        name: stylelint (auto-fix)
+        entry: bash -c 'cd frontend && npx stylelint --fix "${@#frontend/}"' --
+        language: system
+        files: ^frontend/src/.*\.(vue|css)$
+        pass_filenames: true
+
+      # ----- Pre-push: full test suites + deps audit ---------------------
+      - id: pytest
+        name: pytest (full backend suite)
+        entry: bash -c 'cd backend && .venv/bin/pytest'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: vitest
+        name: vitest (full frontend suite)
+        entry: bash -c 'cd frontend && npx vitest run'
+        language: system
+        files: ^frontend/src/
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: npm-audit
+        name: npm audit (frontend deps)
+        entry: bash -c 'cd frontend && npm audit --audit-level=high'
+        language: system
+        files: ^frontend/(package\.json|package-lock\.json)$
+        pass_filenames: false
+        stages: [pre-push]
