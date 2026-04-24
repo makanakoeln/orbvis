@@ -89,6 +89,46 @@ class _PluginData:
     scales: dict[str, dict[str, float]] = field(default_factory=dict)
     # metric_name → (notation_type_name, symbol) for formatting
     units: dict[str, tuple[str, str]] = field(default_factory=dict)
+    # metric_name → Color enum member name (e.g. "GREEN", "BLUE")
+    colors: dict[str, str] = field(default_factory=dict)
+
+
+# Mapping from cmk.graphing.v1.metrics.Color enum names → hex strings.
+# Mirrors cmk.gui.color.Color so OrbVis renders metrics in the same colors CMK does.
+_COLOR_HEX: dict[str, str] = {
+    "LIGHT_RED": "#f37c7c",
+    "RED": "#ed3b3b",
+    "DARK_RED": "#a82a2a",
+    "LIGHT_ORANGE": "#ffad54",
+    "ORANGE": "#ff8400",
+    "DARK_ORANGE": "#b55e00",
+    "LIGHT_YELLOW": "#ffe456",
+    "YELLOW": "#ffd703",
+    "DARK_YELLOW": "#ac7c02",
+    "LIGHT_GREEN": "#62e0bf",
+    "GREEN": "#15d1a0",
+    "DARK_GREEN": "#0f9472",
+    "LIGHT_BLUE": "#6fc1f7",
+    "BLUE": "#28a2f3",
+    "DARK_BLUE": "#1c73ad",
+    "LIGHT_CYAN": "#68eeee",
+    "CYAN": "#1ee6e6",
+    "DARK_CYAN": "#17b5b5",
+    "LIGHT_PURPLE": "#acaaff",
+    "PURPLE": "#8380ff",
+    "DARK_PURPLE": "#5d5bb5",
+    "LIGHT_PINK": "#f9a8e2",
+    "PINK": "#ec48b6",
+    "DARK_PINK": "#be187a",
+    "LIGHT_BROWN": "#d4ad84",
+    "BROWN": "#bf8548",
+    "DARK_BROWN": "#885e33",
+    "LIGHT_GRAY": "#acacac",
+    "GRAY": "#8c8c8c",
+    "DARK_GRAY": "#5d5d5d",
+    "BLACK": "#1e262e",
+    "WHITE": "#ffffff",
+}
 
 
 def _get_plugin_dirs() -> set[Path]:
@@ -151,6 +191,9 @@ def _load_plugins() -> _PluginData:
                     type(notation).__name__,
                     getattr(notation, "symbol", ""),
                 )
+                color = getattr(obj, "color", None)
+                if color is not None and hasattr(color, "name"):
+                    data.colors[obj.name] = color.name
             elif (
                 attr.startswith("translation_")
                 and hasattr(obj, "translations")
@@ -306,29 +349,28 @@ def _resolve_bound(bound, metrics: dict[str, _RawMetric]) -> float:
     return _resolve_quantity(bound.value, metrics)
 
 
-def _metric_color(m: _RawMetric, pct: float) -> str:
-    if m.warn is not None and m.crit is not None and m.crit > m.warn > 0:
-        scale = m.crit - m.warn
-        if m.value < m.warn:
-            return "#19d379"
-        if m.value < m.crit:
-            t = (m.value - m.warn) / scale
-            r = round(245 - (245 - 239) * t)
-            g = round(163 - (163 - 68) * t)
-            return f"#{r:02x}{g:02x}0b"
-        return "#ef4444"
-    # fallback: green→amber→red by percentage
-    if pct <= 50:
-        t = pct / 50
-        r = round(25 + (245 - 25) * t)
-        g = round(211 - (211 - 163) * t)
-        b = round(121 - (121 - 11) * t)
-        return f"#{r:02x}{g:02x}{b:02x}"
-    t = (pct - 50) / 50
-    r = round(245 + (239 - 245) * t)
-    g = round(163 - (163 - 68) * t)
-    b = round(11 + (68 - 11) * t)
-    return f"#{r:02x}{g:02x}{b:02x}"
+_WARN_HEX = "#ffd000"
+_CRIT_HEX = "#ff3232"
+
+
+def _metric_color(
+    metric_name: str,
+    m: _RawMetric,
+    colors: dict[str, str],
+) -> str:
+    """Resolve the fill color for a metric.
+
+    Uses the metric's declared color from its Metric() plugin definition.
+    Falls back to warn/crit colors when the current value breaches thresholds.
+    """
+    if m.crit is not None and m.value >= m.crit > 0:
+        return _CRIT_HEX
+    if m.warn is not None and m.value >= m.warn > 0:
+        return _WARN_HEX
+    declared = colors.get(metric_name)
+    if declared and declared in _COLOR_HEX:
+        return _COLOR_HEX[declared]
+    return _COLOR_HEX["GREEN"]
 
 
 _REMAINDER_COLOR = "#52525b"  # zinc-600 — visible on dark glass cards
@@ -337,6 +379,7 @@ _REMAINDER_COLOR = "#52525b"  # zinc-600 — visible on dark glass cards
 def _compute_simple_side(
     perf,
     metrics: dict[str, _RawMetric],
+    colors: dict[str, str],
 ) -> tuple[float, str] | None:
     """Return (pct, color) for a single Perfometer — not a full row."""
     names = _get_segment_names(perf.segments)
@@ -353,15 +396,16 @@ def _compute_simple_side(
     # sub-percent values round down to 0 and vanish in the browser.
     if total > 0 and pct < 1.0:
         pct = 1.0
-    color = _metric_color(metrics[present[0]], pct)
+    color = _metric_color(present[0], metrics[present[0]], colors)
     return (round(pct, 1), color)
 
 
 def _compute_simple_row(
     perf,
     metrics: dict[str, _RawMetric],
+    colors: dict[str, str],
 ) -> list[PerfometerSegment]:
-    side = _compute_simple_side(perf, metrics)
+    side = _compute_simple_side(perf, metrics, colors)
     if side is None:
         return []
     pct, color = side
@@ -374,10 +418,11 @@ def _compute_simple_row(
 def _compute_bidirectional_row(
     perf,
     metrics: dict[str, _RawMetric],
+    colors: dict[str, str],
 ) -> list[PerfometerSegment] | None:
     """Single-row layout: [empty_left, left_fill, right_fill, empty_right], each half = 50%."""
-    left = _compute_simple_side(perf.left, metrics)
-    right = _compute_simple_side(perf.right, metrics)
+    left = _compute_simple_side(perf.left, metrics, colors)
+    right = _compute_simple_side(perf.right, metrics, colors)
     if left is None or right is None:
         return None
     left_pct, left_color = left
@@ -503,7 +548,7 @@ def compute_perfometer(perf_data_str: str, check_command: str) -> PerfometerResu
             continue
 
         if isinstance(perf_def, pf_api.Perfometer):
-            row = _compute_simple_row(perf_def, metrics)
+            row = _compute_simple_row(perf_def, metrics, plugins.colors)
             if not row:
                 continue
             return PerfometerResult(
@@ -512,7 +557,7 @@ def compute_perfometer(perf_data_str: str, check_command: str) -> PerfometerResu
             )
 
         if isinstance(perf_def, pf_api.Bidirectional):
-            bi_row = _compute_bidirectional_row(perf_def, metrics)
+            bi_row = _compute_bidirectional_row(perf_def, metrics, plugins.colors)
             if bi_row is None:
                 continue
             left_label = _label_from_segments(perf_def.left, metrics, plugins.units)
@@ -526,7 +571,7 @@ def compute_perfometer(perf_data_str: str, check_command: str) -> PerfometerResu
             rows = []
             for part in (perf_def.lower, perf_def.upper):
                 if _perfometer_matches(part, metrics):
-                    row = _compute_simple_row(part, metrics)
+                    row = _compute_simple_row(part, metrics, plugins.colors)
                     if row:
                         rows.append(row)
             if rows:
