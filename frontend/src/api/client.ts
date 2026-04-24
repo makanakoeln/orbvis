@@ -25,7 +25,7 @@ import type {
 // import.meta.env.BASE_URL is '/' in dev and '/heute/orbvis/' when built with --base
 const BASE_URL = `${import.meta.env.BASE_URL}api/v1`;
 
-class ApiError extends Error {
+export class ApiError extends Error {
     constructor(
         public status: number,
         message: string,
@@ -680,5 +680,3 @@ export const cmkApi = {
     disableChecksService: (baseUrl: string, hostname: string, serviceDescription: string) =>
         cmkServiceAction(baseUrl, hostname, serviceDescription, 'disable-active-checks'),
 };
-
-export { ApiError };

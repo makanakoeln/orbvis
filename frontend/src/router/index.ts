@@ -1,4 +1,10 @@
-import { createRouter, createWebHashHistory } from 'vue-router';
+import {
+    createRouter,
+    createWebHashHistory,
+    type NavigationGuardNext,
+    type RouteLocationNormalized,
+    type RouteLocationRaw,
+} from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 
@@ -74,7 +80,9 @@ const router = createRouter({
     ],
 });
 
-router.beforeEach(async (to) => {
+export async function authGuard(
+    to: RouteLocationNormalized,
+): Promise<RouteLocationRaw | undefined> {
     const auth = useAuthStore();
     await auth.init();
 
@@ -98,6 +106,12 @@ router.beforeEach(async (to) => {
     if (to.name === 'login' && auth.isAuthenticated) {
         return { name: 'home' };
     }
-});
+    return undefined;
+}
+
+router.beforeEach(authGuard);
+
+// Suppress "unused" warnings for types only consumed by the guard signature.
+export type { NavigationGuardNext };
 
 export default router;
