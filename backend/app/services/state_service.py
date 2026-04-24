@@ -123,7 +123,7 @@ async def _execute_board_states(
     )
 
 
-async def _get_board_states_batched(
+async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types inline; splitting hides intent
     backend: BackendBase,
     objects: list[BoardObject],
     auth_user: str | None = None,
