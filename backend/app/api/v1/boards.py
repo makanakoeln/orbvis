@@ -20,6 +20,7 @@ from app.api.v1.deps import (
 from app.api.v1.types import BoardName
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.image_security import is_valid_image
 from app.models.role import Role
 from app.models.user import User
 from app.schemas.board import (
@@ -40,26 +41,6 @@ router = APIRouter()
 _ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/gif", "image/svg+xml", "image/webp"}
 _ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
 _MAX_BACKGROUND_BYTES = 10 * 1024 * 1024  # 10 MB
-
-
-def _is_valid_image(content: bytes) -> bool:
-    """Validate image content via magic bytes, not just the Content-Type header."""
-    h = content[:16]
-    if h[:4] == b"\x89PNG":
-        return True
-    if h[:3] == b"\xff\xd8\xff":  # JPEG
-        return True
-    if h[:6] in (b"GIF87a", b"GIF89a"):
-        return True
-    if h[:4] == b"RIFF" and content[8:12] == b"WEBP":  # WebP
-        return True
-    # SVG: search first 512 bytes for the <svg element.
-    # We intentionally do NOT match <?xml alone – that matches any XML file.
-    # A valid SVG must contain an <svg element regardless of whether it has an XML prolog.
-    snippet = content[:512].lower()
-    if b"<svg" in snippet:
-        return True
-    return False
 
 
 def _require_board_view(name: str, user: User) -> None:
@@ -238,7 +219,7 @@ async def upload_background(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"Background image must not exceed {_MAX_BACKGROUND_BYTES // 1024 // 1024} MB",
         )
-    if not _is_valid_image(contents):
+    if not is_valid_image(contents):
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="File content does not match a supported image format",

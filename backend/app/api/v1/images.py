@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1.deps import get_current_user, require_admin
 from app.core.config import settings
+from app.core.image_security import is_valid_image
 from app.models.user import User
 
 router = APIRouter()
@@ -31,19 +32,6 @@ def _images_dir() -> Path:
     d = Path(settings.boards_dir).parent / "images"
     d.mkdir(parents=True, exist_ok=True)
     return d
-
-
-def _is_valid_icon(content: bytes) -> bool:
-    h = content[:16]
-    if h[:4] == b"\x89PNG":
-        return True
-    if h[:3] == b"\xff\xd8\xff":
-        return True
-    if h[:4] == b"RIFF" and content[8:12] == b"WEBP":
-        return True
-    if b"<svg" in content[:512].lower():
-        return True
-    return False
 
 
 @router.get("", response_model=list[ImageListEntry])
@@ -76,7 +64,7 @@ async def upload_image(
             detail="Image file too large (max 2 MB)",
         )
 
-    if not _is_valid_icon(contents):
+    if not is_valid_image(contents):
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="File content does not match a supported image format",

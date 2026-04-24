@@ -1,10 +1,10 @@
-"""Tests for board object sub-resource endpoints and _is_valid_image."""
+"""Tests for board object sub-resource endpoints and is_valid_image."""
 
 from __future__ import annotations
 
 import pytest
 
-from app.api.v1.boards import _is_valid_image
+from app.core.image_security import is_valid_image as _is_valid_image
 
 
 def _patch(monkeypatch, tmp_path):
@@ -22,7 +22,7 @@ async def _create_board(client, token, name="testboard"):
 
 
 # ---------------------------------------------------------------------------
-# _is_valid_image — pure unit tests
+# is_valid_image — pure unit tests
 # ---------------------------------------------------------------------------
 
 
@@ -63,6 +63,31 @@ def test_is_valid_image_random_bytes():
 
 def test_is_valid_image_xml_without_svg():
     data = b"<?xml version='1.0' encoding='UTF-8'?><root></root>"
+    assert not _is_valid_image(data)
+
+
+def test_is_valid_image_rejects_svg_with_external_entity():
+    """An SVG-looking document that references an external entity must be rejected."""
+    data = (
+        b'<?xml version="1.0"?>'
+        b'<!DOCTYPE svg [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
+        b'<svg xmlns="http://www.w3.org/2000/svg">&xxe;</svg>'
+    )
+    assert not _is_valid_image(data)
+
+
+def test_is_valid_image_rejects_svg_with_dtd():
+    """DTDs inside SVG are rejected by defusedxml."""
+    data = (
+        b'<?xml version="1.0"?>'
+        b'<!DOCTYPE svg SYSTEM "attacker://payload">'
+        b'<svg xmlns="http://www.w3.org/2000/svg"/>'
+    )
+    assert not _is_valid_image(data)
+
+
+def test_is_valid_image_rejects_svg_with_broken_xml():
+    data = b'<svg xmlns="http://www.w3.org/2000/svg"><g'
     assert not _is_valid_image(data)
 
 

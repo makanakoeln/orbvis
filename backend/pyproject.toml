@@ -18,6 +18,7 @@ dependencies = [
     "bcrypt>=4.0.0",
     "python-multipart>=0.0.26",       # CVE-2026-40347
     "httpx>=0.28.0",
+    "defusedxml>=0.7.1",              # safe SVG parsing (XXE / billion-laughs protection)
 ]
 
 [project.optional-dependencies]
@@ -28,6 +29,7 @@ dev = [
     "httpx>=0.28.0",
     "ruff>=0.4.0",
     "mypy>=1.10.0",
+    "types-defusedxml>=0.7.0",
     "bandit>=1.8.0",
     "pygments>=2.20.0",               # CVE-2026-4539 (transitive via pytest/rich)
     "pre-commit>=4.0.0",
