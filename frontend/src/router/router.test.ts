@@ -48,7 +48,11 @@ beforeEach(() => {
 describe('router guards', () => {
     it('redirects unauthenticated users on protected routes to /login with redirect param', async () => {
         const result = await authGuard(
-            makeRoute({ fullPath: '/boards/foo', path: '/boards/foo', meta: { requiresAuth: true } }),
+            makeRoute({
+                fullPath: '/boards/foo',
+                path: '/boards/foo',
+                meta: { requiresAuth: true },
+            }),
         );
         expect(result).toEqual({ name: 'login', query: { redirect: '/boards/foo' } });
     });
@@ -113,7 +117,12 @@ describe('router guards', () => {
     it('sends authenticated users away from /login to home', async () => {
         mockAuthState.isAuthenticated = true;
         const result = await authGuard(
-            makeRoute({ fullPath: '/login', path: '/login', name: 'login', meta: { public: true } }),
+            makeRoute({
+                fullPath: '/login',
+                path: '/login',
+                name: 'login',
+                meta: { public: true },
+            }),
         );
         expect(result).toEqual({ name: 'home' });
     });
