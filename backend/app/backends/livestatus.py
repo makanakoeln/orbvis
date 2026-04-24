@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from datetime import UTC
 from functools import lru_cache
 from pathlib import Path
-from typing import Any  # TODO: replace with typed LivestatusRow helper — see row-parsing below
+from typing import TypedDict
 
 import httpx
 
@@ -234,6 +234,95 @@ def _ls_escape(value: str) -> str:
     return value.replace("\r", "").replace("\n", "")
 
 
+# ---------------------------------------------------------------------------
+# Typed Livestatus row helpers
+# ---------------------------------------------------------------------------
+
+# A Livestatus row is a heterogeneous JSON array: each column can hold a scalar,
+# a list, or an object. We treat it as list[object] and use the _row_* helpers
+# below for typed extraction with sensible defaults.
+LivestatusRow = list[object]
+
+
+def _row_str(row: LivestatusRow, idx: int, default: str = "") -> str:
+    if idx >= len(row):
+        return default
+    v = row[idx]
+    return v if isinstance(v, str) else default
+
+
+def _row_int(row: LivestatusRow, idx: int, default: int = 0) -> int:
+    if idx >= len(row):
+        return default
+    v = row[idx]
+    if isinstance(v, bool):
+        return int(v)
+    if isinstance(v, int | float):
+        return int(v)
+    if isinstance(v, str):
+        try:
+            return int(v)
+        except ValueError:
+            return default
+    return default
+
+
+def _row_float(row: LivestatusRow, idx: int, default: float = 0.0) -> float:
+    if idx >= len(row):
+        return default
+    v = row[idx]
+    if isinstance(v, bool):
+        return float(v)
+    if isinstance(v, int | float):
+        return float(v)
+    if isinstance(v, str):
+        try:
+            return float(v)
+        except ValueError:
+            return default
+    return default
+
+
+def _row_bool(row: LivestatusRow, idx: int, *, default: bool = True) -> bool:
+    if idx >= len(row):
+        return default
+    return bool(_row_int(row, idx, default=1 if default else 0))
+
+
+def _row_list(row: LivestatusRow, idx: int) -> list[object]:
+    if idx >= len(row):
+        return []
+    v = row[idx]
+    return v if isinstance(v, list) else []
+
+
+def _row_dict(row: LivestatusRow, idx: int) -> dict[str, object]:
+    if idx >= len(row):
+        return {}
+    v = row[idx]
+    return v if isinstance(v, dict) else {}
+
+
+class _ExtraFields(TypedDict, total=False):
+    """Tail columns of a Livestatus host/service row — mapped onto ObjectState."""
+
+    address: str
+    last_check: float | None
+    state_type: str
+    current_attempt: int
+    max_attempts: int
+    last_state_change: float | None
+    notifications_enabled: bool
+    active_checks_enabled: bool
+
+
+class _MetricInfo(TypedDict):
+    """Parsed perf_data entry (label + unit) used for rrddata queries."""
+
+    label: str
+    unit: str
+
+
 def _rrd_metric_id(label: str) -> str:
     """Sanitize a perf_data metric label for use in a Livestatus rrddata column spec.
 
@@ -263,40 +352,49 @@ _SVC_EXTRA_COLS = (
 )
 
 
-def _parse_extra(
-    row: list[Any], offset: int = 5, *, include_address: bool = False
-) -> dict[str, Any]:
-    try:
-        col = offset
-        address = str(row[col]) if include_address and len(row) > col else ""
-        if include_address:
-            col += 1
-        lc = float(row[col]) if len(row) > col else 0.0
-        st = int(row[col + 1]) if len(row) > col + 1 else 1
-        attempt = int(row[col + 2]) if len(row) > col + 2 else 0
-        max_att = int(row[col + 3]) if len(row) > col + 3 else 0
-        lsc = float(row[col + 4]) if len(row) > col + 4 else 0.0
-        notif = bool(int(row[col + 5])) if len(row) > col + 5 else True
-        active = bool(int(row[col + 6])) if len(row) > col + 6 else True
-    except (ValueError, TypeError):
-        return {}
-    result = {
-        "last_check": lc if lc > 0 else None,
-        "state_type": _STATE_TYPE_MAP.get(st, "HARD"),
-        "current_attempt": attempt,
-        "max_attempts": max_att,
-        "last_state_change": lsc if lsc > 0 else None,
-        "notifications_enabled": notif,
-        "active_checks_enabled": active,
-    }
+def _apply_extra(
+    state: ObjectState, row: LivestatusRow, offset: int = 5, *, include_address: bool = False
+) -> ObjectState:
+    """Fill the tail ObjectState fields (address, timings, attempt counters) from the row."""
+    col = offset
     if include_address:
-        result["address"] = address
-    return result
+        state.address = _row_str(row, col)
+        col += 1
+    lc = _row_float(row, col)
+    lsc = _row_float(row, col + 4)
+    state.last_check = lc if lc > 0 else None
+    state.state_type = _STATE_TYPE_MAP.get(_row_int(row, col + 1, default=1), "HARD")
+    state.current_attempt = _row_int(row, col + 2)
+    state.max_attempts = _row_int(row, col + 3)
+    state.last_state_change = lsc if lsc > 0 else None
+    state.notifications_enabled = _row_bool(row, col + 5, default=True)
+    state.active_checks_enabled = _row_bool(row, col + 6, default=True)
+    return state
 
 
-def _parse_metrics_from_perf(perf_data: str) -> list[dict[str, Any]]:
+def _build_state_from_row(
+    row: LivestatusRow,
+    state_map: dict[int, str],
+    type_: str,
+    *,
+    include_address: bool = False,
+) -> ObjectState:
+    """Construct an ObjectState from a livestatus row with the standard 5-column prefix."""
+    state = ObjectState(
+        object_id="",
+        type=type_,
+        state=state_map.get(_row_int(row, 0), "UNKNOWN"),
+        output=_row_str(row, 1),
+        perf_data=_row_str(row, 2),
+        acknowledged=_row_bool(row, 3, default=False),
+        in_downtime=_row_int(row, 4) > 0,
+    )
+    return _apply_extra(state, row, include_address=include_address)
+
+
+def _parse_metrics_from_perf(perf_data: str) -> list[_MetricInfo]:
     """Parse perf_data string into [{label, unit}] for rrddata queries."""
-    results = []
+    results: list[_MetricInfo] = []
     for part in _re.findall(r"(?:'[^']+'|[^\s]+)=\S*", perf_data):
         eq = part.index("=")
         label = part[:eq].strip("'")
@@ -361,17 +459,7 @@ class LivestatusBackend(BackendBase):
         rows = await self._query(query)
         if not rows:
             return ObjectState(object_id="", type="host", state="PENDING")
-        r = rows[0]
-        return ObjectState(
-            object_id="",
-            type="host",
-            state=_HOST_STATE_MAP.get(int(r[0]), "UNKNOWN"),
-            output=r[1],
-            perf_data=r[2],
-            acknowledged=bool(int(r[3])),
-            in_downtime=int(r[4]) > 0,
-            **_parse_extra(r, include_address=True),
-        )
+        return _build_state_from_row(rows[0], _HOST_STATE_MAP, "host", include_address=True)
 
     async def get_service_state(self, host: str, service: str) -> ObjectState:
         query = (
@@ -383,17 +471,7 @@ class LivestatusBackend(BackendBase):
         rows = await self._query(query)
         if not rows:
             return ObjectState(object_id="", type="service", state="PENDING")
-        r = rows[0]
-        return ObjectState(
-            object_id="",
-            type="service",
-            state=_SERVICE_STATE_MAP.get(int(r[0]), "UNKNOWN"),
-            output=r[1],
-            perf_data=r[2],
-            acknowledged=bool(int(r[3])),
-            in_downtime=int(r[4]) > 0,
-            **_parse_extra(r),
-        )
+        return _build_state_from_row(rows[0], _SERVICE_STATE_MAP, "service")
 
     async def get_service_perf_and_cmd(self, host: str, service: str) -> tuple[str, str]:
         """Return (perf_data, check_command) for a single service."""
@@ -407,7 +485,7 @@ class LivestatusBackend(BackendBase):
         if not rows:
             return "", ""
         r = rows[0]
-        return str(r[0]), str(r[1])
+        return _row_str(r, 0), _row_str(r, 1)
 
     async def get_host_hard_state(self, hostname: str) -> ObjectState:
         query = (
@@ -418,17 +496,7 @@ class LivestatusBackend(BackendBase):
         rows = await self._query(query)
         if not rows:
             return ObjectState(object_id="", type="host", state="PENDING")
-        r = rows[0]
-        return ObjectState(
-            object_id="",
-            type="host",
-            state=_HOST_STATE_MAP.get(int(r[0]), "UNKNOWN"),
-            output=r[1],
-            perf_data=r[2],
-            acknowledged=bool(int(r[3])),
-            in_downtime=int(r[4]) > 0,
-            **_parse_extra(r, include_address=True),
-        )
+        return _build_state_from_row(rows[0], _HOST_STATE_MAP, "host", include_address=True)
 
     async def get_service_hard_state(self, host: str, service: str) -> ObjectState:
         query = (
@@ -440,17 +508,7 @@ class LivestatusBackend(BackendBase):
         rows = await self._query(query)
         if not rows:
             return ObjectState(object_id="", type="service", state="PENDING")
-        r = rows[0]
-        return ObjectState(
-            object_id="",
-            type="service",
-            state=_SERVICE_STATE_MAP.get(int(r[0]), "UNKNOWN"),
-            output=r[1],
-            perf_data=r[2],
-            acknowledged=bool(int(r[3])),
-            in_downtime=int(r[4]) > 0,
-            **_parse_extra(r),
-        )
+        return _build_state_from_row(rows[0], _SERVICE_STATE_MAP, "service")
 
     async def get_hostgroup_states(self, group: str) -> ObjectState:
         query = f"GET hosts\nColumns: state\nFilter: groups >= {_ls_escape(group)}\n"
@@ -458,7 +516,7 @@ class LivestatusBackend(BackendBase):
         if not rows:
             return ObjectState(object_id="", type="hostgroup", state="PENDING")
         worst = max(
-            (_HOST_STATE_MAP.get(int(r[0]), "UNKNOWN") for r in rows),
+            (_HOST_STATE_MAP.get(_row_int(r, 0), "UNKNOWN") for r in rows),
             key=lambda s: _HOST_SEVERITY.get(s, 0),
         )
         return ObjectState(object_id="", type="hostgroup", state=worst)
@@ -469,7 +527,7 @@ class LivestatusBackend(BackendBase):
         if not rows:
             return ObjectState(object_id="", type="servicegroup", state="PENDING")
         worst = max(
-            (_SERVICE_STATE_MAP.get(int(r[0]), "UNKNOWN") for r in rows),
+            (_SERVICE_STATE_MAP.get(_row_int(r, 0), "UNKNOWN") for r in rows),
             key=lambda s: _SERVICE_SEVERITY.get(s, 0),
         )
         return ObjectState(object_id="", type="servicegroup", state=worst)
@@ -477,52 +535,55 @@ class LivestatusBackend(BackendBase):
     async def get_objects(self, obj_type: str) -> list[str]:
         if obj_type == "host":
             rows = await self._query("GET hosts\nColumns: name\n")
-            return [r[0] for r in rows]
+            return [_row_str(r, 0) for r in rows]
         if obj_type == "service":
             rows = await self._query("GET services\nColumns: host_name description\n")
-            return [f"{r[0]};{r[1]}" for r in rows]
+            return [f"{_row_str(r, 0)};{_row_str(r, 1)}" for r in rows]
         if obj_type == "hostgroup":
             rows = await self._query("GET hostgroups\nColumns: name\n")
-            return [r[0] for r in rows]
+            return [_row_str(r, 0) for r in rows]
         if obj_type == "servicegroup":
             rows = await self._query("GET servicegroups\nColumns: name\n")
-            return [r[0] for r in rows]
+            return [_row_str(r, 0) for r in rows]
         return []
 
     async def get_group_members(self, group_type: str, group_name: str) -> list[str]:
         if group_type == "all_hosts":
             rows = await self._query("GET hosts\nColumns: name\n")
-            return [r[0] for r in rows]
+            return [_row_str(r, 0) for r in rows]
         if group_type == "all_services":
             rows = await self._query("GET services\nColumns: host_name description\n")
-            return [f"{r[0]};{r[1]}" for r in rows]
+            return [f"{_row_str(r, 0)};{_row_str(r, 1)}" for r in rows]
         if group_type == "hostgroup":
             query = f"GET hosts\nColumns: name\nFilter: groups >= {_ls_escape(group_name)}\n"
             rows = await self._query(query)
-            return [r[0] for r in rows]
+            return [_row_str(r, 0) for r in rows]
         if group_type == "servicegroup":
             query = f"GET services\nColumns: host_name description\nFilter: groups >= {_ls_escape(group_name)}\n"
             rows = await self._query(query)
-            return [f"{r[0]};{r[1]}" for r in rows]
+            return [f"{_row_str(r, 0)};{_row_str(r, 1)}" for r in rows]
         return []
 
     async def get_topology(self) -> list[TopologyRow]:
         rows = await self._query("GET hosts\nColumns: name parents state plugin_output\n")
         result: list[TopologyRow] = []
         for r in rows:
-            if not r or not r[0]:
+            name = _row_str(r, 0)
+            if not name:
                 continue
-            raw_parents = r[1] if len(r) > 1 else []
+            raw_parents = r[1] if len(r) > 1 else ""
             if isinstance(raw_parents, list):
-                parents = [str(p) for p in raw_parents if p]
+                parents = [p for p in raw_parents if isinstance(p, str) and p]
+            elif isinstance(raw_parents, str):
+                parents = [p.strip() for p in raw_parents.split(",") if p.strip()]
             else:
-                parents = [p.strip() for p in (str(raw_parents) or "").split(",") if p.strip()]
+                parents = []
             result.append(
                 TopologyRow(
-                    name=str(r[0]),
+                    name=name,
                     parents=parents,
-                    state=_HOST_STATE_MAP.get(int(r[2]), "UNKNOWN") if len(r) > 2 else "UNKNOWN",
-                    output=str(r[3]) if len(r) > 3 else "",
+                    state=_HOST_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
+                    output=_row_str(r, 3),
                 )
             )
         return result
@@ -535,9 +596,9 @@ class LivestatusBackend(BackendBase):
         )
         return [
             ServiceRow(
-                name=str(r[0]),
-                state=_SERVICE_STATE_MAP.get(int(r[1]), "UNKNOWN"),
-                output=str(r[2]),
+                name=_row_str(r, 0),
+                state=_SERVICE_STATE_MAP.get(_row_int(r, 1), "UNKNOWN"),
+                output=_row_str(r, 2),
             )
             for r in rows
         ]
@@ -554,20 +615,29 @@ class LivestatusBackend(BackendBase):
         r = rows[0]
 
         # 1. OrbVis labels: orbvis_lat / orbvis_lng
-        labels: dict[str, Any] = r[0] if isinstance(r[0], dict) else {}
-        try:
-            return float(labels["orbvis_lat"]), float(labels["orbvis_lng"])
-        except (KeyError, TypeError, ValueError):
-            pass
+        labels = _row_dict(r, 0)
+        lat_raw = labels.get("orbvis_lat")
+        lng_raw = labels.get("orbvis_lng")
+        if lat_raw is not None and lng_raw is not None:
+            try:
+                return float(str(lat_raw)), float(str(lng_raw))
+            except (TypeError, ValueError):
+                pass
 
         # 2. Legacy custom variables: LAT / LONG
-        try:
-            names: list[Any] = r[1] if isinstance(r[1], list) else []
-            values: list[Any] = r[2] if isinstance(r[2], list) else []
-            cv = dict(zip(names, values, strict=False))
-            return float(cv["LAT"]), float(cv["LONG"])
-        except (KeyError, TypeError, ValueError):
-            return None
+        names = _row_list(r, 1)
+        values = _row_list(r, 2)
+        cv: dict[str, object] = {
+            str(n): v for n, v in zip(names, values, strict=False) if isinstance(n, str)
+        }
+        lat_raw = cv.get("LAT")
+        lng_raw = cv.get("LONG")
+        if lat_raw is not None and lng_raw is not None:
+            try:
+                return float(str(lat_raw)), float(str(lng_raw))
+            except (TypeError, ValueError):
+                return None
+        return None
 
     async def get_graph_templates(self, host: str, service: str | None) -> list[GraphGroup]:
         try:
@@ -881,17 +951,17 @@ class LivestatusBackend(BackendBase):
         # Columns: [0]=name [1]=state [2]=output [3]=perf_data [4]=ack [5]=downtime [6..]=extra
         results: dict[str, ObjectState] = {}
         for r in rows:
-            name = str(r[0])
-            results[name] = ObjectState(
+            name = _row_str(r, 0)
+            state = ObjectState(
                 object_id="",
                 type="host",
-                state=_HOST_STATE_MAP.get(int(r[1]), "UNKNOWN"),
-                output=r[2],
-                perf_data=r[3],
-                acknowledged=bool(int(r[4])),
-                in_downtime=int(r[5]) > 0,
-                **_parse_extra(r, offset=6, include_address=True),
+                state=_HOST_STATE_MAP.get(_row_int(r, 1), "UNKNOWN"),
+                output=_row_str(r, 2),
+                perf_data=_row_str(r, 3),
+                acknowledged=_row_bool(r, 4, default=False),
+                in_downtime=_row_int(r, 5) > 0,
             )
+            results[name] = _apply_extra(state, r, offset=6, include_address=True)
         return results
 
     async def get_services_states(
@@ -919,17 +989,17 @@ class LivestatusBackend(BackendBase):
         #          [5]=ack [6]=downtime [7..]=extra
         results: dict[tuple[str, str], ObjectState] = {}
         for r in rows:
-            key = (str(r[0]), str(r[1]))
-            results[key] = ObjectState(
+            key = (_row_str(r, 0), _row_str(r, 1))
+            state = ObjectState(
                 object_id="",
                 type="service",
-                state=_SERVICE_STATE_MAP.get(int(r[2]), "UNKNOWN"),
-                output=r[3],
-                perf_data=r[4],
-                acknowledged=bool(int(r[5])),
-                in_downtime=int(r[6]) > 0,
-                **_parse_extra(r, offset=7),
+                state=_SERVICE_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
+                output=_row_str(r, 3),
+                perf_data=_row_str(r, 4),
+                acknowledged=_row_bool(r, 5, default=False),
+                in_downtime=_row_int(r, 6) > 0,
             )
+            results[key] = _apply_extra(state, r, offset=7)
         return results
 
     async def get_hosts_services_batch(self, hostnames: list[str]) -> dict[str, list[ServiceRow]]:
@@ -943,11 +1013,11 @@ class LivestatusBackend(BackendBase):
         )
         results: dict[str, list[ServiceRow]] = {h: [] for h in hostnames}
         for r in rows:
-            results[str(r[0])].append(
+            results[_row_str(r, 0)].append(
                 ServiceRow(
-                    name=str(r[1]),
-                    state=_SERVICE_STATE_MAP.get(int(r[2]), "UNKNOWN"),
-                    output=str(r[3]),
+                    name=_row_str(r, 1),
+                    state=_SERVICE_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
+                    output=_row_str(r, 3),
                 )
             )
         return results
@@ -956,7 +1026,7 @@ class LivestatusBackend(BackendBase):
     # Low-level socket communication
     # ------------------------------------------------------------------
 
-    async def _query(self, query: str) -> list[list[Any]]:
+    async def _query(self, query: str) -> list[LivestatusRow]:
         """Acquire connection slot and run query with an overall timeout."""
         async with self._semaphore:
             return await asyncio.wait_for(
@@ -964,7 +1034,7 @@ class LivestatusBackend(BackendBase):
                 timeout=settings.backend_query_timeout,
             )
 
-    async def _query_raw(self, query: str) -> list[list[Any]]:
+    async def _query_raw(self, query: str) -> list[LivestatusRow]:
         """Send a Livestatus query and return parsed rows."""
         lql = query.rstrip("\n") + "\nOutputFormat: json\nResponseHeader: fixed16\n"
         auth_user = _auth_user_ctx.get()
@@ -1018,7 +1088,7 @@ class LivestatusBackend(BackendBase):
             text = body.decode("utf-8").strip()
             if not text:
                 return []
-            parsed: list[list[Any]] = _json.loads(text)
+            parsed: list[LivestatusRow] = _json.loads(text)
             return parsed
         finally:
             writer.close()
