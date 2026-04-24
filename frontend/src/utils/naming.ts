@@ -5,11 +5,11 @@ export const VISUAL_ONLY_TYPES: readonly ObjectType[] = ['image', 'textbox', 'li
 
 /**
  * Return a human-readable type label for a board object.
- * Graph objects are labelled by what they monitor ('service' or 'host'),
- * not by their OrbVis object type ('graph').
+ * Graph and line objects are labelled by what they monitor ('service' or 'host')
+ * when linked to one, not by their OrbVis object type.
  */
 export function getObjectTypeLabel(object: BoardObject): string {
-  if (object.type === 'graph') {
+  if (object.type === 'graph' || object.type === 'line') {
     if (object.service_description) return 'service';
     if (object.host_name) return 'host';
   }

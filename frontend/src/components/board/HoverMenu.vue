@@ -206,9 +206,13 @@ const displayName = computed(() => getBoardObjectName(props.object));
 
 const hoverTypeLabel = computed(() => getObjectTypeLabel(props.object));
 
-const hasMonitoring = computed(
-  () => !(VISUAL_ONLY_TYPES as readonly string[]).includes(props.object.type),
-);
+const hasMonitoring = computed(() => {
+  // A line linked to a host/service is not purely decorative — show its state.
+  if (props.object.type === 'line') {
+    return !!(props.object.host_name || props.object.service_description);
+  }
+  return !(VISUAL_ONLY_TYPES as readonly string[]).includes(props.object.type);
+});
 
 const isNoPermission = computed(() => props.state?.state === 'NO_PERMISSION');
 
