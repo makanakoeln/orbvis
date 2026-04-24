@@ -46,8 +46,8 @@ jobs:
       - name: Dependency audit
         run: npm audit --audit-level=high
 
-      - name: Test
-        run: npm test -- --run
+      - name: Test + coverage gate
+        run: npm run test:coverage
 
       - name: Build
         run: npm run build
