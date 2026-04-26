@@ -1,5 +1,5 @@
 <template>
-    <div class="fixed z-50 pointer-events-none" :style="{ left: `${x}px`, top: `${y}px` }">
+    <div ref="rootEl" class="fixed z-50 pointer-events-none" :style="positionStyle">
         <div
             class="bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-xl p-3.5 min-w-52 max-w-72"
         >
@@ -41,6 +41,16 @@
                     <!-- State -->
                     <div v-if="state" class="text-xs font-semibold mt-1" :class="stateTextColor">
                         {{ state.state }}
+                        <span
+                            v-if="state.acknowledged"
+                            class="text-[var(--text-muted)] font-normal"
+                            >· {{ t('board.hover.acknowledged') }}</span
+                        >
+                        <span
+                            v-else-if="state.in_downtime"
+                            class="text-[var(--text-muted)] font-normal"
+                            >· {{ t('board.hover.inDowntime') }}</span
+                        >
                     </div>
 
                     <!-- Output -->
@@ -155,7 +165,7 @@
 
 <script setup lang="ts">
 import DOMPurify, { type Config as DOMPurifyConfig } from 'dompurify';
-import { computed, onMounted, ref } from 'vue';
+import { computed, type CSSProperties, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { metricsApi } from '@/api/client';
@@ -177,12 +187,91 @@ const props = defineProps<{
     y: number;
     template?: string | null;
     backendId?: string | null;
+    // Bounding rect of the hovered icon (in viewport coords). When the tooltip
+    // has to flip to avoid overflow we anchor the flipped position at this
+    // rect's edges so the tooltip never lands on top of the icon.
+    anchorRect?: { left: number; top: number; right: number; bottom: number } | null;
 }>();
 
 const { t } = useI18n();
 const authStore = useAuthStore();
 
 const cmkPerfometer = ref<PerfometerResult | null>(null);
+
+// Viewport-aware positioning: render once invisible to measure, then flip to
+// the cursor's left/top side if the tooltip would overflow the right/bottom
+// edge of the viewport. Recomputes on prop changes so the same instance can
+// follow the cursor across objects without sticking off-screen.
+const rootEl = ref<HTMLDivElement | null>(null);
+const adjusted = ref<{ left: number; top: number; ready: boolean }>({
+    left: props.x,
+    top: props.y,
+    ready: false,
+});
+
+const positionStyle = computed<CSSProperties>(() => ({
+    left: `${adjusted.value.left}px`,
+    top: `${adjusted.value.top}px`,
+    visibility: adjusted.value.ready ? 'visible' : 'hidden',
+}));
+
+// Effective viewport bounds in *this window's* coordinate system. When OrbVis
+// runs inside Checkmk's <iframe name="main">, the outer browser window is
+// often smaller than the iframe's own innerHeight, so a position that fits
+// `window.innerHeight` can still paint past the visible parent edge. Read the
+// top window's size when same-origin allows it, and translate it back into
+// our local coords via the iframe's offset.
+function getEffectiveBounds(): { width: number; height: number } {
+    const fallback = { width: window.innerWidth, height: window.innerHeight };
+    if (window === window.top) return fallback;
+    try {
+        const top = window.top;
+        const frame = window.frameElement as HTMLIFrameElement | null;
+        if (!top || !frame) return fallback;
+        const fr = frame.getBoundingClientRect();
+        return {
+            width: Math.min(fallback.width, top.innerWidth - fr.left),
+            height: Math.min(fallback.height, top.innerHeight - fr.top),
+        };
+    } catch {
+        return fallback;
+    }
+}
+
+async function updatePosition() {
+    await nextTick();
+    if (!rootEl.value) return;
+    const rect = rootEl.value.getBoundingClientRect();
+    const { width: viewportW, height: viewportH } = getEffectiveBounds();
+    const margin = 8;
+    const gap = 8;
+    let left = props.x;
+    let top = props.y;
+    if (left + rect.width > viewportW - margin) {
+        // Flip past the icon's *left edge* if we know it; otherwise back off
+        // from the cursor by the tooltip width. Cursor-based fallback can
+        // overlap a small icon, so anchorRect is strongly preferred.
+        const flipFrom = props.anchorRect ? props.anchorRect.left : props.x;
+        left = Math.max(margin, flipFrom - rect.width - gap);
+    }
+    if (top + rect.height > viewportH - margin) {
+        const flipFrom = props.anchorRect ? props.anchorRect.top : props.y;
+        top = Math.max(margin, flipFrom - rect.height - gap);
+    }
+    adjusted.value = { left, top, ready: true };
+}
+
+watch(
+    () => [props.x, props.y],
+    () => {
+        adjusted.value.ready = false;
+        void updatePosition();
+    },
+);
+
+onMounted(() => {
+    void updatePosition();
+});
 
 onMounted(() => {
     // Perfometer only makes sense for an object linked to a specific service

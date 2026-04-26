@@ -132,6 +132,10 @@ export default {
         exitFullscreen: 'Vollbild beenden',
         openInNewTab: 'In neuem Tab öffnen (Vollbild)',
         utilizationRing: 'Auslastungsring (erste Metrik)',
+        hover: {
+            acknowledged: 'quittiert',
+            inDowntime: 'in Wartung',
+        },
     },
     boardSettings: {
         editMode: 'Bearbeitungsmodus',

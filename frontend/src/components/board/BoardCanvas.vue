@@ -91,6 +91,7 @@
             :state="states[hoverMenu.object.id]"
             :x="hoverMenu.x"
             :y="hoverMenu.y"
+            :anchor-rect="hoverMenu.anchorRect"
             :backend-id="props.config.backend_id"
             :template="
                 resolveTemplate(
@@ -524,6 +525,7 @@ const hoverMenu = reactive({
     object: null as BoardObjectType | null,
     x: 0,
     y: 0,
+    anchorRect: null as { left: number; top: number; right: number; bottom: number } | null,
 });
 const contextMenu = reactive({
     visible: false,
@@ -536,7 +538,28 @@ function openHoverMenu(event: MouseEvent, obj: BoardObjectType) {
     hoverMenu.object = obj;
     hoverMenu.x = event.pageX + 12;
     hoverMenu.y = event.pageY + 12;
+    // Walk up from event.target to find an icon-sized wrapper for anchoring
+    // the tooltip flip. Skipped for lines because their bounding-box spans
+    // the whole board. event.currentTarget would be null by now (cleared
+    // after Vue's emit bridge), so we work from event.target instead.
+    hoverMenu.anchorRect = obj.type === 'line' ? null : findIconWrapperRect(event.target);
     hoverMenu.visible = true;
+}
+
+function findIconWrapperRect(
+    target: EventTarget | null,
+): { left: number; top: number; right: number; bottom: number } | null {
+    let el = target instanceof Element ? target : null;
+    while (el && el !== document.body) {
+        const r = el.getBoundingClientRect();
+        // Icon wrappers are roughly square and small — a real icon plus its
+        // label tops out around 100×100 px. Anything larger is a container.
+        if (r.width > 0 && r.width < 200 && r.height > 0 && r.height < 200) {
+            return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+        }
+        el = el.parentElement;
+    }
+    return null;
 }
 
 function closeHoverMenu() {

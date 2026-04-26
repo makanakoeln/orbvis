@@ -131,6 +131,10 @@ export default {
         exitFullscreen: 'Exit full screen',
         openInNewTab: 'Open in new tab (full screen)',
         utilizationRing: 'Utilization ring (first metric)',
+        hover: {
+            acknowledged: 'acknowledged',
+            inDowntime: 'in downtime',
+        },
     },
     boardSettings: {
         editMode: 'Edit Mode',
