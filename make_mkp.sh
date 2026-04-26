@@ -71,6 +71,12 @@ tar czf "$TMPDIR/lib/orbvis/htdocs.tar.gz" -C "$SCRIPT_DIR/frontend/dist" .
 # Backend: single tarball → lib/orbvis/server.tar.gz
 tar czf "$TMPDIR/lib/orbvis/server.tar.gz" -C "$SCRIPT_DIR/backend" .
 
+# CHANGELOG.md and VERSION live in the repo root; copy them next to the
+# server tarball so the backend (which searches lib/orbvis/{,server/}) can
+# find them at runtime — otherwise the in-app changelog modal stays empty.
+cp "$SCRIPT_DIR/CHANGELOG.md" "$TMPDIR/lib/orbvis/CHANGELOG.md"
+cp "$SCRIPT_DIR/VERSION"      "$TMPDIR/lib/orbvis/VERSION"
+
 # Demo boards: tarball → lib/orbvis/boards.tar.gz
 mapfile -t _BOARD_FILES < <(cd "$SCRIPT_DIR/backend" && find boards -name "demo*.json" -o -name "demo.svg" 2>/dev/null | sort)
 tar czf "$TMPDIR/lib/orbvis/boards.tar.gz" \
