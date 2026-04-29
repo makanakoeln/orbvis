@@ -76,8 +76,7 @@ To uninstall:
 ### With Docker Compose
 
 ```bash
-./bootstrap.sh        # one-time: generates .env with a fresh SECRET_KEY
-mkdir -p data/boards
+./bootstrap.sh        # one-time: generates .env, ensures data/ dirs exist
 docker compose up --build
 ```
 
