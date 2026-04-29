@@ -5,10 +5,15 @@ WORKDIR /app
 # Install uv for fast dependency management (as root, before user switch)
 RUN pip install --no-cache-dir uv
 
-COPY pyproject.toml .
-RUN uv pip install --system --no-cache .
+# Build context = repo root (set in docker-compose.yml).
+# VERSION and CHANGELOG.md are referenced via force-include "../VERSION" in
+# backend/pyproject.toml and must therefore live at /VERSION resp. /CHANGELOG.md
+# at build time.
+COPY VERSION /VERSION
+COPY CHANGELOG.md /CHANGELOG.md
+COPY backend/ /app/
 
-COPY . .
+RUN uv pip install --system --no-cache .
 
 # Create an unprivileged user and make the app tree writable for it.
 # /app/boards and /app/data are volume mount points — chown them too so the

@@ -1,6 +1,8 @@
 services:
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8742}:8000"
     volumes:
