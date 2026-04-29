@@ -70,7 +70,7 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Build backend image
-        run: docker build ./backend --tag orbvis-backend:test
+        run: docker build . -f backend/Dockerfile --tag orbvis-backend:test
 
       - name: Smoke test backend image
         # Run in testing mode so app.core.config's production-SECRET_KEY check
