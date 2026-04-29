@@ -734,6 +734,7 @@ const TYPE_CHARS: Record<string, string> = {
     map: 'M',
     image: '◆',
     line: '—',
+    aggregation: 'BI',
 };
 const typeChar = computed(() => TYPE_CHARS[props.object.type] ?? '?');
 
@@ -767,6 +768,8 @@ const displayName = computed(() => {
     else if (props.object.type === 'service')
         name = props.object.service_description ?? props.object.id;
     else if (props.object.type === 'map') name = props.object.map_name ?? props.object.id;
+    else if (props.object.type === 'aggregation')
+        name = props.object.aggregation_id ?? props.object.id;
     const maxlen = props.object.label_maxlen;
     if (maxlen && maxlen > 0 && name.length > maxlen) return name.slice(0, maxlen) + '…';
     return name;

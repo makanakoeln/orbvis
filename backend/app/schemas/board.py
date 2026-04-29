@@ -17,7 +17,16 @@ ObjectType = Literal[
     "textbox",
     "cmk_label",
     "graph",
+    "aggregation",
 ]
+
+
+class AggregationInfo(BaseModel):
+    """Discovery payload for a Checkmk BI aggregation (used by the editor autocomplete)."""
+
+    id: str
+    title: str
+    pack_id: str
 
 LineStyle = Literal["plain", "arrow_end", "arrow_start", "arrow_both", "dashed", "weathermap"]
 
@@ -98,6 +107,8 @@ class BoardObject(BaseModel):
     cmk_label_name: str | None = None
     cmk_label_value: str | None = None
     cmk_label_target: Literal["hosts", "services"] | None = None
+    # Checkmk BI aggregation
+    aggregation_id: str | None = None
     # State behaviour flags
     only_hard_states: bool = False
     recognize_services: bool = False
@@ -230,6 +241,7 @@ class BoardObjectUpdate(BaseModel):
     cmk_label_name: str | None = None
     cmk_label_value: str | None = None
     cmk_label_target: Literal["hosts", "services"] | None = None
+    aggregation_id: str | None = None
     only_hard_states: bool | None = None
     recognize_services: bool | None = None
     exclude_members: str | None = None

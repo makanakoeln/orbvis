@@ -137,6 +137,21 @@
                                     />
                                 </div>
                             </template>
+                            <template v-if="object.type === 'aggregation'">
+                                <div class="field-row">
+                                    <label class="field-label">{{
+                                        t('boardSettings.aggregationId') || 'BI aggregation'
+                                    }}</label>
+                                    <AutocompleteInput
+                                        v-model="form.aggregation_id"
+                                        :suggestions="aggregationIds"
+                                        :display-labels="aggregationLabels"
+                                        :loading="loadingAggregations"
+                                        placeholder="aggregation id"
+                                        class="flex-1"
+                                    />
+                                </div>
+                            </template>
                         </div>
                     </section>
 
@@ -1229,6 +1244,7 @@ const form = reactive({
     service_description: '',
     group_name: '',
     map_name: '',
+    aggregation_id: '',
     line_style: null as string | null,
     line_color: null as string | null,
     line_color_border: null as string | null,
@@ -1299,6 +1315,7 @@ watch(
         form.service_description = obj.service_description ?? '';
         form.group_name = obj.group_name ?? '';
         form.map_name = obj.map_name ?? '';
+        form.aggregation_id = obj.aggregation_id ?? '';
         form.line_style = obj.line_style ?? null;
         form.line_color = obj.line_color ?? null;
         form.line_color_border = obj.line_color_border ?? null;
@@ -1358,9 +1375,12 @@ watch(
 const hosts = ref<string[]>([]);
 const services = ref<string[]>([]);
 const groups = ref<string[]>([]);
+const aggregationIds = ref<string[]>([]);
+const aggregationLabels = ref<string[]>([]);
 const loadingHosts = ref(false);
 const loadingServices = ref(false);
 const loadingGroups = ref(false);
+const loadingAggregations = ref(false);
 
 async function loadAutocomplete() {
     if (!props.backendId) return;
@@ -1390,6 +1410,16 @@ async function loadAutocomplete() {
             .objects(props.backendId, 'servicegroup', auth.accessToken!)
             .catch(() => []);
         loadingGroups.value = false;
+    } else if (type === 'aggregation') {
+        loadingAggregations.value = true;
+        const aggrs = await connectionsApi
+            .aggregations(props.backendId, auth.accessToken!)
+            .catch(() => []);
+        aggregationIds.value = aggrs.map((a) => a.id);
+        aggregationLabels.value = aggrs.map((a) =>
+            a.title && a.title !== a.id ? `${a.title} (${a.id})` : a.id,
+        );
+        loadingAggregations.value = false;
     }
 }
 
@@ -1507,6 +1537,8 @@ async function save() {
         if (props.object.type === 'hostgroup' || props.object.type === 'servicegroup')
             updates.group_name = form.group_name || null;
         if (props.object.type === 'map') updates.map_name = form.map_name || null;
+        if (props.object.type === 'aggregation')
+            updates.aggregation_id = form.aggregation_id || null;
 
         if (props.object.type === 'line') {
             updates.host_name = form.host_name || null;

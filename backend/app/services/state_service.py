@@ -145,6 +145,7 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
     svcs_hard: list[BoardObject] = []
     lines: list[BoardObject] = []
     map_objects: list[BoardObject] = []
+    aggregation_objs: list[BoardObject] = []
     others: list[BoardObject] = []
 
     for obj in objects:
@@ -160,6 +161,8 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
             lines.append(obj)
         elif obj.type == "map" and obj.map_name:
             map_objects.append(obj)
+        elif obj.type == "aggregation" and obj.aggregation_id:
+            aggregation_objs.append(obj)
         else:
             others.append(obj)
 
@@ -244,6 +247,25 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
                     else ObjectState(object_id=obj.id, type="service", state="PENDING", stale=True)
                 )
                 results[obj.id] = s
+
+    if aggregation_objs:
+        aids = [o.aggregation_id for o in aggregation_objs if o.aggregation_id]
+        try:
+            aggr_batch = await backend.get_aggregations_states(aids)
+        except Exception:
+            logger.warning("Batch aggregation state query failed", exc_info=True)
+            aggr_batch = {}
+        for obj in aggregation_objs:
+            assert obj.aggregation_id is not None
+            raw = aggr_batch.get(obj.aggregation_id)
+            s = (
+                ObjectState(**{**raw.model_dump(), "object_id": obj.id})
+                if raw is not None
+                else ObjectState(
+                    object_id=obj.id, type="aggregation", state="PENDING", stale=True
+                )
+            )
+            results[obj.id] = s
 
     individual = [_get_object_state(backend, obj) for obj in lines + others]
     for state in await asyncio.gather(*individual):
@@ -348,6 +370,8 @@ async def _get_object_state(backend: BackendBase, obj: BoardObject) -> ObjectSta
             state = await backend.get_service_state(obj.host_name, obj.service_description)
         elif obj.type == "graph" and obj.host_name:
             state = await backend.get_host_state(obj.host_name)
+        elif obj.type == "aggregation" and obj.aggregation_id:
+            state = await backend.get_aggregation_state(obj.aggregation_id)
         else:
             state = ObjectState(object_id=obj.id, type=obj.type, state="PENDING")
         state.object_id = obj.id

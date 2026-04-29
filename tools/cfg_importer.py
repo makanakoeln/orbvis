@@ -253,6 +253,7 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
             "shape",
             "line",
             "textbox",
+            "aggr",
         ):
             continue
 
@@ -340,8 +341,7 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
         x, _ = _parse_coord(p.get("x", "0"))
         y, _ = _parse_coord(p.get("y", "0"))
 
-        # Map legacy type to OrbVis type
-        orbvis_type = legacy_type  # host/service/hostgroup/servicegroup/map all identical
+        orbvis_type = "aggregation" if legacy_type == "aggr" else legacy_type
 
         display, warning = _display(p)
         if warning:
@@ -375,6 +375,10 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
             obj["group_name"] = p.get("servicegroup_name") or p.get("group_name")
         elif legacy_type == "map":
             obj["map_name"] = p.get("map_name")
+        elif legacy_type == "aggr":
+            obj["aggregation_id"] = p.get("aggr_name")
+            if "aggr_url" in p and "url" not in p:
+                obj["url"] = p["aggr_url"]
 
         # Optional link
         if "url" in p:

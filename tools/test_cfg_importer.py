@@ -243,6 +243,26 @@ def test_gadget_unknown_falls_back_with_warning(tmp_path: Path, capsys):
     assert "my_custom_gadget.php" in captured.err
 
 
+def test_aggr_object(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define aggr {
+            aggr_name=Servers
+            aggr_url=http://cmk/site/check_mk/view.py?view_name=aggr_single&aggr_name=Servers
+            x=100
+            y=120
+            object_id=42
+        }
+    """)
+    cfg = tmp_path / "aggr.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    result = blocks_to_board_json(blocks, "aggr")
+    obj = result["objects"][0]
+    assert obj["type"] == "aggregation"
+    assert obj["aggregation_id"] == "Servers"
+    assert obj["url"].endswith("aggr_name=Servers")
+
+
 def test_comment_handling(tmp_path: Path):
     cfg_text = textwrap.dedent("""
         # This is a comment

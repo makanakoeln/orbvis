@@ -7,6 +7,7 @@ making cmk.* modules importable. Falls back gracefully when standalone.
 
 import logging
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 
 from app.core.config import settings
@@ -268,3 +269,132 @@ def _load_user_fallback(username: str) -> dict[str, object]:
     except Exception as e:
         log.warning("_load_user_fallback(%s): %s", username, e)
         return {}
+
+
+# ---------------------------------------------------------------------------
+# Checkmk BI (Business Intelligence) — direct Python integration
+# ---------------------------------------------------------------------------
+#
+# OrbVis prefers the in-process cmk.bi.* path over the REST API:
+#   - no automation user / token (defunct in CMK 2.5)
+#   - automatic per-user permissions via cmk.gui.user
+#   - ~10× lower latency (no HTTP roundtrip, no JSON serialisation)
+#
+# Standalone deployments (no OMD site) fall back to REST in livestatus.py.
+
+
+def cmk_bi_available() -> bool:
+    """Whether the in-process BI fast path is usable in this deployment."""
+    if not available:
+        return False
+    try:
+        import cmk.gui.bi.bi_manager  # noqa: F401
+    except Exception:
+        return False
+    return True
+
+
+def cmk_bi_get_aggregations_states(
+    username: str | None,
+    aggregation_ids: list[str],
+) -> dict[str, dict[str, object]]:
+    """Compute current state for a list of BI aggregations via cmk.bi.
+
+    Synchronous — callers wrap with asyncio.to_thread(). Returns a dict keyed by
+    aggregation id; entries contain ``state`` (int), ``output`` (str),
+    ``acknowledged`` (bool), ``in_downtime`` (bool). Missing aggregations are
+    simply absent from the result.
+    """
+    if not cmk_bi_available() or not aggregation_ids:
+        return {}
+    try:
+        from cmk.bi.filters import BIAggregationFilter
+        from cmk.gui.bi.bi_manager import BIManager
+        from cmk.gui.utils.script_helpers import application_and_request_context
+
+        with application_and_request_context():
+            _set_cmk_user(username)
+            # BIManager() compiles all aggregations on each call; for now we accept the
+            # cost (matches Checkmk's own bi_aggregation_state endpoint behaviour). If
+            # multi-board setups become a hotspot, cache here with ~10s TTL.
+            bi_manager = BIManager()
+            bi_filter = BIAggregationFilter([], [], [], list(aggregation_ids), [], [])
+            results = bi_manager.computer.compute_result_for_filter(bi_filter)
+            return _bi_results_to_dict(results)
+    except Exception as exc:
+        log.warning("cmk.bi compute failed for %s: %s", aggregation_ids, exc)
+        return {}
+
+
+def cmk_bi_list_aggregations() -> list[dict[str, str]]:
+    """Return all configured BI aggregations as [{id, title, pack_id}, ...]."""
+    if not cmk_bi_available():
+        return []
+    try:
+        from cmk.bi.packs import get_cached_bi_packs
+        from cmk.gui.utils.script_helpers import application_and_request_context
+
+        with application_and_request_context():
+            packs = get_cached_bi_packs()
+            packs.load_config()
+            out: list[dict[str, str]] = []
+            for pack in packs.get_packs().values():
+                pack_id = str(getattr(pack, "id", "") or "")
+                for aggr in pack.get_aggregations().values():
+                    aggr_id = str(getattr(aggr, "id", "") or "")
+                    if not aggr_id:
+                        continue
+                    title = str(getattr(aggr, "title", "") or aggr_id)
+                    out.append({"id": aggr_id, "title": title, "pack_id": pack_id})
+            return out
+    except Exception as exc:
+        log.warning("cmk.bi list aggregations failed: %s", exc)
+        return []
+
+
+def _set_cmk_user(username: str | None) -> None:
+    """Best-effort: scope the current cmk.gui request to *username*.
+
+    On failure (CMK API drift, user not in CMK, …) we silently keep the default
+    application context — BI calls then run with whatever permissions the
+    application user has. Per-user RBAC is degraded but the call still succeeds.
+    """
+    if not username:
+        return
+    try:
+        from cmk.gui.session import session
+        from cmk.gui.userdb import LoggedInUser
+
+        session.user = LoggedInUser(username)
+    except Exception as exc:
+        log.debug("cannot set per-user cmk.gui context for %s: %s", username, exc)
+
+
+def _bi_results_to_dict(results: object) -> dict[str, dict[str, object]]:
+    """Normalise BIComputer.compute_result_for_filter output into plain dicts.
+
+    The cmk.bi return type is ``Iterable[tuple[BIAggregation, list[NodeResultBundle]]]``,
+    typed as object here so this module can be imported without cmk.* installed.
+    """
+    out: dict[str, dict[str, object]] = {}
+    if not isinstance(results, Iterable):
+        return out
+    for entry in results:
+        try:
+            aggr, branches = entry
+        except (TypeError, ValueError):
+            continue
+        aggr_id = str(getattr(aggr, "id", "") or "")
+        if not aggr_id or not branches:
+            continue
+        bundle = branches[0]
+        actual = getattr(bundle, "actual_result", None)
+        if actual is None:
+            continue
+        out[aggr_id] = {
+            "state": int(getattr(actual, "state", -1)),
+            "output": str(getattr(actual, "output", "") or ""),
+            "acknowledged": bool(getattr(actual, "acknowledged", False)),
+            "in_downtime": bool(getattr(actual, "downtime_state", 0)),
+        }
+    return out

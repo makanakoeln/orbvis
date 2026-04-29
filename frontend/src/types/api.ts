@@ -14,7 +14,14 @@ export type ObjectType =
     | 'line'
     | 'textbox'
     | 'cmk_label'
-    | 'graph';
+    | 'graph'
+    | 'aggregation';
+
+export interface AggregationInfo {
+    id: string;
+    title: string;
+    pack_id: string;
+}
 
 export interface LabelConfig {
     show: boolean;
@@ -89,6 +96,7 @@ export interface BoardObject {
     cmk_label_name?: string | null;
     cmk_label_value?: string | null;
     cmk_label_target?: 'hosts' | 'services' | null;
+    aggregation_id?: string | null;
     only_hard_states?: boolean;
     recognize_services?: boolean;
     exclude_members?: string | null;

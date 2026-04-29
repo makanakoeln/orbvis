@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TypedDict
 
+from app.schemas.board import AggregationInfo
 from app.schemas.state import ObjectState
 
 
@@ -157,6 +158,22 @@ class BackendBase(ABC):
         Checkmk/Livestatus backends override this using the rrddata column.
         """
         return MetricHistoryResult()
+
+    async def get_aggregation_state(self, aggregation_id: str) -> ObjectState:
+        """Return current state for a Checkmk BI aggregation.
+
+        Default returns PENDING — only Checkmk-aware backends (Livestatus + Test)
+        override this. Other backends silently degrade rather than error out.
+        """
+        return ObjectState(object_id="", type="aggregation", state="PENDING")
+
+    async def get_aggregations_states(self, aggregation_ids: list[str]) -> dict[str, ObjectState]:
+        """Return states for multiple BI aggregations in one call. Default: serial fan-out."""
+        return {aid: await self.get_aggregation_state(aid) for aid in aggregation_ids}
+
+    async def list_aggregations(self) -> list[AggregationInfo]:
+        """Return all defined BI aggregations for editor autocomplete."""
+        return []
 
     @abstractmethod
     async def is_available(self) -> bool:

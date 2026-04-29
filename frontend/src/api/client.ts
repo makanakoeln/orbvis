@@ -3,6 +3,7 @@
  */
 
 import type {
+    AggregationInfo,
     BackendConfig,
     BackendContext,
     BoardConfig,
@@ -292,6 +293,9 @@ export const connectionsApi = {
         if (host) params.set('host', host);
         return request(`/backends/${backendId}/objects?${params}`, {}, token);
     },
+
+    aggregations: (backendId: string, token: string): Promise<AggregationInfo[]> =>
+        request(`/backends/${backendId}/aggregations`, {}, token),
 
     test: (backendId: string, token: string): Promise<{ ok: boolean; message: string }> =>
         request(`/backends/${backendId}/test`, {}, token),

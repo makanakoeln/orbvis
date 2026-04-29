@@ -9,7 +9,7 @@ import logging
 import pkgutil
 import re as _re
 import types
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Iterator, Mapping
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -23,6 +23,7 @@ import httpx
 from app.backends.base import BackendBase, GraphGroup, MetricHistoryResult, ServiceRow, TopologyRow
 from app.core.config import settings
 from app.integrations import checkmk as _cmk_integration
+from app.schemas.board import AggregationInfo
 from app.schemas.state import ObjectState
 
 logger = logging.getLogger(__name__)
@@ -336,6 +337,46 @@ def _rrd_metric_id(label: str) -> str:
 # Livestatus state code → string mapping
 _HOST_STATE_MAP = {0: "UP", 1: "DOWN", 2: "UNREACHABLE"}
 _SERVICE_STATE_MAP = {0: "OK", 1: "WARNING", 2: "CRITICAL", 3: "UNKNOWN"}
+# Checkmk BI aggregation states (cmk.bi.bi_aggregation.BIStates).
+# -2 = ERROR / 4 = UNREACHABLE — both rare; collapsed onto UNKNOWN for OrbVis.
+_BI_STATE_MAP = {
+    -2: "UNKNOWN",
+    -1: "PENDING",
+    0: "OK",
+    1: "WARNING",
+    2: "CRITICAL",
+    3: "UNKNOWN",
+    4: "UNKNOWN",
+}
+
+
+def _aggregations_to_object_states(
+    raw: Mapping[str, object] | object, requested_ids: list[str]
+) -> dict[str, ObjectState]:
+    """Map a Checkmk BI result dict to OrbVis ObjectState entries.
+
+    *raw* is a mapping ``{aggregation_id: {state, output, acknowledged, in_downtime}}``,
+    produced either by the in-process cmk.bi path or by the REST API. Missing
+    entries get a stale PENDING placeholder so the caller never sees gaps.
+    """
+    aggrs: Mapping[str, object] = raw if isinstance(raw, Mapping) else {}
+    out: dict[str, ObjectState] = {}
+    for aid in requested_ids:
+        entry = aggrs.get(aid)
+        if not isinstance(entry, dict):
+            out[aid] = ObjectState(
+                object_id="", type="aggregation", state="PENDING", stale=True
+            )
+            continue
+        out[aid] = ObjectState(
+            object_id="",
+            type="aggregation",
+            state=_BI_STATE_MAP.get(int(entry.get("state", -1) or -1), "UNKNOWN"),
+            output=str(entry.get("output", "") or ""),
+            acknowledged=bool(entry.get("acknowledged", False)),
+            in_downtime=bool(entry.get("in_downtime", False)),
+        )
+    return out
 
 # Aggregate: worst state wins (higher = worse)
 _HOST_SEVERITY = {"UP": 0, "UNREACHABLE": 1, "DOWN": 2, "PENDING": -1}
@@ -431,6 +472,7 @@ class LivestatusBackend(BackendBase):
         self._automation_secret = automation_secret
         self._verify_ssl = verify_ssl
         self._semaphore = asyncio.Semaphore(settings.backend_max_connections)
+        self._aggregations_cache: tuple[float, list[AggregationInfo]] | None = None
 
     @asynccontextmanager
     async def with_auth_user(self, username: str) -> AsyncIterator[None]:
@@ -928,6 +970,128 @@ class LivestatusBackend(BackendBase):
             return True
         except Exception:
             return False
+
+    # ------------------------------------------------------------------
+    # Checkmk BI (Business Intelligence) — REST API
+    # ------------------------------------------------------------------
+
+    def _cmk_rest_base(self) -> str | None:
+        """Return the Checkmk REST API base, or None if not configured for REST calls."""
+        if not (self._checkmk_url and self._automation_user and self._automation_secret):
+            return None
+        cmk_url = self._checkmk_url.rstrip("/")
+        if cmk_url.startswith("/"):
+            cmk_url = "http://127.0.0.1" + cmk_url
+        return cmk_url + "/api/1.0"
+
+    async def _cmk_rest(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict[str, object] | None = None,
+    ) -> dict[str, object] | None:
+        """Call a Checkmk REST endpoint and return parsed JSON; None on any failure."""
+        base = self._cmk_rest_base()
+        if base is None:
+            return None
+        url = base + path
+        auth = f"Bearer {self._automation_user} {self._automation_secret}"
+        try:
+            async with httpx.AsyncClient(verify=self._verify_ssl, timeout=self._timeout) as client:
+                resp = await client.request(
+                    method,
+                    url,
+                    json=json,
+                    headers={"Authorization": auth, "Accept": "application/json"},
+                )
+                if resp.status_code != 200:
+                    logger.debug("CMK REST %s %s: HTTP %s", method, path, resp.status_code)
+                    return None
+                data = resp.json()
+                return data if isinstance(data, dict) else None
+        except Exception as exc:
+            logger.debug("CMK REST %s %s failed: %s", method, path, exc)
+            return None
+
+    async def get_aggregation_state(self, aggregation_id: str) -> ObjectState:
+        states = await self.get_aggregations_states([aggregation_id])
+        return states.get(
+            aggregation_id, ObjectState(object_id="", type="aggregation", state="PENDING")
+        )
+
+    async def get_aggregations_states(
+        self, aggregation_ids: list[str]
+    ) -> dict[str, ObjectState]:
+        if not aggregation_ids:
+            return {}
+
+        # Site-mode: in-process cmk.bi (preferred — per-user permissions, no auth)
+        if _cmk_integration.cmk_bi_available():
+            username = _auth_user_ctx.get()
+            site_data = await asyncio.to_thread(
+                _cmk_integration.cmk_bi_get_aggregations_states, username, aggregation_ids
+            )
+            if site_data:
+                return _aggregations_to_object_states(site_data, aggregation_ids)
+
+        # Standalone-mode fallback: REST API with whatever auth the backend
+        # connection has (typically Bearer with automation_user/secret).
+        rest_data = await self._cmk_rest(
+            "POST",
+            "/domain-types/bi_aggregation/actions/aggregation_state/invoke",
+            json={"filter_names": aggregation_ids},
+        )
+        if rest_data is None:
+            return {
+                aid: ObjectState(object_id="", type="aggregation", state="PENDING", stale=True)
+                for aid in aggregation_ids
+            }
+        return _aggregations_to_object_states(rest_data.get("aggregations") or {}, aggregation_ids)
+
+    async def list_aggregations(self) -> list[AggregationInfo]:
+        import time as _time
+
+        now = _time.time()
+        if self._aggregations_cache is not None and now - self._aggregations_cache[0] < 60.0:
+            return self._aggregations_cache[1]
+
+        # Site-mode: in-process cmk.bi
+        if _cmk_integration.cmk_bi_available():
+            entries = await asyncio.to_thread(_cmk_integration.cmk_bi_list_aggregations)
+            if entries:
+                result = [
+                    AggregationInfo(id=e["id"], title=e["title"], pack_id=e["pack_id"])
+                    for e in entries
+                ]
+                self._aggregations_cache = (now, result)
+                return result
+
+        # Standalone-mode fallback: REST API
+        data = await self._cmk_rest("GET", "/domain-types/bi_pack/collections/all")
+        if data is None:
+            return self._aggregations_cache[1] if self._aggregations_cache else []
+
+        result_rest: list[AggregationInfo] = []
+        packs = data.get("value")
+        for pack in packs if isinstance(packs, list) else []:
+            if not isinstance(pack, dict):
+                continue
+            pack_id = str(pack.get("id", "") or "")
+            members_raw = pack.get("members")
+            members = members_raw.get("aggregations") if isinstance(members_raw, dict) else None
+            aggrs = members.get("value") if isinstance(members, dict) else None
+            for aggr in aggrs if isinstance(aggrs, list) else []:
+                if not isinstance(aggr, dict):
+                    continue
+                aid = str(aggr.get("id", "") or "")
+                if not aid:
+                    continue
+                title = str(aggr.get("title", "") or aid)
+                result_rest.append(AggregationInfo(id=aid, title=title, pack_id=pack_id))
+
+        self._aggregations_cache = (now, result_rest)
+        return result_rest
 
     # ------------------------------------------------------------------
     # Batch query methods

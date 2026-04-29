@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 
 from app.backends.base import BackendBase, MetricHistoryResult, ServiceRow, TopologyRow
+from app.schemas.board import AggregationInfo
 from app.schemas.state import ObjectState
 
 _HOST_STATES = ["UP", "DOWN", "UNREACHABLE"]
@@ -14,6 +15,11 @@ _DEMO_HOSTS = ["localhost", "router01", "switch01", "fileserver", "mailserver"]
 _DEMO_SERVICES = ["HTTP", "PING", "Disk /", "Memory", "CPU Load", "SSH"]
 _DEMO_HOSTGROUPS = ["linux-servers", "windows-servers", "network-devices"]
 _DEMO_SERVICEGROUPS = ["web-services", "storage", "system-checks"]
+_DEMO_AGGREGATIONS = [
+    ("demo_web", "Web stack", "demo_pack"),
+    ("demo_db", "Database cluster", "demo_pack"),
+    ("demo_infra", "Core infrastructure", "demo_pack"),
+]
 
 
 class TestBackend(BackendBase):
@@ -168,6 +174,19 @@ class TestBackend(BackendBase):
             titles[label] = " ".join(w.capitalize() for w in label.split("_"))
 
         return MetricHistoryResult(series=series, titles=titles)
+
+    async def get_aggregation_state(self, aggregation_id: str) -> ObjectState:
+        idx = hash(aggregation_id) % len(_SERVICE_STATES)
+        state = _SERVICE_STATES[idx]
+        return ObjectState(
+            object_id="",
+            type="aggregation",
+            state=state,
+            output=f"BI aggregation {aggregation_id}: {state}",
+        )
+
+    async def list_aggregations(self) -> list[AggregationInfo]:
+        return [AggregationInfo(id=aid, title=t, pack_id=p) for aid, t, p in _DEMO_AGGREGATIONS]
 
     async def is_available(self) -> bool:
         return True

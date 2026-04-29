@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.integrations import checkmk as cmk_integration
 from app.models.user import User
 from app.schemas.backend import BackendConfig, BackendCreate, BackendUpdate
+from app.schemas.board import AggregationInfo
 from app.services import backend_service
 from app.services.state_service import get_backend, get_backend_objects
 
@@ -259,3 +260,24 @@ async def list_backend_objects(
 ) -> list[str]:
     """Return available object names from a backend (for editor autocomplete)."""
     return await get_backend_objects(backend_id, obj_type, host)
+
+
+@router.get("/{backend_id}/aggregations", response_model=list[AggregationInfo])
+async def list_backend_aggregations(
+    backend_id: str,
+    user: User = Depends(get_current_user),
+) -> list[AggregationInfo]:
+    """Return all configured Checkmk BI aggregations for editor autocomplete."""
+    backend = get_backend(backend_id)
+    if backend is None:
+        return []
+    try:
+        # Use the user's auth context so cmk.bi filters by their permissions.
+        with_auth = getattr(backend, "with_auth_user", None)
+        if with_auth is not None:
+            async with with_auth(user.name):
+                return await backend.list_aggregations()
+        return await backend.list_aggregations()
+    except Exception as exc:
+        logger.warning("list_aggregations failed for backend %s: %s", backend_id, exc)
+        return []
