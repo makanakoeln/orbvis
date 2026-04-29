@@ -242,7 +242,10 @@ if [[ ! -d "$VENV_DIR" ]]; then
   sudo "$PYTHON3" -m venv "$VENV_DIR"
 fi
 echo "==> Installing backend dependencies..."
-sudo sh -c "umask 022 && '$VENV_DIR/bin/pip' install --quiet --upgrade pip && '$VENV_DIR/bin/pip' install --quiet -e '$SCRIPT_DIR/backend'"
+# Install non-editable so the package is copied into site-packages. An editable
+# install would leave a .pth pointing at $SCRIPT_DIR (often a user home), which
+# the orbvis service user can't traverse → ModuleNotFoundError at runtime.
+sudo sh -c "umask 022 && '$VENV_DIR/bin/pip' install --quiet --upgrade pip && '$VENV_DIR/bin/pip' install --quiet '$SCRIPT_DIR/backend'"
 sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$VENV_DIR"
 
 # ---------------------------------------------------------------------------
