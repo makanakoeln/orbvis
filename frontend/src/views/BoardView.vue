@@ -198,9 +198,9 @@
                     </svg>
                 </button>
 
-                <!-- Settings button (admin only) -->
+                <!-- Settings button (admin only, not for read-only boards) -->
                 <button
-                    v-if="auth.isAdmin"
+                    v-if="auth.isAdmin && !boardConfig?.readonly"
                     data-tour="board-settings"
                     class="p-[5px] rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
                     :title="t('board.boardSettings')"
