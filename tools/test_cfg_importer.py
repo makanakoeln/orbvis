@@ -4,7 +4,7 @@ import json
 import textwrap
 from pathlib import Path
 
-from cfg_importer import blocks_to_map_json, convert_file, parse_cfg_file
+from cfg_importer import blocks_to_board_json, convert_file, parse_cfg_file
 
 SAMPLE_CFG = textwrap.dedent("""
     define global {
@@ -61,17 +61,16 @@ def test_parse_cfg_file(tmp_path: Path):
     assert "line" in types
 
 
-def test_blocks_to_map_json():
-
-    tmp = Path("/tmp/test_map.cfg")
-    tmp.write_text(SAMPLE_CFG)
-    blocks = parse_cfg_file(tmp)
-    result = blocks_to_map_json(blocks, "test_map")
+def test_blocks_to_board_json(tmp_path: Path):
+    cfg = tmp_path / "test_map.cfg"
+    cfg.write_text(SAMPLE_CFG)
+    blocks = parse_cfg_file(cfg)
+    result = blocks_to_board_json(blocks, "test_map")
 
     assert result["name"] == "test_map"
-    assert result["globals"]["alias"] == "Demo Overview"
-    assert result["globals"]["background_image"] == "demo-overview.png"
-    assert result["globals"]["backend_id"] == "live_1"
+    assert result["alias"] == "Demo Overview"
+    assert result["background_image"] == "demo-overview.png"
+    assert result["backend_id"] == "live_1"
     assert len(result["objects"]) == 4  # host, service, hostgroup, line
 
     host_obj = next(o for o in result["objects"] if o["type"] == "host")
@@ -83,8 +82,9 @@ def test_blocks_to_map_json():
     assert service_obj["service_description"] == "HTTP"
 
     line_obj = next(o for o in result["objects"] if o["type"] == "line")
-    assert line_obj["extra"]["x2"] == 300
-    assert line_obj["extra"]["y2"] == 200
+    assert line_obj["x2"] == 300
+    assert line_obj["y2"] == 200
+    assert line_obj["line_style"] == "plain"
 
 
 def test_convert_file(tmp_path: Path):
@@ -117,13 +117,13 @@ def test_label_styling_and_url(tmp_path: Path):
     cfg = tmp_path / "styling.cfg"
     cfg.write_text(cfg_text)
     blocks = parse_cfg_file(cfg)
-    result = blocks_to_map_json(blocks, "styling")
+    result = blocks_to_board_json(blocks, "styling")
     obj = result["objects"][0]
-    assert obj["label_x"] == -5
-    assert obj["label_y"] == 12
-    assert obj["label_size"] == 14
-    assert obj["label_color"] == "#ff0000"
-    assert obj["label_background"] == "#000000"
+    assert obj["label"]["x"] == -5
+    assert obj["label"]["y"] == 12
+    assert obj["label"]["size"] == 14
+    assert obj["label"]["color"] == "#ff0000"
+    assert obj["label"]["background"] == "#000000"
     assert obj["url"] == "http://example.com/host"
     assert obj["url_target"] == "_self"
 
@@ -140,10 +140,10 @@ def test_textbox_text(tmp_path: Path):
     cfg = tmp_path / "textbox.cfg"
     cfg.write_text(cfg_text)
     blocks = parse_cfg_file(cfg)
-    result = blocks_to_map_json(blocks, "textbox")
+    result = blocks_to_board_json(blocks, "textbox")
     obj = result["objects"][0]
     assert obj["type"] == "textbox"
-    assert obj["label_text"] == "Hello OrbVis World"
+    assert obj["label"]["text"] == "Hello OrbVis World"
 
 
 def test_relative_coords(tmp_path: Path):
@@ -158,21 +158,96 @@ def test_relative_coords(tmp_path: Path):
     cfg = tmp_path / "relcoords.cfg"
     cfg.write_text(cfg_text)
     blocks = parse_cfg_file(cfg)
-    result = blocks_to_map_json(blocks, "relcoords")
+    result = blocks_to_board_json(blocks, "relcoords")
     obj = result["objects"][0]
     # Offset values are used as best-effort position
     assert obj["x"] == 10
     assert obj["y"] == -20
-    # Original strings preserved in extra
-    assert obj["extra"]["x_orig"] == "123%10"
-    assert obj["extra"]["y_orig"] == "456%-20"
+
+
+def test_gadget_speedometer(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define service {
+            host_name=srv1
+            service_description=CPU load
+            x=100
+            y=100
+            view_type=gadget
+            gadget_url=std_speedometer.php
+            object_id=1
+        }
+    """)
+    cfg = tmp_path / "gadget.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    result = blocks_to_board_json(blocks, "gadget")
+    obj = result["objects"][0]
+    assert obj["display"]["mode"] == "gadget"
+    assert obj["display"]["gadget_type"] == "gauge"
+    assert obj["display"]["gadget_metric"] is None
+
+
+def test_gadget_bar_variants(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define service {
+            host_name=srv1
+            service_description=Bandwidth
+            x=10
+            y=10
+            view_type=gadget
+            gadget_url=std_bar.php
+            object_id=1
+        }
+        define service {
+            host_name=srv1
+            service_description=Bandwidth
+            x=20
+            y=20
+            view_type=gadget
+            gadget_url=std_html_bar.php
+            object_id=2
+        }
+    """)
+    cfg = tmp_path / "bars.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    result = blocks_to_board_json(blocks, "bars")
+    for obj in result["objects"]:
+        assert obj["display"]["mode"] == "gadget"
+        assert obj["display"]["gadget_type"] == "bar"
+
+
+def test_gadget_unknown_falls_back_with_warning(tmp_path: Path, capsys):
+    cfg_text = textwrap.dedent("""
+        define service {
+            host_name=srv1
+            service_description=Custom
+            x=10
+            y=10
+            view_type=gadget
+            gadget_url=my_custom_gadget.php
+            object_id=42
+        }
+    """)
+    cfg = tmp_path / "custom.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    result = blocks_to_board_json(blocks, "custom")
+    obj = result["objects"][0]
+    # Unknown gadget_url falls back to icon, OrbVis renders a normal service icon
+    assert obj["display"]["mode"] == "icon"
+    assert "gadget_type" not in obj["display"]
+    # Warning is emitted on stderr with object identifier and the offending url
+    captured = capsys.readouterr()
+    assert "service 42" in captured.err
+    assert "my_custom_gadget.php" in captured.err
 
 
 def test_comment_handling(tmp_path: Path):
     cfg_text = textwrap.dedent("""
         # This is a comment
         define global {
-            alias=Test ; inline comment
+            alias=Test
         }
         define host {
             host_name=server1

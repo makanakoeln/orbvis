@@ -40,6 +40,15 @@ ICONSET_SIZE: dict[str, int] = {
     "std_small": 16,
 }
 
+# NagVis stock gadget URL → OrbVis gadget_type
+# Custom/unknown gadget_urls fall back to icon mode with a warning.
+GADGET_URL_MAP: dict[str, str] = {
+    "std_speedometer.php": "gauge",
+    "std_speedometer2.php": "gauge",
+    "std_bar.php": "bar",
+    "std_html_bar.php": "bar",
+}
+
 # Legacy url_target values that reference the old CMK frameset — remap to _blank
 _FRAMESET_TARGETS = {"main", "frames", "main_window"}
 
@@ -161,12 +170,30 @@ def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
     }
 
 
-def _display(p: dict[str, str]) -> dict[str, Any]:
-    """Build a DisplayConfig dict from legacy properties."""
+def _display(p: dict[str, str]) -> tuple[dict[str, Any], str | None]:
+    """Build a DisplayConfig dict from legacy properties.
+
+    Returns ``(display_dict, warning)``. ``warning`` is non-None when a NagVis
+    ``view_type=gadget`` was encountered with a ``gadget_url`` that has no
+    OrbVis equivalent — the caller emits the message so it includes the
+    object identifier.
+    """
     mode = p.get("view_type", "icon")
     if mode not in ("icon", "text", "gadget"):
         mode = "icon"
-    return {"mode": mode}
+
+    if mode != "gadget":
+        return {"mode": mode}, None
+
+    gadget_url = p.get("gadget_url", "").strip()
+    gadget_type = GADGET_URL_MAP.get(gadget_url)
+
+    if gadget_type is None:
+        return {"mode": "icon"}, f"unknown gadget_url={gadget_url!r}, falling back to icon"
+
+    # Standard NagVis gadgets do not carry an explicit metric name; OrbVis
+    # picks the service's first perfdata when gadget_metric is None.
+    return {"mode": "gadget", "gadget_type": gadget_type, "gadget_metric": None}, None
 
 
 def _url_target(raw: str | None) -> str:
@@ -316,6 +343,10 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
         # Map legacy type to OrbVis type
         orbvis_type = legacy_type  # host/service/hostgroup/servicegroup/map all identical
 
+        display, warning = _display(p)
+        if warning:
+            print(f"  ⚠  {orbvis_type} {raw_id}: {warning}", file=sys.stderr)
+
         obj = {
             "id": f"{orbvis_type}_{raw_id}",
             "type": orbvis_type,
@@ -323,7 +354,7 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
             "y": y,
             "z": _int(p.get("z"), 1),
             "label": _label(p),
-            "display": _display(p),
+            "display": display,
         }
 
         # Type-specific identity fields
