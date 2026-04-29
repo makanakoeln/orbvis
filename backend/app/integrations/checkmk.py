@@ -296,6 +296,41 @@ def cmk_bi_available() -> bool:
     return True
 
 
+def _ensure_edition_compatible() -> None:
+    """One-time workaround for editions missing from cmk.gui.features.features_registry.
+
+    Some 2.5 editions — notably ULTIMATE — are not pre-registered, so any
+    ``application_and_request_context()`` crashes with ``Invalid edition``.
+    We register a minimal :class:`Features` so the WSGI app builder accepts
+    the runtime edition. OrbVis doesn't gate on edition-specific features —
+    we only need Flask request context — so the aliasing is safe.
+    """
+    try:
+        from cmk.ccc.version import edition
+        from cmk.gui.features import Features, features_registry
+        from cmk.utils import paths
+    except Exception:
+        return
+
+    cur_edition = edition(paths.omd_root)
+    if str(cur_edition) in features_registry:
+        return
+    try:
+        features_registry.register(
+            Features(
+                edition=cur_edition,
+                livestatus_only_sites_postprocess=lambda x: list(x) if x else None,
+            )
+        )
+        log.warning(
+            "OrbVis BI: registered minimal Features for edition %r "
+            "(not pre-registered by CMK — known 2.5 ULTIMATE bug).",
+            str(cur_edition),
+        )
+    except Exception:
+        log.debug("Could not register Features for current edition", exc_info=True)
+
+
 # BIManager is expensive to build (loads + compiles all aggregations from
 # bi_config.bi). It holds no per-request state — only a SitesCallback that
 # closes over cmk.gui.sites, which the surrounding request context refreshes
@@ -339,6 +374,7 @@ def cmk_bi_get_aggregations_states(
         from cmk.bi.computer import BIAggregationFilter
         from cmk.gui.utils.script_helpers import application_and_request_context
 
+        _ensure_edition_compatible()
         with application_and_request_context():
             _set_cmk_user(username)
             bi_manager = _cached_bi_manager()
@@ -360,6 +396,7 @@ def cmk_bi_list_aggregations() -> list[dict[str, str]]:
         from cmk.gui.bi import get_cached_bi_packs
         from cmk.gui.utils.script_helpers import application_and_request_context
 
+        _ensure_edition_compatible()
         with application_and_request_context():
             packs = get_cached_bi_packs()
             packs.load_config()
