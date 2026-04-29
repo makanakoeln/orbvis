@@ -71,7 +71,20 @@ else
   APACHE_CONF="/etc/httpd/conf.d/orbvis.conf"
 fi
 
-PYTHON3="$(command -v python3 2>/dev/null || true)"
+# Prefer system Python over user-local installs (pyenv, conda) — those live
+# under $HOME and the orbvis service user cannot traverse other users' homes.
+PYTHON3="${PYTHON3:-}"
+if [[ -z "$PYTHON3" ]]; then
+  for _cand in /usr/bin/python3.13 /usr/bin/python3.12 \
+               /usr/local/bin/python3.13 /usr/local/bin/python3.12 \
+               /usr/bin/python3 /usr/local/bin/python3; do
+    [[ -x "$_cand" ]] || continue
+    if "$_cand" -c 'import sys; sys.exit(0 if sys.version_info >= (3,12) else 1)' 2>/dev/null; then
+      PYTHON3="$_cand"; break
+    fi
+  done
+fi
+[[ -z "$PYTHON3" ]] && PYTHON3="$(command -v python3 2>/dev/null || true)"
 NPM="$(command -v npm 2>/dev/null || true)"
 PREBUILT_FRONTEND=false
 [[ -d "$SCRIPT_DIR/htdocs" ]] && PREBUILT_FRONTEND=true
@@ -141,7 +154,7 @@ fi
 PYTHON_VERSION=$("$PYTHON3" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
 PYTHON_MINOR=$("$PYTHON3" -c 'import sys; print(sys.version_info.minor)')
 if [[ "$("$PYTHON3" -c 'import sys; print(sys.version_info.major)')" -lt 3 ]] || [[ "$PYTHON_MINOR" -lt 12 ]]; then
-  echo "Error: Python 3.12 or newer is required (found $PYTHON_VERSION)." >&2
+  echo "Error: Python 3.12 or newer is required (found $PYTHON_VERSION at $PYTHON3)." >&2
   case "$OS_FAMILY" in
     rhel) echo "  sudo dnf install python3.12" >&2 ;;
     suse) echo "  sudo zypper install python312" >&2 ;;
@@ -149,6 +162,26 @@ if [[ "$("$PYTHON3" -c 'import sys; print(sys.version_info.major)')" -lt 3 ]] ||
   esac
   exit 1
 fi
+
+# The venv shebangs and python symlink point at the resolved interpreter.
+# If that target lives in a user home, the orbvis service user can't traverse
+# to it at runtime → systemd 203/EXEC: Permission denied.
+PYTHON3_RESOLVED="$(readlink -f "$PYTHON3" 2>/dev/null || echo "$PYTHON3")"
+case "$PYTHON3_RESOLVED" in
+  /home/*|/root/*|/Users/*)
+    echo "Error: $PYTHON3 resolves to $PYTHON3_RESOLVED, which lives in a user home" >&2
+    echo "directory. The '$SERVICE_USER' service user can't traverse there at runtime," >&2
+    echo "so the venv would fail with 'Permission denied' when systemd starts uvicorn." >&2
+    echo "" >&2
+    echo "Install a system-wide Python 3.12+ and pass it explicitly:" >&2
+    case "$OS_FAMILY" in
+      rhel) echo "  sudo dnf install python3.12 && PYTHON3=/usr/bin/python3.12 $0" >&2 ;;
+      suse) echo "  sudo zypper install python312 && PYTHON3=/usr/bin/python3.12 $0" >&2 ;;
+      *)    echo "  sudo apt install python3.12 python3.12-venv && PYTHON3=/usr/bin/python3.12 $0" >&2 ;;
+    esac
+    exit 1
+    ;;
+esac
 
 # ---------------------------------------------------------------------------
 # INSTALL
