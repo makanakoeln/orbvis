@@ -1031,9 +1031,14 @@ class LivestatusBackend(BackendBase):
         to drive our async ``_query_raw``. ``AuthUser:`` is injected automatically
         via the ``_auth_user_ctx`` ContextVar set by ``with_auth_user(...)``.
 
-        cmk.bi hardcodes ``Cache: reload`` headers in compiler.py + data_fetcher.py.
-        Some Livestatus backends reject them with HTTP 400 ("undefined request
-        header") — we strip them since they're only a perf hint, not correctness.
+        Two pieces of compatibility shimming:
+        - cmk.bi hardcodes ``Cache: reload`` in compiler.py + data_fetcher.py.
+          Some Livestatus backends reject the header with HTTP 400 ("undefined
+          request header") — strip it; it's only a perf hint, not correctness.
+        - cmk.gui.bi.bi_manager wraps every query in ``sites.prepend_site()``,
+          which prepends the site_id column to each row. cmk.bi consumers
+          (compiler:309, data_fetcher:363/424) read ``row[0]`` as site_id and
+          ``row[1]+`` as actual data — we replicate that here.
         """
         from cmk.livestatus_client._connection import LivestatusResponse
 
@@ -1045,7 +1050,8 @@ class LivestatusBackend(BackendBase):
             rows = loop.run_until_complete(self._query_raw(lql))
         finally:
             loop.close()
-        return LivestatusResponse(rows)
+        site_id = settings.checkmk_site or "local"
+        return LivestatusResponse([[site_id, *row] for row in rows])
 
     async def get_aggregations_states(self, aggregation_ids: list[str]) -> dict[str, ObjectState]:
         if not aggregation_ids:
