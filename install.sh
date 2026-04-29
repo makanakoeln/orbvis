@@ -269,27 +269,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 6. backends.json
-# ---------------------------------------------------------------------------
-if [[ ! -f "$BACKENDS_FILE" ]]; then
-  echo "==> Writing $BACKENDS_FILE..."
-  sudo tee "$BACKENDS_FILE" > /dev/null <<'EOF'
-[
-  {
-    "id": "live_1",
-    "type": "livestatus",
-    "label": "Monitoring",
-    "socket_path": "/var/run/nagios/rw/live"
-  }
-]
-EOF
-  sudo chown "$SERVICE_USER:$SERVICE_USER" "$BACKENDS_FILE"
-else
-  echo "    $BACKENDS_FILE already exists, skipping."
-fi
-
-# ---------------------------------------------------------------------------
-# 7. systemd service
+# 6. systemd service
 # ---------------------------------------------------------------------------
 echo "==> Writing systemd unit: $SYSTEMD_UNIT..."
 sudo tee "$SYSTEMD_UNIT" > /dev/null <<EOF
@@ -464,4 +444,4 @@ echo ""
 echo "  The default admin password is printed in the backend log:"
 echo "    sudo journalctl -u orbvis --no-pager | grep 'Default admin'"
 echo ""
-echo "  Edit $BACKENDS_FILE to point to your monitoring socket."
+echo "  Add a monitoring connection in the OrbVis UI under Admin → Connections."
