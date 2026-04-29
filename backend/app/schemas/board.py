@@ -28,6 +28,7 @@ class AggregationInfo(BaseModel):
     title: str
     pack_id: str
 
+
 LineStyle = Literal["plain", "arrow_end", "arrow_start", "arrow_both", "dashed", "weathermap"]
 
 

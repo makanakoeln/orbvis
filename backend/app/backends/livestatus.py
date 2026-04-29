@@ -364,9 +364,7 @@ def _aggregations_to_object_states(
     for aid in requested_ids:
         entry = aggrs.get(aid)
         if not isinstance(entry, dict):
-            out[aid] = ObjectState(
-                object_id="", type="aggregation", state="PENDING", stale=True
-            )
+            out[aid] = ObjectState(object_id="", type="aggregation", state="PENDING", stale=True)
             continue
         out[aid] = ObjectState(
             object_id="",
@@ -377,6 +375,7 @@ def _aggregations_to_object_states(
             in_downtime=bool(entry.get("in_downtime", False)),
         )
     return out
+
 
 # Aggregate: worst state wins (higher = worse)
 _HOST_SEVERITY = {"UP": 0, "UNREACHABLE": 1, "DOWN": 2, "PENDING": -1}
@@ -1020,9 +1019,7 @@ class LivestatusBackend(BackendBase):
             aggregation_id, ObjectState(object_id="", type="aggregation", state="PENDING")
         )
 
-    async def get_aggregations_states(
-        self, aggregation_ids: list[str]
-    ) -> dict[str, ObjectState]:
+    async def get_aggregations_states(self, aggregation_ids: list[str]) -> dict[str, ObjectState]:
         if not aggregation_ids:
             return {}
 

@@ -261,9 +261,7 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
             s = (
                 ObjectState(**{**raw.model_dump(), "object_id": obj.id})
                 if raw is not None
-                else ObjectState(
-                    object_id=obj.id, type="aggregation", state="PENDING", stale=True
-                )
+                else ObjectState(object_id=obj.id, type="aggregation", state="PENDING", stale=True)
             )
             results[obj.id] = s
 
