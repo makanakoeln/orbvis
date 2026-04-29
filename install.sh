@@ -207,11 +207,10 @@ fi
 echo "==> Setting up Python virtualenv..."
 if [[ ! -d "$VENV_DIR" ]]; then
   sudo "$PYTHON3" -m venv "$VENV_DIR"
-  sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$VENV_DIR"
 fi
 echo "==> Installing backend dependencies..."
-sudo "$VENV_DIR/bin/pip" install --quiet --upgrade pip
-sudo "$VENV_DIR/bin/pip" install --quiet -e "$SCRIPT_DIR/backend"
+sudo sh -c "umask 022 && '$VENV_DIR/bin/pip' install --quiet --upgrade pip && '$VENV_DIR/bin/pip' install --quiet -e '$SCRIPT_DIR/backend'"
+sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$VENV_DIR"
 
 # ---------------------------------------------------------------------------
 # 5. .env configuration
