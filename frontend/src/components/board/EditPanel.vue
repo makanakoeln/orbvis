@@ -353,9 +353,7 @@ async function fetchAddAggregations() {
     try {
         const aggrs = await connectionsApi.aggregations(props.backendId, auth.accessToken!);
         addAggregationIds.value = aggrs.map((a) => a.id);
-        addAggregationLabels.value = aggrs.map((a) =>
-            a.title && a.title !== a.id ? `${a.title} (${a.id})` : a.id,
-        );
+        addAggregationLabels.value = aggrs.map((a) => a.title || a.id);
     } catch {
         addAggregationIds.value = [];
         addAggregationLabels.value = [];

@@ -105,9 +105,58 @@
             </svg>
             <span>{{ t('contextMenu.groupInCheckmk') }}</span>
         </a>
+        <a
+            v-if="aggregationUrl"
+            :href="aggregationUrl"
+            target="_blank"
+            class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+        >
+            <svg
+                class="w-3.5 h-3.5 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                />
+            </svg>
+            <span>{{ t('contextMenu.aggregationInCheckmk') }}</span>
+        </a>
+        <a
+            v-if="aggregationOverviewUrl"
+            :href="aggregationOverviewUrl"
+            target="_blank"
+            class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+        >
+            <svg
+                class="w-3.5 h-3.5 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                />
+            </svg>
+            <span>{{ t('contextMenu.aggregationOverview') }}</span>
+        </a>
 
         <div
-            v-if="!hostUrl && !hostServicesUrl && !serviceUrl && !groupUrl && !checkmkUrl"
+            v-if="
+                !hostUrl &&
+                !hostServicesUrl &&
+                !serviceUrl &&
+                !groupUrl &&
+                !aggregationUrl &&
+                !checkmkUrl
+            "
             class="px-3.5 py-2 text-xs text-[var(--text-muted)] italic"
         >
             {{ t('contextMenu.noCheckmkUrl') }}
@@ -423,6 +472,25 @@ const groupUrl = computed(() => {
     const view = props.object.type === 'hostgroup' ? 'hostgroup' : 'servicegroup';
     const key = props.object.type === 'hostgroup' ? 'hostgroup' : 'servicegroup';
     const p: Record<string, string> = { view_name: view, [key]: props.object.group_name };
+    if (site.value) p.site = site.value;
+    return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`;
+});
+
+const aggregationUrl = computed(() => {
+    if (!base.value || props.object.type !== 'aggregation' || !props.object.aggregation_id)
+        return null;
+    const p: Record<string, string> = {
+        view_name: 'aggr_single',
+        aggr_name: props.object.aggregation_id,
+        po_aggr_expand: '1',
+    };
+    if (site.value) p.site = site.value;
+    return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`;
+});
+
+const aggregationOverviewUrl = computed(() => {
+    if (!base.value || props.object.type !== 'aggregation') return null;
+    const p: Record<string, string> = { view_name: 'aggr_all' };
     if (site.value) p.site = site.value;
     return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`;
 });

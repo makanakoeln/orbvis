@@ -1092,7 +1092,12 @@ class LivestatusBackend(BackendBase):
 
         # Site-mode: in-process cmk.bi
         if _cmk_integration.cmk_bi_available():
-            entries = await asyncio.to_thread(_cmk_integration.cmk_bi_list_aggregations)
+            site_id = settings.checkmk_site or "local"
+            entries = await asyncio.to_thread(
+                _cmk_integration.cmk_bi_list_aggregations,
+                self._bi_query_sync,
+                site_id,
+            )
             if entries:
                 result = [
                     AggregationInfo(id=e["id"], title=e["title"], pack_id=e["pack_id"])

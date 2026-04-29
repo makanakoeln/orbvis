@@ -360,63 +360,65 @@ def _cached_computer(query_callback: QueryCallback, site_id: str) -> object:
 def cmk_bi_get_aggregations_states(
     query_callback: QueryCallback,
     site_id: str,
-    aggregation_ids: list[str],
+    aggregation_names: list[str],
 ) -> dict[str, dict[str, object]]:
     """Compute current state for a list of BI aggregations via cmk.bi.
+
+    Each *aggregation_name* is the resolved branch title (NagVis' ``aggr_name``,
+    e.g. ``"Host localhost"``) — what Checkmk's ``aggr_single`` view expects
+    as ``aggr_name``. A single bi_config aggregation template can produce many
+    branches (one per matching host); we identify them by their resolved title.
 
     Synchronous — callers wrap with asyncio.to_thread(). Per-user permissions
     are honoured because *query_callback* (OrbVis' Livestatus query) injects
     ``AuthUser:`` into every LQL query when run inside ``with_auth_user(...)``.
     """
-    if not cmk_bi_available() or not aggregation_ids:
+    if not cmk_bi_available() or not aggregation_names:
         return {}
     try:
         from cmk.bi.computer import BIAggregationFilter
 
         computer = _cached_computer(query_callback, site_id)
-        bi_filter = BIAggregationFilter([], [], [], list(aggregation_ids), [], [])
+        bi_filter = BIAggregationFilter([], [], [], list(aggregation_names), [], [])
         results = computer.compute_result_for_filter(bi_filter)  # type: ignore[attr-defined]
         out = _bi_results_to_dict(results)
         log.info(
             "OrbVis BI: requested %s, computed %d states (sample=%s)",
-            aggregation_ids,
+            aggregation_names,
             len(out),
             next(iter(out.items()), None),
         )
         return out
     except Exception:
-        log.warning("cmk.bi compute failed for %s", aggregation_ids, exc_info=True)
+        log.warning("cmk.bi compute failed for %s", aggregation_names, exc_info=True)
         return {}
 
 
-def cmk_bi_list_aggregations() -> list[dict[str, str]]:
-    """Read BI aggregations directly from the bi_config.bi file (no Livestatus)."""
+def cmk_bi_list_aggregations(query_callback: QueryCallback, site_id: str) -> list[dict[str, str]]:
+    """List all resolved BI aggregations (one entry per branch).
+
+    Mirrors NagVis' GlobalBackendmkbi.getAggregationNames(): instead of
+    returning the abstract bi_config aggregation templates (which contain
+    placeholders like ``Host $HOSTNAME$``), iterate the compiled branches and
+    return their resolved titles. The resolved title is what Checkmk's
+    ``aggr_single`` view filters by and what users see in the BI UI.
+    """
     if not cmk_bi_available():
         return []
     try:
-        from cmk.bi.filesystem import get_default_site_filesystem
-        from cmk.bi.packs import BIAggregationPacks
-
-        bi_fs = get_default_site_filesystem()
-        packs = BIAggregationPacks(bi_fs.etc.config)
-        packs.load_config()
+        computer = _cached_computer(query_callback, site_id)
+        compiled = getattr(computer, "_compiled_aggregations", {}) or {}
         out: list[dict[str, str]] = []
-        for pack in packs.get_packs().values():
-            pack_id = str(getattr(pack, "id", "") or "")
-            for aggr in pack.get_aggregations().values():
-                aggr_id = str(getattr(aggr, "id", "") or "")
-                if not aggr_id:
+        seen: set[str] = set()
+        for aggr_id, compiled_aggr in compiled.items():
+            pack_id = str(getattr(compiled_aggr, "pack_id", "") or "")
+            for branch in getattr(compiled_aggr, "branches", []) or []:
+                title = str(getattr(getattr(branch, "properties", None), "title", "") or "")
+                if not title or title in seen:
                     continue
-                # Display name = title of the top-level rule the aggregation calls
-                # (the "tree" name in CMK's BI view). Falls back to the aggr_id.
-                node = getattr(aggr, "node", None)
-                action = getattr(node, "action", None) if node is not None else None
-                rule_id = getattr(action, "rule_id", None) if action is not None else None
-                rule = packs.get_rule(rule_id) if rule_id else None
-                title = str(getattr(rule, "title", "") or "") if rule else ""
-                if not title:
-                    title = aggr_id
-                out.append({"id": aggr_id, "title": title, "pack_id": pack_id})
+                seen.add(title)
+                out.append({"id": title, "title": title, "pack_id": pack_id or str(aggr_id)})
+        out.sort(key=lambda e: e["title"].lower())
         return out
     except Exception:
         log.warning("cmk.bi list aggregations failed", exc_info=True)
@@ -426,28 +428,32 @@ def cmk_bi_list_aggregations() -> list[dict[str, str]]:
 def _bi_results_to_dict(results: object) -> dict[str, dict[str, object]]:
     """Normalise BIComputer.compute_result_for_filter output into plain dicts.
 
-    The cmk.bi return type is ``Iterable[tuple[BIAggregation, list[NodeResultBundle]]]``,
-    typed as object here so this module can be imported without cmk.* installed.
+    The cmk.bi return type is ``Iterable[tuple[BICompiledAggregation,
+    list[NodeResultBundle]]]``. Each NodeResultBundle corresponds to a single
+    branch — its ``instance.properties.title`` is the resolved aggr_name (and
+    the dict key callers requested by). Typed as object here so this module
+    can be imported without cmk.* installed.
     """
     out: dict[str, dict[str, object]] = {}
     if not isinstance(results, Iterable):
         return out
     for entry in results:
         try:
-            aggr, branches = entry
+            _aggr, branches = entry
         except (TypeError, ValueError):
             continue
-        aggr_id = str(getattr(aggr, "id", "") or "")
-        if not aggr_id or not branches:
-            continue
-        bundle = branches[0]
-        actual = getattr(bundle, "actual_result", None)
-        if actual is None:
-            continue
-        out[aggr_id] = {
-            "state": int(getattr(actual, "state", -1)),
-            "output": str(getattr(actual, "output", "") or ""),
-            "acknowledged": bool(getattr(actual, "acknowledged", False)),
-            "in_downtime": bool(getattr(actual, "downtime_state", 0)),
-        }
+        for bundle in branches or []:
+            actual = getattr(bundle, "actual_result", None)
+            if actual is None:
+                continue
+            instance = getattr(bundle, "instance", None)
+            title = str(getattr(getattr(instance, "properties", None), "title", "") or "")
+            if not title:
+                continue
+            out[title] = {
+                "state": int(getattr(actual, "state", -1)),
+                "output": str(getattr(actual, "output", "") or ""),
+                "acknowledged": bool(getattr(actual, "acknowledged", False)),
+                "in_downtime": bool(getattr(actual, "downtime_state", 0)),
+            }
     return out

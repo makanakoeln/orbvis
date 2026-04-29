@@ -42,6 +42,12 @@ export function buildCheckmkUrl(obj: BoardObject, checkmkUrl: string | null): st
         p.servicegroup = obj.group_name;
         return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
     }
+    if (obj.type === 'aggregation' && obj.aggregation_id) {
+        p.view_name = 'aggr_single';
+        p.aggr_name = obj.aggregation_id;
+        p.po_aggr_expand = '1';
+        return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
+    }
     return null;
 }
 

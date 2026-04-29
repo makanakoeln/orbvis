@@ -1416,9 +1416,7 @@ async function loadAutocomplete() {
             .aggregations(props.backendId, auth.accessToken!)
             .catch(() => []);
         aggregationIds.value = aggrs.map((a) => a.id);
-        aggregationLabels.value = aggrs.map((a) =>
-            a.title && a.title !== a.id ? `${a.title} (${a.id})` : a.id,
-        );
+        aggregationLabels.value = aggrs.map((a) => a.title || a.id);
         loadingAggregations.value = false;
     }
 }

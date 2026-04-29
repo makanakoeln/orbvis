@@ -299,7 +299,33 @@
                     :r="iconSize / 2"
                     :fill="stateColorRgb"
                 />
+                <!-- BI aggregation: tree glyph (root → two leaves) -->
+                <g
+                    v-if="object.type === 'aggregation'"
+                    fill="white"
+                    stroke="white"
+                    :stroke-width="Math.max(1, iconSize * 0.06)"
+                    stroke-linecap="round"
+                    style="filter: drop-shadow(0 1px 2px rgb(0 0 0 / 50%))"
+                >
+                    <line
+                        :x1="iconSize / 2"
+                        :y1="iconSize * 0.32"
+                        :x2="iconSize * 0.32"
+                        :y2="iconSize * 0.68"
+                    />
+                    <line
+                        :x1="iconSize / 2"
+                        :y1="iconSize * 0.32"
+                        :x2="iconSize * 0.68"
+                        :y2="iconSize * 0.68"
+                    />
+                    <circle :cx="iconSize / 2" :cy="iconSize * 0.32" :r="iconSize * 0.11" />
+                    <circle :cx="iconSize * 0.32" :cy="iconSize * 0.7" :r="iconSize * 0.1" />
+                    <circle :cx="iconSize * 0.68" :cy="iconSize * 0.7" :r="iconSize * 0.1" />
+                </g>
                 <text
+                    v-else
                     :x="iconSize / 2"
                     :y="iconSize / 2"
                     text-anchor="middle"

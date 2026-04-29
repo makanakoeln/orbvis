@@ -267,6 +267,8 @@ export default {
         hostProblemServices: 'Problem services',
         serviceInCheckmk: 'Service in Checkmk',
         groupInCheckmk: 'Group in Checkmk',
+        aggregationInCheckmk: 'Aggregation tree in Checkmk',
+        aggregationOverview: 'All aggregations in Checkmk',
         noCheckmkUrl: 'No Checkmk URL configured',
         editProperties: 'Edit properties',
         duplicate: 'Duplicate',

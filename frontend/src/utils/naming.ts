@@ -16,12 +16,18 @@ export function getObjectTypeLabel(object: BoardObject): string {
     return object.type;
 }
 
-/** Return the display name for a board object (label > host/service > host/group/map > id). */
+/** Return the display name for a board object (label > host/service > host/group/map/aggregation > id). */
 export function getBoardObjectName(object: BoardObject): string {
     if (object.label?.text) return object.label.text;
     if (object.host_name && object.service_description)
         return `${object.host_name} / ${object.service_description}`;
-    return object.host_name ?? object.group_name ?? object.map_name ?? object.id;
+    return (
+        object.host_name ??
+        object.group_name ??
+        object.map_name ??
+        object.aggregation_id ??
+        object.id
+    );
 }
 
 /** Sanitize a raw string into a valid board ID: spaces → hyphens, strip invalid chars. */
