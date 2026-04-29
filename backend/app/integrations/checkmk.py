@@ -290,7 +290,7 @@ def cmk_bi_available() -> bool:
     if not available:
         return False
     try:
-        import cmk.gui.bi.bi_manager  # noqa: F401
+        from cmk.gui.bi import BIManager, get_cached_bi_packs  # noqa: F401
     except Exception:
         return False
     return True
@@ -313,7 +313,8 @@ def _cached_bi_manager() -> object:
         now = _time.time()
         if _BI_MANAGER_CACHE is not None and now - _BI_MANAGER_CACHE[0] < _BI_MANAGER_TTL:
             return _BI_MANAGER_CACHE[1]
-        from cmk.gui.bi.bi_manager import BIManager
+        # cmk.gui.bi re-exports BIManager (stable across 2.3–2.5).
+        from cmk.gui.bi import BIManager
 
         manager = BIManager()
         _BI_MANAGER_CACHE = (now, manager)
@@ -334,7 +335,8 @@ def cmk_bi_get_aggregations_states(
     if not cmk_bi_available() or not aggregation_ids:
         return {}
     try:
-        from cmk.bi.filters import BIAggregationFilter
+        # BIAggregationFilter lives in cmk.bi.computer (NOT cmk.bi.filters) across 2.3–2.5.
+        from cmk.bi.computer import BIAggregationFilter
         from cmk.gui.utils.script_helpers import application_and_request_context
 
         with application_and_request_context():
@@ -343,8 +345,8 @@ def cmk_bi_get_aggregations_states(
             bi_filter = BIAggregationFilter([], [], [], list(aggregation_ids), [], [])
             results = bi_manager.computer.compute_result_for_filter(bi_filter)  # type: ignore[attr-defined]
             return _bi_results_to_dict(results)
-    except Exception as exc:
-        log.warning("cmk.bi compute failed for %s: %s", aggregation_ids, exc)
+    except Exception:
+        log.warning("cmk.bi compute failed for %s", aggregation_ids, exc_info=True)
         return {}
 
 
@@ -353,7 +355,9 @@ def cmk_bi_list_aggregations() -> list[dict[str, str]]:
     if not cmk_bi_available():
         return []
     try:
-        from cmk.bi.packs import get_cached_bi_packs
+        # cmk.gui.bi re-exports get_cached_bi_packs across 2.3–2.5.
+        # The direct cmk.bi.packs path was removed in 2.5.
+        from cmk.gui.bi import get_cached_bi_packs
         from cmk.gui.utils.script_helpers import application_and_request_context
 
         with application_and_request_context():
@@ -369,8 +373,8 @@ def cmk_bi_list_aggregations() -> list[dict[str, str]]:
                     title = str(getattr(aggr, "title", "") or aggr_id)
                     out.append({"id": aggr_id, "title": title, "pack_id": pack_id})
             return out
-    except Exception as exc:
-        log.warning("cmk.bi list aggregations failed: %s", exc)
+    except Exception:
+        log.warning("cmk.bi list aggregations failed", exc_info=True)
         return []
 
 

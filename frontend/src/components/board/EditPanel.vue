@@ -100,6 +100,12 @@
                     :loading="loadingAddAggregations"
                     :placeholder="t('boardSettings.aggregationId')"
                 />
+                <p
+                    v-if="!loadingAddAggregations && addAggregationIds.length === 0"
+                    class="text-xs text-amber-400/70 leading-snug"
+                >
+                    {{ t('boardSettings.noAggregations') }}
+                </p>
             </template>
 
             <template v-else-if="draft.type === 'line'">

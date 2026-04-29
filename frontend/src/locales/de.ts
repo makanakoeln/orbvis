@@ -151,6 +151,8 @@ export default {
         typeMap: 'Kartenlink',
         typeAggregation: 'BI-Aggregation',
         aggregationId: 'BI-Aggregation',
+        noAggregations:
+            'Keine BI-Aggregationen verfügbar — entweder sind in Checkmk keine konfiguriert, oder dein Nutzer hat keine Berechtigung, sie zu sehen.',
         typeLine: 'Linie',
         typeTextbox: 'Textfeld',
         typeImage: 'Bild',
