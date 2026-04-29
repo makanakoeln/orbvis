@@ -25,12 +25,14 @@ from app.core.middleware import (
 from alembic import command
 
 _version_candidates = [
+    Path(__file__).parent / "VERSION",  # bundled in wheel via force-include
     Path(__file__).parent.parent.parent / "VERSION",  # repo root or $ORBVIS_DIR
     Path(__file__).parent.parent / "VERSION",  # inside backend/
 ]
 APP_VERSION = next((p.read_text().strip() for p in _version_candidates if p.is_file()), "0.0.0")
 
 _changelog_candidates = [
+    Path(__file__).parent / "CHANGELOG.md",
     Path(__file__).parent.parent.parent / "CHANGELOG.md",
     Path(__file__).parent.parent / "CHANGELOG.md",
 ]
@@ -521,7 +523,22 @@ def _run_migrations() -> None:
     - Partial migration: ``alembic_version`` table empty (DDL ran but version
       row was never committed) → stamp at head.
     """
-    alembic_ini = Path(__file__).parent.parent / "alembic.ini"
+    _alembic_ini_candidates = (
+        Path(__file__).parent / "alembic.ini",  # bundled in wheel
+        Path(__file__).parent.parent / "alembic.ini",  # source checkout
+    )
+    alembic_ini = next(
+        (p for p in _alembic_ini_candidates if p.is_file()),
+        _alembic_ini_candidates[0],
+    )
+
+    def _make_config() -> Config:
+        cfg = Config(str(alembic_ini))
+        # script_location is relative in alembic.ini; resolve to absolute so
+        # alembic finds env.py / versions/ regardless of cwd.
+        cfg.set_main_option("script_location", str(alembic_ini.parent / "alembic"))
+        return cfg
+
     sync_url = settings.sync_database_url
 
     engine = create_engine(sync_url)
@@ -538,14 +555,14 @@ def _run_migrations() -> None:
                 needs_stamp = row is None
             if needs_stamp:
                 logger.info("Stamping existing database at alembic head.")
-                command.stamp(Config(str(alembic_ini)), "head")
+                command.stamp(_make_config(), "head")
             else:
                 logger.info("Database already at head, skipping migrations.")
             return
     finally:
         engine.dispose()
 
-    command.upgrade(Config(str(alembic_ini)), "head")
+    command.upgrade(_make_config(), "head")
     logger.info("Database migrations applied.")
 
 

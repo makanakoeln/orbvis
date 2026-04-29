@@ -67,6 +67,17 @@ filterwarnings = [
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 
+# Bundle runtime data files inside the package directory so they're available
+# from $VENV/lib/pythonX.Y/site-packages/app/ regardless of where the source
+# tree lives (relevant for non-editable installs from a user home).
+[tool.hatch.build.targets.wheel.force-include]
+"../VERSION" = "app/VERSION"
+"../CHANGELOG.md" = "app/CHANGELOG.md"
+"alembic.ini" = "app/alembic.ini"
+"alembic/env.py" = "app/alembic/env.py"
+"alembic/script.py.mako" = "app/alembic/script.py.mako"
+"alembic/versions" = "app/alembic/versions"
+
 [tool.ruff]
 extend = "../pyproject.toml"
 target-version = "py312"
