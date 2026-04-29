@@ -148,6 +148,8 @@ export default {
         typeHostgroup: 'Hostgroup',
         typeServicegroup: 'Servicegroup',
         typeMap: 'Map link',
+        typeAggregation: 'BI aggregation',
+        aggregationId: 'BI aggregation',
         typeLine: 'Line',
         typeTextbox: 'Textbox',
         typeImage: 'Image',

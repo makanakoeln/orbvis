@@ -149,6 +149,8 @@ export default {
         typeHostgroup: 'Hostgruppe',
         typeServicegroup: 'Servicegruppe',
         typeMap: 'Kartenlink',
+        typeAggregation: 'BI-Aggregation',
+        aggregationId: 'BI-Aggregation',
         typeLine: 'Linie',
         typeTextbox: 'Textfeld',
         typeImage: 'Bild',

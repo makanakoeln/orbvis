@@ -15,6 +15,7 @@ export interface NewObjectDraft {
     service_description: string;
     group_name: string;
     board_name: string;
+    aggregation_id: string;
     label_text: string;
     image_src: string;
     graph_url: string;
@@ -264,6 +265,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         service_description: '',
         group_name: '',
         board_name: '',
+        aggregation_id: '',
         label_text: '',
         image_src: '',
         graph_url: '',
@@ -290,6 +292,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
             service_description: draft.service_description || undefined,
             group_name: draft.group_name || undefined,
             map_name: draft.board_name || undefined,
+            aggregation_id: draft.aggregation_id || undefined,
             label: {
                 show: s.label_show,
                 text:
@@ -360,6 +363,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
             service_description: draft.service_description || undefined,
             group_name: draft.group_name || undefined,
             map_name: draft.board_name || undefined,
+            aggregation_id: draft.aggregation_id || undefined,
             label: {
                 show: s.label_show,
                 text: draft.label_text || null,

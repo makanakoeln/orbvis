@@ -92,6 +92,16 @@
                 />
             </template>
 
+            <template v-else-if="draft.type === 'aggregation'">
+                <AutocompleteInput
+                    v-model="draft.aggregation_id"
+                    :suggestions="addAggregationIds"
+                    :display-labels="addAggregationLabels"
+                    :loading="loadingAddAggregations"
+                    :placeholder="t('boardSettings.aggregationId')"
+                />
+            </template>
+
             <template v-else-if="draft.type === 'line'">
                 <AutocompleteInput
                     v-model="draft.host_name"
@@ -202,6 +212,7 @@ const objectTypeOptions = computed(() => ({
         { name: 'hostgroup', title: t('boardSettings.typeHostgroup') },
         { name: 'servicegroup', title: t('boardSettings.typeServicegroup') },
         { name: 'map', title: t('boardSettings.typeMap') },
+        { name: 'aggregation', title: t('boardSettings.typeAggregation') },
         { name: 'line', title: t('boardSettings.typeLine') },
         { name: 'textbox', title: t('boardSettings.typeTextbox') },
         { name: 'image', title: t('boardSettings.typeImage') },
@@ -241,6 +252,7 @@ const MISSING_FIELD_KEY: Record<string, string> = {
     hostgroup: 'boardSettings.groupName',
     servicegroup: 'boardSettings.groupName',
     map: 'boardSettings.boardName',
+    aggregation: 'boardSettings.aggregationId',
 };
 
 const canPlace = computed(() => {
@@ -255,6 +267,8 @@ const canPlace = computed(() => {
             return !!d.group_name;
         case 'map':
             return !!d.board_name;
+        case 'aggregation':
+            return !!d.aggregation_id;
         case 'line':
         case 'textbox':
         case 'image':
@@ -275,8 +289,11 @@ const missingFieldHint = computed(() => {
 
 const addObjects = ref<string[]>([]);
 const addServices = ref<string[]>([]);
+const addAggregationIds = ref<string[]>([]);
+const addAggregationLabels = ref<string[]>([]);
 const loadingAddObjects = ref(false);
 const loadingAddServices = ref(false);
+const loadingAddAggregations = ref(false);
 
 async function fetchAddObjects(type: string) {
     if (
@@ -320,11 +337,33 @@ async function fetchAddServices(host: string) {
     }
 }
 
+async function fetchAddAggregations() {
+    if (!props.backendId) {
+        addAggregationIds.value = [];
+        addAggregationLabels.value = [];
+        return;
+    }
+    loadingAddAggregations.value = true;
+    try {
+        const aggrs = await connectionsApi.aggregations(props.backendId, auth.accessToken!);
+        addAggregationIds.value = aggrs.map((a) => a.id);
+        addAggregationLabels.value = aggrs.map((a) =>
+            a.title && a.title !== a.id ? `${a.title} (${a.id})` : a.id,
+        );
+    } catch {
+        addAggregationIds.value = [];
+        addAggregationLabels.value = [];
+    } finally {
+        loadingAddAggregations.value = false;
+    }
+}
+
 function onTypeChange() {
     props.draft.host_name = '';
     props.draft.service_description = '';
     props.draft.group_name = '';
     props.draft.board_name = '';
+    props.draft.aggregation_id = '';
     props.draft.label_text = '';
     props.draft.image_src = '';
     props.draft.graph_url = '';
@@ -332,6 +371,10 @@ function onTypeChange() {
     addServices.value = [];
     if (props.draft.type === 'map') {
         if (boardsStore.boards.length === 0) boardsStore.fetchBoards();
+        return;
+    }
+    if (props.draft.type === 'aggregation') {
+        fetchAddAggregations();
         return;
     }
     const fetchType =
