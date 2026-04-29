@@ -197,24 +197,25 @@ setup)
   tar xzf "$MKP_LIB/server.tar.gz" -C "$MKP_LIB/server"
   ok "Backend source extracted"
 
-  # 3. Demo boards (extract, skip existing files)
+  # 3. Demo boards (only seed on fresh install — skip if any *.json already exists)
   step "Setting up board data"
   mkdir -p "$BOARDS_DIR/backgrounds"
-  TMPBOARDS="$(mktemp -d)"
-  tar xzf "$MKP_LIB/boards.tar.gz" -C "$TMPBOARDS"
-  NEW_BOARDS=0
-  for f in "$TMPBOARDS/boards/"*.json; do
-    [[ -f "$f" ]] || continue
-    fname="$(basename "$f")"
-    if [[ ! -f "$BOARDS_DIR/$fname" ]]; then
-      cp "$f" "$BOARDS_DIR/$fname"
+  if compgen -G "$BOARDS_DIR/*.json" > /dev/null; then
+    ok "Boards ready (existing boards detected, skipping demo seed)"
+  else
+    TMPBOARDS="$(mktemp -d)"
+    tar xzf "$MKP_LIB/boards.tar.gz" -C "$TMPBOARDS"
+    NEW_BOARDS=0
+    for f in "$TMPBOARDS/boards/"*.json; do
+      [[ -f "$f" ]] || continue
+      cp "$f" "$BOARDS_DIR/$(basename "$f")"
       NEW_BOARDS=$(( NEW_BOARDS + 1 ))
-    fi
-  done
-  [[ -f "$TMPBOARDS/boards/backgrounds/demo.svg" && ! -f "$BOARDS_DIR/backgrounds/demo.svg" ]] && \
-    cp "$TMPBOARDS/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
-  rm -rf "$TMPBOARDS"
-  ok "Boards ready ($NEW_BOARDS new demo boards)"
+    done
+    [[ -f "$TMPBOARDS/boards/backgrounds/demo.svg" && ! -f "$BOARDS_DIR/backgrounds/demo.svg" ]] && \
+      cp "$TMPBOARDS/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
+    rm -rf "$TMPBOARDS"
+    ok "Boards ready ($NEW_BOARDS demo board(s) installed)"
+  fi
 
   # 4. Python virtualenv + backend
   step "Setting up Python environment"

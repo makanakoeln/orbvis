@@ -17,9 +17,13 @@ fi
 rsync -a --delete "$REPO/backend/" "$SITE_DIR/src/"
 
 # Demo boards + backgrounds (live data dir, separate from src/)
+# Only seed demo boards on a fresh install (no existing *.json in BOARDS_DIR);
+# backgrounds always sync since they may be referenced by user boards too.
 BOARDS_DIR="$SITE_DIR/boards"
 if [[ -d "$BOARDS_DIR" ]]; then
-  rsync -a "$REPO/backend/boards/demo"*.json "$BOARDS_DIR/"
+  if ! compgen -G "$BOARDS_DIR/*.json" > /dev/null; then
+    rsync -a "$REPO/backend/boards/demo"*.json "$BOARDS_DIR/"
+  fi
   rsync -a "$REPO/backend/boards/backgrounds/" "$BOARDS_DIR/backgrounds/"
 fi
 

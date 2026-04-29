@@ -185,21 +185,19 @@ fi
 step "Setting up data directories"
 IMAGES_DIR="$(dirname "$BOARDS_DIR")/images"
 quietly sudo mkdir -p "$BOARDS_DIR/backgrounds" "$IMAGES_DIR"
-NEW_BOARDS=0
-for demo in "$SCRIPT_DIR/backend/boards/"demo*.json; do
-  fname="$(basename "$demo")"
-  if ! sudo test -f "$BOARDS_DIR/$fname"; then
-    quietly sudo cp "$demo" "$BOARDS_DIR/$fname"
-    (( NEW_BOARDS++ )) || true
-  fi
-done
-if ! sudo test -f "$BOARDS_DIR/backgrounds/demo.svg"; then
-  quietly sudo cp "$SCRIPT_DIR/backend/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
-fi
-if [[ $NEW_BOARDS -gt 0 ]]; then
-  ok "Directories ready ($NEW_BOARDS demo board(s) installed)"
+# Only seed demo boards on a truly fresh install (no existing *.json in BOARDS_DIR)
+if compgen -G "$BOARDS_DIR/*.json" > /dev/null; then
+  ok "Directories ready (existing boards detected, skipping demo seed)"
 else
-  ok "Directories ready (demo boards already present)"
+  NEW_BOARDS=0
+  for demo in "$SCRIPT_DIR/backend/boards/"demo*.json; do
+    quietly sudo cp "$demo" "$BOARDS_DIR/$(basename "$demo")"
+    (( NEW_BOARDS++ )) || true
+  done
+  if ! sudo test -f "$BOARDS_DIR/backgrounds/demo.svg"; then
+    quietly sudo cp "$SCRIPT_DIR/backend/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
+  fi
+  ok "Directories ready ($NEW_BOARDS demo board(s) installed)"
 fi
 
 # 3. Python virtualenv + dependencies
