@@ -14,6 +14,11 @@ export const STATE_COLORS: Record<string, string> = {
     PENDING: '#9ca3af',
 };
 
+// Tailwind blue-500 / amber-400 — kept in sync with the badges rendered
+// directly via Tailwind classes in BoardObject.vue (downtime/ack indicators).
+export const DOWNTIME_COLOR = '#3b82f6';
+export const ACKNOWLEDGED_COLOR = '#fbbf24';
+
 export function stateColor(state: string | undefined): string {
     return STATE_COLORS[state ?? 'PENDING'] ?? STATE_COLORS['PENDING'];
 }

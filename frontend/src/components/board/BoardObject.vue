@@ -411,6 +411,8 @@
                 "
                 :tree="state.tree"
                 :icon-size="iconSize"
+                @node-enter="(o, s, e) => $emit('subtree-enter', o, s, e)"
+                @node-leave="$emit('subtree-leave')"
             />
         </div>
         <!-- Label -->
@@ -466,6 +468,8 @@ defineEmits<{
     'hover-leave': [];
     'context-menu': [event: MouseEvent];
     'graph-resize-start': [evt: PointerEvent];
+    'subtree-enter': [obj: BoardObject, state: ObjectState, event: MouseEvent];
+    'subtree-leave': [];
 }>();
 
 const statesStore = useStatesStore();

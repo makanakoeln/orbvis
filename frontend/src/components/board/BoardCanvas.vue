@@ -81,6 +81,10 @@
                 @hover="!editMode && openHoverMenu($event, obj)"
                 @hover-leave="!editMode && closeHoverMenu()"
                 @graph-resize-start="onGraphResizeStart($event, obj)"
+                @subtree-enter="
+                    (subObj, subState, evt) => !editMode && openSubtreeHover(evt, subObj, subState)
+                "
+                @subtree-leave="!editMode && closeHoverMenu()"
             />
         </div>
 
@@ -88,7 +92,7 @@
         <HoverMenu
             v-if="hoverMenu.visible && hoverMenu.object"
             :object="hoverMenu.object"
-            :state="states[hoverMenu.object.id]"
+            :state="hoverMenu.stateOverride ?? states[hoverMenu.object.id]"
             :x="hoverMenu.x"
             :y="hoverMenu.y"
             :anchor-rect="hoverMenu.anchorRect"
@@ -523,6 +527,8 @@ function onCanvasClick(event: MouseEvent) {
 const hoverMenu = reactive({
     visible: false,
     object: null as BoardObjectType | null,
+    // Override state for synthetic objects (BI subtree nodes) that aren't in `states`.
+    stateOverride: null as ObjectState | null,
     x: 0,
     y: 0,
     anchorRect: null as { left: number; top: number; right: number; bottom: number } | null,
@@ -536,6 +542,7 @@ const contextMenu = reactive({
 
 function openHoverMenu(event: MouseEvent, obj: BoardObjectType) {
     hoverMenu.object = obj;
+    hoverMenu.stateOverride = null;
     hoverMenu.x = event.pageX + 12;
     hoverMenu.y = event.pageY + 12;
     // Walk up from event.target to find an icon-sized wrapper for anchoring
@@ -543,6 +550,15 @@ function openHoverMenu(event: MouseEvent, obj: BoardObjectType) {
     // the whole board. event.currentTarget would be null by now (cleared
     // after Vue's emit bridge), so we work from event.target instead.
     hoverMenu.anchorRect = obj.type === 'line' ? null : findIconWrapperRect(event.target);
+    hoverMenu.visible = true;
+}
+
+function openSubtreeHover(event: MouseEvent, obj: BoardObjectType, state: ObjectState) {
+    hoverMenu.object = obj;
+    hoverMenu.stateOverride = state;
+    hoverMenu.x = event.pageX + 12;
+    hoverMenu.y = event.pageY + 12;
+    hoverMenu.anchorRect = findIconWrapperRect(event.target);
     hoverMenu.visible = true;
 }
 
