@@ -41,9 +41,7 @@
                     <!-- State -->
                     <div v-if="state" class="text-xs font-semibold mt-1" :class="stateTextColor">
                         {{ state.state }}
-                        <span
-                            v-if="state.acknowledged"
-                            class="text-[var(--text-muted)] font-normal"
+                        <span v-if="state.acknowledged" class="text-[var(--text-muted)] font-normal"
                             >· {{ t('board.hover.acknowledged') }}</span
                         >
                         <span
