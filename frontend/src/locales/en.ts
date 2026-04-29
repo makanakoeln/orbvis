@@ -152,6 +152,8 @@ export default {
         aggregationId: 'BI aggregation',
         noAggregations:
             'No BI aggregations available — none are configured in Checkmk, or your user has no permission to view them.',
+        expandDepth: 'Expand depth',
+        expandDepthHelp: 'Show child nodes up to N levels (0 = root only).',
         typeLine: 'Line',
         typeTextbox: 'Textbox',
         typeImage: 'Image',

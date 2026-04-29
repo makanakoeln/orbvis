@@ -151,6 +151,19 @@
                                         class="flex-1"
                                     />
                                 </div>
+                                <div class="field-row">
+                                    <label class="field-label">{{
+                                        t('boardSettings.expandDepth')
+                                    }}</label>
+                                    <input
+                                        v-model.number="form.expand_depth"
+                                        type="number"
+                                        min="0"
+                                        max="10"
+                                        class="field flex-1"
+                                        :title="t('boardSettings.expandDepthHelp')"
+                                    />
+                                </div>
                             </template>
                         </div>
                     </section>
@@ -1245,6 +1258,7 @@ const form = reactive({
     group_name: '',
     map_name: '',
     aggregation_id: '',
+    expand_depth: 0,
     line_style: null as string | null,
     line_color: null as string | null,
     line_color_border: null as string | null,
@@ -1316,6 +1330,7 @@ watch(
         form.group_name = obj.group_name ?? '';
         form.map_name = obj.map_name ?? '';
         form.aggregation_id = obj.aggregation_id ?? '';
+        form.expand_depth = obj.expand_depth ?? 0;
         form.line_style = obj.line_style ?? null;
         form.line_color = obj.line_color ?? null;
         form.line_color_border = obj.line_color_border ?? null;
@@ -1535,8 +1550,10 @@ async function save() {
         if (props.object.type === 'hostgroup' || props.object.type === 'servicegroup')
             updates.group_name = form.group_name || null;
         if (props.object.type === 'map') updates.map_name = form.map_name || null;
-        if (props.object.type === 'aggregation')
+        if (props.object.type === 'aggregation') {
             updates.aggregation_id = form.aggregation_id || null;
+            updates.expand_depth = form.expand_depth ?? 0;
+        }
 
         if (props.object.type === 'line') {
             updates.host_name = form.host_name || null;

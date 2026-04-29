@@ -404,6 +404,14 @@
                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                 </svg>
             </span>
+            <!-- BI aggregation: expanded subtree (when expand_depth > 0) -->
+            <AggregationSubtree
+                v-if="
+                    object.type === 'aggregation' && (object.expand_depth ?? 0) > 0 && state?.tree
+                "
+                :tree="state.tree"
+                :icon-size="iconSize"
+            />
         </div>
         <!-- Label -->
         <div
@@ -434,6 +442,7 @@ import { useStatesStore } from '@/stores/states';
 import type { BoardObject, ObjectState } from '@/types/api';
 import { getMetric, parsePerfData, utilColor as _utilColor, utilPercent } from '@/utils/perf';
 
+import AggregationSubtree from './AggregationSubtree.vue';
 import GadgetRenderer from './GadgetRenderer.vue';
 import MetricChart from './MetricChart.vue';
 

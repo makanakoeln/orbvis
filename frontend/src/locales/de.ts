@@ -153,6 +153,8 @@ export default {
         aggregationId: 'BI-Aggregation',
         noAggregations:
             'Keine BI-Aggregationen verfügbar — entweder sind in Checkmk keine konfiguriert, oder dein Nutzer hat keine Berechtigung, sie zu sehen.',
+        expandDepth: 'Aufklapptiefe',
+        expandDepthHelp: 'Kindknoten bis zu N Ebenen anzeigen (0 = nur Wurzel).',
         typeLine: 'Linie',
         typeTextbox: 'Textfeld',
         typeImage: 'Bild',

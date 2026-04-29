@@ -100,6 +100,17 @@
                     :loading="loadingAddAggregations"
                     :placeholder="t('boardSettings.aggregationId')"
                 />
+                <label class="flex items-center gap-2 text-xs text-zinc-400">
+                    {{ t('boardSettings.expandDepth') }}
+                    <input
+                        v-model.number="draft.expand_depth"
+                        type="number"
+                        min="0"
+                        max="10"
+                        class="field w-16"
+                        :title="t('boardSettings.expandDepthHelp')"
+                    />
+                </label>
                 <p
                     v-if="!loadingAddAggregations && addAggregationIds.length === 0"
                     class="text-xs text-amber-400/70 leading-snug"
@@ -368,6 +379,7 @@ function onTypeChange() {
     props.draft.group_name = '';
     props.draft.board_name = '';
     props.draft.aggregation_id = '';
+    props.draft.expand_depth = 0;
     props.draft.label_text = '';
     props.draft.image_src = '';
     props.draft.graph_url = '';
