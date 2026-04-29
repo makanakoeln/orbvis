@@ -993,6 +993,7 @@
                         style="gap: 2px; padding: 0 6px"
                     >
                         <button
+                            v-if="!map.readonly"
                             class="p-1 rounded text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
                             :title="t('board.settingsTitle')"
                             @click.stop="openSettings(map)"
