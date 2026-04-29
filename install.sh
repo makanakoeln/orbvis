@@ -141,14 +141,25 @@ if [[ -z "$PYTHON3" ]]; then
   esac
   exit 1
 fi
-if [[ "$PREBUILT_FRONTEND" == "false" && -z "$NPM" ]]; then
-  echo "Error: npm not found. Install Node.js 18 or newer:" >&2
+_node_install_hint() {
   case "$OS_FAMILY" in
     rhel) echo "  sudo dnf module enable nodejs:20 && sudo dnf install nodejs" >&2 ;;
     suse) echo "  sudo zypper install nodejs20" >&2 ;;
     *)    echo "  sudo apt install nodejs npm" >&2 ;;
   esac
-  exit 1
+}
+if [[ "$PREBUILT_FRONTEND" == "false" ]]; then
+  if [[ -z "$NPM" ]]; then
+    echo "Error: npm not found. Install Node.js 18 or newer:" >&2
+    _node_install_hint
+    exit 1
+  fi
+  NODE_MAJOR="$(node --version 2>/dev/null | sed 's/v\([0-9]*\).*/\1/')"
+  if [[ -z "$NODE_MAJOR" || "$NODE_MAJOR" -lt 18 ]]; then
+    echo "Error: Node.js >= 18 required (found: $(node --version 2>/dev/null || echo none))." >&2
+    _node_install_hint
+    exit 1
+  fi
 fi
 
 PYTHON_VERSION=$("$PYTHON3" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
