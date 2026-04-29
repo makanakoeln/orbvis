@@ -1030,14 +1030,19 @@ class LivestatusBackend(BackendBase):
         Runs inside an ``asyncio.to_thread`` worker; spins up a fresh event loop
         to drive our async ``_query_raw``. ``AuthUser:`` is injected automatically
         via the ``_auth_user_ctx`` ContextVar set by ``with_auth_user(...)``.
+
+        cmk.bi hardcodes ``Cache: reload`` headers in compiler.py + data_fetcher.py.
+        Some Livestatus backends reject them with HTTP 400 ("undefined request
+        header") — we strip them since they're only a perf hint, not correctness.
         """
         from cmk.livestatus_client._connection import LivestatusResponse
 
         del only_sites, fetch_full_data  # OrbVis is single-site; bi_fetch_full_data isn't needed
 
+        lql = "\n".join(line for line in str(query).splitlines() if not line.startswith("Cache:"))
         loop = asyncio.new_event_loop()
         try:
-            rows = loop.run_until_complete(self._query_raw(str(query)))
+            rows = loop.run_until_complete(self._query_raw(lql))
         finally:
             loop.close()
         return LivestatusResponse(rows)

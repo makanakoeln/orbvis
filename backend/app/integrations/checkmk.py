@@ -392,8 +392,16 @@ def cmk_bi_list_aggregations() -> list[dict[str, str]]:
             pack_id = str(getattr(pack, "id", "") or "")
             for aggr in pack.get_aggregations().values():
                 aggr_id = str(getattr(aggr, "id", "") or "")
-                if aggr_id:
-                    out.append({"id": aggr_id, "title": aggr_id, "pack_id": pack_id})
+                if not aggr_id:
+                    continue
+                # BIAggregation has no `title` attribute — surface the assigned
+                # WATO group(s) instead, matching how Checkmk's BI views label them.
+                groups = getattr(aggr, "groups", None)
+                names = list(getattr(groups, "names", []) or [])
+                paths = list(getattr(groups, "paths", []) or [])
+                combined = names + ["/".join(p) for p in paths if p]
+                title = f"{combined[0]} / {aggr_id}" if combined else aggr_id
+                out.append({"id": aggr_id, "title": title, "pack_id": pack_id})
         return out
     except Exception:
         log.warning("cmk.bi list aggregations failed", exc_info=True)
