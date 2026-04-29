@@ -9,8 +9,9 @@ import logging
 import sys
 import threading
 import time as _time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
+from typing import Any
 
 from app.core.config import settings
 
@@ -274,15 +275,23 @@ def _load_user_fallback(username: str) -> dict[str, object]:
 
 
 # ---------------------------------------------------------------------------
-# Checkmk BI (Business Intelligence) — direct Python integration
+# Checkmk BI (Business Intelligence) — direct cmk.bi.* integration
 # ---------------------------------------------------------------------------
 #
-# OrbVis prefers the in-process cmk.bi.* path over the REST API:
-#   - no automation user / token (defunct in CMK 2.5)
-#   - automatic per-user permissions via cmk.gui.user
-#   - ~10× lower latency (no HTTP roundtrip, no JSON serialisation)
+# OrbVis instantiates BICompiler/BIComputer directly and feeds them a custom
+# SitesCallback that uses our own Livestatus client. We deliberately avoid
+# cmk.gui.bi.bi_manager.BIManager (which would require cmk.gui.utils.
+# script_helpers.application_and_request_context() — that builds a Flask app
+# via make_wsgi_app() which crashes on editions not registered in
+# cmk.gui.features.features_registry, including 2.5 ULTIMATE).
+#
+# The cmk.bi.* sub-package has no cmk.gui imports — it is pure compute over
+# Livestatus data — so a direct integration works on every edition without
+# Flask, WSGI, or edition-feature-registry shenanigans.
 #
 # Standalone deployments (no OMD site) fall back to REST in livestatus.py.
+
+QueryCallback = Callable[..., Any]
 
 
 def cmk_bi_available() -> bool:
@@ -290,147 +299,105 @@ def cmk_bi_available() -> bool:
     if not available:
         return False
     try:
-        from cmk.gui.bi import BIManager, get_cached_bi_packs  # noqa: F401
+        from cmk.bi.compiler import BICompiler  # noqa: F401
+        from cmk.bi.computer import BIComputer  # noqa: F401
     except Exception:
         return False
     return True
 
 
-def _ensure_edition_compatible() -> None:
-    """One-time workaround for editions missing from cmk.gui.features.features_registry.
+# BICompiler+BIComputer build is expensive (loads + compiles all aggregations
+# from bi_config.bi). They hold no per-request state, so we cache the bundle
+# for ~10s. CMK config edits propagate after at most one TTL cycle.
+_BI_COMPUTER_CACHE: tuple[float, object] | None = None
+_BI_COMPUTER_LOCK = threading.Lock()
+_BI_COMPUTER_TTL = 10.0
 
-    Some 2.5 editions — notably ULTIMATE — are not pre-registered, so any
-    ``application_and_request_context()`` crashes with ``Invalid edition``.
-    We register a minimal :class:`Features` so the WSGI app builder accepts
-    the runtime edition. OrbVis doesn't gate on edition-specific features —
-    we only need Flask request context — so the aliasing is safe.
+
+def _build_computer(query_callback: QueryCallback, site_id: str) -> object:
+    """Build a fresh BIComputer wired up to OrbVis' Livestatus client."""
+    from cmk.bi.compiler import BICompiler
+    from cmk.bi.computer import BIComputer
+    from cmk.bi.data_fetcher import BIStatusFetcher
+    from cmk.bi.filesystem import get_default_site_filesystem
+    from cmk.bi.lib import SitesCallback
+    from cmk.ccc.site import SiteId
+
+    bi_fs = get_default_site_filesystem()
+    sites_cb = SitesCallback(
+        all_sites_with_id_and_online=lambda: [(SiteId(site_id), True)],
+        query=query_callback,
+        translate=lambda x: x,
+    )
+    compiler = BICompiler(bi_fs.etc.config, sites_cb)
+    compiler.load_compiled_aggregations()
+    status_fetcher = BIStatusFetcher(sites_cb)
+    return BIComputer(compiler.compiled_aggregations, status_fetcher)
+
+
+def _cached_computer(query_callback: QueryCallback, site_id: str) -> object:
+    """Return a cached BIComputer; rebuild every BI_COMPUTER_TTL seconds.
+
+    OrbVis configures one Livestatus backend per OMD site, so a process-global
+    cache is fine — callbacks always point at the same site.
     """
-    try:
-        from cmk.ccc.version import edition
-        from cmk.gui.features import Features, features_registry
-        from cmk.utils import paths
-    except Exception:
-        return
-
-    cur_edition = edition(paths.omd_root)
-    if str(cur_edition) in features_registry:
-        return
-    try:
-        features_registry.register(
-            Features(
-                edition=cur_edition,
-                livestatus_only_sites_postprocess=lambda x: list(x) if x else None,
-            )
-        )
-        log.warning(
-            "OrbVis BI: registered minimal Features for edition %r "
-            "(not pre-registered by CMK — known 2.5 ULTIMATE bug).",
-            str(cur_edition),
-        )
-    except Exception:
-        log.debug("Could not register Features for current edition", exc_info=True)
-
-
-# BIManager is expensive to build (loads + compiles all aggregations from
-# bi_config.bi). It holds no per-request state — only a SitesCallback that
-# closes over cmk.gui.sites, which the surrounding request context refreshes
-# for us — so we cache the instance for ~10s. Config edits in CMK propagate
-# after at most one TTL cycle.
-_BI_MANAGER_CACHE: tuple[float, object] | None = None
-_BI_MANAGER_LOCK = threading.Lock()
-_BI_MANAGER_TTL = 10.0
-
-
-def _cached_bi_manager() -> object:
-    """Return a cached BIManager. Caller must hold an application/request context."""
-    global _BI_MANAGER_CACHE
-    with _BI_MANAGER_LOCK:
+    global _BI_COMPUTER_CACHE
+    with _BI_COMPUTER_LOCK:
         now = _time.time()
-        if _BI_MANAGER_CACHE is not None and now - _BI_MANAGER_CACHE[0] < _BI_MANAGER_TTL:
-            return _BI_MANAGER_CACHE[1]
-        # cmk.gui.bi re-exports BIManager (stable across 2.3–2.5).
-        from cmk.gui.bi import BIManager
-
-        manager = BIManager()
-        _BI_MANAGER_CACHE = (now, manager)
-        return manager
+        if _BI_COMPUTER_CACHE is not None and now - _BI_COMPUTER_CACHE[0] < _BI_COMPUTER_TTL:
+            return _BI_COMPUTER_CACHE[1]
+        computer = _build_computer(query_callback, site_id)
+        _BI_COMPUTER_CACHE = (now, computer)
+        return computer
 
 
 def cmk_bi_get_aggregations_states(
-    username: str | None,
+    query_callback: QueryCallback,
+    site_id: str,
     aggregation_ids: list[str],
 ) -> dict[str, dict[str, object]]:
     """Compute current state for a list of BI aggregations via cmk.bi.
 
-    Synchronous — callers wrap with asyncio.to_thread(). Returns a dict keyed by
-    aggregation id; entries contain ``state`` (int), ``output`` (str),
-    ``acknowledged`` (bool), ``in_downtime`` (bool). Missing aggregations are
-    simply absent from the result.
+    Synchronous — callers wrap with asyncio.to_thread(). Per-user permissions
+    are honoured because *query_callback* (OrbVis' Livestatus query) injects
+    ``AuthUser:`` into every LQL query when run inside ``with_auth_user(...)``.
     """
     if not cmk_bi_available() or not aggregation_ids:
         return {}
     try:
-        # BIAggregationFilter lives in cmk.bi.computer (NOT cmk.bi.filters) across 2.3–2.5.
         from cmk.bi.computer import BIAggregationFilter
-        from cmk.gui.utils.script_helpers import application_and_request_context
 
-        _ensure_edition_compatible()
-        with application_and_request_context():
-            _set_cmk_user(username)
-            bi_manager = _cached_bi_manager()
-            bi_filter = BIAggregationFilter([], [], [], list(aggregation_ids), [], [])
-            results = bi_manager.computer.compute_result_for_filter(bi_filter)  # type: ignore[attr-defined]
-            return _bi_results_to_dict(results)
+        computer = _cached_computer(query_callback, site_id)
+        bi_filter = BIAggregationFilter([], [], [], list(aggregation_ids), [], [])
+        results = computer.compute_result_for_filter(bi_filter)  # type: ignore[attr-defined]
+        return _bi_results_to_dict(results)
     except Exception:
         log.warning("cmk.bi compute failed for %s", aggregation_ids, exc_info=True)
         return {}
 
 
 def cmk_bi_list_aggregations() -> list[dict[str, str]]:
-    """Return all configured BI aggregations as [{id, title, pack_id}, ...]."""
+    """Read BI aggregations directly from the bi_config.bi file (no Livestatus)."""
     if not cmk_bi_available():
         return []
     try:
-        # cmk.gui.bi re-exports get_cached_bi_packs across 2.3–2.5.
-        # The direct cmk.bi.packs path was removed in 2.5.
-        from cmk.gui.bi import get_cached_bi_packs
-        from cmk.gui.utils.script_helpers import application_and_request_context
+        from cmk.bi.filesystem import get_default_site_filesystem
+        from cmk.bi.packs import BIAggregationPacks
 
-        _ensure_edition_compatible()
-        with application_and_request_context():
-            packs = get_cached_bi_packs()
-            packs.load_config()
-            out: list[dict[str, str]] = []
-            for pack in packs.get_packs().values():
-                pack_id = str(getattr(pack, "id", "") or "")
-                for aggr in pack.get_aggregations().values():
-                    aggr_id = str(getattr(aggr, "id", "") or "")
-                    if not aggr_id:
-                        continue
-                    title = str(getattr(aggr, "title", "") or aggr_id)
-                    out.append({"id": aggr_id, "title": title, "pack_id": pack_id})
-            return out
+        bi_fs = get_default_site_filesystem()
+        packs = BIAggregationPacks(bi_fs.etc.config)
+        packs.load_config()
+        out: list[dict[str, str]] = []
+        for pack in packs.get_packs().values():
+            pack_id = str(getattr(pack, "id", "") or "")
+            for aggr in pack.get_aggregations().values():
+                aggr_id = str(getattr(aggr, "id", "") or "")
+                if aggr_id:
+                    out.append({"id": aggr_id, "title": aggr_id, "pack_id": pack_id})
+        return out
     except Exception:
         log.warning("cmk.bi list aggregations failed", exc_info=True)
         return []
-
-
-def _set_cmk_user(username: str | None) -> None:
-    """Best-effort: scope the current cmk.gui request to *username*.
-
-    On failure (CMK API drift, user not in CMK, …) we silently keep the default
-    application context — BI calls then run with whatever permissions the
-    application user has. Per-user RBAC is degraded but the call still succeeds.
-    """
-    if not username:
-        return
-    try:
-        from cmk.gui.session import session
-        from cmk.gui.userdb import LoggedInUser
-
-        session.user = LoggedInUser(username)
-    except Exception as exc:
-        log.debug("cannot set per-user cmk.gui context for %s: %s", username, exc)
 
 
 def _bi_results_to_dict(results: object) -> dict[str, dict[str, object]]:

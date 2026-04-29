@@ -1019,15 +1019,41 @@ class LivestatusBackend(BackendBase):
             aggregation_id, ObjectState(object_id="", type="aggregation", state="PENDING")
         )
 
+    def _bi_query_sync(
+        self,
+        query: object,
+        only_sites: object = None,
+        fetch_full_data: bool = False,
+    ) -> object:
+        """Sync Livestatus query for cmk.bi's SitesCallback.
+
+        Runs inside an ``asyncio.to_thread`` worker; spins up a fresh event loop
+        to drive our async ``_query_raw``. ``AuthUser:`` is injected automatically
+        via the ``_auth_user_ctx`` ContextVar set by ``with_auth_user(...)``.
+        """
+        from cmk.livestatus_client._connection import LivestatusResponse
+
+        del only_sites, fetch_full_data  # OrbVis is single-site; bi_fetch_full_data isn't needed
+
+        loop = asyncio.new_event_loop()
+        try:
+            rows = loop.run_until_complete(self._query_raw(str(query)))
+        finally:
+            loop.close()
+        return LivestatusResponse(rows)
+
     async def get_aggregations_states(self, aggregation_ids: list[str]) -> dict[str, ObjectState]:
         if not aggregation_ids:
             return {}
 
         # Site-mode: in-process cmk.bi (preferred — per-user permissions, no auth)
         if _cmk_integration.cmk_bi_available():
-            username = _auth_user_ctx.get()
+            site_id = settings.checkmk_site or "local"
             site_data = await asyncio.to_thread(
-                _cmk_integration.cmk_bi_get_aggregations_states, username, aggregation_ids
+                _cmk_integration.cmk_bi_get_aggregations_states,
+                self._bi_query_sync,
+                site_id,
+                aggregation_ids,
             )
             if site_data:
                 return _aggregations_to_object_states(site_data, aggregation_ids)
