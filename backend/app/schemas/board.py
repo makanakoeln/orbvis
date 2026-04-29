@@ -128,52 +128,38 @@ class BoardObject(BaseModel):
     type: ObjectType
     x: int | float = 0
     y: int | float = 0
-    # Geographic coordinates (worldmap)
     lat: float | None = None
     lng: float | None = None
     z: int = 1
-    # Host/Service specific
     host_name: str | None = None
     service_description: str | None = None
-    # Group specific
     group_name: str | None = None
-    # Map object
     map_name: str | None = None
-    # Image source (separate from display.image which is for monitoring objects)
     image_src: str | None = None
-    # Line endpoints (pixel for static, lat/lng for worldmap)
     x2: int | float | None = None
     y2: int | float | None = None
     lat2: float | None = None
     lng2: float | None = None
     line_style: LineStyle | None = None
     weathermap_metric: str | None = None
-    # CMK label filter
     cmk_label_name: str | None = None
     cmk_label_value: str | None = None
     cmk_label_target: Literal["hosts", "services"] | None = None
-    # Checkmk BI aggregation
     aggregation_id: str | None = None
-    # Expand the aggregation subtree up to N levels (0 = root only). Hard cap 10.
+    # 0 = root only, hard cap 10 levels — see backend.app.services.state_service.
     expand_depth: int = Field(default=0, ge=0, le=10)
-    # State behaviour flags
     only_hard_states: bool = False
     recognize_services: bool = False
-    # Member exclusion (hostgroup, servicegroup, host, map)
     exclude_members: str | None = None
     exclude_member_states: str | None = None
-    # Nested configs
     label: LabelConfig | None = Field(default_factory=LabelConfig)
     display: DisplayConfig | None = Field(default_factory=DisplayConfig)
-    # Label extensions
     label_border: str | None = None
     label_maxlen: int | None = None
-    # Textbox styling
     textbox_background: str | None = None
     textbox_border: str | None = None
     textbox_width: int | None = None
     textbox_height: int | None = None
-    # Graph embed
     graph_url: str | None = None
     graph_embed_type: Literal["img", "iframe"] = "img"
     graph_width: int = 400
@@ -200,15 +186,11 @@ class BoardObject(BaseModel):
     def _validate_urls(cls, v: str | None) -> str | None:
         return _validate_user_url(v)
 
-    # Line custom colors
     line_color: str | None = None
     line_color_border: str | None = None
-    # Link
     url: str | None = None
     url_target: str = "_blank"
-    # Hover URL (custom hover popup URL instead of template)
     hover_url: str | None = None
-    # Templates (override board-global / global defaults)
     hover_template: str | None = None
     context_template: str | None = None
 

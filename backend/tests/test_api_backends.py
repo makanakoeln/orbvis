@@ -129,6 +129,67 @@ async def test_update_backend_not_found(client, admin_token, tmp_path, monkeypat
 
 
 @pytest.mark.asyncio
+async def test_list_backends_redacts_secrets(client, admin_token, tmp_path, monkeypatch):
+    """GET /backends must never return raw automation_secret values."""
+    _patch(monkeypatch, tmp_path)
+    await client.post(
+        "/api/v1/backends",
+        json={**_SAMPLE_BACKEND, "automation_secret": "very-secret-token"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    response = await client.get(
+        "/api/v1/backends", headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body[0]["automation_secret"] == "***REDACTED***"
+    assert "very-secret-token" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_update_backend_preserves_secret_when_redacted_sent(
+    client, admin_token, tmp_path, monkeypatch
+):
+    """Frontend echoes the redaction sentinel when the admin doesn't retype the
+    secret — backend must keep the previously stored value, not overwrite with
+    the sentinel string."""
+    _patch(monkeypatch, tmp_path)
+    await client.post(
+        "/api/v1/backends",
+        json={**_SAMPLE_BACKEND, "automation_secret": "real-secret"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    response = await client.put(
+        "/api/v1/backends/live_1",
+        json={
+            "type": "livestatus",
+            "label": "Updated",
+            "socket_path": "/tmp/live",  # nosec B108
+            "automation_secret": "***REDACTED***",
+        },
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    # The redacted sentinel was preserved server-side; reload via service to
+    # confirm the on-disk value is still the original.
+    from app.services import backend_service
+
+    cfg = next(b for b in backend_service.load_all() if b.id == "live_1")
+    assert cfg.automation_secret == "real-secret"
+
+
+@pytest.mark.asyncio
+async def test_create_backend_rejects_redacted_sentinel(client, admin_token, tmp_path, monkeypatch):
+    _patch(monkeypatch, tmp_path)
+    response = await client.post(
+        "/api/v1/backends",
+        json={**_SAMPLE_BACKEND, "automation_secret": "***REDACTED***"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_delete_backend(client, admin_token, tmp_path, monkeypatch):
     _patch(monkeypatch, tmp_path)
     await client.post(

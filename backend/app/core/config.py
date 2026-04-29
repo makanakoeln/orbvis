@@ -17,48 +17,32 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    # App
     app_name: str = "OrbVis"
     debug: bool = False
     environment: Literal["development", "production", "testing"] = "production"
-    # Log level — overrides the debug flag when explicitly set. Uses standard
-    # Python logging level names (DEBUG/INFO/WARNING/ERROR/CRITICAL).
+    # Overrides the debug flag when explicitly set. Standard Python logging names.
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
 
-    # Database
     database_url: str = "sqlite+aiosqlite:///./orbvis.db"
 
-    # Security
-    # Must be set via SECRET_KEY env var or .env; if unset an ephemeral key is generated
-    # and all JWTs become invalid after every restart.
+    # Required in production: see _ensure_secret_key validator below.
     secret_key: str = ""
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 30
 
-    # Checkmk/OMD integration
-    # Path to htpasswd file (fallback login with Checkmk credentials)
     checkmk_htpasswd: str = ""
-    # OMD site root (e.g. /omd/sites/heute) – enables cookie-based SSO
     checkmk_omd_root: str = ""
-    # OMD site name (e.g. heute) – used as auth cookie name: auth_<site>
     checkmk_site: str = ""
 
-    # Boards
     boards_dir: str = "./boards"
-
-    # Monitoring backends
     backends_file: str = "./backends.json"
 
-    # WebSocket
     ws_ping_interval: int = 30
     state_refresh_interval: int = 5
+    backend_query_timeout: int = 10
+    backend_max_connections: int = 20
 
-    # Monitoring backend limits
-    backend_query_timeout: int = 10  # seconds; caps full round-trip per LQL query
-    backend_max_connections: int = 20  # max concurrent Livestatus socket connections
-
-    # CORS
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
     # mypy's pydantic plugin doesn't model the @property-under-@computed_field

@@ -100,3 +100,25 @@ def test_ws_rate_limiter_rejects_connection_floods(admin_user):
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect("/api/v1/ws/boards/demo"):
             pass
+
+
+def test_ws_rejects_disallowed_origin(admin_user):
+    """Cross-origin browsers can open WS without a CORS preflight, so OrbVis
+    rejects connections whose Origin header is not in the configured allowlist."""
+    with pytest.raises(WebSocketDisconnect):
+        with _ws_client().websocket_connect(
+            "/api/v1/ws/boards/demo",
+            headers={"origin": "https://evil.example.com"},
+        ):
+            pass
+
+
+def test_ws_accepts_no_origin_header(admin_user, monkeypatch):
+    """Non-browser clients (curl, custom websocket libs) send no Origin header
+    and must still be allowed — the guard short-circuits when the header is
+    missing. Reaches the auth step and rejects there because no token is sent."""
+    with _ws_client().websocket_connect("/api/v1/ws/boards/demo") as ws:
+        # Got past origin check (otherwise close happens before accept).
+        ws.send_text(json.dumps({"type": "not-auth"}))
+        with pytest.raises(WebSocketDisconnect):
+            ws.receive_text()

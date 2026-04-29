@@ -185,6 +185,64 @@ async def test_update_object_not_found(client, admin_token, tmp_path, monkeypatc
     assert response.status_code == 404
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field", ["hover_template", "context_template", "hover_url"])
+async def test_non_admin_cannot_set_template_or_hover_url(
+    client, admin_token, regular_token, regular_user, tmp_path, monkeypatch, field
+):
+    """hover_template / context_template / hover_url render in other users'
+    sessions; only admins may set them. Editor-permission alone is not enough."""
+    _patch(monkeypatch, tmp_path)
+    await _create_board(client, admin_token)
+    await client.post(
+        "/api/v1/boards/testboard/objects",
+        json={"id": "host_x", "type": "host", "x": 0, "y": 0},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    payload = {field: "<script>alert(1)</script>" if field != "hover_url" else "https://x"}
+    response = await client.put(
+        "/api/v1/boards/testboard/objects/host_x",
+        json=payload,
+        headers={"Authorization": f"Bearer {regular_token}"},
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_can_set_hover_template(client, admin_token, tmp_path, monkeypatch):
+    _patch(monkeypatch, tmp_path)
+    await _create_board(client, admin_token)
+    await client.post(
+        "/api/v1/boards/testboard/objects",
+        json={"id": "host_y", "type": "host", "x": 0, "y": 0},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    response = await client.put(
+        "/api/v1/boards/testboard/objects/host_y",
+        json={"hover_template": "<b>Hello</b>"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["hover_template"] == "<b>Hello</b>"
+
+
+@pytest.mark.asyncio
+async def test_update_object_rejects_javascript_url(client, admin_token, tmp_path, monkeypatch):
+    _patch(monkeypatch, tmp_path)
+    await _create_board(client, admin_token)
+    await client.post(
+        "/api/v1/boards/testboard/objects",
+        json={"id": "host_z", "type": "host", "x": 0, "y": 0},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    response = await client.put(
+        "/api/v1/boards/testboard/objects/host_z",
+        json={"url": "javascript:alert(document.cookie)"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # DELETE /boards/{name}/objects/{obj_id}
 # ---------------------------------------------------------------------------

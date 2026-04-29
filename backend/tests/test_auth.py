@@ -2,6 +2,17 @@
 
 import pytest
 
+from app.core.ratelimit import login_limiter
+
+
+@pytest.fixture(autouse=True)
+def _reset_login_limiter():
+    """Login limiter is in-memory and shared across tests; clear it each run
+    so a previous test's failed-login spam doesn't leak into the next test."""
+    login_limiter._calls.clear()
+    yield
+    login_limiter._calls.clear()
+
 
 @pytest.mark.asyncio
 async def test_login_success(client, admin_user):
@@ -68,3 +79,35 @@ async def test_refresh_token_rotation_invalidates_old(client, admin_user):
     new_refresh = first.json()["refresh_token"]
     third = await client.post("/api/v1/auth/refresh", json={"refresh_token": new_refresh})
     assert third.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_login_throttled_after_repeated_failures(client, admin_user):
+    """After login_limiter._max failures from the same client IP, the next
+    attempt returns 429 with a Retry-After header — even with the correct
+    password (the limiter blocks before authentication runs)."""
+    for _ in range(login_limiter._max):
+        await client.post("/api/v1/auth/login", json={"username": "admin", "password": "wrong"})
+    response = await client.post(
+        "/api/v1/auth/login", json={"username": "admin", "password": "secret"}
+    )
+    assert response.status_code == 429
+    assert "Retry-After" in response.headers
+
+
+@pytest.mark.asyncio
+async def test_refresh_rejects_access_token(client, admin_user):
+    """Submitting an access token (type=access) where a refresh token is
+    expected must fail closed — not authenticate the caller."""
+    login = await client.post(
+        "/api/v1/auth/login", json={"username": "admin", "password": "secret"}
+    )
+    access_token = login.json()["access_token"]
+    response = await client.post("/api/v1/auth/refresh", json={"refresh_token": access_token})
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_refresh_rejects_garbage(client):
+    response = await client.post("/api/v1/auth/refresh", json={"refresh_token": "not-a-jwt"})
+    assert response.status_code == 401
