@@ -51,9 +51,12 @@ jobs:
         run: bandit -r app/ -x tests/ -ll
 
       - name: Dependency audit (pip-audit)
+        # Audit project dependencies declared in pyproject.toml only — auditing
+        # the full env would also flag vulnerabilities in build tools like pip
+        # itself, which we cannot fix from this repo.
         run: |
           pip install pip-audit
-          pip-audit
+          pip-audit .
 
       - name: Test + coverage gate
         # Baseline ~50%; Folge-PRs heben die Schwelle stufenweise in Richtung 75%.
