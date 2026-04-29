@@ -331,6 +331,12 @@ def _build_computer(query_callback: QueryCallback, site_id: str) -> object:
     )
     compiler = BICompiler(bi_fs.etc.config, sites_cb)
     compiler.load_compiled_aggregations()
+    log.info(
+        "OrbVis BI: compiled %d aggregations from %s (site=%s)",
+        len(compiler.compiled_aggregations),
+        bi_fs.etc.config,
+        site_id,
+    )
     status_fetcher = BIStatusFetcher(sites_cb)
     return BIComputer(compiler.compiled_aggregations, status_fetcher)
 
@@ -370,7 +376,14 @@ def cmk_bi_get_aggregations_states(
         computer = _cached_computer(query_callback, site_id)
         bi_filter = BIAggregationFilter([], [], [], list(aggregation_ids), [], [])
         results = computer.compute_result_for_filter(bi_filter)  # type: ignore[attr-defined]
-        return _bi_results_to_dict(results)
+        out = _bi_results_to_dict(results)
+        log.info(
+            "OrbVis BI: requested %s, computed %d states (sample=%s)",
+            aggregation_ids,
+            len(out),
+            next(iter(out.items()), None),
+        )
+        return out
     except Exception:
         log.warning("cmk.bi compute failed for %s", aggregation_ids, exc_info=True)
         return {}
@@ -394,13 +407,15 @@ def cmk_bi_list_aggregations() -> list[dict[str, str]]:
                 aggr_id = str(getattr(aggr, "id", "") or "")
                 if not aggr_id:
                     continue
-                # BIAggregation has no `title` attribute — surface the assigned
-                # WATO group(s) instead, matching how Checkmk's BI views label them.
-                groups = getattr(aggr, "groups", None)
-                names = list(getattr(groups, "names", []) or [])
-                paths = list(getattr(groups, "paths", []) or [])
-                combined = names + ["/".join(p) for p in paths if p]
-                title = f"{combined[0]} / {aggr_id}" if combined else aggr_id
+                # Display name = title of the top-level rule the aggregation calls
+                # (the "tree" name in CMK's BI view). Falls back to the aggr_id.
+                node = getattr(aggr, "node", None)
+                action = getattr(node, "action", None) if node is not None else None
+                rule_id = getattr(action, "rule_id", None) if action is not None else None
+                rule = packs.get_rule(rule_id) if rule_id else None
+                title = str(getattr(rule, "title", "") or "") if rule else ""
+                if not title:
+                    title = aggr_id
                 out.append({"id": aggr_id, "title": title, "pack_id": pack_id})
         return out
     except Exception:
