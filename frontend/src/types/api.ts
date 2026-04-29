@@ -23,6 +23,17 @@ export interface AggregationInfo {
     pack_id: string;
 }
 
+export interface AggregationNode {
+    name: string;
+    node_type: 'bi_aggregator' | 'bi_leaf';
+    state: number;
+    in_downtime?: boolean;
+    acknowledged?: boolean;
+    host_name?: string | null;
+    service_description?: string | null;
+    children: AggregationNode[];
+}
+
 export interface LabelConfig {
     show: boolean;
     text?: string | null;
@@ -97,6 +108,7 @@ export interface BoardObject {
     cmk_label_value?: string | null;
     cmk_label_target?: 'hosts' | 'services' | null;
     aggregation_id?: string | null;
+    expand_depth?: number;
     only_hard_states?: boolean;
     recognize_services?: boolean;
     exclude_members?: string | null;
@@ -179,6 +191,7 @@ export interface ObjectState {
     current_attempt?: number;
     max_attempts?: number;
     last_state_change?: number | null;
+    tree?: AggregationNode | null;
 }
 
 export interface PerfometerSegment {

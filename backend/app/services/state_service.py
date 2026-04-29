@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from app.backends.base import ServiceRow
 from app.core.config import settings
-from app.schemas.board import BoardConfig, BoardObject, RadarView
+from app.schemas.board import AggregationNode, BoardConfig, BoardObject, RadarView
 from app.schemas.state import MapStates, ObjectState
 
 # Combined severity for cross-scale worst-state aggregation (recognize_services)
@@ -255,6 +255,24 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
         except Exception:
             logger.warning("Batch aggregation state query failed", exc_info=True)
             aggr_batch = {}
+
+        # Tree-fetch deduplicated by (aggregation_id, depth) — multiple board
+        # objects with the same aggregation+depth share one backend call.
+        unique_keys: set[tuple[str, int]] = set()
+        for o in aggregation_objs:
+            if o.aggregation_id and o.expand_depth > 0:
+                unique_keys.add((o.aggregation_id, o.expand_depth))
+        tree_keys: list[tuple[str, int]] = sorted(unique_keys)
+        tree_map: dict[tuple[str, int], AggregationNode] = {}
+        if tree_keys:
+            tasks = [backend.get_aggregation_tree(aid, depth) for aid, depth in tree_keys]
+            trees = await asyncio.gather(*tasks, return_exceptions=True)
+            for tree_key, tree in zip(tree_keys, trees, strict=True):
+                if isinstance(tree, AggregationNode):
+                    tree_map[tree_key] = tree
+                elif isinstance(tree, BaseException):
+                    logger.warning("Aggregation tree fetch failed for %r", tree_key, exc_info=tree)
+
         for obj in aggregation_objs:
             assert obj.aggregation_id is not None
             raw = aggr_batch.get(obj.aggregation_id)
@@ -263,6 +281,10 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
                 if raw is not None
                 else ObjectState(object_id=obj.id, type="aggregation", state="PENDING", stale=True)
             )
+            if obj.expand_depth > 0:
+                tree = tree_map.get((obj.aggregation_id, obj.expand_depth))
+                if tree is not None:
+                    s = s.model_copy(update={"tree": tree})
             results[obj.id] = s
 
     individual = [_get_object_state(backend, obj) for obj in lines + others]

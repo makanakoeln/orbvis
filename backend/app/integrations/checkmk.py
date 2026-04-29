@@ -394,6 +394,75 @@ def cmk_bi_get_aggregations_states(
         return {}
 
 
+def cmk_bi_get_aggregation_tree(
+    query_callback: QueryCallback,
+    site_id: str,
+    aggregation_name: str,
+    max_depth: int,
+) -> dict[str, Any] | None:
+    """Compute the BI aggregation hierarchy as a plain dict tree.
+
+    Mirrors ``cmk.gui.nodevis.aggregation.NodeVisualizationBIDataMapper.consume``
+    but truncates at *max_depth* levels (root is depth 0). Returns ``None`` when
+    no matching branch exists. Synchronous — wrap with ``asyncio.to_thread``.
+    """
+    if not cmk_bi_available() or not aggregation_name:
+        return None
+    try:
+        from cmk.bi.computer import BIAggregationFilter
+
+        computer = _cached_computer(query_callback, site_id)
+        bi_filter = BIAggregationFilter([], [], [], [aggregation_name], [], [])
+        results = computer.compute_result_for_filter(bi_filter)  # type: ignore[attr-defined]
+        if not isinstance(results, Iterable):
+            return None
+        for entry in results:
+            try:
+                _aggr, branches = entry
+            except (TypeError, ValueError):
+                continue
+            for bundle in branches or []:
+                instance = getattr(bundle, "instance", None)
+                title = str(getattr(getattr(instance, "properties", None), "title", "") or "")
+                if title != aggregation_name:
+                    continue
+                return _bundle_to_node(bundle, depth=0, max_depth=max_depth)
+        return None
+    except Exception:
+        log.warning("cmk.bi tree compute failed for %r", aggregation_name, exc_info=True)
+        return None
+
+
+def _bundle_to_node(bundle: Any, depth: int, max_depth: int) -> dict[str, Any]:
+    """Recursively convert a NodeResultBundle into the AggregationNode dict shape."""
+    from cmk.bi.trees import BICompiledRule
+
+    instance = bundle.instance
+    actual = bundle.actual_result
+    if isinstance(instance, BICompiledRule):
+        name = str(instance.properties.title or "")
+        node: dict[str, Any] = {"name": name, "node_type": "bi_aggregator"}
+    else:
+        host_name = str(getattr(instance, "host_name", "") or "")
+        svc = getattr(instance, "service_description", None)
+        node = {
+            "name": svc or host_name,
+            "node_type": "bi_leaf",
+            "host_name": host_name or None,
+            "service_description": str(svc) if svc else None,
+        }
+    node["state"] = int(getattr(actual, "state", -1))
+    node["in_downtime"] = bool(getattr(actual, "in_downtime", False))
+    node["acknowledged"] = bool(getattr(actual, "acknowledged", False))
+
+    if depth >= max_depth:
+        node["children"] = []
+        return node
+    nested = getattr(bundle, "nested_results", None) or []
+    node["children"] = [_bundle_to_node(child, depth + 1, max_depth) for child in nested]
+    return node
+
+
 def cmk_bi_list_aggregations(query_callback: QueryCallback, site_id: str) -> list[dict[str, str]]:
     """List all resolved BI aggregations (one entry per branch).
 

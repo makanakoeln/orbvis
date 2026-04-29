@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TypedDict
 
-from app.schemas.board import AggregationInfo
+from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.state import ObjectState
 
 
@@ -174,6 +174,15 @@ class BackendBase(ABC):
     async def list_aggregations(self) -> list[AggregationInfo]:
         """Return all defined BI aggregations for editor autocomplete."""
         return []
+
+    async def get_aggregation_tree(
+        self, aggregation_id: str, max_depth: int
+    ) -> AggregationNode | None:
+        """Return the BI aggregation hierarchy up to *max_depth* levels.
+
+        Default returns ``None`` — only Checkmk-aware backends produce trees.
+        """
+        return None
 
     @abstractmethod
     async def is_available(self) -> bool:

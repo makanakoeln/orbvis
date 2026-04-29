@@ -29,6 +29,25 @@ class AggregationInfo(BaseModel):
     pack_id: str
 
 
+class AggregationNode(BaseModel):
+    """One node in a BI aggregation hierarchy (mirrors cmk.gui.nodevis output).
+
+    ``node_type`` is ``"bi_aggregator"`` for rule nodes and ``"bi_leaf"`` for
+    host/service leaves — same identifiers Checkmk uses, so frontend rendering
+    can later be merged with cmk's node visualization. ``state`` is the BI
+    integer state (0=OK, 1=WARN, 2=CRIT, 3=UNKNOWN).
+    """
+
+    name: str
+    node_type: Literal["bi_aggregator", "bi_leaf"]
+    state: int
+    in_downtime: bool = False
+    acknowledged: bool = False
+    host_name: str | None = None
+    service_description: str | None = None
+    children: list[AggregationNode] = Field(default_factory=list)
+
+
 LineStyle = Literal["plain", "arrow_end", "arrow_start", "arrow_both", "dashed", "weathermap"]
 
 
@@ -110,6 +129,8 @@ class BoardObject(BaseModel):
     cmk_label_target: Literal["hosts", "services"] | None = None
     # Checkmk BI aggregation
     aggregation_id: str | None = None
+    # Expand the aggregation subtree up to N levels (0 = root only). Hard cap 10.
+    expand_depth: int = Field(default=0, ge=0, le=10)
     # State behaviour flags
     only_hard_states: bool = False
     recognize_services: bool = False
@@ -243,6 +264,7 @@ class BoardObjectUpdate(BaseModel):
     cmk_label_value: str | None = None
     cmk_label_target: Literal["hosts", "services"] | None = None
     aggregation_id: str | None = None
+    expand_depth: int | None = Field(default=None, ge=0, le=10)
     only_hard_states: bool | None = None
     recognize_services: bool | None = None
     exclude_members: str | None = None

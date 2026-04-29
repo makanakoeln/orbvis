@@ -16,14 +16,14 @@ from dataclasses import dataclass, field
 from datetime import UTC
 from functools import lru_cache
 from pathlib import Path
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 import httpx
 
 from app.backends.base import BackendBase, GraphGroup, MetricHistoryResult, ServiceRow, TopologyRow
 from app.core.config import settings
 from app.integrations import checkmk as _cmk_integration
-from app.schemas.board import AggregationInfo
+from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.state import ObjectState
 
 logger = logging.getLogger(__name__)
@@ -375,6 +375,47 @@ def _aggregations_to_object_states(
             in_downtime=bool(entry.get("in_downtime", False)),
         )
     return out
+
+
+def _hierarchy_to_node(node: Mapping[str, object], depth: int, max_depth: int) -> AggregationNode:
+    """Convert one node from Checkmks ajax_fetch_aggregation_data hierarchy.
+
+    Standalone-mode shape (per ``cmk.gui.nodevis.aggregation``): ``node_type``,
+    ``name``, ``children`` plus state info under ``type_specific.core`` and
+    leaf host/service identifiers in the same dict.
+    """
+    type_specific = node.get("type_specific")
+    core: Mapping[str, object] = {}
+    if isinstance(type_specific, Mapping):
+        c = type_specific.get("core")
+        if isinstance(c, Mapping):
+            core = c
+
+    node_type: Literal["bi_aggregator", "bi_leaf"] = (
+        "bi_aggregator" if str(node.get("node_type") or "") == "bi_aggregator" else "bi_leaf"
+    )
+    host_name = str(core.get("hostname") or "") or None
+    service = str(core.get("service") or "") or None
+
+    children_raw = node.get("children") if depth < max_depth else None
+    children: list[AggregationNode] = []
+    if isinstance(children_raw, list):
+        for child in children_raw:
+            if isinstance(child, Mapping):
+                children.append(_hierarchy_to_node(child, depth + 1, max_depth))
+
+    state_raw = core.get("state", -1)
+    state_val = int(state_raw) if isinstance(state_raw, int | float | str) else -1
+    return AggregationNode(
+        name=str(node.get("name") or ""),
+        node_type=node_type,
+        state=state_val,
+        in_downtime=bool(core.get("in_downtime", False)),
+        acknowledged=bool(core.get("acknowledged", False)),
+        host_name=host_name,
+        service_description=service,
+        children=children,
+    )
 
 
 # Aggregate: worst state wins (higher = worse)
@@ -1131,6 +1172,70 @@ class LivestatusBackend(BackendBase):
 
         self._aggregations_cache = (now, result_rest)
         return result_rest
+
+    async def get_aggregation_tree(
+        self, aggregation_id: str, max_depth: int
+    ) -> AggregationNode | None:
+        if not aggregation_id:
+            return None
+        max_depth = max(0, min(max_depth, 10))
+
+        if _cmk_integration.cmk_bi_available():
+            site_id = settings.checkmk_site or "local"
+            tree = await asyncio.to_thread(
+                _cmk_integration.cmk_bi_get_aggregation_tree,
+                self._bi_query_sync,
+                site_id,
+                aggregation_id,
+                max_depth,
+            )
+            if tree is not None:
+                return AggregationNode.model_validate(tree)
+
+        # Standalone-mode fallback: ajax_fetch_aggregation_data GUI page.
+        # Bearer-auth-capable since CMK 2.4; older versions silently return None.
+        ajax = await self._cmk_gui_get(
+            "/ajax_fetch_aggregation_data.py",
+            params={"aggregations": _json.dumps([aggregation_id])},
+        )
+        if not isinstance(ajax, dict):
+            return None
+        node_config = ajax.get("node_config")
+        hierarchy = node_config.get("hierarchy") if isinstance(node_config, dict) else None
+        if not isinstance(hierarchy, dict):
+            return None
+        return _hierarchy_to_node(hierarchy, depth=0, max_depth=max_depth)
+
+    async def _cmk_gui_get(
+        self, path: str, *, params: dict[str, str] | None = None
+    ) -> object | None:
+        """GET a Checkmk GUI ajax page with the configured Bearer auth.
+
+        ``self._checkmk_url`` is the GUI base (e.g. ``/CMC/check_mk``) so the
+        page lives at ``{cmk_url}{path}``. Returns parsed JSON or None.
+        """
+        if not (self._checkmk_url and self._automation_user and self._automation_secret):
+            return None
+        cmk_url = self._checkmk_url.rstrip("/")
+        if cmk_url.startswith("/"):
+            cmk_url = "http://127.0.0.1" + cmk_url
+        url = cmk_url + path
+        auth = f"Bearer {self._automation_user} {self._automation_secret}"
+        try:
+            async with httpx.AsyncClient(verify=self._verify_ssl, timeout=self._timeout) as client:
+                resp = await client.get(
+                    url,
+                    params=params,
+                    headers={"Authorization": auth, "Accept": "application/json"},
+                )
+                if resp.status_code != 200:
+                    logger.debug("CMK GUI GET %s: HTTP %s", path, resp.status_code)
+                    return None
+                data: object = resp.json()
+                return data
+        except Exception as exc:
+            logger.debug("CMK GUI GET %s failed: %s", path, exc)
+            return None
 
     # ------------------------------------------------------------------
     # Batch query methods
