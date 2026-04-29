@@ -7,6 +7,8 @@ making cmk.* modules importable. Falls back gracefully when standalone.
 
 import logging
 import sys
+import threading
+import time as _time
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -294,6 +296,30 @@ def cmk_bi_available() -> bool:
     return True
 
 
+# BIManager is expensive to build (loads + compiles all aggregations from
+# bi_config.bi). It holds no per-request state — only a SitesCallback that
+# closes over cmk.gui.sites, which the surrounding request context refreshes
+# for us — so we cache the instance for ~10s. Config edits in CMK propagate
+# after at most one TTL cycle.
+_BI_MANAGER_CACHE: tuple[float, object] | None = None
+_BI_MANAGER_LOCK = threading.Lock()
+_BI_MANAGER_TTL = 10.0
+
+
+def _cached_bi_manager() -> object:
+    """Return a cached BIManager. Caller must hold an application/request context."""
+    global _BI_MANAGER_CACHE
+    with _BI_MANAGER_LOCK:
+        now = _time.time()
+        if _BI_MANAGER_CACHE is not None and now - _BI_MANAGER_CACHE[0] < _BI_MANAGER_TTL:
+            return _BI_MANAGER_CACHE[1]
+        from cmk.gui.bi.bi_manager import BIManager
+
+        manager = BIManager()
+        _BI_MANAGER_CACHE = (now, manager)
+        return manager
+
+
 def cmk_bi_get_aggregations_states(
     username: str | None,
     aggregation_ids: list[str],
@@ -309,17 +335,13 @@ def cmk_bi_get_aggregations_states(
         return {}
     try:
         from cmk.bi.filters import BIAggregationFilter
-        from cmk.gui.bi.bi_manager import BIManager
         from cmk.gui.utils.script_helpers import application_and_request_context
 
         with application_and_request_context():
             _set_cmk_user(username)
-            # BIManager() compiles all aggregations on each call; for now we accept the
-            # cost (matches Checkmk's own bi_aggregation_state endpoint behaviour). If
-            # multi-board setups become a hotspot, cache here with ~10s TTL.
-            bi_manager = BIManager()
+            bi_manager = _cached_bi_manager()
             bi_filter = BIAggregationFilter([], [], [], list(aggregation_ids), [], [])
-            results = bi_manager.computer.compute_result_for_filter(bi_filter)
+            results = bi_manager.computer.compute_result_for_filter(bi_filter)  # type: ignore[attr-defined]
             return _bi_results_to_dict(results)
     except Exception as exc:
         log.warning("cmk.bi compute failed for %s: %s", aggregation_ids, exc)
