@@ -12,7 +12,7 @@ services:
     volumes:
       - ./data/boards:/app/boards
       - ./data/icons:/app/icons
-      - orbvis_db:/app/data
+      - ./data/db:/app/data
     environment:
       - BOARDS_DIR=/app/boards
       - DATABASE_URL=sqlite+aiosqlite:////app/data/orbvis.db
@@ -37,6 +37,3 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-
-volumes:
-  orbvis_db:

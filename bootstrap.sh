@@ -47,8 +47,8 @@ fi
 
 # Bind-mount targets must exist on the host before `docker compose up` so the
 # daemon doesn't auto-create them as root.
-if ! mkdir -p data/boards data/icons 2>/dev/null; then
-  echo "Error: cannot create data/boards or data/icons." >&2
+if ! mkdir -p data/boards data/icons data/db 2>/dev/null; then
+  echo "Error: cannot create data/{boards,icons,db}." >&2
   if [[ -d data && ! -w data ]]; then
     echo "  data/ exists but is not writable by $USER." >&2
     echo "  Likely a leftover from a previous docker run that created it as root." >&2
@@ -56,4 +56,4 @@ if ! mkdir -p data/boards data/icons 2>/dev/null; then
   fi
   exit 1
 fi
-echo "Ensured data/boards and data/icons exist."
+echo "Ensured data/{boards,icons,db} exist."
