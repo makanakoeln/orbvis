@@ -149,6 +149,12 @@ def _load_roles() -> dict[str, object]:
 
     Returns the ``roles`` dict mapping role-id → role-spec.
     Returns an empty dict on error or when OMD_ROOT is not set.
+
+    Threat model: ``roles.mk`` is owned by the OMD site user we run as, so
+    reading it via ``exec`` introduces no additional privilege boundary —
+    any process that can write the file already runs as our user. The
+    ``# nosec`` below acknowledges this; do not loosen the file-ownership
+    expectation without re-auditing this load path.
     """
     global _roles_cache, _roles_cache_mtime
     if not settings.checkmk_omd_root:
@@ -364,10 +370,10 @@ def cmk_bi_get_aggregations_states(
 ) -> dict[str, dict[str, object]]:
     """Compute current state for a list of BI aggregations via cmk.bi.
 
-    Each *aggregation_name* is the resolved branch title (NagVis' ``aggr_name``,
-    e.g. ``"Host localhost"``) — what Checkmk's ``aggr_single`` view expects
-    as ``aggr_name``. A single bi_config aggregation template can produce many
-    branches (one per matching host); we identify them by their resolved title.
+    Each *aggregation_name* is the resolved branch title (e.g. ``"Host localhost"``) —
+    what Checkmk's ``aggr_single`` view expects as ``aggr_name``. A single bi_config
+    aggregation template can produce many branches (one per matching host); we
+    identify them by their resolved title.
 
     Synchronous — callers wrap with asyncio.to_thread(). Per-user permissions
     are honoured because *query_callback* (OrbVis' Livestatus query) injects
@@ -382,11 +388,10 @@ def cmk_bi_get_aggregations_states(
         bi_filter = BIAggregationFilter([], [], [], list(aggregation_names), [], [])
         results = computer.compute_result_for_filter(bi_filter)  # type: ignore[attr-defined]
         out = _bi_results_to_dict(results)
-        log.info(
-            "OrbVis BI: requested %s, computed %d states (sample=%s)",
-            aggregation_names,
+        log.debug(
+            "OrbVis BI: requested %d aggregations, computed %d states",
+            len(aggregation_names),
             len(out),
-            next(iter(out.items()), None),
         )
         return out
     except Exception:
@@ -466,11 +471,10 @@ def _bundle_to_node(bundle: Any, depth: int, max_depth: int) -> dict[str, Any]:
 def cmk_bi_list_aggregations(query_callback: QueryCallback, site_id: str) -> list[dict[str, str]]:
     """List all resolved BI aggregations (one entry per branch).
 
-    Mirrors NagVis' GlobalBackendmkbi.getAggregationNames(): instead of
-    returning the abstract bi_config aggregation templates (which contain
-    placeholders like ``Host $HOSTNAME$``), iterate the compiled branches and
-    return their resolved titles. The resolved title is what Checkmk's
-    ``aggr_single`` view filters by and what users see in the BI UI.
+    Instead of returning the abstract bi_config aggregation templates (which
+    contain placeholders like ``Host $HOSTNAME$``), iterate the compiled
+    branches and return their resolved titles. The resolved title is what
+    Checkmk's ``aggr_single`` view filters by and what users see in the BI UI.
     """
     if not cmk_bi_available():
         return []

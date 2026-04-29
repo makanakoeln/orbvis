@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     app_name: str = "OrbVis"
     debug: bool = False
     environment: Literal["development", "production", "testing"] = "production"
+    # Log level — overrides the debug flag when explicitly set. Uses standard
+    # Python logging level names (DEBUG/INFO/WARNING/ERROR/CRITICAL).
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
 
     # Database
     database_url: str = "sqlite+aiosqlite:///./orbvis.db"

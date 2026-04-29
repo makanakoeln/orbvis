@@ -77,6 +77,7 @@
                                         :suggestions="hosts"
                                         :loading="loadingHosts"
                                         placeholder="hostname"
+                                        :empty-text="t('boardSettings.noHosts')"
                                         class="flex-1"
                                     />
                                 </div>
@@ -91,6 +92,7 @@
                                         :suggestions="services"
                                         :loading="loadingServices"
                                         placeholder="service description"
+                                        :empty-text="t('boardSettings.noServices')"
                                         class="flex-1"
                                     />
                                 </div>
@@ -119,6 +121,7 @@
                                         :suggestions="groups"
                                         :loading="loadingGroups"
                                         placeholder="group name"
+                                        :empty-text="t('boardSettings.noGroups')"
                                         class="flex-1"
                                     />
                                 </div>
@@ -133,6 +136,7 @@
                                         :suggestions="boardNames"
                                         :display-labels="boardLabels"
                                         placeholder="map-name"
+                                        :empty-text="t('boardSettings.noBoards')"
                                         class="flex-1"
                                     />
                                 </div>
@@ -148,6 +152,7 @@
                                         :display-labels="aggregationLabels"
                                         :loading="loadingAggregations"
                                         placeholder="aggregation id"
+                                        :empty-text="t('boardSettings.noAggregations')"
                                         class="flex-1"
                                     />
                                 </div>
@@ -243,6 +248,7 @@
                                     :suggestions="hosts"
                                     :loading="loadingHosts"
                                     placeholder="hostname"
+                                    :empty-text="t('boardSettings.noHosts')"
                                     class="flex-1"
                                 />
                             </div>
@@ -255,6 +261,7 @@
                                     :suggestions="services"
                                     :loading="loadingServices"
                                     placeholder="service description"
+                                    :empty-text="t('boardSettings.noServices')"
                                     class="flex-1"
                                 />
                             </div>
@@ -317,6 +324,11 @@
                                                 )
                                             "
                                             :placeholder="t('boardSettings.graphMetricAdd')"
+                                            :empty-text="
+                                                metricSuggestions.length === 0
+                                                    ? t('boardSettings.noMetrics')
+                                                    : undefined
+                                            "
                                             class="w-full"
                                             @change="addMetric"
                                         />
@@ -470,6 +482,7 @@
                                     :suggestions="hosts"
                                     :loading="loadingHosts"
                                     placeholder="hostname"
+                                    :empty-text="t('boardSettings.noHosts')"
                                     class="flex-1"
                                 />
                             </div>
@@ -482,6 +495,11 @@
                                     :suggestions="services"
                                     :loading="loadingServices"
                                     placeholder="service description (optional)"
+                                    :empty-text="
+                                        form.host_name && !loadingServices
+                                            ? t('boardSettings.noServices')
+                                            : undefined
+                                    "
                                     class="flex-1"
                                 />
                             </div>
@@ -513,6 +531,11 @@
                                     v-model="form.weathermap_metric"
                                     :suggestions="metricSuggestions"
                                     :placeholder="t('boardSettings.firstMetric')"
+                                    :empty-text="
+                                        metricSuggestions.length === 0
+                                            ? t('boardSettings.noMetrics')
+                                            : undefined
+                                    "
                                     class="flex-1"
                                 />
                             </div>
@@ -812,6 +835,11 @@
                                         v-model="form.display.gadget_metric"
                                         :suggestions="metricSuggestions"
                                         :placeholder="t('boardSettings.firstMetric')"
+                                        :empty-text="
+                                            metricSuggestions.length === 0
+                                                ? t('boardSettings.noMetrics')
+                                                : undefined
+                                        "
                                         class="flex-1"
                                     />
                                 </div>

@@ -113,6 +113,13 @@ async def update_board(
 ) -> BoardConfig:
     _require_board_edit(name, current_user)
     _require_not_readonly(name)
+    if not current_user.is_admin and (
+        data.hover_template is not None or data.context_template is not None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Editing hover/context templates requires admin privileges",
+        )
     cfg = board_service.update_board(name, data)
     if cfg is None:
         raise HTTPException(
@@ -301,6 +308,18 @@ async def update_object(
 ) -> BoardObject:
     _require_board_edit(name, current_user)
     _require_not_readonly(name)
+    # Templates render as HTML in other users' browsers, so a non-admin editor
+    # could plant XSS via hover_template/context_template. Hover URL is treated
+    # the same way (a malicious URL fires when another user hovers the object).
+    if not current_user.is_admin and (
+        updates.hover_template is not None
+        or updates.context_template is not None
+        or updates.hover_url is not None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Editing hover/context templates requires admin privileges",
+        )
     obj = board_service.update_object(name, obj_id, updates)
     if obj is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Object not found")

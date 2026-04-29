@@ -1,9 +1,9 @@
 #!/bin/bash
 # Deploys OrbVis (frontend + backend) to the CMC OMD site.
-# Run via: sudo /home/ronny/git/orbvis/deploy-cmc.sh
+# Run via: sudo ./deploy-cmc.sh (or `npm run deploy:cmc` from frontend/)
 set -euo pipefail
 
-REPO=/home/ronny/git/orbvis
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SITE_DIR=/omd/sites/CMC/local/share/orbvis
 OUTER_APACHE_CONF=/etc/apache2/conf-available/aaa-orbvis-ws.conf
 OUTER_APACHE_ENABLED=/etc/apache2/conf-enabled/aaa-orbvis-ws.conf

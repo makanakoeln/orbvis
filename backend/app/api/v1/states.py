@@ -68,13 +68,16 @@ async def _broadcast_loop(board_name: str) -> None:
     each group receives states filtered to its user's contact groups.  Otherwise a
     single shared query is issued for efficiency.
     """
-    logger.info("Broadcast loop started for board '%s'", board_name)
+    logger.debug("Broadcast loop started for board '%s'", board_name)
     try:
         while manager.get_connection_count(board_name) > 0:
             cfg = board_service.get_board(board_name)
+            tick_start = asyncio.get_event_loop().time()
+            user_count = 0
             if cfg is not None:
                 if settings.checkmk_omd_root:
                     grouped = manager.get_connections_grouped(board_name)
+                    user_count = len(grouped)
                     for auth_user, connections in grouped.items():
                         can_view = (
                             (lambda n, u=auth_user: _can_view_board_by_name(u, n))
@@ -93,14 +96,22 @@ async def _broadcast_loop(board_name: str) -> None:
                         )
                         await manager.send_to_connections(board_name, connections, msg)
                 else:
+                    user_count = 1
                     states = await state_service.get_board_states(cfg)
                     await manager.broadcast_map_states(board_name, states.model_dump())
+            elapsed_ms = (asyncio.get_event_loop().time() - tick_start) * 1000
+            logger.debug(
+                "Broadcast tick board=%s user_groups=%d elapsed=%.0fms",
+                board_name,
+                user_count,
+                elapsed_ms,
+            )
             await asyncio.sleep(settings.state_refresh_interval)
     except Exception:
         logger.exception("Broadcast loop error for board '%s'", board_name)
     finally:
         _broadcast_tasks.pop(board_name, None)
-        logger.info("Broadcast loop stopped for board '%s'", board_name)
+        logger.debug("Broadcast loop stopped for board '%s'", board_name)
 
 
 @router.get("/boards/{name}/states", response_model=MapStates)
@@ -140,6 +151,14 @@ async def websocket_board_states(
         await websocket.close(code=_WS_CLOSE_RATE_LIMITED)
         return
     ws_connect_limiter.record(client_ip)
+
+    # Origin guard: browsers don't enforce same-origin on WebSocket, so a hostile
+    # cross-origin page could still open a stream. Server-side check uses the
+    # same allowlist as CORS. Non-browser clients (no Origin header) are allowed.
+    origin = websocket.headers.get("origin")
+    if origin and origin not in settings.allowed_origins:
+        await websocket.close(code=_WS_CLOSE_AUTH_FAILED)
+        return
 
     await websocket.accept()
     try:

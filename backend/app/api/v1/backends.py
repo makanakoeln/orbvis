@@ -13,7 +13,13 @@ from app.api.v1.deps import get_current_user, require_admin
 from app.core.config import settings
 from app.integrations import checkmk as cmk_integration
 from app.models.user import User
-from app.schemas.backend import BackendConfig, BackendCreate, BackendUpdate
+from app.schemas.backend import (
+    REDACTED_SECRET,
+    BackendConfig,
+    BackendCreate,
+    BackendUpdate,
+    _redact,
+)
 from app.schemas.board import AggregationInfo
 from app.services import backend_service
 from app.services.state_service import get_backend, get_backend_objects
@@ -29,14 +35,18 @@ class TestResult(BaseModel):
 
 @router.get("", response_model=list[BackendConfig])
 async def list_backends(_: User = Depends(require_admin)) -> list[BackendConfig]:
-    return backend_service.load_all()
+    return [_redact(b) for b in backend_service.load_all()]
 
 
 @router.post("", response_model=BackendConfig, status_code=status.HTTP_201_CREATED)
 async def create_backend(data: BackendCreate, _: User = Depends(require_admin)) -> BackendConfig:
-    # BackendCreate = BackendConfig (type alias), so data can be passed directly.
+    if REDACTED_SECRET in (data.automation_secret, data.icinga2_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide a real secret value when creating a connection",
+        )
     try:
-        return backend_service.create(data)
+        return _redact(backend_service.create(data))
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
 
@@ -47,11 +57,23 @@ async def update_backend(
     data: BackendUpdate,
     _: User = Depends(require_admin),
 ) -> BackendConfig:
-    updated = BackendConfig(id=backend_id, **data.model_dump())
+    existing = next((b for b in backend_service.load_all() if b.id == backend_id), None)
+    if existing is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backend not found")
+
+    payload = data.model_dump()
+    # Frontend echoes the redaction sentinel back unchanged when the admin did
+    # not retype the secret — keep the previously stored value in that case.
+    if payload.get("automation_secret") == REDACTED_SECRET:
+        payload["automation_secret"] = existing.automation_secret
+    if payload.get("icinga2_password") == REDACTED_SECRET:
+        payload["icinga2_password"] = existing.icinga2_password
+
+    updated = BackendConfig(id=backend_id, **payload)
     result = backend_service.update(backend_id, updated)
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backend not found")
-    return result
+    return _redact(result)
 
 
 @router.delete("/{backend_id}", status_code=status.HTTP_204_NO_CONTENT)

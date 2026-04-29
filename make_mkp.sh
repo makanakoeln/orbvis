@@ -69,7 +69,20 @@ cp "$SCRIPT_DIR/cmk_plugins_23/orbvis_permissions.py" "$TMPDIR/web/plugins/wato/
 tar czf "$TMPDIR/lib/orbvis/htdocs.tar.gz" -C "$SCRIPT_DIR/frontend/dist" .
 
 # Backend: single tarball → lib/orbvis/server.tar.gz
-tar czf "$TMPDIR/lib/orbvis/server.tar.gz" -C "$SCRIPT_DIR/backend" .
+# Excludes drop the dev virtualenv, build caches and on-disk databases — they
+# would otherwise add ~80 MB of dev clutter to the .mkp.
+tar czf "$TMPDIR/lib/orbvis/server.tar.gz" \
+  --exclude=".venv" \
+  --exclude="__pycache__" \
+  --exclude="*.pyc" \
+  --exclude=".pytest_cache" \
+  --exclude=".mypy_cache" \
+  --exclude=".ruff_cache" \
+  --exclude="*.db" \
+  --exclude="*.db-journal" \
+  --exclude="boards" \
+  --exclude="images" \
+  -C "$SCRIPT_DIR/backend" .
 
 # CHANGELOG.md and VERSION live in the repo root; copy them next to the
 # server tarball so the backend (which searches lib/orbvis/{,server/}) can

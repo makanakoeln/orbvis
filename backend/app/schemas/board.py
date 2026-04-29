@@ -6,6 +6,31 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+# Schemes that must never appear in user-supplied URL fields stored on a board.
+# javascript:/data:/vbscript: would let an editor inject XSS payloads that fire
+# whenever another user clicks the linked board object.
+_BLOCKED_URL_PREFIXES = (
+    "javascript:",
+    "data:",
+    "vbscript:",
+    "file:",
+)
+
+
+def _validate_user_url(value: str | None) -> str | None:
+    """Reject URL-injection schemes for user-supplied URL fields on board objects."""
+    if not value:
+        return value
+    if len(value) > 4096:
+        raise ValueError("URL too long")
+    s = value.strip()
+    lowered = s.lower()
+    for prefix in _BLOCKED_URL_PREFIXES:
+        if lowered.startswith(prefix):
+            raise ValueError(f"URL scheme {prefix!r} is not allowed")
+    return s
+
+
 ObjectType = Literal[
     "host",
     "service",
@@ -170,6 +195,11 @@ class BoardObject(BaseModel):
             return [s for s in v if isinstance(s, str)]
         return None
 
+    @field_validator("url", "hover_url", "graph_url")
+    @classmethod
+    def _validate_urls(cls, v: str | None) -> str | None:
+        return _validate_user_url(v)
+
     # Line custom colors
     line_color: str | None = None
     line_color_border: str | None = None
@@ -292,6 +322,11 @@ class BoardObjectUpdate(BaseModel):
     hover_url: str | None = None
     hover_template: str | None = None
     context_template: str | None = None
+
+    @field_validator("url", "hover_url", "graph_url")
+    @classmethod
+    def _validate_urls(cls, v: str | None) -> str | None:
+        return _validate_user_url(v)
 
 
 class BoardClone(BaseModel):

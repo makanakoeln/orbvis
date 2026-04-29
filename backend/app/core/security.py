@@ -11,6 +11,11 @@ from app.core.config import settings
 
 # ---------------------------------------------------------------------------
 # Token blocklist — invalidates tokens on logout (in-memory, single-process)
+#
+# WARNING: this lives per process. If OrbVis is run with multiple uvicorn
+# workers, a logout on worker A still leaves the token usable on workers B…N
+# until natural expiry. Run with a single worker (the default uvicorn config)
+# until this is moved to a shared store (DB / Redis).
 # ---------------------------------------------------------------------------
 _blocklist: dict[str, datetime] = {}  # jti → expiry
 _blocklist_lock = Lock()

@@ -49,6 +49,7 @@
                     :suggestions="addObjects"
                     :loading="loadingAddObjects"
                     :placeholder="t('boardSettings.hostname')"
+                    :empty-text="t('boardSettings.noHosts')"
                 />
             </template>
 
@@ -58,6 +59,7 @@
                     :suggestions="addObjects"
                     :loading="loadingAddObjects"
                     :placeholder="t('boardSettings.hostname')"
+                    :empty-text="t('boardSettings.noHosts')"
                     @change="onHostChange"
                 />
                 <AutocompleteInput
@@ -65,6 +67,11 @@
                     :suggestions="addServices"
                     :loading="loadingAddServices"
                     :placeholder="t('boardSettings.serviceDescription')"
+                    :empty-text="
+                        draft.host_name && !loadingAddServices
+                            ? t('boardSettings.noServices')
+                            : undefined
+                    "
                 />
             </template>
 
@@ -74,6 +81,7 @@
                     :suggestions="addObjects"
                     :loading="loadingAddObjects"
                     :placeholder="t('boardSettings.groupName')"
+                    :empty-text="t('boardSettings.noGroups')"
                 />
             </template>
 
@@ -84,6 +92,7 @@
                     :display-labels="boardLabels"
                     :loading="boardsStore.loading"
                     :placeholder="t('boardSettings.boardName')"
+                    :empty-text="t('boardSettings.noBoards')"
                 />
                 <input
                     v-model="draft.label_text"
@@ -99,6 +108,7 @@
                     :display-labels="addAggregationLabels"
                     :loading="loadingAddAggregations"
                     :placeholder="t('boardSettings.aggregationId')"
+                    :empty-text="t('boardSettings.noAggregations')"
                 />
                 <label class="flex items-center gap-2 text-xs text-zinc-400">
                     {{ t('boardSettings.expandDepth') }}
@@ -111,12 +121,6 @@
                         :title="t('boardSettings.expandDepthHelp')"
                     />
                 </label>
-                <p
-                    v-if="!loadingAddAggregations && addAggregationIds.length === 0"
-                    class="text-xs text-amber-400/70 leading-snug"
-                >
-                    {{ t('boardSettings.noAggregations') }}
-                </p>
             </template>
 
             <template v-else-if="draft.type === 'line'">
@@ -125,6 +129,7 @@
                     :suggestions="addObjects"
                     :loading="loadingAddObjects"
                     :placeholder="t('boardSettings.hostname') + ' (optional)'"
+                    :empty-text="t('boardSettings.noHosts')"
                     @change="onHostChange"
                 />
                 <AutocompleteInput
@@ -158,6 +163,7 @@
                     :suggestions="addObjects"
                     :loading="loadingAddObjects"
                     :placeholder="t('boardSettings.hostname')"
+                    :empty-text="t('boardSettings.noHosts')"
                     @change="onHostChange"
                 />
                 <AutocompleteInput

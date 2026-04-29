@@ -54,10 +54,12 @@ async def login(
     user = await authenticate_user(db, data.username, data.password)
     if user is None:
         login_limiter.record(client_ip)
+        logger.info("login: failed for user %r from %s", data.username, client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
         )
+    logger.debug("login: success for user %r", user.name)
     return create_tokens(user)
 
 
@@ -94,6 +96,7 @@ async def refresh_token(data: RefreshRequest, db: AsyncSession = Depends(get_db)
         )
         blocklist_token(jti, expiry)
 
+    logger.debug("refresh: rotated tokens for user %r (jti=%s)", user.name, jti)
     return TokenResponse(
         access_token=create_access_token(user.user_id),
         refresh_token=create_refresh_token(user.user_id),

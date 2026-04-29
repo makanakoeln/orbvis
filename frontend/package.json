@@ -19,7 +19,7 @@
     "lint:css": "stylelint 'src/**/*.{css,vue}'",
     "format": "prettier --write 'src/**/*.{ts,vue,css}'",
     "format:check": "prettier --check 'src/**/*.{ts,vue,css}'",
-    "deploy:cmc": "VITE_BASE_PATH=/CMC/orbvis/ npm run build && sudo /home/ronny/git/orbvis/deploy-cmc.sh",
+    "deploy:cmc": "VITE_BASE_PATH=/CMC/orbvis/ npm run build && sudo ../deploy-cmc.sh",
     "copy-builtin-icons": "node scripts/copy-builtin-icons.js"
   },
   "dependencies": {

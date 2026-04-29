@@ -39,6 +39,12 @@
                 {{ item.label }}
             </button>
         </div>
+        <p
+            v-if="emptyText && !loading && suggestions.length === 0"
+            class="text-xs text-amber-400/70 leading-snug mt-1"
+        >
+            {{ emptyText }}
+        </p>
     </div>
 </template>
 
@@ -54,6 +60,8 @@ const props = defineProps<{
     placeholder?: string;
     loading?: boolean;
     disabled?: boolean;
+    /** Warning text shown below the input when suggestions is empty and not loading. */
+    emptyText?: string;
 }>();
 
 const emit = defineEmits<{

@@ -1211,7 +1211,7 @@ class LivestatusBackend(BackendBase):
     ) -> object | None:
         """GET a Checkmk GUI ajax page with the configured Bearer auth.
 
-        ``self._checkmk_url`` is the GUI base (e.g. ``/CMC/check_mk``) so the
+        ``self._checkmk_url`` is the GUI base (e.g. ``/<site>/check_mk``) so the
         page lives at ``{cmk_url}{path}``. Returns parsed JSON or None.
         """
         if not (self._checkmk_url and self._automation_user and self._automation_secret):

@@ -27,7 +27,7 @@ class ConnectionManager:
         if not already_accepted:
             await websocket.accept()
         self._connections.setdefault(map_name, {})[websocket] = auth_user
-        logger.info(
+        logger.debug(
             "WS connected for map '%s' (total: %d)",
             map_name,
             len(self._connections[map_name]),
@@ -38,7 +38,7 @@ class ConnectionManager:
         connections.pop(websocket, None)
         if not connections:
             self._connections.pop(map_name, None)
-        logger.info("WS disconnected for map '%s'", map_name)
+        logger.debug("WS disconnected for map '%s'", map_name)
 
     async def broadcast_map_states(self, map_name: str, states: dict[str, object]) -> None:
         """Push state update to all clients subscribed to a map (no per-user filtering)."""
@@ -52,7 +52,8 @@ class ConnectionManager:
         for ws in list(connections):
             try:
                 await ws.send_text(message)
-            except Exception:
+            except Exception as exc:
+                logger.debug("WS send failed for map %r: %s — dropping client", map_name, exc)
                 dead.append(ws)
 
         for ws in dead:
@@ -79,7 +80,8 @@ class ConnectionManager:
         for ws in list(connections):
             try:
                 await ws.send_text(message)
-            except Exception:
+            except Exception as exc:
+                logger.debug("WS targeted send failed for map %r: %s", map_name, exc)
                 self.disconnect(map_name, ws)
 
 

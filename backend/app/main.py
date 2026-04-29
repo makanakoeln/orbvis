@@ -77,8 +77,11 @@ from app.services import backend_service
 from app.services.board_service import _board_path, _save_board_file, get_board, update_board
 from app.services.state_service import register_backend
 
+# Resolve log level: explicit log_level setting wins; otherwise debug → DEBUG,
+# default INFO. Setting changes require a restart (no live reconfiguration).
+_log_level = settings.log_level or ("DEBUG" if settings.debug else "INFO")
 logging.basicConfig(
-    level=logging.DEBUG if settings.debug else logging.INFO,
+    level=getattr(logging, _log_level, logging.INFO),
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 logger = logging.getLogger(__name__)

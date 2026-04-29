@@ -14,8 +14,8 @@ from defusedxml.common import DefusedXmlException
 ICON_MIME_TYPES = frozenset({"image/png", "image/jpeg", "image/svg+xml", "image/webp"})
 ICON_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".svg", ".webp"})
 
-# Background images of static boards may include GIF — a non-animated GIF is
-# a common legacy asset format for imported NagVis maps.
+# Background images of static boards may include GIF — a common legacy
+# asset format for imported maps.
 BACKGROUND_MIME_TYPES = frozenset(
     {"image/png", "image/jpeg", "image/gif", "image/svg+xml", "image/webp"}
 )
@@ -34,6 +34,13 @@ def _looks_like_svg_header(content: bytes) -> bool:
     return b"<svg" in content[:512].lower()
 
 
+# SVG elements / attributes that can execute scripts. Rejected even though
+# defusedxml accepts them — once an SVG sits under /images and is opened with
+# image/svg+xml, scripts run with the application's origin (XSS).
+_SVG_FORBIDDEN_TAGS = frozenset({"script", "foreignObject", "use"})
+_SVG_FORBIDDEN_ATTR_PREFIXES = ("on",)
+
+
 def is_safe_svg(content: bytes) -> bool:
     """Parse *content* as SVG with defusedxml; reject DTDs and external entities.
 
@@ -41,7 +48,9 @@ def is_safe_svg(content: bytes) -> bool:
     well-formed XML, but only a real ``<svg>`` root element is acceptable here.
 
     DTDs are rejected outright (even benign ones) so that a future DefinedET
-    upgrade that loosens entity handling cannot silently open a hole.
+    upgrade that loosens entity handling cannot silently open a hole. The
+    parsed tree is then walked to reject ``<script>``, on-event attributes,
+    and ``<foreignObject>``/``<use>`` (which can pull in remote content).
     """
     parser = DefusedET.DefusedXMLParser(forbid_dtd=True, forbid_entities=True)
     try:
@@ -49,9 +58,22 @@ def is_safe_svg(content: bytes) -> bool:
         root = parser.close()
     except (DefusedXmlException, DefusedET.ParseError):
         return False
-    # SVG root is either 'svg' or '{http://www.w3.org/2000/svg}svg'.
-    local = root.tag.rsplit("}", 1)[-1]
-    return local == "svg"
+    if root.tag.rsplit("}", 1)[-1] != "svg":
+        return False
+    for elem in root.iter():
+        local_tag = elem.tag.rsplit("}", 1)[-1]
+        if local_tag in _SVG_FORBIDDEN_TAGS:
+            return False
+        for attr_name, attr_val in elem.attrib.items():
+            local_attr = attr_name.rsplit("}", 1)[-1].lower()
+            if local_attr.startswith(_SVG_FORBIDDEN_ATTR_PREFIXES):
+                return False
+            # Reject javascript:/data: in href / xlink:href.
+            if local_attr in ("href", "xlink:href"):
+                v = attr_val.strip().lower()
+                if v.startswith(("javascript:", "data:", "vbscript:", "file:")):
+                    return False
+    return True
 
 
 def is_valid_image(content: bytes, *, allow_svg: bool = True) -> bool:
