@@ -48,19 +48,31 @@ jobs:
           VERSION="$VERSION" nfpm package --packager deb --target dist/
           VERSION="$VERSION" nfpm package --packager rpm --target dist/
 
+      - name: Build MKP packages
+        run: |
+          pids=()
+          for target in 2.3 2.4 2.5; do
+            ./make_mkp.sh --cmk-target "$target" --skip-frontend --out dist/ &
+            pids+=($!)
+          done
+          for pid in "${pids[@]}"; do
+            wait "$pid"
+          done
+
       - name: Create or update GitHub Release
         run: |
           if gh release view "v${VERSION}" > /dev/null 2>&1; then
             gh release edit "v${VERSION}" \
               --title "OrbVis ${VERSION}" \
               --notes-file CHANGELOG.md
-            gh release upload "v${VERSION}" dist/*.deb dist/*.rpm --clobber
+            gh release upload "v${VERSION}" dist/*.deb dist/*.rpm dist/*.mkp --clobber
           else
             gh release create "v${VERSION}" \
               --title "OrbVis ${VERSION}" \
               --notes-file CHANGELOG.md \
               dist/*.deb \
-              dist/*.rpm
+              dist/*.rpm \
+              dist/*.mkp
           fi
         env:
           GH_TOKEN: ${{ github.token }}
