@@ -252,7 +252,15 @@
         </button>
 
         <!-- Map area + optional edit panel -->
-        <div class="flex flex-1 overflow-hidden" data-tour="board-canvas">
+        <div class="flex flex-1 overflow-hidden relative" data-tour="board-canvas">
+            <!-- Loading overlay (covers all board types) -->
+            <div
+                v-if="isLoading"
+                class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-zinc-500 z-30 text-sm bg-[var(--bg)]"
+            >
+                <CmkLoading />
+                <span>{{ t('board.loadingBoard') }}</span>
+            </div>
             <!-- Worldmap -->
             <div
                 v-if="isWorldmap"
@@ -260,14 +268,7 @@
                 @click="closeWorldmapMenus"
             >
                 <div
-                    v-if="isLoading"
-                    class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-zinc-500 z-10 text-sm"
-                >
-                    <CmkLoading />
-                    <span>{{ t('board.loadingBoard') }}</span>
-                </div>
-                <div
-                    v-else-if="boardsStore.error"
+                    v-if="boardsStore.error"
                     class="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 text-sm"
                 >
                     <span class="text-red-400">{{ boardsStore.error }}</span>
@@ -360,14 +361,7 @@
                 @click="onContainerClick"
             >
                 <div
-                    v-if="isLoading"
-                    class="flex flex-col items-center justify-center h-full gap-3 text-zinc-500 text-sm"
-                >
-                    <CmkLoading />
-                    <span>{{ t('board.loadingBoard') }}</span>
-                </div>
-                <div
-                    v-else-if="boardsStore.error"
+                    v-if="boardsStore.error"
                     class="flex flex-col items-center justify-center h-full gap-3 text-sm"
                 >
                     <span class="text-red-400">{{ boardsStore.error }}</span>
