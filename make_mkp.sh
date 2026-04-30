@@ -1,11 +1,18 @@
 #!/bin/bash
-# make_mkp.sh – Build OrbVis as a Checkmk 2.3 MKP package
+# make_mkp.sh – Build OrbVis as a Checkmk MKP package
 #
 # Usage:
-#   ./make_mkp.sh [--version 1.2.3] [--out /path/to/output]
+#   ./make_mkp.sh [--version 1.2.3] [--cmk-target 2.3|2.5] [--out /path/to/output]
+#
+# --cmk-target selects the CMK GUI-plugin set bundled in the MKP:
+#   2.3  – cmk_plugins_23/ (also tested on CMK 2.4); default
+#   2.5  – cmk_plugins/    (namespace-package layout for CMK 2.5+)
+#
+# The default version is read from the VERSION file in the repo root; pass
+# --version to override.
 #
 # Creates a self-contained .mkp that can be installed via:
-#   mkp add orbvis-<version>.mkp && mkp enable orbvis
+#   mkp add orbvis-<version>-cmk<target>.mkp && mkp enable orbvis
 #
 # After MKP installation, run once as the site user:
 #   su - <SITE> -c "orbvis-setup"
@@ -21,25 +28,41 @@ die()   { echo -e "\n${RED}Error: $*${RESET}\n" >&2; exit 1; }
 # ---------------------------------------------------------------------------
 # Arguments
 # ---------------------------------------------------------------------------
-VERSION="1.0.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Default version comes from the VERSION file (single source of truth).
+if [[ -f "$SCRIPT_DIR/VERSION" ]]; then
+  VERSION="$(tr -d '[:space:]' < "$SCRIPT_DIR/VERSION")"
+else
+  VERSION="0.0.0"
+fi
+CMK_TARGET="2.3"
 OUT_DIR="$(pwd)"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --version) VERSION="$2"; shift 2 ;;
-    --out)     OUT_DIR="$2";  shift 2 ;;
+    --version)    VERSION="$2";    shift 2 ;;
+    --cmk-target) CMK_TARGET="$2"; shift 2 ;;
+    --out)        OUT_DIR="$2";    shift 2 ;;
     *) die "Unknown argument: $1" ;;
   esac
 done
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MKP_NAME="orbvis-${VERSION}.mkp"
+case "$CMK_TARGET" in
+  2.3) MIN_REQUIRED="2.3.0"; PACKAGED="2.3.0p1";  PLUGIN_SRC="$SCRIPT_DIR/cmk_plugins_23" ;;
+  2.5) MIN_REQUIRED="2.5.0"; PACKAGED="2.5.0p1";  PLUGIN_SRC="$SCRIPT_DIR/cmk_plugins" ;;
+  *) die "Unsupported --cmk-target: $CMK_TARGET (allowed: 2.3, 2.5)" ;;
+esac
+
+[[ -d "$PLUGIN_SRC" ]] || die "Plugin source directory not found: $PLUGIN_SRC"
+
+MKP_NAME="orbvis-${VERSION}-cmk${CMK_TARGET}.mkp"
 MKP_OUT="${OUT_DIR}/${MKP_NAME}"
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
 echo ""
-echo -e "${BOLD}Building OrbVis MKP v${VERSION}${RESET}"
+echo -e "${BOLD}Building OrbVis MKP v${VERSION} (CMK target ${CMK_TARGET})${RESET}"
 echo ""
 
 # ---------------------------------------------------------------------------
@@ -57,12 +80,26 @@ ok "Frontend built"
 # 2. Stage directory structure for MKP
 # ---------------------------------------------------------------------------
 step "Staging MKP structure"
-mkdir -p "$TMPDIR/web/plugins/sidebar" "$TMPDIR/web/plugins/wato" "$TMPDIR/lib/orbvis"
+mkdir -p "$TMPDIR/lib/orbvis"
 
-# GUI plugins (CMK 2.3 web/plugins/ layout)
-cp "$SCRIPT_DIR/cmk_plugins_23/orbvis_sidebar.py"     "$TMPDIR/web/plugins/sidebar/orbvis_sidebar.py"
-cp "$SCRIPT_DIR/cmk_plugins_23/orbvis_menu.py"        "$TMPDIR/web/plugins/wato/orbvis_menu.py"
-cp "$SCRIPT_DIR/cmk_plugins_23/orbvis_permissions.py" "$TMPDIR/web/plugins/wato/orbvis_permissions.py"
+# GUI plugins: layout differs by CMK target.
+if [[ "$CMK_TARGET" == "2.3" ]]; then
+  # CMK 2.3 / 2.4 flat layout under local/share/check_mk/web/plugins/
+  mkdir -p "$TMPDIR/web/plugins/sidebar" "$TMPDIR/web/plugins/wato"
+  cp "$PLUGIN_SRC/orbvis_sidebar.py"     "$TMPDIR/web/plugins/sidebar/orbvis_sidebar.py"
+  cp "$PLUGIN_SRC/orbvis_menu.py"        "$TMPDIR/web/plugins/wato/orbvis_menu.py"
+  cp "$PLUGIN_SRC/orbvis_permissions.py" "$TMPDIR/web/plugins/wato/orbvis_permissions.py"
+else
+  # CMK 2.5+ namespace-package layout under local/lib/python3/cmk/gui/plugins/
+  mkdir -p "$TMPDIR/lib/python3/cmk/gui/plugins/sidebar" \
+           "$TMPDIR/lib/python3/cmk/gui/plugins/wato"
+  cp "$PLUGIN_SRC/cmk/gui/plugins/sidebar/orbvis_boards.py" \
+     "$TMPDIR/lib/python3/cmk/gui/plugins/sidebar/orbvis_boards.py"
+  cp "$PLUGIN_SRC/cmk/gui/plugins/wato/orbvis_menu.py" \
+     "$TMPDIR/lib/python3/cmk/gui/plugins/wato/orbvis_menu.py"
+  cp "$PLUGIN_SRC/cmk/gui/plugins/wato/orbvis_permissions.py" \
+     "$TMPDIR/lib/python3/cmk/gui/plugins/wato/orbvis_permissions.py"
+fi
 
 # Frontend: single tarball → lib/orbvis/htdocs.tar.gz
 # orbvis-setup extracts it to $OMD_ROOT/local/share/orbvis/htdocs/
@@ -232,8 +269,49 @@ setup)
 
   # 4. Python virtualenv + backend
   step "Setting up Python environment"
-  PYTHON3="$ROOT/bin/python3"
-  [[ -x "$PYTHON3" ]] || PYTHON3="$(command -v python3)"
+
+  # Resolve a Python 3.12+ interpreter. Order:
+  #   1. PYTHON3 env var (lets users force a specific binary)
+  #   2. $OMD_ROOT/bin/python3 (the site Python)
+  #   3. python3.13, python3.12 on PATH (deadsnakes / OS package)
+  #   4. python3 on PATH (last resort, may be too old)
+  py_version_ok() {
+    "$1" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 12) else 1)' 2>/dev/null
+  }
+
+  PYTHON3="${PYTHON3:-}"
+  if [[ -n "$PYTHON3" ]]; then
+    [[ -x "$PYTHON3" ]] || die "PYTHON3=$PYTHON3 is not executable."
+  else
+    for _candidate in \
+        "$ROOT/bin/python3" \
+        "$(command -v python3.13 2>/dev/null || true)" \
+        "$(command -v python3.12 2>/dev/null || true)" \
+        "$(command -v python3 2>/dev/null || true)"; do
+      [[ -n "$_candidate" && -x "$_candidate" ]] || continue
+      if py_version_ok "$_candidate"; then
+        PYTHON3="$_candidate"
+        break
+      fi
+    done
+  fi
+
+  if [[ -z "$PYTHON3" ]] || ! py_version_ok "$PYTHON3"; then
+    FOUND_VERSION="$("${PYTHON3:-python3}" --version 2>&1 || echo 'not found')"
+    die "OrbVis requires Python 3.12 or newer.
+
+  Found: $FOUND_VERSION
+  Searched: \$PYTHON3, $ROOT/bin/python3, python3.13, python3.12, python3
+
+  Install Python 3.12 and re-run orbvis-setup. On Debian/Ubuntu:
+    sudo add-apt-repository ppa:deadsnakes/ppa
+    sudo apt install python3.12 python3.12-venv
+
+  Then point orbvis-setup at it explicitly:
+    PYTHON3=/usr/bin/python3.12 orbvis-setup"
+  fi
+  ok "Using $($PYTHON3 --version) ($PYTHON3)"
+
   if [[ ! -d "$VENV_DIR" ]]; then
     "$PYTHON3" -m venv --copies "$VENV_DIR"
   fi
@@ -433,9 +511,12 @@ ok "orbvis-setup generated"
 # ---------------------------------------------------------------------------
 step "Building file manifest"
 
-# Paths relative to each category base directory
-mapfile -t WEB_FILES < <(find "$TMPDIR/web" -type f | sed "s|$TMPDIR/web/||" | sort)
-mapfile -t LIB_FILES < <(find "$TMPDIR/lib" -type f | sed "s|$TMPDIR/lib/||" | sort)
+# Paths relative to each category base directory. Use empty arrays when a
+# category directory is absent (e.g. CMK 2.5 build has no web/ tree).
+WEB_FILES=()
+LIB_FILES=()
+[[ -d "$TMPDIR/web" ]] && mapfile -t WEB_FILES < <(find "$TMPDIR/web" -type f | sed "s|$TMPDIR/web/||" | sort)
+[[ -d "$TMPDIR/lib" ]] && mapfile -t LIB_FILES < <(find "$TMPDIR/lib" -type f | sed "s|$TMPDIR/lib/||" | sort)
 BIN_FILES=("orbvis-setup")
 
 ok "Manifest: ${#BIN_FILES[@]} bin, ${#WEB_FILES[@]} web, ${#LIB_FILES[@]} lib files"
@@ -455,14 +536,14 @@ py_list() { printf "'%s', " "$@"; }
   echo "  'download_url': '',"
   echo "  'files': {"
   echo "    'bin': [$(py_list "${BIN_FILES[@]}")],"
-  echo "    'lib': [$(py_list "${LIB_FILES[@]}")],"
-  echo "    'web': [$(py_list "${WEB_FILES[@]}")],"
+  echo "    'lib': [$( ((${#LIB_FILES[@]})) && py_list "${LIB_FILES[@]}" )],"
+  echo "    'web': [$( ((${#WEB_FILES[@]})) && py_list "${WEB_FILES[@]}" )],"
   echo "  },"
   echo "  'name': 'orbvis',"
   echo "  'title': 'OrbVis - Network Monitoring Visualization',"
   echo "  'version': '${VERSION}',"
-  echo "  'version.min_required': '2.3.0',"
-  echo "  'version.packaged': '2.3.0p1',"
+  echo "  'version.min_required': '${MIN_REQUIRED}',"
+  echo "  'version.packaged': '${PACKAGED}',"
   echo "  'version.usable_until': None,"
   echo "}"
 } > "$TMPDIR/info"
@@ -495,13 +576,23 @@ ok "Manifests written and validated"
 step "Creating per-category inner tars"
 
 tar cf "$TMPDIR/bin.tar" --dereference -C "$TMPDIR/bin" "${BIN_FILES[@]}"
-tar cf "$TMPDIR/web.tar" --dereference -C "$TMPDIR/web" "${WEB_FILES[@]}"
-tar cf "$TMPDIR/lib.tar" --dereference -C "$TMPDIR/lib" "${LIB_FILES[@]}"
 
-ok "Inner tars created (bin.tar, web.tar, lib.tar)"
+# web.tar / lib.tar are written even when empty so the MKP has the expected
+# archive set; CMK loads them by name.
+INNER_TARS=("info" "info.json" "bin.tar")
+if ((${#WEB_FILES[@]})); then
+  tar cf "$TMPDIR/web.tar" --dereference -C "$TMPDIR/web" "${WEB_FILES[@]}"
+  INNER_TARS+=("web.tar")
+fi
+if ((${#LIB_FILES[@]})); then
+  tar cf "$TMPDIR/lib.tar" --dereference -C "$TMPDIR/lib" "${LIB_FILES[@]}"
+  INNER_TARS+=("lib.tar")
+fi
+
+ok "Inner tars created (${INNER_TARS[*]})"
 
 step "Creating ${MKP_NAME}"
-tar czf "$MKP_OUT" -C "$TMPDIR" info info.json bin.tar web.tar lib.tar
+tar czf "$MKP_OUT" -C "$TMPDIR" "${INNER_TARS[@]}"
 ok "Created: $MKP_OUT"
 
 # ---------------------------------------------------------------------------
