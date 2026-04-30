@@ -260,10 +260,30 @@
                 @click="closeWorldmapMenus"
             >
                 <div
-                    v-if="boardsStore.loading"
-                    class="absolute inset-0 flex items-center justify-center text-zinc-500 z-10 text-sm"
+                    v-if="isLoading"
+                    class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-zinc-500 z-10 text-sm"
                 >
-                    {{ t('board.loadingBoard') }}
+                    <svg
+                        class="animate-spin h-6 w-6"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                    >
+                        <circle
+                            class="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            stroke-width="4"
+                        />
+                        <path
+                            class="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        />
+                    </svg>
+                    <span>{{ t('board.loadingBoard') }}</span>
                 </div>
                 <div
                     v-else-if="boardsStore.error"
@@ -359,10 +379,30 @@
                 @click="onContainerClick"
             >
                 <div
-                    v-if="boardsStore.loading"
-                    class="flex items-center justify-center h-full text-zinc-500 text-sm"
+                    v-if="isLoading"
+                    class="flex flex-col items-center justify-center h-full gap-3 text-zinc-500 text-sm"
                 >
-                    {{ t('board.loadingBoard') }}
+                    <svg
+                        class="animate-spin h-6 w-6"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                    >
+                        <circle
+                            class="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            stroke-width="4"
+                        />
+                        <path
+                            class="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        />
+                    </svg>
+                    <span>{{ t('board.loadingBoard') }}</span>
                 </div>
                 <div
                     v-else-if="boardsStore.error"
@@ -963,6 +1003,9 @@ const worldmapCanvasRef = ref<InstanceType<typeof WorldMapCanvas> | null>(null);
 const isWorldmap = computed(() => boardConfig.value?.view.type === 'worldmap');
 const isFlowmap = computed(() => boardConfig.value?.view.type === 'flow');
 const isRadar = computed(() => boardConfig.value?.view.type === 'radar');
+const isLoading = computed(
+    () => boardsStore.loading || (statesStore.initialLoad && !boardsStore.error),
+);
 
 const checkmkUrl = computed(() => {
     const bid = boardConfig.value?.backend_id;

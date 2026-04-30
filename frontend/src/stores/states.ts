@@ -57,6 +57,7 @@ export const useStatesStore = defineStore('states', () => {
     const metricGraphs = ref<Record<string, MetricGraphGroup[]>>({}); // objectId → graph groups
     const connected = ref(false);
     const lastUpdate = ref<number | null>(null);
+    const initialLoad = ref(false);
     const _LS_NOTIF = 'orbvis_notifications';
     const notificationsEnabled = ref(
         typeof Notification !== 'undefined' &&
@@ -109,7 +110,12 @@ export const useStatesStore = defineStore('states', () => {
         disconnect();
         currentMap = mapName;
         currentToken = token;
-        await _fetchStates();
+        initialLoad.value = true;
+        try {
+            await _fetchStates();
+        } finally {
+            initialLoad.value = false;
+        }
         if (!pollingMode) _connect();
         else _startPolling();
     }
@@ -221,6 +227,7 @@ export const useStatesStore = defineStore('states', () => {
             ws = null;
         }
         connected.value = false;
+        initialLoad.value = false;
         states.value = {};
         history.value = {};
         metricValues.value = {};
@@ -287,6 +294,7 @@ export const useStatesStore = defineStore('states', () => {
         metricGraphs,
         connected,
         lastUpdate,
+        initialLoad,
         notificationsEnabled,
         connectToMap,
         disconnect,
