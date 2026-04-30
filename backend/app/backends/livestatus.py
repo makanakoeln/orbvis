@@ -484,6 +484,34 @@ def _build_state_from_row(
     return _apply_extra(state, row, include_address=include_address)
 
 
+def _parse_host_state_row(row: LivestatusRow) -> tuple[str, ObjectState]:
+    """Parse host row [name, state, output, perf_data, ack, downtime, ...extra]."""
+    state = ObjectState(
+        object_id="",
+        type="host",
+        state=_HOST_STATE_MAP.get(_row_int(row, 1), "UNKNOWN"),
+        output=_row_str(row, 2),
+        perf_data=_row_str(row, 3),
+        acknowledged=_row_bool(row, 4, default=False),
+        in_downtime=_row_int(row, 5) > 0,
+    )
+    return _row_str(row, 0), _apply_extra(state, row, offset=6, include_address=True)
+
+
+def _parse_service_state_row(row: LivestatusRow) -> tuple[tuple[str, str], ObjectState]:
+    """Parse service row [host_name, description, state, output, perf_data, ack, downtime, ...extra]."""
+    state = ObjectState(
+        object_id="",
+        type="service",
+        state=_SERVICE_STATE_MAP.get(_row_int(row, 2), "UNKNOWN"),
+        output=_row_str(row, 3),
+        perf_data=_row_str(row, 4),
+        acknowledged=_row_bool(row, 5, default=False),
+        in_downtime=_row_int(row, 6) > 0,
+    )
+    return (_row_str(row, 0), _row_str(row, 1)), _apply_extra(state, row, offset=7)
+
+
 def _parse_metrics_from_perf(perf_data: str) -> list[_MetricInfo]:
     """Parse perf_data string into [{label, unit}] for rrddata queries."""
     results: list[_MetricInfo] = []
@@ -1295,21 +1323,27 @@ class LivestatusBackend(BackendBase):
             f"scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
             f"{filters}"
         )
-        # Columns: [0]=name [1]=state [2]=output [3]=perf_data [4]=ack [5]=downtime [6..]=extra
-        results: dict[str, ObjectState] = {}
-        for r in rows:
-            name = _row_str(r, 0)
-            state = ObjectState(
-                object_id="",
-                type="host",
-                state=_HOST_STATE_MAP.get(_row_int(r, 1), "UNKNOWN"),
-                output=_row_str(r, 2),
-                perf_data=_row_str(r, 3),
-                acknowledged=_row_bool(r, 4, default=False),
-                in_downtime=_row_int(r, 5) > 0,
-            )
-            results[name] = _apply_extra(state, r, offset=6, include_address=True)
-        return results
+        return dict(_parse_host_state_row(r) for r in rows)
+
+    async def get_all_hosts_states(self, only_hard: bool = False) -> dict[str, ObjectState]:
+        state_col = "last_hard_state" if only_hard else "state"
+        rows = await self._query(
+            f"GET hosts\n"
+            f"Columns: name {state_col} plugin_output perf_data acknowledged "
+            f"scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
+        )
+        return dict(_parse_host_state_row(r) for r in rows)
+
+    async def get_all_services_states(
+        self, only_hard: bool = False
+    ) -> dict[tuple[str, str], ObjectState]:
+        state_col = "last_hard_state" if only_hard else "state"
+        rows = await self._query(
+            f"GET services\n"
+            f"Columns: host_name description {state_col} plugin_output perf_data "
+            f"acknowledged scheduled_downtime_depth {_SVC_EXTRA_COLS}\n"
+        )
+        return dict(_parse_service_state_row(r) for r in rows)
 
     async def get_services_states(
         self, pairs: list[tuple[str, str]], only_hard: bool = False
@@ -1332,22 +1366,7 @@ class LivestatusBackend(BackendBase):
             f"acknowledged scheduled_downtime_depth {_SVC_EXTRA_COLS}\n"
             f"{filter_lines}"
         )
-        # Columns: [0]=host_name [1]=description [2]=state [3]=output [4]=perf_data
-        #          [5]=ack [6]=downtime [7..]=extra
-        results: dict[tuple[str, str], ObjectState] = {}
-        for r in rows:
-            key = (_row_str(r, 0), _row_str(r, 1))
-            state = ObjectState(
-                object_id="",
-                type="service",
-                state=_SERVICE_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
-                output=_row_str(r, 3),
-                perf_data=_row_str(r, 4),
-                acknowledged=_row_bool(r, 5, default=False),
-                in_downtime=_row_int(r, 6) > 0,
-            )
-            results[key] = _apply_extra(state, r, offset=7)
-        return results
+        return dict(_parse_service_state_row(r) for r in rows)
 
     async def get_hosts_services_batch(self, hostnames: list[str]) -> dict[str, list[ServiceRow]]:
         if not hostnames:

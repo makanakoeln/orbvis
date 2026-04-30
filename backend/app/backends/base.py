@@ -131,6 +131,33 @@ class BackendBase(ABC):
             )
         return results
 
+    async def get_all_hosts_states(self, only_hard: bool = False) -> dict[str, ObjectState]:
+        """Return states for ALL hosts in the backend.
+
+        Default falls back to ``get_group_members`` + ``get_hosts_states``, which
+        produces an O(n) Livestatus filter list for large setups. Backends with
+        direct support (Livestatus) override this with a single unfiltered query.
+        """
+        hosts = await self.get_group_members("all_hosts", "")
+        return await self.get_hosts_states(hosts, only_hard=only_hard)
+
+    async def get_all_services_states(
+        self, only_hard: bool = False
+    ) -> dict[tuple[str, str], ObjectState]:
+        """Return states for ALL services in the backend.
+
+        Default falls back to ``get_group_members`` + ``get_services_states``;
+        Livestatus overrides this with a single unfiltered query to avoid an
+        O(n) filter explosion at large scale (e.g. >10k services).
+        """
+        members = await self.get_group_members("all_services", "")
+        pairs: list[tuple[str, str]] = []
+        for m in members:
+            if ";" in m:
+                host, svc = m.split(";", 1)
+                pairs.append((host, svc))
+        return await self.get_services_states(pairs, only_hard=only_hard)
+
     async def get_hosts_services_batch(self, hostnames: list[str]) -> dict[str, list[ServiceRow]]:
         """Return all services for multiple hosts. Default: one call per host."""
         results: dict[str, list[ServiceRow]] = {}

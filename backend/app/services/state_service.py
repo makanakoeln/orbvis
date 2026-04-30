@@ -415,43 +415,64 @@ async def _aggregate_host_with_services(
 async def _get_radar_states(cfg: BoardConfig, backend: BackendBase) -> MapStates:
     """Fetch states for all dynamically resolved radar map members."""
     rv = cfg.view if isinstance(cfg.view, RadarView) else RadarView()
-    members = await backend.get_group_members(rv.filter, rv.filter_value)
-    if not members:
-        return MapStates(map_name=cfg.name, states=[], generated_at=time.time(), backend_ok=True)
-
-    host_members = [m for m in members if ";" not in m]
-    svc_members: list[tuple[str, str, str]] = []
-    for m in members:
-        if ";" in m:
-            host, svc = m.split(";", 1)
-            svc_members.append((m, host, svc))
-
     states: list[ObjectState] = []
 
-    if host_members:
+    if rv.filter == "all_hosts":
         try:
-            batch = await backend.get_hosts_states(host_members)
+            host_batch = await backend.get_all_hosts_states()
         except Exception:
-            batch = {}
-        for h in host_members:
-            s = batch.get(h) or ObjectState(object_id=h, type="host", state="PENDING", stale=True)
-            s.object_id = h
+            host_batch = {}
+        for host, s in host_batch.items():
+            s.object_id = host
             states.append(s)
-
-    if svc_members:
-        pairs = [(host, svc) for (_, host, svc) in svc_members]
+    elif rv.filter == "all_services":
         try:
-            svc_batch = await backend.get_services_states(pairs)
+            svc_batch_all = await backend.get_all_services_states()
         except Exception:
-            svc_batch = {}
-        for member_id, host, svc in svc_members:
-            s = svc_batch.get((host, svc)) or ObjectState(
-                object_id=member_id, type="service", state="PENDING", stale=True
-            )
+            svc_batch_all = {}
+        for (host, svc), s in svc_batch_all.items():
+            member_id = f"{host};{svc}"
             s.object_id = member_id
             states.append(s)
+    else:
+        members = await backend.get_group_members(rv.filter, rv.filter_value)
+        if not members:
+            return MapStates(
+                map_name=cfg.name, states=[], generated_at=time.time(), backend_ok=True
+            )
+        host_members = [m for m in members if ";" not in m]
+        svc_members: list[tuple[str, str, str]] = []
+        for m in members:
+            if ";" in m:
+                host, svc = m.split(";", 1)
+                svc_members.append((m, host, svc))
 
-    backend_ok = not all(s.stale for s in states)
+        if host_members:
+            try:
+                batch = await backend.get_hosts_states(host_members)
+            except Exception:
+                batch = {}
+            for h in host_members:
+                s = batch.get(h) or ObjectState(
+                    object_id=h, type="host", state="PENDING", stale=True
+                )
+                s.object_id = h
+                states.append(s)
+
+        if svc_members:
+            pairs = [(host, svc) for (_, host, svc) in svc_members]
+            try:
+                svc_batch = await backend.get_services_states(pairs)
+            except Exception:
+                svc_batch = {}
+            for member_id, host, svc in svc_members:
+                s = svc_batch.get((host, svc)) or ObjectState(
+                    object_id=member_id, type="service", state="PENDING", stale=True
+                )
+                s.object_id = member_id
+                states.append(s)
+
+    backend_ok = bool(states) and not all(s.stale for s in states)
     return MapStates(
         map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=backend_ok
     )
