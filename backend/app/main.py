@@ -65,7 +65,7 @@ from app.models.user import User
 from app.schemas.backend import BackendConfig
 from app.seed_boards import seed_demo_boards
 from app.seed_images import seed_builtin_images
-from app.services import backend_service
+from app.services import backend_service, settings_service
 from app.services.state_service import register_backend
 
 # Resolve log level: explicit log_level setting wins; otherwise debug → DEBUG,
@@ -238,6 +238,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await asyncio.to_thread(_run_migrations)
     logger.info("Database initialized.")
 
+    settings_service.apply_log_level(settings_service.get_settings().log_level)
+
     # Always provide the built-in test backend (no config needed)
     register_backend("test", TestBackend())
 
@@ -246,12 +248,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # In Checkmk/OMD mode: auto-set global checkmk_url if not configured yet
     if settings.checkmk_omd_root and settings.checkmk_site:
-        from app.services import settings_service as _ss
-
-        _gs = _ss.get_settings()
+        _gs = settings_service.get_settings()
         if not _gs.checkmk_url:
             _gs.checkmk_url = f"/{settings.checkmk_site}"
-            _ss.save_settings(_gs)
+            settings_service.save_settings(_gs)
             logger.info("Auto-set global checkmk_url to /%s", settings.checkmk_site)
 
     # In Checkmk/OMD mode: auto-create a Livestatus connection if none exists yet

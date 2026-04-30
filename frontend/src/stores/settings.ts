@@ -25,6 +25,7 @@ export const SETTINGS_DEFAULTS: GlobalSettings = {
     default_map_type: 'static',
     hover_template: null,
     context_template: null,
+    log_level: null,
 };
 
 export const useSettingsStore = defineStore('settings', () => {

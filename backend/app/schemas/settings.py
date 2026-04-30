@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel
+
+LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
 class GlobalSettings(BaseModel):
@@ -26,3 +30,5 @@ class GlobalSettings(BaseModel):
     # Global Checkmk URL used as fallback when a connection has no checkmk_url set.
     # In Checkmk/OMD deployments this is auto-populated by the backend on first boot.
     checkmk_url: str | None = None
+    # Overrides the LOG_LEVEL env var (and DEBUG-derived default) when set.
+    log_level: LogLevel | None = None

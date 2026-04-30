@@ -321,7 +321,10 @@ export interface GlobalSettings {
     hover_template?: string | null;
     context_template?: string | null;
     checkmk_url?: string | null;
+    log_level?: LogLevel | null;
 }
+
+export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
 
 export interface WebSocketStateUpdate {
     type: 'state_update';

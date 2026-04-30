@@ -41,4 +41,13 @@ def save_settings(data: GlobalSettings) -> GlobalSettings:
     except Exception:
         tmp.unlink(missing_ok=True)
         raise
+    apply_log_level(data.log_level)
     return data
+
+
+def apply_log_level(level: str | None) -> None:
+    """Apply *level* to the root logger. Falls back to env-derived default when None."""
+    effective = level or settings.log_level or ("DEBUG" if settings.debug else "INFO")
+    numeric = getattr(logging, effective, logging.INFO)
+    logging.getLogger().setLevel(numeric)
+    logger.info("Log level set to %s", effective)

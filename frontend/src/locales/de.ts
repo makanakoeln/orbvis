@@ -482,6 +482,11 @@ export default {
             'Globale Checkmk-URL als Fallback für alle Verbindungen ohne eigene URL',
         checkmkUrlHint:
             'Wird automatisch gesetzt wenn OrbVis innerhalb von Checkmk/OMD betrieben wird',
+        logging: 'Logging',
+        logLevel: 'Log-Level',
+        logLevelHint:
+            'Schwellwert für die Backend-Logs. Wird sofort übernommen, kein Neustart nötig.',
+        logLevelDefault: 'Standard (aus LOG_LEVEL/DEBUG)',
     },
     userSettings: {
         title: 'Benutzereinstellungen',

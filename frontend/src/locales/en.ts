@@ -480,6 +480,10 @@ export default {
         checkmkIntegrationSubtitle:
             'Global Checkmk URL used as fallback for connections without their own URL',
         checkmkUrlHint: 'Set automatically when OrbVis runs inside a Checkmk/OMD installation',
+        logging: 'Logging',
+        logLevel: 'Log level',
+        logLevelHint: 'Threshold for backend logs. Applied immediately, no restart required.',
+        logLevelDefault: 'Default (from LOG_LEVEL/DEBUG)',
     },
     userSettings: {
         title: 'User Settings',

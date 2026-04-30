@@ -446,6 +446,63 @@
                 </CmkCollapsible>
             </section>
 
+            <!-- Logging -->
+            <section
+                class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
+            >
+                <button
+                    class="w-full flex items-center justify-between text-left"
+                    style="padding: 14px 16px"
+                    @click="sectionOpen.logging = !sectionOpen.logging"
+                >
+                    <h3 class="text-base font-semibold text-zinc-400">
+                        {{ t('settings.logging') }}
+                    </h3>
+                    <svg
+                        style="
+                            width: 14px;
+                            height: 14px;
+                            flex-shrink: 0;
+                            transition: transform 200ms;
+                        "
+                        :style="{ transform: sectionOpen.logging ? 'rotate(180deg)' : '' }"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                        />
+                    </svg>
+                </button>
+                <CmkCollapsible :open="sectionOpen.logging">
+                    <div style="padding: 0 16px 14px">
+                        <label class="block">
+                            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
+                                t('settings.logLevel')
+                            }}</span>
+                            <CmkDropdown
+                                class="w-[240px]"
+                                :selected-option="form.log_level ?? null"
+                                :options="logLevelOptions"
+                                label=""
+                                @update:selected-option="
+                                    (v) => {
+                                        form.log_level = (v as LogLevel) || null;
+                                    }
+                                "
+                            />
+                            <p class="text-sm text-zinc-600" style="margin-top: 6px">
+                                {{ t('settings.logLevelHint') }}
+                            </p>
+                        </label>
+                    </div>
+                </CmkCollapsible>
+            </section>
+
             <p v-if="saveError" class="text-sm text-red-400">{{ saveError }}</p>
 
             <div class="flex items-center justify-end gap-[8px]">
@@ -498,7 +555,7 @@ import { useI18n } from 'vue-i18n';
 import NumberInput from '@/components/NumberInput.vue';
 import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';
-import type { GlobalSettings, LineStyle } from '@/types/api';
+import type { GlobalSettings, LineStyle, LogLevel } from '@/types/api';
 import { boardTypeOptions, lineStyleOptions } from '@/utils/dropdownOptions';
 
 const { t } = useI18n();
@@ -518,6 +575,7 @@ const sectionOpen = reactive({
     newBoardDefaults: false,
     templates: false,
     checkmkIntegration: false,
+    logging: false,
 });
 
 const backendOptions = computed(() => ({
@@ -533,6 +591,17 @@ const mapTypeOptions = computed(() => ({
 const lineStyleOpts = computed(() => ({
     type: 'fixed' as const,
     suggestions: lineStyleOptions(t),
+}));
+const logLevelOptions = computed(() => ({
+    type: 'fixed' as const,
+    suggestions: [
+        { name: '', title: t('settings.logLevelDefault') },
+        { name: 'DEBUG', title: 'DEBUG' },
+        { name: 'INFO', title: 'INFO' },
+        { name: 'WARNING', title: 'WARNING' },
+        { name: 'ERROR', title: 'ERROR' },
+        { name: 'CRITICAL', title: 'CRITICAL' },
+    ],
 }));
 
 // Sync form when store finishes loading
