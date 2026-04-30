@@ -47,6 +47,15 @@ def last_tag() -> str | None:
         return None
 
 
+def tag_exists(tag: str) -> bool:
+    return bool(run(["git", "tag", "-l", tag]))
+
+
+def parse_version(v: str) -> tuple[int, int, int]:
+    major, minor, patch = v.split(".")
+    return int(major), int(minor), int(patch)
+
+
 def commits_since(ref: str | None) -> list[tuple[str, str]]:
     """Return list of (hash, subject) since ref (or all commits if None)."""
     range_arg = f"{ref}..HEAD" if ref else "HEAD"
@@ -135,6 +144,21 @@ def main() -> None:
     print(f"New version     : {new_version}")
     print(f"Last git tag    : {tag or '(none — using full history)'}")
     print()
+
+    new_tag = f"v{new_version}"
+    if tag_exists(new_tag):
+        print(
+            f"Refusing to bump: git tag {new_tag} already exists.\n"
+            "Pick a higher version — Checkmk Exchange rejects re-uploads of an existing version."
+        )
+        sys.exit(1)
+
+    if parse_version(new_version) <= parse_version(current_version):
+        print(
+            f"Refusing to bump: {new_version} is not greater than current {current_version}.\n"
+            "Versions must be strictly monotonic."
+        )
+        sys.exit(1)
 
     commits = commits_since(tag)
     if not commits:
