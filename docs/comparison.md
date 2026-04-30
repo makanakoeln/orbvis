@@ -73,10 +73,11 @@ OrbVis-only.
 
 | Feature                                          | NagVis | OrbVis |
 | ------------------------------------------------ | ------ | ------ |
-| Built-in user/role management                    | ✅     | ✅     |
+| Built-in user/role management (standalone mode)  | ✅     | ✅     |
 | Checkmk SSO via auth cookie                      | 🟡     | ✅     |
 | htpasswd verification (multiple hash formats)    | 🟡     | ✅     |
-| RBAC (mod / act / obj)                           | ✅     | ✅     |
+| RBAC (mod / act / obj) — standalone              | ✅     | ✅     |
+| WATO-driven permissions in OMD mode [^4]         | ❌     | ➕     |
 | Per-board view/edit/use/configure roles          | ✅     | ✅     |
 | LDAP                                             | ✅     | ❌     |
 | OAuth / SAML                                     | ❌     | ❌     |
@@ -93,6 +94,11 @@ OrbVis-only.
 | Checkmk visual integration (sidebar snapin)      | ❌     | ✅     |
 
 [^3]: Boards render on mobile but the editor is desktop-first.
+
+[^4]: Inside an OMD site, OrbVis delegates board permissions to Checkmk's
+WATO permission system (`orbvis.view_*`, `orbvis.edit_*`). The internal
+mod/act/obj role table is only used in standalone deployments. See
+[`docs/install.md#permissions--access-control`](install.md#permissions--access-control).
 
 ### Operations
 

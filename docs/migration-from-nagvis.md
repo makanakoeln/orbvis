@@ -1,7 +1,11 @@
 # Migrating from NagVis to OrbVis
 
-OrbVis ships a converter (`tools/cfg_importer.py`) that reads legacy NagVis
-`.cfg` map files and writes OrbVis v2 board JSON.
+OrbVis is a separate application — it does not share a database, user store,
+or configuration with NagVis. The only crossover is the map definitions:
+`tools/cfg_importer.py` reads legacy NagVis `.cfg` map files and writes
+OrbVis v2 board JSON. Users, roles, backend connections and custom assets
+do not transfer; OrbVis sets these up freshly via its own admin UI (or, in
+OMD mode, via Checkmk).
 
 ## What gets converted
 
@@ -28,8 +32,6 @@ OrbVis ships a converter (`tools/cfg_importer.py`) that reads legacy NagVis
 - **Backend connection definitions** — NagVis' `[backend_*]` sections are
   not converted. Configure backends in OrbVis via *Admin → Backends*
   (or `backends.json`).
-- **User accounts / permissions** — re-create users and roles in OrbVis;
-  the NagVis `auth.db` SQLite file is not imported.
 - **Custom CSS / templates** — OrbVis uses Vue + Tailwind, not PHP
   templates. Visual customisation goes through board settings and the
   hover/context menu template fields.

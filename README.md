@@ -69,8 +69,12 @@ mkp enable orbvis
 orbvis-setup
 ```
 
-OrbVis is then reachable at `https://<host>/<site>/orbvis/`. See
-[docs/install.md](docs/install.md) for upgrade and uninstall.
+OrbVis is then reachable at `https://<host>/<site>/orbvis/`. Access follows
+your existing Checkmk roles — `admin` and `user` see all boards out of the
+box, `guest` has no access. See
+[Permissions & access control](docs/install.md#permissions--access-control)
+to scope per-board access. [docs/install.md](docs/install.md) covers upgrade
+and uninstall.
 
 **With Checkmk via .deb / .rpm** (alternative path):
 
@@ -139,6 +143,32 @@ docker compose up --build
 
 Default credentials: `admin` / printed in the backend container log on first start.
 
+## After install — your first board
+
+The post-install flow depends on how you installed:
+
+- **MKP / OMD:** open `https://<host>/<site>/orbvis/`. You're already
+  authenticated via Checkmk SSO (admin/user roles see all boards by default).
+  Three demo boards are seeded on first install.
+- **Standalone (.deb / .rpm / source):** retrieve the random admin password
+  from the service log (`journalctl -u orbvis | grep 'Default admin'`), log
+  in, change it, then create users in *Admin → Users*.
+- **Docker:** retrieve the password from `docker compose logs orbvis | grep
+  'Default admin'`, log in, change it.
+
+Once logged in:
+
+1. Add a monitoring backend in *Admin → Connections* (Livestatus socket or
+   TCP, Checkmk REST API). On OMD the local Livestatus socket is auto-wired.
+2. Either explore the demo boards, **or** import existing NagVis maps with
+   [`tools/cfg_importer.py`](docs/migration-from-nagvis.md), **or** create a
+   new board from the home screen.
+3. For OMD installs that need per-board access control, scope permissions in
+   WATO (*Setup → Users → Roles & permissions → OrbVis*).
+
+See [docs/install.md](docs/install.md) for upgrade, uninstall, production
+hardening, and the full permission model.
+
 ## Development
 
 **Backend:**
@@ -171,11 +201,15 @@ Copy `backend/.env.example` to `backend/.env` and adjust:
 
 Backend connections are defined in `backends.json` (see `backends.json.example`).
 
-> **Production note:** OrbVis currently keeps its JWT-token blocklist in
-> process memory. Run with **a single uvicorn worker** until a shared
-> store lands; multiple workers would cause logged-out tokens to remain
-> valid on other workers until they expire. See
-> [docs/install.md → production hardening](docs/install.md#production-hardening).
+### ⚠️ Production note — single uvicorn worker required
+
+OrbVis currently keeps its JWT-token blocklist in process memory. **Run with a
+single uvicorn worker** until a shared store lands; multiple workers would
+cause logged-out tokens to remain valid on other workers until they expire.
+
+The packaged install paths (MKP, `.deb`, `.rpm`, Docker) already default to one
+worker. If you start uvicorn yourself, do not pass `--workers > 1`. See
+[docs/install.md → production hardening](docs/install.md#production-hardening).
 
 ## Architecture
 

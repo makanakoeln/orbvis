@@ -49,11 +49,9 @@ OrbVis is then reachable at:
 https://<host>/<site>/orbvis/
 ```
 
-The default admin password is printed once on first start. Recover it via:
-
-```bash
-tail -n 200 $OMD_ROOT/var/log/orbvis.log | grep 'Default admin'
-```
+Authentication uses your existing Checkmk session — no separate OrbVis
+password is set up. See [Permissions & access control](#permissions--access-control)
+below for who can see which boards on first login.
 
 ### Upgrade
 
@@ -89,12 +87,71 @@ configures nginx or Apache automatically if either is present.
 
 ```bash
 sudo systemctl status orbvis
+```
+
+### First login (standalone)
+
+On first start OrbVis seeds an `admin` user with a random password and prints
+it once to the service log. Recover it via:
+
+```bash
 sudo journalctl -u orbvis --no-pager | grep 'Default admin'
 ```
+
+Log in at the proxied URL, change the password, then create additional users
+in *Admin → Users*. See [Permissions & access control](#permissions--access-control)
+below for the role model.
 
 ## 3. From source
 
 See the [README](../README.md#development) for a development setup.
+
+## Permissions & access control
+
+OrbVis has two distinct permission paths depending on how it is deployed.
+
+### Inside an OMD site (MKP install)
+
+Authentication and authorization are delegated to Checkmk. The MKP ships
+WATO permissions under *Setup → Users → Roles & permissions → OrbVis*:
+
+| Permission             | Default roles | Meaning                                                |
+| ---------------------- | ------------- | ------------------------------------------------------ |
+| `orbvis.use`           | admin, user   | Required to access OrbVis at all                       |
+| `orbvis.view_all`      | admin, user   | Read access to every board                             |
+| `orbvis.edit_all`      | admin         | Create / modify / delete boards                        |
+| `orbvis.configure`     | admin         | Access general settings, connections, images           |
+| `orbvis.view_<board>`  | admin, user   | Per-board read access (registered dynamically)         |
+| `orbvis.edit_<board>`  | admin         | Per-board write access (registered dynamically)        |
+
+What this means on first login:
+
+- **Checkmk admin role** — sees and edits everything. OrbVis sets
+  `is_admin=True` automatically based on the Checkmk role.
+- **Checkmk user role** — sees all boards by default; cannot edit.
+- **Checkmk guest role** (or any custom role without `orbvis.use`) — has no
+  OrbVis access. Grant the relevant permissions in WATO.
+
+To restrict a role to specific boards, remove `orbvis.view_all` and grant
+the per-board `orbvis.view_<board>` permissions instead. The same applies to
+edit access. OrbVis' own role management is *not* used in OMD mode — Checkmk
+is the single source of truth.
+
+### Standalone (.deb / .rpm / Docker)
+
+OrbVis manages users, roles and permissions itself. Two roles are seeded on
+first start:
+
+- **Administrators** — `map/view/*`, `map/edit/*`, `user/edit/*`
+- **Viewers** — `map/view/*`
+
+Permissions follow the legacy NagVis `mod / act / obj` triple. `obj` is
+either `*` (all boards) or a specific board name. Manage users and roles in
+*Admin → Users* / *Admin → Roles*.
+
+The default `admin` user is created on first start with a random password,
+printed once to the service log (see [First login (standalone)](#first-login-standalone)
+above).
 
 ## Production hardening
 
