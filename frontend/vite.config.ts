@@ -117,6 +117,10 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
+    // Vitest discovers unit tests under src/. e2e/ uses Playwright and must
+    // not be picked up as a Vitest suite (`@playwright/test` defines its own
+    // `test` global which conflicts with Vitest's).
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

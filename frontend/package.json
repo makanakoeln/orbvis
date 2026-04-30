@@ -20,7 +20,10 @@
     "format": "prettier --write 'src/**/*.{ts,vue,css}'",
     "format:check": "prettier --check 'src/**/*.{ts,vue,css}'",
     "deploy:cmc": "VITE_BASE_PATH=/CMC/orbvis/ npm run build && sudo ../deploy-cmc.sh",
-    "copy-builtin-icons": "node scripts/copy-builtin-icons.js"
+    "copy-builtin-icons": "node scripts/copy-builtin-icons.js",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install --with-deps chromium",
+    "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@types/dompurify": "^3.2.0",
@@ -45,6 +48,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.55.1",
     "@tabler/icons": "^3.41.1",
     "@tailwindcss/postcss": "^4.2.2",
     "@tsconfig/node22": "^22.0.5",

@@ -40,6 +40,14 @@ export default [
     languageOptions: { globals: globals.node },
   },
 
+  // Playwright E2E-Tests laufen in Node + nutzen Browser-Globals via Playwright API
+  {
+    files: ['e2e/**/*.ts', 'playwright.config.ts'],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+  },
+
   {
     // Disable security rules with prohibitively high false-positive rates in TypeScript:
     // detect-object-injection fires on every obj[key] bracket access (extremely common in TS).
