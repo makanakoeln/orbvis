@@ -106,9 +106,9 @@ export default defineConfig({
         handler(level, log)
       },
       output: {
-        manualChunks: {
-          d3: ['d3'],
-          echarts: ['echarts', 'vue-echarts'],
+        manualChunks(id) {
+          if (/node_modules\/d3[/-]/.test(id)) return 'd3'
+          if (/node_modules\/(echarts|vue-echarts)\//.test(id)) return 'echarts'
         },
       },
     },
