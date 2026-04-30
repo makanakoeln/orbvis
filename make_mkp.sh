@@ -12,7 +12,7 @@
 # --version to override.
 #
 # Creates a self-contained .mkp that can be installed via:
-#   mkp add orbvis-<version>-cmk<target>.mkp && mkp enable orbvis
+#   mkp add orbvis-<version>-cmk-<target>.mkp && mkp enable orbvis
 #
 # After MKP installation, run once as the site user:
 #   su - <SITE> -c "orbvis-setup"
@@ -56,7 +56,7 @@ esac
 
 [[ -d "$PLUGIN_SRC" ]] || die "Plugin source directory not found: $PLUGIN_SRC"
 
-MKP_NAME="orbvis-${VERSION}-cmk${CMK_TARGET}.mkp"
+MKP_NAME="orbvis-${VERSION}-cmk-${CMK_TARGET}.mkp"
 MKP_OUT="${OUT_DIR}/${MKP_NAME}"
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
