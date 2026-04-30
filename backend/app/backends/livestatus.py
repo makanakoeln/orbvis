@@ -947,7 +947,7 @@ class LivestatusBackend(BackendBase):
             return MetricHistoryResult()
 
         if not rows or not rows[0]:
-            logger.info(
+            logger.debug(
                 "rrddata: empty result for %r/%r (no rrddata support or no data in range)",
                 host,
                 service,

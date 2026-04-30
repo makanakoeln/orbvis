@@ -337,7 +337,7 @@ def _build_computer(query_callback: QueryCallback, site_id: str) -> object:
     )
     compiler = BICompiler(bi_fs.etc.config, sites_cb)
     compiler.load_compiled_aggregations()
-    log.info(
+    log.debug(
         "OrbVis BI: compiled %d aggregations from %s (site=%s)",
         len(compiler.compiled_aggregations),
         bi_fs.etc.config,
@@ -495,7 +495,7 @@ def cmk_bi_list_aggregations(query_callback: QueryCallback, site_id: str) -> lis
                 seen.add(title)
                 out.append({"id": title, "title": title, "pack_id": pack_id or str(aggr_id)})
         out.sort(key=lambda e: e["title"].lower())
-        log.info(
+        log.debug(
             "OrbVis BI list_aggregations: %d templates, branches=%s, returned=%d",
             len(compiled),
             branch_counts,
