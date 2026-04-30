@@ -112,12 +112,11 @@
                 />
                 <label class="flex items-center gap-2 text-xs text-zinc-400">
                     {{ t('boardSettings.expandDepth') }}
-                    <input
-                        v-model.number="draft.expand_depth"
-                        type="number"
+                    <NumberInput
+                        v-model="draft.expand_depth"
                         min="0"
                         max="10"
-                        class="field w-16"
+                        class="w-16"
                         :title="t('boardSettings.expandDepthHelp')"
                     />
                 </label>
@@ -216,6 +215,7 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
+import NumberInput from '@/components/NumberInput.vue';
 import type { NewObjectDraft } from '@/composables/useBoardEditor';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';

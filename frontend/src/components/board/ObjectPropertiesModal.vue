@@ -160,12 +160,11 @@
                                     <label class="field-label">{{
                                         t('boardSettings.expandDepth')
                                     }}</label>
-                                    <input
-                                        v-model.number="form.expand_depth"
-                                        type="number"
+                                    <NumberInput
+                                        v-model="form.expand_depth"
                                         min="0"
                                         max="10"
-                                        class="field flex-1"
+                                        class="flex-1"
                                         :title="t('boardSettings.expandDepthHelp')"
                                     />
                                 </div>
