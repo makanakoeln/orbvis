@@ -5,7 +5,8 @@
 #   ./make_mkp.sh [--version 1.2.3] [--cmk-target 2.3|2.5] [--out /path/to/output]
 #
 # --cmk-target selects the CMK GUI-plugin set bundled in the MKP:
-#   2.3  – cmk_plugins_23/ (also tested on CMK 2.4); default
+#   2.3  – cmk_plugins_23/ (flat layout, CMK 2.3); default
+#   2.4  – cmk_plugins_23/ (flat layout, CMK 2.4)
 #   2.5  – cmk_plugins/    (namespace-package layout for CMK 2.5+)
 #
 # The default version is read from the VERSION file in the repo root; pass
@@ -38,25 +39,31 @@ else
 fi
 CMK_TARGET="2.3"
 OUT_DIR="$(pwd)"
+SKIP_FRONTEND=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --version)    VERSION="$2";    shift 2 ;;
-    --cmk-target) CMK_TARGET="$2"; shift 2 ;;
-    --out)        OUT_DIR="$2";    shift 2 ;;
+    --version)        VERSION="$2";    shift 2 ;;
+    --cmk-target)     CMK_TARGET="$2"; shift 2 ;;
+    --out)            OUT_DIR="$2";    shift 2 ;;
+    --skip-frontend)  SKIP_FRONTEND=1; shift ;;
     *) die "Unknown argument: $1" ;;
   esac
 done
 
 case "$CMK_TARGET" in
   2.3) MIN_REQUIRED="2.3.0"; PACKAGED="2.3.0p1";  PLUGIN_SRC="$SCRIPT_DIR/cmk_plugins_23" ;;
+  2.4) MIN_REQUIRED="2.4.0"; PACKAGED="2.4.0p1";  PLUGIN_SRC="$SCRIPT_DIR/cmk_plugins_23" ;;
   2.5) MIN_REQUIRED="2.5.0"; PACKAGED="2.5.0p1";  PLUGIN_SRC="$SCRIPT_DIR/cmk_plugins" ;;
-  *) die "Unsupported --cmk-target: $CMK_TARGET (allowed: 2.3, 2.5)" ;;
+  *) die "Unsupported --cmk-target: $CMK_TARGET (allowed: 2.3, 2.4, 2.5)" ;;
 esac
 
 [[ -d "$PLUGIN_SRC" ]] || die "Plugin source directory not found: $PLUGIN_SRC"
 
-MKP_NAME="orbvis-${VERSION}-cmk-${CMK_TARGET}.mkp"
+# Filename intentionally omits the version — Checkmk Exchange keeps the upload
+# filename constant across versions so users have a stable download URL. The
+# release version lives inside the MKP manifest (info / info.json).
+MKP_NAME="orbvis-cmk-${CMK_TARGET}.mkp"
 MKP_OUT="${OUT_DIR}/${MKP_NAME}"
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
@@ -67,28 +74,36 @@ echo ""
 
 # ---------------------------------------------------------------------------
 # 1. Build frontend (relative base path → works at any /<SITE>/orbvis/ URL)
+#    --skip-frontend lets CI build once and reuse frontend/dist/ across the
+#    three cmk-target builds — saves ~3× npm install + vite build.
 # ---------------------------------------------------------------------------
-step "Building frontend (relative base path)"
-NPM="$(command -v npm 2>/dev/null || true)"
-[[ -z "$NPM" ]] && die "npm not found. Install Node.js (^20.19 || >=22.12)."
-NODE="$(command -v node 2>/dev/null || true)"
-[[ -z "$NODE" ]] && die "node not found. Install Node.js (^20.19 || >=22.12)."
+if [[ "$SKIP_FRONTEND" == "1" ]]; then
+  [[ -d "$SCRIPT_DIR/frontend/dist" ]] \
+    || die "--skip-frontend was set but frontend/dist/ is missing. Build it first."
+  ok "Frontend reused (skip requested)"
+else
+  step "Building frontend (relative base path)"
+  NPM="$(command -v npm 2>/dev/null || true)"
+  [[ -z "$NPM" ]] && die "npm not found. Install Node.js (^20.19 || >=22.12)."
+  NODE="$(command -v node 2>/dev/null || true)"
+  [[ -z "$NODE" ]] && die "node not found. Install Node.js (^20.19 || >=22.12)."
 
-# Vite 8 requires Node ^20.19.0 || >=22.12.0 — older versions fail with
-# "node:fs/promises does not provide an export named 'constants'".
-NODE_VERSION="$("$NODE" --version | sed 's/^v//')"
-NODE_OK="$("$NODE" -e '
-  const [maj, min] = process.versions.node.split(".").map(Number);
-  const ok = (maj === 20 && min >= 19) || (maj === 22 && min >= 12) || maj > 22;
-  process.stdout.write(ok ? "1" : "0");
-')"
-[[ "$NODE_OK" == "1" ]] || die "Node.js $NODE_VERSION is too old.
-  Vite 8 requires ^20.19.0 || >=22.12.0.
-  Install a newer Node (e.g. via nvm: 'nvm install 22 && nvm use 22')."
-cd "$SCRIPT_DIR/frontend"
-npm install --silent
-VITE_BASE_PATH=./ npm run build -- --base='./' --logLevel=warn
-ok "Frontend built"
+  # Vite 8 requires Node ^20.19.0 || >=22.12.0 — older versions fail with
+  # "node:fs/promises does not provide an export named 'constants'".
+  NODE_VERSION="$("$NODE" --version | sed 's/^v//')"
+  NODE_OK="$("$NODE" -e '
+    const [maj, min] = process.versions.node.split(".").map(Number);
+    const ok = (maj === 20 && min >= 19) || (maj === 22 && min >= 12) || maj > 22;
+    process.stdout.write(ok ? "1" : "0");
+  ')"
+  [[ "$NODE_OK" == "1" ]] || die "Node.js $NODE_VERSION is too old.
+    Vite 8 requires ^20.19.0 || >=22.12.0.
+    Install a newer Node (e.g. via nvm: 'nvm install 22 && nvm use 22')."
+  cd "$SCRIPT_DIR/frontend"
+  npm install --silent
+  VITE_BASE_PATH=./ npm run build -- --base='./' --logLevel=warn
+  ok "Frontend built"
+fi
 
 # ---------------------------------------------------------------------------
 # 2. Stage directory structure for MKP
@@ -96,9 +111,9 @@ ok "Frontend built"
 step "Staging MKP structure"
 mkdir -p "$TMPDIR/lib/orbvis"
 
-# GUI plugins: layout differs by CMK target.
-if [[ "$CMK_TARGET" == "2.3" ]]; then
-  # CMK 2.3 / 2.4 flat layout under local/share/check_mk/web/plugins/
+# GUI plugins: layout differs by plugin source (flat for 2.3/2.4, namespace for 2.5+).
+if [[ "$PLUGIN_SRC" == "$SCRIPT_DIR/cmk_plugins_23" ]]; then
+  # Flat layout under local/share/check_mk/web/plugins/
   mkdir -p "$TMPDIR/web/plugins/sidebar" "$TMPDIR/web/plugins/wato"
   cp "$PLUGIN_SRC/orbvis_sidebar.py"     "$TMPDIR/web/plugins/sidebar/orbvis_sidebar.py"
   cp "$PLUGIN_SRC/orbvis_menu.py"        "$TMPDIR/web/plugins/wato/orbvis_menu.py"
