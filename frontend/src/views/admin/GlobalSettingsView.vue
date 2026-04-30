@@ -529,10 +529,10 @@
                         {{ t('common.saved') }}
                     </span>
                 </Transition>
-                <CmkButton variant="secondary" @click="resetForm">{{
+                <CmkButton variant="secondary" :disabled="!dirty" @click="resetForm">{{
                     t('common.cancel')
                 }}</CmkButton>
-                <CmkButton variant="primary" :disabled="saving" @click="handleSave">
+                <CmkButton variant="primary" :disabled="saving || !dirty" @click="handleSave">
                     {{ saving ? t('common.saving') : t('common.save') }}
                 </CmkButton>
             </div>
@@ -592,6 +592,7 @@ const lineStyleOpts = computed(() => ({
     type: 'fixed' as const,
     suggestions: lineStyleOptions(t),
 }));
+const dirty = computed(() => JSON.stringify(form) !== JSON.stringify(store.settings));
 const logLevelOptions = computed(() => ({
     type: 'fixed' as const,
     suggestions: [
