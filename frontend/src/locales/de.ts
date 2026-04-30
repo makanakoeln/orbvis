@@ -486,7 +486,6 @@ export default {
         logLevel: 'Log-Level',
         logLevelHint:
             'Schwellwert für die Backend-Logs. Wird sofort übernommen, kein Neustart nötig.',
-        logLevelDefault: 'Standard (aus LOG_LEVEL/DEBUG)',
     },
     userSettings: {
         title: 'Benutzereinstellungen',

@@ -20,12 +20,16 @@ def _settings_path() -> Path:
 def get_settings() -> GlobalSettings:
     path = _settings_path()
     if not path.is_file():
-        return GlobalSettings()
-    try:
-        return GlobalSettings.model_validate(json.loads(path.read_text(encoding="utf-8")))
-    except Exception as exc:
-        logger.warning("Could not read settings.json: %s", exc)
-        return GlobalSettings()
+        data = GlobalSettings()
+    else:
+        try:
+            data = GlobalSettings.model_validate(json.loads(path.read_text(encoding="utf-8")))
+        except Exception as exc:
+            logger.warning("Could not read settings.json: %s", exc)
+            data = GlobalSettings()
+    if data.log_level is None:
+        data.log_level = settings.log_level or ("DEBUG" if settings.debug else "INFO")
+    return data
 
 
 def save_settings(data: GlobalSettings) -> GlobalSettings:

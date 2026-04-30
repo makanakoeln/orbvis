@@ -483,7 +483,6 @@ export default {
         logging: 'Logging',
         logLevel: 'Log level',
         logLevelHint: 'Threshold for backend logs. Applied immediately, no restart required.',
-        logLevelDefault: 'Default (from LOG_LEVEL/DEBUG)',
     },
     userSettings: {
         title: 'User Settings',
