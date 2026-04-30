@@ -1,6 +1,47 @@
 # OrbVis
 
-Monitoring visualization platform built with **FastAPI** · **SQLAlchemy 2.0** · **Vue 3** · **TypeScript** · **Vite** · **Pinia** · **Tailwind CSS** · **D3.js**.
+A modern monitoring-visualisation platform — a community successor to
+NagVis. Real-time WebSocket updates, native Checkmk integration,
+force-directed topology and geo boards. Built with **FastAPI** ·
+**SQLAlchemy 2.0** · **Vue 3** · **TypeScript** · **Vite** · **Pinia** ·
+**Tailwind CSS** · **D3.js**.
+
+> OrbVis is in **public beta**. The codebase has been used internally
+> for several months and is stable enough for daily use, but expect
+> rough edges and please report issues. License: GPL-2.0-only.
+
+| ![Login](docs/screenshots/01-login.png) | ![Home](docs/screenshots/ux-13-home-page.png) |
+|---|---|
+| ![Board view](docs/screenshots/ux-02-board-view.png) | ![Edit mode](docs/screenshots/ux-04-edit-mode.png) |
+| ![Geo board](docs/screenshots/qa-geo-board.png) | ![Radar board](docs/screenshots/board-radar.png) |
+| ![Hover with graph](docs/screenshots/hover-cpu-graph.png) | ![Context menu](docs/screenshots/ctx-light.png) |
+
+## Documentation
+
+- [Install guide](docs/install.md) — MKP, standalone, Docker, production hardening
+- [Migration from NagVis](docs/migration-from-nagvis.md) — `cfg_importer.py` walkthrough
+- [Architecture](docs/architecture.md) — backend, frontend, state pipeline
+- [Troubleshooting](docs/troubleshooting.md)
+- [OrbVis vs. NagVis](docs/comparison.md) — feature-parity matrix
+- [Roadmap](ROADMAP.md)
+- [Contributing](CONTRIBUTING.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Security policy](SECURITY.md)
+
+## Migrating from NagVis
+
+OrbVis ships `tools/cfg_importer.py`, which converts legacy NagVis
+`.cfg` map files to OrbVis JSON boards:
+
+```bash
+# Single file
+python tools/cfg_importer.py /opt/omd/sites/<site>/etc/nagvis/maps/datacenter.cfg ./out/
+
+# Whole directory
+python tools/cfg_importer.py --batch /opt/omd/sites/<site>/etc/nagvis/maps/ ./out/
+```
+
+See [docs/migration-from-nagvis.md](docs/migration-from-nagvis.md) for
+what carries over (and what doesn't), step-by-step migration order, and
+how to copy backgrounds.
 
 ## Installation
 
@@ -18,7 +59,20 @@ sudo rpm -i orbvis-X.Y.Z.x86_64.rpm
 
 No Node.js or npm required — the package includes a pre-built frontend.
 
-**With Checkmk / OMD** — deploy into a site after installing the package:
+**With Checkmk / OMD via MKP** (Checkmk Exchange):
+
+```bash
+omd su <site>
+mkp add ~/orbvis-X.Y.Z-cmk2.3.mkp     # for CMK 2.3 / 2.4
+# or:  orbvis-X.Y.Z-cmk2.5.mkp        # for CMK 2.5+
+mkp enable orbvis
+orbvis-setup
+```
+
+OrbVis is then reachable at `https://<host>/<site>/orbvis/`. See
+[docs/install.md](docs/install.md) for upgrade and uninstall.
+
+**With Checkmk via .deb / .rpm** (alternative path):
 
 ```bash
 sudo orbvis-setup <site-name>
@@ -117,6 +171,12 @@ Copy `backend/.env.example` to `backend/.env` and adjust:
 
 Backend connections are defined in `backends.json` (see `backends.json.example`).
 
+> **Production note:** OrbVis currently keeps its JWT-token blocklist in
+> process memory. Run with **a single uvicorn worker** until a shared
+> store lands; multiple workers would cause logged-out tokens to remain
+> valid on other workers until they expire. See
+> [docs/install.md → production hardening](docs/install.md#production-hardening).
+
 ## Architecture
 
 ```
@@ -131,16 +191,6 @@ orbvis/
 ├── install_cmk.sh    Checkmk/OMD install/remove
 ├── nfpm.yaml         Package definition (.deb/.rpm via nfpm)
 └── docker-compose.yml
-```
-
-## Import legacy maps
-
-```bash
-# Single file
-python tools/cfg_importer.py /path/to/maps/mymap.cfg ./data/maps
-
-# Batch import entire maps directory
-python tools/cfg_importer.py --batch /path/to/maps/ ./data/maps
 ```
 
 ## API Reference
