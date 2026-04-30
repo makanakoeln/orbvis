@@ -483,15 +483,24 @@ def cmk_bi_list_aggregations(query_callback: QueryCallback, site_id: str) -> lis
         compiled = getattr(computer, "_compiled_aggregations", {}) or {}
         out: list[dict[str, str]] = []
         seen: set[str] = set()
+        branch_counts: list[tuple[str, int]] = []
         for aggr_id, compiled_aggr in compiled.items():
             pack_id = str(getattr(compiled_aggr, "pack_id", "") or "")
-            for branch in getattr(compiled_aggr, "branches", []) or []:
+            branches = getattr(compiled_aggr, "branches", []) or []
+            branch_counts.append((str(aggr_id), len(branches)))
+            for branch in branches:
                 title = str(getattr(getattr(branch, "properties", None), "title", "") or "")
                 if not title or title in seen:
                     continue
                 seen.add(title)
                 out.append({"id": title, "title": title, "pack_id": pack_id or str(aggr_id)})
         out.sort(key=lambda e: e["title"].lower())
+        log.info(
+            "OrbVis BI list_aggregations: %d templates, branches=%s, returned=%d",
+            len(compiled),
+            branch_counts,
+            len(out),
+        )
         return out
     except Exception:
         log.warning("cmk.bi list aggregations failed", exc_info=True)
