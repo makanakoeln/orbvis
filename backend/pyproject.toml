@@ -77,6 +77,7 @@ packages = ["app"]
 "alembic/env.py" = "app/alembic/env.py"
 "alembic/script.py.mako" = "app/alembic/script.py.mako"
 "alembic/versions" = "app/alembic/versions"
+"app/_seed_boards" = "app/_seed_boards"
 
 [tool.ruff]
 extend = "../pyproject.toml"

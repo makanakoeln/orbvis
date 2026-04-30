@@ -141,13 +141,9 @@ tar czf "$TMPDIR/lib/orbvis/server.tar.gz" \
 cp "$SCRIPT_DIR/CHANGELOG.md" "$TMPDIR/lib/orbvis/CHANGELOG.md"
 cp "$SCRIPT_DIR/VERSION"      "$TMPDIR/lib/orbvis/VERSION"
 
-# Demo boards: tarball → lib/orbvis/boards.tar.gz
-mapfile -t _BOARD_FILES < <(cd "$SCRIPT_DIR/backend" && find boards -name "demo*.json" -o -name "demo.svg" 2>/dev/null | sort)
-tar czf "$TMPDIR/lib/orbvis/boards.tar.gz" \
-  -C "$SCRIPT_DIR/backend" \
-  "${_BOARD_FILES[@]}"
+# Demo boards ship inside the wheel; backend seeds them on first start.
 
-ok "Files staged (frontend + backend + boards bundled as tarballs)"
+ok "Files staged (frontend + backend bundled as tarballs)"
 
 # ---------------------------------------------------------------------------
 # 3. Generate orbvis-setup script
@@ -261,25 +257,9 @@ setup)
   tar xzf "$MKP_LIB/server.tar.gz" -C "$MKP_LIB/server"
   ok "Backend source extracted"
 
-  # 3. Demo boards (only seed on fresh install — skip if any *.json already exists)
-  step "Setting up board data"
+  # 3. Boards directory — backend seeds bundled demos on first start
+  # (gated by a .demo-seeded marker, so user deletions are honored)
   mkdir -p "$BOARDS_DIR/backgrounds"
-  if compgen -G "$BOARDS_DIR/*.json" > /dev/null; then
-    ok "Boards ready (existing boards detected, skipping demo seed)"
-  else
-    TMPBOARDS="$(mktemp -d)"
-    tar xzf "$MKP_LIB/boards.tar.gz" -C "$TMPBOARDS"
-    NEW_BOARDS=0
-    for f in "$TMPBOARDS/boards/"*.json; do
-      [[ -f "$f" ]] || continue
-      cp "$f" "$BOARDS_DIR/$(basename "$f")"
-      NEW_BOARDS=$(( NEW_BOARDS + 1 ))
-    done
-    [[ -f "$TMPBOARDS/boards/backgrounds/demo.svg" && ! -f "$BOARDS_DIR/backgrounds/demo.svg" ]] && \
-      cp "$TMPBOARDS/boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
-    rm -rf "$TMPBOARDS"
-    ok "Boards ready ($NEW_BOARDS demo board(s) installed)"
-  fi
 
   # 4. Python virtualenv + backend
   step "Setting up Python environment"
