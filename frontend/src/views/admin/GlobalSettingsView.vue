@@ -596,7 +596,7 @@ const dirty = computed(() => JSON.stringify(form) !== JSON.stringify(store.setti
 const logLevelOptions = computed(() => ({
     type: 'fixed' as const,
     suggestions: [
-        { name: '', title: t('settings.logLevelDefault') },
+        { name: null, title: t('settings.logLevelDefault') },
         { name: 'DEBUG', title: 'DEBUG' },
         { name: 'INFO', title: 'INFO' },
         { name: 'WARNING', title: 'WARNING' },

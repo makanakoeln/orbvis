@@ -347,7 +347,7 @@
                                     :options="{
                                         type: 'fixed',
                                         suggestions: [
-                                            { name: '', title: '—' },
+                                            { name: null, title: '—' },
                                             ...graphTemplates.map((tpl) => ({
                                                 name: tpl.id,
                                                 title: tpl.title,
