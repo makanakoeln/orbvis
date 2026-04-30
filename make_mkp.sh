@@ -70,7 +70,21 @@ echo ""
 # ---------------------------------------------------------------------------
 step "Building frontend (relative base path)"
 NPM="$(command -v npm 2>/dev/null || true)"
-[[ -z "$NPM" ]] && die "npm not found. Install Node.js >= 18."
+[[ -z "$NPM" ]] && die "npm not found. Install Node.js (^20.19 || >=22.12)."
+NODE="$(command -v node 2>/dev/null || true)"
+[[ -z "$NODE" ]] && die "node not found. Install Node.js (^20.19 || >=22.12)."
+
+# Vite 8 requires Node ^20.19.0 || >=22.12.0 — older versions fail with
+# "node:fs/promises does not provide an export named 'constants'".
+NODE_VERSION="$("$NODE" --version | sed 's/^v//')"
+NODE_OK="$("$NODE" -e '
+  const [maj, min] = process.versions.node.split(".").map(Number);
+  const ok = (maj === 20 && min >= 19) || (maj === 22 && min >= 12) || maj > 22;
+  process.stdout.write(ok ? "1" : "0");
+')"
+[[ "$NODE_OK" == "1" ]] || die "Node.js $NODE_VERSION is too old.
+  Vite 8 requires ^20.19.0 || >=22.12.0.
+  Install a newer Node (e.g. via nvm: 'nvm install 22 && nvm use 22')."
 cd "$SCRIPT_DIR/frontend"
 npm install --silent
 VITE_BASE_PATH=./ npm run build -- --base='./' --logLevel=warn
