@@ -49,3 +49,9 @@ backend/boards/
 *.mkp
 .playwright-mcp/
 frontend/*.cfg
+
+# Allow curated docs assets
+!docs/screenshots/*.png
+!docs/**/*.png
+!frontend/public/*.png
+!frontend/src/**/*.png
