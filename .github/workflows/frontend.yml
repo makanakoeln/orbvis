@@ -49,6 +49,9 @@ jobs:
       - name: Test + coverage gate
         run: npm run test:coverage
 
+      - name: Validate Playwright spec syntax
+        run: npx playwright test --list
+
       - name: Build
         run: npm run build
 
