@@ -4,19 +4,23 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.state import ObjectState
 
 
 class TopologyRow(TypedDict):
-    """One host in the topology view (parent-child flow-graph)."""
+    """One host in the topology view (parent-child flow-graph).
+
+    ``site_id`` is set in distributed Checkmk setups; other backends omit it.
+    """
 
     name: str
     parents: list[str]
     state: str
     output: str
+    site_id: NotRequired[str | None]
 
 
 class ServiceRow(TypedDict):

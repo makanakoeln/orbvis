@@ -57,6 +57,19 @@ def setup() -> None:
         log.debug("cmk.gui.userdb.store not available (%s) — using file fallback", e)
 
 
+def exec_mk_file(path: Path, defaults: dict[str, Any]) -> dict[str, Any]:
+    """Exec a Checkmk ``.mk`` config file and return its variable namespace.
+
+    Threat model: ``.mk`` files are owned by the OMD site user we run as, so
+    ``exec`` introduces no additional privilege boundary. Do not loosen this
+    file-ownership expectation without re-auditing all callers.
+    """
+    ns: dict[str, Any] = dict(defaults)
+    if path.is_file():
+        exec(compile(path.read_bytes(), str(path), "exec"), ns)  # nosec B102 — Checkmk .mk files use Python syntax; no safe alternative to exec()
+    return ns
+
+
 def get_monitoring_core() -> str | None:
     """Return 'cmc', 'nagios', or None (not in OMD or file unreadable).
 
@@ -150,11 +163,7 @@ def _load_roles() -> dict[str, object]:
     Returns the ``roles`` dict mapping role-id → role-spec.
     Returns an empty dict on error or when OMD_ROOT is not set.
 
-    Threat model: ``roles.mk`` is owned by the OMD site user we run as, so
-    reading it via ``exec`` introduces no additional privilege boundary —
-    any process that can write the file already runs as our user. The
-    ``# nosec`` below acknowledges this; do not loosen the file-ownership
-    expectation without re-auditing this load path.
+    See :func:`exec_mk_file` for the file-ownership threat model.
     """
     global _roles_cache, _roles_cache_mtime
     if not settings.checkmk_omd_root:
@@ -166,10 +175,7 @@ def _load_roles() -> dict[str, object]:
         mtime = roles_mk.stat().st_mtime if roles_mk.is_file() else 0.0
         if mtime == _roles_cache_mtime:
             return _roles_cache
-        ns: dict[str, object] = {"roles": {}}
-        if roles_mk.is_file():
-            exec(compile(roles_mk.read_bytes(), str(roles_mk), "exec"), ns)  # nosec B102 — Checkmk .mk files use Python syntax; no safe alternative to exec()
-        roles_val = ns.get("roles", {})
+        roles_val = exec_mk_file(roles_mk, {"roles": {}}).get("roles", {})
         _roles_cache = roles_val if isinstance(roles_val, dict) else {}
         _roles_cache_mtime = mtime
         return _roles_cache
@@ -256,12 +262,8 @@ def _load_user_fallback(username: str) -> dict[str, object]:
     try:
         omd_root = Path(settings.checkmk_omd_root)
 
-        # Static user config (roles, alias, email, language, …) via exec()
         users_mk = omd_root / "etc" / "check_mk" / "multisite.d" / "wato" / "users.mk"
-        ns: dict[str, object] = {"multisite_users": {}}
-        if users_mk.is_file():
-            exec(compile(users_mk.read_bytes(), str(users_mk), "exec"), ns)  # nosec B102 — Checkmk .mk files use Python syntax; no safe alternative to exec()
-        multisite_users = ns["multisite_users"]
+        multisite_users = exec_mk_file(users_mk, {"multisite_users": {}})["multisite_users"]
         raw_user = multisite_users.get(username, {}) if isinstance(multisite_users, dict) else {}
         user_data: dict[str, object] = dict(raw_user) if isinstance(raw_user, dict) else {}
 

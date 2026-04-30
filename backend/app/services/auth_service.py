@@ -330,9 +330,9 @@ def _is_checkmk_admin(username: str) -> bool:
         logger.warning("Checkmk users.mk not found at %s", users_mk)
         return False
     try:
-        ns: dict[str, object] = {"multisite_users": {}}
-        exec(compile(users_mk.read_text(encoding="utf-8"), str(users_mk), "exec"), ns)  # nosec B102 — Checkmk .mk files use Python syntax; no safe alternative to exec()
-        multisite_users = ns["multisite_users"]
+        multisite_users = cmk_integration.exec_mk_file(users_mk, {"multisite_users": {}})[
+            "multisite_users"
+        ]
         user_cfg = multisite_users.get(username, {}) if isinstance(multisite_users, dict) else {}
         roles = user_cfg.get("roles", []) if isinstance(user_cfg, dict) else []
         is_admin = isinstance(roles, list) and "admin" in roles

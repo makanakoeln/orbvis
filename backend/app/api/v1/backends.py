@@ -138,6 +138,7 @@ class TopologyNode(BaseModel):
     parents: list[str]
     state: str
     output: str
+    site_id: str | None = None
     services: list[ServiceNode] = []
 
 

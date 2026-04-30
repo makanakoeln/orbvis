@@ -227,6 +227,7 @@ export interface TopologyNode {
     parents: string[];
     state: string;
     output: string;
+    site_id?: string | null;
     services?: ServiceNode[];
 }
 

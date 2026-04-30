@@ -29,6 +29,8 @@ class ObjectState(BaseModel):
     current_attempt: int = 0
     max_attempts: int = 0
     last_state_change: float | None = None
+    # Set in distributed Checkmk setups to identify the originating site.
+    site_id: str | None = None
     # Populated only for type=='aggregation' when the BoardObject has expand_depth > 0.
     tree: AggregationNode | None = None
 

@@ -8,6 +8,7 @@ import json as _json
 import logging
 import pkgutil
 import re as _re
+import threading
 import types
 from collections.abc import AsyncIterator, Iterator, Mapping
 from contextlib import asynccontextmanager
@@ -16,13 +17,17 @@ from dataclasses import dataclass, field
 from datetime import UTC
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import TYPE_CHECKING, Literal, TypedDict
+
+if TYPE_CHECKING:
+    from cmk.livestatus_client import MultiSiteConnection
 
 import httpx
 
 from app.backends.base import BackendBase, GraphGroup, MetricHistoryResult, ServiceRow, TopologyRow
 from app.core.config import settings
 from app.integrations import checkmk as _cmk_integration
+from app.integrations import checkmk_sites as _cmk_sites
 from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.state import ObjectState
 
@@ -453,6 +458,12 @@ def _apply_extra(
     return state
 
 
+def _is_central_local_socket(host: str | None, socket_path: str) -> bool:
+    if not settings.checkmk_omd_root or host is not None:
+        return False
+    return socket_path == str(Path(settings.checkmk_omd_root) / "tmp" / "run" / "live")
+
+
 def _build_state_from_row(
     row: LivestatusRow,
     state_map: dict[int, str],
@@ -513,6 +524,23 @@ class LivestatusBackend(BackendBase):
         self._verify_ssl = verify_ssl
         self._semaphore = asyncio.Semaphore(settings.backend_max_connections)
         self._aggregations_cache: tuple[float, list[AggregationInfo]] | None = None
+
+        # Auto-federate when this backend points at the central site's local
+        # Livestatus socket — the socket only sees local data, so MultiSiteConnection
+        # is required to also reach remote-site hosts/services.
+        self._sites: dict[str, dict[str, object]] | None = (
+            _cmk_sites.load_sites() if _is_central_local_socket(host, socket_path) else None
+        )
+        self._mc: MultiSiteConnection | None = None  # lazy
+        self._mc_mtime: float = 0.0
+        self._mc_lock = threading.Lock()
+        self._mc_dead: set[str] = set()
+        if self._sites:
+            logger.info(
+                "Livestatus federation enabled: %d sites (%s)",
+                len(self._sites),
+                ", ".join(sorted(self._sites)),
+            )
 
     @asynccontextmanager
     async def with_auth_user(self, username: str) -> AsyncIterator[None]:
@@ -647,9 +675,11 @@ class LivestatusBackend(BackendBase):
         return []
 
     async def get_topology(self) -> list[TopologyRow]:
-        rows = await self._query("GET hosts\nColumns: name parents state plugin_output\n")
+        tagged = await self._query_with_site(
+            "GET hosts\nColumns: name parents state plugin_output\n"
+        )
         result: list[TopologyRow] = []
-        for r in rows:
+        for site_id, r in tagged:
             name = _row_str(r, 0)
             if not name:
                 continue
@@ -660,14 +690,15 @@ class LivestatusBackend(BackendBase):
                 parents = [p.strip() for p in raw_parents.split(",") if p.strip()]
             else:
                 parents = []
-            result.append(
-                TopologyRow(
-                    name=name,
-                    parents=parents,
-                    state=_HOST_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
-                    output=_row_str(r, 3),
-                )
-            )
+            row: TopologyRow = {
+                "name": name,
+                "parents": parents,
+                "state": _HOST_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
+                "output": _row_str(r, 3),
+            }
+            if site_id is not None:
+                row["site_id"] = site_id
+            result.append(row)
         return result
 
     async def get_host_services(self, hostname: str) -> list[ServiceRow]:
@@ -1083,9 +1114,17 @@ class LivestatusBackend(BackendBase):
         """
         from cmk.livestatus_client._connection import LivestatusResponse
 
-        del only_sites, fetch_full_data  # OrbVis is single-site; bi_fetch_full_data isn't needed
+        del fetch_full_data  # bi_fetch_full_data isn't needed
 
         lql = "\n".join(line for line in str(query).splitlines() if not line.startswith("Cache:"))
+
+        if self._sites:
+            sites_filter: list[str] | None = None
+            if isinstance(only_sites, list):
+                sites_filter = [str(s) for s in only_sites if s]
+            return LivestatusResponse(self._run_multisite_sync(lql, only_sites=sites_filter))
+
+        del only_sites
         loop = asyncio.new_event_loop()
         try:
             rows = loop.run_until_complete(self._query_raw(lql))
@@ -1335,12 +1374,78 @@ class LivestatusBackend(BackendBase):
     # ------------------------------------------------------------------
 
     async def _query(self, query: str) -> list[LivestatusRow]:
-        """Acquire connection slot and run query with an overall timeout."""
+        """Run a Livestatus query, stripping the federated site_id prefix."""
+        return [row for _, row in await self._query_with_site(query)]
+
+    async def _query_with_site(self, query: str) -> list[tuple[str | None, LivestatusRow]]:
+        """Run a query and return ``(site_id, row)`` tuples.
+
+        Single-site backends yield ``site_id=None`` so callers can remain
+        backend-agnostic.
+        """
+        if self._sites:
+            rows = await asyncio.wait_for(
+                asyncio.to_thread(self._run_multisite_sync, query),
+                timeout=settings.backend_query_timeout,
+            )
+            return [
+                (str(row[0]) if row and isinstance(row[0], str) else None, row[1:]) for row in rows
+            ]
         async with self._semaphore:
-            return await asyncio.wait_for(
+            rows = await asyncio.wait_for(
                 self._query_raw(query),
                 timeout=settings.backend_query_timeout,
             )
+        return [(None, r) for r in rows]
+
+    def _run_multisite_sync(
+        self, lql: str, only_sites: list[str] | None = None
+    ) -> list[list[object]]:
+        """Sync federated query via Checkmks ``MultiSiteConnection``.
+
+        Must run in a worker thread (``asyncio.to_thread``); ``MultiSiteConnection``
+        is sync. ``AuthUser:`` is sent per-query so the cached connection isn't
+        mutated across concurrent users.
+        """
+        from cmk.livestatus_client import MultiSiteConnection, SiteConfigurations
+
+        sites = self._sites
+        if not sites:
+            return []
+
+        with self._mc_lock:
+            current_mtime = _cmk_sites.sites_mk_mtime()
+            if self._mc is None or current_mtime != self._mc_mtime:
+                if self._mc is not None:
+                    logger.info("sites.mk changed — rebuilding MultiSiteConnection")
+                self._mc = MultiSiteConnection(sites=SiteConfigurations(sites))
+                self._mc.set_prepend_site(True)
+                self._mc_mtime = current_mtime
+                self._mc_dead = set()
+            mc = self._mc
+
+            headers = ""
+            auth_user = _auth_user_ctx.get()
+            if auth_user:
+                headers += f"AuthUser: {auth_user}\n"
+
+            mc.set_only_sites(only_sites)
+            try:
+                rows = mc.query(lql, add_headers=headers)
+            finally:
+                mc.set_only_sites(None)
+
+            self._log_dead_site_transitions(mc.dead_sites())
+            return list(rows)
+
+    def _log_dead_site_transitions(self, dead: Mapping[str, Mapping[str, object]]) -> None:
+        """Log only when a site enters or leaves the dead set, not every query."""
+        current = set(dead)
+        for sid in current - self._mc_dead:
+            logger.warning("Livestatus site %s dead: %s", sid, dead[sid].get("exception"))
+        for sid in self._mc_dead - current:
+            logger.info("Livestatus site %s recovered", sid)
+        self._mc_dead = current
 
     async def _query_raw(self, query: str) -> list[LivestatusRow]:
         """Send a Livestatus query and return parsed rows."""
