@@ -31,6 +31,7 @@ omd su <site>
 mkp add ~/orbvis-cmk-2.5.mkp   # pick MKP for your CMK major (2.3–2.6)
 mkp enable orbvis
 orbvis-setup
+omd start orbvis
 ```
 
 → Full guide: [docs/install.md#1-checkmk-mkp](docs/install.md#1-checkmk-mkp)

@@ -103,6 +103,7 @@ Alternativ-Titel:
 > # oder: ~/orbvis-cmk-2.3.mkp     # CMK 2.3
 > mkp enable orbvis
 > orbvis-setup
+> omd start orbvis
 > ```
 >
 > Danach erreichbar als **OrbVis**-Eintrag im Checkmk-Hauptmenü

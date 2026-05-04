@@ -35,20 +35,22 @@ omd su <site>
 mkp add ~/orbvis-cmk-2.5.mkp
 mkp enable orbvis
 
-# Run the post-install setup once
+# Run the post-install setup once, then start the service
 orbvis-setup
+omd start orbvis
 ```
 
 If you install the MKP via the Checkmk GUI (*Setup → Maintenance →
 Extension packages → Upload package*), enabling the package alone is
 **not enough** — you still have to run `orbvis-setup` once on the
-command line as the site user. The GUI has no way to extract the
-frontend bundle, create the venv, register the OMD service or wire up
-Apache; that is what `orbvis-setup` does.
+command line as the site user, and then start the service. The GUI has
+no way to extract the frontend bundle, create the venv, register the OMD
+service or wire up Apache; that is what `orbvis-setup` does.
 
 ```bash
 omd su <site>
 orbvis-setup
+omd start orbvis
 ```
 
 `orbvis-setup` will:
@@ -61,7 +63,8 @@ orbvis-setup
 - Write an Apache reverse-proxy snippet under
   `$OMD_ROOT/etc/apache/conf.d/orbvis.conf`
 - Register an OMD service so `omd start/stop/restart orbvis` works
-- Reload Apache and start the OrbVis backend on port 8420 (loopback only)
+- Reload Apache (the OrbVis backend itself is started in the next step
+  via `omd start orbvis` and then runs on port 8420, loopback only)
 
 After setup, OrbVis appears as the **OrbVis** entry in the Checkmk main
 menu and as a sidebar snapin (*Edit sidebar → OrbVis Boards*). The
