@@ -13,6 +13,18 @@ sidebar snapin, force-directed topology and geo boards. Built with
 > but targets the same OS reach as Checkmk. Expect rough edges — issues
 > and PRs are welcome. License: GPL-2.0-only.
 
+> **A note on the name.** "OrbVis" is a working title for this private
+> project and is not published as a package on PyPI, npm, or similar
+> registries. Two unrelated projects share the name —
+> [wojciech-graj/OrbVis](https://github.com/wojciech-graj/OrbVis) (a
+> realtime satellite-orbit visualizer) and
+> [staradutt/orbvis](https://github.com/staradutt/orbvis) (a Python
+> package for VASP bandstructure/DOS plotting). Their domains are
+> distinct from monitoring visualisation, so confusion in practice
+> should be minimal. Should this project ever be integrated into
+> Checkmk upstream, the name would most likely be reassigned at that
+> point.
+
 | ![Main-menu entry in Checkmk](docs/screenshots/cmk-mainmenu.png) | ![Board overview embedded in Checkmk](docs/screenshots/cmk-home.png) |
 |---|---|
 | ![Static board with mixed gadgets](docs/screenshots/cmk-board-static.png) | ![Geo board on OpenStreetMap tiles](docs/screenshots/cmk-board-geo.png) |
