@@ -1,0 +1,40 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    # Run as the host user so bind-mounts (data/boards, data/icons) are writable.
+    # bootstrap.sh writes HOST_UID/HOST_GID into .env; defaults match the
+    # orbvis user baked into the Dockerfile when bootstrap hasn't been run.
+    user: "${HOST_UID:-10001}:${HOST_GID:-10001}"
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8742}:8000"
+    volumes:
+      - ./data/boards:/app/boards
+      - ./data/icons:/app/icons
+      - ./data/db:/app/data
+    environment:
+      - BOARDS_DIR=/app/boards
+      - BACKENDS_FILE=/app/data/backends.json
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/orbvis.db
+      # SECRET_KEY is mandatory — generate with `openssl rand -hex 32` and
+      # export it or put it in a .env file next to this compose file.
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required — run `openssl rand -hex 32` and set it}
+      - ORBVIS_PORT=${ORBVIS_PORT:-8741}
+      - ALLOWED_ORIGINS=["http://localhost"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "${ORBVIS_PORT:-8741}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

@@ -1,0 +1,88 @@
+[project]
+name = "orbvis-backend"
+version = "0.1.0"
+description = "OrbVis Backend - FastAPI based monitoring visualization"
+license = { text = "GPL-2.0-only" }
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sqlalchemy[asyncio]>=2.0.0",
+    "alembic>=1.13.0",
+    "aiosqlite>=0.20.0",
+    "asyncpg>=0.30.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "PyJWT[crypto]>=2.8.0",
+    "cryptography>=46.0.7",           # CVE-2026-34073 / CVE-2026-39892 via PyJWT[crypto]
+    "bcrypt>=4.0.0",
+    "python-multipart>=0.0.26",       # CVE-2026-40347
+    "httpx>=0.28.0",
+    "defusedxml>=0.7.1",              # safe SVG parsing (XXE / billion-laughs protection)
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.3",                  # CVE-2025-71176
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.28.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+    "types-defusedxml>=0.7.0",
+    "bandit>=1.8.0",
+    "pygments>=2.20.0",               # CVE-2026-4539 (transitive via pytest/rich)
+    "pre-commit>=4.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+xfail_strict = true
+junit_logging = "all"
+addopts = [
+    "--log-cli-level=CRITICAL",
+    "--log-cli-format=%(asctime)s %(levelname)s %(message)s",
+    "-rs",           # summary of skipped tests
+    "--durations=20",
+    "-p no:faker",
+    "-p no:hypothesispytest",
+]
+markers = [
+    "slow: tests that take a long time to execute",
+]
+filterwarnings = [
+    # OrbVis: SECRET_KEY-Dev-Warning in conftest-gesetupten Tests ignorieren
+    "ignore:SECRET_KEY is not set:UserWarning",
+    # pkg_resources-Deprecations kommen ueber FastAPI/SQLAlchemy Abhaengigkeiten
+    "ignore:pkg_resources is deprecated:DeprecationWarning",
+    "ignore:Deprecated call to `pkg_resources\\.declare_namespace:DeprecationWarning",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+# Bundle runtime data files inside the package directory so they're available
+# from $VENV/lib/pythonX.Y/site-packages/app/ regardless of where the source
+# tree lives (relevant for non-editable installs from a user home).
+[tool.hatch.build.targets.wheel.force-include]
+"../VERSION" = "app/VERSION"
+"../CHANGELOG.md" = "app/CHANGELOG.md"
+"alembic.ini" = "app/alembic.ini"
+"alembic/env.py" = "app/alembic/env.py"
+"alembic/script.py.mako" = "app/alembic/script.py.mako"
+"alembic/versions" = "app/alembic/versions"
+"app/_seed_boards" = "app/_seed_boards"
+
+[tool.ruff]
+extend = "../pyproject.toml"
+target-version = "py312"
+
+# [tool.mypy] wird zentral in ../pyproject.toml konfiguriert (Stufe 3).
+# Mypy-Aufrufe aus backend/ finden backend/pyproject.toml zuerst — daher KEINE
+# leere [tool.mypy]-Sektion hier (die wuerde die Root-Config verschatten).

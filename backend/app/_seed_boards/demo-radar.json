@@ -1,0 +1,13 @@
+{
+  "name": "demo-radar",
+  "alias": "Radar Board (Demo)",
+  "readonly": true,
+  "backend_id": "test",
+  "icon_size": 30,
+  "rotation_interval": 0,
+  "hover_template": null,
+  "context_template": null,
+  "background_image": null,
+  "view": { "type": "radar", "filter": "all_hosts", "filter_value": "" },
+  "objects": []
+}

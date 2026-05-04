@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="760">
+  <rect width="1680" height="760" fill="#09090b"/>
+  <!-- Section: Hosts + Lines -->
+  <rect x="190" y="16" width="470" height="730" rx="10"
+        fill="#4f46e5" fill-opacity="0.08" stroke="#4f46e5" stroke-opacity="0.35" stroke-width="1"/>
+  <text x="425" y="40" text-anchor="middle"
+        font-family="monospace" font-size="9" font-weight="bold" letter-spacing="2"
+        fill="#818cf8">HOSTS + LINES</text>
+  <!-- Section: Services + Gadgets -->
+  <rect x="690" y="16" width="305" height="730" rx="10"
+        fill="#10b981" fill-opacity="0.07" stroke="#10b981" stroke-opacity="0.35" stroke-width="1"/>
+  <text x="842" y="40" text-anchor="middle"
+        font-family="monospace" font-size="9" font-weight="bold" letter-spacing="2"
+        fill="#34d399">SERVICES + GADGETS</text>
+  <!-- Section: Groups -->
+  <rect x="1015" y="16" width="155" height="730" rx="10"
+        fill="#f59e0b" fill-opacity="0.07" stroke="#f59e0b" stroke-opacity="0.35" stroke-width="1"/>
+  <text x="1092" y="40" text-anchor="middle"
+        font-family="monospace" font-size="9" font-weight="bold" letter-spacing="2"
+        fill="#fbbf24">GROUPS</text>
+  <!-- Section: Shape + Map -->
+  <rect x="1195" y="16" width="205" height="730" rx="10"
+        fill="#a78bfa" fill-opacity="0.07" stroke="#a78bfa" stroke-opacity="0.35" stroke-width="1"/>
+  <text x="1297" y="40" text-anchor="middle"
+        font-family="monospace" font-size="9" font-weight="bold" letter-spacing="2"
+        fill="#c4b5fd">SHAPE + MAP</text>
+  <!-- Section: Graphs -->
+  <rect x="1425" y="16" width="225" height="730" rx="10"
+        fill="#06b6d4" fill-opacity="0.07" stroke="#06b6d4" stroke-opacity="0.35" stroke-width="1"/>
+  <text x="1537" y="40" text-anchor="middle"
+        font-family="monospace" font-size="9" font-weight="bold" letter-spacing="2"
+        fill="#22d3ee">GRAPHS</text>
+  <!-- Row type labels in left margin -->
+  <text x="95" y="194" text-anchor="middle" font-family="monospace" font-size="8" fill="#6b7280">icon view</text>
+  <text x="95" y="359" text-anchor="middle" font-family="monospace" font-size="8" fill="#6b7280">gauge / bar</text>
+  <text x="95" y="524" text-anchor="middle" font-family="monospace" font-size="8" fill="#6b7280">traffic light / bi aggr</text>
+</svg>

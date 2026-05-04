@@ -1,0 +1,4 @@
+#!/bin/bash
+# orbvis-install – standalone installation of OrbVis (without Checkmk/OMD)
+# Usage: orbvis-install [install|remove]
+exec /opt/orbvis/install.sh "$@"

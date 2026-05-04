@@ -1,0 +1,17 @@
+[project]
+name = "orbvis-cmk"
+version = "0.1.0"
+description = "OrbVis GUI extensions for Checkmk (sidebar snapin + main menu entry)"
+requires-python = ">=3.10"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+namespaces = true
+
+[tool.ruff]
+extend = "../pyproject.toml"
+target-version = "py312"

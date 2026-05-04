@@ -1,0 +1,52 @@
+# Keep runtime config and data out of the image — these belong on volumes.
+# Without this, `COPY backend/ /app/` would bake host-local files (sometimes
+# with restrictive permissions) into the image and shadow the volume mounts.
+
+# Runtime config & state
+backend/backends.json
+backend/boards/
+backend/maps/
+backend/data/
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Python build/test artifacts
+**/__pycache__/
+**/*.py[cod]
+**/.venv/
+**/venv/
+**/*.egg-info/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.coverage
+**/htmlcov/
+
+# Node
+**/node_modules/
+frontend/dist/
+frontend/coverage/
+
+# VCS / IDE / misc
+.git/
+.github/
+.idea/
+.vscode/
+.claude/
+*.swp
+
+# Screenshots / packaging artifacts
+*.png
+!frontend/public/*.png
+!frontend/src/**/*.png
+!docs/**/*.png
+*.mkp
+sbom-*.cdx.json
+.playwright-mcp/

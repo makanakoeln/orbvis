@@ -1,0 +1,78 @@
+OrbVis
+======
+
+Copyright (C) 2024-2026 OrbVis contributors
+
+OrbVis is licensed under the GNU General Public License, version 2 only
+(GPL-2.0-only). The full license text is in the LICENSE file at the
+root of the source tree.
+
+Origins
+-------
+
+OrbVis is an independent reimplementation of the visualisation
+concepts originally introduced by NagVis (https://www.nagvis.org/) — a
+PHP-based map tool for Nagios / Icinga / Checkmk released by the NagVis
+Project under GPL-2.0-only. OrbVis does not contain NagVis source code;
+the .cfg import format is the only NagVis artefact OrbVis interoperates
+with, and even that is parsed without copying NagVis parser code.
+
+OrbVis links optionally against Checkmk (https://checkmk.com/) when
+running inside an OMD site. It uses Checkmk's Livestatus protocol and
+its htpasswd / auth-cookie formats. Checkmk is licensed under
+GPL-2.0-only (Raw edition) plus commercial licenses for the
+Enterprise / Cloud editions; OrbVis bundles no Checkmk source.
+
+Third-party software
+--------------------
+
+OrbVis ships with — or installs at runtime — a number of open-source
+dependencies, each under its own license. Generated SBOMs (one per
+release) are attached to GitHub release artefacts:
+
+  * Backend (Python):   sbom-backend-X.Y.Z.cdx.json   (CycloneDX)
+  * Frontend (Node.js): sbom-frontend-X.Y.Z.cdx.json  (CycloneDX)
+
+To regenerate the SBOMs locally:
+
+    # Backend
+    cd backend
+    pip install cyclonedx-bom
+    cyclonedx-py environment --output-file sbom-backend.cdx.json
+
+    # Frontend
+    cd frontend
+    npm sbom --sbom-format cyclonedx > sbom-frontend.cdx.json
+
+Notable runtime dependencies
+----------------------------
+
+Backend:
+  * FastAPI       MIT
+  * SQLAlchemy    MIT
+  * Pydantic      MIT
+  * uvicorn       BSD-3-Clause
+  * bcrypt        Apache-2.0
+  * PyJWT         MIT
+  * defusedxml    PSF-2.0
+  * aiosqlite     MIT
+
+Frontend:
+  * Vue 3         MIT
+  * Pinia         MIT
+  * Vite          MIT
+  * D3            ISC
+  * Leaflet       BSD-2-Clause
+  * Tailwind CSS  MIT
+  * DOMPurify     Apache-2.0 OR MPL-2.0
+  * sanitize-html MIT
+
+This list is for orientation only. The authoritative license list is
+the SBOM published with each release.
+
+Trademarks
+----------
+
+"NagVis" and "Checkmk" are trademarks of their respective owners. Use
+of these names in OrbVis documentation is for descriptive purposes
+only; OrbVis is not affiliated with or endorsed by either project.

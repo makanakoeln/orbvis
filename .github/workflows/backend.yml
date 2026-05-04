@@ -1,0 +1,86 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'pyproject.toml'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'pyproject.toml'
+      - '.github/workflows/backend.yml'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Format check
+        run: ruff format --check app/
+
+      - name: Lint
+        run: ruff check app/
+
+      - name: Type check
+        # mypy config lives in the repo-root pyproject.toml (checkmk-strict).
+        # Must run from the repo root so the correct config is discovered.
+        working-directory: ${{ github.workspace }}
+        run: mypy backend/app
+
+      - name: Security scan (bandit)
+        run: bandit -r app/ -x tests/ -ll
+
+      - name: Dependency audit (pip-audit)
+        # Audit project dependencies declared in pyproject.toml only — auditing
+        # the full env would also flag vulnerabilities in build tools like pip
+        # itself, which we cannot fix from this repo.
+        run: |
+          pip install pip-audit
+          pip-audit .
+
+      - name: Test + coverage gate
+        # Baseline ~50%; Folge-PRs heben die Schwelle stufenweise in Richtung 75%.
+        # Gate bewusst unter dem aktuellen Stand, damit kein Zufallsbruch.
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=45
+
+  docker-build-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build backend image
+        run: docker build . -f backend/Dockerfile --tag orbvis-backend:test
+
+      - name: Smoke test backend image
+        # Run in testing mode so app.core.config's production-SECRET_KEY check
+        # doesn't abort. The smoke test only verifies `from app.main import app`
+        # succeeds — it never boots the server.
+        run: |
+          docker run --rm \
+            -e ENVIRONMENT=testing \
+            orbvis-backend:test \
+            python -c "from app.main import app; print('OK')"

@@ -1,0 +1,22 @@
+ROOT=$(git rev-parse --show-toplevel)
+
+cd "$ROOT/frontend" && npx lint-staged
+
+# Run ruff and mypy on staged backend Python files
+STAGED_PY=$(git -C "$ROOT" diff --cached --name-only --diff-filter=ACM | grep '^backend/.*\.py$' || true)
+if [ -n "$STAGED_PY" ]; then
+  RUFF=$(command -v ruff 2>/dev/null || echo "$ROOT/backend/.venv/bin/ruff")
+  MYPY=$(command -v mypy 2>/dev/null || echo "$ROOT/backend/.venv/bin/mypy")
+  if [ ! -x "$RUFF" ]; then
+    echo "error: ruff not found (checked PATH and $ROOT/backend/.venv/bin/ruff)"
+    exit 1
+  fi
+  if [ ! -x "$MYPY" ]; then
+    echo "error: mypy not found (checked PATH and $ROOT/backend/.venv/bin/mypy)"
+    exit 1
+  fi
+  STAGED_ABS=$(echo "$STAGED_PY" | sed "s|^|$ROOT/|")
+  echo "$STAGED_ABS" | xargs "$RUFF" format --check
+  echo "$STAGED_ABS" | xargs "$RUFF" check
+  cd "$ROOT/backend" && "$MYPY" app/
+fi

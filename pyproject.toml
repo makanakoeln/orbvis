@@ -1,0 +1,165 @@
+# OrbVis — root-level tooling anchor.
+#
+# Central configuration point for the OrbVis repository. Sub-projects
+# (backend/, cmk_plugins/) extend from this via `extend = "../pyproject.toml"`.
+#
+# - Stage 1 filled [tool.ruff] with the full Checkmk rule set.
+# - Stage 3 will fill [tool.mypy] with Checkmk strict config + pydantic plugin.
+# - Stage 4 will fill [tool.pytest.ini_options] with Checkmk addopts/filterwarnings.
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+extend-exclude = [
+  "frontend",
+  "data",
+  "boards",
+  "images",
+  "contrib",
+  "--cwd",
+  "backend/alembic",
+  "**/__pycache__",
+]
+
+[tool.ruff.lint]
+select = [
+  "A",      # flake8-builtins
+  "ARG",    # flake8-unused-arguments
+  "B",      # flake8-bugbear
+  "C4",     # flake8-comprehensions
+  "C90",    # mccabe complexity
+  "E",      # pycodestyle errors
+  "F",      # pyflakes
+  "I",      # isort
+  "N",      # pep8-naming (kept from OrbVis)
+  "N804",   # invalid-first-argument-name-for-class-method
+  "N805",   # invalid-first-argument-name-for-method
+  "PL",     # pylint
+  "RUF",    # ruff-specific
+  "RUF100", # unused noqa
+  "SLF",    # flake8-self
+  "T10",    # flake8-debugger
+  "T20",    # flake8-print
+  "UP",     # pyupgrade
+  "W",      # pycodestyle warnings
+]
+ignore = [
+  # Checkmk-Set
+  "E501",    # line too long — handled by formatter
+  "E731",    # lambda assignment
+  "E741",    # ambiguous variable name
+  "PLC0414", # import alias does not rename
+  "PLC0415", # import not at top-level
+  "PLR0911", # too many returns
+  "PLR0912", # too many branches
+  "PLR0913", # too many args
+  "PLR0915", # too many statements
+  "PLR2004", # magic value used in comparison
+  "PLR2044", # line with empty comment
+  "PLW0603", # using global statement
+  "PLW2901", # for-loop variable overwritten
+  "PLW1641", # missing __hash__
+  "UP031",   # use format specifiers instead of percent format
+  # OrbVis-Additions
+  "B008",    # FastAPI Depends(...) in default args is idiomatic
+  "E402",    # module-level import not at top — intentional in main.py
+  "RUF001",  # ambiguous EN DASH in strings — intentional prose
+  "RUF002",  # ambiguous EN DASH in docstrings — intentional prose
+  "RUF003",  # ambiguous EN DASH in comments — intentional prose
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 32 # TODO: schrittweise auf 15 senken, aktuell decken wir Bestandscode.
+
+[tool.ruff.lint.isort]
+section-order = [
+  "future",
+  "standard-library",
+  "third-party",
+  "first-party-not-cmk",
+  "first-party",
+  "local-folder",
+]
+known-first-party = ["cmk", "orbvis"]
+
+[tool.ruff.lint.isort.sections]
+first-party-not-cmk = ["app"]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/app/api/**/*.py" = ["PLR0913", "ARG001", "ARG002"]
+"backend/app/main.py" = ["T201", "ARG001"]                          # Startup-prints + FastAPI lifespan
+"backend/app/backends/**/*.py" = ["ARG002"]                         # ABC-Pattern: ungenutzte Args in Base-Methoden
+"backend/tests/**/*.py" = ["A002", "ARG001", "ARG002", "ARG003", "ARG004", "ARG005", "SLF001", "T20", "PLR2004"]
+"backend/app/seed_*.py" = ["T20"]
+"backend/app/integrations/**/*.py" = ["T20"]
+"tools/**/*.py" = ["T20"]
+"cmk_plugins_23/**/*.py" = ["BLE001", "SLF001", "ARG001"]           # Checkmk-API-Zugriffe + Kompat-Brücken
+"cmk_plugins/cmk/gui/plugins/**/*.py" = ["BLE001", "SLF001", "ARG001"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12" # kleinster gemeinsamer Nenner (Backend traegt noch CMK 2.3)
+explicit_package_bases = true
+mypy_path = "$MYPY_CONFIG_FILE_DIR/backend"
+plugins = ["pydantic.mypy"]
+follow_imports = "silent"
+
+# --strict equivalent
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+extra_checks = true
+no_implicit_reexport = true
+strict_bytes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+# additional (beyond --strict)
+disallow_any_decorated = true
+disallow_any_explicit = false
+disallow_any_expr = false
+disallow_any_unimported = false
+strict_equality_for_none = true
+warn_unreachable = true
+
+enable_error_code = [
+  "deprecated",
+  "exhaustive-match",
+  "ignore-without-code",
+  "mutable-override",
+  "possibly-undefined",
+  "redundant-expr",
+  "redundant-self",
+  "truthy-bool",
+  "truthy-iterable",
+  "unimported-reveal",
+  "unused-awaitable",
+  "unused-ignore",
+]
+
+# cmk_plugins/ und cmk_plugins_23/ sind CMK-2.3–2.6-Kompat-Bridge-Code mit
+# try/except-ImportError-Kaskaden. Die laufen NICHT unter strict mypy —
+# der built-in-Teilbaum (upstream-checkmk/, Stufe 6) wird dagegen strict geprueft.
+exclude = ["^cmk_plugins/", "^cmk_plugins_23/"]
+
+# Bei OrbVis koennen wir die cmk.*-API-Imports nicht aufloesen, solange wir keinen
+# Checkmk-Source-Checkout als mypy_path haben.
+[[tool.mypy.overrides]]
+module = ["cmk.*"]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+warn_untyped_fields = true

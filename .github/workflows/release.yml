@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # GITHUB_TOKEN scopes:
+    #   contents: write  → required by the final `gh release create/edit` step
+    #                      to attach the .deb/.rpm artefacts to the tag release.
+    # All other permissions (packages, pull-requests, actions, …) deliberately
+    # stay at their default `none` so a compromised dependency in this workflow
+    # can't escalate beyond writing to the release assets.
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm install --silent
+          npm run build -- --base=./
+
+      - name: Read version
+        run: echo "VERSION=$(cat VERSION)" >> "$GITHUB_ENV"
+
+      - name: Install nfpm
+        run: |
+          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' \
+            | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt-get update -q
+          sudo apt-get install -y -q nfpm
+
+      - name: Build packages
+        run: |
+          mkdir -p dist
+          VERSION="$VERSION" nfpm package --packager deb --target dist/
+          VERSION="$VERSION" nfpm package --packager rpm --target dist/
+
+      - name: Build MKP packages
+        run: |
+          pids=()
+          for target in 2.3 2.4 2.5 2.6; do
+            ./make_mkp.sh --cmk-target "$target" --skip-frontend --out dist/ &
+            pids+=($!)
+          done
+          for pid in "${pids[@]}"; do
+            wait "$pid"
+          done
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate SBOMs
+        run: |
+          python3 -m venv "$PWD/.sbom-venv"
+          "$PWD/.sbom-venv/bin/pip" install --quiet -e backend cyclonedx-bom
+          PATH="$PWD/.sbom-venv/bin:$PATH" scripts/generate-sboms.sh dist/
+
+      - name: Create or update GitHub Release
+        run: |
+          if gh release view "v${VERSION}" > /dev/null 2>&1; then
+            gh release edit "v${VERSION}" \
+              --title "OrbVis ${VERSION}" \
+              --notes-file CHANGELOG.md
+            gh release upload "v${VERSION}" dist/*.deb dist/*.rpm dist/*.mkp dist/*.cdx.json --clobber
+          else
+            gh release create "v${VERSION}" \
+              --title "OrbVis ${VERSION}" \
+              --notes-file CHANGELOG.md \
+              dist/*.deb \
+              dist/*.rpm \
+              dist/*.mkp \
+              dist/*.cdx.json
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
