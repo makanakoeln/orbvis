@@ -347,6 +347,8 @@
                     :backend-id="boardConfig.backend_id"
                     :service-layout="serviceLayout"
                     :readonly="isKiosk || boardConfig?.readonly"
+                    :click-action="boardConfig.click_action"
+                    :checkmk-url="checkmkUrl"
                 />
                 <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">
                     {{ t('board.noConnectionConfigured') }}

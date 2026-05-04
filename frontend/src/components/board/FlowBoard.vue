@@ -101,13 +101,16 @@ import { connectionsApi } from '@/api/client';
 import HoverMenu from '@/components/board/HoverMenu.vue';
 import { useD3Cleanup } from '@/composables/useD3Cleanup';
 import { useAuthStore } from '@/stores/auth';
-import type { BoardObject, ObjectState, TopologyNode } from '@/types/api';
+import type { BoardObject, ClickAction, ObjectState, TopologyNode } from '@/types/api';
+import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { stateColor } from '@/utils/stateColors';
 
 const props = defineProps<{
     backendId: string;
     serviceLayout: 'off' | 'fan' | 'row' | 'orbit';
     readonly?: boolean;
+    clickAction?: ClickAction;
+    checkmkUrl?: string | null;
 }>();
 const auth = useAuthStore();
 
@@ -617,9 +620,14 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .enter()
         .append('g')
         .attr('class', 'node')
-        .attr('cursor', (d) => (d.nodeType === 'host' && !props.readonly ? 'grab' : 'default'))
+        .attr('cursor', (d) => {
+            if (d.nodeType === 'host' && !props.readonly) return 'grab';
+            return props.clickAction === 'none' ? 'default' : 'pointer';
+        })
         .on('click', (_event, d) => {
-            void d;
+            if (props.clickAction === 'none') return;
+            const url = buildCheckmkUrl(boardObjectFromFNode(d), props.checkmkUrl ?? null);
+            if (url) openUrl(url, '_blank');
         })
         .on('mouseenter', (event: MouseEvent, d) => {
             const nodeRect = (event.currentTarget as SVGGElement).getBoundingClientRect();
