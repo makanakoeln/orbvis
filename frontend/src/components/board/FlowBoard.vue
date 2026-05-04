@@ -133,6 +133,19 @@ function orbitR(N: number): number {
     return Math.max(ORBIT_R_MIN, Math.ceil((N * (r * 2 + 3)) / (2 * Math.PI)));
 }
 
+// Fan = semicircle below host. Arc length = FAN_SPREAD·R must fit N service
+// circles spaced 2r+gap apart, so the radius scales like ~2× orbitR for large N.
+const FAN_SPREAD = Math.PI * 0.9;
+function fanR(N: number): number {
+    const r = svcR(N);
+    if (N <= 1) return ORBIT_R_MIN;
+    return Math.max(ORBIT_R_MIN, Math.ceil(((N - 1) * (r * 2 + 3)) / FAN_SPREAD));
+}
+
+function layoutR(N: number): number {
+    return props.serviceLayout === 'fan' ? fanR(N) : orbitR(N);
+}
+
 // Show labels only when few enough services per host
 function showSvcLabel(N: number): boolean {
     return N <= 10;
@@ -356,9 +369,15 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // --- Build FNode list (reuse cached positions) ---
     const levels = bfsLevels(topoNodes);
     const maxLvl = Math.max(0, ...levels.values());
-    // When services are visible, increase vertical spacing to fit orbit rings
+    // When services are visible, increase vertical spacing to fit service rings.
+    // Fan only extends downward so it needs ~half the inter-host gap of orbit.
     const maxSvcN = Math.max(0, ...[...(nodes.value ?? []).map((n) => n.services?.length ?? 0)]);
-    const minVSpacing = props.serviceLayout !== 'off' && maxSvcN > 0 ? orbitR(maxSvcN) * 2 + 50 : 0;
+    const minVSpacing =
+        props.serviceLayout !== 'off' && maxSvcN > 0
+            ? props.serviceLayout === 'fan'
+                ? fanR(maxSvcN) + 50
+                : orbitR(maxSvcN) * 2 + 50
+            : 0;
     const vSpacing = Math.max(minVSpacing, Math.min(130, (H * 0.8) / Math.max(1, maxLvl + 1)));
 
     // Host nodes first
@@ -480,18 +499,18 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             const hx = host.x ?? 0;
             const hy = host.y ?? 0;
             const N = services.length;
-            const R = orbitR(N);
 
-            if (props.serviceLayout === 'fan' && N <= 8) {
-                // Small fan: semicircle below host, evenly spaced
-                const spread = N > 1 ? Math.PI * 0.9 : 0;
+            if (props.serviceLayout === 'fan') {
+                // Semicircle below host — radius scales with N so points don't overlap
+                const R = fanR(N);
+                const spread = N > 1 ? FAN_SPREAD : 0;
                 services.forEach((svc, i) => {
                     const angle = Math.PI / 2 + (N > 1 ? -spread / 2 + (i * spread) / (N - 1) : 0);
                     svc.fx = hx + R * Math.cos(angle);
                     svc.fy = hy + R * Math.sin(angle);
                 });
-            } else if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit') {
-                // Full circle — fan auto-upgrades to orbit when N > 8 to avoid overlap
+            } else if (props.serviceLayout === 'orbit') {
+                const R = orbitR(N);
                 services.forEach((svc, i) => {
                     const angle = (2 * Math.PI * i) / N - Math.PI / 2;
                     svc.fx = hx + R * Math.cos(angle);
@@ -539,7 +558,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                     const srcN = servicesByHost.get((d.source as FNode).id)?.length ?? 0;
                     const tgtN = servicesByHost.get((d.target as FNode).id)?.length ?? 0;
                     if (srcN === 0 && tgtN === 0) return 160;
-                    return Math.max(200, orbitR(srcN) + orbitR(tgtN) + 60);
+                    return Math.max(200, layoutR(srcN) + layoutR(tgtN) + 60);
                 })
                 .strength(0.4),
         )
@@ -549,7 +568,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 if (d.nodeType === 'service') return 0;
                 const N = servicesByHost.get(d.id)?.length ?? 0;
                 // Modest extra repulsion so service rings don't crowd; collision handles the hard min
-                return N > 0 ? -Math.max(700, orbitR(N) * 9) : -600;
+                return N > 0 ? -Math.max(700, layoutR(N) * 9) : -600;
             }),
         )
         .force(
@@ -564,7 +583,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 const N = svcs.length;
                 if (N === 0 || props.serviceLayout === 'off') return NODE_R + 10;
                 if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit')
-                    return orbitR(N) + svcR(N) + 20;
+                    return layoutR(N) + svcR(N) + 20;
                 // Row grid
                 const cols = Math.min(N, Math.max(4, Math.ceil(Math.sqrt(N * 1.5))));
                 const spacingX = rowSpacings.get(d.id) ?? 60;
