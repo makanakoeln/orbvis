@@ -16,7 +16,6 @@ mkp disable orbvis
 mkp enable orbvis
 ls $OMD_ROOT/local/lib/orbvis/   # should contain server.tar.gz, htdocs.tar.gz
 orbvis-setup
-omd start orbvis
 ```
 
 ### Apache says "mod_proxy not found" / API requests get 404
