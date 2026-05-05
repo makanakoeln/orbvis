@@ -12,7 +12,8 @@ from typing import TypedDict
 from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, inspect, select, text
 
@@ -300,10 +301,25 @@ app = FastAPI(
     version=APP_VERSION,
     description="REST API for OrbVis – monitoring visualization",
     lifespan=lifespan,
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    docs_url=None,
+    redoc_url=None,
     openapi_url="/api/openapi.json",
 )
+
+
+@app.get("/api/docs", include_in_schema=False)
+async def custom_swagger_ui_html() -> HTMLResponse:
+    # Relative URLs so the page works under any reverse-proxy prefix
+    # (e.g. /<SITE>/orbvis/api/docs in a Checkmk OMD site). The Swagger-UI
+    # assets are served by Apache from the bundled CMK files; see install_cmk.sh.
+    return get_swagger_ui_html(
+        openapi_url="openapi.json",
+        title=f"{app.title} - Swagger UI",
+        swagger_js_url="swagger-ui/swagger-ui-bundle.js",
+        swagger_css_url="swagger-ui/swagger-ui.css",
+        swagger_favicon_url="swagger-ui/favicon-32x32.png",
+    )
+
 
 app.add_middleware(
     CORSMiddleware,

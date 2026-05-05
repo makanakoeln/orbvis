@@ -148,6 +148,8 @@ tar czf "$TMPDIR/lib/orbvis/server.tar.gz" \
   --exclude=".ruff_cache" \
   --exclude="*.db" \
   --exclude="*.db-journal" \
+  --exclude="backends.json" \
+  --exclude="connections.json" \
   --exclude="boards" \
   --exclude="images" \
   -C "$SCRIPT_DIR/backend" .

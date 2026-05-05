@@ -129,4 +129,5 @@ cd frontend && npm test
 ```
 
 Interactive API docs run at `http://localhost:8000/api/docs` (or the
-proxied path in deployed setups).
+proxied path in deployed setups, e.g. `/<SITE>/orbvis/api/docs` inside a
+Checkmk site). Inside a Checkmk site the docs page requires **2.5+**.
