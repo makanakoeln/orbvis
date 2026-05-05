@@ -182,6 +182,13 @@ except ImportError:
                         sort_index=40,
                         icon=StaticIcon(IconNames.icons),
                     ),
+                    MainMenuItem(
+                        name="orbvis_api_docs",
+                        title=_("API documentation"),
+                        url=f"/{_SITE}/orbvis/api/docs",
+                        sort_index=50,
+                        icon=StaticIcon(IconNames.api),
+                    ),
                 ]
             return [
                 MainMenuTopic(
@@ -282,6 +289,13 @@ except ImportError:
                             url=f"/{_SITE}/orbvis/#/admin/icons",
                             target="main",
                             sort_index=40,
+                        ),
+                        NavItemTopicEntry(
+                            id="orbvis_api_docs",
+                            title=_("API documentation"),
+                            url=f"/{_SITE}/orbvis/api/docs",
+                            target="main",
+                            sort_index=50,
                         ),
                     ]
                 return [
