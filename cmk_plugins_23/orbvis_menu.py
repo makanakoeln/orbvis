@@ -1,9 +1,10 @@
 # OrbVis main navigation menu entry – compatible with Checkmk 2.3 – 2.6+
 # Installed via MKP to: local/share/check_mk/web/plugins/wato/orbvis_menu.py
 
-import os
-
-_SITE = os.environ.get("OMD_SITE", "")
+try:
+    from cmk.ccc.site import url_prefix as _url_prefix  # CMK 2.4+
+except ImportError:
+    from cmk.utils.site import url_prefix as _url_prefix  # CMK 2.3
 
 
 class _SelfActive(str):
@@ -70,7 +71,7 @@ try:
             TopicMenuItem(
                 name="orbvis_boards",
                 title=_("Boards"),
-                url=f"/{_SITE}/orbvis/",
+                url=f"{_url_prefix()}orbvis/",
                 sort_index=10,
                 icon="save_dashboard",
             ),
@@ -80,21 +81,21 @@ try:
                 TopicMenuItem(
                     name="orbvis_settings",
                     title=_("Settings"),
-                    url=f"/{_SITE}/orbvis/#/admin/settings",
+                    url=f"{_url_prefix()}orbvis/#/admin/settings",
                     sort_index=20,
                     icon="configuration",
                 ),
                 TopicMenuItem(
                     name="orbvis_connections",
                     title=_("Connections"),
-                    url=f"/{_SITE}/orbvis/#/admin/connections",
+                    url=f"{_url_prefix()}orbvis/#/admin/connections",
                     sort_index=30,
                     icon="sites",
                 ),
                 TopicMenuItem(
                     name="orbvis_images",
                     title=_("Images"),
-                    url=f"/{_SITE}/orbvis/#/admin/icons",
+                    url=f"{_url_prefix()}orbvis/#/admin/icons",
                     sort_index=40,
                     icon="icons",
                 ),
@@ -154,7 +155,7 @@ except ImportError:
                 MainMenuItem(
                     name="orbvis_boards",
                     title=_("Boards"),
-                    url=f"/{_SITE}/orbvis/",
+                    url=f"{_url_prefix()}orbvis/",
                     sort_index=10,
                     icon=StaticIcon(IconNames.save_dashboard),
                 ),
@@ -164,28 +165,29 @@ except ImportError:
                     MainMenuItem(
                         name="orbvis_settings",
                         title=_("Settings"),
-                        url=f"/{_SITE}/orbvis/#/admin/settings",
+                        url=f"{_url_prefix()}orbvis/#/admin/settings",
                         sort_index=20,
                         icon=StaticIcon(IconNames.configuration),
                     ),
                     MainMenuItem(
                         name="orbvis_connections",
                         title=_("Connections"),
-                        url=f"/{_SITE}/orbvis/#/admin/connections",
+                        url=f"{_url_prefix()}orbvis/#/admin/connections",
                         sort_index=30,
                         icon=StaticIcon(IconNames.sites),
                     ),
                     MainMenuItem(
                         name="orbvis_images",
                         title=_("Images"),
-                        url=f"/{_SITE}/orbvis/#/admin/icons",
+                        url=f"{_url_prefix()}orbvis/#/admin/icons",
                         sort_index=40,
                         icon=StaticIcon(IconNames.icons),
                     ),
                     MainMenuItem(
                         name="orbvis_api_docs",
                         title=_("API documentation"),
-                        url=f"/{_SITE}/orbvis/api/docs",
+                        url=f"{_url_prefix()}orbvis/api/docs",
+                        target="_blank",
                         sort_index=50,
                         icon=StaticIcon(IconNames.api),
                     ),
@@ -262,7 +264,7 @@ except ImportError:
                     NavItemTopicEntry(
                         id="orbvis_boards",
                         title=_("Boards"),
-                        url=f"/{_SITE}/orbvis/",
+                        url=f"{_url_prefix()}orbvis/",
                         target="main",
                         sort_index=10,
                     ),
@@ -272,29 +274,29 @@ except ImportError:
                         NavItemTopicEntry(
                             id="orbvis_settings",
                             title=_("Settings"),
-                            url=f"/{_SITE}/orbvis/#/admin/settings",
+                            url=f"{_url_prefix()}orbvis/#/admin/settings",
                             target="main",
                             sort_index=20,
                         ),
                         NavItemTopicEntry(
                             id="orbvis_connections",
                             title=_("Connections"),
-                            url=f"/{_SITE}/orbvis/#/admin/connections",
+                            url=f"{_url_prefix()}orbvis/#/admin/connections",
                             target="main",
                             sort_index=30,
                         ),
                         NavItemTopicEntry(
                             id="orbvis_images",
                             title=_("Images"),
-                            url=f"/{_SITE}/orbvis/#/admin/icons",
+                            url=f"{_url_prefix()}orbvis/#/admin/icons",
                             target="main",
                             sort_index=40,
                         ),
                         NavItemTopicEntry(
                             id="orbvis_api_docs",
                             title=_("API documentation"),
-                            url=f"/{_SITE}/orbvis/api/docs",
-                            target="main",
+                            url=f"{_url_prefix()}orbvis/api/docs",
+                            target="_blank",
                             sort_index=50,
                         ),
                     ]
