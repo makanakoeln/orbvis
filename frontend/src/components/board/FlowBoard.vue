@@ -226,6 +226,10 @@ interface FNode extends SimulationNodeDatum {
     nodeType: 'host' | 'service';
     hostId?: string;
     svcTotalCount?: number; // total services for this host (set on service nodes for label visibility)
+    // Cached pointer to the host's TopologyNode so the tooltip can show the
+    // same status detail (alias, services_summary, …) as the static board.
+    // Only set on host nodes; service nodes have minimal data via their parent.
+    topo?: TopologyNode;
     // d3-force sets x/y/vx/vy
 }
 interface FLink extends SimulationLinkDatum<FNode> {
@@ -249,15 +253,28 @@ function boardObjectFromFNode(d: FNode): BoardObject {
 }
 
 function objectStateFromFNode(d: FNode): ObjectState {
+    const topo = d.topo;
     return {
         object_id: d.id,
         type: d.nodeType,
         state: d.state as ObjectState['state'],
         output: d.output,
         perf_data: '',
-        acknowledged: false,
-        in_downtime: false,
+        acknowledged: topo?.acknowledged ?? false,
+        in_downtime: topo?.in_downtime ?? false,
         stale: false,
+        notifications_enabled: topo?.notifications_enabled ?? true,
+        active_checks_enabled: topo?.active_checks_enabled ?? true,
+        alias: topo?.alias,
+        address: topo?.address,
+        site_id: topo?.site_id ?? null,
+        last_check: topo?.last_check ?? null,
+        next_check: topo?.next_check ?? null,
+        last_state_change: topo?.last_state_change ?? null,
+        state_type: topo?.state_type,
+        current_attempt: topo?.current_attempt,
+        max_attempts: topo?.max_attempts,
+        services_summary: topo?.services_summary ?? null,
     };
 }
 
@@ -409,6 +426,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                   output: n.output,
                   bfsLevel: levels.get(n.name) ?? 0,
                   nodeType: 'host',
+                  topo: n,
               }
             : {
                   id: n.name,
@@ -416,6 +434,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                   output: n.output,
                   bfsLevel: levels.get(n.name) ?? 0,
                   nodeType: 'host',
+                  topo: n,
               };
         nodeCache.set(n.name, node);
         return node;

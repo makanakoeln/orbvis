@@ -9,6 +9,7 @@ import logging
 import pkgutil
 import re as _re
 import threading
+import time
 import types
 from collections.abc import AsyncIterator, Iterator, Mapping
 from contextlib import asynccontextmanager
@@ -35,7 +36,7 @@ from app.core.config import settings
 from app.integrations import checkmk as _cmk_integration
 from app.integrations import checkmk_sites as _cmk_sites
 from app.schemas.board import AggregationInfo, AggregationNode
-from app.schemas.state import ObjectState
+from app.schemas.state import ObjectState, ServicesSummary
 
 logger = logging.getLogger(__name__)
 
@@ -319,7 +320,9 @@ class _ExtraFields(TypedDict, total=False):
     """Tail columns of a Livestatus host/service row — mapped onto ObjectState."""
 
     address: str
+    alias: str
     last_check: float | None
+    next_check: float | None
     state_type: str
     current_attempt: int
     max_attempts: int
@@ -435,11 +438,11 @@ _SERVICE_SEVERITY = {"OK": 0, "UNKNOWN": 1, "WARNING": 2, "CRITICAL": 3, "PENDIN
 _STATE_TYPE_MAP = {0: "SOFT", 1: "HARD"}
 
 _HOST_EXTRA_COLS = (
-    "address last_check state_type current_attempt max_check_attempts last_state_change"
-    " notifications_enabled active_checks_enabled"
+    "address alias last_check next_check state_type current_attempt max_check_attempts"
+    " last_state_change notifications_enabled active_checks_enabled"
 )
 _SVC_EXTRA_COLS = (
-    "last_check state_type current_attempt max_check_attempts last_state_change"
+    "last_check next_check state_type current_attempt max_check_attempts last_state_change"
     " notifications_enabled active_checks_enabled"
 )
 
@@ -451,16 +454,19 @@ def _apply_extra(
     col = offset
     if include_address:
         state.address = _row_str(row, col)
-        col += 1
+        state.alias = _row_str(row, col + 1)
+        col += 2
     lc = _row_float(row, col)
-    lsc = _row_float(row, col + 4)
+    nc = _row_float(row, col + 1)
+    lsc = _row_float(row, col + 5)
     state.last_check = lc if lc > 0 else None
-    state.state_type = _STATE_TYPE_MAP.get(_row_int(row, col + 1, default=1), "HARD")
-    state.current_attempt = _row_int(row, col + 2)
-    state.max_attempts = _row_int(row, col + 3)
+    state.next_check = nc if nc > 0 else None
+    state.state_type = _STATE_TYPE_MAP.get(_row_int(row, col + 2, default=1), "HARD")
+    state.current_attempt = _row_int(row, col + 3)
+    state.max_attempts = _row_int(row, col + 4)
     state.last_state_change = lsc if lsc > 0 else None
-    state.notifications_enabled = _row_bool(row, col + 5, default=True)
-    state.active_checks_enabled = _row_bool(row, col + 6, default=True)
+    state.notifications_enabled = _row_bool(row, col + 6, default=True)
+    state.active_checks_enabled = _row_bool(row, col + 7, default=True)
     return state
 
 
@@ -558,6 +564,10 @@ class LivestatusConnection(ConnectionBase):
         self._verify_ssl = verify_ssl
         self._semaphore = asyncio.Semaphore(settings.connection_pool_size)
         self._aggregations_cache: tuple[float, list[AggregationInfo]] | None = None
+        # Per-host-set cache for get_services_summary (TTL=_SERVICES_SUMMARY_CACHE_TTL)
+        self._services_summary_cache: dict[
+            frozenset[str], tuple[float, dict[str, ServicesSummary]]
+        ] = {}
 
         # Auto-federate when this connection points at the central site's local
         # Livestatus socket — the socket only sees local data, so MultiSiteConnection
@@ -722,10 +732,18 @@ class LivestatusConnection(ConnectionBase):
         return []
 
     async def get_topology(self) -> list[TopologyRow]:
+        # Fetch hosts + the same status-detail columns as ObjectState so the
+        # FlowBoard tooltip can render alias / attempts / next-check / etc.
+        # without a separate query.
         tagged = await self._query_with_site(
-            "GET hosts\nColumns: name parents state plugin_output\n"
+            "GET hosts\n"
+            "Columns: name parents state plugin_output "
+            "alias address acknowledged scheduled_downtime_depth last_check next_check "
+            "state_type current_attempt max_check_attempts last_state_change "
+            "notifications_enabled active_checks_enabled\n"
         )
-        result: list[TopologyRow] = []
+        rows: list[tuple[str | None, TopologyRow, str]] = []
+        host_names: list[str] = []
         for site_id, r in tagged:
             name = _row_str(r, 0)
             if not name:
@@ -737,14 +755,42 @@ class LivestatusConnection(ConnectionBase):
                 parents = [p.strip() for p in raw_parents.split(",") if p.strip()]
             else:
                 parents = []
+            lc = _row_float(r, 8)
+            nc = _row_float(r, 9)
+            lsc = _row_float(r, 13)
             row: TopologyRow = {
                 "name": name,
                 "parents": parents,
                 "state": _HOST_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
                 "output": _row_str(r, 3),
+                "alias": _row_str(r, 4),
+                "address": _row_str(r, 5),
+                "acknowledged": _row_bool(r, 6, default=False),
+                "in_downtime": _row_int(r, 7) > 0,
+                "last_check": lc if lc > 0 else None,
+                "next_check": nc if nc > 0 else None,
+                "state_type": _STATE_TYPE_MAP.get(_row_int(r, 10, default=1), "HARD"),
+                "current_attempt": _row_int(r, 11),
+                "max_attempts": _row_int(r, 12),
+                "last_state_change": lsc if lsc > 0 else None,
+                "notifications_enabled": _row_bool(r, 14, default=True),
+                "active_checks_enabled": _row_bool(r, 15, default=True),
             }
             if site_id is not None:
                 row["site_id"] = site_id
+            rows.append((site_id, row, name))
+            host_names.append(name)
+
+        try:
+            summaries = await self.get_services_summary(host_names) if host_names else {}
+        except Exception:
+            logger.warning("Topology services-summary fetch failed", exc_info=True)
+            summaries = {}
+        result: list[TopologyRow] = []
+        for _, row, name in rows:
+            summary = summaries.get(name)
+            if summary is not None:
+                row["services_summary"] = summary
             result.append(row)
         return result
 
@@ -1386,6 +1432,110 @@ class LivestatusConnection(ConnectionBase):
             f"{filter_lines}"
         )
         return dict(_parse_service_state_row(r) for r in rows)
+
+    # Largest host set we'll send as a single batched query. Each host adds
+    # ~5 stats clauses (state 0–3 + pending) wrapped in StatsAnd:2; 200 hosts
+    # ≈ 1000 stats clauses, well within Livestatus query-size limits but kept
+    # bounded so a single tooltip refresh can't block the connection.
+    _SERVICES_SUMMARY_BATCH = 200
+    # Skip the per-host enumeration entirely above this size — pills would be
+    # cluttered for huge maps anyway, and every map refresh would hammer
+    # Livestatus. The host tooltip simply omits the pill row.
+    _SERVICES_SUMMARY_MAX_HOSTS = 1000
+    # Result cache TTL — slightly under the default refresh interval so a
+    # second concurrent refresh of the same board (multi-tab, multi-user) can
+    # hit the cache. Stats data goes stale within the refresh cycle anyway.
+    _SERVICES_SUMMARY_CACHE_TTL = 4.0
+
+    async def get_services_summary(self, hostnames: list[str]) -> dict[str, ServicesSummary]:
+        """Return service-state counts per host.
+
+        Strategy:
+        1. Skip large host sets (>``_SERVICES_SUMMARY_MAX_HOSTS``) — return
+           empty so the tooltip omits the pill row instead of melting Livestatus.
+        2. Hit a TTL-bounded result cache keyed by the host set. Concurrent
+           refreshes of the same board don't re-query.
+        3. For the remaining hosts, run one batched Stats query per chunk of
+           ``_SERVICES_SUMMARY_BATCH`` hosts; each chunk uses
+           ``Stats: state = X\\nStats: host_name = h\\nStatsAnd: 2`` clauses
+           so a single round-trip yields per-host counters without relying on
+           ``StatsGroupBy`` (which behaves inconsistently under MultiSite).
+
+        For typical maps (≤200 hosts) this is one Livestatus round-trip per
+        refresh — down from N round-trips in the previous parallel version.
+        """
+        if not hostnames:
+            return {}
+        if len(hostnames) > self._SERVICES_SUMMARY_MAX_HOSTS:
+            return {h: ServicesSummary() for h in hostnames}
+
+        cache_key = frozenset(hostnames)
+        cached = self._services_summary_cache.get(cache_key)
+        now = time.monotonic()
+        if cached is not None and now - cached[0] < self._SERVICES_SUMMARY_CACHE_TTL:
+            return dict(cached[1])
+
+        async def _summary_for_chunk(chunk: list[str]) -> dict[str, ServicesSummary]:
+            filters = "".join(f"Filter: host_name = {_ls_escape(h)}\n" for h in chunk)
+            if len(chunk) > 1:
+                filters += f"Or: {len(chunk)}\n"
+            stats_clauses = []
+            for h in chunk:
+                hf = _ls_escape(h)
+                for state_code in (0, 1, 2, 3):
+                    stats_clauses.append(
+                        f"Stats: state = {state_code}\nStats: host_name = {hf}\nStatsAnd: 2\n"
+                    )
+                stats_clauses.append(
+                    f"Stats: has_been_checked = 0\nStats: host_name = {hf}\nStatsAnd: 2\n"
+                )
+            query = f"GET services\n{filters}{''.join(stats_clauses)}"
+            try:
+                rows = await self._query(query)
+            except Exception:
+                logger.warning(
+                    "Batched services-summary query failed for %d host(s)",
+                    len(chunk),
+                    exc_info=True,
+                )
+                return {h: ServicesSummary() for h in chunk}
+            result: dict[str, ServicesSummary] = {h: ServicesSummary() for h in chunk}
+            if not rows or not rows[0]:
+                return result
+            row = rows[0]
+            # 5 counters per host, in chunk order
+            for i, h in enumerate(chunk):
+                base = i * 5
+                result[h] = ServicesSummary(
+                    ok=_row_int(row, base),
+                    warning=_row_int(row, base + 1),
+                    critical=_row_int(row, base + 2),
+                    unknown=_row_int(row, base + 3),
+                    pending=_row_int(row, base + 4),
+                )
+            return result
+
+        chunks = [
+            hostnames[i : i + self._SERVICES_SUMMARY_BATCH]
+            for i in range(0, len(hostnames), self._SERVICES_SUMMARY_BATCH)
+        ]
+        partials = await asyncio.gather(*[_summary_for_chunk(c) for c in chunks])
+        merged: dict[str, ServicesSummary] = {}
+        for p in partials:
+            merged.update(p)
+        # Drop entries whose TTL has passed before inserting; bursts of
+        # different host-sets must not accumulate beyond the time horizon.
+        for k in [
+            k
+            for k, (ts, _) in self._services_summary_cache.items()
+            if now - ts >= self._SERVICES_SUMMARY_CACHE_TTL
+        ]:
+            self._services_summary_cache.pop(k, None)
+        self._services_summary_cache[cache_key] = (now, merged)
+        if len(self._services_summary_cache) > 32:
+            oldest = next(iter(self._services_summary_cache))
+            self._services_summary_cache.pop(oldest, None)
+        return dict(merged)
 
     async def get_hosts_services_batch(self, hostnames: list[str]) -> dict[str, list[ServiceRow]]:
         if not hostnames:

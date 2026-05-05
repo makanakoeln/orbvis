@@ -143,6 +143,11 @@ export default {
         hover: {
             acknowledged: 'quittiert',
             inDowntime: 'in Wartung',
+            since: 'seit {duration}',
+            nextCheckIn: 'nächster Check in {duration}',
+            checkOverdue: 'Check überfällig seit {duration}',
+            notificationsDisabled:
+                'Benachrichtigungen deaktiviert — bei Problemen wird nichts gemeldet',
         },
     },
     boardSettings: {

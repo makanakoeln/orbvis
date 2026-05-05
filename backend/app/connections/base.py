@@ -7,11 +7,16 @@ from dataclasses import dataclass, field
 from typing import NotRequired, TypedDict
 
 from app.schemas.board import AggregationInfo, AggregationNode
-from app.schemas.state import ObjectState
+from app.schemas.state import ObjectState, ServicesSummary
 
 
 class TopologyRow(TypedDict):
     """One host in the topology view (parent-child flow-graph).
+
+    Carries the same status-detail fields as ``ObjectState`` so the FlowBoard
+    tooltip can display the same information as the static-board tooltip without
+    a second round-trip. Optional fields are omitted by connections that don't
+    populate them (the frontend treats missing as unknown).
 
     ``site_id`` is set in distributed Checkmk setups; other connections omit it.
     """
@@ -21,6 +26,19 @@ class TopologyRow(TypedDict):
     state: str
     output: str
     site_id: NotRequired[str | None]
+    alias: NotRequired[str]
+    address: NotRequired[str]
+    acknowledged: NotRequired[bool]
+    in_downtime: NotRequired[bool]
+    notifications_enabled: NotRequired[bool]
+    active_checks_enabled: NotRequired[bool]
+    last_check: NotRequired[float | None]
+    next_check: NotRequired[float | None]
+    last_state_change: NotRequired[float | None]
+    state_type: NotRequired[str]
+    current_attempt: NotRequired[int]
+    max_attempts: NotRequired[int]
+    services_summary: NotRequired[ServicesSummary | None]
 
 
 class ServiceRow(TypedDict):
@@ -163,6 +181,32 @@ class ConnectionBase(ABC):
         results: dict[str, list[ServiceRow]] = {}
         for h in hostnames:
             results[h] = await self.get_host_services(h)
+        return results
+
+    async def get_services_summary(self, hostnames: list[str]) -> dict[str, ServicesSummary]:
+        """Return per-host service-state counts for the given hosts.
+
+        Used by the host hover-tooltip to show pills like "12 OK · 2 WARN · 1 CRIT"
+        without transporting the full service list. Default falls back to
+        counting via ``get_host_services``; Livestatus overrides with a single
+        grouped Stats query.
+        """
+        results: dict[str, ServicesSummary] = {}
+        for h in hostnames:
+            summary = ServicesSummary()
+            for svc in await self.get_host_services(h):
+                state = svc.get("state")
+                if state == "OK":
+                    summary.ok += 1
+                elif state == "WARNING":
+                    summary.warning += 1
+                elif state == "CRITICAL":
+                    summary.critical += 1
+                elif state == "UNKNOWN":
+                    summary.unknown += 1
+                elif state == "PENDING":
+                    summary.pending += 1
+            results[h] = summary
         return results
 
     async def get_host_geo(self, hostname: str) -> tuple[float, float] | None:

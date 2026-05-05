@@ -15,6 +15,14 @@ ServiceStateValue = Literal["OK", "WARNING", "CRITICAL", "UNKNOWN", "PENDING"]
 #   NOT_FOUND     — host/service/group is absent from monitoring data entirely
 
 
+class ServicesSummary(BaseModel):
+    ok: int = 0
+    warning: int = 0
+    critical: int = 0
+    unknown: int = 0
+    pending: int = 0
+
+
 class ObjectState(BaseModel):
     object_id: str
     type: str
@@ -27,7 +35,9 @@ class ObjectState(BaseModel):
     notifications_enabled: bool = True
     active_checks_enabled: bool = True
     address: str = ""
+    alias: str = ""
     last_check: float | None = None
+    next_check: float | None = None
     state_type: str = ""  # "HARD" | "SOFT" | ""
     current_attempt: int = 0
     max_attempts: int = 0
@@ -36,6 +46,8 @@ class ObjectState(BaseModel):
     site_id: str | None = None
     # Populated only for type=='aggregation' when the BoardObject has expand_depth > 0.
     tree: AggregationNode | None = None
+    # Aggregated service-state counts; populated only for type=='host'.
+    services_summary: ServicesSummary | None = None
 
 
 class MapStates(BaseModel):

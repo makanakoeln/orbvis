@@ -142,6 +142,10 @@ export default {
         hover: {
             acknowledged: 'acknowledged',
             inDowntime: 'in downtime',
+            since: 'since {duration}',
+            nextCheckIn: 'next check in {duration}',
+            checkOverdue: 'check overdue by {duration}',
+            notificationsDisabled: 'Notifications disabled — alerts will not be sent for this host',
         },
     },
     boardSettings: {

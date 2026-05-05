@@ -1,23 +1,7 @@
 import type { BoardObject as MapObject, ObjectState } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';
 import { parsePerfData } from '@/utils/perf';
-
-function _fmtTs(ts: number | null | undefined): string {
-    if (!ts) return '';
-    return new Date(ts * 1000).toLocaleString();
-}
-
-function _fmtDuration(ts: number | null | undefined): string {
-    if (!ts) return '';
-    const s = Math.max(0, Math.floor(Date.now() / 1000 - ts));
-    if (s < 60) return `${s}s`;
-    const m = Math.floor(s / 60);
-    if (m < 60) return `${m}m ${s % 60}s`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ${m % 60}m`;
-    const d = Math.floor(h / 24);
-    return `${d}d ${h % 24}h`;
-}
+import { formatRelativeDuration, formatRelativeFuture, formatTimestamp } from '@/utils/time';
 
 /**
  * Interpolate a template string with object and state data.
@@ -32,14 +16,18 @@ function _fmtDuration(ts: number | null | undefined): string {
  *   {{service}}          – service description
  *   {{group}}            – group name (hostgroup / servicegroup)
  *   {{address}}          – host IP address
+ *   {{alias}}            – host alias / display name from monitoring core
  *   {{acknowledged}}     – 'true' / 'false'
  *   {{in_downtime}}      – 'true' / 'false'
  *   {{stale}}            – 'true' / 'false'
  *   {{state_type}}       – 'HARD' / 'SOFT'
  *   {{attempts}}         – 'current/max' check attempts (e.g. '2/3')
  *   {{last_check}}       – formatted timestamp of last check
+ *   {{next_check}}       – formatted timestamp of next scheduled check
+ *   {{next_check_in}}    – relative time until next check (e.g. 'in 28s')
  *   {{last_state_change}}– formatted timestamp of last state change
  *   {{state_duration}}   – time since last state change (e.g. '3h 12m')
+ *   {{services_summary}} – host service counts (e.g. '12 OK · 2 WARN · 1 CRIT')
  *   {{perf_data}}        – raw performance data string
  *   {{metric}}           – value of first perf metric (or named one via {{metric:label}})
  *   {{metric_unit}}      – unit of first perf metric
@@ -66,6 +54,7 @@ export function interpolateTemplate(
         service: object.service_description ?? '',
         group: object.group_name ?? '',
         address: state?.address ?? '',
+        alias: state?.alias ?? '',
         acknowledged: state?.acknowledged ? 'true' : 'false',
         in_downtime: state?.in_downtime ? 'true' : 'false',
         stale: state?.stale ? 'true' : 'false',
@@ -74,9 +63,12 @@ export function interpolateTemplate(
             state?.current_attempt && state?.max_attempts
                 ? `${state.current_attempt}/${state.max_attempts}`
                 : '',
-        last_check: _fmtTs(state?.last_check),
-        last_state_change: _fmtTs(state?.last_state_change),
-        state_duration: _fmtDuration(state?.last_state_change),
+        last_check: formatTimestamp(state?.last_check),
+        next_check: formatTimestamp(state?.next_check),
+        next_check_in: formatRelativeFuture(state?.next_check),
+        last_state_change: formatTimestamp(state?.last_state_change),
+        state_duration: formatRelativeDuration(state?.last_state_change),
+        services_summary: formatServicesSummary(state?.services_summary),
         perf_data: perfRaw,
         metric: firstMetric ? String(firstMetric.value) + firstMetric.unit : '',
         metric_unit: firstMetric?.unit ?? '',
@@ -100,4 +92,21 @@ export function resolveTemplate(
     globalTpl: string | null | undefined,
 ): string | null {
     return objectTpl || mapTpl || globalTpl || null;
+}
+
+/**
+ * Compact dot-separated host service-state summary (e.g. "1 CRIT · 2 WARN · 12 OK").
+ * Sorted severity-descending so the worst state is read first.
+ */
+export function formatServicesSummary(
+    summary: ObjectState['services_summary'] | undefined,
+): string {
+    if (!summary) return '';
+    const parts: string[] = [];
+    if (summary.critical) parts.push(`${summary.critical} CRIT`);
+    if (summary.unknown) parts.push(`${summary.unknown} UNKN`);
+    if (summary.warning) parts.push(`${summary.warning} WARN`);
+    if (summary.pending) parts.push(`${summary.pending} PEND`);
+    if (summary.ok) parts.push(`${summary.ok} OK`);
+    return parts.join(' · ');
 }

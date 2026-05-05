@@ -22,6 +22,7 @@ from app.schemas.connection import (
     ConnectionUpdate,
     _redact,
 )
+from app.schemas.state import ServicesSummary
 from app.services import connection_service
 from app.services.state_service import get_connection, get_connection_objects
 
@@ -150,6 +151,19 @@ class TopologyNode(BaseModel):
     output: str
     site_id: str | None = None
     services: list[ServiceNode] = []
+    alias: str = ""
+    address: str = ""
+    acknowledged: bool = False
+    in_downtime: bool = False
+    notifications_enabled: bool = True
+    active_checks_enabled: bool = True
+    last_check: float | None = None
+    next_check: float | None = None
+    last_state_change: float | None = None
+    state_type: str = ""
+    current_attempt: int = 0
+    max_attempts: int = 0
+    services_summary: ServicesSummary | None = None
 
 
 def _filter_topology(

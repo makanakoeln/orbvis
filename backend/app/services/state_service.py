@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from app.connections.base import ServiceRow
 from app.core.config import settings
 from app.schemas.board import AggregationNode, BoardConfig, BoardObject, RadarView
-from app.schemas.state import MapStates, ObjectState
+from app.schemas.state import MapStates, ObjectState, ServicesSummary
 
 # Combined severity for cross-scale worst-state aggregation (recognize_services)
 _COMBINED_SEVERITY: dict[str, int] = {
@@ -209,17 +209,55 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
                 )
                 results[obj.id] = s
 
+    host_objs = hosts_soft + hosts_hard
+    summary_hosts = sorted(
+        {
+            o.host_name
+            for o in host_objs
+            if o.host_name is not None
+            and results.get(o.id) is not None
+            and results[o.id].state not in ("NO_PERMISSION", "NOT_FOUND")
+        }
+    )
     rs_objs = [
         o
-        for o in hosts_soft + hosts_hard
+        for o in host_objs
         if o.recognize_services
         and results.get(o.id) is not None
         and results[o.id].state != "NO_PERMISSION"
     ]
-    if rs_objs:
-        rs_names = list({o.host_name for o in rs_objs if o.host_name is not None})
+    rs_names = list({o.host_name for o in rs_objs if o.host_name is not None})
+
+    # Run summary + recognize_services service-batch in parallel — both depend on
+    # the host-state batch above but neither depends on the other.
+    summary_task: asyncio.Task[dict[str, ServicesSummary]] | None = (
+        asyncio.create_task(connection.get_services_summary(summary_hosts))
+        if summary_hosts
+        else None
+    )
+    rs_task: asyncio.Task[dict[str, list[ServiceRow]]] | None = (
+        asyncio.create_task(connection.get_hosts_services_batch(rs_names)) if rs_objs else None
+    )
+
+    if summary_task is not None:
         try:
-            rs_svc_batch = await connection.get_hosts_services_batch(rs_names)
+            summary_batch = await summary_task
+        except Exception:
+            logger.warning("Services-summary query failed", exc_info=True)
+            summary_batch = {}
+        for obj in host_objs:
+            if obj.host_name is None:
+                continue
+            existing = results.get(obj.id)
+            if existing is None:
+                continue
+            summary = summary_batch.get(obj.host_name)
+            if summary is not None:
+                results[obj.id] = existing.model_copy(update={"services_summary": summary})
+
+    if rs_task is not None:
+        try:
+            rs_svc_batch = await rs_task
         except Exception:
             logger.warning("Batch host-services query failed", exc_info=True)
             rs_svc_batch = {}

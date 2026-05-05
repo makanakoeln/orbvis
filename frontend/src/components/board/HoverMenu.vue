@@ -26,45 +26,149 @@
 
             <!-- Default content -->
             <template v-else>
-                <!-- Header -->
-                <div class="flex items-start gap-2 mb-2">
+                <!-- Header: hostname + state on one line — operator reads
+                     "localhost — UP since 2d 11h" as a single headline. -->
+                <div class="flex items-baseline gap-2 flex-wrap">
                     <span
                         v-if="hasMonitoring"
-                        class="w-2 h-2 rounded-full mt-1 shrink-0"
+                        class="w-2 h-2 rounded-full shrink-0 self-center"
                         :class="stateColor"
                     />
-                    <div class="min-w-0">
-                        <div
-                            class="font-semibold text-[var(--text)] text-sm leading-tight truncate"
-                        >
-                            {{ displayName }}
-                        </div>
-                        <div class="text-xs text-[var(--text-muted)] mt-0.5">
-                            {{ hoverTypeLabel }}
-                        </div>
+                    <div
+                        class="font-semibold text-[var(--text)] text-sm leading-tight truncate min-w-0 flex-1"
+                    >
+                        {{ displayName }}
                     </div>
+                    <span
+                        v-if="hasMonitoring && state"
+                        class="shrink-0 text-sm font-bold leading-tight"
+                        :class="stateTextColor"
+                    >
+                        {{ state.state }}
+                    </span>
+                    <span
+                        v-if="hasMonitoring && state && stateDuration"
+                        class="shrink-0 text-[10px] text-[var(--text-muted)]"
+                    >
+                        {{ t('board.hover.since', { duration: stateDuration }) }}
+                    </span>
+                </div>
+                <!-- Subtitle: type · alias · address · @site (full width, second row) -->
+                <div class="text-xs text-[var(--text-muted)] mt-0.5 truncate">
+                    {{ subtitleText }}
                 </div>
 
                 <template v-if="hasMonitoring">
-                    <!-- State -->
-                    <div v-if="state" class="text-xs font-semibold mt-1" :class="stateTextColor">
-                        {{ state.state }}
-                        <span v-if="state.acknowledged" class="text-[var(--text-muted)] font-normal"
-                            >· {{ t('board.hover.acknowledged') }}</span
+                    <!-- Status modifiers (ACK / DOWNTIME / STALE / MUTED / Attempts) -->
+                    <div v-if="state">
+                        <!-- Attempts: only when interesting (SOFT escalation, attempt > 1) -->
+                        <div v-if="attemptsBadge" class="text-[10px] mt-1.5" :class="attemptsCls">
+                            {{ attemptsBadge }}
+                        </div>
+                        <!-- Modifier badges (ACK / DOWNTIME / STALE / MUTED) — directly
+                             under the state so the operator sees "no action needed" or
+                             "I won't be paged" before scrolling to output/pills. -->
+                        <div
+                            v-if="
+                                state.acknowledged ||
+                                state.in_downtime ||
+                                state.stale ||
+                                state.notifications_enabled === false
+                            "
+                            class="flex gap-1.5 mt-1.5 flex-wrap"
                         >
-                        <span
-                            v-else-if="state.in_downtime"
-                            class="text-[var(--text-muted)] font-normal"
-                            >· {{ t('board.hover.inDowntime') }}</span
-                        >
+                            <span
+                                v-if="state.acknowledged"
+                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/20 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/40 dark:ring-amber-500/25"
+                            >
+                                <svg
+                                    class="w-2.5 h-2.5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="3"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M4.5 12.75l6 6 9-13.5"
+                                    />
+                                </svg>
+                                ACK
+                            </span>
+                            <span
+                                v-if="state.in_downtime"
+                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/20 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 ring-1 ring-blue-500/40 dark:ring-blue-500/25"
+                            >
+                                <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                </svg>
+                                DOWNTIME
+                            </span>
+                            <span
+                                v-if="state.stale"
+                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-zinc-500/20 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-500/40 dark:ring-zinc-500/25"
+                            >
+                                <svg
+                                    class="w-2.5 h-2.5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2.5"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
+                                STALE
+                            </span>
+                            <!-- Critical operator awareness: notifications disabled means
+                                 nobody gets paged when this host breaks. Don't let the
+                                 operator assume otherwise. -->
+                            <span
+                                v-if="state.notifications_enabled === false"
+                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/20 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/40 dark:ring-amber-500/25"
+                                :title="t('board.hover.notificationsDisabled')"
+                            >
+                                <svg
+                                    class="w-2.5 h-2.5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M9.143 17.082a24.248 24.248 0 003.844.148m-3.844-.148a23.856 23.856 0 01-5.455-1.31 8.964 8.964 0 002.3-5.542m3.155 6.852a3 3 0 005.667 1.97m1.965-2.277L21 21M4.5 4.5l15 15"
+                                    />
+                                </svg>
+                                MUTED
+                            </span>
+                        </div>
                     </div>
 
                     <!-- Output -->
                     <div
                         v-if="state?.output"
-                        class="text-xs text-[var(--text-muted)] mt-2 leading-snug line-clamp-3 break-words"
+                        class="text-xs text-[var(--text-muted)] mt-2.5 leading-snug line-clamp-3 break-words"
                     >
                         {{ state.output }}
+                    </div>
+
+                    <!-- Services summary pills (host objects only) -->
+                    <div v-if="servicePills.length" class="flex flex-wrap gap-1 mt-2.5">
+                        <span
+                            v-for="pill in servicePills"
+                            :key="pill.label"
+                            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                            :class="pill.cls"
+                        >
+                            <span class="w-1.5 h-1.5 rounded-full" :class="pill.dot" />
+                            {{ pill.count }} {{ pill.label }}
+                        </span>
                     </div>
 
                     <!-- CMK Perfometer (loaded async from backend) -->
@@ -113,58 +217,9 @@
                         </template>
                     </div>
 
-                    <!-- Badges -->
-                    <div
-                        v-if="state?.acknowledged || state?.in_downtime || state?.stale"
-                        class="flex gap-1.5 mt-2.5 flex-wrap"
-                    >
-                        <span
-                            v-if="state.acknowledged"
-                            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/20 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/40 dark:ring-amber-500/25"
-                        >
-                            <svg
-                                class="w-2.5 h-2.5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="3"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M4.5 12.75l6 6 9-13.5"
-                                />
-                            </svg>
-                            ACK
-                        </span>
-                        <span
-                            v-if="state.in_downtime"
-                            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/20 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 ring-1 ring-blue-500/40 dark:ring-blue-500/25"
-                        >
-                            <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                            </svg>
-                            DOWNTIME
-                        </span>
-                        <span
-                            v-if="state.stale"
-                            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-zinc-500/20 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-500/40 dark:ring-zinc-500/25"
-                        >
-                            <svg
-                                class="w-2.5 h-2.5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="2.5"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                            </svg>
-                            STALE
-                        </span>
+                    <!-- Next check (relative; warns when overdue) -->
+                    <div v-if="nextCheckText" class="text-[10px] mt-2.5" :class="nextCheckText.cls">
+                        {{ nextCheckText.text }}
                     </div>
                 </template>
             </template>
@@ -174,7 +229,7 @@
 
 <script setup lang="ts">
 import DOMPurify, { type Config as DOMPurifyConfig } from 'dompurify';
-import { computed, type CSSProperties, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, type CSSProperties, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { metricsApi } from '@/api/client';
@@ -183,6 +238,7 @@ import type { BoardObject, ObjectState, PerfometerResult } from '@/types/api';
 import { getBoardObjectName, getObjectTypeLabel, VISUAL_ONLY_TYPES } from '@/utils/naming';
 import { parsePerfData, type PerfMetric, utilColor, utilPercent } from '@/utils/perf';
 import { interpolateTemplate } from '@/utils/template';
+import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time';
 
 const _PURIFY_CONFIG = {
     ALLOWED_TAGS: ['b', 'i', 'u', 'em', 'strong', 'span', 'div', 'p', 'br', 'a', 'ul', 'ol', 'li'],
@@ -367,6 +423,146 @@ const stateColor = computed(() => STATE_BG[props.state?.state ?? 'PENDING'] ?? '
 const stateTextColor = computed(
     () => STATE_TEXT[props.state?.state ?? 'PENDING'] ?? 'text-zinc-500',
 );
+
+const subtitleText = computed(() => {
+    const parts: string[] = [hoverTypeLabel.value];
+    const seen = new Set<string>([displayName.value]);
+    const push = (raw: string | undefined | null, prefix = '') => {
+        const v = raw?.trim();
+        if (!v || seen.has(v)) return;
+        seen.add(v);
+        parts.push(prefix ? `${prefix}${v}` : v);
+    };
+    // alias and address help identify the host beyond the (possibly customised)
+    // displayName; site is shown last as a "@site" suffix so it reads naturally
+    // ("host · 10.0.4.12 · @eu_west").
+    push(props.state?.alias);
+    push(props.state?.address);
+    push(props.state?.site_id, '@');
+    return parts.join(' · ');
+});
+
+// Reactive clock so "since X" / "next check in X" tick down while the tooltip
+// stays open. Driven by a 1-Hz interval that lives only as long as the
+// component is mounted, so closed tooltips don't keep timers alive.
+const nowMs = ref(Date.now());
+let _tick: ReturnType<typeof setInterval> | null = null;
+onMounted(() => {
+    _tick = setInterval(() => {
+        nowMs.value = Date.now();
+    }, 1000);
+});
+onUnmounted(() => {
+    if (_tick) clearInterval(_tick);
+    _tick = null;
+});
+
+const attemptsBadge = computed(() => {
+    const cur = props.state?.current_attempt ?? 0;
+    const max = props.state?.max_attempts ?? 0;
+    if (!cur || !max) return '';
+    // Steady-state HARD checks don't need to advertise "1/3" — show only when
+    // there's something interesting (SOFT progression or non-first attempt).
+    if (props.state?.state_type === 'SOFT' || cur > 1) {
+        return `${props.state?.state_type ?? ''} ${cur}/${max}`.trim();
+    }
+    return '';
+});
+
+const stateDuration = computed(() =>
+    formatRelativeDuration(props.state?.last_state_change, nowMs.value),
+);
+
+// SOFT-state escalation deserves an amber attention cue; HARD steady-state is
+// rendered muted (or hidden entirely by attemptsBadge's own gate).
+const attemptsCls = computed(() =>
+    props.state?.state_type === 'SOFT'
+        ? 'text-amber-600 dark:text-amber-400 font-semibold'
+        : 'text-[var(--text-muted)]',
+);
+
+interface NextCheckText {
+    text: string;
+    cls: string;
+}
+const nextCheckText = computed((): NextCheckText | null => {
+    const ts = props.state?.next_check;
+    if (!ts) return null;
+    const future = formatRelativeFuture(ts, nowMs.value);
+    if (future) {
+        return {
+            text: t('board.hover.nextCheckIn', { duration: future }),
+            cls: 'text-[var(--text-muted)]',
+        };
+    }
+    // next_check is in the past — surface "overdue X" as a soft warning so
+    // the operator notices stale data without confusing it with a normal
+    // state.
+    const overdue = formatRelativeDuration(ts, nowMs.value);
+    if (!overdue) return null;
+    return {
+        text: t('board.hover.checkOverdue', { duration: overdue }),
+        cls: 'text-amber-600 dark:text-amber-400',
+    };
+});
+
+interface ServicePill {
+    label: 'OK' | 'WARN' | 'CRIT' | 'UNKN' | 'PEND';
+    count: number;
+    cls: string;
+    dot: string;
+}
+
+const servicePills = computed((): ServicePill[] => {
+    if (props.object.type !== 'host') return [];
+    const summary = props.state?.services_summary;
+    if (!summary) return [];
+    // Severity-descending: a CRIT pill catches the eye before "all green",
+    // matching the operator's "what's broken?" mental model. OK is still
+    // shown last as confirmation.
+    const pills: ServicePill[] = [];
+    if (summary.critical) {
+        pills.push({
+            label: 'CRIT',
+            count: summary.critical,
+            cls: 'bg-red-500/15 text-red-700 dark:text-red-400 ring-1 ring-red-500/30',
+            dot: 'bg-red-500',
+        });
+    }
+    if (summary.unknown) {
+        pills.push({
+            label: 'UNKN',
+            count: summary.unknown,
+            cls: 'bg-orange-500/15 text-orange-700 dark:text-orange-400 ring-1 ring-orange-500/30',
+            dot: 'bg-orange-400',
+        });
+    }
+    if (summary.warning) {
+        pills.push({
+            label: 'WARN',
+            count: summary.warning,
+            cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/30',
+            dot: 'bg-warning',
+        });
+    }
+    if (summary.pending) {
+        pills.push({
+            label: 'PEND',
+            count: summary.pending,
+            cls: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-500/30',
+            dot: 'bg-zinc-500',
+        });
+    }
+    if (summary.ok) {
+        pills.push({
+            label: 'OK',
+            count: summary.ok,
+            cls: 'bg-green-500/15 text-green-700 dark:text-green-400 ring-1 ring-green-500/30',
+            dot: 'bg-green-500',
+        });
+    }
+    return pills;
+});
 
 const perfMetrics = computed((): PerfMetric[] => {
     // Same reasoning as `isServiceLinked` above — only service-linked objects have perf data.

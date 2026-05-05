@@ -183,6 +183,14 @@ export interface BoardRead {
     context_template?: string | null;
 }
 
+export interface ServicesSummary {
+    ok: number;
+    warning: number;
+    critical: number;
+    unknown: number;
+    pending: number;
+}
+
 export interface ObjectState {
     object_id: string;
     type: string;
@@ -195,12 +203,16 @@ export interface ObjectState {
     notifications_enabled?: boolean;
     active_checks_enabled?: boolean;
     address?: string;
+    alias?: string;
+    site_id?: string | null;
     last_check?: number | null;
+    next_check?: number | null;
     state_type?: string;
     current_attempt?: number;
     max_attempts?: number;
     last_state_change?: number | null;
     tree?: AggregationNode | null;
+    services_summary?: ServicesSummary | null;
 }
 
 export interface PerfometerSegment {
@@ -238,6 +250,19 @@ export interface TopologyNode {
     output: string;
     site_id?: string | null;
     services?: ServiceNode[];
+    alias?: string;
+    address?: string;
+    acknowledged?: boolean;
+    in_downtime?: boolean;
+    notifications_enabled?: boolean;
+    active_checks_enabled?: boolean;
+    last_check?: number | null;
+    next_check?: number | null;
+    last_state_change?: number | null;
+    state_type?: string;
+    current_attempt?: number;
+    max_attempts?: number;
+    services_summary?: ServicesSummary | null;
 }
 
 export interface MapStates {

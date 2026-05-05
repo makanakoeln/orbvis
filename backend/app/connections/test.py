@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import math
+import time as _time
 
 from app.connections.base import ConnectionBase, MetricHistoryResult, ServiceRow, TopologyRow
 from app.schemas.board import AggregationInfo, AggregationNode
-from app.schemas.state import ObjectState
+from app.schemas.state import ObjectState, ServicesSummary
 
 _HOST_STATES = ["UP", "DOWN", "UNREACHABLE"]
 _SERVICE_STATES = ["OK", "WARNING", "CRITICAL", "UNKNOWN"]
@@ -181,6 +182,29 @@ _CATEGORY_METRIC_DEFS: dict[str, list[tuple[str, float, str, float]]] = {
 _DEFAULT_METRIC_DEFS: list[tuple[str, float, str, float]] = [("value", 0.0, "", 1.0)]
 
 
+def _apply_demo_timing(state: ObjectState, seed_str: str, *, max_age: int) -> None:
+    """Deterministic timing/attempt fields so the demo board exercises tooltip paths."""
+    now = _time.time()
+    seed = abs(hash(seed_str))
+    last_check = now - (seed % 60)
+    state.last_check = last_check
+    state.next_check = last_check + 60
+    state.last_state_change = now - (seed % max_age + 60)
+    state.state_type = "HARD"
+    state.current_attempt = 1
+    state.max_attempts = 3
+
+
+def _apply_demo_host_metadata(state: ObjectState, hostname: str) -> None:
+    state.alias = f"alias-{hostname}"
+    state.address = f"192.0.2.{abs(hash(hostname)) % 250 + 1}"
+    _apply_demo_timing(state, hostname, max_age=14400)
+
+
+def _apply_demo_service_metadata(state: ObjectState, host: str, service: str) -> None:
+    _apply_demo_timing(state, f"{host}:{service}", max_age=7200)
+
+
 _DEMO_AGGREGATIONS = [
     ("demo_web", "Web stack", "demo_pack"),
     ("demo_db", "Database cluster", "demo_pack"),
@@ -207,7 +231,7 @@ class TestConnection(ConnectionBase):
             output = f"CRITICAL - {hostname} is DOWN (no ICMP echo reply)"
         else:
             output = f"UNREACHABLE - parent host has no route to {hostname}"
-        return ObjectState(
+        result = ObjectState(
             object_id="",
             type="host",
             state=state,
@@ -215,6 +239,8 @@ class TestConnection(ConnectionBase):
             acknowledged=False,
             in_downtime=False,
         )
+        _apply_demo_host_metadata(result, hostname)
+        return result
 
     async def get_service_state(self, host: str, service: str) -> ObjectState:
         pinned = _PINNED_SERVICE_STATES.get((host, service))
@@ -224,7 +250,7 @@ class TestConnection(ConnectionBase):
             state = _SERVICE_STATES[hash(f"{host}:{service}") % len(_SERVICE_STATES)]
             perf_data = _generate_perfdata(host, service)
         output = _generate_output(service, state, perf_data)
-        return ObjectState(
+        result = ObjectState(
             object_id="",
             type="service",
             state=state,
@@ -233,6 +259,35 @@ class TestConnection(ConnectionBase):
             acknowledged=False,
             in_downtime=False,
         )
+        _apply_demo_service_metadata(result, host, service)
+        return result
+
+    async def get_services_summary(self, hostnames: list[str]) -> dict[str, ServicesSummary]:
+        # Compute a deterministic summary per host from the demo service set
+        # without going through the per-service get_host_services path, which
+        # would do _DEMO_SERVICES queries per host.
+        result: dict[str, ServicesSummary] = {}
+        for host in hostnames:
+            summary = ServicesSummary()
+            for svc in _DEMO_SERVICES:
+                pinned = _PINNED_SERVICE_STATES.get((host, svc))
+                state = (
+                    pinned[0]
+                    if pinned is not None
+                    else _SERVICE_STATES[hash(f"{host}:{svc}") % len(_SERVICE_STATES)]
+                )
+                if state == "OK":
+                    summary.ok += 1
+                elif state == "WARNING":
+                    summary.warning += 1
+                elif state == "CRITICAL":
+                    summary.critical += 1
+                elif state == "UNKNOWN":
+                    summary.unknown += 1
+                elif state == "PENDING":
+                    summary.pending += 1
+            result[host] = summary
+        return result
 
     async def get_hostgroup_states(self, group: str) -> ObjectState:
         idx = hash(group) % len(_HOST_STATES)
@@ -271,18 +326,41 @@ class TestConnection(ConnectionBase):
         return list(_DEMO_HOSTS)
 
     async def get_topology(self) -> list[TopologyRow]:
-        return [
-            TopologyRow(name="router01", parents=[], state="UP", output=""),
-            TopologyRow(name="switch01", parents=["router01"], state="UP", output=""),
-            TopologyRow(name="localhost", parents=["router01"], state="UP", output=""),
-            TopologyRow(
-                name="fileserver",
-                parents=["switch01"],
-                state="DOWN",
-                output="Connection refused",
-            ),
-            TopologyRow(name="mailserver", parents=["switch01"], state="UP", output=""),
+        topology: list[tuple[str, list[str], str, str]] = [
+            ("router01", [], "UP", ""),
+            ("switch01", ["router01"], "UP", ""),
+            ("localhost", ["router01"], "UP", ""),
+            ("fileserver", ["switch01"], "DOWN", "Connection refused"),
+            ("mailserver", ["switch01"], "UP", ""),
         ]
+        names = [n for n, _, _, _ in topology]
+        summaries = await self.get_services_summary(names)
+        rows: list[TopologyRow] = []
+        now = _time.time()
+        for name, parents, state, output in topology:
+            seed = abs(hash(name))
+            last_check = now - (seed % 60)
+            row: TopologyRow = {
+                "name": name,
+                "parents": parents,
+                "state": state,
+                "output": output,
+                "alias": f"alias-{name}",
+                "address": f"192.0.2.{seed % 250 + 1}",
+                "acknowledged": False,
+                "in_downtime": False,
+                "notifications_enabled": True,
+                "active_checks_enabled": True,
+                "last_check": last_check,
+                "next_check": last_check + 60,
+                "last_state_change": now - (seed % 14400 + 60),
+                "state_type": "HARD",
+                "current_attempt": 1,
+                "max_attempts": 3,
+                "services_summary": summaries.get(name),
+            }
+            rows.append(row)
+        return rows
 
     async def get_host_services(self, hostname: str) -> list[ServiceRow]:
         result: list[ServiceRow] = []
