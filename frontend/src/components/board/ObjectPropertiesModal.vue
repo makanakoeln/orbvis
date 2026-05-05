@@ -1142,7 +1142,7 @@ const { t } = useI18n();
 const props = defineProps<{
     object: BoardObject;
     state?: ObjectState;
-    backendId: string;
+    connectionId: string;
     mapType?: string;
     checkmkUrl?: string | null;
     anchorRect?: { left: number; top: number; right: number; bottom: number } | null;
@@ -1275,16 +1275,16 @@ const metricSuggestions = computed((): string[] =>
 );
 
 async function fetchMetrics(host: string, service?: string) {
-    if (!props.backendId || !host) return;
+    if (!props.connectionId || !host) return;
     fetchedMetrics.value = await connectionsApi
-        .perfMetrics(props.backendId, host, auth.accessToken!, service || undefined)
+        .perfMetrics(props.connectionId, host, auth.accessToken!, service || undefined)
         .catch(() => []);
 }
 
 async function fetchGraphTemplates(host: string, service?: string) {
-    if (!props.backendId || !host || props.object.type !== 'graph') return;
+    if (!props.connectionId || !host || props.object.type !== 'graph') return;
     graphTemplates.value = await connectionsApi
-        .graphTemplates(props.backendId, host, service ?? null, auth.accessToken!)
+        .graphTemplates(props.connectionId, host, service ?? null, auth.accessToken!)
         .catch(() => []);
 }
 
@@ -1477,37 +1477,37 @@ const loadingGroups = ref(false);
 const loadingAggregations = ref(false);
 
 async function loadAutocomplete() {
-    if (!props.backendId) return;
+    if (!props.connectionId) return;
     const type = props.object.type;
     if (type === 'host' || type === 'service' || type === 'line' || type === 'graph') {
         loadingHosts.value = true;
         hosts.value = await connectionsApi
-            .objects(props.backendId, 'host', auth.accessToken!)
+            .objects(props.connectionId, 'host', auth.accessToken!)
             .catch(() => []);
         loadingHosts.value = false;
         if ((type === 'service' || type === 'line' || type === 'graph') && form.host_name) {
             loadingServices.value = true;
             services.value = await connectionsApi
-                .objects(props.backendId, 'service', auth.accessToken!, form.host_name)
+                .objects(props.connectionId, 'service', auth.accessToken!, form.host_name)
                 .catch(() => []);
             loadingServices.value = false;
         }
     } else if (type === 'hostgroup') {
         loadingGroups.value = true;
         groups.value = await connectionsApi
-            .objects(props.backendId, 'hostgroup', auth.accessToken!)
+            .objects(props.connectionId, 'hostgroup', auth.accessToken!)
             .catch(() => []);
         loadingGroups.value = false;
     } else if (type === 'servicegroup') {
         loadingGroups.value = true;
         groups.value = await connectionsApi
-            .objects(props.backendId, 'servicegroup', auth.accessToken!)
+            .objects(props.connectionId, 'servicegroup', auth.accessToken!)
             .catch(() => []);
         loadingGroups.value = false;
     } else if (type === 'aggregation') {
         loadingAggregations.value = true;
         const aggrs = await connectionsApi
-            .aggregations(props.backendId, auth.accessToken!)
+            .aggregations(props.connectionId, auth.accessToken!)
             .catch(() => []);
         aggregationIds.value = aggrs.map((a) => a.id);
         aggregationLabels.value = aggrs.map((a) => a.title || a.id);
@@ -1549,7 +1549,7 @@ watch(
         ) {
             loadingServices.value = true;
             services.value = await connectionsApi
-                .objects(props.backendId, 'service', auth.accessToken!, host)
+                .objects(props.connectionId, 'service', auth.accessToken!, host)
                 .catch(() => []);
             loadingServices.value = false;
         }

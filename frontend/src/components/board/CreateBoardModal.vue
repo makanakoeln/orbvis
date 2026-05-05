@@ -67,13 +67,13 @@
                         <label class="text-xs font-medium text-zinc-400">{{
                             t('board.connection')
                         }}</label>
-                        <template v-if="connectionsStore.backends.length > 0">
+                        <template v-if="connectionsStore.connections.length > 0">
                             <CmkDropdown
-                                :selected-option="form.backend_id || null"
-                                :options="backendOptions"
+                                :selected-option="form.connection_id || null"
+                                :options="connectionOptions"
                                 :width="'fill'"
                                 :label="t('board.connection')"
-                                @update:selected-option="form.backend_id = $event ?? ''"
+                                @update:selected-option="form.connection_id = $event ?? ''"
                             />
                         </template>
                         <template v-else>
@@ -141,7 +141,7 @@
                         }}</CmkButton>
                         <CmkButton
                             variant="primary"
-                            :disabled="!form.name || !!nameError || !form.backend_id"
+                            :disabled="!form.name || !!nameError || !form.connection_id"
                             @click="submit"
                         >
                             {{ t('common.create') }}
@@ -174,12 +174,12 @@ const boardsStore = useBoardsStore();
 const connectionsStore = useConnectionsStore();
 const settingsStore = useSettingsStore();
 
-const form = ref({ name: '', alias: '', backend_id: '', view_type: 'static' });
+const form = ref({ name: '', alias: '', connection_id: '', view_type: 'static' });
 const aliasTouched = ref(false);
 
-const backendOptions = computed(() => ({
+const connectionOptions = computed(() => ({
     type: 'fixed' as const,
-    suggestions: connectionsStore.backends.map((b) => ({ name: b.id, title: b.label || b.id })),
+    suggestions: connectionsStore.connections.map((b) => ({ name: b.id, title: b.label || b.id })),
 }));
 const mapTypeOptions = computed(() => ({
     type: 'fixed' as const,
@@ -198,14 +198,14 @@ function onNameInput(e: Event) {
 }
 
 function pickBackendId() {
-    const ids = connectionsStore.backends.map((b) => b.id);
+    const ids = connectionsStore.connections.map((b) => b.id);
     const preferred = settingsStore.settings.default_backend_id;
     return (preferred && ids.includes(preferred) ? preferred : ids[0]) ?? '';
 }
 
 onMounted(async () => {
-    await Promise.all([connectionsStore.fetchBackends(), settingsStore.load()]);
-    form.value.backend_id = pickBackendId();
+    await Promise.all([connectionsStore.fetchConnections(), settingsStore.load()]);
+    form.value.connection_id = pickBackendId();
     form.value.view_type = settingsStore.settings.default_map_type || 'static';
 });
 
@@ -215,7 +215,7 @@ async function submit() {
         await boardsStore.createBoard(
             form.value.name,
             form.value.alias,
-            form.value.backend_id,
+            form.value.connection_id,
             form.value.view_type,
             settingsStore.settings.icon_size,
         );
@@ -229,7 +229,7 @@ async function submit() {
     form.value = {
         name: '',
         alias: '',
-        backend_id: pickBackendId(),
+        connection_id: pickBackendId(),
         view_type: settingsStore.settings.default_map_type || 'static',
     };
     emit('created', created);

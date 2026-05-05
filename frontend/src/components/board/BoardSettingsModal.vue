@@ -69,11 +69,11 @@
                             <div class="space-y-[4px]">
                                 <CmkLabel>{{ t('board.connection') }}</CmkLabel>
                                 <CmkDropdown
-                                    :selected-option="form.backend_id || null"
-                                    :options="backendOptions"
+                                    :selected-option="form.connection_id || null"
+                                    :options="connectionOptions"
                                     :width="'fill'"
                                     :label="t('board.connection')"
-                                    @update:selected-option="form.backend_id = $event ?? ''"
+                                    @update:selected-option="form.connection_id = $event ?? ''"
                                 />
                             </div>
                             <div class="space-y-[4px]">
@@ -448,8 +448,8 @@ import { boardsApi, connectionsApi, rolesApi } from '@/api/client';
 import NumberInput from '@/components/NumberInput.vue';
 import { useAuthStore } from '@/stores/auth';
 import type {
-    BackendConfig,
     BoardRead,
+    ConnectionConfig,
     PermissionRead,
     RadarView,
     RoleRead,
@@ -498,7 +498,7 @@ const wmv = props.board.view.type === 'worldmap' ? (props.board.view as Worldmap
 
 const form = ref({
     alias: props.board.alias,
-    backend_id: props.board.backend_id,
+    connection_id: props.board.connection_id,
     icon_size: props.board.icon_size,
     rotation_interval: props.board.rotation_interval,
     click_action: (props.board.click_action ?? 'link') as 'link' | 'none',
@@ -516,12 +516,12 @@ const form = ref({
     background_image: props.board.background_image ?? '',
 });
 
-const backends = ref<BackendConfig[]>([]);
+const connections = ref<ConnectionConfig[]>([]);
 const saving = ref(false);
 
-const backendOptions = computed(() => ({
+const connectionOptions = computed(() => ({
     type: 'fixed' as const,
-    suggestions: backends.value.map((b) => ({ name: b.id, title: b.label || b.id })),
+    suggestions: connections.value.map((b) => ({ name: b.id, title: b.label || b.id })),
 }));
 const mapTypeOptions = computed(() => ({
     type: 'fixed' as const,
@@ -578,7 +578,7 @@ async function save() {
             props.board.name,
             {
                 alias: form.value.alias,
-                backend_id: form.value.backend_id,
+                connection_id: form.value.connection_id,
                 icon_size: form.value.icon_size,
                 rotation_interval: form.value.rotation_interval,
                 click_action: form.value.click_action,
@@ -709,6 +709,6 @@ async function savePermissions() {
 
 onMounted(async () => {
     const [bs] = await Promise.all([connectionsApi.list(auth.accessToken!), loadPermissions()]);
-    backends.value = bs;
+    connections.value = bs;
 });
 </script>

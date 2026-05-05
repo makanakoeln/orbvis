@@ -75,7 +75,7 @@
             :state="hoverMenu.state"
             :x="hoverMenu.x"
             :y="hoverMenu.y"
-            :backend-id="props.backendId"
+            :connection-id="props.connectionId"
         />
     </div>
 </template>
@@ -106,7 +106,7 @@ import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { stateColor } from '@/utils/stateColors';
 
 const props = defineProps<{
-    backendId: string;
+    connectionId: string;
     serviceLayout: 'off' | 'fan' | 'row' | 'orbit';
     readonly?: boolean;
     clickAction?: ClickAction;
@@ -168,7 +168,7 @@ let timer: ReturnType<typeof setInterval> | null = null;
 async function fetchTopology() {
     try {
         nodes.value = await connectionsApi.topology(
-            props.backendId,
+            props.connectionId,
             auth.accessToken!,
             props.serviceLayout !== 'off',
         );
@@ -262,7 +262,7 @@ let _hasFitOnce = false;
 
 // Reset auto-fit when switching boards
 watch(
-    () => props.backendId,
+    () => props.connectionId,
     () => {
         _hasFitOnce = false;
     },

@@ -1,11 +1,11 @@
-"""Test/demo backend that returns static sample data."""
+"""Test/demo connection that returns static sample data."""
 
 from __future__ import annotations
 
 import asyncio
 import math
 
-from app.backends.base import BackendBase, MetricHistoryResult, ServiceRow, TopologyRow
+from app.connections.base import ConnectionBase, MetricHistoryResult, ServiceRow, TopologyRow
 from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.state import ObjectState
 
@@ -194,10 +194,10 @@ _DEMO_AGGREGATION_LEAVES: dict[str, list[tuple[str, str]]] = {
 }
 
 
-class TestBackend(BackendBase):
+class TestConnection(ConnectionBase):
     """Returns deterministic demo states for testing."""
 
-    backend_id = "test"
+    connection_id = "test"
 
     async def get_host_state(self, hostname: str) -> ObjectState:
         state = _PINNED_HOST_STATES.get(hostname, _HOST_STATES[hash(hostname) % len(_HOST_STATES)])

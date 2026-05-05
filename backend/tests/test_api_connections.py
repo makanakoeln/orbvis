@@ -1,24 +1,26 @@
-"""Tests for the backends API endpoints."""
+"""Tests for the connections API endpoints."""
 
 from __future__ import annotations
 
 import pytest
 
-from app.api.v1.backends import _parse_metric_names
+from app.api.v1.connections import _parse_metric_names
 from app.services import state_service
 
 
 def _patch(monkeypatch, tmp_path):
-    backends_file = tmp_path / "backends.json"
-    monkeypatch.setattr("app.core.config.settings.backends_file", str(backends_file))
-    monkeypatch.setattr("app.services.backend_service.settings.backends_file", str(backends_file))
-    return backends_file
+    connections_file = tmp_path / "connections.json"
+    monkeypatch.setattr("app.core.config.settings.connections_file", str(connections_file))
+    monkeypatch.setattr(
+        "app.services.connection_service.settings.connections_file", str(connections_file)
+    )
+    return connections_file
 
 
 _SAMPLE_BACKEND = {
     "id": "live_1",
     "type": "livestatus",
-    "label": "Test Backend",
+    "label": "Test Connection",
     "socket_path": "/tmp/live",  # nosec B108
 }
 
@@ -47,7 +49,7 @@ def test_parse_metric_names_empty():
 
 
 # ---------------------------------------------------------------------------
-# Backends CRUD
+# Connections CRUD
 # ---------------------------------------------------------------------------
 
 
@@ -55,7 +57,7 @@ def test_parse_metric_names_empty():
 async def test_list_backends_empty(client, admin_token, tmp_path, monkeypatch):
     _patch(monkeypatch, tmp_path)
     response = await client.get(
-        "/api/v1/backends", headers={"Authorization": f"Bearer {admin_token}"}
+        "/api/v1/connections", headers={"Authorization": f"Bearer {admin_token}"}
     )
     assert response.status_code == 200
     assert response.json() == []
@@ -67,7 +69,7 @@ async def test_list_backends_non_admin_forbidden(
 ):
     _patch(monkeypatch, tmp_path)
     response = await client.get(
-        "/api/v1/backends", headers={"Authorization": f"Bearer {regular_token}"}
+        "/api/v1/connections", headers={"Authorization": f"Bearer {regular_token}"}
     )
     assert response.status_code == 403
 
@@ -76,7 +78,7 @@ async def test_list_backends_non_admin_forbidden(
 async def test_create_backend(client, admin_token, tmp_path, monkeypatch):
     _patch(monkeypatch, tmp_path)
     response = await client.post(
-        "/api/v1/backends",
+        "/api/v1/connections",
         json=_SAMPLE_BACKEND,
         headers={"Authorization": f"Bearer {admin_token}"},
     )
@@ -88,12 +90,12 @@ async def test_create_backend(client, admin_token, tmp_path, monkeypatch):
 async def test_create_backend_duplicate_id(client, admin_token, tmp_path, monkeypatch):
     _patch(monkeypatch, tmp_path)
     await client.post(
-        "/api/v1/backends",
+        "/api/v1/connections",
         json=_SAMPLE_BACKEND,
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     response = await client.post(
-        "/api/v1/backends",
+        "/api/v1/connections",
         json=_SAMPLE_BACKEND,
         headers={"Authorization": f"Bearer {admin_token}"},
     )
@@ -104,12 +106,12 @@ async def test_create_backend_duplicate_id(client, admin_token, tmp_path, monkey
 async def test_update_backend(client, admin_token, tmp_path, monkeypatch):
     _patch(monkeypatch, tmp_path)
     await client.post(
-        "/api/v1/backends",
+        "/api/v1/connections",
         json=_SAMPLE_BACKEND,
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     response = await client.put(
-        "/api/v1/backends/live_1",
+        "/api/v1/connections/live_1",
         json={"type": "livestatus", "label": "Updated", "socket_path": "/tmp/live2"},  # nosec B108
         headers={"Authorization": f"Bearer {admin_token}"},
     )
@@ -121,7 +123,7 @@ async def test_update_backend(client, admin_token, tmp_path, monkeypatch):
 async def test_update_backend_not_found(client, admin_token, tmp_path, monkeypatch):
     _patch(monkeypatch, tmp_path)
     response = await client.put(
-        "/api/v1/backends/nonexistent",
+        "/api/v1/connections/nonexistent",
         json={"type": "livestatus", "label": "X"},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
@@ -130,15 +132,15 @@ async def test_update_backend_not_found(client, admin_token, tmp_path, monkeypat
 
 @pytest.mark.asyncio
 async def test_list_backends_redacts_secrets(client, admin_token, tmp_path, monkeypatch):
-    """GET /backends must never return raw automation_secret values."""
+    """GET /connections must never return raw automation_secret values."""
     _patch(monkeypatch, tmp_path)
     await client.post(
-        "/api/v1/backends",
+        "/api/v1/connections",
         json={**_SAMPLE_BACKEND, "automation_secret": "very-secret-token"},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     response = await client.get(
-        "/api/v1/backends", headers={"Authorization": f"Bearer {admin_token}"}
+        "/api/v1/connections", headers={"Authorization": f"Bearer {admin_token}"}
     )
     assert response.status_code == 200
     body = response.json()
@@ -151,16 +153,16 @@ async def test_update_backend_preserves_secret_when_redacted_sent(
     client, admin_token, tmp_path, monkeypatch
 ):
     """Frontend echoes the redaction sentinel when the admin doesn't retype the
-    secret — backend must keep the previously stored value, not overwrite with
+    secret — connection must keep the previously stored value, not overwrite with
     the sentinel string."""
     _patch(monkeypatch, tmp_path)
     await client.post(
-        "/api/v1/backends",
+        "/api/v1/connections",
         json={**_SAMPLE_BACKEND, "automation_secret": "real-secret"},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     response = await client.put(
-        "/api/v1/backends/live_1",
+        "/api/v1/connections/live_1",
         json={
             "type": "livestatus",
             "label": "Updated",
@@ -172,9 +174,9 @@ async def test_update_backend_preserves_secret_when_redacted_sent(
     assert response.status_code == 200
     # The redacted sentinel was preserved server-side; reload via service to
     # confirm the on-disk value is still the original.
-    from app.services import backend_service
+    from app.services import connection_service
 
-    cfg = next(b for b in backend_service.load_all() if b.id == "live_1")
+    cfg = next(b for b in connection_service.load_all() if b.id == "live_1")
     assert cfg.automation_secret == "real-secret"
 
 
@@ -182,7 +184,7 @@ async def test_update_backend_preserves_secret_when_redacted_sent(
 async def test_create_backend_rejects_redacted_sentinel(client, admin_token, tmp_path, monkeypatch):
     _patch(monkeypatch, tmp_path)
     response = await client.post(
-        "/api/v1/backends",
+        "/api/v1/connections",
         json={**_SAMPLE_BACKEND, "automation_secret": "***REDACTED***"},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
@@ -193,12 +195,12 @@ async def test_create_backend_rejects_redacted_sentinel(client, admin_token, tmp
 async def test_delete_backend(client, admin_token, tmp_path, monkeypatch):
     _patch(monkeypatch, tmp_path)
     await client.post(
-        "/api/v1/backends",
+        "/api/v1/connections",
         json=_SAMPLE_BACKEND,
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     response = await client.delete(
-        "/api/v1/backends/live_1", headers={"Authorization": f"Bearer {admin_token}"}
+        "/api/v1/connections/live_1", headers={"Authorization": f"Bearer {admin_token}"}
     )
     assert response.status_code == 204
 
@@ -207,23 +209,23 @@ async def test_delete_backend(client, admin_token, tmp_path, monkeypatch):
 async def test_delete_backend_not_found(client, admin_token, tmp_path, monkeypatch):
     _patch(monkeypatch, tmp_path)
     response = await client.delete(
-        "/api/v1/backends/nonexistent", headers={"Authorization": f"Bearer {admin_token}"}
+        "/api/v1/connections/nonexistent", headers={"Authorization": f"Bearer {admin_token}"}
     )
     assert response.status_code == 404
 
 
 # ---------------------------------------------------------------------------
-# GET /backends/{id}/test
+# GET /connections/{id}/test
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_test_backend_available(client, admin_token, mock_backend, monkeypatch):
-    mock_backend.is_available.return_value = True
-    monkeypatch.setitem(state_service._backends, "live_test", mock_backend)
+async def test_test_backend_available(client, admin_token, mock_connection, monkeypatch):
+    mock_connection.is_available.return_value = True
+    monkeypatch.setitem(state_service._connections, "live_test", mock_connection)
 
     response = await client.get(
-        "/api/v1/backends/live_test/test",
+        "/api/v1/connections/live_test/test",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
@@ -231,12 +233,12 @@ async def test_test_backend_available(client, admin_token, mock_backend, monkeyp
 
 
 @pytest.mark.asyncio
-async def test_test_backend_unavailable(client, admin_token, mock_backend, monkeypatch):
-    mock_backend.is_available.return_value = False
-    monkeypatch.setitem(state_service._backends, "live_test2", mock_backend)
+async def test_test_backend_unavailable(client, admin_token, mock_connection, monkeypatch):
+    mock_connection.is_available.return_value = False
+    monkeypatch.setitem(state_service._connections, "live_test2", mock_connection)
 
     response = await client.get(
-        "/api/v1/backends/live_test2/test",
+        "/api/v1/connections/live_test2/test",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
@@ -244,14 +246,14 @@ async def test_test_backend_unavailable(client, admin_token, mock_backend, monke
 
 
 @pytest.mark.asyncio
-async def test_test_backend_exception(client, admin_token, mock_backend, monkeypatch):
+async def test_test_backend_exception(client, admin_token, mock_connection, monkeypatch):
     from unittest.mock import AsyncMock
 
-    mock_backend.is_available = AsyncMock(side_effect=Exception("Connection refused"))
-    monkeypatch.setitem(state_service._backends, "live_test3", mock_backend)
+    mock_connection.is_available = AsyncMock(side_effect=Exception("Connection refused"))
+    monkeypatch.setitem(state_service._connections, "live_test3", mock_connection)
 
     response = await client.get(
-        "/api/v1/backends/live_test3/test",
+        "/api/v1/connections/live_test3/test",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
@@ -262,27 +264,27 @@ async def test_test_backend_exception(client, admin_token, mock_backend, monkeyp
 @pytest.mark.asyncio
 async def test_test_backend_not_registered(client, admin_token, tmp_path, monkeypatch):
     # Ensure a clean _backends dict without this ID
-    monkeypatch.setattr(state_service, "_backends", {})
+    monkeypatch.setattr(state_service, "_connections", {})
 
     response = await client.get(
-        "/api/v1/backends/unregistered/test",
+        "/api/v1/connections/unregistered/test",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 404
 
 
 # ---------------------------------------------------------------------------
-# POST /backends/test-connection
+# POST /connections/test-connection
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_test_connection_success(client, admin_token, mock_backend, monkeypatch):
+async def test_test_connection_success(client, admin_token, mock_connection, monkeypatch):
     from unittest.mock import patch
 
-    with patch("app.services.backend_service.build_instance", return_value=mock_backend):
+    with patch("app.services.connection_service.build_instance", return_value=mock_connection):
         response = await client.post(
-            "/api/v1/backends/test-connection",
+            "/api/v1/connections/test-connection",
             json=_SAMPLE_BACKEND,
             headers={"Authorization": f"Bearer {admin_token}"},
         )
@@ -291,14 +293,14 @@ async def test_test_connection_success(client, admin_token, mock_backend, monkey
 
 
 @pytest.mark.asyncio
-async def test_test_connection_failure(client, admin_token, mock_backend, monkeypatch):
+async def test_test_connection_failure(client, admin_token, mock_connection, monkeypatch):
     from unittest.mock import AsyncMock, patch
 
-    mock_backend.is_available = AsyncMock(side_effect=Exception("refused"))
+    mock_connection.is_available = AsyncMock(side_effect=Exception("refused"))
 
-    with patch("app.services.backend_service.build_instance", return_value=mock_backend):
+    with patch("app.services.connection_service.build_instance", return_value=mock_connection):
         response = await client.post(
-            "/api/v1/backends/test-connection",
+            "/api/v1/connections/test-connection",
             json=_SAMPLE_BACKEND,
             headers={"Authorization": f"Bearer {admin_token}"},
         )

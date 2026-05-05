@@ -6,8 +6,8 @@ import pytest
 from pydantic import ValidationError
 
 from app.core.image_security import is_safe_svg
-from app.schemas.backend import REDACTED_SECRET, BackendConfig, _redact
 from app.schemas.board import BoardObject, BoardObjectUpdate
+from app.schemas.connection import REDACTED_SECRET, ConnectionConfig, _redact
 
 
 class TestBackendUrlValidation:
@@ -24,7 +24,7 @@ class TestBackendUrlValidation:
         ],
     )
     def test_accepts_safe_urls(self, url: str | None) -> None:
-        BackendConfig(id="b1", checkmk_url=url)
+        ConnectionConfig(id="b1", checkmk_url=url)
 
     @pytest.mark.parametrize(
         "url",
@@ -39,20 +39,20 @@ class TestBackendUrlValidation:
     )
     def test_rejects_dangerous_urls(self, url: str) -> None:
         with pytest.raises(ValidationError):
-            BackendConfig(id="b1", checkmk_url=url)
+            ConnectionConfig(id="b1", checkmk_url=url)
 
     def test_rejects_traversal_in_relative_path(self) -> None:
         with pytest.raises(ValidationError):
-            BackendConfig(id="b1", checkmk_url="/CMC/../../etc/passwd")
+            ConnectionConfig(id="b1", checkmk_url="/CMC/../../etc/passwd")
 
     def test_rejects_overlong_url(self) -> None:
         with pytest.raises(ValidationError):
-            BackendConfig(id="b1", checkmk_url="http://example.com/" + "a" * 3000)
+            ConnectionConfig(id="b1", checkmk_url="http://example.com/" + "a" * 3000)
 
 
 class TestBackendSecretRedaction:
     def test_redact_replaces_secrets(self) -> None:
-        cfg = BackendConfig(
+        cfg = ConnectionConfig(
             id="b1",
             automation_secret="real-secret",
             icinga2_password="real-pw",
@@ -62,7 +62,7 @@ class TestBackendSecretRedaction:
         assert redacted.icinga2_password == REDACTED_SECRET
 
     def test_redact_keeps_none(self) -> None:
-        cfg = BackendConfig(id="b1")
+        cfg = ConnectionConfig(id="b1")
         redacted = _redact(cfg)
         assert redacted.automation_secret is None
         assert redacted.icinga2_password is None

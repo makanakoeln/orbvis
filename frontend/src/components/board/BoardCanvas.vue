@@ -47,7 +47,7 @@
                 :state="states[line.id]"
                 :edit-mode="editMode"
                 :drag-coords="lineDragPositions[line.id]"
-                :backend-id="config.backend_id"
+                :connection-id="config.connection_id"
                 @line-drag-start="(evt, mode) => $emit('line-drag-start', evt, line, mode)"
                 @context-menu="(evt) => onObjectContextMenu(evt, line)"
                 @line-click="onLineClick(line)"
@@ -78,7 +78,7 @@
                 :selected="selectedObjectId === obj.id"
                 :edit-mode="editMode"
                 :resize-override="localResizeDimensions[obj.id]"
-                :backend-id="config.backend_id"
+                :connection-id="config.connection_id"
                 @hover="!editMode && openHoverMenu($event, obj)"
                 @hover-leave="!editMode && closeHoverMenu()"
                 @graph-resize-start="onGraphResizeStart($event, obj)"
@@ -97,7 +97,7 @@
             :x="hoverMenu.x"
             :y="hoverMenu.y"
             :anchor-rect="hoverMenu.anchorRect"
-            :backend-id="props.config.backend_id"
+            :connection-id="props.config.connection_id"
             :template="
                 resolveTemplate(
                     hoverMenu.object.hover_template,

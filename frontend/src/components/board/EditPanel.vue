@@ -255,7 +255,7 @@ const snapGridOptions = computed(() => ({
 const props = defineProps<{
     draft: NewObjectDraft;
     placing: boolean;
-    backendId: string;
+    connectionId: string;
     snapGrid: number;
 }>();
 
@@ -320,7 +320,7 @@ const loadingAddAggregations = ref(false);
 
 async function fetchAddObjects(type: string) {
     if (
-        !props.backendId ||
+        !props.connectionId ||
         !type ||
         type === 'line' ||
         type === 'textbox' ||
@@ -332,7 +332,11 @@ async function fetchAddObjects(type: string) {
     }
     loadingAddObjects.value = true;
     try {
-        addObjects.value = await connectionsApi.objects(props.backendId, type, auth.accessToken!);
+        addObjects.value = await connectionsApi.objects(
+            props.connectionId,
+            type,
+            auth.accessToken!,
+        );
     } catch {
         addObjects.value = [];
     } finally {
@@ -341,14 +345,14 @@ async function fetchAddObjects(type: string) {
 }
 
 async function fetchAddServices(host: string) {
-    if (!host || !props.backendId) {
+    if (!host || !props.connectionId) {
         addServices.value = [];
         return;
     }
     loadingAddServices.value = true;
     try {
         addServices.value = await connectionsApi.objects(
-            props.backendId,
+            props.connectionId,
             'service',
             auth.accessToken!,
             host,
@@ -361,14 +365,14 @@ async function fetchAddServices(host: string) {
 }
 
 async function fetchAddAggregations() {
-    if (!props.backendId) {
+    if (!props.connectionId) {
         addAggregationIds.value = [];
         addAggregationLabels.value = [];
         return;
     }
     loadingAddAggregations.value = true;
     try {
-        const aggrs = await connectionsApi.aggregations(props.backendId, auth.accessToken!);
+        const aggrs = await connectionsApi.aggregations(props.connectionId, auth.accessToken!);
         addAggregationIds.value = aggrs.map((a) => a.id);
         addAggregationLabels.value = aggrs.map((a) => a.title || a.id);
     } catch {

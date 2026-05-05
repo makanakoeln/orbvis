@@ -70,7 +70,7 @@ ORBVIS_DIR="$SITE_ROOT/local/share/orbvis"
 HTDOCS_DIR="$ORBVIS_DIR/htdocs"
 BOARDS_DIR="$ORBVIS_DIR/boards"
 ENV_FILE="$ORBVIS_DIR/.env"
-BACKENDS_FILE="$ORBVIS_DIR/backends.json"
+CONNECTIONS_FILE="$ORBVIS_DIR/connections.json"
 DB_FILE="$ORBVIS_DIR/orbvis.db"
 # Determine port: reuse existing from .env, otherwise find a free one from 8420 upward
 BACKEND_PORT=""
@@ -139,7 +139,7 @@ if [[ "$ACTION" == "remove" ]]; then
   step "Removing files"
   quietly sudo rm -f "$APACHE_CONF" "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis"
   quietly sudo -u "$SITE" "$PYTHON3" -m pip uninstall -y orbvis-cmk 2>/dev/null || true
-  quietly sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$CMK_PLUGINS_DST" "$DB_FILE" "$ENV_FILE" "$BACKENDS_FILE"
+  quietly sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$CMK_PLUGINS_DST" "$DB_FILE" "$ENV_FILE" "$CONNECTIONS_FILE"
   ok "Files removed"
 
   step "Reloading Apache"
@@ -236,7 +236,7 @@ SECRET_KEY="${EXISTING_SECRET:-$("$PYTHON3" -c 'import secrets; print(secrets.to
 
 sudo tee "$ENV_FILE" > /dev/null <<EOF
 BOARDS_DIR=$BOARDS_DIR
-BACKENDS_FILE=$BACKENDS_FILE
+CONNECTIONS_FILE=$CONNECTIONS_FILE
 DATABASE_URL=sqlite+aiosqlite:///$DB_FILE
 SECRET_KEY=$SECRET_KEY
 STATE_REFRESH_INTERVAL=15
@@ -246,10 +246,10 @@ CHECKMK_SITE=$SITE
 ORBVIS_PORT=$BACKEND_PORT
 EOF
 
-if sudo test -f "$BACKENDS_FILE"; then
-  ok "Configuration written (existing backends.json kept)"
+if sudo test -f "$CONNECTIONS_FILE"; then
+  ok "Configuration written (existing connections.json kept)"
 else
-  sudo tee "$BACKENDS_FILE" > /dev/null <<EOF
+  sudo tee "$CONNECTIONS_FILE" > /dev/null <<EOF
 [
   {
     "id": "live_1",

@@ -343,8 +343,8 @@
             <!-- Flowmap -->
             <div v-else-if="isFlowmap" class="flex-1 relative overflow-hidden">
                 <FlowBoard
-                    v-if="boardConfig?.backend_id"
-                    :backend-id="boardConfig.backend_id"
+                    v-if="boardConfig?.connection_id"
+                    :connection-id="boardConfig.connection_id"
                     :service-layout="serviceLayout"
                     :readonly="isKiosk || boardConfig?.readonly"
                     :click-action="boardConfig.click_action"
@@ -468,7 +468,7 @@
                         <EditPanel
                             :draft="editor.draft"
                             :placing="editor.placing.value"
-                            :backend-id="boardConfig?.backend_id ?? ''"
+                            :connection-id="boardConfig?.connection_id ?? ''"
                             :snap-grid="editor.snapGrid.value"
                             @start-placing="onStartPlacing()"
                             @update:snap-grid="editor.snapGrid.value = $event"
@@ -705,7 +705,7 @@
             :state="statesStore.states[worldmapHover.object.id]"
             :x="worldmapHover.x"
             :y="worldmapHover.y"
-            :backend-id="boardConfig?.backend_id"
+            :connection-id="boardConfig?.connection_id"
             :template="
                 resolveTemplate(
                     worldmapHover.object.hover_template,
@@ -785,7 +785,7 @@
                 v-if="propsModalObject"
                 :object="propsModalObject"
                 :state="statesStore.states[propsModalObject.id]"
-                :backend-id="boardConfig?.backend_id ?? ''"
+                :connection-id="boardConfig?.connection_id ?? ''"
                 :map-type="boardConfig?.view.type"
                 :checkmk-url="checkmkUrl"
                 :anchor-rect="propsModalAnchor"
@@ -944,7 +944,7 @@ const boardConfigAsRead = computed<import('@/types/api').BoardRead | null>(() =>
         alias: cfg.alias,
         background_image: cfg.background_image,
         icon_size: cfg.icon_size,
-        backend_id: cfg.backend_id,
+        connection_id: cfg.connection_id,
         view_type: cfg.view.type,
         view: cfg.view,
         object_count: cfg.objects.length,
@@ -967,9 +967,9 @@ const isLoading = computed(
 );
 
 const checkmkUrl = computed(() => {
-    const bid = boardConfig.value?.backend_id;
+    const bid = boardConfig.value?.connection_id;
     const connUrl = bid
-        ? (connectionsStore.backends.find((b) => b.id === bid)?.checkmk_url ?? null)
+        ? (connectionsStore.connections.find((b) => b.id === bid)?.checkmk_url ?? null)
         : null;
     return connUrl ?? settingsStore.settings.checkmk_url ?? null;
 });
@@ -1316,10 +1316,10 @@ async function onGraphResizeEnd(id: string, width: number, height: number) {
 
 async function onStartPlacing() {
     const d = editor.draft;
-    const backendId = boardConfig.value?.backend_id;
-    if (boardConfig.value?.view.type === 'worldmap' && backendId && d.host_name) {
+    const connectionId = boardConfig.value?.connection_id;
+    if (boardConfig.value?.view.type === 'worldmap' && connectionId && d.host_name) {
         try {
-            const geo = await connectionsApi.hostGeo(backendId, d.host_name, auth.accessToken!);
+            const geo = await connectionsApi.hostGeo(connectionId, d.host_name, auth.accessToken!);
             if (geo) {
                 editor.startPlacing();
                 await editor.placeAtLatLng(geo.lat, geo.lng);
@@ -1466,7 +1466,7 @@ function onFullscreenChange() {
 }
 
 onMounted(() => {
-    if (auth.isAdmin) connectionsStore.fetchBackends();
+    if (auth.isAdmin) connectionsStore.fetchConnections();
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('fullscreenchange', onFullscreenChange);
 });

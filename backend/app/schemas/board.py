@@ -6,6 +6,20 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+
+def _accept_legacy_backend_id(data: object) -> object:
+    """Translate the pre-rename ``backend_id`` key to ``connection_id`` on input.
+
+    Older board JSON files (written before the rename) carry ``backend_id``;
+    the field name on the model is ``connection_id``. Run as a ``mode='before'``
+    validator so the value reaches the canonical field, but never serialises
+    back under the legacy name.
+    """
+    if isinstance(data, dict) and "backend_id" in data and "connection_id" not in data:
+        data["connection_id"] = data.pop("backend_id")
+    return data
+
+
 # Schemes that must never appear in user-supplied URL fields stored on a board.
 # javascript:/data:/vbscript: would let an editor inject XSS payloads that fire
 # whenever another user clicks the linked board object.
@@ -241,11 +255,13 @@ class BoardObject(BaseModel):
 
 
 class BoardConfig(BaseModel):
+    _migrate_legacy_keys = model_validator(mode="before")(_accept_legacy_backend_id)
+
     name: str
     alias: str = ""
     readonly: bool = False
     show_in_lists: bool = True
-    backend_id: str = "live_1"
+    connection_id: str = "live_1"
     icon_size: int = 30
     rotation_interval: int = 0
     sort_order: int = 0
@@ -258,19 +274,23 @@ class BoardConfig(BaseModel):
 
 
 class BoardCreate(BaseModel):
+    _migrate_legacy_keys = model_validator(mode="before")(_accept_legacy_backend_id)
+
     name: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-zA-Z0-9_\-]+$")
     alias: str = ""
     background_image: str | None = None
     icon_size: int = 30
-    backend_id: str = "live_1"
+    connection_id: str = "live_1"
     view: BoardView = Field(default_factory=StaticView)
 
 
 class BoardUpdate(BaseModel):
+    _migrate_legacy_keys = model_validator(mode="before")(_accept_legacy_backend_id)
+
     alias: str | None = None
     background_image: str | None = None
     icon_size: int | None = None
-    backend_id: str | None = None
+    connection_id: str | None = None
     view: BoardView | None = None
     sort_order: int | None = None
     click_action: ClickAction | None = None
@@ -281,11 +301,13 @@ class BoardUpdate(BaseModel):
 
 
 class BoardRead(BaseModel):
+    _migrate_legacy_keys = model_validator(mode="before")(_accept_legacy_backend_id)
+
     name: str
     alias: str
     background_image: str | None
     icon_size: int
-    backend_id: str
+    connection_id: str
     view_type: str
     view: BoardView
     object_count: int

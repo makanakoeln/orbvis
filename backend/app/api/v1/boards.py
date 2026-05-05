@@ -171,20 +171,20 @@ async def import_cfg(
     content = (await file.read()).decode("utf-8", errors="replace")
     map_name = Path(file.filename).stem
     data = cfg_to_board(content, map_name)
-    # Imported backend ids (typically the source-site name) almost never match
+    # Imported connection ids (typically the source-site name) almost never match
     # the OrbVis-side ids (live_1, live_2, …). Without remapping the imported
-    # board references a non-existent backend and every state lookup fails
+    # board references a non-existent connection and every state lookup fails
     # silently — the user just sees stale gray icons. Fall back to the first
-    # *real* (non-test) registered backend; only fall through to the demo
-    # TestBackend if that is the only thing configured.
-    imported_bid = data.get("backend_id")
-    if isinstance(imported_bid, str) and state_service.get_backend(imported_bid) is None:
-        available = state_service.list_backend_ids()
+    # *real* (non-test) registered connection; only fall through to the demo
+    # TestConnection if that is the only thing configured.
+    imported_bid = data.get("connection_id")
+    if isinstance(imported_bid, str) and state_service.get_connection(imported_bid) is None:
+        available = state_service.list_connection_ids()
         real = [bid for bid in available if bid != "test"]
         if real:
-            data["backend_id"] = real[0]
+            data["connection_id"] = real[0]
         elif available:
-            data["backend_id"] = available[0]
+            data["connection_id"] = available[0]
     try:
         return board_service.import_board(data, overwrite=overwrite)
     except ValueError as exc:

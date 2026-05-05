@@ -308,7 +308,7 @@
                             <CmkDropdown
                                 class="w-[192px]"
                                 :selected-option="form.default_backend_id || null"
-                                :options="backendOptions"
+                                :options="connectionOptions"
                                 label=""
                                 @update:selected-option="form.default_backend_id = $event ?? ''"
                             />
@@ -578,10 +578,10 @@ const sectionOpen = reactive({
     logging: false,
 });
 
-const backendOptions = computed(() => ({
+const connectionOptions = computed(() => ({
     type: 'fixed' as const,
-    suggestions: connectionsStore.backends.length
-        ? connectionsStore.backends.map((b) => ({ name: b.id, title: b.label || b.id }))
+    suggestions: connectionsStore.connections.length
+        ? connectionsStore.connections.map((b) => ({ name: b.id, title: b.label || b.id }))
         : [{ name: 'live_1', title: 'live_1' }],
 }));
 const mapTypeOptions = computed(() => ({
@@ -645,7 +645,7 @@ onUnmounted(() => {
 });
 
 onMounted(async () => {
-    await Promise.all([store.load(), connectionsStore.fetchBackends()]);
+    await Promise.all([store.load(), connectionsStore.fetchConnections()]);
     Object.assign(form, store.settings);
 });
 </script>

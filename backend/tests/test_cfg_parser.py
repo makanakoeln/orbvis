@@ -352,7 +352,7 @@ def _by_id(board: dict[str, object], obj_id: str) -> dict[str, object]:
 
 def test_fixture_global_settings(all_objects_board):
     assert all_objects_board["alias"] == "All Objects"
-    assert all_objects_board["backend_id"] == "ZWEIFUENF"
+    assert all_objects_board["connection_id"] == "ZWEIFUENF"
     assert all_objects_board["icon_size"] == 30  # iconset=std_big
     assert all_objects_board["view"] == {"type": "static"}
 

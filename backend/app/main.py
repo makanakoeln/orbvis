@@ -41,8 +41,8 @@ _CHANGELOG = next((p.read_text() for p in _changelog_candidates if p.is_file()),
 
 from app.api.v1 import (
     auth,
-    backends,
     boards,
+    connections,
     images,
     maps,
     roles,
@@ -55,7 +55,7 @@ from app.api.v1 import (
 from app.api.v1 import (
     settings as settings_api,
 )
-from app.backends.test import TestBackend
+from app.connections.test import TestConnection
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.security import hash_password
@@ -63,11 +63,11 @@ from app.integrations import checkmk as cmk_integration
 from app.models.permission import Permission
 from app.models.role import Role
 from app.models.user import User
-from app.schemas.backend import BackendConfig
+from app.schemas.connection import ConnectionConfig
 from app.seed_boards import seed_demo_boards
 from app.seed_images import seed_builtin_images
-from app.services import backend_service, settings_service
-from app.services.state_service import register_backend
+from app.services import board_service, connection_service, settings_service
+from app.services.state_service import register_connection
 
 # Resolve log level: explicit log_level setting wins; otherwise debug → DEBUG,
 # default INFO. Setting changes require a restart (no live reconfiguration).
@@ -241,11 +241,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     settings_service.apply_log_level(settings_service.get_settings().log_level)
 
-    # Always provide the built-in test backend (no config needed)
-    register_backend("test", TestBackend())
+    # One-shot data migration: rename pre-rename `backends.json` and rewrite
+    # `backend_id` keys in board files. Idempotent on subsequent boots.
+    connection_service.migrate_legacy_filename()
+    board_service.migrate_legacy_keys()
 
-    # Load and activate all persisted backend configs
-    backend_service.activate_all()
+    # Always provide the built-in test connection (no config needed)
+    register_connection("test", TestConnection())
+
+    # Load and activate all persisted connection configs
+    connection_service.activate_all()
 
     # In Checkmk/OMD mode: auto-set global checkmk_url if not configured yet
     if settings.checkmk_omd_root and settings.checkmk_site:
@@ -258,9 +263,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # In Checkmk/OMD mode: auto-create a Livestatus connection if none exists yet
     if settings.checkmk_omd_root and settings.checkmk_site:
         conn_id = f"cmk_{settings.checkmk_site}"
-        if not backend_service.load_all():
+        if not connection_service.load_all():
             socket_path = str(Path(settings.checkmk_omd_root) / "tmp" / "run" / "live")
-            cfg = BackendConfig(
+            cfg = ConnectionConfig(
                 id=conn_id,
                 type="livestatus",
                 label=f"Checkmk {settings.checkmk_site}",
@@ -274,7 +279,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 icinga2_password=None,
                 icinga2_verify_ssl=True,
             )
-            backend_service.create(cfg)
+            connection_service.create(cfg)
             logger.info("Auto-created Checkmk connection '%s' → %s", conn_id, socket_path)
 
     # In SSO/CMK mode authentication is handled externally — no local admin needed
@@ -326,7 +331,7 @@ app.include_router(boards.router, prefix="/api/v1/boards", tags=["boards"])
 app.include_router(states.router, prefix="/api/v1", tags=["states"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(roles.router, prefix="/api/v1/roles", tags=["roles"])
-app.include_router(backends.router, prefix="/api/v1/backends", tags=["backends"])
+app.include_router(connections.router, prefix="/api/v1/connections", tags=["connections"])
 app.include_router(settings_api.router, prefix="/api/v1/settings", tags=["settings"])
 app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
 app.include_router(maps.router, prefix="/api/v1/maps", tags=["maps"])

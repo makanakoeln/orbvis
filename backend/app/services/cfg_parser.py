@@ -135,8 +135,10 @@ def _apply_global(board: dict[str, object], p: dict[str, str]) -> None:
         board["alias"] = p["alias"]
     if "map_image" in p:
         board["background_image"] = p["map_image"]
+    # NagVis cfg uses the legacy "backend_id" parameter name on disk; map to our
+    # canonical "connection_id" while reading.
     if "backend_id" in p:
-        board["backend_id"] = p["backend_id"]
+        board["connection_id"] = p["backend_id"]
     if "iconset" in p:
         board["icon_size"] = ICONSET_SIZE.get(p["iconset"], 22)
 
@@ -313,7 +315,7 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, object]:
         "name": map_name,
         "alias": map_name,
         "readonly": False,
-        "backend_id": "live_1",
+        "connection_id": "live_1",
         "icon_size": 22,
         "rotation_interval": 0,
         "hover_template": None,

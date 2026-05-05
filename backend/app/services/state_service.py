@@ -8,7 +8,7 @@ import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from app.backends.base import ServiceRow
+from app.connections.base import ServiceRow
 from app.core.config import settings
 from app.schemas.board import AggregationNode, BoardConfig, BoardObject, RadarView
 from app.schemas.state import MapStates, ObjectState
@@ -29,32 +29,34 @@ _MONITORING_TYPES: frozenset[str] = frozenset(
 )
 
 if TYPE_CHECKING:
-    from app.backends.base import BackendBase
+    from app.connections.base import ConnectionBase
 
 logger = logging.getLogger(__name__)
 
-# In-memory registry of configured backends
-_backends: dict[str, BackendBase] = {}
+# In-memory registry of configured connections
+_connections: dict[str, ConnectionBase] = {}
 
 
-def register_backend(backend_id: str, backend: BackendBase) -> None:
-    _backends[backend_id] = backend
+def register_connection(connection_id: str, connection: ConnectionBase) -> None:
+    _connections[connection_id] = connection
 
 
-def get_backend(backend_id: str) -> BackendBase | None:
-    return _backends.get(backend_id)
+def get_connection(connection_id: str) -> ConnectionBase | None:
+    return _connections.get(connection_id)
 
 
-def list_backend_ids() -> list[str]:
-    return list(_backends.keys())
+def list_connection_ids() -> list[str]:
+    return list(_connections.keys())
 
 
-async def get_backend_objects(backend_id: str, obj_type: str, host: str | None = None) -> list[str]:
-    """Return available object names from a backend (for autocomplete)."""
-    backend = get_backend(backend_id)
-    if backend is None:
+async def get_connection_objects(
+    connection_id: str, obj_type: str, host: str | None = None
+) -> list[str]:
+    """Return available object names from a connection (for autocomplete)."""
+    connection = get_connection(connection_id)
+    if connection is None:
         return []
-    raw = await backend.get_objects(obj_type)
+    raw = await connection.get_objects(obj_type)
     if obj_type == "service" and host:
         # raw items are "hostname;service_description" – filter and strip prefix
         prefix = f"{host};"
@@ -73,62 +75,66 @@ async def get_board_states(
     queries are scoped to that user's contact groups so they only see objects
     they are authorised for.
     """
-    backend_id = cfg.backend_id
-    backend = get_backend(backend_id)
+    connection_id = cfg.connection_id
+    connection = get_connection(connection_id)
 
-    if backend is None:
-        logger.warning("No backend registered for '%s'", backend_id)
+    if connection is None:
+        logger.warning("No connection registered for '%s'", connection_id)
         states = [
             ObjectState(object_id=obj.id, type=obj.type, state="PENDING") for obj in cfg.objects
         ]
         return MapStates(
-            map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=False
+            map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=False
         )
 
-    if auth_user is not None and settings.checkmk_omd_root and hasattr(backend, "with_auth_user"):
-        async with backend.with_auth_user(auth_user):
+    if (
+        auth_user is not None
+        and settings.checkmk_omd_root
+        and hasattr(connection, "with_auth_user")
+    ):
+        async with connection.with_auth_user(auth_user):
             return await _execute_board_states(
-                cfg, backend, auth_user=auth_user, can_view_board=can_view_board
+                cfg, connection, auth_user=auth_user, can_view_board=can_view_board
             )
-    return await _execute_board_states(cfg, backend, can_view_board=can_view_board)
+    return await _execute_board_states(cfg, connection, can_view_board=can_view_board)
 
 
 async def _execute_board_states(
     cfg: BoardConfig,
-    backend: BackendBase,
+    connection: ConnectionBase,
     auth_user: str | None = None,
     can_view_board: Callable[[str], bool] | None = None,
 ) -> MapStates:
     """Inner state-fetch implementation; must be called with auth context already set."""
     if cfg.view.type == "radar":
-        return await _get_radar_states(cfg, backend)
+        return await _get_radar_states(cfg, connection)
 
     state_map = await _get_board_states_batched(
-        backend, cfg.objects, auth_user=auth_user, can_view_board=can_view_board
+        connection, cfg.objects, auth_user=auth_user, can_view_board=can_view_board
     )
     states = list(state_map.values())
 
-    # Determine backend health using only monitoring-object states.
+    # Determine connection health using only monitoring-object states.
     # Non-monitoring types (image, textbox, map) always return PENDING without stale=True,
-    # so including them would mask a genuinely unreachable backend.
+    # so including them would mask a genuinely unreachable connection.
     monitoring_states = [s for s in states if s.type in _MONITORING_TYPES]
     if monitoring_states:
         # Backend is considered down only if ALL monitoring queries raised exceptions (stale=True).
-        backend_ok = not all(s.stale for s in monitoring_states)
+        connection_ok = not all(s.stale for s in monitoring_states)
     else:
-        # No monitoring objects in this map – ping the backend explicitly.
+        # No monitoring objects in this map – ping the connection explicitly.
         try:
-            backend_ok = await backend.is_available()
+            connection_ok = await connection.is_available()
         except Exception:
-            backend_ok = False
+            connection_ok = False
 
     return MapStates(
-        map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=backend_ok
+        map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=connection_ok
     )
 
 
 async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types inline; splitting hides intent
-    backend: BackendBase,
+    connection: ConnectionBase,
     objects: list[BoardObject],
     auth_user: str | None = None,
     can_view_board: Callable[[str], bool] | None = None,
@@ -177,7 +183,7 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
             continue
         batch_ok = True
         try:
-            batch = await backend.get_hosts_states(
+            batch = await connection.get_hosts_states(
                 [o.host_name for o in host_group if o.host_name is not None],
                 only_hard=only_hard,
             )
@@ -213,7 +219,7 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
     if rs_objs:
         rs_names = list({o.host_name for o in rs_objs if o.host_name is not None})
         try:
-            rs_svc_batch = await backend.get_hosts_services_batch(rs_names)
+            rs_svc_batch = await connection.get_hosts_services_batch(rs_names)
         except Exception:
             logger.warning("Batch host-services query failed", exc_info=True)
             rs_svc_batch = {}
@@ -234,7 +240,7 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
         ]
         batch_ok = True
         try:
-            svc_batch = await backend.get_services_states(pairs, only_hard=only_hard)
+            svc_batch = await connection.get_services_states(pairs, only_hard=only_hard)
         except Exception:
             logger.warning(
                 "Batch service state query failed (only_hard=%s)", only_hard, exc_info=True
@@ -259,13 +265,13 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
     if aggregation_objs:
         aids = [o.aggregation_id for o in aggregation_objs if o.aggregation_id]
         try:
-            aggr_batch = await backend.get_aggregations_states(aids)
+            aggr_batch = await connection.get_aggregations_states(aids)
         except Exception:
             logger.warning("Batch aggregation state query failed", exc_info=True)
             aggr_batch = {}
 
         # Tree-fetch deduplicated by (aggregation_id, depth) — multiple board
-        # objects with the same aggregation+depth share one backend call.
+        # objects with the same aggregation+depth share one connection call.
         unique_keys: set[tuple[str, int]] = set()
         for o in aggregation_objs:
             if o.aggregation_id and o.expand_depth > 0:
@@ -273,7 +279,7 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
         tree_keys: list[tuple[str, int]] = sorted(unique_keys)
         tree_map: dict[tuple[str, int], AggregationNode] = {}
         if tree_keys:
-            tasks = [backend.get_aggregation_tree(aid, depth) for aid, depth in tree_keys]
+            tasks = [connection.get_aggregation_tree(aid, depth) for aid, depth in tree_keys]
             trees = await asyncio.gather(*tasks, return_exceptions=True)
             for tree_key, tree in zip(tree_keys, trees, strict=True):
                 if isinstance(tree, AggregationNode):
@@ -295,7 +301,7 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
                     s = s.model_copy(update={"tree": tree})
             results[obj.id] = s
 
-    individual = [_get_object_state(backend, obj) for obj in lines + others]
+    individual = [_get_object_state(connection, obj) for obj in lines + others]
     for state in await asyncio.gather(*individual):
         results[state.object_id] = state
 
@@ -314,7 +320,7 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
             ref_cfg = board_cfg_cache[map_name]
             if ref_cfg is None:
                 continue
-            ref_backend = get_backend(ref_cfg.backend_id)
+            ref_backend = get_connection(ref_cfg.connection_id)
             if ref_backend is None:
                 continue
             non_map_objs = [o for o in ref_cfg.objects if o.type != "map"]
@@ -372,34 +378,36 @@ def _aggregate_host_with_services_from_data(
     )
 
 
-async def _get_object_state(backend: BackendBase, obj: BoardObject) -> ObjectState:
+async def _get_object_state(connection: ConnectionBase, obj: BoardObject) -> ObjectState:
     try:
         if obj.type == "host" and obj.host_name:
             if obj.only_hard_states:
-                state = await backend.get_host_hard_state(obj.host_name)
+                state = await connection.get_host_hard_state(obj.host_name)
             else:
-                state = await backend.get_host_state(obj.host_name)
+                state = await connection.get_host_state(obj.host_name)
             if obj.recognize_services:
-                state = await _aggregate_host_with_services(backend, state, obj.host_name)
+                state = await _aggregate_host_with_services(connection, state, obj.host_name)
         elif obj.type == "service" and obj.host_name and obj.service_description:
             if obj.only_hard_states:
-                state = await backend.get_service_hard_state(obj.host_name, obj.service_description)
+                state = await connection.get_service_hard_state(
+                    obj.host_name, obj.service_description
+                )
             else:
-                state = await backend.get_service_state(obj.host_name, obj.service_description)
+                state = await connection.get_service_state(obj.host_name, obj.service_description)
         elif obj.type == "hostgroup" and obj.group_name:
-            state = await backend.get_hostgroup_states(obj.group_name)
+            state = await connection.get_hostgroup_states(obj.group_name)
         elif obj.type == "servicegroup" and obj.group_name:
-            state = await backend.get_servicegroup_states(obj.group_name)
+            state = await connection.get_servicegroup_states(obj.group_name)
         elif obj.type == "line" and obj.host_name and obj.service_description:
-            state = await backend.get_service_state(obj.host_name, obj.service_description)
+            state = await connection.get_service_state(obj.host_name, obj.service_description)
         elif obj.type == "line" and obj.host_name:
-            state = await backend.get_host_state(obj.host_name)
+            state = await connection.get_host_state(obj.host_name)
         elif obj.type == "graph" and obj.host_name and obj.service_description:
-            state = await backend.get_service_state(obj.host_name, obj.service_description)
+            state = await connection.get_service_state(obj.host_name, obj.service_description)
         elif obj.type == "graph" and obj.host_name:
-            state = await backend.get_host_state(obj.host_name)
+            state = await connection.get_host_state(obj.host_name)
         elif obj.type == "aggregation" and obj.aggregation_id:
-            state = await backend.get_aggregation_state(obj.aggregation_id)
+            state = await connection.get_aggregation_state(obj.aggregation_id)
         else:
             state = ObjectState(object_id=obj.id, type=obj.type, state="PENDING")
         state.object_id = obj.id
@@ -410,24 +418,24 @@ async def _get_object_state(backend: BackendBase, obj: BoardObject) -> ObjectSta
 
 
 async def _aggregate_host_with_services(
-    backend: BackendBase, host_state: ObjectState, hostname: str
+    connection: ConnectionBase, host_state: ObjectState, hostname: str
 ) -> ObjectState:
     """Aggregate host state with the worst state of all its services."""
     try:
-        services = await backend.get_host_services(hostname)
+        services = await connection.get_host_services(hostname)
     except Exception:
         return host_state
     return _aggregate_host_with_services_from_data(host_state, services)
 
 
-async def _get_radar_states(cfg: BoardConfig, backend: BackendBase) -> MapStates:
+async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> MapStates:
     """Fetch states for all dynamically resolved radar map members."""
     rv = cfg.view if isinstance(cfg.view, RadarView) else RadarView()
     states: list[ObjectState] = []
 
     if rv.filter == "all_hosts":
         try:
-            host_batch = await backend.get_all_hosts_states()
+            host_batch = await connection.get_all_hosts_states()
         except Exception:
             host_batch = {}
         for host, s in host_batch.items():
@@ -435,7 +443,7 @@ async def _get_radar_states(cfg: BoardConfig, backend: BackendBase) -> MapStates
             states.append(s)
     elif rv.filter == "all_services":
         try:
-            svc_batch_all = await backend.get_all_services_states()
+            svc_batch_all = await connection.get_all_services_states()
         except Exception:
             svc_batch_all = {}
         for (host, svc), s in svc_batch_all.items():
@@ -443,10 +451,10 @@ async def _get_radar_states(cfg: BoardConfig, backend: BackendBase) -> MapStates
             s.object_id = member_id
             states.append(s)
     else:
-        members = await backend.get_group_members(rv.filter, rv.filter_value)
+        members = await connection.get_group_members(rv.filter, rv.filter_value)
         if not members:
             return MapStates(
-                map_name=cfg.name, states=[], generated_at=time.time(), backend_ok=True
+                map_name=cfg.name, states=[], generated_at=time.time(), connection_ok=True
             )
         host_members = [m for m in members if ";" not in m]
         svc_members: list[tuple[str, str, str]] = []
@@ -457,7 +465,7 @@ async def _get_radar_states(cfg: BoardConfig, backend: BackendBase) -> MapStates
 
         if host_members:
             try:
-                batch = await backend.get_hosts_states(host_members)
+                batch = await connection.get_hosts_states(host_members)
             except Exception:
                 batch = {}
             for h in host_members:
@@ -470,7 +478,7 @@ async def _get_radar_states(cfg: BoardConfig, backend: BackendBase) -> MapStates
         if svc_members:
             pairs = [(host, svc) for (_, host, svc) in svc_members]
             try:
-                svc_batch = await backend.get_services_states(pairs)
+                svc_batch = await connection.get_services_states(pairs)
             except Exception:
                 svc_batch = {}
             for member_id, host, svc in svc_members:
@@ -480,7 +488,7 @@ async def _get_radar_states(cfg: BoardConfig, backend: BackendBase) -> MapStates
                 s.object_id = member_id
                 states.append(s)
 
-    backend_ok = bool(states) and not all(s.stale for s in states)
+    connection_ok = bool(states) and not all(s.stale for s in states)
     return MapStates(
-        map_name=cfg.name, states=states, generated_at=time.time(), backend_ok=backend_ok
+        map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=connection_ok
     )

@@ -140,7 +140,7 @@ async def test_import_board(client, admin_token, tmp_path, monkeypatch):
     payload = {
         "name": "imported",
         "alias": "Imported",
-        "backend_id": "test",
+        "connection_id": "test",
         "objects": [],
     }
     resp = await client.post(

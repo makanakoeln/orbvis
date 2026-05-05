@@ -44,12 +44,18 @@ export const useBoardsStore = defineStore('boards', () => {
     async function createBoard(
         name: string,
         alias: string,
-        backendId = 'live_1',
+        connectionId = 'live_1',
         boardType = 'static',
         iconSize?: number,
     ) {
         const cfg = await boardsApi.create(
-            { name, alias, backend_id: backendId, icon_size: iconSize, view: { type: boardType } },
+            {
+                name,
+                alias,
+                connection_id: connectionId,
+                icon_size: iconSize,
+                view: { type: boardType },
+            },
             token(),
         );
         // In-place append instead of a full re-fetch. BoardRead is a projection of
@@ -59,7 +65,7 @@ export const useBoardsStore = defineStore('boards', () => {
             alias: cfg.alias,
             background_image: cfg.background_image ?? null,
             icon_size: cfg.icon_size,
-            backend_id: cfg.backend_id,
+            connection_id: cfg.connection_id,
             view_type: cfg.view?.type ?? 'static',
             view: cfg.view,
             object_count: cfg.objects?.length ?? 0,

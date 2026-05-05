@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.api.v1.deps import get_current_user
-from app.backends.livestatus import LivestatusBackend
+from app.connections.livestatus import LivestatusConnection
 from app.models.user import User
 from app.services import state_service
 from app.services.perfometer_service import PerfometerResult, compute_perfometer
@@ -26,19 +26,19 @@ class PerfometerResultOut(BaseModel):
 
 @router.get("/metrics/perfometer", response_model=PerfometerResultOut | None)
 async def get_perfometer(
-    backend_id: str,
+    connection_id: str,
     host: str,
     service: str,
     _current_user: User = Depends(get_current_user),
 ) -> PerfometerResultOut | None:
-    backend = state_service.get_backend(backend_id)
-    if not isinstance(backend, LivestatusBackend):
+    connection = state_service.get_connection(connection_id)
+    if not isinstance(connection, LivestatusConnection):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Backend not found or not a Livestatus backend",
+            detail="Connection not found or not a Livestatus connection",
         )
 
-    perf_data, check_command = await backend.get_service_perf_and_cmd(host, service)
+    perf_data, check_command = await connection.get_service_perf_and_cmd(host, service)
     if not perf_data:
         return None
 

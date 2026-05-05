@@ -88,7 +88,7 @@ frontend checks.
 2. Implement `connect()`, `disconnect()`, `fetch_states()`, and
    whatever the backend type needs (e.g. host group lookup).
 3. Add the type literal to `app/schemas/backend.py`.
-4. Register a constructor in `app/services/backend_service.py`.
+4. Register a constructor in `app/services/connection_service.py`.
 5. Add tests under `tests/`.
 
 `livestatus.py` and `test.py` are good references.

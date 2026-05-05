@@ -10,7 +10,7 @@ SAMPLE_CFG = textwrap.dedent("""
     define global {
         alias=Demo Overview
         map_image=demo-overview.png
-        backend_id=live_1
+        connection_id=live_1
     }
 
     define host {
@@ -70,7 +70,7 @@ def test_blocks_to_board_json(tmp_path: Path):
     assert result["name"] == "test_map"
     assert result["alias"] == "Demo Overview"
     assert result["background_image"] == "demo-overview.png"
-    assert result["backend_id"] == "live_1"
+    assert result["connection_id"] == "live_1"
     assert len(result["objects"]) == 4  # host, service, hostgroup, line
 
     host_obj = next(o for o in result["objects"] if o["type"] == "host")

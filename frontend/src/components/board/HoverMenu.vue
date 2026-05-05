@@ -195,7 +195,7 @@ const props = defineProps<{
     x: number;
     y: number;
     template?: string | null;
-    backendId?: string | null;
+    connectionId?: string | null;
     // Bounding rect of the hovered icon (in viewport coords). When the tooltip
     // has to flip to avoid overflow we anchor the flipped position at this
     // rect's edges so the tooltip never lands on top of the icon.
@@ -297,7 +297,7 @@ onMounted(() => {
         isServiceLinked &&
         props.object.host_name &&
         props.object.service_description &&
-        props.backendId &&
+        props.connectionId &&
         authStore.accessToken &&
         // No perfdata to fetch when the service doesn't exist or we're locked out.
         props.state?.state !== 'NOT_FOUND' &&
@@ -306,7 +306,7 @@ onMounted(() => {
         cmkPerfometerStatus.value = 'loading';
         metricsApi
             .getPerfometer(
-                props.backendId,
+                props.connectionId,
                 props.object.host_name,
                 props.object.service_description,
                 authStore.accessToken,

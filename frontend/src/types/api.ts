@@ -150,7 +150,7 @@ export interface BoardConfig {
     name: string;
     alias: string;
     readonly?: boolean;
-    backend_id: string;
+    connection_id: string;
     icon_size: number;
     rotation_interval: number;
     sort_order: number;
@@ -167,7 +167,7 @@ export interface BoardRead {
     alias: string;
     background_image?: string | null;
     icon_size: number;
-    backend_id: string;
+    connection_id: string;
     view_type: string;
     view: BoardView;
     object_count: number;
@@ -241,7 +241,7 @@ export interface MapStates {
     map_name: string;
     states: ObjectState[];
     generated_at: number;
-    backend_ok: boolean;
+    connection_ok: boolean;
 }
 
 export interface TokenResponse {
@@ -289,7 +289,7 @@ export interface PermissionRead {
     obj: string;
 }
 
-export interface BackendConfig {
+export interface ConnectionConfig {
     id: string;
     type: 'livestatus' | 'icinga2' | 'test';
     label: string;
@@ -306,7 +306,7 @@ export interface BackendConfig {
     icinga2_verify_ssl?: boolean;
 }
 
-export interface BackendContext {
+export interface ConnectionContext {
     monitoring_core: 'cmc' | 'nagios' | null;
     omd_site: string | null;
 }

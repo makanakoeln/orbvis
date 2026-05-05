@@ -473,7 +473,7 @@ const props = defineProps<{
     selected?: boolean;
     editMode?: boolean;
     resizeOverride?: { width: number; height: number };
-    backendId?: string;
+    connectionId?: string;
 }>();
 
 defineEmits<{
@@ -496,7 +496,7 @@ function _triggerHistoryPrefill() {
     if (
         props.object.type !== 'graph' ||
         !props.object.host_name ||
-        !props.backendId ||
+        !props.connectionId ||
         !authStore.accessToken
     )
         return;
@@ -508,7 +508,7 @@ function _triggerHistoryPrefill() {
     const windowMins = props.object.graph_time_window ?? 60;
     statesStore.prefillMetricHistory(
         props.object.id,
-        props.backendId,
+        props.connectionId,
         props.object.host_name,
         props.object.service_description ?? null,
         windowMins,
@@ -751,7 +751,7 @@ async function _fetchPerfometerForRing(): Promise<void> {
     if (
         !props.object.host_name ||
         !props.object.service_description ||
-        !props.backendId ||
+        !props.connectionId ||
         !authStore.accessToken ||
         props.state?.state === 'NOT_FOUND' ||
         props.state?.state === 'NO_PERMISSION'
@@ -760,7 +760,7 @@ async function _fetchPerfometerForRing(): Promise<void> {
     }
     try {
         const r = await metricsApi.getPerfometer(
-            props.backendId,
+            props.connectionId,
             props.object.host_name,
             props.object.service_description,
             authStore.accessToken,

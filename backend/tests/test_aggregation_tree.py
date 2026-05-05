@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.backends.livestatus import _hierarchy_to_node
+from app.connections.livestatus import _hierarchy_to_node
 from app.schemas.board import AggregationNode, BoardConfig, BoardObject, StaticView
 from app.services import state_service
 
@@ -15,7 +15,7 @@ def _board_with_aggregation(expand_depth: int = 0) -> BoardConfig:
     return BoardConfig(
         name="t",
         alias="T",
-        backend_id="mock",
+        connection_id="mock",
         view=StaticView(),
         objects=[
             BoardObject(
@@ -107,39 +107,39 @@ def test_hierarchy_extracts_leaf_host_and_service():
 
 
 @pytest.mark.asyncio
-async def test_state_service_attaches_tree_when_expand_depth_set(mock_backend, monkeypatch):
+async def test_state_service_attaches_tree_when_expand_depth_set(mock_connection, monkeypatch):
     cfg = _board_with_aggregation(expand_depth=2)
     tree = AggregationNode(name="Host localhost", node_type="bi_aggregator", state=0, children=[])
 
-    mock_backend.get_aggregations_states = AsyncMock(return_value={})
-    mock_backend.get_aggregation_tree = AsyncMock(return_value=tree)
-    monkeypatch.setattr(state_service, "_backends", {"mock": mock_backend})
+    mock_connection.get_aggregations_states = AsyncMock(return_value={})
+    mock_connection.get_aggregation_tree = AsyncMock(return_value=tree)
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
 
     result = await state_service.get_board_states(cfg, auth_user=None)
     assert len(result.states) == 1
     assert result.states[0].tree is not None
     assert result.states[0].tree.name == "Host localhost"
-    mock_backend.get_aggregation_tree.assert_awaited_once_with("Host localhost", 2)
+    mock_connection.get_aggregation_tree.assert_awaited_once_with("Host localhost", 2)
 
 
 @pytest.mark.asyncio
-async def test_state_service_skips_tree_when_expand_depth_zero(mock_backend, monkeypatch):
+async def test_state_service_skips_tree_when_expand_depth_zero(mock_connection, monkeypatch):
     cfg = _board_with_aggregation(expand_depth=0)
-    mock_backend.get_aggregations_states = AsyncMock(return_value={})
-    mock_backend.get_aggregation_tree = AsyncMock()
-    monkeypatch.setattr(state_service, "_backends", {"mock": mock_backend})
+    mock_connection.get_aggregations_states = AsyncMock(return_value={})
+    mock_connection.get_aggregation_tree = AsyncMock()
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
 
     result = await state_service.get_board_states(cfg, auth_user=None)
     assert result.states[0].tree is None
-    mock_backend.get_aggregation_tree.assert_not_awaited()
+    mock_connection.get_aggregation_tree.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_state_service_dedupes_tree_fetches(mock_backend, monkeypatch):
+async def test_state_service_dedupes_tree_fetches(mock_connection, monkeypatch):
     cfg = BoardConfig(
         name="t",
         alias="T",
-        backend_id="mock",
+        connection_id="mock",
         view=StaticView(),
         objects=[
             BoardObject(id="a1", type="aggregation", aggregation_id="A", expand_depth=2),
@@ -149,12 +149,12 @@ async def test_state_service_dedupes_tree_fetches(mock_backend, monkeypatch):
     )
     tree_a = AggregationNode(name="A", node_type="bi_aggregator", state=0)
     tree_b = AggregationNode(name="B", node_type="bi_aggregator", state=1)
-    mock_backend.get_aggregations_states = AsyncMock(return_value={})
-    mock_backend.get_aggregation_tree = AsyncMock(
+    mock_connection.get_aggregations_states = AsyncMock(return_value={})
+    mock_connection.get_aggregation_tree = AsyncMock(
         side_effect=lambda aid, depth: tree_a if aid == "A" else tree_b
     )
-    monkeypatch.setattr(state_service, "_backends", {"mock": mock_backend})
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
 
     await state_service.get_board_states(cfg, auth_user=None)
     # Two distinct (id, depth) pairs even though "A" appears twice.
-    assert mock_backend.get_aggregation_tree.await_count == 2
+    assert mock_connection.get_aggregation_tree.await_count == 2

@@ -1,4 +1,4 @@
-"""Pydantic schemas for monitoring backend configuration."""
+"""Pydantic schemas for monitoring connection configuration."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ def _validate_safe_url(value: str | None) -> str | None:
 
     Accepts:
       - empty / None
-      - absolute path (``/<site>/check_mk``) — backend prepends ``http://127.0.0.1``
+      - absolute path (``/<site>/check_mk``) — OrbVis prepends ``http://127.0.0.1``
       - http(s) URL to a non-metadata host
     Rejects ``javascript:``, ``file:``, ``data:``, userinfo (``user:pass@``),
     and known cloud-metadata hosts.
@@ -51,11 +51,11 @@ def _validate_safe_url(value: str | None) -> str | None:
 
 # Sentinel returned in API responses in place of real secrets. Frontend echoes
 # this back unchanged on edit; the route preserves the existing secret in that
-# case (see app.api.v1.backends.update_backend).
+# case (see app.api.v1.connections.update_backend).
 REDACTED_SECRET = "***REDACTED***"
 
 
-class BackendConfig(BaseModel):
+class ConnectionConfig(BaseModel):
     id: str = Field(..., max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
     type: Literal["livestatus", "icinga2", "test"] = "livestatus"
     label: str = Field(default="", max_length=200)
@@ -79,7 +79,7 @@ class BackendConfig(BaseModel):
         return _validate_safe_url(v)
 
 
-def _redact(cfg: BackendConfig) -> BackendConfig:
+def _redact(cfg: ConnectionConfig) -> ConnectionConfig:
     """Return a copy of *cfg* with secrets replaced by ``REDACTED_SECRET``.
 
     Used for API responses so credentials never leave the server. The
@@ -94,10 +94,10 @@ def _redact(cfg: BackendConfig) -> BackendConfig:
     )
 
 
-BackendCreate = BackendConfig
+ConnectionCreate = ConnectionConfig
 
 
-class BackendUpdate(BaseModel):
+class ConnectionUpdate(BaseModel):
     """Full replacement of all mutable fields (id stays fixed)."""
 
     type: Literal["livestatus", "icinga2", "test"] = "livestatus"

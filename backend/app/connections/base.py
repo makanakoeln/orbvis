@@ -1,4 +1,4 @@
-"""Abstract monitoring backend interface."""
+"""Abstract monitoring connection interface."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from app.schemas.state import ObjectState
 class TopologyRow(TypedDict):
     """One host in the topology view (parent-child flow-graph).
 
-    ``site_id`` is set in distributed Checkmk setups; other backends omit it.
+    ``site_id`` is set in distributed Checkmk setups; other connections omit it.
     """
 
     name: str
@@ -46,7 +46,7 @@ class MetricHistoryResult:
 
     series: metric_id → list of (timestamp, value, unit) tuples
     titles: metric_id → human-readable display name
-    graphs: CMK graph template groups (empty for non-CMK backends)
+    graphs: CMK graph template groups (empty for non-CMK connections)
     """
 
     series: dict[str, list[tuple[float, float, str]]] = field(default_factory=dict)
@@ -54,10 +54,10 @@ class MetricHistoryResult:
     graphs: list[GraphGroup] = field(default_factory=list)
 
 
-class BackendBase(ABC):
-    """Base class all monitoring backends must implement."""
+class ConnectionBase(ABC):
+    """Base class all monitoring connections must implement."""
 
-    backend_id: str = "unknown"
+    connection_id: str = "unknown"
 
     @abstractmethod
     async def get_host_state(self, hostname: str) -> ObjectState:
@@ -132,10 +132,10 @@ class BackendBase(ABC):
         return results
 
     async def get_all_hosts_states(self, only_hard: bool = False) -> dict[str, ObjectState]:
-        """Return states for ALL hosts in the backend.
+        """Return states for ALL hosts on the connection.
 
         Default falls back to ``get_group_members`` + ``get_hosts_states``, which
-        produces an O(n) Livestatus filter list for large setups. Backends with
+        produces an O(n) Livestatus filter list for large setups. Connections with
         direct support (Livestatus) override this with a single unfiltered query.
         """
         hosts = await self.get_group_members("all_hosts", "")
@@ -144,7 +144,7 @@ class BackendBase(ABC):
     async def get_all_services_states(
         self, only_hard: bool = False
     ) -> dict[tuple[str, str], ObjectState]:
-        """Return states for ALL services in the backend.
+        """Return states for ALL services on the connection.
 
         Default falls back to ``get_group_members`` + ``get_services_states``;
         Livestatus overrides this with a single unfiltered query to avoid an
@@ -172,7 +172,7 @@ class BackendBase(ABC):
     async def get_graph_templates(self, host: str, service: str | None) -> list[GraphGroup]:
         """Return applicable CMK graph template groups for a host/service.
 
-        Default: empty list (non-CMK backends don't have graph templates).
+        Default: empty list (non-CMK connections don't have graph templates).
         """
         return []
 
@@ -185,16 +185,16 @@ class BackendBase(ABC):
     ) -> MetricHistoryResult:
         """Return historical metric data as MetricHistoryResult.
 
-        Default implementation returns empty result (not all backends support this).
-        Checkmk/Livestatus backends override this using the rrddata column.
+        Default implementation returns empty result (not all connections support this).
+        Checkmk/Livestatus connections override this using the rrddata column.
         """
         return MetricHistoryResult()
 
     async def get_aggregation_state(self, aggregation_id: str) -> ObjectState:
         """Return current state for a Checkmk BI aggregation.
 
-        Default returns PENDING — only Checkmk-aware backends (Livestatus + Test)
-        override this. Other backends silently degrade rather than error out.
+        Default returns PENDING — only Checkmk-aware connections (Livestatus + Test)
+        override this. Other connections silently degrade rather than error out.
         """
         return ObjectState(object_id="", type="aggregation", state="PENDING")
 
@@ -211,11 +211,11 @@ class BackendBase(ABC):
     ) -> AggregationNode | None:
         """Return the BI aggregation hierarchy up to *max_depth* levels.
 
-        Default returns ``None`` — only Checkmk-aware backends produce trees.
+        Default returns ``None`` — only Checkmk-aware connections produce trees.
         """
         return None
 
     @abstractmethod
     async def is_available(self) -> bool:
-        """Check whether the backend is reachable."""
+        """Check whether the connection is reachable."""
         ...

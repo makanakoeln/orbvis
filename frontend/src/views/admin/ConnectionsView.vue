@@ -34,7 +34,7 @@
         <CmkAlertBox v-else-if="store.error" variant="error">{{ store.error }}</CmkAlertBox>
 
         <div
-            v-else-if="store.backends.length === 0"
+            v-else-if="store.connections.length === 0"
             class="text-center py-16 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
         >
             <p class="text-zinc-500 text-sm">{{ t('admin.noConnections') }}</p>
@@ -88,7 +88,7 @@
                 </thead>
                 <tbody class="divide-y divide-[var(--border)]">
                     <tr
-                        v-for="b in store.backends"
+                        v-for="b in store.connections"
                         :key="b.id"
                         class="hover:bg-[var(--bg-hover)] transition-colors"
                     >
@@ -555,7 +555,7 @@ import NumberInput from '@/components/NumberInput.vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import { useConnectionsStore } from '@/stores/connections';
-import type { BackendConfig } from '@/types/api';
+import type { ConnectionConfig } from '@/types/api';
 
 const { t } = useI18n();
 const store = useConnectionsStore();
@@ -581,16 +581,16 @@ async function testExisting(id: string) {
 }
 
 async function testAll() {
-    for (const b of store.backends) testExisting(b.id);
+    for (const b of store.connections) testExisting(b.id);
 }
 
 const monitoringCore = ref<'cmc' | 'nagios' | null>(null);
 const isCmc = computed(() => monitoringCore.value === 'cmc');
 
-async function fetchContext(backendId: string) {
+async function fetchContext(connectionId: string) {
     monitoringCore.value = null;
     try {
-        const ctx = await connectionsApi.context(backendId, auth.accessToken!);
+        const ctx = await connectionsApi.context(connectionId, auth.accessToken!);
         monitoringCore.value = ctx.monitoring_core;
     } catch {
         // fail safe: alle Felder anzeigen
@@ -603,7 +603,7 @@ const saving = ref(false);
 const formError = ref('');
 const dialogTest = reactive({ loading: false, ran: false, ok: false, message: '' });
 
-const emptyForm = (): BackendConfig => ({
+const emptyForm = (): ConnectionConfig => ({
     id: '',
     type: 'livestatus',
     label: '',
@@ -619,7 +619,7 @@ const emptyForm = (): BackendConfig => ({
     icinga2_password: null,
     icinga2_verify_ssl: true,
 });
-const form = reactive<BackendConfig>(emptyForm());
+const form = reactive<ConnectionConfig>(emptyForm());
 
 const connectionTypeOptions = computed(() => ({
     type: 'fixed' as const,
@@ -636,10 +636,10 @@ function openCreate() {
     formError.value = '';
     dialog.mode = 'create';
     dialog.open = true;
-    if (store.backends.length > 0) fetchContext(store.backends[0].id);
+    if (store.connections.length > 0) fetchContext(store.connections[0].id);
 }
 
-function openEdit(b: BackendConfig) {
+function openEdit(b: ConnectionConfig) {
     Object.assign(form, { ...b });
     Object.assign(dialogTest, { loading: false, ran: false, ok: false, message: '' });
     formError.value = '';
@@ -671,11 +671,11 @@ async function save() {
     saving.value = true;
     try {
         if (dialog.mode === 'create') {
-            await store.createBackend({ ...form });
+            await store.createConnection({ ...form });
             toast.success(t('admin.connectionCreated'));
         } else {
             const { id: _id, ...rest } = form;
-            await store.updateBackend(dialog.editId, rest);
+            await store.updateConnection(dialog.editId, rest);
             toast.success(t('admin.connectionUpdated'));
         }
         dialog.open = false;
@@ -692,7 +692,7 @@ async function confirmRemove() {
     if (!id) return;
     deleteTarget.value = null;
     try {
-        await store.deleteBackend(id);
+        await store.deleteConnection(id);
         delete statuses[id];
         delete statusMessages[id];
         toast.success(t('admin.connectionDeleted'));
@@ -702,7 +702,7 @@ async function confirmRemove() {
 }
 
 onMounted(async () => {
-    await store.fetchBackends();
+    await store.fetchConnections();
     testAll();
 });
 </script>

@@ -32,6 +32,45 @@ def _boards_dir() -> Path:
     return p
 
 
+def migrate_legacy_keys() -> None:
+    """Rewrite ``backend_id`` to ``connection_id`` in board JSON files once.
+
+    The schema's AliasChoices already loads files with the legacy key, so this
+    pass is purely about converging the on-disk format. Idempotent: skips files
+    that no longer reference the legacy key.
+    """
+    for path in _boards_dir().glob("*.json"):
+        try:
+            text = path.read_text(encoding="utf-8")
+            if "backend_id" not in text:
+                continue
+            data = json.loads(text)
+            if not _replace_key_recursive(data, "backend_id", "connection_id"):
+                continue
+            tmp = path.with_suffix(path.suffix + ".tmp")
+            tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+            os.replace(tmp, path)
+            logger.info("Migrated %s: backend_id → connection_id", path.name)
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Could not migrate %s: %s", path, exc)
+
+
+def _replace_key_recursive(obj: object, old: str, new: str) -> bool:
+    changed = False
+    if isinstance(obj, dict):
+        if old in obj and new not in obj:
+            obj[new] = obj.pop(old)
+            changed = True
+        for v in obj.values():
+            if _replace_key_recursive(v, old, new):
+                changed = True
+    elif isinstance(obj, list):
+        for v in obj:
+            if _replace_key_recursive(v, old, new):
+                changed = True
+    return changed
+
+
 def _board_path(name: str) -> Path:
     """Return the absolute path for a board file, rejecting unsafe names."""
     if not _NAME_RE.match(name):
@@ -69,7 +108,7 @@ def create_board(data: BoardCreate) -> BoardConfig:
         alias=data.alias,
         background_image=data.background_image,
         icon_size=data.icon_size,
-        backend_id=data.backend_id,
+        connection_id=data.connection_id,
         view=data.view,
     )
     _save_board_file(cfg)
@@ -205,7 +244,7 @@ def _to_read(cfg: BoardConfig) -> BoardRead:
         alias=cfg.alias,
         background_image=cfg.background_image,
         icon_size=cfg.icon_size,
-        backend_id=cfg.backend_id,
+        connection_id=cfg.connection_id,
         view_type=cfg.view.type,
         view=cfg.view,
         object_count=len(cfg.objects),

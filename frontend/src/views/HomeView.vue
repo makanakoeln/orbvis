@@ -968,8 +968,8 @@
                                 </svg>
                                 <span
                                     class="text-sm text-zinc-500 font-mono truncate"
-                                    :title="map.backend_id"
-                                    >{{ map.backend_id }}</span
+                                    :title="map.connection_id"
+                                    >{{ map.connection_id }}</span
                                 >
                                 <span class="text-zinc-700 shrink-0">·</span>
                                 <span

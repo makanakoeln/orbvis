@@ -1,4 +1,4 @@
-"""Backend configuration API."""
+"""Connection configuration API."""
 
 from __future__ import annotations
 
@@ -13,16 +13,16 @@ from app.api.v1.deps import get_current_user, require_admin
 from app.core.config import settings
 from app.integrations import checkmk as cmk_integration
 from app.models.user import User
-from app.schemas.backend import (
+from app.schemas.board import AggregationInfo
+from app.schemas.connection import (
     REDACTED_SECRET,
-    BackendConfig,
-    BackendCreate,
-    BackendUpdate,
+    ConnectionConfig,
+    ConnectionCreate,
+    ConnectionUpdate,
     _redact,
 )
-from app.schemas.board import AggregationInfo
-from app.services import backend_service
-from app.services.state_service import get_backend, get_backend_objects
+from app.services import connection_service
+from app.services.state_service import get_connection, get_connection_objects
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -33,33 +33,35 @@ class TestResult(BaseModel):
     message: str
 
 
-@router.get("", response_model=list[BackendConfig])
-async def list_backends(_: User = Depends(require_admin)) -> list[BackendConfig]:
-    return [_redact(b) for b in backend_service.load_all()]
+@router.get("", response_model=list[ConnectionConfig])
+async def list_backends(_: User = Depends(require_admin)) -> list[ConnectionConfig]:
+    return [_redact(b) for b in connection_service.load_all()]
 
 
-@router.post("", response_model=BackendConfig, status_code=status.HTTP_201_CREATED)
-async def create_backend(data: BackendCreate, _: User = Depends(require_admin)) -> BackendConfig:
+@router.post("", response_model=ConnectionConfig, status_code=status.HTTP_201_CREATED)
+async def create_backend(
+    data: ConnectionCreate, _: User = Depends(require_admin)
+) -> ConnectionConfig:
     if REDACTED_SECRET in (data.automation_secret, data.icinga2_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Provide a real secret value when creating a connection",
         )
     try:
-        return _redact(backend_service.create(data))
+        return _redact(connection_service.create(data))
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
 
 
-@router.put("/{backend_id}", response_model=BackendConfig)
+@router.put("/{connection_id}", response_model=ConnectionConfig)
 async def update_backend(
-    backend_id: str,
-    data: BackendUpdate,
+    connection_id: str,
+    data: ConnectionUpdate,
     _: User = Depends(require_admin),
-) -> BackendConfig:
-    existing = next((b for b in backend_service.load_all() if b.id == backend_id), None)
+) -> ConnectionConfig:
+    existing = next((b for b in connection_service.load_all() if b.id == connection_id), None)
     if existing is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backend not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
 
     payload = data.model_dump()
     # Frontend echoes the redaction sentinel back unchanged when the admin did
@@ -69,60 +71,67 @@ async def update_backend(
     if payload.get("icinga2_password") == REDACTED_SECRET:
         payload["icinga2_password"] = existing.icinga2_password
 
-    updated = BackendConfig(id=backend_id, **payload)
-    result = backend_service.update(backend_id, updated)
+    updated = ConnectionConfig(id=connection_id, **payload)
+    result = connection_service.update(connection_id, updated)
     if result is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backend not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
     return _redact(result)
 
 
-@router.delete("/{backend_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_backend(backend_id: str, _: User = Depends(require_admin)) -> None:
-    if not backend_service.delete(backend_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backend not found")
+@router.delete("/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_backend(connection_id: str, _: User = Depends(require_admin)) -> None:
+    if not connection_service.delete(connection_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
 
 
-class BackendContext(BaseModel):
+class ConnectionContext(BaseModel):
     monitoring_core: str | None  # 'cmc', 'nagios', or None
     omd_site: str | None
 
 
-@router.get("/{backend_id}/context", response_model=BackendContext)
-async def get_backend_context(backend_id: str, _: User = Depends(require_admin)) -> BackendContext:
+@router.get("/{connection_id}/context", response_model=ConnectionContext)
+async def get_backend_context(
+    connection_id: str, _: User = Depends(require_admin)
+) -> ConnectionContext:
     """Return OMD/CMC context for the connection settings UI.
 
-    Only meaningful for Livestatus backends inside an OMD site. Returns nulls
-    for non-OMD setups. The backend_id is accepted for future multi-site use;
+    Only meaningful for Livestatus connections inside an OMD site. Returns nulls
+    for non-OMD setups. The connection_id is accepted for future multi-site use;
     currently core detection is always local.
     """
-    return BackendContext(
+    return ConnectionContext(
         monitoring_core=cmk_integration.get_monitoring_core(),
         omd_site=settings.checkmk_site or None,
     )
 
 
-@router.get("/{backend_id}/test", response_model=TestResult)
-async def test_backend(backend_id: str, _: User = Depends(require_admin)) -> TestResult:
-    """Test connectivity of a saved backend."""
-    backend = get_backend(backend_id)
-    if backend is None:
+@router.get("/{connection_id}/test", response_model=TestResult)
+async def test_backend(connection_id: str, _: User = Depends(require_admin)) -> TestResult:
+    """Test connectivity of a saved connection."""
+    connection = get_connection(connection_id)
+    if connection is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Backend not registered (restart needed?)"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Connection not registered (restart needed?)",
         )
     try:
-        ok = await backend.is_available()
-        return TestResult(ok=ok, message="Connection successful" if ok else "Backend not reachable")
+        ok = await connection.is_available()
+        return TestResult(
+            ok=ok, message="Connection successful" if ok else "Connection not reachable"
+        )
     except Exception as exc:
         return TestResult(ok=False, message=str(exc))
 
 
 @router.post("/test-connection", response_model=TestResult)
-async def test_connection(data: BackendCreate, _: User = Depends(require_admin)) -> TestResult:
+async def test_connection(data: ConnectionCreate, _: User = Depends(require_admin)) -> TestResult:
     """Test connection details without saving – used by the create/edit dialog."""
     try:
-        backend = backend_service.build_instance(data)
-        ok = await backend.is_available()
-        return TestResult(ok=ok, message="Connection successful" if ok else "Backend not reachable")
+        connection = connection_service.build_instance(data)
+        ok = await connection.is_available()
+        return TestResult(
+            ok=ok, message="Connection successful" if ok else "Connection not reachable"
+        )
     except Exception as exc:
         return TestResult(ok=False, message=str(exc))
 
@@ -142,42 +151,44 @@ class TopologyNode(BaseModel):
     services: list[ServiceNode] = []
 
 
-@router.get("/{backend_id}/topology", response_model=list[TopologyNode])
+@router.get("/{connection_id}/topology", response_model=list[TopologyNode])
 async def get_topology(
-    backend_id: str,
+    connection_id: str,
     include_services: bool = Query(False),
     _: User = Depends(get_current_user),
 ) -> list[TopologyNode]:
     """Return host topology for flow board rendering."""
-    backend = get_backend(backend_id)
-    if backend is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backend not registered")
-    nodes = await backend.get_topology()
+    connection = get_connection(connection_id)
+    if connection is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Connection not registered"
+        )
+    nodes = await connection.get_topology()
     if include_services:
         result: list[TopologyNode] = []
         for node in nodes:
-            svcs = await backend.get_host_services(node["name"])
+            svcs = await connection.get_host_services(node["name"])
             result.append(TopologyNode(**node, services=[ServiceNode(**s) for s in svcs]))
         return result
     return [TopologyNode(**n) for n in nodes]
 
 
-@router.get("/{backend_id}/perf-metrics", response_model=list[str])
+@router.get("/{connection_id}/perf-metrics", response_model=list[str])
 async def get_perf_metrics(
-    backend_id: str,
+    connection_id: str,
     host: str = Query(...),
     service: str | None = Query(None),
     _: User = Depends(get_current_user),
 ) -> list[str]:
     """Return perf_data metric names for a host or service (for metric autocomplete)."""
-    backend = get_backend(backend_id)
-    if backend is None:
+    connection = get_connection(connection_id)
+    if connection is None:
         return []
     try:
         if service:
-            state = await backend.get_service_state(host, service)
+            state = await connection.get_service_state(host, service)
         else:
-            state = await backend.get_host_state(host)
+            state = await connection.get_host_state(host)
         return _parse_metric_names(state.perf_data)
     except Exception:
         return []
@@ -208,22 +219,22 @@ class MetricHistoryResponse(BaseModel):
     graphs: list[GraphGroupResponse] = []
 
 
-@router.get("/{backend_id}/metric-history", response_model=MetricHistoryResponse)
+@router.get("/{connection_id}/metric-history", response_model=MetricHistoryResponse)
 async def get_metric_history(
-    backend_id: str,
+    connection_id: str,
     host: str = Query(...),
     service: str | None = Query(None),
     minutes: int = Query(60, ge=1, le=10080),
     _: User = Depends(get_current_user),
 ) -> MetricHistoryResponse:
     """Return RRD metric history for a host/service using Livestatus rrddata (Checkmk only)."""
-    backend = get_backend(backend_id)
-    if backend is None:
+    connection = get_connection(connection_id)
+    if connection is None:
         return MetricHistoryResponse(series={}, titles={})
     end = int(time.time())
     start = end - minutes * 60
     try:
-        raw = await backend.get_metric_history(host, service, start, end)
+        raw = await connection.get_metric_history(host, service, start, end)
     except Exception as exc:
         logger.error("metric-history error: %s", exc, exc_info=True)
         return MetricHistoryResponse(
@@ -245,62 +256,62 @@ class HostGeo(BaseModel):
     lng: float
 
 
-@router.get("/{backend_id}/host-geo", response_model=HostGeo | None)
+@router.get("/{connection_id}/host-geo", response_model=HostGeo | None)
 async def get_host_geo(
-    backend_id: str,
+    connection_id: str,
     host: str = Query(...),
     _: User = Depends(get_current_user),
 ) -> HostGeo | None:
     """Return orbvis_lat/orbvis_lng coordinates for a host, or null if not set."""
-    backend = get_backend(backend_id)
-    if backend is None:
+    connection = get_connection(connection_id)
+    if connection is None:
         return None
-    result = await backend.get_host_geo(host)
+    result = await connection.get_host_geo(host)
     return HostGeo(lat=result[0], lng=result[1]) if result else None
 
 
-@router.get("/{backend_id}/graph-templates", response_model=list[GraphGroupResponse])
+@router.get("/{connection_id}/graph-templates", response_model=list[GraphGroupResponse])
 async def get_graph_templates_for_object(
-    backend_id: str,
+    connection_id: str,
     host: str = Query(...),
     service: str | None = Query(None),
     _: User = Depends(get_current_user),
 ) -> list[GraphGroupResponse]:
     """Return applicable CMK graph template groups for a host/service (for graph object properties)."""
-    backend = get_backend(backend_id)
-    if backend is None:
+    connection = get_connection(connection_id)
+    if connection is None:
         return []
-    groups = await backend.get_graph_templates(host, service)
+    groups = await connection.get_graph_templates(host, service)
     return [GraphGroupResponse(id=g.id, title=g.title, metrics=g.metrics) for g in groups]
 
 
-@router.get("/{backend_id}/objects", response_model=list[str])
+@router.get("/{connection_id}/objects", response_model=list[str])
 async def list_backend_objects(
-    backend_id: str,
+    connection_id: str,
     obj_type: str = Query(..., alias="type"),
     host: str | None = Query(None),
     _: User = Depends(require_admin),
 ) -> list[str]:
-    """Return available object names from a backend (for editor autocomplete)."""
-    return await get_backend_objects(backend_id, obj_type, host)
+    """Return available object names from a connection (for editor autocomplete)."""
+    return await get_connection_objects(connection_id, obj_type, host)
 
 
-@router.get("/{backend_id}/aggregations", response_model=list[AggregationInfo])
+@router.get("/{connection_id}/aggregations", response_model=list[AggregationInfo])
 async def list_backend_aggregations(
-    backend_id: str,
+    connection_id: str,
     user: User = Depends(get_current_user),
 ) -> list[AggregationInfo]:
     """Return all configured Checkmk BI aggregations for editor autocomplete."""
-    backend = get_backend(backend_id)
-    if backend is None:
+    connection = get_connection(connection_id)
+    if connection is None:
         return []
     try:
         # Use the user's auth context so cmk.bi filters by their permissions.
-        with_auth = getattr(backend, "with_auth_user", None)
+        with_auth = getattr(connection, "with_auth_user", None)
         if with_auth is not None:
             async with with_auth(user.name):
-                return await backend.list_aggregations()
-        return await backend.list_aggregations()
+                return await connection.list_aggregations()
+        return await connection.list_aggregations()
     except Exception as exc:
-        logger.warning("list_aggregations failed for backend %s: %s", backend_id, exc)
+        logger.warning("list_aggregations failed for connection %s: %s", connection_id, exc)
         return []

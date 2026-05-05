@@ -1,4 +1,4 @@
-"""MK Livestatus backend via asyncio Unix/TCP socket."""
+"""MK Livestatus connection via asyncio Unix/TCP socket."""
 
 from __future__ import annotations
 
@@ -24,7 +24,13 @@ if TYPE_CHECKING:
 
 import httpx
 
-from app.backends.base import BackendBase, GraphGroup, MetricHistoryResult, ServiceRow, TopologyRow
+from app.connections.base import (
+    ConnectionBase,
+    GraphGroup,
+    MetricHistoryResult,
+    ServiceRow,
+    TopologyRow,
+)
 from app.core.config import settings
 from app.integrations import checkmk as _cmk_integration
 from app.integrations import checkmk_sites as _cmk_sites
@@ -526,10 +532,10 @@ def _parse_metrics_from_perf(perf_data: str) -> list[_MetricInfo]:
     return results
 
 
-class LivestatusBackend(BackendBase):
+class LivestatusConnection(ConnectionBase):
     """Connects to a Livestatus socket (Unix or TCP) and queries host/service states."""
 
-    backend_id: str = "live_1"
+    connection_id: str = "live_1"
 
     def __init__(
         self,
@@ -550,10 +556,10 @@ class LivestatusBackend(BackendBase):
         self._automation_user = automation_user
         self._automation_secret = automation_secret
         self._verify_ssl = verify_ssl
-        self._semaphore = asyncio.Semaphore(settings.backend_max_connections)
+        self._semaphore = asyncio.Semaphore(settings.connection_pool_size)
         self._aggregations_cache: tuple[float, list[AggregationInfo]] | None = None
 
-        # Auto-federate when this backend points at the central site's local
+        # Auto-federate when this connection points at the central site's local
         # Livestatus socket — the socket only sees local data, so MultiSiteConnection
         # is required to also reach remote-site hosts/services.
         self._sites: dict[str, dict[str, object]] | None = (
@@ -1146,7 +1152,7 @@ class LivestatusBackend(BackendBase):
 
         Two pieces of compatibility shimming:
         - cmk.bi hardcodes ``Cache: reload`` in compiler.py + data_fetcher.py.
-          Some Livestatus backends reject the header with HTTP 400 ("undefined
+          Some Livestatus connections reject the header with HTTP 400 ("undefined
           request header") — strip it; it's only a perf hint, not correctness.
         - cmk.gui.bi.bi_manager wraps every query in ``sites.prepend_site()``,
           which prepends the site_id column to each row. cmk.bi consumers
@@ -1190,7 +1196,7 @@ class LivestatusBackend(BackendBase):
             if site_data:
                 return _aggregations_to_object_states(site_data, aggregation_ids)
 
-        # Standalone-mode fallback: REST API with whatever auth the backend
+        # Standalone-mode fallback: REST API with whatever auth the connection
         # connection has (typically Bearer with automation_user/secret).
         rest_data = await self._cmk_rest(
             "POST",
@@ -1412,13 +1418,13 @@ class LivestatusBackend(BackendBase):
     async def _query_with_site(self, query: str) -> list[tuple[str | None, LivestatusRow]]:
         """Run a query and return ``(site_id, row)`` tuples.
 
-        Single-site backends yield ``site_id=None`` so callers can remain
-        backend-agnostic.
+        Single-site connections yield ``site_id=None`` so callers can remain
+        connection-agnostic.
         """
         if self._sites:
             rows = await asyncio.wait_for(
                 asyncio.to_thread(self._run_multisite_sync, query),
-                timeout=settings.backend_query_timeout,
+                timeout=settings.connection_query_timeout,
             )
             return [
                 (str(row[0]) if row and isinstance(row[0], str) else None, row[1:]) for row in rows
@@ -1426,7 +1432,7 @@ class LivestatusBackend(BackendBase):
         async with self._semaphore:
             rows = await asyncio.wait_for(
                 self._query_raw(query),
-                timeout=settings.backend_query_timeout,
+                timeout=settings.connection_query_timeout,
             )
         return [(None, r) for r in rows]
 

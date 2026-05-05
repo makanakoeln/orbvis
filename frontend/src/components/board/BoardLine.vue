@@ -212,7 +212,7 @@ const props = defineProps<{
     state: ObjectState | undefined;
     editMode: boolean;
     dragCoords?: { x: number; y: number; x2: number; y2: number };
-    backendId?: string | null;
+    connectionId?: string | null;
 }>();
 
 defineEmits<{
@@ -395,14 +395,14 @@ async function _fetchPerfometerLabel(): Promise<void> {
     if (
         !props.object.host_name ||
         !props.object.service_description ||
-        !props.backendId ||
+        !props.connectionId ||
         !authStore.accessToken
     ) {
         return;
     }
     try {
         const r = await metricsApi.getPerfometer(
-            props.backendId,
+            props.connectionId,
             props.object.host_name,
             props.object.service_description,
             authStore.accessToken,

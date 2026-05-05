@@ -36,12 +36,12 @@ class Settings(BaseSettings):
     checkmk_site: str = ""
 
     boards_dir: str = "./boards"
-    backends_file: str = "./backends.json"
+    connections_file: str = "./connections.json"
 
     ws_ping_interval: int = 30
     state_refresh_interval: int = 5
-    backend_query_timeout: int = 10
-    backend_max_connections: int = 20
+    connection_query_timeout: int = 10
+    connection_pool_size: int = 20
 
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 

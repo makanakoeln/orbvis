@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.backends.base import BackendBase
+from app.connections.base import ConnectionBase
 from app.core.database import Base, get_db
 from app.core.security import hash_password
 from app.main import app
@@ -105,22 +105,22 @@ async def regular_token(client, regular_user):
 
 
 @pytest.fixture
-def mock_backend() -> MagicMock:
-    """A MagicMock implementing BackendBase for unit tests."""
-    backend = MagicMock(spec=BackendBase)
-    backend.backend_id = "mock_backend"
-    backend.is_available = AsyncMock(return_value=True)
-    backend.get_host_state = AsyncMock()
-    backend.get_service_state = AsyncMock()
-    backend.get_host_hard_state = AsyncMock()
-    backend.get_service_hard_state = AsyncMock()
-    backend.get_hostgroup_states = AsyncMock()
-    backend.get_servicegroup_states = AsyncMock()
-    backend.get_hosts_states = AsyncMock(return_value={})
-    backend.get_services_states = AsyncMock(return_value={})
-    backend.get_hosts_services_batch = AsyncMock(return_value={})
-    backend.get_host_services = AsyncMock(return_value=[])
-    backend.get_objects = AsyncMock(return_value=[])
-    backend.get_group_members = AsyncMock(return_value=[])
-    backend.get_topology = AsyncMock(return_value=[])
-    return backend
+def mock_connection() -> MagicMock:
+    """A MagicMock implementing ConnectionBase for unit tests."""
+    connection = MagicMock(spec=ConnectionBase)
+    connection.connection_id = "mock_connection"
+    connection.is_available = AsyncMock(return_value=True)
+    connection.get_host_state = AsyncMock()
+    connection.get_service_state = AsyncMock()
+    connection.get_host_hard_state = AsyncMock()
+    connection.get_service_hard_state = AsyncMock()
+    connection.get_hostgroup_states = AsyncMock()
+    connection.get_servicegroup_states = AsyncMock()
+    connection.get_hosts_states = AsyncMock(return_value={})
+    connection.get_services_states = AsyncMock(return_value={})
+    connection.get_hosts_services_batch = AsyncMock(return_value={})
+    connection.get_host_services = AsyncMock(return_value=[])
+    connection.get_objects = AsyncMock(return_value=[])
+    connection.get_group_members = AsyncMock(return_value=[])
+    connection.get_topology = AsyncMock(return_value=[])
+    return connection

@@ -138,7 +138,7 @@ export const useStatesStore = defineStore('states', () => {
             }
             Object.assign(states.value, newStates);
             lastUpdate.value = ts;
-            connected.value = data.backend_ok;
+            connected.value = data.connection_ok;
         } catch {
             // Backend unreachable or auth error – show as offline
             connected.value = false;
@@ -163,9 +163,9 @@ export const useStatesStore = defineStore('states', () => {
             opened = true;
             ws?.send(JSON.stringify({ type: 'auth', token: currentToken }));
             // Do NOT set connected=true here. The first state_update message sets
-            // connected via msg.states.backend_ok, which correctly reflects whether the
+            // connected via msg.states.connection_ok, which correctly reflects whether the
             // monitoring backend is reachable – not just whether the WS handshake succeeded.
-            // Setting true here would override a backend_ok=false from the pre-connect
+            // Setting true here would override a connection_ok=false from the pre-connect
             // _fetchStates() call and show "Live" when the monitoring backend is actually down.
         };
 
@@ -186,7 +186,7 @@ export const useStatesStore = defineStore('states', () => {
                     }
                     Object.assign(states.value, newStates);
                     lastUpdate.value = msg.states.generated_at;
-                    connected.value = msg.states.backend_ok;
+                    connected.value = msg.states.connection_ok;
                 }
             } catch {
                 /* ignore parse errors */
@@ -243,7 +243,7 @@ export const useStatesStore = defineStore('states', () => {
 
     async function prefillMetricHistory(
         objectId: string,
-        backendId: string,
+        connectionId: string,
         host: string,
         service: string | null,
         timeWindowMinutes: number,
@@ -251,7 +251,7 @@ export const useStatesStore = defineStore('states', () => {
     ): Promise<void> {
         try {
             const data = await connectionsApi.metricHistory(
-                backendId,
+                connectionId,
                 host,
                 service,
                 timeWindowMinutes,

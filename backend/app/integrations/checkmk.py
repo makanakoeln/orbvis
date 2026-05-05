@@ -352,7 +352,7 @@ def _build_computer(query_callback: QueryCallback, site_id: str) -> object:
 def _cached_computer(query_callback: QueryCallback, site_id: str) -> object:
     """Return a cached BIComputer; rebuild every BI_COMPUTER_TTL seconds.
 
-    OrbVis configures one Livestatus backend per OMD site, so a process-global
+    OrbVis configures one Livestatus connection per OMD site, so a process-global
     cache is fine — callbacks always point at the same site.
     """
     global _BI_COMPUTER_CACHE

@@ -4,12 +4,12 @@
 
 import type {
     AggregationInfo,
-    BackendConfig,
-    BackendContext,
     BoardConfig,
     BoardObject,
     BoardPermissions,
     BoardRead,
+    ConnectionConfig,
+    ConnectionContext,
     DowntimeEntry,
     GlobalSettings,
     ImageEntry,
@@ -130,7 +130,7 @@ export const boardsApi = {
         data: {
             name: string;
             alias?: string;
-            backend_id?: string;
+            connection_id?: string;
             icon_size?: number;
             view?: Record<string, unknown>;
         },
@@ -274,67 +274,76 @@ export const rolesApi = {
         request(`/roles/${roleId}/permissions/${permId}`, { method: 'DELETE' }, token),
 };
 
-// ---- Backends ----
+// ---- Connections ----
 
 export const connectionsApi = {
-    list: (token: string): Promise<BackendConfig[]> => request('/backends', {}, token),
+    list: (token: string): Promise<ConnectionConfig[]> => request('/connections', {}, token),
 
-    create: (data: BackendConfig, token: string): Promise<BackendConfig> =>
-        request('/backends', { method: 'POST', body: JSON.stringify(data) }, token),
+    create: (data: ConnectionConfig, token: string): Promise<ConnectionConfig> =>
+        request('/connections', { method: 'POST', body: JSON.stringify(data) }, token),
 
-    update: (id: string, data: Omit<BackendConfig, 'id'>, token: string): Promise<BackendConfig> =>
-        request(`/backends/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+    update: (
+        id: string,
+        data: Omit<ConnectionConfig, 'id'>,
+        token: string,
+    ): Promise<ConnectionConfig> =>
+        request(`/connections/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
 
     delete: (id: string, token: string): Promise<void> =>
-        request(`/backends/${id}`, { method: 'DELETE' }, token),
+        request(`/connections/${id}`, { method: 'DELETE' }, token),
 
-    objects: (backendId: string, type: string, token: string, host?: string): Promise<string[]> => {
+    objects: (
+        connectionId: string,
+        type: string,
+        token: string,
+        host?: string,
+    ): Promise<string[]> => {
         const params = new URLSearchParams({ type });
         if (host) params.set('host', host);
-        return request(`/backends/${backendId}/objects?${params}`, {}, token);
+        return request(`/connections/${connectionId}/objects?${params}`, {}, token);
     },
 
-    aggregations: (backendId: string, token: string): Promise<AggregationInfo[]> =>
-        request(`/backends/${backendId}/aggregations`, {}, token),
+    aggregations: (connectionId: string, token: string): Promise<AggregationInfo[]> =>
+        request(`/connections/${connectionId}/aggregations`, {}, token),
 
-    test: (backendId: string, token: string): Promise<{ ok: boolean; message: string }> =>
-        request(`/backends/${backendId}/test`, {}, token),
+    test: (connectionId: string, token: string): Promise<{ ok: boolean; message: string }> =>
+        request(`/connections/${connectionId}/test`, {}, token),
 
     topology: (
-        backendId: string,
+        connectionId: string,
         token: string,
         includeServices = false,
     ): Promise<import('@/types/api').TopologyNode[]> =>
         request(
-            `/backends/${backendId}/topology${includeServices ? '?include_services=true' : ''}`,
+            `/connections/${connectionId}/topology${includeServices ? '?include_services=true' : ''}`,
             {},
             token,
         ),
 
     perfMetrics: (
-        backendId: string,
+        connectionId: string,
         host: string,
         token: string,
         service?: string,
     ): Promise<string[]> => {
         const params = new URLSearchParams({ host });
         if (service) params.set('service', service);
-        return request(`/backends/${backendId}/perf-metrics?${params}`, {}, token);
+        return request(`/connections/${connectionId}/perf-metrics?${params}`, {}, token);
     },
 
     graphTemplates: (
-        backendId: string,
+        connectionId: string,
         host: string,
         service: string | null,
         token: string,
     ): Promise<MetricGraphGroup[]> => {
         const params = new URLSearchParams({ host });
         if (service) params.set('service', service);
-        return request(`/backends/${backendId}/graph-templates?${params}`, {}, token);
+        return request(`/connections/${connectionId}/graph-templates?${params}`, {}, token);
     },
 
     metricHistory: (
-        backendId: string,
+        connectionId: string,
         host: string,
         service: string | null,
         minutes: number,
@@ -342,24 +351,32 @@ export const connectionsApi = {
     ): Promise<MetricHistoryResponse> => {
         const params = new URLSearchParams({ host, minutes: String(minutes) });
         if (service) params.set('service', service);
-        return request(`/backends/${backendId}/metric-history?${params}`, {}, token);
+        return request(`/connections/${connectionId}/metric-history?${params}`, {}, token);
     },
 
     hostGeo: (
-        backendId: string,
+        connectionId: string,
         host: string,
         token: string,
     ): Promise<{ lat: number; lng: number } | null> =>
-        request(`/backends/${backendId}/host-geo?host=${encodeURIComponent(host)}`, {}, token),
+        request(
+            `/connections/${connectionId}/host-geo?host=${encodeURIComponent(host)}`,
+            {},
+            token,
+        ),
 
-    context: (backendId: string, token: string): Promise<BackendContext> =>
-        request(`/backends/${backendId}/context`, {}, token),
+    context: (connectionId: string, token: string): Promise<ConnectionContext> =>
+        request(`/connections/${connectionId}/context`, {}, token),
 
     testConnection: (
-        data: BackendConfig,
+        data: ConnectionConfig,
         token: string,
     ): Promise<{ ok: boolean; message: string }> =>
-        request('/backends/test-connection', { method: 'POST', body: JSON.stringify(data) }, token),
+        request(
+            '/connections/test-connection',
+            { method: 'POST', body: JSON.stringify(data) },
+            token,
+        ),
 };
 
 // ---- Images ----
@@ -462,12 +479,12 @@ function cmkHostAction(baseUrl: string, hostname: string, action: string): Promi
 
 export const metricsApi = {
     getPerfometer(
-        backendId: string,
+        connectionId: string,
         host: string,
         service: string,
         token: string,
     ): Promise<PerfometerResult | null> {
-        const params = new URLSearchParams({ backend_id: backendId, host, service });
+        const params = new URLSearchParams({ connection_id: connectionId, host, service });
         return request<PerfometerResult | null>(`/metrics/perfometer?${params}`, {}, token);
     },
 };

@@ -192,7 +192,7 @@ ORBVIS_DIR="$ROOT/local/share/orbvis"
 HTDOCS_DIR="$ORBVIS_DIR/htdocs"
 BOARDS_DIR="$ORBVIS_DIR/boards"
 ENV_FILE="$ORBVIS_DIR/.env"
-BACKENDS_FILE="$ORBVIS_DIR/backends.json"
+CONNECTIONS_FILE="$ORBVIS_DIR/connections.json"
 DB_FILE="$ORBVIS_DIR/orbvis.db"
 VENV_DIR="$ORBVIS_DIR/venv"
 APACHE_CONF="$ROOT/etc/apache/conf.d/orbvis.conf"
@@ -240,7 +240,7 @@ uninstall)
   echo "  Kept (user data):  $BOARDS_DIR"
   echo "                     $DB_FILE"
   echo "                     $ENV_FILE"
-  echo "                     $BACKENDS_FILE"
+  echo "                     $CONNECTIONS_FILE"
   echo ""
   echo "  Remove manually if no longer needed:"
   echo "    rm -rf $ORBVIS_DIR"
@@ -339,7 +339,7 @@ setup)
 
   cat > "$ENV_FILE" << EOF
 BOARDS_DIR=$BOARDS_DIR
-BACKENDS_FILE=$BACKENDS_FILE
+CONNECTIONS_FILE=$CONNECTIONS_FILE
 DATABASE_URL=sqlite+aiosqlite:///$DB_FILE
 SECRET_KEY=$SECRET_KEY
 STATE_REFRESH_INTERVAL=15
@@ -348,8 +348,8 @@ CHECKMK_OMD_ROOT=$ROOT
 CHECKMK_SITE=$SITE
 EOF
 
-  if [[ ! -f "$BACKENDS_FILE" ]]; then
-    cat > "$BACKENDS_FILE" << EOF
+  if [[ ! -f "$CONNECTIONS_FILE" ]]; then
+    cat > "$CONNECTIONS_FILE" << EOF
 [
   {
     "id": "live_1",
@@ -362,7 +362,7 @@ EOF
 EOF
     ok "Configuration written"
   else
-    ok "Configuration written (existing backends.json kept)"
+    ok "Configuration written (existing connections.json kept)"
   fi
 
   # 6. Apache configuration

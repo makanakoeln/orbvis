@@ -42,4 +42,4 @@ class MapStates(BaseModel):
     map_name: str
     states: list[ObjectState]
     generated_at: float  # unix timestamp
-    backend_ok: bool = True  # False when the monitoring backend is unreachable
+    connection_ok: bool = True  # False when the monitoring connection is unreachable

@@ -1,4 +1,4 @@
-"""Icinga2 REST API monitoring backend."""
+"""Icinga2 REST API monitoring connection."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import logging
 
 import httpx
 
-from app.backends.base import BackendBase, ServiceRow, TopologyRow
+from app.connections.base import ConnectionBase, ServiceRow, TopologyRow
 from app.schemas.state import ObjectState
 
 # HTTP-Query-Parameter: Icinga2 akzeptiert str/int/float/bool — httpx serialisiert selbst
@@ -79,10 +79,10 @@ def _apply_icinga_extra(state: ObjectState, attrs: IcingaObject) -> ObjectState:
     return state
 
 
-class Icinga2Backend(BackendBase):
+class Icinga2Connection(ConnectionBase):
     """Query monitoring state from an Icinga2 instance via its REST API."""
 
-    backend_id = "icinga2"
+    connection_id = "icinga2"
 
     def __init__(
         self,
@@ -119,7 +119,7 @@ class Icinga2Backend(BackendBase):
             return list(results) if results else []
 
     # ------------------------------------------------------------------
-    # BackendBase implementation
+    # ConnectionBase implementation
     # ------------------------------------------------------------------
 
     async def get_host_state(self, hostname: str) -> ObjectState:
