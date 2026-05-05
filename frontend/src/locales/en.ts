@@ -100,6 +100,13 @@ export default {
         tileSaturate: 'Map saturation (%)',
         tileSaturatePlaceholder: '100 (default)',
         fitAll: 'Fit all objects',
+        flowRoot: 'Root host',
+        flowRootPlaceholder: 'Leave empty to render full topology',
+        flowChildLayers: 'Child layers',
+        flowParentLayers: 'Parent layers',
+        flowLayersPlaceholder: 'unlimited',
+        flowHint:
+            'Restrict the topology to a cutout around a single root host. -1 = unlimited hops, 0 = none.',
         filterType: 'Filter type',
         filterTypeHostgroup: 'Host group',
         filterTypeServicegroup: 'Service group',

@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from app.api.v1.deps import get_current_user, require_admin
+from app.connections.base import TopologyRow
 from app.core.config import settings
 from app.integrations import checkmk as cmk_integration
 from app.models.user import User
@@ -151,10 +152,53 @@ class TopologyNode(BaseModel):
     services: list[ServiceNode] = []
 
 
+def _filter_topology(
+    nodes: list[TopologyRow],
+    root: str | None,
+    child_layers: int | None,
+    parent_layers: int | None,
+) -> list[TopologyRow]:
+    if not root:
+        return nodes
+    by_name: dict[str, TopologyRow] = {n["name"]: n for n in nodes}
+    if root not in by_name:
+        return []
+
+    children_of: dict[str, list[str]] = {}
+    parents_of: dict[str, list[str]] = {}
+    for n in nodes:
+        parents = n.get("parents") or []
+        parents_of[n["name"]] = list(parents)
+        for parent in parents:
+            children_of.setdefault(parent, []).append(n["name"])
+
+    def bfs(neighbours: dict[str, list[str]], depth_limit: int) -> set[str]:
+        seen: set[str] = {root}
+        frontier: list[str] = [root]
+        depth = 0
+        while frontier and (depth_limit < 0 or depth < depth_limit):
+            depth += 1
+            nxt: list[str] = []
+            for name in frontier:
+                for nb in neighbours.get(name, []):
+                    if nb not in seen and nb in by_name:
+                        seen.add(nb)
+                        nxt.append(nb)
+            frontier = nxt
+        return seen
+
+    keep = bfs(children_of, child_layers if child_layers is not None else -1)
+    keep |= bfs(parents_of, parent_layers if parent_layers is not None else 0)
+    return [n for n in nodes if n["name"] in keep]
+
+
 @router.get("/{connection_id}/topology", response_model=list[TopologyNode])
 async def get_topology(
     connection_id: str,
     include_services: bool = Query(False),
+    root: str | None = Query(None),
+    child_layers: int | None = Query(None, ge=-1, le=20),
+    parent_layers: int | None = Query(None, ge=-1, le=20),
     _: User = Depends(get_current_user),
 ) -> list[TopologyNode]:
     """Return host topology for flow board rendering."""
@@ -164,6 +208,7 @@ async def get_topology(
             status_code=status.HTTP_404_NOT_FOUND, detail="Connection not registered"
         )
     nodes = await connection.get_topology()
+    nodes = _filter_topology(nodes, root, child_layers, parent_layers)
     if include_services:
         result: list[TopologyNode] = []
         for node in nodes:

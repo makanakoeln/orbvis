@@ -231,10 +231,30 @@ def _apply_global(board: dict[str, Any], p: dict[str, str]) -> None:
         board["alias"] = p["alias"]
     if "map_image" in p:
         board["background_image"] = p["map_image"]
+    # NagVis cfg uses ``backend_id`` on disk; accept either spelling.
+    if "backend_id" in p:
+        board["connection_id"] = p["backend_id"]
     if "connection_id" in p:
         board["connection_id"] = p["connection_id"]
     if "iconset" in p:
         board["icon_size"] = ICONSET_SIZE.get(p["iconset"], 22)
+
+    sources = {s.strip().lower() for s in p.get("sources", "").split(",") if s.strip()}
+    if "automap" in sources:
+        view: dict[str, Any] = {"type": "flow"}
+        if p.get("root"):
+            view["root"] = p["root"]
+        if "child_layers" in p:
+            view["child_layers"] = _int(p["child_layers"], -1)
+        if "parent_layers" in p:
+            view["parent_layers"] = _int(p["parent_layers"], 0)
+        board["view"] = view
+    elif sources & {"geomap", "dynmap", "worldmap"}:
+        unsupported = sorted(sources & {"geomap", "dynmap", "worldmap"})
+        print(
+            f"  ⚠  source {','.join(unsupported)} not yet supported — board will be empty",
+            file=sys.stderr,
+        )
 
 
 def _line_obj_common(p: dict[str, str], raw_id: str) -> dict[str, Any]:
@@ -418,6 +438,9 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
         raw_id = p.get("object_id", str(counter))
         objects.append(_handle_object_block(block.block_type, p, raw_id))
 
+    view = board.get("view")
+    if isinstance(view, dict) and view.get("type") == "flow":
+        objects = []
     board["objects"] = objects
     return board
 

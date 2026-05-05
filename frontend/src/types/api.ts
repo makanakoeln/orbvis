@@ -80,6 +80,9 @@ export interface RadarView {
 }
 export interface FlowView {
     type: 'flow';
+    root?: string | null;
+    child_layers?: number | null;
+    parent_layers?: number | null;
 }
 export type BoardView = StaticView | WorldmapView | RadarView | FlowView;
 

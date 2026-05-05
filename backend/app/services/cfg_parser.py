@@ -142,6 +142,17 @@ def _apply_global(board: dict[str, object], p: dict[str, str]) -> None:
     if "iconset" in p:
         board["icon_size"] = ICONSET_SIZE.get(p["iconset"], 22)
 
+    sources = {s.strip().lower() for s in p.get("sources", "").split(",") if s.strip()}
+    if "automap" in sources:
+        view: dict[str, object] = {"type": "flow"}
+        if p.get("root"):
+            view["root"] = p["root"]
+        if "child_layers" in p:
+            view["child_layers"] = _int(p["child_layers"], -1)
+        if "parent_layers" in p:
+            view["parent_layers"] = _int(p["parent_layers"], 0)
+        board["view"] = view
+
 
 def _line_obj_common(p: dict[str, str], raw_id: str) -> dict[str, object]:
     x, y, x2, y2 = _line_coords(p)
@@ -339,5 +350,8 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, object]:
         if obj is not None:
             objects.append(obj)
 
+    view = board.get("view")
+    if isinstance(view, dict) and view.get("type") == "flow":
+        objects = []
     board["objects"] = objects
     return board

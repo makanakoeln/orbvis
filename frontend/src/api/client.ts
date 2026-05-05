@@ -313,12 +313,20 @@ export const connectionsApi = {
         connectionId: string,
         token: string,
         includeServices = false,
-    ): Promise<import('@/types/api').TopologyNode[]> =>
-        request(
-            `/connections/${connectionId}/topology${includeServices ? '?include_services=true' : ''}`,
-            {},
-            token,
-        ),
+        opts?: {
+            root?: string | null;
+            childLayers?: number | null;
+            parentLayers?: number | null;
+        },
+    ): Promise<import('@/types/api').TopologyNode[]> => {
+        const params = new URLSearchParams();
+        if (includeServices) params.set('include_services', 'true');
+        if (opts?.root) params.set('root', opts.root);
+        if (opts?.childLayers != null) params.set('child_layers', String(opts.childLayers));
+        if (opts?.parentLayers != null) params.set('parent_layers', String(opts.parentLayers));
+        const qs = params.toString();
+        return request(`/connections/${connectionId}/topology${qs ? `?${qs}` : ''}`, {}, token);
+    },
 
     perfMetrics: (
         connectionId: string,

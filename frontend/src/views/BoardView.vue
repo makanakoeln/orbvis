@@ -349,6 +349,7 @@
                     :readonly="isKiosk || boardConfig?.readonly"
                     :click-action="boardConfig.click_action"
                     :checkmk-url="checkmkUrl"
+                    :flow-view="boardConfig.view.type === 'flow' ? boardConfig.view : null"
                 />
                 <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">
                     {{ t('board.noConnectionConfigured') }}

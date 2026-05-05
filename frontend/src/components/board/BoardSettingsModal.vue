@@ -176,6 +176,41 @@
                             <p class="text-sm text-zinc-600">{{ t('board.worldmapHint') }}</p>
                         </template>
 
+                        <!-- Flow settings -->
+                        <template v-if="form.map_type === 'flow'">
+                            <div class="space-y-[4px]">
+                                <CmkLabel>{{ t('board.flowRoot') }}</CmkLabel>
+                                <CmkInput
+                                    v-model="form.flow_root"
+                                    :placeholder="t('board.flowRootPlaceholder')"
+                                    field-size="FILL"
+                                />
+                            </div>
+                            <div class="grid grid-cols-2 gap-[8px]">
+                                <div class="space-y-[4px]">
+                                    <CmkLabel>{{ t('board.flowChildLayers') }}</CmkLabel>
+                                    <NumberInput
+                                        v-model="form.flow_child_layers"
+                                        :min="-1"
+                                        :max="20"
+                                        :placeholder="t('board.flowLayersPlaceholder')"
+                                        class="w-full"
+                                    />
+                                </div>
+                                <div class="space-y-[4px]">
+                                    <CmkLabel>{{ t('board.flowParentLayers') }}</CmkLabel>
+                                    <NumberInput
+                                        v-model="form.flow_parent_layers"
+                                        :min="-1"
+                                        :max="20"
+                                        :placeholder="t('board.flowLayersPlaceholder')"
+                                        class="w-full"
+                                    />
+                                </div>
+                            </div>
+                            <p class="text-sm text-zinc-600">{{ t('board.flowHint') }}</p>
+                        </template>
+
                         <!-- Radar settings -->
                         <template v-if="form.map_type === 'radar'">
                             <div class="grid grid-cols-2 gap-[8px]">
@@ -450,6 +485,7 @@ import { useAuthStore } from '@/stores/auth';
 import type {
     BoardRead,
     ConnectionConfig,
+    FlowView,
     PermissionRead,
     RadarView,
     RoleRead,
@@ -495,6 +531,7 @@ function initWorldmapCoords() {
 const wm = initWorldmapCoords();
 const rv = props.board.view.type === 'radar' ? (props.board.view as RadarView) : null;
 const wmv = props.board.view.type === 'worldmap' ? (props.board.view as WorldmapView) : null;
+const fv = props.board.view.type === 'flow' ? (props.board.view as FlowView) : null;
 
 const form = ref({
     alias: props.board.alias,
@@ -511,6 +548,9 @@ const form = ref({
     worldmap_tile_saturate: wmv?.tile_saturate ?? (null as number | null),
     radar_filter: rv?.filter ?? 'hostgroup',
     radar_filter_value: rv?.filter_value ?? '',
+    flow_root: fv?.root ?? '',
+    flow_child_layers: fv?.child_layers ?? (null as number | null),
+    flow_parent_layers: fv?.parent_layers ?? (null as number | null),
     hover_template: props.board.hover_template ?? '',
     context_template: props.board.context_template ?? '',
     background_image: props.board.background_image ?? '',
@@ -570,6 +610,13 @@ async function save() {
                 type: 'radar',
                 filter: form.value.radar_filter,
                 filter_value: form.value.radar_filter_value,
+            };
+        } else if (form.value.map_type === 'flow') {
+            view = {
+                type: 'flow',
+                root: form.value.flow_root.trim() || null,
+                child_layers: form.value.flow_child_layers,
+                parent_layers: form.value.flow_parent_layers,
             };
         } else {
             view = { type: form.value.map_type };

@@ -101,7 +101,7 @@ import { connectionsApi } from '@/api/client';
 import HoverMenu from '@/components/board/HoverMenu.vue';
 import { useD3Cleanup } from '@/composables/useD3Cleanup';
 import { useAuthStore } from '@/stores/auth';
-import type { BoardObject, ClickAction, ObjectState, TopologyNode } from '@/types/api';
+import type { BoardObject, ClickAction, FlowView, ObjectState, TopologyNode } from '@/types/api';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { stateColor } from '@/utils/stateColors';
 
@@ -111,6 +111,7 @@ const props = defineProps<{
     readonly?: boolean;
     clickAction?: ClickAction;
     checkmkUrl?: string | null;
+    flowView?: FlowView | null;
 }>();
 const auth = useAuthStore();
 
@@ -171,6 +172,11 @@ async function fetchTopology() {
             props.connectionId,
             auth.accessToken!,
             props.serviceLayout !== 'off',
+            {
+                root: props.flowView?.root ?? null,
+                childLayers: props.flowView?.child_layers ?? null,
+                parentLayers: props.flowView?.parent_layers ?? null,
+            },
         );
     } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to load topology';
@@ -265,6 +271,19 @@ watch(
     () => props.connectionId,
     () => {
         _hasFitOnce = false;
+    },
+);
+
+watch(
+    () => [
+        props.flowView?.root ?? '',
+        props.flowView?.child_layers ?? null,
+        props.flowView?.parent_layers ?? null,
+    ],
+    () => {
+        nodeCache.clear();
+        _hasFitOnce = false;
+        fetchTopology();
     },
 );
 

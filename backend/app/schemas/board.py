@@ -158,6 +158,10 @@ class RadarView(BaseModel):
 
 class FlowView(BaseModel):
     type: Literal["flow"] = "flow"
+    root: str | None = None
+    # -1 = unlimited; None defaults to unlimited downward / 0 upward (NagVis automap defaults).
+    child_layers: int | None = Field(default=None, ge=-1, le=20)
+    parent_layers: int | None = Field(default=None, ge=-1, le=20)
 
 
 BoardView = Annotated[

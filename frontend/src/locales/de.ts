@@ -101,6 +101,13 @@ export default {
         tileSaturate: 'Karten-Sättigung (%)',
         tileSaturatePlaceholder: '100 (Standard)',
         fitAll: 'Alle Objekte einpassen',
+        flowRoot: 'Wurzel-Host',
+        flowRootPlaceholder: 'Leer lassen, um die gesamte Topologie anzuzeigen',
+        flowChildLayers: 'Kind-Ebenen',
+        flowParentLayers: 'Eltern-Ebenen',
+        flowLayersPlaceholder: 'unbegrenzt',
+        flowHint:
+            'Schränkt die Topologie auf einen Ausschnitt um einen Wurzel-Host ein. -1 = unbegrenzt, 0 = keine.',
         filterType: 'Filtertyp',
         filterTypeHostgroup: 'Hostgruppe',
         filterTypeServicegroup: 'Servicegruppe',
