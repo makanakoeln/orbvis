@@ -545,7 +545,7 @@ py_list() { printf "'%s', " "$@"; }
 {
   echo "{"
   echo "  'author': 'OrbVis Project',"
-  printf "  'description': 'OrbVis monitoring visualization.\\\\n\\\\nAfter install run: su - <SITE> -c orbvis-setup',\\n"
+  printf "  'description': 'OrbVis - modern monitoring visualization for Checkmk, successor to NagVis.\\\\n\\\\nAfter install, run orbvis-setup once as the site user.',\\n"
   echo "  'download_url': '',"
   echo "  'files': {"
   echo "    'bin': [$(py_list "${BIN_FILES[@]}")],"
