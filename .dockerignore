@@ -4,6 +4,7 @@
 
 # Runtime config & state
 backend/backends.json
+backend/connections.json
 backend/boards/
 backend/maps/
 backend/data/

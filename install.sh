@@ -54,7 +54,7 @@ INSTALL_DIR="/opt/orbvis"
 HTDOCS_DIR="$INSTALL_DIR/htdocs"
 BOARDS_DIR="$INSTALL_DIR/boards"
 ENV_FILE="$INSTALL_DIR/.env"
-BACKENDS_FILE="$INSTALL_DIR/backends.json"
+CONNECTIONS_FILE="$INSTALL_DIR/connections.json"
 DB_FILE="$INSTALL_DIR/orbvis.db"
 VENV_DIR="$INSTALL_DIR/venv"
 BACKEND_PORT=8420
@@ -120,7 +120,7 @@ if [[ "$ACTION" == "remove" ]]; then
   fi
 
   sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR"
-  # Keep boards/, .env, backends.json, orbvis.db – user data
+  # Keep boards/, .env, connections.json, orbvis.db – user data
 
   echo ""
   echo "Done. OrbVis has been removed."
@@ -267,7 +267,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   SECRET_KEY="$("$PYTHON3" -c 'import secrets; print(secrets.token_hex(32))')"
   sudo tee "$ENV_FILE" > /dev/null <<EOF
 BOARDS_DIR=$BOARDS_DIR
-BACKENDS_FILE=$BACKENDS_FILE
+CONNECTIONS_FILE=$CONNECTIONS_FILE
 DATABASE_URL=sqlite+aiosqlite:///$DB_FILE
 SECRET_KEY=$SECRET_KEY
 STATE_REFRESH_INTERVAL=15

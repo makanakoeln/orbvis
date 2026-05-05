@@ -15,7 +15,7 @@ services:
       - ./data/db:/app/data
     environment:
       - BOARDS_DIR=/app/boards
-      - BACKENDS_FILE=/app/data/backends.json
+      - CONNECTIONS_FILE=/app/data/connections.json
       - DATABASE_URL=sqlite+aiosqlite:////app/data/orbvis.db
       # SECRET_KEY is mandatory — generate with `openssl rand -hex 32` and
       # export it or put it in a .env file next to this compose file.
