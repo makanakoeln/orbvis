@@ -1597,16 +1597,21 @@ class LivestatusConnection(ConnectionBase):
         """
         from cmk.livestatus_client import MultiSiteConnection, SiteConfigurations
 
-        sites = self._sites
-        if not sites:
+        if not self._sites:
             return []
 
         with self._mc_lock:
             current_mtime = _cmk_sites.sites_mk_mtime()
             if self._mc is None or current_mtime != self._mc_mtime:
                 if self._mc is not None:
-                    logger.info("sites.mk changed — rebuilding MultiSiteConnection")
-                self._mc = MultiSiteConnection(sites=SiteConfigurations(sites))
+                    logger.info("sites.mk changed — reloading enabled sites")
+                self._sites = _cmk_sites.load_sites()
+                if not self._sites:
+                    self._mc = None
+                    self._mc_mtime = current_mtime
+                    self._mc_dead = set()
+                    return []
+                self._mc = MultiSiteConnection(sites=SiteConfigurations(self._sites))
                 self._mc.set_prepend_site(True)
                 self._mc_mtime = current_mtime
                 self._mc_dead = set()
