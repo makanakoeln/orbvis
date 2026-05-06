@@ -339,8 +339,10 @@ setup)
     ln -sf "$PYTHON3" "$VENV_DIR/bin/python3"
   fi
   step "Installing backend dependencies"
-  "$VENV_DIR/bin/pip" install --quiet --upgrade pip
-  "$VENV_DIR/bin/pip" install --quiet "$MKP_LIB/server"
+  # --no-warn-conflicts silences the false-positive resolver complaints from
+  # the cmk meta-package whose deps live in the OMD site-packages, not the venv.
+  "$VENV_DIR/bin/pip" install --quiet --no-warn-conflicts --upgrade pip
+  "$VENV_DIR/bin/pip" install --quiet --no-warn-conflicts "$MKP_LIB/server"
   ok "Backend installed"
 
   # 5. Configuration
