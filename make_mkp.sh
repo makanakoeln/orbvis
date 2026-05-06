@@ -326,7 +326,10 @@ setup)
   ok "Using $($PYTHON3 --version) ($PYTHON3)"
 
   if [[ ! -d "$VENV_DIR" ]]; then
-    "$PYTHON3" -m venv --copies "$VENV_DIR"
+    "$PYTHON3" -m venv --symlinks "$VENV_DIR"
+  fi
+  if [[ ! -L "$VENV_DIR/bin/python3" ]]; then
+    ln -sf "$PYTHON3" "$VENV_DIR/bin/python3"
   fi
   step "Installing backend dependencies"
   "$VENV_DIR/bin/pip" install --quiet --upgrade pip
