@@ -68,16 +68,6 @@
             </button>
         </div>
 
-        <!-- High-service-count hint: nudge towards the aggregated donut layout
-             when the per-host node modes would render thousands of SVG nodes -->
-        <div
-            v-if="showServiceLoadHint"
-            class="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-lg ring-1 ring-[var(--border)] bg-[var(--bg-surface)]/90 backdrop-blur-md text-xs text-zinc-300 shadow-lg shadow-black/40"
-        >
-            {{ totalServiceLoad.toLocaleString() }} services rendered — switch service layout to
-            “Donut” for an aggregated view.
-        </div>
-
         <!-- Hover popup -->
         <HoverMenu
             v-if="hoverMenu.visible && hoverMenu.object"
@@ -107,7 +97,7 @@ import {
     zoom,
     zoomIdentity,
 } from 'd3';
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 import { connectionsApi } from '@/api/client';
 import HoverMenu from '@/components/board/HoverMenu.vue';
@@ -204,24 +194,6 @@ const hoverMenu = reactive<{
     y: number;
 }>({ visible: false, object: null, state: undefined, x: 0, y: 0 });
 let timer: ReturnType<typeof setInterval> | null = null;
-
-// C1: Above this total-service count we surface a hint to switch to the
-// "donut" layout. Aligned with the backend cache TTL / per-host caps so the
-// guidance triggers on the same scale problems they're meant to mitigate.
-const SERVICE_LOAD_THRESHOLD = 5000;
-const totalServiceLoad = computed(() =>
-    (nodes.value ?? []).reduce(
-        (sum, n) => sum + (n.services?.length ?? 0) + (n.services_truncated_count ?? 0),
-        0,
-    ),
-);
-const showServiceLoadHint = computed(
-    () =>
-        totalServiceLoad.value > SERVICE_LOAD_THRESHOLD &&
-        (props.serviceLayout === 'fan' ||
-            props.serviceLayout === 'orbit' ||
-            props.serviceLayout === 'row'),
-);
 
 // Layouts that need the full per-host service list. Donut renders only
 // services_summary aggregates and therefore skips the bulk query entirely —
@@ -727,8 +699,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 const svcs = servicesByHost.get(d.id) ?? [];
                 const N = svcs.length;
                 if (N === 0 || !needsServices(props.serviceLayout)) {
-                    // Donut sits directly on the host — reserve the donut width.
-                    return props.serviceLayout === 'donut' ? NODE_R + 14 : NODE_R + 10;
+                    // Donut sits directly on the host — reserve the donut width
+                    // for donut layout and for top-K-omitted hosts in fan/orbit/row.
+                    const wantsDonut =
+                        props.serviceLayout === 'donut' || (d.topo?.services_omitted ?? false);
+                    return wantsDonut ? NODE_R + 14 : NODE_R + 10;
                 }
                 if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit')
                     return layoutR(N) + svcR(N) + 20;
@@ -909,12 +884,16 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     nodeMerge.select('circle').attr('fill', (d) => stateColor(d.state));
 
     // Donut update — bind aggregated services_summary as proportional arcs on
-    // each host. In non-donut layouts the segment list is empty so the
-    // selection's exit() removes any leftover paths from a previous mode.
+    // each host. Always rendered in donut layout; in fan/orbit/row only for
+    // hosts whose service detail wasn't fetched (top-K cutoff in the backend),
+    // so the user still sees an at-a-glance state aggregate. The exit() removes
+    // leftover paths when a host transitions out of either condition.
     nodeMerge
         .filter((d) => d.nodeType === 'host')
         .each(function (d) {
-            const segments = props.serviceLayout === 'donut' && d.topo ? donutSegments(d.topo) : [];
+            const showDonut =
+                props.serviceLayout === 'donut' || (d.topo?.services_omitted ?? false);
+            const segments = showDonut && d.topo ? donutSegments(d.topo) : [];
             const arcs = donutPie(segments);
             const donutG = select(this).select<SVGGElement>('g.donut');
             const paths = donutG

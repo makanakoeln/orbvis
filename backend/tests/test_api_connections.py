@@ -6,6 +6,7 @@ import pytest
 
 from app.api.v1 import connections as connections_api
 from app.api.v1.connections import _parse_metric_names
+from app.schemas.state import ServicesSummary
 from app.services import state_service
 
 
@@ -403,3 +404,50 @@ async def test_topology_caches_within_ttl(client, admin_token, mock_connection, 
     # Second call within TTL is served from cache.
     assert mock_connection.get_topology.await_count == 1
     assert mock_connection.get_hosts_services_batch.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_topology_top_k_skips_unaffected_hosts(
+    client, admin_token, mock_connection, monkeypatch
+):
+    """Outside the top-K affected hosts: services_omitted=True, no bulk fetch."""
+    monkeypatch.setitem(state_service._connections, "live_topo4", mock_connection)
+
+    def row_with_summary(name: str, *, crit: int = 0, warn: int = 0) -> dict:
+        return {
+            "name": name,
+            "parents": [],
+            "state": "UP",
+            "output": "ok",
+            "services_summary": ServicesSummary(
+                ok=0, warning=warn, critical=crit, unknown=0, pending=0
+            ),
+        }
+
+    mock_connection.get_topology.return_value = [
+        row_with_summary("h-clean-1"),
+        row_with_summary("h-clean-2"),
+        row_with_summary("h-clean-3"),
+        row_with_summary("h-warn", warn=2),
+        row_with_summary("h-crit", crit=5),
+    ]
+    mock_connection.get_hosts_services_batch.return_value = {
+        "h-warn": [{"name": "svc", "state": "WARNING", "output": ""}],
+        "h-crit": [{"name": "svc", "state": "CRITICAL", "output": ""}],
+    }
+
+    response = await client.get(
+        "/api/v1/connections/live_topo4/topology?include_services=true&top_affected_hosts=2",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    assert mock_connection.get_hosts_services_batch.await_count == 1
+    bulk_arg = sorted(mock_connection.get_hosts_services_batch.await_args.args[0])
+    assert bulk_arg == ["h-crit", "h-warn"]
+
+    by_name = {n["name"]: n for n in response.json()}
+    assert by_name["h-crit"]["services_omitted"] is False
+    assert by_name["h-warn"]["services_omitted"] is False
+    for clean in ("h-clean-1", "h-clean-2", "h-clean-3"):
+        assert by_name[clean]["services_omitted"] is True
+        assert by_name[clean]["services"] == []

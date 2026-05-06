@@ -156,6 +156,10 @@ class TopologyNode(BaseModel):
     site_id: str | None = None
     services: list[ServiceNode] = []
     services_truncated_count: int = 0
+    # Set when the host was outside the top-K affected hosts and its service
+    # detail wasn't fetched. The donut ring (services_summary) is still
+    # populated so the client can render an at-a-glance state aggregate.
+    services_omitted: bool = False
     alias: str = ""
     address: str = ""
     acknowledged: bool = False
@@ -200,6 +204,7 @@ class _TopologyCacheKey:
     parent_layers: int | None
     include_services: bool
     services_per_host: int
+    top_affected_hosts: int
 
 
 _topology_cache: dict[_TopologyCacheKey, tuple[float, list[TopologyNode]]] = {}
@@ -257,6 +262,18 @@ def _filter_topology(
     return [n for n in nodes if n["name"] in keep]
 
 
+def _problem_count(row: TopologyRow) -> int:
+    """Rank key for top-K selection: weight non-OK service counts.
+
+    Critical scores higher than warning so a single CRIT outranks several
+    WARNs; unknown/pending fall in between. Mirrors ``_SERVICE_SORT_KEY``.
+    """
+    s = row.get("services_summary")
+    if s is None:
+        return 0
+    return s.critical * 4 + s.warning * 2 + s.unknown * 2 + s.pending
+
+
 @router.get("/{connection_id}/topology", response_model=list[TopologyNode])
 async def get_topology(
     connection_id: str,
@@ -265,16 +282,19 @@ async def get_topology(
     child_layers: int | None = Query(None, ge=-1, le=20),
     parent_layers: int | None = Query(None, ge=-1, le=20),
     services_per_host: int | None = Query(None, ge=0, le=500),
+    top_affected_hosts: int | None = Query(None, ge=0, le=1000),
     _: User = Depends(get_current_user),
 ) -> list[TopologyNode]:
     """Return host topology for flow board rendering.
 
-    For ``include_services=True`` services are fetched in a single bulk query
-    via ``get_hosts_services_batch`` and capped per host (default
-    ``settings.flow_board_max_services_per_host``); the surplus count is
-    reported as ``services_truncated_count``. Successive calls within
-    ``settings.flow_board_topology_cache_ttl`` reuse the cached result so
-    concurrent browser tabs don't multiply Livestatus load.
+    For ``include_services=True`` only the top-K hosts (ranked by problem
+    count, default ``settings.flow_board_top_affected_hosts``) are bulk-fetched
+    via ``get_hosts_services_batch``; their per-host service list is capped by
+    ``services_per_host``/``settings.flow_board_max_services_per_host`` and the
+    surplus reported as ``services_truncated_count``. Hosts outside the top-K
+    have ``services_omitted=True`` and render donut-only from
+    ``services_summary``. Successive calls within
+    ``settings.flow_board_topology_cache_ttl`` reuse the cached result.
     """
     connection = get_connection(connection_id)
     if connection is None:
@@ -287,6 +307,11 @@ async def get_topology(
         if services_per_host is not None
         else settings.flow_board_max_services_per_host
     )
+    top_k = (
+        top_affected_hosts
+        if top_affected_hosts is not None
+        else settings.flow_board_top_affected_hosts
+    )
     cache_key = _TopologyCacheKey(
         connection_id=connection_id,
         root=root,
@@ -294,6 +319,7 @@ async def get_topology(
         parent_layers=parent_layers,
         include_services=include_services,
         services_per_host=limit,
+        top_affected_hosts=top_k,
     )
     ttl = settings.flow_board_topology_cache_ttl
 
@@ -313,9 +339,19 @@ async def get_topology(
 
         result: list[TopologyNode]
         if include_services and rows:
-            services_by_host = await connection.get_hosts_services_batch([r["name"] for r in rows])
+            if top_k > 0 and len(rows) > top_k:
+                ranked = sorted(rows, key=_problem_count, reverse=True)
+                affected = {r["name"] for r in ranked[:top_k]}
+            else:
+                affected = {r["name"] for r in rows}
+            services_by_host = (
+                await connection.get_hosts_services_batch(sorted(affected)) if affected else {}
+            )
             result = []
             for row in rows:
+                if row["name"] not in affected:
+                    result.append(TopologyNode(**row, services_omitted=True))
+                    continue
                 svcs: list[dict[str, str]] = [
                     {"name": s["name"], "state": s["state"], "output": s["output"]}
                     for s in services_by_host.get(row["name"], [])

@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     # results briefly so concurrent tabs share one Livestatus round-trip.
     flow_board_max_services_per_host: int = 50
     flow_board_topology_cache_ttl: float = 10.0
+    # Mirror cmk.gui.nodevis: only fetch service detail for the top-K hosts
+    # ranked by problem count (crit+warn+unknown+pending). The remaining hosts
+    # render donut-only from the per-host num_services_* aggregates.
+    flow_board_top_affected_hosts: int = 50
 
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
