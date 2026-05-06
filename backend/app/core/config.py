@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     connection_query_timeout: int = 10
     connection_pool_size: int = 20
 
+    # Flow-board scaling guards: cap services per host and cache topology
+    # results briefly so concurrent tabs share one Livestatus round-trip.
+    flow_board_max_services_per_host: int = 50
+    flow_board_topology_cache_ttl: float = 10.0
+
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
     # mypy's pydantic plugin doesn't model the @property-under-@computed_field

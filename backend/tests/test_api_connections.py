@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.api.v1 import connections as connections_api
 from app.api.v1.connections import _parse_metric_names
 from app.services import state_service
 
@@ -306,3 +307,99 @@ async def test_test_connection_failure(client, admin_token, mock_connection, mon
         )
     assert response.status_code == 200
     assert response.json()["ok"] is False
+
+
+# ---------------------------------------------------------------------------
+# GET /connections/{id}/topology — bulk fetch, caching, truncation
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _clear_topology_cache():
+    connections_api._topology_cache.clear()
+    yield
+    connections_api._topology_cache.clear()
+
+
+def _topology_row(name: str, parents: list[str] | None = None) -> dict:
+    return {
+        "name": name,
+        "parents": parents or [],
+        "state": "UP",
+        "output": "ok",
+    }
+
+
+@pytest.mark.asyncio
+async def test_topology_uses_bulk_services_query(client, admin_token, mock_connection, monkeypatch):
+    """include_services must call get_hosts_services_batch once, not get_host_services per host."""
+    monkeypatch.setitem(state_service._connections, "live_topo1", mock_connection)
+    mock_connection.get_topology.return_value = [
+        _topology_row("h1"),
+        _topology_row("h2"),
+        _topology_row("h3"),
+    ]
+    mock_connection.get_hosts_services_batch.return_value = {
+        "h1": [{"name": "cpu", "state": "OK", "output": "fine"}],
+        "h2": [],
+        "h3": [{"name": "mem", "state": "WARNING", "output": "high"}],
+    }
+
+    response = await client.get(
+        "/api/v1/connections/live_topo1/topology?include_services=true",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    assert mock_connection.get_hosts_services_batch.await_count == 1
+    assert mock_connection.get_host_services.await_count == 0
+    nodes = response.json()
+    by_name = {n["name"]: n for n in nodes}
+    assert [s["name"] for s in by_name["h1"]["services"]] == ["cpu"]
+    assert by_name["h2"]["services"] == []
+    assert [s["name"] for s in by_name["h3"]["services"]] == ["mem"]
+
+
+@pytest.mark.asyncio
+async def test_topology_truncates_and_sorts_services(
+    client, admin_token, mock_connection, monkeypatch
+):
+    """services_per_host caps the list, non-OK first; truncated count is reported."""
+    monkeypatch.setitem(state_service._connections, "live_topo2", mock_connection)
+    mock_connection.get_topology.return_value = [_topology_row("h1")]
+    mock_connection.get_hosts_services_batch.return_value = {
+        "h1": [{"name": f"svc-ok-{i:02d}", "state": "OK", "output": ""} for i in range(10)]
+        + [
+            {"name": "alpha-warn", "state": "WARNING", "output": "high"},
+            {"name": "beta-crit", "state": "CRITICAL", "output": "down"},
+        ],
+    }
+
+    response = await client.get(
+        "/api/v1/connections/live_topo2/topology?include_services=true&services_per_host=3",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    node = response.json()[0]
+    names = [s["name"] for s in node["services"]]
+    # Critical sorts before warning; OK fills the remaining slot alphabetically.
+    assert names[0] == "beta-crit"
+    assert names[1] == "alpha-warn"
+    assert names[2] == "svc-ok-00"
+    assert node["services_truncated_count"] == 12 - 3
+
+
+@pytest.mark.asyncio
+async def test_topology_caches_within_ttl(client, admin_token, mock_connection, monkeypatch):
+    monkeypatch.setitem(state_service._connections, "live_topo3", mock_connection)
+    mock_connection.get_topology.return_value = [_topology_row("h1")]
+    mock_connection.get_hosts_services_batch.return_value = {"h1": []}
+
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    url = "/api/v1/connections/live_topo3/topology?include_services=true"
+    r1 = await client.get(url, headers=headers)
+    r2 = await client.get(url, headers=headers)
+    assert r1.status_code == 200
+    assert r2.status_code == 200
+    # Second call within TTL is served from cache.
+    assert mock_connection.get_topology.await_count == 1
+    assert mock_connection.get_hosts_services_batch.await_count == 1

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
+from dataclasses import dataclass
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -77,6 +79,7 @@ async def update_backend(
     result = connection_service.update(connection_id, updated)
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+    _invalidate_topology_cache(connection_id)
     return _redact(result)
 
 
@@ -84,6 +87,7 @@ async def update_backend(
 async def delete_backend(connection_id: str, _: User = Depends(require_admin)) -> None:
     if not connection_service.delete(connection_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+    _invalidate_topology_cache(connection_id)
 
 
 class ConnectionContext(BaseModel):
@@ -151,6 +155,7 @@ class TopologyNode(BaseModel):
     output: str
     site_id: str | None = None
     services: list[ServiceNode] = []
+    services_truncated_count: int = 0
     alias: str = ""
     address: str = ""
     acknowledged: bool = False
@@ -164,6 +169,52 @@ class TopologyNode(BaseModel):
     current_attempt: int = 0
     max_attempts: int = 0
     services_summary: ServicesSummary | None = None
+
+
+# Higher number = more "interesting"; OK comes last, PENDING/unknown stable in
+# the middle so a flapping service doesn't reshuffle the visible top-N.
+_SERVICE_SORT_KEY = {"CRITICAL": 0, "WARNING": 1, "UNKNOWN": 2, "PENDING": 3, "OK": 4}
+
+
+def _sorted_truncated_services(
+    svcs: list[dict[str, str]], limit: int
+) -> tuple[list[dict[str, str]], int]:
+    """Return (top-N services, truncated_count). Non-OK first, then OK alphabetic."""
+    ordered = sorted(
+        svcs,
+        key=lambda s: (_SERVICE_SORT_KEY.get(s["state"], 5), s["name"]),
+    )
+    if limit <= 0 or len(ordered) <= limit:
+        return ordered, 0
+    return ordered[:limit], len(ordered) - limit
+
+
+# Topology cache: short TTL so concurrent browser tabs share a single
+# Livestatus round-trip. Reuses the TTL/eviction shape from
+# LivestatusConnection._services_summary_cache (livestatus.py:567+).
+@dataclass(frozen=True)
+class _TopologyCacheKey:
+    connection_id: str
+    root: str | None
+    child_layers: int | None
+    parent_layers: int | None
+    include_services: bool
+    services_per_host: int
+
+
+_topology_cache: dict[_TopologyCacheKey, tuple[float, list[TopologyNode]]] = {}
+# Per-key locks dedupe in-flight fetches: if N tabs cache-miss simultaneously
+# only the first runs the query, the rest await the same result.
+_topology_cache_locks: dict[_TopologyCacheKey, asyncio.Lock] = {}
+_TOPOLOGY_CACHE_MAX = 32
+
+
+def _invalidate_topology_cache(connection_id: str | None = None) -> None:
+    """Drop cached topology entries (optionally scoped to one connection_id)."""
+    keys = [k for k in _topology_cache if connection_id is None or k.connection_id == connection_id]
+    for k in keys:
+        _topology_cache.pop(k, None)
+        _topology_cache_locks.pop(k, None)
 
 
 def _filter_topology(
@@ -213,23 +264,80 @@ async def get_topology(
     root: str | None = Query(None),
     child_layers: int | None = Query(None, ge=-1, le=20),
     parent_layers: int | None = Query(None, ge=-1, le=20),
+    services_per_host: int | None = Query(None, ge=0, le=500),
     _: User = Depends(get_current_user),
 ) -> list[TopologyNode]:
-    """Return host topology for flow board rendering."""
+    """Return host topology for flow board rendering.
+
+    For ``include_services=True`` services are fetched in a single bulk query
+    via ``get_hosts_services_batch`` and capped per host (default
+    ``settings.flow_board_max_services_per_host``); the surplus count is
+    reported as ``services_truncated_count``. Successive calls within
+    ``settings.flow_board_topology_cache_ttl`` reuse the cached result so
+    concurrent browser tabs don't multiply Livestatus load.
+    """
     connection = get_connection(connection_id)
     if connection is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Connection not registered"
         )
-    nodes = await connection.get_topology()
-    nodes = _filter_topology(nodes, root, child_layers, parent_layers)
-    if include_services:
-        result: list[TopologyNode] = []
-        for node in nodes:
-            svcs = await connection.get_host_services(node["name"])
-            result.append(TopologyNode(**node, services=[ServiceNode(**s) for s in svcs]))
+
+    limit = (
+        services_per_host
+        if services_per_host is not None
+        else settings.flow_board_max_services_per_host
+    )
+    cache_key = _TopologyCacheKey(
+        connection_id=connection_id,
+        root=root,
+        child_layers=child_layers,
+        parent_layers=parent_layers,
+        include_services=include_services,
+        services_per_host=limit,
+    )
+    ttl = settings.flow_board_topology_cache_ttl
+
+    cached = _topology_cache.get(cache_key)
+    if cached is not None and time.monotonic() - cached[0] < ttl:
+        return cached[1]
+
+    lock = _topology_cache_locks.setdefault(cache_key, asyncio.Lock())
+    async with lock:
+        # Re-check inside the lock — a concurrent waiter may have populated it.
+        cached = _topology_cache.get(cache_key)
+        if cached is not None and time.monotonic() - cached[0] < ttl:
+            return cached[1]
+
+        rows = await connection.get_topology()
+        rows = _filter_topology(rows, root, child_layers, parent_layers)
+
+        result: list[TopologyNode]
+        if include_services and rows:
+            services_by_host = await connection.get_hosts_services_batch([r["name"] for r in rows])
+            result = []
+            for row in rows:
+                svcs: list[dict[str, str]] = [
+                    {"name": s["name"], "state": s["state"], "output": s["output"]}
+                    for s in services_by_host.get(row["name"], [])
+                ]
+                kept, truncated = _sorted_truncated_services(svcs, limit)
+                result.append(
+                    TopologyNode(
+                        **row,
+                        services=[ServiceNode(**s) for s in kept],
+                        services_truncated_count=truncated,
+                    )
+                )
+        else:
+            result = [TopologyNode(**r) for r in rows]
+
+        # Insertion-order eviction (CPython 3.7+ dicts preserve insertion order).
+        if len(_topology_cache) >= _TOPOLOGY_CACHE_MAX:
+            oldest = next(iter(_topology_cache))
+            _topology_cache.pop(oldest, None)
+            _topology_cache_locks.pop(oldest, None)
+        _topology_cache[cache_key] = (time.monotonic(), result)
         return result
-    return [TopologyNode(**n) for n in nodes]
 
 
 @router.get("/{connection_id}/perf-metrics", response_model=list[str])

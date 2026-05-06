@@ -250,6 +250,7 @@ export interface TopologyNode {
     output: string;
     site_id?: string | null;
     services?: ServiceNode[];
+    services_truncated_count?: number;
     alias?: string;
     address?: string;
     acknowledged?: boolean;

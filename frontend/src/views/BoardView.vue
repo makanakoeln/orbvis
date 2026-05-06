@@ -1348,11 +1348,12 @@ function onLatLng2DragEnd(id: string, lat: number, lng: number) {
 
 // ---- Map Settings ----
 
-type ServiceLayout = 'off' | 'fan' | 'row' | 'orbit';
+type ServiceLayout = 'off' | 'fan' | 'row' | 'orbit' | 'donut';
 const serviceLayout = ref<ServiceLayout>('off');
 const serviceLayoutOpen = ref(false);
 const serviceLayoutOptions = computed(() => [
     { value: 'off' as ServiceLayout, label: t('board.serviceLayoutOff') },
+    { value: 'donut' as ServiceLayout, label: t('board.serviceLayoutDonut') },
     { value: 'fan' as ServiceLayout, label: t('board.serviceLayoutFan') },
     { value: 'orbit' as ServiceLayout, label: t('board.serviceLayoutOrbit') },
     { value: 'row' as ServiceLayout, label: t('board.serviceLayoutRow') },

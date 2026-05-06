@@ -122,6 +122,7 @@ export default {
         serviceLayoutFan: 'Fan',
         serviceLayoutOrbit: 'Orbit',
         serviceLayoutRow: 'Row',
+        serviceLayoutDonut: 'Donut',
         saveChanges: 'Save changes',
         hoverTemplate: 'Hover template',
         contextTemplate: 'Context template',

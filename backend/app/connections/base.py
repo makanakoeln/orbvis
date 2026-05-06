@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import NotRequired, TypedDict
@@ -177,11 +178,23 @@ class ConnectionBase(ABC):
         return await self.get_services_states(pairs, only_hard=only_hard)
 
     async def get_hosts_services_batch(self, hostnames: list[str]) -> dict[str, list[ServiceRow]]:
-        """Return all services for multiple hosts. Default: one call per host."""
-        results: dict[str, list[ServiceRow]] = {}
-        for h in hostnames:
-            results[h] = await self.get_host_services(h)
-        return results
+        """Return all services for multiple hosts.
+
+        Default fan-out via ``asyncio.gather`` with a Semaphore so connections
+        without a real bulk query (icinga2, test) still parallelise instead of
+        serialising N round-trips. Livestatus overrides with a single grouped
+        query — see ``LivestatusConnection.get_hosts_services_batch``.
+        """
+        if not hostnames:
+            return {}
+        sem = asyncio.Semaphore(20)
+
+        async def _one(host: str) -> tuple[str, list[ServiceRow]]:
+            async with sem:
+                return host, await self.get_host_services(host)
+
+        pairs = await asyncio.gather(*(_one(h) for h in hostnames))
+        return dict(pairs)
 
     async def get_services_summary(self, hostnames: list[str]) -> dict[str, ServicesSummary]:
         """Return per-host service-state counts for the given hosts.

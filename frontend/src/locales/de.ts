@@ -121,6 +121,7 @@ export default {
         serviceLayoutFan: 'Fächer',
         serviceLayoutOrbit: 'Orbit',
         serviceLayoutRow: 'Reihe',
+        serviceLayoutDonut: 'Donut',
         backgroundImage: 'Hintergrundbild',
         deleteBackground: 'Hintergrundbild entfernen',
         saveChanges: 'Änderungen speichern',

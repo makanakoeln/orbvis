@@ -68,6 +68,16 @@
             </button>
         </div>
 
+        <!-- High-service-count hint: nudge towards the aggregated donut layout
+             when the per-host node modes would render thousands of SVG nodes -->
+        <div
+            v-if="showServiceLoadHint"
+            class="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-lg ring-1 ring-[var(--border)] bg-[var(--bg-surface)]/90 backdrop-blur-md text-xs text-zinc-300 shadow-lg shadow-black/40"
+        >
+            {{ totalServiceLoad.toLocaleString() }} services rendered — switch service layout to
+            “Donut” for an aggregated view.
+        </div>
+
         <!-- Hover popup -->
         <HoverMenu
             v-if="hoverMenu.visible && hoverMenu.object"
@@ -82,6 +92,7 @@
 
 <script setup lang="ts">
 import {
+    arc as d3arc,
     drag,
     forceCollide,
     forceLink,
@@ -89,13 +100,14 @@ import {
     forceSimulation,
     forceX,
     forceY,
+    pie as d3pie,
     select,
     type SimulationLinkDatum,
     type SimulationNodeDatum,
     zoom,
     zoomIdentity,
 } from 'd3';
-import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 import { connectionsApi } from '@/api/client';
 import HoverMenu from '@/components/board/HoverMenu.vue';
@@ -107,7 +119,7 @@ import { stateColor } from '@/utils/stateColors';
 
 const props = defineProps<{
     connectionId: string;
-    serviceLayout: 'off' | 'fan' | 'row' | 'orbit';
+    serviceLayout: 'off' | 'fan' | 'row' | 'orbit' | 'donut';
     readonly?: boolean;
     clickAction?: ClickAction;
     checkmkUrl?: string | null;
@@ -151,6 +163,34 @@ function layoutR(N: number): number {
 function showSvcLabel(N: number): boolean {
     return N <= 10;
 }
+
+const MORE_NODE_MARKER = '__more__';
+
+// Donut ring around a host: aggregated services_summary as proportional arcs.
+// Inner radius sits a few px outside the host circle, outer adds the ring width.
+const DONUT_INNER = NODE_R + 3;
+const DONUT_OUTER = NODE_R + 11;
+type DonutSegment = { state: 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN' | 'PENDING'; value: number };
+const donutArc = d3arc<{ startAngle: number; endAngle: number }>()
+    .innerRadius(DONUT_INNER)
+    .outerRadius(DONUT_OUTER);
+const donutPie = d3pie<DonutSegment>()
+    .sort(null)
+    .value((d) => d.value);
+
+function donutSegments(n: TopologyNode): DonutSegment[] {
+    const s = n.services_summary;
+    if (!s) return [];
+    // Order matters visually: critical first so it dominates the top of the ring.
+    const all: DonutSegment[] = [
+        { state: 'CRITICAL', value: s.critical },
+        { state: 'WARNING', value: s.warning },
+        { state: 'UNKNOWN', value: s.unknown },
+        { state: 'PENDING', value: s.pending },
+        { state: 'OK', value: s.ok },
+    ];
+    return all.filter((seg) => seg.value > 0);
+}
 const svgEl = ref<SVGSVGElement | null>(null);
 useD3Cleanup(svgEl);
 const nodes = ref<TopologyNode[]>([]);
@@ -165,13 +205,38 @@ const hoverMenu = reactive<{
 }>({ visible: false, object: null, state: undefined, x: 0, y: 0 });
 let timer: ReturnType<typeof setInterval> | null = null;
 
+// C1: Above this total-service count we surface a hint to switch to the
+// "donut" layout. Aligned with the backend cache TTL / per-host caps so the
+// guidance triggers on the same scale problems they're meant to mitigate.
+const SERVICE_LOAD_THRESHOLD = 5000;
+const totalServiceLoad = computed(() =>
+    (nodes.value ?? []).reduce(
+        (sum, n) => sum + (n.services?.length ?? 0) + (n.services_truncated_count ?? 0),
+        0,
+    ),
+);
+const showServiceLoadHint = computed(
+    () =>
+        totalServiceLoad.value > SERVICE_LOAD_THRESHOLD &&
+        (props.serviceLayout === 'fan' ||
+            props.serviceLayout === 'orbit' ||
+            props.serviceLayout === 'row'),
+);
+
+// Layouts that need the full per-host service list. Donut renders only
+// services_summary aggregates and therefore skips the bulk query entirely —
+// that's the main scaling win for large installations.
+function needsServices(layout: typeof props.serviceLayout): boolean {
+    return layout === 'fan' || layout === 'orbit' || layout === 'row';
+}
+
 // ---- Fetch ----
 async function fetchTopology() {
     try {
         nodes.value = await connectionsApi.topology(
             props.connectionId,
             auth.accessToken!,
-            props.serviceLayout !== 'off',
+            needsServices(props.serviceLayout),
             {
                 root: props.flowView?.root ?? null,
                 childLayers: props.flowView?.child_layers ?? null,
@@ -223,9 +288,10 @@ interface FNode extends SimulationNodeDatum {
     state: string;
     output: string;
     bfsLevel: number;
-    nodeType: 'host' | 'service';
+    nodeType: 'host' | 'service' | 'more';
     hostId?: string;
     svcTotalCount?: number; // total services for this host (set on service nodes for label visibility)
+    moreCount?: number; // for nodeType='more': number of services hidden behind this aggregate
     // Cached pointer to the host's TopologyNode so the tooltip can show the
     // same status detail (alias, services_summary, …) as the static board.
     // Only set on host nodes; service nodes have minimal data via their parent.
@@ -242,12 +308,15 @@ interface FLink extends SimulationLinkDatum<FNode> {
 function boardObjectFromFNode(d: FNode): BoardObject {
     const isService = d.nodeType === 'service';
     const svcName = isService ? d.id.split('::').slice(1).join('::') : undefined;
+    // "+N more" pseudo nodes resolve to their host so clicking opens the
+    // host's full service list in Checkmk.
+    const hostNameForCheckmk = isService || d.nodeType === 'more' ? d.hostId : d.id;
     return {
         id: d.id,
         type: isService ? 'service' : 'host',
         x: 0,
         y: 0,
-        host_name: isService ? d.hostId : d.id,
+        host_name: hostNameForCheckmk,
         service_description: svcName,
     } as BoardObject;
 }
@@ -282,12 +351,29 @@ let simulation: ReturnType<typeof forceSimulation<FNode>> | null = null;
 let zoomBeh: ReturnType<typeof zoom<SVGSVGElement, unknown>> | null = null;
 let lastFNodes: FNode[] = [];
 let _hasFitOnce = false;
+// F3 LoD: when zoomed out below this scale we hide service / "+more" nodes and
+// their links — they're unreadable at that size and dominate the tick cost.
+const LOD_LOW_SCALE = 0.5;
+let lodLow = false;
+
+function applyLod(): void {
+    if (!svgEl.value) return;
+    const display = lodLow ? 'none' : '';
+    const sel = select(svgEl.value);
+    sel.selectAll<SVGGElement, FNode>('g.node')
+        .filter((d) => d.nodeType === 'service' || d.nodeType === 'more')
+        .style('display', display);
+    sel.selectAll<SVGLineElement, FLink>('g.links line')
+        .filter((d) => d.isServiceLink)
+        .style('display', display);
+}
 
 // Reset auto-fit when switching boards
 watch(
     () => props.connectionId,
     () => {
         _hasFitOnce = false;
+        lodLow = false;
     },
 );
 
@@ -396,6 +482,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             .scaleExtent([0.15, 3])
             .on('zoom', (event) => {
                 gZoom.attr('transform', event.transform);
+                const newLow = event.transform.k < LOD_LOW_SCALE;
+                if (newLow !== lodLow) {
+                    lodLow = newLow;
+                    applyLod();
+                }
             });
         el.call(zoomBeh);
         // Center immediately so nodes don't flash at top-left on first render
@@ -409,7 +500,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // Fan only extends downward so it needs ~half the inter-host gap of orbit.
     const maxSvcN = Math.max(0, ...[...(nodes.value ?? []).map((n) => n.services?.length ?? 0)]);
     const minVSpacing =
-        props.serviceLayout !== 'off' && maxSvcN > 0
+        needsServices(props.serviceLayout) && maxSvcN > 0
             ? props.serviceLayout === 'fan'
                 ? fanR(maxSvcN) + 50
                 : orbitR(maxSvcN) * 2 + 50
@@ -440,36 +531,43 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         return node;
     });
 
-    // Service nodes appended after host nodes
-    if (props.serviceLayout !== 'off') {
+    // Service nodes appended after host nodes. When the backend reports a
+    // truncation (services_truncated_count > 0) we append one "+M more" pseudo
+    // node so users still see that the host has additional services.
+    function pushChildNode(seed: Omit<FNode, keyof SimulationNodeDatum>): void {
+        const cached = nodeCache.get(seed.id);
+        const node: FNode = cached ? { ...cached, ...seed } : { ...seed };
+        nodeCache.set(seed.id, node);
+        fNodes.push(node);
+    }
+    if (needsServices(props.serviceLayout)) {
         for (const n of topoNodes) {
             if (!n.services) continue;
             const hostLevel = levels.get(n.name) ?? 0;
-            const N = n.services.length;
+            const truncated = n.services_truncated_count ?? 0;
+            const N = n.services.length + (truncated > 0 ? 1 : 0);
             for (const svc of n.services) {
-                const svcId = `${n.name}::${svc.name}`;
-                const cached = nodeCache.get(svcId);
-                const svcNode: FNode = cached
-                    ? {
-                          ...cached,
-                          state: svc.state,
-                          output: svc.output,
-                          bfsLevel: hostLevel,
-                          nodeType: 'service',
-                          hostId: n.name,
-                          svcTotalCount: N,
-                      }
-                    : {
-                          id: svcId,
-                          state: svc.state,
-                          output: svc.output,
-                          bfsLevel: hostLevel,
-                          nodeType: 'service',
-                          hostId: n.name,
-                          svcTotalCount: N,
-                      };
-                nodeCache.set(svcId, svcNode);
-                fNodes.push(svcNode);
+                pushChildNode({
+                    id: `${n.name}::${svc.name}`,
+                    state: svc.state,
+                    output: svc.output,
+                    bfsLevel: hostLevel,
+                    nodeType: 'service',
+                    hostId: n.name,
+                    svcTotalCount: N,
+                });
+            }
+            if (truncated > 0) {
+                pushChildNode({
+                    id: `${n.name}::${MORE_NODE_MARKER}`,
+                    state: 'PENDING',
+                    output: `${truncated} more service${truncated === 1 ? '' : 's'}`,
+                    bfsLevel: hostLevel,
+                    nodeType: 'more',
+                    hostId: n.name,
+                    svcTotalCount: N,
+                    moreCount: truncated,
+                });
             }
         }
     }
@@ -497,12 +595,20 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 });
         }
     }
-    // Host-to-service links
-    if (props.serviceLayout !== 'off') {
+    // Host-to-service links (and host-to-"+more" link if truncated)
+    if (needsServices(props.serviceLayout)) {
         for (const n of topoNodes) {
             if (!n.services) continue;
             const hostNode = nodeById.get(n.name);
             if (!hostNode) continue;
+            const moreNode = nodeById.get(`${n.name}::${MORE_NODE_MARKER}`);
+            if (moreNode)
+                fLinks.push({
+                    source: hostNode,
+                    target: moreNode,
+                    sourceState: hostNode.state,
+                    isServiceLink: true,
+                });
             for (const svc of n.services) {
                 const svcNode = nodeById.get(`${n.name}::${svc.name}`);
                 if (svcNode)
@@ -516,10 +622,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         }
     }
 
-    // Pre-compute service groups per host for fan layout
+    // Pre-compute service groups per host for fan layout. The "+more" pseudo
+    // node participates in the layout so it gets its own slot in the orbit/fan.
     const servicesByHost = new Map<string, FNode[]>();
     for (const n of fNodes) {
-        if (n.nodeType === 'service' && n.hostId) {
+        if ((n.nodeType === 'service' || n.nodeType === 'more') && n.hostId) {
             const arr = servicesByHost.get(n.hostId) ?? [];
             arr.push(n);
             servicesByHost.set(n.hostId, arr);
@@ -619,7 +726,10 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 if (d.nodeType === 'service') return 0;
                 const svcs = servicesByHost.get(d.id) ?? [];
                 const N = svcs.length;
-                if (N === 0 || props.serviceLayout === 'off') return NODE_R + 10;
+                if (N === 0 || !needsServices(props.serviceLayout)) {
+                    // Donut sits directly on the host — reserve the donut width.
+                    return props.serviceLayout === 'donut' ? NODE_R + 14 : NODE_R + 10;
+                }
                 if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit')
                     return layoutR(N) + svcR(N) + 20;
                 // Row grid
@@ -711,6 +821,8 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .attr('r', NODE_R)
         .attr('stroke', 'rgba(0,0,0,0.4)')
         .attr('stroke-width', 1.5);
+    // Empty donut container — actual segments are bound in the update pass below.
+    hostEnter.append('g').attr('class', 'donut').attr('pointer-events', 'none');
     hostEnter
         .append('text')
         .attr('class', 'type-char')
@@ -761,48 +873,103 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .attr('y', (d) => svcR(d.svcTotalCount ?? 1) + 4)
         .style('display', (d) => (showSvcLabel(d.svcTotalCount ?? 1) ? null : 'none'));
 
+    // "+N more" pseudo nodes: same shape as services but with a neutral fill
+    // and a `+N` glyph. They're not real services — clicking opens the host's
+    // service list in Checkmk (handled in the shared click handler below).
+    const moreEnter = nodeEnter.filter((d) => d.nodeType === 'more');
+    moreEnter
+        .append('circle')
+        .attr('r', (d) => svcR(d.svcTotalCount ?? 1))
+        .attr('stroke', 'rgba(0,0,0,0.4)')
+        .attr('stroke-width', 1);
+    moreEnter
+        .append('text')
+        .attr('class', 'type-char')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .attr('fill', 'rgba(255,255,255,0.95)')
+        .attr('font-size', (d) => (svcR(d.svcTotalCount ?? 1) <= 7 ? 7 : 9))
+        .attr('font-weight', '700')
+        .attr('pointer-events', 'none')
+        .text((d) => `+${d.moreCount ?? 0}`);
+    moreEnter
+        .append('text')
+        .attr('class', 'node-label')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'hanging')
+        .attr('font-size', 9)
+        .attr('font-weight', '400')
+        .attr('pointer-events', 'none')
+        .style('fill', 'var(--text)')
+        .attr('y', (d) => svcR(d.svcTotalCount ?? 1) + 4)
+        .text((d) => `+${d.moreCount ?? 0} more`)
+        .style('display', (d) => (showSvcLabel(d.svcTotalCount ?? 1) ? null : 'none'));
+
     const nodeMerge = nodeEnter.merge(nodeSel);
     nodeMerge.select('circle').attr('fill', (d) => stateColor(d.state));
+
+    // Donut update — bind aggregated services_summary as proportional arcs on
+    // each host. In non-donut layouts the segment list is empty so the
+    // selection's exit() removes any leftover paths from a previous mode.
+    nodeMerge
+        .filter((d) => d.nodeType === 'host')
+        .each(function (d) {
+            const segments = props.serviceLayout === 'donut' && d.topo ? donutSegments(d.topo) : [];
+            const arcs = donutPie(segments);
+            const donutG = select(this).select<SVGGElement>('g.donut');
+            const paths = donutG
+                .selectAll<SVGPathElement, (typeof arcs)[number]>('path')
+                .data(arcs, (a) => a.data.state);
+            paths.exit().remove();
+            paths
+                .enter()
+                .append('path')
+                .merge(paths)
+                .attr('d', (a) => donutArc(a) ?? '')
+                .attr('fill', (a) => stateColor(a.data.state))
+                .attr('stroke', 'rgba(0,0,0,0.35)')
+                .attr('stroke-width', 0.5);
+        });
     nodeMerge.select('text.node-label').text((d) => {
+        if (d.nodeType === 'more') return `+${d.moreCount ?? 0} more`;
         if (d.nodeType === 'service') {
             const parts = d.id.split('::');
             return parts[parts.length - 1];
         }
         return d.id;
     });
-    // Refresh service label visibility — may change when switching layout or on re-render
+    // Refresh service / more-label visibility — may change when switching layout or on re-render
     nodeMerge
-        .filter((d) => d.nodeType === 'service')
+        .filter((d) => d.nodeType === 'service' || d.nodeType === 'more')
         .select('text.node-label')
         .style('display', (d) => (showSvcLabel(d.svcTotalCount ?? 1) ? null : 'none'));
 
     // --- Tick handler ---
+    // The first paint can race the d3-force `initializeNodes` step on layout
+    // switches that null out cached host positions, so coerce non-finite
+    // coordinates to 0 to avoid SVG attribute errors (the next tick fixes them).
+    const _coord = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
     function ticked() {
         updateFanPositions();
         linkMerge
-            .attr('x1', (d) => (d.source as FNode).x!)
-            .attr('y1', (d) => (d.source as FNode).y!)
-            .attr('x2', (d) => (d.target as FNode).x!)
-            .attr('y2', (d) => (d.target as FNode).y!)
+            .attr('x1', (d) => _coord((d.source as FNode).x))
+            .attr('y1', (d) => _coord((d.source as FNode).y))
+            .attr('x2', (d) => _coord((d.target as FNode).x))
+            .attr('y2', (d) => _coord((d.target as FNode).y))
             .attr('stroke', (d) => stateColor((d.source as FNode).state));
 
         nodeMerge
-            .attr('transform', (d) => `translate(${d.x ?? 0},${d.y ?? 0})`)
+            .attr('transform', (d) => `translate(${_coord(d.x)},${_coord(d.y)})`)
             .select('circle')
             .attr('fill', (d) => stateColor(d.state));
     }
 
-    // Pre-tick to near-settled positions, render once, fit immediately, then animate remainder
-    simulation.tick(props.serviceLayout !== 'off' ? 250 : 150);
-    updateFanPositions();
-    ticked();
-
-    // For row layout: measure actual label widths from DOM, re-layout with exact spacing
+    // Measure actual row-label widths from the DOM before the simulation starts;
+    // updateFanPositions reads `rowSpacings` to lay out the row grid.
     if (props.serviceLayout === 'row') {
         for (const [hostId, services] of servicesByHost) {
             const N = services.length;
             if (!showSvcLabel(N)) {
-                // No labels — use diameter + gap as spacing
                 rowSpacings.set(hostId, svcR(N) * 2 + 6);
                 continue;
             }
@@ -817,14 +984,32 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             }
             if (maxW > 0) rowSpacings.set(hostId, maxW + 10);
         }
-        updateFanPositions();
-        ticked();
     }
 
-    if (!_hasFitOnce) {
+    // Paint once with cached/initial positions so users see something immediately.
+    updateFanPositions();
+    ticked();
+    // Reapply LoD so newly entered service / "+more" nodes pick up the
+    // current zoom-driven display state.
+    applyLod();
+
+    // F1: don't synchronously tick(250) — that blocks the main thread for
+    // hundreds of ms at scale. Let the simulation converge asynchronously and
+    // defer the initial fit until it has settled enough.
+    const isInitial = !_hasFitOnce;
+    simulation
+        .on('tick', ticked)
+        .alpha(isInitial ? 1 : 0.2)
+        .restart();
+    if (isInitial) {
         _hasFitOnce = true;
-        fitView();
+        let ticksUntilFit = needsServices(props.serviceLayout) ? 60 : 40;
+        simulation.on('tick.fit', () => {
+            if (--ticksUntilFit <= 0) {
+                simulation?.on('tick.fit', null);
+                fitView();
+            }
+        });
     }
-    simulation.on('tick', ticked).restart();
 }
 </script>
