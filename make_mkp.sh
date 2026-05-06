@@ -325,6 +325,13 @@ setup)
   fi
   ok "Using $($PYTHON3 --version) ($PYTHON3)"
 
+  # Checkmk 2.6+ ships a sitecustomize.py that imports cmk.licensing.* whenever
+  # OMD_ROOT is set. Inside a venv `sys.executable` points at the venv binary,
+  # so sitecustomize cannot derive the OMD lib path on its own — we have to
+  # surface $OMD_ROOT/lib/python3 via PYTHONPATH for both venv creation and
+  # every subsequent invocation of the venv python (see init script below).
+  export PYTHONPATH="$ROOT/lib/python3${PYTHONPATH:+:$PYTHONPATH}"
+
   if [[ ! -d "$VENV_DIR" ]]; then
     "$PYTHON3" -m venv --symlinks "$VENV_DIR"
   fi
@@ -447,6 +454,10 @@ LOGFILE="\$OMD_ROOT/var/log/orbvis.log"
 VENV="$VENV_DIR"
 PORT=$BACKEND_PORT
 ENV_FILE="$ENV_FILE"
+
+# Checkmk 2.6+ sitecustomize imports cmk.licensing.* on every Python start;
+# the venv python does not see \$OMD_ROOT/lib/python3 unless we add it.
+export PYTHONPATH="\$OMD_ROOT/lib/python3\${PYTHONPATH:+:\$PYTHONPATH}"
 
 case "\$1" in
   start)
