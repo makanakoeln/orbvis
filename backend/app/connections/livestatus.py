@@ -316,6 +316,18 @@ def _row_dict(row: LivestatusRow, idx: int) -> dict[str, object]:
     return v if isinstance(v, dict) else {}
 
 
+def _services_summary_from_row(row: LivestatusRow, base: int) -> ServicesSummary:
+    """Build ``ServicesSummary`` from 5 consecutive ``num_services_*`` columns
+    starting at ``base`` (order: ok, warn, crit, unknown, pending)."""
+    return ServicesSummary(
+        ok=_row_int(row, base),
+        warning=_row_int(row, base + 1),
+        critical=_row_int(row, base + 2),
+        unknown=_row_int(row, base + 3),
+        pending=_row_int(row, base + 4),
+    )
+
+
 class _ExtraFields(TypedDict, total=False):
     """Tail columns of a Livestatus host/service row — mapped onto ObjectState."""
 
@@ -732,18 +744,21 @@ class LivestatusConnection(ConnectionBase):
         return []
 
     async def get_topology(self) -> list[TopologyRow]:
-        # Fetch hosts + the same status-detail columns as ObjectState so the
-        # FlowBoard tooltip can render alias / attempts / next-check / etc.
-        # without a separate query.
+        # Fetch hosts + status-detail columns + per-host service-state counters.
+        # The num_services_* columns are O(1) on the hosts table (Livestatus
+        # core maintains them) so the donut summary comes for free in this
+        # single query — no separate Stats round-trip, multisite-safe because
+        # each row is self-contained per host.
         tagged = await self._query_with_site(
             "GET hosts\n"
             "Columns: name parents state plugin_output "
             "alias address acknowledged scheduled_downtime_depth last_check next_check "
             "state_type current_attempt max_check_attempts last_state_change "
-            "notifications_enabled active_checks_enabled\n"
+            "notifications_enabled active_checks_enabled "
+            "num_services_ok num_services_warn num_services_crit "
+            "num_services_unknown num_services_pending\n"
         )
-        rows: list[tuple[str | None, TopologyRow, str]] = []
-        host_names: list[str] = []
+        result: list[TopologyRow] = []
         for site_id, r in tagged:
             name = _row_str(r, 0)
             if not name:
@@ -775,22 +790,10 @@ class LivestatusConnection(ConnectionBase):
                 "last_state_change": lsc if lsc > 0 else None,
                 "notifications_enabled": _row_bool(r, 14, default=True),
                 "active_checks_enabled": _row_bool(r, 15, default=True),
+                "services_summary": _services_summary_from_row(r, 16),
             }
             if site_id is not None:
                 row["site_id"] = site_id
-            rows.append((site_id, row, name))
-            host_names.append(name)
-
-        try:
-            summaries = await self.get_services_summary(host_names) if host_names else {}
-        except Exception:
-            logger.warning("Topology services-summary fetch failed", exc_info=True)
-            summaries = {}
-        result: list[TopologyRow] = []
-        for _, row, name in rows:
-            summary = summaries.get(name)
-            if summary is not None:
-                row["services_summary"] = summary
             result.append(row)
         return result
 
@@ -1433,41 +1436,26 @@ class LivestatusConnection(ConnectionBase):
         )
         return dict(_parse_service_state_row(r) for r in rows)
 
-    # Largest host set we'll send as a single batched query. Each host adds
-    # ~5 stats clauses (state 0–3 + pending) wrapped in StatsAnd:2; 200 hosts
-    # ≈ 1000 stats clauses, well within Livestatus query-size limits but kept
-    # bounded so a single tooltip refresh can't block the connection.
-    _SERVICES_SUMMARY_BATCH = 200
-    # Skip the per-host enumeration entirely above this size — pills would be
-    # cluttered for huge maps anyway, and every map refresh would hammer
-    # Livestatus. The host tooltip simply omits the pill row.
-    _SERVICES_SUMMARY_MAX_HOSTS = 1000
+    # Above this host count we drop the per-host filter list and post-filter
+    # in Python — mirrors cmk.gui.nodevis.topology._fetch_data: the core
+    # spends more on filter evaluation than on returning all rows.
+    _SERVICES_SUMMARY_FILTER_THRESHOLD = 500
     # Result cache TTL — slightly under the default refresh interval so a
     # second concurrent refresh of the same board (multi-tab, multi-user) can
-    # hit the cache. Stats data goes stale within the refresh cycle anyway.
+    # hit the cache.
     _SERVICES_SUMMARY_CACHE_TTL = 4.0
 
     async def get_services_summary(self, hostnames: list[str]) -> dict[str, ServicesSummary]:
         """Return service-state counts per host.
 
-        Strategy:
-        1. Skip large host sets (>``_SERVICES_SUMMARY_MAX_HOSTS``) — return
-           empty so the tooltip omits the pill row instead of melting Livestatus.
-        2. Hit a TTL-bounded result cache keyed by the host set. Concurrent
-           refreshes of the same board don't re-query.
-        3. For the remaining hosts, run one batched Stats query per chunk of
-           ``_SERVICES_SUMMARY_BATCH`` hosts; each chunk uses
-           ``Stats: state = X\\nStats: host_name = h\\nStatsAnd: 2`` clauses
-           so a single round-trip yields per-host counters without relying on
-           ``StatsGroupBy`` (which behaves inconsistently under MultiSite).
-
-        For typical maps (≤200 hosts) this is one Livestatus round-trip per
-        refresh — down from N round-trips in the previous parallel version.
+        Reads the per-host ``num_services_{ok,warn,crit,unknown,pending}``
+        columns straight from the ``hosts`` table — Livestatus core maintains
+        them as O(1) counters, so this is a single round-trip regardless of
+        host count and multisite-safe (each row is self-contained per host;
+        sites merge by simple row concatenation).
         """
         if not hostnames:
             return {}
-        if len(hostnames) > self._SERVICES_SUMMARY_MAX_HOSTS:
-            return {h: ServicesSummary() for h in hostnames}
 
         cache_key = frozenset(hostnames)
         cached = self._services_summary_cache.get(cache_key)
@@ -1475,56 +1463,35 @@ class LivestatusConnection(ConnectionBase):
         if cached is not None and now - cached[0] < self._SERVICES_SUMMARY_CACHE_TTL:
             return dict(cached[1])
 
-        async def _summary_for_chunk(chunk: list[str]) -> dict[str, ServicesSummary]:
-            filters = "".join(f"Filter: host_name = {_ls_escape(h)}\n" for h in chunk)
-            if len(chunk) > 1:
-                filters += f"Or: {len(chunk)}\n"
-            stats_clauses = []
-            for h in chunk:
-                hf = _ls_escape(h)
-                for state_code in (0, 1, 2, 3):
-                    stats_clauses.append(
-                        f"Stats: state = {state_code}\nStats: host_name = {hf}\nStatsAnd: 2\n"
-                    )
-                stats_clauses.append(
-                    f"Stats: has_been_checked = 0\nStats: host_name = {hf}\nStatsAnd: 2\n"
-                )
-            query = f"GET services\n{filters}{''.join(stats_clauses)}"
-            try:
-                rows = await self._query(query)
-            except Exception:
-                logger.warning(
-                    "Batched services-summary query failed for %d host(s)",
-                    len(chunk),
-                    exc_info=True,
-                )
-                return {h: ServicesSummary() for h in chunk}
-            result: dict[str, ServicesSummary] = {h: ServicesSummary() for h in chunk}
-            if not rows or not rows[0]:
-                return result
-            row = rows[0]
-            # 5 counters per host, in chunk order
-            for i, h in enumerate(chunk):
-                base = i * 5
-                result[h] = ServicesSummary(
-                    ok=_row_int(row, base),
-                    warning=_row_int(row, base + 1),
-                    critical=_row_int(row, base + 2),
-                    unknown=_row_int(row, base + 3),
-                    pending=_row_int(row, base + 4),
-                )
-            return result
+        query_all = len(hostnames) > self._SERVICES_SUMMARY_FILTER_THRESHOLD
+        if query_all:
+            filters = ""
+        else:
+            filters = "".join(f"Filter: name = {_ls_escape(h)}\n" for h in hostnames)
+            if len(hostnames) > 1:
+                filters += f"Or: {len(hostnames)}\n"
+        query = (
+            "GET hosts\n"
+            "Columns: name num_services_ok num_services_warn num_services_crit "
+            "num_services_unknown num_services_pending\n"
+            f"{filters}"
+        )
+        try:
+            rows = await self._query(query)
+        except Exception:
+            logger.warning("services-summary query failed", exc_info=True)
+            return {h: ServicesSummary() for h in hostnames}
 
-        chunks = [
-            hostnames[i : i + self._SERVICES_SUMMARY_BATCH]
-            for i in range(0, len(hostnames), self._SERVICES_SUMMARY_BATCH)
-        ]
-        partials = await asyncio.gather(*[_summary_for_chunk(c) for c in chunks])
-        merged: dict[str, ServicesSummary] = {}
-        for p in partials:
-            merged.update(p)
-        # Drop entries whose TTL has passed before inserting; bursts of
-        # different host-sets must not accumulate beyond the time horizon.
+        wanted = set(hostnames) if query_all else None
+        merged: dict[str, ServicesSummary] = {h: ServicesSummary() for h in hostnames}
+        for r in rows:
+            name = _row_str(r, 0)
+            if not name:
+                continue
+            if wanted is not None and name not in wanted:
+                continue
+            merged[name] = _services_summary_from_row(r, 1)
+
         for k in [
             k
             for k, (ts, _) in self._services_summary_cache.items()
