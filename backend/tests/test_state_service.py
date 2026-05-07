@@ -207,3 +207,95 @@ async def test_get_board_states_non_monitoring_objects(mock_connection, monkeypa
     assert result.connection_ok is True
     # Both non-monitoring objects get PENDING state
     assert all(s.state == "PENDING" for s in result.states)
+
+
+# ---------------------------------------------------------------------------
+# Topology snapshot diff (used by the Flow Board WebSocket broadcast loop)
+# ---------------------------------------------------------------------------
+
+
+def _topo_node(name: str, **kwargs):
+    """Build a TopologyNode with sensible defaults for diff tests."""
+    from app.api.v1.connections import TopologyNode
+
+    return TopologyNode(**{"parents": [], "state": "UP", "output": "ok", "name": name, **kwargs})
+
+
+@pytest.fixture(autouse=True)
+def _clear_topology_snapshots():
+    state_service._topology_snapshots.clear()
+    yield
+    state_service._topology_snapshots.clear()
+
+
+def test_topology_delta_first_call_is_full():
+    nodes = [_topo_node("h1"), _topo_node("h2")]
+    delta = state_service.compute_topology_delta("b1", None, nodes)
+    assert delta.full is True
+    assert {n.name for n in delta.added} == {"h1", "h2"}
+    assert delta.changed == [] and delta.removed == []
+
+
+def test_topology_delta_no_changes_returns_empty_lists():
+    nodes = [_topo_node("h1"), _topo_node("h2")]
+    state_service.compute_topology_delta("b1", None, nodes)
+    delta = state_service.compute_topology_delta("b1", None, nodes)
+    assert delta.full is False
+    assert delta.added == [] and delta.changed == [] and delta.removed == []
+
+
+def test_topology_delta_detects_added_host():
+    state_service.compute_topology_delta("b1", None, [_topo_node("h1")])
+    delta = state_service.compute_topology_delta("b1", None, [_topo_node("h1"), _topo_node("h2")])
+    assert [n.name for n in delta.added] == ["h2"]
+    assert delta.changed == [] and delta.removed == []
+
+
+def test_topology_delta_detects_changed_volatile_field():
+    state_service.compute_topology_delta("b1", None, [_topo_node("h1", state="UP", output="ok")])
+    delta = state_service.compute_topology_delta(
+        "b1", None, [_topo_node("h1", state="DOWN", output="boom")]
+    )
+    assert [n.name for n in delta.changed] == ["h1"]
+    assert delta.added == [] and delta.removed == []
+
+
+def test_topology_delta_detects_removed_host():
+    state_service.compute_topology_delta("b1", None, [_topo_node("h1"), _topo_node("h2")])
+    delta = state_service.compute_topology_delta("b1", None, [_topo_node("h1")])
+    assert delta.removed == ["h2"]
+    assert delta.added == [] and delta.changed == []
+
+
+def test_topology_delta_ignores_stable_field_change():
+    # alias is metadata, not a volatile field — changing it should NOT trigger a delta.
+    state_service.compute_topology_delta("b1", None, [_topo_node("h1", alias="old")])
+    delta = state_service.compute_topology_delta("b1", None, [_topo_node("h1", alias="new")])
+    assert delta.added == [] and delta.changed == [] and delta.removed == []
+
+
+def test_topology_delta_force_full_resends_everything():
+    nodes = [_topo_node("h1"), _topo_node("h2")]
+    state_service.compute_topology_delta("b1", None, nodes)
+    delta = state_service.compute_topology_delta("b1", None, nodes, force_full=True)
+    assert delta.full is True
+    assert {n.name for n in delta.added} == {"h1", "h2"}
+
+
+def test_topology_delta_per_user_isolation():
+    # Different auth_users see different host sets — snapshots must not collide.
+    state_service.compute_topology_delta("b1", "alice", [_topo_node("h1")])
+    state_service.compute_topology_delta("b1", "bob", [_topo_node("h2")])
+    # Bob's second call: nothing changed, expect empty diff.
+    delta_bob = state_service.compute_topology_delta("b1", "bob", [_topo_node("h2")])
+    assert delta_bob.full is False
+    assert delta_bob.added == [] and delta_bob.changed == [] and delta_bob.removed == []
+
+
+def test_drop_topology_snapshot_clears_all_users_for_board():
+    state_service.compute_topology_delta("b1", "alice", [_topo_node("h1")])
+    state_service.compute_topology_delta("b1", "bob", [_topo_node("h2")])
+    state_service.compute_topology_delta("b2", None, [_topo_node("h3")])
+    state_service.drop_topology_snapshot("b1")
+    assert all(k[0] != "b1" for k in state_service._topology_snapshots)
+    assert ("b2", None) in state_service._topology_snapshots

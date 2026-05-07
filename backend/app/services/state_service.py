@@ -13,6 +13,12 @@ from app.core.config import settings
 from app.schemas.board import AggregationNode, BoardConfig, BoardObject, RadarView
 from app.schemas.state import MapStates, ObjectState, ServicesSummary
 
+# Late import to avoid the connections-API module being imported at startup.
+# TopologyNode lives there because it's the response_model of /topology;
+# the snapshot diff helpers below are the only state_service consumers.
+if TYPE_CHECKING:
+    from app.api.v1.connections import TopologyDelta, TopologyNode
+
 # Combined severity for cross-scale worst-state aggregation (recognize_services)
 _COMBINED_SEVERITY: dict[str, int] = {
     "PENDING": -1,
@@ -530,3 +536,91 @@ async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> Map
     return MapStates(
         map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=connection_ok
     )
+
+
+# ---------------------------------------------------------------------------
+# Flow Board topology snapshots — used by the WebSocket broadcast loop to
+# emit incremental updates instead of re-sending the full topology every tick.
+# ---------------------------------------------------------------------------
+
+# (board_name, auth_user) → (host_name → volatile-fields hash)
+_topology_snapshots: dict[tuple[str, str | None], dict[str, int]] = {}
+
+
+def _hash_topology_node(n: TopologyNode) -> int:
+    """Hash only fields that change between checks.
+
+    Stable identity/topology fields (name, parents, alias, address) are
+    excluded — they're carried in `added` payloads and don't trigger
+    `changed` entries on their own.
+    """
+    s = n.services_summary
+    summary = (s.ok, s.warning, s.critical, s.unknown, s.pending) if s is not None else ()
+    services = tuple((sv.name, sv.state, sv.output) for sv in n.services)
+    return hash(
+        (
+            n.state,
+            n.output,
+            n.last_state_change,
+            n.last_check,
+            n.next_check,
+            n.current_attempt,
+            n.acknowledged,
+            n.in_downtime,
+            n.notifications_enabled,
+            n.active_checks_enabled,
+            n.services_omitted,
+            n.services_truncated_count,
+            summary,
+            services,
+        )
+    )
+
+
+def compute_topology_delta(
+    board_name: str,
+    auth_user: str | None,
+    current: list[TopologyNode],
+    *,
+    force_full: bool = False,
+) -> TopologyDelta:
+    """Diff `current` against the previous snapshot for (board_name, auth_user).
+
+    Side effect: stores the new snapshot in `_topology_snapshots` so the next
+    call returns deltas relative to this one.
+    """
+    from app.api.v1.connections import TopologyDelta as _TopologyDelta
+
+    key = (board_name, auth_user)
+    prev = _topology_snapshots.get(key)
+    new_hashes = {n.name: _hash_topology_node(n) for n in current}
+
+    if force_full or prev is None:
+        _topology_snapshots[key] = new_hashes
+        return _TopologyDelta(full=True, generated_at=time.time(), added=current)
+
+    by_name = {n.name: n for n in current}
+    added = [n for n in current if n.name not in prev]
+    changed = [n for n in current if n.name in prev and new_hashes[n.name] != prev[n.name]]
+    removed = [name for name in prev if name not in by_name]
+
+    _topology_snapshots[key] = new_hashes
+    return _TopologyDelta(
+        full=False,
+        generated_at=time.time(),
+        added=added,
+        changed=changed,
+        removed=removed,
+    )
+
+
+def drop_topology_snapshot(board_name: str, auth_user: str | None = None) -> None:
+    """Forget the snapshot for a board (call when broadcast loop ends or board is deleted).
+
+    With `auth_user=None`, drops snapshots for *all* users of the board.
+    """
+    if auth_user is not None:
+        _topology_snapshots.pop((board_name, auth_user), None)
+        return
+    for key in [k for k in _topology_snapshots if k[0] == board_name]:
+        _topology_snapshots.pop(key, None)

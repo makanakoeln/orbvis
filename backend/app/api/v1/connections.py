@@ -175,6 +175,21 @@ class TopologyNode(BaseModel):
     services_summary: ServicesSummary | None = None
 
 
+class TopologyDelta(BaseModel):
+    """Incremental update for a Flow Board's topology snapshot.
+
+    `full=True` carries the complete topology (initial connect / reset).
+    Otherwise `added`/`changed`/`removed` are diffs against the previous tick:
+    only hosts whose volatile fields actually changed appear in `changed`.
+    """
+
+    full: bool
+    generated_at: float
+    added: list[TopologyNode] = []
+    changed: list[TopologyNode] = []
+    removed: list[str] = []
+
+
 # Higher number = more "interesting"; OK comes last, PENDING/unknown stable in
 # the middle so a flapping service doesn't reshuffle the visible top-N.
 _SERVICE_SORT_KEY = {"CRITICAL": 0, "WARNING": 1, "UNKNOWN": 2, "PENDING": 3, "OK": 4}
