@@ -158,6 +158,17 @@
             :connection-id="props.connectionId"
         />
 
+        <DetailDrawer
+            v-if="detailObject"
+            :object="detailObject"
+            :state="detailState"
+            :checkmk-url="props.checkmkUrl ?? null"
+            @close="closeDetail"
+            @acknowledge="onDetailAck"
+            @schedule-downtime="onDetailDowntime"
+            @force-check="onDetailForceCheck"
+        />
+
         <!-- Context menu (right-click) -->
         <ContextMenu
             v-if="contextMenu.visible && contextMenu.object"
@@ -243,6 +254,7 @@ import { connectionsApi } from '@/api/client';
 import AckModal from '@/components/board/AckModal.vue';
 import CommentModal from '@/components/board/CommentModal.vue';
 import ContextMenu from '@/components/board/ContextMenu.vue';
+import DetailDrawer from '@/components/board/DetailDrawer.vue';
 import DowntimeModal from '@/components/board/DowntimeModal.vue';
 import HoverMenu from '@/components/board/HoverMenu.vue';
 import RemoveDowntimeModal from '@/components/board/RemoveDowntimeModal.vue';
@@ -396,6 +408,30 @@ const contextMenu = reactive<{
 function closeContextMenu(): void {
     contextMenu.visible = false;
     contextMenu.object = null;
+}
+
+const detailObject = ref<BoardObject | null>(null);
+const detailState = ref<ObjectState | undefined>(undefined);
+
+function openDetail(obj: BoardObject, state: ObjectState | undefined): void {
+    detailObject.value = obj;
+    detailState.value = state;
+    closeContextMenu();
+}
+
+function closeDetail(): void {
+    detailObject.value = null;
+    detailState.value = undefined;
+}
+
+function onDetailAck(): void {
+    objectActions.handlers.acknowledge(detailObject.value);
+}
+function onDetailDowntime(): void {
+    objectActions.handlers.scheduleDowntime(detailObject.value);
+}
+function onDetailForceCheck(): void {
+    objectActions.handlers.forceCheck(detailObject.value);
 }
 
 function onDocumentClick(): void {
@@ -1242,10 +1278,18 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             if (d.nodeType === 'host' && !props.readonly) return 'grab';
             return props.clickAction === 'none' ? 'default' : 'pointer';
         })
-        .on('click', (_event, d) => {
+        .on('click', (event: MouseEvent, d) => {
             if (props.clickAction === 'none') return;
-            const url = buildCheckmkUrl(boardObjectFromFNode(d), props.checkmkUrl ?? null);
-            if (url) openUrl(url, '_blank');
+            // Modifier-click keeps the legacy "open in Checkmk" behavior; plain
+            // click opens the in-app detail drawer so the operator doesn't lose
+            // the board context with a tab explosion.
+            if (event.ctrlKey || event.metaKey) {
+                const url = buildCheckmkUrl(boardObjectFromFNode(d), props.checkmkUrl ?? null);
+                if (url) openUrl(url, '_blank');
+                return;
+            }
+            hoverMenu.visible = false;
+            openDetail(boardObjectFromFNode(d), objectStateFromFNode(d));
         })
         .on('contextmenu', (event: MouseEvent, d) => {
             event.preventDefault();

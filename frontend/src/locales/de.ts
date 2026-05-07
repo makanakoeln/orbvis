@@ -162,6 +162,11 @@ export default {
             searchPlaceholder: 'Hosts/Services filtern…',
             problemsOnlyToggle: 'Nur Hosts mit Problemen anzeigen',
         },
+        detailDrawer: {
+            close: 'Schließen',
+            servicesSummary: 'Services',
+            openInCheckmk: 'In Checkmk öffnen',
+        },
     },
     boardSettings: {
         editMode: 'Bearbeitungsmodus',

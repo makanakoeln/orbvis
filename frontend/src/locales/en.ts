@@ -161,6 +161,11 @@ export default {
             searchPlaceholder: 'Filter hosts/services…',
             problemsOnlyToggle: 'Show only hosts with problems',
         },
+        detailDrawer: {
+            close: 'Close',
+            servicesSummary: 'Services',
+            openInCheckmk: 'Open in Checkmk',
+        },
     },
     boardSettings: {
         editMode: 'Edit Mode',
