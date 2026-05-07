@@ -215,6 +215,7 @@ async function fetchTopology() {
                 parentLayers: props.flowView?.parent_layers ?? null,
             },
         );
+        if (error.value) error.value = '';
     } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to load topology';
     } finally {
