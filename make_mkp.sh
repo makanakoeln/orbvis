@@ -494,7 +494,7 @@ case "\$1" in
     PORT="\${ORBVIS_PORT:-8420}"
     cd "$MKP_LIB/server"  # extracted by orbvis-setup step 2
     "\$VENV/bin/python3" -m alembic upgrade head >> "\$LOGFILE" 2>&1
-    "\$VENV/bin/uvicorn" app.main:app \\
+    "\$VENV/bin/python3" -m uvicorn app.main:app \\
       --host 127.0.0.1 --port "\$PORT" \\
       --log-level warning \\
       >> "\$LOGFILE" 2>&1 &
