@@ -14,6 +14,7 @@ from fastapi import (
     status,
 )
 
+from app.api.v1.connections import TopologyNode
 from app.api.v1.deps import can_view_board as _can_view_board
 from app.api.v1.deps import can_view_board_by_name as _can_view_board_by_name
 from app.api.v1.deps import get_current_user
@@ -24,6 +25,7 @@ from app.core.ratelimit import ws_connect_limiter
 from app.core.websocket import manager
 from app.integrations import checkmk as _cmk_integration
 from app.models.user import User
+from app.schemas.board import BoardConfig
 from app.schemas.state import MapStates
 from app.services import board_service, state_service
 from app.services.auth_service import authenticate_bearer_token
@@ -61,12 +63,66 @@ def _resolve_auth_user(username: str, is_admin: bool) -> str | None:
 _broadcast_tasks: dict[str, asyncio.Task[None]] = {}
 
 
+async def _fetch_topology_for_user(
+    cfg: BoardConfig, auth_user: str | None
+) -> list[TopologyNode] | None:
+    """Fetch the live topology for a Flow Board under the given auth_user context.
+
+    Returns None when the connection is unregistered or unavailable (so the
+    caller can skip broadcasting without leaking errors to clients).
+    """
+    connection = state_service.get_connection(cfg.connection_id)
+    if connection is None:
+        return None
+    try:
+        if (
+            auth_user is not None
+            and settings.checkmk_omd_root
+            and hasattr(connection, "with_auth_user")
+        ):
+            async with connection.with_auth_user(auth_user):
+                rows = await connection.get_topology()
+        else:
+            rows = await connection.get_topology()
+    except Exception:
+        logger.warning("topology fetch failed for board '%s'", cfg.name, exc_info=True)
+        return None
+    return [TopologyNode(**row) for row in rows]
+
+
+async def _send_topology_to(
+    cfg: BoardConfig,
+    auth_user: str | None,
+    targets: list[WebSocket],
+    *,
+    force_full: bool,
+) -> None:
+    """Compute the topology delta for (board, auth_user) and push it to *targets*.
+
+    Empty deltas are skipped unless `force_full=True`.
+    """
+    if not targets:
+        return
+    nodes = await _fetch_topology_for_user(cfg, auth_user)
+    if nodes is None:
+        return
+    delta = state_service.compute_topology_delta(cfg.name, auth_user, nodes, force_full=force_full)
+    if not (force_full or delta.added or delta.changed or delta.removed):
+        return
+    msg = json.dumps({"type": "topology_update", "map": cfg.name, "delta": delta.model_dump()})
+    await manager.send_to_connections(cfg.name, targets, msg)
+
+
 async def _broadcast_loop(board_name: str) -> None:
     """Fetch states once per interval and push to all clients subscribed to this board.
 
     When CHECKMK_OMD_ROOT is configured, connections are grouped by auth_user and
     each group receives states filtered to its user's contact groups.  Otherwise a
     single shared query is issued for efficiency.
+
+    For Flow Boards (`view.type == "flow"`) the loop additionally pushes
+    `topology_update` messages with delta encoding so the FlowBoard component
+    can render without its own REST polling.
     """
     logger.debug("Broadcast loop started for board '%s'", board_name)
     try:
@@ -95,10 +151,17 @@ async def _broadcast_loop(board_name: str) -> None:
                             }
                         )
                         await manager.send_to_connections(board_name, connections, msg)
+                        if cfg.view.type == "flow":
+                            await _send_topology_to(cfg, auth_user, connections, force_full=False)
                 else:
                     user_count = 1
                     states = await state_service.get_board_states(cfg)
                     await manager.broadcast_map_states(board_name, states.model_dump())
+                    if cfg.view.type == "flow":
+                        connections = list(
+                            manager.get_connections_grouped(board_name).get(None, [])
+                        )
+                        await _send_topology_to(cfg, None, connections, force_full=False)
             elapsed_ms = (asyncio.get_event_loop().time() - tick_start) * 1000
             logger.debug(
                 "Broadcast tick board=%s user_groups=%d elapsed=%.0fms",
@@ -111,6 +174,7 @@ async def _broadcast_loop(board_name: str) -> None:
         logger.exception("Broadcast loop error for board '%s'", board_name)
     finally:
         _broadcast_tasks.pop(board_name, None)
+        state_service.drop_topology_snapshot(board_name)
         logger.debug("Broadcast loop stopped for board '%s'", board_name)
 
 
@@ -191,6 +255,11 @@ async def websocket_board_states(
 
     if name not in _broadcast_tasks or _broadcast_tasks[name].done():
         _broadcast_tasks[name] = asyncio.create_task(_broadcast_loop(name))
+
+    # First-paint push for Flow Boards: don't make the client wait up to one
+    # broadcast tick (state_refresh_interval) for the initial topology.
+    if cfg.view.type == "flow":
+        await _send_topology_to(cfg, ws_auth_user, [websocket], force_full=True)
 
     try:
         while True:
