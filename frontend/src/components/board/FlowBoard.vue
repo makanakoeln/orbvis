@@ -109,6 +109,7 @@ import {
     type SimulationNodeDatum,
     zoom,
     zoomIdentity,
+    type ZoomTransform,
 } from 'd3';
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -377,6 +378,11 @@ watch(
 onUnmounted(() => {
     document.removeEventListener('visibilitychange', onVisibilityChange);
     if (bootstrapTimer) clearTimeout(bootstrapTimer);
+    if (pendingZoomRaf !== null) {
+        cancelAnimationFrame(pendingZoomRaf);
+        pendingZoomRaf = null;
+        pendingZoomTransform = null;
+    }
     stopPollTimer();
     simulation?.stop();
     if (svgEl.value) select(svgEl.value).selectAll('*').remove();
@@ -451,6 +457,13 @@ let simulation: ReturnType<typeof forceSimulation<FNode>> | null = null;
 let zoomBeh: ReturnType<typeof zoom<SVGSVGElement, unknown>> | null = null;
 let lastFNodes: FNode[] = [];
 let _hasFitOnce = false;
+
+// rAF-coalesce state: high-frequency wheel/drag events (e.g. trackpads firing
+// >60 Hz) would otherwise write the SVG transform multiple times per frame and
+// re-trigger a layout cascade on each. We capture the latest transform and
+// apply it once per animation frame instead.
+let pendingZoomTransform: ZoomTransform | null = null;
+let pendingZoomRaf: number | null = null;
 // F3 LoD: when zoomed out below this scale we hide service / "+more" nodes and
 // their links — they're unreadable at that size and dominate the tick cost.
 // At fit-to-view on multi-hundred-host boards the initial scale lands around
@@ -469,6 +482,19 @@ function applyLod(): void {
     sel.selectAll<SVGLineElement, FLink>('g.links line')
         .filter((d) => d.isServiceLink)
         .style('display', display);
+}
+
+function flushZoomTransform(): void {
+    pendingZoomRaf = null;
+    if (!pendingZoomTransform || !svgEl.value) return;
+    const t = pendingZoomTransform;
+    pendingZoomTransform = null;
+    select(svgEl.value).select<SVGGElement>('g.zoom-layer').attr('transform', t.toString());
+    const newLow = t.k < LOD_LOW_SCALE;
+    if (newLow !== lodLow) {
+        lodLow = newLow;
+        applyLod();
+    }
 }
 
 // Reset auto-fit when switching boards
@@ -584,11 +610,9 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         zoomBeh = zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.15, 3])
             .on('zoom', (event) => {
-                gZoom.attr('transform', event.transform);
-                const newLow = event.transform.k < LOD_LOW_SCALE;
-                if (newLow !== lodLow) {
-                    lodLow = newLow;
-                    applyLod();
+                pendingZoomTransform = event.transform;
+                if (pendingZoomRaf === null) {
+                    pendingZoomRaf = requestAnimationFrame(flushZoomTransform);
                 }
             });
         el.call(zoomBeh);
