@@ -169,6 +169,40 @@
             @force-check="onDetailForceCheck"
         />
 
+        <div v-if="selectedIds.size > 0" class="bulk-actions">
+            <span class="bulk-actions__count">
+                {{ t('board.flow.bulkSelected', { count: selectedIds.size }) }}
+            </span>
+            <button
+                type="button"
+                class="bulk-actions__btn"
+                @click="bulkAction(objectActions.handlers.acknowledge)"
+            >
+                {{ t('contextMenu.acknowledge') }}
+            </button>
+            <button
+                type="button"
+                class="bulk-actions__btn"
+                @click="bulkAction(objectActions.handlers.scheduleDowntime)"
+            >
+                {{ t('contextMenu.scheduleDowntime') }}
+            </button>
+            <button
+                type="button"
+                class="bulk-actions__btn"
+                @click="bulkAction(objectActions.handlers.forceCheck)"
+            >
+                {{ t('contextMenu.forceCheck') }}
+            </button>
+            <button
+                type="button"
+                class="bulk-actions__btn bulk-actions__btn--clear"
+                @click="clearSelection"
+            >
+                ×
+            </button>
+        </div>
+
         <!-- Context menu (right-click) -->
         <ContextMenu
             v-if="contextMenu.visible && contextMenu.object"
@@ -408,6 +442,73 @@ const contextMenu = reactive<{
 function closeContextMenu(): void {
     contextMenu.visible = false;
     contextMenu.object = null;
+}
+
+// Multi-select: shift-clicking nodes builds a set; bulk-action toolbar applies
+// host/service ops sequentially over the set.
+const selectedIds = ref<Set<string>>(new Set());
+const selectedFNodes = new Map<string, FNode>();
+
+function toggleSelection(d: FNode): void {
+    if (selectedIds.value.has(d.id)) {
+        selectedIds.value.delete(d.id);
+        selectedFNodes.delete(d.id);
+    } else {
+        selectedIds.value.add(d.id);
+        selectedFNodes.set(d.id, d);
+    }
+    selectedIds.value = new Set(selectedIds.value);
+    applySelectionStyles();
+}
+
+function clearSelection(): void {
+    selectedIds.value = new Set();
+    selectedFNodes.clear();
+    applySelectionStyles();
+}
+
+// SELECTION_STROKE matches --color-yellow-50 from cmk/colors.css. Inlined as a
+// hex literal because d3 attr() must operate on SVG attribute strings — CSS
+// custom properties aren't available there without a getComputedStyle hop.
+const SELECTION_STROKE = 'rgb(255, 215, 3)';
+
+function applySelectionStyles(): void {
+    if (!svgEl.value) return;
+    select(svgEl.value)
+        .selectAll<SVGGElement, FNode>('g.node')
+        .each(function (d) {
+            const isSel = selectedIds.value.has(d.id);
+            const circle = (this as SVGGElement).querySelector('circle');
+            if (!circle) return;
+            if (isSel) {
+                circle.setAttribute('data-selected', '1');
+                circle.setAttribute('stroke', SELECTION_STROKE);
+                circle.setAttribute('stroke-width', '3');
+            } else if (circle.getAttribute('data-selected') === '1') {
+                circle.removeAttribute('data-selected');
+                if (d.nodeType === 'host') {
+                    const halo = hostHalo(d);
+                    circle.setAttribute('stroke', halo.stroke);
+                    circle.setAttribute('stroke-width', String(halo.width));
+                } else {
+                    circle.setAttribute('stroke', 'rgba(0,0,0,0.4)');
+                    circle.setAttribute('stroke-width', '1');
+                }
+            }
+        });
+}
+
+const selectedObjects = computed(() =>
+    [...selectedFNodes.values()].map((d) => boardObjectFromFNode(d)),
+);
+
+async function bulkAction(
+    handler: (obj: BoardObject | null) => Promise<void> | void,
+): Promise<void> {
+    const objs = selectedObjects.value.slice();
+    for (const obj of objs) {
+        await Promise.resolve(handler(obj));
+    }
 }
 
 const detailObject = ref<BoardObject | null>(null);
@@ -1280,9 +1381,13 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         })
         .on('click', (event: MouseEvent, d) => {
             if (props.clickAction === 'none') return;
-            // Modifier-click keeps the legacy "open in Checkmk" behavior; plain
-            // click opens the in-app detail drawer so the operator doesn't lose
-            // the board context with a tab explosion.
+            // Shift-click toggles multi-select. Modifier (Ctrl/Cmd) keeps the
+            // legacy "open in Checkmk" behavior. Plain click opens the in-app
+            // detail drawer so the operator doesn't lose context with new tabs.
+            if (event.shiftKey) {
+                toggleSelection(d);
+                return;
+            }
             if (event.ctrlKey || event.metaKey) {
                 const url = buildCheckmkUrl(boardObjectFromFNode(d), props.checkmkUrl ?? null);
                 if (url) openUrl(url, '_blank');
@@ -1510,6 +1615,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // current zoom-driven display state.
     applyLod();
     applyFilterOpacity();
+    applySelectionStyles();
 
     // F1: don't synchronously tick(250) — that blocks the main thread for
     // hundreds of ms at scale. Let the simulation converge asynchronously and
@@ -1665,5 +1771,49 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     color: var(--color-yellow-50, #fbbf24);
     border-color: var(--color-yellow-50, #fbbf24);
     background: rgb(251 191 36 / 12%);
+}
+
+.bulk-actions {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    box-shadow: 0 6px 24px rgb(0 0 0 / 40%);
+}
+
+.bulk-actions__count {
+    font-size: 12px;
+    font-weight: var(--font-weight-semibold);
+    color: var(--text);
+    margin-right: 4px;
+}
+
+.bulk-actions__btn {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.bulk-actions__btn:hover {
+    background: var(--bg-hover);
+}
+
+.bulk-actions__btn--clear {
+    width: 24px;
+    padding: 0;
+    text-align: center;
+    color: var(--text-muted);
 }
 </style>

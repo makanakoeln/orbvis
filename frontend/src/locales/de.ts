@@ -161,6 +161,7 @@ export default {
             largeBoardHint: 'Fan/Orbit/Row aggregieren bei >200 Hosts identisch wie Donut',
             searchPlaceholder: 'Hosts/Services filtern…',
             problemsOnlyToggle: 'Nur Hosts mit Problemen anzeigen',
+            bulkSelected: '{count} ausgewählt',
         },
         detailDrawer: {
             close: 'Schließen',
