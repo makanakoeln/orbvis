@@ -245,12 +245,36 @@ watch(
     },
 );
 
+// Pause the 15 s poll while the tab is hidden — keeps idle Multi-Tab setups
+// from each driving their own livestatus round-trip and refreshes immediately
+// when the user returns.
+function startPollTimer(): void {
+    if (timer) return;
+    timer = setInterval(fetchTopology, 15000);
+}
+function stopPollTimer(): void {
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
+    }
+}
+function onVisibilityChange(): void {
+    if (document.hidden) {
+        stopPollTimer();
+    } else {
+        fetchTopology();
+        startPollTimer();
+    }
+}
+
 onMounted(() => {
     fetchTopology();
-    timer = setInterval(fetchTopology, 15000);
+    if (!document.hidden) startPollTimer();
+    document.addEventListener('visibilitychange', onVisibilityChange);
 });
 onUnmounted(() => {
-    if (timer) clearInterval(timer);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+    stopPollTimer();
     simulation?.stop();
     if (svgEl.value) select(svgEl.value).selectAll('*').remove();
 });
@@ -326,7 +350,10 @@ let lastFNodes: FNode[] = [];
 let _hasFitOnce = false;
 // F3 LoD: when zoomed out below this scale we hide service / "+more" nodes and
 // their links — they're unreadable at that size and dominate the tick cost.
-const LOD_LOW_SCALE = 0.5;
+// At fit-to-view on multi-hundred-host boards the initial scale lands around
+// 0.3–0.5, so 0.8 keeps the cheap host-only view active until the user zooms
+// in deliberately.
+const LOD_LOW_SCALE = 0.8;
 let lodLow = false;
 
 function applyLod(): void {
@@ -682,10 +709,12 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         )
         .force(
             'charge',
+            // Only host nodes attract/repel each other; service and "+more"
+            // pseudo-nodes are positioned geometrically by the layout helpers,
+            // so applying charge to them just burns ticks at O(N log N).
             forceManyBody<FNode>().strength((d) => {
-                if (d.nodeType === 'service') return 0;
+                if (d.nodeType !== 'host') return 0;
                 const N = servicesByHost.get(d.id)?.length ?? 0;
-                // Modest extra repulsion so service rings don't crowd; collision handles the hard min
                 return N > 0 ? -Math.max(700, layoutR(N) * 9) : -600;
             }),
         )
