@@ -148,6 +148,11 @@ export default {
             checkOverdue: 'check overdue by {duration}',
             notificationsDisabled: 'Notifications disabled — alerts will not be sent for this host',
         },
+        flow: {
+            offModeBanner:
+                '{total} hidden service issues ({critical} critical, {warning} warning) across {hostsWithProblems} hosts',
+            offModeBannerCta: 'switch to donut layout',
+        },
     },
     boardSettings: {
         editMode: 'Edit Mode',

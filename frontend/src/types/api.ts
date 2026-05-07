@@ -62,6 +62,8 @@ export type LineStyle =
 
 export type LinePerfdataLabel = 'none' | 'percent' | 'bandwidth' | 'both';
 
+export type ServiceLayout = 'off' | 'fan' | 'row' | 'orbit' | 'donut';
+
 export interface StaticView {
     type: 'static';
 }

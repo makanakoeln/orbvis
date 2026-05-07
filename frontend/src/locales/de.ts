@@ -150,6 +150,11 @@ export default {
             notificationsDisabled:
                 'Benachrichtigungen deaktiviert — bei Problemen wird nichts gemeldet',
         },
+        flow: {
+            offModeBanner:
+                '{total} verborgene Service-Probleme ({critical} kritisch, {warning} warning) auf {hostsWithProblems} Hosts',
+            offModeBannerCta: 'auf Donut umschalten',
+        },
     },
     boardSettings: {
         editMode: 'Bearbeitungsmodus',

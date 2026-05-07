@@ -350,6 +350,7 @@
                     :click-action="boardConfig.click_action"
                     :checkmk-url="checkmkUrl"
                     :flow-view="boardConfig.view.type === 'flow' ? boardConfig.view : null"
+                    @update:service-layout="serviceLayout = $event"
                 />
                 <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">
                     {{ t('board.noConnectionConfigured') }}
@@ -844,7 +845,7 @@ import { useBoardsStore } from '@/stores/boards';
 import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
-import type { BoardObject, DowntimeEntry } from '@/types/api';
+import type { BoardObject, DowntimeEntry, ServiceLayout } from '@/types/api';
 import type { TourStep } from '@/types/tour';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { resolveTemplate } from '@/utils/template';
@@ -1348,7 +1349,6 @@ function onLatLng2DragEnd(id: string, lat: number, lng: number) {
 
 // ---- Map Settings ----
 
-type ServiceLayout = 'off' | 'fan' | 'row' | 'orbit' | 'donut';
 const serviceLayout = ref<ServiceLayout>('off');
 const serviceLayoutOpen = ref(false);
 const serviceLayoutOptions = computed(() => [

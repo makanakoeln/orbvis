@@ -68,6 +68,18 @@
             </button>
         </div>
 
+        <button
+            v-if="props.serviceLayout === 'off' && aggregatedProblems.total > 0"
+            type="button"
+            class="off-mode-banner"
+            @click="emit('update:serviceLayout', 'donut')"
+        >
+            <CmkAlertBox variant="warning" size="small">
+                {{ t('board.flow.offModeBanner', aggregatedProblems) }}
+                <span class="off-mode-banner__cta">{{ t('board.flow.offModeBannerCta') }}</span>
+            </CmkAlertBox>
+        </button>
+
         <!-- Hover popup -->
         <HoverMenu
             v-if="hoverMenu.visible && hoverMenu.object"
@@ -81,6 +93,7 @@
 </template>
 
 <script setup lang="ts">
+import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
 import {
     arc as d3arc,
     drag,
@@ -97,25 +110,37 @@ import {
     zoom,
     zoomIdentity,
 } from 'd3';
-import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
 import HoverMenu from '@/components/board/HoverMenu.vue';
 import { useD3Cleanup } from '@/composables/useD3Cleanup';
 import { useAuthStore } from '@/stores/auth';
 import { useStatesStore } from '@/stores/states';
-import type { BoardObject, ClickAction, FlowView, ObjectState, TopologyNode } from '@/types/api';
+import type {
+    BoardObject,
+    ClickAction,
+    FlowView,
+    ObjectState,
+    ServiceLayout,
+    TopologyNode,
+} from '@/types/api';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { stateColor } from '@/utils/stateColors';
 
 const props = defineProps<{
     connectionId: string;
-    serviceLayout: 'off' | 'fan' | 'row' | 'orbit' | 'donut';
+    serviceLayout: ServiceLayout;
     readonly?: boolean;
     clickAction?: ClickAction;
     checkmkUrl?: string | null;
     flowView?: FlowView | null;
 }>();
+const emit = defineEmits<{
+    (e: 'update:serviceLayout', value: ServiceLayout): void;
+}>();
+const { t } = useI18n();
 const auth = useAuthStore();
 const statesStore = useStatesStore();
 
@@ -203,6 +228,31 @@ let timer: ReturnType<typeof setInterval> | null = null;
 function needsServices(layout: typeof props.serviceLayout): boolean {
     return layout === 'fan' || layout === 'orbit' || layout === 'row';
 }
+
+// Off-layout hides per-service health; aggregate problem counts to surface
+// them in a click-to-fix CTA so a green-dot board doesn't mask CRIT/WARN.
+// Total includes UNKNOWN (so unknown-only sites still trigger the banner)
+// but the locale string only enumerates the more actionable CRIT/WARN.
+const aggregatedProblems = computed(() => {
+    let critical = 0;
+    let warning = 0;
+    let unknown = 0;
+    let hostsWithProblems = 0;
+    for (const n of nodes.value) {
+        const s = n.services_summary;
+        if (!s) continue;
+        if (s.critical || s.warning || s.unknown) hostsWithProblems++;
+        critical += s.critical;
+        warning += s.warning;
+        unknown += s.unknown;
+    }
+    return {
+        critical,
+        warning,
+        hostsWithProblems,
+        total: critical + warning + unknown,
+    };
+});
 
 // ---- Data sources ----
 //
@@ -1075,3 +1125,32 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     }
 }
 </script>
+
+<style scoped>
+.off-mode-banner {
+    position: absolute;
+    top: var(--dimension-5);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+.off-mode-banner:focus-visible {
+    outline: 2px solid var(--color-yellow-50);
+    outline-offset: 2px;
+    border-radius: var(--border-radius);
+}
+
+.off-mode-banner__cta {
+    font-weight: var(--font-weight-bold);
+    margin-left: var(--dimension-3);
+    border-bottom: 1px dashed currentcolor;
+}
+</style>
