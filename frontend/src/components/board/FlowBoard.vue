@@ -1102,6 +1102,11 @@ function objectStateFromFNode(d: FNode): ObjectState {
 }
 
 let simulation: ReturnType<typeof forceSimulation<FNode>> | null = null;
+// Track last seen host id set so we can skip the (expensive) force-sim restart
+// on status-only WebSocket updates. The fNode rebuild + visual attr updates
+// still run, but without a sim restart there are no ticks → no DOM transform
+// thrashing for hundreds of hosts on every push.
+let _lastHostIds: Set<string> = new Set();
 let zoomBeh: ReturnType<typeof zoom<SVGSVGElement, unknown>> | null = null;
 let lastFNodes: FNode[] = [];
 let _hasFitOnce = false;
@@ -2038,10 +2043,27 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // hundreds of ms at scale. Let the simulation converge asynchronously and
     // refine the fit once it has settled.
     const isInitial = !_hasFitOnce;
-    simulation
-        .on('tick', ticked)
-        .alpha(isInitial ? 1 : 0.2)
-        .restart();
+    // Compare the new host id set against the previous render to detect
+    // genuine structural changes (host added/removed/renamed) vs. pure
+    // status-only updates. WS push every few seconds — without this gate
+    // every push restarts the force sim for 1-2s of CPU spike on 500-host
+    // boards even though nothing structurally changed.
+    const newHostIds = new Set<string>(topoNodes.map((n) => n.name));
+    const structurallyChanged =
+        newHostIds.size !== _lastHostIds.size ||
+        [...newHostIds].some((id) => !_lastHostIds.has(id));
+    _lastHostIds = newHostIds;
+
+    simulation.on('tick', ticked);
+    if (isInitial || structurallyChanged) {
+        simulation.alpha(isInitial ? 1 : 0.2).restart();
+    } else {
+        // Status-only update: state colors / donut segments / halos already
+        // refreshed via nodeMerge above. No need to advance the sim — the
+        // operator's existing layout stays put and CPU is idle until the
+        // next structural change.
+        simulation.stop();
+    }
     if (isInitial) {
         _hasFitOnce = true;
         // Pre-layout already arranged hosts in a severity spiral, so an
