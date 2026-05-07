@@ -199,8 +199,35 @@ DB_FILE="$ORBVIS_DIR/orbvis.db"
 VENV_DIR="$ORBVIS_DIR/venv"
 APACHE_CONF="$ROOT/etc/apache/conf.d/orbvis.conf"
 INIT_SCRIPT="$ROOT/etc/init.d/orbvis"
-BACKEND_PORT=8420
 LIVESTATUS_SOCKET="$ROOT/tmp/run/live"
+
+# Pick a TCP port that no other OrbVis install on this host already claims.
+# Reuse our own .env if present; otherwise scan all sibling sites' .env files
+# (a port reserved by a stopped site must still count as taken) plus the live
+# socket table, then pick the lowest free port from 8420 upward.
+discover_port() {
+  local existing port envf p
+  if [[ -f "$ENV_FILE" ]]; then
+    existing="$(grep -E '^ORBVIS_PORT=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)"
+    if [[ -n "$existing" ]]; then echo "$existing"; return; fi
+  fi
+  declare -A reserved=()
+  for envf in /omd/sites/*/local/share/orbvis/.env; do
+    [[ -f "$envf" && "$envf" != "$ENV_FILE" ]] || continue
+    p="$(grep -E '^ORBVIS_PORT=' "$envf" 2>/dev/null | head -1 | cut -d= -f2- || true)"
+    [[ -n "$p" ]] && reserved[$p]=1
+  done
+  port=8420
+  while (( port < 8500 )); do
+    if [[ -z "${reserved[$port]:-}" ]] \
+       && ! ss -tlnH "( sport = :$port )" 2>/dev/null | grep -q .; then
+      echo "$port"; return
+    fi
+    (( port++ ))
+  done
+  die "No free port available in 8420-8499 for OrbVis backend."
+}
+BACKEND_PORT="$(discover_port)"
 
 CMD="${1:-setup}"
 
@@ -360,6 +387,7 @@ STATE_REFRESH_INTERVAL=15
 CHECKMK_HTPASSWD=$ROOT/etc/htpasswd
 CHECKMK_OMD_ROOT=$ROOT
 CHECKMK_SITE=$SITE
+ORBVIS_PORT=$BACKEND_PORT
 EOF
 
   if [[ ! -f "$CONNECTIONS_FILE" ]]; then
@@ -454,7 +482,6 @@ EOF
 PIDFILE="\$OMD_ROOT/tmp/run/orbvis.pid"
 LOGFILE="\$OMD_ROOT/var/log/orbvis.log"
 VENV="$VENV_DIR"
-PORT=$BACKEND_PORT
 ENV_FILE="$ENV_FILE"
 
 # Checkmk 2.6+ sitecustomize imports cmk.licensing.* on every Python start;
@@ -469,10 +496,11 @@ case "\$1" in
     fi
     echo -n "Starting orbvis..."
     set -a; source "\$ENV_FILE"; set +a
+    PORT="\${ORBVIS_PORT:-8420}"
     cd "$MKP_LIB/server"  # extracted by orbvis-setup step 2
     "\$VENV/bin/python3" -m alembic upgrade head >> "\$LOGFILE" 2>&1
     "\$VENV/bin/uvicorn" app.main:app \\
-      --host 127.0.0.1 --port \$PORT \\
+      --host 127.0.0.1 --port "\$PORT" \\
       --log-level warning \\
       >> "\$LOGFILE" 2>&1 &
     echo \$! > "\$PIDFILE"

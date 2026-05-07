@@ -72,16 +72,30 @@ BOARDS_DIR="$ORBVIS_DIR/boards"
 ENV_FILE="$ORBVIS_DIR/.env"
 CONNECTIONS_FILE="$ORBVIS_DIR/connections.json"
 DB_FILE="$ORBVIS_DIR/orbvis.db"
-# Determine port: reuse existing from .env, otherwise find a free one from 8420 upward
+# Determine port: reuse existing from .env if present, else pick the lowest
+# free port from 8420 upward. Skip ports already reserved by other OrbVis
+# installs on this host (their .env may pin a port even while the site is
+# stopped) as well as anything currently bound in the live socket table.
 BACKEND_PORT=""
 if sudo test -f "$ENV_FILE" 2>/dev/null; then
   BACKEND_PORT=$(sudo grep -E '^ORBVIS_PORT=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)
 fi
 if [[ -z "$BACKEND_PORT" ]]; then
+  declare -A RESERVED_PORTS=()
+  for envf in /omd/sites/*/local/share/orbvis/.env; do
+    [[ -f "$envf" && "$envf" != "$ENV_FILE" ]] || continue
+    p=$(sudo grep -E '^ORBVIS_PORT=' "$envf" 2>/dev/null | head -1 | cut -d= -f2- || true)
+    [[ -n "$p" ]] && RESERVED_PORTS[$p]=1
+  done
   BACKEND_PORT=8420
-  while ss -tlnp 2>/dev/null | grep -q ":${BACKEND_PORT} "; do
+  while (( BACKEND_PORT < 8500 )); do
+    if [[ -z "${RESERVED_PORTS[$BACKEND_PORT]:-}" ]] \
+       && ! ss -tlnH "( sport = :$BACKEND_PORT )" 2>/dev/null | grep -q .; then
+      break
+    fi
     (( BACKEND_PORT++ ))
   done
+  (( BACKEND_PORT < 8500 )) || die "No free port available in 8420-8499 for OrbVis backend."
 fi
 BASE_PATH="/$SITE/orbvis"
 LIVESTATUS_SOCKET="$SITE_ROOT/tmp/run/live"
