@@ -154,6 +154,12 @@ export default {
             offModeBanner:
                 '{total} verborgene Service-Probleme ({critical} kritisch, {warning} warning) auf {hostsWithProblems} Hosts',
             offModeBannerCta: 'auf Donut umschalten',
+            issuesBanner:
+                '{total} Service-Probleme ({critical} kritisch, {warning} warning) auf {hostsWithProblems} Hosts',
+            topKHint:
+                'Service-Details für die {shown} von {total} am stärksten betroffenen Hosts werden gezeigt — übrige Hosts sind als Donut aggregiert',
+            largeBoardHint: 'Fan/Orbit/Row aggregieren bei >200 Hosts identisch wie Donut',
+            searchPlaceholder: 'Hosts/Services filtern…',
         },
     },
     boardSettings: {

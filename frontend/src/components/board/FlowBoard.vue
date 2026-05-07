@@ -68,6 +68,38 @@
             </button>
         </div>
 
+        <div v-if="!loading && !error" class="flow-search">
+            <svg
+                style="width: 12px; height: 12px"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+                class="text-zinc-400 shrink-0"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 105.62 5.62a7.5 7.5 0 0011.03 11.03z"
+                />
+            </svg>
+            <input
+                v-model="filterText"
+                :placeholder="t('board.flow.searchPlaceholder')"
+                type="search"
+                class="flow-search__input"
+                aria-label="Search hosts and services"
+            />
+            <button
+                v-if="filterText"
+                type="button"
+                class="flow-search__clear"
+                @click="filterText = ''"
+            >
+                ×
+            </button>
+        </div>
+
         <button
             v-if="props.serviceLayout === 'off' && aggregatedProblems.total > 0"
             type="button"
@@ -79,6 +111,21 @@
                 <span class="off-mode-banner__cta">{{ t('board.flow.offModeBannerCta') }}</span>
             </CmkAlertBox>
         </button>
+        <div v-else-if="aggregatedProblems.total > 0" class="off-mode-banner off-mode-banner--info">
+            <CmkAlertBox variant="warning" size="small">
+                {{ t('board.flow.issuesBanner', aggregatedProblems) }}
+            </CmkAlertBox>
+        </div>
+
+        <div
+            v-if="topKBreakdown.omitted > 0 && needsServiceDetail"
+            class="flow-hint flow-hint--topk"
+        >
+            {{ t('board.flow.topKHint', topKBreakdown) }}
+        </div>
+        <div v-else-if="isLargeBoard && needsServiceDetail" class="flow-hint flow-hint--scale">
+            {{ t('board.flow.largeBoardHint') }}
+        </div>
 
         <!-- Hover popup -->
         <HoverMenu
@@ -89,7 +136,64 @@
             :y="hoverMenu.y"
             :connection-id="props.connectionId"
         />
+
+        <!-- Context menu (right-click) -->
+        <ContextMenu
+            v-if="contextMenu.visible && contextMenu.object"
+            :object="contextMenu.object"
+            :state="contextMenu.state"
+            :x="contextMenu.x"
+            :y="contextMenu.y"
+            :checkmk-url="props.checkmkUrl ?? null"
+            @close="closeContextMenu"
+            @acknowledge="onContextMenuAck"
+            @remove-ack="onContextMenuRemoveAck"
+            @schedule-downtime="onContextMenuDowntime"
+            @remove-downtime="onContextMenuRemoveDowntime"
+            @force-check="onContextMenuForceCheck"
+            @add-comment="onContextMenuAddComment"
+            @enable-notifications="onContextMenuToggleNotifications(true)"
+            @disable-notifications="onContextMenuToggleNotifications(false)"
+        />
     </div>
+
+    <AckModal
+        v-if="ackModalObject && props.checkmkUrl"
+        :object="ackModalObject"
+        :checkmk-url="props.checkmkUrl"
+        @close="
+            ackModalObject = null;
+            statesStore.refreshAfterCommand();
+        "
+    />
+
+    <CommentModal
+        v-if="commentModalObject && props.checkmkUrl"
+        :object="commentModalObject"
+        :checkmk-url="props.checkmkUrl"
+        @close="commentModalObject = null"
+    />
+
+    <DowntimeModal
+        v-if="downtimeModalObject && props.checkmkUrl"
+        :object="downtimeModalObject"
+        :checkmk-url="props.checkmkUrl"
+        @close="
+            downtimeModalObject = null;
+            statesStore.refreshAfterCommand();
+        "
+    />
+
+    <RemoveDowntimeModal
+        v-if="removeDowntimeModal.visible && props.checkmkUrl"
+        :downtimes="removeDowntimeModal.downtimes"
+        :checkmk-url="props.checkmkUrl"
+        :object-name="removeDowntimeModal.objectName"
+        @close="
+            removeDowntimeModal.visible = false;
+            statesStore.refreshAfterCommand();
+        "
+    />
 </template>
 
 <script setup lang="ts">
@@ -114,17 +218,25 @@ import {
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { connectionsApi } from '@/api/client';
+import { cmkApi, connectionsApi } from '@/api/client';
+import AckModal from '@/components/board/AckModal.vue';
+import CommentModal from '@/components/board/CommentModal.vue';
+import ContextMenu from '@/components/board/ContextMenu.vue';
+import DowntimeModal from '@/components/board/DowntimeModal.vue';
 import HoverMenu from '@/components/board/HoverMenu.vue';
+import RemoveDowntimeModal from '@/components/board/RemoveDowntimeModal.vue';
 import { useD3Cleanup } from '@/composables/useD3Cleanup';
+import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import { useStatesStore } from '@/stores/states';
 import type {
     BoardObject,
     ClickAction,
+    DowntimeEntry,
     FlowView,
     ObjectState,
     ServiceLayout,
+    ServiceNode,
     TopologyNode,
 } from '@/types/api';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
@@ -144,6 +256,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const auth = useAuthStore();
 const statesStore = useStatesStore();
+const toast = useToast();
 
 const NODE_R = 18;
 const SVC_R_MAX = 11; // service node radius at low service count
@@ -185,16 +298,47 @@ function showSvcLabel(N: number): boolean {
 const MORE_NODE_MARKER = '__more__';
 
 // Donut ring around a host: aggregated services_summary as proportional arcs.
-// Inner radius sits a few px outside the host circle, outer adds the ring width.
+// Width grows inversely with zoom so the ring stays ≥ DONUT_MIN_SCREEN_PX on
+// fit-to-view of dense boards — otherwise an 8 model-px ring collapses to <2 px
+// screen at scale ~0.2 and the entire status aggregate becomes invisible.
 const DONUT_INNER = NODE_R + 3;
-const DONUT_OUTER = NODE_R + 11;
+const DONUT_BASE_WIDTH = 8;
+const DONUT_MIN_SCREEN_PX = 4;
+const DONUT_MAX_WIDTH = 24;
+function donutOuterRadius(zoomK: number): number {
+    const widthForMinScreen = DONUT_MIN_SCREEN_PX / Math.max(zoomK, 0.0001);
+    const width = Math.min(DONUT_MAX_WIDTH, Math.max(DONUT_BASE_WIDTH, widthForMinScreen));
+    return DONUT_INNER + width;
+}
 type DonutSegment = { state: 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN' | 'PENDING'; value: number };
-const donutArc = d3arc<{ startAngle: number; endAngle: number }>()
-    .innerRadius(DONUT_INNER)
-    .outerRadius(DONUT_OUTER);
+type DonutArc = { startAngle: number; endAngle: number };
+function buildDonutArc(zoomK: number) {
+    return d3arc<DonutArc>().innerRadius(DONUT_INNER).outerRadius(donutOuterRadius(zoomK));
+}
 const donutPie = d3pie<DonutSegment>()
     .sort(null)
     .value((d) => d.value);
+
+// Border halo on the host glyph; the fill stays the host's own state so the
+// host-DOWN vs. host-UP-with-CRIT-services distinction isn't erased.
+const HALO_DEFAULT_STROKE = 'rgba(0,0,0,0.4)';
+const HEALTHY_HOST_STATES = new Set(['UP', 'OK', 'PENDING']);
+
+function worstServiceState(d: FNode): string | null {
+    const s = d.topo?.services_summary;
+    if (!s) return null;
+    if (s.critical > 0) return 'CRITICAL';
+    if (s.warning > 0) return 'WARNING';
+    if (s.unknown > 0) return 'UNKNOWN';
+    return null;
+}
+
+function hostHalo(d: FNode): { stroke: string; width: number } {
+    if (!HEALTHY_HOST_STATES.has(d.state)) return { stroke: HALO_DEFAULT_STROKE, width: 1.5 };
+    const worst = worstServiceState(d);
+    if (!worst) return { stroke: HALO_DEFAULT_STROKE, width: 1.5 };
+    return { stroke: stateColor(worst), width: 2.5 };
+}
 
 function donutSegments(n: TopologyNode): DonutSegment[] {
     const s = n.services_summary;
@@ -221,6 +365,163 @@ const hoverMenu = reactive<{
     x: number;
     y: number;
 }>({ visible: false, object: null, state: undefined, x: 0, y: 0 });
+
+const contextMenu = reactive<{
+    visible: boolean;
+    object: BoardObject | null;
+    state: ObjectState | undefined;
+    x: number;
+    y: number;
+}>({ visible: false, object: null, state: undefined, x: 0, y: 0 });
+
+const ackModalObject = ref<BoardObject | null>(null);
+const downtimeModalObject = ref<BoardObject | null>(null);
+const commentModalObject = ref<BoardObject | null>(null);
+const removeDowntimeModal = reactive<{
+    visible: boolean;
+    downtimes: DowntimeEntry[];
+    objectName: string;
+}>({ visible: false, downtimes: [], objectName: '' });
+
+function closeContextMenu(): void {
+    contextMenu.visible = false;
+    contextMenu.object = null;
+}
+
+function onDocumentClick(): void {
+    if (contextMenu.visible) closeContextMenu();
+}
+
+function onContextMenuAck(): void {
+    const obj = contextMenu.object;
+    closeContextMenu();
+    if (obj) ackModalObject.value = obj;
+}
+
+function onContextMenuDowntime(): void {
+    const obj = contextMenu.object;
+    closeContextMenu();
+    if (obj) downtimeModalObject.value = obj;
+}
+
+function onContextMenuAddComment(): void {
+    const obj = contextMenu.object;
+    closeContextMenu();
+    if (obj) commentModalObject.value = obj;
+}
+
+async function onContextMenuRemoveAck(): Promise<void> {
+    const obj = contextMenu.object;
+    closeContextMenu();
+    if (!obj || !props.checkmkUrl) return;
+    try {
+        if (obj.type === 'service' && obj.host_name && obj.service_description) {
+            await cmkApi.removeAcknowledgementService(
+                props.checkmkUrl,
+                obj.host_name,
+                obj.service_description,
+            );
+        } else if (obj.host_name) {
+            await cmkApi.removeAcknowledgementHost(props.checkmkUrl, obj.host_name);
+        }
+        statesStore.refreshAfterCommand();
+    } catch (err) {
+        const detail = err instanceof Error ? err.message : '';
+        toast.error(
+            detail
+                ? `${t('contextMenu.removeAckFailed')}: ${detail}`
+                : t('contextMenu.removeAckFailed'),
+        );
+    }
+}
+
+async function onContextMenuRemoveDowntime(): Promise<void> {
+    const obj = contextMenu.object;
+    closeContextMenu();
+    if (!obj || !props.checkmkUrl) return;
+    let downtimes: DowntimeEntry[];
+    try {
+        if (obj.type === 'service' && obj.host_name && obj.service_description) {
+            downtimes = await cmkApi.listDowntimesService(
+                props.checkmkUrl,
+                obj.host_name,
+                obj.service_description,
+            );
+        } else if (obj.host_name) {
+            downtimes = await cmkApi.listDowntimesHost(props.checkmkUrl, obj.host_name);
+        } else {
+            return;
+        }
+    } catch {
+        toast.error(t('contextMenu.removeDowntimeFailed'));
+        return;
+    }
+    if (downtimes.length === 0) {
+        toast.error(t('contextMenu.noDowntimesFound'));
+        return;
+    }
+    if (downtimes.length === 1) {
+        try {
+            await cmkApi.removeDowntimeById(
+                props.checkmkUrl,
+                downtimes[0].id,
+                downtimes[0].site_id,
+            );
+            toast.success(t('contextMenu.removeDowntimeSuccess'));
+            statesStore.refreshAfterCommand();
+        } catch {
+            toast.error(t('contextMenu.removeDowntimeFailed'));
+        }
+        return;
+    }
+    removeDowntimeModal.downtimes = downtimes;
+    removeDowntimeModal.objectName = obj.host_name ?? '';
+    removeDowntimeModal.visible = true;
+}
+
+async function onContextMenuForceCheck(): Promise<void> {
+    const obj = contextMenu.object;
+    closeContextMenu();
+    if (!obj || !props.checkmkUrl) return;
+    try {
+        if (obj.type === 'service' && obj.host_name && obj.service_description) {
+            await cmkApi.forceCheckService(
+                props.checkmkUrl,
+                obj.host_name,
+                obj.service_description,
+            );
+        } else if (obj.host_name) {
+            await cmkApi.forceCheckHost(props.checkmkUrl, obj.host_name);
+        }
+        statesStore.refreshAfterCommand();
+    } catch {
+        toast.error(t('contextMenu.forceCheckFailed'));
+    }
+}
+
+async function onContextMenuToggleNotifications(enable: boolean): Promise<void> {
+    const obj = contextMenu.object;
+    closeContextMenu();
+    if (!obj || !props.checkmkUrl) return;
+    try {
+        if (obj.type === 'service' && obj.host_name && obj.service_description) {
+            await (enable ? cmkApi.enableNotificationsService : cmkApi.disableNotificationsService)(
+                props.checkmkUrl,
+                obj.host_name,
+                obj.service_description,
+            );
+        } else if (obj.host_name) {
+            await (enable ? cmkApi.enableNotificationsHost : cmkApi.disableNotificationsHost)(
+                props.checkmkUrl,
+                obj.host_name,
+            );
+        }
+        statesStore.refreshAfterCommand();
+    } catch {
+        toast.error(t('contextMenu.toggleNotificationsFailed'));
+    }
+}
+
 let timer: ReturnType<typeof setInterval> | null = null;
 
 // Layouts that need the full per-host service list. Donut renders only
@@ -254,6 +555,60 @@ const aggregatedProblems = computed(() => {
         total: critical + warning + unknown,
     };
 });
+
+// Top-K cutoff visibility: when fan/orbit/row layouts are active and the
+// backend omitted full service detail for some hosts, surface the ratio so
+// operators understand why many hosts only show donut rings.
+const topKBreakdown = computed(() => {
+    const total = nodes.value.length;
+    let omitted = 0;
+    for (const n of nodes.value) if (n.services_omitted) omitted++;
+    return { total, shown: total - omitted, omitted };
+});
+
+const HOST_LIMIT_FOR_RADIAL = 200;
+const isLargeBoard = computed(() => nodes.value.length > HOST_LIMIT_FOR_RADIAL);
+const needsServiceDetail = computed(() => needsServices(props.serviceLayout));
+
+// Free-text filter: dim (don't hide) nodes that don't match so the spatial
+// context is preserved. Hiding would re-trigger force-collide and rearrange
+// the whole board on every keystroke.
+const filterText = ref('');
+const filterNeedle = computed(() => filterText.value.trim().toLowerCase());
+function nodeMatchesFilter(d: FNode): boolean {
+    const needle = filterNeedle.value;
+    if (!needle) return true;
+    if (d.id.toLowerCase().includes(needle)) return true;
+    if (d.nodeType === 'service' && d.hostId?.toLowerCase().includes(needle)) return true;
+    if (d.nodeType === 'host' && d.topo?.alias?.toLowerCase().includes(needle)) return true;
+    return false;
+}
+
+watch(filterText, () => {
+    if (svgEl.value) applyFilterOpacity();
+});
+
+let filterOpacityActive = false;
+
+function applyFilterOpacity(): void {
+    if (!svgEl.value) return;
+    const sel = select(svgEl.value);
+    if (!filterNeedle.value) {
+        if (!filterOpacityActive) return;
+        filterOpacityActive = false;
+        sel.selectAll('g.node, g.links line').attr('opacity', 1);
+        return;
+    }
+    filterOpacityActive = true;
+    sel.selectAll<SVGGElement, FNode>('g.node').attr('opacity', (d) =>
+        nodeMatchesFilter(d) ? 1 : 0.15,
+    );
+    sel.selectAll<SVGLineElement, FLink>('g.links line').attr('opacity', (d) => {
+        const src = d.source as FNode;
+        const tgt = d.target as FNode;
+        return nodeMatchesFilter(src) && nodeMatchesFilter(tgt) ? 1 : 0.1;
+    });
+}
 
 // ---- Data sources ----
 //
@@ -361,6 +716,7 @@ onMounted(() => {
         if (!document.hidden) startPollTimer();
     }
     document.addEventListener('visibilitychange', onVisibilityChange);
+    document.addEventListener('click', onDocumentClick);
 });
 
 watch(
@@ -377,6 +733,7 @@ watch(
 
 onUnmounted(() => {
     document.removeEventListener('visibilitychange', onVisibilityChange);
+    document.removeEventListener('click', onDocumentClick);
     if (bootstrapTimer) clearTimeout(bootstrapTimer);
     if (pendingZoomRaf !== null) {
         cancelAnimationFrame(pendingZoomRaf);
@@ -402,6 +759,8 @@ interface FNode extends SimulationNodeDatum {
     // same status detail (alias, services_summary, …) as the static board.
     // Only set on host nodes; service nodes have minimal data via their parent.
     topo?: TopologyNode;
+    svc?: ServiceNode;
+    parentTopo?: TopologyNode;
     // d3-force sets x/y/vx/vy
 }
 interface FLink extends SimulationLinkDatum<FNode> {
@@ -428,6 +787,29 @@ function boardObjectFromFNode(d: FNode): BoardObject {
 }
 
 function objectStateFromFNode(d: FNode): ObjectState {
+    if (d.nodeType === 'service') {
+        const svc = d.svc;
+        const parent = d.parentTopo;
+        return {
+            object_id: d.id,
+            type: 'service',
+            state: d.state as ObjectState['state'],
+            output: d.output,
+            perf_data: '',
+            acknowledged: svc?.acknowledged ?? false,
+            in_downtime: svc?.in_downtime ?? false,
+            stale: false,
+            notifications_enabled: svc?.notifications_enabled ?? true,
+            active_checks_enabled: parent?.active_checks_enabled ?? true,
+            alias: parent?.alias,
+            address: parent?.address,
+            site_id: parent?.site_id ?? null,
+            last_check: svc?.last_check ?? null,
+            next_check: svc?.next_check ?? null,
+            last_state_change: svc?.last_state_change ?? null,
+            services_summary: null,
+        };
+    }
     const topo = d.topo;
     return {
         object_id: d.id,
@@ -471,6 +853,15 @@ let pendingZoomRaf: number | null = null;
 // in deliberately.
 const LOD_LOW_SCALE = 0.8;
 let lodLow = false;
+let currentZoomK = 1;
+
+function refreshDonutWidths(): void {
+    if (!svgEl.value) return;
+    const arc = buildDonutArc(currentZoomK);
+    select(svgEl.value)
+        .selectAll<SVGPathElement, DonutArc>('g.donut path')
+        .attr('d', (a) => arc(a) ?? '');
+}
 
 function applyLod(): void {
     if (!svgEl.value) return;
@@ -494,6 +885,10 @@ function flushZoomTransform(): void {
     if (newLow !== lodLow) {
         lodLow = newLow;
         applyLod();
+    }
+    if (Math.abs(t.k - currentZoomK) > 0.05) {
+        currentZoomK = t.k;
+        refreshDonutWidths();
     }
 }
 
@@ -694,6 +1089,8 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                     nodeType: 'service',
                     hostId: n.name,
                     svcTotalCount: N,
+                    svc,
+                    parentTopo: n,
                 });
             }
             if (truncated > 0) {
@@ -888,7 +1285,10 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 d.nodeType === 'service' ? 0 : 0.4,
             ),
         )
-        .alphaDecay(0.03)
+        // Faster alpha decay shortens the visible 13 FPS phase on dense boards
+        // by ending the simulation sooner; the default velocityDecay 0.4 is kept
+        // so hosts still have enough momentum to spread to a wide layout.
+        .alphaDecay(0.05)
         .stop();
 
     // --- Drag behaviour ---
@@ -939,6 +1339,15 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             if (props.clickAction === 'none') return;
             const url = buildCheckmkUrl(boardObjectFromFNode(d), props.checkmkUrl ?? null);
             if (url) openUrl(url, '_blank');
+        })
+        .on('contextmenu', (event: MouseEvent, d) => {
+            event.preventDefault();
+            hoverMenu.visible = false;
+            contextMenu.object = boardObjectFromFNode(d);
+            contextMenu.state = objectStateFromFNode(d);
+            contextMenu.x = event.pageX;
+            contextMenu.y = event.pageY;
+            contextMenu.visible = true;
         })
         .on('mouseenter', (event: MouseEvent, d) => {
             const nodeRect = (event.currentTarget as SVGGElement).getBoundingClientRect();
@@ -1051,12 +1460,21 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
 
     const nodeMerge = nodeEnter.merge(nodeSel);
     nodeMerge.select('circle').attr('fill', (d) => stateColor(d.state));
+    nodeMerge
+        .filter((d) => d.nodeType === 'host')
+        .select<SVGCircleElement>('circle')
+        .each(function (d) {
+            const halo = hostHalo(d);
+            this.setAttribute('stroke', halo.stroke);
+            this.setAttribute('stroke-width', String(halo.width));
+        });
 
     // Donut update — bind aggregated services_summary as proportional arcs on
     // each host. Always rendered in donut layout; in fan/orbit/row only for
     // hosts whose service detail wasn't fetched (top-K cutoff in the backend),
     // so the user still sees an at-a-glance state aggregate. The exit() removes
     // leftover paths when a host transitions out of either condition.
+    const donutArc = buildDonutArc(currentZoomK);
     nodeMerge
         .filter((d) => d.nodeType === 'host')
         .each(function (d) {
@@ -1140,6 +1558,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // Reapply LoD so newly entered service / "+more" nodes pick up the
     // current zoom-driven display state.
     applyLod();
+    applyFilterOpacity();
 
     // F1: don't synchronously tick(250) — that blocks the main thread for
     // hundreds of ms at scale. Let the simulation converge asynchronously and
@@ -1151,12 +1570,23 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .restart();
     if (isInitial) {
         _hasFitOnce = true;
-        let ticksUntilFit = needsServices(props.serviceLayout) ? 60 : 40;
+        // Wait for actual convergence (`end` fires when alpha < alphaMin) so the
+        // layout has spread to its final size before we measure its bounds. The
+        // tick cap is a safety net for runs that never settle on huge boards.
+        let fitFired = false;
+        const fireFit = (): void => {
+            if (fitFired) return;
+            fitFired = true;
+            simulation?.on('tick.fit', null);
+            simulation?.on('end.fit', null);
+            fitView();
+        };
+        const maxTicks = needsServices(props.serviceLayout) ? 360 : 240;
+        let ticks = 0;
+        simulation.on('end.fit', fireFit);
         simulation.on('tick.fit', () => {
-            if (--ticksUntilFit <= 0) {
-                simulation?.on('tick.fit', null);
-                fitView();
-            }
+            ticks++;
+            if (ticks >= maxTicks) fireFit();
         });
     }
 }
@@ -1188,5 +1618,76 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     font-weight: var(--font-weight-bold);
     margin-left: var(--dimension-3);
     border-bottom: 1px dashed currentcolor;
+}
+
+.off-mode-banner--info {
+    cursor: default;
+}
+
+.flow-hint {
+    position: absolute;
+    top: calc(var(--dimension-5) + 36px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    padding: 4px 10px;
+    border-radius: var(--border-radius);
+    background: rgb(24 24 27 / 85%);
+    color: var(--text);
+    font-size: 11px;
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    pointer-events: none;
+    max-width: 70%;
+    text-align: center;
+}
+
+.flow-search {
+    position: absolute;
+    top: var(--dimension-5);
+    right: var(--dimension-5);
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: var(--border-radius);
+    background: rgb(24 24 27 / 85%);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(6px);
+    min-width: 200px;
+}
+
+.flow-search__input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 11px;
+    padding: 2px 0;
+}
+
+.flow-search__input::placeholder {
+    color: var(--text-muted);
+}
+
+.flow-search__clear {
+    width: 16px;
+    height: 16px;
+    line-height: 14px;
+    text-align: center;
+    border-radius: 50%;
+    background: var(--bg-hover);
+    color: var(--text-muted);
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+}
+
+.flow-search__clear:hover {
+    color: var(--text);
 }
 </style>

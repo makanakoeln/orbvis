@@ -1349,7 +1349,7 @@ function onLatLng2DragEnd(id: string, lat: number, lng: number) {
 
 // ---- Map Settings ----
 
-const serviceLayout = ref<ServiceLayout>('off');
+const serviceLayout = ref<ServiceLayout>('donut');
 const serviceLayoutOpen = ref(false);
 const serviceLayoutOptions = computed(() => [
     { value: 'off' as ServiceLayout, label: t('board.serviceLayoutOff') },
