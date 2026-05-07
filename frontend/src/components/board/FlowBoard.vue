@@ -609,6 +609,18 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         (el.node() as SVGSVGElement & { __zoom_attached?: boolean }).__zoom_attached = true;
         zoomBeh = zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.15, 3])
+            // Freeze the force simulation while the user actively pans/zooms,
+            // resume it on release if it still had energy left. Otherwise tick
+            // handlers run alongside transform updates and the combined
+            // per-frame work blows past the 16 ms budget on Fan.
+            .on('start.simfreeze', () => {
+                simulation?.stop();
+            })
+            .on('end.simfreeze', () => {
+                if (simulation && simulation.alpha() > simulation.alphaMin()) {
+                    simulation.restart();
+                }
+            })
             .on('zoom', (event) => {
                 pendingZoomTransform = event.transform;
                 if (pendingZoomRaf === null) {
