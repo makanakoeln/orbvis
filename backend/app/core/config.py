@@ -40,17 +40,24 @@ class Settings(BaseSettings):
 
     ws_ping_interval: int = 30
     state_refresh_interval: int = 5
-    connection_query_timeout: int = 10
+    # Cold-start livestatus calls on busy 500+ host sites can exceed the
+    # original 10 s budget; 30 s keeps fan/orbit/row usable while still
+    # guarding against truly stuck sockets.
+    connection_query_timeout: int = 30
     connection_pool_size: int = 20
 
     # Flow-board scaling guards: cap services per host and cache topology
-    # results briefly so concurrent tabs share one Livestatus round-trip.
+    # results so concurrent tabs share one Livestatus round-trip. TTL is
+    # held above the 15 s frontend polling interval so each poll stays a
+    # cache hit when the same parameters are reused.
     flow_board_max_services_per_host: int = 50
-    flow_board_topology_cache_ttl: float = 10.0
+    flow_board_topology_cache_ttl: float = 20.0
     # Mirror cmk.gui.nodevis: only fetch service detail for the top-K hosts
     # ranked by problem count (crit+warn+unknown+pending). The remaining hosts
-    # render donut-only from the per-host num_services_* aggregates.
-    flow_board_top_affected_hosts: int = 50
+    # render donut-only from the per-host num_services_* aggregates. 25 keeps
+    # the OR-filter against the services table cheap on multi-hundred-host
+    # installations.
+    flow_board_top_affected_hosts: int = 25
 
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
