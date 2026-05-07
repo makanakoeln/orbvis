@@ -801,8 +801,10 @@ class LivestatusConnection(ConnectionBase):
                 "active_checks_enabled": _row_bool(r, 15, default=True),
                 "services_summary": _services_summary_from_row(r, 16),
             }
-            if site_id is not None:
-                row["site_id"] = site_id
+            # Federated multisite tags rows with site_id; single-site connections
+            # don't, but consumers (FlowBoard site umbrella, drawer aggregation)
+            # still want a stable identifier to group hosts under.
+            row["site_id"] = site_id if site_id is not None else (settings.checkmk_site or "local")
             result.append(row)
         return result
 
