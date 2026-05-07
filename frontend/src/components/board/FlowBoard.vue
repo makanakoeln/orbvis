@@ -1671,7 +1671,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 const cols = Math.min(N, Math.max(4, Math.ceil(Math.sqrt(N * 1.5))));
                 const spacingX = rowSpacings.get(d.id) ?? 60;
                 return (cols / 2) * spacingX + svcR(N) + 10;
-            }).iterations(3),
+            }).iterations(maxLvl > 0 ? 3 : 1),
         )
         .force(
             'y',
@@ -1686,10 +1686,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                       d.nodeType === 'host' ? (anchorY.get(d.id) ?? 0) : 0,
                   ).strength((d) => (d.nodeType === 'host' ? 0.18 : 0)),
         )
-        // Faster alpha decay shortens the visible 13 FPS phase on dense boards
-        // by ending the simulation sooner; the default velocityDecay 0.4 is kept
-        // so hosts still have enough momentum to spread to a wide layout.
-        .alphaDecay(0.05)
+        // Faster alpha decay on flat boards: the severity-spiral pre-layout
+        // already places hosts in their target slots, so the sim only needs
+        // to resolve overlaps — 30 ticks is enough. For real BFS hierarchies
+        // keep the slower decay so the layered layout has time to settle.
+        .alphaDecay(maxLvl > 0 ? 0.05 : 0.1)
         .stop();
 
     // --- Drag behaviour ---
@@ -2056,7 +2057,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
 
     simulation.on('tick', ticked);
     if (isInitial || structurallyChanged) {
-        simulation.alpha(isInitial ? 1 : 0.2).restart();
+        // Lower initial alpha on flat boards: pre-layout already approximates
+        // the steady state, so 0.4 settles in ~25 ticks instead of ~75 from
+        // alpha=1. Hierarchical boards still need full-energy initial sim.
+        const initAlpha = isInitial ? (maxLvl > 0 ? 1 : 0.4) : 0.2;
+        simulation.alpha(initAlpha).restart();
     } else {
         // Status-only update: state colors / donut segments / halos already
         // refreshed via nodeMerge above. No need to advance the sim — the
@@ -2080,7 +2085,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             simulation?.on('end.fit', null);
             fitView({ animated: true });
         };
-        const maxTicks = needsServices(props.serviceLayout) ? 90 : 60;
+        const maxTicks = needsServices(props.serviceLayout) ? 60 : 30;
         let ticks = 0;
         simulation.on('end.fit', fireFit);
         simulation.on('tick.fit', () => {
