@@ -214,12 +214,16 @@ _topology_cache_locks: dict[_TopologyCacheKey, asyncio.Lock] = {}
 _TOPOLOGY_CACHE_MAX = 32
 
 
+def _drop_topology_cache_key(key: _TopologyCacheKey) -> None:
+    _topology_cache.pop(key, None)
+    _topology_cache_locks.pop(key, None)
+
+
 def _invalidate_topology_cache(connection_id: str | None = None) -> None:
     """Drop cached topology entries (optionally scoped to one connection_id)."""
     keys = [k for k in _topology_cache if connection_id is None or k.connection_id == connection_id]
     for k in keys:
-        _topology_cache.pop(k, None)
-        _topology_cache_locks.pop(k, None)
+        _drop_topology_cache_key(k)
 
 
 def _filter_topology(
@@ -328,52 +332,60 @@ async def get_topology(
         return cached[1]
 
     lock = _topology_cache_locks.setdefault(cache_key, asyncio.Lock())
-    async with lock:
-        # Re-check inside the lock — a concurrent waiter may have populated it.
-        cached = _topology_cache.get(cache_key)
-        if cached is not None and time.monotonic() - cached[0] < ttl:
-            return cached[1]
+    cached_written = False
+    try:
+        async with lock:
+            # Re-check inside the lock — a concurrent waiter may have populated it.
+            cached = _topology_cache.get(cache_key)
+            if cached is not None and time.monotonic() - cached[0] < ttl:
+                return cached[1]
 
-        rows = await connection.get_topology()
-        rows = _filter_topology(rows, root, child_layers, parent_layers)
+            rows = await connection.get_topology()
+            rows = _filter_topology(rows, root, child_layers, parent_layers)
 
-        result: list[TopologyNode]
-        if include_services and rows:
-            if top_k > 0 and len(rows) > top_k:
-                ranked = sorted(rows, key=_problem_count, reverse=True)
-                affected = {r["name"] for r in ranked[:top_k]}
-            else:
-                affected = {r["name"] for r in rows}
-            services_by_host = (
-                await connection.get_hosts_services_batch(sorted(affected)) if affected else {}
-            )
-            result = []
-            for row in rows:
-                if row["name"] not in affected:
-                    result.append(TopologyNode(**row, services_omitted=True))
-                    continue
-                svcs: list[dict[str, str]] = [
-                    {"name": s["name"], "state": s["state"], "output": s["output"]}
-                    for s in services_by_host.get(row["name"], [])
-                ]
-                kept, truncated = _sorted_truncated_services(svcs, limit)
-                result.append(
-                    TopologyNode(
-                        **row,
-                        services=[ServiceNode(**s) for s in kept],
-                        services_truncated_count=truncated,
-                    )
+            result: list[TopologyNode]
+            if include_services and rows:
+                if top_k <= 0:
+                    affected = set()
+                elif len(rows) > top_k:
+                    ranked = sorted(rows, key=_problem_count, reverse=True)
+                    affected = {r["name"] for r in ranked[:top_k]}
+                else:
+                    affected = {r["name"] for r in rows}
+                services_by_host = (
+                    await connection.get_hosts_services_batch(sorted(affected)) if affected else {}
                 )
-        else:
-            result = [TopologyNode(**r) for r in rows]
+                result = []
+                for row in rows:
+                    if row["name"] not in affected:
+                        result.append(TopologyNode(**row, services_omitted=True))
+                        continue
+                    svcs: list[dict[str, str]] = [
+                        {"name": s["name"], "state": s["state"], "output": s["output"]}
+                        for s in services_by_host.get(row["name"], [])
+                    ]
+                    kept, truncated = _sorted_truncated_services(svcs, limit)
+                    result.append(
+                        TopologyNode(
+                            **row,
+                            services=[ServiceNode(**s) for s in kept],
+                            services_truncated_count=truncated,
+                        )
+                    )
+            else:
+                result = [TopologyNode(**r) for r in rows]
 
-        # Insertion-order eviction (CPython 3.7+ dicts preserve insertion order).
-        if len(_topology_cache) >= _TOPOLOGY_CACHE_MAX:
-            oldest = next(iter(_topology_cache))
-            _topology_cache.pop(oldest, None)
-            _topology_cache_locks.pop(oldest, None)
-        _topology_cache[cache_key] = (time.monotonic(), result)
-        return result
+            # Insertion-order eviction (CPython 3.7+ dicts preserve insertion order).
+            if len(_topology_cache) >= _TOPOLOGY_CACHE_MAX:
+                _drop_topology_cache_key(next(iter(_topology_cache)))
+            _topology_cache[cache_key] = (time.monotonic(), result)
+            cached_written = True
+            return result
+    finally:
+        # If the query raised (e.g. livestatus timeout), the lock is released
+        # by `async with` but the dict entry would otherwise leak.
+        if not cached_written:
+            _topology_cache_locks.pop(cache_key, None)
 
 
 @router.get("/{connection_id}/perf-metrics", response_model=list[str])

@@ -451,3 +451,47 @@ async def test_topology_top_k_skips_unaffected_hosts(
     for clean in ("h-clean-1", "h-clean-2", "h-clean-3"):
         assert by_name[clean]["services_omitted"] is True
         assert by_name[clean]["services"] == []
+
+
+@pytest.mark.asyncio
+async def test_topology_lock_dropped_on_failure(client, admin_token, mock_connection, monkeypatch):
+    """Failed queries must not leave dangling entries in the lock dict.
+
+    Otherwise repeated timeouts grow _topology_cache_locks without bound
+    until the cache itself overflows and triggers eviction.
+    """
+    monkeypatch.setitem(state_service._connections, "live_topo_lock", mock_connection)
+    connections_api._topology_cache.clear()
+    connections_api._topology_cache_locks.clear()
+
+    mock_connection.get_topology.side_effect = TimeoutError("livestatus timed out")
+    with pytest.raises(TimeoutError):
+        await client.get(
+            "/api/v1/connections/live_topo_lock/topology?include_services=true",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+    assert connections_api._topology_cache_locks == {}
+
+
+@pytest.mark.asyncio
+async def test_topology_top_k_zero_skips_bulk_fetch(
+    client, admin_token, mock_connection, monkeypatch
+):
+    """top_affected_hosts=0 must omit all service bulk fetches.
+
+    Previously this fell into the "no top-K, fetch all" branch and could
+    issue a 500-host OR-filter query against livestatus on large sites.
+    """
+    monkeypatch.setitem(state_service._connections, "live_topo5", mock_connection)
+    mock_connection.get_topology.return_value = [
+        {"name": f"h-{i}", "parents": [], "state": "UP", "output": "ok"} for i in range(3)
+    ]
+    response = await client.get(
+        "/api/v1/connections/live_topo5/topology?include_services=true&top_affected_hosts=0",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    mock_connection.get_hosts_services_batch.assert_not_awaited()
+    for n in response.json():
+        assert n["services_omitted"] is True
+        assert n["services"] == []
