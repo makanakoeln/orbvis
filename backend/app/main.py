@@ -292,8 +292,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         asyncio.to_thread(seed_builtin_images, Path(settings.boards_dir).parent / "images"),
     )
 
+    warmup_task = asyncio.create_task(connection_service.warmup_loop())
+
     yield
     logger.info("Shutting down OrbVis backend.")
+    warmup_task.cancel()
+    try:
+        await warmup_task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(

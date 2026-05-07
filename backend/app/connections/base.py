@@ -42,6 +42,19 @@ class TopologyRow(TypedDict):
     services_summary: NotRequired[ServicesSummary | None]
 
 
+def topology_problem_rank(row: TopologyRow) -> int:
+    """CRIT-weighted rank for top-K host selection.
+
+    Critical scores higher than warning so a single CRIT outranks several
+    WARNs; unknown/pending fall in between. Used by both the REST endpoint
+    and the background warmup loop so they pick the same top-K hosts.
+    """
+    s = row.get("services_summary")
+    if s is None:
+        return 0
+    return int(s.critical * 4 + s.warning * 2 + s.unknown * 2 + s.pending)
+
+
 class ServiceRow(TypedDict):
     """One service attached to a host (used by get_host_services / batch APIs)."""
 

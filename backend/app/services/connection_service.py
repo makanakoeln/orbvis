@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
 import tempfile
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from app.connections.base import topology_problem_rank
 from app.core.config import settings
 from app.schemas.connection import ConnectionConfig
+from app.services import state_service
 from app.services.state_service import register_connection as _register
 
 if TYPE_CHECKING:
@@ -140,3 +144,52 @@ def build_instance(cfg: ConnectionConfig) -> ConnectionBase:
 def _activate(cfg: ConnectionConfig) -> None:
     """Instantiate and register a connection with the state service."""
     _register(cfg.id, build_instance(cfg))
+
+
+async def _warmup_tick() -> None:
+    """One pass: pre-fetch topology + the top-K bulk-services slice per connection.
+
+    Uses the same ranking as the REST endpoint so warmup primes services for
+    exactly the hosts a flow-board page will request — otherwise the warm
+    pool only helps the cheap query and the user still pays for the bulk
+    services round-trip.
+    """
+    top_k = settings.flow_board_top_affected_hosts
+    for connection_id in state_service.list_connection_ids():
+        connection = state_service.get_connection(connection_id)
+        if connection is None:
+            continue
+        try:
+            t0 = time.monotonic()
+            rows = await connection.get_topology()
+            if rows and top_k > 0:
+                ranked = sorted(rows, key=topology_problem_rank, reverse=True)
+                sample = [r["name"] for r in ranked[:top_k]]
+                await connection.get_hosts_services_batch(sample)
+            logger.info(
+                "warmup tick connection=%s hosts=%d elapsed=%.0fms",
+                connection_id,
+                len(rows),
+                (time.monotonic() - t0) * 1000,
+            )
+        except Exception:
+            # Stale sockets heal on the next tick; never crash the loop.
+            logger.warning("warmup tick failed for connection %s", connection_id, exc_info=True)
+
+
+async def warmup_loop() -> None:
+    """Periodically warm livestatus pools so the first user-facing query is fast.
+
+    Idle pools on large sites can take 10-15 s on the first /topology call
+    (socket open + cold service-cache fetch). Issuing a small query every
+    ``connection_warmup_interval`` seconds keeps the pool primed. Sequential
+    `await` per tick rules out overlapping ticks even on slow sites.
+    """
+    interval = settings.connection_warmup_interval
+    if interval <= 0:
+        return
+    # Prime immediately so the first request after startup is warm.
+    await _warmup_tick()
+    while True:
+        await asyncio.sleep(interval)
+        await _warmup_tick()

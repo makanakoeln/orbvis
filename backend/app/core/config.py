@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     # installations.
     flow_board_top_affected_hosts: int = 25
 
+    # Background warmup loop interval in seconds: pre-fetches a cheap topology
+    # query against every registered connection so the livestatus socket pool
+    # stays primed even when no UI is open. Set to 0 to disable.
+    connection_warmup_interval: int = 60
+
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
     # mypy's pydantic plugin doesn't model the @property-under-@computed_field

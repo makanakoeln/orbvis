@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from app.api.v1.deps import get_current_user, require_admin, resolve_auth_user
-from app.connections.base import ConnectionBase, TopologyRow
+from app.connections.base import ConnectionBase, TopologyRow, topology_problem_rank
 from app.core.config import settings
 from app.integrations import checkmk as cmk_integration
 from app.models.user import User
@@ -282,16 +282,9 @@ def _filter_topology(
     return [n for n in nodes if n["name"] in keep]
 
 
-def _problem_count(row: TopologyRow) -> int:
-    """Rank key for top-K selection: weight non-OK service counts.
-
-    Critical scores higher than warning so a single CRIT outranks several
-    WARNs; unknown/pending fall in between. Mirrors ``_SERVICE_SORT_KEY``.
-    """
-    s = row.get("services_summary")
-    if s is None:
-        return 0
-    return s.critical * 4 + s.warning * 2 + s.unknown * 2 + s.pending
+# Local alias for the shared rank helper — keeps intra-file usage readable
+# without re-exporting the longer name.
+_problem_count = topology_problem_rank
 
 
 async def build_topology_response(
