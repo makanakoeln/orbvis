@@ -48,6 +48,22 @@ def can_view_board(user: User, board_name: str) -> bool:
     return _check_board_permission(user, board_name, "view")
 
 
+def resolve_auth_user(username: str, is_admin: bool) -> str | None:
+    """Username to pass as Livestatus AuthUser, or None for unrestricted access.
+
+    Admins and users with CMK ``general.see_all`` bypass contact-group
+    filtering. Outside Checkmk integrations there is no AuthUser concept,
+    so this always returns None.
+    """
+    if not settings.checkmk_omd_root:
+        return None
+    if is_admin:
+        return None
+    if cmk_integration.check_checkmk_permission(username, "general.see_all"):
+        return None
+    return username
+
+
 def can_view_board_by_name(username: str, board_name: str) -> bool:
     """Check board view permission using only a username string (for background tasks).
 

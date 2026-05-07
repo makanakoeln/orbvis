@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from app.api.v1 import connections as connections_api
@@ -495,3 +497,92 @@ async def test_topology_top_k_zero_skips_bulk_fetch(
     for n in response.json():
         assert n["services_omitted"] is True
         assert n["services"] == []
+
+
+def _attach_with_auth_user(mock_connection: MagicMock) -> MagicMock:
+    """Wire an async-context-manager ``with_auth_user`` onto a mock connection.
+
+    The mock returned can be inspected via ``.assert_called_with(...)`` on the
+    returned MagicMock to verify which auth-user the endpoint passes.
+    """
+    ctx = MagicMock()
+    ctx.__aenter__ = AsyncMock(return_value=None)
+    ctx.__aexit__ = AsyncMock(return_value=None)
+    holder = MagicMock(return_value=ctx)
+    mock_connection.with_auth_user = holder
+    return holder
+
+
+@pytest.mark.asyncio
+async def test_topology_scopes_to_caller_auth_user(
+    client, regular_user, mock_connection, monkeypatch
+):
+    """Non-admin caller's contact-group filter must be applied via ``with_auth_user``."""
+    monkeypatch.setitem(state_service._connections, "live_topo_auth", mock_connection)
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", "/tmp/dummy")  # nosec B108
+    # Disable the see_all bypass so the regular user actually gets scoped.
+    monkeypatch.setattr(
+        "app.api.v1.deps.cmk_integration.check_checkmk_permission",
+        lambda *_a, **_k: False,
+    )
+    mock_connection.get_topology.return_value = [_topology_row("h1")]
+    holder = _attach_with_auth_user(mock_connection)
+
+    login = await client.post(
+        "/api/v1/auth/login", json={"username": "regular", "password": "secret"}
+    )
+    token = login.json()["access_token"]
+
+    response = await client.get(
+        "/api/v1/connections/live_topo_auth/topology",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    holder.assert_called_once_with(regular_user.name)
+
+
+@pytest.mark.asyncio
+async def test_topology_admin_bypasses_auth_user_scope(
+    client, admin_token, mock_connection, monkeypatch
+):
+    """Admins must NOT be wrapped in ``with_auth_user`` — they see everything."""
+    monkeypatch.setitem(state_service._connections, "live_topo_admin", mock_connection)
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", "/tmp/dummy")  # nosec B108
+    mock_connection.get_topology.return_value = [_topology_row("h1")]
+    holder = _attach_with_auth_user(mock_connection)
+
+    response = await client.get(
+        "/api/v1/connections/live_topo_admin/topology",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    holder.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_topology_cache_isolated_per_auth_user(
+    client, admin_token, regular_user, mock_connection, monkeypatch
+):
+    """Cache must not let a non-admin's restricted view leak into an admin's
+    response (or vice versa) — the cache key includes auth_user."""
+    monkeypatch.setitem(state_service._connections, "live_topo_iso", mock_connection)
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", "/tmp/dummy")  # nosec B108
+    monkeypatch.setattr(
+        "app.api.v1.deps.cmk_integration.check_checkmk_permission",
+        lambda *_a, **_k: False,
+    )
+    mock_connection.get_topology.return_value = [_topology_row("h1")]
+    _attach_with_auth_user(mock_connection)
+
+    login = await client.post(
+        "/api/v1/auth/login", json={"username": "regular", "password": "secret"}
+    )
+    user_token = login.json()["access_token"]
+
+    url = "/api/v1/connections/live_topo_iso/topology"
+    r_admin = await client.get(url, headers={"Authorization": f"Bearer {admin_token}"})
+    r_user = await client.get(url, headers={"Authorization": f"Bearer {user_token}"})
+    assert r_admin.status_code == 200
+    assert r_user.status_code == 200
+    # Two distinct auth-user cache keys → two upstream fetches.
+    assert mock_connection.get_topology.await_count == 2

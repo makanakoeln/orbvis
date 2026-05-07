@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
-from app.api.v1.deps import get_current_user, require_admin
+from app.api.v1.deps import get_current_user, require_admin, resolve_auth_user
 from app.connections.base import ConnectionBase, TopologyRow
 from app.core.config import settings
 from app.integrations import checkmk as cmk_integration
@@ -220,6 +220,7 @@ class _TopologyCacheKey:
     include_services: bool
     services_per_host: int
     top_affected_hosts: int
+    auth_user: str | None
 
 
 _topology_cache: dict[_TopologyCacheKey, tuple[float, list[TopologyNode]]] = {}
@@ -356,7 +357,7 @@ async def get_topology(
     parent_layers: int | None = Query(None, ge=-1, le=20),
     services_per_host: int | None = Query(None, ge=0, le=500),
     top_affected_hosts: int | None = Query(None, ge=0, le=1000),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[TopologyNode]:
     """Return host topology for flow board rendering.
 
@@ -368,6 +369,10 @@ async def get_topology(
     have ``services_omitted=True`` and render donut-only from
     ``services_summary``. Successive calls within
     ``settings.flow_board_topology_cache_ttl`` reuse the cached result.
+
+    Result rows are scoped to the caller's Livestatus contact groups (admins
+    and ``general.see_all`` users see everything). The cache key includes the
+    auth-user, so per-tab cache hits never leak rows across users.
     """
     connection = get_connection(connection_id)
     if connection is None:
@@ -385,6 +390,7 @@ async def get_topology(
         if top_affected_hosts is not None
         else settings.flow_board_top_affected_hosts
     )
+    auth_user = resolve_auth_user(current_user.name, current_user.is_admin)
     cache_key = _TopologyCacheKey(
         connection_id=connection_id,
         root=root,
@@ -393,6 +399,7 @@ async def get_topology(
         include_services=include_services,
         services_per_host=limit,
         top_affected_hosts=top_k,
+        auth_user=auth_user,
     )
     ttl = settings.flow_board_topology_cache_ttl
 
@@ -409,15 +416,25 @@ async def get_topology(
             if cached is not None and time.monotonic() - cached[0] < ttl:
                 return cached[1]
 
-            result = await build_topology_response(
-                connection,
-                include_services=include_services,
-                services_per_host=limit,
-                top_affected_hosts=top_k,
-                root=root,
-                child_layers=child_layers,
-                parent_layers=parent_layers,
-            )
+            async def _build() -> list[TopologyNode]:
+                return await build_topology_response(
+                    connection,
+                    include_services=include_services,
+                    services_per_host=limit,
+                    top_affected_hosts=top_k,
+                    root=root,
+                    child_layers=child_layers,
+                    parent_layers=parent_layers,
+                )
+
+            # auth_user is None outside CMK or for see-all callers, so the
+            # contact-group wrap only fires when the connection supports it
+            # (LivestatusConnection does, the test backend doesn't).
+            if auth_user is not None and hasattr(connection, "with_auth_user"):
+                async with connection.with_auth_user(auth_user):
+                    result = await _build()
+            else:
+                result = await _build()
 
             # Insertion-order eviction (CPython 3.7+ dicts preserve insertion order).
             if len(_topology_cache) >= _TOPOLOGY_CACHE_MAX:

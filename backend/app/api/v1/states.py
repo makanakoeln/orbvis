@@ -17,14 +17,13 @@ from fastapi import (
 from app.api.v1.connections import TopologyNode, build_topology_response
 from app.api.v1.deps import can_view_board as _can_view_board
 from app.api.v1.deps import can_view_board_by_name as _can_view_board_by_name
-from app.api.v1.deps import get_current_user
+from app.api.v1.deps import get_current_user, resolve_auth_user
 from app.api.v1.types import BoardName
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.middleware import is_same_origin
 from app.core.ratelimit import ws_connect_limiter
 from app.core.websocket import manager
-from app.integrations import checkmk as _cmk_integration
 from app.models.user import User
 from app.schemas.board import BoardConfig
 from app.schemas.state import MapStates
@@ -42,21 +41,6 @@ _WS_CLOSE_NOT_FOUND = 4004
 _WS_CLOSE_RATE_LIMITED = 4008
 
 router = APIRouter()
-
-
-def _resolve_auth_user(username: str, is_admin: bool) -> str | None:
-    """Return the username to pass as AuthUser to Livestatus, or None for unrestricted access.
-
-    Users with admin role or CMK's 'general.see_all' permission bypass contact-group
-    filtering so Livestatus returns all objects instead of only those the user is a contact for.
-    """
-    if not settings.checkmk_omd_root:
-        return None
-    if is_admin:
-        return None
-    if _cmk_integration.check_checkmk_permission(username, "general.see_all"):
-        return None
-    return username
 
 
 # One shared broadcast task per active board – avoids O(n²) fetch × broadcast behaviour.
@@ -198,7 +182,7 @@ async def get_board_states(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
         )
-    auth_user = _resolve_auth_user(current_user.name, current_user.is_admin)
+    auth_user = resolve_auth_user(current_user.name, current_user.is_admin)
     return await state_service.get_board_states(
         cfg,
         auth_user=auth_user,
@@ -259,7 +243,7 @@ async def websocket_board_states(
         if not _can_view_board(user, name):
             await websocket.close(code=_WS_CLOSE_NO_PERMISSION)
             return
-        ws_auth_user = _resolve_auth_user(user.name, user.is_admin)
+        ws_auth_user = resolve_auth_user(user.name, user.is_admin)
 
     cfg = board_service.get_board(name)
     if cfg is None:
