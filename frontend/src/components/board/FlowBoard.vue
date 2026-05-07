@@ -103,6 +103,7 @@ import { connectionsApi } from '@/api/client';
 import HoverMenu from '@/components/board/HoverMenu.vue';
 import { useD3Cleanup } from '@/composables/useD3Cleanup';
 import { useAuthStore } from '@/stores/auth';
+import { useStatesStore } from '@/stores/states';
 import type { BoardObject, ClickAction, FlowView, ObjectState, TopologyNode } from '@/types/api';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { stateColor } from '@/utils/stateColors';
@@ -116,6 +117,7 @@ const props = defineProps<{
     flowView?: FlowView | null;
 }>();
 const auth = useAuthStore();
+const statesStore = useStatesStore();
 
 const NODE_R = 18;
 const SVC_R_MAX = 11; // service node radius at low service count
@@ -202,7 +204,16 @@ function needsServices(layout: typeof props.serviceLayout): boolean {
     return layout === 'fan' || layout === 'orbit' || layout === 'row';
 }
 
-// ---- Fetch ----
+// ---- Data sources ----
+//
+// Primary: the central WebSocket pipeline pushes `topology_update` deltas via
+// statesStore.topology, scoped per auth_user. We just mirror it into the
+// local `nodes` ref so the existing render watch still fires.
+//
+// Fallback: when the WS handshake never opens (reverse proxy without WS
+// support), statesStore flips `wsAvailable` to false. In that mode this
+// component takes over and polls `/topology` every 15 s, the same behaviour
+// as before the WS push landed.
 async function fetchTopology() {
     try {
         nodes.value = await connectionsApi.topology(
@@ -223,15 +234,27 @@ async function fetchTopology() {
     }
 }
 
-// Re-fetch and clear service cache when serviceLayout prop changes
+watch(
+    () => statesStore.topology,
+    (topo) => {
+        if (!statesStore.wsAvailable) return;
+        nodes.value = [...topo];
+        if (error.value) error.value = '';
+        loading.value = false;
+    },
+    { deep: false },
+);
+
+// Re-fetch and clear service cache when serviceLayout prop changes. With WS
+// the topology is pushed unconditionally with services, so the layout switch
+// is a pure render-side concern; we still drop cached service positions so
+// the new layout starts from scratch.
 watch(
     () => props.serviceLayout,
     (newVal, oldVal) => {
         for (const k of nodeCache.keys()) {
             if (k.includes('::')) nodeCache.delete(k);
         }
-        // When enabling services, reset host positions so the simulation can spread them out
-        // from scratch rather than starting from a cramped no-service layout.
         if (newVal !== 'off' && oldVal === 'off') {
             for (const node of nodeCache.values()) {
                 node.x = undefined;
@@ -241,15 +264,14 @@ watch(
             }
         }
         _hasFitOnce = false;
-        fetchTopology();
+        if (!statesStore.wsAvailable) fetchTopology();
     },
 );
 
-// Pause the 15 s poll while the tab is hidden — keeps idle Multi-Tab setups
-// from each driving their own livestatus round-trip and refreshes immediately
-// when the user returns.
+// Polling-fallback timer (only used when WS is unavailable). Tab-visibility
+// pause keeps idle multi-tab setups from each driving their own round-trip.
 function startPollTimer(): void {
-    if (timer) return;
+    if (timer || statesStore.wsAvailable) return;
     timer = setInterval(fetchTopology, 15000);
 }
 function stopPollTimer(): void {
@@ -259,6 +281,7 @@ function stopPollTimer(): void {
     }
 }
 function onVisibilityChange(): void {
+    if (statesStore.wsAvailable) return;
     if (document.hidden) {
         stopPollTimer();
     } else {
@@ -267,13 +290,43 @@ function onVisibilityChange(): void {
     }
 }
 
+let bootstrapTimer: ReturnType<typeof setTimeout> | null = null;
+
 onMounted(() => {
-    fetchTopology();
-    if (!document.hidden) startPollTimer();
+    if (statesStore.topology.length > 0) {
+        nodes.value = [...statesStore.topology];
+        loading.value = false;
+    } else if (statesStore.wsAvailable) {
+        // Wait briefly for the first WS topology_update; if none arrives,
+        // fall back to a one-shot REST fetch so the user isn't stuck on a
+        // blank board.
+        bootstrapTimer = setTimeout(() => {
+            if (!statesStore.topologyReady && nodes.value.length === 0) {
+                fetchTopology();
+            }
+        }, 2000);
+    } else {
+        fetchTopology();
+        if (!document.hidden) startPollTimer();
+    }
     document.addEventListener('visibilitychange', onVisibilityChange);
 });
+
+watch(
+    () => statesStore.wsAvailable,
+    (available) => {
+        if (!available) {
+            fetchTopology();
+            if (!document.hidden) startPollTimer();
+        } else {
+            stopPollTimer();
+        }
+    },
+);
+
 onUnmounted(() => {
     document.removeEventListener('visibilitychange', onVisibilityChange);
+    if (bootstrapTimer) clearTimeout(bootstrapTimer);
     stopPollTimer();
     simulation?.stop();
     if (svgEl.value) select(svgEl.value).selectAll('*').remove();

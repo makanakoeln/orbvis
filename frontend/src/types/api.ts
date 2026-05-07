@@ -369,6 +369,20 @@ export interface WebSocketStateUpdate {
     states: MapStates;
 }
 
+export interface TopologyDelta {
+    full: boolean;
+    generated_at: number;
+    added: TopologyNode[];
+    changed: TopologyNode[];
+    removed: string[];
+}
+
+export interface WebSocketTopologyUpdate {
+    type: 'topology_update';
+    map: string;
+    delta: TopologyDelta;
+}
+
 export interface ImageEntry {
     name: string;
     url: string;

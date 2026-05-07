@@ -2,7 +2,14 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
 import { boardsApi, connectionsApi } from '@/api/client';
-import type { MetricGraphGroup, ObjectState, WebSocketStateUpdate } from '@/types/api';
+import type {
+    MetricGraphGroup,
+    ObjectState,
+    TopologyDelta,
+    TopologyNode,
+    WebSocketStateUpdate,
+    WebSocketTopologyUpdate,
+} from '@/types/api';
 import { parsePerfData, utilPercent } from '@/utils/perf';
 
 export interface MetricSnapshot {
@@ -58,6 +65,11 @@ export const useStatesStore = defineStore('states', () => {
     const connected = ref(false);
     const lastUpdate = ref<number | null>(null);
     const initialLoad = ref(false);
+    // Flow Board topology pushed via WS (separate from `states` because it
+    // tracks dynamically discovered hosts, not configured BoardObjects).
+    const topology = ref<TopologyNode[]>([]);
+    const topologyReady = ref(false); // true after first topology_update arrives
+    const wsAvailable = ref(true); // false once we fall back to HTTP polling
     const _LS_NOTIF = 'orbvis_notifications';
     const notificationsEnabled = ref(
         typeof Notification !== 'undefined' &&
@@ -150,6 +162,21 @@ export const useStatesStore = defineStore('states', () => {
         pollTimer = setInterval(_fetchStates, 15_000);
     }
 
+    function _applyTopologyDelta(delta: TopologyDelta) {
+        if (delta.full) {
+            topology.value = [...delta.added];
+            return;
+        }
+        const removed = new Set(delta.removed);
+        const updated = new Map<string, TopologyNode>(
+            delta.changed.map((n) => [n.name, n] as const),
+        );
+        topology.value = topology.value
+            .filter((n) => !removed.has(n.name))
+            .map((n) => updated.get(n.name) ?? n)
+            .concat(delta.added);
+    }
+
     function _connect() {
         if (!currentMap || !currentToken) return;
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -171,7 +198,7 @@ export const useStatesStore = defineStore('states', () => {
 
         ws.onmessage = (event) => {
             try {
-                const msg: WebSocketStateUpdate = JSON.parse(event.data);
+                const msg: WebSocketStateUpdate | WebSocketTopologyUpdate = JSON.parse(event.data);
                 if (msg.type === 'state_update') {
                     const newStates: Record<string, ObjectState> = {};
                     for (const s of msg.states.states) {
@@ -187,6 +214,10 @@ export const useStatesStore = defineStore('states', () => {
                     Object.assign(states.value, newStates);
                     lastUpdate.value = msg.states.generated_at;
                     connected.value = msg.states.connection_ok;
+                } else if (msg.type === 'topology_update') {
+                    _applyTopologyDelta(msg.delta);
+                    topologyReady.value = true;
+                    lastUpdate.value = msg.delta.generated_at;
                 }
             } catch {
                 /* ignore parse errors */
@@ -198,6 +229,7 @@ export const useStatesStore = defineStore('states', () => {
                 // Never opened: WebSocket not available (e.g. reverse proxy without WS support).
                 // Switch permanently to HTTP polling for this session.
                 pollingMode = true;
+                wsAvailable.value = false;
                 ws = null;
                 _startPolling();
                 return;
@@ -233,6 +265,8 @@ export const useStatesStore = defineStore('states', () => {
         metricValues.value = {};
         metricTitles.value = {};
         metricGraphs.value = {};
+        topology.value = [];
+        topologyReady.value = false;
         currentMap = null;
         currentToken = undefined;
     }
@@ -295,6 +329,9 @@ export const useStatesStore = defineStore('states', () => {
         connected,
         lastUpdate,
         initialLoad,
+        topology,
+        topologyReady,
+        wsAvailable,
         notificationsEnabled,
         connectToMap,
         disconnect,

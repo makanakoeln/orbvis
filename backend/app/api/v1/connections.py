@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from app.api.v1.deps import get_current_user, require_admin
-from app.connections.base import TopologyRow
+from app.connections.base import ConnectionBase, TopologyRow
 from app.core.config import settings
 from app.integrations import checkmk as cmk_integration
 from app.models.user import User
@@ -293,6 +293,60 @@ def _problem_count(row: TopologyRow) -> int:
     return s.critical * 4 + s.warning * 2 + s.unknown * 2 + s.pending
 
 
+async def build_topology_response(
+    connection: ConnectionBase,
+    *,
+    include_services: bool,
+    services_per_host: int,
+    top_affected_hosts: int,
+    root: str | None = None,
+    child_layers: int | None = None,
+    parent_layers: int | None = None,
+) -> list[TopologyNode]:
+    """Fetch topology + (optionally) per-host services and return TopologyNodes.
+
+    Shared between the REST endpoint and the WS broadcast loop so both produce
+    identical payloads. Caller is responsible for any auth_user context and
+    caching — this helper just runs the queries.
+    """
+    rows = await connection.get_topology()
+    rows = _filter_topology(rows, root, child_layers, parent_layers)
+
+    if not (include_services and rows):
+        return [TopologyNode(**r) for r in rows]
+
+    if top_affected_hosts <= 0:
+        affected: set[str] = set()
+    elif len(rows) > top_affected_hosts:
+        ranked = sorted(rows, key=_problem_count, reverse=True)
+        affected = {r["name"] for r in ranked[:top_affected_hosts]}
+    else:
+        affected = {r["name"] for r in rows}
+
+    services_by_host = (
+        await connection.get_hosts_services_batch(sorted(affected)) if affected else {}
+    )
+
+    result: list[TopologyNode] = []
+    for row in rows:
+        if row["name"] not in affected:
+            result.append(TopologyNode(**row, services_omitted=True))
+            continue
+        svcs: list[dict[str, str]] = [
+            {"name": s["name"], "state": s["state"], "output": s["output"]}
+            for s in services_by_host.get(row["name"], [])
+        ]
+        kept, truncated = _sorted_truncated_services(svcs, services_per_host)
+        result.append(
+            TopologyNode(
+                **row,
+                services=[ServiceNode(**s) for s in kept],
+                services_truncated_count=truncated,
+            )
+        )
+    return result
+
+
 @router.get("/{connection_id}/topology", response_model=list[TopologyNode])
 async def get_topology(
     connection_id: str,
@@ -355,40 +409,15 @@ async def get_topology(
             if cached is not None and time.monotonic() - cached[0] < ttl:
                 return cached[1]
 
-            rows = await connection.get_topology()
-            rows = _filter_topology(rows, root, child_layers, parent_layers)
-
-            result: list[TopologyNode]
-            if include_services and rows:
-                if top_k <= 0:
-                    affected = set()
-                elif len(rows) > top_k:
-                    ranked = sorted(rows, key=_problem_count, reverse=True)
-                    affected = {r["name"] for r in ranked[:top_k]}
-                else:
-                    affected = {r["name"] for r in rows}
-                services_by_host = (
-                    await connection.get_hosts_services_batch(sorted(affected)) if affected else {}
-                )
-                result = []
-                for row in rows:
-                    if row["name"] not in affected:
-                        result.append(TopologyNode(**row, services_omitted=True))
-                        continue
-                    svcs: list[dict[str, str]] = [
-                        {"name": s["name"], "state": s["state"], "output": s["output"]}
-                        for s in services_by_host.get(row["name"], [])
-                    ]
-                    kept, truncated = _sorted_truncated_services(svcs, limit)
-                    result.append(
-                        TopologyNode(
-                            **row,
-                            services=[ServiceNode(**s) for s in kept],
-                            services_truncated_count=truncated,
-                        )
-                    )
-            else:
-                result = [TopologyNode(**r) for r in rows]
+            result = await build_topology_response(
+                connection,
+                include_services=include_services,
+                services_per_host=limit,
+                top_affected_hosts=top_k,
+                root=root,
+                child_layers=child_layers,
+                parent_layers=parent_layers,
+            )
 
             # Insertion-order eviction (CPython 3.7+ dicts preserve insertion order).
             if len(_topology_cache) >= _TOPOLOGY_CACHE_MAX:

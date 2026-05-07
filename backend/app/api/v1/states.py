@@ -14,7 +14,7 @@ from fastapi import (
     status,
 )
 
-from app.api.v1.connections import TopologyNode
+from app.api.v1.connections import TopologyNode, build_topology_response
 from app.api.v1.deps import can_view_board as _can_view_board
 from app.api.v1.deps import can_view_board_by_name as _can_view_board_by_name
 from app.api.v1.deps import get_current_user
@@ -66,14 +66,26 @@ _broadcast_tasks: dict[str, asyncio.Task[None]] = {}
 async def _fetch_topology_for_user(
     cfg: BoardConfig, auth_user: str | None
 ) -> list[TopologyNode] | None:
-    """Fetch the live topology for a Flow Board under the given auth_user context.
+    """Fetch the live topology + services for a Flow Board under auth_user.
 
     Returns None when the connection is unregistered or unavailable (so the
-    caller can skip broadcasting without leaking errors to clients).
+    caller can skip broadcasting without leaking errors to clients). Always
+    pulls service detail for the top-K affected hosts so subscribed clients
+    can render any service layout (off/donut don't need it but the diff
+    encoding only sends host rows that actually changed, so the cost is bounded).
     """
     connection = state_service.get_connection(cfg.connection_id)
     if connection is None:
         return None
+
+    async def _build() -> list[TopologyNode]:
+        return await build_topology_response(
+            connection,
+            include_services=True,
+            services_per_host=settings.flow_board_max_services_per_host,
+            top_affected_hosts=settings.flow_board_top_affected_hosts,
+        )
+
     try:
         if (
             auth_user is not None
@@ -81,13 +93,11 @@ async def _fetch_topology_for_user(
             and hasattr(connection, "with_auth_user")
         ):
             async with connection.with_auth_user(auth_user):
-                rows = await connection.get_topology()
-        else:
-            rows = await connection.get_topology()
+                return await _build()
+        return await _build()
     except Exception:
         logger.warning("topology fetch failed for board '%s'", cfg.name, exc_info=True)
         return None
-    return [TopologyNode(**row) for row in rows]
 
 
 async def _send_topology_to(
