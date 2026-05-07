@@ -218,7 +218,7 @@ import {
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { cmkApi, connectionsApi } from '@/api/client';
+import { connectionsApi } from '@/api/client';
 import AckModal from '@/components/board/AckModal.vue';
 import CommentModal from '@/components/board/CommentModal.vue';
 import ContextMenu from '@/components/board/ContextMenu.vue';
@@ -226,13 +226,12 @@ import DowntimeModal from '@/components/board/DowntimeModal.vue';
 import HoverMenu from '@/components/board/HoverMenu.vue';
 import RemoveDowntimeModal from '@/components/board/RemoveDowntimeModal.vue';
 import { useD3Cleanup } from '@/composables/useD3Cleanup';
-import { useToast } from '@/composables/useToast';
+import { useObjectActions } from '@/composables/useObjectActions';
 import { useAuthStore } from '@/stores/auth';
 import { useStatesStore } from '@/stores/states';
 import type {
     BoardObject,
     ClickAction,
-    DowntimeEntry,
     FlowView,
     ObjectState,
     ServiceLayout,
@@ -256,7 +255,6 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const auth = useAuthStore();
 const statesStore = useStatesStore();
-const toast = useToast();
 
 const NODE_R = 18;
 const SVC_R_MAX = 11; // service node radius at low service count
@@ -374,15 +372,6 @@ const contextMenu = reactive<{
     y: number;
 }>({ visible: false, object: null, state: undefined, x: 0, y: 0 });
 
-const ackModalObject = ref<BoardObject | null>(null);
-const downtimeModalObject = ref<BoardObject | null>(null);
-const commentModalObject = ref<BoardObject | null>(null);
-const removeDowntimeModal = reactive<{
-    visible: boolean;
-    downtimes: DowntimeEntry[];
-    objectName: string;
-}>({ visible: false, downtimes: [], objectName: '' });
-
 function closeContextMenu(): void {
     contextMenu.visible = false;
     contextMenu.object = null;
@@ -392,135 +381,17 @@ function onDocumentClick(): void {
     if (contextMenu.visible) closeContextMenu();
 }
 
-function onContextMenuAck(): void {
-    const obj = contextMenu.object;
-    closeContextMenu();
-    if (obj) ackModalObject.value = obj;
-}
-
-function onContextMenuDowntime(): void {
-    const obj = contextMenu.object;
-    closeContextMenu();
-    if (obj) downtimeModalObject.value = obj;
-}
-
-function onContextMenuAddComment(): void {
-    const obj = contextMenu.object;
-    closeContextMenu();
-    if (obj) commentModalObject.value = obj;
-}
-
-async function onContextMenuRemoveAck(): Promise<void> {
-    const obj = contextMenu.object;
-    closeContextMenu();
-    if (!obj || !props.checkmkUrl) return;
-    try {
-        if (obj.type === 'service' && obj.host_name && obj.service_description) {
-            await cmkApi.removeAcknowledgementService(
-                props.checkmkUrl,
-                obj.host_name,
-                obj.service_description,
-            );
-        } else if (obj.host_name) {
-            await cmkApi.removeAcknowledgementHost(props.checkmkUrl, obj.host_name);
-        }
-        statesStore.refreshAfterCommand();
-    } catch (err) {
-        const detail = err instanceof Error ? err.message : '';
-        toast.error(
-            detail
-                ? `${t('contextMenu.removeAckFailed')}: ${detail}`
-                : t('contextMenu.removeAckFailed'),
-        );
-    }
-}
-
-async function onContextMenuRemoveDowntime(): Promise<void> {
-    const obj = contextMenu.object;
-    closeContextMenu();
-    if (!obj || !props.checkmkUrl) return;
-    let downtimes: DowntimeEntry[];
-    try {
-        if (obj.type === 'service' && obj.host_name && obj.service_description) {
-            downtimes = await cmkApi.listDowntimesService(
-                props.checkmkUrl,
-                obj.host_name,
-                obj.service_description,
-            );
-        } else if (obj.host_name) {
-            downtimes = await cmkApi.listDowntimesHost(props.checkmkUrl, obj.host_name);
-        } else {
-            return;
-        }
-    } catch {
-        toast.error(t('contextMenu.removeDowntimeFailed'));
-        return;
-    }
-    if (downtimes.length === 0) {
-        toast.error(t('contextMenu.noDowntimesFound'));
-        return;
-    }
-    if (downtimes.length === 1) {
-        try {
-            await cmkApi.removeDowntimeById(
-                props.checkmkUrl,
-                downtimes[0].id,
-                downtimes[0].site_id,
-            );
-            toast.success(t('contextMenu.removeDowntimeSuccess'));
-            statesStore.refreshAfterCommand();
-        } catch {
-            toast.error(t('contextMenu.removeDowntimeFailed'));
-        }
-        return;
-    }
-    removeDowntimeModal.downtimes = downtimes;
-    removeDowntimeModal.objectName = obj.host_name ?? '';
-    removeDowntimeModal.visible = true;
-}
-
-async function onContextMenuForceCheck(): Promise<void> {
-    const obj = contextMenu.object;
-    closeContextMenu();
-    if (!obj || !props.checkmkUrl) return;
-    try {
-        if (obj.type === 'service' && obj.host_name && obj.service_description) {
-            await cmkApi.forceCheckService(
-                props.checkmkUrl,
-                obj.host_name,
-                obj.service_description,
-            );
-        } else if (obj.host_name) {
-            await cmkApi.forceCheckHost(props.checkmkUrl, obj.host_name);
-        }
-        statesStore.refreshAfterCommand();
-    } catch {
-        toast.error(t('contextMenu.forceCheckFailed'));
-    }
-}
-
-async function onContextMenuToggleNotifications(enable: boolean): Promise<void> {
-    const obj = contextMenu.object;
-    closeContextMenu();
-    if (!obj || !props.checkmkUrl) return;
-    try {
-        if (obj.type === 'service' && obj.host_name && obj.service_description) {
-            await (enable ? cmkApi.enableNotificationsService : cmkApi.disableNotificationsService)(
-                props.checkmkUrl,
-                obj.host_name,
-                obj.service_description,
-            );
-        } else if (obj.host_name) {
-            await (enable ? cmkApi.enableNotificationsHost : cmkApi.disableNotificationsHost)(
-                props.checkmkUrl,
-                obj.host_name,
-            );
-        }
-        statesStore.refreshAfterCommand();
-    } catch {
-        toast.error(t('contextMenu.toggleNotificationsFailed'));
-    }
-}
+const objectActions = useObjectActions(() => props.checkmkUrl ?? null, closeContextMenu);
+const { ackModalObject, downtimeModalObject, commentModalObject, removeDowntimeModal } =
+    objectActions;
+const onContextMenuAck = () => objectActions.handlers.acknowledge(contextMenu.object);
+const onContextMenuRemoveAck = () => objectActions.handlers.removeAck(contextMenu.object);
+const onContextMenuDowntime = () => objectActions.handlers.scheduleDowntime(contextMenu.object);
+const onContextMenuRemoveDowntime = () => objectActions.handlers.removeDowntime(contextMenu.object);
+const onContextMenuAddComment = () => objectActions.handlers.addComment(contextMenu.object);
+const onContextMenuForceCheck = () => objectActions.handlers.forceCheck(contextMenu.object);
+const onContextMenuToggleNotifications = (enable: boolean) =>
+    objectActions.handlers.toggleNotifications(contextMenu.object, enable);
 
 let timer: ReturnType<typeof setInterval> | null = null;
 

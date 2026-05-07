@@ -183,19 +183,12 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
-import { cmkApi } from '@/api/client';
-import { useToast } from '@/composables/useToast';
+import { useObjectActions } from '@/composables/useObjectActions';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
-import type {
-    BoardConfig,
-    BoardObject as BoardObjectType,
-    DowntimeEntry,
-    ObjectState,
-} from '@/types/api';
+import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { resolveTemplate } from '@/utils/template';
 
@@ -208,8 +201,6 @@ import DowntimeModal from './DowntimeModal.vue';
 import HoverMenu from './HoverMenu.vue';
 import RemoveDowntimeModal from './RemoveDowntimeModal.vue';
 
-const { t } = useI18n();
-const toast = useToast();
 const settingsStore = useSettingsStore();
 const statesStore = useStatesStore();
 
@@ -617,146 +608,18 @@ function onContextMenuDuplicate() {
 
 // ---- CMK actions from context menu ----
 
-const ackModalObject = ref<BoardObjectType | null>(null);
-const downtimeModalObject = ref<BoardObjectType | null>(null);
-const commentModalObject = ref<BoardObjectType | null>(null);
-const removeDowntimeModal = reactive<{
-    visible: boolean;
-    downtimes: DowntimeEntry[];
-    objectName: string;
-}>({
-    visible: false,
-    downtimes: [],
-    objectName: '',
-});
+const objectActions = useObjectActions(() => props.checkmkUrl ?? null, closeMenus);
+const { ackModalObject, downtimeModalObject, commentModalObject, removeDowntimeModal } =
+    objectActions;
+const onContextMenuAck = () => objectActions.handlers.acknowledge(contextMenu.object);
+const onContextMenuRemoveAck = () => objectActions.handlers.removeAck(contextMenu.object);
+const onContextMenuDowntime = () => objectActions.handlers.scheduleDowntime(contextMenu.object);
+const onContextMenuRemoveDowntime = () => objectActions.handlers.removeDowntime(contextMenu.object);
+const onContextMenuAddComment = () => objectActions.handlers.addComment(contextMenu.object);
+const onContextMenuToggleNotifications = (enable: boolean) =>
+    objectActions.handlers.toggleNotifications(contextMenu.object, enable);
 
-function onContextMenuAck() {
-    const obj = contextMenu.object;
-    closeMenus();
-    if (obj) ackModalObject.value = obj;
-}
-
-function onContextMenuDowntime() {
-    const obj = contextMenu.object;
-    closeMenus();
-    if (obj) downtimeModalObject.value = obj;
-}
-
-async function onContextMenuRemoveDowntime() {
-    const obj = contextMenu.object;
-    closeMenus();
-    if (!obj || !props.checkmkUrl) return;
-    let downtimes: DowntimeEntry[];
-    try {
-        if (obj.type === 'service' && obj.host_name && obj.service_description) {
-            downtimes = await cmkApi.listDowntimesService(
-                props.checkmkUrl,
-                obj.host_name,
-                obj.service_description,
-            );
-        } else if (obj.host_name) {
-            downtimes = await cmkApi.listDowntimesHost(props.checkmkUrl, obj.host_name);
-        } else {
-            return;
-        }
-    } catch {
-        toast.error(t('contextMenu.removeDowntimeFailed'));
-        return;
-    }
-    if (downtimes.length === 0) {
-        toast.error(t('contextMenu.noDowntimesFound'));
-        return;
-    }
-    if (downtimes.length === 1) {
-        await doRemoveDowntime(downtimes[0]);
-        return;
-    }
-    removeDowntimeModal.downtimes = downtimes;
-    removeDowntimeModal.objectName = obj.host_name ?? '';
-    removeDowntimeModal.visible = true;
-}
-
-async function doRemoveDowntime(dt: DowntimeEntry) {
-    if (!props.checkmkUrl) return;
-    try {
-        await cmkApi.removeDowntimeById(props.checkmkUrl, dt.id, dt.site_id);
-        toast.success(t('contextMenu.removeDowntimeSuccess'));
-        statesStore.refreshAfterCommand();
-    } catch {
-        toast.error(t('contextMenu.removeDowntimeFailed'));
-    }
-}
-
-function onContextMenuAddComment() {
-    const obj = contextMenu.object;
-    closeMenus();
-    if (obj) commentModalObject.value = obj;
-}
-
-async function onContextMenuRemoveAck() {
-    const obj = contextMenu.object;
-    closeMenus();
-    if (!obj || !props.checkmkUrl) return;
-    try {
-        if (obj.type === 'service' && obj.host_name && obj.service_description) {
-            await cmkApi.removeAcknowledgementService(
-                props.checkmkUrl,
-                obj.host_name,
-                obj.service_description,
-            );
-        } else if (obj.host_name) {
-            await cmkApi.removeAcknowledgementHost(props.checkmkUrl, obj.host_name);
-        }
-    } catch (err) {
-        const detail = err instanceof Error ? err.message : '';
-        toast.error(
-            detail
-                ? `${t('contextMenu.removeAckFailed')}: ${detail}`
-                : t('contextMenu.removeAckFailed'),
-        );
-    }
-}
-
-async function onContextMenuToggleNotifications(enable: boolean) {
-    const obj = contextMenu.object;
-    closeMenus();
-    if (!obj || !props.checkmkUrl) return;
-    try {
-        if (obj.type === 'service' && obj.host_name && obj.service_description) {
-            await (enable ? cmkApi.enableNotificationsService : cmkApi.disableNotificationsService)(
-                props.checkmkUrl,
-                obj.host_name,
-                obj.service_description,
-            );
-        } else if (obj.host_name) {
-            await (enable ? cmkApi.enableNotificationsHost : cmkApi.disableNotificationsHost)(
-                props.checkmkUrl,
-                obj.host_name,
-            );
-        }
-    } catch {
-        toast.error(t('contextMenu.toggleNotificationsFailed'));
-    }
-}
-
-async function onContextMenuForceCheck() {
-    const obj = contextMenu.object;
-    closeMenus();
-    if (!obj || !props.checkmkUrl) return;
-    try {
-        if (obj.type === 'service' && obj.host_name && obj.service_description) {
-            await cmkApi.forceCheckService(
-                props.checkmkUrl,
-                obj.host_name,
-                obj.service_description,
-            );
-        } else if (obj.host_name) {
-            await cmkApi.forceCheckHost(props.checkmkUrl, obj.host_name);
-        }
-    } catch {
-        toast.error(t('contextMenu.forceCheckFailed'));
-    }
-}
+const onContextMenuForceCheck = () => objectActions.handlers.forceCheck(contextMenu.object);
 
 function closeMenus() {
     hoverMenu.visible = false;
