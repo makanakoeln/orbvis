@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from app.api.v1.deps import get_current_user, require_admin, resolve_auth_user
-from app.connections.base import ConnectionBase, TopologyRow, topology_problem_rank
+from app.connections.base import ConnectionBase, ServiceRow, TopologyRow, topology_problem_rank
 from app.core.config import settings
 from app.integrations import checkmk as cmk_integration
 from app.models.user import User
@@ -146,6 +146,12 @@ class ServiceNode(BaseModel):
     name: str
     state: str
     output: str
+    acknowledged: bool = False
+    in_downtime: bool = False
+    notifications_enabled: bool = True
+    last_state_change: float | None = None
+    last_check: float | None = None
+    next_check: float | None = None
 
 
 class TopologyNode(BaseModel):
@@ -195,9 +201,7 @@ class TopologyDelta(BaseModel):
 _SERVICE_SORT_KEY = {"CRITICAL": 0, "WARNING": 1, "UNKNOWN": 2, "PENDING": 3, "OK": 4}
 
 
-def _sorted_truncated_services(
-    svcs: list[dict[str, str]], limit: int
-) -> tuple[list[dict[str, str]], int]:
+def _sorted_truncated_services(svcs: list[ServiceRow], limit: int) -> tuple[list[ServiceRow], int]:
     """Return (top-N services, truncated_count). Non-OK first, then OK alphabetic."""
     ordered = sorted(
         svcs,
@@ -326,15 +330,12 @@ async def build_topology_response(
         if row["name"] not in affected:
             result.append(TopologyNode(**row, services_omitted=True))
             continue
-        svcs: list[dict[str, str]] = [
-            {"name": s["name"], "state": s["state"], "output": s["output"]}
-            for s in services_by_host.get(row["name"], [])
-        ]
+        svcs = list(services_by_host.get(row["name"], []))
         kept, truncated = _sorted_truncated_services(svcs, services_per_host)
         result.append(
             TopologyNode(
                 **row,
-                services=[ServiceNode(**s) for s in kept],
+                services=[ServiceNode.model_validate(s) for s in kept],
                 services_truncated_count=truncated,
             )
         )

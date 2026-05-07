@@ -243,6 +243,12 @@ export interface ServiceNode {
     name: string;
     state: string;
     output: string;
+    acknowledged?: boolean;
+    in_downtime?: boolean;
+    notifications_enabled?: boolean;
+    last_state_change?: number | null;
+    last_check?: number | null;
+    next_check?: number | null;
 }
 
 export interface TopologyNode {

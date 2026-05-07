@@ -302,6 +302,15 @@ def _row_bool(row: LivestatusRow, idx: int, *, default: bool = True) -> bool:
     return bool(_row_int(row, idx, default=1 if default else 0))
 
 
+def _row_float_or_none(row: LivestatusRow, idx: int) -> float | None:
+    """Return float for the cell, or None when livestatus reports the missing
+    sentinel 0 (used for never-checked services) or the column is absent."""
+    if idx >= len(row):
+        return None
+    v = _row_float(row, idx, default=0.0)
+    return v if v > 0 else None
+
+
 def _row_list(row: LivestatusRow, idx: int) -> list[object]:
     if idx >= len(row):
         return []
@@ -1514,7 +1523,10 @@ class LivestatusConnection(ConnectionBase):
             if len(hosts) > 1:
                 filters += f"Or: {len(hosts)}\n"
             return await self._query(
-                f"GET services\nColumns: host_name description state plugin_output\n{filters}"
+                "GET services\n"
+                "Columns: host_name description state plugin_output "
+                "acknowledged scheduled_downtime_depth notifications_enabled "
+                "last_state_change last_check next_check\n" + filters
             )
 
         # Split top-K into smaller parallel queries: one slow host stalls only
@@ -1531,6 +1543,12 @@ class LivestatusConnection(ConnectionBase):
                         name=_row_str(r, 1),
                         state=_SERVICE_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
                         output=_row_str(r, 3),
+                        acknowledged=bool(_row_int(r, 4)),
+                        in_downtime=_row_int(r, 5) > 0,
+                        notifications_enabled=bool(_row_int(r, 6)),
+                        last_state_change=_row_float_or_none(r, 7),
+                        last_check=_row_float_or_none(r, 8),
+                        next_check=_row_float_or_none(r, 9),
                     )
                 )
         return results

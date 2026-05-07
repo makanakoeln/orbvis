@@ -56,11 +56,22 @@ def topology_problem_rank(row: TopologyRow) -> int:
 
 
 class ServiceRow(TypedDict):
-    """One service attached to a host (used by get_host_services / batch APIs)."""
+    """One service attached to a host (used by get_host_services / batch APIs).
+
+    name/state/output are required — the rest are optional context fields surfaced
+    in the hover/context UI so operators don't have to drill into Checkmk just to
+    see acknowledged/in_downtime/last-state-change.
+    """
 
     name: str
     state: str
     output: str
+    acknowledged: NotRequired[bool]
+    in_downtime: NotRequired[bool]
+    notifications_enabled: NotRequired[bool]
+    last_state_change: NotRequired[float | None]
+    last_check: NotRequired[float | None]
+    next_check: NotRequired[float | None]
 
 
 @dataclass
