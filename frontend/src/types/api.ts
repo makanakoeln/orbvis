@@ -15,7 +15,8 @@ export type ObjectType =
     | 'textbox'
     | 'cmk_label'
     | 'graph'
-    | 'aggregation';
+    | 'aggregation'
+    | 'site';
 
 export interface AggregationInfo {
     id: string;

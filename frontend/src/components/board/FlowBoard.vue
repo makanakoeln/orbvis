@@ -35,7 +35,7 @@
             <button
                 title="Fit all"
                 class="p-[5px] bg-[var(--bg-surface)]/90 backdrop-blur-md text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors border-b border-[var(--border)]"
-                @click="fitView"
+                @click="fitView()"
             >
                 <svg
                     style="width: 14px; height: 14px"
@@ -420,6 +420,43 @@ function problemScoreFromTopo(n: TopologyNode): number {
     const s = n.services_summary;
     if (!s) return hostPenalty;
     return hostPenalty + s.critical * 4 + s.warning * 2 + s.unknown * 2;
+}
+
+// Severity rank: 2 = critical/down, 1 = warn/unknown, 0 = ok.
+// Used for the initial spiral pre-layout (problems toward the center) and
+// for severity-stratified forceX/forceY targets so high-severity hosts stay
+// near origin instead of getting flung to the rim by charge alone.
+function severityRank(n: TopologyNode | undefined): 0 | 1 | 2 {
+    if (!n) return 0;
+    if (!HEALTHY_HOST_STATES.has(n.state)) return 2;
+    const s = n.services_summary;
+    if (!s) return 0;
+    if (s.critical > 0) return 2;
+    if (s.warning > 0 || s.unknown > 0) return 1;
+    return 0;
+}
+
+// Phyllotaxis (sunflower) layout: even-density spiral with no holes. Sorting
+// by severity rank (desc) means hosts with the worst state get the inner
+// slots, healthy hosts the outer. The combined effect is a compact disk
+// whose center is dominated by problems and whose rim is mostly green —
+// readable at a glance even on 500-host boards.
+const PHYLLOTAXIS_ANGLE = Math.PI * (3 - Math.sqrt(5));
+const SPIRAL_SPACING = 55;
+function preLayoutHosts(hosts: FNode[]): void {
+    if (!hosts.length) return;
+    const ranked = [...hosts].sort((a, b) => {
+        const sa = severityRank(a.topo);
+        const sb = severityRank(b.topo);
+        if (sa !== sb) return sb - sa;
+        return a.id.localeCompare(b.id);
+    });
+    ranked.forEach((d, i) => {
+        const angle = i * PHYLLOTAXIS_ANGLE;
+        const r = SPIRAL_SPACING * Math.sqrt(i + 1);
+        d.x = r * Math.cos(angle);
+        d.y = r * Math.sin(angle);
+    });
 }
 
 const TOP_K_LIMIT = 5;
@@ -912,8 +949,9 @@ interface FNode extends SimulationNodeDatum {
     state: string;
     output: string;
     bfsLevel: number;
-    nodeType: 'host' | 'service' | 'more';
+    nodeType: 'host' | 'service' | 'more' | 'site';
     hostId?: string;
+    siteId?: string;
     svcTotalCount?: number; // total services for this host (set on service nodes for label visibility)
     moreCount?: number; // for nodeType='more': number of services hidden behind this aggregate
     // Cached pointer to the host's TopologyNode so the tooltip can show the
@@ -932,6 +970,15 @@ interface FLink extends SimulationLinkDatum<FNode> {
 }
 
 function boardObjectFromFNode(d: FNode): BoardObject {
+    if (d.nodeType === 'site') {
+        return {
+            id: d.id,
+            type: 'site',
+            x: 0,
+            y: 0,
+            host_name: d.siteId ?? null,
+        } as BoardObject;
+    }
     const isService = d.nodeType === 'service';
     const svcName = isService ? d.id.split('::').slice(1).join('::') : undefined;
     // "+N more" pseudo nodes resolve to their host so clicking opens the
@@ -947,7 +994,65 @@ function boardObjectFromFNode(d: FNode): BoardObject {
     } as BoardObject;
 }
 
+function siteHostsAggregate(siteId: string): {
+    hostCount: number;
+    hostsUp: number;
+    hostsDown: number;
+    hostsUnreachable: number;
+    summary: { ok: number; warning: number; critical: number; unknown: number; pending: number };
+} {
+    let hostCount = 0;
+    let hostsUp = 0;
+    let hostsDown = 0;
+    let hostsUnreachable = 0;
+    const summary = { ok: 0, warning: 0, critical: 0, unknown: 0, pending: 0 };
+    for (const n of nodes.value) {
+        const sid = n.site_id || props.connectionId;
+        if (sid !== siteId) continue;
+        hostCount++;
+        if (n.state === 'UP') hostsUp++;
+        else if (n.state === 'DOWN') hostsDown++;
+        else if (n.state === 'UNREACHABLE') hostsUnreachable++;
+        const s = n.services_summary;
+        if (s) {
+            summary.ok += s.ok;
+            summary.warning += s.warning;
+            summary.critical += s.critical;
+            summary.unknown += s.unknown;
+            summary.pending += s.pending;
+        }
+    }
+    return { hostCount, hostsUp, hostsDown, hostsUnreachable, summary };
+}
+
 function objectStateFromFNode(d: FNode): ObjectState {
+    if (d.nodeType === 'site') {
+        const agg = siteHostsAggregate(d.siteId ?? '');
+        const worst =
+            agg.hostsDown > 0
+                ? 'DOWN'
+                : agg.summary.critical > 0
+                  ? 'CRITICAL'
+                  : agg.summary.warning > 0
+                    ? 'WARNING'
+                    : 'UP';
+        return {
+            object_id: d.id,
+            type: 'site',
+            state: worst as ObjectState['state'],
+            output:
+                `${agg.hostCount} hosts ` +
+                `(${agg.hostsUp} up, ${agg.hostsDown} down, ${agg.hostsUnreachable} unreachable)`,
+            perf_data: '',
+            acknowledged: false,
+            in_downtime: false,
+            stale: false,
+            notifications_enabled: true,
+            active_checks_enabled: true,
+            site_id: d.siteId ?? null,
+            services_summary: agg.summary,
+        };
+    }
     if (d.nodeType === 'service') {
         const svc = d.svc;
         const parent = d.parentTopo;
@@ -1019,9 +1124,22 @@ let currentZoomK = 1;
 function refreshDonutWidths(): void {
     if (!svgEl.value) return;
     const arc = buildDonutArc(currentZoomK);
+    const sel = select(svgEl.value);
+    sel.selectAll<SVGPathElement, DonutArc>('g.donut path').attr('d', (a) => arc(a) ?? '');
+    refreshHostLabelOffsets();
+}
+
+// Host labels sit just outside the donut ring. Donut outer radius depends on
+// the current zoom (see donutOuterRadius), so the label y offset has to track
+// that — otherwise at fit-zoom-out the wide donut overlaps the hostname text
+// and at zoom-in the label sits unnecessarily far away.
+function refreshHostLabelOffsets(): void {
+    if (!svgEl.value) return;
+    const labelY = donutOuterRadius(currentZoomK) + 5;
     select(svgEl.value)
-        .selectAll<SVGPathElement, DonutArc>('g.donut path')
-        .attr('d', (a) => arc(a) ?? '');
+        .selectAll<SVGTextElement, FNode>('g.node text.node-label')
+        .filter((d) => d.nodeType === 'host')
+        .attr('y', labelY);
 }
 
 function applyLod(): void {
@@ -1047,10 +1165,10 @@ function flushZoomTransform(): void {
         lodLow = newLow;
         applyLod();
     }
-    if (Math.abs(t.k - currentZoomK) > 0.05) {
-        currentZoomK = t.k;
-        refreshDonutWidths();
-    }
+    currentZoomK = t.k;
+    // Donut widths and host-label offsets are refreshed on zoom end, not per
+    // frame — rebinding 500+ donut path d-attributes mid-zoom is the main
+    // source of stutter on dense boards.
 }
 
 // Reset auto-fit when switching boards
@@ -1102,7 +1220,7 @@ function bfsLevels(topoNodes: TopologyNode[]): Map<string, number> {
 }
 
 // ---- Zoom controls ----
-function fitView() {
+function fitView({ animated = true }: { animated?: boolean } = {}) {
     const svg = svgEl.value;
     if (!svg || !zoomBeh || !lastFNodes.length) return;
     const W = svg.clientWidth || 900;
@@ -1117,10 +1235,13 @@ function fitView() {
     const scale = Math.min(3, Math.max(0.15, Math.min(W / (maxX - minX), H / (maxY - minY))));
     const tx = W / 2 - scale * ((minX + maxX) / 2);
     const ty = H / 2 - scale * ((minY + maxY) / 2);
-    select(svg)
-        .transition()
-        .duration(500)
-        .call(zoomBeh.transform, zoomIdentity.translate(tx, ty).scale(scale));
+    const target = zoomIdentity.translate(tx, ty).scale(scale);
+    const sel = select(svg);
+    if (animated) {
+        sel.transition().duration(400).call(zoomBeh.transform, target);
+    } else {
+        sel.call(zoomBeh.transform, target);
+    }
 }
 
 function zoomIn() {
@@ -1182,6 +1303,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 if (simulation && simulation.alpha() > simulation.alphaMin()) {
                     simulation.restart();
                 }
+            })
+            .on('end.refresh-donut', () => {
+                // Reapply donut widths and host-label offsets once after the
+                // zoom gesture finishes; doing it per-frame stutters at scale.
+                refreshDonutWidths();
             })
             .on('zoom', (event) => {
                 pendingZoomTransform = event.transform;
@@ -1276,6 +1402,74 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         }
     }
 
+    // Synthetic site root nodes: when the topology is flat (no real parent
+    // hierarchy), surface a per-site root node above the host disk so the
+    // operator can see "X hosts on site Y" at a glance. The root is anchored
+    // to a fixed Y above the phyllotaxis disk; the host anchor positions stay
+    // in their severity-spiral slots, so the visual structure becomes a
+    // labeled umbrella rather than a tall chain.
+    //
+    // Single-site Checkmk setups don't tag rows with site_id (the federated
+    // multisite path does), so fall back to the connection id so the operator
+    // still sees a labeled root.
+    const SITE_Y_OFFSET = -1500;
+    // "Mostly flat" instead of strict every() — a handful of cross-cluster
+    // parent links (e.g. a probe host pointing at one peer) shouldn't disable
+    // the site umbrella for the remaining hundreds of independent hosts.
+    const rootCount = topoNodes.filter((n) => n.parents.length === 0).length;
+    const isMostlyFlat = topoNodes.length > 0 && rootCount / topoNodes.length >= 0.9;
+    function siteIdFor(n: TopologyNode): string {
+        return n.site_id || props.connectionId;
+    }
+    const siteIds: string[] = [];
+    if (isMostlyFlat) {
+        const seen = new Set<string>();
+        for (const n of topoNodes) {
+            const sid = siteIdFor(n);
+            if (seen.has(sid)) continue;
+            seen.add(sid);
+            siteIds.push(sid);
+        }
+    }
+    const siteSpread = Math.max(0, (siteIds.length - 1) * 600);
+    siteIds.forEach((sid, i) => {
+        const id = `__site__::${sid}`;
+        const xTarget =
+            siteIds.length === 1 ? 0 : -siteSpread / 2 + (i * siteSpread) / (siteIds.length - 1);
+        const cached = nodeCache.get(id);
+        const node: FNode = cached
+            ? { ...cached, nodeType: 'site', state: 'UP', siteId: sid }
+            : {
+                  id,
+                  state: 'UP',
+                  output: '',
+                  bfsLevel: 0,
+                  nodeType: 'site',
+                  siteId: sid,
+              };
+        node.fx = xTarget;
+        node.fy = SITE_Y_OFFSET;
+        node.x = xTarget;
+        node.y = SITE_Y_OFFSET;
+        nodeCache.set(id, node);
+        fNodes.push(node);
+    });
+
+    // Severity-based concentric ring pre-layout for hosts that don't have
+    // cached positions — gives the operator a glance-readable arrangement
+    // (problems clustered toward the center) before the force simulation has
+    // settled. The pre-layout positions are then used as anchors below so
+    // forceX/forceY pull each host back toward its severity ring instead of
+    // the simulation flattening everything into a wide ellipse.
+    preLayoutHosts(fNodes.filter((n) => n.nodeType === 'host' && n.x === undefined));
+    const anchorX = new Map<string, number>();
+    const anchorY = new Map<string, number>();
+    for (const n of fNodes) {
+        if (n.nodeType !== 'host') continue;
+        anchorX.set(n.id, n.x ?? 0);
+        anchorY.set(n.id, n.y ?? 0);
+    }
+
     // Remove stale cached nodes
     const activeIds = new Set(fNodes.map((n) => n.id));
     for (const k of nodeCache.keys()) {
@@ -1295,6 +1489,20 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                     source: src,
                     target: tgt,
                     sourceState: src.state,
+                    isServiceLink: false,
+                });
+        }
+    }
+    // Site-to-host links (only when synthetic site roots are active)
+    if (siteIds.length > 0) {
+        for (const n of topoNodes) {
+            const src = nodeById.get(`__site__::${siteIdFor(n)}`);
+            const tgt = nodeById.get(n.name);
+            if (src && tgt)
+                fLinks.push({
+                    source: src,
+                    target: tgt,
+                    sourceState: 'UP',
                     isServiceLink: false,
                 });
         }
@@ -1395,7 +1603,12 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // --- Update simulation ---
     if (simulation) simulation.stop();
 
-    const hostLinks = fLinks.filter((l) => !l.isServiceLink);
+    // Site-to-host links are visual only — they'd pull hosts toward the fixed
+    // site root and undo the severity disk. Render them as lines but skip in
+    // forceLink.
+    const hostLinks = fLinks.filter(
+        (l) => !l.isServiceLink && (l.source as FNode).nodeType !== 'site',
+    );
 
     simulation = forceSimulation<FNode>(fNodes)
         .force(
@@ -1415,21 +1628,29 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             'charge',
             // Only host nodes attract/repel each other; service and "+more"
             // pseudo-nodes are positioned geometrically by the layout helpers,
-            // so applying charge to them just burns ticks at O(N log N).
+            // so applying charge to them just burns ticks at O(N log N). On
+            // flat topologies (no BFS hierarchy) the severity-ring pre-layout
+            // already spreads hosts evenly, so charge is suppressed there —
+            // otherwise the all-to-all repulsion wins against the anchor and
+            // flattens the rings into a wide ellipse.
             forceManyBody<FNode>().strength((d) => {
                 if (d.nodeType !== 'host') return 0;
+                if (maxLvl === 0) return 0;
                 const N = servicesByHost.get(d.id)?.length ?? 0;
                 return N > 0 ? -Math.max(700, layoutR(N) * 9) : -600;
             }),
         )
         .force(
             'center',
-            forceX<FNode>(0).strength((d) => (d.nodeType === 'host' ? 0.05 : 0)),
+            forceX<FNode>((d) => (d.nodeType === 'host' ? (anchorX.get(d.id) ?? 0) : 0)).strength(
+                (d) => (d.nodeType === 'host' ? 0.18 : 0),
+            ),
         )
         .force(
             'collide',
             forceCollide<FNode>((d) => {
                 if (d.nodeType === 'service') return 0;
+                if (d.nodeType === 'site') return 70;
                 const svcs = servicesByHost.get(d.id) ?? [];
                 const N = svcs.length;
                 if (N === 0 || !needsServices(props.serviceLayout)) {
@@ -1449,9 +1670,16 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         )
         .force(
             'y',
-            forceY<FNode>((d) => (d.bfsLevel - maxLvl / 2) * vSpacing).strength((d) =>
-                d.nodeType === 'service' ? 0 : 0.4,
-            ),
+            // For real BFS hierarchies (maxLvl > 0) keep the layered look; for
+            // flat topologies anchor each host to its severity-ring slot so the
+            // pre-layout's glance-readable structure survives the force pass.
+            maxLvl > 0
+                ? forceY<FNode>((d) => (d.bfsLevel - maxLvl / 2) * vSpacing).strength((d) =>
+                      d.nodeType === 'service' ? 0 : 0.4,
+                  )
+                : forceY<FNode>((d) =>
+                      d.nodeType === 'host' ? (anchorY.get(d.id) ?? 0) : 0,
+                  ).strength((d) => (d.nodeType === 'host' ? 0.18 : 0)),
         )
         // Faster alpha decay shortens the visible 13 FPS phase on dense boards
         // by ending the simulation sooner; the default velocityDecay 0.4 is kept
@@ -1485,10 +1713,23 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     const linkEnter = linkSel.enter().append('line');
     const linkMerge = linkEnter
         .merge(linkSel)
-        .attr('stroke', (d) => stateColor((d.source as FNode).state))
-        .attr('stroke-opacity', (d) => (d.isServiceLink ? 0.3 : 0.45))
-        .attr('stroke-width', (d) => (d.isServiceLink ? 1 : 1.5))
-        .attr('stroke-dasharray', (d) => (d.isServiceLink ? '3,3' : null));
+        .attr('stroke', (d) => {
+            const src = d.source as FNode;
+            if (src.nodeType === 'site') return 'rgba(160,160,170,0.25)';
+            return stateColor(src.state);
+        })
+        .attr('stroke-opacity', (d) => {
+            if ((d.source as FNode).nodeType === 'site') return 0.3;
+            return d.isServiceLink ? 0.3 : 0.45;
+        })
+        .attr('stroke-width', (d) => {
+            if ((d.source as FNode).nodeType === 'site') return 0.6;
+            return d.isServiceLink ? 1 : 1.5;
+        })
+        .attr('stroke-dasharray', (d) => {
+            if ((d.source as FNode).nodeType === 'site') return '2,3';
+            return d.isServiceLink ? '3,3' : null;
+        });
 
     // --- Nodes ---
     const gNodes = gZoom.select<SVGGElement>('g.nodes');
@@ -1500,10 +1741,18 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .append('g')
         .attr('class', 'node')
         .attr('cursor', (d) => {
+            if (d.nodeType === 'site') return 'pointer';
             if (d.nodeType === 'host' && !props.readonly) return 'grab';
             return props.clickAction === 'none' ? 'default' : 'pointer';
         })
         .on('click', (event: MouseEvent, d) => {
+            // Site root opens an aggregated drawer; no shift-select / context
+            // menu since site-level bulk ops aren't a thing.
+            if (d.nodeType === 'site') {
+                hoverMenu.visible = false;
+                openDetail(boardObjectFromFNode(d), objectStateFromFNode(d));
+                return;
+            }
             if (props.clickAction === 'none') return;
             // Shift-click toggles multi-select. Modifier (Ctrl/Cmd) keeps the
             // legacy "open in Checkmk" behavior. Plain click opens the in-app
@@ -1521,6 +1770,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             openDetail(boardObjectFromFNode(d), objectStateFromFNode(d));
         })
         .on('contextmenu', (event: MouseEvent, d) => {
+            if (d.nodeType === 'site') return;
             event.preventDefault();
             hoverMenu.visible = false;
             contextMenu.object = boardObjectFromFNode(d);
@@ -1530,6 +1780,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             contextMenu.visible = true;
         })
         .on('mouseenter', (event: MouseEvent, d) => {
+            if (d.nodeType === 'site') return;
             const nodeRect = (event.currentTarget as SVGGElement).getBoundingClientRect();
             hoverMenu.object = boardObjectFromFNode(d);
             hoverMenu.state = objectStateFromFNode(d);
@@ -1546,6 +1797,44 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     if (!props.readonly) {
         nodeEnter.filter((d) => d.nodeType === 'host').call(dragBehavior as never);
     }
+
+    // Site root nodes (synthetic): rounded rect with site name.
+    const siteEnter = nodeEnter.filter((d) => d.nodeType === 'site');
+    const SITE_RECT_W = 110;
+    const SITE_RECT_H = 36;
+    siteEnter
+        .append('rect')
+        .attr('x', -SITE_RECT_W / 2)
+        .attr('y', -SITE_RECT_H / 2)
+        .attr('width', SITE_RECT_W)
+        .attr('height', SITE_RECT_H)
+        .attr('rx', 8)
+        .attr('fill', 'var(--bg-surface)')
+        .attr('stroke', 'var(--text-muted)')
+        .attr('stroke-width', 1.5);
+    siteEnter
+        .append('text')
+        .attr('class', 'type-char')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .attr('fill', 'var(--text-muted)')
+        .attr('font-size', 9)
+        .attr('font-weight', '600')
+        .attr('letter-spacing', '0.08em')
+        .attr('pointer-events', 'none')
+        .attr('y', -8)
+        .text('SITE');
+    siteEnter
+        .append('text')
+        .attr('class', 'node-label')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .attr('font-size', 13)
+        .attr('font-weight', '700')
+        .attr('pointer-events', 'none')
+        .style('fill', 'var(--text)')
+        .attr('y', 6)
+        .text((d) => d.siteId ?? '');
 
     // Host nodes
     const hostEnter = nodeEnter.filter((d) => d.nodeType === 'host');
@@ -1575,7 +1864,9 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .attr('font-weight', '500')
         .attr('pointer-events', 'none')
         .style('fill', 'var(--text)')
-        .attr('y', NODE_R + 5);
+        // y is recomputed by refreshHostLabelOffsets() to clear the donut ring;
+        // start with the worst-case offset so the first paint never overlaps.
+        .attr('y', NODE_R + DONUT_MAX_WIDTH + 5);
 
     // Service nodes
     const svcEnter = nodeEnter.filter((d) => d.nodeType === 'service');
@@ -1682,6 +1973,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             const parts = d.id.split('::');
             return parts[parts.length - 1];
         }
+        if (d.nodeType === 'site') return d.siteId ?? '';
         return d.id;
     });
     // Refresh service / more-label visibility — may change when switching layout or on re-render
@@ -1738,12 +2030,13 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // Reapply LoD so newly entered service / "+more" nodes pick up the
     // current zoom-driven display state.
     applyLod();
+    refreshHostLabelOffsets();
     applyFilterOpacity();
     applySelectionStyles();
 
     // F1: don't synchronously tick(250) — that blocks the main thread for
     // hundreds of ms at scale. Let the simulation converge asynchronously and
-    // defer the initial fit until it has settled enough.
+    // refine the fit once it has settled.
     const isInitial = !_hasFitOnce;
     simulation
         .on('tick', ticked)
@@ -1751,18 +2044,21 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .restart();
     if (isInitial) {
         _hasFitOnce = true;
-        // Wait for actual convergence (`end` fires when alpha < alphaMin) so the
-        // layout has spread to its final size before we measure its bounds. The
-        // tick cap is a safety net for runs that never settle on huge boards.
+        // Pre-layout already arranged hosts in a severity spiral, so an
+        // immediate (un-animated) fit gives the operator structure on first
+        // paint instead of a 4-6s wait for simulation.end.
+        fitView({ animated: false });
+        // Refine the fit once collide/charge have spread overlapping nodes.
+        // Lower tick cap because pre-layout starts close to the steady state.
         let fitFired = false;
         const fireFit = (): void => {
             if (fitFired) return;
             fitFired = true;
             simulation?.on('tick.fit', null);
             simulation?.on('end.fit', null);
-            fitView();
+            fitView({ animated: true });
         };
-        const maxTicks = needsServices(props.serviceLayout) ? 360 : 240;
+        const maxTicks = needsServices(props.serviceLayout) ? 90 : 60;
         let ticks = 0;
         simulation.on('end.fit', fireFit);
         simulation.on('tick.fit', () => {

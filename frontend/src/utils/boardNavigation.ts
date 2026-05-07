@@ -48,6 +48,12 @@ export function buildCheckmkUrl(obj: BoardObject, checkmkUrl: string | null): st
         p.po_aggr_expand = '1';
         return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
     }
+    if (obj.type === 'site' && obj.host_name) {
+        // Site root drills into the per-site host overview.
+        p.view_name = 'allhosts';
+        p.site = obj.host_name;
+        return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
+    }
     return null;
 }
 
