@@ -818,7 +818,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watchEffect } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -1349,8 +1349,14 @@ function onLatLng2DragEnd(id: string, lat: number, lng: number) {
 
 // ---- Map Settings ----
 
-const serviceLayout = ref<ServiceLayout>('donut');
+const SERVICE_LAYOUT_DEFAULT: ServiceLayout = 'donut';
+const serviceLayout = ref<ServiceLayout>(SERVICE_LAYOUT_DEFAULT);
 const serviceLayoutOpen = ref(false);
+
+watch(boardName, () => {
+    serviceLayout.value = SERVICE_LAYOUT_DEFAULT;
+    serviceLayoutOpen.value = false;
+});
 const serviceLayoutOptions = computed(() => [
     { value: 'off' as ServiceLayout, label: t('board.serviceLayoutOff') },
     { value: 'donut' as ServiceLayout, label: t('board.serviceLayoutDonut') },
