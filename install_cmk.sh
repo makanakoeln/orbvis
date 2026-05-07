@@ -53,7 +53,18 @@ if [[ -z "$SITE" ]] || [[ "$ACTION" != "install" && "$ACTION" != "remove" ]]; th
   exit 1
 fi
 
-[[ "$EUID" -eq 0 ]] && die "Run this script as a normal user, not as root."
+# Dual-mode: when invoked via `sudo deploy-cmc.sh` (EUID=0, NOPASSWD path),
+# run privileged commands directly. When invoked as a normal user, prefix
+# privileged steps with sudo and authenticate once up front.
+if [[ "$EUID" -eq 0 ]]; then
+  INVOKER="${SUDO_USER:-$(logname 2>/dev/null || true)}"
+  [[ -z "$INVOKER" || "$INVOKER" == "root" ]] && \
+    die "Cannot determine invoking user (SUDO_USER unset). Run via 'sudo $0 ...' from a normal user shell."
+  AS_ROOT=()
+else
+  AS_ROOT=("sudo")
+fi
+AS_SITE=("sudo" "-u" "$SITE")
 
 SITE_ROOT="/omd/sites/$SITE"
 [[ -d "$SITE_ROOT" ]] || die "OMD site '$SITE' not found."
@@ -77,14 +88,14 @@ DB_FILE="$ORBVIS_DIR/orbvis.db"
 # installs on this host (their .env may pin a port even while the site is
 # stopped) as well as anything currently bound in the live socket table.
 BACKEND_PORT=""
-if sudo test -f "$ENV_FILE" 2>/dev/null; then
-  BACKEND_PORT=$(sudo grep -E '^ORBVIS_PORT=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)
+if "${AS_ROOT[@]}" test -f "$ENV_FILE" 2>/dev/null; then
+  BACKEND_PORT=$("${AS_ROOT[@]}" grep -E '^ORBVIS_PORT=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)
 fi
 if [[ -z "$BACKEND_PORT" ]]; then
   declare -A RESERVED_PORTS=()
   for envf in /omd/sites/*/local/share/orbvis/.env; do
     [[ -f "$envf" && "$envf" != "$ENV_FILE" ]] || continue
-    p=$(sudo grep -E '^ORBVIS_PORT=' "$envf" 2>/dev/null | head -1 | cut -d= -f2- || true)
+    p=$("${AS_ROOT[@]}" grep -E '^ORBVIS_PORT=' "$envf" 2>/dev/null | head -1 | cut -d= -f2- || true)
     [[ -n "$p" ]] && RESERVED_PORTS[$p]=1
   done
   BACKEND_PORT=8420
@@ -109,7 +120,7 @@ INIT_SCRIPT="$SITE_ROOT/etc/init.d/orbvis"
 # Prerequisites
 # ---------------------------------------------------------------------------
 NPM=""
-if [[ ! -d "$SCRIPT_DIR/htdocs" ]]; then
+if [[ ! -d "$SCRIPT_DIR/htdocs" && "${ORBVIS_SKIP_BUILD:-0}" != "1" ]]; then
   NPM="$(command -v npm 2>/dev/null || true)"
   if [[ -z "$NPM" ]]; then
     case "$OS_FAMILY" in
@@ -137,7 +148,7 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "sudo is required for privileged steps. You may be prompted for your password."
-sudo -v
+[[ "$EUID" -ne 0 ]] && sudo -v
 
 # ---------------------------------------------------------------------------
 # REMOVE
@@ -147,17 +158,17 @@ if [[ "$ACTION" == "remove" ]]; then
   : > "$LOG_FILE"
 
   step "Stopping OrbVis backend"
-  quietly sudo -u "$SITE" omd stop orbvis 2>/dev/null || true
+  quietly "${AS_SITE[@]}" omd stop orbvis 2>/dev/null || true
   ok "Backend stopped"
 
   step "Removing files"
-  quietly sudo rm -f "$APACHE_CONF" "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis"
-  quietly sudo -u "$SITE" "$PYTHON3" -m pip uninstall -y orbvis-cmk 2>/dev/null || true
-  quietly sudo rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$CMK_PLUGINS_DST" "$DB_FILE" "$ENV_FILE" "$CONNECTIONS_FILE"
+  quietly "${AS_ROOT[@]}" rm -f "$APACHE_CONF" "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis"
+  quietly "${AS_SITE[@]}" "$PYTHON3" -m pip uninstall -y orbvis-cmk 2>/dev/null || true
+  quietly "${AS_ROOT[@]}" rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$CMK_PLUGINS_DST" "$DB_FILE" "$ENV_FILE" "$CONNECTIONS_FILE"
   ok "Files removed"
 
   step "Reloading Apache"
-  quietly sudo omd reload "$SITE" apache
+  quietly "${AS_ROOT[@]}" omd reload "$SITE" apache
   ok "Apache reloaded"
 
   echo ""
@@ -180,63 +191,69 @@ echo "  URL:     https://$(hostname -f 2>/dev/null || hostname)$BASE_PATH/"
 # 1. Frontend
 if [[ -d "$SCRIPT_DIR/htdocs" ]]; then
   step "Deploying pre-built frontend"
-  quietly sudo rm -rf "$HTDOCS_DIR"
-  quietly sudo mkdir -p "$HTDOCS_DIR"
-  quietly sudo cp -r "$SCRIPT_DIR/htdocs/." "$HTDOCS_DIR/"
+  quietly "${AS_ROOT[@]}" rm -rf "$HTDOCS_DIR"
+  quietly "${AS_ROOT[@]}" mkdir -p "$HTDOCS_DIR"
+  quietly "${AS_ROOT[@]}" cp -r "$SCRIPT_DIR/htdocs/." "$HTDOCS_DIR/"
   ok "Frontend deployed"
+elif [[ "${ORBVIS_SKIP_BUILD:-0}" == "1" && -d "$SCRIPT_DIR/frontend/dist" ]]; then
+  step "Deploying pre-built frontend dist"
+  quietly "${AS_ROOT[@]}" rm -rf "$HTDOCS_DIR"
+  quietly "${AS_ROOT[@]}" mkdir -p "$HTDOCS_DIR"
+  quietly "${AS_ROOT[@]}" cp -r "$SCRIPT_DIR/frontend/dist/." "$HTDOCS_DIR/"
+  ok "Frontend deployed (pre-built)"
 else
   step "Building frontend"
   cd "$SCRIPT_DIR/frontend"
   quietly "$NPM" install
   quietly "$NPM" run build -- --base="$BASE_PATH/"
-  quietly sudo rm -rf "$HTDOCS_DIR"
-  quietly sudo mkdir -p "$HTDOCS_DIR"
-  quietly sudo cp -r "$SCRIPT_DIR/frontend/dist/." "$HTDOCS_DIR/"
+  quietly "${AS_ROOT[@]}" rm -rf "$HTDOCS_DIR"
+  quietly "${AS_ROOT[@]}" mkdir -p "$HTDOCS_DIR"
+  quietly "${AS_ROOT[@]}" cp -r "$SCRIPT_DIR/frontend/dist/." "$HTDOCS_DIR/"
   ok "Frontend built and deployed"
 fi
 
 # 2. Data directories + demo boards
 step "Setting up data directories"
 IMAGES_DIR="$(dirname "$BOARDS_DIR")/images"
-quietly sudo mkdir -p "$BOARDS_DIR/backgrounds" "$IMAGES_DIR"
+quietly "${AS_ROOT[@]}" mkdir -p "$BOARDS_DIR/backgrounds" "$IMAGES_DIR"
 # Only seed demo boards on a truly fresh install (no existing *.json in BOARDS_DIR)
 if compgen -G "$BOARDS_DIR/*.json" > /dev/null; then
   ok "Directories ready (existing boards detected, skipping demo seed)"
 else
   NEW_BOARDS=0
   for demo in "$SCRIPT_DIR/backend/app/_seed_boards/"demo*.json; do
-    quietly sudo cp "$demo" "$BOARDS_DIR/$(basename "$demo")"
+    quietly "${AS_ROOT[@]}" cp "$demo" "$BOARDS_DIR/$(basename "$demo")"
     (( NEW_BOARDS++ )) || true
   done
-  if ! sudo test -f "$BOARDS_DIR/backgrounds/demo.svg"; then
-    quietly sudo cp "$SCRIPT_DIR/backend/app/_seed_boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
+  if ! "${AS_ROOT[@]}" test -f "$BOARDS_DIR/backgrounds/demo.svg"; then
+    quietly "${AS_ROOT[@]}" cp "$SCRIPT_DIR/backend/app/_seed_boards/backgrounds/demo.svg" "$BOARDS_DIR/backgrounds/demo.svg"
   fi
   ok "Directories ready ($NEW_BOARDS demo board(s) installed)"
 fi
 
 # 3. Python virtualenv + dependencies
 step "Setting up Python environment"
-if sudo test -d "$VENV_DIR"; then
+if "${AS_ROOT[@]}" test -d "$VENV_DIR"; then
   ok "Virtualenv already exists, skipping creation"
 else
-  quietly sudo "$PYTHON3" -m venv --symlinks "$VENV_DIR"
+  quietly "${AS_ROOT[@]}" "$PYTHON3" -m venv --symlinks "$VENV_DIR"
 fi
 # Ensure venv python3 is a symlink so the OMD Python's RPATH is preserved.
 # When venv copies the binary instead of symlinking, libpython3.13 can't be
 # found at runtime because the relative RPATH no longer resolves correctly.
 if [[ ! -L "$VENV_DIR/bin/python3" ]]; then
-  quietly sudo ln -sf "$PYTHON3" "$VENV_DIR/bin/python3"
+  quietly "${AS_ROOT[@]}" ln -sf "$PYTHON3" "$VENV_DIR/bin/python3"
 fi
-if ! sudo test -f "$VENV_DIR/bin/pip"; then
+if ! "${AS_ROOT[@]}" test -f "$VENV_DIR/bin/pip"; then
   # CMK 2.5+ builds Python without ensurepip wheel; bootstrap pip from site
-  quietly sudo "$SITE_ROOT/bin/pip3" install --prefix="$VENV_DIR" pip \
+  quietly "${AS_ROOT[@]}" "$SITE_ROOT/bin/pip3" install --prefix="$VENV_DIR" pip \
     || die "Cannot install pip into virtualenv (tried $SITE_ROOT/bin/pip3)."
 fi
 step "Installing backend dependencies"
-quietly sudo "$VENV_DIR/bin/pip" install --quiet --upgrade pip
+quietly "${AS_ROOT[@]}" "$VENV_DIR/bin/pip" install --quiet --upgrade pip
 # rsync rather than cp -r so dev artefacts (backends.json, connections.json,
 # *.db, boards/) from the source checkout never leak into the installed copy.
-quietly sudo rsync -a --delete \
+quietly "${AS_ROOT[@]}" rsync -a --delete \
   --exclude='backends.json' \
   --exclude='connections.json' \
   --exclude='boards/' \
@@ -248,22 +265,22 @@ quietly sudo rsync -a --delete \
   --exclude='.pytest_cache' \
   --exclude='.mypy_cache' \
   "$SCRIPT_DIR/backend/" "$ORBVIS_DIR/src/"
-quietly sudo cp "$SCRIPT_DIR/VERSION" "$ORBVIS_DIR/VERSION"
-quietly sudo cp "$SCRIPT_DIR/CHANGELOG.md" "$ORBVIS_DIR/CHANGELOG.md"
-quietly sudo "$VENV_DIR/bin/pip" install --quiet -e "$ORBVIS_DIR/src"
+quietly "${AS_ROOT[@]}" cp "$SCRIPT_DIR/VERSION" "$ORBVIS_DIR/VERSION"
+quietly "${AS_ROOT[@]}" cp "$SCRIPT_DIR/CHANGELOG.md" "$ORBVIS_DIR/CHANGELOG.md"
+quietly "${AS_ROOT[@]}" "$VENV_DIR/bin/pip" install --quiet -e "$ORBVIS_DIR/src"
 # Clean up dev artefacts that earlier installs may have left behind in src/.
-quietly sudo rm -f "$ORBVIS_DIR/src/backends.json" "$ORBVIS_DIR/src/connections.json"
+quietly "${AS_ROOT[@]}" rm -f "$ORBVIS_DIR/src/backends.json" "$ORBVIS_DIR/src/connections.json"
 ok "Backend dependencies installed"
 
 # 4. Configuration
 step "Writing configuration"
 EXISTING_SECRET=""
-if sudo test -f "$ENV_FILE"; then
-  EXISTING_SECRET=$(sudo grep -E '^SECRET_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)
+if "${AS_ROOT[@]}" test -f "$ENV_FILE"; then
+  EXISTING_SECRET=$("${AS_ROOT[@]}" grep -E '^SECRET_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)
 fi
 SECRET_KEY="${EXISTING_SECRET:-$("$PYTHON3" -c 'import secrets; print(secrets.token_hex(32))')}"
 
-sudo tee "$ENV_FILE" > /dev/null <<EOF
+"${AS_ROOT[@]}" tee "$ENV_FILE" > /dev/null <<EOF
 BOARDS_DIR=$BOARDS_DIR
 CONNECTIONS_FILE=$CONNECTIONS_FILE
 DATABASE_URL=sqlite+aiosqlite:///$DB_FILE
@@ -275,10 +292,10 @@ CHECKMK_SITE=$SITE
 ORBVIS_PORT=$BACKEND_PORT
 EOF
 
-if sudo test -f "$CONNECTIONS_FILE"; then
+if "${AS_ROOT[@]}" test -f "$CONNECTIONS_FILE"; then
   ok "Configuration written (existing connections.json kept)"
 else
-  sudo tee "$CONNECTIONS_FILE" > /dev/null <<EOF
+  "${AS_ROOT[@]}" tee "$CONNECTIONS_FILE" > /dev/null <<EOF
 [
   {
     "id": "live_1",
@@ -339,7 +356,7 @@ Alias /$SITE/orbvis/api/swagger-ui $SWAGGER_UI_DIR
   SWAGGER_UI_PROXYBYPASS="ProxyPass        /$SITE/orbvis/api/swagger-ui  !"
 fi
 
-sudo tee "$APACHE_CONF" > /dev/null <<EOF
+"${AS_ROOT[@]}" tee "$APACHE_CONF" > /dev/null <<EOF
 # OrbVis – static frontend + backend proxy
 # Auto-generated by install_cmk.sh
 
@@ -406,7 +423,7 @@ ok "Apache configuration written"
 
 # 6. OMD init script
 step "Registering OrbVis as OMD service"
-sudo tee "$INIT_SCRIPT" > /dev/null <<EOF
+"${AS_ROOT[@]}" tee "$INIT_SCRIPT" > /dev/null <<EOF
 #!/bin/bash
 # OMD init script for OrbVis backend
 
@@ -471,31 +488,31 @@ case "\$1" in
     ;;
 esac
 EOF
-quietly sudo chmod +x "$INIT_SCRIPT"
-quietly sudo ln -sf "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis"
+quietly "${AS_ROOT[@]}" chmod +x "$INIT_SCRIPT"
+quietly "${AS_ROOT[@]}" ln -sf "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis"
 ok "OrbVis registered as OMD service"
 
 # 7. Checkmk GUI plugins
 step "Installing Checkmk GUI plugins"
-quietly sudo mkdir -p "$CMK_PLUGINS_DST"
-quietly sudo cp -r "$CMK_PLUGINS_SRC/." "$CMK_PLUGINS_DST/"
-quietly sudo chown -R "$SITE:$SITE" "$CMK_PLUGINS_DST"
-quietly sudo -u "$SITE" "$PYTHON3" -m pip install --quiet -e "$CMK_PLUGINS_DST"
+quietly "${AS_ROOT[@]}" mkdir -p "$CMK_PLUGINS_DST"
+quietly "${AS_ROOT[@]}" cp -r "$CMK_PLUGINS_SRC/." "$CMK_PLUGINS_DST/"
+quietly "${AS_ROOT[@]}" chown -R "$SITE:$SITE" "$CMK_PLUGINS_DST"
+quietly "${AS_SITE[@]}" "$PYTHON3" -m pip install --quiet -e "$CMK_PLUGINS_DST"
 ok "Checkmk GUI plugins installed"
 
 # 8. Ownership
 step "Setting file permissions"
-quietly sudo chown -R "$SITE:$SITE" "$ORBVIS_DIR"
+quietly "${AS_ROOT[@]}" chown -R "$SITE:$SITE" "$ORBVIS_DIR"
 ok "Permissions set"
 
 # 9. Start services
 step "Restarting Apache"
-quietly sudo omd restart "$SITE" apache
+quietly "${AS_ROOT[@]}" omd restart "$SITE" apache
 ok "Apache restarted"
 
 step "Starting OrbVis backend"
 cd /tmp
-quietly sudo -u "$SITE" omd restart orbvis
+quietly "${AS_SITE[@]}" omd restart orbvis
 ok "OrbVis backend started"
 
 # ---------------------------------------------------------------------------
