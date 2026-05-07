@@ -160,6 +160,7 @@ export default {
                 'Service-Details für die {shown} von {total} am stärksten betroffenen Hosts werden gezeigt — übrige Hosts sind als Donut aggregiert',
             largeBoardHint: 'Fan/Orbit/Row aggregieren bei >200 Hosts identisch wie Donut',
             searchPlaceholder: 'Hosts/Services filtern…',
+            problemsOnlyToggle: 'Nur Hosts mit Problemen anzeigen',
         },
     },
     boardSettings: {

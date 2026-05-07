@@ -159,6 +159,7 @@ export default {
             largeBoardHint:
                 'Fan/Orbit/Row aggregate identically to Donut on boards with >200 hosts',
             searchPlaceholder: 'Filter hosts/services…',
+            problemsOnlyToggle: 'Show only hosts with problems',
         },
     },
     boardSettings: {

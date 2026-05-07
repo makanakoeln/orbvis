@@ -98,6 +98,27 @@
             >
                 ×
             </button>
+            <button
+                type="button"
+                class="flow-search__toggle"
+                :class="{ 'flow-search__toggle--active': stateFilter === 'problems' }"
+                :title="t('board.flow.problemsOnlyToggle')"
+                @click="stateFilter = stateFilter === 'problems' ? 'all' : 'problems'"
+            >
+                <svg
+                    style="width: 12px; height: 12px"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                    />
+                </svg>
+            </button>
         </div>
 
         <button
@@ -443,10 +464,23 @@ const needsServiceDetail = computed(() => needsServices(props.serviceLayout));
 
 // Free-text filter: dim (don't hide) nodes that don't match so the spatial
 // context is preserved. Hiding would re-trigger force-collide and rearrange
-// the whole board on every keystroke.
+// the whole board on every keystroke. State filter dims healthy hosts/services
+// so the operator sees only what needs attention.
+type StateFilter = 'all' | 'problems';
 const filterText = ref('');
+const stateFilter = ref<StateFilter>('all');
 const filterNeedle = computed(() => filterText.value.trim().toLowerCase());
+
+function nodeHasProblem(d: FNode): boolean {
+    if (d.nodeType === 'host') {
+        if (!HEALTHY_HOST_STATES.has(d.state)) return true;
+        return worstServiceState(d) !== null;
+    }
+    return d.state !== 'OK' && d.state !== 'PENDING';
+}
+
 function nodeMatchesFilter(d: FNode): boolean {
+    if (stateFilter.value === 'problems' && !nodeHasProblem(d)) return false;
     const needle = filterNeedle.value;
     if (!needle) return true;
     if (d.id.toLowerCase().includes(needle)) return true;
@@ -455,7 +489,9 @@ function nodeMatchesFilter(d: FNode): boolean {
     return false;
 }
 
-watch(filterText, () => {
+const filterIsActive = computed(() => stateFilter.value !== 'all' || filterNeedle.value.length > 0);
+
+watch([filterText, stateFilter], () => {
     if (svgEl.value) applyFilterOpacity();
 });
 
@@ -464,7 +500,7 @@ let filterOpacityActive = false;
 function applyFilterOpacity(): void {
     if (!svgEl.value) return;
     const sel = select(svgEl.value);
-    if (!filterNeedle.value) {
+    if (!filterIsActive.value) {
         if (!filterOpacityActive) return;
         filterOpacityActive = false;
         sel.selectAll('g.node, g.links line').attr('opacity', 1);
@@ -1560,5 +1596,30 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
 
 .flow-search__clear:hover {
     color: var(--text);
+}
+
+.flow-search__toggle {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.flow-search__toggle:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+}
+
+.flow-search__toggle--active {
+    color: var(--color-yellow-50, #fbbf24);
+    border-color: var(--color-yellow-50, #fbbf24);
+    background: rgb(251 191 36 / 12%);
 }
 </style>
