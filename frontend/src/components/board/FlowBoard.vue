@@ -68,7 +68,7 @@
             </button>
         </div>
 
-        <div v-if="!loading && !error" class="flow-search">
+        <div v-if="!loading && !error && !detailObject" class="flow-search">
             <svg
                 style="width: 12px; height: 12px"
                 fill="none"
@@ -165,8 +165,13 @@
             :checkmk-url="props.checkmkUrl ?? null"
             @close="closeDetail"
             @acknowledge="onDetailAck"
+            @remove-ack="onDetailRemoveAck"
             @schedule-downtime="onDetailDowntime"
+            @remove-downtime="onDetailRemoveDowntime"
             @force-check="onDetailForceCheck"
+            @add-comment="onDetailAddComment"
+            @enable-notifications="onDetailToggleNotifications(true)"
+            @disable-notifications="onDetailToggleNotifications(false)"
         />
 
         <div v-if="selectedIds.size > 0" class="bulk-actions">
@@ -399,11 +404,34 @@ function worstServiceState(d: FNode): string | null {
 }
 
 function hostHalo(d: FNode): { stroke: string; width: number } {
-    if (!HEALTHY_HOST_STATES.has(d.state)) return { stroke: HALO_DEFAULT_STROKE, width: 1.5 };
+    const isTopK = topKWorstIds.value.has(d.id);
+    if (!HEALTHY_HOST_STATES.has(d.state)) {
+        return isTopK
+            ? { stroke: stateColor(d.state), width: 4 }
+            : { stroke: HALO_DEFAULT_STROKE, width: 1.5 };
+    }
     const worst = worstServiceState(d);
     if (!worst) return { stroke: HALO_DEFAULT_STROKE, width: 1.5 };
-    return { stroke: stateColor(worst), width: 2.5 };
+    return { stroke: stateColor(worst), width: isTopK ? 4 : 2.5 };
 }
+
+function problemScoreFromTopo(n: TopologyNode): number {
+    const hostPenalty = HEALTHY_HOST_STATES.has(n.state) ? 0 : 100;
+    const s = n.services_summary;
+    if (!s) return hostPenalty;
+    return hostPenalty + s.critical * 4 + s.warning * 2 + s.unknown * 2;
+}
+
+const TOP_K_LIMIT = 5;
+const TOP_K_THRESHOLD = 50;
+const topKWorstIds = computed<Set<string>>(() => {
+    if (nodes.value.length < TOP_K_THRESHOLD) return new Set();
+    const scored = nodes.value
+        .map((n) => ({ id: n.name, score: problemScoreFromTopo(n) }))
+        .filter((s) => s.score > 0)
+        .sort((a, b) => b.score - a.score);
+    return new Set(scored.slice(0, TOP_K_LIMIT).map((s) => s.id));
+});
 
 function donutSegments(n: TopologyNode): DonutSegment[] {
     const s = n.services_summary;
@@ -472,6 +500,83 @@ function clearSelection(): void {
 // custom properties aren't available there without a getComputedStyle hop.
 const SELECTION_STROKE = 'rgb(255, 215, 3)';
 
+function attachLasso(svg: SVGSVGElement): void {
+    let startX = 0;
+    let startY = 0;
+    let lassoEl: SVGRectElement | null = null;
+    let active = false;
+
+    const onPointerDown = (event: PointerEvent) => {
+        if (!event.shiftKey || event.button !== 0) return;
+        const target = event.target as Element;
+        if (target.closest('g.node')) return;
+        active = true;
+        const rect = svg.getBoundingClientRect();
+        startX = event.clientX - rect.left;
+        startY = event.clientY - rect.top;
+        lassoEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        lassoEl.setAttribute('fill', 'rgba(255,215,3,0.08)');
+        lassoEl.setAttribute('stroke', 'rgb(255,215,3)');
+        lassoEl.setAttribute('stroke-dasharray', '4 4');
+        lassoEl.setAttribute('pointer-events', 'none');
+        svg.appendChild(lassoEl);
+        svg.setPointerCapture(event.pointerId);
+        event.preventDefault();
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+        if (!active || !lassoEl) return;
+        const rect = svg.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const minX = Math.min(startX, x);
+        const minY = Math.min(startY, y);
+        const w = Math.abs(x - startX);
+        const h = Math.abs(y - startY);
+        lassoEl.setAttribute('x', String(minX));
+        lassoEl.setAttribute('y', String(minY));
+        lassoEl.setAttribute('width', String(w));
+        lassoEl.setAttribute('height', String(h));
+    };
+
+    const onPointerUp = (event: PointerEvent) => {
+        if (!active) return;
+        active = false;
+        svg.releasePointerCapture(event.pointerId);
+        const rect = svg.getBoundingClientRect();
+        const endX = event.clientX - rect.left;
+        const endY = event.clientY - rect.top;
+        const minX = Math.min(startX, endX);
+        const minY = Math.min(startY, endY);
+        const maxX = Math.max(startX, endX);
+        const maxY = Math.max(startY, endY);
+        if (lassoEl) {
+            lassoEl.remove();
+            lassoEl = null;
+        }
+        // Trivial 4-px box = treat as missed-click, do nothing
+        if (maxX - minX < 4 && maxY - minY < 4) return;
+        select(svg)
+            .selectAll<SVGGElement, FNode>('g.node')
+            .each(function (d) {
+                const r = (this as SVGGElement).getBoundingClientRect();
+                const cx = r.x + r.width / 2 - rect.left;
+                const cy = r.y + r.height / 2 - rect.top;
+                if (cx >= minX && cx <= maxX && cy >= minY && cy <= maxY) {
+                    selectedIds.value.add(d.id);
+                    selectedFNodes.set(d.id, d);
+                }
+            });
+        selectedIds.value = new Set(selectedIds.value);
+        applySelectionStyles();
+    };
+
+    svg.addEventListener('pointerdown', onPointerDown);
+    svg.addEventListener('pointermove', onPointerMove);
+    svg.addEventListener('pointerup', onPointerUp);
+    svg.addEventListener('pointercancel', onPointerUp);
+}
+
 function applySelectionStyles(): void {
     if (!svgEl.value) return;
     select(svgEl.value)
@@ -528,11 +633,23 @@ function closeDetail(): void {
 function onDetailAck(): void {
     objectActions.handlers.acknowledge(detailObject.value);
 }
+function onDetailRemoveAck(): void {
+    objectActions.handlers.removeAck(detailObject.value);
+}
 function onDetailDowntime(): void {
     objectActions.handlers.scheduleDowntime(detailObject.value);
 }
+function onDetailRemoveDowntime(): void {
+    objectActions.handlers.removeDowntime(detailObject.value);
+}
 function onDetailForceCheck(): void {
     objectActions.handlers.forceCheck(detailObject.value);
+}
+function onDetailAddComment(): void {
+    objectActions.handlers.addComment(detailObject.value);
+}
+function onDetailToggleNotifications(enable: boolean): void {
+    objectActions.handlers.toggleNotifications(detailObject.value, enable);
 }
 
 function onDocumentClick(): void {
@@ -1048,6 +1165,12 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         (el.node() as SVGSVGElement & { __zoom_attached?: boolean }).__zoom_attached = true;
         zoomBeh = zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.15, 3])
+            // Shift+drag is reserved for lasso multi-select; let the lasso
+            // listener handle those events instead of panning.
+            .filter((event) => {
+                if (event.type === 'mousedown' && event.shiftKey) return false;
+                return !event.button || event.button === 0;
+            })
             // Freeze the force simulation while the user actively pans/zooms,
             // resume it on release if it still had energy left. Otherwise tick
             // handlers run alongside transform updates and the combined
@@ -1067,6 +1190,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 }
             });
         el.call(zoomBeh);
+        attachLasso(svg);
         // Center immediately so nodes don't flash at top-left on first render
         el.call(zoomBeh.transform, zoomIdentity.translate(W / 2, H / 2));
     }

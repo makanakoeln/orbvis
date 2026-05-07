@@ -84,14 +84,54 @@
             >
                 {{ t('board.detailDrawer.openInCheckmk') }}
             </a>
-            <button type="button" class="detail-drawer__btn" @click="emit('acknowledge')">
+            <button
+                v-if="!state?.acknowledged && isProblematic"
+                type="button"
+                class="detail-drawer__btn"
+                @click="emit('acknowledge')"
+            >
                 {{ t('contextMenu.acknowledge') }}
+            </button>
+            <button
+                v-if="state?.acknowledged"
+                type="button"
+                class="detail-drawer__btn"
+                @click="emit('remove-ack')"
+            >
+                {{ t('contextMenu.removeAck') }}
             </button>
             <button type="button" class="detail-drawer__btn" @click="emit('schedule-downtime')">
                 {{ t('contextMenu.scheduleDowntime') }}
             </button>
+            <button
+                v-if="state?.in_downtime"
+                type="button"
+                class="detail-drawer__btn"
+                @click="emit('remove-downtime')"
+            >
+                {{ t('contextMenu.removeDowntime') }}
+            </button>
             <button type="button" class="detail-drawer__btn" @click="emit('force-check')">
                 {{ t('contextMenu.forceCheck') }}
+            </button>
+            <button type="button" class="detail-drawer__btn" @click="emit('add-comment')">
+                {{ t('contextMenu.addComment') }}
+            </button>
+            <button
+                v-if="state?.notifications_enabled !== false"
+                type="button"
+                class="detail-drawer__btn"
+                @click="emit('disable-notifications')"
+            >
+                {{ t('contextMenu.disableNotifications') }}
+            </button>
+            <button
+                v-else
+                type="button"
+                class="detail-drawer__btn"
+                @click="emit('enable-notifications')"
+            >
+                {{ t('contextMenu.enableNotifications') }}
             </button>
         </footer>
     </div>
@@ -115,9 +155,17 @@ const props = defineProps<{
 const emit = defineEmits<{
     close: [];
     acknowledge: [];
+    'remove-ack': [];
     'schedule-downtime': [];
+    'remove-downtime': [];
     'force-check': [];
+    'add-comment': [];
+    'enable-notifications': [];
+    'disable-notifications': [];
 }>();
+
+const PROBLEM_STATES = new Set(['CRITICAL', 'WARNING', 'UNKNOWN', 'DOWN', 'UNREACHABLE']);
+const isProblematic = computed(() => (props.state ? PROBLEM_STATES.has(props.state.state) : false));
 
 const { t } = useI18n();
 
@@ -379,9 +427,14 @@ const modifiers = computed<Modifier[]>(() => {
 
 .detail-drawer__btn--primary {
     flex-basis: 100%;
-    background: var(--accent, #4ade80);
-    color: var(--bg);
-    border-color: var(--accent, #4ade80);
+    background: var(--bg-hover);
+    color: var(--text);
+    border-color: var(--text-muted);
     font-weight: var(--font-weight-semibold);
+}
+
+.detail-drawer__btn--primary:hover {
+    background: var(--bg);
+    border-color: var(--text);
 }
 </style>
