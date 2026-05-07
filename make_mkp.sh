@@ -355,9 +355,13 @@ setup)
   # Checkmk 2.6+ ships a sitecustomize.py that imports cmk.licensing.* whenever
   # OMD_ROOT is set. Inside a venv `sys.executable` points at the venv binary,
   # so sitecustomize cannot derive the OMD lib path on its own — we have to
-  # surface $OMD_ROOT/lib/python3 via PYTHONPATH for both venv creation and
-  # every subsequent invocation of the venv python (see init script below).
-  export PYTHONPATH="$ROOT/lib/python3${PYTHONPATH:+:$PYTHONPATH}"
+  # surface OMD's module paths via PYTHONPATH for both venv creation and every
+  # subsequent invocation of the venv python (see init script below).
+  #
+  # 2.5 and older ship cmk.* modules under $ROOT/lib/python3.
+  # 2.6 moved cmk-licensing (and friends) to $ROOT/lib/pythonX.Y/site-packages.
+  PY_XY="$("$PYTHON3" -c 'import sys; print(f"python{sys.version_info.major}.{sys.version_info.minor}")')"
+  export PYTHONPATH="$ROOT/lib/$PY_XY/site-packages:$ROOT/lib/python3${PYTHONPATH:+:$PYTHONPATH}"
 
   if [[ ! -d "$VENV_DIR" ]]; then
     "$PYTHON3" -m venv --symlinks "$VENV_DIR"
@@ -485,8 +489,11 @@ VENV="$VENV_DIR"
 ENV_FILE="$ENV_FILE"
 
 # Checkmk 2.6+ sitecustomize imports cmk.licensing.* on every Python start;
-# the venv python does not see \$OMD_ROOT/lib/python3 unless we add it.
-export PYTHONPATH="\$OMD_ROOT/lib/python3\${PYTHONPATH:+:\$PYTHONPATH}"
+# the venv python does not see OMD's module paths unless we add them. 2.5
+# ships cmk.* under lib/python3, 2.6 moved cmk-licensing into the version-
+# specific site-packages — surface both so either layout works.
+PY_XY="\$("\$VENV/bin/python3" -c 'import sys; print(f"python{sys.version_info.major}.{sys.version_info.minor}")')"
+export PYTHONPATH="\$OMD_ROOT/lib/\$PY_XY/site-packages:\$OMD_ROOT/lib/python3\${PYTHONPATH:+:\$PYTHONPATH}"
 
 case "\$1" in
   start)
