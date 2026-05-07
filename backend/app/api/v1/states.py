@@ -21,6 +21,7 @@ from app.api.v1.deps import get_current_user
 from app.api.v1.types import BoardName
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.core.middleware import is_same_origin
 from app.core.ratelimit import ws_connect_limiter
 from app.core.websocket import manager
 from app.integrations import checkmk as _cmk_integration
@@ -226,11 +227,15 @@ async def websocket_board_states(
         return
     ws_connect_limiter.record(client_ip)
 
-    # Origin guard: browsers don't enforce same-origin on WebSocket, so a hostile
-    # cross-origin page could still open a stream. Server-side check uses the
-    # same allowlist as CORS. Non-browser clients (no Origin header) are allowed.
+    # Origin guard: browsers don't enforce same-origin on WS, so block hostile
+    # cross-origin pages. Same-origin or explicit allowlist; missing header =
+    # non-browser client.
     origin = websocket.headers.get("origin")
-    if origin and origin not in settings.allowed_origins:
+    if (
+        origin
+        and origin not in settings.allowed_origins
+        and not is_same_origin(origin, websocket.scope.get("headers", []))
+    ):
         await websocket.close(code=_WS_CLOSE_AUTH_FAILED)
         return
 

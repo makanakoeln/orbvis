@@ -69,3 +69,25 @@ async def test_login_exempt_from_csrf_origin_check(client, admin_user):
         headers={"Cookie": "something=irrelevant"},
     )
     assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_cookie_authed_mutation_accepted_when_same_origin(client):
+    """Same-origin (Origin's host == X-Forwarded-Host) is safe even if the
+    Origin string is not literally listed in ALLOWED_ORIGINS — covers OMD
+    deployments where the site-FQDN can't be enumerated up-front. The CSRF
+    middleware must let the request through; auth then rejects it because
+    the cookie is forged. The pre-fix behaviour was a hard 403 from the
+    middleware before auth could even look at the request."""
+    response = await client.post(
+        "/api/v1/boards",
+        json={"name": "csrf-same-origin", "alias": "x"},
+        headers={
+            "Cookie": "auth_demo=forged-session-value",
+            "Origin": "https://orbvis.example.com",
+            "X-Forwarded-Host": "orbvis.example.com",
+        },
+    )
+    # Same-origin → CSRF middleware lets it through; downstream auth rejects
+    # the forged cookie with 401 (not 403, which is the CSRF middleware's code).
+    assert response.status_code == 401

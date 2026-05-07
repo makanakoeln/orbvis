@@ -6,7 +6,44 @@ inspection can short-circuit without materialising a Request object.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from urllib.parse import urlsplit
+
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+
+def _host_only(value: str) -> str:
+    """First entry of an X-Forwarded-Host chain, port stripped, lowercased."""
+    first = value.split(",", 1)[0].strip()
+    if first.startswith("["):
+        end = first.find("]")
+        return first[: end + 1].lower() if end >= 0 else first.lower()
+    return first.rsplit(":", 1)[0].lower() if ":" in first else first.lower()
+
+
+def is_same_origin(origin: str, raw_headers: Iterable[tuple[bytes, bytes]]) -> bool:
+    """True when ``Origin``'s host matches the request's authoritative host.
+
+    Reverse-proxy aware: ``X-Forwarded-Host`` wins over ``Host`` because the
+    latter typically carries the upstream port (``127.0.0.1:8422``) once the
+    request lands at the backend. ASGI scope header names are lowercased
+    bytes per the ASGI spec, so no case folding is needed here.
+    """
+    origin_host = urlsplit(origin).hostname
+    if not origin_host:
+        return False
+    fwd = ""
+    host = ""
+    for name, value in raw_headers:
+        if name == b"x-forwarded-host" and not fwd:
+            fwd = value.decode("latin-1")
+        elif name == b"host" and not host:
+            host = value.decode("latin-1")
+        if fwd and host:
+            break
+    if fwd and _host_only(fwd) == origin_host:
+        return True
+    return bool(host) and _host_only(host) == origin_host
 
 
 class SecurityHeadersMiddleware:
@@ -102,7 +139,7 @@ class CSRFOriginMiddleware:
             return
 
         origin = headers.get(b"origin", b"").decode("latin-1")
-        if origin and origin in self._allowed:
+        if origin and (origin in self._allowed or is_same_origin(origin, scope.get("headers", []))):
             await self.app(scope, receive, send)
             return
 

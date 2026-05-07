@@ -122,3 +122,47 @@ def test_ws_accepts_no_origin_header(admin_user, monkeypatch):
         ws.send_text(json.dumps({"type": "not-auth"}))
         with pytest.raises(WebSocketDisconnect):
             ws.receive_text()
+
+
+def test_ws_accepts_same_origin_via_host_header(admin_user):
+    """Same-origin connects (Origin's host == request Host) bypass the explicit
+    allowlist. Real-world scenario: backend deployed under OMD where the
+    site-FQDN can't easily be enumerated up-front in ALLOWED_ORIGINS."""
+    with _ws_client().websocket_connect(
+        "/api/v1/ws/boards/demo",
+        headers={"origin": "https://orbvis.example.com", "host": "orbvis.example.com"},
+    ) as ws:
+        ws.send_text(json.dumps({"type": "not-auth"}))
+        with pytest.raises(WebSocketDisconnect):
+            ws.receive_text()
+
+
+def test_ws_accepts_same_origin_via_x_forwarded_host(admin_user):
+    """Behind a reverse proxy that rewrites Host (ProxyPreserveHost off), the
+    original client-facing host arrives in X-Forwarded-Host. Same-origin must
+    still match against that header."""
+    with _ws_client().websocket_connect(
+        "/api/v1/ws/boards/demo",
+        headers={
+            "origin": "https://orbvis.example.com",
+            "host": "127.0.0.1:8422",
+            "x-forwarded-host": "orbvis.example.com",
+        },
+    ) as ws:
+        ws.send_text(json.dumps({"type": "not-auth"}))
+        with pytest.raises(WebSocketDisconnect):
+            ws.receive_text()
+
+
+def test_ws_rejects_origin_mismatched_with_host(admin_user):
+    """Cross-origin attack: malicious page on evil.com with a forged Host
+    header still mismatches Origin's host. Reject."""
+    with pytest.raises(WebSocketDisconnect):
+        with _ws_client().websocket_connect(
+            "/api/v1/ws/boards/demo",
+            headers={
+                "origin": "https://evil.example.com",
+                "host": "orbvis.example.com",
+            },
+        ):
+            pass
