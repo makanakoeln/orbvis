@@ -2,7 +2,7 @@
     <div
         ref="canvasEl"
         class="relative select-none bg-[var(--bg)]"
-        :class="[placing ? 'cursor-crosshair' : '', bgImageSize ? 'w-full h-full' : '']"
+        :class="placing ? 'cursor-crosshair' : ''"
         :style="canvasStyle"
         :data-native-width="bgImageSize?.width"
         :data-native-height="bgImageSize?.height"
@@ -35,11 +35,7 @@
         </svg>
 
         <!-- SVG overlay for lines -->
-        <svg
-            class="absolute inset-0 w-full h-full"
-            :viewBox="bgImageSize ? `0 0 ${bgImageSize.width} ${bgImageSize.height}` : undefined"
-            :preserveAspectRatio="bgImageSize ? 'none' : undefined"
-        >
+        <svg class="absolute inset-0 w-full h-full">
             <BoardLine
                 v-for="line in lineObjects"
                 :key="line.id"
@@ -293,20 +289,21 @@ watch(
     { immediate: true },
 );
 
-const canvasWidth = computed(() =>
-    props.config.objects.reduce(
+const canvasWidth = computed(() => {
+    const fromObjects = props.config.objects.reduce(
         (m, o) => Math.max(m, o.x + (o.type === 'graph' ? (o.graph_width ?? 400) : 150)),
         800,
-    ),
-);
-const canvasHeight = computed(() =>
-    props.config.objects.reduce(
+    );
+    return Math.max(fromObjects, bgImageSize.value?.width ?? 0);
+});
+const canvasHeight = computed(() => {
+    const fromObjects = props.config.objects.reduce(
         (m, o) => Math.max(m, o.y + (o.type === 'graph' ? (o.graph_height ?? 200) : 150)),
         600,
-    ),
-);
+    );
+    return Math.max(fromObjects, bgImageSize.value?.height ?? 0);
+});
 
-// Canvas style: with background → fill parent absolutely; without → fixed pixel size
 const canvasStyle = computed(() => {
     const bg = props.config.background_image;
     const url = bgImageUrl.value;
@@ -314,20 +311,13 @@ const canvasStyle = computed(() => {
         minWidth: `max(${canvasWidth.value}px, 100%)`,
         minHeight: `max(${canvasHeight.value}px, 100%)`,
     };
-    if (bg && bgImageSize.value) {
-        return {
-            backgroundImage: `url(${url})`,
-            backgroundRepeat: 'no-repeat',
-            backgroundSize: '100% 100%',
-        };
-    }
     if (bg && !bgImageFailed.value) {
-        // Image still loading — reserve pixel space so SVG overlay doesn't collapse
         return {
             ...pixelSize,
             backgroundImage: `url(${url})`,
             backgroundRepeat: 'no-repeat',
-            backgroundSize: '100% 100%',
+            backgroundSize: 'auto',
+            backgroundPosition: 'top left',
         };
     }
     return pixelSize;
@@ -352,16 +342,6 @@ function objectWrapperStyle(obj: BoardObjectType) {
           : 'default';
     const zIndex = _dragId.value === obj.id ? 100 : (obj.z ?? 1);
 
-    if (bgImageSize.value) {
-        // Percentage positions relative to native image dimensions
-        return {
-            left: `${(pos.x / bgImageSize.value.width) * 100}%`,
-            top: `${(pos.y / bgImageSize.value.height) * 100}%`,
-            transform: 'translate(-50%, -50%)',
-            cursor,
-            zIndex,
-        };
-    }
     return {
         left: `${pos.x}px`,
         top: `${pos.y}px`,
@@ -629,17 +609,9 @@ function closeMenus() {
 function getMapPosition(event: MouseEvent): { x: number; y: number } {
     if (!canvasEl.value) return { x: 0, y: 0 };
     const rect = canvasEl.value.getBoundingClientRect();
-    if (bgImageSize.value) {
-        // Canvas fills container — convert screen coords to native image coords
-        return {
-            x: ((event.clientX - rect.left) / rect.width) * bgImageSize.value.width,
-            y: ((event.clientY - rect.top) / rect.height) * bgImageSize.value.height,
-        };
-    }
-    const parent = canvasEl.value.parentElement!;
     return {
-        x: event.clientX - rect.left + parent.scrollLeft,
-        y: event.clientY - rect.top + parent.scrollTop,
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
     };
 }
 

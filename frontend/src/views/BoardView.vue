@@ -360,8 +360,7 @@
             <!-- Static map -->
             <div
                 v-else
-                class="flex-1 bg-[var(--bg)] relative"
-                :class="boardConfig?.background_image ? 'overflow-hidden' : 'overflow-auto'"
+                class="flex-1 bg-[var(--bg)] relative overflow-auto"
                 @click="onContainerClick"
             >
                 <div
