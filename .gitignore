@@ -54,6 +54,7 @@ sbom-*.cdx.json
 .playwright-mcp/
 frontend/*.cfg
 docs/frontend-coverage-plan.md
+reports/
 
 # Allow curated docs assets
 !docs/screenshots/*.png
