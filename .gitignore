@@ -32,6 +32,8 @@ frontend/coverage/
 
 # Dev helpers
 start.sh
+deploy-cmc.sh
+deploy-omd.sh
 
 # IDE
 .idea/
