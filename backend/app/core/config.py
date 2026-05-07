@@ -4,7 +4,7 @@ import logging
 import secrets
 from typing import Literal, Self
 
-from pydantic import computed_field, field_validator, model_validator
+from pydantic import Field, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     # the OR-filter against the services table cheap on multi-hundred-host
     # installations.
     flow_board_top_affected_hosts: int = 25
+
+    # Bulk-services query chunk size: split top-K host lookups into N parallel
+    # smaller queries instead of one big OR-filter. Cheaper per-query latency
+    # on cold sites, plus a single hung host only stalls its own chunk.
+    flow_board_bulk_service_chunk_size: int = Field(default=5, ge=1)
 
     # Background warmup loop interval in seconds: pre-fetches a cheap topology
     # query against every registered connection so the livestatus socket pool

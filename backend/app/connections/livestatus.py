@@ -1507,21 +1507,32 @@ class LivestatusConnection(ConnectionBase):
     async def get_hosts_services_batch(self, hostnames: list[str]) -> dict[str, list[ServiceRow]]:
         if not hostnames:
             return {}
-        filters = "".join(f"Filter: host_name = {_ls_escape(h)}\n" for h in hostnames)
-        if len(hostnames) > 1:
-            filters += f"Or: {len(hostnames)}\n"
-        rows = await self._query(
-            f"GET services\nColumns: host_name description state plugin_output\n{filters}"
-        )
-        results: dict[str, list[ServiceRow]] = {h: [] for h in hostnames}
-        for r in rows:
-            results[_row_str(r, 0)].append(
-                ServiceRow(
-                    name=_row_str(r, 1),
-                    state=_SERVICE_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
-                    output=_row_str(r, 3),
-                )
+        chunk_size = settings.flow_board_bulk_service_chunk_size
+
+        async def _query_chunk(hosts: list[str]) -> list[LivestatusRow]:
+            filters = "".join(f"Filter: host_name = {_ls_escape(h)}\n" for h in hosts)
+            if len(hosts) > 1:
+                filters += f"Or: {len(hosts)}\n"
+            return await self._query(
+                f"GET services\nColumns: host_name description state plugin_output\n{filters}"
             )
+
+        # Split top-K into smaller parallel queries: one slow host stalls only
+        # its own chunk, and several livestatus workers can serve the request
+        # concurrently up to ``connection_pool_size``.
+        chunks = [hostnames[i : i + chunk_size] for i in range(0, len(hostnames), chunk_size)]
+        chunk_results = await asyncio.gather(*(_query_chunk(c) for c in chunks))
+
+        results: dict[str, list[ServiceRow]] = {h: [] for h in hostnames}
+        for rows in chunk_results:
+            for r in rows:
+                results[_row_str(r, 0)].append(
+                    ServiceRow(
+                        name=_row_str(r, 1),
+                        state=_SERVICE_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
+                        output=_row_str(r, 3),
+                    )
+                )
         return results
 
     # ------------------------------------------------------------------
