@@ -22,6 +22,7 @@ class PerfometerSegmentOut(BaseModel):
 class PerfometerResultOut(BaseModel):
     label: str
     rows: list[list[PerfometerSegmentOut]]
+    pcts: list[float]
 
 
 @router.get("/metrics/perfometer", response_model=PerfometerResultOut | None)
@@ -52,4 +53,5 @@ async def get_perfometer(
             [PerfometerSegmentOut(pct=seg.pct, color=seg.color) for seg in row]
             for row in result.rows
         ],
+        pcts=result.pcts,
     )

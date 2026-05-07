@@ -226,6 +226,7 @@ export interface PerfometerSegment {
 export interface PerfometerResult {
     label: string;
     rows: PerfometerSegment[][];
+    pcts: number[];
 }
 
 export interface DowntimeEntry {

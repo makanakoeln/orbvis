@@ -29,6 +29,9 @@ class PerfometerSegment:
 class PerfometerResult:
     label: str
     rows: list[list[PerfometerSegment]]  # 1 row for simple, 2 for stacked/bidirectional
+    pcts: list[
+        float
+    ]  # raw side percentages: [pct] simple, [left, right] bi, [lower, upper] stacked
 
 
 # ---------------------------------------------------------------------------
@@ -384,8 +387,12 @@ def _compute_simple_side(
     perf: object,
     metrics: dict[str, _RawMetric],
     colors: dict[str, str],
-) -> tuple[float, str] | None:
-    """Return (pct, color) for a single Perfometer — not a full row."""
+) -> tuple[float, float, str] | None:
+    """Return (raw_pct, segment_pct, color) for a single Perfometer.
+
+    raw_pct is the true [0,100] utilization for label display.
+    segment_pct adds a 1% visual floor so non-zero fills don't vanish.
+    """
     names = _get_segment_names(getattr(perf, "segments", ()))
     present = [n for n in names if n in metrics]
     if not present:
@@ -398,52 +405,47 @@ def _compute_simple_side(
     upper = _resolve_bound(getattr(focus_range, "upper", None), metrics)
     if upper <= lower:
         return None
-    pct = min(100.0, max(0.0, (total - lower) / (upper - lower) * 100))
-    # Keep a tiny fill visible when the metric is non-zero — otherwise
-    # sub-percent values round down to 0 and vanish in the browser.
-    if total > 0 and pct < 1.0:
-        pct = 1.0
+    raw_pct = min(100.0, max(0.0, (total - lower) / (upper - lower) * 100))
+    segment_pct = 1.0 if total > 0 and raw_pct < 1.0 else raw_pct
     color = _metric_color(present[0], metrics[present[0]], colors)
-    return (round(pct, 1), color)
+    return (round(raw_pct, 2), round(segment_pct, 1), color)
 
 
 def _compute_simple_row(
     perf: object,
     metrics: dict[str, _RawMetric],
     colors: dict[str, str],
-) -> list[PerfometerSegment]:
+) -> tuple[list[PerfometerSegment], float] | None:
     side = _compute_simple_side(perf, metrics, colors)
     if side is None:
-        return []
-    pct, color = side
-    return [
-        PerfometerSegment(pct=pct, color=color),
-        PerfometerSegment(pct=round(100 - pct, 1), color=_REMAINDER_COLOR),
+        return None
+    raw_pct, segment_pct, color = side
+    row = [
+        PerfometerSegment(pct=segment_pct, color=color),
+        PerfometerSegment(pct=round(100 - segment_pct, 1), color=_REMAINDER_COLOR),
     ]
+    return (row, raw_pct)
 
 
 def _compute_bidirectional_row(
     perf: object,
     metrics: dict[str, _RawMetric],
     colors: dict[str, str],
-) -> list[PerfometerSegment] | None:
+) -> tuple[list[PerfometerSegment], float, float] | None:
     """Single-row layout: [empty_left, left_fill, right_fill, empty_right], each half = 50%."""
     left = _compute_simple_side(getattr(perf, "left", None), metrics, colors)
     right = _compute_simple_side(getattr(perf, "right", None), metrics, colors)
     if left is None or right is None:
         return None
-    left_pct, left_color = left
-    right_pct, right_color = right
-    empty_left = 50 - 50 * left_pct / 100
-    fill_left = 50 * left_pct / 100
-    fill_right = 50 * right_pct / 100
-    empty_right = 50 - 50 * right_pct / 100
-    return [
-        PerfometerSegment(pct=round(empty_left, 1), color=_REMAINDER_COLOR),
-        PerfometerSegment(pct=round(fill_left, 1), color=left_color),
-        PerfometerSegment(pct=round(fill_right, 1), color=right_color),
-        PerfometerSegment(pct=round(empty_right, 1), color=_REMAINDER_COLOR),
+    left_raw, left_seg, left_color = left
+    right_raw, right_seg, right_color = right
+    row = [
+        PerfometerSegment(pct=round(50 - 50 * left_seg / 100, 1), color=_REMAINDER_COLOR),
+        PerfometerSegment(pct=round(50 * left_seg / 100, 1), color=left_color),
+        PerfometerSegment(pct=round(50 * right_seg / 100, 1), color=right_color),
+        PerfometerSegment(pct=round(50 - 50 * right_seg / 100, 1), color=_REMAINDER_COLOR),
     ]
+    return (row, left_raw, right_raw)
 
 
 def _format_si(value: float, symbol: str) -> str:
@@ -582,32 +584,38 @@ def compute_perfometer(perf_data_str: str, check_command: str) -> PerfometerResu
             continue
 
         if isinstance(perf_def, pf_api.Perfometer):
-            row = _compute_simple_row(perf_def, metrics, plugins.colors)
-            if not row:
+            simple = _compute_simple_row(perf_def, metrics, plugins.colors)
+            if simple is None:
                 continue
+            row, pct = simple
             return PerfometerResult(
                 label=_label_from_segments(perf_def, metrics, plugins.units),
                 rows=[row],
+                pcts=[pct],
             )
 
         if isinstance(perf_def, pf_api.Bidirectional):
-            bi_row = _compute_bidirectional_row(perf_def, metrics, plugins.colors)
-            if bi_row is None:
+            bi = _compute_bidirectional_row(perf_def, metrics, plugins.colors)
+            if bi is None:
                 continue
+            row, left_pct, right_pct = bi
             left_label = _label_from_segments(perf_def.left, metrics, plugins.units)
             right_label = _label_from_segments(perf_def.right, metrics, plugins.units)
             return PerfometerResult(
                 label=" / ".join(filter(None, [left_label, right_label])),
-                rows=[bi_row],
+                rows=[row],
+                pcts=[left_pct, right_pct],
             )
 
         if isinstance(perf_def, pf_api.Stacked):
             rows = []
+            pcts = []
             for part in (perf_def.lower, perf_def.upper):
                 if _perfometer_matches(part, metrics):
-                    row = _compute_simple_row(part, metrics, plugins.colors)
-                    if row:
-                        rows.append(row)
+                    simple = _compute_simple_row(part, metrics, plugins.colors)
+                    if simple:
+                        rows.append(simple[0])
+                        pcts.append(simple[1])
             if rows:
                 labels = []
                 for part in (perf_def.lower, perf_def.upper):
@@ -616,6 +624,7 @@ def compute_perfometer(perf_data_str: str, check_command: str) -> PerfometerResu
                 return PerfometerResult(
                     label=" / ".join(filter(None, labels)),
                     rows=rows,
+                    pcts=pcts,
                 )
 
     return None

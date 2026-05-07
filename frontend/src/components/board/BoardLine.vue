@@ -201,7 +201,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 
 import { metricsApi } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
-import type { BoardObject, ObjectState } from '@/types/api';
+import type { BoardObject, ObjectState, PerfometerResult } from '@/types/api';
 import { getMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf';
 import { STATE_COLORS } from '@/utils/stateColors';
 
@@ -386,12 +386,13 @@ function _fmtMetric(m: ReturnType<typeof getMetric>): string {
     return _fmtSI(m.value, m.unit);
 }
 
-// CMK-formatted bandwidth strings via /metrics/perfometer (when host+service set).
-// The endpoint applies the proper Metric.unit (kbit/s, MiB/s, …) which the raw
-// perfdata doesn't carry. Falls back to client-side _fmtMetric on failure.
-const cmkPerfLabel = ref<string | null>(null);
+// CMK-formatted bandwidth strings & utilization via /metrics/perfometer (when
+// host+service set). The endpoint applies the proper Metric.unit (kbit/s, …)
+// and computes percentages from the plugin's focus_range — which the raw
+// perfdata's max field often doesn't carry for interface checks.
+const cmkPerfData = ref<PerfometerResult | null>(null);
 
-async function _fetchPerfometerLabel(): Promise<void> {
+async function _fetchPerfometer(): Promise<void> {
     if (
         !props.object.host_name ||
         !props.object.service_description ||
@@ -401,52 +402,64 @@ async function _fetchPerfometerLabel(): Promise<void> {
         return;
     }
     try {
-        const r = await metricsApi.getPerfometer(
+        cmkPerfData.value = await metricsApi.getPerfometer(
             props.connectionId,
             props.object.host_name,
             props.object.service_description,
             authStore.accessToken,
         );
-        cmkPerfLabel.value = r?.label ?? null;
     } catch {
-        cmkPerfLabel.value = null;
+        cmkPerfData.value = null;
     }
 }
 
 onMounted(() => {
-    if (showsPerfdataLabels.value) void _fetchPerfometerLabel();
+    if (showsPerfdataLabels.value) void _fetchPerfometer();
 });
 watch(
     () => props.state?.perf_data,
     () => {
-        if (showsPerfdataLabels.value) void _fetchPerfometerLabel();
+        if (showsPerfdataLabels.value) void _fetchPerfometer();
     },
 );
 
 // Split the perfometer label "in / out" into the two halves for separate
 // rendering on each side of the midpoint arrows.
 const cmkSplit = computed<[string | null, string | null]>(() => {
-    if (!cmkPerfLabel.value) return [null, null];
-    const parts = cmkPerfLabel.value.split(' / ');
+    const label = cmkPerfData.value?.label;
+    if (!label) return [null, null];
+    const parts = label.split(' / ');
     if (parts.length === 2) return [parts[0]?.trim() || null, parts[1]?.trim() || null];
-    return [cmkPerfLabel.value, null];
+    return [label, null];
 });
 
-// Format a label for the chosen perfdata mode. 'percent' prefers utilPercent
-// of the metric (matches the legacy ---%---><---%--- variant), 'bandwidth'
-// shows the raw value with units, 'both' combines them.
-function _fmtLabel(m: ReturnType<typeof getMetric>, cmkValue: string | null): string {
+const cmkPcts = computed<[number | null, number | null]>(() => {
+    const pcts = cmkPerfData.value?.pcts ?? [];
+    return [pcts[0] ?? null, pcts[1] ?? null];
+});
+
+// Format a label for the chosen perfdata mode. 'percent' prefers the CMK
+// perfometer utilization (uses plugin focus_range / interface speed), falling
+// back to client-side utilPercent which only works when perfdata has max set.
+function _fmtLabel(
+    m: ReturnType<typeof getMetric>,
+    cmkValue: string | null,
+    cmkPct: number | null,
+): string {
     if (!m) return '';
     const mode = props.object.line_perfdata_label ?? 'none';
     if (mode === 'none') return '';
-    if (mode === 'percent') return `${utilPercent(m).toFixed(0)}%`;
+    const pct = cmkPct ?? utilPercent(m);
+    if (mode === 'percent') return `${pct.toFixed(0)}%`;
     const value = cmkValue ?? _fmtMetric(m);
-    if (mode === 'both') return `${value} (${utilPercent(m).toFixed(0)}%)`;
+    if (mode === 'both') return `${value} (${pct.toFixed(0)}%)`;
     return value; // 'bandwidth'
 }
 
-const wmLabelIn = computed(() => _fmtLabel(wmMetricIn.value, cmkSplit.value[0]));
-const wmLabelOut = computed(() => _fmtLabel(wmMetricOut.value, cmkSplit.value[1]));
+const wmLabelIn = computed(() => _fmtLabel(wmMetricIn.value, cmkSplit.value[0], cmkPcts.value[0]));
+const wmLabelOut = computed(() =>
+    _fmtLabel(wmMetricOut.value, cmkSplit.value[1], cmkPcts.value[1]),
+);
 // Fallback: a single value below the midpoint when neither in/out has a real
 // metric to render but the mode is non-none — used as a state hint.
 const wmLabelSingle = computed(() => {
