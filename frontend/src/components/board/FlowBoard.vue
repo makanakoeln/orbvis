@@ -158,21 +158,23 @@
             :connection-id="props.connectionId"
         />
 
-        <DetailDrawer
-            v-if="detailObject"
-            :object="detailObject"
-            :state="detailState"
-            :checkmk-url="props.checkmkUrl ?? null"
-            @close="closeDetail"
-            @acknowledge="onDetailAck"
-            @remove-ack="onDetailRemoveAck"
-            @schedule-downtime="onDetailDowntime"
-            @remove-downtime="onDetailRemoveDowntime"
-            @force-check="onDetailForceCheck"
-            @add-comment="onDetailAddComment"
-            @enable-notifications="onDetailToggleNotifications(true)"
-            @disable-notifications="onDetailToggleNotifications(false)"
-        />
+        <Transition name="drawer-slide">
+            <DetailDrawer
+                v-if="detailObject"
+                :object="detailObject"
+                :state="detailState"
+                :checkmk-url="props.checkmkUrl ?? null"
+                @close="closeDetail"
+                @acknowledge="onDetailAck"
+                @remove-ack="onDetailRemoveAck"
+                @schedule-downtime="onDetailDowntime"
+                @remove-downtime="onDetailRemoveDowntime"
+                @force-check="onDetailForceCheck"
+                @add-comment="onDetailAddComment"
+                @enable-notifications="onDetailToggleNotifications(true)"
+                @disable-notifications="onDetailToggleNotifications(false)"
+            />
+        </Transition>
 
         <div v-if="selectedIds.size > 0" class="bulk-actions">
             <span class="bulk-actions__count">
@@ -654,17 +656,26 @@ async function bulkAction(
 }
 
 const detailObject = ref<BoardObject | null>(null);
-const detailState = ref<ObjectState | undefined>(undefined);
+const detailFNode = ref<FNode | null>(null);
+// Recompute the drawer body whenever topology changes — otherwise a site
+// drawer keeps showing the aggregate from the click moment, going stale on
+// active boards.
+const detailState = computed<ObjectState | undefined>(() => {
+    if (!detailFNode.value) return undefined;
+    // Touch nodes.value so the computed re-runs on every topology push.
+    void nodes.value;
+    return objectStateFromFNode(detailFNode.value);
+});
 
-function openDetail(obj: BoardObject, state: ObjectState | undefined): void {
+function openDetail(obj: BoardObject, fNode: FNode): void {
     detailObject.value = obj;
-    detailState.value = state;
+    detailFNode.value = fNode;
     closeContextMenu();
 }
 
 function closeDetail(): void {
     detailObject.value = null;
-    detailState.value = undefined;
+    detailFNode.value = null;
 }
 
 function onDetailAck(): void {
@@ -1028,14 +1039,22 @@ function siteHostsAggregate(siteId: string): {
 function objectStateFromFNode(d: FNode): ObjectState {
     if (d.nodeType === 'site') {
         const agg = siteHostsAggregate(d.siteId ?? '');
-        const worst =
-            agg.hostsDown > 0
-                ? 'DOWN'
-                : agg.summary.critical > 0
-                  ? 'CRITICAL'
-                  : agg.summary.warning > 0
-                    ? 'WARNING'
-                    : 'UP';
+        // Site state aggregation rules:
+        // - DOWN: every host on this site is DOWN/UNREACHABLE (site itself is offline)
+        // - CRITICAL: at least one host is DOWN/UNREACHABLE OR has critical services
+        // - WARNING: at least one warning/unknown service, no criticals
+        // - UP: everything is healthy
+        // A single down host out of hundreds shouldn't paint the whole site
+        // DOWN — that would mask the real picture during partial outages.
+        const allDown = agg.hostCount > 0 && agg.hostsDown + agg.hostsUnreachable === agg.hostCount;
+        const anyDown = agg.hostsDown + agg.hostsUnreachable > 0;
+        const worst = allDown
+            ? 'DOWN'
+            : anyDown || agg.summary.critical > 0
+              ? 'CRITICAL'
+              : agg.summary.warning > 0 || agg.summary.unknown > 0
+                ? 'WARNING'
+                : 'UP';
         return {
             object_id: d.id,
             type: 'site',
@@ -1132,6 +1151,7 @@ function refreshDonutWidths(): void {
     const sel = select(svgEl.value);
     sel.selectAll<SVGPathElement, DonutArc>('g.donut path').attr('d', (a) => arc(a) ?? '');
     refreshHostLabelOffsets();
+    refreshSiteScale();
 }
 
 // Host labels sit just outside the donut ring. Donut outer radius depends on
@@ -1145,6 +1165,22 @@ function refreshHostLabelOffsets(): void {
         .selectAll<SVGTextElement, FNode>('g.node text.node-label')
         .filter((d) => d.nodeType === 'host')
         .attr('y', labelY);
+}
+
+// Site root box scales up at low zoom so the label stays legible. At fit-zoom
+// (k≈0.25) the 110-px-wide rect would render as ~28px without this — too
+// small to read. At full zoom the scale stays 1 (no inflation).
+function siteScaleForZoom(zoomK: number): number {
+    const inv = 1 / Math.max(zoomK, 0.0001);
+    return Math.min(3.5, Math.max(1, inv));
+}
+function refreshSiteScale(): void {
+    if (!svgEl.value) return;
+    const scale = siteScaleForZoom(currentZoomK);
+    select(svgEl.value)
+        .selectAll<SVGGElement, FNode>('g.node')
+        .filter((d) => d.nodeType === 'site')
+        .attr('transform', (d) => `translate(${d.x ?? 0},${d.y ?? 0}) scale(${scale})`);
 }
 
 function applyLod(): void {
@@ -1281,6 +1317,26 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // --- Ensure static containers exist (created once) ---
     let gZoom = el.select<SVGGElement>('g.zoom-layer');
     if (gZoom.empty()) {
+        // Top-K glow filter: a soft outer halo on the worst-state hosts so
+        // they stand out at fit-zoom where stroke-width alone disappears.
+        const defs = el.append('defs');
+        const filter = defs
+            .append('filter')
+            .attr('id', 'top-k-glow')
+            .attr('x', '-50%')
+            .attr('y', '-50%')
+            .attr('width', '200%')
+            .attr('height', '200%');
+        filter
+            .append('feGaussianBlur')
+            .attr('in', 'SourceGraphic')
+            .attr('stdDeviation', 3)
+            .attr('result', 'blur');
+        const merge = filter.append('feMerge');
+        merge.append('feMergeNode').attr('in', 'blur');
+        merge.append('feMergeNode').attr('in', 'blur');
+        merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
         gZoom = el.append('g').attr('class', 'zoom-layer');
         gZoom.append('g').attr('class', 'links');
         gZoom.append('g').attr('class', 'nodes');
@@ -1422,7 +1478,10 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // parent links (e.g. a probe host pointing at one peer) shouldn't disable
     // the site umbrella for the remaining hundreds of independent hosts.
     const rootCount = topoNodes.filter((n) => n.parents.length === 0).length;
-    const isMostlyFlat = topoNodes.length > 0 && rootCount / topoNodes.length >= 0.9;
+    // 0.5 threshold: keep the site umbrella whenever the majority of hosts
+    // sit at the top — even with parent_child links between handful of
+    // hosts the umbrella still helps operators read the board.
+    const isMostlyFlat = topoNodes.length > 0 && rootCount / topoNodes.length >= 0.5;
     function siteIdFor(n: TopologyNode): string {
         return n.site_id || props.connectionId;
     }
@@ -1756,7 +1815,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             // menu since site-level bulk ops aren't a thing.
             if (d.nodeType === 'site') {
                 hoverMenu.visible = false;
-                openDetail(boardObjectFromFNode(d), objectStateFromFNode(d));
+                openDetail(boardObjectFromFNode(d), d);
                 return;
             }
             if (props.clickAction === 'none') return;
@@ -1773,7 +1832,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 return;
             }
             hoverMenu.visible = false;
-            openDetail(boardObjectFromFNode(d), objectStateFromFNode(d));
+            openDetail(boardObjectFromFNode(d), d);
         })
         .on('contextmenu', (event: MouseEvent, d) => {
             if (d.nodeType === 'site') return;
@@ -1939,11 +1998,21 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     nodeMerge.select('circle').attr('fill', (d) => stateColor(d.state));
     nodeMerge
         .filter((d) => d.nodeType === 'host')
-        .select<SVGCircleElement>('circle')
         .each(function (d) {
+            const circle = (this as SVGGElement).querySelector('circle');
+            if (!circle) return;
             const halo = hostHalo(d);
-            this.setAttribute('stroke', halo.stroke);
-            this.setAttribute('stroke-width', String(halo.width));
+            circle.setAttribute('stroke', halo.stroke);
+            circle.setAttribute('stroke-width', String(halo.width));
+            // Top-K glow filter is anchored on the host group (not the circle)
+            // so the worst-N hosts are visually unmissable even at fit-zoom
+            // where stroke width alone collapses to <1 screen pixel.
+            const isTopK = topKWorstIds.value.has(d.id);
+            if (isTopK) {
+                (this as SVGGElement).setAttribute('filter', 'url(#top-k-glow)');
+            } else {
+                (this as SVGGElement).removeAttribute('filter');
+            }
         });
 
     // Donut update — bind aggregated services_summary as proportional arcs on
@@ -2003,7 +2072,14 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             .attr('stroke', (d) => stateColor((d.source as FNode).state));
 
         nodeMerge
-            .attr('transform', (d) => `translate(${_coord(d.x)},${_coord(d.y)})`)
+            .attr('transform', (d) => {
+                const x = _coord(d.x);
+                const y = _coord(d.y);
+                if (d.nodeType === 'site') {
+                    return `translate(${x},${y}) scale(${siteScaleForZoom(currentZoomK)})`;
+                }
+                return `translate(${x},${y})`;
+            })
             .select('circle')
             .attr('fill', (d) => stateColor(d.state));
     }
@@ -2037,6 +2113,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // current zoom-driven display state.
     applyLod();
     refreshHostLabelOffsets();
+    refreshSiteScale();
     applyFilterOpacity();
     applySelectionStyles();
 

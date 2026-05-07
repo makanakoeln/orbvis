@@ -333,6 +333,18 @@ const checkInfoRows = computed<MetaRow[]>(() => {
     }
 }
 
+/* Vue <Transition name="drawer-slide"> applies these classes on close so the
+ * drawer slides out instead of vanishing. The mount-time slide-in is still
+ * driven by the keyframe above. */
+.drawer-slide-leave-active.detail-drawer {
+    transition: transform 0.18s ease-in;
+    animation: none;
+}
+
+.drawer-slide-leave-to.detail-drawer {
+    transform: translateX(100%);
+}
+
 .detail-drawer__header {
     display: flex;
     align-items: center;
