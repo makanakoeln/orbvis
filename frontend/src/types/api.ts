@@ -93,6 +93,7 @@ export interface FlowView {
     top_affected_hosts?: number | null;
     max_services_per_host?: number | null;
     positions?: Record<string, FlowNodePosition>;
+    service_layout?: ServiceLayout | null;
 }
 export type BoardView = StaticView | WorldmapView | RadarView | FlowView;
 

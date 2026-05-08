@@ -51,37 +51,10 @@
                 class="flex items-center gap-[5px] shrink-0 transition-opacity"
                 :class="drawerObject ? 'opacity-40 hover:opacity-100' : ''"
             >
-                <!-- Flow problems pill -->
-                <button
-                    v-if="isFlowmap && flowProblems.total > 0 && serviceLayout === 'off'"
-                    type="button"
-                    class="flex items-center rounded-full text-xs font-medium ring-1 transition-all cursor-pointer"
-                    style="gap: 4px; padding: 2px 7px"
-                    :class="
-                        flowProblems.critical > 0
-                            ? 'bg-red-500/10 ring-red-500/30 text-red-300 hover:bg-red-500/20'
-                            : 'bg-amber-500/10 ring-amber-500/30 text-amber-300 hover:bg-amber-500/20'
-                    "
-                    :title="`${t('board.flow.issuesBanner', flowProblems)} — ${t('board.flow.offModeBannerCta')}`"
-                    @click="serviceLayout = 'donut'"
-                >
-                    <svg
-                        style="width: 10px; height: 10px"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2.5"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                        />
-                    </svg>
-                    {{ t('board.flow.problemsPill', flowProblems) }}
-                </button>
+                <!-- Flow problems pill (informational; layout switch lives in
+                     the dedicated bottom-right toggle, no need for a CTA here) -->
                 <span
-                    v-else-if="isFlowmap && flowProblems.total > 0"
+                    v-if="isFlowmap && flowProblems.total > 0"
                     class="flex items-center rounded-full text-xs font-medium ring-1"
                     style="gap: 4px; padding: 2px 7px"
                     :class="
@@ -426,7 +399,7 @@
                     :click-action="boardConfig.click_action"
                     :checkmk-url="checkmkUrl"
                     :flow-view="boardConfig.view.type === 'flow' ? boardConfig.view : null"
-                    @update:service-layout="serviceLayout = $event"
+                    @update:service-layout="onServiceLayoutChanged"
                     @update:problems="flowProblems = $event"
                     @drawer-object="flowDrawerObject = $event"
                     @positions-changed="onFlowPositionsChanged"
@@ -803,7 +776,7 @@
                                         : 'text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
                                 "
                                 @click="
-                                    serviceLayout = opt.value;
+                                    onServiceLayoutChanged(opt.value);
                                     serviceLayoutOpen = false;
                                 "
                             >
@@ -1538,7 +1511,7 @@ function onLatLng2DragEnd(id: string, lat: number, lng: number) {
 
 // ---- Map Settings ----
 
-const SERVICE_LAYOUT_DEFAULT: ServiceLayout = 'donut';
+const SERVICE_LAYOUT_DEFAULT: ServiceLayout = 'off';
 const serviceLayout = ref<ServiceLayout>(SERVICE_LAYOUT_DEFAULT);
 const serviceLayoutOpen = ref(false);
 
@@ -1565,23 +1538,43 @@ function closeAnyDrawer(): void {
     if (flowDrawerObject.value) flowBoardRef.value?.closeDetail();
 }
 
-async function onFlowPositionsChanged(
-    positions: Record<string, { x: number; y: number }>,
-): Promise<void> {
+async function persistFlowView(patch: Record<string, unknown>): Promise<void> {
     const cfg = boardConfig.value;
     if (!cfg || cfg.readonly) return;
     if (cfg.view.type !== 'flow') return;
     const token = auth.accessToken;
     if (!token) return;
-    const newView = { ...cfg.view, positions };
-    cfg.view = newView; // optimistic local update keeps the prop reactive
+    const newView = { ...cfg.view, ...patch };
+    cfg.view = newView;
     try {
         await boardsApi.update(cfg.name, { view: newView }, token);
     } catch (err) {
-        // Layout drag is low-stakes — log and let the next drag retry.
-        console.warn('Failed to persist flow positions:', err);
+        // Layout edits are low-stakes — log and let the next change retry.
+        console.warn('Failed to persist flow view:', err);
     }
 }
+
+function onFlowPositionsChanged(positions: Record<string, { x: number; y: number }>): void {
+    void persistFlowView({ positions });
+}
+
+function onServiceLayoutChanged(layout: ServiceLayout): void {
+    serviceLayout.value = layout;
+    void persistFlowView({ service_layout: layout });
+}
+
+// Hydrate the local serviceLayout ref from the persisted view whenever the
+// board config swaps. The watch on boardName below clears the ref before the
+// new board arrives, so this fires once the new boardConfig is in place.
+watch(
+    () => boardConfig.value?.view,
+    (view) => {
+        if (view?.type === 'flow' && view.service_layout) {
+            serviceLayout.value = view.service_layout;
+        }
+    },
+    { immediate: true },
+);
 
 watch(boardName, () => {
     serviceLayout.value = SERVICE_LAYOUT_DEFAULT;

@@ -175,6 +175,8 @@ class FlowView(BaseModel):
     # hosts fall back to the force-simulation layout. Service-node positions
     # are derived from their host and not persisted.
     positions: dict[str, FlowNodePosition] = Field(default_factory=dict)
+    # Service-node layout chosen by the operator. None = use UI default.
+    service_layout: Literal["off", "donut", "fan", "orbit", "row"] | None = None
 
 
 BoardView = Annotated[
