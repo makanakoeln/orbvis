@@ -1415,8 +1415,17 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             .on('start.simfreeze', () => {
                 cancelPendingFit();
                 simulation?.stop();
+                // Disable pointer-events on the zoomed group so the browser
+                // doesn't hit-test against ~3000 SVG children on every
+                // pointermove. We restore on gesture end so click/hover work.
+                if (svgEl.value) {
+                    svgEl.value.classList.add('pan-active');
+                }
             })
             .on('end.simfreeze', () => {
+                if (svgEl.value) {
+                    svgEl.value.classList.remove('pan-active');
+                }
                 if (simulation && simulation.alpha() > simulation.alphaMin()) {
                     simulation.restart();
                 }
@@ -2271,6 +2280,15 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
 /* stylelint-disable-next-line selector-pseudo-class-no-unknown */
 :deep(g.zoom-layer) {
     will-change: transform;
+}
+
+/* During an active pan/zoom gesture, suppress hit-testing on the entire
+   zoom-layer so pointermove doesn't traverse ~3000 SVG descendants per
+   frame just to figure out hover targets the user can't interact with
+   while dragging anyway. d3-zoom's start/end handlers toggle this class. */
+/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
+:deep(svg.pan-active g.zoom-layer) {
+    pointer-events: none;
 }
 
 .flow-hint {
