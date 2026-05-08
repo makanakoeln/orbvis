@@ -221,7 +221,10 @@
                                             :title="`crit: ${mainPerfRow.critLabel}`"
                                         />
                                     </div>
-                                    <div class="detail-drawer__main-metric-value">
+                                    <div
+                                        v-if="mainHeadline.valueLabel"
+                                        class="detail-drawer__main-metric-value"
+                                    >
                                         {{ mainHeadline.valueLabel }}
                                     </div>
                                 </div>
@@ -560,10 +563,16 @@ import { useMutationObserver } from '@vueuse/core';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { connectionsApi } from '@/api/client';
+import { connectionsApi, metricsApi } from '@/api/client';
 import { fmtValueWithUnit } from '@/composables/useMetricChart';
 import { useAuthStore } from '@/stores/auth';
-import type { BoardObject, MetricPoint, ObjectDetails, ObjectState } from '@/types/api';
+import type {
+    BoardObject,
+    MetricPoint,
+    ObjectDetails,
+    ObjectState,
+    PerfometerResult,
+} from '@/types/api';
 import { buildCheckmkUrl } from '@/utils/boardNavigation';
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming';
 import { parsePerfData, type PerfMetric, utilColor, utilPercent } from '@/utils/perf';
@@ -635,6 +644,10 @@ const auth = useAuthStore();
 // comments, downtimes and topology rarely change but can be many KB each, so
 // fetching them per Drawer-open keeps the WebSocket payload compact.
 const details = ref<ObjectDetails | null>(null);
+// CMK perf-o-meter result — same metric Checkmk shows in views, computed
+// from the service's perfometer plugin definition (e.g. mem_used_percent for
+// Linux Memory). Only populated for services.
+const perfometer = ref<PerfometerResult | null>(null);
 
 // Source the watch on primitive keys (not the reactive object) so it fires
 // only when selection actually changes — state-stream updates that re-create
@@ -648,18 +661,18 @@ watch(
     ],
     async ([objType, host, service, connId]) => {
         details.value = null;
+        perfometer.value = null;
         if (!connId || !auth.accessToken || !host) return;
         if (objType !== 'host' && objType !== 'service') return;
         if (objType === 'service' && !service) return;
         const reqService = objType === 'service' ? (service ?? null) : null;
         try {
-            const res = await connectionsApi.objectDetails(
-                connId,
-                objType,
-                host,
-                reqService,
-                auth.accessToken,
-            );
+            const [detailsRes, perfRes] = await Promise.all([
+                connectionsApi.objectDetails(connId, objType, host, reqService, auth.accessToken),
+                objType === 'service' && reqService
+                    ? metricsApi.getPerfometer(connId, host, reqService, auth.accessToken)
+                    : Promise.resolve(null),
+            ]);
             // Stale-response guard: between the await and now the user may have
             // clicked another object. Match all three identity fields so a host
             // response doesn't land on a same-named service or vice versa.
@@ -668,10 +681,12 @@ watch(
                 props.object?.host_name === host &&
                 props.object?.service_description === reqService
             ) {
-                details.value = res;
+                details.value = detailsRes;
+                perfometer.value = perfRes;
             }
         } catch {
             details.value = null;
+            perfometer.value = null;
         }
     },
     { immediate: true },
@@ -1151,10 +1166,9 @@ const otherPerfRows = computed<PerfRow[]>(() => {
     return perfRows.value.filter((r) => r.label !== main);
 });
 
-// Headline label/value above the bar — perf_data labels are metric IDs
-// like "mem_lnx_committed_as". Prefer the highest-percentage line from the
-// long output (Checkmk's human-readable summary, e.g. "Committed: 80.94% -
-// 15.7 GiB of 19.4 GiB virtual memory") so the operator sees a real name.
+// Headline label/value above the bar — match what Checkmk's own Perf-O-Meter
+// would show (e.g. "RAM usage" for Linux Memory). Falls back to the highest
+// long-output percent line, then to the raw perf_data metric.
 interface MainHeadline {
     label: string;
     valueLabel: string;
@@ -1162,6 +1176,13 @@ interface MainHeadline {
     color: string;
 }
 const mainHeadline = computed<MainHeadline | null>(() => {
+    const pf = perfometer.value;
+    if (pf && pf.pcts.length > 0) {
+        const pct = Math.min(100, pf.pcts[0]);
+        // pf.label already encodes both name and value ("RAM 53.88%"), so we
+        // don't repeat it as a separate detail line under the bar.
+        return { label: pf.label, valueLabel: '', pct, color: utilColor(pct) };
+    }
     const longRow = [...longOutputRows.value]
         .map((r) => {
             const pctMatch = r.value.match(/(\d+(?:\.\d+)?)\s*%/);

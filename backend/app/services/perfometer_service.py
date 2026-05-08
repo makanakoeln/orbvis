@@ -521,7 +521,35 @@ def _label_from_segments(
     present = [n for n in names if n in metrics]
     if not present:
         return ""
-    return _fmt_value(present[0], metrics[present[0]], units)
+    value = _fmt_value(present[0], metrics[present[0]], units)
+    # Prepend the CMK metric title ("RAM usage 53.88 %") so consumers don't
+    # have to reach back into the metric registry to label the value. Falls
+    # back to just the value when the title isn't registered.
+    title = _metric_title(present[0])
+    return f"{title} {value}".strip() if title else value
+
+
+@lru_cache(maxsize=1)
+def _metric_title_map() -> dict[str, str]:
+    """Map metric name → display title from cmk.plugins.<x>.graphing modules."""
+    titles: dict[str, str] = {}
+    try:
+        from cmk.graphing.v1 import metrics as _gm
+    except ImportError:
+        return titles
+    for mod in _iter_graphing_modules(_get_plugin_dirs()):
+        for attr in dir(mod):
+            obj = getattr(mod, attr)
+            if isinstance(obj, _gm.Metric):
+                try:
+                    titles[obj.name] = obj.title.localize(lambda s: s)
+                except Exception:
+                    pass
+    return titles
+
+
+def _metric_title(name: str) -> str:
+    return _metric_title_map().get(name, "")
 
 
 # ---------------------------------------------------------------------------
