@@ -989,7 +989,7 @@
 
                     <div
                         v-if="auth.isAdmin"
-                        class="flex items-center justify-end border-t border-[var(--border)] max-h-0 overflow-hidden group-hover:max-h-[36px] transition-[max-height] duration-150"
+                        class="flex items-center justify-end border-t border-[var(--border)] max-h-0 overflow-hidden group-hover:max-h-[36px] group-focus-within:max-h-[36px] transition-[max-height] duration-150"
                         style="gap: 2px; padding: 0 6px"
                     >
                         <button
