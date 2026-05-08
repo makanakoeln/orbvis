@@ -1463,30 +1463,23 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         }
     }
 
-    // Synthetic site root nodes: when the topology is flat (no real parent
-    // hierarchy), surface a per-site root node above the host disk so the
-    // operator can see "X hosts on site Y" at a glance. The root is anchored
-    // to a fixed Y above the phyllotaxis disk; the host anchor positions stay
-    // in their severity-spiral slots, so the visual structure becomes a
-    // labeled umbrella rather than a tall chain.
+    // Synthetic site root nodes: surface a per-site root above the host disk
+    // so the operator always sees "X hosts on site Y" at a glance. Single-site
+    // Checkmk setups don't tag rows with site_id (the federated multisite path
+    // does), so fall back to the connection id.
     //
-    // Single-site Checkmk setups don't tag rows with site_id (the federated
-    // multisite path does), so fall back to the connection id so the operator
-    // still sees a labeled root.
-    const SITE_Y_OFFSET = -1500;
-    // "Mostly flat" instead of strict every() — a handful of cross-cluster
-    // parent links (e.g. a probe host pointing at one peer) shouldn't disable
-    // the site umbrella for the remaining hundreds of independent hosts.
+    // Y offset is adaptive: a flat topology (no parent chains) puts the site
+    // far above the phyllotaxis disk for a clean umbrella; a hierarchical
+    // topology already has its own visual root via parent_child links, so we
+    // sit the site just above the topmost host to avoid a tall empty chain.
     const rootCount = topoNodes.filter((n) => n.parents.length === 0).length;
-    // 0.5 threshold: keep the site umbrella whenever the majority of hosts
-    // sit at the top — even with parent_child links between handful of
-    // hosts the umbrella still helps operators read the board.
     const isMostlyFlat = topoNodes.length > 0 && rootCount / topoNodes.length >= 0.5;
+    const SITE_Y_OFFSET = isMostlyFlat ? -1500 : -300;
     function siteIdFor(n: TopologyNode): string {
         return n.site_id || props.connectionId;
     }
     const siteIds: string[] = [];
-    if (isMostlyFlat) {
+    if (topoNodes.length > 0) {
         const seen = new Set<string>();
         for (const n of topoNodes) {
             const sid = siteIdFor(n);
@@ -1557,9 +1550,14 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 });
         }
     }
-    // Site-to-host links (only when synthetic site roots are active)
+    // Site-to-host links (only when synthetic site roots are active).
+    // In a hierarchical topology only top-level hosts hang directly off the
+    // site — child hosts already inherit a visual chain via parent_child.
     if (siteIds.length > 0) {
-        for (const n of topoNodes) {
+        const linkedHosts = isMostlyFlat
+            ? topoNodes
+            : topoNodes.filter((n) => n.parents.length === 0);
+        for (const n of linkedHosts) {
             const src = nodeById.get(`__site__::${siteIdFor(n)}`);
             const tgt = nodeById.get(n.name);
             if (src && tgt)
