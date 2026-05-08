@@ -1460,7 +1460,25 @@ function onObjectClick(obj: BoardObject, event?: MouseEvent) {
         if (cmkUrl) openUrl(cmkUrl, '_blank');
         return;
     }
+    // Decorative objects without a monitored target have nothing to show in
+    // the slide-in. Click is a no-op rather than an empty drawer.
+    if (!objectHasMonitoringTarget(obj)) return;
     openDetail(obj);
+}
+
+function objectHasMonitoringTarget(obj: BoardObject): boolean {
+    switch (obj.type) {
+        case 'host':
+        case 'service':
+            return Boolean(obj.host_name);
+        case 'hostgroup':
+        case 'servicegroup':
+            return Boolean(obj.group_name);
+        case 'aggregation':
+            return Boolean(obj.aggregation_id);
+        default:
+            return false;
+    }
 }
 
 async function onCanvasClick(event: MouseEvent) {
