@@ -241,6 +241,8 @@ export default {
         noHosts: 'Keine Hosts verfügbar',
         noServices: 'Keine Services für diesen Host',
         noGroups: 'Keine Gruppen verfügbar',
+        noHostgroups: 'Keine Hostgruppen in dieser Site konfiguriert',
+        noServicegroups: 'Keine Servicegruppen in dieser Site konfiguriert',
         noBoards: 'Keine weiteren Boards vorhanden',
         noMetrics: 'Keine Metriken verfügbar',
         noGraphTemplates: 'Keine Graph-Templates verfügbar',

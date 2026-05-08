@@ -239,6 +239,8 @@ export default {
         noHosts: 'No hosts available',
         noServices: 'No services for this host',
         noGroups: 'No groups available',
+        noHostgroups: 'No host groups configured in this site',
+        noServicegroups: 'No service groups configured in this site',
         noBoards: 'No other boards available',
         noMetrics: 'No metrics available',
         noGraphTemplates: 'No graph templates available',

@@ -81,7 +81,13 @@
                     :suggestions="addObjects"
                     :loading="loadingAddObjects"
                     :placeholder="t('boardSettings.groupName')"
-                    :empty-text="t('boardSettings.noGroups')"
+                    :empty-text="
+                        t(
+                            draft.type === 'hostgroup'
+                                ? 'boardSettings.noHostgroups'
+                                : 'boardSettings.noServicegroups',
+                        )
+                    "
                 />
             </template>
 
