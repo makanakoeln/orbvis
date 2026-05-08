@@ -18,6 +18,7 @@ export default {
         objects: '{n} objects | {n} object | {n} objects',
         noData: '—',
         saved: 'Saved',
+        none: 'None',
     },
     auth: {
         username: 'Username',
@@ -118,6 +119,7 @@ export default {
         filterTypeAllServices: 'All services',
         groupName: 'Group name',
         backgroundImage: 'Background image',
+        backgroundColor: 'Background color',
         deleteBackground: 'Remove background image',
         notificationsOn: 'Browser notifications enabled — click to disable',
         notificationsOff: 'Enable browser notifications for state changes',

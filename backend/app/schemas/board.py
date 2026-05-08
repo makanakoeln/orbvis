@@ -288,6 +288,7 @@ class BoardConfig(BaseModel):
     hover_template: str | None = None
     context_template: str | None = None
     background_image: str | None = None
+    background_color: str | None = None
     view: BoardView = Field(default_factory=StaticView)
     objects: list[BoardObject] = Field(default_factory=list)
 
@@ -298,6 +299,7 @@ class BoardCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-zA-Z0-9_\-]+$")
     alias: str = ""
     background_image: str | None = None
+    background_color: str | None = None
     icon_size: int = 30
     connection_id: str = "live_1"
     view: BoardView = Field(default_factory=StaticView)
@@ -308,6 +310,7 @@ class BoardUpdate(BaseModel):
 
     alias: str | None = None
     background_image: str | None = None
+    background_color: str | None = None
     icon_size: int | None = None
     connection_id: str | None = None
     view: BoardView | None = None
@@ -325,6 +328,7 @@ class BoardRead(BaseModel):
     name: str
     alias: str
     background_image: str | None
+    background_color: str | None = None
     icon_size: int
     connection_id: str
     view_type: str

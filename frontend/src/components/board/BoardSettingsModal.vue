@@ -379,6 +379,17 @@
                             <p v-if="uploadOk" class="text-green-400 text-xs">
                                 {{ t('board.uploadedSuccessfully') }}
                             </p>
+
+                            <label
+                                class="text-sm font-medium text-zinc-400 block mt-[10px]"
+                                style="margin-top: 12px"
+                                >{{ t('board.backgroundColor') }}</label
+                            >
+                            <ColorInput
+                                v-model="form.background_color"
+                                :none-label="t('common.none')"
+                                default-color="#1f2937"
+                            />
                         </div>
 
                         <p v-if="saveError" class="text-xs text-red-400">{{ saveError }}</p>
@@ -506,6 +517,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { boardsApi, connectionsApi, rolesApi } from '@/api/client';
+import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { useAuthStore } from '@/stores/auth';
 import type {
@@ -587,6 +599,7 @@ const form = ref({
     hover_template: props.board.hover_template ?? '',
     context_template: props.board.context_template ?? '',
     background_image: props.board.background_image ?? '',
+    background_color: props.board.background_color ?? '',
 });
 
 const connections = ref<ConnectionConfig[]>([]);
@@ -666,6 +679,7 @@ async function save() {
                 click_action: form.value.click_action,
                 show_in_lists: form.value.show_in_lists,
                 background_image: form.value.background_image || null,
+                background_color: form.value.background_color || null,
                 view,
                 hover_template: form.value.hover_template || null,
                 context_template: form.value.context_template || null,

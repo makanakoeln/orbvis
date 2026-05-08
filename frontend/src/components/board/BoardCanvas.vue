@@ -304,20 +304,19 @@ const canvasHeight = computed(() => {
 const canvasStyle = computed(() => {
     const bg = props.config.background_image;
     const url = bgImageUrl.value;
-    const pixelSize = {
+    const color = props.config.background_color;
+    const base: Record<string, string> = {
         minWidth: `max(${canvasWidth.value}px, 100%)`,
         minHeight: `max(${canvasHeight.value}px, 100%)`,
     };
+    if (color) base.backgroundColor = color;
     if (bg && !bgImageFailed.value) {
-        return {
-            ...pixelSize,
-            backgroundImage: `url(${url})`,
-            backgroundRepeat: 'no-repeat',
-            backgroundSize: 'auto',
-            backgroundPosition: 'top left',
-        };
+        base.backgroundImage = `url(${url})`;
+        base.backgroundRepeat = 'no-repeat';
+        base.backgroundSize = 'auto';
+        base.backgroundPosition = 'top left';
     }
-    return pixelSize;
+    return base;
 });
 
 const nonLineObjects = computed(() => props.config.objects.filter((o) => o.type !== 'line'));

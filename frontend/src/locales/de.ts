@@ -18,6 +18,7 @@ export default {
         objects: '{n} Objekte | {n} Objekt | {n} Objekte',
         noData: '—',
         saved: 'Gespeichert',
+        none: 'Keine',
     },
     auth: {
         username: 'Benutzername',
@@ -127,6 +128,7 @@ export default {
         serviceLayoutRow: 'Reihe',
         serviceLayoutDonut: 'Donut',
         backgroundImage: 'Hintergrundbild',
+        backgroundColor: 'Hintergrundfarbe',
         deleteBackground: 'Hintergrundbild entfernen',
         saveChanges: 'Änderungen speichern',
         hoverTemplate: 'Hover-Template',

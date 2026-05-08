@@ -172,6 +172,7 @@ export interface BoardConfig {
     hover_template?: string | null;
     context_template?: string | null;
     background_image?: string | null;
+    background_color?: string | null;
     view: BoardView;
     objects: BoardObject[];
 }
@@ -180,6 +181,7 @@ export interface BoardRead {
     name: string;
     alias: string;
     background_image?: string | null;
+    background_color?: string | null;
     icon_size: number;
     connection_id: string;
     view_type: string;
