@@ -566,11 +566,15 @@ _topology_snapshots: dict[tuple[str, str | None], dict[str, int]] = {}
 
 
 def _hash_topology_node(n: TopologyNode) -> int:
-    """Hash only fields that change between checks.
+    """Hash only operationally-significant fields.
 
     Stable identity/topology fields (name, parents, alias, address) are
     excluded — they're carried in `added` payloads and don't trigger
-    `changed` entries on their own.
+    `changed` entries on their own. Timing fields (``last_check``,
+    ``next_check``, ``current_attempt``) deliberately don't contribute
+    either: they tick every Checkmk re-check, which on busy sites would
+    flag every host as changed every ~30 s and defeat the delta entirely.
+    They still ride along when a real change pushes a node into ``changed``.
     """
     s = n.services_summary
     summary = (s.ok, s.warning, s.critical, s.unknown, s.pending) if s is not None else ()
@@ -580,9 +584,6 @@ def _hash_topology_node(n: TopologyNode) -> int:
             n.state,
             n.output,
             n.last_state_change,
-            n.last_check,
-            n.next_check,
-            n.current_attempt,
             n.acknowledged,
             n.in_downtime,
             n.notifications_enabled,
