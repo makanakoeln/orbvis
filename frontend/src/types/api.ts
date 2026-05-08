@@ -384,7 +384,13 @@ export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
 export interface WebSocketStateUpdate {
     type: 'state_update';
     map: string;
+    // When `full` is true (or absent, for old servers), `states.states` holds
+    // every object on the board and replaces the local map. When false, it
+    // contains only added/changed entries and `removed_ids` lists object_ids
+    // that disappeared since the previous tick — frontend merges in place.
     states: MapStates;
+    full?: boolean;
+    removed_ids?: string[];
 }
 
 export interface TopologyDelta {

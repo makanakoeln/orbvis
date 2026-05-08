@@ -200,18 +200,27 @@ export const useStatesStore = defineStore('states', () => {
             try {
                 const msg: WebSocketStateUpdate | WebSocketTopologyUpdate = JSON.parse(event.data);
                 if (msg.type === 'state_update') {
-                    const newStates: Record<string, ObjectState> = {};
+                    // `full` defaults to true so old servers (or the first tick of a
+                    // fresh broadcast loop) replace the map. Delta ticks set it to
+                    // false and only carry added/changed states + removed_ids.
+                    const isFull = msg.full ?? true;
                     for (const s of msg.states.states) {
                         if (notificationsEnabled.value)
                             _notifyStateChange(s, states.value[s.object_id]);
-                        newStates[s.object_id] = s;
+                        states.value[s.object_id] = s;
                         if (s.perf_data)
                             _recordHistory(s.object_id, s.perf_data, msg.states.generated_at);
                     }
-                    for (const id of Object.keys(states.value)) {
-                        if (!newStates[id]) delete states.value[id];
+                    if (isFull) {
+                        const incomingIds = new Set(msg.states.states.map((s) => s.object_id));
+                        for (const id of Object.keys(states.value)) {
+                            if (!incomingIds.has(id)) delete states.value[id];
+                        }
+                    } else {
+                        for (const id of msg.removed_ids ?? []) {
+                            delete states.value[id];
+                        }
                     }
-                    Object.assign(states.value, newStates);
                     lastUpdate.value = msg.states.generated_at;
                     connected.value = msg.states.connection_ok;
                 } else if (msg.type === 'topology_update') {

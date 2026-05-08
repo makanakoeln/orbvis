@@ -642,3 +642,98 @@ def drop_topology_snapshot(board_name: str, auth_user: str | None = None) -> Non
         return
     for key in [k for k in _topology_snapshots if k[0] == board_name]:
         _topology_snapshots.pop(key, None)
+
+
+# ---------------------------------------------------------------------------
+# Object-state delta encoding for the WebSocket broadcast loop. Without this,
+# every tick re-sends the full state map (~600 B per object × N objects × M
+# clients × every state_refresh_interval). Most checks are unchanged tick to
+# tick, so the delta is much smaller in steady state.
+# ---------------------------------------------------------------------------
+
+# (board_name, auth_user) → (object_id → volatile-fields hash)
+_state_snapshots: dict[tuple[str, str | None], dict[str, int]] = {}
+
+
+def _hash_object_state(s: ObjectState) -> int:
+    """Hash only fields that change between checks. Stable identity fields
+    (object_id, type, address, alias) are excluded — they're carried in the
+    payload of any included state, not re-sent on their own.
+    """
+    summary = s.services_summary
+    summary_t = (
+        (summary.ok, summary.warning, summary.critical, summary.unknown, summary.pending)
+        if summary is not None
+        else ()
+    )
+    # AggregationNode is recursive and not directly tuple-hashable. Pydantic
+    # JSON dump is fast (Rust core) and only runs for aggregation objects.
+    tree_repr = s.tree.model_dump_json() if s.tree is not None else ""
+    return hash(
+        (
+            s.state,
+            s.output,
+            s.perf_data,
+            s.acknowledged,
+            s.in_downtime,
+            s.stale,
+            s.notifications_enabled,
+            s.active_checks_enabled,
+            s.last_check,
+            s.next_check,
+            s.state_type,
+            s.current_attempt,
+            s.max_attempts,
+            s.last_state_change,
+            s.site_id,
+            summary_t,
+            tree_repr,
+        )
+    )
+
+
+def compute_states_delta(
+    board_name: str,
+    auth_user: str | None,
+    current: list[ObjectState],
+    *,
+    force_full: bool = False,
+) -> tuple[list[ObjectState], list[str], bool]:
+    """Diff `current` against the previous snapshot for (board, auth_user).
+
+    Returns ``(states_to_send, removed_ids, full)``:
+    - ``states_to_send``: full list when ``full=True``; else only added or changed entries
+    - ``removed_ids``: object_ids no longer present (only meaningful when ``full=False``)
+    - ``full``: ``True`` on first call (no prior snapshot) or when ``force_full=True``
+
+    Side effect: stores the new hashes so the next call diffs against this.
+    """
+    key = (board_name, auth_user)
+    prev = _state_snapshots.get(key)
+    new_hashes = {s.object_id: _hash_object_state(s) for s in current}
+
+    if force_full or prev is None:
+        _state_snapshots[key] = new_hashes
+        return current, [], True
+
+    by_id = {s.object_id: s for s in current}
+    to_send = [
+        s
+        for s in current
+        if s.object_id not in prev or new_hashes[s.object_id] != prev[s.object_id]
+    ]
+    removed = [oid for oid in prev if oid not in by_id]
+    _state_snapshots[key] = new_hashes
+    return to_send, removed, False
+
+
+def drop_states_snapshot(board_name: str, auth_user: str | None = None) -> None:
+    """Forget the snapshot for a board (call when broadcast loop ends or board is deleted).
+
+    With ``auth_user=None``, drops snapshots for *all* users of the board.
+    """
+    if auth_user is not None:
+        _state_snapshots.pop((board_name, auth_user), None)
+        return
+    for key in [k for k in _state_snapshots if k[0] == board_name]:
+        _state_snapshots.pop(key, None)

@@ -26,7 +26,7 @@ from app.core.ratelimit import ws_connect_limiter
 from app.core.websocket import manager
 from app.models.user import User
 from app.schemas.board import BoardConfig, FlowView
-from app.schemas.state import MapStates
+from app.schemas.state import MapStates, ObjectState
 from app.services import board_service, state_service
 from app.services.auth_service import authenticate_bearer_token
 
@@ -116,12 +116,44 @@ async def _send_topology_to(
     await manager.send_to_connections(cfg.name, targets, msg)
 
 
+def _build_states_msg(
+    board_name: str,
+    states: MapStates,
+    to_send: list[ObjectState],
+    removed_ids: list[str],
+    full: bool,
+) -> str:
+    """Encode a state-update message. When full=False, ``states.states`` holds
+    only added/changed entries and ``removed_ids`` carries entries gone from
+    the previous tick — frontend merges instead of replaces.
+    """
+    return json.dumps(
+        {
+            "type": "state_update",
+            "map": board_name,
+            "states": {
+                "map_name": states.map_name,
+                "states": [s.model_dump() for s in to_send],
+                "generated_at": states.generated_at,
+                "connection_ok": states.connection_ok,
+            },
+            "removed_ids": removed_ids,
+            "full": full,
+        }
+    )
+
+
 async def _broadcast_loop(board_name: str) -> None:
     """Fetch states once per interval and push to all clients subscribed to this board.
 
     When CHECKMK_OMD_ROOT is configured, connections are grouped by auth_user and
     each group receives states filtered to its user's contact groups.  Otherwise a
     single shared query is issued for efficiency.
+
+    Updates are delta-encoded against the previous tick's snapshot per
+    (board, auth_user) — only added/changed states travel the wire, plus
+    object_ids that disappeared. The first tick after the loop starts (or when
+    a snapshot is dropped) is full so newly-attached clients converge.
 
     For Flow Boards (`view.type == "flow"`) the loop additionally pushes
     `topology_update` messages with delta encoding so the FlowBoard component
@@ -146,24 +178,27 @@ async def _broadcast_loop(board_name: str) -> None:
                         states = await state_service.get_board_states(
                             cfg, auth_user=auth_user, can_view_board=can_view
                         )
-                        msg = json.dumps(
-                            {
-                                "type": "state_update",
-                                "map": board_name,
-                                "states": states.model_dump(),
-                            }
+                        to_send, removed_ids, is_full = state_service.compute_states_delta(
+                            board_name, auth_user, states.states
                         )
-                        await manager.send_to_connections(board_name, connections, msg)
+                        if is_full or to_send or removed_ids:
+                            msg = _build_states_msg(
+                                board_name, states, to_send, removed_ids, is_full
+                            )
+                            await manager.send_to_connections(board_name, connections, msg)
                         if cfg.view.type == "flow":
                             await _send_topology_to(cfg, auth_user, connections, force_full=False)
                 else:
                     user_count = 1
                     states = await state_service.get_board_states(cfg)
-                    await manager.broadcast_map_states(board_name, states.model_dump())
+                    to_send, removed_ids, is_full = state_service.compute_states_delta(
+                        board_name, None, states.states
+                    )
+                    connections = list(manager.get_connections_grouped(board_name).get(None, []))
+                    if is_full or to_send or removed_ids:
+                        msg = _build_states_msg(board_name, states, to_send, removed_ids, is_full)
+                        await manager.send_to_connections(board_name, connections, msg)
                     if cfg.view.type == "flow":
-                        connections = list(
-                            manager.get_connections_grouped(board_name).get(None, [])
-                        )
                         await _send_topology_to(cfg, None, connections, force_full=False)
             elapsed_ms = (asyncio.get_event_loop().time() - tick_start) * 1000
             logger.debug(
@@ -178,6 +213,7 @@ async def _broadcast_loop(board_name: str) -> None:
     finally:
         _broadcast_tasks.pop(board_name, None)
         state_service.drop_topology_snapshot(board_name)
+        state_service.drop_states_snapshot(board_name)
         logger.debug("Broadcast loop stopped for board '%s'", board_name)
 
 
