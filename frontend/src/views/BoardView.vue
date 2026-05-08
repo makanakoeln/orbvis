@@ -492,23 +492,21 @@
             </div>
 
             <!-- Shared detail drawer for static / worldmap / radar boards -->
-            <Transition name="drawer-slide">
-                <DetailDrawer
-                    v-if="!isFlowmap && detailDrawerObject"
-                    :object="detailDrawerObject"
-                    :state="detailDrawerState"
-                    :checkmk-url="checkmkUrl"
-                    @close="closeDetail"
-                    @acknowledge="onDetailAck"
-                    @remove-ack="onDetailRemoveAck"
-                    @schedule-downtime="onDetailDowntime"
-                    @remove-downtime="onDetailRemoveDowntime"
-                    @force-check="onDetailForceCheck"
-                    @add-comment="onDetailAddComment"
-                    @enable-notifications="onDetailToggleNotifications(true)"
-                    @disable-notifications="onDetailToggleNotifications(false)"
-                />
-            </Transition>
+            <DetailDrawer
+                v-if="!isFlowmap"
+                :object="detailDrawerObject"
+                :state="detailDrawerState"
+                :checkmk-url="checkmkUrl"
+                @close="closeDetail"
+                @acknowledge="onDetailAck"
+                @remove-ack="onDetailRemoveAck"
+                @schedule-downtime="onDetailDowntime"
+                @remove-downtime="onDetailRemoveDowntime"
+                @force-check="onDetailForceCheck"
+                @add-comment="onDetailAddComment"
+                @enable-notifications="onDetailToggleNotifications(true)"
+                @disable-notifications="onDetailToggleNotifications(false)"
+            />
         </div>
 
         <!-- Shared drawer-action modals -->

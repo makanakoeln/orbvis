@@ -138,23 +138,20 @@
             :connection-id="props.connectionId"
         />
 
-        <Transition name="drawer-slide">
-            <DetailDrawer
-                v-if="detailObject"
-                :object="detailObject"
-                :state="detailState"
-                :checkmk-url="props.checkmkUrl ?? null"
-                @close="closeDetail"
-                @acknowledge="onDetailAck"
-                @remove-ack="onDetailRemoveAck"
-                @schedule-downtime="onDetailDowntime"
-                @remove-downtime="onDetailRemoveDowntime"
-                @force-check="onDetailForceCheck"
-                @add-comment="onDetailAddComment"
-                @enable-notifications="onDetailToggleNotifications(true)"
-                @disable-notifications="onDetailToggleNotifications(false)"
-            />
-        </Transition>
+        <DetailDrawer
+            :object="detailObject"
+            :state="detailState"
+            :checkmk-url="props.checkmkUrl ?? null"
+            @close="closeDetail"
+            @acknowledge="onDetailAck"
+            @remove-ack="onDetailRemoveAck"
+            @schedule-downtime="onDetailDowntime"
+            @remove-downtime="onDetailRemoveDowntime"
+            @force-check="onDetailForceCheck"
+            @add-comment="onDetailAddComment"
+            @enable-notifications="onDetailToggleNotifications(true)"
+            @disable-notifications="onDetailToggleNotifications(false)"
+        />
 
         <div v-if="selectedIds.size > 0" class="bulk-actions">
             <span class="bulk-actions__count">

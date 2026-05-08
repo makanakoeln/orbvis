@@ -1,266 +1,282 @@
 <template>
-    <div
-        v-if="object"
-        class="detail-drawer"
-        role="dialog"
+    <CmkSlideIn
+        :open="!!object"
+        size="narrow"
+        :modal="false"
+        border-color="none"
         :aria-label="displayName"
-        :class="`detail-drawer--${severityKind}`"
-        @click.stop
+        :portal-to="portalTarget"
+        @close="emit('close')"
     >
         <div
-            class="detail-drawer__severity-bar"
-            :style="{ background: state ? stateColor(state.state) : 'var(--border)' }"
-        />
+            v-if="object"
+            class="detail-drawer"
+            :class="`detail-drawer--${severityKind}`"
+            @click.stop
+        >
+            <div
+                class="detail-drawer__severity-bar"
+                :style="{ background: state ? stateColor(state.state) : 'var(--border)' }"
+            />
 
-        <header class="detail-drawer__header">
-            <div class="detail-drawer__title">
-                <div class="detail-drawer__title-row">
-                    <span class="detail-drawer__name" :title="displayName">{{ displayName }}</span>
-                    <span class="detail-drawer__type-pill">{{ typeLabel }}</span>
-                </div>
-                <div v-if="state" class="detail-drawer__state-line">
-                    <span
-                        class="detail-drawer__state-pill"
-                        :style="{
-                            color: stateColor(state.state),
-                            borderColor: stateColor(state.state),
-                            background: stateBgColor(state.state),
-                        }"
-                    >
-                        {{ state.state }}
-                    </span>
-                    <span v-if="sinceText" class="detail-drawer__since-text">{{ sinceText }}</span>
-                </div>
-            </div>
-            <a
-                v-if="checkmkUrlFull"
-                :href="checkmkUrlFull"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="detail-drawer__icon-btn"
-                :title="t('board.detailDrawer.openInCheckmk')"
-                :aria-label="t('board.detailDrawer.openInCheckmk')"
-            >
-                <CmkIcon name="export-link" size="small" />
-            </a>
-            <button
-                type="button"
-                class="detail-drawer__close"
-                :title="t('board.detailDrawer.close')"
-                @click="emit('close')"
-            >
-                ×
-            </button>
-        </header>
-
-        <div v-if="state" class="detail-drawer__body">
-            <div v-if="modifiers.length" class="detail-drawer__badges">
-                <span
-                    v-for="mod in modifiers"
-                    :key="mod.label"
-                    class="detail-drawer__badge"
-                    :class="`detail-drawer__badge--${mod.kind}`"
-                >
-                    {{ mod.label }}
-                </span>
-            </div>
-
-            <pre v-if="state.output" class="detail-drawer__output">{{ state.output }}</pre>
-
-            <div v-if="perfRows.length" class="detail-drawer__section">
-                <h4>{{ t('board.detailDrawer.perfdataLabel') }}</h4>
-                <div class="detail-drawer__perf">
-                    <div v-for="row in perfRows" :key="row.label" class="detail-drawer__perf-row">
-                        <div class="detail-drawer__perf-label" :title="row.label">
-                            {{ row.label }}
-                        </div>
-                        <div class="detail-drawer__perf-bar-wrap">
-                            <div
-                                class="detail-drawer__perf-bar"
-                                :style="{ width: row.pct + '%', background: row.color }"
-                            />
-                            <div
-                                v-if="row.warnPct !== null"
-                                class="detail-drawer__perf-mark detail-drawer__perf-mark--warn"
-                                :style="{ left: row.warnPct + '%' }"
-                                :title="`warn: ${row.warnLabel}`"
-                            />
-                            <div
-                                v-if="row.critPct !== null"
-                                class="detail-drawer__perf-mark detail-drawer__perf-mark--crit"
-                                :style="{ left: row.critPct + '%' }"
-                                :title="`crit: ${row.critLabel}`"
-                            />
-                        </div>
-                        <div class="detail-drawer__perf-value">{{ row.valueLabel }}</div>
+            <header class="detail-drawer__header">
+                <div class="detail-drawer__title">
+                    <div class="detail-drawer__title-row">
+                        <span class="detail-drawer__name" :title="displayName">{{
+                            displayName
+                        }}</span>
+                        <span class="detail-drawer__type-pill">{{ typeLabel }}</span>
+                    </div>
+                    <div v-if="state" class="detail-drawer__state-line">
+                        <span
+                            class="detail-drawer__state-pill"
+                            :style="{
+                                color: stateColor(state.state),
+                                borderColor: stateColor(state.state),
+                                background: stateBgColor(state.state),
+                            }"
+                        >
+                            {{ state.state }}
+                        </span>
+                        <span v-if="sinceText" class="detail-drawer__since-text">{{
+                            sinceText
+                        }}</span>
                     </div>
                 </div>
-            </div>
-
-            <div
-                v-if="serviceChips.length"
-                class="detail-drawer__chips"
-                :style="{ gridTemplateColumns: `repeat(${serviceChips.length}, 1fr)` }"
-            >
-                <component
-                    :is="chip.url ? 'a' : 'button'"
-                    v-for="chip in serviceChips"
-                    :key="chip.state"
-                    :type="chip.url ? undefined : 'button'"
-                    :href="chip.url || undefined"
-                    :target="chip.url ? '_blank' : undefined"
-                    :rel="chip.url ? 'noopener noreferrer' : undefined"
-                    class="detail-drawer__chip"
-                    :class="
-                        chip.count > 0
-                            ? `detail-drawer__chip--${chip.tone}`
-                            : 'detail-drawer__chip--zero'
-                    "
-                    :disabled="chip.count === 0 || !chip.url ? true : undefined"
+                <a
+                    v-if="checkmkUrlFull"
+                    :href="checkmkUrlFull"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="detail-drawer__icon-btn"
+                    :title="t('board.detailDrawer.openInCheckmk')"
+                    :aria-label="t('board.detailDrawer.openInCheckmk')"
                 >
-                    <span class="detail-drawer__chip-count">{{ chip.count }}</span>
-                    <span class="detail-drawer__chip-label">{{ chip.label }}</span>
-                </component>
-            </div>
-
-            <div
-                v-if="hostChips.length"
-                class="detail-drawer__chips"
-                :style="{ gridTemplateColumns: `repeat(${hostChips.length}, 1fr)` }"
-            >
-                <component
-                    :is="chip.url ? 'a' : 'button'"
-                    v-for="chip in hostChips"
-                    :key="chip.state"
-                    :type="chip.url ? undefined : 'button'"
-                    :href="chip.url || undefined"
-                    :target="chip.url ? '_blank' : undefined"
-                    :rel="chip.url ? 'noopener noreferrer' : undefined"
-                    class="detail-drawer__chip"
-                    :class="
-                        chip.count > 0
-                            ? `detail-drawer__chip--${chip.tone}`
-                            : 'detail-drawer__chip--zero'
-                    "
-                    :disabled="chip.count === 0 || !chip.url ? true : undefined"
+                    <CmkIcon name="export-link" size="small" />
+                </a>
+                <button
+                    type="button"
+                    class="detail-drawer__close"
+                    :title="t('board.detailDrawer.close')"
+                    @click="emit('close')"
                 >
-                    <span class="detail-drawer__chip-count">{{ chip.count }}</span>
-                    <span class="detail-drawer__chip-label">{{ chip.label }}</span>
-                </component>
-            </div>
+                    ×
+                </button>
+            </header>
 
-            <dl v-if="metaRows.length" class="detail-drawer__meta">
-                <template v-for="row in metaRows" :key="row.label">
-                    <dt>{{ row.label }}</dt>
-                    <dd>{{ row.value }}</dd>
-                </template>
-            </dl>
+            <div v-if="state" class="detail-drawer__body">
+                <div v-if="modifiers.length" class="detail-drawer__badges">
+                    <span
+                        v-for="mod in modifiers"
+                        :key="mod.label"
+                        class="detail-drawer__badge"
+                        :class="`detail-drawer__badge--${mod.kind}`"
+                    >
+                        {{ mod.label }}
+                    </span>
+                </div>
 
-            <div v-if="checkInfoRows.length" class="detail-drawer__section">
-                <h4>{{ t('board.detailDrawer.checkInfo') }}</h4>
-                <dl class="detail-drawer__meta">
-                    <template v-for="row in checkInfoRows" :key="row.label">
+                <pre v-if="state.output" class="detail-drawer__output">{{ state.output }}</pre>
+
+                <div v-if="perfRows.length" class="detail-drawer__section">
+                    <h4>{{ t('board.detailDrawer.perfdataLabel') }}</h4>
+                    <div class="detail-drawer__perf">
+                        <div
+                            v-for="row in perfRows"
+                            :key="row.label"
+                            class="detail-drawer__perf-row"
+                        >
+                            <div class="detail-drawer__perf-label" :title="row.label">
+                                {{ row.label }}
+                            </div>
+                            <div class="detail-drawer__perf-bar-wrap">
+                                <div
+                                    class="detail-drawer__perf-bar"
+                                    :style="{ width: row.pct + '%', background: row.color }"
+                                />
+                                <div
+                                    v-if="row.warnPct !== null"
+                                    class="detail-drawer__perf-mark detail-drawer__perf-mark--warn"
+                                    :style="{ left: row.warnPct + '%' }"
+                                    :title="`warn: ${row.warnLabel}`"
+                                />
+                                <div
+                                    v-if="row.critPct !== null"
+                                    class="detail-drawer__perf-mark detail-drawer__perf-mark--crit"
+                                    :style="{ left: row.critPct + '%' }"
+                                    :title="`crit: ${row.critLabel}`"
+                                />
+                            </div>
+                            <div class="detail-drawer__perf-value">{{ row.valueLabel }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    v-if="serviceChips.length"
+                    class="detail-drawer__chips"
+                    :style="{ gridTemplateColumns: `repeat(${serviceChips.length}, 1fr)` }"
+                >
+                    <component
+                        :is="chip.url ? 'a' : 'button'"
+                        v-for="chip in serviceChips"
+                        :key="chip.state"
+                        :type="chip.url ? undefined : 'button'"
+                        :href="chip.url || undefined"
+                        :target="chip.url ? '_blank' : undefined"
+                        :rel="chip.url ? 'noopener noreferrer' : undefined"
+                        class="detail-drawer__chip"
+                        :class="
+                            chip.count > 0
+                                ? `detail-drawer__chip--${chip.tone}`
+                                : 'detail-drawer__chip--zero'
+                        "
+                        :disabled="chip.count === 0 || !chip.url ? true : undefined"
+                    >
+                        <span class="detail-drawer__chip-count">{{ chip.count }}</span>
+                        <span class="detail-drawer__chip-label">{{ chip.label }}</span>
+                    </component>
+                </div>
+
+                <div
+                    v-if="hostChips.length"
+                    class="detail-drawer__chips"
+                    :style="{ gridTemplateColumns: `repeat(${hostChips.length}, 1fr)` }"
+                >
+                    <component
+                        :is="chip.url ? 'a' : 'button'"
+                        v-for="chip in hostChips"
+                        :key="chip.state"
+                        :type="chip.url ? undefined : 'button'"
+                        :href="chip.url || undefined"
+                        :target="chip.url ? '_blank' : undefined"
+                        :rel="chip.url ? 'noopener noreferrer' : undefined"
+                        class="detail-drawer__chip"
+                        :class="
+                            chip.count > 0
+                                ? `detail-drawer__chip--${chip.tone}`
+                                : 'detail-drawer__chip--zero'
+                        "
+                        :disabled="chip.count === 0 || !chip.url ? true : undefined"
+                    >
+                        <span class="detail-drawer__chip-count">{{ chip.count }}</span>
+                        <span class="detail-drawer__chip-label">{{ chip.label }}</span>
+                    </component>
+                </div>
+
+                <dl v-if="metaRows.length" class="detail-drawer__meta">
+                    <template v-for="row in metaRows" :key="row.label">
                         <dt>{{ row.label }}</dt>
-                        <dd :class="row.tone ? `detail-drawer__meta-value--${row.tone}` : ''">
-                            {{ row.value }}
-                        </dd>
+                        <dd>{{ row.value }}</dd>
                     </template>
                 </dl>
-            </div>
-        </div>
 
-        <footer v-if="!isSite" class="detail-drawer__actions">
-            <h4 class="detail-drawer__actions-title">
-                {{ t('board.detailDrawer.sectionActions') }}
-            </h4>
-            <div class="detail-drawer__actions-grid">
-                <button
-                    v-if="!state?.acknowledged && isProblematic"
-                    type="button"
-                    class="detail-drawer__btn detail-drawer__btn--primary"
-                    @click="emit('acknowledge')"
-                >
-                    {{ t('board.detailDrawer.ackLabel') }}
-                </button>
-                <button
-                    v-if="state?.acknowledged"
-                    type="button"
-                    class="detail-drawer__btn detail-drawer__btn--warn"
-                    @click="emit('remove-ack')"
-                >
-                    {{ t('board.detailDrawer.removeAckLabel') }}
-                </button>
-                <button type="button" class="detail-drawer__btn" @click="emit('force-check')">
-                    {{ t('board.detailDrawer.forceCheckLabel') }}
-                </button>
-                <button
-                    v-if="!state?.in_downtime"
-                    type="button"
-                    class="detail-drawer__btn"
-                    @click="emit('schedule-downtime')"
-                >
-                    {{ t('board.detailDrawer.scheduleDowntimeLabel') }}
-                </button>
-                <button
-                    v-if="state?.in_downtime"
-                    type="button"
-                    class="detail-drawer__btn detail-drawer__btn--warn"
-                    @click="emit('remove-downtime')"
-                >
-                    {{ t('board.detailDrawer.removeDowntimeLabel') }}
-                </button>
-                <button type="button" class="detail-drawer__btn" @click="emit('add-comment')">
-                    {{ t('board.detailDrawer.addCommentLabel') }}
-                </button>
-                <details class="detail-drawer__more">
-                    <summary
-                        class="detail-drawer__btn detail-drawer__btn--more"
-                        :title="t('board.detailDrawer.moreActions')"
+                <div v-if="checkInfoRows.length" class="detail-drawer__section">
+                    <h4>{{ t('board.detailDrawer.checkInfo') }}</h4>
+                    <dl class="detail-drawer__meta">
+                        <template v-for="row in checkInfoRows" :key="row.label">
+                            <dt>{{ row.label }}</dt>
+                            <dd :class="row.tone ? `detail-drawer__meta-value--${row.tone}` : ''">
+                                {{ row.value }}
+                            </dd>
+                        </template>
+                    </dl>
+                </div>
+            </div>
+
+            <footer v-if="!isSite" class="detail-drawer__actions">
+                <h4 class="detail-drawer__actions-title">
+                    {{ t('board.detailDrawer.sectionActions') }}
+                </h4>
+                <div class="detail-drawer__actions-grid">
+                    <button
+                        v-if="!state?.acknowledged && isProblematic"
+                        type="button"
+                        class="detail-drawer__btn detail-drawer__btn--primary"
+                        @click="emit('acknowledge')"
                     >
-                        {{ t('board.detailDrawer.moreActions') }}
-                    </summary>
-                    <div class="detail-drawer__more-menu" role="menu">
-                        <button
-                            v-if="state?.notifications_enabled !== false"
-                            type="button"
-                            class="detail-drawer__more-item"
-                            role="menuitem"
-                            @click="
-                                closeMoreMenu($event);
-                                emit('disable-notifications');
-                            "
+                        {{ t('board.detailDrawer.ackLabel') }}
+                    </button>
+                    <button
+                        v-if="state?.acknowledged"
+                        type="button"
+                        class="detail-drawer__btn detail-drawer__btn--warn"
+                        @click="emit('remove-ack')"
+                    >
+                        {{ t('board.detailDrawer.removeAckLabel') }}
+                    </button>
+                    <button type="button" class="detail-drawer__btn" @click="emit('force-check')">
+                        {{ t('board.detailDrawer.forceCheckLabel') }}
+                    </button>
+                    <button
+                        v-if="!state?.in_downtime"
+                        type="button"
+                        class="detail-drawer__btn"
+                        @click="emit('schedule-downtime')"
+                    >
+                        {{ t('board.detailDrawer.scheduleDowntimeLabel') }}
+                    </button>
+                    <button
+                        v-if="state?.in_downtime"
+                        type="button"
+                        class="detail-drawer__btn detail-drawer__btn--warn"
+                        @click="emit('remove-downtime')"
+                    >
+                        {{ t('board.detailDrawer.removeDowntimeLabel') }}
+                    </button>
+                    <button type="button" class="detail-drawer__btn" @click="emit('add-comment')">
+                        {{ t('board.detailDrawer.addCommentLabel') }}
+                    </button>
+                    <details class="detail-drawer__more">
+                        <summary
+                            class="detail-drawer__btn detail-drawer__btn--more"
+                            :title="t('board.detailDrawer.moreActions')"
                         >
-                            {{ t('board.detailDrawer.disableNotificationsLabel') }}
-                        </button>
-                        <button
-                            v-else
-                            type="button"
-                            class="detail-drawer__more-item"
-                            role="menuitem"
-                            @click="
-                                closeMoreMenu($event);
-                                emit('enable-notifications');
-                            "
-                        >
-                            {{ t('board.detailDrawer.enableNotificationsLabel') }}
-                        </button>
-                    </div>
-                </details>
-            </div>
-        </footer>
+                            {{ t('board.detailDrawer.moreActions') }}
+                        </summary>
+                        <div class="detail-drawer__more-menu" role="menu">
+                            <button
+                                v-if="state?.notifications_enabled !== false"
+                                type="button"
+                                class="detail-drawer__more-item"
+                                role="menuitem"
+                                @click="
+                                    closeMoreMenu($event);
+                                    emit('disable-notifications');
+                                "
+                            >
+                                {{ t('board.detailDrawer.disableNotificationsLabel') }}
+                            </button>
+                            <button
+                                v-else
+                                type="button"
+                                class="detail-drawer__more-item"
+                                role="menuitem"
+                                @click="
+                                    closeMoreMenu($event);
+                                    emit('enable-notifications');
+                                "
+                            >
+                                {{ t('board.detailDrawer.enableNotificationsLabel') }}
+                            </button>
+                        </div>
+                    </details>
+                </div>
+            </footer>
 
-        <footer v-else class="detail-drawer__actions detail-drawer__actions--site">
-            <a
-                v-if="problemsUrlFull"
-                :href="problemsUrlFull"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="detail-drawer__btn detail-drawer__btn--primary"
-            >
-                {{ t('board.detailDrawer.openProblems') }} ↗
-            </a>
-        </footer>
-    </div>
+            <footer v-else class="detail-drawer__actions detail-drawer__actions--site">
+                <a
+                    v-if="problemsUrlFull"
+                    :href="problemsUrlFull"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="detail-drawer__btn detail-drawer__btn--primary"
+                >
+                    {{ t('board.detailDrawer.openProblems') }} ↗
+                </a>
+            </footer>
+        </div>
+    </CmkSlideIn>
 </template>
 
 <script setup lang="ts">
@@ -274,6 +290,7 @@ import { parsePerfData, utilColor, utilPercent } from '@/utils/perf';
 import { stateColor } from '@/utils/stateColors';
 import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time';
 import CmkIcon from '@/vendor/cmk/components/CmkIcon';
+import CmkSlideIn from '@/vendor/cmk/components/CmkSlideIn';
 
 function stateBgColor(state: string): string {
     const c = stateColor(state);
@@ -290,7 +307,11 @@ const props = defineProps<{
     object: BoardObject | null;
     state?: ObjectState;
     checkmkUrl?: string | null;
+    /** CSS selector for the CmkSlideIn portal target. Defaults to body. */
+    portalTarget?: string;
 }>();
+
+const portalTarget = computed(() => props.portalTarget);
 
 const emit = defineEmits<{
     close: [];
@@ -629,21 +650,12 @@ const perfRows = computed<PerfRow[]>(() => {
 
 <style scoped>
 .detail-drawer {
-    /* Absolute (not fixed) so the drawer stays inside the board container and
-       respects the OrbVis/Checkmk app header sitting above it. */
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 360px;
-    max-width: 100vw;
-    background: var(--bg-surface);
-    border-left: 1px solid var(--border);
-    z-index: 30;
+    /* Mounted as the slot of CmkSlideIn (vendor/cmk/components/CmkSlideIn);
+       the SlideIn handles size, position, animation, focus-trap. We just
+       provide the inner column layout. */
     display: flex;
     flex-direction: column;
-    box-shadow: -4px 0 16px rgb(0 0 0 / 40%);
-    animation: slide-in 0.18s ease-out;
+    flex: 1 1 auto;
     min-height: 0;
 
     /* Local tokens for chip + warn-button tints. Kept here (not in style.css)
@@ -659,28 +671,6 @@ const perfRows = computed<PerfRow[]>(() => {
     --chip-ok-fg: rgb(74 222 128);
     --chip-ok-border: rgb(74 222 128 / 25%);
     --primary-btn-fg: rgb(0 0 0 / 90%);
-}
-
-@keyframes slide-in {
-    from {
-        transform: translateX(100%);
-    }
-
-    to {
-        transform: translateX(0);
-    }
-}
-
-/* Vue <Transition name="drawer-slide"> applies these classes on close so the
- * drawer slides out instead of vanishing. The mount-time slide-in is still
- * driven by the keyframe above. */
-.drawer-slide-leave-active.detail-drawer {
-    transition: transform 0.18s ease-in;
-    animation: none;
-}
-
-.drawer-slide-leave-to.detail-drawer {
-    transform: translateX(100%);
 }
 
 .detail-drawer__severity-bar {
