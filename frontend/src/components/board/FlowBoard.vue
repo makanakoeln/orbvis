@@ -2056,8 +2056,13 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     nodeMerge
         .filter((d) => d.nodeType === 'host')
         .each(function (d) {
+            // Off respects the operator's explicit choice — no automatic
+            // services_omitted fallback. Donut always shows arcs. Detail
+            // layouts (fan/orbit/row) fall back to donut only when the
+            // backend dropped per-service rows for top-K cutoff.
+            const layout = props.serviceLayout;
             const showDonut =
-                props.serviceLayout === 'donut' || (d.topo?.services_omitted ?? false);
+                layout === 'donut' || (layout !== 'off' && (d.topo?.services_omitted ?? false));
             const segments = showDonut && d.topo ? donutSegments(d.topo) : [];
             const arcs = donutPie(segments);
             const donutG = select(this).select<SVGGElement>('g.donut');
