@@ -666,20 +666,6 @@ const perfRows = computed<PerfRow[]>(() => {
     flex-direction: column;
     flex: 1 1 auto;
     min-height: 0;
-
-    /* Local tokens for chip + warn-button tints. Kept here (not in style.css)
-       because they are drawer-internal accents on top of the global state-color
-       system. */
-    --chip-crit-fg: rgb(248 113 113);
-    --chip-crit-border: rgb(248 113 113 / 35%);
-    --chip-warn-fg: rgb(255 208 0);
-    --chip-warn-border: rgb(255 208 0 / 35%);
-    --chip-warn-border-hover: rgb(255 208 0 / 55%);
-    --chip-unknown-fg: rgb(251 146 60);
-    --chip-unknown-border: rgb(251 146 60 / 35%);
-    --chip-ok-fg: rgb(74 222 128);
-    --chip-ok-border: rgb(74 222 128 / 25%);
-    --primary-btn-fg: rgb(0 0 0 / 90%);
 }
 
 .detail-drawer__severity-bar {
@@ -999,44 +985,47 @@ const perfRows = computed<PerfRow[]>(() => {
     font-weight: var(--font-weight-semibold);
 }
 
+/* Chips track the global Checkmk state-color tokens (style.css) so they stay
+   in sync with the rest of OrbVis/CMK. Background/border are tinted variants
+   produced via color-mix; text uses the full state color. */
 .detail-drawer__chip--crit {
-    background: rgb(248 113 113 / 12%);
-    border-color: var(--chip-crit-border);
+    background: color-mix(in srgb, var(--color-state-critical) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-state-critical) 35%, transparent);
 }
 
 .detail-drawer__chip--crit .detail-drawer__chip-count,
 .detail-drawer__chip--crit .detail-drawer__chip-label {
-    color: var(--chip-crit-fg);
+    color: var(--color-state-critical);
 }
 
 .detail-drawer__chip--warn {
-    background: rgb(255 208 0 / 12%);
-    border-color: var(--chip-warn-border);
+    background: color-mix(in srgb, var(--color-state-warning) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-state-warning) 35%, transparent);
 }
 
 .detail-drawer__chip--warn .detail-drawer__chip-count,
 .detail-drawer__chip--warn .detail-drawer__chip-label {
-    color: var(--chip-warn-fg);
+    color: var(--color-state-warning);
 }
 
 .detail-drawer__chip--unknown {
-    background: rgb(251 146 60 / 12%);
-    border-color: var(--chip-unknown-border);
+    background: color-mix(in srgb, var(--color-state-unknown) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-state-unknown) 35%, transparent);
 }
 
 .detail-drawer__chip--unknown .detail-drawer__chip-count,
 .detail-drawer__chip--unknown .detail-drawer__chip-label {
-    color: var(--chip-unknown-fg);
+    color: var(--color-state-unknown);
 }
 
 .detail-drawer__chip--ok {
-    background: rgb(74 222 128 / 8%);
-    border-color: var(--chip-ok-border);
+    background: color-mix(in srgb, var(--color-state-ok) 8%, transparent);
+    border-color: color-mix(in srgb, var(--color-state-ok) 25%, transparent);
 }
 
 .detail-drawer__chip--ok .detail-drawer__chip-count,
 .detail-drawer__chip--ok .detail-drawer__chip-label {
-    color: var(--chip-ok-fg);
+    color: var(--color-state-ok);
 }
 
 .detail-drawer__chip--zero {
