@@ -569,8 +569,10 @@ const savedOk = ref(false);
 let savedOkTimer: ReturnType<typeof setTimeout> | null = null;
 let saveErrorTimer: ReturnType<typeof setTimeout> | null = null;
 
+// Open the first section by default — operators arriving on the page see
+// what's configurable instead of an opaque list of collapsed headers.
 const sectionOpen = reactive({
-    objectDefaults: false,
+    objectDefaults: true,
     labelDefaults: false,
     newBoardDefaults: false,
     templates: false,
