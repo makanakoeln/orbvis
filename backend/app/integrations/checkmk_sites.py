@@ -6,12 +6,17 @@ shape expected by :class:`livestatus.MultiSiteConnection`. Returns ``None`` to
 signal "stay on the single-site fast path" — when not in an OMD site, when
 sites.mk is missing or unparseable, or when only the local site is configured.
 
-The two normalisation helpers ``_encode_socket_for_livestatus`` and
+The normalisation helpers ``_encode_socket_for_livestatus`` and
 ``_site_config_for_livestatus`` are direct ports of their counterparts in
-``cmk/gui/sites.py``. They are stable byte-for-byte across CMK 2.3 / 2.4 / 2.5
-(spot-checked) and only depend on the WATO site-spec contract; we copy them
-because ``cmk.gui.sites`` itself imports flask/g/active_config at module top
-and cannot be imported outside a GUI request context.
+``cmk/gui/sites.py``. ``_filter_enabled`` and ``_is_single_local_site`` are
+ports of ``cmk.gui.site_config.{enabled_sites,is_single_local_site}``. We
+copy them rather than import:
+- ``cmk.gui.sites`` imports flask/g/active_config at module top and cannot be
+  imported outside a GUI request context.
+- ``cmk.gui.site_config.enabled_sites`` / ``is_single_local_site`` changed
+  signatures across versions: 2.3/2.4 take no args and read the global
+  ``active_config.sites``; 2.5+ take the site-config mapping explicitly.
+The bodies are trivial and stable across the WATO site-spec contract.
 """
 
 from __future__ import annotations
@@ -80,6 +85,37 @@ def _site_config_for_livestatus(
     return copied
 
 
+def _filter_enabled(site_configs: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Port of cmk.gui.site_config.enabled_sites — version-agnostic.
+
+    2.3/2.4 read ``active_config.sites`` implicitly; 2.5+ take the mapping as
+    an argument. The body is trivial: drop entries flagged ``disabled``.
+    """
+    return {
+        site_id: dict(spec)
+        for site_id, spec in site_configs.items()
+        if not spec.get("disabled", False)
+    }
+
+
+def _is_single_local_site(sites: dict[str, dict[str, Any]], livestatus_unix_socket: str) -> bool:
+    """Port of cmk.gui.site_config.is_single_local_site — version-agnostic."""
+    if len(sites) > 1:
+        return False
+    if not sites:
+        return True
+    spec = next(iter(sites.values()))
+    sock = spec.get("socket")
+    if not isinstance(sock, tuple):
+        return False
+    if sock[0] == "local":
+        return True
+    if sock[0] == "unix":
+        path = sock[1].get("path") if isinstance(sock[1], dict) else None
+        return path == livestatus_unix_socket
+    return False
+
+
 def load_sites() -> dict[str, dict[str, Any]] | None:
     """Return enabled Checkmk site configurations for ``MultiSiteConnection``.
 
@@ -101,14 +137,13 @@ def load_sites() -> dict[str, dict[str, Any]] | None:
     if not _cmk_integration.available:
         return None
     try:
-        from cmk.gui.site_config import enabled_sites, is_single_local_site
         from cmk.utils.paths import livestatus_unix_socket
     except ImportError as exc:
-        log.warning("cmk.gui.site_config / cmk.utils.paths not importable: %s", exc)
+        log.warning("cmk.utils.paths not importable: %s", exc)
         return None
 
-    enabled = enabled_sites(raw)
-    if is_single_local_site(enabled):
+    enabled = _filter_enabled(raw)
+    if _is_single_local_site(enabled, str(livestatus_unix_socket)):
         return None
 
     out: dict[str, dict[str, Any]] = {}
