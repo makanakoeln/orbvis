@@ -2264,6 +2264,15 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     display: none;
 }
 
+/* Promote the panned/zoomed group to its own GPU-composited layer so the
+   browser can re-rasterize the (large) SVG subtree once and just translate
+   the layer per frame, instead of repainting all 500+ host icons +
+   service rings every pan/zoom step. */
+/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
+:deep(g.zoom-layer) {
+    will-change: transform;
+}
+
 .flow-hint {
     position: absolute;
     top: calc(var(--dimension-5) + 36px);
