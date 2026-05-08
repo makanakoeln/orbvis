@@ -1243,14 +1243,11 @@ function refreshSiteScale(): void {
 
 function applyLod(): void {
     if (!svgEl.value) return;
-    const display = lodLow ? 'none' : '';
-    const sel = select(svgEl.value);
-    sel.selectAll<SVGGElement, FNode>('g.node')
-        .filter((d) => d.nodeType === 'service' || d.nodeType === 'more')
-        .style('display', display);
-    sel.selectAll<SVGLineElement, FLink>('g.links line')
-        .filter((d) => d.isServiceLink)
-        .style('display', display);
+    // Toggle a single class on the SVG root; the scoped CSS below hides
+    // service / "+more" nodes and service-links via descendant selectors.
+    // Inline-styling 3000+ elements per LoD flip stutters mid-zoom on
+    // multi-hundred-host boards.
+    svgEl.value.classList.toggle('lod-low', lodLow);
 }
 
 function flushZoomTransform(): void {
@@ -1844,6 +1841,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     const linkEnter = linkSel.enter().append('line');
     const linkMerge = linkEnter
         .merge(linkSel)
+        .attr('class', (d) => (d.isServiceLink ? 'link link-service' : 'link'))
         .attr('stroke', (d) => {
             const src = d.source as FNode;
             if (src.nodeType === 'site') return 'rgba(160,160,170,0.25)';
@@ -1870,7 +1868,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     const nodeEnter = nodeSel
         .enter()
         .append('g')
-        .attr('class', 'node')
+        .attr('class', (d) => `node node-${d.nodeType}`)
         .attr('cursor', (d) => {
             if (d.nodeType === 'site') return 'pointer';
             if (d.nodeType === 'host' && !props.readonly) return 'grab';
@@ -2254,6 +2252,18 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
 </script>
 
 <style scoped>
+/* Level-of-detail: at low zoom the service rings + "+more" badges and the
+   service-links between them are unreadable, so we hide them via a single
+   class on the SVG root rather than inline-styling thousands of elements. */
+/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
+:deep(svg.lod-low g.node-service),
+/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
+:deep(svg.lod-low g.node-more),
+/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
+:deep(svg.lod-low g.links line.link-service) {
+    display: none;
+}
+
 .flow-hint {
     position: absolute;
     top: calc(var(--dimension-5) + 36px);
