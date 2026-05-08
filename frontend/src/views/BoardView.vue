@@ -298,8 +298,14 @@
             </svg>
         </button>
 
-        <!-- Map area + optional edit panel -->
-        <div class="flex flex-1 overflow-hidden relative" data-tour="board-canvas">
+        <!-- Map area + optional edit panel. Acts as the portal target for the
+             shared CmkSlideIn-based detail drawer so the slide-in stays under
+             the topbar. -->
+        <div
+            id="orbvis-board-shell"
+            class="flex flex-1 overflow-hidden relative"
+            data-tour="board-canvas"
+        >
             <!-- Loading overlay (covers all board types) -->
             <div
                 v-if="isLoading"
@@ -497,6 +503,7 @@
                 :object="detailDrawerObject"
                 :state="detailDrawerState"
                 :checkmk-url="checkmkUrl"
+                portal-target="#orbvis-board-shell"
                 @close="closeDetail"
                 @acknowledge="onDetailAck"
                 @remove-ack="onDetailRemoveAck"

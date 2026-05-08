@@ -142,6 +142,7 @@
             :object="detailObject"
             :state="detailState"
             :checkmk-url="props.checkmkUrl ?? null"
+            portal-target="#orbvis-board-shell"
             @close="closeDetail"
             @acknowledge="onDetailAck"
             @remove-ack="onDetailRemoveAck"

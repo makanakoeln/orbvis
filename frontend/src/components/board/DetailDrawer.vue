@@ -189,44 +189,52 @@
                     {{ t('board.detailDrawer.sectionActions') }}
                 </h4>
                 <div class="detail-drawer__actions-grid">
-                    <button
+                    <CmkButton
                         v-if="!state?.acknowledged && isProblematic"
-                        type="button"
-                        class="detail-drawer__btn detail-drawer__btn--primary"
+                        variant="success"
+                        class="detail-drawer__action detail-drawer__action--primary"
                         @click="emit('acknowledge')"
                     >
                         {{ t('board.detailDrawer.ackLabel') }}
-                    </button>
-                    <button
+                    </CmkButton>
+                    <CmkButton
                         v-if="state?.acknowledged"
-                        type="button"
-                        class="detail-drawer__btn detail-drawer__btn--warn"
+                        variant="warning"
+                        class="detail-drawer__action"
                         @click="emit('remove-ack')"
                     >
                         {{ t('board.detailDrawer.removeAckLabel') }}
-                    </button>
-                    <button type="button" class="detail-drawer__btn" @click="emit('force-check')">
+                    </CmkButton>
+                    <CmkButton
+                        variant="optional"
+                        class="detail-drawer__action"
+                        @click="emit('force-check')"
+                    >
                         {{ t('board.detailDrawer.forceCheckLabel') }}
-                    </button>
-                    <button
+                    </CmkButton>
+                    <CmkButton
                         v-if="!state?.in_downtime"
-                        type="button"
-                        class="detail-drawer__btn"
+                        variant="optional"
+                        class="detail-drawer__action"
                         @click="emit('schedule-downtime')"
                     >
                         {{ t('board.detailDrawer.scheduleDowntimeLabel') }}
-                    </button>
-                    <button
+                    </CmkButton>
+                    <CmkButton
                         v-if="state?.in_downtime"
-                        type="button"
-                        class="detail-drawer__btn detail-drawer__btn--warn"
+                        variant="warning"
+                        class="detail-drawer__action"
                         @click="emit('remove-downtime')"
                     >
                         {{ t('board.detailDrawer.removeDowntimeLabel') }}
-                    </button>
-                    <button type="button" class="detail-drawer__btn" @click="emit('add-comment')">
+                    </CmkButton>
+                    <CmkButton
+                        variant="optional"
+                        class="detail-drawer__action"
+                        @click="emit('add-comment')"
+                    >
                         {{ t('board.detailDrawer.addCommentLabel') }}
-                    </button>
+                    </CmkButton>
                     <details class="detail-drawer__more">
                         <summary
                             class="detail-drawer__btn detail-drawer__btn--more"
@@ -265,15 +273,15 @@
             </footer>
 
             <footer v-else class="detail-drawer__actions detail-drawer__actions--site">
-                <a
+                <CmkButton
                     v-if="problemsUrlFull"
+                    variant="success"
                     :href="problemsUrlFull"
                     target="_blank"
-                    rel="noopener noreferrer"
-                    class="detail-drawer__btn detail-drawer__btn--primary"
+                    class="detail-drawer__action detail-drawer__action--primary"
                 >
                     {{ t('board.detailDrawer.openProblems') }} ↗
-                </a>
+                </CmkButton>
             </footer>
         </div>
     </CmkSlideIn>
@@ -289,6 +297,7 @@ import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming';
 import { parsePerfData, utilColor, utilPercent } from '@/utils/perf';
 import { stateColor } from '@/utils/stateColors';
 import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time';
+import CmkButton from '@/vendor/cmk/components/CmkButton.vue';
 import CmkIcon from '@/vendor/cmk/components/CmkIcon';
 import CmkSlideIn from '@/vendor/cmk/components/CmkSlideIn';
 
@@ -1063,48 +1072,37 @@ const perfRows = computed<PerfRow[]>(() => {
     gap: 6px;
 }
 
+/* CmkButton is inline-flex; stretch it across the grid cell so the actions
+   line up. The --primary variant spans both columns for emphasis. */
+.detail-drawer__action {
+    width: 100%;
+}
+
+.detail-drawer__action--primary {
+    grid-column: span 2;
+}
+
+/* Summary acts as the More-actions toggle and styled to match a sibling
+   CmkButton (optional variant). */
 .detail-drawer__btn {
-    padding: 8px 10px;
-    background: var(--bg);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: var(--border-radius);
+    display: inline-flex;
+    height: var(--dimension-10, 32px);
+    padding: 0 8px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--default-button-optional-color, var(--bg));
+    border: 1px solid var(--button-optional-border-color, var(--border));
+    color: var(--button-optional-text-color, var(--text));
+    border-radius: var(--dimension-3, var(--border-radius));
     font-size: 12px;
-    font-weight: var(--font-weight-semibold);
+    font-weight: bold;
     cursor: pointer;
     text-align: center;
     text-decoration: none;
-    transition:
-        background 0.1s,
-        border-color 0.1s;
 }
 
 .detail-drawer__btn:hover {
     background: var(--bg-hover);
-    border-color: var(--text-muted);
-}
-
-.detail-drawer__btn--primary {
-    grid-column: span 2;
-    background: var(--color-corporate-green-50, rgb(34 197 94));
-    color: var(--primary-btn-fg);
-    border-color: var(--color-corporate-green-50, rgb(34 197 94));
-}
-
-.detail-drawer__btn--primary:hover {
-    background: var(--color-corporate-green-40, rgb(22 163 74));
-    border-color: var(--color-corporate-green-40, rgb(22 163 74));
-}
-
-.detail-drawer__btn--warn {
-    background: rgb(255 208 0 / 12%);
-    color: var(--chip-warn-fg);
-    border-color: var(--chip-warn-border);
-}
-
-.detail-drawer__btn--warn:hover {
-    background: rgb(255 208 0 / 18%);
-    border-color: var(--chip-warn-border-hover);
 }
 
 .detail-drawer__more {
