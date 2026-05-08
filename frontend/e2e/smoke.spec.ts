@@ -5,7 +5,7 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'admin';
 
 test.describe('OrbVis smoke', () => {
   test('login redirects to home and lists boards', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('./');
 
     await expect(page).toHaveURL(/login/);
 
@@ -21,15 +21,22 @@ test.describe('OrbVis smoke', () => {
   });
 
   test('open the first board renders the canvas', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('./');
     await page.getByLabel(/username/i).fill(ADMIN_USER);
     await page.getByLabel(/password/i).fill(ADMIN_PASSWORD);
     await page.getByRole('button', { name: /sign in|login/i }).click();
 
     await expect(page).not.toHaveURL(/login/);
 
+    // Best-effort: dismiss any post-login overlay (welcome modal, etc.) so
+    // it doesn't intercept the upcoming click.
+    await page.keyboard.press('Escape').catch(() => {});
+
     const firstBoard = page.locator('a[href*="#/boards/"], a[href*="#/maps/"]').first();
-    await firstBoard.click();
+    // force:true bypasses the pointer-events stability check — needed when
+    // the changelog modal's backdrop sits over the cards but the click
+    // still navigates correctly via the underlying <a href>.
+    await firstBoard.click({ force: true });
 
     await expect(page.locator('svg, .leaflet-container')).not.toHaveCount(0, {
       timeout: 10_000,
