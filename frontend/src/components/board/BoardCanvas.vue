@@ -10,6 +10,7 @@
         @pointermove.prevent="onCanvasPointerMove"
         @pointerup="onCanvasPointerUp"
         @pointercancel="onCanvasPointerUp"
+        @wheel="onCanvasWheel"
     >
         <!-- Grid overlay — always in CSS pixel space so it's visible regardless of bg-image scale -->
         <svg
@@ -91,6 +92,18 @@
                 @subtree-leave="!editMode && closeHoverMenu()"
             />
         </div>
+
+        <!-- Zoom indicator + reset (only visible when zoomed). Sits just above
+             the bottom-right corner so it doesn't compete with the search bar. -->
+        <button
+            v-if="zoom !== 1 && !editMode"
+            type="button"
+            class="board-zoom-reset"
+            title="Reset zoom (1:1)"
+            @click="resetZoom"
+        >
+            {{ Math.round(zoom * 100) }}% ↺
+        </button>
 
         <!-- Hover popup -->
         <HoverMenu
@@ -319,9 +332,16 @@ const canvasStyle = computed(() => {
     const bg = props.config.background_image;
     const url = bgImageUrl.value;
     const color = props.config.background_color;
+    const z = zoom.value;
     const base: Record<string, string> = {
-        minWidth: `max(${canvasWidth.value}px, 100%)`,
-        minHeight: `max(${canvasHeight.value}px, 100%)`,
+        // Multiply min-size by zoom so the outer overflow-auto container grows
+        // its scrollbars while we apply the matching CSS transform — that gives
+        // operators native browser pan via scroll, parity with FlowBoard's d3
+        // zoom/pan in spirit if not in interaction.
+        minWidth: `max(${canvasWidth.value * z}px, 100%)`,
+        minHeight: `max(${canvasHeight.value * z}px, 100%)`,
+        transform: z !== 1 ? `scale(${z})` : '',
+        transformOrigin: '0 0',
     };
     if (color) base.backgroundColor = color;
     if (bg && !bgImageFailed.value) {
@@ -332,6 +352,49 @@ const canvasStyle = computed(() => {
     }
     return base;
 });
+
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 4;
+const zoom = ref(1);
+
+function onCanvasWheel(event: WheelEvent): void {
+    // ctrl+wheel = zoom (matches browsers' image-viewer / map convention).
+    // Bare wheel keeps the outer container's natural scroll behaviour.
+    // Edit mode is fixed at zoom=1 so drag-coord math stays simple.
+    if (props.editMode || !event.ctrlKey) return;
+    event.preventDefault();
+    const factor = event.deltaY < 0 ? 1.1 : 1 / 1.1;
+    const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom.value * factor));
+    if (next === zoom.value) return;
+    // Anchor zoom around the cursor: scroll the outer container so the point
+    // under the mouse stays under the mouse after the size change.
+    const outer = canvasEl.value?.parentElement;
+    if (outer) {
+        const rect = canvasEl.value!.getBoundingClientRect();
+        const cx = event.clientX - rect.left;
+        const cy = event.clientY - rect.top;
+        const ratio = next / zoom.value;
+        zoom.value = next;
+        // Wait one frame for the new transform to apply, then realign scroll.
+        requestAnimationFrame(() => {
+            outer.scrollLeft += cx * (ratio - 1);
+            outer.scrollTop += cy * (ratio - 1);
+        });
+    } else {
+        zoom.value = next;
+    }
+}
+
+function resetZoom(): void {
+    zoom.value = 1;
+}
+
+watch(
+    () => props.editMode,
+    (edit) => {
+        if (edit) zoom.value = 1;
+    },
+);
 
 const nonLineObjects = computed(() => props.config.objects.filter((o) => o.type !== 'line'));
 const lineObjects = computed(() => props.config.objects.filter((o) => o.type === 'line'));
@@ -622,5 +685,27 @@ function getMapPosition(event: MouseEvent): { x: number; y: number } {
     };
 }
 
-defineExpose({ getCanvasEl: () => canvasEl.value, getMapPosition });
+defineExpose({ getCanvasEl: () => canvasEl.value, getMapPosition, resetZoom });
 </script>
+
+<style scoped>
+.board-zoom-reset {
+    position: absolute;
+    bottom: var(--dimension-5);
+    right: var(--dimension-5);
+    z-index: 6;
+    padding: 4px 10px;
+    border-radius: var(--border-radius);
+    background: rgb(24 24 27 / 85%);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+}
+
+.board-zoom-reset:hover {
+    border-color: var(--color-corporate-green-50);
+}
+</style>
