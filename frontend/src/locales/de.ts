@@ -198,6 +198,7 @@ export default {
             addCommentLabel: 'Kommentar',
             disableNotificationsLabel: 'Benachrichtigungen aus',
             enableNotificationsLabel: 'Benachrichtigungen an',
+            rawMetrics: 'Rohwerte ({n})',
             tabStatus: 'Status',
             tabPerformance: 'Performance',
             tabContext: 'Kontext',

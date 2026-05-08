@@ -192,47 +192,116 @@
 
                         <CmkTabContent v-if="showPerformanceTab" id="performance" spacing="none">
                             <div class="detail-drawer__pane">
-                                <div v-if="perfRows.length" class="detail-drawer__perf">
+                                <div v-if="mainPerfRow" class="detail-drawer__main-metric">
+                                    <div class="detail-drawer__main-metric-head">
+                                        <span class="detail-drawer__main-metric-label">{{
+                                            mainPerfRow.label
+                                        }}</span>
+                                        <span class="detail-drawer__main-metric-value">{{
+                                            mainPerfRow.valueLabel
+                                        }}</span>
+                                    </div>
                                     <div
-                                        v-for="row in perfRows"
-                                        :key="row.label"
-                                        class="detail-drawer__perf-row"
+                                        class="detail-drawer__perf-bar-wrap detail-drawer__perf-bar-wrap--lg"
                                     >
-                                        <div class="detail-drawer__perf-label" :title="row.label">
-                                            {{ row.label }}
-                                        </div>
-                                        <div class="detail-drawer__perf-bar-wrap">
-                                            <div
-                                                class="detail-drawer__perf-bar"
-                                                :style="{
-                                                    width: row.pct + '%',
-                                                    background: row.color,
-                                                }"
-                                            />
-                                            <div
-                                                v-if="row.warnPct !== null"
-                                                class="detail-drawer__perf-mark detail-drawer__perf-mark--warn"
-                                                :style="{ left: row.warnPct + '%' }"
-                                                :title="`warn: ${row.warnLabel}`"
-                                            />
-                                            <div
-                                                v-if="row.critPct !== null"
-                                                class="detail-drawer__perf-mark detail-drawer__perf-mark--crit"
-                                                :style="{ left: row.critPct + '%' }"
-                                                :title="`crit: ${row.critLabel}`"
-                                            />
-                                        </div>
-                                        <div class="detail-drawer__perf-value">
-                                            {{ row.valueLabel }}
-                                        </div>
+                                        <div
+                                            class="detail-drawer__perf-bar"
+                                            :style="{
+                                                width: mainPerfRow.pct + '%',
+                                                background: mainPerfRow.color,
+                                            }"
+                                        />
+                                        <div
+                                            v-if="mainPerfRow.warnPct !== null"
+                                            class="detail-drawer__perf-mark detail-drawer__perf-mark--warn"
+                                            :style="{ left: mainPerfRow.warnPct + '%' }"
+                                            :title="`warn: ${mainPerfRow.warnLabel}`"
+                                        />
+                                        <div
+                                            v-if="mainPerfRow.critPct !== null"
+                                            class="detail-drawer__perf-mark detail-drawer__perf-mark--crit"
+                                            :style="{ left: mainPerfRow.critPct + '%' }"
+                                            :title="`crit: ${mainPerfRow.critLabel}`"
+                                        />
                                     </div>
                                 </div>
 
-                                <pre
-                                    v-if="longOutputText"
-                                    class="detail-drawer__output detail-drawer__output--long"
-                                    >{{ longOutputText }}</pre
+                                <div v-if="mainHistoryKey" class="detail-drawer__chart-wrap">
+                                    <MetricChart
+                                        :data="historyData"
+                                        :metric-keys="[mainHistoryKey]"
+                                        :window-secs="HISTORY_MINUTES * 60"
+                                        :thresholds="mainThresholds"
+                                        :unit="mainMetric?.unit"
+                                        :dark="isDark"
+                                    />
+                                </div>
+
+                                <div
+                                    v-if="longOutputRows.length"
+                                    class="detail-drawer__pane-section"
                                 >
+                                    <div class="detail-drawer__pane-heading">
+                                        {{ t('board.detailDrawer.details') }}
+                                    </div>
+                                    <dl class="detail-drawer__output-rows">
+                                        <template v-for="(row, i) in longOutputRows" :key="i">
+                                            <dt v-if="row.label">{{ row.label }}</dt>
+                                            <dd>{{ row.value }}</dd>
+                                        </template>
+                                    </dl>
+                                </div>
+
+                                <details
+                                    v-if="otherPerfRows.length"
+                                    class="detail-drawer__raw-metrics"
+                                >
+                                    <summary>
+                                        {{
+                                            t('board.detailDrawer.rawMetrics', {
+                                                n: otherPerfRows.length,
+                                            })
+                                        }}
+                                    </summary>
+                                    <div class="detail-drawer__perf">
+                                        <div
+                                            v-for="row in otherPerfRows"
+                                            :key="row.label"
+                                            class="detail-drawer__perf-row"
+                                        >
+                                            <div
+                                                class="detail-drawer__perf-label"
+                                                :title="row.label"
+                                            >
+                                                {{ row.label }}
+                                            </div>
+                                            <div class="detail-drawer__perf-bar-wrap">
+                                                <div
+                                                    class="detail-drawer__perf-bar"
+                                                    :style="{
+                                                        width: row.pct + '%',
+                                                        background: row.color,
+                                                    }"
+                                                />
+                                                <div
+                                                    v-if="row.warnPct !== null"
+                                                    class="detail-drawer__perf-mark detail-drawer__perf-mark--warn"
+                                                    :style="{ left: row.warnPct + '%' }"
+                                                    :title="`warn: ${row.warnLabel}`"
+                                                />
+                                                <div
+                                                    v-if="row.critPct !== null"
+                                                    class="detail-drawer__perf-mark detail-drawer__perf-mark--crit"
+                                                    :style="{ left: row.critPct + '%' }"
+                                                    :title="`crit: ${row.critLabel}`"
+                                                />
+                                            </div>
+                                            <div class="detail-drawer__perf-value">
+                                                {{ row.valueLabel }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </details>
                             </div>
                         </CmkTabContent>
 
@@ -487,21 +556,25 @@
 </template>
 
 <script setup lang="ts">
+import { useMutationObserver } from '@vueuse/core';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
+import { fmtValueWithUnit } from '@/composables/useMetricChart';
 import { useAuthStore } from '@/stores/auth';
-import type { BoardObject, ObjectDetails, ObjectState } from '@/types/api';
+import type { BoardObject, MetricPoint, ObjectDetails, ObjectState } from '@/types/api';
 import { buildCheckmkUrl } from '@/utils/boardNavigation';
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming';
-import { parsePerfData, utilColor, utilPercent } from '@/utils/perf';
+import { parsePerfData, type PerfMetric, utilColor, utilPercent } from '@/utils/perf';
 import { stateColor } from '@/utils/stateColors';
 import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time';
 import CmkButton from '@/vendor/cmk/components/CmkButton.vue';
 import CmkIcon from '@/vendor/cmk/components/CmkIcon';
 import CmkSlideIn from '@/vendor/cmk/components/CmkSlideIn';
 import { CmkTab, CmkTabContent, CmkTabs } from '@/vendor/cmk/components/CmkTabs';
+
+import MetricChart from './MetricChart.vue';
 
 function stateBgColor(state: string): string {
     const c = stateColor(state);
@@ -972,12 +1045,7 @@ interface PerfRow {
 }
 
 function fmtNum(n: number, unit: string): string {
-    const abs = Math.abs(n);
-    let str: string;
-    if (abs >= 100) str = n.toFixed(0);
-    else if (abs >= 10) str = n.toFixed(1);
-    else str = n.toFixed(2);
-    return `${str}${unit}`;
+    return fmtValueWithUnit(n, unit);
 }
 
 // Tab visibility — only show tabs that actually have content. The Status tab
@@ -1029,34 +1097,149 @@ const contextMetaRows = computed<MetaRow2[]>(() => {
     return rows;
 });
 
-const perfRows = computed<PerfRow[]>(() => {
+const parsedMetrics = computed<PerfMetric[]>(() => {
     const raw = props.state?.perf_data;
-    if (!raw) return [];
-    const metrics = parsePerfData(raw);
-    if (!metrics.length) return [];
-    return metrics.map((m) => {
-        const pct = utilPercent(m);
-        const refMax = m.max ?? m.crit ?? null;
-        const warnPct =
-            m.warn !== null && refMax !== null && refMax > 0
-                ? Math.min(100, (m.warn / refMax) * 100)
-                : null;
-        const critPct =
-            m.crit !== null && refMax !== null && refMax > 0
-                ? Math.min(100, (m.crit / refMax) * 100)
-                : null;
-        return {
-            label: m.label,
-            pct,
-            color: utilColor(pct),
-            warnPct,
-            critPct,
-            warnLabel: m.warn !== null ? fmtNum(m.warn, m.unit) : '',
-            critLabel: m.crit !== null ? fmtNum(m.crit, m.unit) : '',
-            valueLabel: fmtNum(m.value, m.unit),
-        };
-    });
+    return raw ? parsePerfData(raw) : [];
 });
+
+function _toPerfRow(m: PerfMetric): PerfRow {
+    const pct = utilPercent(m);
+    const refMax = m.max ?? m.crit ?? null;
+    const warnPct =
+        m.warn !== null && refMax !== null && refMax > 0
+            ? Math.min(100, (m.warn / refMax) * 100)
+            : null;
+    const critPct =
+        m.crit !== null && refMax !== null && refMax > 0
+            ? Math.min(100, (m.crit / refMax) * 100)
+            : null;
+    return {
+        label: m.label,
+        pct,
+        color: utilColor(pct),
+        warnPct,
+        critPct,
+        warnLabel: m.warn !== null ? fmtNum(m.warn, m.unit) : '',
+        critLabel: m.crit !== null ? fmtNum(m.crit, m.unit) : '',
+        valueLabel: fmtNum(m.value, m.unit),
+    };
+}
+
+const perfRows = computed<PerfRow[]>(() => parsedMetrics.value.map(_toPerfRow));
+
+// Pick the metric that best summarizes the service: prefer one with thresholds
+// set (those drive the actual state), then fall back to the highest utilization.
+// Anchors the Performance tab so the operator sees the headline value first.
+const mainMetric = computed<PerfMetric | null>(() => {
+    const metrics = parsedMetrics.value;
+    if (!metrics.length) return null;
+    const withThresholds = metrics.filter((m) => m.warn !== null || m.crit !== null);
+    const candidates = withThresholds.length ? withThresholds : metrics;
+    return [...candidates].sort((a, b) => utilPercent(b) - utilPercent(a))[0] ?? null;
+});
+
+const mainPerfRow = computed<PerfRow | null>(() =>
+    mainMetric.value ? _toPerfRow(mainMetric.value) : null,
+);
+
+const otherPerfRows = computed<PerfRow[]>(() => {
+    const main = mainMetric.value?.label;
+    return perfRows.value.filter((r) => r.label !== main);
+});
+
+// Long output is a multi-line agent summary; each line tends to be
+// "Label: <value>" — render as a structured two-column list instead of <pre>
+// so it scans like a real summary table.
+interface LongOutputRow {
+    label: string;
+    value: string;
+}
+const longOutputRows = computed<LongOutputRow[]>(() => {
+    const raw = longOutputText.value;
+    if (!raw) return [];
+    return raw
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+            const idx = line.indexOf(':');
+            if (idx <= 0) return { label: '', value: line };
+            return { label: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim() };
+        });
+});
+
+// Mini-graph data — fetched lazily when the Performance tab is visible.
+// 4 hours window matches Checkmk's default Perf-O-Meter graph; it's enough to
+// see "trending toward warn" without being noisy.
+const HISTORY_MINUTES = 240;
+const historyData = ref<Record<string, MetricPoint[]>>({});
+let _historyReqId = 0;
+
+async function _loadHistory(): Promise<void> {
+    historyData.value = {};
+    const obj = props.object;
+    const connId = props.connectionId;
+    if (
+        !connId ||
+        !auth.accessToken ||
+        !obj?.host_name ||
+        (obj.type !== 'host' && obj.type !== 'service')
+    )
+        return;
+    const reqId = ++_historyReqId;
+    try {
+        const res = await connectionsApi.metricHistory(
+            connId,
+            obj.host_name,
+            obj.type === 'service' ? (obj.service_description ?? null) : null,
+            HISTORY_MINUTES,
+            auth.accessToken,
+        );
+        if (reqId === _historyReqId) historyData.value = res.series ?? {};
+    } catch {
+        if (reqId === _historyReqId) historyData.value = {};
+    }
+}
+
+// Refetch on selection change, but only when the Performance tab actually has
+// content to show — otherwise we'd hit metric-history for hosts that don't
+// expose perf_data at all.
+watch(
+    [
+        () => props.object?.type,
+        () => props.object?.host_name,
+        () => props.object?.service_description,
+        () => props.connectionId,
+        showPerformanceTab,
+    ],
+    ([, , , , show]) => {
+        if (show) void _loadHistory();
+        else historyData.value = {};
+    },
+);
+
+const mainHistoryKey = computed(() => {
+    const main = mainMetric.value?.label;
+    if (!main) return null;
+    // metric-history keys come straight from Checkmk's metric IDs (perf_data
+    // labels), so a direct match works for normal services.
+    return main in historyData.value ? main : null;
+});
+
+const mainThresholds = computed(() => {
+    const m = mainMetric.value;
+    if (!m) return null;
+    return { warn: m.warn, crit: m.crit };
+});
+
+const isDark = ref(document.documentElement.classList.contains('dark'));
+useMutationObserver(
+    document.documentElement,
+    () => {
+        isDark.value = document.documentElement.classList.contains('dark');
+    },
+    { attributes: true, attributeFilter: ['class'] },
+);
 </script>
 
 <style scoped>
@@ -1420,6 +1603,100 @@ const perfRows = computed<PerfRow[]>(() => {
     overflow: hidden;
 }
 
+.detail-drawer__perf-bar-wrap--lg {
+    height: 14px;
+    border-radius: 6px;
+}
+
+/* Headline metric block — visually anchored at the top of the Performance
+   tab so the operator sees the status-driving value without scanning. */
+.detail-drawer__main-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 0 6px;
+}
+
+.detail-drawer__main-metric-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.detail-drawer__main-metric-label {
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: var(--font-weight-semibold);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.detail-drawer__main-metric-value {
+    color: var(--text);
+    font-size: 18px;
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+.detail-drawer__chart-wrap {
+    height: 120px;
+    margin: 4px 0;
+}
+
+/* Long output rendered as a label/value table — the human-readable summary
+   that Checkmk already produces, so we treat it as the primary breakdown
+   and skip duplicating the same data as bars below. */
+.detail-drawer__output-rows {
+    display: grid;
+    grid-template-columns: minmax(80px, max-content) 1fr;
+    gap: 3px 12px;
+    margin: 0;
+    font-size: 11px;
+}
+
+.detail-drawer__output-rows dt {
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.detail-drawer__output-rows dd {
+    color: var(--text);
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.detail-drawer__raw-metrics {
+    border-top: 1px solid var(--border);
+    padding-top: 6px;
+}
+
+.detail-drawer__raw-metrics > summary {
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: var(--font-weight-semibold);
+    padding: 4px 0;
+    user-select: none;
+}
+
+/* stylelint-disable-next-line no-descending-specificity */
+.detail-drawer__raw-metrics[open] > summary {
+    color: var(--text);
+}
+
+.detail-drawer__raw-metrics > .detail-drawer__perf {
+    margin-top: 6px;
+}
+
 .detail-drawer__perf-bar {
     height: 100%;
     transition: width 0.2s ease;
@@ -1712,6 +1989,7 @@ const perfRows = computed<PerfRow[]>(() => {
     position: relative;
 }
 
+/* stylelint-disable-next-line no-descending-specificity */
 .detail-drawer__more > summary {
     list-style: none;
     cursor: pointer;

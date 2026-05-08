@@ -196,6 +196,7 @@ export default {
             addCommentLabel: 'Add comment',
             disableNotificationsLabel: 'Disable notifications',
             enableNotificationsLabel: 'Enable notifications',
+            rawMetrics: 'Raw metrics ({n})',
             tabStatus: 'Status',
             tabPerformance: 'Performance',
             tabContext: 'Context',
