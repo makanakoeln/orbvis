@@ -369,8 +369,17 @@ function onGraphResizeStart(event: PointerEvent, obj: BoardObjectType) {
     if (!canvasEl.value) return;
     canvasEl.value.setPointerCapture(event.pointerId);
     _resizeId.value = obj.id;
-    _resizeInitW.value = obj.graph_width ?? 400;
-    _resizeInitH.value = obj.graph_height ?? 200;
+    if (obj.type === 'textbox') {
+        // For ``auto``-sized textboxes (no stored width/height) start the
+        // resize from what the user actually sees on screen.
+        const handle = event.target as HTMLElement | null;
+        const rect = handle?.parentElement?.getBoundingClientRect();
+        _resizeInitW.value = obj.textbox_width ?? Math.round(rect?.width ?? 200);
+        _resizeInitH.value = obj.textbox_height ?? Math.round(rect?.height ?? 40);
+    } else {
+        _resizeInitW.value = obj.graph_width ?? 400;
+        _resizeInitH.value = obj.graph_height ?? 200;
+    }
     _resizeStartX.value = event.clientX;
     _resizeStartY.value = event.clientY;
     localResizeDimensions[obj.id] = { width: _resizeInitW.value, height: _resizeInitH.value };

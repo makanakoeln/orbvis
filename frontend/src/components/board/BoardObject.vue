@@ -181,7 +181,7 @@
         </div>
         <!-- Resize handle (edit mode only) -->
         <div
-            v-if="editMode"
+            v-if="editMode && resizableTypes.has(object.type)"
             class="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize bg-[var(--color-corporate-green-50)]/70 hover:bg-[var(--color-corporate-green-50)] rounded-tl flex items-center justify-center transition-colors"
             title="Resize"
             @pointerdown.stop="$emit('graph-resize-start', $event)"
@@ -841,6 +841,8 @@ const charFontSize = computed(() => {
     return Math.max(9, Math.round(props.iconSize * factor));
 });
 
+const resizableTypes = new Set(['graph', 'textbox']);
+
 const TYPE_CHARS: Record<string, string> = {
     host: 'H',
     service: 'S',
@@ -853,14 +855,19 @@ const TYPE_CHARS: Record<string, string> = {
 };
 const typeChar = computed(() => TYPE_CHARS[props.object.type] ?? '?');
 
-const textboxStyle = computed(() => ({
-    backdropFilter: 'blur(4px)',
-    background: props.object.textbox_background ?? 'var(--bg-glass)',
-    borderColor: props.object.textbox_border ?? undefined,
-    color: 'var(--text)',
-    width: props.object.textbox_width ? `${props.object.textbox_width}px` : undefined,
-    height: props.object.textbox_height ? `${props.object.textbox_height}px` : undefined,
-}));
+const textboxStyle = computed(() => {
+    const override = props.resizeOverride;
+    const w = override?.width ?? props.object.textbox_width;
+    const h = override?.height ?? props.object.textbox_height;
+    return {
+        backdropFilter: 'blur(4px)',
+        background: props.object.textbox_background ?? 'var(--bg-glass)',
+        borderColor: props.object.textbox_border ?? undefined,
+        color: 'var(--text)',
+        width: w ? `${w}px` : undefined,
+        height: h ? `${h}px` : undefined,
+    };
+});
 
 const labelStyle = computed(() => {
     const bg = props.object.label?.background;

@@ -1511,10 +1511,15 @@ function onLineDragStart(event: MouseEvent, obj: BoardObject, mode: LineDragMode
 
 async function onGraphResizeEnd(id: string, width: number, height: number) {
     const obj = boardConfig.value?.objects.find((o) => o.id === id);
-    if (obj) {
-        obj.graph_width = width;
-        obj.graph_height = height;
+    if (!obj) return;
+    if (obj.type === 'textbox') {
+        obj.textbox_width = width;
+        obj.textbox_height = height;
+        await editor.updateObjectProperties(id, { textbox_width: width, textbox_height: height });
+        return;
     }
+    obj.graph_width = width;
+    obj.graph_height = height;
     await editor.updateObjectProperties(id, { graph_width: width, graph_height: height });
 }
 
