@@ -7,6 +7,7 @@ import importlib
 import json as _json
 import logging
 import pkgutil
+import random
 import re as _re
 import threading
 import time
@@ -36,7 +37,13 @@ from app.core.config import settings
 from app.integrations import checkmk as _cmk_integration
 from app.integrations import checkmk_sites as _cmk_sites
 from app.schemas.board import AggregationInfo, AggregationNode
-from app.schemas.state import ObjectState, ServicesSummary
+from app.schemas.state import (
+    CommentInfo,
+    DowntimeInfo,
+    ObjectDetails,
+    ObjectState,
+    ServicesSummary,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -467,6 +474,21 @@ _SVC_EXTRA_COLS = (
     " notifications_enabled active_checks_enabled"
 )
 
+# Column lists for the on-demand object-details endpoint. Order matters —
+# _build_details indexes positionally.
+_HOST_DETAIL_COLS = (
+    "long_plugin_output check_command latency execution_time is_flapping"
+    " in_notification_period notification_period check_interval"
+    " parents childs groups contact_groups labels"
+)
+_SVC_DETAIL_COLS = (
+    "long_plugin_output check_command latency execution_time is_flapping"
+    " in_notification_period notification_period check_interval"
+    " host_groups groups contact_groups labels last_time_ok"
+)
+_COMMENT_COLS = "id author comment entry_time expire_time"
+_DOWNTIME_COLS = "id author comment start_time end_time fixed"
+
 
 def _apply_extra(
     state: ObjectState, row: LivestatusRow, offset: int = 5, *, include_address: bool = False
@@ -545,6 +567,79 @@ def _parse_service_state_row(row: LivestatusRow) -> tuple[tuple[str, str], Objec
     return (_row_str(row, 0), _row_str(row, 1)), _apply_extra(state, row, offset=7)
 
 
+def _row_strs(row: LivestatusRow, idx: int) -> list[str]:
+    """Return a string list from a Livestatus list-typed column."""
+    return [str(x) for x in _row_list(row, idx) if x]
+
+
+def _build_details(
+    type_: Literal["host", "service"],
+    host: str,
+    service: str | None,
+    row: LivestatusRow,
+    comment_rows: list[LivestatusRow],
+    downtime_rows: list[LivestatusRow],
+) -> ObjectDetails:
+    """Map a host/service detail row + comments/downtimes onto ObjectDetails.
+
+    Column order must mirror ``_HOST_DETAIL_COLS`` / ``_SVC_DETAIL_COLS``.
+    The leading 9 columns are common; the trailing group list differs (host:
+    parents, children, groups · service: host_groups, groups + last_time_ok).
+    """
+    common_count = 8
+    d = ObjectDetails(
+        type=type_,
+        host_name=host,
+        service_description=service,
+        # Livestatus encodes line breaks in the agent output as the literal "\n"
+        # so they survive the line-based wire protocol; the UI wants real newlines.
+        long_output=_row_str(row, 0).replace("\\n", "\n").replace("\\r", ""),
+        check_command=_row_str(row, 1),
+        latency=_row_float_or_none(row, 2),
+        execution_time=_row_float_or_none(row, 3),
+        is_flapping=_row_bool(row, 4, default=False),
+        in_notification_period=_row_bool(row, 5, default=True),
+        notification_period=_row_str(row, 6),
+        check_interval=_row_float_or_none(row, 7),
+    )
+
+    if type_ == "host":
+        d.parents = _row_strs(row, common_count)
+        d.children = _row_strs(row, common_count + 1)
+        d.host_groups = _row_strs(row, common_count + 2)
+        d.contact_groups = _row_strs(row, common_count + 3)
+        d.labels = {str(k): str(v) for k, v in _row_dict(row, common_count + 4).items()}
+    else:
+        d.host_groups = _row_strs(row, common_count)
+        d.service_groups = _row_strs(row, common_count + 1)
+        d.contact_groups = _row_strs(row, common_count + 2)
+        d.labels = {str(k): str(v) for k, v in _row_dict(row, common_count + 3).items()}
+        d.last_time_ok = _row_float_or_none(row, common_count + 4)
+
+    d.comments = [
+        CommentInfo(
+            id=_row_int(r, 0),
+            author=_row_str(r, 1),
+            comment=_row_str(r, 2),
+            entry_time=_row_float(r, 3),
+            expire_time=_row_float_or_none(r, 4),
+        )
+        for r in comment_rows
+    ]
+    d.downtimes = [
+        DowntimeInfo(
+            id=_row_int(r, 0),
+            author=_row_str(r, 1),
+            comment=_row_str(r, 2),
+            start_time=_row_float(r, 3),
+            end_time=_row_float(r, 4),
+            fixed=_row_bool(r, 5, default=True),
+        )
+        for r in downtime_rows
+    ]
+    return d
+
+
 def _parse_metrics_from_perf(perf_data: str) -> list[_MetricInfo]:
     """Parse perf_data string into [{label, unit}] for rrddata queries."""
     results: list[_MetricInfo] = []
@@ -584,6 +679,12 @@ class LivestatusConnection(ConnectionBase):
         self._automation_secret = automation_secret
         self._verify_ssl = verify_ssl
         self._semaphore = asyncio.Semaphore(settings.connection_pool_size)
+        # Separate, tighter cap on bulk-services fan-out so 500-host top-K
+        # fetches don't blast the unix-socket listen backlog (EAGAIN). Held
+        # at chunk granularity in get_hosts_services_batch.
+        self._bulk_chunk_semaphore = asyncio.Semaphore(
+            settings.flow_board_bulk_max_concurrent_chunks
+        )
         self._aggregations_cache: tuple[float, list[AggregationInfo]] | None = None
         # Per-host-set cache for get_services_summary (TTL=_SERVICES_SUMMARY_CACHE_TTL)
         self._services_summary_cache: dict[
@@ -661,6 +762,47 @@ class LivestatusConnection(ConnectionBase):
             return "", ""
         r = rows[0]
         return _row_str(r, 0), _row_str(r, 1)
+
+    async def get_host_details(self, hostname: str) -> ObjectDetails | None:
+        return await self._fetch_details("host", hostname, None)
+
+    async def get_service_details(self, hostname: str, service: str) -> ObjectDetails | None:
+        return await self._fetch_details("service", hostname, service)
+
+    async def _fetch_details(
+        self, type_: Literal["host", "service"], host: str, service: str | None
+    ) -> ObjectDetails | None:
+        is_host = type_ == "host"
+        now = int(time.time())
+        if is_host:
+            row_table, row_filter = "hosts", f"Filter: name = {_ls_escape(host)}\n"
+            scope_filter = (
+                f"Filter: host_name = {_ls_escape(host)}\nFilter: is_service = 0\nAnd: 2\n"
+            )
+        else:
+            assert service is not None
+            row_table = "services"
+            row_filter = (
+                f"Filter: host_name = {_ls_escape(host)}\n"
+                f"Filter: description = {_ls_escape(service)}\n"
+            )
+            scope_filter = (
+                f"Filter: host_name = {_ls_escape(host)}\n"
+                f"Filter: service_description = {_ls_escape(service)}\nAnd: 2\n"
+            )
+        cols = _HOST_DETAIL_COLS if is_host else _SVC_DETAIL_COLS
+        # Drop expired comments and ended downtimes — the drawer header reads
+        # "Active downtimes", and stale comments add noise without value.
+        active_cmt = f"Filter: expire_time = 0\nFilter: expire_time >= {now}\nOr: 2\n"
+        active_dt = f"Filter: end_time >= {now}\n"
+        rows, cmt_rows, dt_rows = await asyncio.gather(
+            self._query(f"GET {row_table}\nColumns: {cols}\n{row_filter}"),
+            self._query(f"GET comments\nColumns: {_COMMENT_COLS}\n{scope_filter}{active_cmt}"),
+            self._query(f"GET downtimes\nColumns: {_DOWNTIME_COLS}\n{scope_filter}{active_dt}"),
+        )
+        if not rows:
+            return None
+        return _build_details(type_, host, service, rows[0], cmt_rows, dt_rows)
 
     async def get_host_hard_state(self, hostname: str) -> ObjectState:
         query = (
@@ -1531,14 +1673,27 @@ class LivestatusConnection(ConnectionBase):
                 "last_state_change last_check next_check\n" + filters
             )
 
+        async def _bounded_query_chunk(hosts: list[str]) -> list[LivestatusRow]:
+            async with self._bulk_chunk_semaphore:
+                return await _query_chunk(hosts)
+
         # Split top-K into smaller parallel queries: one slow host stalls only
-        # its own chunk, and several livestatus workers can serve the request
-        # concurrently up to ``connection_pool_size``.
+        # its own chunk. The semaphore caps in-flight chunks so high host counts
+        # (e.g. 500-host top-K → 100 chunks) don't exhaust the livestatus
+        # listen backlog. ``return_exceptions=True`` lets a single failed chunk
+        # degrade gracefully (those hosts get an empty service list) instead of
+        # killing the whole topology broadcast.
         chunks = [hostnames[i : i + chunk_size] for i in range(0, len(hostnames), chunk_size)]
-        chunk_results = await asyncio.gather(*(_query_chunk(c) for c in chunks))
+        chunk_results = await asyncio.gather(
+            *(_bounded_query_chunk(c) for c in chunks),
+            return_exceptions=True,
+        )
 
         results: dict[str, list[ServiceRow]] = {h: [] for h in hostnames}
         for rows in chunk_results:
+            if isinstance(rows, BaseException):
+                logger.warning("services chunk failed", exc_info=rows)
+                continue
             for r in rows:
                 results[_row_str(r, 0)].append(
                     ServiceRow(
@@ -1638,6 +1793,37 @@ class LivestatusConnection(ConnectionBase):
             logger.info("Livestatus site %s recovered", sid)
         self._mc_dead = current
 
+    async def _open_connection(
+        self,
+    ) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+        """Open a TCP/Unix connection to livestatus, retrying on transient EAGAIN.
+
+        High-fanout flow-board fetches (top-K with hundreds of hosts) burst many
+        concurrent connects which can momentarily exhaust the unix-socket
+        listen backlog. The kernel surfaces this as
+        ``BlockingIOError: [Errno 11] Resource temporarily unavailable``.
+        Short jittered backoff resolves it without hammering further; the cap
+        keeps total latency bounded so a genuinely-down livestatus still fails
+        the per-query timeout.
+        """
+        attempts = 4
+        for i in range(attempts):
+            try:
+                if self._host:
+                    return await asyncio.wait_for(
+                        asyncio.open_connection(self._host, self._port),
+                        timeout=self._timeout,
+                    )
+                return await asyncio.wait_for(
+                    asyncio.open_unix_connection(self._socket_path),
+                    timeout=self._timeout,
+                )
+            except (BlockingIOError, ConnectionResetError, ConnectionRefusedError):
+                if i == attempts - 1:
+                    raise
+                await asyncio.sleep(0.05 + random.random() * 0.1)
+        raise AssertionError("unreachable")  # pragma: no cover
+
     async def _query_raw(self, query: str) -> list[LivestatusRow]:
         """Send a Livestatus query and return parsed rows."""
         lql = query.rstrip("\n") + "\nOutputFormat: json\nResponseHeader: fixed16\n"
@@ -1646,16 +1832,7 @@ class LivestatusConnection(ConnectionBase):
             lql += f"AuthUser: {auth_user}\n"
         lql += "\n"
 
-        if self._host:
-            reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(self._host, self._port),
-                timeout=self._timeout,
-            )
-        else:
-            reader, writer = await asyncio.wait_for(
-                asyncio.open_unix_connection(self._socket_path),
-                timeout=self._timeout,
-            )
+        reader, writer = await self._open_connection()
 
         # asyncio.shield() prevents a second CancelledError from aborting
         # wait_closed() when the caller cancels this coroutine mid-cleanup.

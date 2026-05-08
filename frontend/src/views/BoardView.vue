@@ -503,6 +503,7 @@
                 :object="detailDrawerObject"
                 :state="detailDrawerState"
                 :checkmk-url="checkmkUrl"
+                :connection-id="boardConfig?.connection_id ?? null"
                 portal-target="#orbvis-board-shell"
                 @close="closeDetail"
                 @acknowledge="onDetailAck"

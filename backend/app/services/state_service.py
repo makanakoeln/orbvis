@@ -482,8 +482,20 @@ async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> Map
             host_batch = await connection.get_all_hosts_states()
         except Exception:
             host_batch = {}
+        # Operators expect to see the service-state breakdown when clicking a host
+        # in the radar drawer — without this the chip row stays empty for radar
+        # boards even though the data is one cheap query away.
+        if host_batch:
+            try:
+                summaries = await connection.get_services_summary(list(host_batch.keys()))
+            except Exception:
+                summaries = {}
+        else:
+            summaries = {}
         for host, s in host_batch.items():
             s.object_id = host
+            if s.services_summary is None and host in summaries:
+                s.services_summary = summaries[host]
             states.append(s)
     elif rv.filter == "all_services":
         try:
@@ -512,11 +524,17 @@ async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> Map
                 batch = await connection.get_hosts_states(host_members)
             except Exception:
                 batch = {}
+            try:
+                summaries = await connection.get_services_summary(host_members)
+            except Exception:
+                summaries = {}
             for h in host_members:
                 s = batch.get(h) or ObjectState(
                     object_id=h, type="host", state="PENDING", stale=True
                 )
                 s.object_id = h
+                if s.services_summary is None and h in summaries:
+                    s.services_summary = summaries[h]
                 states.append(s)
 
         if svc_members:

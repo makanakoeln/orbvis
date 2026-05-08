@@ -24,7 +24,7 @@ from app.schemas.connection import (
     ConnectionUpdate,
     _redact,
 )
-from app.schemas.state import ServicesSummary
+from app.schemas.state import ObjectDetails, ServicesSummary
 from app.services import connection_service
 from app.services.state_service import get_connection, get_connection_objects
 
@@ -553,6 +553,33 @@ async def get_graph_templates_for_object(
         return []
     groups = await connection.get_graph_templates(host, service)
     return [GraphGroupResponse(id=g.id, title=g.title, metrics=g.metrics) for g in groups]
+
+
+@router.get("/{connection_id}/object-details", response_model=ObjectDetails | None)
+async def get_object_details(
+    connection_id: str,
+    obj_type: str = Query(..., alias="type", regex="^(host|service)$"),
+    host: str = Query(...),
+    service: str | None = Query(None),
+    _: User = Depends(get_current_user),
+) -> ObjectDetails | None:
+    """Return on-demand drawer/properties details for a host or service.
+
+    Kept off the WebSocket state stream because long_output, comments,
+    downtimes and topology can each be many KB and rarely change between
+    checks. The Drawer fetches this once on open.
+    """
+    connection = get_connection(connection_id)
+    if connection is None:
+        return None
+    if obj_type == "host":
+        return await connection.get_host_details(host)
+    if not service:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="service query parameter required for type=service",
+        )
+    return await connection.get_service_details(host, service)
 
 
 @router.get("/{connection_id}/objects", response_model=list[str])

@@ -78,6 +78,12 @@
 
                 <pre v-if="state.output" class="detail-drawer__output">{{ state.output }}</pre>
 
+                <pre
+                    v-if="longOutputText"
+                    class="detail-drawer__output detail-drawer__output--long"
+                    >{{ longOutputText }}</pre
+                >
+
                 <div v-if="perfRows.length" class="detail-drawer__section">
                     <h4>{{ t('board.detailDrawer.perfdataLabel') }}</h4>
                     <div class="detail-drawer__perf">
@@ -181,6 +187,86 @@
                             </dd>
                         </template>
                     </dl>
+                </div>
+
+                <div
+                    v-if="downtimeList.length"
+                    class="detail-drawer__section detail-drawer__section--downtimes"
+                >
+                    <h4>{{ t('board.detailDrawer.activeDowntimes') }}</h4>
+                    <ul class="detail-drawer__list">
+                        <li v-for="dt in downtimeList" :key="dt.id" class="detail-drawer__list-row">
+                            <div class="detail-drawer__list-meta">
+                                <span class="detail-drawer__list-author">{{ dt.author }}</span>
+                                <span
+                                    v-if="!dt.fixed"
+                                    class="detail-drawer__list-tag"
+                                    :title="t('board.detailDrawer.flexibleDowntime')"
+                                    >FLEX</span
+                                >
+                                <span class="detail-drawer__list-time">{{ dt.timeRange }}</span>
+                            </div>
+                            <div v-if="dt.comment" class="detail-drawer__list-text">
+                                {{ dt.comment }}
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div v-if="commentList.length" class="detail-drawer__section">
+                    <h4>{{ t('board.detailDrawer.comments') }}</h4>
+                    <ul class="detail-drawer__list">
+                        <li v-for="c in commentList" :key="c.id" class="detail-drawer__list-row">
+                            <div class="detail-drawer__list-meta">
+                                <span class="detail-drawer__list-author">{{ c.author }}</span>
+                                <span class="detail-drawer__list-time">{{ c.age }}</span>
+                                <span v-if="c.expires" class="detail-drawer__list-time">
+                                    · {{ t('board.detailDrawer.expires') }} {{ c.expires }}
+                                </span>
+                            </div>
+                            <div class="detail-drawer__list-text">{{ c.text }}</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div v-if="topologyGroups.length" class="detail-drawer__section">
+                    <h4>{{ t('board.detailDrawer.topology') }}</h4>
+                    <dl class="detail-drawer__meta">
+                        <template v-for="group in topologyGroups" :key="group.label">
+                            <dt>{{ group.label }}</dt>
+                            <dd>
+                                <span
+                                    v-for="item in group.items"
+                                    :key="item"
+                                    class="detail-drawer__chip-tag"
+                                >
+                                    <a
+                                        v-if="group.isHostList && hostLink(item)"
+                                        :href="hostLink(item) ?? '#'"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        >{{ item }}</a
+                                    >
+                                    <template v-else>{{ item }}</template>
+                                </span>
+                            </dd>
+                        </template>
+                    </dl>
+                </div>
+
+                <div v-if="labelEntries.length" class="detail-drawer__section">
+                    <h4>{{ t('board.detailDrawer.labels') }}</h4>
+                    <div class="detail-drawer__labels">
+                        <span
+                            v-for="[key, value] in labelEntries"
+                            :key="key"
+                            class="detail-drawer__chip-tag detail-drawer__chip-tag--label"
+                            :title="`${key}: ${value}`"
+                        >
+                            <span class="detail-drawer__label-key">{{ key }}</span>
+                            <span class="detail-drawer__label-value">{{ value }}</span>
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -288,10 +374,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import type { BoardObject, ObjectState } from '@/types/api';
+import { connectionsApi } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
+import type { BoardObject, ObjectDetails, ObjectState } from '@/types/api';
 import { buildCheckmkUrl } from '@/utils/boardNavigation';
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming';
 import { parsePerfData, utilColor, utilPercent } from '@/utils/perf';
@@ -316,6 +404,8 @@ const props = defineProps<{
     object: BoardObject | null;
     state?: ObjectState;
     checkmkUrl?: string | null;
+    /** Board's connection_id — used to fetch on-demand object details. */
+    connectionId?: string | null;
     /** CSS selector for the CmkSlideIn portal target. Defaults to body. */
     portalTarget?: string;
 }>();
@@ -351,6 +441,54 @@ function closeMoreMenu(e: Event): void {
     const details = (e.currentTarget as HTMLElement).closest('details');
     if (details) (details as HTMLDetailsElement).open = false;
 }
+
+const auth = useAuthStore();
+
+// On-demand details kept separate from the streamed ObjectState — long_output,
+// comments, downtimes and topology rarely change but can be many KB each, so
+// fetching them per Drawer-open keeps the WebSocket payload compact.
+const details = ref<ObjectDetails | null>(null);
+
+// Source the watch on primitive keys (not the reactive object) so it fires
+// only when selection actually changes — state-stream updates that re-create
+// the prop reference would otherwise cause refetches on every tick.
+watch(
+    [
+        () => props.object?.type,
+        () => props.object?.host_name,
+        () => props.object?.service_description,
+        () => props.connectionId,
+    ],
+    async ([objType, host, service, connId]) => {
+        details.value = null;
+        if (!connId || !auth.accessToken || !host) return;
+        if (objType !== 'host' && objType !== 'service') return;
+        if (objType === 'service' && !service) return;
+        const reqService = objType === 'service' ? (service ?? null) : null;
+        try {
+            const res = await connectionsApi.objectDetails(
+                connId,
+                objType,
+                host,
+                reqService,
+                auth.accessToken,
+            );
+            // Stale-response guard: between the await and now the user may have
+            // clicked another object. Match all three identity fields so a host
+            // response doesn't land on a same-named service or vice versa.
+            if (
+                props.object?.type === objType &&
+                props.object?.host_name === host &&
+                props.object?.service_description === reqService
+            ) {
+                details.value = res;
+            }
+        } catch {
+            details.value = null;
+        }
+    },
+    { immediate: true },
+);
 
 const PROBLEM_STATES = new Set(['CRITICAL', 'WARNING', 'UNKNOWN', 'DOWN', 'UNREACHABLE']);
 const isProblematic = computed(() => (props.state ? PROBLEM_STATES.has(props.state.state) : false));
@@ -514,7 +652,7 @@ const hostChips = computed<SummaryChip[]>(() => {
 
 interface Modifier {
     label: string;
-    kind: 'ack' | 'downtime' | 'stale' | 'muted';
+    kind: 'ack' | 'downtime' | 'stale' | 'muted' | 'flapping';
 }
 const modifiers = computed<Modifier[]>(() => {
     const s = props.state;
@@ -524,8 +662,11 @@ const modifiers = computed<Modifier[]>(() => {
     if (s.in_downtime) list.push({ label: 'DOWNTIME', kind: 'downtime' });
     if (s.stale) list.push({ label: 'STALE', kind: 'stale' });
     if (s.notifications_enabled === false) list.push({ label: 'MUTED', kind: 'muted' });
+    if (details.value?.is_flapping) list.push({ label: 'FLAPPING', kind: 'flapping' });
     return list;
 });
+
+const longOutputText = computed(() => details.value?.long_output ?? '');
 
 interface MetaRow {
     label: string;
@@ -604,7 +745,123 @@ const checkInfoRows = computed<MetaRow[]>(() => {
         }
     }
 
+    const d = details.value;
+    if (d) {
+        if (d.check_command) {
+            rows.push({ label: t('board.detailDrawer.checkCommand'), value: d.check_command });
+        }
+        // Service-only: when did this check last go OK? Lets the operator see
+        // "broken for 2 days" vs. "just flipped" without leaving the drawer.
+        if (d.last_time_ok && d.last_time_ok > 0 && s.state !== 'OK') {
+            rows.push({
+                label: t('board.detailDrawer.lastOk'),
+                value: t('board.detailDrawer.timeAgo', {
+                    duration: formatRelativeDuration(d.last_time_ok, nowMs.value),
+                }),
+            });
+        }
+        if (typeof d.latency === 'number' && d.latency >= 0) {
+            rows.push({
+                label: t('board.detailDrawer.latency'),
+                value: `${(d.latency * 1000).toFixed(0)} ms`,
+            });
+        }
+        if (d.notification_period && d.notification_period !== '24X7') {
+            rows.push({
+                label: t('board.detailDrawer.notificationPeriod'),
+                value: d.notification_period,
+                tone: d.in_notification_period ? undefined : 'warn',
+            });
+        }
+    }
+
     return rows;
+});
+
+// Topology / membership / labels — from on-demand details. Empty groups are
+// hidden so the drawer stays compact when nothing useful is set.
+interface TopologyGroup {
+    label: string;
+    items: string[];
+    /** Optional Checkmk-style hostname links (parents, children) */
+    isHostList?: boolean;
+}
+const topologyGroups = computed<TopologyGroup[]>(() => {
+    const d = details.value;
+    if (!d) return [];
+    const out: TopologyGroup[] = [];
+    if (d.parents.length)
+        out.push({ label: t('board.detailDrawer.parents'), items: d.parents, isHostList: true });
+    if (d.children.length)
+        out.push({ label: t('board.detailDrawer.children'), items: d.children, isHostList: true });
+    if (d.host_groups.length)
+        out.push({ label: t('board.detailDrawer.hostGroups'), items: d.host_groups });
+    if (d.service_groups.length)
+        out.push({ label: t('board.detailDrawer.serviceGroups'), items: d.service_groups });
+    if (d.contact_groups.length)
+        out.push({ label: t('board.detailDrawer.contactGroups'), items: d.contact_groups });
+    return out;
+});
+
+const labelEntries = computed(() => Object.entries(details.value?.labels ?? {}));
+
+function hostLink(host: string): string | null {
+    if (!props.checkmkUrl) return null;
+    const base = props.checkmkUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
+    const params = new URLSearchParams({ view_name: 'hoststatus', host });
+    if (props.state?.site_id) params.set('site', props.state.site_id);
+    return `${base}/check_mk/view.py?${params}`;
+}
+
+interface Comment {
+    id: number;
+    author: string;
+    text: string;
+    age: string;
+    expires: string | null;
+}
+const commentList = computed<Comment[]>(() => {
+    const list = details.value?.comments ?? [];
+    return list.map((c) => ({
+        id: c.id,
+        author: c.author || '?',
+        text: c.comment,
+        age: t('board.detailDrawer.timeAgo', {
+            duration: formatRelativeDuration(c.entry_time, nowMs.value),
+        }),
+        expires:
+            c.expire_time && c.expire_time > 0
+                ? t('board.detailDrawer.timeIn', {
+                      duration: formatRelativeFuture(c.expire_time, nowMs.value),
+                  })
+                : null,
+    }));
+});
+
+interface Downtime {
+    id: number;
+    author: string;
+    comment: string;
+    timeRange: string;
+    fixed: boolean;
+}
+function fmtDateTime(ts: number): string {
+    return new Date(ts * 1000).toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+const downtimeList = computed<Downtime[]>(() => {
+    const list = details.value?.downtimes ?? [];
+    return list.map((d) => ({
+        id: d.id,
+        author: d.author || '?',
+        comment: d.comment,
+        timeRange: `${fmtDateTime(d.start_time)} → ${fmtDateTime(d.end_time)}`,
+        fixed: d.fixed,
+    }));
 });
 
 interface PerfRow {
@@ -826,6 +1083,12 @@ const perfRows = computed<PerfRow[]>(() => {
     border: 1px solid rgb(113 113 122 / 40%);
 }
 
+.detail-drawer__badge--flapping {
+    background: rgb(168 85 247 / 15%);
+    color: var(--color-purple-50, #c084fc);
+    border: 1px solid rgb(168 85 247 / 40%);
+}
+
 .detail-drawer__output {
     font-family: var(--font-mono, monospace);
     font-size: 11px;
@@ -838,6 +1101,13 @@ const perfRows = computed<PerfRow[]>(() => {
     overflow: auto;
     white-space: pre-wrap;
     max-height: 180px;
+}
+
+/* Long agent output is dimmer than the summary so the eye lands on the
+   short status line first. */
+.detail-drawer__output--long {
+    color: var(--text-muted);
+    max-height: 240px;
 }
 
 .detail-drawer__section h4 {
@@ -1030,6 +1300,108 @@ const perfRows = computed<PerfRow[]>(() => {
 
 .detail-drawer__chip--zero {
     opacity: 0.45;
+}
+
+/* Inline group/host-name chips for the topology + labels sections. */
+.detail-drawer__chip-tag {
+    display: inline-block;
+    font-size: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 1px 6px;
+    border-radius: 999px;
+    margin: 0 4px 4px 0;
+    line-height: 16px;
+    overflow-wrap: anywhere;
+}
+
+.detail-drawer__chip-tag a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.detail-drawer__chip-tag a:hover {
+    color: var(--color-corporate-green-50, rgb(34 197 94));
+}
+
+.detail-drawer__chip-tag--label {
+    padding: 0;
+    overflow: hidden;
+    background: var(--bg-surface);
+}
+
+.detail-drawer__label-key {
+    display: inline-block;
+    background: var(--bg-hover);
+    color: var(--text-muted);
+    padding: 1px 6px;
+    border-right: 1px solid var(--border);
+}
+
+.detail-drawer__label-value {
+    display: inline-block;
+    padding: 1px 6px;
+}
+
+.detail-drawer__labels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+}
+
+/* Comments + downtimes lists share the row layout. */
+.detail-drawer__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.detail-drawer__list-row {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    padding: 6px 8px;
+    font-size: 11px;
+}
+
+.detail-drawer__list-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 10px;
+    margin-bottom: 2px;
+    align-items: center;
+}
+
+.detail-drawer__list-author {
+    color: var(--text);
+    font-weight: var(--font-weight-semibold);
+}
+
+.detail-drawer__list-tag {
+    background: rgb(59 130 246 / 18%);
+    color: var(--color-blue-50, var(--text));
+    border: 1px solid rgb(59 130 246 / 40%);
+    border-radius: 999px;
+    padding: 0 6px;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.04em;
+}
+
+.detail-drawer__list-text {
+    color: var(--text);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.detail-drawer__section--downtimes .detail-drawer__list-row {
+    border: 1px solid rgb(59 130 246 / 35%);
+    background: rgb(59 130 246 / 6%);
 }
 
 .detail-drawer__actions {

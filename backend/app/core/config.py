@@ -64,6 +64,16 @@ class Settings(BaseSettings):
     # on cold sites, plus a single hung host only stalls its own chunk.
     flow_board_bulk_service_chunk_size: int = Field(default=5, ge=1)
 
+    # Cap how many bulk-service chunks may be in flight to a single Livestatus
+    # connection at once. Each chunk opens its own livestatus socket; firing
+    # hundreds in parallel (e.g. 500-host top-K with chunk_size=5 → 100 chunks)
+    # exhausts the unix-socket listen backlog and surfaces as
+    # ``BlockingIOError: [Errno 11] Resource temporarily unavailable``. 8 keeps
+    # well below the kernel's default backlog (128) and below
+    # ``connection_pool_size`` so other queries aren't starved, while still
+    # delivering sub-second total latency on 500+ host fetches.
+    flow_board_bulk_max_concurrent_chunks: int = Field(default=8, ge=1, le=64)
+
     # Background warmup loop interval in seconds: pre-fetches a cheap topology
     # query against every registered connection so the livestatus socket pool
     # stays primed even when no UI is open. Set to 0 to disable.

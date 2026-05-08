@@ -428,3 +428,43 @@ export interface MetricHistoryResponse {
     titles: Record<string, string>;
     graphs: MetricGraphGroup[];
 }
+
+export interface CommentInfo {
+    id: number;
+    author: string;
+    comment: string;
+    entry_time: number;
+    expire_time: number | null;
+}
+
+export interface DowntimeInfo {
+    id: number;
+    author: string;
+    comment: string;
+    start_time: number;
+    end_time: number;
+    fixed: boolean;
+}
+
+export interface ObjectDetails {
+    type: 'host' | 'service';
+    host_name: string;
+    service_description: string | null;
+    long_output: string;
+    check_command: string;
+    latency: number | null;
+    execution_time: number | null;
+    is_flapping: boolean;
+    in_notification_period: boolean;
+    last_time_ok: number | null;
+    notification_period: string;
+    check_interval: number | null;
+    parents: string[];
+    children: string[];
+    host_groups: string[];
+    service_groups: string[];
+    contact_groups: string[];
+    labels: Record<string, string>;
+    comments: CommentInfo[];
+    downtimes: DowntimeInfo[];
+}

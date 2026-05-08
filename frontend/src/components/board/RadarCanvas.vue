@@ -50,16 +50,9 @@
             <div
                 v-for="state in sortedStates"
                 :key="state.object_id"
-                class="rounded-xl p-3.5 ring-1 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
-                :class="[
-                    cardClass(state.state),
-                    props.readonly
-                        ? 'cursor-default'
-                        : buildCheckmkUrlFromState(state, props.checkmkUrl ?? null)
-                          ? 'cursor-pointer'
-                          : 'cursor-default',
-                ]"
-                @click="onCardClick(state)"
+                class="rounded-xl p-3.5 ring-1 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer"
+                :class="cardClass(state.state)"
+                @click="onCardClick(state, $event)"
             >
                 <!-- Name -->
                 <div class="flex items-start justify-between gap-2 mb-2">
@@ -137,8 +130,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-import type { ObjectState } from '@/types/api';
-import { buildCheckmkUrlFromState, openUrl } from '@/utils/boardNavigation';
+import type { BoardObject, ObjectState } from '@/types/api';
 
 const props = defineProps<{
     states: Record<string, ObjectState>;
@@ -146,10 +138,37 @@ const props = defineProps<{
     readonly?: boolean;
 }>();
 
-function onCardClick(state: ObjectState) {
-    if (props.readonly) return;
-    const url = buildCheckmkUrlFromState(state, props.checkmkUrl ?? null);
-    if (url) openUrl(url, '_blank');
+const emit = defineEmits<{
+    'object-click': [obj: BoardObject, event: MouseEvent];
+}>();
+
+function stateToBoardObject(state: ObjectState): BoardObject {
+    if (state.type === 'service' && state.object_id.includes(';')) {
+        const [host, svc] = state.object_id.split(';', 2);
+        return {
+            id: state.object_id,
+            type: 'service',
+            host_name: host,
+            service_description: svc,
+            x: 0,
+            y: 0,
+            z: 0,
+            url_target: '_blank',
+        };
+    }
+    return {
+        id: state.object_id,
+        type: 'host',
+        host_name: state.object_id,
+        x: 0,
+        y: 0,
+        z: 0,
+        url_target: '_blank',
+    };
+}
+
+function onCardClick(state: ObjectState, event: MouseEvent) {
+    emit('object-click', stateToBoardObject(state), event);
 }
 
 // State severity for sorting (worst first)

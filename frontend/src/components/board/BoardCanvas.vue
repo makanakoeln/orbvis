@@ -179,13 +179,11 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
 
 import { useObjectActions } from '@/composables/useObjectActions';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api';
-import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { resolveTemplate } from '@/utils/template';
 
 import AckModal from './AckModal.vue';
@@ -228,7 +226,6 @@ const emit = defineEmits<{
     'graph-resize-end': [id: string, width: number, height: number];
 }>();
 
-const router = useRouter();
 const canvasEl = ref<HTMLDivElement | null>(null);
 const bgImageSize = ref<{ width: number; height: number } | null>(null);
 
@@ -328,11 +325,8 @@ const lineObjects = computed(() => props.config.objects.filter((o) => o.type ===
 
 function objectWrapperStyle(obj: BoardObjectType) {
     const pos = localDragPositions[obj.id] ?? { x: obj.x, y: obj.y };
-    const isMap = obj.type === 'map';
     const canDrag = props.editMode || props.isAdmin;
-    const clickable =
-        props.config.click_action !== 'none' &&
-        (isMap || obj.url || !!buildCheckmkUrl(obj, props.checkmkUrl ?? null));
+    const clickable = props.config.click_action !== 'none';
     const cursor = canDrag
         ? _dragId.value === obj.id
             ? 'grabbing'
@@ -448,25 +442,10 @@ function onLineClick(line: BoardObjectType) {
 }
 
 function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
-    if (props.editMode) {
-        if (!_didMove.value) emit('object-click', obj, event);
-        return;
-    }
     // Suppress navigation click if the pointer just completed a real drag move
     if (_didMove.value) return;
-    if (props.config.click_action === 'none') return;
-    if (obj.url) {
-        openUrl(obj.url, obj.url_target || '_blank');
-        return;
-    }
-    if (obj.type === 'map' && obj.map_name) {
-        router.push({ name: 'board', params: { name: obj.map_name } });
-        return;
-    }
-    const cmkUrl = buildCheckmkUrl(obj, props.checkmkUrl ?? null);
-    if (cmkUrl) {
-        openUrl(cmkUrl, '_blank');
-    }
+    closeMenus();
+    emit('object-click', obj, event);
 }
 
 function onObjectContextMenu(event: MouseEvent, obj: BoardObjectType) {

@@ -16,6 +16,7 @@ import type {
     MapStates,
     MetricGraphGroup,
     MetricHistoryResponse,
+    ObjectDetails,
     PerfometerResult,
     PermissionRead,
     RoleRead,
@@ -317,6 +318,8 @@ export const connectionsApi = {
             root?: string | null;
             childLayers?: number | null;
             parentLayers?: number | null;
+            topAffectedHosts?: number | null;
+            servicesPerHost?: number | null;
         },
     ): Promise<import('@/types/api').TopologyNode[]> => {
         const params = new URLSearchParams();
@@ -324,6 +327,12 @@ export const connectionsApi = {
         if (opts?.root) params.set('root', opts.root);
         if (opts?.childLayers != null) params.set('child_layers', String(opts.childLayers));
         if (opts?.parentLayers != null) params.set('parent_layers', String(opts.parentLayers));
+        if (opts?.topAffectedHosts != null) {
+            params.set('top_affected_hosts', String(opts.topAffectedHosts));
+        }
+        if (opts?.servicesPerHost != null) {
+            params.set('services_per_host', String(opts.servicesPerHost));
+        }
         const qs = params.toString();
         return request(`/connections/${connectionId}/topology${qs ? `?${qs}` : ''}`, {}, token);
     },
@@ -360,6 +369,18 @@ export const connectionsApi = {
         const params = new URLSearchParams({ host, minutes: String(minutes) });
         if (service) params.set('service', service);
         return request(`/connections/${connectionId}/metric-history?${params}`, {}, token);
+    },
+
+    objectDetails: (
+        connectionId: string,
+        objectType: 'host' | 'service',
+        host: string,
+        service: string | null,
+        token: string,
+    ): Promise<ObjectDetails | null> => {
+        const params = new URLSearchParams({ type: objectType, host });
+        if (service) params.set('service', service);
+        return request(`/connections/${connectionId}/object-details?${params}`, {}, token);
     },
 
     hostGeo: (

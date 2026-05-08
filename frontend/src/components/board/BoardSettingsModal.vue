@@ -209,6 +209,32 @@
                                 </div>
                             </div>
                             <p class="text-sm text-zinc-600">{{ t('board.flowHint') }}</p>
+
+                            <div class="grid grid-cols-2 gap-[8px]">
+                                <div class="space-y-[4px]">
+                                    <CmkLabel>{{ t('board.flowTopAffectedHosts') }}</CmkLabel>
+                                    <NumberInput
+                                        v-model="form.flow_top_affected_hosts"
+                                        :min="0"
+                                        :max="1000"
+                                        :placeholder="String(FLOW_TOP_AFFECTED_HOSTS_DEFAULT)"
+                                        class="w-full"
+                                    />
+                                </div>
+                                <div class="space-y-[4px]">
+                                    <CmkLabel>{{ t('board.flowMaxServicesPerHost') }}</CmkLabel>
+                                    <NumberInput
+                                        v-model="form.flow_max_services_per_host"
+                                        :min="0"
+                                        :max="500"
+                                        :placeholder="String(FLOW_MAX_SERVICES_PER_HOST_DEFAULT)"
+                                        class="w-full"
+                                    />
+                                </div>
+                            </div>
+                            <p class="text-sm text-zinc-600">
+                                {{ t('board.flowLimitsHint') }}
+                            </p>
                         </template>
 
                         <!-- Radar settings -->
@@ -493,6 +519,11 @@ import type {
 } from '@/types/api';
 import { boardTypeOptions, lineStyleOptions } from '@/utils/dropdownOptions';
 
+// Mirror of backend `Settings.flow_board_*` defaults — shown as placeholder so
+// the user knows which value applies when the field is left empty.
+const FLOW_TOP_AFFECTED_HOSTS_DEFAULT = 25;
+const FLOW_MAX_SERVICES_PER_HOST_DEFAULT = 50;
+
 const props = defineProps<{
     board: BoardRead;
     worldmapView?: { lat: number; lng: number; zoom: number } | null;
@@ -551,6 +582,8 @@ const form = ref({
     flow_root: fv?.root ?? '',
     flow_child_layers: fv?.child_layers ?? (null as number | null),
     flow_parent_layers: fv?.parent_layers ?? (null as number | null),
+    flow_top_affected_hosts: fv?.top_affected_hosts ?? (null as number | null),
+    flow_max_services_per_host: fv?.max_services_per_host ?? (null as number | null),
     hover_template: props.board.hover_template ?? '',
     context_template: props.board.context_template ?? '',
     background_image: props.board.background_image ?? '',
@@ -617,6 +650,8 @@ async function save() {
                 root: form.value.flow_root.trim() || null,
                 child_layers: form.value.flow_child_layers,
                 parent_layers: form.value.flow_parent_layers,
+                top_affected_hosts: form.value.flow_top_affected_hosts,
+                max_services_per_host: form.value.flow_max_services_per_host,
             };
         } else {
             view = { type: form.value.map_type };

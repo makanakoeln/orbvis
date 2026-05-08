@@ -50,6 +50,53 @@ class ObjectState(BaseModel):
     services_summary: ServicesSummary | None = None
 
 
+class CommentInfo(BaseModel):
+    id: int
+    author: str
+    comment: str
+    entry_time: float
+    expire_time: float | None = None
+
+
+class DowntimeInfo(BaseModel):
+    id: int
+    author: str
+    comment: str
+    start_time: float
+    end_time: float
+    fixed: bool = True
+
+
+class ObjectDetails(BaseModel):
+    """Extended object info loaded on demand (Drawer, Properties modal).
+
+    Kept separate from ``ObjectState`` so the WebSocket stream stays compact —
+    long_output, comments, downtimes and topology can each be many KB and
+    rarely change between checks.
+    """
+
+    type: Literal["host", "service"]
+    host_name: str
+    service_description: str | None = None
+    long_output: str = ""
+    check_command: str = ""
+    latency: float | None = None
+    execution_time: float | None = None
+    is_flapping: bool = False
+    in_notification_period: bool = True
+    last_time_ok: float | None = None  # service only
+    notification_period: str = ""
+    check_interval: float | None = None
+    parents: list[str] = []
+    children: list[str] = []
+    host_groups: list[str] = []
+    service_groups: list[str] = []
+    contact_groups: list[str] = []
+    labels: dict[str, str] = {}
+    comments: list[CommentInfo] = []
+    downtimes: list[DowntimeInfo] = []
+
+
 class MapStates(BaseModel):
     map_name: str
     states: list[ObjectState]

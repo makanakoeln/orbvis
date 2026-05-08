@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import NotRequired, TypedDict
 
 from app.schemas.board import AggregationInfo, AggregationNode
-from app.schemas.state import ObjectState, ServicesSummary
+from app.schemas.state import ObjectDetails, ObjectState, ServicesSummary
 
 
 class TopologyRow(TypedDict):
@@ -141,6 +141,14 @@ class ConnectionBase(ABC):
     async def get_host_services(self, hostname: str) -> list[ServiceRow]:
         """Return services for a host as [{name, state, output}]."""
         ...
+
+    async def get_host_details(self, hostname: str) -> ObjectDetails | None:
+        """Return on-demand drawer/property details for a host. Default: None."""
+        return None
+
+    async def get_service_details(self, hostname: str, service: str) -> ObjectDetails | None:
+        """Return on-demand drawer/property details for a service. Default: None."""
+        return None
 
     async def get_host_hard_state(self, hostname: str) -> ObjectState:
         """Return the last hard state for a host (default: delegates to current state)."""

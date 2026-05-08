@@ -27,7 +27,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-    'object-click': [obj: BoardObjectType];
+    'object-click': [obj: BoardObjectType, event: MouseEvent];
     'object-contextmenu': [obj: BoardObjectType];
     'object-contextmenu-view': [obj: BoardObjectType, x: number, y: number];
     'object-hover': [obj: BoardObjectType, event: MouseEvent];
@@ -166,10 +166,10 @@ function syncMarkers() {
             else marker.dragging?.disable();
         } else {
             const marker = L.marker([lat, lng], { icon, draggable: props.editMode });
-            marker.on('click', (e) => {
+            marker.on('click', (e: L.LeafletMouseEvent) => {
                 L.DomEvent.stopPropagation(e);
                 const current = props.config.objects.find((o) => o.id === objId);
-                if (current) emit('object-click', current);
+                if (current) emit('object-click', current, e.originalEvent);
             });
             marker.on('contextmenu', (e: L.LeafletMouseEvent) => {
                 L.DomEvent.stopPropagation(e);
@@ -405,10 +405,10 @@ function syncLines() {
                 : null;
 
             const objId = obj.id;
-            polyline.on('click', (e) => {
+            polyline.on('click', (e: L.LeafletMouseEvent) => {
                 L.DomEvent.stopPropagation(e);
                 const cur = props.config.objects.find((o) => o.id === objId);
-                if (cur) emit('object-click', cur);
+                if (cur) emit('object-click', cur, e.originalEvent);
             });
             polyline.on('contextmenu', (e: L.LeafletMouseEvent) => {
                 L.DomEvent.stopPropagation(e);
