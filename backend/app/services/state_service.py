@@ -656,9 +656,12 @@ _state_snapshots: dict[tuple[str, str | None], dict[str, int]] = {}
 
 
 def _hash_object_state(s: ObjectState) -> int:
-    """Hash only fields that change between checks. Stable identity fields
-    (object_id, type, address, alias) are excluded — they're carried in the
-    payload of any included state, not re-sent on their own.
+    """Hash only operationally-significant fields. ``last_check``, ``next_check``
+    and ``current_attempt`` deliberately don't contribute — they tick every
+    Checkmk re-check (often every 30 s) regardless of whether anything real
+    changed, and including them would defeat the delta on busy sites. They
+    still ride along inside any state that *does* get re-sent, so the UI's
+    "last check N s ago" stays accurate enough between meaningful changes.
     """
     summary = s.services_summary
     summary_t = (
@@ -679,10 +682,7 @@ def _hash_object_state(s: ObjectState) -> int:
             s.stale,
             s.notifications_enabled,
             s.active_checks_enabled,
-            s.last_check,
-            s.next_check,
             s.state_type,
-            s.current_attempt,
             s.max_attempts,
             s.last_state_change,
             s.site_id,
