@@ -161,6 +161,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError } from '@/api/client';
+import { useEscapeClose } from '@/composables/useEscapeClose';
 import { useBoardsStore } from '@/stores/boards';
 import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';
@@ -168,6 +169,7 @@ import { boardTypeOptions } from '@/utils/dropdownOptions';
 import { sanitizeBoardName, slugToTitleCase } from '@/utils/naming';
 
 const emit = defineEmits<{ close: []; created: [name: string] }>();
+useEscapeClose(() => emit('close'));
 
 const { t } = useI18n();
 const boardsStore = useBoardsStore();

@@ -84,6 +84,7 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { usersApi } from '@/api/client';
+import { useEscapeClose } from '@/composables/useEscapeClose';
 import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps<{
@@ -91,7 +92,8 @@ const props = defineProps<{
     userName: string;
 }>();
 
-defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: [] }>();
+useEscapeClose(() => emit('close'));
 
 const { t } = useI18n();
 const auth = useAuthStore();

@@ -49,13 +49,16 @@
 import CmkButton from '@cmk/components/CmkButton.vue';
 import { useI18n } from 'vue-i18n';
 
+import { useEscapeClose } from '@/composables/useEscapeClose';
+
 defineProps<{
     title: string;
     message?: string;
     confirmLabel?: string;
 }>();
 
-defineEmits<{ confirm: []; cancel: [] }>();
+const emit = defineEmits<{ confirm: []; cancel: [] }>();
+useEscapeClose(() => emit('cancel'));
 
 const { t } = useI18n();
 </script>

@@ -54,6 +54,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
+import { useEscapeClose } from '@/composables/useEscapeClose';
 import type { BoardObject } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';
 
@@ -63,6 +64,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ close: [] }>();
+useEscapeClose(() => emit('close'));
 
 const { t } = useI18n();
 const comment = ref('');

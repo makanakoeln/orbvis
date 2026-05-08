@@ -57,7 +57,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 
-defineEmits<{ close: [] }>();
+import { useEscapeClose } from '@/composables/useEscapeClose';
+
+const emit = defineEmits<{ close: [] }>();
+useEscapeClose(() => emit('close'));
 
 const appVersion = __APP_VERSION__;
 const content = ref('');

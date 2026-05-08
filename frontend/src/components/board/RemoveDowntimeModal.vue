@@ -65,6 +65,7 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
+import { useEscapeClose } from '@/composables/useEscapeClose';
 import type { DowntimeEntry } from '@/types/api';
 
 const props = defineProps<{
@@ -74,6 +75,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ close: [] }>();
+useEscapeClose(() => emit('close'));
 
 const { t } = useI18n();
 const removingId = ref<string | null>(null);

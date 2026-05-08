@@ -69,6 +69,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
+import { useEscapeClose } from '@/composables/useEscapeClose';
 import type { BoardObject } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';
 
@@ -80,6 +81,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ close: [] }>();
+useEscapeClose(() => emit('close'));
 
 function toLocalDatetimeString(d: Date): string {
     const pad = (n: number) => String(n).padStart(2, '0');

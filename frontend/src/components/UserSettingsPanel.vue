@@ -257,6 +257,7 @@ import { computed, h, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { usersApi } from '@/api/client';
+import { useEscapeClose } from '@/composables/useEscapeClose';
 import { applyTheme } from '@/composables/useTheme';
 import { i18n } from '@/i18n';
 import { useAuthStore } from '@/stores/auth';
@@ -273,6 +274,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ close: [] }>();
+useEscapeClose(() => emit('close'));
 
 const auth = useAuthStore();
 

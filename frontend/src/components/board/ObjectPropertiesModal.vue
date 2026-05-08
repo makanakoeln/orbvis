@@ -1148,6 +1148,7 @@ import { boardsApi, connectionsApi } from '@/api/client';
 import ColorInput from '@/components/ColorInput.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import NumberInput from '@/components/NumberInput.vue';
+import { useEscapeClose } from '@/composables/useEscapeClose';
 import { useAuthStore } from '@/stores/auth';
 import { useStatesStore } from '@/stores/states';
 import type { BoardObject, LinePerfdataLabel, MetricGraphGroup, ObjectState } from '@/types/api';
@@ -1173,6 +1174,7 @@ const emit = defineEmits<{
     save: [updates: Record<string, unknown>];
     delete: [];
 }>();
+useEscapeClose(() => emit('close'));
 
 const auth = useAuthStore();
 const statesStore = useStatesStore();

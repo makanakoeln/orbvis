@@ -557,6 +557,7 @@ import { useI18n } from 'vue-i18n';
 import { ApiError, boardsApi, connectionsApi, rolesApi } from '@/api/client';
 import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
+import { useEscapeClose } from '@/composables/useEscapeClose';
 import { useAuthStore } from '@/stores/auth';
 import type {
     BoardRead,
@@ -567,7 +568,7 @@ import type {
     RoleRead,
     WorldmapView,
 } from '@/types/api';
-import { boardTypeOptions, lineStyleOptions } from '@/utils/dropdownOptions';
+import { boardTypeOptions } from '@/utils/dropdownOptions';
 
 // Mirror of backend `Settings.flow_board_*` defaults — shown as placeholder so
 // the user knows which value applies when the field is left empty.
@@ -579,6 +580,7 @@ const props = defineProps<{
     worldmapView?: { lat: number; lng: number; zoom: number } | null;
 }>();
 const emit = defineEmits<{ close: []; updated: [] }>();
+useEscapeClose(() => emit('close'));
 
 const { t } = useI18n();
 const auth = useAuthStore();
