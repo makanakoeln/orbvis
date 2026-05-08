@@ -1522,15 +1522,6 @@ useMutationObserver(
     font-weight: var(--font-weight-bold);
 }
 
-.detail-drawer__meta--stacked {
-    grid-template-columns: 1fr;
-    gap: 6px;
-}
-
-.detail-drawer__meta--stacked dt {
-    margin-top: 4px;
-}
-
 .detail-drawer__row {
     display: flex;
     align-items: baseline;
@@ -1634,6 +1625,18 @@ useMutationObserver(
     color: var(--text);
     margin: 0;
     overflow-wrap: anywhere;
+}
+
+/* Topology rows have variable-length labels ("Contact groups") and many chips
+   that wouldn't fit in the 90px first column — stack vertically instead so
+   each label gets its own line above the chips. */
+.detail-drawer__meta--stacked {
+    grid-template-columns: 1fr;
+    gap: 6px;
+}
+
+.detail-drawer__meta--stacked dt {
+    margin-top: 4px;
 }
 
 .detail-drawer__meta-value--warn {
