@@ -652,7 +652,20 @@ const detailState = computed<ObjectState | undefined>(() => {
     return objectStateFromFNode(detailFNode.value);
 });
 
+// The initial render schedules a refining fitView once the force-simulation
+// settles. If the operator clicks a node before that fires, we'd animate the
+// layout into a new transform mid-interaction — registered here, called from
+// any interaction that should "claim" the current view.
+let _cancelPendingFit: (() => void) | null = null;
+function cancelPendingFit(): void {
+    if (_cancelPendingFit) {
+        _cancelPendingFit();
+        _cancelPendingFit = null;
+    }
+}
+
 function openDetail(obj: BoardObject, fNode: FNode): void {
+    cancelPendingFit();
     detailObject.value = obj;
     detailFNode.value = fNode;
     closeContextMenu();
@@ -1384,6 +1397,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             // handlers run alongside transform updates and the combined
             // per-frame work blows past the 16 ms budget on Fan.
             .on('start.simfreeze', () => {
+                cancelPendingFit();
                 simulation?.stop();
             })
             .on('end.simfreeze', () => {
@@ -1786,6 +1800,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // --- Drag behaviour ---
     const dragBehavior = drag<SVGGElement, FNode>()
         .on('start', (event, d) => {
+            cancelPendingFit();
             if (!event.active) simulation!.alphaTarget(0.3).restart();
             d.fx = d.x;
             d.fy = d.y;
@@ -2192,12 +2207,21 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         // Refine the fit once collide/charge have spread overlapping nodes.
         // Lower tick cap because pre-layout starts close to the steady state.
         let fitFired = false;
+        const detachListeners = (): void => {
+            simulation?.on('tick.fit', null);
+            simulation?.on('end.fit', null);
+        };
         const fireFit = (): void => {
             if (fitFired) return;
             fitFired = true;
-            simulation?.on('tick.fit', null);
-            simulation?.on('end.fit', null);
+            detachListeners();
             fitView({ animated: true });
+        };
+        // Operator interactions (open detail, drag, manual zoom) call this to
+        // claim the current view before the refining fit can yank it.
+        _cancelPendingFit = () => {
+            fitFired = true;
+            detachListeners();
         };
         const maxTicks = needsServices(props.serviceLayout) ? 60 : 30;
         let ticks = 0;
