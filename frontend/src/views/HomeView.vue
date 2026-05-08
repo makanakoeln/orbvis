@@ -1101,21 +1101,13 @@
                         })
                     }}
                 </p>
-                <div class="flex justify-end" style="gap: 8px">
-                    <button
-                        class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                        style="padding: 5px 12px"
-                        @click="confirmDelete = null"
-                    >
+                <div class="flex justify-end gap-[8px]">
+                    <CmkButton variant="secondary" @click="confirmDelete = null">
                         {{ t('common.cancel') }}
-                    </button>
-                    <button
-                        class="rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-500 text-white transition-all"
-                        style="padding: 5px 12px"
-                        @click="doDelete"
-                    >
+                    </CmkButton>
+                    <CmkButton variant="danger" @click="doDelete">
                         {{ t('common.delete') }}
-                    </button>
+                    </CmkButton>
                 </div>
             </div>
         </div>
@@ -1190,25 +1182,13 @@
                 <p v-if="cloneError" class="text-sm text-red-400" style="margin-bottom: 8px">
                     {{ cloneError }}
                 </p>
-                <div
-                    class="flex justify-end border-t border-[var(--border)]"
-                    style="gap: 8px; padding-top: 10px"
-                >
-                    <button
-                        class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                        style="padding: 5px 12px"
-                        @click="confirmClone = null"
-                    >
+                <div class="flex justify-end gap-[8px] border-t border-[var(--border)] pt-[10px]">
+                    <CmkButton variant="secondary" @click="confirmClone = null">
                         {{ t('common.cancel') }}
-                    </button>
-                    <button
-                        :disabled="!cloneNewName"
-                        class="rounded-lg text-sm font-semibold bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-40 disabled:cursor-not-allowed text-[var(--button-primary-text-color,#000)] transition-all"
-                        style="padding: 5px 12px"
-                        @click="doClone"
-                    >
+                    </CmkButton>
+                    <CmkButton variant="primary" :disabled="!cloneNewName" @click="doClone">
                         {{ t('admin.cloneBoardAction') }}
-                    </button>
+                    </CmkButton>
                 </div>
             </div>
         </div>
@@ -1266,21 +1246,13 @@
                 <p class="text-sm text-zinc-400" style="margin-bottom: 16px">
                     {{ t('admin.importOverwrite', { name: importConflict.name }) }}
                 </p>
-                <div class="flex justify-end" style="gap: 8px">
-                    <button
-                        class="rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                        style="padding: 5px 12px"
-                        @click="importConflict = null"
-                    >
+                <div class="flex justify-end gap-[8px]">
+                    <CmkButton variant="secondary" @click="importConflict = null">
                         {{ t('common.cancel') }}
-                    </button>
-                    <button
-                        class="bg-amber-600 hover:bg-amber-500 rounded-lg text-sm font-semibold text-white transition-all"
-                        style="padding: 5px 12px"
-                        @click="confirmImportOverwrite"
-                    >
+                    </CmkButton>
+                    <CmkButton variant="warning" @click="confirmImportOverwrite">
                         {{ t('common.overwrite') }}
-                    </button>
+                    </CmkButton>
                 </div>
             </div>
         </div>
@@ -1301,6 +1273,7 @@
 </template>
 
 <script setup lang="ts">
+import CmkButton from '@cmk/components/CmkButton.vue';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { useI18n } from 'vue-i18n';
