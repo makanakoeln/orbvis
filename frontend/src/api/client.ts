@@ -139,8 +139,24 @@ export const boardsApi = {
     ): Promise<BoardConfig> =>
         request('/boards', { method: 'POST', body: JSON.stringify(data) }, token),
 
-    update: (name: string, data: Record<string, unknown>, token: string): Promise<BoardConfig> =>
-        request(`/boards/${name}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+    update: (
+        name: string,
+        data: Record<string, unknown>,
+        token: string,
+        ifMatch?: number | null,
+    ): Promise<BoardConfig> =>
+        request(
+            `/boards/${name}`,
+            {
+                method: 'PUT',
+                body: JSON.stringify(data),
+                headers:
+                    ifMatch != null
+                        ? ({ 'If-Match': String(ifMatch) } as Record<string, string>)
+                        : {},
+            },
+            token,
+        ),
 
     reorder: (order: { name: string; sort_order: number }[], token: string): Promise<void> =>
         request('/boards/reorder', { method: 'POST', body: JSON.stringify(order) }, token),

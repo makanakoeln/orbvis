@@ -516,7 +516,7 @@ import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { boardsApi, connectionsApi, rolesApi } from '@/api/client';
+import { ApiError, boardsApi, connectionsApi, rolesApi } from '@/api/client';
 import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { useAuthStore } from '@/stores/auth';
@@ -685,11 +685,19 @@ async function save() {
                 context_template: form.value.context_template || null,
             },
             auth.accessToken!,
+            props.board.version ?? null,
         );
         emit('updated');
         emit('close');
     } catch (e: unknown) {
-        saveError.value = e instanceof Error ? e.message : 'An error occurred';
+        // 409 means another operator saved this board after we opened it.
+        // Surface a clear message instead of the generic "An error occurred"
+        // so the operator can reload and reconcile.
+        if (e instanceof ApiError && e.status === 409) {
+            saveError.value = t('board.staleConflict');
+        } else {
+            saveError.value = e instanceof Error ? e.message : 'An error occurred';
+        }
     } finally {
         saving.value = false;
     }

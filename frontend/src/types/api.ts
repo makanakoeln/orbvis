@@ -173,6 +173,7 @@ export interface BoardConfig {
     context_template?: string | null;
     background_image?: string | null;
     background_color?: string | null;
+    version?: number;
     view: BoardView;
     objects: BoardObject[];
 }
@@ -188,6 +189,7 @@ export interface BoardRead {
     view: BoardView;
     object_count: number;
     rotation_interval: number;
+    version?: number;
     sort_order: number;
     click_action: ClickAction;
     readonly?: boolean;

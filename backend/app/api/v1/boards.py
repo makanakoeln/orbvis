@@ -6,7 +6,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -109,7 +109,10 @@ async def get_board(name: BoardName, current_user: User = Depends(get_current_us
 
 @router.put("/{name}", response_model=BoardConfig)
 async def update_board(
-    name: BoardName, data: BoardUpdate, current_user: User = Depends(get_current_user)
+    name: BoardName,
+    data: BoardUpdate,
+    request: Request,
+    current_user: User = Depends(get_current_user),
 ) -> BoardConfig:
     _require_board_edit(name, current_user)
     _require_not_readonly(name)
@@ -120,12 +123,38 @@ async def update_board(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Editing hover/context templates requires admin privileges",
         )
-    cfg = board_service.update_board(name, data)
+    expected_version = _parse_if_match(request.headers.get("If-Match"))
+    try:
+        cfg = board_service.update_board(name, data, expected_version=expected_version)
+    except board_service.StaleBoardError as exc:
+        # 412 fits when If-Match was provided; 409 is the looser conflict signal
+        # used by clients that don't surface the precondition. The body carries
+        # ``current_version`` so the client can refetch and merge.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"reason": "stale_board", "current_version": exc.current_version},
+        ) from exc
     if cfg is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
         )
     return cfg
+
+
+def _parse_if_match(value: str | None) -> int | None:
+    """Parse the version embedded in an ``If-Match`` header.
+
+    Accepts both bare integers (``If-Match: 7``) and strong-quoted ETags
+    (``If-Match: "7"``). Returns ``None`` for empty / unparseable values so
+    callers without optimistic-locking awareness keep working.
+    """
+    if not value:
+        return None
+    s = value.strip().strip('"')
+    try:
+        return int(s)
+    except ValueError:
+        return None
 
 
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT)

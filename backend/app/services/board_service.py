@@ -171,15 +171,34 @@ def create_board(data: BoardCreate) -> BoardConfig:
         return cfg
 
 
-def update_board(name: str, data: BoardUpdate) -> BoardConfig | None:
+class StaleBoardError(Exception):
+    """Raised when the client's ``expected_version`` doesn't match disk state.
+
+    The current version is exposed so the API layer can return it in the 409
+    response body — the client can then reload, re-display, and let the
+    operator decide whether to retry their change.
+    """
+
+    def __init__(self, current_version: int) -> None:
+        super().__init__(f"Board version mismatch (current: {current_version})")
+        self.current_version = current_version
+
+
+def update_board(
+    name: str, data: BoardUpdate, expected_version: int | None = None
+) -> BoardConfig | None:
     with _board_lock(name):
         cfg = get_board(name)
         if cfg is None:
             return None
+        if expected_version is not None and cfg.version != expected_version:
+            raise StaleBoardError(cfg.version)
         update_data = data.model_dump(exclude_unset=True)
         if not update_data:
             return cfg
-        cfg = BoardConfig.model_validate(cfg.model_dump() | update_data)
+        merged = cfg.model_dump() | update_data
+        merged["version"] = cfg.version + 1
+        cfg = BoardConfig.model_validate(merged)
         _save_board(cfg)
         return cfg
 
@@ -208,6 +227,7 @@ def add_object(name: str, obj: BoardObject) -> BoardConfig | None:
         if obj.id in existing_ids:
             raise ValueError(f"Object ID '{obj.id}' already exists in board '{name}'")
         cfg.objects.append(obj)
+        cfg.version += 1
         _save_board(cfg)
         return cfg
 
@@ -223,6 +243,7 @@ def update_object(board_name: str, obj_id: str, updates: BoardObjectUpdate) -> B
                     obj.model_dump() | updates.model_dump(exclude_unset=True)
                 )
                 cfg.objects[i] = new_obj
+                cfg.version += 1
                 _save_board(cfg)
                 return new_obj
         return None
@@ -237,6 +258,7 @@ def delete_object(board_name: str, obj_id: str) -> bool:
         cfg.objects = [o for o in cfg.objects if o.id != obj_id]
         if len(cfg.objects) == original_len:
             return False
+        cfg.version += 1
         _save_board(cfg)
         return True
 
@@ -382,6 +404,7 @@ def _to_read(cfg: BoardConfig) -> BoardRead:
         alias=cfg.alias,
         background_image=cfg.background_image,
         background_color=cfg.background_color,
+        version=cfg.version,
         icon_size=cfg.icon_size,
         connection_id=cfg.connection_id,
         view_type=cfg.view.type,

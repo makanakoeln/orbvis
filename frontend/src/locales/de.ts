@@ -129,6 +129,8 @@ export default {
         serviceLayoutDonut: 'Donut',
         backgroundImage: 'Hintergrundbild',
         backgroundColor: 'Hintergrundfarbe',
+        staleConflict:
+            'Board wurde zwischenzeitlich geändert — bitte schließen und neu öffnen, damit deine Änderung auf der aktuellen Version basiert.',
         deleteBackground: 'Hintergrundbild entfernen',
         saveChanges: 'Änderungen speichern',
         hoverTemplate: 'Hover-Template',

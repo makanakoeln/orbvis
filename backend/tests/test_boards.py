@@ -209,3 +209,88 @@ async def test_delete_background(client, admin_token, tmp_path, monkeypatch):
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert get_resp.json()["background_image"] is None
+
+
+@pytest.mark.asyncio
+async def test_update_board_increments_version(client, admin_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.boards_dir", str(tmp_path))
+    monkeypatch.setattr("app.services.board_service.settings.boards_dir", str(tmp_path))
+
+    await client.post(
+        "/api/v1/boards",
+        json={"name": "lock-board", "alias": "v0"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    initial = await client.get(
+        "/api/v1/boards/lock-board", headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert initial.json()["version"] == 0
+
+    resp = await client.put(
+        "/api/v1/boards/lock-board",
+        json={"alias": "v1"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["version"] == 1
+
+
+@pytest.mark.asyncio
+async def test_update_board_rejects_stale_if_match(client, admin_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.boards_dir", str(tmp_path))
+    monkeypatch.setattr("app.services.board_service.settings.boards_dir", str(tmp_path))
+
+    await client.post(
+        "/api/v1/boards",
+        json={"name": "lock-board", "alias": "v0"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    # First operator saves successfully — bumps version to 1.
+    await client.put(
+        "/api/v1/boards/lock-board",
+        json={"alias": "v1"},
+        headers={
+            "Authorization": f"Bearer {admin_token}",
+            "If-Match": "0",
+        },
+    )
+
+    # Second operator still holds version 0 → must be rejected.
+    stale = await client.put(
+        "/api/v1/boards/lock-board",
+        json={"alias": "v2"},
+        headers={
+            "Authorization": f"Bearer {admin_token}",
+            "If-Match": "0",
+        },
+    )
+    assert stale.status_code == 409
+    body = stale.json()
+    assert body["detail"]["reason"] == "stale_board"
+    assert body["detail"]["current_version"] == 1
+
+
+@pytest.mark.asyncio
+async def test_update_board_without_if_match_skips_check(
+    client, admin_token, tmp_path, monkeypatch
+):
+    monkeypatch.setattr("app.core.config.settings.boards_dir", str(tmp_path))
+    monkeypatch.setattr("app.services.board_service.settings.boards_dir", str(tmp_path))
+
+    await client.post(
+        "/api/v1/boards",
+        json={"name": "lock-board", "alias": "v0"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    # Bump twice without supplying If-Match — both must succeed.
+    for alias in ("v1", "v2"):
+        resp = await client.put(
+            "/api/v1/boards/lock-board",
+            json={"alias": alias},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 200
+    final = await client.get(
+        "/api/v1/boards/lock-board", headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert final.json()["version"] == 2

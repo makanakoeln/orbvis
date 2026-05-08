@@ -120,6 +120,8 @@ export default {
         groupName: 'Group name',
         backgroundImage: 'Background image',
         backgroundColor: 'Background color',
+        staleConflict:
+            'Board changed elsewhere — close and reopen to apply your edit on top of the latest version.',
         deleteBackground: 'Remove background image',
         notificationsOn: 'Browser notifications enabled — click to disable',
         notificationsOff: 'Enable browser notifications for state changes',

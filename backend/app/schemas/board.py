@@ -289,6 +289,10 @@ class BoardConfig(BaseModel):
     context_template: str | None = None
     background_image: str | None = None
     background_color: str | None = None
+    # Monotonically incremented per persisted change. Compared against the
+    # client's ``If-Match`` header on update; mismatch returns 409 Conflict so
+    # two operators editing the same board don't silently lose changes.
+    version: int = 0
     view: BoardView = Field(default_factory=StaticView)
     objects: list[BoardObject] = Field(default_factory=list)
 
@@ -335,6 +339,7 @@ class BoardRead(BaseModel):
     view: BoardView
     object_count: int
     rotation_interval: int
+    version: int = 0
     sort_order: int = 0
     click_action: ClickAction = "link"
     readonly: bool = False
