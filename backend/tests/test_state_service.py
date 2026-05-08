@@ -286,6 +286,64 @@ async def test_per_object_connection_override_routes_to_other_backend(mock_conne
 
 
 @pytest.mark.asyncio
+async def test_worldmap_auto_source_inflates_geo_hosts(mock_connection, monkeypatch):
+    """worldmap.auto_source pulls hosts with geo coords into transient objects."""
+    from app.schemas.board import WorldmapView
+
+    mock_connection.get_hosts_states = AsyncMock(
+        return_value={
+            "ham-srv1": ObjectState(object_id="ham-srv1", type="host", state="UP"),
+            "muc-srv1": ObjectState(object_id="muc-srv1", type="host", state="DOWN"),
+        }
+    )
+    mock_connection.get_hosts_with_geo = AsyncMock(
+        return_value=[
+            {"name": "ham-srv1", "alias": "Hamburg srv1", "lat": 53.5, "lng": 10.0},
+            {"name": "muc-srv1", "alias": "Munich srv1", "lat": 48.1, "lng": 11.5},
+        ]
+    )
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+
+    cfg = BoardConfig(
+        name="geo",
+        alias="Geo",
+        connection_id="mock",
+        view=WorldmapView(auto_source="all_hosts"),
+        objects=[],
+    )
+    result = await get_board_states(cfg)
+    by_id = {s.object_id: s for s in result.states}
+    assert by_id["auto:ham-srv1"].state == "UP"
+    assert by_id["auto:muc-srv1"].state == "DOWN"
+
+
+@pytest.mark.asyncio
+async def test_worldmap_auto_source_skips_persisted_duplicates(mock_connection, monkeypatch):
+    """Persisted objects with matching host names win over auto-discovered duplicates."""
+    from app.schemas.board import WorldmapView
+
+    mock_connection.get_hosts_states = AsyncMock(
+        return_value={"srv1": ObjectState(object_id="srv1", type="host", state="DOWN")}
+    )
+    mock_connection.get_hosts_with_geo = AsyncMock(
+        return_value=[{"name": "srv1", "alias": "srv1", "lat": 1.0, "lng": 2.0}]
+    )
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+
+    cfg = BoardConfig(
+        name="geo",
+        alias="Geo",
+        connection_id="mock",
+        view=WorldmapView(auto_source="all_hosts"),
+        objects=[BoardObject(id="manual_srv1", type="host", host_name="srv1", lat=10, lng=20)],
+    )
+    result = await get_board_states(cfg)
+    ids = {s.object_id for s in result.states}
+    assert "manual_srv1" in ids
+    assert "auto:srv1" not in ids
+
+
+@pytest.mark.asyncio
 async def test_per_object_connection_override_unregistered_yields_pending(
     mock_connection, monkeypatch
 ):

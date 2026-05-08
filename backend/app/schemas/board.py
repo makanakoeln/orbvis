@@ -148,6 +148,12 @@ class WorldmapView(BaseModel):
     tile_url: str | None = None
     # CSS saturate() filter percent: 0 = greyscale, 100 = unchanged.
     tile_saturate: float | None = Field(default=None, ge=0, le=100)
+    # Automap source: when set, the backend dynamically populates the board
+    # with hosts that carry orbvis_lat/orbvis_lng labels (or legacy LAT/LONG
+    # custom variables) from the configured connection. Persisted objects
+    # remain visible on top of the auto-discovered ones.
+    auto_source: Literal["all_hosts", "hostgroup", "servicegroup"] | None = None
+    auto_filter_value: str = ""
 
 
 class RadarView(BaseModel):

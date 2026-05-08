@@ -174,6 +174,44 @@
                                 />
                             </div>
                             <p class="text-sm text-zinc-600">{{ t('board.worldmapHint') }}</p>
+
+                            <!-- Automap: dynamically populate the board from
+                                 host geo-coords (orbvis_lat/orbvis_lng labels
+                                 or LAT/LONG custom variables). Mirrors NagVis
+                                 automap with lat/lng. -->
+                            <div
+                                class="space-y-[4px] border-t border-[var(--border)]"
+                                style="padding-top: 8px"
+                            >
+                                <CmkLabel>{{ t('board.autoSource') }}</CmkLabel>
+                                <select
+                                    v-model="form.worldmap_auto_source"
+                                    class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
+                                >
+                                    <option value="">{{ t('board.autoSourceNone') }}</option>
+                                    <option value="all_hosts">
+                                        {{ t('board.autoSourceAllHosts') }}
+                                    </option>
+                                    <option value="hostgroup">
+                                        {{ t('board.autoSourceHostgroup') }}
+                                    </option>
+                                    <option value="servicegroup">
+                                        {{ t('board.autoSourceServicegroup') }}
+                                    </option>
+                                </select>
+                                <CmkInput
+                                    v-if="
+                                        form.worldmap_auto_source === 'hostgroup' ||
+                                        form.worldmap_auto_source === 'servicegroup'
+                                    "
+                                    v-model="form.worldmap_auto_filter_value"
+                                    :placeholder="t('board.autoFilterValuePlaceholder')"
+                                    field-size="FILL"
+                                />
+                                <p class="text-sm text-zinc-600">
+                                    {{ t('board.autoSourceHint') }}
+                                </p>
+                            </div>
                         </template>
 
                         <!-- Flow settings -->
@@ -584,6 +622,12 @@ const form = ref({
     click_action: (props.board.click_action ?? 'link') as 'link' | 'none',
     show_in_lists: props.board.show_in_lists !== false,
     map_type: props.board.view.type,
+    worldmap_auto_source: (wmv?.auto_source ?? '') as
+        | ''
+        | 'all_hosts'
+        | 'hostgroup'
+        | 'servicegroup',
+    worldmap_auto_filter_value: wmv?.auto_filter_value ?? '',
     worldmap_lat: wm.lat,
     worldmap_lng: wm.lng,
     worldmap_zoom: wm.zoom,
@@ -648,6 +692,8 @@ async function save() {
                 lat: form.value.worldmap_lat,
                 lng: form.value.worldmap_lng,
                 zoom: form.value.worldmap_zoom,
+                auto_source: form.value.worldmap_auto_source || null,
+                auto_filter_value: form.value.worldmap_auto_filter_value,
                 tile_url: form.value.worldmap_tile_url || null,
                 tile_saturate: form.value.worldmap_tile_saturate,
             };

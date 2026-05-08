@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from app.connections.base import ServiceRow
 from app.core.config import settings
-from app.schemas.board import AggregationNode, BoardConfig, BoardObject, RadarView
+from app.schemas.board import AggregationNode, BoardConfig, BoardObject, RadarView, WorldmapView
 from app.schemas.state import MapStates, ObjectState, ServicesSummary
 
 # Late import to avoid the connections-API module being imported at startup.
@@ -119,8 +119,14 @@ async def _execute_board_states(
     if cfg.view.type == "radar":
         return await _get_radar_states(cfg, connection)
 
+    # Inflate worldmap automap-source hosts into transient board objects so
+    # the rest of the pipeline (state fetch, websocket diffing, frontend
+    # rendering) treats them like any other host. They are not persisted —
+    # the BoardConfig in board_service still holds only the user-curated set.
+    objects = await inflate_auto_objects(cfg, connection)
+
     state_map = await _states_for_objects(
-        cfg.objects,
+        objects,
         default_connection=connection,
         default_connection_id=cfg.connection_id,
         auth_user=auth_user,
@@ -146,6 +152,46 @@ async def _execute_board_states(
     return MapStates(
         map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=connection_ok
     )
+
+
+_AUTO_PREFIX = "auto:"
+
+
+async def inflate_auto_objects(cfg: BoardConfig, connection: ConnectionBase) -> list[BoardObject]:
+    """If the board is a worldmap with ``auto_source``, append matching hosts.
+
+    Persisted objects always win — if an auto-discovered host shares its name
+    with one the operator manually placed, the manual entry's coordinates are
+    kept and the auto entry is skipped, giving the operator a safe override.
+    """
+    view = cfg.view
+    if not isinstance(view, WorldmapView) or view.auto_source is None:
+        return cfg.objects
+    group_type = view.auto_source if view.auto_source != "all_hosts" else None
+    try:
+        geo_hosts = await connection.get_hosts_with_geo(
+            group_type=group_type,
+            group_name=view.auto_filter_value or None,
+        )
+    except Exception:
+        logger.warning("Failed to fetch geo hosts for board %s", cfg.name, exc_info=True)
+        return cfg.objects
+
+    existing_host_names = {o.host_name for o in cfg.objects if o.host_name}
+    inflated: list[BoardObject] = list(cfg.objects)
+    for h in geo_hosts:
+        if h["name"] in existing_host_names:
+            continue
+        inflated.append(
+            BoardObject(
+                id=f"{_AUTO_PREFIX}{h['name']}",
+                type="host",
+                host_name=h["name"],
+                lat=h["lat"],
+                lng=h["lng"],
+            )
+        )
+    return inflated
 
 
 async def _states_for_objects(

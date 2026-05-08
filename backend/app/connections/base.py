@@ -55,6 +55,20 @@ def topology_problem_rank(row: TopologyRow) -> int:
     return int(s.critical * 4 + s.warning * 2 + s.unknown * 2 + s.pending)
 
 
+class GeoHost(TypedDict):
+    """A host with discovered geo-coordinates.
+
+    Used by the worldmap-board automap source to populate hosts dynamically
+    from monitoring custom variables (``_LATITUDE``/``_LONGITUDE`` etc.) so
+    operators don't have to maintain a parallel coordinate list manually.
+    """
+
+    name: str
+    alias: str
+    lat: float
+    lng: float
+
+
 class ServiceRow(TypedDict):
     """One service attached to a host (used by get_host_services / batch APIs).
 
@@ -131,6 +145,18 @@ class ConnectionBase(ABC):
     async def get_group_members(self, group_type: str, group_name: str) -> list[str]:
         """Return member names for a radar filter (hostgroup/servicegroup/all_hosts/all_services)."""
         ...
+
+    async def get_hosts_with_geo(
+        self, *, group_type: str | None = None, group_name: str | None = None
+    ) -> list[GeoHost]:
+        """Return hosts that carry latitude/longitude custom variables.
+
+        Default implementation returns nothing — only Livestatus exposes the
+        custom_variable_names/values columns we need. ``group_type`` may be
+        ``"hostgroup"``, ``"servicegroup"`` or ``None`` (all hosts); when set,
+        ``group_name`` filters to that group.
+        """
+        return []
 
     @abstractmethod
     async def get_topology(self) -> list[TopologyRow]:

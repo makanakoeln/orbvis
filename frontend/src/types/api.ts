@@ -75,6 +75,8 @@ export interface WorldmapView {
     zoom: number;
     tile_url?: string | null;
     tile_saturate?: number | null;
+    auto_source?: 'all_hosts' | 'hostgroup' | 'servicegroup' | null;
+    auto_filter_value?: string;
 }
 export interface RadarView {
     type: 'radar';

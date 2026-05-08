@@ -127,6 +127,9 @@ export const boardsApi = {
     get: (name: string, token: string): Promise<BoardConfig> =>
         request(`/boards/${name}`, {}, token),
 
+    autoObjects: (name: string, token: string): Promise<BoardObject[]> =>
+        request(`/boards/${name}/auto-objects`, {}, token),
+
     create: (
         data: {
             name: string;

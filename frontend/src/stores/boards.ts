@@ -33,7 +33,20 @@ export const useBoardsStore = defineStore('boards', () => {
         error.value = null;
         currentBoard.value = null; // clear stale data immediately
         try {
-            currentBoard.value = await boardsApi.get(name, token());
+            const cfg = await boardsApi.get(name, token());
+            // Worldmap boards with auto_source merge transient hosts on top of
+            // the persisted set. The merge happens here (not in the editor)
+            // so the canvas, drawer and websocket flow all see one object list.
+            const wv = cfg.view?.type === 'worldmap' ? cfg.view : null;
+            if (wv?.auto_source) {
+                try {
+                    const auto = await boardsApi.autoObjects(name, token());
+                    cfg.objects = [...cfg.objects, ...auto];
+                } catch {
+                    // Auto-source failures shouldn't block the persisted view.
+                }
+            }
+            currentBoard.value = cfg;
         } catch (e: unknown) {
             error.value = e instanceof Error ? e.message : 'Failed to load board';
         } finally {

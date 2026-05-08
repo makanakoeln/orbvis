@@ -28,6 +28,7 @@ import httpx
 
 from app.connections.base import (
     ConnectionBase,
+    GeoHost,
     GraphGroup,
     MetricHistoryResult,
     ServiceRow,
@@ -1008,6 +1009,63 @@ class LivestatusConnection(ConnectionBase):
             except (TypeError, ValueError):
                 return None
         return None
+
+    async def get_hosts_with_geo(
+        self, *, group_type: str | None = None, group_name: str | None = None
+    ) -> list[GeoHost]:
+        """Return every host whose monitoring data carries geo-coordinates.
+
+        Reads the same label/custom-variable conventions as ``get_host_geo``:
+        orbvis_lat / orbvis_lng labels first, legacy LAT / LONG custom vars as
+        fallback. Hosts without geo data are filtered out so the worldmap
+        automap source receives a clean list.
+        """
+        filt = ""
+        if group_type == "hostgroup" and group_name:
+            filt = f"Filter: groups >= {_ls_escape(group_name)}\n"
+        elif group_type == "servicegroup" and group_name:
+            # servicegroup membership lives on the services table; resolve to
+            # the unique host names that own a member service.
+            svc_rows = await self._query(
+                f"GET services\nColumns: host_name\nFilter: groups >= {_ls_escape(group_name)}\n"
+            )
+            host_names = {_row_str(r, 0) for r in svc_rows if _row_str(r, 0)}
+            if not host_names:
+                return []
+            host_filters = "".join(f"Filter: name = {_ls_escape(h)}\n" for h in host_names)
+            filt = f"{host_filters}Or: {len(host_names)}\n"
+
+        query = (
+            "GET hosts\n"
+            "Columns: name alias labels custom_variable_names custom_variable_values\n" + filt
+        )
+        rows = await self._query(query)
+        out: list[GeoHost] = []
+        for r in rows:
+            name = _row_str(r, 0)
+            if not name:
+                continue
+            alias = _row_str(r, 1) or name
+            labels = _row_dict(r, 2)
+            lat_raw: object | None = labels.get("orbvis_lat")
+            lng_raw: object | None = labels.get("orbvis_lng")
+            if lat_raw is None or lng_raw is None:
+                names = _row_list(r, 3)
+                values = _row_list(r, 4)
+                cv = {str(n): v for n, v in zip(names, values, strict=False) if isinstance(n, str)}
+                lat_raw = cv.get("LAT")
+                lng_raw = cv.get("LONG")
+            if lat_raw is None or lng_raw is None:
+                continue
+            try:
+                out.append(
+                    GeoHost(
+                        name=name, alias=alias, lat=float(str(lat_raw)), lng=float(str(lng_raw))
+                    )
+                )
+            except (TypeError, ValueError):
+                continue
+        return out
 
     async def get_graph_templates(self, host: str, service: str | None) -> list[GraphGroup]:
         try:

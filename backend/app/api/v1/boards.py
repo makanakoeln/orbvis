@@ -107,6 +107,32 @@ async def get_board(name: BoardName, current_user: User = Depends(get_current_us
     return cfg
 
 
+@router.get("/{name}/auto-objects", response_model=list[BoardObject])
+async def get_auto_objects(
+    name: BoardName, current_user: User = Depends(get_current_user)
+) -> list[BoardObject]:
+    """Return objects synthesised from a worldmap automap source.
+
+    Empty for boards without ``auto_source`` configured. The objects are
+    transient — they're never persisted, so the editor only ever sees the
+    operator's curated set.
+    """
+    from app.services import state_service
+
+    _require_board_view(name, current_user)
+    cfg = board_service.get_board(name)
+    if cfg is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
+    connection = state_service.get_connection(cfg.connection_id)
+    if connection is None:
+        return []
+    inflated = await state_service.inflate_auto_objects(cfg, connection)
+    persisted_ids = {o.id for o in cfg.objects}
+    return [o for o in inflated if o.id not in persisted_ids]
+
+
 @router.put("/{name}", response_model=BoardConfig)
 async def update_board(
     name: BoardName,
