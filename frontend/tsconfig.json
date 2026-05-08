@@ -8,7 +8,8 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "cmk-shared-typing/*": ["./src/cmk-stubs/cmk-shared-typing/*"]
     },
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,

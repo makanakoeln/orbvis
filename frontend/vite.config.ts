@@ -15,7 +15,9 @@ const CMK_SRC = process.env.CMK_FRONTEND_VUE_SRC
 const ORBVIS_SRC = fileURLToPath(new URL('./src', import.meta.url))
 
 const CMK_STUBS: Record<string, string> = {
-  [`${CMK_SRC}/components/CmkIcon`]: `${ORBVIS_SRC}/components/cmk-stubs/CmkIcon.vue`,
+  // CmkIcon: vendored vendor builds runtime URLs (see CmkIcon/utils.ts) and
+  // can be used directly. Only CmkMultitoneIcon still needs the stub because
+  // its multi-tone SVG handling assumes the Vite asset graph.
   [`${CMK_SRC}/components/CmkIcon/CmkMultitoneIcon.vue`]: `${ORBVIS_SRC}/components/cmk-stubs/CmkMultitoneIcon.vue`,
 }
 
