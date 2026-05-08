@@ -27,12 +27,30 @@
                     </svg>
                     <span class="text-xs font-medium">{{ t('nav.overview') }}</span>
                 </router-link>
-                <span class="font-semibold text-[var(--text)] text-sm truncate">
+                <button
+                    v-if="drawerObject"
+                    type="button"
+                    class="font-semibold text-zinc-400 hover:text-[var(--text)] text-sm truncate transition-colors cursor-pointer"
+                    :title="t('board.detailDrawer.close')"
+                    @click="closeAnyDrawer"
+                >
+                    {{ boardConfig?.alias || route.params.name }}
+                </button>
+                <span v-else class="font-semibold text-[var(--text)] text-sm truncate">
                     {{ boardConfig?.alias || route.params.name }}
                 </span>
+                <template v-if="drawerObject">
+                    <span class="text-zinc-600 text-sm shrink-0">›</span>
+                    <span class="font-semibold text-[var(--text)] text-sm truncate">
+                        {{ getBoardObjectName(drawerObject) }}
+                    </span>
+                </template>
             </div>
 
-            <div class="flex items-center gap-[5px] shrink-0">
+            <div
+                class="flex items-center gap-[5px] shrink-0 transition-opacity"
+                :class="drawerObject ? 'opacity-40 hover:opacity-100' : ''"
+            >
                 <!-- Flow problems pill -->
                 <button
                     v-if="isFlowmap && flowProblems.total > 0 && serviceLayout === 'off'"
@@ -401,6 +419,7 @@
             <div v-else-if="isFlowmap" class="flex-1 relative overflow-hidden">
                 <FlowBoard
                     v-if="boardConfig?.connection_id"
+                    ref="flowBoardRef"
                     :connection-id="boardConfig.connection_id"
                     :service-layout="serviceLayout"
                     :readonly="isKiosk || boardConfig?.readonly"
@@ -409,7 +428,7 @@
                     :flow-view="boardConfig.view.type === 'flow' ? boardConfig.view : null"
                     @update:service-layout="serviceLayout = $event"
                     @update:problems="flowProblems = $event"
-                    @drawer-open="flowDrawerOpen = $event"
+                    @drawer-object="flowDrawerObject = $event"
                 />
                 <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">
                     {{ t('board.noConnectionConfigured') }}
@@ -565,7 +584,7 @@
                     !boardConfig.readonly &&
                     !isFlowmap &&
                     !isRadar &&
-                    !detailDrawerObject
+                    !drawerObject
                 "
                 class="fixed z-40 flex flex-col items-end gap-[10px]"
                 style="bottom: 24px; right: 24px"
@@ -720,7 +739,7 @@
         <!-- Services-layout toggle (Flow Board only). Hidden during triage. -->
         <Teleport to="body">
             <div
-                v-if="isFlowmap && !flowDrawerOpen"
+                v-if="isFlowmap && !drawerObject"
                 class="fixed z-40"
                 style="bottom: 24px; right: 24px"
             >
@@ -969,6 +988,7 @@ import { useStatesStore } from '@/stores/states';
 import type { BoardObject, DowntimeEntry, ServiceLayout } from '@/types/api';
 import type { TourStep } from '@/types/tour';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
+import { getBoardObjectName } from '@/utils/naming';
 import { resolveTemplate } from '@/utils/template';
 import CmkLoading from '@/vendor/cmk/components/CmkLoading.vue';
 
@@ -1534,7 +1554,15 @@ const FLOW_PROBLEMS_DEFAULT: FlowProblems = {
     total: 0,
 };
 const flowProblems = ref<FlowProblems>({ ...FLOW_PROBLEMS_DEFAULT });
-const flowDrawerOpen = ref(false);
+const flowDrawerObject = ref<BoardObject | null>(null);
+const flowBoardRef = ref<{ closeDetail: () => void } | null>(null);
+const drawerObject = computed<BoardObject | null>(
+    () => detailDrawerObject.value ?? flowDrawerObject.value,
+);
+function closeAnyDrawer(): void {
+    if (detailDrawerObject.value) closeDetail();
+    if (flowDrawerObject.value) flowBoardRef.value?.closeDetail();
+}
 
 watch(boardName, () => {
     serviceLayout.value = SERVICE_LAYOUT_DEFAULT;

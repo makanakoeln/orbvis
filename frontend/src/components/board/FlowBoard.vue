@@ -308,7 +308,7 @@ const emit = defineEmits<{
         e: 'update:problems',
         value: { critical: number; warning: number; hostsWithProblems: number; total: number },
     ): void;
-    (e: 'drawer-open', value: boolean): void;
+    (e: 'drawer-object', value: BoardObject | null): void;
 }>();
 const { t } = useI18n();
 const auth = useAuthStore();
@@ -737,12 +737,11 @@ const aggregatedProblems = computed(() => {
 watch(aggregatedProblems, (v) => emit('update:problems', v), { immediate: true });
 
 // Lifted to BoardView so the parent can hide overlapping bottom-right controls
-// (Services-mode toggle) while triage is in progress. Watching the boolean
-// avoids re-emits when the operator just clicks a different host.
-watch(
-    () => detailObject.value !== null,
-    (v) => emit('drawer-open', v),
-);
+// and render a triage breadcrumb. Emits the actual object so the parent can
+// label the breadcrumb without keeping a parallel state copy.
+watch(detailObject, (v) => emit('drawer-object', v));
+
+defineExpose({ closeDetail });
 
 // Top-K cutoff visibility: when fan/orbit/row layouts are active and the
 // backend omitted full service detail for some hosts, surface the ratio so
