@@ -156,12 +156,25 @@ class RadarView(BaseModel):
     filter_value: str = ""
 
 
+class FlowNodePosition(BaseModel):
+    x: float
+    y: float
+
+
 class FlowView(BaseModel):
     type: Literal["flow"] = "flow"
     root: str | None = None
     # -1 = unlimited; None defaults to unlimited downward / 0 upward (NagVis automap defaults).
     child_layers: int | None = Field(default=None, ge=-1, le=20)
     parent_layers: int | None = Field(default=None, ge=-1, le=20)
+    # Per-board overrides for the global flow_board_* limits. None = use the
+    # global default from settings.
+    top_affected_hosts: int | None = Field(default=None, ge=0, le=1000)
+    max_services_per_host: int | None = Field(default=None, ge=0, le=500)
+    # Pinned host positions from operator drags. Key is the host name; missing
+    # hosts fall back to the force-simulation layout. Service-node positions
+    # are derived from their host and not persisted.
+    positions: dict[str, FlowNodePosition] = Field(default_factory=dict)
 
 
 BoardView = Annotated[

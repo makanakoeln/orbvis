@@ -309,6 +309,7 @@ const emit = defineEmits<{
         value: { critical: number; warning: number; hostsWithProblems: number; total: number },
     ): void;
     (e: 'drawer-object', value: BoardObject | null): void;
+    (e: 'positions-changed', value: Record<string, { x: number; y: number }>): void;
 }>();
 const { t } = useI18n();
 const auth = useAuthStore();
@@ -740,6 +741,31 @@ watch(aggregatedProblems, (v) => emit('update:problems', v), { immediate: true }
 // and render a triage breadcrumb. Emits the actual object so the parent can
 // label the breadcrumb without keeping a parallel state copy.
 watch(detailObject, (v) => emit('drawer-object', v));
+
+// Coalesce burst drags into a single save: dragging multiple hosts in
+// succession or multi-select drags would otherwise hammer boards.update.
+let _emitPinnedTimer: ReturnType<typeof setTimeout> | null = null;
+function emitPinnedPositions(): void {
+    if (_emitPinnedTimer) clearTimeout(_emitPinnedTimer);
+    _emitPinnedTimer = setTimeout(() => {
+        const positions: Record<string, { x: number; y: number }> = {};
+        for (const node of nodeCache.values()) {
+            if (
+                node.nodeType === 'host' &&
+                typeof node.fx === 'number' &&
+                typeof node.fy === 'number' &&
+                Number.isFinite(node.fx) &&
+                Number.isFinite(node.fy)
+            ) {
+                positions[node.id] = { x: node.fx, y: node.fy };
+            }
+        }
+        emit('positions-changed', positions);
+    }, 400);
+}
+onUnmounted(() => {
+    if (_emitPinnedTimer) clearTimeout(_emitPinnedTimer);
+});
 
 defineExpose({ closeDetail });
 
@@ -1396,26 +1422,33 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             : 0;
     const vSpacing = Math.max(minVSpacing, Math.min(130, (H * 0.8) / Math.max(1, maxLvl + 1)));
 
-    // Host nodes first
+    // Host nodes first. New (uncached) hosts seed their pinned position from
+    // the saved board view, so reload preserves the operator's layout.
+    const savedPositions = props.flowView?.positions ?? {};
     const fNodes: FNode[] = topoNodes.map((n) => {
         const cached = nodeCache.get(n.name);
-        const node: FNode = cached
-            ? {
-                  ...cached,
-                  state: n.state,
-                  output: n.output,
-                  bfsLevel: levels.get(n.name) ?? 0,
-                  nodeType: 'host',
-                  topo: n,
-              }
-            : {
-                  id: n.name,
-                  state: n.state,
-                  output: n.output,
-                  bfsLevel: levels.get(n.name) ?? 0,
-                  nodeType: 'host',
-                  topo: n,
-              };
+        if (cached) {
+            const updated: FNode = {
+                ...cached,
+                state: n.state,
+                output: n.output,
+                bfsLevel: levels.get(n.name) ?? 0,
+                nodeType: 'host',
+                topo: n,
+            };
+            nodeCache.set(n.name, updated);
+            return updated;
+        }
+        const saved = savedPositions[n.name];
+        const node: FNode = {
+            id: n.name,
+            state: n.state,
+            output: n.output,
+            bfsLevel: levels.get(n.name) ?? 0,
+            nodeType: 'host',
+            topo: n,
+            ...(saved ? { x: saved.x, y: saved.y, fx: saved.x, fy: saved.y } : {}),
+        };
         nodeCache.set(n.name, node);
         return node;
     });
@@ -1765,6 +1798,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             if (!event.active) simulation!.alphaTarget(0);
             d.fx = d.x;
             d.fy = d.y;
+            if (d.nodeType === 'host') emitPinnedPositions();
         });
 
     // --- Links ---

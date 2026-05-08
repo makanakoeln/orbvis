@@ -429,6 +429,7 @@
                     @update:service-layout="serviceLayout = $event"
                     @update:problems="flowProblems = $event"
                     @drawer-object="flowDrawerObject = $event"
+                    @positions-changed="onFlowPositionsChanged"
                 />
                 <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">
                     {{ t('board.noConnectionConfigured') }}
@@ -960,7 +961,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } f
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
-import { cmkApi, connectionsApi } from '@/api/client';
+import { boardsApi, cmkApi, connectionsApi } from '@/api/client';
 import AckModal from '@/components/board/AckModal.vue';
 import BoardCanvas from '@/components/board/BoardCanvas.vue';
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue';
@@ -1562,6 +1563,24 @@ const drawerObject = computed<BoardObject | null>(
 function closeAnyDrawer(): void {
     if (detailDrawerObject.value) closeDetail();
     if (flowDrawerObject.value) flowBoardRef.value?.closeDetail();
+}
+
+async function onFlowPositionsChanged(
+    positions: Record<string, { x: number; y: number }>,
+): Promise<void> {
+    const cfg = boardConfig.value;
+    if (!cfg || cfg.readonly) return;
+    if (cfg.view.type !== 'flow') return;
+    const token = auth.accessToken;
+    if (!token) return;
+    const newView = { ...cfg.view, positions };
+    cfg.view = newView; // optimistic local update keeps the prop reactive
+    try {
+        await boardsApi.update(cfg.name, { view: newView }, token);
+    } catch (err) {
+        // Layout drag is low-stakes — log and let the next drag retry.
+        console.warn('Failed to persist flow positions:', err);
+    }
 }
 
 watch(boardName, () => {

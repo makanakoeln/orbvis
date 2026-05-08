@@ -81,11 +81,18 @@ export interface RadarView {
     filter: string;
     filter_value: string;
 }
+export interface FlowNodePosition {
+    x: number;
+    y: number;
+}
 export interface FlowView {
     type: 'flow';
     root?: string | null;
     child_layers?: number | null;
     parent_layers?: number | null;
+    top_affected_hosts?: number | null;
+    max_services_per_host?: number | null;
+    positions?: Record<string, FlowNodePosition>;
 }
 export type BoardView = StaticView | WorldmapView | RadarView | FlowView;
 
