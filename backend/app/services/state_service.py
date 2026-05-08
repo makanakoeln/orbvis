@@ -33,6 +33,10 @@ _COMBINED_SEVERITY: dict[str, int] = {
 _MONITORING_TYPES: frozenset[str] = frozenset(
     {"host", "service", "hostgroup", "servicegroup", "line", "graph"}
 )
+# Types that contribute to the worst-state roll-up of a map-link object.
+# Includes map and aggregation so nested boards transitively show up in the
+# parent map's status pill.
+_MAP_AGGREGATION_TYPES: frozenset[str] = _MONITORING_TYPES | {"map", "aggregation"}
 
 if TYPE_CHECKING:
     from app.connections.base import ConnectionBase
@@ -116,7 +120,11 @@ async def _execute_board_states(
         return await _get_radar_states(cfg, connection)
 
     state_map = await _get_board_states_batched(
-        connection, cfg.objects, auth_user=auth_user, can_view_board=can_view_board
+        connection,
+        cfg.objects,
+        auth_user=auth_user,
+        can_view_board=can_view_board,
+        _visited_maps=frozenset({cfg.name}),
     )
     states = list(state_map.values())
 
@@ -145,6 +153,7 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
     auth_user: str | None = None,
     can_view_board: Callable[[str], bool] | None = None,
     board_cfg_cache: dict[str, BoardConfig | None] | None = None,
+    _visited_maps: frozenset[str] | None = None,
 ) -> dict[str, ObjectState]:
     """Fetch states for all board objects using batch queries where supported.
 
@@ -152,9 +161,15 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
     map-link recursion so a board referenced by several sibling or nested maps
     loads only once. The cache stores ``None`` for not-found boards to avoid
     retrying missing names.
+
+    ``_visited_maps`` carries the set of board names already on the current
+    recursion path so map-link aggregation can transitively include nested
+    maps without infinite-looping on cycles.
     """
     if board_cfg_cache is None:
         board_cfg_cache = {}
+    if _visited_maps is None:
+        _visited_maps = frozenset()
     hosts_soft: list[BoardObject] = []
     hosts_hard: list[BoardObject] = []
     svcs_soft: list[BoardObject] = []
@@ -367,13 +382,22 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
             ref_backend = get_connection(ref_cfg.connection_id)
             if ref_backend is None:
                 continue
-            non_map_objs = [o for o in ref_cfg.objects if o.type != "map"]
+            # Include nested map-objects in the recursion as long as they
+            # don't form a cycle — otherwise a board with only nested links
+            # would aggregate to PENDING even when its leaves have real states.
+            child_visited = _visited_maps | {map_name}
+            included_objs = [
+                o
+                for o in ref_cfg.objects
+                if o.type != "map" or (o.map_name and o.map_name not in child_visited)
+            ]
             try:
                 board_states[map_name] = await _get_board_states_batched(
                     ref_backend,
-                    non_map_objs,
+                    included_objs,
                     auth_user=auth_user,
                     board_cfg_cache=board_cfg_cache,
+                    _visited_maps=child_visited,
                 )
             except Exception:
                 pass
@@ -385,7 +409,7 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
                 results[obj.id] = ObjectState(object_id=obj.id, type="map", state="NO_PERMISSION")
                 continue
             sub = entry or {}
-            mon = [s for s in sub.values() if s.type in _MONITORING_TYPES]
+            mon = [s for s in sub.values() if s.type in _MAP_AGGREGATION_TYPES]
             if mon:
                 real = [s for s in mon if s.state != "NO_PERMISSION"]
                 if not real:

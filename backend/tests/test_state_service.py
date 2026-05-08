@@ -194,6 +194,65 @@ async def test_get_board_states_batch_exception_yields_pending(mock_connection, 
 
 
 @pytest.mark.asyncio
+async def test_map_link_aggregates_nested_map_states(mock_connection, monkeypatch):
+    """A Map-A → Map-B → host(CRIT) chain must surface CRIT on the top-level link.
+
+    Before this aggregation supported recursion, intermediate map links were
+    filtered out and the parent link aggregated to PENDING.
+    """
+    from app.services import board_service
+
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+
+    # Two stored boards: ``inner`` holds a CRIT host, ``outer`` only references inner.
+    inner = _board(
+        [_obj("h_inner", "host", host_name="srv-crit")],
+        connection_id="mock",
+    )
+    inner.name = "inner"
+    leaf = _board(
+        [_obj("link_to_inner", "map", map_name="inner")],
+        connection_id="mock",
+    )
+    leaf.name = "leaf"
+    outer = _board(
+        [_obj("link_to_leaf", "map", map_name="leaf")],
+        connection_id="mock",
+    )
+    outer.name = "outer"
+
+    boards = {"inner": inner, "leaf": leaf, "outer": outer}
+    monkeypatch.setattr(board_service, "get_board", boards.get)
+    mock_connection.get_hosts_states = AsyncMock(
+        return_value={"srv-crit": ObjectState(object_id="h_inner", type="host", state="DOWN")}
+    )
+
+    result = await get_board_states(outer)
+    by_id = {s.object_id: s for s in result.states}
+    assert by_id["link_to_leaf"].state == "DOWN"
+
+
+@pytest.mark.asyncio
+async def test_map_link_handles_cycle_without_recursion(mock_connection, monkeypatch):
+    """Self-referential map cycle must not stack-overflow; result is PENDING."""
+    from app.services import board_service
+
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+
+    # Board A links to B, B links back to A — pure cycle, no leaves.
+    a = _board([_obj("a_to_b", "map", map_name="b")], connection_id="mock")
+    a.name = "a"
+    b = _board([_obj("b_to_a", "map", map_name="a")], connection_id="mock")
+    b.name = "b"
+    monkeypatch.setattr(board_service, "get_board", {"a": a, "b": b}.get)
+    mock_connection.is_available = AsyncMock(return_value=True)
+
+    result = await get_board_states(a)
+    by_id = {s.object_id: s for s in result.states}
+    assert by_id["a_to_b"].state == "PENDING"
+
+
+@pytest.mark.asyncio
 async def test_get_board_states_non_monitoring_objects(mock_connection, monkeypatch):
     monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
     mock_connection.is_available = AsyncMock(return_value=True)
