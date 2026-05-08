@@ -12,6 +12,7 @@ from typing import TypedDict
 from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -348,6 +349,9 @@ app.add_middleware(
 app.add_middleware(MethodOverrideMiddleware)
 app.add_middleware(CSRFOriginMiddleware, allowed_origins=settings.allowed_origins)
 app.add_middleware(SecurityHeadersMiddleware)
+# Gzip JSON responses above 1 KiB. Hot endpoints (board states, autocomplete
+# host/service lists) are highly compressible; saves ~70 % over the wire.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(boards.router, prefix="/api/v1/boards", tags=["boards"])
