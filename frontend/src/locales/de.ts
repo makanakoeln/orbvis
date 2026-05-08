@@ -108,6 +108,10 @@ export default {
         flowLayersPlaceholder: 'unbegrenzt',
         flowHint:
             'Schränkt die Topologie auf einen Ausschnitt um einen Wurzel-Host ein. -1 = unbegrenzt, 0 = keine.',
+        flowTopAffectedHosts: 'Hosts mit Service-Detail',
+        flowMaxServicesPerHost: 'Services pro Host',
+        flowLimitsHint:
+            'Nur die Top-K Hosts mit den meisten Problemen rendern Service-Details; alle anderen zeigen nur den Donut. Leer lassen, um den globalen Standard zu verwenden.',
         filterType: 'Filtertyp',
         filterTypeHostgroup: 'Hostgruppe',
         filterTypeServicegroup: 'Servicegruppe',
@@ -151,14 +155,12 @@ export default {
                 'Benachrichtigungen deaktiviert — bei Problemen wird nichts gemeldet',
         },
         flow: {
-            offModeBanner:
-                '{total} verborgene Service-Probleme ({critical} kritisch, {warning} warning) auf {hostsWithProblems} Hosts',
             offModeBannerCta: 'auf Donut umschalten',
             issuesBanner:
                 '{total} Service-Probleme ({critical} kritisch, {warning} warning) auf {hostsWithProblems} Hosts',
+            problemsPill: '{critical} krit. · {warning} warn.',
             topKHint:
                 'Service-Details für die {shown} von {total} am stärksten betroffenen Hosts werden gezeigt — übrige Hosts sind als Donut aggregiert',
-            largeBoardHint: 'Fan/Orbit/Row aggregieren bei >200 Hosts identisch wie Donut',
             searchPlaceholder: 'Hosts/Services filtern…',
             problemsOnlyToggle: 'Nur Hosts mit Problemen anzeigen',
             bulkSelected: '{count} ausgewählt',
@@ -166,7 +168,11 @@ export default {
         detailDrawer: {
             close: 'Schließen',
             servicesSummary: 'Services',
+            hostsSummary: 'Hosts',
+            since: 'seit {duration}',
             openInCheckmk: 'In Checkmk öffnen',
+            openProblems: 'Probleme anzeigen',
+            moreActions: 'Weitere Aktionen',
             checkInfo: 'Check-Info',
             attemptLabel: 'Versuch',
             attemptValue: '{current}/{max} ({type})',
@@ -182,6 +188,16 @@ export default {
             details: 'Details',
             host: 'Host',
             site: 'Site',
+            perfdataLabel: 'Performance-Daten',
+            sectionActions: 'Aktionen',
+            ackLabel: 'Acknowledgen',
+            forceCheckLabel: 'Sofort prüfen',
+            scheduleDowntimeLabel: 'Downtime planen',
+            removeAckLabel: 'ACK entfernen',
+            removeDowntimeLabel: 'Downtime aufheben',
+            addCommentLabel: 'Kommentar',
+            disableNotificationsLabel: 'Benachrichtigungen aus',
+            enableNotificationsLabel: 'Benachrichtigungen an',
         },
     },
     boardSettings: {

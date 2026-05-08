@@ -33,6 +33,62 @@
             </div>
 
             <div class="flex items-center gap-[5px] shrink-0">
+                <!-- Flow problems pill -->
+                <button
+                    v-if="isFlowmap && flowProblems.total > 0 && serviceLayout === 'off'"
+                    type="button"
+                    class="flex items-center rounded-full text-xs font-medium ring-1 transition-all cursor-pointer"
+                    style="gap: 4px; padding: 2px 7px"
+                    :class="
+                        flowProblems.critical > 0
+                            ? 'bg-red-500/10 ring-red-500/30 text-red-300 hover:bg-red-500/20'
+                            : 'bg-amber-500/10 ring-amber-500/30 text-amber-300 hover:bg-amber-500/20'
+                    "
+                    :title="`${t('board.flow.issuesBanner', flowProblems)} — ${t('board.flow.offModeBannerCta')}`"
+                    @click="serviceLayout = 'donut'"
+                >
+                    <svg
+                        style="width: 10px; height: 10px"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                        />
+                    </svg>
+                    {{ t('board.flow.problemsPill', flowProblems) }}
+                </button>
+                <span
+                    v-else-if="isFlowmap && flowProblems.total > 0"
+                    class="flex items-center rounded-full text-xs font-medium ring-1"
+                    style="gap: 4px; padding: 2px 7px"
+                    :class="
+                        flowProblems.critical > 0
+                            ? 'bg-red-500/10 ring-red-500/30 text-red-300'
+                            : 'bg-amber-500/10 ring-amber-500/30 text-amber-300'
+                    "
+                    :title="t('board.flow.issuesBanner', flowProblems)"
+                >
+                    <svg
+                        style="width: 10px; height: 10px"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                        />
+                    </svg>
+                    {{ t('board.flow.problemsPill', flowProblems) }}
+                </span>
+
                 <!-- Connection status -->
                 <div
                     class="flex items-center rounded-full text-xs font-medium ring-1 transition-all"
@@ -338,6 +394,7 @@
                 :states="statesStore.states"
                 :checkmk-url="checkmkUrl"
                 :readonly="isKiosk || boardConfig?.readonly"
+                @object-click="onObjectClick"
             />
 
             <!-- Flowmap -->
@@ -351,6 +408,8 @@
                     :checkmk-url="checkmkUrl"
                     :flow-view="boardConfig.view.type === 'flow' ? boardConfig.view : null"
                     @update:service-layout="serviceLayout = $event"
+                    @update:problems="flowProblems = $event"
+                    @drawer-open="flowDrawerOpen = $event"
                 />
                 <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">
                     {{ t('board.noConnectionConfigured') }}
@@ -438,9 +497,65 @@
                     </router-link>
                 </div>
             </div>
+
+            <!-- Shared detail drawer for static / worldmap / radar boards -->
+            <Transition name="drawer-slide">
+                <DetailDrawer
+                    v-if="!isFlowmap && detailDrawerObject"
+                    :object="detailDrawerObject"
+                    :state="detailDrawerState"
+                    :checkmk-url="checkmkUrl"
+                    @close="closeDetail"
+                    @acknowledge="onDetailAck"
+                    @remove-ack="onDetailRemoveAck"
+                    @schedule-downtime="onDetailDowntime"
+                    @remove-downtime="onDetailRemoveDowntime"
+                    @force-check="onDetailForceCheck"
+                    @add-comment="onDetailAddComment"
+                    @enable-notifications="onDetailToggleNotifications(true)"
+                    @disable-notifications="onDetailToggleNotifications(false)"
+                />
+            </Transition>
         </div>
 
-        <!-- FAB + Add Object panel + action bar (all bottom-right) -->
+        <!-- Shared drawer-action modals -->
+        <AckModal
+            v-if="detailActions.ackModalObject.value && checkmkUrl"
+            :object="detailActions.ackModalObject.value"
+            :checkmk-url="checkmkUrl"
+            @close="
+                detailActions.ackModalObject.value = null;
+                statesStore.refreshAfterCommand();
+            "
+        />
+        <DowntimeModal
+            v-if="detailActions.downtimeModalObject.value && checkmkUrl"
+            :object="detailActions.downtimeModalObject.value"
+            :checkmk-url="checkmkUrl"
+            @close="
+                detailActions.downtimeModalObject.value = null;
+                statesStore.refreshAfterCommand();
+            "
+        />
+        <CommentModal
+            v-if="detailActions.commentModalObject.value && checkmkUrl"
+            :object="detailActions.commentModalObject.value"
+            :checkmk-url="checkmkUrl"
+            @close="detailActions.commentModalObject.value = null"
+        />
+        <RemoveDowntimeModal
+            v-if="detailActions.removeDowntimeModal.visible && checkmkUrl"
+            :downtimes="detailActions.removeDowntimeModal.downtimes"
+            :checkmk-url="checkmkUrl"
+            :object-name="detailActions.removeDowntimeModal.objectName"
+            @close="
+                detailActions.removeDowntimeModal.visible = false;
+                statesStore.refreshAfterCommand();
+            "
+        />
+
+        <!-- FAB + Add Object panel + action bar (all bottom-right). Hidden
+             while the detail drawer is open so it doesn't overlap triage. -->
         <Teleport to="body">
             <div
                 v-if="
@@ -449,7 +564,8 @@
                     boardConfig &&
                     !boardConfig.readonly &&
                     !isFlowmap &&
-                    !isRadar
+                    !isRadar &&
+                    !detailDrawerObject
                 "
                 class="fixed z-40 flex flex-col items-end gap-[10px]"
                 style="bottom: 24px; right: 24px"
@@ -601,9 +717,13 @@
             </div>
         </Teleport>
 
-        <!-- Bottom row: Services toggle (Flow Board only) -->
+        <!-- Services-layout toggle (Flow Board only). Hidden during triage. -->
         <Teleport to="body">
-            <div v-if="isFlowmap" class="fixed z-40" style="bottom: 24px; right: 24px">
+            <div
+                v-if="isFlowmap && !flowDrawerOpen"
+                class="fixed z-40"
+                style="bottom: 24px; right: 24px"
+            >
                 <div class="relative">
                     <!-- Backdrop to close dropdown on outside click -->
                     <div
@@ -827,6 +947,7 @@ import BoardCanvas from '@/components/board/BoardCanvas.vue';
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue';
 import CommentModal from '@/components/board/CommentModal.vue';
 import ContextMenu from '@/components/board/ContextMenu.vue';
+import DetailDrawer from '@/components/board/DetailDrawer.vue';
 import DowntimeModal from '@/components/board/DowntimeModal.vue';
 import EditPanel from '@/components/board/EditPanel.vue';
 import FlowBoard from '@/components/board/FlowBoard.vue';
@@ -838,6 +959,7 @@ import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import { useBoardEditor } from '@/composables/useBoardEditor';
+import { useObjectActions } from '@/composables/useObjectActions';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
@@ -1252,18 +1374,61 @@ const selectedObject = computed<BoardObject | null>(() => {
     return boardConfig.value.objects.find((o) => o.id === editor.selectedObjectId.value) ?? null;
 });
 
+// ---- Detail drawer (shared across static / worldmap / radar boards) ----
+
+const detailDrawerObject = ref<BoardObject | null>(null);
+const detailDrawerState = computed(() =>
+    detailDrawerObject.value ? statesStore.states[detailDrawerObject.value.id] : undefined,
+);
+const detailActions = useObjectActions(
+    () => checkmkUrl.value,
+    () => {},
+);
+
+function openDetail(obj: BoardObject) {
+    detailDrawerObject.value = obj;
+    worldmapHover.visible = false;
+    worldmapCtxMenu.visible = false;
+}
+
+function closeDetail() {
+    detailDrawerObject.value = null;
+}
+
+function onDetailAck() {
+    detailActions.handlers.acknowledge(detailDrawerObject.value);
+}
+function onDetailRemoveAck() {
+    void detailActions.handlers.removeAck(detailDrawerObject.value);
+}
+function onDetailDowntime() {
+    detailActions.handlers.scheduleDowntime(detailDrawerObject.value);
+}
+function onDetailRemoveDowntime() {
+    void detailActions.handlers.removeDowntime(detailDrawerObject.value);
+}
+function onDetailForceCheck() {
+    void detailActions.handlers.forceCheck(detailDrawerObject.value);
+}
+function onDetailAddComment() {
+    detailActions.handlers.addComment(detailDrawerObject.value);
+}
+function onDetailToggleNotifications(enable: boolean) {
+    void detailActions.handlers.toggleNotifications(detailDrawerObject.value, enable);
+}
+
 // ---- Static map event handlers ----
 
 async function onObjectDragEnd(id: string, x: number, y: number) {
     await editor.saveObjectPosition(id, x, y);
 }
 
-function onObjectClick(obj: BoardObject, _event?: MouseEvent) {
+function onObjectClick(obj: BoardObject, event?: MouseEvent) {
     if (editor.editMode.value) {
         editor.selectObject(obj.id);
         return;
     }
-    if (boardConfig.value?.readonly || boardConfig.value?.click_action === 'none') return;
+    if (boardConfig.value?.click_action === 'none') return;
     if (obj.url) {
         openUrl(obj.url, obj.url_target || '_blank');
         return;
@@ -1272,8 +1437,12 @@ function onObjectClick(obj: BoardObject, _event?: MouseEvent) {
         void router.push({ name: 'board', params: { name: obj.map_name } });
         return;
     }
-    const cmkUrl = buildCheckmkUrl(obj, checkmkUrl.value);
-    if (cmkUrl) openUrl(cmkUrl, '_blank');
+    if (event && (event.ctrlKey || event.metaKey)) {
+        const cmkUrl = buildCheckmkUrl(obj, checkmkUrl.value);
+        if (cmkUrl) openUrl(cmkUrl, '_blank');
+        return;
+    }
+    openDetail(obj);
 }
 
 async function onCanvasClick(event: MouseEvent) {
@@ -1352,9 +1521,25 @@ const SERVICE_LAYOUT_DEFAULT: ServiceLayout = 'donut';
 const serviceLayout = ref<ServiceLayout>(SERVICE_LAYOUT_DEFAULT);
 const serviceLayoutOpen = ref(false);
 
+type FlowProblems = {
+    critical: number;
+    warning: number;
+    hostsWithProblems: number;
+    total: number;
+};
+const FLOW_PROBLEMS_DEFAULT: FlowProblems = {
+    critical: 0,
+    warning: 0,
+    hostsWithProblems: 0,
+    total: 0,
+};
+const flowProblems = ref<FlowProblems>({ ...FLOW_PROBLEMS_DEFAULT });
+const flowDrawerOpen = ref(false);
+
 watch(boardName, () => {
     serviceLayout.value = SERVICE_LAYOUT_DEFAULT;
     serviceLayoutOpen.value = false;
+    flowProblems.value = { ...FLOW_PROBLEMS_DEFAULT };
 });
 const serviceLayoutOptions = computed(() => [
     { value: 'off' as ServiceLayout, label: t('board.serviceLayoutOff') },

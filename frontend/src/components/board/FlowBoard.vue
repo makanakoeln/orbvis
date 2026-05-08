@@ -121,31 +121,11 @@
             </button>
         </div>
 
-        <button
-            v-if="props.serviceLayout === 'off' && aggregatedProblems.total > 0"
-            type="button"
-            class="off-mode-banner"
-            @click="emit('update:serviceLayout', 'donut')"
-        >
-            <CmkAlertBox variant="warning" size="small">
-                {{ t('board.flow.offModeBanner', aggregatedProblems) }}
-                <span class="off-mode-banner__cta">{{ t('board.flow.offModeBannerCta') }}</span>
-            </CmkAlertBox>
-        </button>
-        <div v-else-if="aggregatedProblems.total > 0" class="off-mode-banner off-mode-banner--info">
-            <CmkAlertBox variant="warning" size="small">
-                {{ t('board.flow.issuesBanner', aggregatedProblems) }}
-            </CmkAlertBox>
-        </div>
-
         <div
             v-if="topKBreakdown.omitted > 0 && needsServiceDetail"
             class="flow-hint flow-hint--topk"
         >
             {{ t('board.flow.topKHint', topKBreakdown) }}
-        </div>
-        <div v-else-if="isLargeBoard && needsServiceDetail" class="flow-hint flow-hint--scale">
-            {{ t('board.flow.largeBoardHint') }}
         </div>
 
         <!-- Hover popup -->
@@ -270,7 +250,6 @@
 </template>
 
 <script setup lang="ts">
-import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
 import {
     arc as d3arc,
     drag,
@@ -325,6 +304,11 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
     (e: 'update:serviceLayout', value: ServiceLayout): void;
+    (
+        e: 'update:problems',
+        value: { critical: number; warning: number; hostsWithProblems: number; total: number },
+    ): void;
+    (e: 'drawer-open', value: boolean): void;
 }>();
 const { t } = useI18n();
 const auth = useAuthStore();
@@ -750,6 +734,16 @@ const aggregatedProblems = computed(() => {
     };
 });
 
+watch(aggregatedProblems, (v) => emit('update:problems', v), { immediate: true });
+
+// Lifted to BoardView so the parent can hide overlapping bottom-right controls
+// (Services-mode toggle) while triage is in progress. Watching the boolean
+// avoids re-emits when the operator just clicks a different host.
+watch(
+    () => detailObject.value !== null,
+    (v) => emit('drawer-open', v),
+);
+
 // Top-K cutoff visibility: when fan/orbit/row layouts are active and the
 // backend omitted full service detail for some hosts, surface the ratio so
 // operators understand why many hosts only show donut rings.
@@ -760,8 +754,6 @@ const topKBreakdown = computed(() => {
     return { total, shown: total - omitted, omitted };
 });
 
-const HOST_LIMIT_FOR_RADIAL = 200;
-const isLargeBoard = computed(() => nodes.value.length > HOST_LIMIT_FOR_RADIAL);
 const needsServiceDetail = computed(() => needsServices(props.serviceLayout));
 
 // Free-text filter: dim (don't hide) nodes that don't match so the spatial
@@ -839,6 +831,8 @@ async function fetchTopology() {
                 root: props.flowView?.root ?? null,
                 childLayers: props.flowView?.child_layers ?? null,
                 parentLayers: props.flowView?.parent_layers ?? null,
+                topAffectedHosts: props.flowView?.top_affected_hosts ?? null,
+                servicesPerHost: props.flowView?.max_services_per_host ?? null,
             },
         );
         if (error.value) error.value = '';
@@ -879,7 +873,14 @@ watch(
             }
         }
         _hasFitOnce = false;
-        if (!statesStore.wsAvailable) fetchTopology();
+        if (!statesStore.wsAvailable) {
+            fetchTopology();
+        } else if (svgEl.value && nodes.value.length) {
+            // Re-render immediately with the new layout. Without this the
+            // user waits for the next WS topology push (up to ~15 s) before
+            // anything changes on screen — feels broken.
+            render(svgEl.value, nodes.value);
+        }
     },
 );
 
@@ -2174,37 +2175,6 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
 </script>
 
 <style scoped>
-.off-mode-banner {
-    position: absolute;
-    top: var(--dimension-5);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 5;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-}
-
-.off-mode-banner:focus-visible {
-    outline: 2px solid var(--color-yellow-50);
-    outline-offset: 2px;
-    border-radius: var(--border-radius);
-}
-
-.off-mode-banner__cta {
-    font-weight: var(--font-weight-bold);
-    margin-left: var(--dimension-3);
-    border-bottom: 1px dashed currentcolor;
-}
-
-.off-mode-banner--info {
-    cursor: default;
-}
-
 .flow-hint {
     position: absolute;
     top: calc(var(--dimension-5) + 36px);
