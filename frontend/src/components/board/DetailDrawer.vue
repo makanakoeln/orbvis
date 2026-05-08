@@ -106,7 +106,11 @@
                 </div>
             </div>
 
-            <div v-if="state.services_summary" class="detail-drawer__chips">
+            <div
+                v-if="serviceChips.length"
+                class="detail-drawer__chips"
+                :style="{ gridTemplateColumns: `repeat(${serviceChips.length}, 1fr)` }"
+            >
                 <component
                     :is="chip.url ? 'a' : 'button'"
                     v-for="chip in serviceChips"
@@ -128,7 +132,11 @@
                 </component>
             </div>
 
-            <div v-if="hostsSummary" class="detail-drawer__chips detail-drawer__chips--three">
+            <div
+                v-if="hostChips.length"
+                class="detail-drawer__chips"
+                :style="{ gridTemplateColumns: `repeat(${hostChips.length}, 1fr)` }"
+            >
                 <component
                     :is="chip.url ? 'a' : 'button'"
                     v-for="chip in hostChips"
@@ -351,6 +359,7 @@ const problemsUrlFull = computed(() => {
     if (!siteId) return null;
     const params = new URLSearchParams({
         view_name: 'svcproblems',
+        filled_in: 'filter',
         site: siteId,
     });
     return `${base}/check_mk/view.py?${params}`;
@@ -387,8 +396,12 @@ function hostStateFilter(state: string): Record<string, string> {
 function buildServiceChipUrl(state: string, count: number): string | null {
     if (count <= 0 || !props.checkmkUrl || !props.object) return null;
     const base = props.checkmkUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
+    // svcproblems is the built-in filter form for non-OK states; allservices is
+    // the only view that can show OK rows. Both need filled_in=filter so the
+    // st0..st3 bitmask is applied (otherwise checkmk shows the unfiltered list).
     const params: Record<string, string> = {
-        view_name: 'allservices',
+        view_name: state === 'OK' ? 'allservices' : 'svcproblems',
+        filled_in: 'filter',
         ...svcStateFilter(state),
     };
     if (props.object.type === 'site' && props.object.host_name) {
@@ -406,7 +419,8 @@ function buildHostChipUrl(state: string, count: number): string | null {
     if (props.object.type !== 'site' || !props.object.host_name) return null;
     const base = props.checkmkUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
     const params: Record<string, string> = {
-        view_name: 'allhosts',
+        view_name: state === 'UP' ? 'allhosts' : 'hostproblems',
+        filled_in: 'filter',
         site: props.object.host_name,
         ...hostStateFilter(state),
     };
@@ -428,12 +442,14 @@ const serviceChips = computed<SummaryChip[]>(() => {
         tone,
         url: buildServiceChipUrl(state, count),
     });
+    // Hide problem chips at zero (visual noise); always keep the OK anchor so
+    // the operator sees an "all green" cue when nothing is wrong.
     return [
         make('CRITICAL', s.critical ?? 0, 'CRIT', 'crit'),
         make('WARNING', s.warning ?? 0, 'WARN', 'warn'),
         make('UNKNOWN', s.unknown ?? 0, 'UNKN', 'unknown'),
         make('OK', s.ok ?? 0, 'OK', 'ok'),
-    ];
+    ].filter((chip) => chip.state === 'OK' || chip.count > 0);
 });
 
 // Site state output looks like "504 hosts (504 up, 0 down, 0 unreachable)";
@@ -466,7 +482,7 @@ const hostChips = computed<SummaryChip[]>(() => {
         make('DOWN', h.down, 'DOWN', 'crit'),
         make('UNREACHABLE', h.unreachable, 'UNRCH', 'warn'),
         make('UP', h.up, 'UP', 'ok'),
-    ];
+    ].filter((chip) => chip.state === 'UP' || chip.count > 0);
 });
 
 interface Modifier {
@@ -940,13 +956,10 @@ const perfRows = computed<PerfRow[]>(() => {
 }
 
 .detail-drawer__chips {
+    /* Column count is set inline based on the chip count (zero-state chips are
+       filtered out before render). */
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
     gap: 6px;
-}
-
-.detail-drawer__chips--three {
-    grid-template-columns: repeat(3, 1fr);
 }
 
 .detail-drawer__chip {
