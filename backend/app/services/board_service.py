@@ -265,13 +265,17 @@ def _save_board_file(cfg: BoardConfig) -> None:
 def _save_board(cfg: BoardConfig) -> None:
     """Update the in-memory cache and schedule a debounced disk flush.
 
+    Caller transfers ownership of ``cfg`` — must not keep mutating it after
+    this returns, since the same instance is now stored in the cache. This
+    skips a deep copy that would otherwise dominate per-op cost on boards
+    with many objects.
+
     Callers must already hold ``_board_lock(cfg.name)`` so the cache update is
     consistent with the read-modify-write they just performed.
     """
     name = cfg.name
-    snapshot = cfg.model_copy(deep=True)
     with _CACHE_GUARD:
-        _CACHE[name] = snapshot
+        _CACHE[name] = cfg
         _DIRTY.add(name)
         old = _FLUSH_TIMERS.pop(name, None)
         if old is not None:
