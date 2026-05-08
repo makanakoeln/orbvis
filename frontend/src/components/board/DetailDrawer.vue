@@ -65,209 +65,322 @@
             </header>
 
             <div v-if="state" class="detail-drawer__body">
-                <div v-if="modifiers.length" class="detail-drawer__badges">
-                    <span
-                        v-for="mod in modifiers"
-                        :key="mod.label"
-                        class="detail-drawer__badge"
-                        :class="`detail-drawer__badge--${mod.kind}`"
-                    >
-                        {{ mod.label }}
-                    </span>
-                </div>
-
-                <pre v-if="state.output" class="detail-drawer__output">{{ state.output }}</pre>
-
-                <pre
-                    v-if="longOutputText"
-                    class="detail-drawer__output detail-drawer__output--long"
-                    >{{ longOutputText }}</pre
-                >
-
-                <div v-if="perfRows.length" class="detail-drawer__section">
-                    <h4>{{ t('board.detailDrawer.perfdataLabel') }}</h4>
-                    <div class="detail-drawer__perf">
-                        <div
-                            v-for="row in perfRows"
-                            :key="row.label"
-                            class="detail-drawer__perf-row"
-                        >
-                            <div class="detail-drawer__perf-label" :title="row.label">
-                                {{ row.label }}
-                            </div>
-                            <div class="detail-drawer__perf-bar-wrap">
-                                <div
-                                    class="detail-drawer__perf-bar"
-                                    :style="{ width: row.pct + '%', background: row.color }"
-                                />
-                                <div
-                                    v-if="row.warnPct !== null"
-                                    class="detail-drawer__perf-mark detail-drawer__perf-mark--warn"
-                                    :style="{ left: row.warnPct + '%' }"
-                                    :title="`warn: ${row.warnLabel}`"
-                                />
-                                <div
-                                    v-if="row.critPct !== null"
-                                    class="detail-drawer__perf-mark detail-drawer__perf-mark--crit"
-                                    :style="{ left: row.critPct + '%' }"
-                                    :title="`crit: ${row.critLabel}`"
-                                />
-                            </div>
-                            <div class="detail-drawer__perf-value">{{ row.valueLabel }}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div
-                    v-if="serviceChips.length"
-                    class="detail-drawer__chips"
-                    :style="{ gridTemplateColumns: `repeat(${serviceChips.length}, 1fr)` }"
-                >
-                    <component
-                        :is="chip.url ? 'a' : 'button'"
-                        v-for="chip in serviceChips"
-                        :key="chip.state"
-                        :type="chip.url ? undefined : 'button'"
-                        :href="chip.url || undefined"
-                        :target="chip.url ? '_blank' : undefined"
-                        :rel="chip.url ? 'noopener noreferrer' : undefined"
-                        class="detail-drawer__chip"
-                        :class="
-                            chip.count > 0
-                                ? `detail-drawer__chip--${chip.tone}`
-                                : 'detail-drawer__chip--zero'
-                        "
-                        :disabled="chip.count === 0 || !chip.url ? true : undefined"
-                    >
-                        <span class="detail-drawer__chip-count">{{ chip.count }}</span>
-                        <span class="detail-drawer__chip-label">{{ chip.label }}</span>
-                    </component>
-                </div>
-
-                <div
-                    v-if="hostChips.length"
-                    class="detail-drawer__chips"
-                    :style="{ gridTemplateColumns: `repeat(${hostChips.length}, 1fr)` }"
-                >
-                    <component
-                        :is="chip.url ? 'a' : 'button'"
-                        v-for="chip in hostChips"
-                        :key="chip.state"
-                        :type="chip.url ? undefined : 'button'"
-                        :href="chip.url || undefined"
-                        :target="chip.url ? '_blank' : undefined"
-                        :rel="chip.url ? 'noopener noreferrer' : undefined"
-                        class="detail-drawer__chip"
-                        :class="
-                            chip.count > 0
-                                ? `detail-drawer__chip--${chip.tone}`
-                                : 'detail-drawer__chip--zero'
-                        "
-                        :disabled="chip.count === 0 || !chip.url ? true : undefined"
-                    >
-                        <span class="detail-drawer__chip-count">{{ chip.count }}</span>
-                        <span class="detail-drawer__chip-label">{{ chip.label }}</span>
-                    </component>
-                </div>
-
-                <dl v-if="metaRows.length" class="detail-drawer__meta">
-                    <template v-for="row in metaRows" :key="row.label">
-                        <dt>{{ row.label }}</dt>
-                        <dd>{{ row.value }}</dd>
+                <CmkTabs v-model="activeTab" class="detail-drawer__tabs">
+                    <template #tabs>
+                        <CmkTab id="status">{{ t('board.detailDrawer.tabStatus') }}</CmkTab>
+                        <CmkTab v-if="showPerformanceTab" id="performance">{{
+                            t('board.detailDrawer.tabPerformance')
+                        }}</CmkTab>
+                        <CmkTab v-if="showContextTab" id="context">{{
+                            t('board.detailDrawer.tabContext')
+                        }}</CmkTab>
+                        <CmkTab v-if="showActivityTab" id="activity">
+                            <span class="detail-drawer__tab-with-count">
+                                {{ t('board.detailDrawer.tabActivity') }}
+                                <span class="detail-drawer__tab-count">{{
+                                    commentList.length + downtimeList.length
+                                }}</span>
+                            </span>
+                        </CmkTab>
                     </template>
-                </dl>
 
-                <div v-if="checkInfoRows.length" class="detail-drawer__section">
-                    <h4>{{ t('board.detailDrawer.checkInfo') }}</h4>
-                    <dl class="detail-drawer__meta">
-                        <template v-for="row in checkInfoRows" :key="row.label">
-                            <dt>{{ row.label }}</dt>
-                            <dd :class="row.tone ? `detail-drawer__meta-value--${row.tone}` : ''">
-                                {{ row.value }}
-                            </dd>
-                        </template>
-                    </dl>
-                </div>
-
-                <div
-                    v-if="downtimeList.length"
-                    class="detail-drawer__section detail-drawer__section--downtimes"
-                >
-                    <h4>{{ t('board.detailDrawer.activeDowntimes') }}</h4>
-                    <ul class="detail-drawer__list">
-                        <li v-for="dt in downtimeList" :key="dt.id" class="detail-drawer__list-row">
-                            <div class="detail-drawer__list-meta">
-                                <span class="detail-drawer__list-author">{{ dt.author }}</span>
-                                <span
-                                    v-if="!dt.fixed"
-                                    class="detail-drawer__list-tag"
-                                    :title="t('board.detailDrawer.flexibleDowntime')"
-                                    >FLEX</span
-                                >
-                                <span class="detail-drawer__list-time">{{ dt.timeRange }}</span>
-                            </div>
-                            <div v-if="dt.comment" class="detail-drawer__list-text">
-                                {{ dt.comment }}
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-
-                <div v-if="commentList.length" class="detail-drawer__section">
-                    <h4>{{ t('board.detailDrawer.comments') }}</h4>
-                    <ul class="detail-drawer__list">
-                        <li v-for="c in commentList" :key="c.id" class="detail-drawer__list-row">
-                            <div class="detail-drawer__list-meta">
-                                <span class="detail-drawer__list-author">{{ c.author }}</span>
-                                <span class="detail-drawer__list-time">{{ c.age }}</span>
-                                <span v-if="c.expires" class="detail-drawer__list-time">
-                                    · {{ t('board.detailDrawer.expires') }} {{ c.expires }}
-                                </span>
-                            </div>
-                            <div class="detail-drawer__list-text">{{ c.text }}</div>
-                        </li>
-                    </ul>
-                </div>
-
-                <div v-if="topologyGroups.length" class="detail-drawer__section">
-                    <h4>{{ t('board.detailDrawer.topology') }}</h4>
-                    <dl class="detail-drawer__meta">
-                        <template v-for="group in topologyGroups" :key="group.label">
-                            <dt>{{ group.label }}</dt>
-                            <dd>
-                                <span
-                                    v-for="item in group.items"
-                                    :key="item"
-                                    class="detail-drawer__chip-tag"
-                                >
-                                    <a
-                                        v-if="group.isHostList && hostLink(item)"
-                                        :href="hostLink(item) ?? '#'"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        >{{ item }}</a
+                    <template #tab-contents>
+                        <CmkTabContent id="status" spacing="none">
+                            <div class="detail-drawer__pane">
+                                <div v-if="modifiers.length" class="detail-drawer__badges">
+                                    <span
+                                        v-for="mod in modifiers"
+                                        :key="mod.label"
+                                        class="detail-drawer__badge"
+                                        :class="`detail-drawer__badge--${mod.kind}`"
                                     >
-                                    <template v-else>{{ item }}</template>
-                                </span>
-                            </dd>
-                        </template>
-                    </dl>
-                </div>
+                                        {{ mod.label }}
+                                    </span>
+                                </div>
 
-                <div v-if="labelEntries.length" class="detail-drawer__section">
-                    <h4>{{ t('board.detailDrawer.labels') }}</h4>
-                    <div class="detail-drawer__labels">
-                        <span
-                            v-for="[key, value] in labelEntries"
-                            :key="key"
-                            class="detail-drawer__chip-tag detail-drawer__chip-tag--label"
-                            :title="`${key}: ${value}`"
-                        >
-                            <span class="detail-drawer__label-key">{{ key }}</span>
-                            <span class="detail-drawer__label-value">{{ value }}</span>
-                        </span>
-                    </div>
-                </div>
+                                <pre v-if="state.output" class="detail-drawer__output">{{
+                                    state.output
+                                }}</pre>
+
+                                <div
+                                    v-if="serviceChips.length"
+                                    class="detail-drawer__chips"
+                                    :style="{
+                                        gridTemplateColumns: `repeat(${serviceChips.length}, 1fr)`,
+                                    }"
+                                >
+                                    <component
+                                        :is="chip.url ? 'a' : 'button'"
+                                        v-for="chip in serviceChips"
+                                        :key="chip.state"
+                                        :type="chip.url ? undefined : 'button'"
+                                        :href="chip.url || undefined"
+                                        :target="chip.url ? '_blank' : undefined"
+                                        :rel="chip.url ? 'noopener noreferrer' : undefined"
+                                        class="detail-drawer__chip"
+                                        :class="
+                                            chip.count > 0
+                                                ? `detail-drawer__chip--${chip.tone}`
+                                                : 'detail-drawer__chip--zero'
+                                        "
+                                        :disabled="chip.count === 0 || !chip.url ? true : undefined"
+                                    >
+                                        <span class="detail-drawer__chip-count">{{
+                                            chip.count
+                                        }}</span>
+                                        <span class="detail-drawer__chip-label">{{
+                                            chip.label
+                                        }}</span>
+                                    </component>
+                                </div>
+
+                                <div
+                                    v-if="hostChips.length"
+                                    class="detail-drawer__chips"
+                                    :style="{
+                                        gridTemplateColumns: `repeat(${hostChips.length}, 1fr)`,
+                                    }"
+                                >
+                                    <component
+                                        :is="chip.url ? 'a' : 'button'"
+                                        v-for="chip in hostChips"
+                                        :key="chip.state"
+                                        :type="chip.url ? undefined : 'button'"
+                                        :href="chip.url || undefined"
+                                        :target="chip.url ? '_blank' : undefined"
+                                        :rel="chip.url ? 'noopener noreferrer' : undefined"
+                                        class="detail-drawer__chip"
+                                        :class="
+                                            chip.count > 0
+                                                ? `detail-drawer__chip--${chip.tone}`
+                                                : 'detail-drawer__chip--zero'
+                                        "
+                                        :disabled="chip.count === 0 || !chip.url ? true : undefined"
+                                    >
+                                        <span class="detail-drawer__chip-count">{{
+                                            chip.count
+                                        }}</span>
+                                        <span class="detail-drawer__chip-label">{{
+                                            chip.label
+                                        }}</span>
+                                    </component>
+                                </div>
+
+                                <dl
+                                    v-if="metaRows.length || checkInfoRows.length"
+                                    class="detail-drawer__meta"
+                                >
+                                    <template v-for="row in metaRows" :key="row.label">
+                                        <dt>{{ row.label }}</dt>
+                                        <dd>{{ row.value }}</dd>
+                                    </template>
+                                    <template v-for="row in checkInfoRows" :key="row.label">
+                                        <dt>{{ row.label }}</dt>
+                                        <dd
+                                            :class="
+                                                row.tone
+                                                    ? `detail-drawer__meta-value--${row.tone}`
+                                                    : ''
+                                            "
+                                        >
+                                            {{ row.value }}
+                                        </dd>
+                                    </template>
+                                </dl>
+                            </div>
+                        </CmkTabContent>
+
+                        <CmkTabContent v-if="showPerformanceTab" id="performance" spacing="none">
+                            <div class="detail-drawer__pane">
+                                <div v-if="perfRows.length" class="detail-drawer__perf">
+                                    <div
+                                        v-for="row in perfRows"
+                                        :key="row.label"
+                                        class="detail-drawer__perf-row"
+                                    >
+                                        <div class="detail-drawer__perf-label" :title="row.label">
+                                            {{ row.label }}
+                                        </div>
+                                        <div class="detail-drawer__perf-bar-wrap">
+                                            <div
+                                                class="detail-drawer__perf-bar"
+                                                :style="{
+                                                    width: row.pct + '%',
+                                                    background: row.color,
+                                                }"
+                                            />
+                                            <div
+                                                v-if="row.warnPct !== null"
+                                                class="detail-drawer__perf-mark detail-drawer__perf-mark--warn"
+                                                :style="{ left: row.warnPct + '%' }"
+                                                :title="`warn: ${row.warnLabel}`"
+                                            />
+                                            <div
+                                                v-if="row.critPct !== null"
+                                                class="detail-drawer__perf-mark detail-drawer__perf-mark--crit"
+                                                :style="{ left: row.critPct + '%' }"
+                                                :title="`crit: ${row.critLabel}`"
+                                            />
+                                        </div>
+                                        <div class="detail-drawer__perf-value">
+                                            {{ row.valueLabel }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <pre
+                                    v-if="longOutputText"
+                                    class="detail-drawer__output detail-drawer__output--long"
+                                    >{{ longOutputText }}</pre
+                                >
+                            </div>
+                        </CmkTabContent>
+
+                        <CmkTabContent v-if="showContextTab" id="context" spacing="none">
+                            <div class="detail-drawer__pane">
+                                <dl v-if="contextMetaRows.length" class="detail-drawer__meta">
+                                    <template v-for="row in contextMetaRows" :key="row.label">
+                                        <dt>{{ row.label }}</dt>
+                                        <dd
+                                            :class="
+                                                row.tone
+                                                    ? `detail-drawer__meta-value--${row.tone}`
+                                                    : ''
+                                            "
+                                        >
+                                            <code
+                                                v-if="
+                                                    row.label ===
+                                                    t('board.detailDrawer.checkCommand')
+                                                "
+                                                class="detail-drawer__code"
+                                                >{{ row.value }}</code
+                                            >
+                                            <template v-else>{{ row.value }}</template>
+                                        </dd>
+                                    </template>
+                                </dl>
+
+                                <dl
+                                    v-if="topologyGroups.length"
+                                    class="detail-drawer__meta detail-drawer__meta--stacked"
+                                >
+                                    <template v-for="group in topologyGroups" :key="group.label">
+                                        <dt>{{ group.label }}</dt>
+                                        <dd>
+                                            <span
+                                                v-for="item in group.items"
+                                                :key="item"
+                                                class="detail-drawer__chip-tag"
+                                            >
+                                                <a
+                                                    v-if="group.isHostList && hostLink(item)"
+                                                    :href="hostLink(item) ?? '#'"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    >{{ item }}</a
+                                                >
+                                                <template v-else>{{ item }}</template>
+                                            </span>
+                                        </dd>
+                                    </template>
+                                </dl>
+
+                                <div v-if="labelEntries.length">
+                                    <div class="detail-drawer__pane-heading">
+                                        {{ t('board.detailDrawer.labels') }}
+                                    </div>
+                                    <div class="detail-drawer__labels">
+                                        <span
+                                            v-for="[key, value] in labelEntries"
+                                            :key="key"
+                                            class="detail-drawer__chip-tag detail-drawer__chip-tag--label"
+                                            :title="`${key}: ${value}`"
+                                        >
+                                            <span class="detail-drawer__label-key">{{ key }}</span>
+                                            <span class="detail-drawer__label-value">{{
+                                                value
+                                            }}</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </CmkTabContent>
+
+                        <CmkTabContent v-if="showActivityTab" id="activity" spacing="none">
+                            <div class="detail-drawer__pane">
+                                <div
+                                    v-if="downtimeList.length"
+                                    class="detail-drawer__pane-section detail-drawer__section--downtimes"
+                                >
+                                    <div class="detail-drawer__pane-heading">
+                                        {{ t('board.detailDrawer.activeDowntimes') }}
+                                    </div>
+                                    <ul class="detail-drawer__list">
+                                        <li
+                                            v-for="dt in downtimeList"
+                                            :key="dt.id"
+                                            class="detail-drawer__list-row"
+                                        >
+                                            <div class="detail-drawer__list-meta">
+                                                <span class="detail-drawer__list-author">{{
+                                                    dt.author
+                                                }}</span>
+                                                <span
+                                                    v-if="!dt.fixed"
+                                                    class="detail-drawer__list-tag"
+                                                    :title="
+                                                        t('board.detailDrawer.flexibleDowntime')
+                                                    "
+                                                    >FLEX</span
+                                                >
+                                                <span class="detail-drawer__list-time">{{
+                                                    dt.timeRange
+                                                }}</span>
+                                            </div>
+                                            <div v-if="dt.comment" class="detail-drawer__list-text">
+                                                {{ dt.comment }}
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div v-if="commentList.length" class="detail-drawer__pane-section">
+                                    <div class="detail-drawer__pane-heading">
+                                        {{ t('board.detailDrawer.comments') }}
+                                    </div>
+                                    <ul class="detail-drawer__list">
+                                        <li
+                                            v-for="c in commentList"
+                                            :key="c.id"
+                                            class="detail-drawer__list-row"
+                                        >
+                                            <div class="detail-drawer__list-meta">
+                                                <span class="detail-drawer__list-author">{{
+                                                    c.author
+                                                }}</span>
+                                                <span class="detail-drawer__list-time">{{
+                                                    c.age
+                                                }}</span>
+                                                <span
+                                                    v-if="c.expires"
+                                                    class="detail-drawer__list-time"
+                                                >
+                                                    ·
+                                                    {{ t('board.detailDrawer.expires') }}
+                                                    {{ c.expires }}
+                                                </span>
+                                            </div>
+                                            <div class="detail-drawer__list-text">
+                                                {{ c.text }}
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </CmkTabContent>
+                    </template>
+                </CmkTabs>
             </div>
 
             <footer v-if="!isSite" class="detail-drawer__actions">
@@ -388,6 +501,7 @@ import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time';
 import CmkButton from '@/vendor/cmk/components/CmkButton.vue';
 import CmkIcon from '@/vendor/cmk/components/CmkIcon';
 import CmkSlideIn from '@/vendor/cmk/components/CmkSlideIn';
+import { CmkTab, CmkTabContent, CmkTabs } from '@/vendor/cmk/components/CmkTabs';
 
 function stateBgColor(state: string): string {
     const c = stateColor(state);
@@ -746,33 +860,15 @@ const checkInfoRows = computed<MetaRow[]>(() => {
     }
 
     const d = details.value;
-    if (d) {
-        if (d.check_command) {
-            rows.push({ label: t('board.detailDrawer.checkCommand'), value: d.check_command });
-        }
-        // Service-only: when did this check last go OK? Lets the operator see
-        // "broken for 2 days" vs. "just flipped" without leaving the drawer.
-        if (d.last_time_ok && d.last_time_ok > 0 && s.state !== 'OK') {
-            rows.push({
-                label: t('board.detailDrawer.lastOk'),
-                value: t('board.detailDrawer.timeAgo', {
-                    duration: formatRelativeDuration(d.last_time_ok, nowMs.value),
-                }),
-            });
-        }
-        if (typeof d.latency === 'number' && d.latency >= 0) {
-            rows.push({
-                label: t('board.detailDrawer.latency'),
-                value: `${(d.latency * 1000).toFixed(0)} ms`,
-            });
-        }
-        if (d.notification_period && d.notification_period !== '24X7') {
-            rows.push({
-                label: t('board.detailDrawer.notificationPeriod'),
-                value: d.notification_period,
-                tone: d.in_notification_period ? undefined : 'warn',
-            });
-        }
+    // Service-only: when did this check last go OK? Lets the operator see
+    // "broken for 2 days" vs. "just flipped" without leaving the drawer.
+    if (d?.last_time_ok && d.last_time_ok > 0 && s.state !== 'OK') {
+        rows.push({
+            label: t('board.detailDrawer.lastOk'),
+            value: t('board.detailDrawer.timeAgo', {
+                duration: formatRelativeDuration(d.last_time_ok, nowMs.value),
+            }),
+        });
     }
 
     return rows;
@@ -884,12 +980,61 @@ function fmtNum(n: number, unit: string): string {
     return `${str}${unit}`;
 }
 
+// Tab visibility — only show tabs that actually have content. The Status tab
+// always renders (output + state badges + chips); others appear conditionally.
+const showPerformanceTab = computed(() => perfRows.value.length > 0 || !!longOutputText.value);
+const showContextTab = computed(
+    () =>
+        topologyGroups.value.length > 0 ||
+        labelEntries.value.length > 0 ||
+        contextMetaRows.value.length > 0,
+);
+const showActivityTab = computed(
+    () => commentList.value.length > 0 || downtimeList.value.length > 0,
+);
+
+const activeTab = ref('status');
+
+watch([() => props.object?.host_name, () => props.object?.service_description], () => {
+    // Reset to overview whenever the user picks a different object so they
+    // don't land on an empty tab from the previous selection.
+    activeTab.value = 'status';
+});
+
+interface MetaRow2 {
+    label: string;
+    value: string;
+    tone?: 'warn';
+}
+
+const contextMetaRows = computed<MetaRow2[]>(() => {
+    const d = details.value;
+    const rows: MetaRow2[] = [];
+    if (!d) return rows;
+    if (d.check_command)
+        rows.push({ label: t('board.detailDrawer.checkCommand'), value: d.check_command });
+    if (typeof d.latency === 'number' && d.latency >= 0) {
+        rows.push({
+            label: t('board.detailDrawer.latency'),
+            value: `${(d.latency * 1000).toFixed(0)} ms`,
+        });
+    }
+    if (d.notification_period && d.notification_period !== '24X7') {
+        rows.push({
+            label: t('board.detailDrawer.notificationPeriod'),
+            value: d.notification_period,
+            tone: d.in_notification_period ? undefined : 'warn',
+        });
+    }
+    return rows;
+});
+
 const perfRows = computed<PerfRow[]>(() => {
     const raw = props.state?.perf_data;
     if (!raw) return [];
     const metrics = parsePerfData(raw);
     if (!metrics.length) return [];
-    return metrics.slice(0, 6).map((m) => {
+    return metrics.map((m) => {
         const pct = utilPercent(m);
         const refMax = m.max ?? m.crit ?? null;
         const warnPct =
@@ -1029,11 +1174,108 @@ const perfRows = computed<PerfRow[]>(() => {
 .detail-drawer__body {
     flex: 1 1 auto;
     overflow-y: auto;
-    padding: 12px 16px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.detail-drawer__tabs {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* Override the vendor CmkTabs styling to fit the narrow Drawer: thin tab pills
+   instead of the default boxy tab bar, no content-area border. */
+/* stylelint-disable selector-pseudo-class-no-unknown */
+.detail-drawer__tabs :deep(.cmk-tabs__list) {
+    padding: 0 12px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.detail-drawer__tabs :deep(.cmk-tab__li) {
+    padding: 6px 10px !important;
+    font-size: 11px;
+    line-height: 1;
+    border-radius: 0;
+    border-color: transparent;
+    background: transparent;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: var(--font-weight-semibold);
+}
+
+.detail-drawer__tabs :deep(.cmk-tab__li[data-state='active']) {
+    color: var(--text);
+    background: transparent;
+    border-bottom: 2px solid var(--color-corporate-green-50, rgb(34 197 94));
+}
+
+.detail-drawer__tabs :deep(.cmk-tab-content) {
+    border: none;
+    padding: 0;
+}
+/* stylelint-enable selector-pseudo-class-no-unknown */
+
+.detail-drawer__pane {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    min-height: 0;
+    padding: 12px 16px;
+}
+
+.detail-drawer__pane-section + .detail-drawer__pane-section {
+    margin-top: 4px;
+}
+
+.detail-drawer__pane-heading {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    font-weight: var(--font-weight-semibold);
+    margin: 4px 0 6px;
+}
+
+.detail-drawer__tab-with-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.detail-drawer__tab-count {
+    background: color-mix(in srgb, var(--color-state-warning) 20%, transparent);
+    color: var(--text);
+    font-size: 9px;
+    line-height: 14px;
+    min-width: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    text-align: center;
+    font-weight: var(--font-weight-bold);
+}
+
+.detail-drawer__code {
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    background: var(--bg);
+    color: var(--text);
+    padding: 1px 6px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border);
+    overflow-wrap: anywhere;
+    display: inline-block;
+}
+
+.detail-drawer__meta--stacked {
+    grid-template-columns: 1fr;
+    gap: 6px;
+}
+
+.detail-drawer__meta--stacked dt {
+    margin-top: 4px;
 }
 
 .detail-drawer__row {
