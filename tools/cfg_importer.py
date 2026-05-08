@@ -126,22 +126,43 @@ def _bool(value: str | None, default: bool = False) -> bool:
     return value.strip().lower() in ("1", "true", "yes")
 
 
-def _parse_coord(value: str) -> tuple[int, str | None]:
-    """Return (resolved_int, original_if_relative).
+@dataclass
+class Coord:
+    """A NagVis-style coordinate.
 
-    Legacy absolute coord  → int, None
-    Legacy relative "ref%offset" → offset as int, original string
+    - Absolute: ``value`` set, ``ref`` is ``None``.
+    - Relative: ``ref`` holds the referenced object_id, ``offset`` the additive
+      offset; ``value`` is a best-effort fallback (just the offset) used when
+      the referenced object cannot be resolved during the second pass.
+    """
+
+    value: int
+    ref: str | None = None
+    offset: int | None = None
+
+
+# NagVis object_ids are hex-ish strings (e.g. ``5148ed``); accept any
+# alphanumeric+underscore identifier so external imports also resolve.
+_REL_COORD_RE = re.compile(r"^([A-Za-z0-9_]+)%(-?\d+)$")
+
+
+def _parse_coord(value: str) -> Coord:
+    """Parse one legacy coordinate value.
+
+    Legacy absolute ``"123"``       → ``Coord(123)``
+    Legacy relative ``"5148ed%10"`` → ``Coord(value=10, ref='5148ed', offset=10)``
+    Anything else falls back to ``Coord(0)``.
     """
     v = value.strip()
     if v.lstrip("-").isdigit():
-        return int(v), None
-    m = re.match(r"(-?\d+)%(-?\d+)", v)
+        return Coord(int(v))
+    m = _REL_COORD_RE.match(v)
     if m:
-        return int(m.group(2)), v
-    return 0, v
+        return Coord(value=int(m.group(2)), ref=m.group(1), offset=int(m.group(2)))
+    return Coord(0)
 
 
-def _parse_line_coords(p: dict[str, str]) -> tuple[int, int, int, int]:
+def _parse_line_coords(p: dict[str, str]) -> tuple[Coord, Coord, Coord, Coord]:
     """Parse legacy line coords.
 
     Legacy format encodes both endpoints in x and y as comma-separated values:
@@ -154,34 +175,101 @@ def _parse_line_coords(p: dict[str, str]) -> tuple[int, int, int, int]:
 
     if "," in raw_x:
         x1_s, x2_s = raw_x.split(",", 1)
-        x, _ = _parse_coord(x1_s.strip())
-        x2, _ = _parse_coord(x2_s.strip())
+        x = _parse_coord(x1_s.strip())
+        x2 = _parse_coord(x2_s.strip())
     else:
-        x, _ = _parse_coord(raw_x)
-        x2, _ = _parse_coord(p.get("x2", "0"))
+        x = _parse_coord(raw_x)
+        x2 = _parse_coord(p.get("x2", "0"))
 
     if "," in raw_y:
         y1_s, y2_s = raw_y.split(",", 1)
-        y, _ = _parse_coord(y1_s.strip())
-        y2, _ = _parse_coord(y2_s.strip())
+        y = _parse_coord(y1_s.strip())
+        y2 = _parse_coord(y2_s.strip())
     else:
-        y, _ = _parse_coord(raw_y)
-        y2, _ = _parse_coord(p.get("y2", "0"))
+        y = _parse_coord(raw_y)
+        y2 = _parse_coord(p.get("y2", "0"))
 
     return x, y, x2, y2
 
 
+def _auto_size(value: str | None) -> int | None:
+    """Return numeric textbox width/height, or ``None`` for legacy ``"auto"``."""
+    if value is None:
+        return None
+    v = value.strip().lower()
+    if v in {"auto", ""}:
+        return None
+    try:
+        return int(v)
+    except ValueError:
+        return None
+
+
+# NagVis label_style is a CSS-ish string ("color:#fff;font-size:14px;font-weight:bold").
+# We extract the few properties OrbVis renders from a structured LabelConfig.
+_STYLE_PX = re.compile(r"^(\d+(?:\.\d+)?)\s*(?:px)?$")
+
+
+def _parse_label_style(raw: str | None) -> dict[str, Any]:
+    """Extract OrbVis-relevant fields from a NagVis ``label_style`` value."""
+    out: dict[str, Any] = {}
+    if not raw:
+        return out
+    for decl in raw.split(";"):
+        if ":" not in decl:
+            continue
+        key, val = decl.split(":", 1)
+        key = key.strip().lower()
+        val = val.strip()
+        if not val:
+            continue
+        if key == "color":
+            out["color"] = val
+        elif key == "background-color":
+            out["background"] = val
+        elif key == "font-size":
+            m = _STYLE_PX.match(val)
+            if m:
+                out["size"] = int(float(m.group(1)))
+        elif key == "font-weight":
+            out["weight"] = val
+    return out
+
+
+def _color_or_default(value: str | None, default: str | None) -> str | None:
+    """Normalise a colour value: empty/whitespace → ``default``."""
+    if value is None:
+        return default
+    v = value.strip()
+    return v if v else default
+
+
 def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
-    """Build a LabelConfig dict from legacy properties."""
+    """Build a LabelConfig dict from legacy properties.
+
+    NagVis encodes typography via the free-form ``label_style`` CSS string.
+    Explicit ``label_color`` / ``label_background`` keys win when present;
+    otherwise we recover values from the style string.
+    """
+    style = _parse_label_style(p.get("label_style"))
     return {
         "show": _bool(p.get("label_show"), show_default),
         "text": p.get("label_text") or None,
         "x": _int(p.get("label_x")),
         "y": _int(p.get("label_y"), 34),
-        "size": _int(p.get("label_size"), 11),
-        "color": p.get("label_color", "#ffffff"),
-        "background": p.get("label_background", "transparent"),
+        "size": _int(p.get("label_size"), style.get("size", 11)),
+        "color": p.get("label_color") or style.get("color", "#ffffff"),
+        "background": p.get("label_background") or style.get("background", "transparent"),
     }
+
+
+def _attach_pending_refs(obj: dict[str, Any], **coords: Coord) -> None:
+    """Stash relative-coord references on the object for the resolution pass."""
+    refs = {key: c for key, c in coords.items() if c.ref is not None}
+    if refs:
+        obj["_pending_refs"] = {
+            key: {"ref": c.ref, "offset": c.offset or 0} for key, c in refs.items()
+        }
 
 
 def _display(p: dict[str, str]) -> tuple[dict[str, Any], str | None]:
@@ -231,6 +319,10 @@ def _apply_global(board: dict[str, Any], p: dict[str, str]) -> None:
         board["alias"] = p["alias"]
     if "map_image" in p:
         board["background_image"] = p["map_image"]
+    if "background_color" in p:
+        bg = _color_or_default(p["background_color"], None)
+        if bg is not None:
+            board["background_color"] = bg
     # NagVis cfg uses ``backend_id`` on disk; accept either spelling.
     if "backend_id" in p:
         board["connection_id"] = p["backend_id"]
@@ -261,17 +353,24 @@ def _line_obj_common(p: dict[str, str], raw_id: str) -> dict[str, Any]:
     x, y, x2, y2 = _parse_line_coords(p)
     line_type = _int(p.get("line_type", "11"))
     type_attrs = LINE_TYPE_MAP.get(line_type, _DEFAULT_LINE_TYPE)
+    # NagVis lines may carry a label (``label_show=1`` + ``label_text``); fall
+    # back to hidden when neither is present so the line stays a plain line.
+    has_label = _bool(p.get("label_show")) or bool(p.get("label_text"))
+    label = _label(p, show_default=has_label)
     obj: dict[str, Any] = {
         "id": f"line_{raw_id}",
         "type": "line",
-        "x": x,
-        "y": y,
-        "z": _int(p.get("z"), 1),
-        "x2": x2,
-        "y2": y2,
-        "label": {"show": False},
+        "x": x.value,
+        "y": y.value,
+        # Lines have no NagVis default; sit below stateful objects (z=10) and
+        # textboxes (z=5) by default so they don't cover hosts.
+        "z": _int(p.get("z"), 0),
+        "x2": x2.value,
+        "y2": y2.value,
+        "label": label,
         **type_attrs,
     }
+    _attach_pending_refs(obj, x=x, y=y, x2=x2, y2=y2)
     if "line_width" in p:
         obj["line_width"] = _int(p["line_width"])
     return obj
@@ -305,45 +404,70 @@ def _handle_line_block(p: dict[str, str], raw_id: str) -> dict[str, Any]:
 
 
 def _handle_shape(p: dict[str, str], raw_id: str) -> dict[str, Any]:
-    x, _ = _parse_coord(p.get("x", "0"))
-    y, _ = _parse_coord(p.get("y", "0"))
-    return {
+    x = _parse_coord(p.get("x", "0"))
+    y = _parse_coord(p.get("y", "0"))
+    obj: dict[str, Any] = {
         "id": f"image_{raw_id}",
         "type": "image",
-        "x": x,
-        "y": y,
+        "x": x.value,
+        "y": y.value,
+        # NagVis shape default z=1.
         "z": _int(p.get("z"), 1),
         "image_src": p.get("icon") or None,
         "label": {"show": False},
     }
+    _attach_pending_refs(obj, x=x, y=y)
+    return obj
 
 
 def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, Any]:
-    # legacy textbox x/y is top-left; OrbVis centers objects — offset by half w/h
-    x, _ = _parse_coord(p.get("x", "0"))
-    y, _ = _parse_coord(p.get("y", "0"))
-    x += _int(p.get("w"), 200) // 2
-    y += _int(p.get("h"), 40) // 2
+    # NagVis textbox x/y is top-left; OrbVis centers objects on x/y. We can
+    # only translate when the size is numeric — for ``w=auto`` we fall back to
+    # using the legacy top-left position as the OrbVis center.
+    x = _parse_coord(p.get("x", "0"))
+    y = _parse_coord(p.get("y", "0"))
+
+    width = _auto_size(p.get("w"))
+    height = _auto_size(p.get("h"))
+    if width is not None:
+        x.value += width // 2
+    if height is not None:
+        y.value += height // 2
+
     raw_text = p.get("text") or None
     if raw_text:
         raw_text = re.sub(r"<br\s*/?>", "\n", raw_text, flags=re.IGNORECASE)
         raw_text = re.sub(r"<[^>]+>", "", raw_text)
-    return {
+    style = _parse_label_style(p.get("style"))
+    obj: dict[str, Any] = {
         "id": f"textbox_{raw_id}",
         "type": "textbox",
-        "x": x,
-        "y": y,
-        "z": _int(p.get("z"), 1),
+        "x": x.value,
+        "y": y.value,
+        # NagVis textbox default z=5.
+        "z": _int(p.get("z"), 5),
         "label": {
             "show": True,
             "text": raw_text,
             "x": 0,
             "y": 0,
-            "size": 11,
-            "color": "#ffffff",
-            "background": "transparent",
+            "size": style.get("size", 11),
+            "color": style.get("color", "#ffffff"),
+            "background": _color_or_default(p.get("background_color"), "transparent"),
         },
     }
+    if width is not None:
+        obj["textbox_width"] = width
+    if height is not None:
+        obj["textbox_height"] = height
+    border = _color_or_default(p.get("border_color"), None)
+    if border is not None:
+        obj["textbox_border"] = border
+    bg = _color_or_default(p.get("background_color"), None)
+    if bg is not None:
+        obj["textbox_background"] = bg
+    _attach_pending_refs(obj, x=x, y=y)
+    return obj
 
 
 def _apply_type_specific(obj: dict[str, Any], legacy_type: str, p: dict[str, str]) -> None:
@@ -374,8 +498,8 @@ def _apply_type_specific(obj: dict[str, Any], legacy_type: str, p: dict[str, str
 
 def _handle_monitor_block(legacy_type: str, p: dict[str, str], raw_id: str) -> dict[str, Any]:
     """host / service / hostgroup / servicegroup / map / aggr."""
-    x, _ = _parse_coord(p.get("x", "0"))
-    y, _ = _parse_coord(p.get("y", "0"))
+    x = _parse_coord(p.get("x", "0"))
+    y = _parse_coord(p.get("y", "0"))
     orbvis_type = "aggregation" if legacy_type == "aggr" else legacy_type
     display, warning = _display(p)
     if warning:
@@ -383,9 +507,10 @@ def _handle_monitor_block(legacy_type: str, p: dict[str, str], raw_id: str) -> d
     obj: dict[str, Any] = {
         "id": f"{orbvis_type}_{raw_id}",
         "type": orbvis_type,
-        "x": x,
-        "y": y,
-        "z": _int(p.get("z"), 1),
+        "x": x.value,
+        "y": y.value,
+        # NagVis default for stateful objects is z=10.
+        "z": _int(p.get("z"), 10),
         "label": _label(p),
         "display": display,
     }
@@ -394,6 +519,7 @@ def _handle_monitor_block(legacy_type: str, p: dict[str, str], raw_id: str) -> d
         obj["url"] = p["url"]
     if "url_target" in p:
         obj["url_target"] = _url_target(p["url_target"])
+    _attach_pending_refs(obj, x=x, y=y)
     return obj
 
 
@@ -407,6 +533,52 @@ def _handle_object_block(legacy_type: str, p: dict[str, str], raw_id: str) -> di
     if legacy_type == "textbox":
         return _handle_textbox(p, raw_id)
     return _handle_monitor_block(legacy_type, p, raw_id)
+
+
+def _resolve_pending_refs(objects: list[dict[str, Any]]) -> None:
+    """Resolve ``_pending_refs`` on each object using the raw NagVis object_id index.
+
+    Lines and other objects can reference another object via ``ref%offset``
+    coords. We assume the raw NagVis object_id is the trailing component of
+    each generated OrbVis id (``<type>_<raw_id>``), so we iterate until either
+    nothing changes (transitive refs settled) or we hit a small fix-point cap.
+    Unresolved refs silently fall back to the offset value already written.
+    """
+    by_raw: dict[str, dict[str, Any]] = {}
+    for obj in objects:
+        raw_id = str(obj.get("id", "")).split("_", 1)[-1]
+        if raw_id:
+            by_raw[raw_id] = obj
+
+    # Multiple passes so chains (A → B → C) settle. Cap = 5 — NagVis itself
+    # warns about cycles, so deep chains are rare.
+    for _ in range(5):
+        changed = False
+        for obj in objects:
+            refs = obj.get("_pending_refs")
+            if not refs:
+                continue
+            for axis, ref in list(refs.items()):
+                target = by_raw.get(ref["ref"])
+                if target is None:
+                    continue
+                # x2/y2 reuse the target's x/y — NagVis only stores one
+                # endpoint per object, lines reuse it by axis-name match.
+                base_axis = "x" if axis in ("x", "x2") else "y"
+                target_pending = target.get("_pending_refs") or {}
+                if base_axis in target_pending:
+                    continue
+                obj[axis] = int(target.get(base_axis, 0)) + int(ref["offset"])
+                refs.pop(axis)
+                changed = True
+            if not refs:
+                obj.pop("_pending_refs", None)
+        if not changed:
+            break
+
+    # Strip any unresolved refs so they don't leak into the JSON output.
+    for obj in objects:
+        obj.pop("_pending_refs", None)
 
 
 def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any]:
@@ -437,6 +609,8 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
         counter += 1
         raw_id = p.get("object_id", str(counter))
         objects.append(_handle_object_block(block.block_type, p, raw_id))
+
+    _resolve_pending_refs(objects)
 
     view = board.get("view")
     if isinstance(view, dict) and view.get("type") == "flow":
