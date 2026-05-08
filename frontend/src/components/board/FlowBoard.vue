@@ -1194,6 +1194,7 @@ let _hasFitOnce = false;
 // apply it once per animation frame instead.
 let pendingZoomTransform: ZoomTransform | null = null;
 let pendingZoomRaf: number | null = null;
+let panActiveFlag = false;
 // F3 LoD: when zoomed out below this scale we hide service / "+more" nodes and
 // their links — they're unreadable at that size and dominate the tick cost.
 // At fit-to-view on multi-hundred-host boards the initial scale lands around
@@ -1415,16 +1416,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             .on('start.simfreeze', () => {
                 cancelPendingFit();
                 simulation?.stop();
-                // Disable pointer-events on the zoomed group so the browser
-                // doesn't hit-test against ~3000 SVG children on every
-                // pointermove. We restore on gesture end so click/hover work.
-                if (svgEl.value) {
-                    svgEl.value.classList.add('pan-active');
-                }
             })
             .on('end.simfreeze', () => {
-                if (svgEl.value) {
+                if (panActiveFlag && svgEl.value) {
                     svgEl.value.classList.remove('pan-active');
+                    panActiveFlag = false;
                 }
                 if (simulation && simulation.alpha() > simulation.alphaMin()) {
                     simulation.restart();
@@ -1439,6 +1435,15 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 pendingZoomTransform = event.transform;
                 if (pendingZoomRaf === null) {
                     pendingZoomRaf = requestAnimationFrame(flushZoomTransform);
+                }
+                // Defer pan-active until an actual transform change (rather
+                // than mousedown) so a bare click on a service — which has
+                // no d3-drag pointer-capture — still receives its click
+                // event after mouseup; setting pointer-events:none on
+                // mousedown would otherwise route mouseup to the SVG bg.
+                if (!panActiveFlag && svgEl.value) {
+                    panActiveFlag = true;
+                    svgEl.value.classList.add('pan-active');
                 }
             });
         el.call(zoomBeh);
@@ -1823,22 +1828,39 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .stop();
 
     // --- Drag behaviour ---
+    // alphaTarget+pin only fires once an actual `drag` event arrives — d3
+    // calls `start`/`end` for bare clicks too, and otherwise every host
+    // click would re-energise the force layout. On the first real drag
+    // tick we also pin every other host: typical boards save < 5% of host
+    // positions, so without this the remaining ones drift toward the
+    // force equilibrium for the duration of the drag.
+    let dragMoved = false;
     const dragBehavior = drag<SVGGElement, FNode>()
-        .on('start', (event, d) => {
+        .on('start', () => {
             cancelPendingFit();
-            if (!event.active) simulation!.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
+            dragMoved = false;
         })
         .on('drag', (event, d) => {
+            if (!dragMoved) {
+                dragMoved = true;
+                for (const node of nodeCache.values()) {
+                    if (node.nodeType === 'host' && (node.fx == null || node.fy == null)) {
+                        node.fx = node.x ?? 0;
+                        node.fy = node.y ?? 0;
+                    }
+                }
+                if (!event.active) simulation!.alphaTarget(0.3).restart();
+            }
             d.fx = event.x;
             d.fy = event.y;
         })
         .on('end', (event, d) => {
+            if (!dragMoved) return;
             if (!event.active) simulation!.alphaTarget(0);
             d.fx = d.x;
             d.fy = d.y;
             if (d.nodeType === 'host') emitPinnedPositions();
+            dragMoved = false;
         });
 
     // --- Links ---
@@ -2221,8 +2243,12 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         // Status-only update: state colors / donut segments / halos already
         // refreshed via nodeMerge above. No need to advance the sim — the
         // operator's existing layout stays put and CPU is idle until the
-        // next structural change.
-        simulation.stop();
+        // next structural change. Drive alpha to zero so a subsequent
+        // pan/zoom doesn't resurrect the freshly-constructed sim — the
+        // forceSimulation() constructor leaves alpha at 1, and end.simfreeze
+        // would otherwise see "alpha > alphaMin" and call restart(), kicking
+        // every host back into a force-relaxation pass on each WS push.
+        simulation.alpha(0).stop();
     }
     if (isInitial) {
         _hasFitOnce = true;
