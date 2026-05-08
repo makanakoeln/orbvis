@@ -93,6 +93,10 @@ class ObjectDetails(BaseModel):
     service_groups: list[str] = []
     contact_groups: list[str] = []
     labels: dict[str, str] = {}
+    # CMK graphing-plugin display titles for the perf_data metric IDs of this
+    # service (e.g. {"mem_lnx_committed_as": "Committed memory"}). Drawer falls
+    # back to title-cased metric IDs when an entry is missing.
+    metric_titles: dict[str, str] = {}
     comments: list[CommentInfo] = []
     downtimes: list[DowntimeInfo] = []
 

@@ -192,13 +192,10 @@
 
                         <CmkTabContent v-if="showPerformanceTab" id="performance" spacing="none">
                             <div class="detail-drawer__pane">
-                                <div v-if="mainPerfRow" class="detail-drawer__main-metric">
+                                <div v-if="mainHeadline" class="detail-drawer__main-metric">
                                     <div class="detail-drawer__main-metric-head">
                                         <span class="detail-drawer__main-metric-label">{{
-                                            mainPerfRow.label
-                                        }}</span>
-                                        <span class="detail-drawer__main-metric-value">{{
-                                            mainPerfRow.valueLabel
+                                            mainHeadline.label
                                         }}</span>
                                     </div>
                                     <div
@@ -207,22 +204,25 @@
                                         <div
                                             class="detail-drawer__perf-bar"
                                             :style="{
-                                                width: mainPerfRow.pct + '%',
-                                                background: mainPerfRow.color,
+                                                width: mainHeadline.pct + '%',
+                                                background: mainHeadline.color,
                                             }"
                                         />
                                         <div
-                                            v-if="mainPerfRow.warnPct !== null"
+                                            v-if="mainPerfRow?.warnPct !== null && mainPerfRow"
                                             class="detail-drawer__perf-mark detail-drawer__perf-mark--warn"
                                             :style="{ left: mainPerfRow.warnPct + '%' }"
                                             :title="`warn: ${mainPerfRow.warnLabel}`"
                                         />
                                         <div
-                                            v-if="mainPerfRow.critPct !== null"
+                                            v-if="mainPerfRow?.critPct !== null && mainPerfRow"
                                             class="detail-drawer__perf-mark detail-drawer__perf-mark--crit"
                                             :style="{ left: mainPerfRow.critPct + '%' }"
                                             :title="`crit: ${mainPerfRow.critLabel}`"
                                         />
+                                    </div>
+                                    <div class="detail-drawer__main-metric-value">
+                                        {{ mainHeadline.valueLabel }}
                                     </div>
                                 </div>
 
@@ -1102,6 +1102,10 @@ const parsedMetrics = computed<PerfMetric[]>(() => {
     return raw ? parsePerfData(raw) : [];
 });
 
+function _displayLabel(metricId: string): string {
+    return details.value?.metric_titles[metricId] || metricId;
+}
+
 function _toPerfRow(m: PerfMetric): PerfRow {
     const pct = utilPercent(m);
     const refMax = m.max ?? m.crit ?? null;
@@ -1114,7 +1118,7 @@ function _toPerfRow(m: PerfMetric): PerfRow {
             ? Math.min(100, (m.crit / refMax) * 100)
             : null;
     return {
-        label: m.label,
+        label: _displayLabel(m.label),
         pct,
         color: utilColor(pct),
         warnPct,
@@ -1145,6 +1149,33 @@ const mainPerfRow = computed<PerfRow | null>(() =>
 const otherPerfRows = computed<PerfRow[]>(() => {
     const main = mainMetric.value?.label;
     return perfRows.value.filter((r) => r.label !== main);
+});
+
+// Headline label/value above the bar — perf_data labels are metric IDs
+// like "mem_lnx_committed_as". Prefer the highest-percentage line from the
+// long output (Checkmk's human-readable summary, e.g. "Committed: 80.94% -
+// 15.7 GiB of 19.4 GiB virtual memory") so the operator sees a real name.
+interface MainHeadline {
+    label: string;
+    valueLabel: string;
+    pct: number;
+    color: string;
+}
+const mainHeadline = computed<MainHeadline | null>(() => {
+    const longRow = [...longOutputRows.value]
+        .map((r) => {
+            const pctMatch = r.value.match(/(\d+(?:\.\d+)?)\s*%/);
+            return pctMatch && r.label ? { ...r, pct: parseFloat(pctMatch[1]) } : null;
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null)
+        .sort((a, b) => b.pct - a.pct)[0];
+    if (longRow) {
+        const pct = Math.min(100, longRow.pct);
+        return { label: longRow.label, valueLabel: longRow.value, pct, color: utilColor(pct) };
+    }
+    const row = mainPerfRow.value;
+    if (!row) return null;
+    return { label: row.label, valueLabel: row.valueLabel, pct: row.pct, color: row.color };
 });
 
 // Long output is a multi-line agent summary; each line tends to be

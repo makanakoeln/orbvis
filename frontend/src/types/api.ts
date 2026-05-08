@@ -465,6 +465,7 @@ export interface ObjectDetails {
     service_groups: string[];
     contact_groups: string[];
     labels: Record<string, string>;
+    metric_titles: Record<string, string>;
     comments: CommentInfo[];
     downtimes: DowntimeInfo[];
 }

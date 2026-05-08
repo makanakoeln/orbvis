@@ -769,6 +769,11 @@ class LivestatusConnection(ConnectionBase):
     async def get_service_details(self, hostname: str, service: str) -> ObjectDetails | None:
         return await self._fetch_details("service", hostname, service)
 
+    async def _get_metric_titles(self, host: str, service: str | None) -> dict[str, str]:
+        """Lookup display titles for the host/service's perf_data metric IDs."""
+        names = await self._get_perf_metric_names(host, service)
+        return {n: _cmk_metric_title(n) for n in names}
+
     async def _fetch_details(
         self, type_: Literal["host", "service"], host: str, service: str | None
     ) -> ObjectDetails | None:
@@ -795,14 +800,17 @@ class LivestatusConnection(ConnectionBase):
         # "Active downtimes", and stale comments add noise without value.
         active_cmt = f"Filter: expire_time = 0\nFilter: expire_time >= {now}\nOr: 2\n"
         active_dt = f"Filter: end_time >= {now}\n"
-        rows, cmt_rows, dt_rows = await asyncio.gather(
+        rows, cmt_rows, dt_rows, metric_titles = await asyncio.gather(
             self._query(f"GET {row_table}\nColumns: {cols}\n{row_filter}"),
             self._query(f"GET comments\nColumns: {_COMMENT_COLS}\n{scope_filter}{active_cmt}"),
             self._query(f"GET downtimes\nColumns: {_DOWNTIME_COLS}\n{scope_filter}{active_dt}"),
+            self._get_metric_titles(host, service),
         )
         if not rows:
             return None
-        return _build_details(type_, host, service, rows[0], cmt_rows, dt_rows)
+        details = _build_details(type_, host, service, rows[0], cmt_rows, dt_rows)
+        details.metric_titles = metric_titles
+        return details
 
     async def get_host_hard_state(self, hostname: str) -> ObjectState:
         query = (
