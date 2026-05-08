@@ -663,12 +663,18 @@ _state_snapshots: dict[tuple[str, str | None], dict[str, int]] = {}
 
 
 def _hash_object_state(s: ObjectState) -> int:
-    """Hash only operationally-significant fields. ``last_check``, ``next_check``
-    and ``current_attempt`` deliberately don't contribute — they tick every
-    Checkmk re-check (often every 30 s) regardless of whether anything real
-    changed, and including them would defeat the delta on busy sites. They
-    still ride along inside any state that *does* get re-sent, so the UI's
-    "last check N s ago" stays accurate enough between meaningful changes.
+    """Hash only operationally-significant fields.
+
+    Excluded from the change-detection hash (they still ride along inside any
+    state that *does* get re-sent, just don't trigger a re-send on their own):
+    - ``last_check``/``next_check``/``current_attempt`` — tick every Checkmk
+      re-check regardless of whether anything real changed.
+    - ``output`` — typically embeds live latency like ``"OK - rta 0.022ms"``
+      that fluctuates every check; the operationally interesting bit is the
+      state transition, not the text.
+
+    ``perf_data`` *is* included because the frontend appends it to per-object
+    metric history on every push — dropping it would freeze the live graphs.
     """
     summary = s.services_summary
     summary_t = (
@@ -682,7 +688,6 @@ def _hash_object_state(s: ObjectState) -> int:
     return hash(
         (
             s.state,
-            s.output,
             s.perf_data,
             s.acknowledged,
             s.in_downtime,
