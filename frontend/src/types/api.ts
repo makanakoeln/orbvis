@@ -343,7 +343,7 @@ export interface ConnectionConfig {
     label: string;
     socket_path?: string | null;
     host?: string | null;
-    port: number;
+    port?: number | null;
     timeout: number;
     checkmk_url?: string | null;
     automation_user?: string | null;

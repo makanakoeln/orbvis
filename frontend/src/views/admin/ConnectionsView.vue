@@ -170,7 +170,10 @@
                         </td>
                         <td class="text-zinc-400 font-mono text-sm" style="padding: 6px 12px">
                             <template v-if="b.type === 'livestatus'">
-                                {{ b.socket_path || `${b.host}:${b.port}` }}
+                                {{
+                                    b.socket_path ||
+                                    (b.host ? (b.port ? `${b.host}:${b.port}` : b.host) : '—')
+                                }}
                             </template>
                             <template v-else-if="b.type === 'icinga2'">
                                 {{ b.icinga2_url || '—' }}
@@ -609,7 +612,7 @@ const emptyForm = (): ConnectionConfig => ({
     label: '',
     socket_path: null,
     host: null,
-    port: 6557,
+    port: null,
     timeout: 10,
     checkmk_url: null,
     automation_user: null,

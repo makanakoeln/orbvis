@@ -62,7 +62,8 @@ class ConnectionConfig(BaseModel):
     # Livestatus connection (Unix socket OR TCP, not both)
     socket_path: str | None = Field(default=None, max_length=512)
     host: str | None = Field(default=None, max_length=255)
-    port: int = Field(default=6557, ge=1, le=65535)
+    # Optional: unix-socket-only setups have no port; UI also emits null when cleared.
+    port: int | None = Field(default=None, ge=1, le=65535)
     timeout: float = Field(default=10.0, ge=0.1, le=300.0)
     checkmk_url: str | None = Field(default=None, description="e.g. /<site>/check_mk")
     automation_user: str | None = Field(default=None, max_length=200)
@@ -104,7 +105,7 @@ class ConnectionUpdate(BaseModel):
     label: str = Field(default="", max_length=200)
     socket_path: str | None = Field(default=None, max_length=512)
     host: str | None = Field(default=None, max_length=255)
-    port: int = Field(default=6557, ge=1, le=65535)
+    port: int | None = Field(default=None, ge=1, le=65535)
     timeout: float = Field(default=10.0, ge=0.1, le=300.0)
     checkmk_url: str | None = None
     automation_user: str | None = Field(default=None, max_length=200)
