@@ -268,6 +268,8 @@ export default {
         clickToPlace: 'Auf Board klicken zum Platzieren…',
         selected: 'Ausgewählt',
         monitoringObject: 'Monitoring-Objekt',
+        connection: 'Verbindung',
+        connectionInherit: 'Vom Board übernehmen',
         targetBoard: 'Ziel-Board',
         content: 'Inhalt',
         lineSection: 'Linie',

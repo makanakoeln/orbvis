@@ -266,6 +266,8 @@ export default {
         clickToPlace: 'Click on board to place…',
         selected: 'Selected',
         monitoringObject: 'Monitoring object',
+        connection: 'Connection',
+        connectionInherit: 'Inherit from board',
         targetBoard: 'Target board',
         content: 'Content',
         lineSection: 'Line',

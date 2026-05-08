@@ -67,6 +67,26 @@
                     >
                         <p class="section-title">{{ t('boardSettings.monitoringObject') }}</p>
                         <div class="space-y-[8px]">
+                            <div class="field-row">
+                                <label class="field-label">{{
+                                    t('boardSettings.connection')
+                                }}</label>
+                                <select
+                                    v-model="form.connection_id"
+                                    class="flex-1 px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
+                                >
+                                    <option value="">
+                                        {{ t('boardSettings.connectionInherit') }}
+                                    </option>
+                                    <option
+                                        v-for="c in availableConnections"
+                                        :key="c.id"
+                                        :value="c.id"
+                                    >
+                                        {{ c.label || c.id }}
+                                    </option>
+                                </select>
+                            </div>
                             <template v-if="object.type === 'host' || object.type === 'service'">
                                 <div class="field-row">
                                     <label class="field-label">{{
@@ -1326,6 +1346,7 @@ async function addMetric(value: string) {
 // ---- Form state ----
 
 const form = reactive({
+    connection_id: '' as string,
     host_name: '',
     service_description: '',
     group_name: '',
@@ -1401,6 +1422,7 @@ const showFilter = ref(!!(props.object.exclude_members || props.object.exclude_m
 watch(
     () => props.object,
     (obj) => {
+        form.connection_id = obj.connection_id ?? '';
         form.host_name = obj.host_name ?? '';
         form.service_description = obj.service_description ?? '';
         form.group_name = obj.group_name ?? '';
@@ -1466,6 +1488,26 @@ watch(
 
 // ---- Autocomplete ----
 
+const availableConnections = ref<{ id: string; label: string }[]>([]);
+async function loadConnections(): Promise<void> {
+    if (!auth.accessToken) return;
+    try {
+        const all = await connectionsApi.list(auth.accessToken);
+        availableConnections.value = all.map((c) => ({ id: c.id, label: c.label || c.id }));
+    } catch {
+        availableConnections.value = [];
+    }
+}
+loadConnections();
+
+// Refetch host/service suggestions whenever the operator switches the
+// per-object connection — otherwise the dropdown stays bound to the board's
+// default backend and the override is invisible until they save+reopen.
+watch(
+    () => form.connection_id,
+    () => loadAutocomplete(),
+);
+
 const hosts = ref<string[]>([]);
 const services = ref<string[]>([]);
 const groups = ref<string[]>([]);
@@ -1477,38 +1519,36 @@ const loadingGroups = ref(false);
 const loadingAggregations = ref(false);
 
 async function loadAutocomplete() {
-    if (!props.connectionId) return;
+    // Per-object connection override wins; fall back to the board default.
+    const cid = form.connection_id || props.connectionId;
+    if (!cid) return;
     const type = props.object.type;
     if (type === 'host' || type === 'service' || type === 'line' || type === 'graph') {
         loadingHosts.value = true;
-        hosts.value = await connectionsApi
-            .objects(props.connectionId, 'host', auth.accessToken!)
-            .catch(() => []);
+        hosts.value = await connectionsApi.objects(cid, 'host', auth.accessToken!).catch(() => []);
         loadingHosts.value = false;
         if ((type === 'service' || type === 'line' || type === 'graph') && form.host_name) {
             loadingServices.value = true;
             services.value = await connectionsApi
-                .objects(props.connectionId, 'service', auth.accessToken!, form.host_name)
+                .objects(cid, 'service', auth.accessToken!, form.host_name)
                 .catch(() => []);
             loadingServices.value = false;
         }
     } else if (type === 'hostgroup') {
         loadingGroups.value = true;
         groups.value = await connectionsApi
-            .objects(props.connectionId, 'hostgroup', auth.accessToken!)
+            .objects(cid, 'hostgroup', auth.accessToken!)
             .catch(() => []);
         loadingGroups.value = false;
     } else if (type === 'servicegroup') {
         loadingGroups.value = true;
         groups.value = await connectionsApi
-            .objects(props.connectionId, 'servicegroup', auth.accessToken!)
+            .objects(cid, 'servicegroup', auth.accessToken!)
             .catch(() => []);
         loadingGroups.value = false;
     } else if (type === 'aggregation') {
         loadingAggregations.value = true;
-        const aggrs = await connectionsApi
-            .aggregations(props.connectionId, auth.accessToken!)
-            .catch(() => []);
+        const aggrs = await connectionsApi.aggregations(cid, auth.accessToken!).catch(() => []);
         aggregationIds.value = aggrs.map((a) => a.id);
         aggregationLabels.value = aggrs.map((a) => a.title || a.id);
         loadingAggregations.value = false;
@@ -1565,6 +1605,7 @@ async function save() {
     saving.value = true;
     try {
         const updates: Record<string, unknown> = {
+            connection_id: form.connection_id || null,
             display:
                 props.object.type === 'graph' || props.object.type === 'line'
                     ? null
