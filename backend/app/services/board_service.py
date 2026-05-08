@@ -44,6 +44,18 @@ def _board_lock(name: str) -> threading.Lock:
         return lock
 
 
+# In-memory board cache + debounced disk flush. Reads from cache avoid the
+# JSON parse on every request, and bursts of writes (drag-end + property edit
+# + reorder, or a 504-object bulk import) collapse into a single disk write.
+# Cache and bookkeeping are guarded by _CACHE_GUARD.
+_CACHE: dict[str, BoardConfig] = {}
+_DIRTY: set[str] = set()
+_FLUSH_TIMERS: dict[str, threading.Timer] = {}
+_CACHE_GUARD = threading.Lock()
+# Coalesce writes within this window into a single disk flush.
+_FLUSH_DEBOUNCE_S = 0.2
+
+
 def _boards_dir() -> Path:
     p = Path(settings.boards_dir)
     p.mkdir(parents=True, exist_ok=True)
@@ -97,8 +109,19 @@ def _board_path(name: str) -> Path:
 
 
 def list_boards() -> list[BoardRead]:
-    boards = []
+    # Cache may hold boards whose debounced flush hasn't hit disk yet, plus
+    # newer in-memory edits to boards that *are* on disk. Prefer cache for
+    # known names so we never list a stale snapshot.
+    with _CACHE_GUARD:
+        cached = {name: cfg.model_copy(deep=True) for name, cfg in _CACHE.items()}
+    seen: set[str] = set()
+    boards: list[BoardRead] = []
+    for name, cfg in cached.items():
+        boards.append(_to_read(cfg))
+        seen.add(name)
     for path in _boards_dir().glob("*.json"):
+        if path.stem in seen:
+            continue
         try:
             cfg = _load_board_file(path)
             boards.append(_to_read(cfg))
@@ -108,29 +131,43 @@ def list_boards() -> list[BoardRead]:
 
 
 def get_board(name: str) -> BoardConfig | None:
+    with _CACHE_GUARD:
+        cached = _CACHE.get(name)
+    if cached is not None:
+        return cached.model_copy(deep=True)
     try:
         path = _board_path(name)
     except ValueError:
         return None
     if not path.exists():
         return None
-    return _load_board_file(path)
+    cfg = _load_board_file(path)
+    with _CACHE_GUARD:
+        # Lost a load race with another thread — keep their copy
+        existing = _CACHE.get(name)
+        if existing is not None:
+            return existing.model_copy(deep=True)
+        _CACHE[name] = cfg
+    return cfg.model_copy(deep=True)
 
 
 def create_board(data: BoardCreate) -> BoardConfig:
-    path = _board_path(data.name)
-    if path.exists():
-        raise ValueError(f"Board '{data.name}' already exists")
-    cfg = BoardConfig(
-        name=data.name,
-        alias=data.alias,
-        background_image=data.background_image,
-        icon_size=data.icon_size,
-        connection_id=data.connection_id,
-        view=data.view,
-    )
-    _save_board_file(cfg)
-    return cfg
+    with _board_lock(data.name):
+        # Existence check covers both disk *and* cache (a debounced create
+        # may not have flushed yet). Validates the path along the way.
+        path = _board_path(data.name)
+        if path.exists() or get_board(data.name) is not None:
+            raise ValueError(f"Board '{data.name}' already exists")
+        cfg = BoardConfig(
+            name=data.name,
+            alias=data.alias,
+            background_image=data.background_image,
+            icon_size=data.icon_size,
+            connection_id=data.connection_id,
+            view=data.view,
+        )
+        _save_board(cfg)
+        return cfg
 
 
 def update_board(name: str, data: BoardUpdate) -> BoardConfig | None:
@@ -142,7 +179,7 @@ def update_board(name: str, data: BoardUpdate) -> BoardConfig | None:
         if not update_data:
             return cfg
         cfg = BoardConfig.model_validate(cfg.model_dump() | update_data)
-        _save_board_file(cfg)
+        _save_board(cfg)
         return cfg
 
 
@@ -151,10 +188,14 @@ def delete_board(name: str) -> bool:
         path = _board_path(name)
     except ValueError:
         return False
-    if not path.exists():
-        return False
-    path.unlink()
-    return True
+    with _board_lock(name):
+        # Drop cache + cancel pending flush so a stale debounced write can't
+        # recreate the file after we unlink it.
+        _invalidate_cache(name)
+        if not path.exists():
+            return False
+        path.unlink()
+        return True
 
 
 def add_object(name: str, obj: BoardObject) -> BoardConfig | None:
@@ -166,7 +207,7 @@ def add_object(name: str, obj: BoardObject) -> BoardConfig | None:
         if obj.id in existing_ids:
             raise ValueError(f"Object ID '{obj.id}' already exists in board '{name}'")
         cfg.objects.append(obj)
-        _save_board_file(cfg)
+        _save_board(cfg)
         return cfg
 
 
@@ -181,7 +222,7 @@ def update_object(board_name: str, obj_id: str, updates: BoardObjectUpdate) -> B
                     obj.model_dump() | updates.model_dump(exclude_unset=True)
                 )
                 cfg.objects[i] = new_obj
-                _save_board_file(cfg)
+                _save_board(cfg)
                 return new_obj
         return None
 
@@ -195,7 +236,7 @@ def delete_object(board_name: str, obj_id: str) -> bool:
         cfg.objects = [o for o in cfg.objects if o.id != obj_id]
         if len(cfg.objects) == original_len:
             return False
-        _save_board_file(cfg)
+        _save_board(cfg)
         return True
 
 
@@ -221,34 +262,101 @@ def _save_board_file(cfg: BoardConfig) -> None:
         raise
 
 
+def _save_board(cfg: BoardConfig) -> None:
+    """Update the in-memory cache and schedule a debounced disk flush.
+
+    Callers must already hold ``_board_lock(cfg.name)`` so the cache update is
+    consistent with the read-modify-write they just performed.
+    """
+    name = cfg.name
+    snapshot = cfg.model_copy(deep=True)
+    with _CACHE_GUARD:
+        _CACHE[name] = snapshot
+        _DIRTY.add(name)
+        old = _FLUSH_TIMERS.pop(name, None)
+        if old is not None:
+            old.cancel()
+        timer = threading.Timer(_FLUSH_DEBOUNCE_S, _flush, args=(name,))
+        timer.daemon = True
+        _FLUSH_TIMERS[name] = timer
+        timer.start()
+
+
+def _flush(name: str) -> None:
+    """Persist a dirty board to disk. Holds the per-board lock to serialize
+    against concurrent writers, then writes whatever the cache currently holds.
+    """
+    with _board_lock(name):
+        with _CACHE_GUARD:
+            if name not in _DIRTY:
+                return
+            cfg = _CACHE.get(name)
+            _DIRTY.discard(name)
+            _FLUSH_TIMERS.pop(name, None)
+        if cfg is None:
+            return
+        try:
+            _save_board_file(cfg)
+        except Exception:
+            # Re-mark dirty so a later write or shutdown flush retries
+            with _CACHE_GUARD:
+                _DIRTY.add(name)
+            logger.exception("Failed to flush board '%s'", name)
+
+
+def flush_all() -> None:
+    """Synchronously flush every dirty board. Call from app shutdown so
+    pending in-memory writes don't get lost when the process exits.
+    """
+    with _CACHE_GUARD:
+        # Cancel pending timers so they don't race with us
+        for timer in _FLUSH_TIMERS.values():
+            timer.cancel()
+        _FLUSH_TIMERS.clear()
+        names = list(_DIRTY)
+    for name in names:
+        _flush(name)
+
+
+def _invalidate_cache(name: str) -> None:
+    """Drop a board from the cache and discard any pending flush — used when
+    the board is deleted so a stale debounced timer doesn't recreate the file.
+    """
+    with _CACHE_GUARD:
+        _CACHE.pop(name, None)
+        _DIRTY.discard(name)
+        timer = _FLUSH_TIMERS.pop(name, None)
+        if timer is not None:
+            timer.cancel()
+
+
 def clone_board(name: str, new_name: str, alias: str | None = None) -> BoardConfig:
     with _board_lock(new_name):
         src = get_board(name)
         if src is None:
             raise ValueError(f"Board '{name}' not found")
         dest_path = _board_path(new_name)
-        if dest_path.exists():
+        if dest_path.exists() or get_board(new_name) is not None:
             raise ValueError(f"Board '{new_name}' already exists")
         cfg = copy.deepcopy(src)
         cfg.name = new_name
         cfg.readonly = False  # clones are always editable
         if alias is not None:
             cfg.alias = alias
-        _save_board_file(cfg)
+        _save_board(cfg)
         return cfg
 
 
 def import_board(data: dict[str, object], *, overwrite: bool = False) -> BoardConfig:
     cfg = BoardConfig.model_validate(data)
     with _board_lock(cfg.name):
-        path = _board_path(cfg.name)
-        if path.exists():
+        existing = get_board(cfg.name)
+        if existing is not None:
             if not overwrite:
                 raise ValueError(f"Board '{cfg.name}' already exists")
-            existing = _load_board_file(path)
             if existing.readonly:
                 raise ValueError(f"Board '{cfg.name}' is read-only and cannot be overwritten")
-        _save_board_file(cfg)
+        _save_board(cfg)
         return cfg
 
 
@@ -260,7 +368,7 @@ def reorder_boards(order: list[tuple[str, int]]) -> None:
             if cfg is None:
                 continue
             cfg.sort_order = sort_order
-            _save_board_file(cfg)
+            _save_board(cfg)
 
 
 def _to_read(cfg: BoardConfig) -> BoardRead:

@@ -297,6 +297,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     yield
     logger.info("Shutting down OrbVis backend.")
+    # Flush any pending debounced board writes before the process exits.
+    board_service.flush_all()
     warmup_task.cancel()
     try:
         await warmup_task

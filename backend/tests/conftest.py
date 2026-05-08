@@ -43,6 +43,24 @@ async def setup_db():
         await conn.run_sync(Base.metadata.drop_all)
 
 
+@pytest.fixture(autouse=True)
+def _reset_board_cache():
+    # Module-level board cache leaks between tests because tests reuse names
+    # like "src-board" against different tmp_paths. Clear before and after.
+    from app.services import board_service
+
+    def _wipe() -> None:
+        for timer in board_service._FLUSH_TIMERS.values():
+            timer.cancel()
+        board_service._FLUSH_TIMERS.clear()
+        board_service._CACHE.clear()
+        board_service._DIRTY.clear()
+
+    _wipe()
+    yield
+    _wipe()
+
+
 @pytest_asyncio.fixture
 async def db_session():
     async with TestSessionLocal() as session:
