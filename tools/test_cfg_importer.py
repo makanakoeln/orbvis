@@ -360,6 +360,35 @@ def test_line_without_label_stays_hidden(tmp_path: Path):
     assert obj["label"]["show"] is False
 
 
+def test_per_object_backend_imported_when_differs(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define global {
+            backend_id=primary
+        }
+        define host {
+            host_name=local
+            x=10
+            y=20
+            object_id=h1
+        }
+        define host {
+            host_name=remote
+            backend_id=secondary
+            x=40
+            y=20
+            object_id=h2
+        }
+    """)
+    cfg = tmp_path / "multi-backend.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    result = blocks_to_board_json(blocks, "multi-backend")
+    assert result["connection_id"] == "primary"
+    by_host = {o["host_name"]: o for o in result["objects"] if o["type"] == "host"}
+    assert "connection_id" not in by_host["local"]  # inherits board default
+    assert by_host["remote"]["connection_id"] == "secondary"
+
+
 def test_background_color_imported(tmp_path: Path):
     cfg_text = textwrap.dedent("""
         define global {

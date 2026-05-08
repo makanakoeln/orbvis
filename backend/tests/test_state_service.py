@@ -253,6 +253,56 @@ async def test_map_link_handles_cycle_without_recursion(mock_connection, monkeyp
 
 
 @pytest.mark.asyncio
+async def test_per_object_connection_override_routes_to_other_backend(mock_connection, monkeypatch):
+    """An object's ``connection_id`` overrides the board default."""
+    primary = mock_connection
+    secondary = AsyncMock()
+    secondary.get_hosts_states = AsyncMock(
+        return_value={
+            "remote-host": ObjectState(object_id="remote-host", type="host", state="DOWN")
+        }
+    )
+    secondary.is_available = AsyncMock(return_value=True)
+
+    primary.get_hosts_states = AsyncMock(
+        return_value={"local-host": ObjectState(object_id="local-host", type="host", state="UP")}
+    )
+
+    monkeypatch.setattr(state_service, "_connections", {"primary": primary, "secondary": secondary})
+
+    board = _board(
+        [
+            _obj("local", "host", host_name="local-host"),
+            _obj("remote", "host", host_name="remote-host", connection_id="secondary"),
+        ],
+        connection_id="primary",
+    )
+    result = await get_board_states(board)
+    by_id = {s.object_id: s for s in result.states}
+    assert by_id["local"].state == "UP"
+    assert by_id["remote"].state == "DOWN"
+    primary.get_hosts_states.assert_called_once()
+    secondary.get_hosts_states.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_per_object_connection_override_unregistered_yields_pending(
+    mock_connection, monkeypatch
+):
+    monkeypatch.setattr(state_service, "_connections", {"primary": mock_connection})
+    mock_connection.get_hosts_states = AsyncMock(return_value={})
+
+    board = _board(
+        [_obj("orphan", "host", host_name="anywhere", connection_id="ghost")],
+        connection_id="primary",
+    )
+    result = await get_board_states(board)
+    by_id = {s.object_id: s for s in result.states}
+    assert by_id["orphan"].state == "PENDING"
+    assert by_id["orphan"].stale is True
+
+
+@pytest.mark.asyncio
 async def test_get_board_states_non_monitoring_objects(mock_connection, monkeypatch):
     monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
     mock_connection.is_available = AsyncMock(return_value=True)

@@ -119,12 +119,13 @@ async def _execute_board_states(
     if cfg.view.type == "radar":
         return await _get_radar_states(cfg, connection)
 
-    state_map = await _get_board_states_batched(
-        connection,
+    state_map = await _states_for_objects(
         cfg.objects,
+        default_connection=connection,
+        default_connection_id=cfg.connection_id,
         auth_user=auth_user,
         can_view_board=can_view_board,
-        _visited_maps=frozenset({cfg.name}),
+        visited_maps=frozenset({cfg.name}),
     )
     states = list(state_map.values())
 
@@ -145,6 +146,59 @@ async def _execute_board_states(
     return MapStates(
         map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=connection_ok
     )
+
+
+async def _states_for_objects(
+    objects: list[BoardObject],
+    *,
+    default_connection: ConnectionBase,
+    default_connection_id: str,
+    auth_user: str | None = None,
+    can_view_board: Callable[[str], bool] | None = None,
+    board_cfg_cache: dict[str, BoardConfig | None] | None = None,
+    visited_maps: frozenset[str] = frozenset(),
+) -> dict[str, ObjectState]:
+    """Run the batched state fetch once per distinct connection, then merge.
+
+    NagVis maps allow ``backend_id`` per object so a single board can mix
+    monitoring sources (Checkmk + Icinga, two CMK sites, …). We honour the
+    same contract: an object's ``connection_id`` overrides the board default.
+    Objects sharing a connection are still batched together — only the
+    cross-connection split adds round-trips, which run in parallel.
+    """
+    if board_cfg_cache is None:
+        board_cfg_cache = {}
+
+    groups: dict[str, list[BoardObject]] = {}
+    for obj in objects:
+        cid = obj.connection_id or default_connection_id
+        groups.setdefault(cid, []).append(obj)
+
+    async def _run(cid: str, group_objs: list[BoardObject]) -> dict[str, ObjectState]:
+        conn = default_connection if cid == default_connection_id else get_connection(cid)
+        if conn is None:
+            return {
+                obj.id: ObjectState(object_id=obj.id, type=obj.type, state="PENDING", stale=True)
+                for obj in group_objs
+            }
+        return await _get_board_states_batched(
+            conn,
+            group_objs,
+            auth_user=auth_user,
+            can_view_board=can_view_board,
+            board_cfg_cache=board_cfg_cache,
+            _visited_maps=visited_maps,
+        )
+
+    if len(groups) == 1:
+        cid, group_objs = next(iter(groups.items()))
+        return await _run(cid, group_objs)
+
+    results = await asyncio.gather(*[_run(cid, objs) for cid, objs in groups.items()])
+    merged: dict[str, ObjectState] = {}
+    for r in results:
+        merged.update(r)
+    return merged
 
 
 async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types inline; splitting hides intent
@@ -392,12 +446,13 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
                 if o.type != "map" or (o.map_name and o.map_name not in child_visited)
             ]
             try:
-                board_states[map_name] = await _get_board_states_batched(
-                    ref_backend,
+                board_states[map_name] = await _states_for_objects(
                     included_objs,
+                    default_connection=ref_backend,
+                    default_connection_id=ref_cfg.connection_id,
                     auth_user=auth_user,
                     board_cfg_cache=board_cfg_cache,
-                    _visited_maps=child_visited,
+                    visited_maps=child_visited,
                 )
             except Exception:
                 pass

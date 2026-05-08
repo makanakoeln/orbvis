@@ -470,6 +470,19 @@ def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, Any]:
     return obj
 
 
+def _apply_object_backend(obj: dict[str, Any], p: dict[str, str]) -> None:
+    """Mirror NagVis' per-object ``backend_id`` onto OrbVis' ``connection_id``.
+
+    NagVis lets a single map mix backends — this carries that intent into
+    OrbVis where state_service routes the object to the matching connection.
+    Boards' default ``backend_id`` is applied at the global block, so we only
+    set the per-object override when the value differs.
+    """
+    bid = p.get("backend_id") or p.get("connection_id")
+    if bid:
+        obj["connection_id"] = bid
+
+
 def _apply_type_specific(obj: dict[str, Any], legacy_type: str, p: dict[str, str]) -> None:
     if legacy_type == "host":
         obj["host_name"] = p.get("host_name")
@@ -515,6 +528,7 @@ def _handle_monitor_block(legacy_type: str, p: dict[str, str], raw_id: str) -> d
         "display": display,
     }
     _apply_type_specific(obj, legacy_type, p)
+    _apply_object_backend(obj, p)
     if "url" in p:
         obj["url"] = p["url"]
     if "url_target" in p:
@@ -525,14 +539,18 @@ def _handle_monitor_block(legacy_type: str, p: dict[str, str], raw_id: str) -> d
 
 def _handle_object_block(legacy_type: str, p: dict[str, str], raw_id: str) -> dict[str, Any]:
     if p.get("view_type") == "line" and legacy_type != "line":
-        return _handle_view_type_line(p, raw_id)
-    if legacy_type == "line":
-        return _handle_line_block(p, raw_id)
-    if legacy_type == "shape":
-        return _handle_shape(p, raw_id)
-    if legacy_type == "textbox":
-        return _handle_textbox(p, raw_id)
-    return _handle_monitor_block(legacy_type, p, raw_id)
+        obj = _handle_view_type_line(p, raw_id)
+    elif legacy_type == "line":
+        obj = _handle_line_block(p, raw_id)
+    elif legacy_type == "shape":
+        obj = _handle_shape(p, raw_id)
+    elif legacy_type == "textbox":
+        obj = _handle_textbox(p, raw_id)
+    else:
+        # _handle_monitor_block already applies the backend override.
+        return _handle_monitor_block(legacy_type, p, raw_id)
+    _apply_object_backend(obj, p)
+    return obj
 
 
 def _resolve_pending_refs(objects: list[dict[str, Any]]) -> None:

@@ -104,6 +104,7 @@ export type MonitoringState = HostState | ServiceState | 'NO_PERMISSION' | 'NOT_
 export interface BoardObject {
     id: string;
     type: ObjectType;
+    connection_id?: string | null;
     x: number;
     y: number;
     lat?: number | null;

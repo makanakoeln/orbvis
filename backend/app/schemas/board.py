@@ -190,6 +190,11 @@ ClickAction = Literal["link", "none"]
 class BoardObject(BaseModel):
     id: str
     type: ObjectType
+    # Per-object connection override. ``None`` means "inherit the board's
+    # connection_id" — the common case. Setting this lets a single board mix
+    # objects from multiple monitoring backends, the way NagVis allows
+    # ``backend_id`` per object.
+    connection_id: str | None = None
     x: int | float = 0
     y: int | float = 0
     lat: float | None = None
@@ -351,6 +356,7 @@ class BoardRead(BaseModel):
 class BoardObjectUpdate(BaseModel):
     """Allowed fields for a partial object update — id and type are immutable."""
 
+    connection_id: str | None = None
     x: int | float | None = None
     y: int | float | None = None
     lat: float | None = None
