@@ -36,20 +36,27 @@
 
         <!-- SVG overlay for lines -->
         <svg class="absolute inset-0 w-full h-full">
-            <BoardLine
+            <g
                 v-for="line in lineObjects"
                 :key="line.id"
-                :object="line"
-                :state="states[line.id]"
-                :edit-mode="editMode"
-                :drag-coords="lineDragPositions[line.id]"
-                :connection-id="config.connection_id"
-                @line-drag-start="(evt, mode) => $emit('line-drag-start', evt, line, mode)"
-                @context-menu="(evt) => onObjectContextMenu(evt, line)"
-                @line-click="onLineClick(line)"
-                @hover="openHoverMenu($event, line)"
-                @hover-leave="closeHoverMenu()"
-            />
+                :style="{
+                    opacity: matchesSearch(line) ? 1 : 0.25,
+                    transition: 'opacity 120ms ease',
+                }"
+            >
+                <BoardLine
+                    :object="line"
+                    :state="states[line.id]"
+                    :edit-mode="editMode"
+                    :drag-coords="lineDragPositions[line.id]"
+                    :connection-id="config.connection_id"
+                    @line-drag-start="(evt, mode) => $emit('line-drag-start', evt, line, mode)"
+                    @context-menu="(evt) => onObjectContextMenu(evt, line)"
+                    @line-click="onLineClick(line)"
+                    @hover="openHoverMenu($event, line)"
+                    @hover-leave="closeHoverMenu()"
+                />
+            </g>
         </svg>
 
         <!-- Map objects: each wrapped in a positioned div -->
@@ -184,6 +191,7 @@ import { useObjectActions } from '@/composables/useObjectActions';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api';
+import { objectMatchesFilter } from '@/utils/objectFilter';
 import { resolveTemplate } from '@/utils/template';
 
 import AckModal from './AckModal.vue';
@@ -209,6 +217,12 @@ const props = defineProps<{
     iconSizeOverride?: number;
     isAdmin?: boolean;
     snapGrid?: number;
+    /**
+     * Search needle from the top-level board search bar. Non-matching objects
+     * dim to 25% so the operator's eye snaps to matches without losing the
+     * spatial layout — same approach as FlowBoard's filter.
+     */
+    filterNeedle?: string;
 }>();
 
 const emit = defineEmits<{
@@ -341,7 +355,13 @@ function objectWrapperStyle(obj: BoardObjectType) {
         transform: 'translate(-50%, -50%)',
         cursor,
         zIndex,
+        opacity: matchesSearch(obj) ? 1 : 0.25,
+        transition: 'opacity 120ms ease',
     };
+}
+
+function matchesSearch(obj: BoardObjectType): boolean {
+    return objectMatchesFilter(obj, props.filterNeedle ?? '');
 }
 
 // ---- Pointer-capture drag handlers ----

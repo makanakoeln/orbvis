@@ -136,6 +136,7 @@ const props = defineProps<{
     states: Record<string, ObjectState>;
     checkmkUrl?: string | null;
     readonly?: boolean;
+    filterNeedle?: string;
 }>();
 
 const emit = defineEmits<{
@@ -183,9 +184,16 @@ const severity: Record<string, number> = {
     OK: 0,
 };
 
-const sortedStates = computed(() =>
-    Object.values(props.states).sort((a, b) => (severity[b.state] ?? 0) - (severity[a.state] ?? 0)),
-);
+const sortedStates = computed(() => {
+    const needle = (props.filterNeedle ?? '').trim().toLowerCase();
+    const all = Object.values(props.states).sort(
+        (a, b) => (severity[b.state] ?? 0) - (severity[a.state] ?? 0),
+    );
+    if (!needle) return all;
+    // Radar cards have no spatial layout, so filtering (rather than dimming)
+    // produces a more useful view: only matching hosts/services remain visible.
+    return all.filter((s) => displayName(s).toLowerCase().includes(needle));
+});
 
 const summary = computed(() => {
     const counts: Record<string, number> = {};

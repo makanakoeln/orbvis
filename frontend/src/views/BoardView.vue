@@ -340,6 +340,7 @@
                     :edit-mode="editor.editMode.value"
                     :placing="editor.placing.value"
                     :selected-object-id="editor.selectedObjectId.value"
+                    :filter-needle="boardFilterNeedle"
                     @object-click="onObjectClick"
                     @object-contextmenu="onObjectContextMenu"
                     @object-contextmenu-view="onWorldmapContextMenuView"
@@ -348,6 +349,15 @@
                     @canvas-latlng-click="onCanvasLatLngClick"
                     @latlng-drag-end="onLatLngDragEnd"
                     @latlng2-drag-end="onLatLng2DragEnd"
+                />
+                <BoardSearch
+                    v-if="
+                        boardConfig &&
+                        boardConfig.objects.length > 0 &&
+                        !editor.editMode.value &&
+                        !boardsStore.error
+                    "
+                    v-model="boardFilterNeedle"
                 />
                 <!-- Fit all button -->
                 <button
@@ -386,13 +396,19 @@
             </div>
 
             <!-- Radar -->
-            <RadarCanvas
-                v-else-if="isRadar"
-                :states="statesStore.states"
-                :checkmk-url="checkmkUrl"
-                :readonly="isKiosk || boardConfig?.readonly"
-                @object-click="onObjectClick"
-            />
+            <div v-else-if="isRadar" class="flex-1 relative overflow-hidden">
+                <RadarCanvas
+                    :states="statesStore.states"
+                    :checkmk-url="checkmkUrl"
+                    :readonly="isKiosk || boardConfig?.readonly"
+                    :filter-needle="boardFilterNeedle"
+                    @object-click="onObjectClick"
+                />
+                <BoardSearch
+                    v-if="boardConfig && !editor.editMode.value"
+                    v-model="boardFilterNeedle"
+                />
+            </div>
 
             <!-- Flowmap -->
             <div v-else-if="isFlowmap" class="flex-1 relative overflow-hidden">
@@ -434,6 +450,10 @@
                     </router-link>
                 </div>
                 <template v-else-if="boardConfig">
+                    <BoardSearch
+                        v-if="boardConfig.objects.length > 0 && !editor.editMode.value"
+                        v-model="boardFilterNeedle"
+                    />
                     <!-- Empty board hint -->
                     <div
                         v-if="boardConfig.objects.length === 0 && !editor.editMode.value"
@@ -472,6 +492,7 @@
                         :is-admin="auth.isAdmin && !isKiosk"
                         :icon-size-override="undefined"
                         :snap-grid="editor.snapGrid.value"
+                        :filter-needle="boardFilterNeedle"
                         @object-drag-end="onObjectDragEnd"
                         @object-click="onObjectClick"
                         @object-contextmenu="onObjectContextMenu"
@@ -945,6 +966,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { boardsApi, cmkApi, connectionsApi } from '@/api/client';
 import AckModal from '@/components/board/AckModal.vue';
 import BoardCanvas from '@/components/board/BoardCanvas.vue';
+import BoardSearch from '@/components/board/BoardSearch.vue';
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue';
 import CommentModal from '@/components/board/CommentModal.vue';
 import ContextMenu from '@/components/board/ContextMenu.vue';
@@ -1087,6 +1109,13 @@ const worldmapCanvasRef = ref<InstanceType<typeof WorldMapCanvas> | null>(null);
 const isWorldmap = computed(() => boardConfig.value?.view.type === 'worldmap');
 const isFlowmap = computed(() => boardConfig.value?.view.type === 'flow');
 const isRadar = computed(() => boardConfig.value?.view.type === 'radar');
+
+// Top-right search bar shared by static / worldmap / radar boards.
+// FlowBoard ships its own search because it filters d3 nodes directly.
+const boardFilterNeedle = ref('');
+watch(boardName, () => {
+    boardFilterNeedle.value = '';
+});
 const isLoading = computed(
     () => boardsStore.loading || (statesStore.initialLoad && !boardsStore.error),
 );

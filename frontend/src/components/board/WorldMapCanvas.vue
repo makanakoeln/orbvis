@@ -16,6 +16,7 @@ import type {
     WorldmapView,
 } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';
+import { objectMatchesFilter } from '@/utils/objectFilter';
 import { STATE_COLORS } from '@/utils/stateColors';
 
 const props = defineProps<{
@@ -24,6 +25,7 @@ const props = defineProps<{
     editMode: boolean;
     placing: boolean;
     selectedObjectId: string | null;
+    filterNeedle?: string;
 }>();
 
 const emit = defineEmits<{
@@ -519,6 +521,28 @@ watch(
     },
     { deep: true },
 );
+
+watch(
+    () => props.filterNeedle ?? '',
+    () => applyFilterDimming(),
+);
+
+function applyFilterDimming(): void {
+    const needle = props.filterNeedle ?? '';
+    for (const obj of props.config.objects) {
+        const opacity = objectMatchesFilter(obj, needle) ? 1 : 0.25;
+        const m = markers.get(obj.id);
+        if (m) m.setOpacity(opacity);
+        const line = lines.get(obj.id);
+        if (line) {
+            line.polyline.setStyle({ opacity });
+            line.border?.setStyle({ opacity });
+            line.label?.setOpacity(opacity);
+            line.arrowEnd?.setOpacity(opacity);
+            line.arrowStart?.setOpacity(opacity);
+        }
+    }
+}
 
 watch(
     () => props.placing,
