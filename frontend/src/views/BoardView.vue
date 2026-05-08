@@ -504,6 +504,7 @@
                 :state="detailDrawerState"
                 :checkmk-url="checkmkUrl"
                 :connection-id="boardConfig?.connection_id ?? null"
+                :selectable-hosts="selectableHostNames"
                 portal-target="#orbvis-board-shell"
                 @close="closeDetail"
                 @acknowledge="onDetailAck"
@@ -514,6 +515,7 @@
                 @add-comment="onDetailAddComment"
                 @enable-notifications="onDetailToggleNotifications(true)"
                 @disable-notifications="onDetailToggleNotifications(false)"
+                @select-host="onSelectHost"
             />
         </div>
 
@@ -1389,6 +1391,22 @@ function openDetail(obj: BoardObject) {
     detailDrawerObject.value = obj;
     worldmapHover.visible = false;
     worldmapCtxMenu.visible = false;
+}
+
+// All host BoardObjects on this board, keyed by hostname so the Drawer's
+// topology section can decide whether a parent/child entry can highlight on
+// the board (vs. just linking to Checkmk).
+const selectableHostNames = computed(() =>
+    (boardConfig.value?.objects ?? [])
+        .filter((o) => o.type === 'host' && o.host_name)
+        .map((o) => o.host_name as string),
+);
+
+function onSelectHost(hostName: string) {
+    const obj = (boardConfig.value?.objects ?? []).find(
+        (o) => o.type === 'host' && o.host_name === hostName,
+    );
+    if (obj) detailDrawerObject.value = obj;
 }
 
 function closeDetail() {

@@ -310,8 +310,14 @@
 
                         <CmkTabContent v-if="showContextTab" id="context" spacing="none">
                             <div class="detail-drawer__pane">
-                                <dl v-if="contextMetaRows.length" class="detail-drawer__meta">
-                                    <template v-for="row in contextMetaRows" :key="row.label">
+                                <dl
+                                    v-if="contextMetaRowsWithoutCheckCmd.length"
+                                    class="detail-drawer__meta"
+                                >
+                                    <template
+                                        v-for="row in contextMetaRowsWithoutCheckCmd"
+                                        :key="row.label"
+                                    >
                                         <dt>{{ row.label }}</dt>
                                         <dd
                                             :class="
@@ -320,18 +326,17 @@
                                                     : ''
                                             "
                                         >
-                                            <code
-                                                v-if="
-                                                    row.label ===
-                                                    t('board.detailDrawer.checkCommand')
-                                                "
-                                                class="detail-drawer__code"
-                                                >{{ row.value }}</code
-                                            >
-                                            <template v-else>{{ row.value }}</template>
+                                            {{ row.value }}
                                         </dd>
                                     </template>
                                 </dl>
+
+                                <div v-if="checkCommandRow">
+                                    <div class="detail-drawer__pane-heading">
+                                        {{ checkCommandRow.label }}
+                                    </div>
+                                    <CmkCode :code-txt="checkCommandRow.value" width="fill" />
+                                </div>
 
                                 <dl
                                     v-if="topologyGroups.length"
@@ -339,21 +344,22 @@
                                 >
                                     <template v-for="group in topologyGroups" :key="group.label">
                                         <dt>{{ group.label }}</dt>
-                                        <dd>
-                                            <span
+                                        <dd class="detail-drawer__chip-row">
+                                            <CmkChip
                                                 v-for="item in group.items"
                                                 :key="item"
-                                                class="detail-drawer__chip-tag"
+                                                size="small"
+                                                :color="group.isHostList ? 'info' : 'others'"
+                                                variant="outline"
+                                                :as-div="!group.isHostList || !canSelectHost(item)"
+                                                @click="
+                                                    group.isHostList && canSelectHost(item)
+                                                        ? emit('select-host', item)
+                                                        : null
+                                                "
                                             >
-                                                <a
-                                                    v-if="group.isHostList && hostLink(item)"
-                                                    :href="hostLink(item) ?? '#'"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    >{{ item }}</a
-                                                >
-                                                <template v-else>{{ item }}</template>
-                                            </span>
+                                                {{ item }}
+                                            </CmkChip>
                                         </dd>
                                     </template>
                                 </dl>
@@ -362,18 +368,23 @@
                                     <div class="detail-drawer__pane-heading">
                                         {{ t('board.detailDrawer.labels') }}
                                     </div>
-                                    <div class="detail-drawer__labels">
-                                        <span
+                                    <div class="detail-drawer__chip-row">
+                                        <CmkChip
                                             v-for="[key, value] in labelEntries"
                                             :key="key"
-                                            class="detail-drawer__chip-tag detail-drawer__chip-tag--label"
+                                            size="small"
+                                            color="others"
+                                            variant="outline"
+                                            as-div
                                             :title="`${key}: ${value}`"
                                         >
-                                            <span class="detail-drawer__label-key">{{ key }}</span>
-                                            <span class="detail-drawer__label-value">{{
-                                                value
-                                            }}</span>
-                                        </span>
+                                            <template #start>
+                                                <span class="detail-drawer__label-key">{{
+                                                    key
+                                                }}</span>
+                                            </template>
+                                            {{ value }}
+                                        </CmkChip>
                                     </div>
                                 </div>
                             </div>
@@ -579,6 +590,8 @@ import { parsePerfData, type PerfMetric, utilColor, utilPercent } from '@/utils/
 import { stateColor } from '@/utils/stateColors';
 import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time';
 import CmkButton from '@/vendor/cmk/components/CmkButton.vue';
+import { CmkChip } from '@/vendor/cmk/components/CmkChip';
+import { CmkCode } from '@/vendor/cmk/components/CmkCode';
 import CmkIcon from '@/vendor/cmk/components/CmkIcon';
 import CmkSlideIn from '@/vendor/cmk/components/CmkSlideIn';
 import { CmkTab, CmkTabContent, CmkTabs } from '@/vendor/cmk/components/CmkTabs';
@@ -604,6 +617,9 @@ const props = defineProps<{
     connectionId?: string | null;
     /** CSS selector for the CmkSlideIn portal target. Defaults to body. */
     portalTarget?: string;
+    /** Hostnames currently on the board — topology entries to those hosts
+     * become clickable buttons that emit `select-host` for the parent to act on. */
+    selectableHosts?: string[];
 }>();
 
 const portalTarget = computed(() => props.portalTarget);
@@ -618,7 +634,14 @@ const emit = defineEmits<{
     'add-comment': [];
     'enable-notifications': [];
     'disable-notifications': [];
+    /** Host name picked from the topology section — board may highlight + select it. */
+    'select-host': [hostName: string];
 }>();
+
+const selectableHostSet = computed(() => new Set(props.selectableHosts ?? []));
+function canSelectHost(host: string): boolean {
+    return selectableHostSet.value.has(host);
+}
 
 // Drives age/overdue labels so they tick forward without a state push.
 const nowMs = ref(Date.now());
@@ -676,10 +699,14 @@ watch(
             // Stale-response guard: between the await and now the user may have
             // clicked another object. Match all three identity fields so a host
             // response doesn't land on a same-named service or vice versa.
+            // Note: service_description may be undefined on host BoardObjects
+            // (Flow Board synthesises hosts without it) — normalise to null
+            // before comparing so guard doesn't reject legitimate hosts.
+            const currentService = props.object?.service_description ?? null;
             if (
                 props.object?.type === objType &&
                 props.object?.host_name === host &&
-                props.object?.service_description === reqService
+                currentService === reqService
             ) {
                 details.value = detailsRes;
                 perfometer.value = perfRes;
@@ -989,14 +1016,6 @@ const topologyGroups = computed<TopologyGroup[]>(() => {
 
 const labelEntries = computed(() => Object.entries(details.value?.labels ?? {}));
 
-function hostLink(host: string): string | null {
-    if (!props.checkmkUrl) return null;
-    const base = props.checkmkUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
-    const params = new URLSearchParams({ view_name: 'hoststatus', host });
-    if (props.state?.site_id) params.set('site', props.state.site_id);
-    return `${base}/check_mk/view.py?${params}`;
-}
-
 interface Comment {
     id: number;
     author: string;
@@ -1111,6 +1130,17 @@ const contextMetaRows = computed<MetaRow2[]>(() => {
     }
     return rows;
 });
+
+// Check command gets its own CmkCode block — it's typically long and benefits
+// from monospace + horizontal scroll, while latency / notif. period stay in
+// the regular dt/dd grid.
+const checkCommandRow = computed<MetaRow2 | null>(
+    () =>
+        contextMetaRows.value.find((r) => r.label === t('board.detailDrawer.checkCommand')) ?? null,
+);
+const contextMetaRowsWithoutCheckCmd = computed<MetaRow2[]>(() =>
+    contextMetaRows.value.filter((r) => r.label !== t('board.detailDrawer.checkCommand')),
+);
 
 const parsedMetrics = computed<PerfMetric[]>(() => {
     const raw = props.state?.perf_data;
@@ -1492,18 +1522,6 @@ useMutationObserver(
     font-weight: var(--font-weight-bold);
 }
 
-.detail-drawer__code {
-    font-family: var(--font-mono, monospace);
-    font-size: 10px;
-    background: var(--bg);
-    color: var(--text);
-    padding: 1px 6px;
-    border-radius: var(--border-radius);
-    border: 1px solid var(--border);
-    overflow-wrap: anywhere;
-    display: inline-block;
-}
-
 .detail-drawer__meta--stacked {
     grid-template-columns: 1fr;
     gap: 6px;
@@ -1873,52 +1891,18 @@ useMutationObserver(
     opacity: 0.45;
 }
 
-/* Inline group/host-name chips for the topology + labels sections. */
-.detail-drawer__chip-tag {
-    display: inline-block;
-    font-size: 10px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 1px 6px;
-    border-radius: 999px;
-    margin: 0 4px 4px 0;
-    line-height: 16px;
-    overflow-wrap: anywhere;
-}
-
-.detail-drawer__chip-tag a {
-    color: inherit;
-    text-decoration: none;
-}
-
-.detail-drawer__chip-tag a:hover {
-    color: var(--color-corporate-green-50, rgb(34 197 94));
-}
-
-.detail-drawer__chip-tag--label {
-    padding: 0;
-    overflow: hidden;
-    background: var(--bg-surface);
+/* Inline chip rows for topology + labels sections — wraps the vendored
+   CmkChip components with consistent spacing. */
+.detail-drawer__chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
 }
 
 .detail-drawer__label-key {
-    display: inline-block;
-    background: var(--bg-hover);
     color: var(--text-muted);
-    padding: 1px 6px;
-    border-right: 1px solid var(--border);
-}
-
-.detail-drawer__label-value {
-    display: inline-block;
-    padding: 1px 6px;
-}
-
-.detail-drawer__labels {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0;
+    margin-right: 4px;
 }
 
 /* Comments + downtimes lists share the row layout. */

@@ -143,6 +143,7 @@
             :state="detailState"
             :checkmk-url="props.checkmkUrl ?? null"
             :connection-id="props.connectionId ?? null"
+            :selectable-hosts="flowSelectableHosts"
             portal-target="#orbvis-board-shell"
             @close="closeDetail"
             @acknowledge="onDetailAck"
@@ -153,6 +154,7 @@
             @add-comment="onDetailAddComment"
             @enable-notifications="onDetailToggleNotifications(true)"
             @disable-notifications="onDetailToggleNotifications(false)"
+            @select-host="onSelectFlowHost"
         />
 
         <div v-if="selectedIds.size > 0" class="bulk-actions">
@@ -699,6 +701,24 @@ function onDetailToggleNotifications(enable: boolean): void {
 
 function onDocumentClick(): void {
     if (contextMenu.visible) closeContextMenu();
+}
+
+// Hostnames the Flow Board currently renders — Drawer-Topology entries that
+// match these become click-to-jump buttons. Recomputes on every topology push.
+const flowSelectableHosts = computed(() => nodes.value.map((n) => n.name));
+
+function onSelectFlowHost(hostName: string): void {
+    const node = nodes.value.find((n) => n.name === hostName);
+    if (!node) return;
+    // Synthesize a BoardObject the Drawer can render — Flow Board nodes don't
+    // come from boardConfig.objects, they live in the live topology snapshot.
+    detailObject.value = {
+        id: `flow-host-${hostName}`,
+        type: 'host',
+        x: 0,
+        y: 0,
+        host_name: hostName,
+    } as BoardObject;
 }
 
 const objectActions = useObjectActions(() => props.checkmkUrl ?? null, closeContextMenu);
