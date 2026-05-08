@@ -29,15 +29,12 @@
                             class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
                         />
                     </div>
-                    <div>
-                        <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{{
-                            t('downtime.comment')
-                        }}</label>
-                        <input
+                    <div class="space-y-[4px]">
+                        <CmkLabel>{{ t('downtime.comment') }}</CmkLabel>
+                        <CmkInput
                             v-model="comment"
-                            class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
+                            field-size="FILL"
                             :placeholder="t('downtime.comment') + '…'"
-                            @keydown.esc="$emit('close')"
                         />
                     </div>
                 </div>
@@ -65,6 +62,8 @@
 <script setup lang="ts">
 import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkLabel from '@cmk/components/CmkLabel.vue';
+import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 

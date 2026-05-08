@@ -18,7 +18,6 @@
                         class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
                         :placeholder="t('comment.comment') + '…'"
                         @keydown.enter="submit"
-                        @keydown.esc="$emit('close')"
                     />
                 </div>
 
