@@ -357,9 +357,10 @@ const problemsUrlFull = computed(() => {
     const base = props.checkmkUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
     const siteId = props.object.host_name ?? props.state?.site_id;
     if (!siteId) return null;
+    // svcproblems' built-in defaults (CRIT/WARN/UNKN active) are exactly what
+    // the operator wants here — no filled_in, just the site scope.
     const params = new URLSearchParams({
         view_name: 'svcproblems',
-        filled_in: 'filter',
         site: siteId,
     });
     return `${base}/check_mk/view.py?${params}`;
@@ -378,34 +379,37 @@ interface SummaryChip {
     url: string | null;
 }
 
-// Filter codes pulled from Checkmk's "svcproblems" / "allservices" view —
-// they map service state to the corresponding st0..st3 + stp bitmask checkboxes.
-function svcStateFilter(state: string): Record<string, string> {
-    if (state === 'CRITICAL') return { st0: 'off', st1: 'off', st2: 'on', st3: 'off', stp: 'off' };
-    if (state === 'WARNING') return { st0: 'off', st1: 'on', st2: 'off', st3: 'off', stp: 'off' };
-    if (state === 'UNKNOWN') return { st0: 'off', st1: 'off', st2: 'off', st3: 'on', stp: 'off' };
-    return { st0: 'on', st1: 'off', st2: 'off', st3: 'off', stp: 'off' };
+// Checkmk's filter machinery takes a single "svc_state" / "host_state" filter
+// whose individual st*/hst* checkboxes are interpreted as a bitmask. A box
+// only counts as ON when its parameter is present and equals "on" — sending
+// "off" or omitting it both mean "exclude this state". The whole filter is
+// only honored when "_active" lists svcstate/hoststate alongside the host /
+// site filter; without it the Setup-defined view defaults win.
+function svcStateOn(state: string): string {
+    if (state === 'CRITICAL') return 'st2';
+    if (state === 'WARNING') return 'st1';
+    if (state === 'UNKNOWN') return 'st3';
+    return 'st0'; // OK
 }
 
-function hostStateFilter(state: string): Record<string, string> {
-    if (state === 'DOWN') return { hst0: 'off', hst1: 'on', hst2: 'off', hstp: 'off' };
-    if (state === 'UNREACHABLE') return { hst0: 'off', hst1: 'off', hst2: 'on', hstp: 'off' };
-    return { hst0: 'on', hst1: 'off', hst2: 'off', hstp: 'off' };
+function hostStateOn(state: string): string {
+    if (state === 'DOWN') return 'hst1';
+    if (state === 'UNREACHABLE') return 'hst2';
+    return 'hst0'; // UP
 }
 
 function buildServiceChipUrl(state: string, count: number): string | null {
     if (count <= 0 || !props.checkmkUrl || !props.object) return null;
     const base = props.checkmkUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
-    // svcproblems is the built-in filter form for non-OK states; allservices is
-    // the only view that can show OK rows. Both need filled_in=filter so the
-    // st0..st3 bitmask is applied (otherwise checkmk shows the unfiltered list).
     const params: Record<string, string> = {
-        view_name: state === 'OK' ? 'allservices' : 'svcproblems',
+        view_name: 'allservices',
         filled_in: 'filter',
-        ...svcStateFilter(state),
+        _active: 'svcstate;host',
+        [svcStateOn(state)]: 'on',
     };
     if (props.object.type === 'site' && props.object.host_name) {
         params.site = props.object.host_name;
+        params._active = 'svcstate;site';
     } else if (props.object.host_name) {
         params.host = props.object.host_name;
     } else {
@@ -419,10 +423,11 @@ function buildHostChipUrl(state: string, count: number): string | null {
     if (props.object.type !== 'site' || !props.object.host_name) return null;
     const base = props.checkmkUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
     const params: Record<string, string> = {
-        view_name: state === 'UP' ? 'allhosts' : 'hostproblems',
+        view_name: 'allhosts',
         filled_in: 'filter',
+        _active: 'hoststate;site',
         site: props.object.host_name,
-        ...hostStateFilter(state),
+        [hostStateOn(state)]: 'on',
     };
     return `${base}/check_mk/view.py?${new URLSearchParams(params)}`;
 }
