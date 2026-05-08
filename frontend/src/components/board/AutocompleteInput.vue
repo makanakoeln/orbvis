@@ -38,6 +38,12 @@
             >
                 {{ item.label }}
             </button>
+            <div
+                v-if="truncated > 0"
+                class="px-3 py-2 text-xs text-zinc-500 italic border-t border-zinc-700/60"
+            >
+                +{{ truncated }} more — keep typing to narrow results
+            </div>
         </div>
         <p
             v-if="emptyText && !loading && suggestions.length === 0"
@@ -79,6 +85,12 @@ const displayValue = computed(() => {
     return idx >= 0 ? (props.displayLabels[idx] ?? props.modelValue) : props.modelValue;
 });
 
+// Cap kept so the dropdown stays responsive for thousands of suggestions, but
+// raised from 50 — operators with hosts that have many services were missing
+// entries below the previous cap when they couldn't recall the exact name to
+// type. The list is virtualisable later if this proves too long.
+const SUGGESTION_LIMIT = 500;
+
 const filtered = computed(() => {
     const q = displayValue.value.toLowerCase();
     const items = props.suggestions.map((value, i) => ({
@@ -86,7 +98,17 @@ const filtered = computed(() => {
         label: props.displayLabels?.[i] ?? value,
     }));
     const list = q ? items.filter(({ label }) => label.toLowerCase().includes(q)) : items.slice();
-    return list.sort((a, b) => a.label.localeCompare(b.label)).slice(0, 50);
+    return list.sort((a, b) => a.label.localeCompare(b.label)).slice(0, SUGGESTION_LIMIT);
+});
+
+const truncated = computed(() => {
+    const q = displayValue.value.toLowerCase();
+    const matchCount = q
+        ? props.suggestions.filter((value, i) =>
+              (props.displayLabels?.[i] ?? value).toLowerCase().includes(q),
+          ).length
+        : props.suggestions.length;
+    return Math.max(0, matchCount - SUGGESTION_LIMIT);
 });
 
 function onInput(e: Event) {

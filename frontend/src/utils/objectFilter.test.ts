@@ -36,7 +36,15 @@ describe('objectMatchesFilter', () => {
         const o = obj({
             type: 'textbox',
             host_name: undefined,
-            label: { show: true, text: 'Datacenter A' },
+            label: {
+                show: true,
+                text: 'Datacenter A',
+                x: 0,
+                y: 0,
+                size: 11,
+                color: '#fff',
+                background: 'transparent',
+            },
         });
         expect(objectMatchesFilter(o, 'datacenter')).toBe(true);
     });
