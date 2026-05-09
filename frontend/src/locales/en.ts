@@ -440,6 +440,8 @@ export default {
             'Checkmk fans this command out across all members; partial failures abort the operation.',
         groupHostgroup: 'host group',
         groupServicegroup: 'service group',
+        groupNotConfigured:
+            'Tip: Checkmk only accepts bulk actions on {type}s that are configured in Setup → Host groups (or Service groups). Implicit / livestatus-only groups are rejected by the REST API.',
     },
     downtime: {
         title: 'Schedule downtime',

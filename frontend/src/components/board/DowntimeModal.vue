@@ -42,7 +42,9 @@
                     </div>
                 </div>
 
-                <CmkAlertBox v-if="error" variant="error" size="small">{{ error }}</CmkAlertBox>
+                <CmkAlertBox v-if="error" variant="error" size="small">
+                    <span style="white-space: pre-line">{{ error }}</span>
+                </CmkAlertBox>
                 <p v-if="success" class="text-xs text-green-400">{{ t('downtime.success') }}</p>
 
                 <div class="flex gap-3 justify-end pt-1 border-t border-[var(--border)]">
@@ -160,9 +162,20 @@ async function submit() {
         success.value = true;
         setTimeout(() => emit('close'), 1200);
     } catch (e: unknown) {
-        error.value = e instanceof Error ? e.message : t('downtime.error');
+        const msg = e instanceof Error ? e.message : t('downtime.error');
+        error.value = enrichGroupError(msg);
     } finally {
         submitting.value = false;
     }
+}
+
+// Same enrichment as AckModal — implicit hostgroups (livestatus-only) are
+// rejected by the WATO-backed downtime endpoint with an opaque field error.
+function enrichGroupError(msg: string): string {
+    if (!isGroup.value) return msg;
+    if (/hostgroup_name|servicegroup_name|Group missing|not monitored/i.test(msg)) {
+        return `${msg}\n\n${t('ack.groupNotConfigured', { type: groupTypeLabel.value })}`;
+    }
+    return msg;
 }
 </script>

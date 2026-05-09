@@ -442,6 +442,8 @@ export default {
             'Checkmk verteilt das Kommando an alle Mitglieder; bei Teilfehler wird der Vorgang abgebrochen.',
         groupHostgroup: 'Hostgruppe',
         groupServicegroup: 'Servicegruppe',
+        groupNotConfigured:
+            'Hinweis: Checkmk akzeptiert Bulk-Aktionen nur auf {type}n, die in Setup → Hostgruppen (bzw. Servicegruppen) konfiguriert sind. Implizite / nur über Livestatus sichtbare Gruppen werden vom REST-API abgelehnt.',
     },
     downtime: {
         title: 'Downtime planen',
