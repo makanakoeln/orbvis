@@ -202,3 +202,115 @@ async def test_bulk_services_smaller_than_chunk_size_runs_one_query(monkeypatch)
     assert calls == 1
     assert result["h1"][0]["name"] == "svc-a"
     assert result["h2"] == [] and result["h3"] == []
+
+
+# ---------------------------------------------------------------------------
+# Hostgroup / Servicegroup aggregation summaries
+#
+# The drawer + tooltip count chips are driven by ``services_summary`` on the
+# group's aggregate ObjectState. These tests pin the Livestatus state-byte →
+# summary-slot mapping (UP=ok, DOWN=critical, UNREACHABLE=unknown for hosts;
+# OK/WARN/CRIT/UNKN straight-through for services) and the worst-state pick.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_hostgroup_aggregation_fills_services_summary(monkeypatch):
+    connection = _make_livestatus_connection()
+
+    async def _fake_query(query: str):
+        if query.startswith("GET hostgroups"):
+            # exists check
+            return [["web"]]
+        # GET hosts ... Columns: state
+        return [[0], [0], [1], [2], [0]]  # 3xUP, 1xDOWN, 1xUNREACHABLE
+
+    monkeypatch.setattr(connection, "_query", _fake_query)
+    state = await connection.get_hostgroup_states("web")
+    assert state.state == "DOWN"
+    assert state.services_summary is not None
+    assert state.services_summary.ok == 3
+    assert state.services_summary.critical == 1
+    assert state.services_summary.unknown == 1
+    assert state.services_summary.warning == 0
+
+
+@pytest.mark.asyncio
+async def test_hostgroup_aggregation_unknown_when_no_hosts(monkeypatch):
+    connection = _make_livestatus_connection()
+
+    async def _fake_query(query: str):
+        if query.startswith("GET hostgroups"):
+            return [["empty"]]
+        return []
+
+    monkeypatch.setattr(connection, "_query", _fake_query)
+    state = await connection.get_hostgroup_states("empty")
+    assert state.state == "PENDING"
+    # No hosts → no summary populated.
+    assert state.services_summary is None
+
+
+@pytest.mark.asyncio
+async def test_hostgroup_aggregation_not_found_when_group_missing(monkeypatch):
+    connection = _make_livestatus_connection()
+
+    async def _fake_query(query: str):
+        return []  # exists check returns nothing
+
+    monkeypatch.setattr(connection, "_query", _fake_query)
+    state = await connection.get_hostgroup_states("ghost")
+    assert state.state == "NOT_FOUND"
+
+
+@pytest.mark.asyncio
+async def test_servicegroup_aggregation_fills_services_summary(monkeypatch):
+    connection = _make_livestatus_connection()
+
+    async def _fake_query(query: str):
+        if query.startswith("GET servicegroups"):
+            return [["disks"]]
+        # GET services ... Columns: state
+        return [[0], [0], [1], [2], [3]]  # 2xOK, 1xWARN, 1xCRIT, 1xUNKN
+
+    monkeypatch.setattr(connection, "_query", _fake_query)
+    state = await connection.get_servicegroup_states("disks")
+    assert state.state == "CRITICAL"
+    assert state.services_summary is not None
+    assert state.services_summary.ok == 2
+    assert state.services_summary.warning == 1
+    assert state.services_summary.critical == 1
+    assert state.services_summary.unknown == 1
+
+
+@pytest.mark.asyncio
+async def test_group_member_states_hostgroup_includes_modifiers(monkeypatch):
+    """``get_group_member_states`` returns one row per host with the
+    Plugin-Output (first line only), ack/downtime/notification flags and
+    last-state-change — exactly what the Members tab renders."""
+    connection = _make_livestatus_connection()
+
+    async def _fake_query(query: str):
+        # name, state, output, ack, dt_depth, notif_enabled, last_state_change
+        return [
+            ["srv1", 0, "PING OK\nlatency 1ms", 0, 0, 1, 1700.0],
+            ["srv2", 1, "ping fail", 1, 1, 0, 1750.0],
+        ]
+
+    monkeypatch.setattr(connection, "_query", _fake_query)
+    rows = await connection.get_group_member_states("hostgroup", "web")
+    assert [r["host"] for r in rows] == ["srv1", "srv2"]
+    assert rows[0]["state"] == "UP"
+    assert rows[0]["output"] == "PING OK"  # multi-line collapsed to first
+    assert rows[1]["state"] == "DOWN"
+    assert rows[1]["acknowledged"] is True
+    assert rows[1]["in_downtime"] is True
+    assert rows[1]["notifications_enabled"] is False
+    assert rows[1]["last_state_change"] == 1750.0
+
+
+@pytest.mark.asyncio
+async def test_group_member_states_unknown_type_returns_empty(monkeypatch):
+    connection = _make_livestatus_connection()
+    rows = await connection.get_group_member_states("contactgroup", "x")
+    assert rows == []

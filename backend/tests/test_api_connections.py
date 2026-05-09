@@ -643,3 +643,63 @@ async def test_group_members_unknown_connection(client, admin_token):
     # Default is empty list — connection missing is non-fatal for this read-only endpoint.
     assert resp.status_code == 200
     assert resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_group_members_admin_bypasses_authuser_filter(
+    client, admin_token, mock_connection, monkeypatch
+):
+    """Admins / see_all users must see every member, not the authuser-scoped subset.
+
+    Regression: passing ``user.name`` straight to ``with_auth_user`` clipped
+    the response to 0 rows when cmkadmin wasn't an explicit contact on any
+    host. ``resolve_auth_user`` returns ``None`` for admins so the scope is
+    skipped — this test pins that behaviour.
+    """
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", "/tmp/dummy")  # nosec B108
+    _attach_with_auth_user(mock_connection)
+    mock_connection.get_group_member_states = AsyncMock(
+        return_value=[{"host": "srv1", "service": "", "state": "UP", "output": ""}]
+    )
+    monkeypatch.setitem(state_service._connections, "live_admin", mock_connection)
+
+    resp = await client.get(
+        "/api/v1/connections/live_admin/groups/hostgroup/web/members",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    # with_auth_user must NOT have been entered for an admin caller.
+    assert mock_connection.with_auth_user.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_group_members_non_admin_uses_authuser_filter(
+    client, regular_user, mock_connection, monkeypatch
+):
+    """Non-admin users keep the AuthUser scope (CMK-side contact-group filter)."""
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", "/tmp/dummy")  # nosec B108
+    monkeypatch.setattr(
+        "app.api.v1.deps.cmk_integration.check_checkmk_permission",
+        lambda *_a, **_k: False,
+    )
+    _attach_with_auth_user(mock_connection)
+    mock_connection.get_group_member_states = AsyncMock(return_value=[])
+    monkeypatch.setitem(state_service._connections, "live_user", mock_connection)
+
+    login = await client.post(
+        "/api/v1/auth/login", json={"username": "regular", "password": "secret"}
+    )
+    user_token = login.json()["access_token"]
+
+    resp = await client.get(
+        "/api/v1/connections/live_user/groups/hostgroup/web/members",
+        headers={"Authorization": f"Bearer {user_token}"},
+    )
+    assert resp.status_code == 200
+    # AuthUser scope IS active for a regular user.
+    assert mock_connection.with_auth_user.call_count == 1
