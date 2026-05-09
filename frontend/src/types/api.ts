@@ -344,6 +344,17 @@ export interface PermissionRead {
     obj: string;
 }
 
+export interface GroupMember {
+    host: string;
+    service: string;
+    state: string;
+    output: string;
+    acknowledged?: boolean;
+    in_downtime?: boolean;
+    notifications_enabled?: boolean;
+    last_state_change?: number | null;
+}
+
 export interface ConnectionConfig {
     id: string;
     type: 'livestatus' | 'icinga2' | 'test';

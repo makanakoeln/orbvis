@@ -7,6 +7,7 @@ import logging
 import re
 import time
 from dataclasses import dataclass
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -591,6 +592,47 @@ async def list_backend_objects(
 ) -> list[str]:
     """Return available object names from a connection (for editor autocomplete)."""
     return await get_connection_objects(connection_id, obj_type, host)
+
+
+class GroupMember(BaseModel):
+    """One row of the host- or service-group triage list shown in the drawer."""
+
+    host: str
+    service: str = ""
+    state: str
+    output: str = ""
+    acknowledged: bool = False
+    in_downtime: bool = False
+    notifications_enabled: bool = True
+    last_state_change: float | None = None
+
+
+@router.get(
+    "/{connection_id}/groups/{group_type}/{group_name}/members",
+    response_model=list[GroupMember],
+)
+async def list_group_members(
+    connection_id: str,
+    group_type: Literal["hostgroup", "servicegroup"],
+    group_name: str,
+    user: User = Depends(get_current_user),
+) -> list[GroupMember]:
+    """Return per-member state for a host- or service-group.
+
+    Drives the Members tab of the slide-in drawer. Auth-scoped via Livestatus
+    when the connection supports it so users only see members they're
+    authorised for.
+    """
+    connection = get_connection(connection_id)
+    if connection is None:
+        return []
+    with_auth = getattr(connection, "with_auth_user", None)
+    if with_auth is not None and settings.checkmk_omd_root:
+        async with with_auth(user.name):
+            rows = await connection.get_group_member_states(group_type, group_name)
+    else:
+        rows = await connection.get_group_member_states(group_type, group_name)
+    return [GroupMember.model_validate(dict(r)) for r in rows]
 
 
 @router.get("/{connection_id}/aggregations", response_model=list[AggregationInfo])

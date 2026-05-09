@@ -485,6 +485,10 @@ interface NextCheckText {
     text: string;
     cls: string;
 }
+// CMC's check scheduling can make `next_check` lag behind "now" by a
+// second or two even when the check is healthy. Suppress the "overdue"
+// label until the LAST check is itself stale by this many seconds.
+const OVERDUE_GRACE_SECONDS = 60;
 const nextCheckText = computed((): NextCheckText | null => {
     const ts = props.state?.next_check;
     if (!ts) return null;
@@ -495,9 +499,18 @@ const nextCheckText = computed((): NextCheckText | null => {
             cls: 'text-[var(--text-muted)]',
         };
     }
-    // next_check is in the past — surface "overdue X" as a soft warning so
-    // the operator notices stale data without confusing it with a normal
-    // state.
+    // next_check is in the past. CMC schedules checks sub-second and
+    // returns a `next_check` value that's already a hair behind "now"
+    // even immediately after a successful check — flashing "overdue"
+    // every render would be wrong. Only treat the check as overdue if
+    // the LAST one is also stale; otherwise show the freshness via
+    // last_check.
+    const lastCheck = props.state?.last_check;
+    const sinceLastCheckSec =
+        lastCheck && lastCheck > 0 ? Math.floor(nowMs.value / 1000 - lastCheck) : Infinity;
+    if (sinceLastCheckSec < OVERDUE_GRACE_SECONDS) {
+        return null;
+    }
     const overdue = formatRelativeDuration(ts, nowMs.value);
     if (!overdue) return null;
     return {

@@ -74,6 +74,14 @@
                         <CmkTab v-if="showContextTab" id="context">{{
                             t('board.detailDrawer.tabContext')
                         }}</CmkTab>
+                        <CmkTab v-if="showMembersTab" id="members">
+                            <span class="detail-drawer__tab-with-count">
+                                {{ t('board.detailDrawer.tabMembers') }}
+                                <span class="detail-drawer__tab-count">{{
+                                    groupMembers.length
+                                }}</span>
+                            </span>
+                        </CmkTab>
                         <CmkTab v-if="showActivityTab" id="activity">
                             <span class="detail-drawer__tab-with-count">
                                 {{ t('board.detailDrawer.tabActivity') }}
@@ -390,6 +398,165 @@
                             </div>
                         </CmkTabContent>
 
+                        <CmkTabContent v-if="showMembersTab" id="members" spacing="none">
+                            <div class="detail-drawer__pane">
+                                <!-- Health summary chips: same visual language as
+                                     services_summary on host objects so the operator
+                                     sees an instant good/bad split. -->
+                                <div
+                                    v-if="groupMembers.length"
+                                    class="detail-drawer__chips"
+                                    style="grid-template-columns: repeat(4, 1fr)"
+                                >
+                                    <button
+                                        type="button"
+                                        class="detail-drawer__chip"
+                                        :class="
+                                            memberHealth.crit > 0
+                                                ? 'detail-drawer__chip--crit'
+                                                : 'detail-drawer__chip--zero'
+                                        "
+                                        :disabled="memberHealth.crit === 0"
+                                        @click="onlyProblems = true"
+                                    >
+                                        <span class="detail-drawer__chip-count">{{
+                                            memberHealth.crit
+                                        }}</span>
+                                        <span class="detail-drawer__chip-label">CRIT</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="detail-drawer__chip"
+                                        :class="
+                                            memberHealth.warn > 0
+                                                ? 'detail-drawer__chip--warn'
+                                                : 'detail-drawer__chip--zero'
+                                        "
+                                        :disabled="memberHealth.warn === 0"
+                                        @click="onlyProblems = true"
+                                    >
+                                        <span class="detail-drawer__chip-count">{{
+                                            memberHealth.warn
+                                        }}</span>
+                                        <span class="detail-drawer__chip-label">WARN</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="detail-drawer__chip"
+                                        :class="
+                                            memberHealth.unkn > 0
+                                                ? 'detail-drawer__chip--unknown'
+                                                : 'detail-drawer__chip--zero'
+                                        "
+                                        :disabled="memberHealth.unkn === 0"
+                                        @click="onlyProblems = true"
+                                    >
+                                        <span class="detail-drawer__chip-count">{{
+                                            memberHealth.unkn
+                                        }}</span>
+                                        <span class="detail-drawer__chip-label">UNKN</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="detail-drawer__chip detail-drawer__chip--ok"
+                                        @click="onlyProblems = false"
+                                    >
+                                        <span class="detail-drawer__chip-count">{{
+                                            memberHealth.ok
+                                        }}</span>
+                                        <span class="detail-drawer__chip-label">OK</span>
+                                    </button>
+                                </div>
+
+                                <div class="detail-drawer__member-controls">
+                                    <input
+                                        v-model="memberSearch"
+                                        type="search"
+                                        :placeholder="t('board.detailDrawer.memberSearch')"
+                                        class="detail-drawer__member-search"
+                                    />
+                                    <label class="detail-drawer__member-toggle">
+                                        <input v-model="onlyProblems" type="checkbox" />
+                                        {{ t('board.detailDrawer.onlyProblems') }}
+                                    </label>
+                                </div>
+
+                                <p v-if="loadingMembers" class="detail-drawer__pane-empty">
+                                    {{ t('common.loading') }}
+                                </p>
+                                <p
+                                    v-else-if="filteredMembers.length === 0"
+                                    class="detail-drawer__pane-empty"
+                                >
+                                    {{ t('board.detailDrawer.noMembers') }}
+                                </p>
+                                <ul v-else class="detail-drawer__member-list">
+                                    <li
+                                        v-for="m in visibleMembers"
+                                        :key="m.host + ';' + m.service"
+                                        class="detail-drawer__member-row"
+                                    >
+                                        <span
+                                            class="detail-drawer__member-state"
+                                            :class="`detail-drawer__member-state--${memberStateTone(m.state)}`"
+                                            :title="m.state"
+                                        >
+                                            {{ memberStateBadge(m.state) }}
+                                        </span>
+                                        <div class="detail-drawer__member-body">
+                                            <div class="detail-drawer__member-name">
+                                                <span>{{ m.host }}</span>
+                                                <span
+                                                    v-if="m.service"
+                                                    class="detail-drawer__member-svc"
+                                                    >{{ m.service }}</span
+                                                >
+                                                <span
+                                                    v-if="m.acknowledged"
+                                                    class="detail-drawer__member-flag detail-drawer__member-flag--ack"
+                                                    >ACK</span
+                                                >
+                                                <span
+                                                    v-if="m.in_downtime"
+                                                    class="detail-drawer__member-flag detail-drawer__member-flag--dt"
+                                                    >DT</span
+                                                >
+                                                <span
+                                                    v-if="m.notifications_enabled === false"
+                                                    class="detail-drawer__member-flag detail-drawer__member-flag--mute"
+                                                    >MUTED</span
+                                                >
+                                            </div>
+                                            <div
+                                                v-if="m.output"
+                                                class="detail-drawer__member-output"
+                                                :title="m.output"
+                                            >
+                                                {{ m.output }}
+                                            </div>
+                                        </div>
+                                        <span
+                                            v-if="m.last_state_change"
+                                            class="detail-drawer__member-since"
+                                            :title="formatLocaleTime(m.last_state_change)"
+                                        >
+                                            {{ formatRelativeAge(m.last_state_change) }}
+                                        </span>
+                                    </li>
+                                </ul>
+                                <p
+                                    v-if="truncatedMemberCount > 0"
+                                    class="detail-drawer__member-truncated"
+                                >
+                                    {{
+                                        t('board.detailDrawer.moreMembers', {
+                                            n: truncatedMemberCount,
+                                        })
+                                    }}
+                                </p>
+                            </div>
+                        </CmkTabContent>
+
                         <CmkTabContent v-if="showActivityTab" id="activity" spacing="none">
                             <div class="detail-drawer__pane">
                                 <div
@@ -579,6 +746,7 @@ import { fmtValueWithUnit } from '@/composables/useMetricChart';
 import { useAuthStore } from '@/stores/auth';
 import type {
     BoardObject,
+    GroupMember,
     MetricPoint,
     ObjectDetails,
     ObjectState,
@@ -642,6 +810,11 @@ const selectableHostSet = computed(() => new Set(props.selectableHosts ?? []));
 function canSelectHost(host: string): boolean {
     return selectableHostSet.value.has(host);
 }
+
+// CMC reschedules checks sub-second, so `next_check` lags behind "now"
+// between checks even when the host is healthy. Don't paint "overdue"
+// until the LAST check is itself stale by this many seconds.
+const OVERDUE_GRACE_SECONDS = 60;
 
 // Drives age/overdue labels so they tick forward without a state push.
 const nowMs = ref(Date.now());
@@ -718,6 +891,136 @@ watch(
     },
     { immediate: true },
 );
+
+// Hostgroup / Servicegroup member-list — drives the Members tab. We fetch
+// per-member state (not just the aggregate pill) so the operator can triage
+// without leaving the drawer.
+const groupMembers = ref<GroupMember[]>([]);
+const loadingMembers = ref(false);
+const memberSearch = ref('');
+const onlyProblems = ref(false);
+
+watch(
+    [() => props.object?.type, () => props.object?.group_name, () => props.connectionId],
+    async ([objType, groupName, connId]) => {
+        groupMembers.value = [];
+        memberSearch.value = '';
+        onlyProblems.value = false;
+        if (!connId || !auth.accessToken || !groupName) return;
+        if (objType !== 'hostgroup' && objType !== 'servicegroup') return;
+        loadingMembers.value = true;
+        try {
+            const rows = await connectionsApi.groupMembers(
+                connId,
+                objType,
+                groupName,
+                auth.accessToken,
+            );
+            // Stale-response guard.
+            if (props.object?.type === objType && props.object?.group_name === groupName) {
+                groupMembers.value = rows;
+            }
+        } catch {
+            groupMembers.value = [];
+        } finally {
+            loadingMembers.value = false;
+        }
+    },
+    { immediate: true },
+);
+
+// Severity rank for sort: worst first. Matches the same intent as the radar
+// view but inlined here so the member list and the donut counts agree.
+const _MEMBER_SEVERITY: Record<string, number> = {
+    DOWN: 5,
+    CRITICAL: 5,
+    UNREACHABLE: 4,
+    WARNING: 3,
+    UNKNOWN: 3,
+    PENDING: 1,
+    UP: 0,
+    OK: 0,
+};
+
+const memberHealth = computed(() => {
+    const counts = { ok: 0, warn: 0, crit: 0, unkn: 0, pending: 0 };
+    for (const m of groupMembers.value) {
+        if (m.state === 'OK' || m.state === 'UP') counts.ok += 1;
+        else if (m.state === 'WARNING') counts.warn += 1;
+        else if (m.state === 'CRITICAL' || m.state === 'DOWN') counts.crit += 1;
+        else if (m.state === 'UNKNOWN' || m.state === 'UNREACHABLE') counts.unkn += 1;
+        else counts.pending += 1;
+    }
+    return counts;
+});
+
+const filteredMembers = computed(() => {
+    const needle = memberSearch.value.trim().toLowerCase();
+    return groupMembers.value
+        .filter((m) => {
+            if (onlyProblems.value && (m.state === 'OK' || m.state === 'UP')) return false;
+            if (!needle) return true;
+            return (
+                m.host.toLowerCase().includes(needle) ||
+                m.service.toLowerCase().includes(needle) ||
+                m.output.toLowerCase().includes(needle)
+            );
+        })
+        .sort((a, b) => {
+            const sa = _MEMBER_SEVERITY[a.state] ?? 0;
+            const sb = _MEMBER_SEVERITY[b.state] ?? 0;
+            if (sa !== sb) return sb - sa;
+            return a.host.localeCompare(b.host) || a.service.localeCompare(b.service);
+        });
+});
+
+const MEMBER_TRUNCATE = 50;
+const visibleMembers = computed(() => filteredMembers.value.slice(0, MEMBER_TRUNCATE));
+const truncatedMemberCount = computed(() =>
+    Math.max(0, filteredMembers.value.length - MEMBER_TRUNCATE),
+);
+
+const isGroup = computed(
+    () => props.object?.type === 'hostgroup' || props.object?.type === 'servicegroup',
+);
+
+function memberStateTone(state: string): string {
+    if (state === 'CRITICAL' || state === 'DOWN') return 'crit';
+    if (state === 'WARNING') return 'warn';
+    if (state === 'UNKNOWN' || state === 'UNREACHABLE') return 'unknown';
+    if (state === 'PENDING') return 'pending';
+    return 'ok';
+}
+
+function memberStateBadge(state: string): string {
+    switch (state) {
+        case 'CRITICAL':
+        case 'DOWN':
+            return state === 'DOWN' ? 'D' : 'C';
+        case 'WARNING':
+            return 'W';
+        case 'UNKNOWN':
+            return '?';
+        case 'UNREACHABLE':
+            return 'U';
+        case 'PENDING':
+            return '·';
+        case 'OK':
+        case 'UP':
+            return '✓';
+        default:
+            return '·';
+    }
+}
+
+function formatRelativeAge(ts: number | null | undefined): string {
+    return formatRelativeDuration(ts, nowMs.value);
+}
+
+function formatLocaleTime(ts: number | null | undefined): string {
+    if (!ts) return '';
+    return new Date(ts * 1000).toLocaleString();
+}
 
 const PROBLEM_STATES = new Set(['CRITICAL', 'WARNING', 'UNKNOWN', 'DOWN', 'UNREACHABLE']);
 const isProblematic = computed(() => (props.state ? PROBLEM_STATES.has(props.state.state) : false));
@@ -959,11 +1262,18 @@ const checkInfoRows = computed<MetaRow[]>(() => {
 
     if (s.next_check && s.next_check > 0) {
         if (s.next_check < now) {
-            rows.push({
-                label: t('board.detailDrawer.nextCheck'),
-                value: `${t('board.detailDrawer.overdue')} (${formatRelativeDuration(s.next_check, nowMs.value)})`,
-                tone: 'warn',
-            });
+            // CMC keeps `next_check` slightly behind "now" between checks
+            // because it reschedules sub-second. Suppress "overdue" while
+            // the LAST check is recent — only flag it if the check chain
+            // really has stalled.
+            const sinceLastCheck = s.last_check && s.last_check > 0 ? now - s.last_check : Infinity;
+            if (sinceLastCheck >= OVERDUE_GRACE_SECONDS) {
+                rows.push({
+                    label: t('board.detailDrawer.nextCheck'),
+                    value: `${t('board.detailDrawer.overdue')} (${formatRelativeDuration(s.next_check, nowMs.value)})`,
+                    tone: 'warn',
+                });
+            }
         } else {
             rows.push({
                 label: t('board.detailDrawer.nextCheck'),
@@ -1094,6 +1404,7 @@ const showContextTab = computed(
 const showActivityTab = computed(
     () => commentList.value.length > 0 || downtimeList.value.length > 0,
 );
+const showMembersTab = computed(() => isGroup.value);
 
 const activeTab = ref('status');
 
@@ -2077,5 +2388,170 @@ useMutationObserver(
 
 .detail-drawer__more-item:hover {
     background: var(--bg-hover);
+}
+
+/* ── Group members tab ──────────────────────────────────────────────────── */
+
+.detail-drawer__pane-empty {
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 16px;
+    text-align: center;
+}
+
+.detail-drawer__member-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    margin-bottom: 8px;
+}
+
+.detail-drawer__member-search {
+    flex: 1;
+    min-width: 0;
+    background: var(--default-form-element-bg-color);
+    border: 1px solid var(--default-form-element-border-color);
+    color: var(--text);
+    padding: 4px 8px;
+    border-radius: var(--border-radius);
+    font-size: 12px;
+}
+
+.detail-drawer__member-search:focus {
+    outline: none;
+    border-color: var(--color-corporate-green-50);
+}
+
+.detail-drawer__member-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.detail-drawer__member-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.detail-drawer__member-row {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    gap: 8px;
+    align-items: start;
+    padding: 6px 8px;
+    border-radius: var(--border-radius);
+    background: rgb(255 255 255 / 2%);
+}
+
+.detail-drawer__member-row:hover {
+    background: var(--bg-hover);
+}
+
+.detail-drawer__member-state {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+}
+
+.detail-drawer__member-state--ok {
+    background: #22c55e;
+}
+
+.detail-drawer__member-state--warn {
+    background: #ffd000;
+    color: var(--button-primary-text-color, black);
+}
+
+.detail-drawer__member-state--crit {
+    background: #ef4444;
+}
+
+.detail-drawer__member-state--unknown {
+    background: #f97316;
+}
+
+.detail-drawer__member-state--pending {
+    background: var(--text-muted);
+}
+
+.detail-drawer__member-body {
+    min-width: 0;
+}
+
+.detail-drawer__member-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text);
+}
+
+.detail-drawer__member-svc {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.detail-drawer__member-flag {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.detail-drawer__member-flag--ack {
+    background: rgb(245 158 11 / 20%);
+    color: var(--color-mod-acknowledged);
+}
+
+.detail-drawer__member-flag--dt {
+    background: rgb(59 130 246 / 20%);
+    color: var(--color-mod-downtime);
+}
+
+.detail-drawer__member-flag--mute {
+    background: rgb(113 113 122 / 30%);
+    color: var(--color-mod-muted);
+}
+
+.detail-drawer__member-output {
+    color: var(--text-muted);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 1px;
+}
+
+.detail-drawer__member-since {
+    color: var(--text-muted);
+    font-size: 10px;
+    white-space: nowrap;
+    align-self: center;
+}
+
+.detail-drawer__member-truncated {
+    color: var(--text-muted);
+    font-size: 11px;
+    text-align: center;
+    margin-top: 8px;
+    font-style: italic;
 }
 </style>

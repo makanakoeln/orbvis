@@ -55,6 +55,26 @@ def topology_problem_rank(row: TopologyRow) -> int:
     return int(s.critical * 4 + s.warning * 2 + s.unknown * 2 + s.pending)
 
 
+class GroupMemberRow(TypedDict):
+    """One member of a host- or service-group, with enough state context to
+    render a triage row in the slide-in drawer.
+
+    For hostgroups, ``service`` is empty. For servicegroups, ``service`` holds
+    the service description. Plugin output is the *first line only* — long
+    output is fetched on demand via ``get_object_details`` for the row the
+    operator opens explicitly.
+    """
+
+    host: str
+    service: str
+    state: str
+    output: str
+    acknowledged: NotRequired[bool]
+    in_downtime: NotRequired[bool]
+    notifications_enabled: NotRequired[bool]
+    last_state_change: NotRequired[float | None]
+
+
 class GeoHost(TypedDict):
     """A host with discovered geo-coordinates.
 
@@ -145,6 +165,17 @@ class ConnectionBase(ABC):
     async def get_group_members(self, group_type: str, group_name: str) -> list[str]:
         """Return member names for a radar filter (hostgroup/servicegroup/all_hosts/all_services)."""
         ...
+
+    async def get_group_member_states(
+        self, group_type: str, group_name: str
+    ) -> list[GroupMemberRow]:
+        """Return state details for every member of a host- or service-group.
+
+        Default implementation returns nothing — only Livestatus exposes the
+        full per-member state. The drawer falls back to the existing
+        aggregated state if this returns empty.
+        """
+        return []
 
     async def get_hosts_with_geo(
         self, *, group_type: str | None = None, group_name: str | None = None

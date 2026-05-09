@@ -12,6 +12,7 @@ import type {
     ConnectionContext,
     DowntimeEntry,
     GlobalSettings,
+    GroupMember,
     ImageEntry,
     MapStates,
     MetricGraphGroup,
@@ -325,6 +326,18 @@ export const connectionsApi = {
 
     aggregations: (connectionId: string, token: string): Promise<AggregationInfo[]> =>
         request(`/connections/${connectionId}/aggregations`, {}, token),
+
+    groupMembers: (
+        connectionId: string,
+        groupType: 'hostgroup' | 'servicegroup',
+        groupName: string,
+        token: string,
+    ): Promise<GroupMember[]> =>
+        request(
+            `/connections/${connectionId}/groups/${groupType}/${encodeURIComponent(groupName)}/members`,
+            {},
+            token,
+        ),
 
     test: (connectionId: string, token: string): Promise<{ ok: boolean; message: string }> =>
         request(`/connections/${connectionId}/test`, {}, token),

@@ -13,6 +13,12 @@
     --color-state-critical: #ff0000;
     --color-state-unknown: #ff8800;
     --color-state-pending: #aaaaaa;
+
+    /* Modifier badges shown alongside states in the slidein. CMK's vendored
+       palette has no semantic ack/downtime tokens so we define them here. */
+    --color-mod-acknowledged: #f59e0b;
+    --color-mod-downtime: #3b82f6;
+    --color-mod-muted: #a1a1aa;
 }
 
 :root {

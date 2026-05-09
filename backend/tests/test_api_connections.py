@@ -586,3 +586,60 @@ async def test_topology_cache_isolated_per_auth_user(
     assert r_user.status_code == 200
     # Two distinct auth-user cache keys → two upstream fetches.
     assert mock_connection.get_topology.await_count == 2
+
+
+# ---------------------------------------------------------------------------
+# GET /connections/{id}/groups/{type}/{name}/members
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_group_members_hostgroup(client, admin_token, mock_connection, monkeypatch):
+    from unittest.mock import AsyncMock
+
+    mock_connection.get_group_member_states = AsyncMock(
+        return_value=[
+            {"host": "srv1", "service": "", "state": "DOWN", "output": "ping fail"},
+            {
+                "host": "srv2",
+                "service": "",
+                "state": "UP",
+                "output": "PING OK",
+                "acknowledged": True,
+            },
+        ]
+    )
+    monkeypatch.setitem(state_service._connections, "live_grp", mock_connection)
+
+    resp = await client.get(
+        "/api/v1/connections/live_grp/groups/hostgroup/web/members",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 2
+    assert body[0]["host"] == "srv1"
+    assert body[0]["state"] == "DOWN"
+    assert body[1]["acknowledged"] is True
+
+
+@pytest.mark.asyncio
+async def test_group_members_invalid_group_type(client, admin_token, mock_connection, monkeypatch):
+    monkeypatch.setitem(state_service._connections, "live_grp2", mock_connection)
+    resp = await client.get(
+        "/api/v1/connections/live_grp2/groups/bogus/web/members",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    # Pydantic Literal rejects anything outside hostgroup/servicegroup → 422
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_group_members_unknown_connection(client, admin_token):
+    resp = await client.get(
+        "/api/v1/connections/ghost/groups/hostgroup/x/members",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    # Default is empty list — connection missing is non-fatal for this read-only endpoint.
+    assert resp.status_code == 200
+    assert resp.json() == []

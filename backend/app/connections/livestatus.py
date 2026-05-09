@@ -30,6 +30,7 @@ from app.connections.base import (
     ConnectionBase,
     GeoHost,
     GraphGroup,
+    GroupMemberRow,
     MetricHistoryResult,
     ServiceRow,
     TopologyRow,
@@ -1009,6 +1010,71 @@ class LivestatusConnection(ConnectionBase):
             except (TypeError, ValueError):
                 return None
         return None
+
+    async def get_group_member_states(
+        self, group_type: str, group_name: str
+    ) -> list[GroupMemberRow]:
+        """Fetch per-member state details for a host- or service-group.
+
+        Single Livestatus query per group — the drawer renders the triage
+        list straight from the result without a follow-up round-trip. Plugin
+        output is the first non-empty line so a one-line preview shows next
+        to each member without bloating the response.
+        """
+        if group_type == "hostgroup":
+            query = (
+                "GET hosts\n"
+                "Columns: name state plugin_output acknowledged "
+                "scheduled_downtime_depth notifications_enabled last_state_change\n"
+                f"Filter: groups >= {_ls_escape(group_name)}\n"
+            )
+            rows = await self._query(query)
+            out: list[GroupMemberRow] = []
+            for r in rows:
+                name = _row_str(r, 0)
+                if not name:
+                    continue
+                out.append(
+                    GroupMemberRow(
+                        host=name,
+                        service="",
+                        state=_HOST_STATE_MAP.get(_row_int(r, 1), "UNKNOWN"),
+                        output=_row_str(r, 2).split("\n", 1)[0],
+                        acknowledged=bool(_row_int(r, 3)),
+                        in_downtime=_row_int(r, 4) > 0,
+                        notifications_enabled=bool(_row_int(r, 5)),
+                        last_state_change=_row_float(r, 6) or None,
+                    )
+                )
+            return out
+        if group_type == "servicegroup":
+            query = (
+                "GET services\n"
+                "Columns: host_name description state plugin_output acknowledged "
+                "scheduled_downtime_depth notifications_enabled last_state_change\n"
+                f"Filter: groups >= {_ls_escape(group_name)}\n"
+            )
+            rows = await self._query(query)
+            out_s: list[GroupMemberRow] = []
+            for r in rows:
+                host = _row_str(r, 0)
+                svc = _row_str(r, 1)
+                if not host or not svc:
+                    continue
+                out_s.append(
+                    GroupMemberRow(
+                        host=host,
+                        service=svc,
+                        state=_SERVICE_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
+                        output=_row_str(r, 3).split("\n", 1)[0],
+                        acknowledged=bool(_row_int(r, 4)),
+                        in_downtime=_row_int(r, 5) > 0,
+                        notifications_enabled=bool(_row_int(r, 6)),
+                        last_state_change=_row_float(r, 7) or None,
+                    )
+                )
+            return out_s
+        return []
 
     async def get_hosts_with_geo(
         self, *, group_type: str | None = None, group_name: str | None = None
