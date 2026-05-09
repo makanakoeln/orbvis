@@ -400,71 +400,30 @@
 
                         <CmkTabContent v-if="showMembersTab" id="members" spacing="none">
                             <div class="detail-drawer__pane">
-                                <!-- Health summary chips: same visual language as
-                                     services_summary on host objects so the operator
-                                     sees an instant good/bad split. -->
+                                <!-- Health summary chips: hide zero-counts to match
+                                     the Status tab's hideZeros behaviour. The OK
+                                     chip stays as an anchor for "all green". -->
                                 <div
                                     v-if="groupMembers.length"
                                     class="detail-drawer__chips"
-                                    style="grid-template-columns: repeat(4, 1fr)"
+                                    :style="{
+                                        gridTemplateColumns: `repeat(${memberChips.length}, 1fr)`,
+                                    }"
                                 >
                                     <button
+                                        v-for="chip in memberChips"
+                                        :key="chip.label"
                                         type="button"
                                         class="detail-drawer__chip"
-                                        :class="
-                                            memberHealth.crit > 0
-                                                ? 'detail-drawer__chip--crit'
-                                                : 'detail-drawer__chip--zero'
-                                        "
-                                        :disabled="memberHealth.crit === 0"
-                                        @click="onlyProblems = true"
+                                        :class="`detail-drawer__chip--${chip.tone}`"
+                                        @click="onlyProblems = chip.label !== 'OK'"
                                     >
                                         <span class="detail-drawer__chip-count">{{
-                                            memberHealth.crit
+                                            chip.count
                                         }}</span>
-                                        <span class="detail-drawer__chip-label">CRIT</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="detail-drawer__chip"
-                                        :class="
-                                            memberHealth.warn > 0
-                                                ? 'detail-drawer__chip--warn'
-                                                : 'detail-drawer__chip--zero'
-                                        "
-                                        :disabled="memberHealth.warn === 0"
-                                        @click="onlyProblems = true"
-                                    >
-                                        <span class="detail-drawer__chip-count">{{
-                                            memberHealth.warn
+                                        <span class="detail-drawer__chip-label">{{
+                                            chip.label
                                         }}</span>
-                                        <span class="detail-drawer__chip-label">WARN</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="detail-drawer__chip"
-                                        :class="
-                                            memberHealth.unkn > 0
-                                                ? 'detail-drawer__chip--unknown'
-                                                : 'detail-drawer__chip--zero'
-                                        "
-                                        :disabled="memberHealth.unkn === 0"
-                                        @click="onlyProblems = true"
-                                    >
-                                        <span class="detail-drawer__chip-count">{{
-                                            memberHealth.unkn
-                                        }}</span>
-                                        <span class="detail-drawer__chip-label">UNKN</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="detail-drawer__chip detail-drawer__chip--ok"
-                                        @click="onlyProblems = false"
-                                    >
-                                        <span class="detail-drawer__chip-count">{{
-                                            memberHealth.ok
-                                        }}</span>
-                                        <span class="detail-drawer__chip-label">OK</span>
                                     </button>
                                 </div>
 
@@ -494,54 +453,67 @@
                                     <li
                                         v-for="m in visibleMembers"
                                         :key="m.host + ';' + m.service"
-                                        class="detail-drawer__member-row"
+                                        class="detail-drawer__member-li"
                                     >
-                                        <span
-                                            class="detail-drawer__member-state"
-                                            :class="`detail-drawer__member-state--${memberStateTone(m.state)}`"
-                                            :title="m.state"
+                                        <button
+                                            type="button"
+                                            class="detail-drawer__member-row"
+                                            :title="
+                                                t('board.detailDrawer.openMember', {
+                                                    name: m.service
+                                                        ? m.host + ' / ' + m.service
+                                                        : m.host,
+                                                })
+                                            "
+                                            @click="emit('select-host', m.host, m.service || null)"
                                         >
-                                            {{ memberStateBadge(m.state) }}
-                                        </span>
-                                        <div class="detail-drawer__member-body">
-                                            <div class="detail-drawer__member-name">
-                                                <span>{{ m.host }}</span>
-                                                <span
-                                                    v-if="m.service"
-                                                    class="detail-drawer__member-svc"
-                                                    >{{ m.service }}</span
-                                                >
-                                                <span
-                                                    v-if="m.acknowledged"
-                                                    class="detail-drawer__member-flag detail-drawer__member-flag--ack"
-                                                    >ACK</span
-                                                >
-                                                <span
-                                                    v-if="m.in_downtime"
-                                                    class="detail-drawer__member-flag detail-drawer__member-flag--dt"
-                                                    >DT</span
-                                                >
-                                                <span
-                                                    v-if="m.notifications_enabled === false"
-                                                    class="detail-drawer__member-flag detail-drawer__member-flag--mute"
-                                                    >MUTED</span
-                                                >
-                                            </div>
-                                            <div
-                                                v-if="m.output"
-                                                class="detail-drawer__member-output"
-                                                :title="m.output"
+                                            <span
+                                                class="detail-drawer__member-state"
+                                                :class="`detail-drawer__member-state--${memberStateTone(m.state)}`"
+                                                :title="m.state"
                                             >
-                                                {{ m.output }}
+                                                {{ memberStateBadge(m.state) }}
+                                            </span>
+                                            <div class="detail-drawer__member-body">
+                                                <div class="detail-drawer__member-name">
+                                                    <span>{{ m.host }}</span>
+                                                    <span
+                                                        v-if="m.service"
+                                                        class="detail-drawer__member-svc"
+                                                        >{{ m.service }}</span
+                                                    >
+                                                    <span
+                                                        v-if="m.acknowledged"
+                                                        class="detail-drawer__member-flag detail-drawer__member-flag--ack"
+                                                        >ACK</span
+                                                    >
+                                                    <span
+                                                        v-if="m.in_downtime"
+                                                        class="detail-drawer__member-flag detail-drawer__member-flag--dt"
+                                                        >DT</span
+                                                    >
+                                                    <span
+                                                        v-if="m.notifications_enabled === false"
+                                                        class="detail-drawer__member-flag detail-drawer__member-flag--mute"
+                                                        >MUTED</span
+                                                    >
+                                                </div>
+                                                <div
+                                                    v-if="m.output"
+                                                    class="detail-drawer__member-output"
+                                                    :title="m.output"
+                                                >
+                                                    {{ m.output }}
+                                                </div>
                                             </div>
-                                        </div>
-                                        <span
-                                            v-if="m.last_state_change"
-                                            class="detail-drawer__member-since"
-                                            :title="formatLocaleTime(m.last_state_change)"
-                                        >
-                                            {{ formatRelativeAge(m.last_state_change) }}
-                                        </span>
+                                            <span
+                                                v-if="m.last_state_change"
+                                                class="detail-drawer__member-since"
+                                                :title="formatLocaleTime(m.last_state_change)"
+                                            >
+                                                {{ formatRelativeAge(m.last_state_change) }}
+                                            </span>
+                                        </button>
                                     </li>
                                 </ul>
                                 <p
@@ -803,7 +775,7 @@ const emit = defineEmits<{
     'enable-notifications': [];
     'disable-notifications': [];
     /** Host name picked from the topology section — board may highlight + select it. */
-    'select-host': [hostName: string];
+    'select-host': [hostName: string, serviceDescription?: string | null];
 }>();
 
 const selectableHostSet = computed(() => new Set(props.selectableHosts ?? []));
@@ -983,6 +955,22 @@ const truncatedMemberCount = computed(() =>
 const isGroup = computed(
     () => props.object?.type === 'hostgroup' || props.object?.type === 'servicegroup',
 );
+
+interface MemberChip {
+    label: string;
+    count: number;
+    tone: 'crit' | 'warn' | 'unknown' | 'ok';
+}
+
+const memberChips = computed<MemberChip[]>(() => {
+    const h = memberHealth.value;
+    const chips: MemberChip[] = [];
+    if (h.crit > 0) chips.push({ label: 'CRIT', count: h.crit, tone: 'crit' });
+    if (h.warn > 0) chips.push({ label: 'WARN', count: h.warn, tone: 'warn' });
+    if (h.unkn > 0) chips.push({ label: 'UNKN', count: h.unkn, tone: 'unknown' });
+    chips.push({ label: 'OK', count: h.ok, tone: 'ok' });
+    return chips;
+});
 
 function memberStateTone(state: string): string {
     if (state === 'CRITICAL' || state === 'DOWN') return 'crit';
@@ -2401,6 +2389,7 @@ useMutationObserver(
 
 .detail-drawer__member-controls {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     margin-top: 12px;
@@ -2443,6 +2432,10 @@ useMutationObserver(
     gap: 2px;
 }
 
+.detail-drawer__member-li {
+    list-style: none;
+}
+
 .detail-drawer__member-row {
     display: grid;
     grid-template-columns: 24px 1fr auto;
@@ -2451,10 +2444,22 @@ useMutationObserver(
     padding: 6px 8px;
     border-radius: var(--border-radius);
     background: rgb(255 255 255 / 2%);
+    border: none;
+    width: 100%;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: background 100ms ease;
 }
 
 .detail-drawer__member-row:hover {
     background: var(--bg-hover);
+}
+
+.detail-drawer__member-row:focus-visible {
+    outline: 2px solid var(--color-corporate-green-50);
+    outline-offset: -2px;
 }
 
 .detail-drawer__member-state {
@@ -2545,6 +2550,7 @@ useMutationObserver(
     font-size: 10px;
     white-space: nowrap;
     align-self: center;
+    font-variant-numeric: tabular-nums;
 }
 
 .detail-drawer__member-truncated {

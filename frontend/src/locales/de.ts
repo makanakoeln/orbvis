@@ -220,6 +220,7 @@ export default {
             onlyProblems: 'Nur Probleme',
             noMembers: 'Keine Mitglieder passen zum aktuellen Filter',
             moreMembers: '+{n} weitere — Filter verfeinern um sie zu sehen',
+            openMember: '{name} im Drawer öffnen',
             checkCommand: 'Check-Kommando',
             lastOk: 'Zuletzt OK',
             latency: 'Latenz',

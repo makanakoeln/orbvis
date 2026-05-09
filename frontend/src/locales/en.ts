@@ -218,6 +218,7 @@ export default {
             onlyProblems: 'Only problems',
             noMembers: 'No members match the current filter',
             moreMembers: '+{n} more — refine the filter to see them',
+            openMember: 'Open {name} in the drawer',
             checkCommand: 'Check command',
             lastOk: 'Last OK',
             latency: 'Latency',

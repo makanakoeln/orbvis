@@ -1431,11 +1431,38 @@ const selectableHostNames = computed(() =>
         .map((o) => o.host_name as string),
 );
 
-function onSelectHost(hostName: string) {
-    const obj = (boardConfig.value?.objects ?? []).find(
-        (o) => o.type === 'host' && o.host_name === hostName,
-    );
-    if (obj) detailDrawerObject.value = obj;
+function onSelectHost(hostName: string, serviceDescription?: string | null) {
+    // Prefer a real board-object so toolbar actions (ack/downtime) bind to the
+    // operator's curated entry. Fall back to a synthesised object so members
+    // discovered via the hostgroup drawer (often not placed on the board)
+    // still open in the same slidein — the parent state cycle lifts onto the
+    // standard host/service-detail-fetch watch automatically.
+    const objs = boardConfig.value?.objects ?? [];
+    const real = objs.find((o) => {
+        if (o.type === 'service') {
+            return (
+                o.host_name === hostName &&
+                (serviceDescription ? o.service_description === serviceDescription : true)
+            );
+        }
+        return o.type === 'host' && o.host_name === hostName;
+    });
+    if (real) {
+        detailDrawerObject.value = real;
+        return;
+    }
+    detailDrawerObject.value = {
+        id: serviceDescription
+            ? `transient:${hostName};${serviceDescription}`
+            : `transient:${hostName}`,
+        type: serviceDescription ? 'service' : 'host',
+        host_name: hostName,
+        service_description: serviceDescription ?? undefined,
+        x: 0,
+        y: 0,
+        z: 0,
+        url_target: '_blank',
+    };
 }
 
 function closeDetail() {
