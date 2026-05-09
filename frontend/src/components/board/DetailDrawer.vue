@@ -611,12 +611,23 @@
                 </h4>
                 <div class="detail-drawer__actions-grid">
                     <CmkButton
-                        v-if="!state?.acknowledged && isProblematic"
+                        v-if="!state?.acknowledged && (isProblematic || isGroup)"
                         variant="success"
                         class="detail-drawer__action detail-drawer__action--primary"
+                        :title="
+                            isGroup
+                                ? t('board.detailDrawer.ackGroupTooltip', {
+                                      n: groupMembers.length,
+                                  })
+                                : ''
+                        "
                         @click="emit('acknowledge')"
                     >
-                        {{ t('board.detailDrawer.ackLabel') }}
+                        {{
+                            isGroup
+                                ? t('board.detailDrawer.ackGroupLabel', { n: groupMembers.length })
+                                : t('board.detailDrawer.ackLabel')
+                        }}
                     </CmkButton>
                     <CmkButton
                         v-if="state?.acknowledged"
@@ -637,9 +648,20 @@
                         v-if="!state?.in_downtime"
                         variant="optional"
                         class="detail-drawer__action"
+                        :title="
+                            isGroup
+                                ? t('board.detailDrawer.dtGroupTooltip', {
+                                      n: groupMembers.length,
+                                  })
+                                : ''
+                        "
                         @click="emit('schedule-downtime')"
                     >
-                        {{ t('board.detailDrawer.scheduleDowntimeLabel') }}
+                        {{
+                            isGroup
+                                ? t('board.detailDrawer.dtGroupLabel', { n: groupMembers.length })
+                                : t('board.detailDrawer.scheduleDowntimeLabel')
+                        }}
                     </CmkButton>
                     <CmkButton
                         v-if="state?.in_downtime"

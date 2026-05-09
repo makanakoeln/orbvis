@@ -219,6 +219,10 @@ export default {
             noMembers: 'No members match the current filter',
             moreMembers: '+{n} more — refine the filter to see them',
             openMember: 'Open {name} in the drawer',
+            ackGroupLabel: 'Acknowledge ({n})',
+            ackGroupTooltip: 'Acknowledge problems on all {n} members of this group',
+            dtGroupLabel: 'Downtime ({n})',
+            dtGroupTooltip: 'Schedule downtime on all {n} members of this group',
             checkCommand: 'Check command',
             lastOk: 'Last OK',
             latency: 'Latency',
@@ -431,6 +435,11 @@ export default {
         submitting: 'Acknowledging…',
         success: 'Acknowledgement set',
         error: 'Failed to acknowledge',
+        groupScope: 'Applies to every member of the {type}',
+        groupHint:
+            'Checkmk fans this command out across all members; partial failures abort the operation.',
+        groupHostgroup: 'host group',
+        groupServicegroup: 'service group',
     },
     downtime: {
         title: 'Schedule downtime',

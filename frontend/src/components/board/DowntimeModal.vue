@@ -7,6 +7,9 @@
             >
                 <h3 class="text-base font-bold text-[var(--text)]">{{ t('downtime.title') }}</h3>
                 <p class="text-xs text-[var(--text-muted)] -mt-2">{{ displayName }}</p>
+                <p v-if="isGroup" class="text-xs text-amber-400 -mt-2" :title="t('ack.groupHint')">
+                    {{ t('ack.groupScope', { type: groupTypeLabel }) }}
+                </p>
 
                 <div class="space-y-3">
                     <div>
@@ -99,6 +102,13 @@ const success = ref(false);
 
 const displayName = computed(() => getBoardObjectName(props.object));
 
+const isGroup = computed(
+    () => props.object.type === 'hostgroup' || props.object.type === 'servicegroup',
+);
+const groupTypeLabel = computed(() =>
+    props.object.type === 'hostgroup' ? t('ack.groupHostgroup') : t('ack.groupServicegroup'),
+);
+
 async function submit() {
     if (!comment.value.trim() || submitting.value) return;
     submitting.value = true;
@@ -107,7 +117,25 @@ async function submit() {
     try {
         const start = new Date(startTime.value).toISOString();
         const end = new Date(endTime.value).toISOString();
-        if (
+        // Group downtimes fan out via CMK's downtime_type=hostgroup|servicegroup
+        // — one REST call covers every member.
+        if (props.object.type === 'hostgroup' && props.object.group_name) {
+            await cmkApi.downtimeHostgroup(
+                props.checkmkUrl,
+                props.object.group_name,
+                start,
+                end,
+                commentText,
+            );
+        } else if (props.object.type === 'servicegroup' && props.object.group_name) {
+            await cmkApi.downtimeServicegroup(
+                props.checkmkUrl,
+                props.object.group_name,
+                start,
+                end,
+                commentText,
+            );
+        } else if (
             props.object.type === 'service' &&
             props.object.host_name &&
             props.object.service_description

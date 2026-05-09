@@ -740,6 +740,80 @@ export const cmkApi = {
         });
     },
 
+    // ── Group bulk-actions ─────────────────────────────────────────────────
+    // CMK's REST API supports ``acknowledge_type=hostgroup|servicegroup`` and
+    // ``downtime_type=hostgroup|servicegroup`` so a single call applies to
+    // every member of the group. This is dramatically faster (and safer in
+    // terms of partial failures) than looping per-member from the UI.
+
+    acknowledgeHostgroup(
+        baseUrl: string,
+        groupName: string,
+        comment: string,
+        sticky: boolean,
+        notify: boolean,
+        persistent: boolean,
+    ): Promise<void> {
+        return cmkRequest(baseUrl, '/domain-types/acknowledge/collections/host', {
+            acknowledge_type: 'hostgroup',
+            hostgroup_name: groupName,
+            comment,
+            sticky,
+            notify,
+            persistent,
+        });
+    },
+
+    acknowledgeServicegroup(
+        baseUrl: string,
+        groupName: string,
+        comment: string,
+        sticky: boolean,
+        notify: boolean,
+        persistent: boolean,
+    ): Promise<void> {
+        return cmkRequest(baseUrl, '/domain-types/acknowledge/collections/service', {
+            acknowledge_type: 'servicegroup',
+            servicegroup_name: groupName,
+            comment,
+            sticky,
+            notify,
+            persistent,
+        });
+    },
+
+    downtimeHostgroup(
+        baseUrl: string,
+        groupName: string,
+        startTime: string,
+        endTime: string,
+        comment: string,
+    ): Promise<void> {
+        return cmkRequest(baseUrl, '/domain-types/downtime/collections/host', {
+            downtime_type: 'hostgroup',
+            hostgroup_name: groupName,
+            start_time: startTime,
+            end_time: endTime,
+            comment,
+        });
+    },
+
+    downtimeServicegroup(
+        baseUrl: string,
+        groupName: string,
+        startTime: string,
+        endTime: string,
+        comment: string,
+    ): Promise<void> {
+        return cmkRequest(baseUrl, '/domain-types/downtime/collections/service', {
+            downtime_type: 'servicegroup',
+            servicegroup_name: groupName,
+            start_time: startTime,
+            end_time: endTime,
+            comment,
+        });
+    },
+
     enableNotificationsHost: (baseUrl: string, hostname: string) =>
         cmkHostAction(baseUrl, hostname, 'enable-notifications'),
 

@@ -7,6 +7,9 @@
             >
                 <h3 class="text-base font-bold text-[var(--text)]">{{ t('ack.title') }}</h3>
                 <p class="text-xs text-[var(--text-muted)] -mt-2">{{ displayName }}</p>
+                <p v-if="isGroup" class="text-xs text-amber-400 -mt-2" :title="t('ack.groupHint')">
+                    {{ t('ack.groupScope', { type: groupTypeLabel }) }}
+                </p>
 
                 <div class="space-y-3">
                     <div>
@@ -78,6 +81,13 @@ const commentEl = ref<HTMLInputElement | null>(null);
 
 const displayName = computed(() => getBoardObjectName(props.object));
 
+const isGroup = computed(
+    () => props.object.type === 'hostgroup' || props.object.type === 'servicegroup',
+);
+const groupTypeLabel = computed(() =>
+    props.object.type === 'hostgroup' ? t('ack.groupHostgroup') : t('ack.groupServicegroup'),
+);
+
 onMounted(() => commentEl.value?.focus());
 
 async function submit() {
@@ -85,7 +95,28 @@ async function submit() {
     submitting.value = true;
     error.value = '';
     try {
-        if (
+        // Group acks fan out via CMK's acknowledge_type=hostgroup|servicegroup
+        // — one REST call applies to every member, much faster (and atomic
+        // wrt failures) than looping per-member from the UI.
+        if (props.object.type === 'hostgroup' && props.object.group_name) {
+            await cmkApi.acknowledgeHostgroup(
+                props.checkmkUrl,
+                props.object.group_name,
+                comment.value,
+                sticky.value,
+                notify.value,
+                persistent.value,
+            );
+        } else if (props.object.type === 'servicegroup' && props.object.group_name) {
+            await cmkApi.acknowledgeServicegroup(
+                props.checkmkUrl,
+                props.object.group_name,
+                comment.value,
+                sticky.value,
+                notify.value,
+                persistent.value,
+            );
+        } else if (
             props.object.type === 'service' &&
             props.object.host_name &&
             props.object.service_description

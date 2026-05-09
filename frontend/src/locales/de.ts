@@ -221,6 +221,10 @@ export default {
             noMembers: 'Keine Mitglieder passen zum aktuellen Filter',
             moreMembers: '+{n} weitere — Filter verfeinern um sie zu sehen',
             openMember: '{name} im Drawer öffnen',
+            ackGroupLabel: 'Acknowledge ({n})',
+            ackGroupTooltip: 'Probleme aller {n} Mitglieder dieser Gruppe quittieren',
+            dtGroupLabel: 'Downtime ({n})',
+            dtGroupTooltip: 'Wartung für alle {n} Mitglieder dieser Gruppe planen',
             checkCommand: 'Check-Kommando',
             lastOk: 'Zuletzt OK',
             latency: 'Latenz',
@@ -433,6 +437,11 @@ export default {
         submitting: 'Wird quittiert…',
         success: 'Quittierung gesetzt',
         error: 'Fehler beim Quittieren',
+        groupScope: 'Wird auf alle Mitglieder der {type} angewendet',
+        groupHint:
+            'Checkmk verteilt das Kommando an alle Mitglieder; bei Teilfehler wird der Vorgang abgebrochen.',
+        groupHostgroup: 'Hostgruppe',
+        groupServicegroup: 'Servicegruppe',
     },
     downtime: {
         title: 'Downtime planen',
