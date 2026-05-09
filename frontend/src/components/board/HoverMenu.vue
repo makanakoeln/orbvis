@@ -527,7 +527,16 @@ interface ServicePill {
 }
 
 const servicePills = computed((): ServicePill[] => {
-    if (props.object.type !== 'host') return [];
+    // Hosts: per-host service-state breakdown.
+    // Hostgroups/Servicegroups: per-member state breakdown — the backend
+    // populates the same ``services_summary`` shape (UP→ok, DOWN→critical,
+    // UNREACHABLE→unknown for hostgroups), so the same pill row works.
+    if (
+        props.object.type !== 'host' &&
+        props.object.type !== 'hostgroup' &&
+        props.object.type !== 'servicegroup'
+    )
+        return [];
     const summary = props.state?.services_summary;
     if (!summary) return [];
     // Severity-descending: a CRIT pill catches the eye before "all green",

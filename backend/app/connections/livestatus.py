@@ -851,11 +851,18 @@ class LivestatusConnection(ConnectionBase):
         rows = await self._query(query)
         if not rows:
             return ObjectState(object_id="", type="hostgroup", state="PENDING")
-        worst = max(
-            (_HOST_STATE_MAP.get(_row_int(r, 0), "UNKNOWN") for r in rows),
-            key=lambda s: _HOST_SEVERITY.get(s, 0),
+        states = [_HOST_STATE_MAP.get(_row_int(r, 0), "UNKNOWN") for r in rows]
+        worst = max(states, key=lambda s: _HOST_SEVERITY.get(s, 0))
+        # Map host states onto the services_summary slots so the hover/tooltip
+        # can render counts the same way it does for host objects: UP=ok,
+        # DOWN=critical, UNREACHABLE=unknown.
+        summary = ServicesSummary(
+            ok=sum(1 for s in states if s == "UP"),
+            critical=sum(1 for s in states if s == "DOWN"),
+            unknown=sum(1 for s in states if s == "UNREACHABLE"),
+            pending=sum(1 for s in states if s == "PENDING"),
         )
-        return ObjectState(object_id="", type="hostgroup", state=worst)
+        return ObjectState(object_id="", type="hostgroup", state=worst, services_summary=summary)
 
     async def get_servicegroup_states(self, group: str) -> ObjectState:
         exists_q = f"GET servicegroups\nColumns: name\nFilter: name = {_ls_escape(group)}\n"
@@ -866,11 +873,16 @@ class LivestatusConnection(ConnectionBase):
         rows = await self._query(query)
         if not rows:
             return ObjectState(object_id="", type="servicegroup", state="PENDING")
-        worst = max(
-            (_SERVICE_STATE_MAP.get(_row_int(r, 0), "UNKNOWN") for r in rows),
-            key=lambda s: _SERVICE_SEVERITY.get(s, 0),
+        states = [_SERVICE_STATE_MAP.get(_row_int(r, 0), "UNKNOWN") for r in rows]
+        worst = max(states, key=lambda s: _SERVICE_SEVERITY.get(s, 0))
+        summary = ServicesSummary(
+            ok=sum(1 for s in states if s == "OK"),
+            warning=sum(1 for s in states if s == "WARNING"),
+            critical=sum(1 for s in states if s == "CRITICAL"),
+            unknown=sum(1 for s in states if s == "UNKNOWN"),
+            pending=sum(1 for s in states if s == "PENDING"),
         )
-        return ObjectState(object_id="", type="servicegroup", state=worst)
+        return ObjectState(object_id="", type="servicegroup", state=worst, services_summary=summary)
 
     async def get_objects(self, obj_type: str) -> list[str]:
         if obj_type == "host":

@@ -626,9 +626,14 @@ async def list_group_members(
     connection = get_connection(connection_id)
     if connection is None:
         return []
+    # ``resolve_auth_user`` returns ``None`` for admins / users with see_all,
+    # which is what every other state-fetch path uses. Passing ``user.name``
+    # unconditionally caused the AuthUser filter to drop hosts where cmkadmin
+    # isn't an explicit contact — admins must see the whole group.
+    auth_user = resolve_auth_user(user.name, user.is_admin)
     with_auth = getattr(connection, "with_auth_user", None)
-    if with_auth is not None and settings.checkmk_omd_root:
-        async with with_auth(user.name):
+    if auth_user is not None and with_auth is not None:
+        async with with_auth(auth_user):
             rows = await connection.get_group_member_states(group_type, group_name)
     else:
         rows = await connection.get_group_member_states(group_type, group_name)
