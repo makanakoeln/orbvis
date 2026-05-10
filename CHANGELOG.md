@@ -61,6 +61,10 @@ without changing any public API.
   as a Checkmk-builtin in 2.6 (3 blockers, 4 should-fixes
   documented)
 - GUI MKP-update test path covered alongside the existing CLI path
+- `deploy-cmc.sh`-driven installs now launch the daemon via
+  `python -m uvicorn` so the absence of a `venv/bin/uvicorn`
+  console script (when OMD's site-python already imports uvicorn
+  for `cmk-agent-receiver`) no longer breaks startup
 
 ## [0.1.0] - 2026-05-03
 
