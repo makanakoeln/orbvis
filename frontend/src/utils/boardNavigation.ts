@@ -60,17 +60,30 @@ export function buildCheckmkUrl(obj: BoardObject, checkmkUrl: string | null): st
 /**
  * For object types where the live monitoring view (``buildCheckmkUrl``)
  * isn't where the operator's "edit this thing" intent leads, return the
- * configuration/setup URL. Currently only BI aggregations have a
- * meaningful edit destination — the BI packs overview, since CMK doesn't
- * expose deep-linking to a specific aggregation editor without the
- * pack name (no REST endpoint for that lookup either).
+ * configuration/setup URL.
+ *
+ * BI aggregations: when ``packId`` is supplied (resolved from the
+ * AggregationInfo cache the EditPanel + Drawer already keep), deep-link
+ * straight into the rules editor of that pack (``mode=bi_rules&pack=…``)
+ * so the operator can immediately find + edit the aggregation. Falls
+ * back to the BI packs overview (``mode=bi_packs``) when no pack id is
+ * available — better than nothing, just one extra click.
  */
-export function buildCheckmkSetupUrl(obj: BoardObject, checkmkUrl: string | null): string | null {
+export function buildCheckmkSetupUrl(
+    obj: BoardObject,
+    checkmkUrl: string | null,
+    packId?: string | null,
+): string | null {
     const r = _baseAndSite(checkmkUrl);
     if (!r) return null;
     const { base, p } = r;
     if (obj.type === 'aggregation') {
-        p.mode = 'bi_packs';
+        if (packId) {
+            p.mode = 'bi_rules';
+            p.pack = packId;
+        } else {
+            p.mode = 'bi_packs';
+        }
         return `${base}/check_mk/wato.py?${new URLSearchParams(p)}`;
     }
     return null;

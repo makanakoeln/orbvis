@@ -1155,9 +1155,38 @@ const typeLabel = computed(() => (props.object ? getObjectTypeLabel(props.object
 const checkmkUrlFull = computed(() =>
     props.object ? buildCheckmkUrl(props.object, props.checkmkUrl ?? null) : null,
 );
-const checkmkSetupUrlFull = computed(() =>
-    props.object ? buildCheckmkSetupUrl(props.object, props.checkmkUrl ?? null) : null,
+// Lookup of aggregation_id → pack_id, populated lazily when this drawer
+// shows a BI aggregation. Lets buildCheckmkSetupUrl deep-link into the
+// owning pack's rules editor instead of the bi_packs overview.
+const aggregationPackIds = ref<Record<string, string>>({});
+watch(
+    () => [props.object?.type, props.object?.aggregation_id, props.connectionId] as const,
+    async ([type, aggId, connId]) => {
+        if (type !== 'aggregation' || !aggId || !connId) return;
+        if (aggId in aggregationPackIds.value) return;
+        const auth = useAuthStore();
+        if (!auth.accessToken) return;
+        try {
+            const aggrs = await connectionsApi.aggregations(connId, auth.accessToken);
+            const next: Record<string, string> = { ...aggregationPackIds.value };
+            for (const a of aggrs) {
+                if (a.pack_id) next[a.id] = a.pack_id;
+            }
+            aggregationPackIds.value = next;
+        } catch {
+            // Pack-id lookup failure means we fall back to the bi_packs
+            // overview link, which is fine; nothing to do here.
+        }
+    },
+    { immediate: true },
 );
+
+const checkmkSetupUrlFull = computed(() => {
+    if (!props.object) return null;
+    const aggId = props.object.aggregation_id ?? null;
+    const packId = aggId ? aggregationPackIds.value[aggId] : null;
+    return buildCheckmkSetupUrl(props.object, props.checkmkUrl ?? null, packId ?? null);
+});
 
 const problemsUrlFull = computed(() => {
     if (!props.object || props.object.type !== 'site' || !props.checkmkUrl) return null;
