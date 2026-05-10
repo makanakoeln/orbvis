@@ -13,8 +13,8 @@
             :y1="link.y1"
             :x2="link.x2"
             :y2="link.y2"
-            stroke="rgb(113 113 122 / 0.5)"
-            stroke-width="1"
+            :stroke="link.onWorstPath ? WORST_PATH_COLOR : 'rgb(113 113 122 / 0.5)'"
+            :stroke-width="link.onWorstPath ? 2.5 : 1"
         />
         <!-- Root is the BoardObject icon itself, so skip it here -->
         <g
@@ -30,8 +30,14 @@
             <circle
                 :r="nodeRadius"
                 :fill="stateColorFor(node.data)"
-                :stroke="strokeFor(node.data)"
-                :stroke-width="node.data.in_downtime || node.data.acknowledged ? 2.5 : 1.5"
+                :stroke="node.onWorstPath ? WORST_PATH_COLOR : strokeFor(node.data)"
+                :stroke-width="
+                    node.onWorstPath
+                        ? 3
+                        : node.data.in_downtime || node.data.acknowledged
+                          ? 2.5
+                          : 1.5
+                "
                 :stroke-dasharray="node.data.in_downtime ? '3 2' : undefined"
             />
             <!-- Downtime/ack badges — same SVG paths as BoardObject's badges so
@@ -118,6 +124,11 @@ const BADGE_OFFSET_F = 0.7; // badge center offset from node center (× nodeRadi
 const BADGE_RADIUS_F = 0.55; // badge circle radius (× nodeRadius)
 const TOP_PAD = 20; // top inset before the root row
 const LABEL_PAD = 60; // extra horizontal padding for label overflow
+// Highlight colour for the path from the root to the worst leaf.
+// Stays distinct from the state-fill colours (which use saturated
+// reds/yellows for actual leaf state) so the path stands out as a
+// trace rather than another state colour.
+const WORST_PATH_COLOR = 'rgb(244 114 182)';
 
 // BI state codes (cmk.bi.bi_aggregation.BIStates) → service-style labels.
 const BI_STATE_LABEL: Record<number, MonitoringState> = {
@@ -195,6 +206,7 @@ interface RenderedNode {
     x: number;
     y: number;
     data: AggregationNode;
+    onWorstPath: boolean;
 }
 interface RenderedLink {
     key: string;
@@ -202,6 +214,7 @@ interface RenderedLink {
     y1: number;
     x2: number;
     y2: number;
+    onWorstPath: boolean;
 }
 
 // d3.tree() produces a tidy hierarchical layout: every parent's subtree gets a
@@ -214,9 +227,41 @@ const layout = computed(() => {
     return layoutFn(root);
 });
 
+// Set of d3 hierarchy nodes that lie on the path from the root to the
+// worst-state leaf. Operators triaging an aggregation flip want to
+// answer "which branch caused this?" without clicking through every
+// leaf — highlighting the path makes that visual at a glance.
+//
+// Tie-break: the deepest leaf wins (more specific failure trumps a
+// shallower one of the same severity). When all leaves are OK the set
+// is empty and the highlight is a no-op.
+const worstPath = computed<Set<HierarchyNode<AggregationNode>>>(() => {
+    type HN = HierarchyNode<AggregationNode>;
+    // Collect leaves first so the comparator can pick its worst without
+    // tripping up TS's flow-sensitive narrowing inside the each() callback.
+    const problemLeaves: HN[] = [];
+    layout.value.each((n: HN) => {
+        if (n.data.node_type === 'bi_leaf' && n.data.state > 0) problemLeaves.push(n);
+    });
+    if (problemLeaves.length === 0) return new Set();
+    problemLeaves.sort((a, b) => {
+        if (a.data.state !== b.data.state) return b.data.state - a.data.state;
+        return b.depth - a.depth; // deeper wins as a tie-break
+    });
+    const worst: HN = problemLeaves[0];
+    const set = new Set<HN>();
+    let cur: HN | null = worst;
+    while (cur !== null) {
+        set.add(cur);
+        cur = cur.parent;
+    }
+    return set;
+});
+
 const renderedNodes = computed<RenderedNode[]>(() => {
     const out: RenderedNode[] = [];
     let i = 0;
+    const path = worstPath.value;
     layout.value.each((n) => {
         if (n.depth === 0) {
             i++;
@@ -227,6 +272,7 @@ const renderedNodes = computed<RenderedNode[]>(() => {
             x: n.x ?? 0,
             y: TOP_PAD + (n.y ?? 0),
             data: n.data,
+            onWorstPath: path.has(n),
         });
     });
     return out;
@@ -235,6 +281,7 @@ const renderedNodes = computed<RenderedNode[]>(() => {
 const renderedLinks = computed<RenderedLink[]>(() => {
     const out: RenderedLink[] = [];
     let idx = 0;
+    const path = worstPath.value;
     layout.value.each((n) => {
         if (!n.parent) return;
         out.push({
@@ -243,6 +290,7 @@ const renderedLinks = computed<RenderedLink[]>(() => {
             y1: TOP_PAD + (n.parent.y ?? 0),
             x2: n.x ?? 0,
             y2: TOP_PAD + (n.y ?? 0),
+            onWorstPath: path.has(n) && path.has(n.parent),
         });
     });
     return out;
