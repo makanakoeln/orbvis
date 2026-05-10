@@ -528,12 +528,69 @@ async function cmkGetDowntimes(
     }));
 }
 
-function cmkHostAction(baseUrl: string, hostname: string, action: string): Promise<void> {
-    return cmkRequest(
-        baseUrl,
-        `/objects/host/${encodeURIComponent(hostname)}/actions/${action}/invoke`,
-        {},
-    );
+/**
+ * Action verbs the orbvis backend's livestatus-command relay accepts.
+ * Mirrors `_HOST_COMMANDS` / `_SERVICE_COMMANDS` in
+ * backend/app/api/v1/connections.py — keep the lists in sync.
+ */
+type CmkAction =
+    | 'force_check'
+    | 'enable_notifications'
+    | 'disable_notifications'
+    | 'enable_checks'
+    | 'disable_checks'
+    | 'remove_acknowledgement';
+
+/**
+ * Resolve the OrbVis API base from the CMK baseUrl the DetailDrawer
+ * passes us. `<host>/<site>/check_mk/` → `<host>/<site>/orbvis/api/v1`.
+ *
+ * The cmkApi entries take a CMK URL because they used to talk to the
+ * Checkmk REST API directly. Force-check / enable-notifications /
+ * disable-active-checks etc. don't exist as REST verbs in any version of
+ * Checkmk (2.3–2.6), so the calls now route through OrbVis's own backend
+ * which writes to the livestatus command pipe instead.
+ */
+function orbvisApiBase(cmkBaseUrl: string): string {
+    return cmkBaseUrl.replace(/\/check_mk\/?$/, '/orbvis/api/v1').replace(/\/$/, '');
+}
+
+async function orbvisCommand(
+    cmkBaseUrl: string,
+    target: 'host-action' | 'service-action',
+    body: Record<string, unknown>,
+): Promise<void> {
+    // The cmkApi was originally session-cookie based (CMK SSO). Its
+    // replacement uses OrbVis's own JWT. Read the same key the auth store
+    // writes — keeping cmkApi callable from places without a vue-store
+    // injection (composables, modal components).
+    const token = sessionStorage.getItem('orbvis_access_token') || '';
+    // OrbVis hardcodes "live_1" as the default connection_id on every
+    // CMK-bundled install (set by orbvis-setup), so it's a safe default
+    // for action commands. Future work: thread the active board's
+    // connection_id through if multi-backend setups need it.
+    const connectionId = 'live_1';
+    const url = `${orbvisApiBase(cmkBaseUrl)}/connections/${connectionId}/${target}`;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+        body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+        const detail = await response.json().catch(() => null);
+        const msg = detail?.detail ?? detail?.title ?? `HTTP ${response.status}`;
+        throw new Error(typeof msg === 'string' ? msg : `HTTP ${response.status}`);
+    }
+}
+
+function cmkHostAction(baseUrl: string, hostname: string, action: CmkAction): Promise<void> {
+    return orbvisCommand(baseUrl, 'host-action', {
+        action,
+        host_name: hostname,
+    });
 }
 
 // ---- Metrics (perfometer) ----
@@ -554,10 +611,13 @@ function cmkServiceAction(
     baseUrl: string,
     hostname: string,
     serviceDescription: string,
-    action: string,
+    action: CmkAction,
 ): Promise<void> {
-    const id = `${encodeURIComponent(hostname)}~${encodeURIComponent(serviceDescription)}`;
-    return cmkRequest(baseUrl, `/objects/service/${id}/actions/${action}/invoke`, {});
+    return orbvisCommand(baseUrl, 'service-action', {
+        action,
+        host_name: hostname,
+        service_description: serviceDescription,
+    });
 }
 
 export const cmkApi = {
@@ -676,28 +736,11 @@ export const cmkApi = {
         });
     },
 
-    forceCheckHost(baseUrl: string, hostname: string): Promise<void> {
-        return cmkRequest(
-            baseUrl,
-            `/objects/host/${encodeURIComponent(hostname)}/actions/reschedule-active-checks/invoke`,
-            { force: true },
-        );
-    },
+    forceCheckHost: (baseUrl: string, hostname: string) =>
+        cmkHostAction(baseUrl, hostname, 'force_check'),
 
-    forceCheckService(
-        baseUrl: string,
-        hostname: string,
-        serviceDescription: string,
-    ): Promise<void> {
-        const id = `${encodeURIComponent(hostname)}~${encodeURIComponent(serviceDescription)}`;
-        return cmkRequest(
-            baseUrl,
-            `/objects/service/${id}/actions/reschedule-active-checks/invoke`,
-            {
-                force: true,
-            },
-        );
-    },
+    forceCheckService: (baseUrl: string, hostname: string, serviceDescription: string) =>
+        cmkServiceAction(baseUrl, hostname, serviceDescription, 'force_check'),
 
     addCommentHost(baseUrl: string, hostname: string, comment: string): Promise<void> {
         return cmkRequest(baseUrl, '/domain-types/comment/collections/host', {
@@ -721,24 +764,14 @@ export const cmkApi = {
         });
     },
 
-    removeAcknowledgementHost(baseUrl: string, hostname: string): Promise<void> {
-        return cmkRequest(baseUrl, '/domain-types/acknowledge/actions/delete/invoke', {
-            acknowledge_type: 'host',
-            host_name: hostname,
-        });
-    },
+    // remove-ack via the OrbVis livestatus relay rather than CMK REST.
+    // The REST endpoint /domain-types/acknowledge/actions/delete/invoke is
+    // 2.4+ only — 2.3 sites would 404 on the old code path.
+    removeAcknowledgementHost: (baseUrl: string, hostname: string) =>
+        cmkHostAction(baseUrl, hostname, 'remove_acknowledgement'),
 
-    removeAcknowledgementService(
-        baseUrl: string,
-        hostname: string,
-        serviceDescription: string,
-    ): Promise<void> {
-        return cmkRequest(baseUrl, '/domain-types/acknowledge/actions/delete/invoke', {
-            acknowledge_type: 'service',
-            host_name: hostname,
-            service_description: serviceDescription,
-        });
-    },
+    removeAcknowledgementService: (baseUrl: string, hostname: string, serviceDescription: string) =>
+        cmkServiceAction(baseUrl, hostname, serviceDescription, 'remove_acknowledgement'),
 
     // ── Group bulk-actions ─────────────────────────────────────────────────
     // CMK's REST API supports ``acknowledge_type=hostgroup|servicegroup`` and
@@ -815,26 +848,26 @@ export const cmkApi = {
     },
 
     enableNotificationsHost: (baseUrl: string, hostname: string) =>
-        cmkHostAction(baseUrl, hostname, 'enable-notifications'),
+        cmkHostAction(baseUrl, hostname, 'enable_notifications'),
 
     disableNotificationsHost: (baseUrl: string, hostname: string) =>
-        cmkHostAction(baseUrl, hostname, 'disable-notifications'),
+        cmkHostAction(baseUrl, hostname, 'disable_notifications'),
 
     enableNotificationsService: (baseUrl: string, hostname: string, serviceDescription: string) =>
-        cmkServiceAction(baseUrl, hostname, serviceDescription, 'enable-notifications'),
+        cmkServiceAction(baseUrl, hostname, serviceDescription, 'enable_notifications'),
 
     disableNotificationsService: (baseUrl: string, hostname: string, serviceDescription: string) =>
-        cmkServiceAction(baseUrl, hostname, serviceDescription, 'disable-notifications'),
+        cmkServiceAction(baseUrl, hostname, serviceDescription, 'disable_notifications'),
 
     enableChecksHost: (baseUrl: string, hostname: string) =>
-        cmkHostAction(baseUrl, hostname, 'enable-active-checks'),
+        cmkHostAction(baseUrl, hostname, 'enable_checks'),
 
     disableChecksHost: (baseUrl: string, hostname: string) =>
-        cmkHostAction(baseUrl, hostname, 'disable-active-checks'),
+        cmkHostAction(baseUrl, hostname, 'disable_checks'),
 
     enableChecksService: (baseUrl: string, hostname: string, serviceDescription: string) =>
-        cmkServiceAction(baseUrl, hostname, serviceDescription, 'enable-active-checks'),
+        cmkServiceAction(baseUrl, hostname, serviceDescription, 'enable_checks'),
 
     disableChecksService: (baseUrl: string, hostname: string, serviceDescription: string) =>
-        cmkServiceAction(baseUrl, hostname, serviceDescription, 'disable-active-checks'),
+        cmkServiceAction(baseUrl, hostname, serviceDescription, 'disable_checks'),
 };

@@ -659,3 +659,96 @@ async def list_backend_aggregations(
     except Exception as exc:
         logger.warning("list_aggregations failed for connection %s: %s", connection_id, exc)
         return []
+
+
+# ---------------------------------------------------------------------------
+# Operational commands (ack-removal, force-check, notifications, active-checks)
+# ---------------------------------------------------------------------------
+# Checkmk's REST API only exposes ack/downtime/comment as verbs; the rest
+# (reschedule-active-checks, enable/disable-notifications, enable/disable-
+# active-checks, remove_acknowledgement on 2.3) is reachable only through the
+# livestatus command pipe. Frontend cmkApi used to POST to fictitious REST
+# URLs and silently 404 — these endpoints replace that.
+_HOST_COMMANDS: dict[str, str] = {
+    "force_check": "SCHEDULE_FORCED_HOST_CHECK;{host};{ts}",
+    "enable_notifications": "ENABLE_HOST_NOTIFICATIONS;{host}",
+    "disable_notifications": "DISABLE_HOST_NOTIFICATIONS;{host}",
+    "enable_checks": "ENABLE_HOST_CHECK;{host}",
+    "disable_checks": "DISABLE_HOST_CHECK;{host}",
+    "remove_acknowledgement": "REMOVE_HOST_ACKNOWLEDGEMENT;{host}",
+}
+_SERVICE_COMMANDS: dict[str, str] = {
+    "force_check": "SCHEDULE_FORCED_SVC_CHECK;{host};{svc};{ts}",
+    "enable_notifications": "ENABLE_SVC_NOTIFICATIONS;{host};{svc}",
+    "disable_notifications": "DISABLE_SVC_NOTIFICATIONS;{host};{svc}",
+    "enable_checks": "ENABLE_SVC_CHECK;{host};{svc}",
+    "disable_checks": "DISABLE_SVC_CHECK;{host};{svc}",
+    "remove_acknowledgement": "REMOVE_SVC_ACKNOWLEDGEMENT;{host};{svc}",
+}
+
+
+class HostActionRequest(BaseModel):
+    action: str
+    host_name: str
+    site_id: str | None = None
+
+
+class ServiceActionRequest(BaseModel):
+    action: str
+    host_name: str
+    service_description: str
+    site_id: str | None = None
+
+
+@router.post("/{connection_id}/host-action", status_code=status.HTTP_204_NO_CONTENT)
+async def host_action(
+    connection_id: str,
+    body: HostActionRequest,
+    user: User = Depends(get_current_user),
+) -> None:
+    """Execute a livestatus command on a host (force-check, notifications, ...)."""
+    template = _HOST_COMMANDS.get(body.action)
+    if template is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown host action {body.action!r} (valid: {sorted(_HOST_COMMANDS)})",
+        )
+    connection = get_connection(connection_id)
+    if connection is None or not hasattr(connection, "send_command"):
+        raise HTTPException(status_code=404, detail="Connection not found or not livestatus-backed")
+    cmd = template.format(host=body.host_name, ts=int(time.time()))
+    try:
+        await connection.send_command(cmd, body.site_id)
+    except Exception as exc:
+        logger.warning("host_action %s on %s failed: %s", body.action, body.host_name, exc)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.post("/{connection_id}/service-action", status_code=status.HTTP_204_NO_CONTENT)
+async def service_action(
+    connection_id: str,
+    body: ServiceActionRequest,
+    user: User = Depends(get_current_user),
+) -> None:
+    """Execute a livestatus command on a service (force-check, notifications, ...)."""
+    template = _SERVICE_COMMANDS.get(body.action)
+    if template is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown service action {body.action!r} (valid: {sorted(_SERVICE_COMMANDS)})",
+        )
+    connection = get_connection(connection_id)
+    if connection is None or not hasattr(connection, "send_command"):
+        raise HTTPException(status_code=404, detail="Connection not found or not livestatus-backed")
+    cmd = template.format(host=body.host_name, svc=body.service_description, ts=int(time.time()))
+    try:
+        await connection.send_command(cmd, body.site_id)
+    except Exception as exc:
+        logger.warning(
+            "service_action %s on %s/%s failed: %s",
+            body.action,
+            body.host_name,
+            body.service_description,
+            exc,
+        )
+        raise HTTPException(status_code=502, detail=str(exc)) from exc

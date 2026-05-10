@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import importlib
 import json as _json
 import logging
@@ -1882,6 +1883,72 @@ class LivestatusConnection(ConnectionBase):
                 timeout=settings.connection_query_timeout,
             )
         return [(None, r) for r in rows]
+
+    async def send_command(self, command: str, site_id: str | None = None) -> None:
+        """Send a Livestatus external command to the configured site.
+
+        ``command`` is the bare command body — e.g.
+        ``"SCHEDULE_FORCED_SVC_CHECK;hostname;service;1700000000"`` — *without*
+        the ``COMMAND [<timestamp>]`` framing. SingleSiteConnection.command
+        and the federated MultiSiteConnection both add the ``COMMAND``
+        prefix and timestamp themselves, so the bare body is the right
+        contract.
+
+        The Checkmk REST API does not expose host/service action verbs like
+        ``reschedule-active-checks`` or ``disable-notifications`` (no version
+        between 2.3 and 2.6 carries these endpoints), so anything that the
+        DetailDrawer would normally call out to CMK REST for has to be
+        relayed through livestatus' command pipe instead. Federated sites
+        get the request routed via ``MultiSiteConnection.command``;
+        single-socket connections write the line straight to the unix
+        socket — no response is expected from a COMMAND, livestatus just
+        queues it.
+        """
+        if self._sites:
+            await asyncio.to_thread(self._run_multisite_command, command, site_id)
+            return
+        # Single-socket path: livestatus expects ``COMMAND [<ts>] <body>``.
+        ts = int(time.time())
+        full = f"COMMAND [{ts}] {command}"
+        _reader, writer = await self._open_connection()
+        try:
+            writer.write((full + "\n").encode())
+            await writer.drain()
+        finally:
+            writer.close()
+            with contextlib.suppress(Exception):
+                await writer.wait_closed()
+
+    def _run_multisite_command(self, command_body: str, site_id: str | None) -> None:
+        """Send a Livestatus external command via MultiSiteConnection.
+
+        Parallel to ``_run_multisite_sync`` but uses ``mc.command()`` —
+        which adds the ``COMMAND [<timestamp>]`` framing internally, so
+        we pass the bare command body. Sync; must run in a worker thread.
+        """
+        from cmk.livestatus_client import MultiSiteConnection, SiteConfigurations
+
+        if not self._sites:
+            return
+        with self._mc_lock:
+            current_mtime = _cmk_sites.sites_mk_mtime()
+            if self._mc is None or current_mtime != self._mc_mtime:
+                self._sites = _cmk_sites.load_sites()
+                if not self._sites:
+                    self._mc = None
+                    self._mc_mtime = current_mtime
+                    self._mc_dead = set()
+                    return
+                self._mc = MultiSiteConnection(sites=SiteConfigurations(self._sites))
+                self._mc.set_prepend_site(True)
+                self._mc_mtime = current_mtime
+                self._mc_dead = set()
+            # `MultiSiteConnection.command` requires a real configured
+            # sitename — "local" only matches when the literal site is
+            # named "local". In OMD the site name comes from $OMD_SITE
+            # (RTEST25C etc.).
+            target = site_id or settings.checkmk_site or "local"
+            self._mc.command(command_body, target)
 
     def _run_multisite_sync(
         self, lql: str, only_sites: list[str] | None = None
