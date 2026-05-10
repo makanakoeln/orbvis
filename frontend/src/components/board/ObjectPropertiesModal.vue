@@ -1027,6 +1027,20 @@
                                     class="flex-1"
                                 />
                             </div>
+                            <!--
+                                Live count of leaves the regex would suppress
+                                from the aggregation tree. Visual feedback
+                                turns the regex from "guess" into a tracked
+                                filter — operator sees immediately whether
+                                their pattern matches 0, 12, or "every leaf".
+                            -->
+                            <p
+                                v-if="excludeMembersFeedback"
+                                class="text-xs pl-[6.75rem]"
+                                :class="excludeMembersFeedback.tone"
+                            >
+                                {{ excludeMembersFeedback.text }}
+                            </p>
                             <p class="text-sm text-zinc-600 pl-[6.75rem]">
                                 {{ t('boardSettings.excludeHint') }}
                             </p>
@@ -1151,10 +1165,17 @@ import NumberInput from '@/components/NumberInput.vue';
 import { useEscapeClose } from '@/composables/useEscapeClose';
 import { useAuthStore } from '@/stores/auth';
 import { useStatesStore } from '@/stores/states';
-import type { BoardObject, LinePerfdataLabel, MetricGraphGroup, ObjectState } from '@/types/api';
+import type {
+    AggregationNode,
+    BoardObject,
+    LinePerfdataLabel,
+    MetricGraphGroup,
+    ObjectState,
+} from '@/types/api';
 import { linePerfdataLabelOptions, lineStyleOptions } from '@/utils/dropdownOptions';
 import { getBoardObjectName } from '@/utils/naming';
 import { parsePerfData } from '@/utils/perf';
+import { compileRegex } from '@/utils/regex';
 
 import AutocompleteInput from './AutocompleteInput.vue';
 
@@ -1558,6 +1579,110 @@ async function loadAutocomplete() {
 }
 
 loadAutocomplete();
+
+// ── exclude_members suppression-count preview ─────────────────────────
+// Cache the live tree once we know the aggregation id; the suppression
+// count then re-computes locally as the operator types the regex without
+// hitting the backend on every keystroke.
+const excludeMembersTree = ref<AggregationNode | null>(null);
+
+watch(
+    () => [form.aggregation_id, props.connectionId] as const,
+    async ([aggId, cid]) => {
+        if (!aggId || !cid || !auth.accessToken) {
+            excludeMembersTree.value = null;
+            return;
+        }
+        try {
+            // Fixed depth=10 = the API cap; "every leaf" guarantees the
+            // count reflects the full aggregation, not just the
+            // currently-displayed subtree.
+            const result = await connectionsApi.aggregationTree(cid, aggId, 10, auth.accessToken);
+            excludeMembersTree.value = result.tree;
+        } catch {
+            excludeMembersTree.value = null;
+        }
+    },
+    { immediate: true },
+);
+
+function _flatLeaves(n: AggregationNode, out: AggregationNode[] = []): AggregationNode[] {
+    if (n.node_type === 'bi_leaf') {
+        out.push(n);
+    } else {
+        for (const c of n.children) _flatLeaves(c, out);
+    }
+    return out;
+}
+
+const _STATE_NAMES: Record<number, string> = { 0: 'OK', 1: 'WARN', 2: 'CRIT', 3: 'UNKN' };
+
+const excludeMembersFeedback = computed<{ text: string; tone: string } | null>(() => {
+    const tree = excludeMembersTree.value;
+    if (!tree) return null;
+    const memberRe = (form.exclude_members || '').trim();
+    const stateList = (form.exclude_member_states || '')
+        .split(',')
+        .map((s) => s.trim().toUpperCase())
+        .filter(Boolean);
+    if (!memberRe && stateList.length === 0) return null;
+
+    let regex: RegExp | null = null;
+    if (memberRe) {
+        try {
+            // Pattern is operator-typed and only used to test against the
+            // already-fetched leaves array — no server round-trip and no
+            // unbounded input source. compileRegex centralises the eslint
+            // tradeoff for security/detect-non-literal-regexp so we can
+            // keep using the standard linter elsewhere.
+            regex = compileRegex(memberRe);
+        } catch {
+            return {
+                text: t('boardSettings.excludeRegexInvalid'),
+                tone: 'text-rose-400',
+            };
+        }
+    }
+
+    const leaves = _flatLeaves(tree);
+    const total = leaves.length;
+    let suppressed = 0;
+    for (const l of leaves) {
+        const key = l.host_name
+            ? l.service_description
+                ? `${l.host_name};${l.service_description}`
+                : l.host_name
+            : l.name;
+        const matchesMember = regex ? regex.test(key) : true;
+        const matchesState = stateList.length
+            ? stateList.includes(_STATE_NAMES[l.state] ?? '')
+            : true;
+        // exclude when BOTH (or only-defined) filters match the leaf.
+        const memberApplies = !!regex;
+        const stateApplies = stateList.length > 0;
+        if (
+            (memberApplies && stateApplies && matchesMember && matchesState) ||
+            (memberApplies && !stateApplies && matchesMember) ||
+            (!memberApplies && stateApplies && matchesState)
+        ) {
+            suppressed += 1;
+        }
+    }
+
+    if (suppressed === 0) {
+        return { text: t('boardSettings.excludeNoMatches', { total }), tone: 'text-zinc-500' };
+    }
+    if (suppressed >= total) {
+        return {
+            text: t('boardSettings.excludeAllMatched', { count: suppressed, total }),
+            tone: 'text-amber-400',
+        };
+    }
+    return {
+        text: t('boardSettings.excludeMatched', { count: suppressed, total }),
+        tone: 'text-zinc-300',
+    };
+});
 
 onMounted(() => {
     if (form.host_name) {

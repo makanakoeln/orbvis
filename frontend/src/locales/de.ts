@@ -276,6 +276,10 @@ export default {
         aggregationFunction: 'Funktion',
         aggregationFunctionHint:
             'Top-Level-Aggregationsfunktion aus Checkmk (z. B. worst, best, count_ok). Wird in WATO konfiguriert.',
+        excludeMatched: '{count} von {total} Elementen werden ausgeblendet.',
+        excludeNoMatches: '0 von {total} Elementen ausgeblendet — Filter ohne Treffer.',
+        excludeAllMatched: 'Alle {count} Elemente werden ausgeblendet — Filter ist zu breit.',
+        excludeRegexInvalid: 'Regex ungültig.',
         noHosts: 'Keine Hosts verfügbar',
         noServices: 'Keine Services für diesen Host',
         noGroups: 'Keine Gruppen verfügbar',

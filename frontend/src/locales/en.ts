@@ -274,6 +274,10 @@ export default {
         aggregationFunction: 'Function',
         aggregationFunctionHint:
             'Top-level aggregation function from Checkmk (e.g. worst, best, count_ok). Configured in WATO.',
+        excludeMatched: '{count} of {total} leaves will be hidden.',
+        excludeNoMatches: '0 of {total} leaves hidden — filter matches nothing.',
+        excludeAllMatched: 'All {count} leaves would be hidden — the filter is too broad.',
+        excludeRegexInvalid: 'Invalid regular expression.',
         noHosts: 'No hosts available',
         noServices: 'No services for this host',
         noGroups: 'No groups available',
