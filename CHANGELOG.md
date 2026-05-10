@@ -4,6 +4,64 @@ All notable changes to OrbVis are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-05-10
+
+Iterative release that hardens the operator workflow on top of 0.1.0
+without changing any public API.
+
+### BI aggregations
+- Drawer summary pane with per-state leaf counts and the worst-leaf
+  path
+- Bulk-acknowledge confirm modal (capped parallelism, audit-trail
+  comment trailer) for all contributing leaves of an aggregation
+- WATO setup deep-link from the drawer (`mode=bi_rules&pack=<id>`
+  when the pack id is known, otherwise `mode=bi_packs`)
+- Live preview of the resulting tree state + glyph-density warning
+  in the edit panel
+- `exclude_members` regex now shows a live "N suppressed of M"
+  feedback line in the object-properties modal
+- Stale-data hint in the drawer when the aggregation's federation
+  is unhealthy
+- Subtree highlight from root to worst leaf in the BI tree gadget
+
+### Group-level actions
+- Hostgroup / servicegroup acknowledge + downtime via Checkmk's
+  `acknowledge_type=hostgroup|servicegroup` REST surface
+- Members tab with triage health, per-row search, last-state-change
+- Clickable member rows; hide-zero health chips; responsive controls
+
+### Boards & objects
+- Per-object connection override (multi-backend per board)
+- Connection picker in object-properties modal
+- Worldmap automap source — auto-discover hosts with lat/lng
+- Search bar parity for static, worldmap, radar and flow boards
+- `Ctrl+Wheel` zoom (with cursor anchor) on static boards
+- Settings: Object-defaults section open by default for
+  discoverability
+
+### Drawer / detail panel
+- Open-in icons resolve absolute paths regardless of bundle
+  base-path
+- Member states aggregate properly across nested map links
+- Force-check / notifications / checks / remove-ack now route
+  through the livestatus command pipe
+- Group-action errors enriched with WATO-config hints
+- Decorative objects (textbox, image, line without host/svc) skip
+  the slide-in
+
+### Checkmk integration
+- Connections support CMK 2.3 / 2.4 / 2.5 / 2.6 site_config
+  signatures
+- TCP port is optional (allows unix-socket-only setups)
+- Modals close on Escape across the board
+- Autocomplete suggestion cap raised to 500 with truncation surface
+
+### Docs / tooling
+- `docs/cmk-builtin-readiness.md` — punch-list for shipping OrbVis
+  as a Checkmk-builtin in 2.6 (3 blockers, 4 should-fixes
+  documented)
+- GUI MKP-update test path covered alongside the existing CLI path
+
 ## [0.1.0] - 2026-05-03
 
 Initial release. OrbVis is a modern monitoring visualization platform — a
