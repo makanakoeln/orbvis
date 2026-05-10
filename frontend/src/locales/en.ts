@@ -186,6 +186,8 @@ export default {
             worstLeaf: 'Worst leaf',
             bulkAcknowledge: 'Acknowledge {count} contributing leaves',
             bulkAckOk: 'Acknowledged {count} leaves',
+            aggregationStale:
+                'Connection to at least one federation site is unhealthy — leaf states shown may be out of date.',
             openProblems: 'Show problems',
             moreActions: 'More actions',
             checkInfo: 'Check info',

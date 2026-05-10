@@ -188,6 +188,8 @@ export default {
             worstLeaf: 'Schwerwiegendstes Element',
             bulkAcknowledge: '{count} betroffene Elemente bestätigen',
             bulkAckOk: '{count} Elemente bestätigt',
+            aggregationStale:
+                'Verbindung zu mindestens einer Federation-Site ist gestört — angezeigte Element-States sind möglicherweise nicht aktuell.',
             openProblems: 'Probleme anzeigen',
             moreActions: 'Weitere Aktionen',
             checkInfo: 'Check-Info',

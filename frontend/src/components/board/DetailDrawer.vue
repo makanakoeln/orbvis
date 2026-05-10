@@ -259,6 +259,20 @@
                                             aggregationSummary.worstPath
                                         }}</span>
                                     </div>
+                                    <!--
+                                        Stale-data hint: livestatus to a federated
+                                        site went dead since the tree was fetched,
+                                        so the per-leaf states the operator sees
+                                        may not reflect reality. Surfacing this
+                                        explicitly avoids misreading "1 CRIT"
+                                        as fresh.
+                                    -->
+                                    <div
+                                        v-if="state.stale"
+                                        class="detail-drawer__list-text detail-drawer__stale-hint"
+                                    >
+                                        ⚠ {{ t('board.detailDrawer.aggregationStale') }}
+                                    </div>
                                     <button
                                         v-if="aggregationProblemLeaves.length"
                                         type="button"
@@ -2595,6 +2609,15 @@ useMutationObserver(
 .detail-drawer__list-strong {
     font-weight: var(--font-weight-semibold);
     color: var(--text);
+}
+
+/* Stale-data hint inside the aggregation pane — same visual language as
+ * the connection-down banner elsewhere in the SPA, dialed down for an
+ * inline warning. */
+.detail-drawer__stale-hint {
+    color: var(--color-yellow, #f59e0b);
+    font-style: italic;
+    margin-top: 4px;
 }
 
 .detail-drawer__actions {
