@@ -177,6 +177,21 @@
                             }}
                         </li>
                     </ul>
+                    <!--
+                        Density warning: an aggregation with expand_depth >0
+                        and >50 leaves renders dozens of state-coloured
+                        circles next to the root glyph and easily clutters
+                        worldmap/static boards. Suggest dropping expand_depth
+                        to 0 (drawer-only viewing) when this happens. Threshold
+                        is empirical — most multi-host aggregations fan to
+                        20-40, so 50 is the comfortable cutoff.
+                    -->
+                    <div
+                        v-if="aggregationPreviewDensityWarning"
+                        class="mt-2 rounded p-1.5 text-[10px] border border-amber-500/40 bg-amber-500/10 text-amber-200"
+                    >
+                        ⚠ {{ aggregationPreviewDensityWarning }}
+                    </div>
                 </div>
             </template>
 
@@ -496,6 +511,16 @@ const aggregationPreviewLeaves = computed(() =>
 const aggregationPreviewMore = computed(() =>
     Math.max(0, aggregationPreviewLeavesAll.value.length - 5),
 );
+
+const _DENSITY_WARN_THRESHOLD = 50;
+const aggregationPreviewDensityWarning = computed<string | null>(() => {
+    const total = aggregationPreviewLeavesAll.value.length;
+    const depth = props.draft.expand_depth ?? 0;
+    if (depth > 0 && total > _DENSITY_WARN_THRESHOLD) {
+        return t('boardSettings.aggregationDensityWarning', { count: total });
+    }
+    return null;
+});
 
 let _aggregationPreviewToken = 0;
 async function refreshAggregationPreview(): Promise<void> {

@@ -577,6 +577,17 @@
             "
         />
 
+        <BulkAckModal
+            v-if="bulkAckModal && checkmkUrl"
+            :aggregation-id="bulkAckModal.aggregationId"
+            :targets="bulkAckModal.targets"
+            :checkmk-url="checkmkUrl"
+            @close="
+                bulkAckModal = null;
+                statesStore.refreshAfterCommand();
+            "
+        />
+
         <!-- FAB + Add Object panel + action bar (all bottom-right). Hidden
              while the detail drawer is open so it doesn't overlap triage. -->
         <Teleport to="body">
@@ -969,6 +980,7 @@ import AckModal from '@/components/board/AckModal.vue';
 import BoardCanvas from '@/components/board/BoardCanvas.vue';
 import BoardSearch from '@/components/board/BoardSearch.vue';
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue';
+import BulkAckModal from '@/components/board/BulkAckModal.vue';
 import CommentModal from '@/components/board/CommentModal.vue';
 import ContextMenu from '@/components/board/ContextMenu.vue';
 import DetailDrawer from '@/components/board/DetailDrawer.vue';
@@ -1493,54 +1505,24 @@ function onDetailToggleNotifications(enable: boolean) {
 }
 
 /**
- * Bulk-acknowledge contributing leaves of a BI aggregation. The drawer
- * already filtered to WARN/CRIT leaves with a host_name. We loop through
- * each, sending the same comment + flags as a single-target ack would.
- * No modal — the operator already confirmed by clicking the button. Failures
- * surface as a single toast at the end so a partially-applied ack is still
- * better than abandoning the whole batch on the first hiccup.
+ * Bulk-acknowledge contributing leaves of a BI aggregation. Opens the
+ * BulkAckModal — that previews the targets, lets the operator review/edit
+ * the comment (pre-filled with "Bulk-ack: <aggregation_id>" so audit logs
+ * trace back to the originating aggregation), and runs the per-leaf ack
+ * loop with progress feedback. The previous "fire immediately on click"
+ * version was risky for misclicks since N acks have no atomic undo.
  */
-async function onDetailBulkAcknowledge(targets: Array<{ host: string; service: string | null }>) {
+function onDetailBulkAcknowledge(targets: Array<{ host: string; service: string | null }>) {
     if (!checkmkUrl.value || !targets.length) return;
-    const comment = 'Bulk-ack from BI aggregation drawer';
-    const failures: string[] = [];
-    for (const t of targets) {
-        try {
-            if (t.service) {
-                await cmkApi.acknowledgeService(
-                    checkmkUrl.value,
-                    t.host,
-                    t.service,
-                    comment,
-                    false,
-                    false,
-                    false,
-                );
-            } else {
-                await cmkApi.acknowledgeHost(
-                    checkmkUrl.value,
-                    t.host,
-                    comment,
-                    false,
-                    false,
-                    false,
-                );
-            }
-        } catch (e) {
-            failures.push(t.service ? `${t.host}/${t.service}` : t.host);
-            console.warn('[OrbVis] bulk-ack failed for', t, e);
-        }
-    }
-    if (failures.length) {
-        toast.error(
-            t('contextMenu.acknowledgeFailed') +
-                ` (${failures.length}/${targets.length}): ${failures.slice(0, 3).join(', ')}` +
-                (failures.length > 3 ? ' …' : ''),
-        );
-    } else {
-        toast.success(t('board.detailDrawer.bulkAckOk', { count: targets.length }));
-    }
+    const obj = detailDrawerObject.value;
+    const aggregationId = obj?.aggregation_id ?? obj?.id ?? 'unknown';
+    bulkAckModal.value = { aggregationId, targets };
 }
+
+const bulkAckModal = ref<{
+    aggregationId: string;
+    targets: Array<{ host: string; service: string | null }>;
+} | null>(null);
 
 // ---- Static map event handlers ----
 

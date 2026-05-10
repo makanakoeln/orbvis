@@ -267,6 +267,8 @@ export default {
         expandDepthHelp: 'Kindknoten bis zu N Ebenen anzeigen (0 = nur Wurzel).',
         aggregationPreview: 'Vorschau (Live-Status)',
         aggregationPreviewMore: '{count} weitere',
+        aggregationDensityWarning:
+            '{count} Knoten — Subtree wird auf dem Board sehr dicht. Setze die Aufklapptiefe auf 0, um nur die Wurzel zu zeigen und Details über das Drawer abzurufen.',
         noHosts: 'Keine Hosts verfügbar',
         noServices: 'Keine Services für diesen Host',
         noGroups: 'Keine Gruppen verfügbar',
@@ -451,6 +453,12 @@ export default {
         groupServicegroup: 'Servicegruppe',
         groupNotConfigured:
             'Hinweis: Checkmk akzeptiert Bulk-Aktionen nur auf {type}n, die in Setup → Hostgruppen (bzw. Servicegruppen) konfiguriert sind. Implizite / nur über Livestatus sichtbare Gruppen werden vom REST-API abgelehnt.',
+        bulkTitle: 'Beitragende Elemente bestätigen',
+        bulkSubtitle: '{count} Elemente aus Aggregation „{aggregation}"',
+        bulkSubmit: '{count} Elemente bestätigen',
+        bulkSubmitting: 'Quittiere {current}/{total}…',
+        bulkSuccess: '{count} Elemente quittiert',
+        bulkPartial: '{failed} von {total} fehlgeschlagen: {sample}',
     },
     downtime: {
         title: 'Downtime planen',

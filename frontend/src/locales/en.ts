@@ -265,6 +265,8 @@ export default {
         expandDepthHelp: 'Show child nodes up to N levels (0 = root only).',
         aggregationPreview: 'Preview (live state)',
         aggregationPreviewMore: '{count} more',
+        aggregationDensityWarning:
+            '{count} nodes — the subtree will be very crowded on the board. Set expand depth to 0 to keep only the root glyph and drill into details via the drawer.',
         noHosts: 'No hosts available',
         noServices: 'No services for this host',
         noGroups: 'No groups available',
@@ -449,6 +451,12 @@ export default {
         groupServicegroup: 'service group',
         groupNotConfigured:
             'Tip: Checkmk only accepts bulk actions on {type}s that are configured in Setup → Host groups (or Service groups). Implicit / livestatus-only groups are rejected by the REST API.',
+        bulkTitle: 'Acknowledge contributing leaves',
+        bulkSubtitle: '{count} leaves from aggregation "{aggregation}"',
+        bulkSubmit: 'Acknowledge {count} leaves',
+        bulkSubmitting: 'Acknowledging {current}/{total}…',
+        bulkSuccess: '{count} leaves acknowledged',
+        bulkPartial: '{failed} of {total} failed: {sample}',
     },
     downtime: {
         title: 'Schedule downtime',
