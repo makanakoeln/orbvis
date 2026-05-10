@@ -66,6 +66,11 @@ class AggregationInfo(BaseModel):
     id: str
     title: str
     pack_id: str
+    # Top-level aggregation function (worst / best / count_ok / call_a_rule
+    # / state_of_host / state_of_service / ...). The EditPanel renders this
+    # as a read-only chip so the designer doesn't have to crosscheck WATO
+    # to know what semantic the aggregation has.
+    function: str | None = None
 
 
 class AggregationNode(BaseModel):

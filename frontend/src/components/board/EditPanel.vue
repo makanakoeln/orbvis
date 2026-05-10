@@ -116,6 +116,24 @@
                     :placeholder="t('boardSettings.aggregationId')"
                     :empty-text="t('boardSettings.noAggregations')"
                 />
+                <!--
+                    Read-only aggregation-function chip. Tells the designer
+                    which top-level semantic the picked aggregation has
+                    (worst / best / count_ok / state_of_host / ...) so
+                    they don't have to crosscheck WATO. Hidden when the
+                    function isn't available (no aggregation picked yet,
+                    or cmk.bi didn't surface it on this CMK version).
+                -->
+                <div
+                    v-if="aggregationFunctionLabel"
+                    class="text-[10px] inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[var(--bg-subtle,rgba(0,0,0,0.05))] border border-[var(--border)] self-start"
+                    :title="t('boardSettings.aggregationFunctionHint')"
+                >
+                    <span class="text-[var(--text-muted)]">
+                        {{ t('boardSettings.aggregationFunction') }}
+                    </span>
+                    <span class="font-mono text-[var(--text)]">{{ aggregationFunctionLabel }}</span>
+                </div>
                 <label class="flex items-center gap-2 text-xs text-zinc-400">
                     {{ t('boardSettings.expandDepth') }}
                     <NumberInput
@@ -135,8 +153,21 @@
                     can fan out to hundreds of nodes which would slow down
                     re-renders during typing.
                 -->
+                <!--
+                    When the connection probe fails, render a distinct
+                    "preview unavailable" hint instead of silently hiding
+                    the panel. Otherwise the designer can't tell whether
+                    the aggregation legitimately has 0 leaves or whether
+                    the livestatus connection is down.
+                -->
                 <div
-                    v-if="aggregationPreview"
+                    v-if="!aggregationConnectionOk && draft.aggregation_id && !aggregationPreview"
+                    class="text-xs rounded p-2 border border-rose-500/40 bg-rose-500/10 text-rose-200"
+                >
+                    {{ t('boardSettings.aggregationPreviewConnectionDown') }}
+                </div>
+                <div
+                    v-else-if="aggregationPreview"
                     class="text-xs rounded p-2 bg-[var(--bg-subtle,rgba(0,0,0,0.05))] border border-[var(--border)]"
                 >
                     <div class="text-[var(--text-muted)] mb-1">
@@ -387,6 +418,11 @@ const addObjects = ref<string[]>([]);
 const addServices = ref<string[]>([]);
 const addAggregationIds = ref<string[]>([]);
 const addAggregationLabels = ref<string[]>([]);
+// Map of aggregation id → top-level function (e.g. "worst", "best").
+// Populated from the same /connections/<id>/aggregations response that
+// drives the autocomplete; consumed by the read-only chip in the
+// EditPanel's aggregation block.
+const aggregationFunctions = ref<Record<string, string>>({});
 const loadingAddObjects = ref(false);
 const loadingAddServices = ref(false);
 const loadingAddAggregations = ref(false);
@@ -441,6 +477,7 @@ async function fetchAddAggregations() {
     if (!props.connectionId) {
         addAggregationIds.value = [];
         addAggregationLabels.value = [];
+        aggregationFunctions.value = {};
         return;
     }
     loadingAddAggregations.value = true;
@@ -448,13 +485,25 @@ async function fetchAddAggregations() {
         const aggrs = await connectionsApi.aggregations(props.connectionId, auth.accessToken!);
         addAggregationIds.value = aggrs.map((a) => a.id);
         addAggregationLabels.value = aggrs.map((a) => a.title || a.id);
+        const fnMap: Record<string, string> = {};
+        for (const a of aggrs) {
+            if (a.function) fnMap[a.id] = a.function;
+        }
+        aggregationFunctions.value = fnMap;
     } catch {
         addAggregationIds.value = [];
         addAggregationLabels.value = [];
+        aggregationFunctions.value = {};
     } finally {
         loadingAddAggregations.value = false;
     }
 }
+
+const aggregationFunctionLabel = computed<string | null>(() => {
+    const id = props.draft.aggregation_id;
+    if (!id) return null;
+    return aggregationFunctions.value[id] ?? null;
+});
 
 // ── BI aggregation live preview ───────────────────────────────────────
 // Map BI numeric states (0=OK, 1=WARN, 2=CRIT, 3=UNKN) to colour + label.
@@ -473,6 +522,7 @@ const _BI_PREVIEW_LABEL: Record<number, string> = {
 };
 
 const aggregationPreview = ref<AggregationNode | null>(null);
+const aggregationConnectionOk = ref<boolean>(true);
 
 function _flattenLeaves(n: AggregationNode, out: AggregationNode[] = []): AggregationNode[] {
     if (n.node_type === 'bi_leaf') {
@@ -528,11 +578,12 @@ async function refreshAggregationPreview(): Promise<void> {
     const depth = Math.max(1, props.draft.expand_depth ?? 1);
     if (!props.connectionId || !id) {
         aggregationPreview.value = null;
+        aggregationConnectionOk.value = true;
         return;
     }
     const myToken = ++_aggregationPreviewToken;
     try {
-        const tree = await connectionsApi.aggregationTree(
+        const result = await connectionsApi.aggregationTree(
             props.connectionId,
             id,
             depth,
@@ -541,10 +592,14 @@ async function refreshAggregationPreview(): Promise<void> {
         // Only commit if this is the latest pending request — protects
         // against flicker when the operator changes the input quickly.
         if (myToken === _aggregationPreviewToken) {
-            aggregationPreview.value = tree;
+            aggregationPreview.value = result.tree;
+            aggregationConnectionOk.value = result.connection_ok;
         }
     } catch {
-        if (myToken === _aggregationPreviewToken) aggregationPreview.value = null;
+        if (myToken === _aggregationPreviewToken) {
+            aggregationPreview.value = null;
+            aggregationConnectionOk.value = false;
+        }
     }
 }
 

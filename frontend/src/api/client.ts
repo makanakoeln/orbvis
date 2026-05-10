@@ -333,7 +333,7 @@ export const connectionsApi = {
         aggregationId: string,
         depth: number,
         token: string,
-    ): Promise<AggregationNode | null> =>
+    ): Promise<{ tree: AggregationNode | null; connection_ok: boolean }> =>
         request(
             `/connections/${connectionId}/aggregations/${encodeURIComponent(aggregationId)}/tree?depth=${depth}`,
             {},

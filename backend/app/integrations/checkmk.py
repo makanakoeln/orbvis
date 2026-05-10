@@ -488,6 +488,27 @@ def cmk_bi_list_aggregations(query_callback: QueryCallback, site_id: str) -> lis
         branch_counts: list[tuple[str, int]] = []
         for aggr_id, compiled_aggr in compiled.items():
             pack_id = str(getattr(compiled_aggr, "pack_id", "") or "")
+            # Pull the top-level aggregation function for the editor chip.
+            # cmk.bi stores it on the compiled aggregation as either
+            # ``aggregation_function`` or ``function`` depending on
+            # version; both objects expose a ``.type()`` shortcut so any
+            # of those produces a usable label like "worst" / "best" /
+            # "count_ok".
+            function = ""
+            for attr in ("aggregation_function", "function"):
+                fn_obj = getattr(compiled_aggr, attr, None)
+                if fn_obj is None:
+                    continue
+                kind = getattr(fn_obj, "type", None)
+                if callable(kind):
+                    try:
+                        function = str(kind())
+                    except Exception:
+                        function = ""
+                elif kind is not None:
+                    function = str(kind)
+                if function:
+                    break
             branches = getattr(compiled_aggr, "branches", []) or []
             branch_counts.append((str(aggr_id), len(branches)))
             for branch in branches:
@@ -495,7 +516,14 @@ def cmk_bi_list_aggregations(query_callback: QueryCallback, site_id: str) -> lis
                 if not title or title in seen:
                     continue
                 seen.add(title)
-                out.append({"id": title, "title": title, "pack_id": pack_id or str(aggr_id)})
+                entry: dict[str, str] = {
+                    "id": title,
+                    "title": title,
+                    "pack_id": pack_id or str(aggr_id),
+                }
+                if function:
+                    entry["function"] = function
+                out.append(entry)
         out.sort(key=lambda e: e["title"].lower())
         log.debug(
             "OrbVis BI list_aggregations: %d templates, branches=%s, returned=%d",

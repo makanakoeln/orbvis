@@ -267,6 +267,11 @@ export default {
         aggregationPreviewMore: '{count} more',
         aggregationDensityWarning:
             '{count} nodes — the subtree will be very crowded on the board. Set expand depth to 0 to keep only the root glyph and drill into details via the drawer.',
+        aggregationPreviewConnectionDown:
+            'Preview unavailable — the Checkmk connection is unhealthy. Check the connection status and reload.',
+        aggregationFunction: 'Function',
+        aggregationFunctionHint:
+            'Top-level aggregation function from Checkmk (e.g. worst, best, count_ok). Configured in WATO.',
         noHosts: 'No hosts available',
         noServices: 'No services for this host',
         noGroups: 'No groups available',

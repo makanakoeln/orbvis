@@ -22,6 +22,10 @@ export interface AggregationInfo {
     id: string;
     title: string;
     pack_id: string;
+    /** Aggregation function (worst / best / count_ok / state_of_host / …)
+     * used by the EditPanel as a read-only chip. May be null when the
+     * cmk.bi compiler couldn't extract it (e.g. very old CMK versions). */
+    function?: string | null;
 }
 
 export interface AggregationNode {

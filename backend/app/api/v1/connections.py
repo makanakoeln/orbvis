@@ -661,37 +661,61 @@ async def list_backend_aggregations(
         return []
 
 
+class AggregationTreeResult(BaseModel):
+    """Tree-fetch response with a connection-health discriminator.
+
+    Returning a bare ``tree | null`` made it impossible for the EditPanel
+    to distinguish "aggregation has zero leaves" from "the connection is
+    dead and we couldn't compute a tree". This wrapper lets the UI render
+    a "connection unavailable" hint in the latter case.
+    """
+
+    tree: AggregationNode | None
+    connection_ok: bool
+
+
 @router.get(
     "/{connection_id}/aggregations/{aggregation_id}/tree",
-    response_model=AggregationNode | None,
+    response_model=AggregationTreeResult,
 )
 async def get_backend_aggregation_tree(
     connection_id: str,
     aggregation_id: str,
     depth: int = Query(2, ge=0, le=10),
     user: User = Depends(get_current_user),
-) -> AggregationNode | None:
+) -> AggregationTreeResult:
     """Return the live BI aggregation tree for the editor preview pane.
 
     Used by the EditPanel to render a "what does this look like right now"
     sample so the designer picking ``expand_depth`` can see the resulting
     fan-out before saving the board. Capped at 10 levels — even a single
     rendering of 200+ leaves makes the EditPanel sluggish.
+
+    Carries a ``connection_ok`` flag so the UI can distinguish "0 leaves"
+    from "couldn't reach Checkmk" — the previous bare-tree shape couldn't
+    differentiate, so the EditPanel hid the preview in both cases and the
+    designer was left guessing.
     """
     connection = get_connection(connection_id)
     if connection is None:
-        return None
+        return AggregationTreeResult(tree=None, connection_ok=False)
     try:
         with_auth = getattr(connection, "with_auth_user", None)
         if with_auth is not None:
             async with with_auth(user.name):
-                return await connection.get_aggregation_tree(aggregation_id, depth)
-        return await connection.get_aggregation_tree(aggregation_id, depth)
+                tree = await connection.get_aggregation_tree(aggregation_id, depth)
+        else:
+            tree = await connection.get_aggregation_tree(aggregation_id, depth)
+        # Probe connection health independently — a tree of None on a
+        # healthy connection is a legitimate "0 leaves" / "aggregation
+        # not registered" outcome, not a fetch failure.
+        connection_ok = await connection.is_available()
+        return AggregationTreeResult(tree=tree, connection_ok=connection_ok)
     except Exception as exc:
         logger.warning(
             "get_aggregation_tree(%s, %s) failed: %s", connection_id, aggregation_id, exc
         )
-        return None
+        return AggregationTreeResult(tree=None, connection_ok=False)
 
 
 # ---------------------------------------------------------------------------

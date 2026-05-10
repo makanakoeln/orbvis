@@ -269,6 +269,11 @@ export default {
         aggregationPreviewMore: '{count} weitere',
         aggregationDensityWarning:
             '{count} Knoten — Subtree wird auf dem Board sehr dicht. Setze die Aufklapptiefe auf 0, um nur die Wurzel zu zeigen und Details über das Drawer abzurufen.',
+        aggregationPreviewConnectionDown:
+            'Vorschau nicht verfügbar — Verbindung zur Checkmk-Site ist gestört. Status der Connection prüfen und neu laden.',
+        aggregationFunction: 'Funktion',
+        aggregationFunctionHint:
+            'Top-Level-Aggregationsfunktion aus Checkmk (z. B. worst, best, count_ok). Wird in WATO konfiguriert.',
         noHosts: 'Keine Hosts verfügbar',
         noServices: 'Keine Services für diesen Host',
         noGroups: 'Keine Gruppen verfügbar',
