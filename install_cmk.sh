@@ -445,7 +445,12 @@ case "\$1" in
     export LD_LIBRARY_PATH="\$OMD_ROOT/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
     cd "$ORBVIS_DIR/src"
     "\$VENV/bin/python3" -m alembic upgrade head >> "\$LOGFILE" 2>&1
-    "\$VENV/bin/uvicorn" \$APP \\
+    # Invoke uvicorn through the venv python: when OMD's site-python
+    # already provides the uvicorn module (cmk-agent-receiver pulls it
+    # in), \`pip install -e\` skips dropping the \`uvicorn\` console
+    # script into the venv's bin/, so calling the binary directly
+    # would fail with "No such file or directory".
+    "\$VENV/bin/python3" -m uvicorn \$APP \\
       --host 127.0.0.1 --port "\$PORT" \\
       --log-level warning \\
       >> "\$LOGFILE" 2>&1 &
