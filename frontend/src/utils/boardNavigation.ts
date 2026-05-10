@@ -57,6 +57,25 @@ export function buildCheckmkUrl(obj: BoardObject, checkmkUrl: string | null): st
     return null;
 }
 
+/**
+ * For object types where the live monitoring view (``buildCheckmkUrl``)
+ * isn't where the operator's "edit this thing" intent leads, return the
+ * configuration/setup URL. Currently only BI aggregations have a
+ * meaningful edit destination — the BI packs overview, since CMK doesn't
+ * expose deep-linking to a specific aggregation editor without the
+ * pack name (no REST endpoint for that lookup either).
+ */
+export function buildCheckmkSetupUrl(obj: BoardObject, checkmkUrl: string | null): string | null {
+    const r = _baseAndSite(checkmkUrl);
+    if (!r) return null;
+    const { base, p } = r;
+    if (obj.type === 'aggregation') {
+        p.mode = 'bi_packs';
+        return `${base}/check_mk/wato.py?${new URLSearchParams(p)}`;
+    }
+    return null;
+}
+
 export function buildCheckmkUrlFromState(
     state: ObjectState,
     checkmkUrl: string | null,

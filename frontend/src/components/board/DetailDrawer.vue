@@ -54,6 +54,21 @@
                 >
                     <CmkIcon name="export-link" size="small" />
                 </a>
+                <!-- Aggregation-only: deep-link into Checkmk Setup → BI Packs.
+                     Goes alongside the live-view "open in Checkmk" link so
+                     the operator can jump straight to "edit the rules" when
+                     the aggregation behaviour needs adjusting. -->
+                <a
+                    v-if="checkmkSetupUrlFull"
+                    :href="checkmkSetupUrlFull"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="detail-drawer__icon-btn"
+                    :title="t('board.detailDrawer.openInCheckmkSetup')"
+                    :aria-label="t('board.detailDrawer.openInCheckmkSetup')"
+                >
+                    <CmkIcon name="setup" size="small" />
+                </a>
                 <button
                     type="button"
                     class="detail-drawer__close"
@@ -195,6 +210,78 @@
                                         </dd>
                                     </template>
                                 </dl>
+                                <!--
+                                    BI aggregation summary: per-state leaf counts,
+                                    the worst-leaf path, and a click-to-drill leaf
+                                    list. Rendered only when this drawer is showing
+                                    an aggregation object and the backend has
+                                    materialised its tree (state.tree).
+                                -->
+                                <section
+                                    v-if="aggregationSummary"
+                                    class="detail-drawer__pane-section detail-drawer__section--aggregation"
+                                >
+                                    <h3 class="detail-drawer__section-heading">
+                                        {{ t('board.detailDrawer.aggregationSummary') }}
+                                    </h3>
+                                    <div
+                                        class="detail-drawer__chips"
+                                        :style="{
+                                            gridTemplateColumns: `repeat(${aggregationSummary.chips.length}, 1fr)`,
+                                        }"
+                                    >
+                                        <button
+                                            v-for="chip in aggregationSummary.chips"
+                                            :key="chip.state"
+                                            type="button"
+                                            class="detail-drawer__chip"
+                                            :class="
+                                                chip.count > 0
+                                                    ? `detail-drawer__chip--${chip.tone}`
+                                                    : 'detail-drawer__chip--zero'
+                                            "
+                                            :disabled="chip.count === 0 ? true : undefined"
+                                        >
+                                            <span class="detail-drawer__chip-count">{{
+                                                chip.count
+                                            }}</span>
+                                            <span class="detail-drawer__chip-label">{{
+                                                chip.label
+                                            }}</span>
+                                        </button>
+                                    </div>
+                                    <div
+                                        v-if="aggregationSummary.worstPath"
+                                        class="detail-drawer__list-text"
+                                    >
+                                        {{ t('board.detailDrawer.worstLeaf') }}:
+                                        <span class="detail-drawer__list-strong">{{
+                                            aggregationSummary.worstPath
+                                        }}</span>
+                                    </div>
+                                    <ul
+                                        v-if="aggregationSummary.leaves.length"
+                                        class="detail-drawer__list"
+                                    >
+                                        <li
+                                            v-for="leaf in aggregationSummary.leaves"
+                                            :key="leaf.id"
+                                            class="detail-drawer__list-row detail-drawer__list-row--clickable"
+                                            @click="onAggregationLeafClick(leaf)"
+                                        >
+                                            <span
+                                                class="detail-drawer__list-dot"
+                                                :class="`detail-drawer__list-dot--${leaf.tone}`"
+                                            />
+                                            <span class="detail-drawer__list-text">
+                                                {{ leaf.label }}
+                                            </span>
+                                            <span class="detail-drawer__list-state">{{
+                                                leaf.stateLabel
+                                            }}</span>
+                                        </li>
+                                    </ul>
+                                </section>
                             </div>
                         </CmkTabContent>
 
@@ -739,6 +826,7 @@ import { connectionsApi, metricsApi } from '@/api/client';
 import { fmtValueWithUnit } from '@/composables/useMetricChart';
 import { useAuthStore } from '@/stores/auth';
 import type {
+    AggregationNode,
     BoardObject,
     GroupMember,
     MetricPoint,
@@ -746,7 +834,7 @@ import type {
     ObjectState,
     PerfometerResult,
 } from '@/types/api';
-import { buildCheckmkUrl } from '@/utils/boardNavigation';
+import { buildCheckmkSetupUrl, buildCheckmkUrl } from '@/utils/boardNavigation';
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming';
 import { parsePerfData, type PerfMetric, utilColor, utilPercent } from '@/utils/perf';
 import { stateColor } from '@/utils/stateColors';
@@ -1053,6 +1141,9 @@ const typeLabel = computed(() => (props.object ? getObjectTypeLabel(props.object
 const checkmkUrlFull = computed(() =>
     props.object ? buildCheckmkUrl(props.object, props.checkmkUrl ?? null) : null,
 );
+const checkmkSetupUrlFull = computed(() =>
+    props.object ? buildCheckmkSetupUrl(props.object, props.checkmkUrl ?? null) : null,
+);
 
 const problemsUrlFull = computed(() => {
     if (!props.object || props.object.type !== 'site' || !props.checkmkUrl) return null;
@@ -1079,6 +1170,69 @@ interface SummaryChip {
     label: string;
     tone: 'crit' | 'warn' | 'unknown' | 'ok';
     url: string | null;
+}
+
+// ── BI aggregation summary ────────────────────────────────────────────
+// Map BI states (numeric, used by CMK BIStates: 0=OK, 1=WARN, 2=CRIT,
+// 3=UNKNOWN) onto the same chip tones the rest of the drawer uses.
+const _BI_STATE_TONE: Record<number, 'ok' | 'warn' | 'crit' | 'unknown'> = {
+    0: 'ok',
+    1: 'warn',
+    2: 'crit',
+    3: 'unknown',
+};
+const _BI_STATE_LABEL: Record<number, string> = {
+    0: 'OK',
+    1: 'WARN',
+    2: 'CRIT',
+    3: 'UNKN',
+};
+
+interface AggregationLeafRow {
+    id: string;
+    label: string;
+    stateLabel: string;
+    tone: 'ok' | 'warn' | 'crit' | 'unknown';
+    /** Walked path back to root, used for "worstPath" display. */
+    path: string[];
+    hostName: string | null;
+    serviceDescription: string | null;
+    state: number;
+}
+
+interface AggregationSummary {
+    chips: SummaryChip[];
+    /** "host01 / Service X" for the highest-state leaf, or null if all OK. */
+    worstPath: string | null;
+    leaves: AggregationLeafRow[];
+}
+
+function _walkAggregationLeaves(node: AggregationNode, path: string[] = []): AggregationLeafRow[] {
+    if (node.node_type === 'bi_leaf') {
+        const tone = _BI_STATE_TONE[node.state] ?? 'unknown';
+        const stateLabel = _BI_STATE_LABEL[node.state] ?? String(node.state);
+        const id = node.service_description
+            ? `${node.host_name ?? ''};${node.service_description}`
+            : (node.host_name ?? node.name);
+        return [
+            {
+                id,
+                label: node.name,
+                stateLabel,
+                tone,
+                path: [...path, node.name],
+                hostName: node.host_name ?? null,
+                serviceDescription: node.service_description ?? null,
+                state: node.state,
+            },
+        ];
+    }
+    const out: AggregationLeafRow[] = [];
+    const sub = [...path, node.name];
+    for (const child of node.children) {
+        out.push(..._walkAggregationLeaves(child, sub));
+    }
+    return out;
 }
 
 // Checkmk's filter machinery takes a single "svc_state" / "host_state" filter
@@ -1132,6 +1286,43 @@ function buildHostChipUrl(state: string, count: number): string | null {
         [hostStateOn(state)]: 'on',
     };
     return `${base}/check_mk/view.py?${new URLSearchParams(params)}`;
+}
+
+const aggregationSummary = computed<AggregationSummary | null>(() => {
+    const obj = props.object;
+    const tree = props.state?.tree;
+    if (!obj || obj.type !== 'aggregation' || !tree) return null;
+
+    const leaves = _walkAggregationLeaves(tree);
+    if (!leaves.length) return null;
+
+    const counts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
+    for (const l of leaves) counts[l.state] = (counts[l.state] ?? 0) + 1;
+
+    const chipOrder: number[] = [2, 1, 3, 0];
+    const chips: SummaryChip[] = chipOrder.map((s) => ({
+        state: _BI_STATE_LABEL[s],
+        count: counts[s] ?? 0,
+        label: _BI_STATE_LABEL[s],
+        tone: _BI_STATE_TONE[s] ?? 'unknown',
+        url: null,
+    }));
+
+    // The worst leaf bubbles up first by sort order — reuse the chip
+    // order so we get a deterministic "worst path" even if multiple
+    // leaves tie (CRIT > WARN > UNKN > OK).
+    const sorted = [...leaves].sort(
+        (a, b) => chipOrder.indexOf(a.state) - chipOrder.indexOf(b.state),
+    );
+    const worst = sorted.find((l) => l.state > 0) ?? null;
+    const worstPath = worst ? worst.path.join(' › ') : null;
+
+    return { chips, worstPath, leaves: sorted };
+});
+
+function onAggregationLeafClick(leaf: AggregationLeafRow): void {
+    if (!leaf.hostName) return;
+    emit('select-host', leaf.hostName, leaf.serviceDescription ?? null);
 }
 
 const serviceChips = computed<SummaryChip[]>(() => {
@@ -2281,6 +2472,68 @@ useMutationObserver(
 .detail-drawer__section--downtimes .detail-drawer__list-row {
     border: 1px solid rgb(59 130 246 / 35%);
     background: rgb(59 130 246 / 6%);
+}
+
+/* BI aggregation summary pane: per-leaf clickable rows. */
+.detail-drawer__section--aggregation {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-drawer__section--aggregation .detail-drawer__list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.detail-drawer__list-row--clickable {
+    display: grid;
+    grid-template-columns: 8px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.detail-drawer__list-row--clickable:hover {
+    background: var(--bg-hover);
+}
+
+.detail-drawer__list-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+}
+
+.detail-drawer__list-dot--ok {
+    background: var(--color-green, #22c55e);
+}
+
+.detail-drawer__list-dot--warn {
+    background: var(--color-yellow, #ffd000);
+}
+
+.detail-drawer__list-dot--crit {
+    background: var(--color-red, #ef4444);
+}
+
+.detail-drawer__list-dot--unknown {
+    background: var(--color-orange, #f97316);
+}
+
+.detail-drawer__list-state {
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.detail-drawer__list-strong {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text);
 }
 
 .detail-drawer__actions {
