@@ -62,6 +62,7 @@ sbom-*.cdx.json
 .playwright-mcp/
 frontend/*.cfg
 docs/frontend-coverage-plan.md
+docs/cmk-builtin-readiness.md
 reports/
 
 # Allow curated docs assets
