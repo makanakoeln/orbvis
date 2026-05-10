@@ -265,6 +265,8 @@ export default {
             'Keine BI-Aggregationen verfügbar — entweder sind in Checkmk keine konfiguriert, oder dein Nutzer hat keine Berechtigung, sie zu sehen.',
         expandDepth: 'Aufklapptiefe',
         expandDepthHelp: 'Kindknoten bis zu N Ebenen anzeigen (0 = nur Wurzel).',
+        aggregationPreview: 'Vorschau (Live-Status)',
+        aggregationPreviewMore: '{count} weitere',
         noHosts: 'Keine Hosts verfügbar',
         noServices: 'Keine Services für diesen Host',
         noGroups: 'Keine Gruppen verfügbar',

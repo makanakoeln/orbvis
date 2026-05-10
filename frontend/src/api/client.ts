@@ -4,6 +4,7 @@
 
 import type {
     AggregationInfo,
+    AggregationNode,
     BoardConfig,
     BoardObject,
     BoardPermissions,
@@ -326,6 +327,18 @@ export const connectionsApi = {
 
     aggregations: (connectionId: string, token: string): Promise<AggregationInfo[]> =>
         request(`/connections/${connectionId}/aggregations`, {}, token),
+
+    aggregationTree: (
+        connectionId: string,
+        aggregationId: string,
+        depth: number,
+        token: string,
+    ): Promise<AggregationNode | null> =>
+        request(
+            `/connections/${connectionId}/aggregations/${encodeURIComponent(aggregationId)}/tree?depth=${depth}`,
+            {},
+            token,
+        ),
 
     groupMembers: (
         connectionId: string,

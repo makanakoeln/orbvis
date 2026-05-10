@@ -17,7 +17,7 @@ from app.connections.base import ConnectionBase, ServiceRow, TopologyRow, topolo
 from app.core.config import settings
 from app.integrations import checkmk as cmk_integration
 from app.models.user import User
-from app.schemas.board import AggregationInfo
+from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.connection import (
     REDACTED_SECRET,
     ConnectionConfig,
@@ -659,6 +659,39 @@ async def list_backend_aggregations(
     except Exception as exc:
         logger.warning("list_aggregations failed for connection %s: %s", connection_id, exc)
         return []
+
+
+@router.get(
+    "/{connection_id}/aggregations/{aggregation_id}/tree",
+    response_model=AggregationNode | None,
+)
+async def get_backend_aggregation_tree(
+    connection_id: str,
+    aggregation_id: str,
+    depth: int = Query(2, ge=0, le=10),
+    user: User = Depends(get_current_user),
+) -> AggregationNode | None:
+    """Return the live BI aggregation tree for the editor preview pane.
+
+    Used by the EditPanel to render a "what does this look like right now"
+    sample so the designer picking ``expand_depth`` can see the resulting
+    fan-out before saving the board. Capped at 10 levels — even a single
+    rendering of 200+ leaves makes the EditPanel sluggish.
+    """
+    connection = get_connection(connection_id)
+    if connection is None:
+        return None
+    try:
+        with_auth = getattr(connection, "with_auth_user", None)
+        if with_auth is not None:
+            async with with_auth(user.name):
+                return await connection.get_aggregation_tree(aggregation_id, depth)
+        return await connection.get_aggregation_tree(aggregation_id, depth)
+    except Exception as exc:
+        logger.warning(
+            "get_aggregation_tree(%s, %s) failed: %s", connection_id, aggregation_id, exc
+        )
+        return None
 
 
 # ---------------------------------------------------------------------------

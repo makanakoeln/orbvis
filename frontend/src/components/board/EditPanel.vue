@@ -126,6 +126,58 @@
                         :title="t('boardSettings.expandDepthHelp')"
                     />
                 </label>
+                <!--
+                    Live preview of the resulting BI tree at the chosen depth.
+                    Renders as a compact "{ok=N warn=N crit=N unkn=N} of M
+                    leaves" line plus the first few leaves so the designer
+                    sees the fan-out before saving. The render shape (counts +
+                    sample) is deliberately minimal — fully expanded trees
+                    can fan out to hundreds of nodes which would slow down
+                    re-renders during typing.
+                -->
+                <div
+                    v-if="aggregationPreview"
+                    class="text-xs rounded p-2 bg-[var(--bg-subtle,rgba(0,0,0,0.05))] border border-[var(--border)]"
+                >
+                    <div class="text-[var(--text-muted)] mb-1">
+                        {{ t('boardSettings.aggregationPreview') }}
+                    </div>
+                    <div class="flex gap-3 mb-1">
+                        <span
+                            v-for="c in aggregationPreviewCounts"
+                            :key="c.key"
+                            :class="[
+                                'font-mono',
+                                c.count > 0 ? `text-[${c.color}]` : 'text-[var(--text-muted)]',
+                            ]"
+                        >
+                            {{ c.label }}={{ c.count }}
+                        </span>
+                    </div>
+                    <ul class="m-0 p-0 list-none flex flex-col gap-0.5">
+                        <li
+                            v-for="leaf in aggregationPreviewLeaves"
+                            :key="leaf.id"
+                            class="flex items-center gap-2 text-[var(--text)]"
+                        >
+                            <span
+                                class="inline-block w-1.5 h-1.5 rounded-full"
+                                :style="{ background: leaf.color }"
+                            />
+                            <span class="truncate">{{ leaf.label }}</span>
+                        </li>
+                        <li
+                            v-if="aggregationPreviewMore > 0"
+                            class="text-[var(--text-muted)] italic"
+                        >
+                            …{{
+                                t('boardSettings.aggregationPreviewMore', {
+                                    count: aggregationPreviewMore,
+                                })
+                            }}
+                        </li>
+                    </ul>
+                </div>
             </template>
 
             <template v-else-if="draft.type === 'line'">
@@ -225,7 +277,7 @@ import NumberInput from '@/components/NumberInput.vue';
 import type { NewObjectDraft } from '@/composables/useBoardEditor';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
-import type { ObjectType } from '@/types/api';
+import type { AggregationNode, ObjectType } from '@/types/api';
 
 import AutocompleteInput from './AutocompleteInput.vue';
 import ImagePicker from './ImagePicker.vue';
@@ -388,6 +440,96 @@ async function fetchAddAggregations() {
         loadingAddAggregations.value = false;
     }
 }
+
+// ── BI aggregation live preview ───────────────────────────────────────
+// Map BI numeric states (0=OK, 1=WARN, 2=CRIT, 3=UNKN) to colour + label.
+// Pinned to CSS vars so the preview honours the active theme.
+const _BI_PREVIEW_COLOR: Record<number, string> = {
+    0: 'var(--color-green, #22c55e)',
+    1: 'var(--color-yellow, #ffd000)',
+    2: 'var(--color-red, #ef4444)',
+    3: 'var(--color-orange, #f97316)',
+};
+const _BI_PREVIEW_LABEL: Record<number, string> = {
+    0: 'OK',
+    1: 'WARN',
+    2: 'CRIT',
+    3: 'UNKN',
+};
+
+const aggregationPreview = ref<AggregationNode | null>(null);
+
+function _flattenLeaves(n: AggregationNode, out: AggregationNode[] = []): AggregationNode[] {
+    if (n.node_type === 'bi_leaf') {
+        out.push(n);
+    } else {
+        for (const c of n.children) _flattenLeaves(c, out);
+    }
+    return out;
+}
+
+const aggregationPreviewLeavesAll = computed<AggregationNode[]>(() =>
+    aggregationPreview.value ? _flattenLeaves(aggregationPreview.value) : [],
+);
+
+const aggregationPreviewCounts = computed(() => {
+    const counts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
+    for (const l of aggregationPreviewLeavesAll.value) {
+        counts[l.state] = (counts[l.state] ?? 0) + 1;
+    }
+    return [2, 1, 3, 0].map((s) => ({
+        key: String(s),
+        label: _BI_PREVIEW_LABEL[s],
+        color: _BI_PREVIEW_COLOR[s],
+        count: counts[s] ?? 0,
+    }));
+});
+
+const aggregationPreviewLeaves = computed(() =>
+    aggregationPreviewLeavesAll.value.slice(0, 5).map((l) => ({
+        id: l.service_description ? `${l.host_name}/${l.service_description}` : l.name,
+        label: l.name,
+        color: _BI_PREVIEW_COLOR[l.state] ?? _BI_PREVIEW_COLOR[3],
+    })),
+);
+
+const aggregationPreviewMore = computed(() =>
+    Math.max(0, aggregationPreviewLeavesAll.value.length - 5),
+);
+
+let _aggregationPreviewToken = 0;
+async function refreshAggregationPreview(): Promise<void> {
+    const id = props.draft.aggregation_id;
+    const depth = Math.max(1, props.draft.expand_depth ?? 1);
+    if (!props.connectionId || !id) {
+        aggregationPreview.value = null;
+        return;
+    }
+    const myToken = ++_aggregationPreviewToken;
+    try {
+        const tree = await connectionsApi.aggregationTree(
+            props.connectionId,
+            id,
+            depth,
+            auth.accessToken!,
+        );
+        // Only commit if this is the latest pending request — protects
+        // against flicker when the operator changes the input quickly.
+        if (myToken === _aggregationPreviewToken) {
+            aggregationPreview.value = tree;
+        }
+    } catch {
+        if (myToken === _aggregationPreviewToken) aggregationPreview.value = null;
+    }
+}
+
+watch(
+    () => [props.draft.aggregation_id, props.draft.expand_depth, props.connectionId] as const,
+    () => {
+        if (props.draft.type === 'aggregation') void refreshAggregationPreview();
+    },
+    { immediate: true },
+);
 
 function onTypeChange() {
     props.draft.host_name = '';
