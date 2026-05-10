@@ -177,10 +177,8 @@
                         <span
                             v-for="c in aggregationPreviewCounts"
                             :key="c.key"
-                            :class="[
-                                'font-mono',
-                                c.count > 0 ? `text-[${c.color}]` : 'text-[var(--text-muted)]',
-                            ]"
+                            class="font-mono"
+                            :style="{ color: c.count > 0 ? c.color : 'var(--text-muted)' }"
                         >
                             {{ c.label }}={{ c.count }}
                         </span>
@@ -324,6 +322,13 @@ import type { NewObjectDraft } from '@/composables/useBoardEditor';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
 import type { AggregationNode, ObjectType } from '@/types/api';
+import {
+    aggregationLeafId,
+    BI_STATE_COLOR,
+    BI_STATE_LABEL,
+    countLeavesByState,
+    flattenAggregationLeaves,
+} from '@/utils/aggregationTree';
 
 import AutocompleteInput from './AutocompleteInput.vue';
 import ImagePicker from './ImagePicker.vue';
@@ -505,56 +510,28 @@ const aggregationFunctionLabel = computed<string | null>(() => {
     return aggregationFunctions.value[id] ?? null;
 });
 
-// ── BI aggregation live preview ───────────────────────────────────────
-// Map BI numeric states (0=OK, 1=WARN, 2=CRIT, 3=UNKN) to colour + label.
-// Pinned to CSS vars so the preview honours the active theme.
-const _BI_PREVIEW_COLOR: Record<number, string> = {
-    0: 'var(--color-green, #22c55e)',
-    1: 'var(--color-yellow, #ffd000)',
-    2: 'var(--color-red, #ef4444)',
-    3: 'var(--color-orange, #f97316)',
-};
-const _BI_PREVIEW_LABEL: Record<number, string> = {
-    0: 'OK',
-    1: 'WARN',
-    2: 'CRIT',
-    3: 'UNKN',
-};
-
 const aggregationPreview = ref<AggregationNode | null>(null);
 const aggregationConnectionOk = ref<boolean>(true);
 
-function _flattenLeaves(n: AggregationNode, out: AggregationNode[] = []): AggregationNode[] {
-    if (n.node_type === 'bi_leaf') {
-        out.push(n);
-    } else {
-        for (const c of n.children) _flattenLeaves(c, out);
-    }
-    return out;
-}
-
 const aggregationPreviewLeavesAll = computed<AggregationNode[]>(() =>
-    aggregationPreview.value ? _flattenLeaves(aggregationPreview.value) : [],
+    aggregationPreview.value ? flattenAggregationLeaves(aggregationPreview.value) : [],
 );
 
 const aggregationPreviewCounts = computed(() => {
-    const counts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
-    for (const l of aggregationPreviewLeavesAll.value) {
-        counts[l.state] = (counts[l.state] ?? 0) + 1;
-    }
+    const counts = countLeavesByState(aggregationPreviewLeavesAll.value);
     return [2, 1, 3, 0].map((s) => ({
         key: String(s),
-        label: _BI_PREVIEW_LABEL[s],
-        color: _BI_PREVIEW_COLOR[s],
+        label: BI_STATE_LABEL[s],
+        color: BI_STATE_COLOR[s],
         count: counts[s] ?? 0,
     }));
 });
 
 const aggregationPreviewLeaves = computed(() =>
     aggregationPreviewLeavesAll.value.slice(0, 5).map((l) => ({
-        id: l.service_description ? `${l.host_name}/${l.service_description}` : l.name,
+        id: aggregationLeafId(l),
         label: l.name,
-        color: _BI_PREVIEW_COLOR[l.state] ?? _BI_PREVIEW_COLOR[3],
+        color: BI_STATE_COLOR[l.state] ?? BI_STATE_COLOR[3],
     })),
 );
 

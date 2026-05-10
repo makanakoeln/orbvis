@@ -854,12 +854,20 @@ import { useAuthStore } from '@/stores/auth';
 import type {
     AggregationNode,
     BoardObject,
+    BulkAckTarget,
     GroupMember,
     MetricPoint,
     ObjectDetails,
     ObjectState,
     PerfometerResult,
 } from '@/types/api';
+import {
+    aggregationLeafId,
+    BI_STATE_LABEL as BI_STATE_LABEL_MAP,
+    BI_STATE_TONE,
+    countLeavesByState,
+    walkAggregationLeavesWithPath,
+} from '@/utils/aggregationTree';
 import { buildCheckmkSetupUrl, buildCheckmkUrl } from '@/utils/boardNavigation';
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming';
 import { parsePerfData, type PerfMetric, utilColor, utilPercent } from '@/utils/perf';
@@ -913,7 +921,7 @@ const emit = defineEmits<{
     /** Host name picked from the topology section — board may highlight + select it. */
     'select-host': [hostName: string, serviceDescription?: string | null];
     /** Bulk-acknowledge contributing leaves of a BI aggregation. */
-    'bulk-acknowledge': [targets: Array<{ host: string; service: string | null }>];
+    'bulk-acknowledge': [targets: BulkAckTarget[]];
 }>();
 
 const selectableHostSet = computed(() => new Set(props.selectableHosts ?? []));
@@ -1172,7 +1180,11 @@ const checkmkUrlFull = computed(() =>
 // Lookup of aggregation_id → pack_id, populated lazily when this drawer
 // shows a BI aggregation. Lets buildCheckmkSetupUrl deep-link into the
 // owning pack's rules editor instead of the bi_packs overview.
-const aggregationPackIds = ref<Record<string, string>>({});
+//
+// Map values: string = pack id; null = looked up but not surfaced by
+// cmk.bi (cache the negative so subsequent drawer opens don't re-fetch
+// the whole aggregation catalog).
+const aggregationPackIds = ref<Record<string, string | null>>({});
 watch(
     () => [props.object?.type, props.object?.aggregation_id, props.connectionId] as const,
     async ([type, aggId, connId]) => {
@@ -1182,10 +1194,11 @@ watch(
         if (!auth.accessToken) return;
         try {
             const aggrs = await connectionsApi.aggregations(connId, auth.accessToken);
-            const next: Record<string, string> = { ...aggregationPackIds.value };
+            const next: Record<string, string | null> = { ...aggregationPackIds.value };
             for (const a of aggrs) {
-                if (a.pack_id) next[a.id] = a.pack_id;
+                next[a.id] = a.pack_id ?? null;
             }
+            if (!(aggId in next)) next[aggId] = null;
             aggregationPackIds.value = next;
         } catch {
             // Pack-id lookup failure means we fall back to the bi_packs
@@ -1229,22 +1242,6 @@ interface SummaryChip {
     url: string | null;
 }
 
-// ── BI aggregation summary ────────────────────────────────────────────
-// Map BI states (numeric, used by CMK BIStates: 0=OK, 1=WARN, 2=CRIT,
-// 3=UNKNOWN) onto the same chip tones the rest of the drawer uses.
-const _BI_STATE_TONE: Record<number, 'ok' | 'warn' | 'crit' | 'unknown'> = {
-    0: 'ok',
-    1: 'warn',
-    2: 'crit',
-    3: 'unknown',
-};
-const _BI_STATE_LABEL: Record<number, string> = {
-    0: 'OK',
-    1: 'WARN',
-    2: 'CRIT',
-    3: 'UNKN',
-};
-
 interface AggregationLeafRow {
     id: string;
     label: string;
@@ -1264,32 +1261,17 @@ interface AggregationSummary {
     leaves: AggregationLeafRow[];
 }
 
-function _walkAggregationLeaves(node: AggregationNode, path: string[] = []): AggregationLeafRow[] {
-    if (node.node_type === 'bi_leaf') {
-        const tone = _BI_STATE_TONE[node.state] ?? 'unknown';
-        const stateLabel = _BI_STATE_LABEL[node.state] ?? String(node.state);
-        const id = node.service_description
-            ? `${node.host_name ?? ''};${node.service_description}`
-            : (node.host_name ?? node.name);
-        return [
-            {
-                id,
-                label: node.name,
-                stateLabel,
-                tone,
-                path: [...path, node.name],
-                hostName: node.host_name ?? null,
-                serviceDescription: node.service_description ?? null,
-                state: node.state,
-            },
-        ];
-    }
-    const out: AggregationLeafRow[] = [];
-    const sub = [...path, node.name];
-    for (const child of node.children) {
-        out.push(..._walkAggregationLeaves(child, sub));
-    }
-    return out;
+function _walkAggregationLeaves(node: AggregationNode): AggregationLeafRow[] {
+    return walkAggregationLeavesWithPath(node).map(({ leaf, path }) => ({
+        id: aggregationLeafId(leaf),
+        label: leaf.name,
+        stateLabel: BI_STATE_LABEL_MAP[leaf.state] ?? String(leaf.state),
+        tone: BI_STATE_TONE[leaf.state] ?? 'unknown',
+        path,
+        hostName: leaf.host_name ?? null,
+        serviceDescription: leaf.service_description ?? null,
+        state: leaf.state,
+    }));
 }
 
 // Checkmk's filter machinery takes a single "svc_state" / "host_state" filter
@@ -1353,15 +1335,13 @@ const aggregationSummary = computed<AggregationSummary | null>(() => {
     const leaves = _walkAggregationLeaves(tree);
     if (!leaves.length) return null;
 
-    const counts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
-    for (const l of leaves) counts[l.state] = (counts[l.state] ?? 0) + 1;
-
+    const counts = countLeavesByState(leaves.map((l) => ({ state: l.state }) as AggregationNode));
     const chipOrder: number[] = [2, 1, 3, 0];
     const chips: SummaryChip[] = chipOrder.map((s) => ({
-        state: _BI_STATE_LABEL[s],
+        state: BI_STATE_LABEL_MAP[s],
         count: counts[s] ?? 0,
-        label: _BI_STATE_LABEL[s],
-        tone: _BI_STATE_TONE[s] ?? 'unknown',
+        label: BI_STATE_LABEL_MAP[s],
+        tone: BI_STATE_TONE[s] ?? 'unknown',
         url: null,
     }));
 

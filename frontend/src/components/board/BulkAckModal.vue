@@ -86,16 +86,12 @@ import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
-import { onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
 import { useEscapeClose } from '@/composables/useEscapeClose';
-
-interface BulkAckTarget {
-    host: string;
-    service: string | null;
-}
+import type { BulkAckTarget } from '@/types/api';
 
 const props = defineProps<{
     /** Aggregation that originated the bulk-ack — embedded in the comment
@@ -122,6 +118,10 @@ const progress = ref(0);
 const successCount = ref(0);
 const error = ref('');
 const commentEl = ref<HTMLInputElement | null>(null);
+let closeTimer: number | null = null;
+onBeforeUnmount(() => {
+    if (closeTimer !== null) window.clearTimeout(closeTimer);
+});
 
 onMounted(() => commentEl.value?.focus());
 
@@ -132,8 +132,14 @@ async function submit() {
     progress.value = 0;
     successCount.value = 0;
     const failures: string[] = [];
-    for (const tgt of props.targets) {
-        progress.value += 1;
+
+    // Bounded parallelism: each leaf hits the same Checkmk site so we cap
+    // concurrency to keep the GUI responsive without queueing up many
+    // simultaneous COMMAND-pipe writes (livestatus serialises them
+    // anyway). Five matches CMK's own bulk-action UI default.
+    const CONCURRENCY = 5;
+    const queue = [...props.targets];
+    const ackOne = async (tgt: BulkAckTarget): Promise<void> => {
         try {
             if (tgt.service) {
                 await cmkApi.acknowledgeService(
@@ -159,8 +165,18 @@ async function submit() {
         } catch (e) {
             failures.push(tgt.service ? `${tgt.host}/${tgt.service}` : tgt.host);
             console.warn('[OrbVis] bulk-ack failed for', tgt, e);
+        } finally {
+            progress.value += 1;
         }
-    }
+    };
+    const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+        for (;;) {
+            const next = queue.shift();
+            if (!next) return;
+            await ackOne(next);
+        }
+    });
+    await Promise.all(workers);
     submitting.value = false;
     if (failures.length) {
         error.value = t('ack.bulkPartial', {
@@ -169,9 +185,7 @@ async function submit() {
             sample: failures.slice(0, 3).join(', '),
         });
     } else {
-        // All-success → close after a brief flash so the operator sees
-        // the green count.
-        setTimeout(() => emit('close'), 1200);
+        closeTimer = window.setTimeout(() => emit('close'), 1200);
     }
 }
 </script>

@@ -1172,6 +1172,11 @@ import type {
     MetricGraphGroup,
     ObjectState,
 } from '@/types/api';
+import {
+    aggregationLeafId,
+    BI_STATE_LABEL,
+    flattenAggregationLeaves,
+} from '@/utils/aggregationTree';
 import { linePerfdataLabelOptions, lineStyleOptions } from '@/utils/dropdownOptions';
 import { getBoardObjectName } from '@/utils/naming';
 import { parsePerfData } from '@/utils/perf';
@@ -1606,17 +1611,6 @@ watch(
     { immediate: true },
 );
 
-function _flatLeaves(n: AggregationNode, out: AggregationNode[] = []): AggregationNode[] {
-    if (n.node_type === 'bi_leaf') {
-        out.push(n);
-    } else {
-        for (const c of n.children) _flatLeaves(c, out);
-    }
-    return out;
-}
-
-const _STATE_NAMES: Record<number, string> = { 0: 'OK', 1: 'WARN', 2: 'CRIT', 3: 'UNKN' };
-
 const excludeMembersFeedback = computed<{ text: string; tone: string } | null>(() => {
     const tree = excludeMembersTree.value;
     if (!tree) return null;
@@ -1644,18 +1638,14 @@ const excludeMembersFeedback = computed<{ text: string; tone: string } | null>((
         }
     }
 
-    const leaves = _flatLeaves(tree);
+    const leaves = flattenAggregationLeaves(tree);
     const total = leaves.length;
     let suppressed = 0;
     for (const l of leaves) {
-        const key = l.host_name
-            ? l.service_description
-                ? `${l.host_name};${l.service_description}`
-                : l.host_name
-            : l.name;
+        const key = aggregationLeafId(l);
         const matchesMember = regex ? regex.test(key) : true;
         const matchesState = stateList.length
-            ? stateList.includes(_STATE_NAMES[l.state] ?? '')
+            ? stateList.includes(BI_STATE_LABEL[l.state] ?? '')
             : true;
         // exclude when BOTH (or only-defined) filters match the leaf.
         const memberApplies = !!regex;

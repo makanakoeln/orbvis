@@ -103,6 +103,14 @@ export interface FlowView {
 }
 export type BoardView = StaticView | WorldmapView | RadarView | FlowView;
 
+// Bulk-ack target shape shared by DetailDrawer (emits) → BoardView
+// (handler) → BulkAckModal (props). One declaration so a future field
+// (e.g. site_id for federated targets) lands in one place.
+export interface BulkAckTarget {
+    host: string;
+    service: string | null;
+}
+
 export type HostState = 'UP' | 'DOWN' | 'UNREACHABLE' | 'PENDING';
 export type ServiceState = 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN' | 'PENDING';
 export type MonitoringState = HostState | ServiceState | 'NO_PERMISSION' | 'NOT_FOUND';

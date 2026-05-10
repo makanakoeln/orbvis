@@ -1002,7 +1002,7 @@ import { useBoardsStore } from '@/stores/boards';
 import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
-import type { BoardObject, DowntimeEntry, ServiceLayout } from '@/types/api';
+import type { BoardObject, BulkAckTarget, DowntimeEntry, ServiceLayout } from '@/types/api';
 import type { TourStep } from '@/types/tour';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { getBoardObjectName } from '@/utils/naming';
@@ -1512,7 +1512,7 @@ function onDetailToggleNotifications(enable: boolean) {
  * loop with progress feedback. The previous "fire immediately on click"
  * version was risky for misclicks since N acks have no atomic undo.
  */
-function onDetailBulkAcknowledge(targets: Array<{ host: string; service: string | null }>) {
+function onDetailBulkAcknowledge(targets: BulkAckTarget[]) {
     if (!checkmkUrl.value || !targets.length) return;
     const obj = detailDrawerObject.value;
     const aggregationId = obj?.aggregation_id ?? obj?.id ?? 'unknown';
@@ -1521,7 +1521,7 @@ function onDetailBulkAcknowledge(targets: Array<{ host: string; service: string 
 
 const bulkAckModal = ref<{
     aggregationId: string;
-    targets: Array<{ host: string; service: string | null }>;
+    targets: BulkAckTarget[];
 } | null>(null);
 
 // ---- Static map event handlers ----
