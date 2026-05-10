@@ -537,6 +537,7 @@
                 @enable-notifications="onDetailToggleNotifications(true)"
                 @disable-notifications="onDetailToggleNotifications(false)"
                 @select-host="onSelectHost"
+                @bulk-acknowledge="onDetailBulkAcknowledge"
             />
         </div>
 
@@ -1489,6 +1490,56 @@ function onDetailAddComment() {
 }
 function onDetailToggleNotifications(enable: boolean) {
     void detailActions.handlers.toggleNotifications(detailDrawerObject.value, enable);
+}
+
+/**
+ * Bulk-acknowledge contributing leaves of a BI aggregation. The drawer
+ * already filtered to WARN/CRIT leaves with a host_name. We loop through
+ * each, sending the same comment + flags as a single-target ack would.
+ * No modal — the operator already confirmed by clicking the button. Failures
+ * surface as a single toast at the end so a partially-applied ack is still
+ * better than abandoning the whole batch on the first hiccup.
+ */
+async function onDetailBulkAcknowledge(targets: Array<{ host: string; service: string | null }>) {
+    if (!checkmkUrl.value || !targets.length) return;
+    const comment = 'Bulk-ack from BI aggregation drawer';
+    const failures: string[] = [];
+    for (const t of targets) {
+        try {
+            if (t.service) {
+                await cmkApi.acknowledgeService(
+                    checkmkUrl.value,
+                    t.host,
+                    t.service,
+                    comment,
+                    false,
+                    false,
+                    false,
+                );
+            } else {
+                await cmkApi.acknowledgeHost(
+                    checkmkUrl.value,
+                    t.host,
+                    comment,
+                    false,
+                    false,
+                    false,
+                );
+            }
+        } catch (e) {
+            failures.push(t.service ? `${t.host}/${t.service}` : t.host);
+            console.warn('[OrbVis] bulk-ack failed for', t, e);
+        }
+    }
+    if (failures.length) {
+        toast.error(
+            t('contextMenu.acknowledgeFailed') +
+                ` (${failures.length}/${targets.length}): ${failures.slice(0, 3).join(', ')}` +
+                (failures.length > 3 ? ' …' : ''),
+        );
+    } else {
+        toast.success(t('board.detailDrawer.bulkAckOk', { count: targets.length }));
+    }
 }
 
 // ---- Static map event handlers ----

@@ -184,6 +184,8 @@ export default {
             openInCheckmkSetup: 'Edit in Checkmk Setup',
             aggregationSummary: 'Aggregation',
             worstLeaf: 'Worst leaf',
+            bulkAcknowledge: 'Acknowledge {count} contributing leaves',
+            bulkAckOk: 'Acknowledged {count} leaves',
             openProblems: 'Show problems',
             moreActions: 'More actions',
             checkInfo: 'Check info',

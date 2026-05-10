@@ -259,6 +259,18 @@
                                             aggregationSummary.worstPath
                                         }}</span>
                                     </div>
+                                    <button
+                                        v-if="aggregationProblemLeaves.length"
+                                        type="button"
+                                        class="detail-drawer__action-btn"
+                                        @click="onBulkAcknowledgeClick"
+                                    >
+                                        {{
+                                            t('board.detailDrawer.bulkAcknowledge', {
+                                                count: aggregationProblemLeaves.length,
+                                            })
+                                        }}
+                                    </button>
                                     <ul
                                         v-if="aggregationSummary.leaves.length"
                                         class="detail-drawer__list"
@@ -886,6 +898,8 @@ const emit = defineEmits<{
     'disable-notifications': [];
     /** Host name picked from the topology section — board may highlight + select it. */
     'select-host': [hostName: string, serviceDescription?: string | null];
+    /** Bulk-acknowledge contributing leaves of a BI aggregation. */
+    'bulk-acknowledge': [targets: Array<{ host: string; service: string | null }>];
 }>();
 
 const selectableHostSet = computed(() => new Set(props.selectableHosts ?? []));
@@ -1323,6 +1337,24 @@ const aggregationSummary = computed<AggregationSummary | null>(() => {
 function onAggregationLeafClick(leaf: AggregationLeafRow): void {
     if (!leaf.hostName) return;
     emit('select-host', leaf.hostName, leaf.serviceDescription ?? null);
+}
+
+const aggregationProblemLeaves = computed<AggregationLeafRow[]>(() => {
+    const summary = aggregationSummary.value;
+    if (!summary) return [];
+    // state>0 = WARN/CRIT/UNKN; OK leaves don't need ack.
+    return summary.leaves.filter((l) => l.state > 0 && !!l.hostName);
+});
+
+function onBulkAcknowledgeClick(): void {
+    if (!aggregationProblemLeaves.value.length) return;
+    emit(
+        'bulk-acknowledge',
+        aggregationProblemLeaves.value.map((l) => ({
+            host: l.hostName as string,
+            service: l.serviceDescription ?? null,
+        })),
+    );
 }
 
 const serviceChips = computed<SummaryChip[]>(() => {

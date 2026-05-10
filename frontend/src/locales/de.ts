@@ -186,6 +186,8 @@ export default {
             openInCheckmkSetup: 'In Checkmk Setup bearbeiten',
             aggregationSummary: 'Aggregation',
             worstLeaf: 'Schwerwiegendstes Element',
+            bulkAcknowledge: '{count} betroffene Elemente bestätigen',
+            bulkAckOk: '{count} Elemente bestätigt',
             openProblems: 'Probleme anzeigen',
             moreActions: 'Weitere Aktionen',
             checkInfo: 'Check-Info',
