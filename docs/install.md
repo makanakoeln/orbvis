@@ -87,6 +87,21 @@ below for who can see which boards on first login.
 Re-add and re-enable the MKP, then run `orbvis-setup` again. User data
 (`boards/`, `orbvis.db`, `.env`, `backends.json`) is preserved.
 
+```bash
+omd su <site>
+mkp disable orbvis
+mkp add ~/orbvis-cmk-2.5.mkp     # overwrites the old version
+mkp enable orbvis
+orbvis-setup                      # extracts the new server + htdocs, restarts the daemon
+```
+
+If you upload the new MKP through the Checkmk GUI (*Setup → Maintenance
+→ Extension packages → Upload package*), you **still** have to run
+`orbvis-setup` once on the command line as the site user — the upload
+only stores the package; only `orbvis-setup` extracts the bundled
+`server.tar.gz` / `htdocs.tar.gz` into the site and restarts the OrbVis
+daemon. Skipping it leaves the site running the previous version.
+
 ### Uninstall
 
 OrbVis can be removed cleanly at any time — both from the command line

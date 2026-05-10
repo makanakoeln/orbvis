@@ -67,7 +67,7 @@
                     :title="t('board.detailDrawer.openInCheckmkSetup')"
                     :aria-label="t('board.detailDrawer.openInCheckmkSetup')"
                 >
-                    <CmkIcon name="setup" size="small" />
+                    <CmkIcon name="main-setup" size="small" />
                 </a>
                 <button
                     type="button"

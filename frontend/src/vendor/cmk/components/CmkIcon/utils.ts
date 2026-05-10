@@ -21,17 +21,23 @@ export function iconSizeNametoNumber(sizeName: IconSizeNames | undefined) {
     return size;
 }
 
-// Builds "<base>/check_mk/" relative to the bundle's BASE_URL. Example:
-//   BASE_URL '/ZWEIFUENF/orbvis/' → '/ZWEIFUENF/check_mk/'
-// In standalone mode (BASE_URL '/') this becomes '/check_mk/'; that path only
-// resolves when OrbVis is co-deployed with a Checkmk site, which matches the
-// current rollout.
+// Builds an absolute "/<site>/check_mk/" prefix at runtime. Example:
+//   page at /ZWEIFUENF/orbvis/#/boards/foo → '/ZWEIFUENF/check_mk/'
+// We deliberately read window.location.pathname (not import.meta.env.BASE_URL)
+// because the bundle is built with `base: './'` so it can be served from any
+// OMD-site prefix without rebuilding. With a relative BASE_URL the icon path
+// would otherwise resolve against the current SPA route (e.g. /<site>/orbvis/
+// rather than /<site>/check_mk/) and 404.
+//
+// Falls back to '/check_mk/' when no '/orbvis/' segment is detected — that
+// path resolves wherever OrbVis is co-deployed with a Checkmk site under the
+// document root, which matches the current rollout.
 function checkmkBase(): string {
-    const base = import.meta.env.BASE_URL || '/';
-    // Replace trailing /orbvis/ with /check_mk/ when present, otherwise sit at /check_mk/.
-    if (base.endsWith('/orbvis/')) return base.replace(/\/orbvis\/$/, '/check_mk/');
-    if (base.endsWith('/')) return `${base}check_mk/`;
-    return `${base}/check_mk/`;
+    if (typeof window === 'undefined') return '/check_mk/';
+    const pathname = window.location.pathname;
+    const orbvisIdx = pathname.indexOf('/orbvis/');
+    if (orbvisIdx >= 0) return `${pathname.slice(0, orbvisIdx)}/check_mk/`;
+    return '/check_mk/';
 }
 
 export function getIconPath(name: SimpleIcons, theme: string): string {
