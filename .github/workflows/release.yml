@@ -69,17 +69,31 @@ jobs:
           "$PWD/.sbom-venv/bin/pip" install --quiet -e backend cyclonedx-bom
           PATH="$PWD/.sbom-venv/bin:$PATH" scripts/generate-sboms.sh dist/
 
+      - name: Extract release notes for this version
+        run: |
+          awk -v ver="$VERSION" '
+            /^## \[/ {
+              if (found) exit
+              if ($0 ~ "^## \\["ver"\\]") { found=1; next }
+            }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::error::No CHANGELOG.md section found for version ${VERSION}" >&2
+            exit 1
+          fi
+
       - name: Create or update GitHub Release
         run: |
           if gh release view "v${VERSION}" > /dev/null 2>&1; then
             gh release edit "v${VERSION}" \
               --title "OrbVis ${VERSION}" \
-              --notes-file CHANGELOG.md
+              --notes-file release-notes.md
             gh release upload "v${VERSION}" dist/*.deb dist/*.rpm dist/*.mkp dist/*.cdx.json --clobber
           else
             gh release create "v${VERSION}" \
               --title "OrbVis ${VERSION}" \
-              --notes-file CHANGELOG.md \
+              --notes-file release-notes.md \
               dist/*.deb \
               dist/*.rpm \
               dist/*.mkp \
