@@ -1716,7 +1716,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             ? topoNodes
             : topoNodes.filter((n) => n.parents.length === 0);
         for (const n of linkedHosts) {
-            const src = nodeById.get(`__site__::${siteIdFor(n)}`);
+            const siteId = `__site__::${siteIdFor(n)}`;
+            const arr = childMap.get(siteId) ?? [];
+            arr.push(n.name);
+            childMap.set(siteId, arr);
+            const src = nodeById.get(siteId);
             const tgt = nodeById.get(n.name);
             if (src && tgt)
                 fLinks.push({
@@ -1823,26 +1827,42 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // --- Update simulation ---
     if (simulation) simulation.stop();
 
-    // Site-to-host links are visual only — they'd pull hosts toward the fixed
-    // site root and undo the severity disk. Render them as lines but skip in
-    // forceLink.
-    const hostLinks = fLinks.filter(
-        (l) => !l.isServiceLink && (l.source as FNode).nodeType !== 'site',
-    );
+    // Both host-host and site-host links participate in forceLink so a site
+    // drag pulls its hosts along the same way a parent-host drag pulls its
+    // children: the link acts as a spring. Service links remain excluded —
+    // they're laid out geometrically by updateFanPositions().
+    const springLinks = fLinks.filter((l) => !l.isServiceLink);
 
     simulation = forceSimulation<FNode>(fNodes)
         .force(
             'link',
-            forceLink<FNode, FLink>(hostLinks)
+            forceLink<FNode, FLink>(springLinks)
                 .id((d) => d.id)
                 .distance((d) => {
-                    // Space hosts far enough apart that their service rings don't overlap
-                    const srcN = servicesByHost.get((d.source as FNode).id)?.length ?? 0;
-                    const tgtN = servicesByHost.get((d.target as FNode).id)?.length ?? 0;
+                    const src = d.source as FNode;
+                    const tgt = d.target as FNode;
+                    // Site → host: scale with the host's service ring so a
+                    // dense top-K host doesn't sit on top of the site box.
+                    if (src.nodeType === 'site' || tgt.nodeType === 'site') {
+                        const host = src.nodeType === 'site' ? tgt : src;
+                        const N = servicesByHost.get(host.id)?.length ?? 0;
+                        return N > 0 ? Math.max(220, layoutR(N) + 80) : 220;
+                    }
+                    // Host → host
+                    const srcN = servicesByHost.get(src.id)?.length ?? 0;
+                    const tgtN = servicesByHost.get(tgt.id)?.length ?? 0;
                     if (srcN === 0 && tgtN === 0) return 160;
                     return Math.max(200, layoutR(srcN) + layoutR(tgtN) + 60);
                 })
-                .strength(0.4),
+                // Site links pull more softly than host parent-child links so
+                // the severity-disk pre-layout still dominates at rest while
+                // the spring is visible on an actual site drag.
+                .strength((d) => {
+                    const src = d.source as FNode;
+                    const tgt = d.target as FNode;
+                    if (src.nodeType === 'site' || tgt.nodeType === 'site') return 0.08;
+                    return 0.4;
+                }),
         )
         .force(
             'charge',
@@ -1965,13 +1985,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             // it settled the first time → subsequent drags would update
             // fx but never tick to push the change into d.x / transform.
             if (!event.active && simulation) simulation.alphaTarget(0.3).restart();
-            // Free the dragged host's descendants so forceLink can pull
-            // them along as the parent moves. Without this, any child that
-            // had a saved fx/fy (legacy subtree-pin data or a prior direct
-            // drag) stays frozen and the spring connection looks broken.
-            // Site drag deliberately does *not* unpin hosts: site→host is a
-            // visual-only link, so a site drag just moves the site umbrella.
-            if (d.nodeType === 'host') {
+            // Free the dragged parent's descendants so forceLink can pull
+            // them along as the parent (or site) moves. Without this any
+            // child that had a saved fx/fy (from a prior direct drag) stays
+            // frozen and the spring connection looks broken.
+            if (d.nodeType === 'host' || d.nodeType === 'site') {
                 const subtree = new Set<string>();
                 collectDescendants(d.id, subtree);
                 for (const id of subtree) {
@@ -1998,7 +2016,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             const root = nodeCache.get(d.id) ?? d;
             if (typeof root.fx === 'number') root.x = root.fx;
             if (typeof root.fy === 'number') root.y = root.fy;
-            if (root.nodeType === 'host' || root.nodeType === 'site') emitPinnedPositions();
+            // Readonly boards (demos) allow interactive drags but don't
+            // persist them — every session gets its own layout playground.
+            if (!props.readonly && (root.nodeType === 'host' || root.nodeType === 'site')) {
+                emitPinnedPositions();
+            }
             dragMoved = false;
         });
 
@@ -2040,8 +2062,9 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .append('g')
         .attr('class', (d) => `node node-${d.nodeType}`)
         .attr('cursor', (d) => {
-            if (d.nodeType === 'site') return props.readonly ? 'pointer' : 'grab';
-            if (d.nodeType === 'host' && !props.readonly) return 'grab';
+            // Readonly boards (e.g. the bundled demos) still allow drags so
+            // the layout feels interactive — only the persistence is gated.
+            if (d.nodeType === 'site' || d.nodeType === 'host') return 'grab';
             return props.clickAction === 'none' ? 'default' : 'pointer';
         })
         .on('click', (event: MouseEvent, d) => {
@@ -2092,13 +2115,12 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             hoverMenu.object = null;
         });
 
-    // Drag on host + site nodes when not in readonly/kiosk mode. Dragging
-    // the site moves its whole host subtree along (via collectSubtree).
-    if (!props.readonly) {
-        nodeEnter
-            .filter((d) => d.nodeType === 'host' || d.nodeType === 'site')
-            .call(dragBehavior as never);
-    }
+    // Always attach drag to host + site nodes — readonly boards stay
+    // interactive (just no persistence), so demos feel as alive as live
+    // boards. The persistence path inside drag.end checks props.readonly.
+    nodeEnter
+        .filter((d) => d.nodeType === 'host' || d.nodeType === 'site')
+        .call(dragBehavior as never);
 
     // Site root nodes (synthetic): rounded rect with site name.
     const siteEnter = nodeEnter.filter((d) => d.nodeType === 'site');
