@@ -6,65 +6,35 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [0.2.0] - 2026-05-10
 
-Iterative release that hardens the operator workflow on top of 0.1.0
-without changing any public API.
+Iterative release on top of 0.1.0 with no public-API changes.
 
-### BI aggregations
-- Drawer summary pane with per-state leaf counts and the worst-leaf
-  path
-- Bulk-acknowledge confirm modal (capped parallelism, audit-trail
-  comment trailer) for all contributing leaves of an aggregation
-- WATO setup deep-link from the drawer (`mode=bi_rules&pack=<id>`
-  when the pack id is known, otherwise `mode=bi_packs`)
-- Live preview of the resulting tree state + glyph-density warning
-  in the edit panel
-- `exclude_members` regex now shows a live "N suppressed of M"
-  feedback line in the object-properties modal
-- Stale-data hint in the drawer when the aggregation's federation
-  is unhealthy
-- Subtree highlight from root to worst leaf in the BI tree gadget
+### Features
 
-### Group-level actions
-- Hostgroup / servicegroup acknowledge + downtime via Checkmk's
-  `acknowledge_type=hostgroup|servicegroup` REST surface
-- Members tab with triage health, per-row search, last-state-change
-- Clickable member rows; hide-zero health chips; responsive controls
+- Flow board: major overhaul — donut/fan/orbit/phyllotaxis layouts, host halo, search + problems-only filter, shift-click and lasso multi-select, in-app detail drawer, right-click context menu
+- Flow board: live topology over WebSocket with `TopologyDelta`, persistent host drag positions, site-umbrella root, top-K problem highlighting
+- Flow board: pan/zoom performance — rAF-coalesced zoom, GPU-promoted zoom-layer, LoD via single CSS class, force-sim pause during pan, tuned cache/top-K/timeout for large installs
+- Detail drawer: redesigned shell on `CmkSlideIn` with tabbed content (Status / Performance / Context / Activity), CMK perfometer headline, sparklines, on-demand long output, topology, comments and downtimes
+- BI aggregations: drawer summary pane, bulk-acknowledge of contributing leaves with confirm modal, WATO deep-link, root→worst-leaf subtree highlight, stale-data hint, live tree-state preview and glyph-density warning in the edit panel, live suppression-count for `exclude_members` regex
+- Group-level actions: hostgroup / servicegroup acknowledge + downtime via CMK `acknowledge_type`, members tab with triage health, search and last-state-change
+- Boards: per-object connection override (multi-backend per board) + picker in object-properties, worldmap automap source for hosts with lat/lng, `Ctrl+Wheel` zoom on static boards, search-bar parity across board types, optimistic locking via `If-Match`, `background_color`, textbox resize handles
+- Triage UX: detail-drawer-first workflow with triage breadcrumb, board header dim, context menu trimmed to navigation
+- States: delta-encoded WebSocket `state_update` with timing/output fields stripped from the change-detection hash
+- Backend: gzip-compressed JSON responses above 1 KiB, in-memory board cache with debounced flush
+- Hover: host tooltip with service summary, modifier badges and live countdown
+- Checkmk integration: API documentation link in the CMK main menu, Swagger UI served locally behind the OMD Apache proxy, `backends` REST surface renamed to `connections`
 
-### Boards & objects
-- Per-object connection override (multi-backend per board)
-- Connection picker in object-properties modal
-- Worldmap automap source — auto-discover hosts with lat/lng
-- Search bar parity for static, worldmap, radar and flow boards
-- `Ctrl+Wheel` zoom (with cursor anchor) on static boards
-- Settings: Object-defaults section open by default for
-  discoverability
+### Bug Fixes
 
-### Drawer / detail panel
-- Open-in icons resolve absolute paths regardless of bundle
-  base-path
-- Member states aggregate properly across nested map links
-- Force-check / notifications / checks / remove-ack now route
-  through the livestatus command pipe
-- Group-action errors enriched with WATO-config hints
-- Decorative objects (textbox, image, line without host/svc) skip
-  the slide-in
-
-### Checkmk integration
-- Connections support CMK 2.3 / 2.4 / 2.5 / 2.6 site_config
-  signatures
-- TCP port is optional (allows unix-socket-only setups)
-- Modals close on Escape across the board
-- Autocomplete suggestion cap raised to 500 with truncation surface
-
-### Docs / tooling
-- `docs/cmk-builtin-readiness.md` — punch-list for shipping OrbVis
-  as a Checkmk-builtin in 2.6 (3 blockers, 4 should-fixes
-  documented)
-- GUI MKP-update test path covered alongside the existing CLI path
-- `deploy-cmc.sh`-driven installs now launch the daemon via
-  `python -m uvicorn` so the absence of a `venv/bin/uvicorn`
-  console script (when OMD's site-python already imports uvicorn
-  for `cmk-agent-receiver`) no longer breaks startup
+- Connections: support CMK 2.3 / 2.4 `site_config` signatures and make TCP port optional for unix-socket-only setups
+- Install: launch uvicorn via `python -m` (both `deploy-cmc.sh` and `orbvis-setup`), build venv with `--system-site-packages` for `cmk.licensing`, surface OMD `lib/python3` via `PYTHONPATH`, discover free backend port for multi-site installs
+- States: aggregate nested map links so the worst state bubbles up
+- Board service: per-board lock around read-modify-write to prevent lost updates under concurrent edits
+- Importer: resolve relative coords, per-type defaults, label/textbox fidelity
+- Modals: close on Escape across the board
+- Drawer: route force-check / notifications / checks / remove-ack via the livestatus command pipe; respect `see_all` admin scope; chip-drilldown filter; open-in icons resolve absolute paths
+- Flow board: respect Off mode for service layout, cancel pending fit on operator interaction, harden topology cache for `top-K=0`, scope topology endpoint to auth-user contact groups
+- Board: use CMK perfometer percentage in line labels, keep object positions when adding a background image, skip slide-in for decorative objects without host/service
+- Refresh enabled sites when `sites.mk` changes
 
 ## [0.1.0] - 2026-05-03
 
