@@ -1430,7 +1430,19 @@ const detailActions = useObjectActions(
 );
 
 function openDetail(obj: BoardObject) {
-    detailDrawerObject.value = obj;
+    // A line is a visual relation between two endpoints, but in monitoring
+    // terms it represents either the host or the host's service (whichever
+    // is configured). Drawer logic keys off `type` to fetch state and
+    // render the right tabs, so expose the line as its underlying
+    // host/service for the drawer's purposes.
+    if (obj.type === 'line' && obj.host_name) {
+        detailDrawerObject.value = {
+            ...obj,
+            type: obj.service_description ? 'service' : 'host',
+        };
+    } else {
+        detailDrawerObject.value = obj;
+    }
     worldmapHover.visible = false;
     worldmapCtxMenu.visible = false;
 }
@@ -1559,6 +1571,7 @@ function objectHasMonitoringTarget(obj: BoardObject): boolean {
     switch (obj.type) {
         case 'host':
         case 'service':
+        case 'line':
             return Boolean(obj.host_name);
         case 'hostgroup':
         case 'servicegroup':
