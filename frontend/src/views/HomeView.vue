@@ -1495,20 +1495,27 @@ function worldmapZoom(map: BoardRead) {
     return map.view.type === 'worldmap' ? (map.view as WorldmapView).zoom : 5;
 }
 
-onMounted(() => {
-    boardsStore.fetchBoards();
-    if (auth.user && !localStorage.getItem(`orbvis_onboarded_${auth.user.user_id}`)) {
-        if (changelogVisible.value) {
-            // Show onboarding only after the changelog is dismissed
-            const stop = watch(changelogVisible, (val) => {
-                if (!val) {
-                    showOnboarding.value = true;
-                    stop();
-                }
-            });
-        } else {
-            showOnboarding.value = true;
-        }
+onMounted(async () => {
+    await boardsStore.fetchBoards();
+    if (!auth.user) return;
+    const storageKey = `orbvis_onboarded_${auth.user.user_id}`;
+    if (localStorage.getItem(storageKey)) return;
+    // Existing operators who already have boards have outgrown the
+    // onboarding tour; mark them as onboarded so an upgrade doesn't
+    // ambush them with it.
+    if (boardsStore.boards.length > 0) {
+        localStorage.setItem(storageKey, '1');
+        return;
+    }
+    if (changelogVisible.value) {
+        const stop = watch(changelogVisible, (val) => {
+            if (!val) {
+                showOnboarding.value = true;
+                stop();
+            }
+        });
+    } else {
+        showOnboarding.value = true;
     }
 });
 </script>
