@@ -1559,12 +1559,17 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // does), so fall back to the connection id.
     //
     // Y offset is adaptive: a flat topology (no parent chains) puts the site
-    // far above the phyllotaxis disk for a clean umbrella; a hierarchical
+    // above the phyllotaxis disk for a clean umbrella; a hierarchical
     // topology already has its own visual root via parent_child links, so we
     // sit the site just above the topmost host to avoid a tall empty chain.
+    // Scale the flat-board offset with the disk radius (SPIRAL_SPACING ·
+    // sqrt(N) is the phyllotaxis outer rim) so a 10-host board doesn't get a
+    // 1500-px void between site and the disk while a 500-host board still
+    // gets the site visibly above the rim.
     const rootCount = topoNodes.filter((n) => n.parents.length === 0).length;
     const isMostlyFlat = topoNodes.length > 0 && rootCount / topoNodes.length >= 0.5;
-    const SITE_Y_OFFSET = isMostlyFlat ? -1500 : -300;
+    const diskRadius = SPIRAL_SPACING * Math.sqrt(topoNodes.length);
+    const SITE_Y_OFFSET = isMostlyFlat ? -(diskRadius + 120) : -300;
     function siteIdFor(n: TopologyNode): string {
         return n.site_id || props.connectionId;
     }
