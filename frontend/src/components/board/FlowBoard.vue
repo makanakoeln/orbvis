@@ -921,6 +921,19 @@ watch(
         for (const k of nodeCache.keys()) {
             if (k.includes('::')) nodeCache.delete(k);
         }
+        // Drop cached host positions for non-pinned hosts so preLayoutHosts
+        // re-spreads them at spacing appropriate for the new layout. Without
+        // this the donut-tight phyllotaxis carries over into fan/orbit/row
+        // and the bigger service rings overlap neighbouring hosts once zoomed
+        // in. User-dragged hosts (fx/fy set) keep their position.
+        for (const node of nodeCache.values()) {
+            if (node.nodeType !== 'host') continue;
+            if (node.fx !== undefined && node.fy !== undefined) continue;
+            node.x = undefined;
+            node.y = undefined;
+            node.vx = undefined;
+            node.vy = undefined;
+        }
         if (newVal !== 'off' && oldVal === 'off') {
             for (const node of nodeCache.values()) {
                 node.x = undefined;
@@ -1768,21 +1781,37 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             // Only host nodes attract/repel each other; service and "+more"
             // pseudo-nodes are positioned geometrically by the layout helpers,
             // so applying charge to them just burns ticks at O(N log N). On
-            // flat topologies (no BFS hierarchy) the severity-ring pre-layout
-            // already spreads hosts evenly, so charge is suppressed there —
-            // otherwise the all-to-all repulsion wins against the anchor and
-            // flattens the rings into a wide ellipse.
+            // flat topologies with donut/off layouts the severity-ring
+            // pre-layout already spreads hosts evenly, so charge is
+            // suppressed — otherwise the all-to-all repulsion wins against
+            // the anchor and flattens the rings into a wide ellipse. For
+            // service-aware layouts (fan/orbit/row) we keep the charge so
+            // top-K hosts with big service rings repel their (donut)
+            // neighbours which would otherwise stay clamped by the severity
+            // spiral anchor in the inner ring.
             forceManyBody<FNode>().strength((d) => {
                 if (d.nodeType !== 'host') return 0;
-                if (maxLvl === 0) return 0;
+                if (maxLvl === 0 && !needsServices(props.serviceLayout)) return 0;
                 const N = servicesByHost.get(d.id)?.length ?? 0;
                 return N > 0 ? -Math.max(700, layoutR(N) * 9) : -600;
             }),
         )
+        // Anchor strength: full grip on donut/off (where collide-radius is small
+        // and the severity-spiral pre-layout already fits), softer on
+        // fan/orbit/row so the much bigger top-K service rings can actually
+        // push neighbours aside instead of being yanked back by the anchor.
+        // Hosts that actually render service rings (services rendered, i.e.
+        // not services_omitted) get no anchor at all so charge+collide can
+        // disperse them freely.
         .force(
             'center',
             forceX<FNode>((d) => (d.nodeType === 'host' ? (anchorX.get(d.id) ?? 0) : 0)).strength(
-                (d) => (d.nodeType === 'host' ? 0.18 : 0),
+                (d) => {
+                    if (d.nodeType !== 'host') return 0;
+                    if (!needsServices(props.serviceLayout)) return 0.18;
+                    const N = servicesByHost.get(d.id)?.length ?? 0;
+                    return N > 0 ? 0 : 0.06;
+                },
             ),
         )
         .force(
@@ -1800,12 +1829,12 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                     return wantsDonut ? NODE_R + 14 : NODE_R + 10;
                 }
                 if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit')
-                    return layoutR(N) + svcR(N) + 20;
+                    return layoutR(N) + svcR(N) + 35;
                 // Row grid
                 const cols = Math.min(N, Math.max(4, Math.ceil(Math.sqrt(N * 1.5))));
                 const spacingX = rowSpacings.get(d.id) ?? 60;
-                return (cols / 2) * spacingX + svcR(N) + 10;
-            }).iterations(maxLvl > 0 ? 3 : 1),
+                return (cols / 2) * spacingX + svcR(N) + 20;
+            }).iterations(needsServices(props.serviceLayout) ? 5 : maxLvl > 0 ? 3 : 1),
         )
         .force(
             'y',
@@ -1818,13 +1847,21 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                   )
                 : forceY<FNode>((d) =>
                       d.nodeType === 'host' ? (anchorY.get(d.id) ?? 0) : 0,
-                  ).strength((d) => (d.nodeType === 'host' ? 0.18 : 0)),
+                  ).strength((d) => {
+                      if (d.nodeType !== 'host') return 0;
+                      if (!needsServices(props.serviceLayout)) return 0.18;
+                      const N = servicesByHost.get(d.id)?.length ?? 0;
+                      return N > 0 ? 0 : 0.06;
+                  }),
         )
         // Faster alpha decay on flat boards: the severity-spiral pre-layout
         // already places hosts in their target slots, so the sim only needs
         // to resolve overlaps — 30 ticks is enough. For real BFS hierarchies
         // keep the slower decay so the layered layout has time to settle.
-        .alphaDecay(maxLvl > 0 ? 0.05 : 0.1)
+        // Service-aware layouts (fan/orbit/row) also need the slower decay
+        // because collide has to push the much bigger top-K rings apart
+        // against the (softened) anchor pull.
+        .alphaDecay(maxLvl > 0 || needsServices(props.serviceLayout) ? 0.05 : 0.1)
         .stop();
 
     // --- Drag behaviour ---
@@ -2237,7 +2274,13 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         // Lower initial alpha on flat boards: pre-layout already approximates
         // the steady state, so 0.4 settles in ~25 ticks instead of ~75 from
         // alpha=1. Hierarchical boards still need full-energy initial sim.
-        const initAlpha = isInitial ? (maxLvl > 0 ? 1 : 0.4) : 0.2;
+        // Service-aware layouts need full energy too — collide has to push the
+        // top-K rings apart from the donut-packed spiral starting point.
+        const initAlpha = isInitial
+            ? maxLvl > 0 || needsServices(props.serviceLayout)
+                ? 1
+                : 0.4
+            : 0.2;
         simulation.alpha(initAlpha).restart();
     } else {
         // Status-only update: state colors / donut segments / halos already
@@ -2275,7 +2318,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             fitFired = true;
             detachListeners();
         };
-        const maxTicks = needsServices(props.serviceLayout) ? 60 : 30;
+        const maxTicks = needsServices(props.serviceLayout) ? 120 : 30;
         let ticks = 0;
         simulation.on('end.fit', fireFit);
         simulation.on('tick.fit', () => {

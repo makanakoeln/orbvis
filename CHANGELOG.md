@@ -33,6 +33,7 @@ Iterative release on top of 0.1.0 with no public-API changes.
 - Modals: close on Escape across the board
 - Drawer: route force-check / notifications / checks / remove-ack via the livestatus command pipe; respect `see_all` admin scope; chip-drilldown filter; open-in icons resolve absolute paths
 - Flow board: respect Off mode for service layout, cancel pending fit on operator interaction, harden topology cache for `top-K=0`, scope topology endpoint to auth-user contact groups
+- Flow board: spread hosts so fan/orbit/row service rings of top-K hosts don't overlap their donut neighbours on zoom-in
 - Board: use CMK perfometer percentage in line labels, keep object positions when adding a background image, skip slide-in for decorative objects without host/service
 - Refresh enabled sites when `sites.mk` changes
 
