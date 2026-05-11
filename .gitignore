@@ -63,6 +63,8 @@ sbom-*.cdx.json
 frontend/*.cfg
 docs/frontend-coverage-plan.md
 docs/cmk-builtin-readiness.md
+docs/bi-ux-review.md
+docs/bi-ux-review-followup.md
 reports/
 
 # Allow curated docs assets
