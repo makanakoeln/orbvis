@@ -4,18 +4,22 @@
         class="relative select-none bg-[var(--bg)]"
         :class="placing ? 'cursor-crosshair' : ''"
         :style="canvasStyle"
-        :data-native-width="bgImageSize?.width"
-        :data-native-height="bgImageSize?.height"
+        :data-native-width="canvasWidth"
+        :data-native-height="canvasHeight"
         @click="onCanvasClick"
         @pointermove.prevent="onCanvasPointerMove"
         @pointerup="onCanvasPointerUp"
         @pointercancel="onCanvasPointerUp"
         @wheel="onCanvasWheel"
     >
-        <!-- Grid overlay — always in CSS pixel space so it's visible regardless of bg-image scale -->
+        <!-- Grid overlay — viewBox keeps coords in native canvas space so the
+             snap intervals match drag-quantised object positions even after
+             the canvas asymmetric-stretches into the pane. -->
         <svg
             v-if="editMode && (snapGrid ?? 0) > 0"
             class="absolute inset-0 w-full h-full pointer-events-none"
+            :viewBox="`0 0 ${canvasWidth} ${canvasHeight}`"
+            preserveAspectRatio="none"
         >
             <defs>
                 <pattern
@@ -35,7 +39,11 @@
             <rect width="100%" height="100%" :fill="`url(#grid-${snapGrid})`" />
         </svg>
 
-        <!-- SVG overlay for lines -->
+        <!-- SVG overlay for lines. Renders at display-pixel coords (no
+             viewBox) so strokes, polygon arrowheads, and text labels keep
+             their natural proportions when the canvas asymmetric-stretches.
+             BoardLine multiplies its native obj.x/y by the injected
+             `canvasScale` so endpoints still align with HTML object icons. -->
         <svg class="absolute inset-0 w-full h-full">
             <g
                 v-for="line in lineObjects"
@@ -198,7 +206,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue';
 
 import { useObjectActions } from '@/composables/useObjectActions';
 import { useSettingsStore } from '@/stores/settings';
@@ -334,14 +342,21 @@ const canvasStyle = computed(() => {
     const color = props.config.background_color;
     const z = zoom.value;
     const base: Record<string, string> = {
-        // Multiply min-size by zoom so the outer overflow-auto container grows
-        // its scrollbars while we apply the matching CSS transform — that gives
-        // operators native browser pan via scroll, parity with FlowBoard's d3
-        // zoom/pan in spirit if not in interaction.
-        minWidth: `max(${canvasWidth.value * z}px, 100%)`,
-        minHeight: `max(${canvasHeight.value * z}px, 100%)`,
-        transform: z !== 1 ? `scale(${z})` : '',
-        transformOrigin: '0 0',
+        // Canvas fills the pane so the bg-image (100% 100%) covers the whole
+        // background with no dark borders. Object positions are stored in the
+        // native coord system (max of bg-image native size and outermost
+        // object) and rendered as percentages so they stay anchored to the
+        // same bg-pixel regardless of the pane's actual rendered size.
+        //
+        // The asymmetric stretch is the classical NagVis behaviour and the
+        // tradeoff operators expect: the bg can squash if the pane's aspect
+        // ratio doesn't match the bg image's. Icons stay at fixed CSS-px sizes.
+        //
+        // `zoom` handles the user's manual Ctrl+Wheel zoom uniformly on top
+        // (scales bg + objects + icons together as a single magnifying glass).
+        width: '100%',
+        height: '100%',
+        zoom: z !== 1 ? String(z) : '',
     };
     if (color) base.backgroundColor = color;
     if (bg && !bgImageFailed.value) {
@@ -373,8 +388,10 @@ function onCanvasWheel(event: WheelEvent): void {
     const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom.value * factor));
     if (next === zoom.value) return;
     // Anchor zoom around the cursor: scroll the outer container so the point
-    // under the mouse stays under the mouse after the size change.
-    const outer = canvasEl.value?.parentElement;
+    // under the mouse stays under the mouse after the size change. The
+    // immediate parent is a flex centering wrapper; the actual scroll viewport
+    // is the ancestor with `overflow: auto` (BoardView's static-map pane).
+    const outer = findScrollAncestor(canvasEl.value);
     if (outer) {
         const rect = canvasEl.value!.getBoundingClientRect();
         const cx = event.clientX - rect.left;
@@ -393,6 +410,49 @@ function onCanvasWheel(event: WheelEvent): void {
 
 function resetZoom(): void {
     zoom.value = 1;
+}
+
+// Reactive scale factor from native coord space → display pixels. Used by
+// child SVGs (lines, arrows, line labels) that draw at display-px so their
+// stroke widths, glyph aspects, and polygon shapes don't distort with the
+// asymmetric bg-image stretch. Updated via ResizeObserver on the canvas
+// element so all derived render values track viewport changes.
+const canvasDisplaySize = ref<{ width: number; height: number }>({ width: 0, height: 0 });
+const canvasScale = computed(() => ({
+    sx: canvasWidth.value > 0 ? canvasDisplaySize.value.width / canvasWidth.value : 1,
+    sy: canvasHeight.value > 0 ? canvasDisplaySize.value.height / canvasHeight.value : 1,
+}));
+provide('canvasScale', canvasScale);
+let canvasResizeObserver: ResizeObserver | null = null;
+onMounted(() => {
+    const el = canvasEl.value;
+    if (!el) return;
+    canvasDisplaySize.value = { width: el.clientWidth, height: el.clientHeight };
+    canvasResizeObserver = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        const box = entry.contentBoxSize?.[0];
+        if (box) {
+            canvasDisplaySize.value = { width: box.inlineSize, height: box.blockSize };
+        } else {
+            canvasDisplaySize.value = { width: el.clientWidth, height: el.clientHeight };
+        }
+    });
+    canvasResizeObserver.observe(el);
+});
+onBeforeUnmount(() => {
+    canvasResizeObserver?.disconnect();
+    canvasResizeObserver = null;
+});
+
+function findScrollAncestor(el: HTMLElement | null): HTMLElement | null {
+    let node: HTMLElement | null = el?.parentElement ?? null;
+    while (node) {
+        const overflow = getComputedStyle(node).overflow;
+        if (/(auto|scroll)/.test(overflow)) return node;
+        node = node.parentElement;
+    }
+    return null;
 }
 
 watch(
@@ -417,10 +477,14 @@ function objectWrapperStyle(obj: BoardObjectType) {
           ? 'pointer'
           : 'default';
     const zIndex = _dragId.value === obj.id ? 100 : (obj.z ?? 1);
-
+    // % positioning anchors the object to a fraction of the native coord
+    // space; combined with bg-image at 100% 100%, the object stays on the
+    // same bg-pixel regardless of how the canvas is scaled to fit the pane.
+    const w = canvasWidth.value || 1;
+    const h = canvasHeight.value || 1;
     return {
-        left: `${pos.x}px`,
-        top: `${pos.y}px`,
+        left: `${(pos.x / w) * 100}%`,
+        top: `${(pos.y / h) * 100}%`,
         transform: 'translate(-50%, -50%)',
         cursor,
         zIndex,
@@ -435,6 +499,15 @@ function matchesSearch(obj: BoardObjectType): boolean {
 
 // ---- Pointer-capture drag handlers ----
 
+// Translate a viewport-px coord (event.clientX/Y minus canvas rect.left/top)
+// into the canvas's native coord space — the asymmetric-stretch canvas means
+// 1px on screen != 1px in obj.x. Used by every drag/resize/place handler.
+function viewportToNative(viewportX: number, viewportY: number, rect: DOMRect) {
+    const sx = (canvasWidth.value || 1) / Math.max(rect.width, 1);
+    const sy = (canvasHeight.value || 1) / Math.max(rect.height, 1);
+    return { x: viewportX * sx, y: viewportY * sy };
+}
+
 function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
     if (event.button === 2) return; // right-click: let contextmenu event fire normally
     _suppressNextCanvasClick.value = false;
@@ -444,8 +517,13 @@ function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
     if (!canvas) return;
     canvas.setPointerCapture(event.pointerId);
     const rect = canvas.getBoundingClientRect();
-    _dragOffX.value = event.clientX - rect.left - obj.x;
-    _dragOffY.value = event.clientY - rect.top - obj.y;
+    const cursorNative = viewportToNative(
+        event.clientX - rect.left,
+        event.clientY - rect.top,
+        rect,
+    );
+    _dragOffX.value = cursorNative.x - obj.x;
+    _dragOffY.value = cursorNative.y - obj.y;
     _dragInitX.value = obj.x;
     _dragInitY.value = obj.y;
     _didMove.value = false;
@@ -487,8 +565,13 @@ function onCanvasPointerMove(event: PointerEvent) {
     const id = _dragId.value;
     if (!id || !canvasEl.value) return;
     const rect = canvasEl.value.getBoundingClientRect();
-    const x = Math.max(0, _snap(Math.round(event.clientX - rect.left - _dragOffX.value)));
-    const y = Math.max(0, _snap(Math.round(event.clientY - rect.top - _dragOffY.value)));
+    const cursorNative = viewportToNative(
+        event.clientX - rect.left,
+        event.clientY - rect.top,
+        rect,
+    );
+    const x = Math.max(0, _snap(Math.round(cursorNative.x - _dragOffX.value)));
+    const y = Math.max(0, _snap(Math.round(cursorNative.y - _dragOffY.value)));
     if (
         !_didMove.value &&
         (Math.abs(x - _dragInitX.value) > 4 || Math.abs(y - _dragInitY.value) > 4)
@@ -685,10 +768,7 @@ function closeMenus() {
 function getMapPosition(event: MouseEvent): { x: number; y: number } {
     if (!canvasEl.value) return { x: 0, y: 0 };
     const rect = canvasEl.value.getBoundingClientRect();
-    return {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-    };
+    return viewportToNative(event.clientX - rect.left, event.clientY - rect.top, rect);
 }
 
 defineExpose({ getCanvasEl: () => canvasEl.value, getMapPosition, resetZoom });

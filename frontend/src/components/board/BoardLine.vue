@@ -197,7 +197,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, inject, onMounted, type Ref, ref, watch } from 'vue';
 
 import { metricsApi } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
@@ -223,10 +223,23 @@ defineEmits<{
     'hover-leave': [];
 }>();
 
-const x1 = computed(() => props.dragCoords?.x ?? props.object.x);
-const y1 = computed(() => props.dragCoords?.y ?? props.object.y);
-const x2 = computed(() => props.dragCoords?.x2 ?? props.object.x2 ?? props.object.x + 50);
-const y2 = computed(() => props.dragCoords?.y2 ?? props.object.y2 ?? props.object.y + 50);
+// Injected from BoardCanvas. Translates the line's native obj.x/y coords
+// into display-pixel coords so strokes, arrowheads, and text labels render
+// at their natural proportions inside the no-viewBox SVG (which itself sits
+// at the asymmetric-stretched canvas display size).
+const canvasScale = inject<Ref<{ sx: number; sy: number }>>(
+    'canvasScale',
+    ref({ sx: 1, sy: 1 }) as Ref<{ sx: number; sy: number }>,
+);
+
+const x1 = computed(() => (props.dragCoords?.x ?? props.object.x) * canvasScale.value.sx);
+const y1 = computed(() => (props.dragCoords?.y ?? props.object.y) * canvasScale.value.sy);
+const x2 = computed(
+    () => (props.dragCoords?.x2 ?? props.object.x2 ?? props.object.x + 50) * canvasScale.value.sx,
+);
+const y2 = computed(
+    () => (props.dragCoords?.y2 ?? props.object.y2 ?? props.object.y + 50) * canvasScale.value.sy,
+);
 
 const lineColor = computed(
     () =>
