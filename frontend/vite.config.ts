@@ -136,13 +136,13 @@ export default defineConfig({
       ],
       // Baseline aus current state (~7% wenn Vue-Views mitgezaehlt werden —
       // viele views/* und components/* sind komplett untested). Folge-PRs heben
-      // die Schwellen inkrementell an, Ziel 30%. Gate bewusst knapp unter dem
-      // aktuellen Stand, damit kein Zufallsbruch.
+      // die Schwellen inkrementell an, Ziel 30%. Schwellen mit ~1pp Puffer
+      // unter den aktuellen Ist-Werten, damit kleine PRs nicht zufällig brechen.
       thresholds: {
-        lines: 7,
+        lines: 6,
         functions: 4,
         branches: 3,
-        statements: 7,
+        statements: 6,
       },
     },
   },
