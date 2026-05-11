@@ -345,10 +345,16 @@ const canvasStyle = computed(() => {
     };
     if (color) base.backgroundColor = color;
     if (bg && !bgImageFailed.value) {
+        // Stretch the image to fill the canvas. Canvas dimensions already
+        // expand to encompass both the natural image size and the object
+        // extent (whichever is larger), so 100% 100% never squashes the
+        // image below its natural size for fresh boards designed at native
+        // bg dimensions, and faithfully covers the full object extent for
+        // boards from 0.1.0 where object coords were saved in the
+        // stretched-canvas coordinate system.
         base.backgroundImage = `url(${url})`;
         base.backgroundRepeat = 'no-repeat';
-        base.backgroundSize = 'auto';
-        base.backgroundPosition = 'top left';
+        base.backgroundSize = '100% 100%';
     }
     return base;
 });
