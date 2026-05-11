@@ -102,6 +102,12 @@ only stores the package; only `orbvis-setup` extracts the bundled
 `server.tar.gz` / `htdocs.tar.gz` into the site and restarts the OrbVis
 daemon. Skipping it leaves the site running the previous version.
 
+After the upgrade, force-reload the OrbVis tab once in the browser
+(`Ctrl+Shift+R`, or `Cmd+Shift+R` on macOS). The browser caches the old
+`index.html` and may keep serving the previous JS/CSS bundle until the
+cache is bypassed, which surfaces as stale views or unchanged click
+behaviour right after the upgrade.
+
 ### Uninstall
 
 OrbVis can be removed cleanly at any time — both from the command line
