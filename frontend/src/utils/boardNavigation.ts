@@ -12,6 +12,17 @@ function _baseAndSite(
     return { base, p };
 }
 
+// Wrap a relative Checkmk path in `index.py?start_url=…` so the landing page
+// keeps Checkmk's chrome (sidebar, top-bar, breadcrumbs) instead of dropping
+// the operator into a bare view. Bare view URLs are still useful inside an
+// embedded iframe (no double chrome), but at the OrbVis layer "open in
+// Checkmk" always means "open the real Checkmk page".
+function _wrapInChrome(base: string, viewPath: string, viewParams: URLSearchParams): string {
+    const inner = `${viewPath}?${viewParams}`;
+    const outer = new URLSearchParams({ start_url: inner });
+    return `${base}/check_mk/index.py?${outer}`;
+}
+
 export function buildCheckmkUrl(obj: BoardObject, checkmkUrl: string | null): string | null {
     const r = _baseAndSite(checkmkUrl);
     if (!r) return null;
@@ -20,7 +31,7 @@ export function buildCheckmkUrl(obj: BoardObject, checkmkUrl: string | null): st
     if ((obj.type === 'host' || obj.type === 'line') && obj.host_name && !obj.service_description) {
         p.view_name = 'hoststatus';
         p.host = obj.host_name;
-        return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
+        return _wrapInChrome(base, 'view.py', new URLSearchParams(p));
     }
     if (
         (obj.type === 'service' || obj.type === 'line') &&
@@ -30,29 +41,29 @@ export function buildCheckmkUrl(obj: BoardObject, checkmkUrl: string | null): st
         p.view_name = 'service';
         p.host = obj.host_name;
         p.service = obj.service_description;
-        return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
+        return _wrapInChrome(base, 'view.py', new URLSearchParams(p));
     }
     if (obj.type === 'hostgroup' && obj.group_name) {
         p.view_name = 'hostgroup';
         p.hostgroup = obj.group_name;
-        return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
+        return _wrapInChrome(base, 'view.py', new URLSearchParams(p));
     }
     if (obj.type === 'servicegroup' && obj.group_name) {
         p.view_name = 'servicegroup';
         p.servicegroup = obj.group_name;
-        return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
+        return _wrapInChrome(base, 'view.py', new URLSearchParams(p));
     }
     if (obj.type === 'aggregation' && obj.aggregation_id) {
         p.view_name = 'aggr_single';
         p.aggr_name = obj.aggregation_id;
         p.po_aggr_expand = '1';
-        return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
+        return _wrapInChrome(base, 'view.py', new URLSearchParams(p));
     }
     if (obj.type === 'site' && obj.host_name) {
         // Site root drills into the per-site host overview.
         p.view_name = 'allhosts';
         p.site = obj.host_name;
-        return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
+        return _wrapInChrome(base, 'view.py', new URLSearchParams(p));
     }
     return null;
 }
@@ -84,7 +95,7 @@ export function buildCheckmkSetupUrl(
         } else {
             p.mode = 'bi_packs';
         }
-        return `${base}/check_mk/wato.py?${new URLSearchParams(p)}`;
+        return _wrapInChrome(base, 'wato.py', new URLSearchParams(p));
     }
     return null;
 }
@@ -102,12 +113,12 @@ export function buildCheckmkUrlFromState(
         p.view_name = 'service';
         p.host = host;
         p.service = svc;
-        return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
+        return _wrapInChrome(base, 'view.py', new URLSearchParams(p));
     }
     if (state.type === 'host') {
         p.view_name = 'hoststatus';
         p.host = state.object_id;
-        return `${base}/check_mk/view.py?${new URLSearchParams(p)}`;
+        return _wrapInChrome(base, 'view.py', new URLSearchParams(p));
     }
     return null;
 }
