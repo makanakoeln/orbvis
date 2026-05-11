@@ -428,6 +428,9 @@ onMounted(() => {
     const el = canvasEl.value;
     if (!el) return;
     canvasDisplaySize.value = { width: el.clientWidth, height: el.clientHeight };
+    // jsdom (vitest) doesn't ship ResizeObserver; skip cleanly so unit tests
+    // can mount the component. Production browsers always provide it.
+    if (typeof ResizeObserver === 'undefined') return;
     canvasResizeObserver = new ResizeObserver((entries) => {
         const entry = entries[0];
         if (!entry) return;
