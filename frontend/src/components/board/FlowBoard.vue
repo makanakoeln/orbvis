@@ -431,19 +431,37 @@ function severityRank(n: TopologyNode | undefined): 0 | 1 | 2 {
 // readable at a glance even on 500-host boards.
 const PHYLLOTAXIS_ANGLE = Math.PI * (3 - Math.sqrt(5));
 const SPIRAL_SPACING = 55;
-function preLayoutHosts(hosts: FNode[]): void {
-    if (!hosts.length) return;
-    const ranked = [...hosts].sort((a, b) => {
+function rankBySeverity(hosts: FNode[]): FNode[] {
+    return [...hosts].sort((a, b) => {
         const sa = severityRank(a.topo);
         const sb = severityRank(b.topo);
         if (sa !== sb) return sb - sa;
         return a.id.localeCompare(b.id);
     });
-    ranked.forEach((d, i) => {
+}
+function preLayoutHosts(hosts: FNode[]): void {
+    if (!hosts.length) return;
+    rankBySeverity(hosts).forEach((d, i) => {
         const angle = i * PHYLLOTAXIS_ANGLE;
         const r = SPIRAL_SPACING * Math.sqrt(i + 1);
         d.x = r * Math.cos(angle);
         d.y = r * Math.sin(angle);
+    });
+}
+// Half-disk phyllotaxis below the site: mirror the negative-y points so the
+// entire spiral lands in the lower half-plane. Hosts visually hang under
+// their site root instead of orbiting around (0,0).
+function preLayoutHostsBelowSite(
+    sitePos: { x: number; y: number },
+    hosts: FNode[],
+    gap: number,
+): void {
+    if (!hosts.length) return;
+    rankBySeverity(hosts).forEach((d, i) => {
+        const angle = i * PHYLLOTAXIS_ANGLE;
+        const r = SPIRAL_SPACING * Math.sqrt(i + 1);
+        d.x = sitePos.x + r * Math.cos(angle);
+        d.y = sitePos.y + gap + Math.abs(r * Math.sin(angle));
     });
 }
 
@@ -783,7 +801,7 @@ function emitPinnedPositions(): void {
         const positions: Record<string, { x: number; y: number }> = {};
         for (const node of nodeCache.values()) {
             if (
-                node.nodeType === 'host' &&
+                (node.nodeType === 'host' || node.nodeType === 'site') &&
                 typeof node.fx === 'number' &&
                 typeof node.fy === 'number' &&
                 Number.isFinite(node.fx) &&
@@ -1290,18 +1308,21 @@ watch(
     },
 );
 
-watch(
-    () => [
-        props.flowView?.root ?? '',
-        props.flowView?.child_layers ?? null,
-        props.flowView?.parent_layers ?? null,
-    ],
-    () => {
-        nodeCache.clear();
-        _hasFitOnce = false;
-        fetchTopology();
-    },
-);
+// Persisting positions creates a new flowView object reference each save.
+// Vue's watch source returning an array would fire on every reference change
+// (Object.is on the array), resetting _hasFitOnce and triggering a refit even
+// when root/layers haven't actually changed. Compare the keys as a single
+// string via computed so identical values are deduped before the watch sees
+// them.
+const flowViewKey = computed(() => {
+    const v = props.flowView;
+    return `${v?.root ?? ''}|${v?.child_layers ?? ''}|${v?.parent_layers ?? ''}`;
+});
+watch(flowViewKey, () => {
+    nodeCache.clear();
+    _hasFitOnce = false;
+    fetchTopology();
+});
 
 // Stable node map — keeps d3 positions across topology refreshes
 const nodeCache = new Map<string, FNode>();
@@ -1553,41 +1574,51 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         }
     }
 
-    // Synthetic site root nodes: surface a per-site root above the host disk
-    // so the operator always sees "X hosts on site Y" at a glance. Single-site
-    // Checkmk setups don't tag rows with site_id (the federated multisite path
-    // does), so fall back to the connection id.
+    // Synthetic site root nodes: surface a per-site root so the operator
+    // always sees "X hosts on site Y" at a glance. Single-site Checkmk setups
+    // don't tag rows with site_id (the federated multisite path does), so
+    // fall back to the connection id.
     //
-    // Y offset is adaptive: a flat topology (no parent chains) puts the site
-    // above the phyllotaxis disk for a clean umbrella; a hierarchical
-    // topology already has its own visual root via parent_child links, so we
-    // sit the site just above the topmost host to avoid a tall empty chain.
-    // Scale the flat-board offset with the disk radius (SPIRAL_SPACING ·
-    // sqrt(N) is the phyllotaxis outer rim) so a 10-host board doesn't get a
-    // 1500-px void between site and the disk while a 500-host board still
-    // gets the site visibly above the rim.
+    // For flat topologies the site anchors a half-disk of hosts below it
+    // (hosts visually hang under the site). For hierarchical topologies BFS
+    // already drives the vertical layout, so the site just sits above the
+    // topmost layer to avoid an empty chain.
     const rootCount = topoNodes.filter((n) => n.parents.length === 0).length;
     const isMostlyFlat = topoNodes.length > 0 && rootCount / topoNodes.length >= 0.5;
-    const diskRadius = SPIRAL_SPACING * Math.sqrt(topoNodes.length);
-    const SITE_Y_OFFSET = isMostlyFlat ? -(diskRadius + 120) : -300;
+    const HOST_SITE_GAP = 140;
     function siteIdFor(n: TopologyNode): string {
         return n.site_id || props.connectionId;
     }
     const siteIds: string[] = [];
+    const hostsBySite = new Map<string, FNode[]>();
     if (topoNodes.length > 0) {
         const seen = new Set<string>();
-        for (const n of topoNodes) {
-            const sid = siteIdFor(n);
-            if (seen.has(sid)) continue;
-            seen.add(sid);
-            siteIds.push(sid);
+        for (const fNode of fNodes) {
+            if (fNode.nodeType !== 'host' || !fNode.topo) continue;
+            const sid = siteIdFor(fNode.topo);
+            if (!seen.has(sid)) {
+                seen.add(sid);
+                siteIds.push(sid);
+            }
+            const arr = hostsBySite.get(sid) ?? [];
+            arr.push(fNode);
+            hostsBySite.set(sid, arr);
         }
     }
     const siteSpread = Math.max(0, (siteIds.length - 1) * 600);
+    const sitePositions = new Map<string, { x: number; y: number }>();
     siteIds.forEach((sid, i) => {
         const id = `__site__::${sid}`;
         const xTarget =
             siteIds.length === 1 ? 0 : -siteSpread / 2 + (i * siteSpread) / (siteIds.length - 1);
+        // Site initially sits above its host group. Scale offset with the
+        // disk radius so the umbrella stays visually tied to its hosts on
+        // small boards and clears the dispersion-induced spread on large
+        // ones. Once the operator drags the site, the position is owned by
+        // the user — we keep the cached fx/fy instead of snapping back.
+        const groupSize = hostsBySite.get(sid)?.length ?? 0;
+        const groupDiskR = SPIRAL_SPACING * Math.sqrt(Math.max(1, groupSize));
+        const defaultY = -(groupDiskR + 160);
         const cached = nodeCache.get(id);
         const node: FNode = cached
             ? { ...cached, nodeType: 'site', state: 'UP', siteId: sid }
@@ -1599,21 +1630,37 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                   nodeType: 'site',
                   siteId: sid,
               };
-        node.fx = xTarget;
-        node.fy = SITE_Y_OFFSET;
-        node.x = xTarget;
-        node.y = SITE_Y_OFFSET;
+        if (!cached) {
+            const saved = savedPositions[id];
+            const fx = saved?.x ?? xTarget;
+            const fy = saved?.y ?? defaultY;
+            node.fx = fx;
+            node.fy = fy;
+            node.x = fx;
+            node.y = fy;
+        }
         nodeCache.set(id, node);
         fNodes.push(node);
+        sitePositions.set(sid, { x: node.x ?? xTarget, y: node.y ?? defaultY });
     });
 
-    // Severity-based concentric ring pre-layout for hosts that don't have
-    // cached positions — gives the operator a glance-readable arrangement
-    // (problems clustered toward the center) before the force simulation has
-    // settled. The pre-layout positions are then used as anchors below so
-    // forceX/forceY pull each host back toward its severity ring instead of
-    // the simulation flattening everything into a wide ellipse.
-    preLayoutHosts(fNodes.filter((n) => n.nodeType === 'host' && n.x === undefined));
+    // Severity-based pre-layout: hosts that don't have a cached position get
+    // an initial arrangement so the force simulation has a glance-readable
+    // starting point. On flat boards we group hosts per site and lay each
+    // group out in a half-disk below its site root; on hierarchical boards
+    // BFS drives the vertical layout, so the legacy phyllotaxis spiral is
+    // kept around the origin.
+    const uncachedHosts = fNodes.filter((n) => n.nodeType === 'host' && n.x === undefined);
+    if (isMostlyFlat && siteIds.length > 0) {
+        for (const sid of siteIds) {
+            const sitePos = sitePositions.get(sid);
+            if (!sitePos) continue;
+            const group = (hostsBySite.get(sid) ?? []).filter((n) => n.x === undefined);
+            preLayoutHostsBelowSite(sitePos, group, HOST_SITE_GAP);
+        }
+    } else {
+        preLayoutHosts(uncachedHosts);
+    }
     const anchorX = new Map<string, number>();
     const anchorY = new Map<string, number>();
     for (const n of fNodes) {
@@ -1629,6 +1676,22 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     }
 
     const nodeById = new Map(fNodes.map((n) => [n.id, n]));
+
+    // Parent → direct children map for "unpin on drag": dragging a parent
+    // host should let its descendants float via forceLink instead of staying
+    // anchored to an old fx/fy (which can linger from legacy subtree-pin
+    // saves or earlier explicit drags). We unpin the whole subtree on
+    // drag.start so the spring connection can actually pull them along.
+    const hostNameSet = new Set(topoNodes.map((n) => n.name));
+    const childMap = new Map<string, string[]>();
+    for (const n of topoNodes) {
+        for (const p of n.parents) {
+            if (!hostNameSet.has(p)) continue;
+            const arr = childMap.get(p) ?? [];
+            arr.push(n.name);
+            childMap.set(p, arr);
+        }
+    }
 
     const fLinks: FLink[] = [];
     // Host-to-host links
@@ -1870,38 +1933,72 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .stop();
 
     // --- Drag behaviour ---
-    // alphaTarget+pin only fires once an actual `drag` event arrives — d3
-    // calls `start`/`end` for bare clicks too, and otherwise every host
-    // click would re-energise the force layout. On the first real drag
-    // tick we also pin every other host: typical boards save < 5% of host
-    // positions, so without this the remaining ones drift toward the
-    // force equilibrium for the duration of the drag.
+    // Each draggable node is treated independently: only the dragged node
+    // gets pinned to the cursor. Children/parents react through the running
+    // force simulation (forceLink + forceCollide + forceManyBody), so
+    // related hosts float along with a natural spring delay instead of
+    // tracking the cursor rigidly. The site is just another draggable node;
+    // because site→host links are visual-only the site moves independently.
     let dragMoved = false;
+    function collectDescendants(rootId: string, out: Set<string>): void {
+        const queue: string[] = [rootId];
+        while (queue.length) {
+            const id = queue.shift()!;
+            const children = childMap.get(id);
+            if (!children) continue;
+            for (const childId of children) {
+                if (out.has(childId)) continue;
+                out.add(childId);
+                queue.push(childId);
+            }
+        }
+    }
     const dragBehavior = drag<SVGGElement, FNode>()
-        .on('start', () => {
+        .on('start', (event, d) => {
             cancelPendingFit();
             dragMoved = false;
+            // Wake the simulation here, not in drag.drag — d3-drag's
+            // `event.active` is 0 only in start/end (the gesture isn't
+            // counted yet/anymore). In drag.drag it's always ≥ 1, so the
+            // textbook `if (!event.active) sim.alphaTarget(0.3).restart()`
+            // gate would never fire there, leaving the sim stopped after
+            // it settled the first time → subsequent drags would update
+            // fx but never tick to push the change into d.x / transform.
+            if (!event.active && simulation) simulation.alphaTarget(0.3).restart();
+            // Free the dragged host's descendants so forceLink can pull
+            // them along as the parent moves. Without this, any child that
+            // had a saved fx/fy (legacy subtree-pin data or a prior direct
+            // drag) stays frozen and the spring connection looks broken.
+            // Site drag deliberately does *not* unpin hosts: site→host is a
+            // visual-only link, so a site drag just moves the site umbrella.
+            if (d.nodeType === 'host') {
+                const subtree = new Set<string>();
+                collectDescendants(d.id, subtree);
+                for (const id of subtree) {
+                    const node = nodeCache.get(id);
+                    if (!node) continue;
+                    node.fx = null;
+                    node.fy = null;
+                }
+            }
         })
         .on('drag', (event, d) => {
-            if (!dragMoved) {
-                dragMoved = true;
-                for (const node of nodeCache.values()) {
-                    if (node.nodeType === 'host' && (node.fx == null || node.fy == null)) {
-                        node.fx = node.x ?? 0;
-                        node.fy = node.y ?? 0;
-                    }
-                }
-                if (!event.active) simulation!.alphaTarget(0.3).restart();
-            }
-            d.fx = event.x;
-            d.fy = event.y;
+            const root = nodeCache.get(d.id);
+            if (!root) return;
+            dragMoved = true;
+            root.fx = event.x;
+            root.fy = event.y;
         })
         .on('end', (event, d) => {
+            // Always release the alphaTarget so the sim cools down after the
+            // drag — even bare clicks (no movement) get a brief wake from
+            // start.alphaTarget(0.3) and need to be cooled back to 0.
+            if (!event.active && simulation) simulation.alphaTarget(0);
             if (!dragMoved) return;
-            if (!event.active) simulation!.alphaTarget(0);
-            d.fx = d.x;
-            d.fy = d.y;
-            if (d.nodeType === 'host') emitPinnedPositions();
+            const root = nodeCache.get(d.id) ?? d;
+            if (typeof root.fx === 'number') root.x = root.fx;
+            if (typeof root.fy === 'number') root.y = root.fy;
+            if (root.nodeType === 'host' || root.nodeType === 'site') emitPinnedPositions();
             dragMoved = false;
         });
 
@@ -1943,7 +2040,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .append('g')
         .attr('class', (d) => `node node-${d.nodeType}`)
         .attr('cursor', (d) => {
-            if (d.nodeType === 'site') return 'pointer';
+            if (d.nodeType === 'site') return props.readonly ? 'pointer' : 'grab';
             if (d.nodeType === 'host' && !props.readonly) return 'grab';
             return props.clickAction === 'none' ? 'default' : 'pointer';
         })
@@ -1995,9 +2092,12 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             hoverMenu.object = null;
         });
 
-    // Drag only on host nodes when not in readonly/kiosk mode
+    // Drag on host + site nodes when not in readonly/kiosk mode. Dragging
+    // the site moves its whole host subtree along (via collectSubtree).
     if (!props.readonly) {
-        nodeEnter.filter((d) => d.nodeType === 'host').call(dragBehavior as never);
+        nodeEnter
+            .filter((d) => d.nodeType === 'host' || d.nodeType === 'site')
+            .call(dragBehavior as never);
     }
 
     // Site root nodes (synthetic): rounded rect with site name.
