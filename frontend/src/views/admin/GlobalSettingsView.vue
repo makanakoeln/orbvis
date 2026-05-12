@@ -564,6 +564,8 @@ import CmkColorPicker from '@cmk/components/CmkColorPicker.vue';
 import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkToggleButtonGroup from '@cmk/components/CmkToggleButtonGroup.vue';
+import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
+import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';

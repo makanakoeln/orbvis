@@ -509,6 +509,8 @@ import CmkBadge from '@cmk/components/CmkBadge.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
+import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
+import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, reactive, ref } from 'vue';

@@ -121,6 +121,8 @@
 import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
+import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
+import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
