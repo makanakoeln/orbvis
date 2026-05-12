@@ -1,67 +1,43 @@
 <template>
-    <Teleport to="body">
-        <div class="fixed inset-0 z-50 flex items-center justify-center">
-            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('close')" />
-            <div
-                class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl p-6 w-[26rem] space-y-4"
-            >
-                <h3 class="text-base font-bold text-[var(--text)]">{{ t('downtime.title') }}</h3>
-                <p class="text-xs text-[var(--text-muted)] -mt-2">{{ displayName }}</p>
-                <p v-if="isGroup" class="text-xs text-amber-400 -mt-2" :title="t('ack.groupHint')">
-                    {{ t('ack.groupScope', { type: groupTypeLabel }) }}
-                </p>
+    <OrbModal :open="true" :title="t('downtime.title')" closable @close="$emit('close')">
+        <p class="downtime-modal__subtitle">{{ displayName }}</p>
+        <p v-if="isGroup" class="downtime-modal__group-hint" :title="t('ack.groupHint')">
+            {{ t('ack.groupScope', { type: groupTypeLabel }) }}
+        </p>
 
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{{
-                            t('downtime.startTime')
-                        }}</label>
-                        <input
-                            v-model="startTime"
-                            type="datetime-local"
-                            class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{{
-                            t('downtime.endTime')
-                        }}</label>
-                        <input
-                            v-model="endTime"
-                            type="datetime-local"
-                            class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
-                        />
-                    </div>
-                    <div class="space-y-[4px]">
-                        <CmkLabel>{{ t('downtime.comment') }}</CmkLabel>
-                        <CmkInput
-                            v-model="comment"
-                            field-size="FILL"
-                            :placeholder="t('downtime.comment') + '…'"
-                        />
-                    </div>
-                </div>
-
-                <CmkAlertBox v-if="error" variant="error" size="small">
-                    <span style="white-space: pre-line">{{ error }}</span>
-                </CmkAlertBox>
-                <p v-if="success" class="text-xs text-green-400">{{ t('downtime.success') }}</p>
-
-                <div class="flex gap-3 justify-end pt-1 border-t border-[var(--border)]">
-                    <CmkButton variant="secondary" @click="$emit('close')">{{
-                        t('common.cancel')
-                    }}</CmkButton>
-                    <CmkButton
-                        variant="primary"
-                        :disabled="submitting || !comment.trim()"
-                        @click="submit"
-                    >
-                        {{ submitting ? t('downtime.submitting') : t('downtime.submit') }}
-                    </CmkButton>
-                </div>
+        <div class="downtime-modal__fields">
+            <div>
+                <label class="downtime-modal__label">{{ t('downtime.startTime') }}</label>
+                <input v-model="startTime" type="datetime-local" class="downtime-modal__input" />
+            </div>
+            <div>
+                <label class="downtime-modal__label">{{ t('downtime.endTime') }}</label>
+                <input v-model="endTime" type="datetime-local" class="downtime-modal__input" />
+            </div>
+            <div class="downtime-modal__cmk-field">
+                <CmkLabel>{{ t('downtime.comment') }}</CmkLabel>
+                <CmkInput
+                    v-model="comment"
+                    field-size="FILL"
+                    :placeholder="t('downtime.comment') + '…'"
+                />
             </div>
         </div>
-    </Teleport>
+
+        <CmkAlertBox v-if="error" variant="error" size="small">
+            <span style="white-space: pre-line">{{ error }}</span>
+        </CmkAlertBox>
+        <p v-if="success" class="downtime-modal__success">{{ t('downtime.success') }}</p>
+
+        <template #footer>
+            <CmkButton variant="secondary" @click="$emit('close')">
+                {{ t('common.cancel') }}
+            </CmkButton>
+            <CmkButton variant="primary" :disabled="submitting || !comment.trim()" @click="submit">
+                {{ submitting ? t('downtime.submitting') : t('downtime.submit') }}
+            </CmkButton>
+        </template>
+    </OrbModal>
 </template>
 
 <script setup lang="ts">
@@ -73,7 +49,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
-import { useEscapeClose } from '@/composables/useEscapeClose';
+import OrbModal from '@/components/OrbModal.vue';
 import { useStatesStore } from '@/stores/states';
 import type { BoardObject } from '@/types/api';
 import { flattenAggregationLeaves } from '@/utils/aggregationTree';
@@ -87,7 +63,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ close: [] }>();
-useEscapeClose(() => emit('close'));
 
 function toLocalDatetimeString(d: Date): string {
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -246,3 +221,60 @@ function enrichGroupError(msg: string): string {
     return msg;
 }
 </script>
+
+<style scoped>
+.downtime-modal__subtitle {
+    font-size: var(--font-size-normal);
+    color: var(--text-muted);
+    margin: calc(-1 * var(--dimension-4)) 0 0;
+}
+
+.downtime-modal__group-hint {
+    font-size: var(--font-size-normal);
+    color: var(--color-yellow-50);
+    margin: calc(-1 * var(--dimension-4)) 0 0;
+}
+
+.downtime-modal__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-4);
+    margin-top: var(--dimension-5);
+}
+
+.downtime-modal__cmk-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-2);
+}
+
+.downtime-modal__label {
+    display: block;
+    font-size: var(--font-size-normal);
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: var(--dimension-3);
+}
+
+.downtime-modal__input {
+    width: 100%;
+    padding: var(--dimension-4) var(--dimension-5);
+    background: var(--default-form-element-bg-color);
+    border: 1px solid var(--default-form-element-border-color);
+    border-radius: var(--dimension-3);
+    font-size: var(--font-size-large);
+    color: var(--text);
+}
+
+.downtime-modal__input:focus {
+    outline: none;
+    border-color: var(--color-corporate-green-50);
+    box-shadow: 0 0 0 2px var(--color-corporate-green-50);
+}
+
+.downtime-modal__success {
+    font-size: var(--font-size-normal);
+    color: var(--color-corporate-green-50);
+    margin-top: var(--dimension-4);
+}
+</style>

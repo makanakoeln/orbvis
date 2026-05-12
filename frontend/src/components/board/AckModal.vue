@@ -1,53 +1,39 @@
 <template>
-    <Teleport to="body">
-        <div class="fixed inset-0 z-50 flex items-center justify-center">
-            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('close')" />
-            <div
-                class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl p-6 w-[26rem] space-y-4"
-            >
-                <h3 class="text-base font-bold text-[var(--text)]">{{ t('ack.title') }}</h3>
-                <p class="text-xs text-[var(--text-muted)] -mt-2">{{ displayName }}</p>
-                <p v-if="isGroup" class="text-xs text-amber-400 -mt-2" :title="t('ack.groupHint')">
-                    {{ t('ack.groupScope', { type: groupTypeLabel }) }}
-                </p>
+    <OrbModal :open="true" :title="t('ack.title')" closable @close="$emit('close')">
+        <p class="ack-modal__subtitle">{{ displayName }}</p>
+        <p v-if="isGroup" class="ack-modal__group-hint" :title="t('ack.groupHint')">
+            {{ t('ack.groupScope', { type: groupTypeLabel }) }}
+        </p>
 
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{{
-                            t('ack.comment')
-                        }}</label>
-                        <CmkInput
-                            ref="commentEl"
-                            v-model="comment"
-                            field-size="FILL"
-                            :placeholder="t('ack.comment') + '…'"
-                        />
-                    </div>
-                    <CmkCheckbox v-model="sticky" :label="t('ack.sticky')" />
-                    <CmkCheckbox v-model="notify" :label="t('ack.notify')" />
-                    <CmkCheckbox v-model="persistent" :label="t('ack.persistent')" />
-                </div>
-
-                <CmkAlertBox v-if="error" variant="error" size="small">
-                    <span style="white-space: pre-line">{{ error }}</span>
-                </CmkAlertBox>
-                <p v-if="success" class="text-xs text-green-400">{{ t('ack.success') }}</p>
-
-                <div class="flex gap-3 justify-end pt-1 border-t border-[var(--border)]">
-                    <CmkButton variant="secondary" @click="$emit('close')">{{
-                        t('common.cancel')
-                    }}</CmkButton>
-                    <CmkButton
-                        variant="primary"
-                        :disabled="submitting || !comment.trim()"
-                        @click="submit"
-                    >
-                        {{ submitting ? t('ack.submitting') : t('ack.submit') }}
-                    </CmkButton>
-                </div>
+        <div class="ack-modal__fields">
+            <div>
+                <label class="ack-modal__label">{{ t('ack.comment') }}</label>
+                <CmkInput
+                    ref="commentEl"
+                    v-model="comment"
+                    field-size="FILL"
+                    :placeholder="t('ack.comment') + '…'"
+                />
             </div>
+            <CmkCheckbox v-model="sticky" :label="t('ack.sticky')" />
+            <CmkCheckbox v-model="notify" :label="t('ack.notify')" />
+            <CmkCheckbox v-model="persistent" :label="t('ack.persistent')" />
         </div>
-    </Teleport>
+
+        <CmkAlertBox v-if="error" variant="error" size="small">
+            <span style="white-space: pre-line">{{ error }}</span>
+        </CmkAlertBox>
+        <p v-if="success" class="ack-modal__success">{{ t('ack.success') }}</p>
+
+        <template #footer>
+            <CmkButton variant="secondary" @click="$emit('close')">
+                {{ t('common.cancel') }}
+            </CmkButton>
+            <CmkButton variant="primary" :disabled="submitting || !comment.trim()" @click="submit">
+                {{ submitting ? t('ack.submitting') : t('ack.submit') }}
+            </CmkButton>
+        </template>
+    </OrbModal>
 </template>
 
 <script setup lang="ts">
@@ -59,7 +45,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
-import { useEscapeClose } from '@/composables/useEscapeClose';
+import OrbModal from '@/components/OrbModal.vue';
 import type { BoardObject } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';
 
@@ -69,7 +55,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ close: [] }>();
-useEscapeClose(() => emit('close'));
 
 const { t } = useI18n();
 const comment = ref('');
@@ -164,3 +149,38 @@ function enrichGroupError(e: unknown): string {
     return msg;
 }
 </script>
+
+<style scoped>
+.ack-modal__subtitle {
+    font-size: var(--font-size-normal);
+    color: var(--text-muted);
+    margin: calc(-1 * var(--dimension-4)) 0 0;
+}
+
+.ack-modal__group-hint {
+    font-size: var(--font-size-normal);
+    color: var(--color-yellow-50);
+    margin: calc(-1 * var(--dimension-4)) 0 0;
+}
+
+.ack-modal__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-4);
+    margin-top: var(--dimension-5);
+}
+
+.ack-modal__label {
+    display: block;
+    font-size: var(--font-size-normal);
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: var(--dimension-3);
+}
+
+.ack-modal__success {
+    font-size: var(--font-size-normal);
+    color: var(--color-corporate-green-50);
+    margin-top: var(--dimension-4);
+}
+</style>

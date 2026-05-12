@@ -1,84 +1,64 @@
 <template>
-    <Teleport to="body">
-        <div class="fixed inset-0 z-50 flex items-center justify-center">
-            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('close')" />
-            <div
-                class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl p-6 w-[28rem] space-y-4"
+    <OrbModal :open="true" :title="t('ack.bulkTitle')" closable @close="$emit('close')">
+        <p class="bulk-ack__subtitle">
+            {{
+                t('ack.bulkSubtitle', {
+                    aggregation: aggregationId,
+                    count: targets.length,
+                })
+            }}
+        </p>
+
+        <ul class="bulk-ack__list">
+            <li
+                v-for="(t2, i) in targets"
+                :key="i"
+                class="bulk-ack__item"
+                :title="t2.service ? `${t2.host} / ${t2.service}` : t2.host"
             >
-                <h3 class="text-base font-bold text-[var(--text)]">
-                    {{ t('ack.bulkTitle') }}
-                </h3>
-                <p class="text-xs text-[var(--text-muted)] -mt-2">
-                    {{
-                        t('ack.bulkSubtitle', {
-                            aggregation: aggregationId,
-                            count: targets.length,
-                        })
-                    }}
-                </p>
+                {{ t2.host
+                }}<span v-if="t2.service" class="bulk-ack__service"> / {{ t2.service }}</span>
+            </li>
+        </ul>
 
-                <ul
-                    class="max-h-40 overflow-y-auto rounded ring-1 ring-[var(--border)] divide-y divide-[var(--border)] text-xs"
-                >
-                    <li
-                        v-for="(t2, i) in targets"
-                        :key="i"
-                        class="px-3 py-1.5 font-mono text-[var(--text)] truncate"
-                        :title="t2.service ? `${t2.host} / ${t2.service}` : t2.host"
-                    >
-                        {{ t2.host
-                        }}<span v-if="t2.service" class="text-[var(--text-muted)]">
-                            / {{ t2.service }}</span
-                        >
-                    </li>
-                </ul>
-
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{{
-                            t('ack.comment')
-                        }}</label>
-                        <CmkInput
-                            ref="commentEl"
-                            v-model="comment"
-                            field-size="FILL"
-                            :placeholder="t('ack.comment') + '…'"
-                        />
-                    </div>
-                    <CmkCheckbox v-model="sticky" :label="t('ack.sticky')" />
-                    <CmkCheckbox v-model="notify" :label="t('ack.notify')" />
-                    <CmkCheckbox v-model="persistent" :label="t('ack.persistent')" />
-                </div>
-
-                <CmkAlertBox v-if="error" variant="error" size="small">
-                    <span style="white-space: pre-line">{{ error }}</span>
-                </CmkAlertBox>
-                <p v-if="successCount" class="text-xs text-green-400">
-                    {{ t('ack.bulkSuccess', { count: successCount }) }}
-                </p>
-
-                <div class="flex gap-3 justify-end pt-1 border-t border-[var(--border)]">
-                    <CmkButton variant="secondary" @click="$emit('close')">{{
-                        t('common.cancel')
-                    }}</CmkButton>
-                    <CmkButton
-                        variant="primary"
-                        :disabled="submitting || !comment.trim()"
-                        @click="submit"
-                    >
-                        {{
-                            submitting
-                                ? t('ack.bulkSubmitting', {
-                                      current: progress,
-                                      total: targets.length,
-                                  })
-                                : t('ack.bulkSubmit', { count: targets.length })
-                        }}
-                    </CmkButton>
-                </div>
+        <div class="bulk-ack__fields">
+            <div>
+                <label class="bulk-ack__label">{{ t('ack.comment') }}</label>
+                <CmkInput
+                    ref="commentEl"
+                    v-model="comment"
+                    field-size="FILL"
+                    :placeholder="t('ack.comment') + '…'"
+                />
             </div>
+            <CmkCheckbox v-model="sticky" :label="t('ack.sticky')" />
+            <CmkCheckbox v-model="notify" :label="t('ack.notify')" />
+            <CmkCheckbox v-model="persistent" :label="t('ack.persistent')" />
         </div>
-    </Teleport>
+
+        <CmkAlertBox v-if="error" variant="error" size="small">
+            <span style="white-space: pre-line">{{ error }}</span>
+        </CmkAlertBox>
+        <p v-if="successCount" class="bulk-ack__success">
+            {{ t('ack.bulkSuccess', { count: successCount }) }}
+        </p>
+
+        <template #footer>
+            <CmkButton variant="secondary" @click="$emit('close')">
+                {{ t('common.cancel') }}
+            </CmkButton>
+            <CmkButton variant="primary" :disabled="submitting || !comment.trim()" @click="submit">
+                {{
+                    submitting
+                        ? t('ack.bulkSubmitting', {
+                              current: progress,
+                              total: targets.length,
+                          })
+                        : t('ack.bulkSubmit', { count: targets.length })
+                }}
+            </CmkButton>
+        </template>
+    </OrbModal>
 </template>
 
 <script setup lang="ts">
@@ -90,7 +70,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
-import { useEscapeClose } from '@/composables/useEscapeClose';
+import OrbModal from '@/components/OrbModal.vue';
 import type { BulkAckTarget } from '@/types/api';
 
 const props = defineProps<{
@@ -102,13 +82,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ close: [] }>();
-useEscapeClose(() => emit('close'));
 
 const { t } = useI18n();
-// Pre-fill the comment with a tag containing the aggregation id so the
-// audit trail shows which aggregation triggered the action. Operators
-// can edit / append, but the prefix is what makes the entry searchable
-// later.
 const comment = ref(`Bulk-ack: ${props.aggregationId}`);
 const sticky = ref(true);
 const notify = ref(true);
@@ -189,3 +164,60 @@ async function submit() {
     }
 }
 </script>
+
+<style scoped>
+.bulk-ack__subtitle {
+    font-size: var(--font-size-normal);
+    color: var(--text-muted);
+    margin: calc(-1 * var(--dimension-4)) 0 var(--dimension-5);
+}
+
+.bulk-ack__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 160px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--dimension-3);
+    font-size: var(--font-size-normal);
+}
+
+.bulk-ack__item {
+    padding: var(--dimension-3) var(--dimension-5);
+    font-family: monospace;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bulk-ack__list > .bulk-ack__item + .bulk-ack__item {
+    border-top: 1px solid var(--border);
+}
+
+.bulk-ack__service {
+    color: var(--text-muted);
+}
+
+.bulk-ack__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-4);
+    margin-top: var(--dimension-5);
+}
+
+.bulk-ack__label {
+    display: block;
+    font-size: var(--font-size-normal);
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: var(--dimension-3);
+}
+
+.bulk-ack__success {
+    font-size: var(--font-size-normal);
+    color: var(--color-corporate-green-50);
+    margin-top: var(--dimension-4);
+}
+</style>
