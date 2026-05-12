@@ -94,9 +94,6 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
     const iconFile = obj.display?.image ?? obj.image_src;
     let iconHtml: string;
     if (iconFile) {
-        // Selected-Indicator als weicher Glow um die Icon-Silhouette, damit das
-        // Custom Icon pixel-genau bleibt und keine Box-Optik durch outline + offset
-        // entsteht.
         const outline = selected ? 'filter: drop-shadow(0 0 6px #4ade80);' : '';
         iconHtml = `<img src="${import.meta.env.BASE_URL}images/${iconFile}" style="width:${size}px;height:${size}px;object-fit:contain;display:block;${outline}" />`;
     } else {
@@ -127,6 +124,15 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
 
     const wrappedIcon = `<div style="position:relative;display:inline-block;">${iconHtml}${ackBadge}${downtimeBadge}</div>`;
 
+    const labelSize = obj.label?.size ?? 11;
+    const labelColor = obj.label?.color || 'white';
+    const labelBg = obj.label?.background;
+    const labelBgStyle =
+        labelBg && labelBg !== 'transparent'
+            ? `background:${labelBg};padding:1px 5px;border-radius:3px;`
+            : '';
+    const labelOffsetX = obj.label?.x ?? 0;
+    const labelOffsetY = obj.label?.y ?? 0;
     return L.divIcon({
         className: '',
         html:
@@ -134,12 +140,14 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
             (label
                 ? `<div style="
         text-align: center;
-        color: white;
-        font-size: 11px;
+        color: ${labelColor};
+        font-size: ${labelSize}px;
         font-weight: 500;
         text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
         white-space: nowrap;
         margin-top: 3px;
+        transform: translate(${labelOffsetX}px, ${labelOffsetY}px);
+        ${labelBgStyle}
       ">${label.replace(/\n/g, '<br>')}</div>`
                 : ''),
         iconSize: [size, size],

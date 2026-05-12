@@ -795,10 +795,6 @@ const isSvgIcon = computed(() => {
     return icon?.toLowerCase().endsWith('.svg') ?? false;
 });
 
-// Custom-Icon Selected-Indicator: weicher Glow folgt der Icon-Silhouette
-// (Alpha-Kanal), damit ein hochgeladenes Bild pixel-genau bleibt und keine
-// Box-Optik durch outline + offset entsteht. Bei Tabler-SVGs im Dark-Mode wird
-// das invert(1) aus .svg-icon kombiniert, damit das Icon sichtbar bleibt.
 const customIconStyle = computed(() => {
     const base = {
         width: `${props.iconSize}px`,

@@ -1178,7 +1178,7 @@ import {
     flattenAggregationLeaves,
 } from '@/utils/aggregationTree';
 import { linePerfdataLabelOptions, lineStyleOptions } from '@/utils/dropdownOptions';
-import { getBoardObjectName } from '@/utils/naming';
+import { getBoardObjectIdentifier } from '@/utils/naming';
 import { parsePerfData } from '@/utils/perf';
 import { compileRegex } from '@/utils/regex';
 
@@ -1713,7 +1713,7 @@ watch(
     },
 );
 
-const displayName = computed(() => getBoardObjectName(props.object));
+const displayName = computed(() => getBoardObjectIdentifier(props.object));
 
 // ---- Save ----
 

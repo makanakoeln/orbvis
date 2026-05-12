@@ -19,6 +19,11 @@ export function getObjectTypeLabel(object: BoardObject): string {
 /** Return the display name for a board object (label > host/service > host/group/map/aggregation > id). */
 export function getBoardObjectName(object: BoardObject): string {
     if (object.label?.text) return object.label.text;
+    return getBoardObjectIdentifier(object);
+}
+
+/** Raw monitoring identifier, ignoring the custom `label.text` override. */
+export function getBoardObjectIdentifier(object: BoardObject): string {
     if (object.host_name && object.service_description)
         return `${object.host_name} / ${object.service_description}`;
     return (
