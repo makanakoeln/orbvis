@@ -265,15 +265,10 @@
             <img
                 v-if="(object.display?.image ?? object.image_src) && !imgLoadFailed"
                 :src="`${BASE_URL}images/${object.display?.image ?? object.image_src}`"
-                :style="iconStyle"
+                :style="customIconStyle"
                 draggable="false"
                 class="object-contain transition-all duration-300 select-none"
-                :class="[
-                    isSvgIcon ? 'svg-icon' : '',
-                    selected
-                        ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-zinc-950 rounded'
-                        : '',
-                ]"
+                :class="isSvgIcon ? 'svg-icon' : ''"
                 @error="imgLoadFailed = true"
             />
             <!-- State circle fallback — SVG for crisp sub-pixel text centering -->
@@ -711,11 +706,6 @@ const graphWrapperStyle = computed(() => ({
 
 const svgSize = computed(() => props.iconSize + RING_PAD * 2);
 
-const iconStyle = computed(() => ({
-    width: `${props.iconSize}px`,
-    height: `${props.iconSize}px`,
-}));
-
 const STATE_RGB: Record<string, string> = {
     UP: 'rgb(34,197,94)',
     OK: 'rgb(34,197,94)',
@@ -803,6 +793,21 @@ const ringUtilColor = computed(() => {
 const isSvgIcon = computed(() => {
     const icon = props.object.display?.image ?? props.object.image_src;
     return icon?.toLowerCase().endsWith('.svg') ?? false;
+});
+
+// Custom-Icon Selected-Indicator: weicher Glow folgt der Icon-Silhouette
+// (Alpha-Kanal), damit ein hochgeladenes Bild pixel-genau bleibt und keine
+// Box-Optik durch outline + offset entsteht. Bei Tabler-SVGs im Dark-Mode wird
+// das invert(1) aus .svg-icon kombiniert, damit das Icon sichtbar bleibt.
+const customIconStyle = computed(() => {
+    const base = {
+        width: `${props.iconSize}px`,
+        height: `${props.iconSize}px`,
+    };
+    if (!props.selected) return base;
+    const glow = 'drop-shadow(0 0 6px var(--color-corporate-green-50))';
+    const filter = isSvgIcon.value && isDark.value ? `invert(1) ${glow}` : glow;
+    return { ...base, filter };
 });
 
 const shouldShowRing = computed(

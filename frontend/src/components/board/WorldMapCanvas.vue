@@ -94,9 +94,10 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
     const iconFile = obj.display?.image ?? obj.image_src;
     let iconHtml: string;
     if (iconFile) {
-        const outline = selected
-            ? 'outline: 3px solid white; outline-offset: 2px; border-radius: 3px;'
-            : '';
+        // Selected-Indicator als weicher Glow um die Icon-Silhouette, damit das
+        // Custom Icon pixel-genau bleibt und keine Box-Optik durch outline + offset
+        // entsteht.
+        const outline = selected ? 'filter: drop-shadow(0 0 6px #4ade80);' : '';
         iconHtml = `<img src="${import.meta.env.BASE_URL}images/${iconFile}" style="width:${size}px;height:${size}px;object-fit:contain;display:block;${outline}" />`;
     } else {
         iconHtml = `<div style="
