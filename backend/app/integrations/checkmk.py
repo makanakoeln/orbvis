@@ -387,7 +387,8 @@ def cmk_bi_get_aggregations_states(
         from cmk.bi.computer import BIAggregationFilter
 
         computer = _cached_computer(query_callback, site_id)
-        bi_filter = BIAggregationFilter([], [], [], list(aggregation_names), [], [])
+        names = list(aggregation_names)
+        bi_filter = BIAggregationFilter([], [], names, names, [], [])
         results = computer.compute_result_for_filter(bi_filter)  # type: ignore[attr-defined]
         out = _bi_results_to_dict(results)
         log.debug(
@@ -419,7 +420,7 @@ def cmk_bi_get_aggregation_tree(
         from cmk.bi.computer import BIAggregationFilter
 
         computer = _cached_computer(query_callback, site_id)
-        bi_filter = BIAggregationFilter([], [], [], [aggregation_name], [], [])
+        bi_filter = BIAggregationFilter([], [], [aggregation_name], [aggregation_name], [], [])
         results = computer.compute_result_for_filter(bi_filter)  # type: ignore[attr-defined]
         if not isinstance(results, Iterable):
             return None
