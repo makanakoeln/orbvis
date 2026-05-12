@@ -4,20 +4,20 @@
             type="number"
             :value="displayValue"
             v-bind="inputAttrs"
-            class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:hidden [&::-webkit-inner-spin-button]:hidden"
+            class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:hidden [&::-webkit-inner-spin-button]:hidden"
             style="padding: 5px 24px 5px 8px"
             @input="onInput"
             @keydown.up.prevent="step(1)"
             @keydown.down.prevent="step(-1)"
         />
         <div
-            class="absolute right-0 inset-y-0 flex flex-col border-l border-zinc-700/60 rounded-r-lg overflow-hidden"
+            class="absolute right-0 inset-y-0 flex flex-col border-l border-[var(--border)] rounded-r-lg overflow-hidden"
             style="width: 20px"
         >
             <button
                 type="button"
                 tabindex="-1"
-                class="flex-1 flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-zinc-700/60 transition-colors"
+                class="flex-1 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
                 @mousedown.prevent="step(1)"
             >
                 <svg
@@ -37,7 +37,7 @@
             <button
                 type="button"
                 tabindex="-1"
-                class="flex-1 flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-zinc-700/60 transition-colors border-t border-zinc-700/60"
+                class="flex-1 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors border-t border-[var(--border)]"
                 @mousedown.prevent="step(-1)"
             >
                 <svg

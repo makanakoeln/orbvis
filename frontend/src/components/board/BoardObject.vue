@@ -11,7 +11,7 @@
         <!-- No permission: render silent empty box -->
         <div
             v-if="state?.state === 'NO_PERMISSION'"
-            class="w-full h-full rounded-lg border border-zinc-800/30 bg-zinc-900/20"
+            class="w-full h-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/20"
         />
 
         <!-- Native chart mode (host linked) -->
@@ -19,11 +19,11 @@
             <!-- Waiting for first data point / not found -->
             <div
                 v-if="!hasChartData"
-                class="w-full h-full flex flex-col items-center justify-center gap-1.5 rounded-lg text-zinc-500"
+                class="w-full h-full flex flex-col items-center justify-center gap-1.5 rounded-lg text-[var(--text-muted)]"
                 :class="
                     editMode
-                        ? 'border-2 border-dashed border-zinc-600'
-                        : 'border border-zinc-800/40'
+                        ? 'border-2 border-dashed border-[var(--border)]'
+                        : 'border border-[var(--border)]'
                 "
             >
                 <svg
@@ -50,12 +50,14 @@
             <!-- D3 chart -->
             <div
                 v-else
-                class="w-full h-full flex flex-col overflow-hidden rounded-lg border dark:bg-zinc-950/90 dark:border-white/10 bg-white border-zinc-200"
+                class="w-full h-full flex flex-col overflow-hidden rounded-lg border dark:bg-[var(--bg)]/90 dark:border-white/10 bg-white border-[var(--border)]"
                 style="padding: 6px 8px 5px"
             >
                 <!-- Header: metric label + current value -->
                 <div class="mb-1 flex items-center justify-between shrink-0">
-                    <span class="text-[9px] font-semibold tracking-wide text-zinc-400 truncate">
+                    <span
+                        class="text-[9px] font-semibold tracking-wide text-[var(--text-muted)] truncate"
+                    >
                         {{
                             isSingleMetric
                                 ? chartMetricLabels[0] || object.graph_metric?.[0]
@@ -70,7 +72,7 @@
                     >
                     <span
                         v-else
-                        class="text-[9px] text-zinc-500 shrink-0 ml-1 uppercase tracking-wide"
+                        class="text-[9px] text-[var(--text-muted)] shrink-0 ml-1 uppercase tracking-wide"
                         >live</span
                     >
                 </div>
@@ -89,9 +91,10 @@
                             class="inline-block w-1.5 h-1.5 rounded-full shrink-0"
                             :style="{ background: CHART_PALETTE[idx % CHART_PALETTE.length] }"
                         />
-                        <span class="text-[9px] dark:text-zinc-500 text-zinc-500 truncate">{{
-                            label
-                        }}</span>
+                        <span
+                            class="text-[9px] dark:text-[var(--text-muted)] text-[var(--text-muted)] truncate"
+                            >{{ label }}</span
+                        >
                         <span
                             class="text-[9px] font-mono font-semibold shrink-0 whitespace-nowrap"
                             :style="{ color: CHART_PALETTE[idx % CHART_PALETTE.length] }"
@@ -108,7 +111,7 @@
                     </div>
                     <span
                         v-if="chartMetricLabels.length > MAX_VISIBLE_SERIES"
-                        class="text-[9px] text-zinc-600 self-center cursor-default"
+                        class="text-[9px] text-[var(--text-muted)] self-center cursor-default"
                         :title="hiddenMetricLabels"
                         >+{{ chartMetricLabels.length - MAX_VISIBLE_SERIES }}</span
                     >
@@ -133,7 +136,7 @@
             <!-- Placeholder: no URL or load error -->
             <div
                 v-if="!object.graph_url || graphLoadFailed"
-                class="w-full h-full flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-zinc-600 rounded-lg text-zinc-500"
+                class="w-full h-full flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-[var(--border)] rounded-lg text-[var(--text-muted)]"
             >
                 <svg
                     class="w-6 h-6"
@@ -203,7 +206,7 @@
         <!-- Selection ring -->
         <div
             v-if="selected"
-            class="absolute inset-0 rounded-lg ring-2 ring-[var(--color-corporate-green-50)] ring-offset-1 ring-offset-zinc-950 pointer-events-none"
+            class="absolute inset-0 rounded-lg ring-2 ring-[var(--color-corporate-green-50)] ring-offset-1 ring-offset-[var(--bg)] pointer-events-none"
         />
     </div>
 
@@ -230,7 +233,7 @@
         <div
             :class="
                 selected
-                    ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-zinc-950 rounded-xl'
+                    ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-[var(--bg)] rounded-xl'
                     : ''
             "
         >
@@ -262,7 +265,7 @@
             class="font-semibold whitespace-nowrap pointer-events-none px-1.5 py-0.5 rounded"
             :class="
                 selected
-                    ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-zinc-950'
+                    ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-[var(--bg)]'
                     : ''
             "
             :style="textOnlyStyle"
@@ -303,7 +306,7 @@
                 class="block select-none transition-all duration-300 rounded-full"
                 :class="
                     selected
-                        ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-zinc-950'
+                        ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-[var(--bg)]'
                         : ''
                 "
                 :style="{ filter: stateGlow }"
@@ -385,7 +388,7 @@
             <!-- Stale data badge -->
             <span
                 v-if="state?.stale"
-                class="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-zinc-600 text-zinc-200 flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
+                class="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--color-pending)] text-[var(--text)] flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
                 title="Stale data"
             >
                 <svg

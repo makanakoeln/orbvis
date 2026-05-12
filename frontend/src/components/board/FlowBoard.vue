@@ -1,6 +1,9 @@
 <template>
     <div class="absolute inset-0 bg-[var(--bg)]">
-        <div v-if="loading" class="flex items-center justify-center h-full text-zinc-500 text-sm">
+        <div
+            v-if="loading"
+            class="flex items-center justify-center h-full text-[var(--text-muted)] text-sm"
+        >
             Loading topology…
         </div>
         <div v-else-if="error" class="flex items-center justify-center h-full text-red-400 text-sm">
@@ -15,7 +18,7 @@
         >
             <button
                 title="Zoom in"
-                class="p-[5px] bg-[var(--bg-surface)]/90 backdrop-blur-md text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors border-b border-[var(--border)]"
+                class="p-[5px] bg-[var(--bg-surface)]/90 backdrop-blur-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors border-b border-[var(--border)]"
                 @click="zoomIn"
             >
                 <svg
@@ -34,7 +37,7 @@
             </button>
             <button
                 title="Fit all"
-                class="p-[5px] bg-[var(--bg-surface)]/90 backdrop-blur-md text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors border-b border-[var(--border)]"
+                class="p-[5px] bg-[var(--bg-surface)]/90 backdrop-blur-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors border-b border-[var(--border)]"
                 @click="fitView()"
             >
                 <svg
@@ -53,7 +56,7 @@
             </button>
             <button
                 title="Zoom out"
-                class="p-[5px] bg-[var(--bg-surface)]/90 backdrop-blur-md text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+                class="p-[5px] bg-[var(--bg-surface)]/90 backdrop-blur-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
                 @click="zoomOut"
             >
                 <svg
@@ -75,7 +78,7 @@
                 viewBox="0 0 24 24"
                 stroke="currentColor"
                 stroke-width="2"
-                class="text-zinc-400 shrink-0"
+                class="text-[var(--text-muted)] shrink-0"
             >
                 <path
                     stroke-linecap="round"

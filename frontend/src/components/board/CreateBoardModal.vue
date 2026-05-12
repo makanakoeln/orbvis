@@ -11,7 +11,7 @@
                         {{ t('admin.createBoard') }}
                     </h3>
                     <button
-                        class="p-[5px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+                        class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                         @click="$emit('close')"
                     >
                         <svg
@@ -31,7 +31,7 @@
                 </div>
                 <form class="space-y-[10px]" @submit.prevent="submit">
                     <div class="space-y-[4px]">
-                        <label class="text-xs font-medium text-zinc-400">
+                        <label class="text-xs font-medium text-[var(--text-muted)]">
                             {{ t('admin.boardId') }}
                         </label>
                         <CmkInput
@@ -46,10 +46,12 @@
                             "
                         />
                         <p v-if="nameError" class="text-xs text-red-400">{{ nameError }}</p>
-                        <p v-else class="text-xs text-zinc-600">{{ t('admin.boardIdHint') }}</p>
+                        <p v-else class="text-xs text-[var(--text-muted)]">
+                            {{ t('admin.boardIdHint') }}
+                        </p>
                     </div>
                     <div class="space-y-[4px]">
-                        <label class="text-xs font-medium text-zinc-400">{{
+                        <label class="text-xs font-medium text-[var(--text-muted)]">{{
                             t('admin.alias')
                         }}</label>
                         <CmkInput
@@ -64,7 +66,7 @@
                         />
                     </div>
                     <div class="space-y-[4px]">
-                        <label class="text-xs font-medium text-zinc-400">{{
+                        <label class="text-xs font-medium text-[var(--text-muted)]">{{
                             t('board.connection')
                         }}</label>
                         <template v-if="connectionsStore.connections.length > 0">
@@ -107,7 +109,7 @@
                         </template>
                     </div>
                     <div class="space-y-[4px]">
-                        <label class="text-xs font-medium text-zinc-400">{{
+                        <label class="text-xs font-medium text-[var(--text-muted)]">{{
                             t('board.boardType')
                         }}</label>
                         <CmkDropdown
@@ -117,7 +119,7 @@
                             :label="t('board.boardType')"
                             @update:selected-option="form.view_type = $event ?? ''"
                         />
-                        <p class="text-xs text-zinc-500">
+                        <p class="text-xs text-[var(--text-muted)]">
                             <template v-if="form.view_type === 'static'">{{
                                 t('board.boardTypeStaticDesc')
                             }}</template>

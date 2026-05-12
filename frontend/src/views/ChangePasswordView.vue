@@ -22,7 +22,9 @@
                 <h1 class="text-xl font-bold text-[var(--text)]">
                     {{ t('changePassword.title') }}
                 </h1>
-                <p class="text-sm text-zinc-500 mt-1.5">{{ t('changePassword.subtitle') }}</p>
+                <p class="text-sm text-[var(--text-muted)] mt-1.5">
+                    {{ t('changePassword.subtitle') }}
+                </p>
             </div>
 
             <div
@@ -30,7 +32,7 @@
             >
                 <form class="space-y-4" @submit.prevent="save">
                     <div class="space-y-1.5">
-                        <label class="text-xs font-medium text-zinc-400">{{
+                        <label class="text-xs font-medium text-[var(--text-muted)]">{{
                             t('changePassword.newPassword')
                         }}</label>
                         <input
@@ -40,11 +42,11 @@
                             required
                             minlength="6"
                             autofocus
-                            class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                            class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                         />
                     </div>
                     <div class="space-y-1.5">
-                        <label class="text-xs font-medium text-zinc-400">{{
+                        <label class="text-xs font-medium text-[var(--text-muted)]">{{
                             t('changePassword.confirmPassword')
                         }}</label>
                         <input
@@ -52,7 +54,7 @@
                             type="password"
                             placeholder="••••••••"
                             required
-                            class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                            class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                         />
                     </div>
 
@@ -68,10 +70,13 @@
                 </form>
             </div>
 
-            <p class="text-center text-xs text-zinc-600 mt-4">
+            <p class="text-center text-xs text-[var(--text-muted)] mt-4">
                 {{ t('changePassword.loggedInAs') }}
-                <span class="text-zinc-500">{{ auth.user?.name }}</span> ·
-                <button class="hover:text-zinc-400 transition-colors" @click="auth.logout">
+                <span class="text-[var(--text-muted)]">{{ auth.user?.name }}</span> ·
+                <button
+                    class="hover:text-[var(--text-muted)] transition-colors"
+                    @click="auth.logout"
+                >
                     {{ t('auth.logout') }}
                 </button>
             </p>

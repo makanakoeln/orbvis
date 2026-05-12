@@ -107,7 +107,7 @@
                             </span>
                             <span
                                 v-if="state.stale"
-                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-zinc-500/20 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-500/40 dark:ring-zinc-500/25"
+                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--color-pending)]/20 text-[var(--text-muted)] dark:text-[var(--text-muted)] ring-1 ring-[var(--border)] dark:ring-[var(--border)]"
                             >
                                 <svg
                                     class="w-2.5 h-2.5"
@@ -406,7 +406,7 @@ const STATE_BG: Record<string, string> = {
     UNREACHABLE: 'bg-orange-400',
     UNKNOWN: 'bg-orange-400',
     WARNING: 'bg-warning',
-    PENDING: 'bg-zinc-500',
+    PENDING: 'bg-[var(--color-pending)]',
 };
 const STATE_TEXT: Record<string, string> = {
     UP: 'text-green-600 dark:text-green-400',
@@ -419,9 +419,11 @@ const STATE_TEXT: Record<string, string> = {
     PENDING: 'text-[var(--text-muted)]',
 };
 
-const stateColor = computed(() => STATE_BG[props.state?.state ?? 'PENDING'] ?? 'bg-zinc-500');
+const stateColor = computed(
+    () => STATE_BG[props.state?.state ?? 'PENDING'] ?? 'bg-[var(--color-pending)]',
+);
 const stateTextColor = computed(
-    () => STATE_TEXT[props.state?.state ?? 'PENDING'] ?? 'text-zinc-500',
+    () => STATE_TEXT[props.state?.state ?? 'PENDING'] ?? 'text-[var(--text-muted)]',
 );
 
 const subtitleText = computed(() => {
@@ -571,8 +573,8 @@ const servicePills = computed((): ServicePill[] => {
         pills.push({
             label: 'PEND',
             count: summary.pending,
-            cls: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-500/30',
-            dot: 'bg-zinc-500',
+            cls: 'bg-[var(--color-pending)]/15 text-[var(--text-muted)] dark:text-[var(--text-muted)] ring-1 ring-[var(--border)]',
+            dot: 'bg-[var(--color-pending)]',
         });
     }
     if (summary.ok) {

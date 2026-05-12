@@ -16,12 +16,16 @@
                                     : t('admin.editUser', { name: userName })
                             }}
                         </h3>
-                        <p v-if="isSelf" class="text-sm text-zinc-500" style="margin-top: 2px">
+                        <p
+                            v-if="isSelf"
+                            class="text-sm text-[var(--text-muted)]"
+                            style="margin-top: 2px"
+                        >
                             {{ userName }}
                         </p>
                     </div>
                     <button
-                        class="p-[4px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+                        class="p-[4px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                         @click="tryClose"
                     >
                         <svg
@@ -42,11 +46,13 @@
 
                 <!-- Admin settings (non-self editing) -->
                 <div v-if="!isSelf && userRead" class="space-y-[8px]">
-                    <p class="text-sm font-medium text-zinc-400">{{ t('admin.settings') }}</p>
+                    <p class="text-sm font-medium text-[var(--text-muted)]">
+                        {{ t('admin.settings') }}
+                    </p>
 
                     <div class="flex items-start gap-[8px]">
                         <CmkCheckbox v-model="adminIsAdmin" :label="t('admin.administrator')" />
-                        <p class="text-sm text-zinc-600" style="margin-top: 2px">
+                        <p class="text-sm text-[var(--text-muted)]" style="margin-top: 2px">
                             {{ t('admin.administratorHint') }}
                         </p>
                     </div>
@@ -61,7 +67,9 @@
                     v-if="!isSelf && userRead && availableRoles?.length"
                     class="border-t border-[var(--border)] pt-[8px] space-y-[6px]"
                 >
-                    <p class="text-sm font-medium text-zinc-400">{{ t('admin.roles') }}</p>
+                    <p class="text-sm font-medium text-[var(--text-muted)]">
+                        {{ t('admin.roles') }}
+                    </p>
                     <div v-for="role in availableRoles" :key="role.role_id">
                         <CmkCheckbox
                             :model-value="adminRoleIds.includes(role.role_id)"
@@ -90,8 +98,8 @@
                             style="gap: 5px; padding: 6px 8px"
                             :class="
                                 selectedTheme === opt.value
-                                    ? 'bg-zinc-600 border-zinc-500 text-zinc-100'
-                                    : 'bg-[var(--default-form-element-bg-color)] border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                                    ? 'bg-[var(--toggle-button-group-active-bg-color)] border-[var(--border)] text-[var(--text)]'
+                                    : 'bg-[var(--default-form-element-bg-color)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--border)] hover:text-[var(--text)]'
                             "
                             @click="selectTheme(opt.value)"
                         >
@@ -115,8 +123,8 @@
                             style="padding: 6px 8px"
                             :class="
                                 selectedLanguage === opt.value
-                                    ? 'bg-zinc-600 border-zinc-500 text-zinc-100'
-                                    : 'bg-[var(--default-form-element-bg-color)] border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                                    ? 'bg-[var(--toggle-button-group-active-bg-color)] border-[var(--border)] text-[var(--text)]'
+                                    : 'bg-[var(--default-form-element-bg-color)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--border)] hover:text-[var(--text)]'
                             "
                             @click="selectedLanguage = opt.value"
                         >
@@ -131,7 +139,7 @@
                     class="space-y-[8px]"
                     :class="isSelf ? 'pt-[12px] border-t border-[var(--border)]' : ''"
                 >
-                    <p class="text-sm font-medium text-zinc-400">
+                    <p class="text-sm font-medium text-[var(--text-muted)]">
                         {{ t('userSettings.changePassword') }}
                     </p>
                     <form class="space-y-[8px]" @submit.prevent="savePassword">
@@ -143,7 +151,7 @@
                                 autocomplete="new-password"
                                 field-size="FILL"
                             />
-                            <p class="text-sm text-zinc-600">
+                            <p class="text-sm text-[var(--text-muted)]">
                                 {{ t('userSettings.passwordMinLength') }}
                             </p>
                         </div>
@@ -166,7 +174,7 @@
                             <button
                                 type="submit"
                                 :disabled="pwSaving"
-                                class="ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-zinc-300 hover:text-[var(--text)] transition-all"
+                                class="ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-[var(--text)] hover:text-[var(--text)] transition-all"
                                 style="padding: 5px 10px; font-size: 12px"
                             >
                                 {{
@@ -186,7 +194,7 @@
                     </p>
                     <button
                         v-else
-                        class="text-sm text-zinc-600 hover:text-zinc-400 transition-colors"
+                        class="text-sm text-[var(--text-muted)] hover:text-[var(--text-muted)] transition-colors"
                         @click="resetTour"
                     >
                         {{ t('userSettings.resetTour') }}

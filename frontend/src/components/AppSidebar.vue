@@ -71,7 +71,7 @@
             <!-- Collapse toggle — in header, far from logout -->
             <button
                 v-if="!sidebarCollapsed"
-                class="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all shrink-0"
+                class="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all shrink-0"
                 :title="t('nav.collapseSidebar')"
                 @click="sidebarCollapsed = !sidebarCollapsed"
             >
@@ -116,7 +116,7 @@
                 />
                 <p
                     v-if="!sidebarCollapsed"
-                    class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider select-none"
+                    class="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider select-none"
                     style="padding: 0 8px 4px"
                 >
                     {{ t('nav.administration') }}
@@ -214,7 +214,7 @@
                         {{ auth.user?.name }}
                     </p>
                     <p
-                        class="text-xs text-zinc-500 group-hover:text-zinc-400 transition-colors leading-tight"
+                        class="text-xs text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-colors leading-tight"
                     >
                         {{ t('nav.userSettings') }}
                     </p>
@@ -224,7 +224,7 @@
             <!-- Logout -->
             <button
                 v-if="!auth.ssoActive"
-                class="w-full flex items-center rounded-lg text-sm text-zinc-500 hover:text-red-400 hover:bg-red-500/5 transition-all duration-150 py-[6px]"
+                class="w-full flex items-center rounded-lg text-sm text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/5 transition-all duration-150 py-[6px]"
                 :class="sidebarCollapsed ? 'justify-center px-0' : 'gap-[8px] px-[8px]'"
                 :title="sidebarCollapsed ? t('auth.logout') : undefined"
                 @click="auth.logout()"
@@ -249,7 +249,7 @@
             <!-- Version -->
             <button
                 v-if="!sidebarCollapsed"
-                class="w-full text-left text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
+                class="w-full text-left text-[10px] text-[var(--text-muted)] hover:text-[var(--text-muted)] transition-colors"
                 style="padding: 2px 8px"
                 @click="showChangelog = true"
             >

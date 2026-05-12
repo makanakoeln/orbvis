@@ -21,7 +21,7 @@
                 </div>
                 <div
                     class="text-[10px] mt-[2px]"
-                    :class="placing ? 'text-amber-400/70' : 'text-zinc-500'"
+                    :class="placing ? 'text-amber-400/70' : 'text-[var(--text-muted)]'"
                 >
                     {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.dragObjects') }}
                 </div>
@@ -134,7 +134,7 @@
                     </span>
                     <span class="font-mono text-[var(--text)]">{{ aggregationFunctionLabel }}</span>
                 </div>
-                <label class="flex items-center gap-2 text-xs text-zinc-400">
+                <label class="flex items-center gap-2 text-xs text-[var(--text-muted)]">
                     {{ t('boardSettings.expandDepth') }}
                     <NumberInput
                         v-model="draft.expand_depth"
@@ -282,7 +282,7 @@
 
             <!-- Grid snap -->
             <div class="flex items-center justify-between gap-[8px]">
-                <label class="text-xs text-zinc-500 select-none">{{
+                <label class="text-xs text-[var(--text-muted)] select-none">{{
                     t('boardSettings.grid')
                 }}</label>
                 <CmkDropdown
@@ -303,7 +303,10 @@
             >
                 {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.placeOnBoard') }}
             </CmkButton>
-            <p v-if="draft.type && !canPlace && !placing" class="text-xs text-zinc-500 text-center">
+            <p
+                v-if="draft.type && !canPlace && !placing"
+                class="text-xs text-[var(--text-muted)] text-center"
+            >
                 {{ missingFieldHint }}
             </p>
         </div>
@@ -634,7 +637,7 @@ watch(
 @reference "tailwindcss";
 
 .field {
-    @apply w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150;
+    @apply w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150;
 
     padding: 5px 10px;
 }

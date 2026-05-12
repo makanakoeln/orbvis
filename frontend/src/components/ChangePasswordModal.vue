@@ -10,10 +10,10 @@
                         <h3 class="text-base font-bold text-[var(--text)]">
                             {{ t('userSettings.changePassword') }}
                         </h3>
-                        <p class="text-xs text-zinc-500 mt-0.5">{{ userName }}</p>
+                        <p class="text-xs text-[var(--text-muted)] mt-0.5">{{ userName }}</p>
                     </div>
                     <button
-                        class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+                        class="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                         @click="$emit('close')"
                     >
                         <svg

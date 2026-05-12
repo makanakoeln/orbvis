@@ -9,7 +9,7 @@
                 class="w-14 h-14 rounded-2xl bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] flex items-center justify-center mb-4"
             >
                 <svg
-                    class="w-7 h-7 text-zinc-600"
+                    class="w-7 h-7 text-[var(--text-muted)]"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -22,13 +22,13 @@
                     />
                 </svg>
             </div>
-            <p class="text-zinc-500 text-sm font-medium">No objects found</p>
-            <p class="text-zinc-600 text-xs mt-1">Check the Radar filter settings</p>
+            <p class="text-[var(--text-muted)] text-sm font-medium">No objects found</p>
+            <p class="text-[var(--text-muted)] text-xs mt-1">Check the Radar filter settings</p>
         </div>
 
         <!-- Summary bar -->
         <div v-else class="mb-5 flex items-center gap-4 flex-wrap">
-            <span class="text-xs text-zinc-500">{{ sortedStates.length }} objects</span>
+            <span class="text-xs text-[var(--text-muted)]">{{ sortedStates.length }} objects</span>
             <div class="flex items-center gap-3 flex-wrap">
                 <span
                     v-for="s in summary"
@@ -67,7 +67,7 @@
                         <span
                             v-if="state.acknowledged"
                             title="Acknowledged"
-                            class="text-zinc-400 opacity-70"
+                            class="text-[var(--text-muted)] opacity-70"
                         >
                             <svg
                                 class="w-3 h-3"
@@ -86,7 +86,7 @@
                         <span
                             v-if="state.in_downtime"
                             title="In downtime"
-                            class="text-zinc-400 opacity-70"
+                            class="text-[var(--text-muted)] opacity-70"
                         >
                             <svg
                                 class="w-3 h-3"
@@ -245,7 +245,7 @@ function nameClass(state: string): string {
         case 'OK':
             return 'text-green-300';
         default:
-            return 'text-zinc-400';
+            return 'text-[var(--text-muted)]';
     }
 }
 
@@ -263,7 +263,7 @@ function badgeClass(state: string): string {
         case 'OK':
             return 'bg-green-500/15 text-green-400';
         default:
-            return 'bg-zinc-700/50 text-zinc-500';
+            return 'bg-[var(--bg-hover)] text-[var(--text-muted)]';
     }
 }
 
@@ -281,7 +281,7 @@ function stateDotClass(state: string): string {
         case 'OK':
             return 'bg-green-400';
         default:
-            return 'bg-zinc-500';
+            return 'bg-[var(--color-pending)]';
     }
 }
 
@@ -299,7 +299,7 @@ function stateTextClass(state: string): string {
         case 'OK':
             return 'text-green-400';
         default:
-            return 'text-zinc-500';
+            return 'text-[var(--text-muted)]';
     }
 }
 </script>

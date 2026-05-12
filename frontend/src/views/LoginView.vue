@@ -158,7 +158,7 @@
             <!-- Version footer -->
             <div class="text-center mt-[16px]">
                 <button
-                    class="text-[12px] text-zinc-600 hover:text-zinc-400 transition-colors"
+                    class="text-[12px] text-[var(--text-muted)] hover:text-[var(--text-muted)] transition-colors"
                     @click="showChangelog = true"
                 >
                     v{{ appVersion }}

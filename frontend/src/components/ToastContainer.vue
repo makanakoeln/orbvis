@@ -8,8 +8,8 @@
                     class="flex items-start gap-2.5 px-4 py-3 rounded-xl shadow-xl shadow-black/40 ring-1 text-sm font-medium max-w-sm pointer-events-auto"
                     :class="
                         toast.type === 'success'
-                            ? 'bg-zinc-800 ring-green-500/30 text-green-300'
-                            : 'bg-zinc-800 ring-red-500/30 text-red-300'
+                            ? 'bg-[var(--bg-surface)] ring-green-500/30 text-green-300'
+                            : 'bg-[var(--bg-surface)] ring-red-500/30 text-red-300'
                     "
                 >
                     <svg

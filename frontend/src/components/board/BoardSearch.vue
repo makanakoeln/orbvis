@@ -6,7 +6,7 @@
             viewBox="0 0 24 24"
             stroke="currentColor"
             stroke-width="2"
-            class="text-zinc-400 shrink-0"
+            class="text-[var(--text-muted)] shrink-0"
         >
             <path
                 stroke-linecap="round"
@@ -70,13 +70,13 @@ const local = computed({
 }
 
 .board-search__input::placeholder {
-    color: var(--zinc-500, #71717a);
+    color: var(--text-muted);
 }
 
 .board-search__clear {
     background: transparent;
     border: none;
-    color: var(--zinc-500, #71717a);
+    color: var(--text-muted);
     cursor: pointer;
     font-size: 16px;
     line-height: 1;

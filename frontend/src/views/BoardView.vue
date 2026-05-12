@@ -10,7 +10,7 @@
             <div class="flex items-center gap-[10px] min-w-0">
                 <router-link
                     to="/"
-                    class="shrink-0 flex items-center gap-[4px] text-zinc-500 hover:text-zinc-300 transition-colors"
+                    class="shrink-0 flex items-center gap-[4px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
                 >
                     <svg
                         style="width: 12px; height: 12px"
@@ -30,7 +30,7 @@
                 <button
                     v-if="drawerObject"
                     type="button"
-                    class="font-semibold text-zinc-400 hover:text-[var(--text)] text-sm truncate transition-colors cursor-pointer"
+                    class="font-semibold text-[var(--text-muted)] hover:text-[var(--text)] text-sm truncate transition-colors cursor-pointer"
                     :title="t('board.detailDrawer.close')"
                     @click="closeAnyDrawer"
                 >
@@ -40,7 +40,7 @@
                     {{ boardConfig?.alias || route.params.name }}
                 </span>
                 <template v-if="drawerObject">
-                    <span class="text-zinc-600 text-sm shrink-0">›</span>
+                    <span class="text-[var(--text-muted)] text-sm shrink-0">›</span>
                     <span class="font-semibold text-[var(--text)] text-sm truncate">
                         {{ getBoardObjectName(drawerObject) }}
                     </span>
@@ -105,7 +105,7 @@
                     :class="
                         statesStore.notificationsEnabled
                             ? 'text-amber-400 hover:bg-amber-500/10'
-                            : 'text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)]'
+                            : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
                     "
                     :title="
                         statesStore.notificationsEnabled
@@ -132,7 +132,7 @@
                 <!-- Read-only badge -->
                 <span
                     v-if="boardConfig?.readonly"
-                    class="flex items-center rounded-lg text-xs font-semibold bg-zinc-700/50 text-zinc-400 ring-1 ring-[var(--default-border-color)]"
+                    class="flex items-center rounded-lg text-xs font-semibold bg-[var(--bg-hover)] text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]"
                     style="gap: 3px; padding: 2px 6px"
                 >
                     <svg
@@ -181,7 +181,7 @@
                     style="gap: 3px; padding: 2px 7px"
                     :class="
                         rotationPaused
-                            ? 'bg-zinc-700/50 ring-[var(--default-border-color)] text-zinc-400'
+                            ? 'bg-[var(--bg-hover)] ring-[var(--default-border-color)] text-[var(--text-muted)]'
                             : 'bg-[var(--color-corporate-green-50)]/8 ring-[var(--color-corporate-green-50)]/20 text-[var(--color-corporate-green-50)]'
                     "
                     @click="toggleRotationPause"
@@ -206,7 +206,7 @@
                 <!-- Fullscreen: browser fullscreen in standalone, new-tab kiosk in Checkmk -->
                 <button
                     v-if="auth.ssoActive || auth.isCheckmkDeployment"
-                    class="p-[5px] rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+                    class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
                     :title="t('board.openInNewTab')"
                     @click="openKioskInNewTab"
                 >
@@ -226,7 +226,7 @@
                 </button>
                 <button
                     v-else
-                    class="p-[5px] rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+                    class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
                     :title="t('board.fullscreen')"
                     @click="enterFullscreen"
                 >
@@ -249,7 +249,7 @@
                 <button
                     v-if="auth.isAdmin && !boardConfig?.readonly"
                     data-tour="board-settings"
-                    class="p-[5px] rounded-lg text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+                    class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
                     :title="t('board.boardSettings')"
                     @click="openSettings"
                 >
@@ -309,7 +309,7 @@
             <!-- Loading overlay (covers all board types) -->
             <div
                 v-if="isLoading"
-                class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-zinc-500 z-30 text-sm bg-[var(--bg)]"
+                class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-[var(--text-muted)] z-30 text-sm bg-[var(--bg)]"
             >
                 <CmkLoading />
                 <span>{{ t('board.loadingBoard') }}</span>
@@ -327,7 +327,7 @@
                     <span class="text-red-400">{{ boardsStore.error }}</span>
                     <router-link
                         to="/"
-                        class="text-zinc-500 hover:text-zinc-300 transition-colors text-xs"
+                        class="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors text-xs"
                     >
                         {{ t('board.backToOverview') }}
                     </router-link>
@@ -363,7 +363,7 @@
                 <button
                     v-if="boardConfig && boardConfig.objects.some((o) => o.lat != null)"
                     :title="t('board.fitAll')"
-                    class="absolute z-[1000] leaflet-control-fit-all bg-white hover:bg-zinc-100 text-zinc-700 border border-zinc-300 rounded text-xs font-medium shadow transition-colors"
+                    class="absolute z-[1000] leaflet-control-fit-all bg-white hover:bg-zinc-100 text-zinc-700 border border-[var(--border)] rounded text-xs font-medium shadow transition-colors"
                     style="padding: 2px 4px; top: 80px; left: 10px"
                     @click.stop="worldmapCanvasRef?.fitAll()"
                 >
@@ -383,12 +383,12 @@
                 </button>
                 <div
                     v-else-if="!boardConfig"
-                    class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-zinc-600"
+                    class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-[var(--text-muted)]"
                 >
                     <span>{{ t('board.boardNotFound') }}</span>
                     <router-link
                         to="/"
-                        class="text-zinc-500 hover:text-zinc-300 transition-colors text-xs"
+                        class="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors text-xs"
                     >
                         {{ t('board.backToOverview') }}
                     </router-link>
@@ -426,7 +426,10 @@
                     @drawer-object="flowDrawerObject = $event"
                     @positions-changed="onFlowPositionsChanged"
                 />
-                <div v-else class="flex items-center justify-center h-full text-zinc-500 text-sm">
+                <div
+                    v-else
+                    class="flex items-center justify-center h-full text-[var(--text-muted)] text-sm"
+                >
                     {{ t('board.noConnectionConfigured') }}
                 </div>
             </div>
@@ -444,7 +447,7 @@
                     <span class="text-red-400">{{ boardsStore.error }}</span>
                     <router-link
                         to="/"
-                        class="text-zinc-500 hover:text-zinc-300 transition-colors text-xs"
+                        class="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors text-xs"
                     >
                         {{ t('board.backToOverview') }}
                     </router-link>
@@ -461,7 +464,7 @@
                     >
                         <svg
                             style="width: 32px; height: 32px"
-                            class="text-zinc-500"
+                            class="text-[var(--text-muted)]"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -473,7 +476,7 @@
                                 d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0H3"
                             />
                         </svg>
-                        <p class="text-sm text-zinc-400">
+                        <p class="text-sm text-[var(--text-muted)]">
                             <template v-if="auth.isAdmin">{{
                                 t('board.emptyBoardAdmin')
                             }}</template>
@@ -506,12 +509,12 @@
                 </template>
                 <div
                     v-else
-                    class="flex flex-col items-center justify-center h-full gap-3 text-zinc-600"
+                    class="flex flex-col items-center justify-center h-full gap-3 text-[var(--text-muted)]"
                 >
                     <span>{{ t('board.boardNotFound') }}</span>
                     <router-link
                         to="/"
-                        class="text-zinc-500 hover:text-zinc-300 transition-colors text-xs"
+                        class="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors text-xs"
                     >
                         {{ t('board.backToOverview') }}
                     </router-link>
@@ -642,13 +645,17 @@
                         class="flex items-center bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/40 backdrop-blur-md"
                         style="gap: 3px; padding: 4px 6px"
                     >
-                        <span class="text-[10px] font-bold text-zinc-500 capitalize px-[4px]">{{
-                            selectedObject.type
-                        }}</span>
-                        <div class="bg-zinc-700" style="width: 1px; height: 14px; margin: 0 1px" />
+                        <span
+                            class="text-[10px] font-bold text-[var(--text-muted)] capitalize px-[4px]"
+                            >{{ selectedObject.type }}</span
+                        >
+                        <div
+                            class="bg-[var(--border)]"
+                            style="width: 1px; height: 14px; margin: 0 1px"
+                        />
                         <button
                             title="Edit properties"
-                            class="p-[7px] rounded-lg text-zinc-400 hover:text-[var(--color-corporate-green-40)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                            class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--color-corporate-green-40)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
                             @click="openPropsModal(selectedObject!)"
                         >
                             <svg
@@ -667,7 +674,7 @@
                         </button>
                         <button
                             title="Duplicate"
-                            class="p-[7px] rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60 transition-all"
+                            class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                             @click="editor.duplicateSelected()"
                         >
                             <svg
@@ -686,7 +693,7 @@
                         </button>
                         <button
                             title="Delete"
-                            class="p-[7px] rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
                             @click="deleteTargetObject = selectedObject"
                         >
                             <svg
@@ -713,8 +720,8 @@
                     style="width: 40px; height: 40px"
                     :class="
                         editor.editMode.value
-                            ? 'bg-zinc-700 hover:bg-zinc-600 ring-[var(--default-border-color)] text-zinc-200 hover:text-white'
-                            : 'bg-[var(--bg-surface)]/80 hover:bg-[var(--bg-surface)] ring-[var(--border)] text-zinc-500 hover:text-zinc-300'
+                            ? 'bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] ring-[var(--default-border-color)] text-[var(--text)] hover:text-white'
+                            : 'bg-[var(--bg-surface)]/80 hover:bg-[var(--bg-surface)] ring-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]'
                     "
                     :title="editor.editMode.value ? t('board.editing') : t('board.edit')"
                     @click="onToggleEditMode"
@@ -772,7 +779,7 @@
                         :class="
                             serviceLayout !== 'off'
                                 ? 'bg-[var(--color-corporate-green-50)]/15 text-[var(--color-corporate-green-40)] ring-[var(--color-corporate-green-50)]/40'
-                                : 'bg-[var(--bg-surface)]/80 text-zinc-400 ring-[var(--border)] hover:text-[var(--text)] hover:bg-[var(--bg-surface)]'
+                                : 'bg-[var(--bg-surface)]/80 text-[var(--text-muted)] ring-[var(--border)] hover:text-[var(--text)] hover:bg-[var(--bg-surface)]'
                         "
                         @click="serviceLayoutOpen = !serviceLayoutOpen"
                     >
@@ -814,7 +821,7 @@
                                 :class="
                                     serviceLayout === opt.value
                                         ? 'text-[var(--color-corporate-green-40)] bg-[var(--color-corporate-green-50)]/10'
-                                        : 'text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
+                                        : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
                                 "
                                 @click="
                                     onServiceLayoutChanged(opt.value);
@@ -844,8 +851,8 @@
         </Teleport>
 
         <!-- Delete confirmation -->
-        <ConfirmDialog
-            v-if="deleteTargetObject"
+        <OrbConfirmDialog
+            :open="!!deleteTargetObject"
             :title="t('board.deleteObject')"
             :message="t('board.cannotBeUndone')"
             :confirm-label="t('common.delete')"
@@ -992,8 +999,8 @@ import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue'
 import RadarCanvas from '@/components/board/RadarCanvas.vue';
 import RemoveDowntimeModal from '@/components/board/RemoveDowntimeModal.vue';
 import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue';
-import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
+import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import { useBoardEditor } from '@/composables/useBoardEditor';
 import { useObjectActions } from '@/composables/useObjectActions';
 import { useToast } from '@/composables/useToast';

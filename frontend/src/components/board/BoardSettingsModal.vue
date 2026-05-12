@@ -14,10 +14,12 @@
                         <h3 class="text-base font-bold text-[var(--text)]">
                             {{ t('board.settingsTitle') }}
                         </h3>
-                        <p class="text-sm text-zinc-500 font-mono mt-[2px]">{{ board.name }}</p>
+                        <p class="text-sm text-[var(--text-muted)] font-mono mt-[2px]">
+                            {{ board.name }}
+                        </p>
                     </div>
                     <button
-                        class="p-[5px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+                        class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                         @click="$emit('close')"
                     >
                         <svg
@@ -46,7 +48,7 @@
                         :class="
                             activeTab === tab.id
                                 ? 'bg-[var(--color-corporate-green-50)]/20 text-[var(--color-corporate-green-40)]'
-                                : 'text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)]'
+                                : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
                         "
                         @click="activeTab = tab.id"
                     >
@@ -85,7 +87,9 @@
                                         max="96"
                                         class="w-full"
                                     />
-                                    <span class="text-sm text-zinc-500 shrink-0">px</span>
+                                    <span class="text-sm text-[var(--text-muted)] shrink-0"
+                                        >px</span
+                                    >
                                 </div>
                             </div>
                         </div>
@@ -100,11 +104,11 @@
                                     max="3600"
                                     class="w-[100px]"
                                 />
-                                <span class="text-sm text-zinc-500 shrink-0">{{
+                                <span class="text-sm text-[var(--text-muted)] shrink-0">{{
                                     t('board.rotationSuffix')
                                 }}</span>
                             </div>
-                            <p class="text-sm text-zinc-600">
+                            <p class="text-sm text-[var(--text-muted)]">
                                 {{ t('board.rotationIntervalHint') }}
                             </p>
                         </div>
@@ -173,7 +177,9 @@
                                     class="w-full"
                                 />
                             </div>
-                            <p class="text-sm text-zinc-600">{{ t('board.worldmapHint') }}</p>
+                            <p class="text-sm text-[var(--text-muted)]">
+                                {{ t('board.worldmapHint') }}
+                            </p>
 
                             <!-- Automap: dynamically populate the board from
                                  host geo-coords (orbvis_lat/orbvis_lng labels
@@ -208,7 +214,7 @@
                                     :placeholder="t('board.autoFilterValuePlaceholder')"
                                     field-size="FILL"
                                 />
-                                <p class="text-sm text-zinc-600">
+                                <p class="text-sm text-[var(--text-muted)]">
                                     {{ t('board.autoSourceHint') }}
                                 </p>
                             </div>
@@ -246,7 +252,9 @@
                                     />
                                 </div>
                             </div>
-                            <p class="text-sm text-zinc-600">{{ t('board.flowHint') }}</p>
+                            <p class="text-sm text-[var(--text-muted)]">
+                                {{ t('board.flowHint') }}
+                            </p>
 
                             <div class="grid grid-cols-2 gap-[8px]">
                                 <div class="space-y-[4px]">
@@ -270,7 +278,7 @@
                                     />
                                 </div>
                             </div>
-                            <p class="text-sm text-zinc-600">
+                            <p class="text-sm text-[var(--text-muted)]">
                                 {{ t('board.flowLimitsHint') }}
                             </p>
                         </template>
@@ -310,10 +318,11 @@
                             class="space-y-[4px] border-t border-[var(--border)]"
                             style="padding-top: 8px"
                         >
-                            <label class="text-sm font-medium text-zinc-400 block mt-[6px]">{{
-                                t('boardSettings.templates')
-                            }}</label>
-                            <label class="text-sm text-zinc-400 block mt-[8px]">{{
+                            <label
+                                class="text-sm font-medium text-[var(--text-muted)] block mt-[6px]"
+                                >{{ t('boardSettings.templates') }}</label
+                            >
+                            <label class="text-sm text-[var(--text-muted)] block mt-[8px]">{{
                                 t('board.hoverTemplate')
                             }}</label>
                             <CmkInput
@@ -321,7 +330,7 @@
                                 :placeholder="t('board.templatePlaceholder')"
                                 field-size="FILL"
                             />
-                            <label class="text-sm text-zinc-400 block mt-[6px]">{{
+                            <label class="text-sm text-[var(--text-muted)] block mt-[6px]">{{
                                 t('board.contextTemplate')
                             }}</label>
                             <CmkInput
@@ -329,14 +338,17 @@
                                 :placeholder="t('board.templatePlaceholder')"
                                 field-size="FILL"
                             />
-                            <p class="text-sm text-zinc-600">{{ t('board.templateHint') }}</p>
+                            <p class="text-sm text-[var(--text-muted)]">
+                                {{ t('board.templateHint') }}
+                            </p>
                         </div>
 
                         <!-- Click action -->
                         <div class="border-t border-[var(--border)]" style="padding-top: 8px">
-                            <label class="text-sm font-medium text-zinc-400 block mb-[6px]">{{
-                                t('board.clickAction')
-                            }}</label>
+                            <label
+                                class="text-sm font-medium text-[var(--text-muted)] block mb-[6px]"
+                                >{{ t('board.clickAction') }}</label
+                            >
                             <CmkDropdown
                                 :selected-option="form.click_action"
                                 :options="clickActionOptions"
@@ -356,7 +368,7 @@
                                 <div class="text-sm font-medium text-[var(--text)]">
                                     {{ t('board.showInLists') }}
                                 </div>
-                                <div class="text-sm text-zinc-500 mt-[2px]">
+                                <div class="text-sm text-[var(--text-muted)] mt-[2px]">
                                     {{ t('board.showInListsHint') }}
                                 </div>
                             </div>
@@ -369,9 +381,10 @@
                             class="space-y-[4px] border-t border-[var(--border)]"
                             style="padding-top: 8px"
                         >
-                            <label class="text-sm font-medium text-zinc-400 block mt-[6px]">{{
-                                t('board.backgroundImage')
-                            }}</label>
+                            <label
+                                class="text-sm font-medium text-[var(--text-muted)] block mt-[6px]"
+                                >{{ t('board.backgroundImage') }}</label
+                            >
                             <div class="flex gap-[6px] mt-[4px]">
                                 <CmkInput
                                     v-model="form.background_image"
@@ -379,7 +392,7 @@
                                     field-size="FILL"
                                 />
                                 <label
-                                    class="flex items-center bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all shrink-0"
+                                    class="flex items-center bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer transition-all shrink-0"
                                     style="padding: 5px 10px"
                                 >
                                     {{ t('common.upload') }}
@@ -393,7 +406,7 @@
                                 <button
                                     v-if="form.background_image"
                                     type="button"
-                                    class="bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-red-500 rounded-lg text-sm text-zinc-500 hover:text-red-400 transition-all shrink-0"
+                                    class="bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-red-500 rounded-lg text-sm text-[var(--text-muted)] hover:text-red-400 transition-all shrink-0"
                                     style="padding: 5px 10px"
                                     :title="t('board.deleteBackground')"
                                     @click="deleteBackground"
@@ -419,7 +432,7 @@
                             </p>
 
                             <label
-                                class="text-sm font-medium text-zinc-400 block mt-[10px]"
+                                class="text-sm font-medium text-[var(--text-muted)] block mt-[10px]"
                                 style="margin-top: 12px"
                                 >{{ t('board.backgroundColor') }}</label
                             >
@@ -443,19 +456,19 @@
                                 <thead>
                                     <tr class="border-b border-[var(--border)]">
                                         <th
-                                            class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
+                                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
                                             style="padding: 4px 8px"
                                         >
                                             {{ t('admin.role') }}
                                         </th>
                                         <th
-                                            class="text-center text-sm font-semibold text-zinc-500 tracking-wider w-20"
+                                            class="text-center text-sm font-semibold text-[var(--text-muted)] tracking-wider w-20"
                                             style="padding: 4px 8px"
                                         >
                                             {{ t('common.view') }}
                                         </th>
                                         <th
-                                            class="text-center text-sm font-semibold text-zinc-500 tracking-wider w-20"
+                                            class="text-center text-sm font-semibold text-[var(--text-muted)] tracking-wider w-20"
                                             style="padding: 4px 8px"
                                         >
                                             {{ t('common.edit') }}
@@ -486,7 +499,7 @@
                                                 />
                                                 <span
                                                     v-if="hasWildcard(role, 'view')"
-                                                    class="text-[10px] text-zinc-600"
+                                                    class="text-[10px] text-[var(--text-muted)]"
                                                     :title="t('admin.viaWildcardRule')"
                                                     >*</span
                                                 >
@@ -504,7 +517,7 @@
                                                 />
                                                 <span
                                                     v-if="hasWildcard(role, 'edit')"
-                                                    class="text-[10px] text-zinc-600"
+                                                    class="text-[10px] text-[var(--text-muted)]"
                                                     :title="t('admin.viaWildcardRule')"
                                                     >*</span
                                                 >
@@ -515,11 +528,11 @@
                             </table>
                             <p
                                 v-if="!permRoles.length"
-                                class="text-center py-6 text-zinc-600 text-sm"
+                                class="text-center py-6 text-[var(--text-muted)] text-sm"
                             >
                                 {{ t('admin.noRoles') }}
                             </p>
-                            <p class="text-sm text-zinc-600 mt-3 px-1">
+                            <p class="text-sm text-[var(--text-muted)] mt-3 px-1">
                                 * {{ t('admin.wildcardNote') }}
                             </p>
                         </div>

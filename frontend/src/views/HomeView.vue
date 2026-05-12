@@ -10,7 +10,7 @@
                 </h2>
                 <div class="relative" style="width: 200px">
                     <svg
-                        class="absolute top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
+                        class="absolute top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"
                         style="left: 8px; width: 13px; height: 13px"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -26,13 +26,13 @@
                     <input
                         v-model="searchQuery"
                         :placeholder="t('home.search')"
-                        class="w-full bg-[var(--bg-input)] ring-1 ring-[var(--default-form-element-border-color)]/50 rounded text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                        class="w-full bg-[var(--bg-input)] ring-1 ring-[var(--default-form-element-border-color)]/50 rounded text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                         style="font-size: 12px; padding: 5px 8px 5px 26px"
                         :style="searchQuery ? 'padding-right: 24px' : ''"
                     />
                     <button
                         v-if="searchQuery"
-                        class="absolute top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                        class="absolute top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
                         style="right: 6px"
                         :title="t('home.clearSearch')"
                         @click="searchQuery = ''"
@@ -79,7 +79,7 @@
             <!-- Loading -->
             <div
                 v-if="boardsStore.loading"
-                class="flex items-center text-zinc-500 text-sm justify-center"
+                class="flex items-center text-[var(--text-muted)] text-sm justify-center"
                 style="gap: 8px; padding: 48px 0"
             >
                 <svg
@@ -124,7 +124,7 @@
                     style="width: 40px; height: 40px; margin-bottom: 16px"
                 >
                     <svg
-                        class="text-zinc-600"
+                        class="text-[var(--text-muted)]"
                         style="width: 22px; height: 22px"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -138,8 +138,8 @@
                         />
                     </svg>
                 </div>
-                <p class="text-zinc-300 font-semibold">{{ t('home.noBoardsTitle') }}</p>
-                <p class="text-zinc-600 text-sm" style="margin-top: 6px">
+                <p class="text-[var(--text)] font-semibold">{{ t('home.noBoardsTitle') }}</p>
+                <p class="text-[var(--text-muted)] text-sm" style="margin-top: 6px">
                     <span v-if="auth.isAdmin" class="text-[var(--color-corporate-green-50)]">{{
                         t('home.noBoardsAdmin')
                     }}</span>
@@ -159,7 +159,7 @@
             >
                 <p
                     v-if="searchQuery && !filteredBoards.length"
-                    class="col-span-full text-center text-zinc-600 text-sm"
+                    class="col-span-full text-center text-[var(--text-muted)] text-sm"
                     style="padding: 40px 0"
                 >
                     {{ t('home.noSearchResults', { q: searchQuery }) }}
@@ -912,7 +912,7 @@
                                               ? 'bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30'
                                               : map.view.type === 'flow'
                                                 ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30'
-                                                : 'bg-zinc-800/70 text-zinc-400 ring-1 ring-[var(--default-border-color)]/60'
+                                                : 'bg-[var(--bg-surface)]/70 text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60'
                                     "
                                 >
                                     {{ boardTypeLabel(map.view.type) }}
@@ -924,7 +924,7 @@
                             >
                                 <span
                                     v-if="map.show_in_lists === false && auth.isAdmin"
-                                    class="text-[10px] rounded-md font-medium bg-zinc-800/80 text-zinc-500 ring-1 ring-[var(--default-border-color)]/60 backdrop-blur-sm"
+                                    class="text-[10px] rounded-md font-medium bg-[var(--bg-surface)]/80 text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60 backdrop-blur-sm"
                                     style="padding: 2px 5px"
                                     :title="t('home.hiddenBoard')"
                                 >
@@ -954,7 +954,7 @@
                             </div>
                             <div class="flex items-center min-w-0" style="gap: 6px">
                                 <svg
-                                    class="shrink-0 text-zinc-600"
+                                    class="shrink-0 text-[var(--text-muted)]"
                                     style="width: 12px; height: 12px"
                                     fill="none"
                                     viewBox="0 0 24 24"
@@ -968,20 +968,20 @@
                                     />
                                 </svg>
                                 <span
-                                    class="text-sm text-zinc-500 font-mono truncate"
+                                    class="text-sm text-[var(--text-muted)] font-mono truncate"
                                     :title="map.connection_id"
                                     >{{ map.connection_id }}</span
                                 >
-                                <span class="text-zinc-700 shrink-0">·</span>
+                                <span class="text-[var(--text-muted)] shrink-0">·</span>
                                 <span
                                     v-if="
                                         map.readonly ||
                                         ['flow', 'radar', 'worldmap'].includes(map.view.type)
                                     "
-                                    class="text-sm text-zinc-500 shrink-0 italic"
+                                    class="text-sm text-[var(--text-muted)] shrink-0 italic"
                                     >{{ t('home.dynamicObjects') }}</span
                                 >
-                                <span v-else class="text-sm text-zinc-500 shrink-0">{{
+                                <span v-else class="text-sm text-[var(--text-muted)] shrink-0">{{
                                     t('common.objects', map.object_count)
                                 }}</span>
                             </div>
@@ -995,7 +995,7 @@
                     >
                         <button
                             v-if="!map.readonly"
-                            class="p-1 rounded text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                            class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
                             :title="t('board.settingsTitle')"
                             @click.stop="openSettings(map)"
                         >
@@ -1019,7 +1019,7 @@
                             </svg>
                         </button>
                         <button
-                            class="p-1 rounded text-zinc-600 hover:text-amber-400 hover:bg-amber-500/10 transition-all"
+                            class="p-1 rounded text-[var(--text-muted)] hover:text-amber-400 hover:bg-amber-500/10 transition-all"
                             :title="t('admin.cloneBoard')"
                             @click.stop="cloneBoard(map)"
                         >
@@ -1038,7 +1038,7 @@
                             </svg>
                         </button>
                         <button
-                            class="p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-white/5 transition-all"
+                            class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5 transition-all"
                             :title="t('admin.exportBoard')"
                             @click.stop="exportBoard(map.name)"
                         >
@@ -1057,7 +1057,7 @@
                             </svg>
                         </button>
                         <button
-                            class="p-1 rounded text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            class="p-1 rounded text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
                             :title="t('admin.deleteBoard', { name: map.alias || map.name })"
                             @click.stop="deleteBoard(map)"
                         >
@@ -1094,7 +1094,7 @@
                 <h3 class="text-base font-bold text-[var(--text)]" style="margin-bottom: 4px">
                     {{ t('admin.deleteBoardTitle') }}
                 </h3>
-                <p class="text-sm text-zinc-400" style="margin-bottom: 16px">
+                <p class="text-sm text-[var(--text-muted)]" style="margin-bottom: 16px">
                     {{
                         t('admin.deleteBoardConfirm', {
                             name: confirmDelete.alias || confirmDelete.name,
@@ -1129,7 +1129,7 @@
                         {{ t('admin.cloneBoard') }}
                     </h3>
                     <button
-                        class="rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+                        class="rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                         style="padding: 5px"
                         @click="confirmClone = null"
                     >
@@ -1150,7 +1150,7 @@
                 </div>
                 <div style="margin-bottom: 10px">
                     <label
-                        class="block text-sm font-medium text-zinc-400"
+                        class="block text-sm font-medium text-[var(--text-muted)]"
                         style="margin-bottom: 4px"
                         >{{ t('admin.boardId') }}</label
                     >
@@ -1168,7 +1168,7 @@
                 </div>
                 <div style="margin-bottom: 10px">
                     <label
-                        class="block text-sm font-medium text-zinc-400"
+                        class="block text-sm font-medium text-[var(--text-muted)]"
                         style="margin-bottom: 4px"
                         >{{ t('admin.alias') }}</label
                     >
@@ -1204,7 +1204,7 @@
     <!-- Import FAB (admin only) -->
     <label
         v-if="auth.isAdmin"
-        class="group fixed z-40 flex items-center rounded bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] shadow-lg text-zinc-500 hover:text-zinc-300 transition-all cursor-pointer"
+        class="group fixed z-40 flex items-center rounded bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] shadow-lg text-[var(--text-muted)] hover:text-[var(--text)] transition-all cursor-pointer"
         style="bottom: 20px; right: 20px; gap: 6px; padding: 6px 12px"
         :title="t('admin.importBoard')"
     >
@@ -1243,7 +1243,7 @@
                 <h3 class="text-base font-bold text-[var(--text)]" style="margin-bottom: 4px">
                     {{ t('admin.importBoard') }}
                 </h3>
-                <p class="text-sm text-zinc-400" style="margin-bottom: 16px">
+                <p class="text-sm text-[var(--text-muted)]" style="margin-bottom: 16px">
                     {{ t('admin.importOverwrite', { name: importConflict.name }) }}
                 </p>
                 <div class="flex justify-end gap-[8px]">

@@ -60,7 +60,7 @@
                                 ? 'w-2 h-2 bg-[var(--color-corporate-green-50)]'
                                 : i === step
                                   ? 'w-2.5 h-2.5 bg-[var(--color-corporate-green-50)] ring-2 ring-[var(--color-corporate-green-50)]/40'
-                                  : 'w-2 h-2 bg-zinc-600'
+                                  : 'w-2 h-2 bg-[var(--color-pending)]'
                         "
                     />
                 </div>
@@ -69,12 +69,14 @@
                     <h3 class="font-bold text-[var(--text)] text-base mb-1.5">
                         {{ currentStep.title }}
                     </h3>
-                    <p class="text-sm text-zinc-400 leading-relaxed">{{ currentStep.body }}</p>
+                    <p class="text-sm text-[var(--text-muted)] leading-relaxed">
+                        {{ currentStep.body }}
+                    </p>
                 </div>
 
                 <div class="flex items-center justify-between px-5 pb-4">
                     <button
-                        class="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+                        class="text-xs text-[var(--text-muted)] hover:text-[var(--text-muted)] transition-colors"
                         @click="skip"
                     >
                         {{ t('onboarding.skip') }}
@@ -82,7 +84,7 @@
                     <div class="flex items-center gap-1.5">
                         <button
                             v-if="step > 1"
-                            class="px-3 py-1.5 rounded-lg text-sm text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+                            class="px-3 py-1.5 rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                             @click="prev"
                         >
                             {{ t('onboarding.back') }}
@@ -161,7 +163,9 @@
                         </svg>
                     </div>
                     <p class="text-2xl font-bold text-white">{{ t('onboarding.complete') }}</p>
-                    <p class="text-sm text-zinc-400 mt-1">{{ t('onboarding.completeSubtitle') }}</p>
+                    <p class="text-sm text-[var(--text-muted)] mt-1">
+                        {{ t('onboarding.completeSubtitle') }}
+                    </p>
                 </div>
             </div>
         </Transition>

@@ -13,10 +13,10 @@
             >
                 <div>
                     <h2 class="text-base font-semibold text-[var(--text)]">Changelog</h2>
-                    <p class="text-xs text-zinc-500 mt-0.5">OrbVis v{{ appVersion }}</p>
+                    <p class="text-xs text-[var(--text-muted)] mt-0.5">OrbVis v{{ appVersion }}</p>
                 </div>
                 <button
-                    class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+                    class="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                     @click="$emit('close')"
                 >
                     <svg
@@ -39,14 +39,14 @@
             <div class="flex-1 overflow-y-auto px-6 py-5">
                 <div
                     v-if="loading"
-                    class="flex items-center justify-center py-12 text-zinc-500 text-sm"
+                    class="flex items-center justify-center py-12 text-[var(--text-muted)] text-sm"
                 >
                     Loading…
                 </div>
                 <div v-else-if="error" class="text-red-400 text-sm">{{ error }}</div>
                 <pre
                     v-else
-                    class="text-xs text-zinc-300 font-mono whitespace-pre-wrap leading-relaxed"
+                    class="text-xs text-[var(--text)] font-mono whitespace-pre-wrap leading-relaxed"
                     >{{ content }}</pre
                 >
             </div>

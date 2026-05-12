@@ -8,7 +8,7 @@
         >
             <router-link
                 to="/"
-                class="flex items-center gap-[6px] text-[13px] text-zinc-400 hover:text-[var(--text)] transition-colors border-r border-[var(--border)]"
+                class="flex items-center gap-[6px] text-[13px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors border-r border-[var(--border)]"
                 style="padding-right: 10px; margin-right: 8px"
             >
                 <svg
@@ -35,7 +35,7 @@
                 :class="
                     isActive(item.to)
                         ? 'text-[var(--color-corporate-green-40)] bg-[var(--color-corporate-green-50)]/10 ring-1 ring-[var(--color-corporate-green-50)]/20'
-                        : 'text-zinc-400 hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
                 "
             >
                 {{ item.label }}

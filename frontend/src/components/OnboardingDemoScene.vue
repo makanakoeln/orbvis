@@ -51,7 +51,7 @@
                 </text>
             </svg>
             <div
-                class="mt-1 whitespace-nowrap rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium text-zinc-200"
+                class="mt-1 whitespace-nowrap rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium text-[var(--text)]"
             >
                 {{ obj.name }}
             </div>

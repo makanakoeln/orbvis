@@ -55,7 +55,8 @@
         <div class="absolute graph-gadget" :style="graphStyle">
             <!-- Header -->
             <div class="mb-1 flex items-center justify-between">
-                <span class="text-[9px] font-semibold uppercase tracking-wide text-zinc-400"
+                <span
+                    class="text-[9px] font-semibold uppercase tracking-wide text-[var(--text-muted)]"
                     >CPU Utilization</span
                 >
                 <span class="text-[10px] font-bold text-amber-400">76%</span>
@@ -193,8 +194,8 @@
             </svg>
             <!-- Footer time labels -->
             <div class="mt-0.5 flex items-center justify-between">
-                <span class="text-[7px] text-zinc-600">1h ago</span>
-                <span class="text-[7px] text-zinc-600">now</span>
+                <span class="text-[7px] text-[var(--text-muted)]">1h ago</span>
+                <span class="text-[7px] text-[var(--text-muted)]">now</span>
             </div>
         </div>
 
@@ -222,7 +223,7 @@
                 </text>
             </svg>
             <div
-                class="mt-1 whitespace-nowrap rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium text-zinc-200"
+                class="mt-1 whitespace-nowrap rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium text-[var(--text)]"
             >
                 {{ obj.name }}
             </div>

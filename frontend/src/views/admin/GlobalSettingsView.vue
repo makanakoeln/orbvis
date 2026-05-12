@@ -4,7 +4,7 @@
             <h2 class="text-lg font-bold text-[var(--text)] tracking-tight">
                 {{ t('settings.title') }}
             </h2>
-            <p class="text-sm text-zinc-500" style="margin-top: 3px">
+            <p class="text-sm text-[var(--text-muted)]" style="margin-top: 3px">
                 {{ t('settings.subtitle') }}
             </p>
         </div>
@@ -23,7 +23,7 @@
                     style="padding: 14px 16px"
                     @click="sectionOpen.objectDefaults = !sectionOpen.objectDefaults"
                 >
-                    <h3 class="text-base font-semibold text-zinc-400">
+                    <h3 class="text-base font-semibold text-[var(--text-muted)]">
                         {{ t('settings.objectDefaults') }}
                     </h3>
                     <svg
@@ -51,7 +51,7 @@
                         <div class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start">
                             <label class="block">
                                 <span
-                                    class="text-sm text-zinc-400 block"
+                                    class="text-sm text-[var(--text-muted)] block"
                                     style="margin-bottom: 3px"
                                     >{{ t('board.iconSize') }}</span
                                 >
@@ -65,7 +65,7 @@
 
                             <label class="block">
                                 <span
-                                    class="text-sm text-zinc-400 block"
+                                    class="text-sm text-[var(--text-muted)] block"
                                     style="margin-bottom: 3px"
                                     >{{ t('boardSettings.viewType') }}</span
                                 >
@@ -84,12 +84,12 @@
 
                             <label class="block">
                                 <span
-                                    class="text-sm text-zinc-400 block"
+                                    class="text-sm text-[var(--text-muted)] block"
                                     style="margin-bottom: 3px"
                                     >{{ t('boardSettings.z') }}</span
                                 >
                                 <NumberInput v-model="form.z" min="1" max="999" class="w-[80px]" />
-                                <p class="text-sm text-zinc-600" style="margin-top: 4px">
+                                <p class="text-sm text-[var(--text-muted)]" style="margin-top: 4px">
                                     {{ t('settings.zHint') }}
                                 </p>
                             </label>
@@ -100,7 +100,7 @@
                         >
                             <label class="block">
                                 <span
-                                    class="text-sm text-zinc-400 block"
+                                    class="text-sm text-[var(--text-muted)] block"
                                     style="margin-bottom: 3px"
                                     >{{ t('boardSettings.lineStyle') }}</span
                                 >
@@ -119,7 +119,7 @@
 
                             <label class="block">
                                 <span
-                                    class="text-sm text-zinc-400 block"
+                                    class="text-sm text-[var(--text-muted)] block"
                                     style="margin-bottom: 3px"
                                     >{{ t('boardSettings.target') }}</span
                                 >
@@ -146,7 +146,7 @@
                     style="padding: 14px 16px"
                     @click="sectionOpen.labelDefaults = !sectionOpen.labelDefaults"
                 >
-                    <h3 class="text-base font-semibold text-zinc-400">
+                    <h3 class="text-base font-semibold text-[var(--text-muted)]">
                         {{ t('settings.labelDefaults') }}
                     </h3>
                     <svg
@@ -184,7 +184,7 @@
                             <div class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start">
                                 <label class="block">
                                     <span
-                                        class="text-sm text-zinc-400 block"
+                                        class="text-sm text-[var(--text-muted)] block"
                                         style="margin-bottom: 3px"
                                         >{{ t('boardSettings.size') }} (px)</span
                                     >
@@ -198,7 +198,7 @@
 
                                 <label class="block">
                                     <span
-                                        class="text-sm text-zinc-400 block"
+                                        class="text-sm text-[var(--text-muted)] block"
                                         style="margin-bottom: 3px"
                                         >{{ t('boardSettings.color') }}</span
                                     >
@@ -217,7 +217,7 @@
 
                                 <label class="block">
                                     <span
-                                        class="text-sm text-zinc-400 block"
+                                        class="text-sm text-[var(--text-muted)] block"
                                         style="margin-bottom: 3px"
                                         >{{ t('boardSettings.background') }}</span
                                     >
@@ -244,7 +244,7 @@
                             >
                                 <label class="block">
                                     <span
-                                        class="text-sm text-zinc-400 block"
+                                        class="text-sm text-[var(--text-muted)] block"
                                         style="margin-bottom: 3px"
                                         >{{ t('boardSettings.offsetX') }}</span
                                     >
@@ -252,7 +252,7 @@
                                 </label>
                                 <label class="block">
                                     <span
-                                        class="text-sm text-zinc-400 block"
+                                        class="text-sm text-[var(--text-muted)] block"
                                         style="margin-bottom: 3px"
                                         >{{ t('boardSettings.offsetY') }}</span
                                     >
@@ -273,7 +273,7 @@
                     style="padding: 14px 16px"
                     @click="sectionOpen.newBoardDefaults = !sectionOpen.newBoardDefaults"
                 >
-                    <h3 class="text-base font-semibold text-zinc-400">
+                    <h3 class="text-base font-semibold text-[var(--text-muted)]">
                         {{ t('settings.newBoardDefaults') }}
                     </h3>
                     <svg
@@ -302,9 +302,11 @@
                         style="padding: 0 16px 14px"
                     >
                         <label class="block">
-                            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                                t('board.connection')
-                            }}</span>
+                            <span
+                                class="text-sm text-[var(--text-muted)] block"
+                                style="margin-bottom: 3px"
+                                >{{ t('board.connection') }}</span
+                            >
                             <CmkDropdown
                                 class="w-[192px]"
                                 :selected-option="form.default_backend_id || null"
@@ -315,9 +317,11 @@
                         </label>
 
                         <label class="block">
-                            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                                t('board.boardType')
-                            }}</span>
+                            <span
+                                class="text-sm text-[var(--text-muted)] block"
+                                style="margin-bottom: 3px"
+                                >{{ t('board.boardType') }}</span
+                            >
                             <CmkDropdown
                                 class="w-[176px]"
                                 :selected-option="form.default_map_type || null"
@@ -339,7 +343,7 @@
                     style="padding: 14px 16px"
                     @click="sectionOpen.templates = !sectionOpen.templates"
                 >
-                    <h3 class="text-base font-semibold text-zinc-400">
+                    <h3 class="text-base font-semibold text-[var(--text-muted)]">
                         {{ t('settings.templates') }}
                     </h3>
                     <svg
@@ -364,11 +368,15 @@
                 </button>
                 <CmkCollapsible :open="sectionOpen.templates">
                     <div class="space-y-[10px]" style="padding: 0 16px 14px">
-                        <p class="text-sm text-zinc-600">{{ t('settings.templatesSubtitle') }}</p>
+                        <p class="text-sm text-[var(--text-muted)]">
+                            {{ t('settings.templatesSubtitle') }}
+                        </p>
                         <label class="block">
-                            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                                t('settings.hoverTemplate')
-                            }}</span>
+                            <span
+                                class="text-sm text-[var(--text-muted)] block"
+                                style="margin-bottom: 3px"
+                                >{{ t('settings.hoverTemplate') }}</span
+                            >
                             <CmkInput
                                 v-model="form.hover_template"
                                 :placeholder="t('board.templatePlaceholder')"
@@ -377,9 +385,11 @@
                         </label>
 
                         <label class="block">
-                            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                                t('settings.contextTemplate')
-                            }}</span>
+                            <span
+                                class="text-sm text-[var(--text-muted)] block"
+                                style="margin-bottom: 3px"
+                                >{{ t('settings.contextTemplate') }}</span
+                            >
                             <CmkInput
                                 v-model="form.context_template"
                                 :placeholder="t('board.templatePlaceholder')"
@@ -399,7 +409,7 @@
                     style="padding: 14px 16px"
                     @click="sectionOpen.checkmkIntegration = !sectionOpen.checkmkIntegration"
                 >
-                    <h3 class="text-base font-semibold text-zinc-400">
+                    <h3 class="text-base font-semibold text-[var(--text-muted)]">
                         {{ t('settings.checkmkIntegration') }}
                     </h3>
                     <svg
@@ -426,19 +436,21 @@
                 </button>
                 <CmkCollapsible :open="sectionOpen.checkmkIntegration">
                     <div style="padding: 0 16px 14px">
-                        <p class="text-sm text-zinc-600" style="margin-bottom: 10px">
+                        <p class="text-sm text-[var(--text-muted)]" style="margin-bottom: 10px">
                             {{ t('settings.checkmkIntegrationSubtitle') }}
                         </p>
                         <label class="block">
-                            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                                t('admin.checkmkUrl')
-                            }}</span>
+                            <span
+                                class="text-sm text-[var(--text-muted)] block"
+                                style="margin-bottom: 3px"
+                                >{{ t('admin.checkmkUrl') }}</span
+                            >
                             <CmkInput
                                 v-model="form.checkmk_url"
                                 placeholder="https://checkmk.example.com/mysite"
                                 field-size="FILL"
                             />
-                            <p class="text-sm text-zinc-600" style="margin-top: 6px">
+                            <p class="text-sm text-[var(--text-muted)]" style="margin-top: 6px">
                                 {{ t('settings.checkmkUrlHint') }}
                             </p>
                         </label>
@@ -455,7 +467,7 @@
                     style="padding: 14px 16px"
                     @click="sectionOpen.logging = !sectionOpen.logging"
                 >
-                    <h3 class="text-base font-semibold text-zinc-400">
+                    <h3 class="text-base font-semibold text-[var(--text-muted)]">
                         {{ t('settings.logging') }}
                     </h3>
                     <svg
@@ -481,9 +493,11 @@
                 <CmkCollapsible :open="sectionOpen.logging">
                     <div style="padding: 0 16px 14px">
                         <label class="block">
-                            <span class="text-sm text-zinc-400 block" style="margin-bottom: 3px">{{
-                                t('settings.logLevel')
-                            }}</span>
+                            <span
+                                class="text-sm text-[var(--text-muted)] block"
+                                style="margin-bottom: 3px"
+                                >{{ t('settings.logLevel') }}</span
+                            >
                             <CmkDropdown
                                 class="w-[240px]"
                                 :selected-option="form.log_level ?? null"
@@ -495,7 +509,7 @@
                                     }
                                 "
                             />
-                            <p class="text-sm text-zinc-600" style="margin-top: 6px">
+                            <p class="text-sm text-[var(--text-muted)]" style="margin-top: 6px">
                                 {{ t('settings.logLevelHint') }}
                             </p>
                         </label>
