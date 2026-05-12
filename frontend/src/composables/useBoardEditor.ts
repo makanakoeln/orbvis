@@ -279,6 +279,19 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         selectedObjectId.value = null;
     }
 
+    function resetDraft() {
+        draft.type = '';
+        draft.host_name = '';
+        draft.service_description = '';
+        draft.group_name = '';
+        draft.board_name = '';
+        draft.aggregation_id = '';
+        draft.expand_depth = 0;
+        draft.label_text = '';
+        draft.image_src = '';
+        draft.graph_url = '';
+    }
+
     async function placeAt(x: number, y: number) {
         if (!placing.value || !draft.type) return;
         placing.value = false;
@@ -344,6 +357,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
             const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!);
             if (boardsStore.currentBoard) boardsStore.currentBoard.objects = newConfig.objects;
             selectedObjectId.value = id;
+            resetDraft();
         } catch (e) {
             console.error('Failed to add object', e);
         }
@@ -390,6 +404,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
             const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!);
             if (boardsStore.currentBoard) boardsStore.currentBoard.objects = newConfig.objects;
             selectedObjectId.value = id;
+            resetDraft();
         } catch (e) {
             console.error('Failed to add object', e);
         }

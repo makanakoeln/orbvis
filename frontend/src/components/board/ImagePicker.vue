@@ -10,9 +10,11 @@
                 class="w-8 h-8 object-contain shrink-0"
                 :class="modelValue.endsWith('.svg') ? 'svg-icon' : ''"
             />
-            <span class="flex-1 text-xs font-mono text-zinc-300 truncate">{{ modelValue }}</span>
+            <span class="flex-1 text-xs font-mono text-[var(--text)] truncate">{{
+                modelValue
+            }}</span>
             <button
-                class="text-zinc-500 hover:text-zinc-300 transition-colors"
+                class="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
                 type="button"
                 @click="$emit('update:modelValue', '')"
             >
@@ -28,14 +30,15 @@
             </button>
         </div>
 
-        <!-- Toggle button -->
+        <!-- Toggle button (hidden once an image is selected — clear via X to pick another) -->
         <button
+            v-if="!modelValue"
             type="button"
             class="w-full px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-left flex items-center gap-2 hover:ring-[var(--default-form-element-border-color)] transition-all focus:outline-none focus:ring-[var(--color-corporate-green-50)]"
             @click="open = !open"
         >
             <svg
-                class="w-4 h-4 text-zinc-500 shrink-0"
+                class="w-4 h-4 text-[var(--text-muted)] shrink-0"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -47,11 +50,11 @@
                     d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
                 />
             </svg>
-            <span :class="modelValue ? 'text-zinc-400' : 'text-zinc-500'">
+            <span :class="modelValue ? 'text-[var(--text-muted)]' : 'text-[var(--text-muted)]'">
                 {{ modelValue ? t('boardSettings.customIcon') : t('boardSettings.iconName') }}
             </span>
             <svg
-                class="w-3.5 h-3.5 text-zinc-600 ml-auto transition-transform duration-150"
+                class="w-3.5 h-3.5 text-[var(--text-muted)] ml-auto transition-transform duration-150"
                 :class="open ? 'rotate-180' : ''"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -78,18 +81,18 @@
                 class="rounded-lg ring-1 ring-[var(--default-border-color)] bg-[var(--bg-surface)] overflow-hidden"
             >
                 <!-- Search -->
-                <div class="p-2 border-b border-zinc-700/60">
+                <div class="p-2 border-b border-[var(--border)]">
                     <input
                         v-model="query"
                         :placeholder="t('boardSettings.searchIcons')"
-                        class="w-full px-2.5 py-1.5 text-xs bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-md text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-[var(--color-corporate-green-50)] transition-all"
+                        class="w-full px-2.5 py-1.5 text-xs bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-md text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-[var(--color-corporate-green-50)] transition-all"
                     />
                 </div>
 
                 <!-- Loading -->
                 <div
                     v-if="loading"
-                    class="flex items-center justify-center py-6 text-zinc-600 text-xs gap-2"
+                    class="flex items-center justify-center py-6 text-[var(--text-muted)] text-xs gap-2"
                 >
                     <svg
                         class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
@@ -117,7 +120,7 @@
                 <template v-else-if="!images.length">
                     <div class="px-4 pt-5 pb-3 text-center">
                         <svg
-                            class="w-8 h-8 mx-auto mb-2 text-zinc-700"
+                            class="w-8 h-8 mx-auto mb-2 text-[var(--text-muted)]"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -129,7 +132,9 @@
                                 d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
                             />
                         </svg>
-                        <p class="text-xs text-zinc-500 mb-3">{{ t('admin.noIcons') }}</p>
+                        <p class="text-xs text-[var(--text-muted)] mb-3">
+                            {{ t('admin.noIcons') }}
+                        </p>
                         <label
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded-lg text-xs font-semibold text-[var(--button-primary-text-color,#000)] transition-all cursor-pointer"
                         >
@@ -167,7 +172,7 @@
                         <div v-if="uploading || uploadError" class="px-3 pb-3">
                             <div
                                 v-if="uploading"
-                                class="flex items-center gap-2 text-xs text-zinc-400 justify-center py-1"
+                                class="flex items-center gap-2 text-xs text-[var(--text-muted)] justify-center py-1"
                             >
                                 <svg
                                     class="animate-spin w-3.5 h-3.5 text-[var(--color-corporate-green-50)]"
@@ -198,7 +203,10 @@
                 </template>
 
                 <!-- No search match -->
-                <div v-else-if="!filtered.length" class="py-5 text-center text-xs text-zinc-600">
+                <div
+                    v-else-if="!filtered.length"
+                    class="py-5 text-center text-xs text-[var(--text-muted)]"
+                >
                     {{ t('home.noSearchResults', { q: query }) }}
                 </div>
 
@@ -209,7 +217,7 @@
                             v-for="image in filtered"
                             :key="image.name"
                             type="button"
-                            class="flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all hover:bg-zinc-700/60"
+                            class="flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all hover:bg-[var(--bg-hover)]"
                             :class="
                                 modelValue === image.name
                                     ? 'ring-1 ring-[var(--color-corporate-green-50)] bg-[var(--color-corporate-green-50)]/10'
@@ -225,7 +233,7 @@
                                 :class="image.name.endsWith('.svg') ? 'svg-icon' : ''"
                             />
                             <span
-                                class="text-[9px] font-mono text-zinc-500 truncate w-full text-center leading-tight"
+                                class="text-[9px] font-mono text-[var(--text-muted)] truncate w-full text-center leading-tight"
                                 >{{ image.name }}</span
                             >
                         </button>
@@ -233,13 +241,13 @@
 
                     <!-- Upload more -->
                     <div
-                        class="px-2 pb-2 border-t border-zinc-700/60 pt-2 flex items-center justify-between"
+                        class="px-2 pb-2 border-t border-[var(--border)] pt-2 flex items-center justify-between"
                     >
-                        <span class="text-[10px] text-zinc-600"
+                        <span class="text-[10px] text-[var(--text-muted)]"
                             >{{ images.length }} icon{{ images.length === 1 ? '' : 's' }}</span
                         >
                         <label
-                            class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50 transition-all cursor-pointer"
+                            class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all cursor-pointer"
                         >
                             <svg
                                 class="w-3 h-3"
@@ -265,7 +273,7 @@
                         </label>
                         <div
                             v-if="uploading"
-                            class="flex items-center gap-1 text-[10px] text-zinc-500"
+                            class="flex items-center gap-1 text-[10px] text-[var(--text-muted)]"
                         >
                             <svg
                                 class="animate-spin w-3 h-3 text-[var(--color-corporate-green-50)]"
