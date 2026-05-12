@@ -74,7 +74,9 @@ import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
 import { useEscapeClose } from '@/composables/useEscapeClose';
+import { useStatesStore } from '@/stores/states';
 import type { BoardObject } from '@/types/api';
+import { flattenAggregationLeaves } from '@/utils/aggregationTree';
 import { getBoardObjectName } from '@/utils/naming';
 
 const { t } = useI18n();
@@ -107,9 +109,26 @@ const displayName = computed(() => getBoardObjectName(props.object));
 const isGroup = computed(
     () => props.object.type === 'hostgroup' || props.object.type === 'servicegroup',
 );
+const isAggregation = computed(() => props.object.type === 'aggregation');
 const groupTypeLabel = computed(() =>
     props.object.type === 'hostgroup' ? t('ack.groupHostgroup') : t('ack.groupServicegroup'),
 );
+
+const statesStore = useStatesStore();
+
+interface DowntimeTarget {
+    host: string;
+    service: string | null;
+}
+
+function aggregationDowntimeTargets(): DowntimeTarget[] {
+    const state = statesStore.getState(props.object.id);
+    const tree = state?.tree;
+    if (!tree) return [];
+    return flattenAggregationLeaves(tree)
+        .filter((l) => !!l.host_name)
+        .map((l) => ({ host: l.host_name as string, service: l.service_description ?? null }));
+}
 
 async function submit() {
     if (!comment.value.trim() || submitting.value) return;
@@ -119,9 +138,57 @@ async function submit() {
     try {
         const start = new Date(startTime.value).toISOString();
         const end = new Date(endTime.value).toISOString();
-        // Group downtimes fan out via CMK's downtime_type=hostgroup|servicegroup
-        // — one REST call covers every member.
-        if (props.object.type === 'hostgroup' && props.object.group_name) {
+        if (isAggregation.value) {
+            const targets = aggregationDowntimeTargets();
+            if (!targets.length) {
+                error.value = t('downtime.error');
+                return;
+            }
+            const CONCURRENCY = 5;
+            const queue = [...targets];
+            const failures: string[] = [];
+            const downtimeOne = async (tgt: DowntimeTarget): Promise<void> => {
+                try {
+                    if (tgt.service) {
+                        await cmkApi.downtimeService(
+                            props.checkmkUrl,
+                            tgt.host,
+                            tgt.service,
+                            start,
+                            end,
+                            commentText,
+                        );
+                    } else {
+                        await cmkApi.downtimeHost(
+                            props.checkmkUrl,
+                            tgt.host,
+                            start,
+                            end,
+                            commentText,
+                        );
+                    }
+                } catch (e) {
+                    failures.push(tgt.service ? `${tgt.host}/${tgt.service}` : tgt.host);
+                    console.warn('[OrbVis] bulk-downtime failed for', tgt, e);
+                }
+            };
+            const workers: Promise<void>[] = [];
+            for (let i = 0; i < Math.min(CONCURRENCY, queue.length); i += 1) {
+                workers.push(
+                    (async () => {
+                        while (queue.length) {
+                            const tgt = queue.shift();
+                            if (tgt) await downtimeOne(tgt);
+                        }
+                    })(),
+                );
+            }
+            await Promise.all(workers);
+            if (failures.length) {
+                error.value = `${failures.length}/${targets.length} ${t('downtime.error')}`;
+                return;
+            }
+        } else if (props.object.type === 'hostgroup' && props.object.group_name) {
             await cmkApi.downtimeHostgroup(
                 props.checkmkUrl,
                 props.object.group_name,

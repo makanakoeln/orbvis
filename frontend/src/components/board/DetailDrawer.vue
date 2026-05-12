@@ -785,6 +785,7 @@
                         {{ t('board.detailDrawer.removeDowntimeLabel') }}
                     </CmkButton>
                     <CmkButton
+                        v-if="!isAggregation"
                         variant="optional"
                         class="detail-drawer__action"
                         @click="emit('add-comment')"
@@ -1101,6 +1102,7 @@ const truncatedMemberCount = computed(() =>
 const isGroup = computed(
     () => props.object?.type === 'hostgroup' || props.object?.type === 'servicegroup',
 );
+const isAggregation = computed(() => props.object?.type === 'aggregation');
 
 interface MemberChip {
     label: string;
