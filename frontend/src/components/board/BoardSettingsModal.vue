@@ -364,7 +364,7 @@
                             <button
                                 v-if="form.background_image"
                                 type="button"
-                                class="bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-red-500 rounded-lg text-sm text-[var(--text-muted)] hover:text-red-400 transition-all shrink-0"
+                                class="bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-[var(--color-light-red-50)] rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] transition-all shrink-0"
                                 style="padding: 5px 10px"
                                 :title="t('board.deleteBackground')"
                                 @click="deleteBackground"
@@ -384,8 +384,10 @@
                                 </svg>
                             </button>
                         </div>
-                        <p v-if="uploadError" class="text-red-400 text-sm">{{ uploadError }}</p>
-                        <p v-if="uploadOk" class="text-green-400 text-xs">
+                        <p v-if="uploadError" class="text-[var(--color-light-red-40)] text-sm">
+                            {{ uploadError }}
+                        </p>
+                        <p v-if="uploadOk" class="text-[var(--color-corporate-green-50)] text-xs">
                             {{ t('board.uploadedSuccessfully') }}
                         </p>
 
@@ -401,7 +403,9 @@
                         />
                     </div>
 
-                    <p v-if="saveError" class="text-xs text-red-400">{{ saveError }}</p>
+                    <p v-if="saveError" class="text-xs text-[var(--color-light-red-40)]">
+                        {{ saveError }}
+                    </p>
                 </div>
 
                 <!-- Permissions -->

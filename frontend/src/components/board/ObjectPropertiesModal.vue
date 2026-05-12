@@ -248,7 +248,7 @@
                                 {{ t('boardSettings.graphMetricSource') }}
                             </p>
                             <span
-                                class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25 shrink-0"
+                                class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[var(--color-warning)]/15 text-[var(--color-yellow-50)] border border-[var(--color-warning)]/25 shrink-0"
                                 >experimental</span
                             >
                         </div>
@@ -313,7 +313,7 @@
                                         >
                                             {{ metricIdToTitle[m] ?? m }}
                                             <button
-                                                class="text-[var(--text-muted)] hover:text-red-400"
+                                                class="text-[var(--text-muted)] hover:text-[var(--color-light-red-40)]"
                                                 @click="
                                                     form.graph_metric = form.graph_metric.filter(
                                                         (x) => x !== m,
@@ -1120,7 +1120,9 @@
                         />
                     </div>
                     <div class="flex items-center" style="gap: 8px">
-                        <p v-if="saveError" class="text-red-400 text-sm">{{ saveError }}</p>
+                        <p v-if="saveError" class="text-[var(--color-light-red-40)] text-sm">
+                            {{ saveError }}
+                        </p>
                         <CmkButton variant="secondary" @click="$emit('close')">{{
                             t('common.cancel')
                         }}</CmkButton>
@@ -1661,7 +1663,7 @@ const excludeMembersFeedback = computed<{ text: string; tone: string } | null>((
     if (suppressed >= total) {
         return {
             text: t('boardSettings.excludeAllMatched', { count: suppressed, total }),
-            tone: 'text-amber-400',
+            tone: 'text-[var(--color-yellow-50)]',
         };
     }
     return {

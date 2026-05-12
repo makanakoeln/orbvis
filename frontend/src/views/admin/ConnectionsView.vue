@@ -113,12 +113,12 @@
                                     />
                                     <span
                                         v-else-if="statuses[b.id]"
-                                        class="rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)]"
+                                        class="rounded-full bg-[var(--color-corporate-green-50)] shadow-[0_0_6px_rgba(74,222,128,0.6)]"
                                         style="width: 8px; height: 8px"
                                     />
                                     <span
                                         v-else
-                                        class="rounded-full bg-red-400"
+                                        class="rounded-full bg-[var(--color-light-red-40)]"
                                         style="width: 8px; height: 8px"
                                     />
                                 </span>
@@ -210,7 +210,7 @@
                                     </svg>
                                 </button>
                                 <button
-                                    class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                    class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
                                     :title="t('common.delete')"
                                     @click="deleteTarget = b.id"
                                 >
@@ -451,19 +451,26 @@
                     style="padding: 8px 12px"
                     :class="
                         dialogTest.ok
-                            ? 'bg-green-500/8 ring-green-500/20 text-green-400'
-                            : 'bg-red-500/8 ring-red-500/20 text-red-400'
+                            ? 'bg-[var(--color-corporate-green-50)]/8 ring-[var(--color-corporate-green-50)]/20 text-[var(--color-corporate-green-50)]'
+                            : 'bg-[var(--color-light-red-50)]/8 ring-[var(--color-light-red-50)]/20 text-[var(--color-light-red-40)]'
                     "
                 >
                     <span
                         class="rounded-full shrink-0 mt-1"
                         style="width: 6px; height: 6px"
-                        :class="dialogTest.ok ? 'bg-green-400' : 'bg-red-400'"
+                        :class="
+                            dialogTest.ok
+                                ? 'bg-[var(--color-corporate-green-50)]'
+                                : 'bg-[var(--color-light-red-40)]'
+                        "
                     />
                     {{ dialogTest.message }}
                 </div>
 
-                <p v-if="formError" class="text-red-400 text-xs flex items-center gap-[4px]">
+                <p
+                    v-if="formError"
+                    class="text-[var(--color-light-red-40)] text-xs flex items-center gap-[4px]"
+                >
                     <svg
                         class="shrink-0"
                         style="width: 12px; height: 12px"

@@ -87,7 +87,7 @@
                             </svg>
                         </button>
                         <button
-                            class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
                             :title="t('common.delete')"
                             @click="deleteTargetId = role.role_id"
                         >
@@ -181,7 +181,7 @@
                                 >new</span
                             >
                             <button
-                                class="text-[var(--text-muted)] hover:text-red-400 transition-colors shrink-0 p-0.5 rounded"
+                                class="text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] transition-colors shrink-0 p-0.5 rounded"
                                 :title="t('common.delete')"
                                 @click="removeDraftPerm(perm.perm_id)"
                             >
@@ -242,7 +242,9 @@
                                 field-size="FILL"
                             />
                         </div>
-                        <p v-if="permError" class="text-red-400 text-xs">{{ permError }}</p>
+                        <p v-if="permError" class="text-[var(--color-light-red-40)] text-xs">
+                            {{ permError }}
+                        </p>
                         <div class="flex justify-end">
                             <button
                                 type="submit"

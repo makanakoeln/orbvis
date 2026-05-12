@@ -8,13 +8,13 @@
                     class="flex items-start gap-2.5 px-4 py-3 rounded-xl shadow-xl shadow-black/40 ring-1 text-sm font-medium max-w-sm pointer-events-auto"
                     :class="
                         toast.type === 'success'
-                            ? 'bg-[var(--bg-surface)] ring-green-500/30 text-green-300'
-                            : 'bg-[var(--bg-surface)] ring-red-500/30 text-red-300'
+                            ? 'bg-[var(--bg-surface)] ring-[var(--color-corporate-green-50)]/30 text-[var(--color-corporate-green-50)]'
+                            : 'bg-[var(--bg-surface)] ring-[var(--color-light-red-50)]/30 text-[var(--color-light-red-40)]'
                     "
                 >
                     <svg
                         v-if="toast.type === 'success'"
-                        class="w-4 h-4 shrink-0 mt-0.5 text-green-400"
+                        class="w-4 h-4 shrink-0 mt-0.5 text-[var(--color-corporate-green-50)]"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -24,7 +24,7 @@
                     </svg>
                     <svg
                         v-else
-                        class="w-4 h-4 shrink-0 mt-0.5 text-red-400"
+                        class="w-4 h-4 shrink-0 mt-0.5 text-[var(--color-light-red-40)]"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"

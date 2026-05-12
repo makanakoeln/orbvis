@@ -195,7 +195,10 @@
                                 </svg>
                                 {{ t('common.saving') }}
                             </div>
-                            <div v-else-if="uploadError" class="text-xs text-red-400 text-center">
+                            <div
+                                v-else-if="uploadError"
+                                class="text-xs text-[var(--color-light-red-40)] text-center"
+                            >
                                 {{ uploadError }}
                             </div>
                         </div>

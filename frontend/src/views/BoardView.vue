@@ -59,8 +59,8 @@
                     style="gap: 4px; padding: 2px 7px"
                     :class="
                         flowProblems.critical > 0
-                            ? 'bg-red-500/10 ring-red-500/30 text-red-300'
-                            : 'bg-amber-500/10 ring-amber-500/30 text-amber-300'
+                            ? 'bg-[var(--color-light-red-50)]/10 ring-[var(--color-light-red-50)]/30 text-[var(--color-light-red-40)]'
+                            : 'bg-[var(--color-warning)]/10 ring-[var(--color-warning)]/30 text-[var(--color-yellow-50)]'
                     "
                     :title="t('board.flow.issuesBanner', flowProblems)"
                 >
@@ -86,14 +86,18 @@
                     style="gap: 4px; padding: 2px 7px"
                     :class="
                         statesStore.connected
-                            ? 'bg-green-500/8 ring-green-500/20 text-green-400'
-                            : 'bg-red-500/8 ring-red-500/20 text-red-400'
+                            ? 'bg-[var(--color-corporate-green-50)]/8 ring-[var(--color-corporate-green-50)]/20 text-[var(--color-corporate-green-50)]'
+                            : 'bg-[var(--color-light-red-50)]/8 ring-[var(--color-light-red-50)]/20 text-[var(--color-light-red-40)]'
                     "
                 >
                     <span
                         class="rounded-full inline-block"
                         style="width: 5px; height: 5px"
-                        :class="statesStore.connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'"
+                        :class="
+                            statesStore.connected
+                                ? 'bg-[var(--color-corporate-green-50)] animate-pulse'
+                                : 'bg-[var(--color-light-red-40)]'
+                        "
                     />
                     {{ statesStore.connected ? t('board.live') : t('board.offline') }}
                 </div>
@@ -104,7 +108,7 @@
                     class="p-[5px] rounded-lg transition-all duration-150"
                     :class="
                         statesStore.notificationsEnabled
-                            ? 'text-amber-400 hover:bg-amber-500/10'
+                            ? 'text-[var(--color-yellow-50)] hover:bg-[var(--color-warning)]/10'
                             : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
                     "
                     :title="
@@ -154,7 +158,7 @@
                 <!-- Editing badge -->
                 <span
                     v-if="editor.editMode.value"
-                    class="flex items-center rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20"
+                    class="flex items-center rounded-lg text-xs font-semibold bg-[var(--color-warning)]/10 text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/20"
                     style="gap: 3px; padding: 2px 6px"
                 >
                     <svg
@@ -324,7 +328,7 @@
                     v-if="boardsStore.error"
                     class="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 text-sm"
                 >
-                    <span class="text-red-400">{{ boardsStore.error }}</span>
+                    <span class="text-[var(--color-light-red-40)]">{{ boardsStore.error }}</span>
                     <router-link
                         to="/"
                         class="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors text-xs"
@@ -444,7 +448,7 @@
                     v-if="boardsStore.error"
                     class="flex flex-col items-center justify-center h-full gap-3 text-sm"
                 >
-                    <span class="text-red-400">{{ boardsStore.error }}</span>
+                    <span class="text-[var(--color-light-red-40)]">{{ boardsStore.error }}</span>
                     <router-link
                         to="/"
                         class="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors text-xs"
@@ -693,7 +697,7 @@
                         </button>
                         <button
                             title="Delete"
-                            class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
                             @click="deleteTargetObject = selectedObject"
                         >
                             <svg

@@ -93,7 +93,7 @@
                     {{ icon.name }}
                 </p>
                 <button
-                    class="absolute rounded bg-red-500/0 hover:bg-red-500/20 text-[var(--text-muted)] hover:text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                    class="absolute rounded bg-[var(--color-light-red-50)]/0 hover:bg-[var(--color-light-red-50)]/20 text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
                     style="top: 4px; right: 4px; width: 18px; height: 18px"
                     :title="t('common.delete')"
                     @click="deleteTargetName = icon.name"

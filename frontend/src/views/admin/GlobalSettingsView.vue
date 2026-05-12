@@ -517,7 +517,7 @@
                 </CmkCollapsible>
             </section>
 
-            <p v-if="saveError" class="text-sm text-red-400">{{ saveError }}</p>
+            <p v-if="saveError" class="text-sm text-[var(--color-light-red-40)]">{{ saveError }}</p>
 
             <div class="flex items-center justify-end gap-[8px]">
                 <Transition
@@ -526,7 +526,10 @@
                     leave-to-class="opacity-0"
                     leave-active-class="transition-opacity duration-300"
                 >
-                    <span v-if="savedOk" class="flex items-center gap-[5px] text-sm text-green-400">
+                    <span
+                        v-if="savedOk"
+                        class="flex items-center gap-[5px] text-sm text-[var(--color-corporate-green-50)]"
+                    >
                         <svg
                             style="width: 14px; height: 14px"
                             fill="none"

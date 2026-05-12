@@ -408,7 +408,7 @@
             <!-- Acknowledged badge -->
             <span
                 v-if="state?.acknowledged"
-                class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-400 text-zinc-900 flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
+                class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--color-warning)] text-zinc-900 flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
                 title="Acknowledged"
             >
                 <svg
@@ -428,7 +428,7 @@
             <!-- Downtime badge -->
             <span
                 v-if="state?.in_downtime"
-                class="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
+                class="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-[var(--color-light-blue-50)] text-white flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
                 title="In downtime"
             >
                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">

@@ -224,7 +224,7 @@
             <!-- Logout -->
             <button
                 v-if="!auth.ssoActive"
-                class="w-full flex items-center rounded-lg text-sm text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/5 transition-all duration-150 py-[6px]"
+                class="w-full flex items-center rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/5 transition-all duration-150 py-[6px]"
                 :class="sidebarCollapsed ? 'justify-center px-0' : 'gap-[8px] px-[8px]'"
                 :title="sidebarCollapsed ? t('auth.logout') : undefined"
                 @click="auth.logout()"

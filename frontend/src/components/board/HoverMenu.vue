@@ -79,7 +79,7 @@
                         >
                             <span
                                 v-if="state.acknowledged"
-                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/20 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/40 dark:ring-amber-500/25"
+                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--color-warning)]/20 dark:bg-[var(--color-warning)]/15 text-[var(--color-yellow-60)] dark:text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/40 dark:ring-[var(--color-warning)]/25"
                             >
                                 <svg
                                     class="w-2.5 h-2.5"
@@ -98,7 +98,7 @@
                             </span>
                             <span
                                 v-if="state.in_downtime"
-                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/20 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 ring-1 ring-blue-500/40 dark:ring-blue-500/25"
+                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--color-light-blue-50)]/20 dark:bg-[var(--color-light-blue-50)]/15 text-[var(--color-light-blue-70)] dark:text-[var(--color-light-blue-50)] ring-1 ring-[var(--color-light-blue-50)]/40 dark:ring-[var(--color-light-blue-50)]/25"
                             >
                                 <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
@@ -129,7 +129,7 @@
                                  operator assume otherwise. -->
                             <span
                                 v-if="state.notifications_enabled === false"
-                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/20 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/40 dark:ring-amber-500/25"
+                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--color-warning)]/20 dark:bg-[var(--color-warning)]/15 text-[var(--color-yellow-60)] dark:text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/40 dark:ring-[var(--color-warning)]/25"
                                 :title="t('board.hover.notificationsDisabled')"
                             >
                                 <svg
@@ -399,23 +399,23 @@ const isNoPermission = computed(() => props.state?.state === 'NO_PERMISSION');
 const isNotFound = computed(() => props.state?.state === 'NOT_FOUND');
 
 const STATE_BG: Record<string, string> = {
-    UP: 'bg-green-400',
-    OK: 'bg-green-400',
-    DOWN: 'bg-red-500',
-    CRITICAL: 'bg-red-500',
+    UP: 'bg-[var(--color-corporate-green-50)]',
+    OK: 'bg-[var(--color-corporate-green-50)]',
+    DOWN: 'bg-[var(--color-light-red-50)]',
+    CRITICAL: 'bg-[var(--color-light-red-50)]',
     UNREACHABLE: 'bg-orange-400',
     UNKNOWN: 'bg-orange-400',
     WARNING: 'bg-warning',
     PENDING: 'bg-[var(--color-pending)]',
 };
 const STATE_TEXT: Record<string, string> = {
-    UP: 'text-green-600 dark:text-green-400',
-    OK: 'text-green-600 dark:text-green-400',
-    DOWN: 'text-red-600 dark:text-red-400',
-    CRITICAL: 'text-red-600 dark:text-red-400',
+    UP: 'text-[var(--color-corporate-green-60)] dark:text-[var(--color-corporate-green-50)]',
+    OK: 'text-[var(--color-corporate-green-60)] dark:text-[var(--color-corporate-green-50)]',
+    DOWN: 'text-[var(--color-light-red-60)] dark:text-[var(--color-light-red-40)]',
+    CRITICAL: 'text-[var(--color-light-red-60)] dark:text-[var(--color-light-red-40)]',
     UNREACHABLE: 'text-orange-600 dark:text-orange-400',
     UNKNOWN: 'text-orange-600 dark:text-orange-400',
-    WARNING: 'text-amber-600 dark:text-warning',
+    WARNING: 'text-[var(--color-yellow-60)] dark:text-warning',
     PENDING: 'text-[var(--text-muted)]',
 };
 
@@ -479,7 +479,7 @@ const stateDuration = computed(() =>
 // rendered muted (or hidden entirely by attemptsBadge's own gate).
 const attemptsCls = computed(() =>
     props.state?.state_type === 'SOFT'
-        ? 'text-amber-600 dark:text-amber-400 font-semibold'
+        ? 'text-[var(--color-yellow-60)] dark:text-[var(--color-yellow-50)] font-semibold'
         : 'text-[var(--text-muted)]',
 );
 
@@ -517,7 +517,7 @@ const nextCheckText = computed((): NextCheckText | null => {
     if (!overdue) return null;
     return {
         text: t('board.hover.checkOverdue', { duration: overdue }),
-        cls: 'text-amber-600 dark:text-amber-400',
+        cls: 'text-[var(--color-yellow-60)] dark:text-[var(--color-yellow-50)]',
     };
 });
 
@@ -549,8 +549,8 @@ const servicePills = computed((): ServicePill[] => {
         pills.push({
             label: 'CRIT',
             count: summary.critical,
-            cls: 'bg-red-500/15 text-red-700 dark:text-red-400 ring-1 ring-red-500/30',
-            dot: 'bg-red-500',
+            cls: 'bg-[var(--color-light-red-50)]/15 text-[var(--color-light-red-70)] dark:text-[var(--color-light-red-40)] ring-1 ring-[var(--color-light-red-50)]/30',
+            dot: 'bg-[var(--color-light-red-50)]',
         });
     }
     if (summary.unknown) {
@@ -565,7 +565,7 @@ const servicePills = computed((): ServicePill[] => {
         pills.push({
             label: 'WARN',
             count: summary.warning,
-            cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/30',
+            cls: 'bg-[var(--color-warning)]/15 text-[var(--color-yellow-60)] dark:text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/30',
             dot: 'bg-warning',
         });
     }
@@ -581,8 +581,8 @@ const servicePills = computed((): ServicePill[] => {
         pills.push({
             label: 'OK',
             count: summary.ok,
-            cls: 'bg-green-500/15 text-green-700 dark:text-green-400 ring-1 ring-green-500/30',
-            dot: 'bg-green-500',
+            cls: 'bg-[var(--color-corporate-green-50)]/15 text-[var(--color-corporate-green-70)] dark:text-[var(--color-corporate-green-50)] ring-1 ring-[var(--color-corporate-green-50)]/30',
+            dot: 'bg-[var(--color-corporate-green-50)]',
         });
     }
     return pills;

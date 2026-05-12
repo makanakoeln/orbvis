@@ -59,7 +59,7 @@
                     class="text-[9px] font-semibold uppercase tracking-wide text-[var(--text-muted)]"
                     >CPU Utilization</span
                 >
-                <span class="text-[10px] font-bold text-amber-400">76%</span>
+                <span class="text-[10px] font-bold text-[var(--color-yellow-50)]">76%</span>
             </div>
             <!-- Chart: Y-axis 0–100, warn@75%, crit@90% -->
             <svg width="175" height="92" viewBox="0 0 175 92">

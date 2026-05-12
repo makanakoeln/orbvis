@@ -21,7 +21,9 @@
                 </div>
                 <div
                     class="text-[10px] mt-[2px]"
-                    :class="placing ? 'text-amber-400/70' : 'text-[var(--text-muted)]'"
+                    :class="
+                        placing ? 'text-[var(--color-yellow-50)]/70' : 'text-[var(--text-muted)]'
+                    "
                 >
                     {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.dragObjects') }}
                 </div>
@@ -217,7 +219,7 @@
                     -->
                     <div
                         v-if="aggregationPreviewDensityWarning"
-                        class="mt-2 rounded p-1.5 text-[10px] border border-amber-500/40 bg-amber-500/10 text-amber-200"
+                        class="mt-2 rounded p-1.5 text-[10px] border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 text-[var(--color-yellow-50)]"
                     >
                         ⚠ {{ aggregationPreviewDensityWarning }}
                     </div>

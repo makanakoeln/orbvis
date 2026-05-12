@@ -210,7 +210,7 @@
             </button>
             <button
                 v-if="showEdit"
-                class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/8 transition-colors"
+                class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--color-light-red-40)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/8 transition-colors"
                 @click="$emit('delete')"
             >
                 <svg

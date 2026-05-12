@@ -94,12 +94,20 @@
                         <td style="padding: 6px 12px">
                             <span
                                 class="inline-flex items-center gap-[4px] text-xs font-medium"
-                                :class="user.is_active ? 'text-green-400' : 'text-red-400'"
+                                :class="
+                                    user.is_active
+                                        ? 'text-[var(--color-corporate-green-50)]'
+                                        : 'text-[var(--color-light-red-40)]'
+                                "
                             >
                                 <span
                                     class="rounded-full"
                                     style="width: 6px; height: 6px"
-                                    :class="user.is_active ? 'bg-green-400' : 'bg-red-400'"
+                                    :class="
+                                        user.is_active
+                                            ? 'bg-[var(--color-corporate-green-50)]'
+                                            : 'bg-[var(--color-light-red-40)]'
+                                    "
                                 />
                                 {{ user.is_active ? t('admin.active') : t('admin.inactive') }}
                             </span>
@@ -141,7 +149,7 @@
                                         </svg>
                                     </button>
                                     <button
-                                        class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                        class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
                                         :title="t('common.delete')"
                                         @click="deleteTargetId = user.user_id"
                                     >
@@ -208,7 +216,7 @@
                     />
                     <p
                         v-if="newUserConfirmPassword && newUser.password !== newUserConfirmPassword"
-                        class="text-xs text-red-400"
+                        class="text-xs text-[var(--color-light-red-40)]"
                     >
                         {{ t('userSettings.passwordMismatch') }}
                     </p>

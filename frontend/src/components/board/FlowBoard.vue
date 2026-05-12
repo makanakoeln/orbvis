@@ -6,7 +6,10 @@
         >
             Loading topology…
         </div>
-        <div v-else-if="error" class="flex items-center justify-center h-full text-red-400 text-sm">
+        <div
+            v-else-if="error"
+            class="flex items-center justify-center h-full text-[var(--color-light-red-40)] text-sm"
+        >
             {{ error }}
         </div>
         <svg v-else ref="svgEl" class="w-full h-full block" />

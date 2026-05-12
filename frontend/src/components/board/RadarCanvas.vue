@@ -217,7 +217,7 @@ function cardClass(state: string): string {
     switch (state) {
         case 'DOWN':
         case 'CRITICAL':
-            return 'bg-red-500/8 ring-red-500/20 hover:shadow-red-900/20';
+            return 'bg-[var(--color-light-red-50)]/8 ring-[var(--color-light-red-50)]/20 hover:shadow-red-900/20';
         case 'UNREACHABLE':
             return 'bg-orange-500/8 ring-orange-500/20 hover:shadow-orange-900/20';
         case 'WARNING':
@@ -225,7 +225,7 @@ function cardClass(state: string): string {
             return 'bg-[#ffd000]/8 ring-[#ffd000]/20 hover:shadow-yellow-900/20';
         case 'UP':
         case 'OK':
-            return 'bg-green-500/8 ring-green-500/20 hover:shadow-green-900/20';
+            return 'bg-[var(--color-corporate-green-50)]/8 ring-[var(--color-corporate-green-50)]/20 hover:shadow-green-900/20';
         default:
             return 'bg-[var(--default-form-element-bg-color)] ring-[var(--border)]';
     }
@@ -235,7 +235,7 @@ function nameClass(state: string): string {
     switch (state) {
         case 'DOWN':
         case 'CRITICAL':
-            return 'text-red-300';
+            return 'text-[var(--color-light-red-40)]';
         case 'UNREACHABLE':
             return 'text-orange-300';
         case 'WARNING':
@@ -243,7 +243,7 @@ function nameClass(state: string): string {
             return 'text-[#ffd000]';
         case 'UP':
         case 'OK':
-            return 'text-green-300';
+            return 'text-[var(--color-corporate-green-50)]';
         default:
             return 'text-[var(--text-muted)]';
     }
@@ -253,7 +253,7 @@ function badgeClass(state: string): string {
     switch (state) {
         case 'DOWN':
         case 'CRITICAL':
-            return 'bg-red-500/15 text-red-400';
+            return 'bg-[var(--color-light-red-50)]/15 text-[var(--color-light-red-40)]';
         case 'UNREACHABLE':
             return 'bg-orange-500/15 text-orange-400';
         case 'WARNING':
@@ -261,7 +261,7 @@ function badgeClass(state: string): string {
             return 'bg-[#ffd000]/15 text-[#ffd000]';
         case 'UP':
         case 'OK':
-            return 'bg-green-500/15 text-green-400';
+            return 'bg-[var(--color-corporate-green-50)]/15 text-[var(--color-corporate-green-50)]';
         default:
             return 'bg-[var(--bg-hover)] text-[var(--text-muted)]';
     }
@@ -271,7 +271,7 @@ function stateDotClass(state: string): string {
     switch (state) {
         case 'DOWN':
         case 'CRITICAL':
-            return 'bg-red-400';
+            return 'bg-[var(--color-light-red-40)]';
         case 'UNREACHABLE':
             return 'bg-orange-400';
         case 'WARNING':
@@ -279,7 +279,7 @@ function stateDotClass(state: string): string {
             return 'bg-[#ffd000]';
         case 'UP':
         case 'OK':
-            return 'bg-green-400';
+            return 'bg-[var(--color-corporate-green-50)]';
         default:
             return 'bg-[var(--color-pending)]';
     }
@@ -289,7 +289,7 @@ function stateTextClass(state: string): string {
     switch (state) {
         case 'DOWN':
         case 'CRITICAL':
-            return 'text-red-400';
+            return 'text-[var(--color-light-red-40)]';
         case 'UNREACHABLE':
             return 'text-orange-400';
         case 'WARNING':
@@ -297,7 +297,7 @@ function stateTextClass(state: string): string {
             return 'text-[#ffd000]';
         case 'UP':
         case 'OK':
-            return 'text-green-400';
+            return 'text-[var(--color-corporate-green-50)]';
         default:
             return 'text-[var(--text-muted)]';
     }

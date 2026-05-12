@@ -3,10 +3,10 @@
         <div class="w-full max-w-sm">
             <div class="text-center mb-8">
                 <div
-                    class="w-12 h-12 rounded-2xl bg-amber-500/15 ring-1 ring-amber-500/25 flex items-center justify-center mx-auto mb-4"
+                    class="w-12 h-12 rounded-2xl bg-[var(--color-warning)]/15 ring-1 ring-[var(--color-warning)]/25 flex items-center justify-center mx-auto mb-4"
                 >
                     <svg
-                        class="w-6 h-6 text-amber-400"
+                        class="w-6 h-6 text-[var(--color-yellow-50)]"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -58,7 +58,7 @@
                         />
                     </div>
 
-                    <p v-if="error" class="text-red-400 text-xs">{{ error }}</p>
+                    <p v-if="error" class="text-[var(--color-light-red-40)] text-xs">{{ error }}</p>
 
                     <button
                         type="submit"

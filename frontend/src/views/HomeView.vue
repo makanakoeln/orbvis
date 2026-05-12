@@ -107,7 +107,7 @@
             <!-- Error -->
             <div
                 v-else-if="boardsStore.error"
-                class="flex items-center bg-red-500/8 ring-1 ring-red-500/20 rounded-xl text-red-400 text-sm"
+                class="flex items-center bg-[var(--color-light-red-50)]/8 ring-1 ring-[var(--color-light-red-50)]/20 rounded-xl text-[var(--color-light-red-40)] text-sm"
                 style="gap: 6px; padding: 8px 12px"
             >
                 {{ boardsStore.error }}
@@ -932,7 +932,7 @@
                                 </span>
                                 <span
                                     v-if="map.rotation_interval > 0"
-                                    class="rounded-full font-medium bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30 backdrop-blur-sm"
+                                    class="rounded-full font-medium bg-[var(--color-warning)]/20 text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/30 backdrop-blur-sm"
                                     style="font-size: 11px; padding: 2px 6px"
                                     :title="
                                         t('home.rotationBadgeTitle', { n: map.rotation_interval })
@@ -1019,7 +1019,7 @@
                             </svg>
                         </button>
                         <button
-                            class="p-1 rounded text-[var(--text-muted)] hover:text-amber-400 hover:bg-amber-500/10 transition-all"
+                            class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-yellow-50)] hover:bg-[var(--color-warning)]/10 transition-all"
                             :title="t('admin.cloneBoard')"
                             @click.stop="cloneBoard(map)"
                         >
@@ -1057,7 +1057,7 @@
                             </svg>
                         </button>
                         <button
-                            class="p-1 rounded text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
                             :title="t('admin.deleteBoard', { name: map.alias || map.name })"
                             @click.stop="deleteBoard(map)"
                         >

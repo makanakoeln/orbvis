@@ -47,7 +47,7 @@
         </div>
         <p
             v-if="emptyText && !loading && suggestions.length === 0"
-            class="text-xs text-amber-400/70 leading-snug mt-1"
+            class="text-xs text-[var(--color-yellow-50)]/70 leading-snug mt-1"
         >
             {{ emptyText }}
         </p>
