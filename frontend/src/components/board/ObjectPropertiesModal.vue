@@ -1103,13 +1103,6 @@
                             </p>
                         </div>
                     </section>
-
-                    <!-- ID (debug) -->
-                    <div
-                        class="text-xs text-zinc-700 font-mono pt-1 border-t border-[var(--border)]"
-                    >
-                        ID: {{ object.id }}
-                    </div>
                 </CmkScrollContainer>
 
                 <!-- Footer -->
