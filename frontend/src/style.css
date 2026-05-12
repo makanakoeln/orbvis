@@ -125,7 +125,7 @@ input:-webkit-autofill:focus {
 
 .admin-subtitle {
     color: var(--text-muted);
-    margin-top: var(--dimension-2);
+    margin-top: var(--dimension-3);
 }
 
 /* Tailwind-zinc Klassen sind durch CMK-Token (--text, --text-muted, --border, --bg-*)
