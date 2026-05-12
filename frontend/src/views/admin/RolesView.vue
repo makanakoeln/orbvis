@@ -117,234 +117,155 @@
             </div>
         </div>
 
-        <!-- Create role dialog -->
-        <Teleport to="body">
-            <div v-if="showCreate" class="fixed inset-0 z-50 flex items-center justify-center">
-                <div
-                    class="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                    @click="showCreate = false"
-                />
-                <div
-                    class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl w-80"
-                    style="padding: 16px"
-                >
-                    <div class="flex items-center justify-between" style="margin-bottom: 12px">
-                        <h3 class="text-base font-bold text-[var(--text)]">
-                            {{ t('admin.createRole') }}
-                        </h3>
-                        <button
-                            class="p-[4px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                            @click="showCreate = false"
+        <OrbModal
+            :open="showCreate"
+            :title="t('admin.createRole')"
+            closable
+            @close="showCreate = false"
+        >
+            <form class="roles-create__form" @submit.prevent="createRole">
+                <div class="roles-create__field">
+                    <label class="roles-create__label">{{ t('admin.roleName') }}</label>
+                    <CmkInput
+                        v-model="newRoleName"
+                        placeholder="e.g. operators"
+                        field-size="FILL"
+                    />
+                </div>
+            </form>
+            <template #footer>
+                <CmkButton variant="secondary" @click="showCreate = false">
+                    {{ t('common.cancel') }}
+                </CmkButton>
+                <CmkButton variant="primary" @click="createRole">
+                    {{ t('common.create') }}
+                </CmkButton>
+            </template>
+        </OrbModal>
+
+        <OrbModal :open="!!editRole" closable @close="cancelEdit">
+            <template #header>
+                <span class="roles-edit__title">
+                    {{ t('admin.permissionsTitle') }} –
+                    <span class="roles-edit__name">{{ editRole?.name }}</span>
+                </span>
+            </template>
+            <div v-if="editRole" class="roles-edit__body">
+                <!-- Current permissions -->
+                <div>
+                    <p
+                        class="text-sm font-medium text-[var(--text-muted)]"
+                        style="margin-bottom: 6px"
+                    >
+                        {{ t('admin.assigned') }}
+                    </p>
+                    <div
+                        v-if="draftPerms.length"
+                        class="divide-y divide-[var(--border)] rounded-lg ring-1 ring-[var(--border)] overflow-hidden"
+                    >
+                        <div
+                            v-for="perm in draftPerms"
+                            :key="perm.perm_id"
+                            class="flex items-center justify-between gap-[8px] hover:bg-[var(--bg-hover)] transition-colors"
+                            style="padding: 5px 10px"
+                            :class="
+                                perm.perm_id < 0 ? 'bg-[var(--color-corporate-green-50)]/5' : ''
+                            "
                         >
-                            <svg
-                                style="width: 14px; height: 14px"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="2"
+                            <span class="text-xs font-mono text-[var(--text)]"
+                                >{{ perm.mod }}/{{ perm.act }}/{{ perm.obj }}</span
                             >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
-                            </svg>
-                        </button>
+                            <span
+                                v-if="perm.perm_id < 0"
+                                class="text-[10px] text-[var(--color-corporate-green-50)] shrink-0"
+                                >new</span
+                            >
+                            <button
+                                class="text-[var(--text-muted)] hover:text-red-400 transition-colors shrink-0 p-0.5 rounded"
+                                :title="t('common.delete')"
+                                @click="removeDraftPerm(perm.perm_id)"
+                            >
+                                <svg
+                                    style="width: 12px; height: 12px"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2.5"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
-                    <form class="space-y-[10px]" @submit.prevent="createRole">
+                    <p v-else class="text-sm text-[var(--text-muted)]">
+                        {{ t('admin.noPermissionsYet') }}
+                    </p>
+                </div>
+
+                <!-- Add permission form -->
+                <div class="border-t border-[var(--border)] pt-[12px]">
+                    <p
+                        class="text-sm font-medium text-[var(--text-muted)]"
+                        style="margin-bottom: 6px"
+                    >
+                        {{ t('admin.addPermission') }}
+                    </p>
+                    <form class="space-y-[10px]" @submit.prevent="addDraftPerm">
                         <div class="space-y-[4px]">
                             <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                t('admin.roleName')
+                                t('admin.preset')
+                            }}</label>
+                            <CmkDropdown
+                                :selected-option="permPreset"
+                                :options="permPresetOptions"
+                                :width="'fill'"
+                                :label="t('admin.preset')"
+                                @update:selected-option="
+                                    (v) => {
+                                        permPreset = v ?? '';
+                                        applyPreset();
+                                    }
+                                "
+                            />
+                        </div>
+                        <div v-if="needsMapName" class="space-y-[4px]">
+                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
+                                t('admin.boardNameLabel')
                             }}</label>
                             <CmkInput
-                                v-model="newRoleName"
-                                placeholder="e.g. operators"
+                                v-model="newPerm.obj"
+                                placeholder="my-board"
                                 field-size="FILL"
                             />
                         </div>
-                        <div
-                            class="flex gap-[8px] justify-end pt-[10px] border-t border-[var(--border)]"
-                        >
-                            <CmkButton variant="secondary" @click="showCreate = false">{{
-                                t('common.cancel')
-                            }}</CmkButton>
-                            <CmkButton variant="primary" @click="createRole">{{
-                                t('common.create')
-                            }}</CmkButton>
+                        <p v-if="permError" class="text-red-400 text-xs">{{ permError }}</p>
+                        <div class="flex justify-end">
+                            <button
+                                type="submit"
+                                :disabled="!permPreset"
+                                class="bg-[var(--default-form-element-bg-color)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-[var(--text)] transition-all"
+                                style="padding: 5px 10px"
+                            >
+                                {{ t('admin.add') }}
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
-        </Teleport>
-
-        <!-- Edit permissions dialog -->
-        <Teleport to="body">
-            <div v-if="editRole" class="fixed inset-0 z-50 flex items-center justify-center">
-                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="cancelEdit" />
-                <div
-                    class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl w-[28rem] max-h-[90vh] flex flex-col overflow-hidden"
-                >
-                    <div
-                        class="flex items-center justify-between shrink-0 border-b border-[var(--border)]"
-                        style="padding: 10px 16px"
-                    >
-                        <h3 class="text-base font-bold text-[var(--text)]">
-                            {{ t('admin.permissionsTitle') }} –
-                            <span class="text-[var(--color-corporate-green-50)]">{{
-                                editRole.name
-                            }}</span>
-                        </h3>
-                        <button
-                            class="p-[4px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                            @click="cancelEdit"
-                        >
-                            <svg
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                style="width: 14px; height: 14px"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <div class="overflow-y-auto flex-1 space-y-[16px]" style="padding: 10px 16px">
-                        <!-- Current permissions -->
-                        <div>
-                            <p
-                                class="text-sm font-medium text-[var(--text-muted)]"
-                                style="margin-bottom: 6px"
-                            >
-                                {{ t('admin.assigned') }}
-                            </p>
-                            <div
-                                v-if="draftPerms.length"
-                                class="divide-y divide-[var(--border)] rounded-lg ring-1 ring-[var(--border)] overflow-hidden"
-                            >
-                                <div
-                                    v-for="perm in draftPerms"
-                                    :key="perm.perm_id"
-                                    class="flex items-center justify-between gap-[8px] hover:bg-[var(--bg-hover)] transition-colors"
-                                    style="padding: 5px 10px"
-                                    :class="
-                                        perm.perm_id < 0
-                                            ? 'bg-[var(--color-corporate-green-50)]/5'
-                                            : ''
-                                    "
-                                >
-                                    <span class="text-xs font-mono text-[var(--text)]"
-                                        >{{ perm.mod }}/{{ perm.act }}/{{ perm.obj }}</span
-                                    >
-                                    <span
-                                        v-if="perm.perm_id < 0"
-                                        class="text-[10px] text-[var(--color-corporate-green-50)] shrink-0"
-                                        >new</span
-                                    >
-                                    <button
-                                        class="text-[var(--text-muted)] hover:text-red-400 transition-colors shrink-0 p-0.5 rounded"
-                                        :title="t('common.delete')"
-                                        @click="removeDraftPerm(perm.perm_id)"
-                                    >
-                                        <svg
-                                            style="width: 12px; height: 12px"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            stroke-width="2.5"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="M6 18L18 6M6 6l12 12"
-                                            />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <p v-else class="text-sm text-[var(--text-muted)]">
-                                {{ t('admin.noPermissionsYet') }}
-                            </p>
-                        </div>
-
-                        <!-- Add permission form -->
-                        <div class="border-t border-[var(--border)] pt-[12px]">
-                            <p
-                                class="text-sm font-medium text-[var(--text-muted)]"
-                                style="margin-bottom: 6px"
-                            >
-                                {{ t('admin.addPermission') }}
-                            </p>
-                            <form class="space-y-[10px]" @submit.prevent="addDraftPerm">
-                                <div class="space-y-[4px]">
-                                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                        t('admin.preset')
-                                    }}</label>
-                                    <CmkDropdown
-                                        :selected-option="permPreset"
-                                        :options="permPresetOptions"
-                                        :width="'fill'"
-                                        :label="t('admin.preset')"
-                                        @update:selected-option="
-                                            (v) => {
-                                                permPreset = v ?? '';
-                                                applyPreset();
-                                            }
-                                        "
-                                    />
-                                </div>
-                                <div v-if="needsMapName" class="space-y-[4px]">
-                                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                        t('admin.boardNameLabel')
-                                    }}</label>
-                                    <CmkInput
-                                        v-model="newPerm.obj"
-                                        placeholder="my-board"
-                                        field-size="FILL"
-                                    />
-                                </div>
-                                <p v-if="permError" class="text-red-400 text-xs">{{ permError }}</p>
-                                <div class="flex justify-end">
-                                    <button
-                                        type="submit"
-                                        :disabled="!permPreset"
-                                        class="bg-[var(--default-form-element-bg-color)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-[var(--text)] transition-all"
-                                        style="padding: 5px 10px"
-                                    >
-                                        {{ t('admin.add') }}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Footer -->
-                    <div
-                        class="flex items-center justify-end gap-[8px] shrink-0 border-t border-[var(--border)]"
-                        style="padding: 8px 16px"
-                    >
-                        <p v-if="permSaveError" class="text-red-400 text-xs flex-1">
-                            {{ permSaveError }}
-                        </p>
-                        <CmkButton variant="secondary" @click="cancelEdit">{{
-                            t('common.cancel')
-                        }}</CmkButton>
-                        <CmkButton
-                            variant="primary"
-                            :disabled="permSaving"
-                            @click="savePermissions"
-                        >
-                            {{ permSaving ? t('common.saving') : t('common.save') }}
-                        </CmkButton>
-                    </div>
-                </div>
-            </div>
-        </Teleport>
+            <template #footer>
+                <p v-if="permSaveError" class="roles-edit__error">{{ permSaveError }}</p>
+                <CmkButton variant="secondary" @click="cancelEdit">
+                    {{ t('common.cancel') }}
+                </CmkButton>
+                <CmkButton variant="primary" :disabled="permSaving" @click="savePermissions">
+                    {{ permSaving ? t('common.saving') : t('common.save') }}
+                </CmkButton>
+            </template>
+        </OrbModal>
 
         <OrbConfirmDialog
             :open="deleteTargetId !== null"
@@ -367,6 +288,7 @@ import { useI18n } from 'vue-i18n';
 
 import { rolesApi } from '@/api/client';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
+import OrbModal from '@/components/OrbModal.vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import type { PermissionRead, RoleRead } from '@/types/api';
@@ -542,3 +464,47 @@ async function savePermissions() {
 
 onMounted(fetchRoles);
 </script>
+
+<style scoped>
+.roles-create__form {
+    display: flex;
+    flex-direction: column;
+    min-width: 320px;
+}
+
+.roles-create__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-3);
+}
+
+.roles-create__label {
+    font-size: var(--font-size-large);
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.roles-edit__title {
+    font-size: var(--font-size-large);
+    font-weight: var(--font-weight-bold);
+}
+
+.roles-edit__name {
+    color: var(--color-corporate-green-50);
+}
+
+.roles-edit__body {
+    width: min(28rem, 90vw);
+    max-height: 60vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-6);
+}
+
+.roles-edit__error {
+    font-size: var(--font-size-normal);
+    color: var(--color-light-red-40);
+    flex: 1;
+}
+</style>

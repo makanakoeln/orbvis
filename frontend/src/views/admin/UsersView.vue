@@ -168,144 +168,105 @@
             </table>
         </div>
 
-        <!-- Create dialog -->
-        <Teleport to="body">
-            <div v-if="showCreate" class="fixed inset-0 z-50 flex items-center justify-center">
-                <div
-                    class="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                    @click="showCreate = false"
-                />
-                <div
-                    class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl"
-                    style="padding: 16px; width: 380px"
-                >
-                    <div class="flex items-center justify-between" style="margin-bottom: 16px">
-                        <h3 class="text-base font-bold text-[var(--text)]">
-                            {{ t('admin.createUser') }}
-                        </h3>
-                        <button
-                            class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                            @click="showCreate = false"
-                        >
-                            <svg
-                                style="width: 14px; height: 14px"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="2"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
-                            </svg>
-                        </button>
-                    </div>
-                    <form class="space-y-[10px]" @submit.prevent="createUser">
-                        <div class="space-y-[4px]">
-                            <CmkLabel>{{ t('auth.username') }}</CmkLabel>
-                            <CmkInput
-                                v-model="newUser.name"
-                                placeholder="john"
-                                autocomplete="off"
-                                field-size="FILL"
-                            />
-                        </div>
-
-                        <div class="space-y-[4px]">
-                            <CmkLabel>{{ t('auth.password') }}</CmkLabel>
-                            <CmkInput
-                                v-model="newUser.password"
-                                type="password"
-                                autocomplete="new-password"
-                                field-size="FILL"
-                            />
-                            <p class="text-sm text-[var(--text-muted)]">
-                                {{ t('userSettings.passwordMinLength') }}
-                            </p>
-                        </div>
-
-                        <div class="space-y-[4px]">
-                            <CmkLabel>{{ t('userSettings.confirmPassword') }}</CmkLabel>
-                            <CmkInput
-                                v-model="newUserConfirmPassword"
-                                type="password"
-                                autocomplete="new-password"
-                                field-size="FILL"
-                            />
-                            <p
-                                v-if="
-                                    newUserConfirmPassword &&
-                                    newUser.password !== newUserConfirmPassword
-                                "
-                                class="text-xs text-red-400"
-                            >
-                                {{ t('userSettings.passwordMismatch') }}
-                            </p>
-                        </div>
-
-                        <div class="border-t border-[var(--border)] pt-[10px] space-y-[10px]">
-                            <div class="flex items-start gap-[8px]">
-                                <CmkCheckbox
-                                    v-model="newUser.is_admin"
-                                    :label="t('admin.administrator')"
-                                />
-                                <p class="text-sm text-[var(--text-muted)] mt-0.5">
-                                    {{ t('admin.administratorHint') }}
-                                </p>
-                            </div>
-
-                            <CmkCheckbox
-                                v-model="newUser.must_change_password"
-                                :label="t('admin.mustChangePassword')"
-                            />
-                        </div>
-
-                        <div
-                            v-if="availableRoles.length"
-                            class="border-t border-[var(--border)] pt-[10px] space-y-[8px]"
-                        >
-                            <p class="text-sm font-medium text-[var(--text-muted)]">
-                                {{ t('admin.roles') }}
-                            </p>
-                            <div v-for="role in availableRoles" :key="role.role_id">
-                                <CmkCheckbox
-                                    :model-value="selectedRoleIds.includes(role.role_id)"
-                                    :label="role.name"
-                                    @update:model-value="
-                                        (v) => {
-                                            if (v) selectedRoleIds.push(role.role_id);
-                                            else
-                                                selectedRoleIds = selectedRoleIds.filter(
-                                                    (id) => id !== role.role_id,
-                                                );
-                                        }
-                                    "
-                                />
-                            </div>
-                        </div>
-
-                        <p v-if="createError" class="text-xs text-red-400">{{ createError }}</p>
-                        <div
-                            class="flex gap-[8px] justify-end border-t border-[var(--border)]"
-                            style="padding-top: 10px"
-                        >
-                            <CmkButton variant="secondary" @click="showCreate = false">{{
-                                t('common.cancel')
-                            }}</CmkButton>
-                            <CmkButton
-                                variant="primary"
-                                :disabled="creating || newUser.password !== newUserConfirmPassword"
-                                @click="createUser"
-                            >
-                                {{ creating ? t('common.saving') : t('common.create') }}
-                            </CmkButton>
-                        </div>
-                    </form>
+        <OrbModal
+            :open="showCreate"
+            :title="t('admin.createUser')"
+            closable
+            @close="showCreate = false"
+        >
+            <form class="users-create__form" @submit.prevent="createUser">
+                <div class="space-y-[4px]">
+                    <CmkLabel>{{ t('auth.username') }}</CmkLabel>
+                    <CmkInput
+                        v-model="newUser.name"
+                        placeholder="john"
+                        autocomplete="off"
+                        field-size="FILL"
+                    />
                 </div>
-            </div>
-        </Teleport>
+
+                <div class="space-y-[4px]">
+                    <CmkLabel>{{ t('auth.password') }}</CmkLabel>
+                    <CmkInput
+                        v-model="newUser.password"
+                        type="password"
+                        autocomplete="new-password"
+                        field-size="FILL"
+                    />
+                    <p class="text-sm text-[var(--text-muted)]">
+                        {{ t('userSettings.passwordMinLength') }}
+                    </p>
+                </div>
+
+                <div class="space-y-[4px]">
+                    <CmkLabel>{{ t('userSettings.confirmPassword') }}</CmkLabel>
+                    <CmkInput
+                        v-model="newUserConfirmPassword"
+                        type="password"
+                        autocomplete="new-password"
+                        field-size="FILL"
+                    />
+                    <p
+                        v-if="newUserConfirmPassword && newUser.password !== newUserConfirmPassword"
+                        class="text-xs text-red-400"
+                    >
+                        {{ t('userSettings.passwordMismatch') }}
+                    </p>
+                </div>
+
+                <div class="border-t border-[var(--border)] pt-[10px] space-y-[10px]">
+                    <div class="flex items-start gap-[8px]">
+                        <CmkCheckbox v-model="newUser.is_admin" :label="t('admin.administrator')" />
+                        <p class="text-sm text-[var(--text-muted)] mt-0.5">
+                            {{ t('admin.administratorHint') }}
+                        </p>
+                    </div>
+
+                    <CmkCheckbox
+                        v-model="newUser.must_change_password"
+                        :label="t('admin.mustChangePassword')"
+                    />
+                </div>
+
+                <div
+                    v-if="availableRoles.length"
+                    class="border-t border-[var(--border)] pt-[10px] space-y-[8px]"
+                >
+                    <p class="text-sm font-medium text-[var(--text-muted)]">
+                        {{ t('admin.roles') }}
+                    </p>
+                    <div v-for="role in availableRoles" :key="role.role_id">
+                        <CmkCheckbox
+                            :model-value="selectedRoleIds.includes(role.role_id)"
+                            :label="role.name"
+                            @update:model-value="
+                                (v) => {
+                                    if (v) selectedRoleIds.push(role.role_id);
+                                    else
+                                        selectedRoleIds = selectedRoleIds.filter(
+                                            (id) => id !== role.role_id,
+                                        );
+                                }
+                            "
+                        />
+                    </div>
+                </div>
+
+                <p v-if="createError" class="users-create__error">{{ createError }}</p>
+            </form>
+            <template #footer>
+                <CmkButton variant="secondary" @click="showCreate = false">
+                    {{ t('common.cancel') }}
+                </CmkButton>
+                <CmkButton
+                    variant="primary"
+                    :disabled="creating || newUser.password !== newUserConfirmPassword"
+                    @click="createUser"
+                >
+                    {{ creating ? t('common.saving') : t('common.create') }}
+                </CmkButton>
+            </template>
+        </OrbModal>
 
         <OrbConfirmDialog
             :open="deleteTargetId !== null"
@@ -343,6 +304,7 @@ import { useI18n } from 'vue-i18n';
 
 import { rolesApi, usersApi } from '@/api/client';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
+import OrbModal from '@/components/OrbModal.vue';
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
@@ -431,3 +393,17 @@ onMounted(() => {
     loadRoles();
 });
 </script>
+
+<style scoped>
+.users-create__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-5);
+    min-width: 380px;
+}
+
+.users-create__error {
+    font-size: var(--font-size-normal);
+    color: var(--color-light-red-40);
+}
+</style>
