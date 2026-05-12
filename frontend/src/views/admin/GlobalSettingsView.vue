@@ -1,12 +1,12 @@
 <template>
     <div class="max-w-2xl">
         <div style="margin-bottom: 16px">
-            <h2 class="text-lg font-bold text-[var(--text)] tracking-tight">
+            <CmkHeading type="h2">
                 {{ t('settings.title') }}
-            </h2>
-            <p class="text-sm text-[var(--text-muted)]" style="margin-top: 3px">
+            </CmkHeading>
+            <CmkParagraph class="admin-subtitle">
                 {{ t('settings.subtitle') }}
-            </p>
+            </CmkParagraph>
         </div>
 
         <div v-if="store.loading" class="flex items-center justify-center py-8">

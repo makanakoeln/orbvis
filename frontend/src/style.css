@@ -123,6 +123,11 @@ input:-webkit-autofill:focus {
     --gauge-track: #d4d4d8;
 }
 
+.admin-subtitle {
+    color: var(--text-muted);
+    margin-top: var(--dimension-2);
+}
+
 /* Tailwind-zinc Klassen sind durch CMK-Token (--text, --text-muted, --border, --bg-*)
    ersetzt; theme-spezifische Anpassungen passieren über die Token. */
 

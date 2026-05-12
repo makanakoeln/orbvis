@@ -2,12 +2,12 @@
     <div>
         <div class="flex justify-between items-center" style="margin-bottom: 16px">
             <div>
-                <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
+                <CmkHeading type="h2">
                     {{ t('admin.icons') }}
-                </h2>
-                <p class="text-sm text-[var(--text-muted)]" style="margin-top: 3px">
+                </CmkHeading>
+                <CmkParagraph class="admin-subtitle">
                     {{ t('admin.iconsSubtitle') }}
-                </p>
+                </CmkParagraph>
             </div>
             <CmkButton variant="primary" @click="fileInputEl?.click()">
                 <svg

@@ -2,12 +2,12 @@
     <div class="max-w-4xl">
         <div class="flex justify-between items-center" style="margin-bottom: 16px">
             <div>
-                <h2 class="text-lg font-bold text-[var(--text)] tracking-tight">
+                <CmkHeading type="h2">
                     {{ t('admin.users') }}
-                </h2>
-                <p class="text-sm text-[var(--text-muted)]" style="margin-top: 3px">
+                </CmkHeading>
+                <CmkParagraph class="admin-subtitle">
                     {{ t('admin.usersSubtitle') }}
-                </p>
+                </CmkParagraph>
             </div>
             <CmkButton variant="primary" @click="showCreate = true">
                 <svg
