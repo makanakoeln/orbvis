@@ -779,7 +779,7 @@ defineExpose({ getCanvasEl: () => canvasEl.value, getMapPosition, resetZoom });
 
 <style scoped>
 .board-zoom-reset {
-    position: absolute;
+    position: fixed;
     bottom: var(--dimension-5);
     right: var(--dimension-5);
     z-index: 6;

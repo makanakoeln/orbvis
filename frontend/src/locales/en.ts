@@ -65,7 +65,7 @@ export default {
         boardNotFound: 'Board not found',
         backToOverview: '← Back to overview',
         emptyBoard: 'This board has no objects yet',
-        emptyBoardAdmin: 'No objects yet — click ✏ Edit to add some',
+        emptyBoardAdmin: 'No objects yet — click the Edit button (bottom right) to add some',
         noConnectionConfigured: 'No connection configured for this board.',
         unsavedChanges: 'Unsaved changes',
         saveOrDiscard: 'Save or discard before leaving edit mode.',

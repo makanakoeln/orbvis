@@ -65,7 +65,8 @@ export default {
         boardNotFound: 'Board nicht gefunden',
         backToOverview: '← Zur Übersicht',
         emptyBoard: 'Dieses Board enthält noch keine Objekte',
-        emptyBoardAdmin: 'Noch keine Objekte — klicke ✏ Bearbeiten um welche hinzuzufügen',
+        emptyBoardAdmin:
+            'Noch keine Objekte — klicke unten rechts auf Bearbeiten, um welche hinzuzufügen',
         noConnectionConfigured: 'Keine Connection für dieses Board konfiguriert.',
         unsavedChanges: 'Ungespeicherte Änderungen',
         saveOrDiscard: 'Bitte speichern oder verwerfen Sie die Änderungen vor dem Verlassen.',
