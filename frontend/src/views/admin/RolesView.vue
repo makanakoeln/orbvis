@@ -5,7 +5,7 @@
                 <h2 class="text-lg font-bold text-[var(--text)] tracking-tight">
                     {{ t('admin.rolesAndPermissions') }}
                 </h2>
-                <p class="text-sm text-zinc-500" style="margin-top: 3px">
+                <p class="text-sm text-[var(--text-muted)]" style="margin-top: 3px">
                     {{ t('admin.rolesSubtitle') }}
                 </p>
             </div>
@@ -43,7 +43,7 @@
                         <div class="flex items-center gap-[6px]" style="margin-bottom: 3px">
                             <span class="font-semibold text-[var(--text)]">{{ role.name }}</span>
                             <span
-                                class="text-xs rounded bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-zinc-500"
+                                class="text-xs rounded bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-[var(--text-muted)]"
                                 style="padding: 1px 5px"
                             >
                                 {{ role.permissions.length }} {{ t('admin.permissions') }}
@@ -57,18 +57,18 @@
                             <span
                                 v-for="perm in role.permissions"
                                 :key="perm.perm_id"
-                                class="text-xs bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-md text-zinc-400 font-mono"
+                                class="text-xs bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-md text-[var(--text-muted)] font-mono"
                                 style="padding: 1px 5px"
                                 >{{ perm.mod }}/{{ perm.act }}/{{ perm.obj }}</span
                             >
                         </div>
-                        <p v-else class="text-sm text-zinc-600" style="margin-top: 6px">
+                        <p v-else class="text-sm text-[var(--text-muted)]" style="margin-top: 6px">
                             {{ t('admin.noPermissions') }}
                         </p>
                     </div>
                     <div class="flex items-center gap-[3px] shrink-0">
                         <button
-                            class="p-[4px] rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                            class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
                             :title="t('common.edit')"
                             @click="openEdit(role)"
                         >
@@ -87,7 +87,7 @@
                             </svg>
                         </button>
                         <button
-                            class="p-[4px] rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
                             :title="t('common.delete')"
                             @click="deleteTargetId = role.role_id"
                         >
@@ -109,7 +109,10 @@
                 </div>
             </div>
 
-            <div v-if="!roles.length" class="text-center py-[32px] text-zinc-600 text-sm">
+            <div
+                v-if="!roles.length"
+                class="text-center py-[32px] text-[var(--text-muted)] text-sm"
+            >
                 {{ t('admin.noRoles') }}
             </div>
         </div>
@@ -130,7 +133,7 @@
                             {{ t('admin.createRole') }}
                         </h3>
                         <button
-                            class="p-[4px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+                            class="p-[4px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                             @click="showCreate = false"
                         >
                             <svg
@@ -150,7 +153,7 @@
                     </div>
                     <form class="space-y-[10px]" @submit.prevent="createRole">
                         <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-zinc-400">{{
+                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                 t('admin.roleName')
                             }}</label>
                             <CmkInput
@@ -192,7 +195,7 @@
                             }}</span>
                         </h3>
                         <button
-                            class="p-[4px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+                            class="p-[4px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                             @click="cancelEdit"
                         >
                             <svg
@@ -214,7 +217,10 @@
                     <div class="overflow-y-auto flex-1 space-y-[16px]" style="padding: 10px 16px">
                         <!-- Current permissions -->
                         <div>
-                            <p class="text-sm font-medium text-zinc-500" style="margin-bottom: 6px">
+                            <p
+                                class="text-sm font-medium text-[var(--text-muted)]"
+                                style="margin-bottom: 6px"
+                            >
                                 {{ t('admin.assigned') }}
                             </p>
                             <div
@@ -232,7 +238,7 @@
                                             : ''
                                     "
                                 >
-                                    <span class="text-xs font-mono text-zinc-300"
+                                    <span class="text-xs font-mono text-[var(--text)]"
                                         >{{ perm.mod }}/{{ perm.act }}/{{ perm.obj }}</span
                                     >
                                     <span
@@ -241,7 +247,7 @@
                                         >new</span
                                     >
                                     <button
-                                        class="text-zinc-500 hover:text-red-400 transition-colors shrink-0 p-0.5 rounded"
+                                        class="text-[var(--text-muted)] hover:text-red-400 transition-colors shrink-0 p-0.5 rounded"
                                         :title="t('common.delete')"
                                         @click="removeDraftPerm(perm.perm_id)"
                                     >
@@ -261,19 +267,22 @@
                                     </button>
                                 </div>
                             </div>
-                            <p v-else class="text-sm text-zinc-600">
+                            <p v-else class="text-sm text-[var(--text-muted)]">
                                 {{ t('admin.noPermissionsYet') }}
                             </p>
                         </div>
 
                         <!-- Add permission form -->
                         <div class="border-t border-[var(--border)] pt-[12px]">
-                            <p class="text-sm font-medium text-zinc-500" style="margin-bottom: 6px">
+                            <p
+                                class="text-sm font-medium text-[var(--text-muted)]"
+                                style="margin-bottom: 6px"
+                            >
                                 {{ t('admin.addPermission') }}
                             </p>
                             <form class="space-y-[10px]" @submit.prevent="addDraftPerm">
                                 <div class="space-y-[4px]">
-                                    <label class="text-sm font-medium text-zinc-400">{{
+                                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                         t('admin.preset')
                                     }}</label>
                                     <CmkDropdown
@@ -290,7 +299,7 @@
                                     />
                                 </div>
                                 <div v-if="needsMapName" class="space-y-[4px]">
-                                    <label class="text-sm font-medium text-zinc-400">{{
+                                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                         t('admin.boardNameLabel')
                                     }}</label>
                                     <CmkInput
@@ -304,7 +313,7 @@
                                     <button
                                         type="submit"
                                         :disabled="!permPreset"
-                                        class="bg-[var(--default-form-element-bg-color)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-zinc-300 transition-all"
+                                        class="bg-[var(--default-form-element-bg-color)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-[var(--text)] transition-all"
                                         style="padding: 5px 10px"
                                     >
                                         {{ t('admin.add') }}
@@ -337,8 +346,8 @@
             </div>
         </Teleport>
 
-        <ConfirmDialog
-            v-if="deleteTargetId !== null"
+        <OrbConfirmDialog
+            :open="deleteTargetId !== null"
             :title="t('admin.deleteRole')"
             :message="t('board.cannotBeUndone')"
             :confirm-label="t('common.delete')"
@@ -357,7 +366,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { rolesApi } from '@/api/client';
-import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import type { PermissionRead, RoleRead } from '@/types/api';

@@ -5,7 +5,7 @@
                 <h2 class="text-base font-bold text-[var(--text)] tracking-tight">
                     {{ t('admin.icons') }}
                 </h2>
-                <p class="text-sm text-zinc-500" style="margin-top: 3px">
+                <p class="text-sm text-[var(--text-muted)]" style="margin-top: 3px">
                     {{ t('admin.iconsSubtitle') }}
                 </p>
             </div>
@@ -38,13 +38,25 @@
         <!-- Upload feedback -->
         <CmkAlertBox v-if="uploadError" variant="error">{{ uploadError }}</CmkAlertBox>
 
+        <OrbConfirmDialog
+            :open="!!deleteTargetName"
+            :title="deleteTargetName ? t('admin.deleteIcon', { name: deleteTargetName }) : ''"
+            :message="t('board.cannotBeUndone')"
+            :confirm-label="t('common.delete')"
+            @confirm="confirmDeleteIcon"
+            @cancel="deleteTargetName = null"
+        />
+
         <div v-if="loading" class="flex items-center justify-center py-8">
             <CmkLoading />
         </div>
 
-        <div v-else-if="!icons.length" class="text-center py-[40px] text-zinc-600 text-sm">
+        <div
+            v-else-if="!icons.length"
+            class="text-center py-[40px] text-[var(--text-muted)] text-sm"
+        >
             <svg
-                class="mx-auto text-zinc-700"
+                class="mx-auto text-[var(--text-muted)]"
                 style="width: 32px; height: 32px; margin-bottom: 8px"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -75,13 +87,13 @@
                     :class="icon.name.endsWith('.svg') ? 'svg-icon' : ''"
                 />
                 <p
-                    class="text-[10px] text-zinc-500 font-mono text-center truncate w-full"
+                    class="text-[10px] text-[var(--text-muted)] font-mono text-center truncate w-full"
                     :title="icon.name"
                 >
                     {{ icon.name }}
                 </p>
                 <button
-                    class="absolute rounded bg-red-500/0 hover:bg-red-500/20 text-zinc-700 hover:text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                    class="absolute rounded bg-red-500/0 hover:bg-red-500/20 text-[var(--text-muted)] hover:text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
                     style="top: 4px; right: 4px; width: 18px; height: 18px"
                     :title="t('common.delete')"
                     @click="deleteTargetName = icon.name"
@@ -103,15 +115,6 @@
             </div>
         </div>
     </div>
-
-    <ConfirmDialog
-        v-if="deleteTargetName"
-        :title="t('admin.deleteIcon', { name: deleteTargetName })"
-        :message="t('board.cannotBeUndone')"
-        :confirm-label="t('common.delete')"
-        @confirm="confirmDeleteIcon"
-        @cancel="deleteTargetName = null"
-    />
 </template>
 
 <script setup lang="ts">
@@ -122,7 +125,7 @@ import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { imagesApi } from '@/api/client';
-import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import { useAuthStore } from '@/stores/auth';
 import type { ImageEntry } from '@/types/api';
 

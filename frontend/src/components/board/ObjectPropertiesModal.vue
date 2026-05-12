@@ -28,14 +28,14 @@
                 >
                     <div class="flex items-center gap-[8px]">
                         <span
-                            class="text-xs font-semibold px-[6px] py-[2px] rounded-md bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-zinc-400 capitalize"
+                            class="text-xs font-semibold px-[6px] py-[2px] rounded-md bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-[var(--text-muted)] capitalize"
                         >
                             {{ object.type }}
                         </span>
                         <span class="text-sm font-bold text-[var(--text)]">{{ displayName }}</span>
                     </div>
                     <button
-                        class="p-[5px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+                        class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                         @click="$emit('close')"
                     >
                         <svg
@@ -198,7 +198,7 @@
                         <textarea
                             v-model="form.label.text"
                             rows="3"
-                            class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all resize-none mb-[8px]"
+                            class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all resize-none mb-[8px]"
                             style="padding: 5px 10px"
                             :placeholder="t('boardSettings.textContent') + '…'"
                         />
@@ -296,7 +296,7 @@
                                         :class="
                                             graphSource === mode
                                                 ? 'bg-[var(--color-corporate-green-50)] text-[var(--button-primary-text-color,#000)]'
-                                                : 'bg-[var(--default-form-element-bg-color)] text-zinc-400 hover:text-zinc-200'
+                                                : 'bg-[var(--default-form-element-bg-color)] text-[var(--text-muted)] hover:text-[var(--text)]'
                                         "
                                         @click="setGraphSource(mode)"
                                     >
@@ -316,11 +316,11 @@
                                         <span
                                             v-for="m in form.graph_metric"
                                             :key="m"
-                                            class="flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--default-form-element-bg-color)] text-xs text-zinc-300 ring-1 ring-[var(--default-border-color)]"
+                                            class="flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--default-form-element-bg-color)] text-xs text-[var(--text)] ring-1 ring-[var(--default-border-color)]"
                                         >
                                             {{ metricIdToTitle[m] ?? m }}
                                             <button
-                                                class="text-zinc-500 hover:text-red-400"
+                                                class="text-[var(--text-muted)] hover:text-red-400"
                                                 @click="
                                                     form.graph_metric = form.graph_metric.filter(
                                                         (x) => x !== m,
@@ -482,7 +482,7 @@
                                         min="0"
                                         class="flex-1"
                                     />
-                                    <span class="text-sm text-zinc-500 shrink-0">{{
+                                    <span class="text-sm text-[var(--text-muted)] shrink-0">{{
                                         t('boardSettings.graphRefreshOff')
                                     }}</span>
                                 </div>
@@ -675,13 +675,13 @@
                         <div class="grid grid-cols-3 gap-[8px]">
                             <template v-if="mapType === 'worldmap'">
                                 <div class="flex items-center gap-[8px]">
-                                    <label class="text-sm text-zinc-500 shrink-0">{{
+                                    <label class="text-sm text-[var(--text-muted)] shrink-0">{{
                                         t('boardSettings.lat')
                                     }}</label>
                                     <NumberInput v-model="form.lat" step="any" class="flex-1" />
                                 </div>
                                 <div class="flex items-center gap-[8px]">
-                                    <label class="text-sm text-zinc-500 shrink-0">{{
+                                    <label class="text-sm text-[var(--text-muted)] shrink-0">{{
                                         t('boardSettings.lng')
                                     }}</label>
                                     <NumberInput v-model="form.lng" step="any" class="flex-1" />
@@ -689,20 +689,20 @@
                             </template>
                             <template v-else>
                                 <div class="flex items-center gap-[8px]">
-                                    <label class="text-sm text-zinc-500 shrink-0">{{
+                                    <label class="text-sm text-[var(--text-muted)] shrink-0">{{
                                         t('boardSettings.x')
                                     }}</label>
                                     <NumberInput v-model="form.x" class="flex-1" />
                                 </div>
                                 <div class="flex items-center gap-[8px]">
-                                    <label class="text-sm text-zinc-500 shrink-0">{{
+                                    <label class="text-sm text-[var(--text-muted)] shrink-0">{{
                                         t('boardSettings.y')
                                     }}</label>
                                     <NumberInput v-model="form.y" class="flex-1" />
                                 </div>
                             </template>
                             <div class="flex items-center gap-[8px]">
-                                <label class="text-sm text-zinc-500 shrink-0">{{
+                                <label class="text-sm text-[var(--text-muted)] shrink-0">{{
                                     t('boardSettings.z')
                                 }}</label>
                                 <NumberInput v-model="form.z" min="1" max="999" class="flex-1" />
@@ -767,7 +767,7 @@
                                                     {{ t('boardSettings.labelAdvanced') }}
                                                 </p>
                                                 <svg
-                                                    class="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-all ml-auto shrink-0"
+                                                    class="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-all ml-auto shrink-0"
                                                     :class="showLabelAdvanced ? '' : '-rotate-90'"
                                                     fill="none"
                                                     viewBox="0 0 24 24"
@@ -933,7 +933,7 @@
                                 >{{ form.url }}</span
                             >
                             <svg
-                                class="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-all ml-auto shrink-0"
+                                class="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-all ml-auto shrink-0"
                                 :class="showLink ? '' : '-rotate-90'"
                                 fill="none"
                                 viewBox="0 0 24 24"
@@ -959,7 +959,7 @@
                                     <button
                                         v-if="autoUrl && !form.url"
                                         type="button"
-                                        class="text-[10px] text-zinc-500 hover:text-[var(--color-corporate-green-50)] hover:underline text-left transition-colors"
+                                        class="text-[10px] text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:underline text-left transition-colors"
                                         @click="form.url = autoUrl!"
                                     >
                                         {{ t('boardSettings.urlAutoHint') }} →
@@ -990,7 +990,7 @@
                         >
                             <p class="section-title mb-0">{{ t('boardSettings.filterSection') }}</p>
                             <svg
-                                class="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-all ml-auto shrink-0"
+                                class="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-all ml-auto shrink-0"
                                 :class="showFilter ? '' : '-rotate-90'"
                                 fill="none"
                                 viewBox="0 0 24 24"
@@ -1041,7 +1041,7 @@
                             >
                                 {{ excludeMembersFeedback.text }}
                             </p>
-                            <p class="text-sm text-zinc-600 pl-[6.75rem]">
+                            <p class="text-sm text-[var(--text-muted)] pl-[6.75rem]">
                                 {{ t('boardSettings.excludeHint') }}
                             </p>
                         </div>
@@ -1056,7 +1056,7 @@
                         >
                             <p class="section-title mb-0">{{ t('boardSettings.templates') }}</p>
                             <svg
-                                class="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-all ml-auto shrink-0"
+                                class="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-all ml-auto shrink-0"
                                 :class="showTemplates ? '' : '-rotate-90'"
                                 fill="none"
                                 viewBox="0 0 24 24"
@@ -1098,7 +1098,7 @@
                                     class="flex-1"
                                 />
                             </div>
-                            <p class="text-sm text-zinc-600 pl-[6.75rem]">
+                            <p class="text-sm text-[var(--text-muted)] pl-[6.75rem]">
                                 {{ t('board.templateHint') }}
                             </p>
                         </div>
@@ -1114,8 +1114,8 @@
                         <CmkButton variant="danger" @click="confirmDelete = true">{{
                             t('common.delete')
                         }}</CmkButton>
-                        <ConfirmDialog
-                            v-if="confirmDelete"
+                        <OrbConfirmDialog
+                            :open="confirmDelete"
                             :title="t('board.deleteObject')"
                             :message="t('board.cannotBeUndone')"
                             :confirm-label="t('common.delete')"
@@ -1153,8 +1153,8 @@ import { useI18n } from 'vue-i18n';
 
 import { boardsApi, connectionsApi } from '@/api/client';
 import ColorInput from '@/components/ColorInput.vue';
-import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import NumberInput from '@/components/NumberInput.vue';
+import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import { useEscapeClose } from '@/composables/useEscapeClose';
 import { useAuthStore } from '@/stores/auth';
 import { useStatesStore } from '@/stores/states';
@@ -1653,7 +1653,10 @@ const excludeMembersFeedback = computed<{ text: string; tone: string } | null>((
     }
 
     if (suppressed === 0) {
-        return { text: t('boardSettings.excludeNoMatches', { total }), tone: 'text-zinc-500' };
+        return {
+            text: t('boardSettings.excludeNoMatches', { total }),
+            tone: 'text-[var(--text-muted)]',
+        };
     }
     if (suppressed >= total) {
         return {
@@ -1663,7 +1666,7 @@ const excludeMembersFeedback = computed<{ text: string; tone: string } | null>((
     }
     return {
         text: t('boardSettings.excludeMatched', { count: suppressed, total }),
-        tone: 'text-zinc-300',
+        tone: 'text-[var(--text)]',
     };
 });
 
@@ -1822,7 +1825,7 @@ async function save() {
 @reference "tailwindcss";
 
 .section-title {
-    @apply text-xs font-semibold text-zinc-500 tracking-wider uppercase mb-[6px] leading-none;
+    @apply text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase mb-[6px] leading-none;
 }
 
 .field-row {
@@ -1830,13 +1833,13 @@ async function save() {
 }
 
 .field-label {
-    @apply text-sm text-zinc-500 shrink-0;
+    @apply text-sm text-[var(--text-muted)] shrink-0;
 
     width: 88px;
 }
 
 .field {
-    @apply w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150;
+    @apply w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150;
 
     padding: 5px 10px;
     appearance: textfield;

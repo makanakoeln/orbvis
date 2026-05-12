@@ -25,6 +25,10 @@ export default {
     // Tailwind nutzt eigene Properties (--tw-ring-color etc.) und Modifier-Klassen (.hover\:...)
     'property-no-unknown': [true, { ignoreProperties: ['/^--tw-/', 'ring-color'] }],
     'selector-class-pattern': null,
+    'selector-pseudo-class-no-unknown': [
+      true,
+      { ignorePseudoClasses: ['deep', 'global', 'slotted'] },
+    ],
     // Keine hardcodierten Farbwerte in <style>-Blöcken (CSS vars nutzen)
     'declaration-property-value-disallowed-list': {
       color: ['/^#/', '/^rgb/', '/^hsl/'],

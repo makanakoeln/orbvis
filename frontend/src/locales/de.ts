@@ -4,6 +4,7 @@ export default {
         saving: 'Speichert…',
         save: 'Speichern',
         cancel: 'Abbrechen',
+        confirm: 'Bestätigen',
         close: 'Schließen',
         delete: 'Löschen',
         edit: 'Bearbeiten',

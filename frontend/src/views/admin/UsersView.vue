@@ -5,7 +5,7 @@
                 <h2 class="text-lg font-bold text-[var(--text)] tracking-tight">
                     {{ t('admin.users') }}
                 </h2>
-                <p class="text-sm text-zinc-500" style="margin-top: 3px">
+                <p class="text-sm text-[var(--text-muted)]" style="margin-top: 3px">
                     {{ t('admin.usersSubtitle') }}
                 </p>
             </div>
@@ -39,31 +39,31 @@
                 <thead>
                     <tr class="border-b border-[var(--border)]">
                         <th
-                            class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
+                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
                             style="padding: 6px 12px"
                         >
                             {{ t('admin.name') }}
                         </th>
                         <th
-                            class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
+                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
                             style="padding: 6px 12px"
                         >
                             {{ t('admin.type') }}
                         </th>
                         <th
-                            class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
+                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
                             style="padding: 6px 12px"
                         >
                             {{ t('admin.status') }}
                         </th>
                         <th
-                            class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
+                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
                             style="padding: 6px 12px"
                         >
                             {{ t('admin.roles') }}
                         </th>
                         <th
-                            class="text-right text-sm font-semibold text-zinc-500 tracking-wider"
+                            class="text-right text-sm font-semibold text-[var(--text-muted)] tracking-wider"
                             style="padding: 6px 12px"
                         >
                             {{ t('admin.actions') }}
@@ -87,7 +87,9 @@
                                 color="warning"
                                 >{{ t('admin.admin') }}</CmkBadge
                             >
-                            <span v-else class="text-sm text-zinc-600">{{ t('admin.user') }}</span>
+                            <span v-else class="text-sm text-[var(--text-muted)]">{{
+                                t('admin.user')
+                            }}</span>
                         </td>
                         <td style="padding: 6px 12px">
                             <span
@@ -102,25 +104,25 @@
                                 {{ user.is_active ? t('admin.active') : t('admin.inactive') }}
                             </span>
                         </td>
-                        <td class="text-zinc-500 text-sm" style="padding: 6px 12px">
+                        <td class="text-[var(--text-muted)] text-sm" style="padding: 6px 12px">
                             <template v-if="user.roles.length">
                                 <span
                                     v-for="r in user.roles"
                                     :key="r.role_id"
-                                    class="inline-block rounded bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-zinc-400 mr-1 mb-0.5"
+                                    class="inline-block rounded bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-[var(--text-muted)] mr-1 mb-0.5"
                                     style="padding: 1px 5px"
                                 >
                                     {{ r.name }}
                                 </span>
                             </template>
-                            <span v-else class="text-zinc-700">—</span>
+                            <span v-else class="text-[var(--text-muted)]">—</span>
                         </td>
                         <td class="text-right" style="padding: 6px 12px">
                             <div class="flex items-center justify-end gap-[3px]">
                                 <template v-if="user.user_id !== auth.user?.user_id">
                                     <button
                                         v-if="canEditUsers"
-                                        class="p-[4px] rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                                        class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
                                         :title="t('common.edit')"
                                         @click="editUser = user"
                                     >
@@ -139,7 +141,7 @@
                                         </svg>
                                     </button>
                                     <button
-                                        class="p-[4px] rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                        class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
                                         :title="t('common.delete')"
                                         @click="deleteTargetId = user.user_id"
                                     >
@@ -158,7 +160,7 @@
                                         </svg>
                                     </button>
                                 </template>
-                                <span v-else class="text-xs text-zinc-700 pr-1">—</span>
+                                <span v-else class="text-xs text-[var(--text-muted)] pr-1">—</span>
                             </div>
                         </td>
                     </tr>
@@ -182,7 +184,7 @@
                             {{ t('admin.createUser') }}
                         </h3>
                         <button
-                            class="p-[5px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+                            class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                             @click="showCreate = false"
                         >
                             <svg
@@ -219,7 +221,7 @@
                                 autocomplete="new-password"
                                 field-size="FILL"
                             />
-                            <p class="text-sm text-zinc-600">
+                            <p class="text-sm text-[var(--text-muted)]">
                                 {{ t('userSettings.passwordMinLength') }}
                             </p>
                         </div>
@@ -249,7 +251,7 @@
                                     v-model="newUser.is_admin"
                                     :label="t('admin.administrator')"
                                 />
-                                <p class="text-sm text-zinc-600 mt-0.5">
+                                <p class="text-sm text-[var(--text-muted)] mt-0.5">
                                     {{ t('admin.administratorHint') }}
                                 </p>
                             </div>
@@ -264,7 +266,9 @@
                             v-if="availableRoles.length"
                             class="border-t border-[var(--border)] pt-[10px] space-y-[8px]"
                         >
-                            <p class="text-sm font-medium text-zinc-400">{{ t('admin.roles') }}</p>
+                            <p class="text-sm font-medium text-[var(--text-muted)]">
+                                {{ t('admin.roles') }}
+                            </p>
                             <div v-for="role in availableRoles" :key="role.role_id">
                                 <CmkCheckbox
                                     :model-value="selectedRoleIds.includes(role.role_id)"
@@ -303,8 +307,8 @@
             </div>
         </Teleport>
 
-        <ConfirmDialog
-            v-if="deleteTargetId !== null"
+        <OrbConfirmDialog
+            :open="deleteTargetId !== null"
             :title="t('admin.deleteUser')"
             :message="t('board.cannotBeUndone')"
             :confirm-label="t('common.delete')"
@@ -338,7 +342,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { rolesApi, usersApi } from '@/api/client';
-import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';

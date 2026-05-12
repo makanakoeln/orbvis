@@ -270,3 +270,83 @@ declare module '@cmk/components/CmkLabel.vue' {
     const component: DefineComponent<CmkLabelProps>;
     export default component;
 }
+
+declare module '@cmk/components/CmkDialog.vue' {
+    import type { DefineComponent } from 'vue';
+    type ButtonVariant =
+        | 'primary'
+        | 'secondary'
+        | 'optional'
+        | 'success'
+        | 'warning'
+        | 'danger'
+        | 'info';
+    interface CmkDialogProps {
+        title?: string;
+        message: string;
+        buttons?: { title: string; variant: ButtonVariant; onclick: () => void }[];
+        variant?: 'error' | 'warning' | 'success' | 'info' | 'loading';
+    }
+    const component: DefineComponent<CmkDialogProps>;
+    export default component;
+}
+
+declare module '@cmk/components/CmkIcon/CmkMultitoneIcon.vue' {
+    import type { DefineComponent } from 'vue';
+    interface CmkMultitoneIconProps {
+        name: string;
+        primaryColor?: { custom: string } | { variable: string };
+        size?: 'xsmall' | 'small' | 'medium' | 'large' | 'xlarge' | 'xxlarge' | 'xxxlarge';
+        title?: string;
+    }
+    const component: DefineComponent<CmkMultitoneIconProps>;
+    export default component;
+}
+
+declare module '@cmk/components/CmkIcon' {
+    import type { DefineComponent } from 'vue';
+    interface CmkIconProps {
+        name: string;
+        size?: 'xsmall' | 'small' | 'medium' | 'large' | 'xlarge' | 'xxlarge' | 'xxxlarge';
+        title?: string;
+        rotate?: number;
+        variant?: 'inline' | 'plain';
+        colored?: 'colored' | 'colorless';
+    }
+    const component: DefineComponent<CmkIconProps>;
+    export default component;
+}
+
+declare module '@cmk/components/CmkPopup.vue' {
+    import type { DefineComponent } from 'vue';
+    interface CmkPopupProps {
+        open: boolean;
+    }
+    const component: DefineComponent<
+        CmkPopupProps,
+        object,
+        object,
+        object,
+        object,
+        object,
+        object,
+        { close: [] }
+    >;
+    export default component;
+}
+
+declare module '@cmk/components/typography/CmkHeading.vue' {
+    import type { DefineComponent } from 'vue';
+    interface CmkHeadingProps {
+        type?: 'h1' | 'h2' | 'h3' | 'h4';
+        onClick?: (() => void) | null;
+    }
+    const component: DefineComponent<CmkHeadingProps>;
+    export default component;
+}
+
+declare module '@cmk/components/typography/CmkParagraph.vue' {
+    import type { DefineComponent } from 'vue';
+    const component: DefineComponent<object>;
+    export default component;
+}

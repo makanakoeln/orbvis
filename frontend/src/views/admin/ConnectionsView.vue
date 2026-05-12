@@ -5,7 +5,7 @@
                 <h2 class="text-lg font-bold text-[var(--text)] tracking-tight">
                     {{ t('admin.connectionsTitle') }}
                 </h2>
-                <p class="text-sm text-zinc-500" style="margin-top: 3px">
+                <p class="text-sm text-[var(--text-muted)]" style="margin-top: 3px">
                     {{ t('admin.connectionsSubtitle') }}
                 </p>
             </div>
@@ -37,8 +37,8 @@
             v-else-if="store.connections.length === 0"
             class="text-center py-16 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
         >
-            <p class="text-zinc-500 text-sm">{{ t('admin.noConnections') }}</p>
-            <p class="text-zinc-600 text-sm mt-1">{{ t('admin.noConnectionsHint') }}</p>
+            <p class="text-[var(--text-muted)] text-sm">{{ t('admin.noConnections') }}</p>
+            <p class="text-[var(--text-muted)] text-sm mt-1">{{ t('admin.noConnectionsHint') }}</p>
         </div>
 
         <div
@@ -49,37 +49,37 @@
                 <thead>
                     <tr class="border-b border-[var(--border)]">
                         <th
-                            class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
+                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
                             style="padding: 6px 12px"
                         >
                             {{ t('admin.status') }}
                         </th>
                         <th
-                            class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
+                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
                             style="padding: 6px 12px"
                         >
                             ID
                         </th>
                         <th
-                            class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
+                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
                             style="padding: 6px 12px"
                         >
                             {{ t('admin.displayLabel') }}
                         </th>
                         <th
-                            class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
+                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
                             style="padding: 6px 12px"
                         >
                             {{ t('admin.type') }}
                         </th>
                         <th
-                            class="text-left text-sm font-semibold text-zinc-500 tracking-wider"
+                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
                             style="padding: 6px 12px"
                         >
                             {{ t('admin.connection') }}
                         </th>
                         <th
-                            class="text-right text-sm font-semibold text-zinc-500 tracking-wider"
+                            class="text-right text-sm font-semibold text-[var(--text-muted)] tracking-wider"
                             style="padding: 6px 12px"
                         >
                             {{ t('admin.actions') }}
@@ -103,12 +103,12 @@
                                 <span class="relative flex shrink-0">
                                     <span
                                         v-if="statusLoading[b.id]"
-                                        class="rounded-full bg-zinc-500 animate-pulse"
+                                        class="rounded-full bg-[var(--color-pending)] animate-pulse"
                                         style="width: 8px; height: 8px"
                                     />
                                     <span
                                         v-else-if="statuses[b.id] === undefined"
-                                        class="rounded-full bg-zinc-600"
+                                        class="rounded-full bg-[var(--color-pending)]"
                                         style="width: 8px; height: 8px"
                                     />
                                     <span
@@ -123,7 +123,7 @@
                                     />
                                 </span>
                                 <span
-                                    class="text-sm text-zinc-400 group-hover:text-zinc-200 transition-colors"
+                                    class="text-sm text-[var(--text-muted)] group-hover:text-[var(--text)] transition-colors"
                                 >
                                     {{
                                         statusLoading[b.id]
@@ -133,7 +133,7 @@
                                 </span>
                                 <!-- Refresh icon — visible on hover to signal clickability -->
                                 <svg
-                                    class="text-zinc-600 group-hover:text-zinc-400 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                                    class="text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-colors opacity-0 group-hover:opacity-100 shrink-0"
                                     style="width: 11px; height: 11px"
                                     fill="none"
                                     viewBox="0 0 24 24"
@@ -148,10 +148,13 @@
                                 </svg>
                             </button>
                         </td>
-                        <td class="font-mono text-sm text-zinc-400" style="padding: 6px 12px">
+                        <td
+                            class="font-mono text-sm text-[var(--text-muted)]"
+                            style="padding: 6px 12px"
+                        >
                             {{ b.id }}
                         </td>
-                        <td class="text-zinc-300" style="padding: 6px 12px">
+                        <td class="text-[var(--text)]" style="padding: 6px 12px">
                             {{ b.label || '—' }}
                         </td>
                         <td style="padding: 6px 12px">
@@ -168,7 +171,10 @@
                                 >{{ b.type }}</CmkBadge
                             >
                         </td>
-                        <td class="text-zinc-400 font-mono text-sm" style="padding: 6px 12px">
+                        <td
+                            class="text-[var(--text-muted)] font-mono text-sm"
+                            style="padding: 6px 12px"
+                        >
                             <template v-if="b.type === 'livestatus'">
                                 {{
                                     b.socket_path ||
@@ -178,12 +184,14 @@
                             <template v-else-if="b.type === 'icinga2'">
                                 {{ b.icinga2_url || '—' }}
                             </template>
-                            <span v-else class="text-zinc-700">{{ t('admin.builtIn') }}</span>
+                            <span v-else class="text-[var(--text-muted)]">{{
+                                t('admin.builtIn')
+                            }}</span>
                         </td>
                         <td class="text-right" style="padding: 6px 12px">
                             <div class="flex items-center justify-end gap-[4px]">
                                 <button
-                                    class="p-[4px] rounded-md text-zinc-600 hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                                    class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
                                     :title="t('common.edit')"
                                     @click="openEdit(b)"
                                 >
@@ -202,7 +210,7 @@
                                     </svg>
                                 </button>
                                 <button
-                                    class="p-[4px] rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                    class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
                                     :title="t('common.delete')"
                                     @click="deleteTarget = b.id"
                                 >
@@ -227,9 +235,9 @@
             </table>
         </div>
 
-        <ConfirmDialog
-            v-if="deleteTarget"
-            :title="t('admin.deleteConnection', { id: deleteTarget })"
+        <OrbConfirmDialog
+            :open="!!deleteTarget"
+            :title="deleteTarget ? t('admin.deleteConnection', { id: deleteTarget }) : ''"
             :message="t('board.cannotBeUndone')"
             :confirm-label="t('common.delete')"
             @confirm="confirmRemove"
@@ -256,7 +264,7 @@
                             }}
                         </h3>
                         <button
-                            class="p-[5px] rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[var(--bg-hover)] transition-all"
+                            class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
                             @click="dialog.open = false"
                         >
                             <svg
@@ -277,15 +285,17 @@
 
                     <form class="space-y-[12px]" @submit.prevent="save">
                         <div v-if="dialog.mode === 'create'" class="space-y-[4px]">
-                            <label class="text-sm font-medium text-zinc-400">{{
+                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                 t('admin.connectionId')
                             }}</label>
                             <CmkInput v-model="form.id" placeholder="cmk_heute" field-size="FILL" />
-                            <p class="text-sm text-zinc-600">{{ t('admin.connectionIdHint') }}</p>
+                            <p class="text-sm text-[var(--text-muted)]">
+                                {{ t('admin.connectionIdHint') }}
+                            </p>
                         </div>
 
                         <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-zinc-400">{{
+                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                 t('admin.displayLabel')
                             }}</label>
                             <CmkInput
@@ -296,7 +306,7 @@
                         </div>
 
                         <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-zinc-400">{{
+                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                 t('admin.type')
                             }}</label>
                             <CmkDropdown
@@ -313,7 +323,7 @@
                         <template v-if="form.type === 'livestatus'">
                             <!-- Unix socket -->
                             <div class="space-y-[4px]">
-                                <label class="text-sm font-medium text-zinc-400">{{
+                                <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                     t('admin.unixSocket')
                                 }}</label>
                                 <CmkInput
@@ -326,7 +336,7 @@
                             <!-- OR divider -->
                             <div class="relative flex items-center gap-[8px]">
                                 <div class="flex-1 border-t border-[var(--border)]" />
-                                <span class="text-sm text-zinc-600 shrink-0">{{
+                                <span class="text-sm text-[var(--text-muted)] shrink-0">{{
                                     t('admin.orTcp')
                                 }}</span>
                                 <div class="flex-1 border-t border-[var(--border)]" />
@@ -335,7 +345,7 @@
                             <!-- TCP Host + Port -->
                             <div class="grid grid-cols-[1fr_7rem] gap-[8px]">
                                 <div class="space-y-[4px]">
-                                    <label class="text-sm font-medium text-zinc-400">{{
+                                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                         t('admin.tcpHost')
                                     }}</label>
                                     <CmkInput
@@ -345,7 +355,7 @@
                                     />
                                 </div>
                                 <div class="space-y-[4px]">
-                                    <label class="text-sm font-medium text-zinc-400">{{
+                                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                         t('admin.port')
                                     }}</label>
                                     <NumberInput
@@ -360,7 +370,7 @@
                             <!-- Checkmk URL + Automation + Timeout -->
                             <div class="border-t border-[var(--border)] pt-[12px] space-y-[12px]">
                                 <div class="space-y-[4px]">
-                                    <label class="text-sm font-medium text-zinc-400">{{
+                                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                         t('admin.checkmkUrl')
                                     }}</label>
                                     <CmkInput
@@ -368,16 +378,17 @@
                                         placeholder="http://localhost/heute"
                                         field-size="FILL"
                                     />
-                                    <p class="text-sm text-zinc-600">
+                                    <p class="text-sm text-[var(--text-muted)]">
                                         {{ t('admin.contextLinks') }}
                                     </p>
                                 </div>
                                 <template v-if="!isCmc">
                                     <div class="grid grid-cols-2 gap-[8px]">
                                         <div class="space-y-[4px]">
-                                            <label class="text-sm font-medium text-zinc-400">{{
-                                                t('admin.automationUser')
-                                            }}</label>
+                                            <label
+                                                class="text-sm font-medium text-[var(--text-muted)]"
+                                                >{{ t('admin.automationUser') }}</label
+                                            >
                                             <CmkInput
                                                 v-model="form.automation_user"
                                                 placeholder="automation"
@@ -385,9 +396,10 @@
                                             />
                                         </div>
                                         <div class="space-y-[4px]">
-                                            <label class="text-sm font-medium text-zinc-400">{{
-                                                t('admin.automationSecret')
-                                            }}</label>
+                                            <label
+                                                class="text-sm font-medium text-[var(--text-muted)]"
+                                                >{{ t('admin.automationSecret') }}</label
+                                            >
                                             <CmkInput
                                                 v-model="form.automation_secret"
                                                 type="password"
@@ -396,15 +408,15 @@
                                             />
                                         </div>
                                     </div>
-                                    <p class="text-sm text-zinc-600">
+                                    <p class="text-sm text-[var(--text-muted)]">
                                         {{ t('admin.automationHint') }}
                                     </p>
                                 </template>
-                                <p v-else class="text-sm text-zinc-500">
+                                <p v-else class="text-sm text-[var(--text-muted)]">
                                     {{ t('admin.automationHintCmc') }}
                                 </p>
                                 <div class="space-y-[4px]">
-                                    <label class="text-sm font-medium text-zinc-400">{{
+                                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                         t('admin.timeout')
                                     }}</label>
                                     <NumberInput
@@ -414,14 +426,14 @@
                                         step="0.5"
                                         class="w-[112px]"
                                     />
-                                    <p class="text-sm text-zinc-600">seconds</p>
+                                    <p class="text-sm text-[var(--text-muted)]">seconds</p>
                                 </div>
                             </div>
                         </template>
 
                         <template v-if="form.type === 'icinga2'">
                             <div class="space-y-[4px]">
-                                <label class="text-sm font-medium text-zinc-400">{{
+                                <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                     t('admin.icinga2Url')
                                 }}</label>
                                 <CmkInput
@@ -433,7 +445,7 @@
 
                             <div class="grid grid-cols-2 gap-[8px]">
                                 <div class="space-y-[4px]">
-                                    <label class="text-sm font-medium text-zinc-400">{{
+                                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                         t('admin.icinga2Username')
                                     }}</label>
                                     <CmkInput
@@ -443,7 +455,7 @@
                                     />
                                 </div>
                                 <div class="space-y-[4px]">
-                                    <label class="text-sm font-medium text-zinc-400">{{
+                                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                         t('admin.icinga2Password')
                                     }}</label>
                                     <CmkInput
@@ -462,7 +474,7 @@
                             </div>
 
                             <div class="space-y-[4px]">
-                                <label class="text-sm font-medium text-zinc-400">{{
+                                <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                     t('admin.timeout')
                                 }}</label>
                                 <NumberInput
@@ -472,7 +484,7 @@
                                     step="0.5"
                                     class="w-[112px]"
                                 />
-                                <p class="text-sm text-zinc-600">seconds</p>
+                                <p class="text-sm text-[var(--text-muted)]">seconds</p>
                             </div>
                         </template>
 
@@ -553,8 +565,8 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
-import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import NumberInput from '@/components/NumberInput.vue';
+import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import { useConnectionsStore } from '@/stores/connections';
