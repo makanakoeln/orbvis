@@ -1,262 +1,171 @@
 <template>
-    <Teleport to="body">
-        <div class="fixed inset-0 z-50 flex items-center justify-center">
-            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="tryClose" />
-            <div
-                class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl space-y-[12px]"
-                style="padding: 16px; width: 300px"
+    <OrbModal :open="true" closable @close="tryClose">
+        <template #header>
+            <span class="user-settings__title">
+                {{ isSelf ? t('userSettings.title') : t('admin.editUser', { name: userName }) }}
+                <span v-if="isSelf" class="user-settings__user">{{ userName }}</span>
+            </span>
+        </template>
+
+        <div class="user-settings__body">
+            <!-- Admin settings (non-self editing) -->
+            <section v-if="!isSelf && userRead" class="user-settings__section">
+                <p class="user-settings__section-title">{{ t('admin.settings') }}</p>
+
+                <div class="user-settings__row">
+                    <CmkCheckbox v-model="adminIsAdmin" :label="t('admin.administrator')" />
+                    <p class="user-settings__hint">{{ t('admin.administratorHint') }}</p>
+                </div>
+
+                <CmkCheckbox v-model="adminIsActive" :label="t('admin.active')" />
+                <CmkCheckbox v-model="adminMustChange" :label="t('admin.mustChangePassword')" />
+            </section>
+
+            <!-- Role assignment (non-self editing) -->
+            <section
+                v-if="!isSelf && userRead && availableRoles?.length"
+                class="user-settings__section user-settings__section--divided"
             >
-                <!-- Header -->
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h3 class="text-base font-bold text-[var(--text)]">
+                <p class="user-settings__section-title">{{ t('admin.roles') }}</p>
+                <div v-for="role in availableRoles" :key="role.role_id">
+                    <CmkCheckbox
+                        :model-value="adminRoleIds.includes(role.role_id)"
+                        :label="role.name"
+                        @update:model-value="
+                            (v) => {
+                                if (v) adminRoleIds.push(role.role_id);
+                                else
+                                    adminRoleIds = adminRoleIds.filter((id) => id !== role.role_id);
+                            }
+                        "
+                    />
+                </div>
+            </section>
+
+            <!-- Theme selector (only for self) -->
+            <section v-if="isSelf" class="user-settings__section">
+                <CmkLabel>{{ t('userSettings.theme') }}</CmkLabel>
+                <div class="user-settings__toggle-group">
+                    <button
+                        v-for="opt in themeOptions"
+                        :key="opt.value"
+                        type="button"
+                        class="user-settings__toggle"
+                        :class="{ 'user-settings__toggle--active': selectedTheme === opt.value }"
+                        @click="selectTheme(opt.value)"
+                    >
+                        <component :is="opt.icon" class="user-settings__toggle-icon" />
+                        {{ opt.label }}
+                    </button>
+                </div>
+            </section>
+
+            <!-- Language selector -->
+            <section
+                v-if="isSelf && !auth.ssoActive && !auth.isCheckmkDeployment"
+                class="user-settings__section"
+            >
+                <CmkLabel>{{ t('userSettings.language') }}</CmkLabel>
+                <div class="user-settings__toggle-group">
+                    <button
+                        v-for="opt in languageOptions"
+                        :key="opt.value"
+                        type="button"
+                        class="user-settings__toggle"
+                        :class="{ 'user-settings__toggle--active': selectedLanguage === opt.value }"
+                        @click="selectedLanguage = opt.value"
+                    >
+                        {{ opt.label }}
+                    </button>
+                </div>
+            </section>
+
+            <!-- Password change -->
+            <section
+                v-if="showPasswordSection"
+                class="user-settings__section"
+                :class="{ 'user-settings__section--divided': isSelf }"
+            >
+                <p class="user-settings__section-title">{{ t('userSettings.changePassword') }}</p>
+                <form class="user-settings__pw-form" @submit.prevent="savePassword">
+                    <div class="user-settings__pw-field">
+                        <CmkLabel>{{ t('userSettings.newPassword') }}</CmkLabel>
+                        <CmkInput
+                            v-model="password"
+                            type="password"
+                            autocomplete="new-password"
+                            field-size="FILL"
+                        />
+                        <p class="user-settings__hint">
+                            {{ t('userSettings.passwordMinLength') }}
+                        </p>
+                    </div>
+                    <div class="user-settings__pw-field">
+                        <CmkLabel>{{ t('userSettings.confirmPassword') }}</CmkLabel>
+                        <CmkInput
+                            v-model="confirm"
+                            type="password"
+                            autocomplete="new-password"
+                            field-size="FILL"
+                        />
+                    </div>
+
+                    <p v-if="pwError" class="user-settings__error">{{ pwError }}</p>
+                    <p v-if="pwSuccess" class="user-settings__success">
+                        {{ t('userSettings.passwordChanged') }}
+                    </p>
+
+                    <div v-if="!pwSuccess" class="user-settings__pw-actions">
+                        <CmkButton variant="secondary" :disabled="pwSaving" @click="savePassword">
                             {{
-                                isSelf
-                                    ? t('userSettings.title')
-                                    : t('admin.editUser', { name: userName })
+                                pwSaving ? t('common.saving') : t('userSettings.changePasswordBtn')
                             }}
-                        </h3>
-                        <p
-                            v-if="isSelf"
-                            class="text-sm text-[var(--text-muted)]"
-                            style="margin-top: 2px"
-                        >
-                            {{ userName }}
-                        </p>
+                        </CmkButton>
                     </div>
-                    <button
-                        class="p-[4px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                        @click="tryClose"
-                    >
-                        <svg
-                            style="width: 14px; height: 14px"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
-                        </svg>
-                    </button>
-                </div>
+                </form>
+            </section>
 
-                <!-- Admin settings (non-self editing) -->
-                <div v-if="!isSelf && userRead" class="space-y-[8px]">
-                    <p class="text-sm font-medium text-[var(--text-muted)]">
-                        {{ t('admin.settings') }}
-                    </p>
-
-                    <div class="flex items-start gap-[8px]">
-                        <CmkCheckbox v-model="adminIsAdmin" :label="t('admin.administrator')" />
-                        <p class="text-sm text-[var(--text-muted)]" style="margin-top: 2px">
-                            {{ t('admin.administratorHint') }}
-                        </p>
-                    </div>
-
-                    <CmkCheckbox v-model="adminIsActive" :label="t('admin.active')" />
-
-                    <CmkCheckbox v-model="adminMustChange" :label="t('admin.mustChangePassword')" />
-                </div>
-
-                <!-- Role assignment (non-self editing) -->
-                <div
-                    v-if="!isSelf && userRead && availableRoles?.length"
-                    class="border-t border-[var(--border)] pt-[8px] space-y-[6px]"
-                >
-                    <p class="text-sm font-medium text-[var(--text-muted)]">
-                        {{ t('admin.roles') }}
-                    </p>
-                    <div v-for="role in availableRoles" :key="role.role_id">
-                        <CmkCheckbox
-                            :model-value="adminRoleIds.includes(role.role_id)"
-                            :label="role.name"
-                            @update:model-value="
-                                (v) => {
-                                    if (v) adminRoleIds.push(role.role_id);
-                                    else
-                                        adminRoleIds = adminRoleIds.filter(
-                                            (id) => id !== role.role_id,
-                                        );
-                                }
-                            "
-                        />
-                    </div>
-                </div>
-
-                <!-- Theme selector (only for self) -->
-                <div v-if="isSelf" class="space-y-[6px]">
-                    <CmkLabel>{{ t('userSettings.theme') }}</CmkLabel>
-                    <div class="flex gap-[6px]">
-                        <button
-                            v-for="opt in themeOptions"
-                            :key="opt.value"
-                            class="flex-1 flex items-center justify-center rounded-lg text-xs font-medium transition-all border"
-                            style="gap: 5px; padding: 6px 8px"
-                            :class="
-                                selectedTheme === opt.value
-                                    ? 'bg-[var(--toggle-button-group-active-bg-color)] border-[var(--border)] text-[var(--text)]'
-                                    : 'bg-[var(--default-form-element-bg-color)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--border)] hover:text-[var(--text)]'
-                            "
-                            @click="selectTheme(opt.value)"
-                        >
-                            <component :is="opt.icon" style="width: 13px; height: 13px" />
-                            {{ opt.label }}
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Language selector (only for self, not in SSO mode where CMK controls it) -->
-                <div
-                    v-if="isSelf && !auth.ssoActive && !auth.isCheckmkDeployment"
-                    class="space-y-[6px]"
-                >
-                    <CmkLabel>{{ t('userSettings.language') }}</CmkLabel>
-                    <div class="flex gap-[6px]">
-                        <button
-                            v-for="opt in languageOptions"
-                            :key="opt.value"
-                            class="flex-1 flex items-center justify-center rounded-lg text-xs font-medium transition-all border"
-                            style="padding: 6px 8px"
-                            :class="
-                                selectedLanguage === opt.value
-                                    ? 'bg-[var(--toggle-button-group-active-bg-color)] border-[var(--border)] text-[var(--text)]'
-                                    : 'bg-[var(--default-form-element-bg-color)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--border)] hover:text-[var(--text)]'
-                            "
-                            @click="selectedLanguage = opt.value"
-                        >
-                            {{ opt.label }}
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Password change (hidden in SSO+self) -->
-                <div
-                    v-if="showPasswordSection"
-                    class="space-y-[8px]"
-                    :class="isSelf ? 'pt-[12px] border-t border-[var(--border)]' : ''"
-                >
-                    <p class="text-sm font-medium text-[var(--text-muted)]">
-                        {{ t('userSettings.changePassword') }}
-                    </p>
-                    <form class="space-y-[8px]" @submit.prevent="savePassword">
-                        <div class="space-y-[4px]">
-                            <CmkLabel>{{ t('userSettings.newPassword') }}</CmkLabel>
-                            <CmkInput
-                                v-model="password"
-                                type="password"
-                                autocomplete="new-password"
-                                field-size="FILL"
-                            />
-                            <p class="text-sm text-[var(--text-muted)]">
-                                {{ t('userSettings.passwordMinLength') }}
-                            </p>
-                        </div>
-                        <div class="space-y-[4px]">
-                            <CmkLabel>{{ t('userSettings.confirmPassword') }}</CmkLabel>
-                            <CmkInput
-                                v-model="confirm"
-                                type="password"
-                                autocomplete="new-password"
-                                field-size="FILL"
-                            />
-                        </div>
-
-                        <p v-if="pwError" class="text-red-400 text-sm">{{ pwError }}</p>
-                        <p v-if="pwSuccess" class="text-green-400 text-sm">
-                            {{ t('userSettings.passwordChanged') }}
-                        </p>
-
-                        <div v-if="!pwSuccess" class="flex justify-end">
-                            <button
-                                type="submit"
-                                :disabled="pwSaving"
-                                class="ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-[var(--text)] hover:text-[var(--text)] transition-all"
-                                style="padding: 5px 10px; font-size: 12px"
-                            >
-                                {{
-                                    pwSaving
-                                        ? t('common.saving')
-                                        : t('userSettings.changePasswordBtn')
-                                }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Tour reset (self only) -->
-                <div v-if="isSelf" class="border-t border-[var(--border)] pt-[8px]">
-                    <p v-if="tourResetDone" class="text-sm text-green-400">
-                        {{ t('userSettings.tourResetDone') }}
-                    </p>
-                    <button
-                        v-else
-                        class="text-sm text-[var(--text-muted)] hover:text-[var(--text-muted)] transition-colors"
-                        @click="resetTour"
-                    >
-                        {{ t('userSettings.resetTour') }}
-                    </button>
-                </div>
-
-                <!-- Save error -->
-                <p v-if="saveError || adminError" class="text-red-400 text-sm px-1">
-                    {{ saveError || adminError }}
+            <!-- Tour reset (self only) -->
+            <section v-if="isSelf" class="user-settings__section user-settings__section--divided">
+                <p v-if="tourResetDone" class="user-settings__success">
+                    {{ t('userSettings.tourResetDone') }}
                 </p>
+                <CmkButton v-else variant="secondary" @click="resetTour">
+                    {{ t('userSettings.resetTour') }}
+                </CmkButton>
+            </section>
 
-                <!-- Unsaved changes warning -->
-                <div
-                    v-if="showUnsavedWarning"
-                    class="flex items-center gap-[6px] bg-amber-500/10 ring-1 ring-amber-500/30 rounded-lg text-amber-400 text-xs"
-                    style="padding: 6px 10px"
-                >
-                    <svg
-                        class="shrink-0"
-                        style="width: 13px; height: 13px"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                        />
-                    </svg>
-                    {{ t('userSettings.unsavedChanges') }}
-                    <button class="underline hover:text-amber-300" @click="discardAndClose">
-                        {{ t('common.discard') }}
-                    </button>
-                </div>
+            <!-- Save error -->
+            <p v-if="saveError || adminError" class="user-settings__error">
+                {{ saveError || adminError }}
+            </p>
 
-                <!-- Footer: Save / Cancel -->
-                <div
-                    v-if="isSelf || (!isSelf && userRead)"
-                    class="flex gap-[6px] pt-[8px] border-t border-[var(--border)]"
-                >
-                    <CmkButton variant="secondary" class="flex-1" @click="discardAndClose">
-                        {{ t('common.cancel') }}
-                    </CmkButton>
-                    <CmkButton
-                        variant="primary"
-                        class="flex-1"
-                        :disabled="isSelf ? saving || !isDirty : adminSaving"
-                        @click="isSelf ? save() : saveAdminSettings()"
-                    >
-                        {{
-                            (isSelf ? saving : adminSaving) ? t('common.saving') : t('common.save')
-                        }}
-                    </CmkButton>
-                </div>
-            </div>
+            <!-- Unsaved-changes warning -->
+            <CmkAlertBox v-if="showUnsavedWarning" variant="warning" size="small">
+                {{ t('userSettings.unsavedChanges') }}
+                <CmkButton variant="secondary" @click="discardAndClose">
+                    {{ t('common.discard') }}
+                </CmkButton>
+            </CmkAlertBox>
         </div>
-    </Teleport>
+
+        <template v-if="isSelf || (!isSelf && userRead)" #footer>
+            <CmkButton variant="secondary" @click="discardAndClose">
+                {{ t('common.cancel') }}
+            </CmkButton>
+            <CmkButton
+                variant="primary"
+                :disabled="isSelf ? saving || !isDirty : adminSaving"
+                @click="isSelf ? save() : saveAdminSettings()"
+            >
+                {{ (isSelf ? saving : adminSaving) ? t('common.saving') : t('common.save') }}
+            </CmkButton>
+        </template>
+    </OrbModal>
 </template>
 
 <script setup lang="ts">
+import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkLabel from '@cmk/components/CmkLabel.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
@@ -265,7 +174,7 @@ import { computed, h, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { usersApi } from '@/api/client';
-import { useEscapeClose } from '@/composables/useEscapeClose';
+import OrbModal from '@/components/OrbModal.vue';
 import { applyTheme } from '@/composables/useTheme';
 import { i18n } from '@/i18n';
 import { useAuthStore } from '@/stores/auth';
@@ -282,7 +191,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ close: [] }>();
-useEscapeClose(() => emit('close'));
 
 const auth = useAuthStore();
 
@@ -380,7 +288,6 @@ const themeOptions = computed(() => [
 function selectTheme(theme: string) {
     selectedTheme.value = theme;
     showUnsavedWarning.value = false;
-    // Preview immediately in DOM without persisting
     if (props.isSelf) applyTheme(theme, auth.ssoActive, auth.user?.cmk_theme);
 }
 
@@ -417,7 +324,6 @@ function tryClose() {
 }
 
 function discardAndClose() {
-    // Revert theme preview to saved value
     if (props.isSelf) applyTheme(savedTheme.value, auth.ssoActive, auth.user?.cmk_theme);
     selectedTheme.value = savedTheme.value;
     selectedLanguage.value = savedLanguage.value;
@@ -466,3 +372,116 @@ async function savePassword() {
     }
 }
 </script>
+
+<style scoped>
+.user-settings__title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-settings__user {
+    font-size: var(--font-size-normal);
+    font-weight: var(--font-weight-default);
+    color: var(--text-muted);
+}
+
+.user-settings__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-5);
+    min-width: 300px;
+}
+
+.user-settings__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-4);
+}
+
+.user-settings__section--divided {
+    padding-top: var(--dimension-5);
+    border-top: 1px solid var(--border);
+}
+
+.user-settings__section-title {
+    font-size: var(--font-size-large);
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.user-settings__row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--dimension-4);
+}
+
+.user-settings__hint {
+    font-size: var(--font-size-normal);
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.user-settings__toggle-group {
+    display: flex;
+    gap: var(--dimension-3);
+    margin-top: var(--dimension-3);
+}
+
+.user-settings__toggle {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--dimension-3);
+    padding: var(--dimension-4) var(--dimension-5);
+    border-radius: var(--dimension-3);
+    background: var(--default-form-element-bg-color);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--font-size-normal);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.user-settings__toggle:hover {
+    color: var(--text);
+}
+
+.user-settings__toggle--active {
+    background: var(--toggle-button-group-active-bg-color);
+    color: var(--text);
+}
+
+.user-settings__toggle-icon {
+    width: 13px;
+    height: 13px;
+}
+
+.user-settings__pw-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-4);
+}
+
+.user-settings__pw-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-3);
+}
+
+.user-settings__pw-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.user-settings__error {
+    font-size: var(--font-size-large);
+    color: var(--color-light-red-40);
+}
+
+.user-settings__success {
+    font-size: var(--font-size-large);
+    color: var(--color-corporate-green-50);
+}
+</style>

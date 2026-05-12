@@ -1,79 +1,47 @@
 <template>
-    <Teleport to="body">
-        <div class="fixed inset-0 z-50 flex items-center justify-center">
-            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('close')" />
-            <div
-                class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-2xl p-6 w-80"
-            >
-                <div class="flex items-center justify-between mb-5">
-                    <div>
-                        <h3 class="text-base font-bold text-[var(--text)]">
-                            {{ t('userSettings.changePassword') }}
-                        </h3>
-                        <p class="text-xs text-[var(--text-muted)] mt-0.5">{{ userName }}</p>
-                    </div>
-                    <button
-                        class="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                        @click="$emit('close')"
-                    >
-                        <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
-                        </svg>
-                    </button>
-                </div>
+    <OrbModal :open="true" closable @close="$emit('close')">
+        <template #header>
+            <span class="change-password__title">
+                {{ t('userSettings.changePassword') }}
+                <span class="change-password__user">{{ userName }}</span>
+            </span>
+        </template>
 
-                <form class="space-y-4" @submit.prevent="save">
-                    <div class="space-y-1.5">
-                        <CmkLabel>{{ t('userSettings.newPassword') }}</CmkLabel>
-                        <CmkInput
-                            v-model="password"
-                            type="password"
-                            placeholder="••••••••"
-                            field-size="FILL"
-                        />
-                    </div>
-                    <div class="space-y-1.5">
-                        <CmkLabel>{{ t('userSettings.confirmPassword') }}</CmkLabel>
-                        <CmkInput
-                            v-model="confirm"
-                            type="password"
-                            placeholder="••••••••"
-                            field-size="FILL"
-                        />
-                    </div>
-
-                    <p v-if="error" class="text-red-400 text-xs">{{ error }}</p>
-                    <p v-if="success" class="text-green-400 text-xs">
-                        {{ t('userSettings.passwordChanged') }}
-                    </p>
-
-                    <div class="flex gap-3 justify-end pt-2 border-t border-[var(--border)]">
-                        <CmkButton variant="secondary" @click="$emit('close')">
-                            {{ success ? t('common.close') : t('common.cancel') }}
-                        </CmkButton>
-                        <CmkButton
-                            v-if="!success"
-                            variant="primary"
-                            :disabled="saving"
-                            @click="save"
-                        >
-                            {{ saving ? t('common.saving') : t('common.save') }}
-                        </CmkButton>
-                    </div>
-                </form>
+        <form class="change-password__form" @submit.prevent="save">
+            <div class="change-password__field">
+                <CmkLabel>{{ t('userSettings.newPassword') }}</CmkLabel>
+                <CmkInput
+                    v-model="password"
+                    type="password"
+                    placeholder="••••••••"
+                    field-size="FILL"
+                />
             </div>
-        </div>
-    </Teleport>
+            <div class="change-password__field">
+                <CmkLabel>{{ t('userSettings.confirmPassword') }}</CmkLabel>
+                <CmkInput
+                    v-model="confirm"
+                    type="password"
+                    placeholder="••••••••"
+                    field-size="FILL"
+                />
+            </div>
+
+            <p v-if="error" class="change-password__error">{{ error }}</p>
+            <p v-if="success" class="change-password__success">
+                {{ t('userSettings.passwordChanged') }}
+            </p>
+        </form>
+
+        <template #footer>
+            <CmkButton variant="secondary" @click="$emit('close')">
+                {{ success ? t('common.close') : t('common.cancel') }}
+            </CmkButton>
+            <CmkButton v-if="!success" variant="primary" :disabled="saving" @click="save">
+                {{ saving ? t('common.saving') : t('common.save') }}
+            </CmkButton>
+        </template>
+    </OrbModal>
 </template>
 
 <script setup lang="ts">
@@ -84,7 +52,7 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { usersApi } from '@/api/client';
-import { useEscapeClose } from '@/composables/useEscapeClose';
+import OrbModal from '@/components/OrbModal.vue';
 import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps<{
@@ -92,8 +60,7 @@ const props = defineProps<{
     userName: string;
 }>();
 
-const emit = defineEmits<{ close: [] }>();
-useEscapeClose(() => emit('close'));
+defineEmits<{ close: [] }>();
 
 const { t } = useI18n();
 const auth = useAuthStore();
@@ -124,3 +91,40 @@ async function save() {
     }
 }
 </script>
+
+<style scoped>
+.change-password__title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.change-password__user {
+    font-size: var(--font-size-normal);
+    font-weight: var(--font-weight-default);
+    color: var(--text-muted);
+}
+
+.change-password__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-5);
+    min-width: 320px;
+}
+
+.change-password__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-3);
+}
+
+.change-password__error {
+    font-size: var(--font-size-normal);
+    color: var(--color-light-red-40);
+}
+
+.change-password__success {
+    font-size: var(--font-size-normal);
+    color: var(--color-corporate-green-50);
+}
+</style>
