@@ -235,7 +235,7 @@ import { useI18n } from 'vue-i18n';
 import { metricsApi } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import type { BoardObject, ObjectState, PerfometerResult } from '@/types/api';
-import { getBoardObjectName, getObjectTypeLabel, VISUAL_ONLY_TYPES } from '@/utils/naming';
+import { getBoardObjectIdentifier, getObjectTypeLabel, VISUAL_ONLY_TYPES } from '@/utils/naming';
 import { parsePerfData, type PerfMetric, utilColor, utilPercent } from '@/utils/perf';
 import { interpolateTemplate } from '@/utils/template';
 import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time';
@@ -383,7 +383,7 @@ const renderedTemplate = computed(() => {
     return DOMPurify.sanitize(html, _PURIFY_CONFIG);
 });
 
-const displayName = computed(() => getBoardObjectName(props.object));
+const displayName = computed(() => getBoardObjectIdentifier(props.object));
 
 const hoverTypeLabel = computed(() => getObjectTypeLabel(props.object));
 
