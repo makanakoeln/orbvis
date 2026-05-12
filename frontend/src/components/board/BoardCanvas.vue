@@ -101,17 +101,20 @@
             />
         </div>
 
-        <!-- Zoom indicator + reset (only visible when zoomed). Sits just above
-             the bottom-right corner so it doesn't compete with the search bar. -->
-        <button
-            v-if="zoom !== 1 && !editMode"
-            type="button"
-            class="board-zoom-reset"
-            title="Reset zoom (1:1)"
-            @click="resetZoom"
-        >
-            {{ Math.round(zoom * 100) }}% ↺
-        </button>
+        <!-- Zoom indicator + reset (only visible when zoomed). Teleported to
+             <body> so it escapes the canvas's CSS `zoom` (which would otherwise
+             scale this fixed-positioned pill along with the rest). -->
+        <Teleport to="body">
+            <button
+                v-if="userZoom !== 1 && !editMode"
+                type="button"
+                class="board-zoom-reset"
+                title="Reset to fit"
+                @click="resetZoom"
+            >
+                {{ Math.round(userZoom * 100) }}% ↺
+            </button>
+        </Teleport>
 
         <!-- Hover popup -->
         <HoverMenu
@@ -340,24 +343,19 @@ const canvasStyle = computed(() => {
     const bg = props.config.background_image;
     const url = bgImageUrl.value;
     const color = props.config.background_color;
-    const z = zoom.value;
-    const base: Record<string, string> = {
-        // Canvas fills the pane so the bg-image (100% 100%) covers the whole
-        // background with no dark borders. Object positions are stored in the
-        // native coord system (max of bg-image native size and outermost
-        // object) and rendered as percentages so they stay anchored to the
-        // same bg-pixel regardless of the pane's actual rendered size.
-        //
-        // The asymmetric stretch is the classical NagVis behaviour and the
-        // tradeoff operators expect: the bg can squash if the pane's aspect
-        // ratio doesn't match the bg image's. Icons stay at fixed CSS-px sizes.
-        //
-        // `zoom` handles the user's manual Ctrl+Wheel zoom uniformly on top
-        // (scales bg + objects + icons together as a single magnifying glass).
-        width: '100%',
-        height: '100%',
-        zoom: z !== 1 ? String(z) : '',
-    };
+    // At userZoom=1 the canvas fills the pane (asymmetric stretch — operators
+    // want the wallpaper look). At userZoom>1 it switches to native pixel
+    // size so CSS zoom can scale bg + objects together; coverFactor keeps the
+    // first zoom step visually close to the stretched default so the aspect
+    // snap at z=1→1.01 is as small as possible.
+    const base: Record<string, string> =
+        userZoom.value === 1
+            ? { width: '100%', height: '100%' }
+            : {
+                  width: `${canvasWidth.value}px`,
+                  height: `${canvasHeight.value}px`,
+                  zoom: String(coverFactor.value * userZoom.value),
+              };
     if (color) base.backgroundColor = color;
     if (bg && !bgImageFailed.value) {
         // Stretch the image to fill the canvas. Canvas dimensions already
@@ -374,78 +372,103 @@ const canvasStyle = computed(() => {
     return base;
 });
 
-const ZOOM_MIN = 0.25;
+// ZOOM_MIN=1 so operators cannot zoom out below "bg fills pane" — that view
+// has no informational value for monitoring.
+const ZOOM_MIN = 1;
 const ZOOM_MAX = 4;
-const zoom = ref(1);
+const userZoom = ref(1);
+
+const coverFactor = computed(() => {
+    const pane = paneSize.value;
+    if (!pane.width || !pane.height) return 1;
+    if (!canvasWidth.value || !canvasHeight.value) return 1;
+    const fx = pane.width / canvasWidth.value;
+    const fy = pane.height / canvasHeight.value;
+    return Math.max(fx, fy);
+});
 
 function onCanvasWheel(event: WheelEvent): void {
     // ctrl+wheel = zoom (matches browsers' image-viewer / map convention).
     // Bare wheel keeps the outer container's natural scroll behaviour.
-    // Edit mode is fixed at zoom=1 so drag-coord math stays simple.
+    // Edit mode is fixed at user_zoom=1 so drag-coord math stays simple.
     if (props.editMode || !event.ctrlKey) return;
     event.preventDefault();
     const factor = event.deltaY < 0 ? 1.1 : 1 / 1.1;
-    const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom.value * factor));
-    if (next === zoom.value) return;
+    const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, userZoom.value * factor));
+    if (next === userZoom.value) return;
     // Anchor zoom around the cursor: scroll the outer container so the point
-    // under the mouse stays under the mouse after the size change. The
-    // immediate parent is a flex centering wrapper; the actual scroll viewport
-    // is the ancestor with `overflow: auto` (BoardView's static-map pane).
+    // under the mouse stays under the mouse after the size change.
     const outer = findScrollAncestor(canvasEl.value);
     if (outer) {
         const rect = canvasEl.value!.getBoundingClientRect();
         const cx = event.clientX - rect.left;
         const cy = event.clientY - rect.top;
-        const ratio = next / zoom.value;
-        zoom.value = next;
-        // Wait one frame for the new transform to apply, then realign scroll.
+        const ratio = next / userZoom.value;
+        userZoom.value = next;
         requestAnimationFrame(() => {
             outer.scrollLeft += cx * (ratio - 1);
             outer.scrollTop += cy * (ratio - 1);
         });
     } else {
-        zoom.value = next;
+        userZoom.value = next;
     }
 }
 
 function resetZoom(): void {
-    zoom.value = 1;
+    userZoom.value = 1;
 }
 
-// Reactive scale factor from native coord space → display pixels. Used by
-// child SVGs (lines, arrows, line labels) that draw at display-px so their
-// stroke widths, glyph aspects, and polygon shapes don't distort with the
-// asymmetric bg-image stretch. Updated via ResizeObserver on the canvas
-// element so all derived render values track viewport changes.
+// canvasScale feeds child SVG layers (lines, arrows, line labels) that draw
+// in display-px so their stroke widths and glyph shapes don't distort under
+// the asymmetric bg-image stretch at zoom=1.
 const canvasDisplaySize = ref<{ width: number; height: number }>({ width: 0, height: 0 });
 const canvasScale = computed(() => ({
     sx: canvasWidth.value > 0 ? canvasDisplaySize.value.width / canvasWidth.value : 1,
     sy: canvasHeight.value > 0 ? canvasDisplaySize.value.height / canvasHeight.value : 1,
 }));
 provide('canvasScale', canvasScale);
+const paneSize = ref<{ width: number; height: number }>({ width: 0, height: 0 });
 let canvasResizeObserver: ResizeObserver | null = null;
+let paneResizeObserver: ResizeObserver | null = null;
+
+function setIfChanged(
+    target: { value: { width: number; height: number } },
+    width: number,
+    height: number,
+): void {
+    if (target.value.width !== width || target.value.height !== height) {
+        target.value = { width, height };
+    }
+}
+
 onMounted(() => {
     const el = canvasEl.value;
     if (!el) return;
     canvasDisplaySize.value = { width: el.clientWidth, height: el.clientHeight };
-    // jsdom (vitest) doesn't ship ResizeObserver; skip cleanly so unit tests
-    // can mount the component. Production browsers always provide it.
+    const pane = findScrollAncestor(el);
+    if (pane) paneSize.value = { width: pane.clientWidth, height: pane.clientHeight };
     if (typeof ResizeObserver === 'undefined') return;
     canvasResizeObserver = new ResizeObserver((entries) => {
         const entry = entries[0];
         if (!entry) return;
         const box = entry.contentBoxSize?.[0];
-        if (box) {
-            canvasDisplaySize.value = { width: box.inlineSize, height: box.blockSize };
-        } else {
-            canvasDisplaySize.value = { width: el.clientWidth, height: el.clientHeight };
-        }
+        const w = box ? box.inlineSize : el.clientWidth;
+        const h = box ? box.blockSize : el.clientHeight;
+        setIfChanged(canvasDisplaySize, w, h);
     });
     canvasResizeObserver.observe(el);
+    if (pane) {
+        paneResizeObserver = new ResizeObserver(() => {
+            setIfChanged(paneSize, pane.clientWidth, pane.clientHeight);
+        });
+        paneResizeObserver.observe(pane);
+    }
 });
 onBeforeUnmount(() => {
     canvasResizeObserver?.disconnect();
     canvasResizeObserver = null;
+    paneResizeObserver?.disconnect();
+    paneResizeObserver = null;
 });
 
 function findScrollAncestor(el: HTMLElement | null): HTMLElement | null {
@@ -461,7 +484,7 @@ function findScrollAncestor(el: HTMLElement | null): HTMLElement | null {
 watch(
     () => props.editMode,
     (edit) => {
-        if (edit) zoom.value = 1;
+        if (edit) userZoom.value = 1;
     },
 );
 
@@ -779,16 +802,18 @@ defineExpose({ getCanvasEl: () => canvasEl.value, getMapPosition, resetZoom });
 
 <style scoped>
 .board-zoom-reset {
+    /* Sits left of the BoardSearch filter (top:5 right:5 inside the canvas
+       wrapper, ≈ 200 px wide). Vertical 48 px clears the 36 px topbar. */
     position: fixed;
-    bottom: var(--dimension-5);
-    right: var(--dimension-5);
+    top: 48px;
+    right: calc(var(--dimension-5) + 215px);
     z-index: 6;
-    padding: 4px 10px;
+    padding: 6px 14px;
     border-radius: var(--border-radius);
     background: rgb(24 24 27 / 85%);
     border: 1px solid var(--border);
     color: var(--text);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     backdrop-filter: blur(6px);
