@@ -1080,119 +1080,55 @@
             </VueDraggable>
         </main>
     </div>
-    <!-- Delete confirmation -->
-    <Teleport to="body">
-        <div v-if="confirmDelete" class="fixed inset-0 z-50 flex items-center justify-center">
-            <div
-                class="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                @click="confirmDelete = null"
-            />
-            <div
-                class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl"
-                style="padding: 16px; width: 320px"
-            >
-                <h3 class="text-base font-bold text-[var(--text)]" style="margin-bottom: 4px">
-                    {{ t('admin.deleteBoardTitle') }}
-                </h3>
-                <p class="text-sm text-[var(--text-muted)]" style="margin-bottom: 16px">
-                    {{
-                        t('admin.deleteBoardConfirm', {
-                            name: confirmDelete.alias || confirmDelete.name,
-                        })
-                    }}
-                </p>
-                <div class="flex justify-end gap-[8px]">
-                    <CmkButton variant="secondary" @click="confirmDelete = null">
-                        {{ t('common.cancel') }}
-                    </CmkButton>
-                    <CmkButton variant="danger" @click="doDelete">
-                        {{ t('common.delete') }}
-                    </CmkButton>
-                </div>
-            </div>
-        </div>
-    </Teleport>
+    <OrbConfirmDialog
+        :open="!!confirmDelete"
+        :title="t('admin.deleteBoardTitle')"
+        :message="
+            confirmDelete
+                ? t('admin.deleteBoardConfirm', {
+                      name: confirmDelete.alias || confirmDelete.name,
+                  })
+                : ''
+        "
+        :confirm-label="t('common.delete')"
+        @confirm="doDelete"
+        @cancel="confirmDelete = null"
+    />
 
-    <!-- Clone Board Modal -->
-    <Teleport to="body">
-        <div v-if="confirmClone" class="fixed inset-0 z-50 flex items-center justify-center">
-            <div
-                class="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                @click="confirmClone = null"
+    <OrbModal
+        :open="!!confirmClone"
+        :title="t('admin.cloneBoard')"
+        closable
+        @close="confirmClone = null"
+    >
+        <div class="home-clone-modal__field">
+            <label class="home-clone-modal__label">{{ t('admin.boardId') }}</label>
+            <input
+                ref="cloneInputEl"
+                :value="cloneNewName"
+                class="home-clone-modal__input home-clone-modal__input--mono"
+                spellcheck="false"
+                @input="onCloneNameInput"
+                @keydown.enter="doClone"
+                @keydown.esc="confirmClone = null"
+                @focus="($event.target as HTMLInputElement).select()"
             />
-            <div
-                class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl"
-                style="padding: 16px; width: 320px"
-            >
-                <div class="flex items-center justify-between" style="margin-bottom: 12px">
-                    <h3 class="text-base font-bold text-[var(--text)]">
-                        {{ t('admin.cloneBoard') }}
-                    </h3>
-                    <button
-                        class="rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                        style="padding: 5px"
-                        @click="confirmClone = null"
-                    >
-                        <svg
-                            style="width: 14px; height: 14px"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
-                        </svg>
-                    </button>
-                </div>
-                <div style="margin-bottom: 10px">
-                    <label
-                        class="block text-sm font-medium text-[var(--text-muted)]"
-                        style="margin-bottom: 4px"
-                        >{{ t('admin.boardId') }}</label
-                    >
-                    <input
-                        ref="cloneInputEl"
-                        :value="cloneNewName"
-                        class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] font-mono"
-                        style="padding: 5px 10px"
-                        spellcheck="false"
-                        @input="onCloneNameInput"
-                        @keydown.enter="doClone"
-                        @keydown.esc="confirmClone = null"
-                        @focus="($event.target as HTMLInputElement).select()"
-                    />
-                </div>
-                <div style="margin-bottom: 10px">
-                    <label
-                        class="block text-sm font-medium text-[var(--text-muted)]"
-                        style="margin-bottom: 4px"
-                        >{{ t('admin.alias') }}</label
-                    >
-                    <input
-                        v-model="cloneAlias"
-                        class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
-                        style="padding: 5px 10px"
-                        spellcheck="false"
-                    />
-                </div>
-                <p v-if="cloneError" class="text-sm text-red-400" style="margin-bottom: 8px">
-                    {{ cloneError }}
-                </p>
-                <div class="flex justify-end gap-[8px] border-t border-[var(--border)] pt-[10px]">
-                    <CmkButton variant="secondary" @click="confirmClone = null">
-                        {{ t('common.cancel') }}
-                    </CmkButton>
-                    <CmkButton variant="primary" :disabled="!cloneNewName" @click="doClone">
-                        {{ t('admin.cloneBoardAction') }}
-                    </CmkButton>
-                </div>
-            </div>
         </div>
-    </Teleport>
+        <div class="home-clone-modal__field">
+            <label class="home-clone-modal__label">{{ t('admin.alias') }}</label>
+            <input v-model="cloneAlias" class="home-clone-modal__input" spellcheck="false" />
+        </div>
+        <p v-if="cloneError" class="home-clone-modal__error">{{ cloneError }}</p>
+
+        <template #footer>
+            <CmkButton variant="secondary" @click="confirmClone = null">
+                {{ t('common.cancel') }}
+            </CmkButton>
+            <CmkButton variant="primary" :disabled="!cloneNewName" @click="doClone">
+                {{ t('admin.cloneBoardAction') }}
+            </CmkButton>
+        </template>
+    </OrbModal>
 
     <BoardSettingsModal
         v-if="settingsBoard"
@@ -1230,33 +1166,15 @@
             @change="importBoard"
         />
     </label>
-    <Teleport to="body">
-        <div v-if="importConflict" class="fixed inset-0 z-50 flex items-center justify-center">
-            <div
-                class="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                @click="importConflict = null"
-            />
-            <div
-                class="relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/50 rounded-xl"
-                style="padding: 16px; width: 360px"
-            >
-                <h3 class="text-base font-bold text-[var(--text)]" style="margin-bottom: 4px">
-                    {{ t('admin.importBoard') }}
-                </h3>
-                <p class="text-sm text-[var(--text-muted)]" style="margin-bottom: 16px">
-                    {{ t('admin.importOverwrite', { name: importConflict.name }) }}
-                </p>
-                <div class="flex justify-end gap-[8px]">
-                    <CmkButton variant="secondary" @click="importConflict = null">
-                        {{ t('common.cancel') }}
-                    </CmkButton>
-                    <CmkButton variant="warning" @click="confirmImportOverwrite">
-                        {{ t('common.overwrite') }}
-                    </CmkButton>
-                </div>
-            </div>
-        </div>
-    </Teleport>
+    <OrbConfirmDialog
+        :open="!!importConflict"
+        :title="t('admin.importBoard')"
+        :message="importConflict ? t('admin.importOverwrite', { name: importConflict.name }) : ''"
+        :confirm-label="t('common.overwrite')"
+        confirm-variant="warning"
+        @confirm="confirmImportOverwrite"
+        @cancel="importConflict = null"
+    />
 
     <CreateBoardModal v-if="showCreate" @close="showCreate = false" @created="onCreated" />
     <OnboardingTour
@@ -1283,6 +1201,8 @@ import { boardsApi } from '@/api/client';
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue';
 import CreateBoardModal from '@/components/board/CreateBoardModal.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
+import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
+import OrbModal from '@/components/OrbModal.vue';
 import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue';
 import { useChangelog } from '@/composables/useChangelog';
 import { useAuthStore } from '@/stores/auth';
@@ -1519,3 +1439,45 @@ onMounted(async () => {
     }
 });
 </script>
+
+<style scoped>
+.home-clone-modal__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-3);
+    margin-bottom: var(--dimension-4);
+    min-width: 320px;
+}
+
+.home-clone-modal__label {
+    font-size: var(--font-size-large);
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.home-clone-modal__input {
+    width: 100%;
+    padding: var(--dimension-4) var(--dimension-5);
+    background: var(--default-form-element-bg-color);
+    border: 1px solid var(--default-form-element-border-color);
+    border-radius: var(--dimension-3);
+    font-size: var(--font-size-large);
+    color: var(--text);
+}
+
+.home-clone-modal__input--mono {
+    font-family: monospace;
+}
+
+.home-clone-modal__input:focus {
+    outline: none;
+    border-color: var(--color-corporate-green-50);
+    box-shadow: 0 0 0 2px var(--color-corporate-green-50);
+}
+
+.home-clone-modal__error {
+    font-size: var(--font-size-large);
+    color: var(--color-light-red-40);
+    margin-bottom: var(--dimension-4);
+}
+</style>
