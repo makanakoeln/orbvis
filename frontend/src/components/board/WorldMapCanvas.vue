@@ -122,8 +122,6 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
        </span>`
         : '';
 
-    const wrappedIcon = `<div style="position:relative;display:inline-block;">${iconHtml}${ackBadge}${downtimeBadge}</div>`;
-
     const labelSize = obj.label?.size ?? 11;
     const labelColor = obj.label?.color || 'white';
     const labelBg = obj.label?.background;
@@ -133,12 +131,12 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
             : '';
     const labelOffsetX = obj.label?.x ?? 0;
     const labelOffsetY = obj.label?.y ?? 0;
-    return L.divIcon({
-        className: '',
-        html:
-            wrappedIcon +
-            (label
-                ? `<div style="
+    const labelHtml = label
+        ? `<div style="
+        position:absolute;
+        top:100%;
+        left:50%;
+        transform: translate(calc(-50% + ${labelOffsetX}px), ${labelOffsetY}px);
         text-align: center;
         color: ${labelColor};
         font-size: ${labelSize}px;
@@ -146,10 +144,15 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
         text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
         white-space: nowrap;
         margin-top: 3px;
-        transform: translate(${labelOffsetX}px, ${labelOffsetY}px);
         ${labelBgStyle}
       ">${label.replace(/\n/g, '<br>')}</div>`
-                : ''),
+        : '';
+
+    const wrappedIcon = `<div style="position:relative;display:inline-block;">${iconHtml}${ackBadge}${downtimeBadge}${labelHtml}</div>`;
+
+    return L.divIcon({
+        className: '',
+        html: wrappedIcon,
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
         popupAnchor: [0, -(size / 2 + 4)],
