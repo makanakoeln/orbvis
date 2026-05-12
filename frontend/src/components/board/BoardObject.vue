@@ -250,6 +250,27 @@
         </div>
     </div>
 
+    <!-- Text-only: object name rendered as state-coloured text, no icon. -->
+    <div
+        v-else-if="object.display?.mode === 'text'"
+        class="flex flex-col items-center"
+        @mouseenter="$emit('hover', $event)"
+        @mouseleave="$emit('hover-leave')"
+        @contextmenu.prevent="$emit('context-menu', $event)"
+    >
+        <div
+            class="font-semibold whitespace-nowrap pointer-events-none px-1.5 py-0.5 rounded"
+            :class="
+                selected
+                    ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-zinc-950'
+                    : ''
+            "
+            :style="textOnlyStyle"
+        >
+            {{ displayName }}
+        </div>
+    </div>
+
     <!-- All other types: icon circle (or custom image) + label -->
     <div
         v-else
@@ -875,6 +896,21 @@ const labelStyle = computed(() => {
     return {
         fontSize: `${props.object.label?.size ?? 11}px`,
         color: props.object.label?.color ?? '#e4e4e7',
+        background: bg && bg !== 'transparent' ? bg : 'rgba(0,0,0,0.65)',
+        backdropFilter: 'blur(4px)',
+        textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+        outline: props.object.label_border
+            ? `1px solid ${props.object.label_border}`
+            : '1px solid rgba(255,255,255,0.12)',
+    };
+});
+
+const textOnlyStyle = computed(() => {
+    const bg = props.object.label?.background;
+    const size = props.object.label?.size ?? Math.max(12, Math.round(props.iconSize * 0.4));
+    return {
+        fontSize: `${size}px`,
+        color: props.object.label?.color ?? stateColorRgb.value,
         background: bg && bg !== 'transparent' ? bg : 'rgba(0,0,0,0.65)',
         backdropFilter: 'blur(4px)',
         textShadow: '0 1px 3px rgba(0,0,0,0.9)',

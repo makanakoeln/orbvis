@@ -77,7 +77,8 @@ function escapeHtml(s: string): string {
 function makeDivIcon(obj: BoardObjectType): L.DivIcon {
     const color = stateColor(obj.id);
     const size = obj.display?.image_size ?? props.config.icon_size ?? 30;
-    const label = obj.label?.show !== false ? escapeHtml(getBoardObjectName(obj)) : '';
+    const escapedName = escapeHtml(getBoardObjectName(obj));
+    const label = obj.label?.show !== false ? escapedName : '';
     const selected = props.selectedObjectId === obj.id;
 
     const TYPE_CHARS: Record<string, string> = {
@@ -92,8 +93,24 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
     const charSize = Math.max(8, Math.round(size * (typeChar.length > 1 ? 0.34 : 0.42)));
 
     const iconFile = obj.display?.image ?? obj.image_src;
+    const textOnly = obj.display?.mode === 'text';
     let iconHtml: string;
-    if (iconFile) {
+    if (textOnly) {
+        const txtColor = obj.label?.color || color;
+        const txtSize = obj.label?.size ?? Math.max(12, Math.round(size * 0.5));
+        const selRing = selected ? 'outline:2px solid #4ade80;outline-offset:2px;' : '';
+        iconHtml = `<div style="
+        color: ${txtColor};
+        font-size: ${txtSize}px;
+        font-weight: 600;
+        white-space: nowrap;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: rgba(0,0,0,0.55);
+        ${selRing}
+      ">${escapedName}</div>`;
+    } else if (iconFile) {
         const outline = selected ? 'filter: drop-shadow(0 0 6px #4ade80);' : '';
         iconHtml = `<img src="${import.meta.env.BASE_URL}images/${iconFile}" style="width:${size}px;height:${size}px;object-fit:contain;display:block;${outline}" />`;
     } else {
@@ -131,8 +148,9 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
             : '';
     const labelOffsetX = obj.label?.x ?? 0;
     const labelOffsetY = obj.label?.y ?? 0;
-    const labelHtml = label
-        ? `<div style="
+    const labelHtml =
+        label && !textOnly
+            ? `<div style="
         position:absolute;
         top:100%;
         left:50%;
@@ -146,7 +164,7 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
         margin-top: 3px;
         ${labelBgStyle}
       ">${label.replace(/\n/g, '<br>')}</div>`
-        : '';
+            : '';
 
     const wrappedIcon = `<div style="position:relative;display:inline-block;">${iconHtml}${ackBadge}${downtimeBadge}${labelHtml}</div>`;
 
