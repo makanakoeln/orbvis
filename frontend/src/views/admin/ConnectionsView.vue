@@ -447,7 +447,7 @@
                 <!-- Test result -->
                 <div
                     v-if="dialogTest.ran"
-                    class="flex items-start gap-[8px] rounded-lg ring-1 text-sm"
+                    class="flex items-center gap-[8px] rounded-lg ring-1 text-sm"
                     style="padding: 8px 12px"
                     :class="
                         dialogTest.ok
@@ -456,8 +456,8 @@
                     "
                 >
                     <span
-                        class="rounded-full shrink-0 mt-1"
-                        style="width: 6px; height: 6px"
+                        class="rounded-full shrink-0"
+                        style="width: 8px; height: 8px"
                         :class="
                             dialogTest.ok
                                 ? 'bg-[var(--color-corporate-green-50)]'
@@ -469,7 +469,7 @@
 
                 <p
                     v-if="formError"
-                    class="text-[var(--color-light-red-40)] text-xs flex items-center gap-[4px]"
+                    class="text-[var(--color-light-red-40)] text-sm flex items-center gap-[6px]"
                 >
                     <svg
                         class="shrink-0"

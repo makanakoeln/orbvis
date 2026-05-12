@@ -476,12 +476,12 @@ async function savePassword() {
 }
 
 .user-settings__error {
-    font-size: var(--font-size-large);
+    font-size: var(--font-size-normal);
     color: var(--color-light-red-40);
 }
 
 .user-settings__success {
-    font-size: var(--font-size-large);
+    font-size: var(--font-size-normal);
     color: var(--color-corporate-green-50);
 }
 </style>

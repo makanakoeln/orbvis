@@ -177,7 +177,7 @@
                             >
                             <span
                                 v-if="perm.perm_id < 0"
-                                class="text-[10px] text-[var(--color-corporate-green-50)] shrink-0"
+                                class="text-xs font-medium text-[var(--color-corporate-green-50)] shrink-0"
                                 >new</span
                             >
                             <button
@@ -242,7 +242,7 @@
                                 field-size="FILL"
                             />
                         </div>
-                        <p v-if="permError" class="text-[var(--color-light-red-40)] text-xs">
+                        <p v-if="permError" class="text-[var(--color-light-red-40)] text-sm">
                             {{ permError }}
                         </p>
                         <div class="flex justify-end">

@@ -93,7 +93,7 @@
                         </td>
                         <td style="padding: 6px 12px">
                             <span
-                                class="inline-flex items-center gap-[4px] text-xs font-medium"
+                                class="inline-flex items-center gap-[6px] text-sm font-medium"
                                 :class="
                                     user.is_active
                                         ? 'text-[var(--color-corporate-green-50)]'
@@ -102,7 +102,7 @@
                             >
                                 <span
                                     class="rounded-full"
-                                    style="width: 6px; height: 6px"
+                                    style="width: 8px; height: 8px"
                                     :class="
                                         user.is_active
                                             ? 'bg-[var(--color-corporate-green-50)]'
@@ -168,7 +168,7 @@
                                         </svg>
                                     </button>
                                 </template>
-                                <span v-else class="text-xs text-[var(--text-muted)] pr-1">—</span>
+                                <span v-else class="text-sm text-[var(--text-muted)] pr-1">—</span>
                             </div>
                         </td>
                     </tr>
@@ -216,7 +216,7 @@
                     />
                     <p
                         v-if="newUserConfirmPassword && newUser.password !== newUserConfirmPassword"
-                        class="text-xs text-[var(--color-light-red-40)]"
+                        class="text-sm text-[var(--color-light-red-40)]"
                     >
                         {{ t('userSettings.passwordMismatch') }}
                     </p>
