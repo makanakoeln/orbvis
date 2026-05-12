@@ -380,7 +380,7 @@ input.cmk-input:disabled {
 }
 
 .cmk-checkbox__indicator {
-    color: #000;
+    color: #fff;
 }
 
 .cmk-checkbox__label {
