@@ -1198,7 +1198,7 @@ watch(
             const aggrs = await connectionsApi.aggregations(connId, auth.accessToken);
             const next: Record<string, string | null> = { ...aggregationPackIds.value };
             for (const a of aggrs) {
-                next[a.id] = a.pack_id ?? null;
+                next[a.id] = a.pack_id || null;
             }
             if (!(aggId in next)) next[aggId] = null;
             aggregationPackIds.value = next;

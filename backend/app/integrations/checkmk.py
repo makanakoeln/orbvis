@@ -519,7 +519,7 @@ def cmk_bi_list_aggregations(query_callback: QueryCallback, site_id: str) -> lis
                 entry: dict[str, str] = {
                     "id": title,
                     "title": title,
-                    "pack_id": pack_id or str(aggr_id),
+                    "pack_id": pack_id,
                 }
                 if function:
                     entry["function"] = function
