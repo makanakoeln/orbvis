@@ -547,10 +547,10 @@
                                         :placeholder="t('board.detailDrawer.memberSearch')"
                                         class="detail-drawer__member-search"
                                     />
-                                    <label class="detail-drawer__member-toggle">
-                                        <input v-model="onlyProblems" type="checkbox" />
-                                        {{ t('board.detailDrawer.onlyProblems') }}
-                                    </label>
+                                    <CmkCheckbox
+                                        v-model="onlyProblems"
+                                        :label="t('board.detailDrawer.onlyProblems')"
+                                    />
                                 </div>
 
                                 <p v-if="loadingMembers" class="detail-drawer__pane-empty">
@@ -845,6 +845,7 @@
 </template>
 
 <script setup lang="ts">
+import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import { useMutationObserver } from '@vueuse/core';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';

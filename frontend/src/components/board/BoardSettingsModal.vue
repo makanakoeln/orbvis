@@ -153,21 +153,16 @@
                             style="padding-top: 8px"
                         >
                             <CmkLabel>{{ t('board.autoSource') }}</CmkLabel>
-                            <select
-                                v-model="form.worldmap_auto_source"
-                                class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
-                            >
-                                <option value="">{{ t('board.autoSourceNone') }}</option>
-                                <option value="all_hosts">
-                                    {{ t('board.autoSourceAllHosts') }}
-                                </option>
-                                <option value="hostgroup">
-                                    {{ t('board.autoSourceHostgroup') }}
-                                </option>
-                                <option value="servicegroup">
-                                    {{ t('board.autoSourceServicegroup') }}
-                                </option>
-                            </select>
+                            <CmkDropdown
+                                :selected-option="form.worldmap_auto_source || ''"
+                                :options="worldmapAutoSourceOptions"
+                                :width="'fill'"
+                                :label="t('board.autoSource')"
+                                @update:selected-option="
+                                    form.worldmap_auto_source = ($event ??
+                                        '') as typeof form.worldmap_auto_source
+                                "
+                            />
                             <CmkInput
                                 v-if="
                                     form.worldmap_auto_source === 'hostgroup' ||
@@ -452,13 +447,10 @@
                                     </td>
                                     <td class="text-center" style="padding: 4px 8px">
                                         <div class="flex items-center justify-center gap-[3px]">
-                                            <input
-                                                type="checkbox"
-                                                :checked="hasDraftPerm(role, 'view')"
+                                            <CmkCheckbox
+                                                :model-value="hasDraftPerm(role, 'view')"
                                                 :disabled="hasWildcard(role, 'view')"
-                                                class="accent-[var(--color-corporate-green-50)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                                style="width: 14px; height: 14px"
-                                                @change="toggleDraftPerm(role, 'view')"
+                                                @update:model-value="toggleDraftPerm(role, 'view')"
                                             />
                                             <span
                                                 v-if="hasWildcard(role, 'view')"
@@ -470,13 +462,10 @@
                                     </td>
                                     <td class="text-center" style="padding: 4px 8px">
                                         <div class="flex items-center justify-center gap-[3px]">
-                                            <input
-                                                type="checkbox"
-                                                :checked="hasDraftPerm(role, 'edit')"
+                                            <CmkCheckbox
+                                                :model-value="hasDraftPerm(role, 'edit')"
                                                 :disabled="hasWildcard(role, 'edit')"
-                                                class="accent-[var(--color-corporate-green-50)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                                style="width: 14px; height: 14px"
-                                                @change="toggleDraftPerm(role, 'edit')"
+                                                @update:model-value="toggleDraftPerm(role, 'edit')"
                                             />
                                             <span
                                                 v-if="hasWildcard(role, 'edit')"
@@ -521,6 +510,7 @@ import CmkLabel from '@cmk/components/CmkLabel.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkScrollContainer from '@cmk/components/CmkScrollContainer.vue';
 import CmkSwitch from '@cmk/components/CmkSwitch.vue';
+import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -628,6 +618,15 @@ const connectionOptions = computed(() => ({
 const mapTypeOptions = computed(() => ({
     type: 'fixed' as const,
     suggestions: boardTypeOptions(t),
+}));
+const worldmapAutoSourceOptions = computed(() => ({
+    type: 'fixed' as const,
+    suggestions: [
+        { name: '', title: t('board.autoSourceNone') },
+        { name: 'all_hosts', title: t('board.autoSourceAllHosts') },
+        { name: 'hostgroup', title: t('board.autoSourceHostgroup') },
+        { name: 'servicegroup', title: t('board.autoSourceServicegroup') },
+    ],
 }));
 const radarFilterOptions = computed(() => ({
     type: 'fixed' as const,

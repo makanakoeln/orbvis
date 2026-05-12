@@ -71,21 +71,14 @@
                                 <label class="field-label">{{
                                     t('boardSettings.connection')
                                 }}</label>
-                                <select
-                                    v-model="form.connection_id"
-                                    class="flex-1 px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)]"
-                                >
-                                    <option value="">
-                                        {{ t('boardSettings.connectionInherit') }}
-                                    </option>
-                                    <option
-                                        v-for="c in availableConnections"
-                                        :key="c.id"
-                                        :value="c.id"
-                                    >
-                                        {{ c.label || c.id }}
-                                    </option>
-                                </select>
+                                <CmkDropdown
+                                    class="flex-1"
+                                    :selected-option="form.connection_id || ''"
+                                    :options="connectionDropdownOptions"
+                                    :width="'fill'"
+                                    :label="t('boardSettings.connection')"
+                                    @update:selected-option="form.connection_id = $event ?? ''"
+                                />
                             </div>
                             <template v-if="object.type === 'host' || object.type === 'service'">
                                 <div class="field-row">
@@ -563,10 +556,10 @@
                             </div>
                             <!-- Weather-color toggle -->
                             <div class="field-row">
-                                <label class="field-label">{{
-                                    t('boardSettings.lineWeatherColor')
-                                }}</label>
-                                <input v-model="form.line_weather_color" type="checkbox" />
+                                <CmkCheckbox
+                                    v-model="form.line_weather_color"
+                                    :label="t('boardSettings.lineWeatherColor')"
+                                />
                             </div>
                             <!-- Weathermap inbound metric (used by labels and gradient) -->
                             <div
@@ -1510,6 +1503,13 @@ watch(
 // ---- Autocomplete ----
 
 const availableConnections = ref<{ id: string; label: string }[]>([]);
+const connectionDropdownOptions = computed(() => ({
+    type: 'fixed' as const,
+    suggestions: [
+        { name: '', title: t('boardSettings.connectionInherit') },
+        ...availableConnections.value.map((c) => ({ name: c.id, title: c.label })),
+    ],
+}));
 async function loadConnections(): Promise<void> {
     if (!auth.accessToken) return;
     try {
