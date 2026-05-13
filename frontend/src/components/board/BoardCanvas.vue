@@ -648,12 +648,10 @@ function onCanvasPointerUp(event: PointerEvent) {
         emit('object-drag-end', id, pos.x, pos.y);
     } else if (!_didMove.value && props.placing) {
         emit('canvas-click', event as unknown as MouseEvent);
-    } else if (!_didMove.value) {
-        // No drag — native click/dblclick will fire on the object div and
-        // route through @click.stop / @dblclick.stop handlers. Just suppress
-        // the bubbling canvas-click so it doesn't deselect.
-        _suppressNextCanvasClick.value = true;
     }
+    // !_didMove && !placing: nothing to do — native click on the object div
+    // fires @click.stop="onObjectClick", and @click.stop prevents the event
+    // from bubbling to the canvas wrapper, so no spurious canvas-click.
 }
 
 // ---- Event delegation ----
