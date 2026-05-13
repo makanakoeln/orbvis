@@ -346,6 +346,7 @@ export default {
         label: 'Beschriftung',
         labelAuto: '(automatisch)',
         size: 'Größe',
+        mapDefault: 'Board-Vorgabe',
         color: 'Farbe',
         offsetX: 'Offset X',
         offsetY: 'Offset Y',

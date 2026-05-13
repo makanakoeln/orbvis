@@ -343,6 +343,7 @@ export default {
         label: 'Label',
         labelAuto: '(auto)',
         size: 'Size',
+        mapDefault: 'map default',
         color: 'Color',
         offsetX: 'Offset X',
         offsetY: 'Offset Y',

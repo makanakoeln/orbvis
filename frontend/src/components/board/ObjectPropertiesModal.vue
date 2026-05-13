@@ -862,7 +862,11 @@
                                     v-model="form.display.image_size"
                                     min="1"
                                     max="512"
-                                    placeholder="map default"
+                                    :placeholder="
+                                        boardIconSize != null
+                                            ? String(boardIconSize)
+                                            : t('boardSettings.mapDefault')
+                                    "
                                     class="w-24"
                                 />
                             </div>
@@ -1179,6 +1183,7 @@ const props = defineProps<{
     state?: ObjectState;
     connectionId: string;
     mapType?: string;
+    boardIconSize?: number | null;
     checkmkUrl?: string | null;
     anchorRect?: { left: number; top: number; right: number; bottom: number } | null;
 }>();

@@ -331,7 +331,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
                     : {
                           mode: s.view_type as 'icon' | 'text' | 'gadget',
                           image: draft.image_src || null,
-                          image_size: s.icon_size,
+                          image_size: null,
                       },
             image_src: draft.type === 'image' ? draft.image_src || null : undefined,
             url_target: s.url_target,
@@ -394,7 +394,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
             display: {
                 mode: s.view_type as 'icon' | 'text' | 'gadget',
                 image: draft.image_src || null,
-                image_size: s.icon_size,
+                image_size: null,
             },
             url_target: s.url_target,
             z: s.z,
