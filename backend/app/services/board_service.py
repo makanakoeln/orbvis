@@ -265,7 +265,29 @@ def delete_object(board_name: str, obj_id: str) -> bool:
 
 def _load_board_file(path: Path) -> BoardConfig:
     data = json.loads(path.read_text())
+    _sanitize_legacy_data(data)
     return BoardConfig.model_validate(data)
+
+
+def _sanitize_legacy_data(data: object) -> None:
+    """In-place pre-cleanup so newly-strict validators don't reject legacy JSON.
+
+    Strict input validators on the API schema would otherwise prevent any
+    board from loading if a single object carries a value that pre-dates a
+    rule (e.g. an unsupported ``line_color`` written before the regex check
+    existed). Coerce these to ``None`` here so the load succeeds; future
+    saves through the API still reject bad input.
+    """
+    if not isinstance(data, dict):
+        return
+    from app.schemas.board import _coerce_color
+
+    for obj in data.get("objects") or []:
+        if not isinstance(obj, dict):
+            continue
+        for key in ("line_color", "line_color_border"):
+            if key in obj:
+                obj[key] = _coerce_color(obj[key])
 
 
 def _save_board_file(cfg: BoardConfig) -> None:

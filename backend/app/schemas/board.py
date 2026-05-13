@@ -61,6 +61,21 @@ def _validate_color(value: str | None) -> str | None:
     return s
 
 
+def _coerce_color(value: object) -> object:
+    """Sanitize bad colors to ``None`` so legacy boards still load.
+
+    Read-side companion to ``_validate_color`` — pre-existing JSON may carry
+    values that newer rules reject (e.g. unsupported CSS expressions written
+    before the validator existed). Dropping them is the safe fallback;
+    re-saving the board through the API still rejects bad input.
+    """
+    if value is None or value == "":
+        return value
+    if not isinstance(value, str):
+        return None
+    return value if _COLOR_RE.fullmatch(value.strip()) else None
+
+
 ObjectType = Literal[
     "host",
     "service",
