@@ -717,6 +717,83 @@
                     </div>
                 </Transition>
 
+                <!-- FAB: Add object (with type picker popover) -->
+                <Transition
+                    enter-from-class="opacity-0 translate-y-1 scale-95"
+                    enter-active-class="transition-all duration-150 ease-out"
+                    leave-to-class="opacity-0 translate-y-1 scale-95"
+                    leave-active-class="transition-all duration-100 ease-in"
+                >
+                    <div
+                        v-if="editor.editMode.value && !editor.placing.value"
+                        ref="addPickerWrapperRef"
+                        class="relative"
+                    >
+                        <Transition
+                            enter-from-class="opacity-0 translate-y-1 scale-95"
+                            enter-active-class="transition-all duration-150 ease-out origin-bottom-right"
+                            leave-to-class="opacity-0 translate-y-1 scale-95"
+                            leave-active-class="transition-all duration-100 ease-in origin-bottom-right"
+                        >
+                            <div
+                                v-if="addPickerOpen"
+                                class="absolute right-0 mb-[8px] w-56 bg-[var(--bg-surface)] backdrop-blur-xl ring-1 ring-white/8 shadow-2xl shadow-black/60 rounded-xl overflow-hidden"
+                                style="bottom: 100%"
+                                role="menu"
+                                :aria-label="t('boardSettings.selectType')"
+                            >
+                                <button
+                                    v-for="opt in placeableTypeOptions"
+                                    :key="opt.name"
+                                    role="menuitem"
+                                    class="w-full flex items-center gap-[10px] text-[13px] text-left text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+                                    style="padding: 8px 12px"
+                                    @click="chooseAddType(opt.name)"
+                                >
+                                    <svg
+                                        class="text-[var(--text-muted)] shrink-0"
+                                        style="width: 12px; height: 12px"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        stroke-width="2.5"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M12 4.5v15m7.5-7.5h-15"
+                                        />
+                                    </svg>
+                                    <span>{{ opt.title }}</span>
+                                </button>
+                            </div>
+                        </Transition>
+                        <button
+                            data-tour="add-object-fab"
+                            class="rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1 bg-[var(--color-corporate-green-50)]/90 hover:bg-[var(--color-corporate-green-50)] ring-[var(--color-corporate-green-50)]/60 text-white"
+                            style="width: 40px; height: 40px"
+                            :title="t('boardSettings.addObject')"
+                            :aria-expanded="addPickerOpen"
+                            aria-haspopup="menu"
+                            @click="addPickerOpen = !addPickerOpen"
+                        >
+                            <svg
+                                style="width: 18px; height: 18px"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M12 4.5v15m7.5-7.5h-15"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </Transition>
+
                 <!-- FAB: Edit toggle -->
                 <button
                     data-tour="edit-fab"
@@ -983,6 +1060,7 @@
 </template>
 
 <script setup lang="ts">
+import { onClickOutside } from '@vueuse/core';
 import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
@@ -1014,9 +1092,16 @@ import { useBoardsStore } from '@/stores/boards';
 import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
-import type { BoardObject, BulkAckTarget, DowntimeEntry, ServiceLayout } from '@/types/api';
+import type {
+    BoardObject,
+    BulkAckTarget,
+    DowntimeEntry,
+    ObjectType,
+    ServiceLayout,
+} from '@/types/api';
 import type { TourStep } from '@/types/tour';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
+import { placeableObjectTypes } from '@/utils/dropdownOptions';
 import { getBoardObjectName } from '@/utils/naming';
 import { resolveTemplate } from '@/utils/template';
 import CmkLoading from '@/vendor/cmk/components/CmkLoading.vue';
@@ -1158,6 +1243,29 @@ async function reloadBoard() {
 }
 
 const editor = useBoardEditor(boardName, reloadBoard);
+
+// ---- Add-object type picker (anchored above the "+" FAB) ----
+
+const addPickerOpen = ref(false);
+const addPickerWrapperRef = ref<HTMLElement | null>(null);
+
+const placeableTypeOptions = computed(() => placeableObjectTypes(t));
+
+function chooseAddType(type: ObjectType) {
+    editor.draft.type = type;
+    addPickerOpen.value = false;
+}
+
+onClickOutside(addPickerWrapperRef, () => {
+    addPickerOpen.value = false;
+});
+
+watch(
+    () => editor.editMode.value,
+    (on) => {
+        if (!on) addPickerOpen.value = false;
+    },
+);
 
 // ---- Object properties modal (right-click in view mode) ----
 
@@ -1841,7 +1949,8 @@ function onKeyDown(e: KeyboardEvent) {
         return;
     if (e.key === 'Escape') {
         e.preventDefault();
-        if (editor.placing.value) editor.cancelPlacing();
+        if (addPickerOpen.value) addPickerOpen.value = false;
+        else if (editor.placing.value) editor.cancelPlacing();
         else editor.selectObject(null);
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && editor.selectedObjectId.value) {
         e.preventDefault();

@@ -37,12 +37,7 @@
                 :options="objectTypeOptions"
                 :width="'fill'"
                 :label="t('boardSettings.selectType')"
-                @update:selected-option="
-                    (v) => {
-                        draft.type = v as ObjectType | '';
-                        onTypeChange();
-                    }
-                "
+                @update:selected-option="(v) => (draft.type = v as ObjectType | '')"
             />
 
             <template v-if="draft.type === 'host'">
@@ -334,6 +329,7 @@ import {
     countLeavesByState,
     flattenAggregationLeaves,
 } from '@/utils/aggregationTree';
+import { placeableObjectTypes } from '@/utils/dropdownOptions';
 
 import AutocompleteInput from './AutocompleteInput.vue';
 import ImagePicker from './ImagePicker.vue';
@@ -342,19 +338,7 @@ const { t } = useI18n();
 
 const objectTypeOptions = computed(() => ({
     type: 'fixed' as const,
-    suggestions: [
-        { name: '', title: t('boardSettings.selectType') },
-        { name: 'host', title: t('boardSettings.typeHost') },
-        { name: 'service', title: t('boardSettings.typeService') },
-        { name: 'hostgroup', title: t('boardSettings.typeHostgroup') },
-        { name: 'servicegroup', title: t('boardSettings.typeServicegroup') },
-        { name: 'map', title: t('boardSettings.typeMap') },
-        { name: 'aggregation', title: t('boardSettings.typeAggregation') },
-        { name: 'line', title: t('boardSettings.typeLine') },
-        { name: 'textbox', title: t('boardSettings.typeTextbox') },
-        { name: 'image', title: t('boardSettings.typeImage') },
-        { name: 'graph', title: `${t('boardSettings.typeGraph')} (experimental)` },
-    ],
+    suggestions: [{ name: '', title: t('boardSettings.selectType') }, ...placeableObjectTypes(t)],
 }));
 const snapGridOptions = computed(() => ({
     type: 'fixed' as const,
@@ -625,6 +609,8 @@ function onTypeChange() {
 function onHostChange() {
     fetchAddServices(props.draft.host_name);
 }
+
+watch(() => props.draft.type, onTypeChange);
 
 watch(
     () => props.draft.host_name,

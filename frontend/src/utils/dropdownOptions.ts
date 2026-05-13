@@ -1,6 +1,23 @@
 import type { ComposerTranslation } from 'vue-i18n';
 
+import type { ObjectType } from '@/types/api';
+
 type T = ComposerTranslation;
+
+export function placeableObjectTypes(t: T): { name: ObjectType; title: string }[] {
+    return [
+        { name: 'host', title: t('boardSettings.typeHost') },
+        { name: 'service', title: t('boardSettings.typeService') },
+        { name: 'hostgroup', title: t('boardSettings.typeHostgroup') },
+        { name: 'servicegroup', title: t('boardSettings.typeServicegroup') },
+        { name: 'map', title: t('boardSettings.typeMap') },
+        { name: 'aggregation', title: t('boardSettings.typeAggregation') },
+        { name: 'line', title: t('boardSettings.typeLine') },
+        { name: 'textbox', title: t('boardSettings.typeTextbox') },
+        { name: 'image', title: t('boardSettings.typeImage') },
+        { name: 'graph', title: `${t('boardSettings.typeGraph')} (experimental)` },
+    ];
+}
 
 export function boardTypeOptions(t: T) {
     return [
