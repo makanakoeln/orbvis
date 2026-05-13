@@ -19,12 +19,17 @@
                         ? 'absolute w-[25rem] max-h-[75vh]'
                         : 'relative w-[36rem] max-h-[90vh]'
                 "
-                :style="isPopover ? popoverStyle : {}"
+                :style="cardStyle"
             >
                 <!-- Header -->
                 <div
-                    class="flex items-center justify-between shrink-0 border-b border-[var(--border)]"
+                    class="flex items-center justify-between shrink-0 border-b border-[var(--border)] select-none touch-none"
+                    :class="dragStart ? 'cursor-grabbing' : 'cursor-grab'"
                     style="padding: 10px 16px"
+                    @pointerdown="onHeaderPointerDown"
+                    @pointermove="onHeaderPointerMove"
+                    @pointerup="onHeaderPointerUp"
+                    @pointercancel="onHeaderPointerUp"
                 >
                     <div class="flex items-center gap-[8px]">
                         <span
@@ -1251,6 +1256,53 @@ const popoverStyle = computed(() => {
 
     return { left: `${left}px`, top: `${top}px` };
 });
+
+// Drag-to-move (grab the header)
+const dragOffset = ref({ dx: 0, dy: 0 });
+const dragStart = ref<{ px: number; py: number; ox: number; oy: number } | null>(null);
+
+const cardStyle = computed<Record<string, string>>(() => {
+    const base: Record<string, string> = isPopover.value
+        ? { ...(popoverStyle.value as Record<string, string>) }
+        : {};
+    if (dragOffset.value.dx !== 0 || dragOffset.value.dy !== 0) {
+        base.transform = `translate(${dragOffset.value.dx}px, ${dragOffset.value.dy}px)`;
+    }
+    return base;
+});
+
+function onHeaderPointerDown(e: PointerEvent) {
+    if (e.button !== 0) return;
+    const target = e.currentTarget as HTMLElement;
+    target.setPointerCapture(e.pointerId);
+    dragStart.value = {
+        px: e.clientX,
+        py: e.clientY,
+        ox: dragOffset.value.dx,
+        oy: dragOffset.value.dy,
+    };
+}
+
+function onHeaderPointerMove(e: PointerEvent) {
+    const s = dragStart.value;
+    if (!s) return;
+    dragOffset.value = {
+        dx: s.ox + (e.clientX - s.px),
+        dy: s.oy + (e.clientY - s.py),
+    };
+}
+
+function onHeaderPointerUp() {
+    dragStart.value = null;
+}
+
+watch(
+    () => props.object,
+    () => {
+        dragOffset.value = { dx: 0, dy: 0 };
+        dragStart.value = null;
+    },
+);
 
 const fetchedMetrics = ref<string[]>([]);
 const graphTemplates = ref<MetricGraphGroup[]>([]);
