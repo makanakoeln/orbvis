@@ -219,8 +219,9 @@
         @mouseenter="$emit('hover', $event)"
         @mouseleave="$emit('hover-leave')"
         @contextmenu.prevent="$emit('context-menu', $event)"
-        v-html="object.label?.text || 'Text'"
-    />
+    >
+        {{ object.label?.text || 'Text' }}
+    </div>
 
     <!-- Gadget -->
     <div
