@@ -275,6 +275,7 @@ const bgImageSize = ref<{ width: number; height: number } | null>(null);
 
 // Local pointer-capture drag state
 const _dragId = ref<string | null>(null);
+const _dragObj = ref<BoardObjectType | null>(null);
 const _dragOffX = ref(0);
 const _dragOffY = ref(0);
 const _dragInitX = ref(0);
@@ -560,6 +561,7 @@ function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
     _dragInitY.value = obj.y;
     _didMove.value = false;
     _dragId.value = obj.id;
+    _dragObj.value = obj;
     localDragPositions[obj.id] = { x: obj.x, y: obj.y };
 }
 
@@ -625,7 +627,9 @@ function onCanvasPointerUp(event: PointerEvent) {
     }
 
     const id = _dragId.value;
+    const obj = _dragObj.value;
     _dragId.value = null;
+    _dragObj.value = null;
 
     if (!id) {
         if (props.placing) emit('canvas-click', event as unknown as MouseEvent);
@@ -637,6 +641,9 @@ function onCanvasPointerUp(event: PointerEvent) {
         emit('object-drag-end', id, pos.x, pos.y);
     } else if (!_didMove.value && props.placing) {
         emit('canvas-click', event as unknown as MouseEvent);
+    } else if (!_didMove.value && obj && props.editMode) {
+        emit('object-click', obj);
+        _suppressNextCanvasClick.value = true;
     } else if (!_didMove.value) {
         _suppressNextCanvasClick.value = true;
     }
@@ -661,23 +668,7 @@ function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
 }
 
 function onObjectContextMenu(event: MouseEvent, obj: BoardObjectType) {
-    if (props.editMode) {
-        // Get the bounding rect of the clicked element (wrapper div or SVG element)
-        const el = (event.currentTarget ?? event.target) as Element | null;
-        const r = el?.getBoundingClientRect?.();
-        const anchor =
-            r && (r.width > 0 || r.height > 0)
-                ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
-                : {
-                      left: event.clientX,
-                      top: event.clientY,
-                      right: event.clientX,
-                      bottom: event.clientY,
-                  };
-        emit('object-contextmenu', obj, anchor);
-    } else {
-        openContextMenu(event, obj);
-    }
+    openContextMenu(event, obj);
 }
 
 function onCanvasClick(event: MouseEvent) {
