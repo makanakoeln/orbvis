@@ -276,6 +276,7 @@ const bgImageSize = ref<{ width: number; height: number } | null>(null);
 // Local pointer-capture drag state
 const _dragId = ref<string | null>(null);
 const _dragObj = ref<BoardObjectType | null>(null);
+const _dragPointerId = ref<number | null>(null);
 const _dragOffX = ref(0);
 const _dragOffY = ref(0);
 const _dragInitX = ref(0);
@@ -545,10 +546,8 @@ function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
     if (event.button === 2) return; // right-click: let contextmenu event fire normally
     _suppressNextCanvasClick.value = false;
     if (!props.editMode) return;
-    event.preventDefault();
     const canvas = canvasEl.value;
     if (!canvas) return;
-    canvas.setPointerCapture(event.pointerId);
     const rect = canvas.getBoundingClientRect();
     const cursorNative = viewportToNative(
         event.clientX - rect.left,
@@ -562,6 +561,7 @@ function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
     _didMove.value = false;
     _dragId.value = obj.id;
     _dragObj.value = obj;
+    _dragPointerId.value = event.pointerId;
     localDragPositions[obj.id] = { x: obj.x, y: obj.y };
 }
 
@@ -610,6 +610,13 @@ function onCanvasPointerMove(event: PointerEvent) {
         (Math.abs(x - _dragInitX.value) > 4 || Math.abs(y - _dragInitY.value) > 4)
     ) {
         _didMove.value = true;
+        if (_dragPointerId.value !== null && canvasEl.value) {
+            try {
+                canvasEl.value.setPointerCapture(_dragPointerId.value);
+            } catch {
+                // pointer may have ended between pointerdown and first move
+            }
+        }
         emit('object-drag-start', id);
     }
     localDragPositions[id] = { x, y };
@@ -627,9 +634,9 @@ function onCanvasPointerUp(event: PointerEvent) {
     }
 
     const id = _dragId.value;
-    const obj = _dragObj.value;
     _dragId.value = null;
     _dragObj.value = null;
+    _dragPointerId.value = null;
 
     if (!id) {
         if (props.placing) emit('canvas-click', event as unknown as MouseEvent);
@@ -641,10 +648,10 @@ function onCanvasPointerUp(event: PointerEvent) {
         emit('object-drag-end', id, pos.x, pos.y);
     } else if (!_didMove.value && props.placing) {
         emit('canvas-click', event as unknown as MouseEvent);
-    } else if (!_didMove.value && obj && props.editMode) {
-        emit('object-click', obj);
-        _suppressNextCanvasClick.value = true;
     } else if (!_didMove.value) {
+        // No drag — native click/dblclick will fire on the object div and
+        // route through @click.stop / @dblclick.stop handlers. Just suppress
+        // the bubbling canvas-click so it doesn't deselect.
         _suppressNextCanvasClick.value = true;
     }
 }

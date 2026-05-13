@@ -797,7 +797,7 @@
                     <button
                         title="Edit properties"
                         class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--color-corporate-green-40)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
-                        @click="openPropsModal(selectedObject!)"
+                        @click="openPropsModal(selectedObject!, selectedObjectAnchor)"
                     >
                         <svg
                             style="width: 14px; height: 14px"
@@ -1300,6 +1300,16 @@ const actionBarStyle = computed(() => {
     };
 });
 
+const selectedObjectAnchor = computed<AnchorRect | null>(() => {
+    if (!selectedObjectEl.value || selectedRect.width.value === 0) return null;
+    return {
+        left: selectedRect.left.value,
+        top: selectedRect.top.value,
+        right: selectedRect.right.value,
+        bottom: selectedRect.bottom.value,
+    };
+});
+
 const placeableTypeOptions = computed(() => placeableObjectTypes(t));
 
 function chooseAddType(type: ObjectType) {
@@ -1346,7 +1356,15 @@ function onObjectContextMenu(obj: BoardObject, anchor?: AnchorRect | null) {
 }
 
 function onObjectDblclick(obj: BoardObject) {
-    openPropsModal(obj);
+    const el = document.querySelector(
+        `[data-object-id="${CSS.escape(obj.id)}"]`,
+    ) as HTMLElement | null;
+    const r = el?.getBoundingClientRect();
+    const anchor =
+        r && (r.width > 0 || r.height > 0)
+            ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
+            : null;
+    openPropsModal(obj, anchor);
 }
 
 function onObjectDuplicate(obj: BoardObject) {
