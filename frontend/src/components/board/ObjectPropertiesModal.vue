@@ -24,7 +24,7 @@
                 <!-- Header -->
                 <div
                     class="flex items-center justify-between shrink-0 border-b border-[var(--border)] select-none touch-none"
-                    :class="dragStart ? 'cursor-grabbing' : 'cursor-grab'"
+                    :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
                     style="padding: 10px 16px"
                     @pointerdown="onHeaderPointerDown"
                     @pointermove="onHeaderPointerMove"
@@ -1260,6 +1260,7 @@ const popoverStyle = computed(() => {
 // Drag-to-move (grab the header)
 const dragOffset = ref({ dx: 0, dy: 0 });
 const dragStart = ref<{ px: number; py: number; ox: number; oy: number } | null>(null);
+const dragging = ref(false);
 
 const cardStyle = computed<Record<string, string>>(() => {
     const base: Record<string, string> = isPopover.value
@@ -1273,8 +1274,8 @@ const cardStyle = computed<Record<string, string>>(() => {
 
 function onHeaderPointerDown(e: PointerEvent) {
     if (e.button !== 0) return;
-    const target = e.currentTarget as HTMLElement;
-    target.setPointerCapture(e.pointerId);
+    // Don't start a drag from interactive children (the close button etc.).
+    if ((e.target as HTMLElement).closest('button')) return;
     dragStart.value = {
         px: e.clientX,
         py: e.clientY,
@@ -1286,14 +1287,26 @@ function onHeaderPointerDown(e: PointerEvent) {
 function onHeaderPointerMove(e: PointerEvent) {
     const s = dragStart.value;
     if (!s) return;
-    dragOffset.value = {
-        dx: s.ox + (e.clientX - s.px),
-        dy: s.oy + (e.clientY - s.py),
-    };
+    const dx = s.ox + (e.clientX - s.px);
+    const dy = s.oy + (e.clientY - s.py);
+    if (!dragging.value && Math.abs(dx - s.ox) < 4 && Math.abs(dy - s.oy) < 4) {
+        return; // below threshold: don't engage drag yet (preserves click on header)
+    }
+    if (!dragging.value) {
+        dragging.value = true;
+        const target = e.currentTarget as HTMLElement;
+        try {
+            target.setPointerCapture(e.pointerId);
+        } catch {
+            // pointer may have ended
+        }
+    }
+    dragOffset.value = { dx, dy };
 }
 
 function onHeaderPointerUp() {
     dragStart.value = null;
+    dragging.value = false;
 }
 
 watch(
