@@ -128,6 +128,12 @@ input:-webkit-autofill:focus {
     margin-top: var(--dimension-3);
 }
 
+/* reka-ui sperrt body { pointer-events: none } während ein Modal offen ist; das
+   per Teleport in body gerenderte CmkDropdown-Menü erbt das und wird unklickbar. */
+.cmk-dropdown__menu {
+    pointer-events: auto;
+}
+
 /* Tailwind-zinc Klassen sind durch CMK-Token (--text, --text-muted, --border, --bg-*)
    ersetzt; theme-spezifische Anpassungen passieren über die Token. */
 
