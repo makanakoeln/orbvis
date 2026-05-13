@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -42,6 +43,21 @@ def _validate_user_url(value: str | None) -> str | None:
     for prefix in _BLOCKED_URL_PREFIXES:
         if lowered.startswith(prefix):
             raise ValueError(f"URL scheme {prefix!r} is not allowed")
+    return s
+
+
+# Hex (#rgb/#rgba/#rrggbb/#rrggbbaa), a plain CSS named color, or "transparent".
+# Strict on purpose — keeps `<script>`, `javascript:`, `expression(...)` and other
+# CSS-injection payloads out of stroke/background attributes downstream.
+_COLOR_RE = re.compile(r"^(#[0-9a-fA-F]{3,8}|[a-zA-Z]{1,32}|transparent)$")
+
+
+def _validate_color(value: str | None) -> str | None:
+    if value is None or value == "":
+        return value
+    s = value.strip()
+    if not _COLOR_RE.fullmatch(s):
+        raise ValueError(f"invalid color value: {value!r}")
     return s
 
 
@@ -275,6 +291,11 @@ class BoardObject(BaseModel):
     def _validate_urls(cls, v: str | None) -> str | None:
         return _validate_user_url(v)
 
+    @field_validator("line_color", "line_color_border")
+    @classmethod
+    def _validate_line_colors(cls, v: str | None) -> str | None:
+        return _validate_color(v)
+
     @model_validator(mode="before")
     @classmethod
     def _legacy_weathermap(cls, data: object) -> object:
@@ -425,6 +446,11 @@ class BoardObjectUpdate(BaseModel):
     @classmethod
     def _validate_urls(cls, v: str | None) -> str | None:
         return _validate_user_url(v)
+
+    @field_validator("line_color", "line_color_border")
+    @classmethod
+    def _validate_line_colors(cls, v: str | None) -> str | None:
+        return _validate_color(v)
 
     @model_validator(mode="before")
     @classmethod
