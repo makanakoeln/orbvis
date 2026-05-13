@@ -624,25 +624,45 @@
                                         <label class="field-label">{{
                                             t('boardSettings.startX')
                                         }}</label>
-                                        <NumberInput v-model="form.x" class="flex-1" />
+                                        <NumberInput
+                                            v-model="form.x"
+                                            min="0"
+                                            max="10000"
+                                            class="flex-1"
+                                        />
                                     </div>
                                     <div class="field-row">
                                         <label class="field-label">{{
                                             t('boardSettings.y')
                                         }}</label>
-                                        <NumberInput v-model="form.y" class="flex-1" />
+                                        <NumberInput
+                                            v-model="form.y"
+                                            min="0"
+                                            max="10000"
+                                            class="flex-1"
+                                        />
                                     </div>
                                     <div class="field-row">
                                         <label class="field-label">{{
                                             t('boardSettings.endX')
                                         }}</label>
-                                        <NumberInput v-model="form.x2" class="flex-1" />
+                                        <NumberInput
+                                            v-model="form.x2"
+                                            min="0"
+                                            max="10000"
+                                            class="flex-1"
+                                        />
                                     </div>
                                     <div class="field-row">
                                         <label class="field-label">{{
                                             t('boardSettings.y')
                                         }}</label>
-                                        <NumberInput v-model="form.y2" class="flex-1" />
+                                        <NumberInput
+                                            v-model="form.y2"
+                                            min="0"
+                                            max="10000"
+                                            class="flex-1"
+                                        />
                                     </div>
                                 </template>
                             </div>
@@ -690,13 +710,23 @@
                                     <label class="text-sm text-[var(--text-muted)] shrink-0">{{
                                         t('boardSettings.x')
                                     }}</label>
-                                    <NumberInput v-model="form.x" class="flex-1" />
+                                    <NumberInput
+                                        v-model="form.x"
+                                        min="0"
+                                        max="10000"
+                                        class="flex-1"
+                                    />
                                 </div>
                                 <div class="flex items-center gap-[8px]">
                                     <label class="text-sm text-[var(--text-muted)] shrink-0">{{
                                         t('boardSettings.y')
                                     }}</label>
-                                    <NumberInput v-model="form.y" class="flex-1" />
+                                    <NumberInput
+                                        v-model="form.y"
+                                        min="0"
+                                        max="10000"
+                                        class="flex-1"
+                                    />
                                 </div>
                             </template>
                             <div class="flex items-center gap-[8px]">
