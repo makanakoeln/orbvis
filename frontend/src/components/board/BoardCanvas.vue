@@ -73,6 +73,7 @@
             v-for="obj in nonLineObjects"
             :key="obj.id"
             class="absolute"
+            :data-object-id="obj.id"
             :style="objectWrapperStyle(obj)"
             @pointerdown="onObjectPointerDown($event, obj)"
             @dragstart.prevent
@@ -560,7 +561,6 @@ function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
     _didMove.value = false;
     _dragId.value = obj.id;
     localDragPositions[obj.id] = { x: obj.x, y: obj.y };
-    if (props.editMode) emit('object-click', obj); // select on pointerdown (no event = no action bar)
 }
 
 function onGraphResizeStart(event: PointerEvent, obj: BoardObjectType) {

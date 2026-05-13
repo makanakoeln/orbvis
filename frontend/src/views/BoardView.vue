@@ -623,6 +623,7 @@
                     enter-active-class="transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-bottom-right"
                     leave-to-class="opacity-0 scale-y-75 scale-x-95 translate-y-4"
                     leave-active-class="transition-all duration-200 ease-[cubic-bezier(0.4,0,1,1)] origin-bottom-right"
+                    @after-leave="editor.resetDraft()"
                 >
                     <div
                         v-if="editor.editMode.value && !!editor.draft.type"
@@ -641,90 +642,7 @@
                     </div>
                 </Transition>
 
-                <!-- Object action bar (appears when object selected in edit mode) -->
-                <Transition
-                    enter-from-class="opacity-0 translate-y-1 scale-95"
-                    enter-active-class="transition-all duration-150 ease-out"
-                    leave-to-class="opacity-0 translate-y-1 scale-95"
-                    leave-active-class="transition-all duration-100 ease-in"
-                >
-                    <div
-                        v-if="
-                            editor.editMode.value &&
-                            editor.selectedObjectId.value &&
-                            selectedObject &&
-                            !isDragging
-                        "
-                        class="flex items-center bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/40 backdrop-blur-md"
-                        style="gap: 3px; padding: 4px 6px"
-                    >
-                        <span
-                            class="text-[10px] font-bold text-[var(--text-muted)] capitalize px-[4px]"
-                            >{{ selectedObject.type }}</span
-                        >
-                        <div
-                            class="bg-[var(--border)]"
-                            style="width: 1px; height: 14px; margin: 0 1px"
-                        />
-                        <button
-                            title="Edit properties"
-                            class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--color-corporate-green-40)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
-                            @click="openPropsModal(selectedObject!)"
-                        >
-                            <svg
-                                style="width: 14px; height: 14px"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="2"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"
-                                />
-                            </svg>
-                        </button>
-                        <button
-                            title="Duplicate"
-                            class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                            @click="editor.duplicateSelected()"
-                        >
-                            <svg
-                                style="width: 14px; height: 14px"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="2"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
-                                />
-                            </svg>
-                        </button>
-                        <button
-                            title="Delete"
-                            class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
-                            @click="deleteTargetObject = selectedObject"
-                        >
-                            <svg
-                                style="width: 14px; height: 14px"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="2"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                                />
-                            </svg>
-                        </button>
-                    </div>
-                </Transition>
+                <!-- Action bar moved out — now anchored to selected object via separate Teleport -->
 
                 <!-- FAB: Add object (with type picker popover) -->
                 <Transition
@@ -846,6 +764,95 @@
                     </svg>
                 </button>
             </div>
+        </Teleport>
+
+        <!-- Action bar anchored to selected object (edit mode) -->
+        <Teleport to="body">
+            <Transition
+                enter-from-class="opacity-0 translate-y-1 scale-95"
+                enter-active-class="transition-all duration-150 ease-out"
+                leave-to-class="opacity-0 translate-y-1 scale-95"
+                leave-active-class="transition-all duration-100 ease-in"
+            >
+                <div
+                    v-if="
+                        editor.editMode.value &&
+                        editor.selectedObjectId.value &&
+                        selectedObject &&
+                        !isDragging &&
+                        actionBarStyle
+                    "
+                    class="fixed z-40 flex items-center bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/40 backdrop-blur-md"
+                    style="gap: 3px; padding: 4px 6px"
+                    :style="actionBarStyle"
+                >
+                    <span
+                        class="text-[10px] font-bold text-[var(--text-muted)] capitalize px-[4px]"
+                        >{{ selectedObject!.type }}</span
+                    >
+                    <div
+                        class="bg-[var(--border)]"
+                        style="width: 1px; height: 14px; margin: 0 1px"
+                    />
+                    <button
+                        title="Edit properties"
+                        class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--color-corporate-green-40)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                        @click="openPropsModal(selectedObject!)"
+                    >
+                        <svg
+                            style="width: 14px; height: 14px"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"
+                            />
+                        </svg>
+                    </button>
+                    <button
+                        title="Duplicate"
+                        class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+                        @click="editor.duplicateSelected()"
+                    >
+                        <svg
+                            style="width: 14px; height: 14px"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
+                            />
+                        </svg>
+                    </button>
+                    <button
+                        title="Delete"
+                        class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
+                        @click="deleteTargetObject = selectedObject"
+                    >
+                        <svg
+                            style="width: 14px; height: 14px"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                            />
+                        </svg>
+                    </button>
+                </div>
+            </Transition>
         </Teleport>
 
         <!-- Services-layout toggle (Flow Board only). Hidden during triage. -->
@@ -1069,8 +1076,8 @@
 </template>
 
 <script setup lang="ts">
-import { onClickOutside } from '@vueuse/core';
-import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue';
+import { onClickOutside, useElementBounding, useEventListener } from '@vueuse/core';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -1258,6 +1265,40 @@ const editor = useBoardEditor(boardName, reloadBoard);
 const addPickerOpen = ref(false);
 const addPickerWrapperRef = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
+
+// ---- Action bar position anchored to selected object ----
+const selectedObjectEl = ref<HTMLElement | null>(null);
+const selectedRect = useElementBounding(selectedObjectEl);
+
+watch(
+    () => editor.selectedObjectId.value,
+    async (id) => {
+        await nextTick();
+        selectedObjectEl.value = id
+            ? (document.querySelector(`[data-object-id="${CSS.escape(id)}"]`) as HTMLElement | null)
+            : null;
+    },
+    { immediate: true },
+);
+
+useEventListener(window, 'resize', () => selectedRect.update());
+
+const actionBarStyle = computed(() => {
+    const top = selectedRect.top.value;
+    const left = selectedRect.left.value;
+    const width = selectedRect.width.value;
+    const bottom = selectedRect.bottom.value;
+    if (!selectedObjectEl.value || width === 0) return null;
+    const barHeightApprox = 36;
+    const gap = 8;
+    const aboveTop = top - barHeightApprox - gap;
+    const useAbove = aboveTop >= 8;
+    return {
+        top: `${useAbove ? aboveTop : bottom + gap}px`,
+        left: `${left + width / 2}px`,
+        transform: 'translateX(-50%)',
+    };
+});
 
 const placeableTypeOptions = computed(() => placeableObjectTypes(t));
 
