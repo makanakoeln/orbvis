@@ -781,6 +781,7 @@
                         selectedObject &&
                         !isDragging &&
                         !propsModalObject &&
+                        !editor.draft.type &&
                         actionBarStyle
                     "
                     class="fixed z-40 flex items-center bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/40 backdrop-blur-md"
@@ -983,7 +984,7 @@
             :x="worldmapCtxMenu.x"
             :y="worldmapCtxMenu.y"
             :checkmk-url="checkmkUrl"
-            :show-edit="auth.isAdmin"
+            :show-edit="auth.isAdmin && !editor.editMode.value"
             :template="
                 resolveTemplate(
                     worldmapCtxMenu.object.context_template,

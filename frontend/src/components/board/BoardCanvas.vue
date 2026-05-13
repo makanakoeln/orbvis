@@ -147,7 +147,7 @@
             :x="contextMenu.x"
             :y="contextMenu.y"
             :checkmk-url="checkmkUrl"
-            :show-edit="isAdmin"
+            :show-edit="isAdmin && !editMode"
             :template="
                 resolveTemplate(
                     contextMenu.object.context_template,
