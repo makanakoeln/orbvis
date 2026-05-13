@@ -626,7 +626,7 @@ function onHostChange() {
     fetchAddServices(props.draft.host_name);
 }
 
-watch(() => props.draft.type, onTypeChange);
+watch(() => props.draft.type, onTypeChange, { immediate: true });
 
 watch(
     () => props.draft.host_name,
