@@ -12,12 +12,12 @@
             v-if="object"
             class="detail-drawer"
             :class="`detail-drawer--${severityKind}`"
+            :style="{
+                '--detail-drawer-accent': state ? stateColor(state.state) : 'var(--border)',
+            }"
             @click.stop
         >
-            <div
-                class="detail-drawer__severity-bar"
-                :style="{ background: state ? stateColor(state.state) : 'var(--border)' }"
-            />
+            <div class="detail-drawer__severity-bar" />
 
             <header class="detail-drawer__header">
                 <div class="detail-drawer__title">
@@ -1903,11 +1903,13 @@ useMutationObserver(
     flex-direction: column;
     flex: 1 1 auto;
     min-height: 0;
+    border-left: 4px solid var(--detail-drawer-accent, var(--border));
 }
 
 .detail-drawer__severity-bar {
     height: 3px;
     flex-shrink: 0;
+    background: var(--detail-drawer-accent, var(--border));
 }
 
 .detail-drawer__header {

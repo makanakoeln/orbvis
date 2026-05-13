@@ -142,10 +142,13 @@ html {
 }
 
 /* OrbVis-Aliase auf body, nicht :root: CMK setzt --default-bg-color erst auf body[data-theme=…].
-   --bg ist die Seiten-Hintergrundfarbe (sehr dunkel), --default-bg-color die elevation für CMK-Panels
-   (Slideouts, Popups). Sie *müssen* unterscheidbar sein, damit CmkSlideIn sich abhebt. */
+   Elevation-Hierarchie (CMK-Konvention dunkles Theme):
+     --bg (page)            = --ux-theme-1   (dunkelster Surface-Ton, nicht pitch-black)
+     --default-bg-color     = --ux-theme-2   (Slideouts, Popups — elevation gegen page)
+     --bg-surface (cards)   = --ux-theme-3   (Board-Cards, Tabellen)
+   --default-bg-color MUSS unterscheidbar von --bg sein, damit CmkSlideIn sich abhebt. */
 body {
-    --bg: #09090b;
+    --bg: var(--ux-theme-1, #1c2228);
     --bg-surface: var(--ux-theme-3, #18181b);
     --bg-input: var(--default-form-element-bg-color, #27272a);
     --bg-glass: rgb(24 24 27 / 92%);
