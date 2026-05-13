@@ -28,6 +28,22 @@
                     {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.dragObjects') }}
                 </div>
             </div>
+            <button
+                class="shrink-0 rounded-md p-[4px] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+                :title="t('common.close')"
+                :aria-label="t('common.close')"
+                @click="$emit('cancel-add')"
+            >
+                <svg
+                    style="width: 14px; height: 14px"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
 
         <!-- Add Object form -->
@@ -360,7 +376,7 @@ const props = defineProps<{
 defineEmits<{
     'start-placing': [];
     'update:snapGrid': [value: number];
-    'close-edit-mode': [];
+    'cancel-add': [];
 }>();
 
 const auth = useAuthStore();

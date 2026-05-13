@@ -619,7 +619,7 @@
                     leave-active-class="transition-all duration-200 ease-[cubic-bezier(0.4,0,1,1)] origin-bottom-right"
                 >
                     <div
-                        v-if="editor.editMode.value"
+                        v-if="editor.editMode.value && !!editor.draft.type"
                         class="w-64 max-h-[calc(100vh-10rem)] flex flex-col bg-[var(--bg-surface)] backdrop-blur-xl ring-1 ring-white/8 shadow-2xl shadow-black/60 rounded-2xl"
                         data-tour="edit-panel"
                     >
@@ -630,7 +630,7 @@
                             :snap-grid="editor.snapGrid.value"
                             @start-placing="onStartPlacing()"
                             @update:snap-grid="editor.snapGrid.value = $event"
-                            @close-edit-mode="editor.toggleEditMode()"
+                            @cancel-add="editor.resetDraft()"
                         />
                     </div>
                 </Transition>

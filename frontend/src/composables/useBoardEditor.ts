@@ -504,6 +504,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         updateObjectProperties,
         placing,
         draft,
+        resetDraft,
         startPlacing,
         placeAt,
         placeAtLatLng,
