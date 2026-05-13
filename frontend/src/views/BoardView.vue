@@ -1357,6 +1357,7 @@ function onObjectContextMenu(obj: BoardObject, anchor?: AnchorRect | null) {
 }
 
 function onObjectDblclick(obj: BoardObject) {
+    if (!editor.editMode.value) return;
     const el = document.querySelector(
         `[data-object-id="${CSS.escape(obj.id)}"]`,
     ) as HTMLElement | null;
