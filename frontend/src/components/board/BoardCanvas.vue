@@ -254,6 +254,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+    'object-drag-start': [id: string];
     'object-drag-end': [id: string, x: number, y: number];
     'object-click': [obj: BoardObjectType, event?: MouseEvent];
     'object-contextmenu': [
@@ -607,6 +608,7 @@ function onCanvasPointerMove(event: PointerEvent) {
         (Math.abs(x - _dragInitX.value) > 4 || Math.abs(y - _dragInitY.value) > 4)
     ) {
         _didMove.value = true;
+        emit('object-drag-start', id);
     }
     localDragPositions[id] = { x, y };
 }

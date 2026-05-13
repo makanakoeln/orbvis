@@ -354,7 +354,7 @@ const { t } = useI18n();
 
 const objectTypeOptions = computed(() => ({
     type: 'fixed' as const,
-    suggestions: [{ name: '', title: t('boardSettings.selectType') }, ...placeableObjectTypes(t)],
+    suggestions: placeableObjectTypes(t),
 }));
 const snapGridOptions = computed(() => ({
     type: 'fixed' as const,

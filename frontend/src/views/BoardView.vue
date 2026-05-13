@@ -500,7 +500,13 @@
                         :icon-size-override="undefined"
                         :snap-grid="editor.snapGrid.value"
                         :filter-needle="boardFilterNeedle"
-                        @object-drag-end="onObjectDragEnd"
+                        @object-drag-start="isDragging = true"
+                        @object-drag-end="
+                            (id, x, y) => {
+                                isDragging = false;
+                                onObjectDragEnd(id, x, y);
+                            }
+                        "
                         @object-click="onObjectClick"
                         @object-contextmenu="onObjectContextMenu"
                         @object-dblclick="onObjectDblclick"
@@ -644,7 +650,10 @@
                 >
                     <div
                         v-if="
-                            editor.editMode.value && editor.selectedObjectId.value && selectedObject
+                            editor.editMode.value &&
+                            editor.selectedObjectId.value &&
+                            selectedObject &&
+                            !isDragging
                         "
                         class="flex items-center bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/40 backdrop-blur-md"
                         style="gap: 3px; padding: 4px 6px"
@@ -1248,6 +1257,7 @@ const editor = useBoardEditor(boardName, reloadBoard);
 
 const addPickerOpen = ref(false);
 const addPickerWrapperRef = ref<HTMLElement | null>(null);
+const isDragging = ref(false);
 
 const placeableTypeOptions = computed(() => placeableObjectTypes(t));
 
