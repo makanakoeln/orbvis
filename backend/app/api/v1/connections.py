@@ -761,7 +761,7 @@ class ServiceActionRequest(BaseModel):
 async def host_action(
     connection_id: str,
     body: HostActionRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_admin),
 ) -> None:
     """Execute a livestatus command on a host (force-check, notifications, ...)."""
     template = _HOST_COMMANDS.get(body.action)
@@ -785,7 +785,7 @@ async def host_action(
 async def service_action(
     connection_id: str,
     body: ServiceActionRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_admin),
 ) -> None:
     """Execute a livestatus command on a service (force-check, notifications, ...)."""
     template = _SERVICE_COMMANDS.get(body.action)

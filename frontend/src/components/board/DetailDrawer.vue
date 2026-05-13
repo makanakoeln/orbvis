@@ -274,7 +274,7 @@
                                         ⚠ {{ t('board.detailDrawer.aggregationStale') }}
                                     </div>
                                     <button
-                                        v-if="aggregationProblemLeaves.length"
+                                        v-if="aggregationProblemLeaves.length && canCommand"
                                         type="button"
                                         class="detail-drawer__action-btn"
                                         @click="onBulkAcknowledgeClick"
@@ -724,7 +724,7 @@
                 </h4>
                 <div class="detail-drawer__actions-grid">
                     <CmkButton
-                        v-if="!state?.acknowledged && (isProblematic || isGroup)"
+                        v-if="!state?.acknowledged && (isProblematic || isGroup) && canCommand"
                         variant="success"
                         class="detail-drawer__action detail-drawer__action--primary"
                         :title="
@@ -743,7 +743,7 @@
                         }}
                     </CmkButton>
                     <CmkButton
-                        v-if="state?.acknowledged"
+                        v-if="state?.acknowledged && canCommand"
                         variant="warning"
                         class="detail-drawer__action"
                         @click="emit('remove-ack')"
@@ -751,6 +751,7 @@
                         {{ t('board.detailDrawer.removeAckLabel') }}
                     </CmkButton>
                     <CmkButton
+                        v-if="canCommand"
                         variant="optional"
                         class="detail-drawer__action"
                         @click="emit('force-check')"
@@ -758,7 +759,7 @@
                         {{ t('board.detailDrawer.forceCheckLabel') }}
                     </CmkButton>
                     <CmkButton
-                        v-if="!state?.in_downtime"
+                        v-if="!state?.in_downtime && canCommand"
                         variant="optional"
                         class="detail-drawer__action"
                         :title="
@@ -777,7 +778,7 @@
                         }}
                     </CmkButton>
                     <CmkButton
-                        v-if="state?.in_downtime"
+                        v-if="state?.in_downtime && canCommand"
                         variant="warning"
                         class="detail-drawer__action"
                         @click="emit('remove-downtime')"
@@ -785,14 +786,14 @@
                         {{ t('board.detailDrawer.removeDowntimeLabel') }}
                     </CmkButton>
                     <CmkButton
-                        v-if="!isAggregation"
+                        v-if="!isAggregation && canCommand"
                         variant="optional"
                         class="detail-drawer__action"
                         @click="emit('add-comment')"
                     >
                         {{ t('board.detailDrawer.addCommentLabel') }}
                     </CmkButton>
-                    <details class="detail-drawer__more">
+                    <details v-if="canCommand" class="detail-drawer__more">
                         <summary
                             class="detail-drawer__btn detail-drawer__btn--more"
                             :title="t('board.detailDrawer.moreActions')"
@@ -955,6 +956,11 @@ function closeMoreMenu(e: Event): void {
 }
 
 const auth = useAuthStore();
+
+// Operational commands (ack, downtime, force-check, comment, notifications) are
+// admin-only. Backend endpoints enforce this too; the UI mirrors the gate so
+// non-admin operators don't see buttons that would 403 on click.
+const canCommand = computed(() => auth.isAdmin);
 
 // On-demand details kept separate from the streamed ObjectState — long_output,
 // comments, downtimes and topology rarely change but can be many KB each, so
