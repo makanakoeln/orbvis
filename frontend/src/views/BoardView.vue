@@ -4,7 +4,7 @@
         <div
             v-if="!isKiosk"
             class="bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center justify-between shrink-0 z-30"
-            style="padding: 0 16px; height: 36px"
+            style="padding: 0 var(--dimension-6); height: 36px"
         >
             <!-- Left: back link (Checkmk/SSO mode) + board name -->
             <div class="flex items-center gap-[10px] min-w-0">

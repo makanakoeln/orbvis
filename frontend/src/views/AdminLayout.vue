@@ -4,12 +4,12 @@
         <nav
             v-if="auth.ssoActive || auth.isCheckmkDeployment"
             class="shrink-0 bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center gap-[4px]"
-            style="padding: 0 16px; height: 40px"
+            style="padding: 0 var(--dimension-6); height: 40px"
         >
             <router-link
                 to="/"
                 class="flex items-center gap-[6px] text-[13px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors border-r border-[var(--border)]"
-                style="padding-right: 10px; margin-right: 8px"
+                style="padding-right: 10px; margin-right: var(--dimension-4)"
             >
                 <svg
                     style="width: 14px; height: 14px; flex-shrink: 0"
@@ -41,7 +41,7 @@
                 {{ item.label }}
             </router-link>
         </nav>
-        <main class="flex-1 overflow-auto" style="padding: 20px 24px">
+        <main class="flex-1 overflow-auto" style="padding: var(--dimension-7) var(--dimension-8)">
             <router-view />
         </main>
     </div>

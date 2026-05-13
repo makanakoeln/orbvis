@@ -1,6 +1,6 @@
 <template>
     <div class="max-w-4xl">
-        <div class="flex justify-between items-center" style="margin-bottom: 16px">
+        <div class="flex justify-between items-center" style="margin-bottom: var(--dimension-6)">
             <div>
                 <CmkHeading type="h2">
                     {{ t('admin.users') }}
@@ -15,7 +15,7 @@
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                     stroke-width="2.5"
-                    style="width: 13px; height: 13px; margin-right: 4px"
+                    style="width: 13px; height: 13px; margin-right: var(--dimension-3)"
                 >
                     <path
                         stroke-linecap="round"

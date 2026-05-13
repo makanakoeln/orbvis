@@ -1,6 +1,6 @@
 <template>
     <div class="max-w-5xl">
-        <div class="flex justify-between items-center" style="margin-bottom: 16px">
+        <div class="flex justify-between items-center" style="margin-bottom: var(--dimension-6)">
             <div>
                 <CmkHeading type="h2">
                     {{ t('admin.connectionsTitle') }}
@@ -15,7 +15,7 @@
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                     stroke-width="2.5"
-                    style="width: 13px; height: 13px; margin-right: 4px"
+                    style="width: 13px; height: 13px; margin-right: var(--dimension-3)"
                 >
                     <path
                         stroke-linecap="round"
@@ -448,7 +448,7 @@
                 <div
                     v-if="dialogTest.ran"
                     class="flex items-center gap-[8px] rounded-lg ring-1 text-sm"
-                    style="padding: 8px 12px"
+                    style="padding: var(--dimension-4) 12px"
                     :class="
                         dialogTest.ok
                             ? 'bg-[var(--color-corporate-green-50)]/8 ring-[var(--color-corporate-green-50)]/20 text-[var(--color-corporate-green-50)]'

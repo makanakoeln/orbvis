@@ -1,10 +1,13 @@
 <template>
     <div class="flex-1 min-h-0 overflow-y-auto bg-[var(--bg)]">
-        <main style="padding: 20px 24px 40px">
-            <div class="flex items-center" style="max-width: 960px; margin: 0 auto 20px; gap: 8px">
+        <main style="padding: var(--dimension-7) 24px 40px">
+            <div
+                class="flex items-center"
+                style="max-width: 960px; margin: 0 auto 20px; gap: var(--dimension-4)"
+            >
                 <h2
                     class="text-base font-semibold text-[var(--text)] tracking-tight"
-                    style="margin-right: 8px"
+                    style="margin-right: var(--dimension-4)"
                 >
                     {{ t('home.title') }}
                 </h2>
@@ -28,7 +31,7 @@
                         :placeholder="t('home.search')"
                         class="w-full bg-[var(--bg-input)] ring-1 ring-[var(--default-form-element-border-color)]/50 rounded text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
                         style="font-size: 12px; padding: 5px 8px 5px 26px"
-                        :style="searchQuery ? 'padding-right: 24px' : ''"
+                        :style="searchQuery ? 'padding-right: var(--dimension-8)' : ''"
                     />
                     <button
                         v-if="searchQuery"
@@ -80,7 +83,7 @@
             <div
                 v-if="boardsStore.loading"
                 class="flex items-center text-[var(--text-muted)] text-sm justify-center"
-                style="gap: 8px; padding: 48px 0"
+                style="gap: var(--dimension-4); padding: 48px 0"
             >
                 <svg
                     class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
@@ -108,7 +111,7 @@
             <div
                 v-else-if="boardsStore.error"
                 class="flex items-center bg-[var(--color-light-red-50)]/8 ring-1 ring-[var(--color-light-red-50)]/20 rounded-xl text-[var(--color-light-red-40)] text-sm"
-                style="gap: 6px; padding: 8px 12px"
+                style="gap: 6px; padding: var(--dimension-4) 12px"
             >
                 {{ boardsStore.error }}
             </div>
@@ -121,7 +124,7 @@
             >
                 <div
                     class="rounded-xl bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] flex items-center justify-center"
-                    style="width: 40px; height: 40px; margin-bottom: 16px"
+                    style="width: 40px; height: 40px; margin-bottom: var(--dimension-6)"
                 >
                     <svg
                         class="text-[var(--text-muted)]"
@@ -154,7 +157,7 @@
                 :disabled="!isDragEnabled"
                 data-tour="boards-grid"
                 class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-                style="max-width: 960px; margin: 0 auto; gap: 16px"
+                style="max-width: 960px; margin: 0 auto; gap: var(--dimension-6)"
                 @end="onDragEnd"
             >
                 <p
@@ -904,7 +907,7 @@
                             >
                                 <span
                                     class="rounded-md font-medium backdrop-blur-sm"
-                                    style="font-size: 11px; padding: 2px 6px"
+                                    style="font-size: 11px; padding: var(--dimension-2) 6px"
                                     :class="
                                         map.view.type === 'worldmap'
                                             ? 'bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/30'
@@ -925,7 +928,7 @@
                                 <span
                                     v-if="map.show_in_lists === false && auth.isAdmin"
                                     class="text-[10px] rounded-md font-medium bg-[var(--bg-surface)]/80 text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60 backdrop-blur-sm"
-                                    style="padding: 2px 5px"
+                                    style="padding: var(--dimension-2) 5px"
                                     :title="t('home.hiddenBoard')"
                                 >
                                     {{ t('home.hidden') }}
@@ -933,7 +936,7 @@
                                 <span
                                     v-if="map.rotation_interval > 0"
                                     class="rounded-full font-medium bg-[var(--color-warning)]/20 text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/30 backdrop-blur-sm"
-                                    style="font-size: 11px; padding: 2px 6px"
+                                    style="font-size: 11px; padding: var(--dimension-2) 6px"
                                     :title="
                                         t('home.rotationBadgeTitle', { n: map.rotation_interval })
                                     "
@@ -991,7 +994,7 @@
                     <div
                         v-if="auth.isAdmin"
                         class="flex items-center justify-end border-t border-[var(--border)] max-h-0 overflow-hidden group-hover:max-h-[36px] group-focus-within:max-h-[36px] transition-[max-height] duration-150"
-                        style="gap: 2px; padding: 0 6px"
+                        style="gap: var(--dimension-2); padding: 0 6px"
                     >
                         <button
                             v-if="!map.readonly"

@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="flex justify-between items-center" style="margin-bottom: 16px">
+        <div class="flex justify-between items-center" style="margin-bottom: var(--dimension-6)">
             <div>
                 <CmkHeading type="h2">
                     {{ t('admin.icons') }}
@@ -11,7 +11,7 @@
             </div>
             <CmkButton variant="primary" @click="fileInputEl?.click()">
                 <svg
-                    style="width: 13px; height: 13px; margin-right: 4px"
+                    style="width: 13px; height: 13px; margin-right: var(--dimension-3)"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -57,7 +57,7 @@
         >
             <svg
                 class="mx-auto text-[var(--text-muted)]"
-                style="width: 32px; height: 32px; margin-bottom: 8px"
+                style="width: 32px; height: 32px; margin-bottom: var(--dimension-4)"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -77,7 +77,7 @@
                 v-for="icon in icons"
                 :key="icon.name"
                 class="group relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl flex flex-col items-center gap-[6px] hover:ring-[var(--default-form-element-border-color)] transition-all"
-                style="padding: 8px"
+                style="padding: var(--dimension-4)"
             >
                 <img
                     :src="`${BASE_URL}${icon.url}`"

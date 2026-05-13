@@ -1,6 +1,6 @@
 <template>
     <div class="max-w-2xl">
-        <div style="margin-bottom: 16px">
+        <div style="margin-bottom: var(--dimension-6)">
             <CmkHeading type="h2">
                 {{ t('settings.title') }}
             </CmkHeading>
@@ -89,7 +89,10 @@
                                     >{{ t('boardSettings.z') }}</span
                                 >
                                 <NumberInput v-model="form.z" min="1" max="999" class="w-[80px]" />
-                                <p class="text-sm text-[var(--text-muted)]" style="margin-top: 4px">
+                                <p
+                                    class="text-sm text-[var(--text-muted)]"
+                                    style="margin-top: var(--dimension-3)"
+                                >
                                     {{ t('settings.zHint') }}
                                 </p>
                             </label>

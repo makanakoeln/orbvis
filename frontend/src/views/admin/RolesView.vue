@@ -1,6 +1,6 @@
 <template>
     <div class="max-w-3xl">
-        <div class="flex justify-between items-center" style="margin-bottom: 16px">
+        <div class="flex justify-between items-center" style="margin-bottom: var(--dimension-6)">
             <div>
                 <CmkHeading type="h2">
                     {{ t('admin.rolesAndPermissions') }}
@@ -15,7 +15,7 @@
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                     stroke-width="2.5"
-                    style="width: 13px; height: 13px; margin-right: 4px"
+                    style="width: 13px; height: 13px; margin-right: var(--dimension-3)"
                 >
                     <path
                         stroke-linecap="round"
@@ -36,7 +36,7 @@
                 v-for="role in roles"
                 :key="role.role_id"
                 class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl hover:ring-[var(--border)] transition-all"
-                style="padding: 12px"
+                style="padding: var(--dimension-5)"
             >
                 <div class="flex justify-between items-start gap-[12px]">
                     <div class="min-w-0 flex-1">
@@ -52,7 +52,7 @@
                         <div
                             v-if="role.permissions.length"
                             class="flex flex-wrap gap-[4px]"
-                            style="margin-top: 8px"
+                            style="margin-top: var(--dimension-4)"
                         >
                             <span
                                 v-for="perm in role.permissions"

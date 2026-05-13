@@ -150,7 +150,7 @@
                                  automap with lat/lng. -->
                         <div
                             class="space-y-[4px] border-t border-[var(--border)]"
-                            style="padding-top: 8px"
+                            style="padding-top: var(--dimension-4)"
                         >
                             <CmkLabel>{{ t('board.autoSource') }}</CmkLabel>
                             <CmkDropdown
@@ -274,7 +274,7 @@
                     <!-- Templates -->
                     <div
                         class="space-y-[4px] border-t border-[var(--border)]"
-                        style="padding-top: 8px"
+                        style="padding-top: var(--dimension-4)"
                     >
                         <label
                             class="text-sm font-medium text-[var(--text-muted)] block mt-[6px]"
@@ -302,7 +302,10 @@
                     </div>
 
                     <!-- Click action -->
-                    <div class="border-t border-[var(--border)]" style="padding-top: 8px">
+                    <div
+                        class="border-t border-[var(--border)]"
+                        style="padding-top: var(--dimension-4)"
+                    >
                         <label
                             class="text-sm font-medium text-[var(--text-muted)] block mb-[6px]"
                             >{{ t('board.clickAction') }}</label
@@ -337,7 +340,7 @@
                     <div
                         v-if="form.map_type === 'static'"
                         class="space-y-[4px] border-t border-[var(--border)]"
-                        style="padding-top: 8px"
+                        style="padding-top: var(--dimension-4)"
                     >
                         <label
                             class="text-sm font-medium text-[var(--text-muted)] block mt-[6px]"
@@ -393,7 +396,7 @@
 
                         <label
                             class="text-sm font-medium text-[var(--text-muted)] block mt-[10px]"
-                            style="margin-top: 12px"
+                            style="margin-top: var(--dimension-5)"
                             >{{ t('board.backgroundColor') }}</label
                         >
                         <ColorInput
@@ -419,19 +422,19 @@
                                 <tr class="border-b border-[var(--border)]">
                                     <th
                                         class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                                        style="padding: 4px 8px"
+                                        style="padding: var(--dimension-3) var(--dimension-4)"
                                     >
                                         {{ t('admin.role') }}
                                     </th>
                                     <th
                                         class="text-center text-sm font-semibold text-[var(--text-muted)] tracking-wider w-20"
-                                        style="padding: 4px 8px"
+                                        style="padding: var(--dimension-3) var(--dimension-4)"
                                     >
                                         {{ t('common.view') }}
                                     </th>
                                     <th
                                         class="text-center text-sm font-semibold text-[var(--text-muted)] tracking-wider w-20"
-                                        style="padding: 4px 8px"
+                                        style="padding: var(--dimension-3) var(--dimension-4)"
                                     >
                                         {{ t('common.edit') }}
                                     </th>
@@ -445,11 +448,14 @@
                                 >
                                     <td
                                         class="font-medium text-[var(--text)]"
-                                        style="padding: 4px 8px"
+                                        style="padding: var(--dimension-3) var(--dimension-4)"
                                     >
                                         {{ role.name }}
                                     </td>
-                                    <td class="text-center" style="padding: 4px 8px">
+                                    <td
+                                        class="text-center"
+                                        style="padding: var(--dimension-3) var(--dimension-4)"
+                                    >
                                         <div class="flex items-center justify-center gap-[3px]">
                                             <CmkCheckbox
                                                 :model-value="hasDraftPerm(role, 'view')"
@@ -464,7 +470,10 @@
                                             >
                                         </div>
                                     </td>
-                                    <td class="text-center" style="padding: 4px 8px">
+                                    <td
+                                        class="text-center"
+                                        style="padding: var(--dimension-3) var(--dimension-4)"
+                                    >
                                         <div class="flex items-center justify-center gap-[3px]">
                                             <CmkCheckbox
                                                 :model-value="hasDraftPerm(role, 'edit')"

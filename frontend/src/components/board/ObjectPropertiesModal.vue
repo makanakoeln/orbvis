@@ -1101,7 +1101,7 @@
                 <!-- Footer -->
                 <div
                     class="flex items-center justify-between shrink-0 border-t border-[var(--border)]"
-                    style="gap: 8px; padding: 10px 16px"
+                    style="gap: var(--dimension-4); padding: 10px 16px"
                 >
                     <div>
                         <CmkButton variant="danger" @click="confirmDelete = true">{{
@@ -1119,7 +1119,7 @@
                             @cancel="confirmDelete = false"
                         />
                     </div>
-                    <div class="flex items-center" style="gap: 8px">
+                    <div class="flex items-center" style="gap: var(--dimension-4)">
                         <p v-if="saveError" class="text-[var(--color-light-red-40)] text-sm">
                             {{ saveError }}
                         </p>
