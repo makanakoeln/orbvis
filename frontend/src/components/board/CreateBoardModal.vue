@@ -23,11 +23,7 @@
                     v-model="form.alias"
                     placeholder="My Board"
                     field-size="FILL"
-                    @update:model-value="
-                        () => {
-                            aliasTouched = true;
-                        }
-                    "
+                    @update:model-value="onAliasInput"
                 />
             </div>
             <div class="create-board__field">
@@ -120,6 +116,7 @@ const settingsStore = useSettingsStore();
 
 const form = ref({ name: '', alias: '', connection_id: '', view_type: 'static' });
 const aliasTouched = ref(false);
+const nameTouched = ref(false);
 
 const connectionOptions = computed(() => ({
     type: 'fixed' as const,
@@ -134,10 +131,20 @@ const _NAME_RE = /^[a-zA-Z0-9_-]+$/;
 const nameError = ref('');
 
 function onNameInput(e: Event) {
+    nameTouched.value = true;
     form.value.name = sanitizeBoardName((e.target as HTMLInputElement).value);
     nameError.value = _NAME_RE.test(form.value.name) ? '' : t('admin.boardIdInvalid');
     if (!aliasTouched.value) {
         form.value.alias = slugToTitleCase(form.value.name);
+    }
+}
+
+function onAliasInput() {
+    aliasTouched.value = true;
+    if (!nameTouched.value) {
+        form.value.name = sanitizeBoardName(form.value.alias).toLowerCase();
+        nameError.value =
+            form.value.name && !_NAME_RE.test(form.value.name) ? t('admin.boardIdInvalid') : '';
     }
 }
 
