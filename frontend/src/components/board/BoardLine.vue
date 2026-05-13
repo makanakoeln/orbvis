@@ -1,5 +1,5 @@
 <template>
-    <g>
+    <g :data-object-id="object.id">
         <!-- Invisible fat hit-area: always for right-click, move-cursor only in edit mode -->
         <line
             :x1="x1"
