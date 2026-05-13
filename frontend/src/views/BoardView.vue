@@ -775,7 +775,7 @@
                             :title="t('boardSettings.addObject')"
                             :aria-expanded="addPickerOpen"
                             aria-haspopup="menu"
-                            @click="addPickerOpen = !addPickerOpen"
+                            @click="onAddFabClick"
                         >
                             <svg
                                 style="width: 18px; height: 18px"
@@ -1254,6 +1254,15 @@ const placeableTypeOptions = computed(() => placeableObjectTypes(t));
 function chooseAddType(type: ObjectType) {
     editor.draft.type = type;
     addPickerOpen.value = false;
+}
+
+function onAddFabClick() {
+    if (editor.draft.type) {
+        editor.resetDraft();
+        addPickerOpen.value = true;
+    } else {
+        addPickerOpen.value = !addPickerOpen.value;
+    }
 }
 
 onClickOutside(addPickerWrapperRef, () => {

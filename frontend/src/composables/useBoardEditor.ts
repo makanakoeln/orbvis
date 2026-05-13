@@ -51,6 +51,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         if (!editMode.value) {
             selectedObjectId.value = null;
             placing.value = false;
+            resetDraft();
         }
     }
 
