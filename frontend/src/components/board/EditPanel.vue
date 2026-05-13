@@ -93,6 +93,7 @@
                     v-model="draft.group_name"
                     :suggestions="addObjects"
                     :loading="loadingAddObjects"
+                    :disabled="!loadingAddObjects && addObjects.length === 0"
                     :placeholder="t('boardSettings.groupName')"
                     :empty-text="
                         t(
