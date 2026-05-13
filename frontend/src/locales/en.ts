@@ -72,6 +72,8 @@ export default {
         saveOrDiscard: 'Save or discard before leaving edit mode.',
         saveAndExit: 'Save & exit',
         deleteObject: 'Delete object',
+        deleteObjectTitle: 'Delete {type} "{name}"?',
+        deleteObjectTitleUnnamed: 'Delete {type}?',
         cannotBeUndone: 'This cannot be undone.',
         uploadedSuccessfully: 'Uploaded successfully',
         settingsTitle: 'Board Settings',

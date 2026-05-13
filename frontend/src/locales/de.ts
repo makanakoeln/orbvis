@@ -73,6 +73,8 @@ export default {
         saveOrDiscard: 'Bitte speichern oder verwerfen Sie die Änderungen vor dem Verlassen.',
         saveAndExit: 'Speichern & beenden',
         deleteObject: 'Objekt löschen',
+        deleteObjectTitle: '{type} „{name}" löschen?',
+        deleteObjectTitleUnnamed: '{type} löschen?',
         cannotBeUndone: 'Dies kann nicht rückgängig gemacht werden.',
         uploadedSuccessfully: 'Erfolgreich hochgeladen',
         settingsTitle: 'Board-Einstellungen',

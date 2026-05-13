@@ -952,7 +952,7 @@
         <!-- Delete confirmation -->
         <OrbConfirmDialog
             :open="!!deleteTargetObject"
-            :title="t('board.deleteObject')"
+            :title="deleteDialogTitle"
             :message="t('board.cannotBeUndone')"
             :confirm-label="t('common.delete')"
             @confirm="confirmObjectDelete"
@@ -1120,7 +1120,7 @@ import type {
 import type { TourStep } from '@/types/tour';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { placeableObjectTypes } from '@/utils/dropdownOptions';
-import { getBoardObjectName } from '@/utils/naming';
+import { getBoardObjectIdentifier, getBoardObjectName, getObjectTypeLabel } from '@/utils/naming';
 import { resolveTemplate } from '@/utils/template';
 import CmkLoading from '@/vendor/cmk/components/CmkLoading.vue';
 
@@ -1346,6 +1346,15 @@ type AnchorRect = { left: number; top: number; right: number; bottom: number };
 const propsModalObject = ref<BoardObject | null>(null);
 const propsModalAnchor = ref<AnchorRect | null>(null);
 const deleteTargetObject = ref<BoardObject | null>(null);
+
+const deleteDialogTitle = computed(() => {
+    const obj = deleteTargetObject.value;
+    if (!obj) return t('board.deleteObject');
+    const type = getObjectTypeLabel(obj);
+    const name = obj.label?.text || getBoardObjectIdentifier(obj);
+    if (!name || name === obj.id) return t('board.deleteObjectTitleUnnamed', { type });
+    return t('board.deleteObjectTitle', { type, name });
+});
 
 function openPropsModal(obj: BoardObject, anchor?: AnchorRect | null) {
     editor.selectObject(obj.id);
