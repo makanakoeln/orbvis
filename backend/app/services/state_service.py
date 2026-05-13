@@ -429,12 +429,18 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
             logger.warning("Batch aggregation state query failed", exc_info=True)
             aggr_batch = {}
 
+        # Always fetch enough tree depth to populate the detail drawer's leaf
+        # list — even when ``expand_depth=0`` (icon stays collapsed on canvas
+        # but the drawer still needs the full leaf set for the worst-path and
+        # ack-leaves actions). The canvas renderer keys off ``expand_depth``
+        # separately and ignores deeper levels.
         # Tree-fetch deduplicated by (aggregation_id, depth) — multiple board
         # objects with the same aggregation+depth share one connection call.
+        drawer_tree_depth = 10
         unique_keys: set[tuple[str, int]] = set()
         for o in aggregation_objs:
-            if o.aggregation_id and o.expand_depth > 0:
-                unique_keys.add((o.aggregation_id, o.expand_depth))
+            if o.aggregation_id:
+                unique_keys.add((o.aggregation_id, max(o.expand_depth, drawer_tree_depth)))
         tree_keys: list[tuple[str, int]] = sorted(unique_keys)
         tree_map: dict[tuple[str, int], AggregationNode] = {}
         if tree_keys:
@@ -454,10 +460,9 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
                 if raw is not None
                 else ObjectState(object_id=obj.id, type="aggregation", state="PENDING", stale=True)
             )
-            if obj.expand_depth > 0:
-                tree = tree_map.get((obj.aggregation_id, obj.expand_depth))
-                if tree is not None:
-                    s = s.model_copy(update={"tree": tree})
+            tree = tree_map.get((obj.aggregation_id, max(obj.expand_depth, drawer_tree_depth)))
+            if tree is not None:
+                s = s.model_copy(update={"tree": tree})
             results[obj.id] = s
 
     individual = [_get_object_state(connection, obj) for obj in lines + others]

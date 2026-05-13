@@ -119,19 +119,24 @@ async def test_state_service_attaches_tree_when_expand_depth_set(mock_connection
     assert len(result.states) == 1
     assert result.states[0].tree is not None
     assert result.states[0].tree.name == "Host localhost"
-    mock_connection.get_aggregation_tree.assert_awaited_once_with("Host localhost", 2)
+    # Drawer needs the full leaf set; the fetch always pulls at least
+    # DRAWER_TREE_DEPTH levels even when expand_depth is shallower.
+    mock_connection.get_aggregation_tree.assert_awaited_once_with("Host localhost", 10)
 
 
 @pytest.mark.asyncio
-async def test_state_service_skips_tree_when_expand_depth_zero(mock_connection, monkeypatch):
+async def test_state_service_attaches_tree_when_expand_depth_zero(mock_connection, monkeypatch):
+    # Even when the icon stays collapsed (expand_depth=0), the drawer still
+    # needs leaf data for the worst-path chip and bulk-acknowledge.
     cfg = _board_with_aggregation(expand_depth=0)
+    tree = AggregationNode(name="Host localhost", node_type="bi_aggregator", state=0, children=[])
     mock_connection.get_aggregations_states = AsyncMock(return_value={})
-    mock_connection.get_aggregation_tree = AsyncMock()
+    mock_connection.get_aggregation_tree = AsyncMock(return_value=tree)
     monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
 
     result = await state_service.get_board_states(cfg, auth_user=None)
-    assert result.states[0].tree is None
-    mock_connection.get_aggregation_tree.assert_not_awaited()
+    assert result.states[0].tree is not None
+    mock_connection.get_aggregation_tree.assert_awaited_once_with("Host localhost", 10)
 
 
 @pytest.mark.asyncio
