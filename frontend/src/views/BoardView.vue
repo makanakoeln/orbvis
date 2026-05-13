@@ -780,6 +780,7 @@
                         editor.selectedObjectId.value &&
                         selectedObject &&
                         !isDragging &&
+                        !propsModalObject &&
                         actionBarStyle
                     "
                     class="fixed z-40 flex items-center bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/40 backdrop-blur-md"
