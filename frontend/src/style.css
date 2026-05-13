@@ -78,7 +78,7 @@
     --default-form-element-border-color: #71717a;
     --font-color: #f4f4f5;
     --font-color-dimmed: #71717a;
-    --default-bg-color: #09090b;
+    --default-bg-color: var(--ux-theme-2, #20272e);
     --default-nav-bg-color: #111827;
     --default-nav-border-color: #27272a;
     --default-border-color: rgb(255 255 255 / 6%);
@@ -141,9 +141,11 @@ html {
     font-size: 14px;
 }
 
-/* OrbVis-Aliase auf body, nicht :root: CMK setzt --default-bg-color erst auf body[data-theme=…]. */
+/* OrbVis-Aliase auf body, nicht :root: CMK setzt --default-bg-color erst auf body[data-theme=…].
+   --bg ist die Seiten-Hintergrundfarbe (sehr dunkel), --default-bg-color die elevation für CMK-Panels
+   (Slideouts, Popups). Sie *müssen* unterscheidbar sein, damit CmkSlideIn sich abhebt. */
 body {
-    --bg: var(--default-bg-color, #09090b);
+    --bg: #09090b;
     --bg-surface: var(--ux-theme-3, #18181b);
     --bg-input: var(--default-form-element-bg-color, #27272a);
     --bg-glass: rgb(24 24 27 / 92%);
