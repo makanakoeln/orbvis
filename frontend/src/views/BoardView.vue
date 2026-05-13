@@ -646,10 +646,10 @@
 
                 <!-- FAB: Add object (with type picker popover) -->
                 <Transition
-                    enter-from-class="opacity-0 translate-y-1 scale-95"
-                    enter-active-class="transition-all duration-150 ease-out"
-                    leave-to-class="opacity-0 translate-y-1 scale-95"
-                    leave-active-class="transition-all duration-100 ease-in"
+                    enter-from-class="opacity-0 scale-y-75 scale-x-95 translate-y-4"
+                    enter-active-class="transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-bottom-right"
+                    leave-to-class="opacity-0 scale-y-75 scale-x-95 translate-y-4"
+                    leave-active-class="transition-all duration-200 ease-[cubic-bezier(0.4,0,1,1)] origin-bottom-right"
                 >
                     <div
                         v-if="editor.editMode.value && !editor.placing.value"
