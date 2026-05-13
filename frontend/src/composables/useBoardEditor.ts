@@ -173,20 +173,46 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
 
     // --- Save object position (called from BoardCanvas object-drag-end event) ---
     async function saveObjectPosition(id: string, x: number, y: number) {
-        // Optimistic update before the API call so Vue re-renders at the new position
-        // immediately when localDragPositions is cleared — no snap-back glitch.
-        const obj = boardsStore.currentBoard?.objects.find((o) => o.id === id);
+        const objects = boardsStore.currentBoard?.objects ?? [];
+        // Nudge to free spot if the drop lands on top of another object — otherwise
+        // they overlap pixel-perfect and the lower one becomes invisible.
+        const adjusted = _avoidOverlap(id, x, y, objects);
+        const obj = objects.find((o) => o.id === id);
         if (obj) {
-            obj.x = x;
-            obj.y = y;
+            obj.x = adjusted.x;
+            obj.y = adjusted.y;
         }
         try {
-            await boardsApi.updateObject(mapName.value, id, { x, y }, auth.accessToken!);
+            await boardsApi.updateObject(
+                mapName.value,
+                id,
+                { x: adjusted.x, y: adjusted.y },
+                auth.accessToken!,
+            );
             if (_onDragSaved) _onDragSaved(id);
         } catch (e) {
             console.error('Failed to save drag', e);
             await onMapChange();
         }
+    }
+
+    function _avoidOverlap(id: string, x: number, y: number, objects: readonly BoardObject[]) {
+        const COLLISION_RADIUS = 12;
+        const STEP = 28;
+        const MAX_STEPS = 8;
+        for (let i = 0; i < MAX_STEPS; i++) {
+            const hit = objects.some(
+                (o) =>
+                    o.id !== id &&
+                    o.type !== 'line' &&
+                    Math.abs(o.x - x) < COLLISION_RADIUS &&
+                    Math.abs(o.y - y) < COLLISION_RADIUS,
+            );
+            if (!hit) return { x: _snap(x), y: _snap(y) };
+            x += STEP;
+            y += STEP;
+        }
+        return { x: _snap(x), y: _snap(y) };
     }
 
     // --- Line drag ---
@@ -298,11 +324,16 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         const s = useSettingsStore().settings;
         // Use crypto.randomUUID() to avoid collisions from rapid or concurrent placements.
         const id = `${draft.type}_${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)}`;
+        const existing = boardsStore.currentBoard?.objects ?? [];
+        const placePos =
+            draft.type === 'line'
+                ? { x: _snap(Math.round(x)), y: _snap(Math.round(y)) }
+                : _avoidOverlap(id, Math.round(x), Math.round(y), existing);
         const obj: BoardObject = {
             id,
             type: draft.type,
-            x: _snap(Math.round(x)),
-            y: _snap(Math.round(y)),
+            x: placePos.x,
+            y: placePos.y,
             host_name: draft.host_name || undefined,
             service_description: draft.service_description || undefined,
             group_name: draft.group_name || undefined,
