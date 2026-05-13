@@ -137,7 +137,7 @@ export const boardsApi = {
             name: string;
             alias?: string;
             connection_id?: string;
-            icon_size?: number;
+            icon_size?: number | null;
             view?: Record<string, unknown>;
         },
         token: string,

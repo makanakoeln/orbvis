@@ -180,7 +180,7 @@ export interface BoardConfig {
     alias: string;
     readonly?: boolean;
     connection_id: string;
-    icon_size: number;
+    icon_size: number | null;
     rotation_interval: number;
     sort_order: number;
     click_action: ClickAction;
@@ -198,7 +198,7 @@ export interface BoardRead {
     alias: string;
     background_image?: string | null;
     background_color?: string | null;
-    icon_size: number;
+    icon_size: number | null;
     connection_id: string;
     view_type: string;
     view: BoardView;

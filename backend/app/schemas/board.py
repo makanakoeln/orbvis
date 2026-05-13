@@ -297,7 +297,7 @@ class BoardConfig(BaseModel):
     readonly: bool = False
     show_in_lists: bool = True
     connection_id: str = "live_1"
-    icon_size: int = 30
+    icon_size: int | None = None
     rotation_interval: int = 0
     sort_order: int = 0
     click_action: ClickAction = "link"
@@ -320,7 +320,7 @@ class BoardCreate(BaseModel):
     alias: str = ""
     background_image: str | None = None
     background_color: str | None = None
-    icon_size: int = 30
+    icon_size: int | None = None
     connection_id: str = "live_1"
     view: BoardView = Field(default_factory=StaticView)
 
@@ -349,7 +349,7 @@ class BoardRead(BaseModel):
     alias: str
     background_image: str | None
     background_color: str | None = None
-    icon_size: int
+    icon_size: int | None
     connection_id: str
     view_type: str
     view: BoardView

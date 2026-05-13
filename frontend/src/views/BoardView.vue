@@ -953,7 +953,7 @@
                 :state="statesStore.states[propsModalObject.id]"
                 :connection-id="boardConfig?.connection_id ?? ''"
                 :map-type="boardConfig?.view.type"
-                :board-icon-size="boardConfig?.icon_size ?? null"
+                :board-icon-size="boardConfig?.icon_size ?? settingsStore.settings.icon_size"
                 :checkmk-url="checkmkUrl"
                 :anchor-rect="propsModalAnchor"
                 @close="_closePropsModal()"

@@ -59,7 +59,7 @@ export const useBoardsStore = defineStore('boards', () => {
         alias: string,
         connectionId = 'live_1',
         boardType = 'static',
-        iconSize?: number,
+        iconSize?: number | null,
     ) {
         const cfg = await boardsApi.create(
             {

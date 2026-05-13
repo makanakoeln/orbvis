@@ -8,6 +8,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 
+import { useSettingsStore } from '@/stores/settings';
 import type {
     BoardConfig,
     BoardObject as BoardObjectType,
@@ -27,6 +28,8 @@ const props = defineProps<{
     selectedObjectId: string | null;
     filterNeedle?: string;
 }>();
+
+const settingsStore = useSettingsStore();
 
 const emit = defineEmits<{
     'object-click': [obj: BoardObjectType, event: MouseEvent];
@@ -76,7 +79,8 @@ function escapeHtml(s: string): string {
 
 function makeDivIcon(obj: BoardObjectType): L.DivIcon {
     const color = stateColor(obj.id);
-    const size = obj.display?.image_size ?? props.config.icon_size ?? 30;
+    const size =
+        obj.display?.image_size ?? props.config.icon_size ?? settingsStore.settings.icon_size;
     const escapedName = escapeHtml(getBoardObjectName(obj));
     const label = obj.label?.show !== false ? escapedName : '';
     const selected = props.selectedObjectId === obj.id;

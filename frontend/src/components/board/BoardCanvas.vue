@@ -85,7 +85,11 @@
                 :state="states[obj.id]"
                 :icon-size="
                     obj.display?.image_size ??
-                    (obj.display?.mode === 'gadget' ? 60 : (iconSizeOverride ?? config.icon_size))
+                    (obj.display?.mode === 'gadget'
+                        ? 60
+                        : (iconSizeOverride ??
+                          config.icon_size ??
+                          settingsStore.settings.icon_size))
                 "
                 :selected="selectedObjectId === obj.id"
                 :edit-mode="editMode"

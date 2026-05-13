@@ -161,7 +161,7 @@ async function submit() {
             form.value.alias,
             form.value.connection_id,
             form.value.view_type,
-            settingsStore.settings.icon_size,
+            null,
         );
     } catch (err) {
         if (err instanceof ApiError && err.status === 409) {

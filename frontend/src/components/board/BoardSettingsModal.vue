@@ -50,6 +50,7 @@
                                     v-model="form.icon_size"
                                     min="12"
                                     max="96"
+                                    :placeholder="String(settingsStore.settings.icon_size)"
                                     class="w-full"
                                 />
                                 <span class="text-sm text-[var(--text-muted)] shrink-0">px</span>
@@ -533,6 +534,7 @@ import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import OrbModal from '@/components/OrbModal.vue';
 import { useAuthStore } from '@/stores/auth';
+import { useSettingsStore } from '@/stores/settings';
 import type {
     BoardRead,
     ConnectionConfig,
@@ -557,6 +559,7 @@ const emit = defineEmits<{ close: []; updated: [] }>();
 
 const { t } = useI18n();
 const auth = useAuthStore();
+const settingsStore = useSettingsStore();
 
 const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => {
     const isCmk = auth.ssoActive || auth.isCheckmkDeployment;
