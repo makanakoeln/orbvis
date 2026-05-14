@@ -79,8 +79,8 @@
                         icon-name="dashboard-main"
                         :title="entry.alias || entry.board"
                         :subtitle="usageSubtitle(entry)"
-                        :open-in-new-tab="false"
-                        :callback="() => openAffectedBoard(entry)"
+                        :url="boardUrl(entry)"
+                        :open-in-new-tab="true"
                     />
                 </CmkLinkCardContainer>
                 <div class="image-usage-pane__actions">
@@ -184,7 +184,6 @@ import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
 import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRouter } from 'vue-router';
 
 import { ApiError, imagesApi } from '@/api/client';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
@@ -194,7 +193,6 @@ import type { ImageEntry, ImageUsageEntry } from '@/types/api';
 const BASE_URL = import.meta.env.BASE_URL;
 const { t } = useI18n();
 const auth = useAuthStore();
-const router = useRouter();
 
 const fileInputEl = ref<HTMLInputElement | null>(null);
 const icons = ref<ImageEntry[]>([]);
@@ -260,9 +258,11 @@ function usageSubtitle(entry: ImageUsageEntry): string {
     return parts.join(', ');
 }
 
-function openAffectedBoard(entry: ImageUsageEntry) {
-    cancelDelete();
-    router.push(`/boards/${entry.board}`);
+function boardUrl(entry: ImageUsageEntry): string {
+    // Hash router: build a full URL so target=_blank opens the right route in
+    // a new tab (a bare "#/boards/..." would resolve against the current
+    // location and stay in-tab on some browsers).
+    return `${window.location.pathname}#/boards/${entry.board}`;
 }
 
 function cancelDelete() {
