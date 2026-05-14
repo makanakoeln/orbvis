@@ -6,45 +6,9 @@
             class="bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center justify-between shrink-0 z-30"
             style="padding: 0 var(--dimension-6); height: 36px"
         >
-            <!-- Left: back link (Checkmk/SSO mode) + board name -->
-            <div class="flex items-center gap-[10px] min-w-0">
-                <router-link
-                    to="/"
-                    class="shrink-0 flex items-center gap-[4px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-                >
-                    <svg
-                        style="width: 12px; height: 12px"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2.5"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-                        />
-                    </svg>
-                    <span class="text-xs font-medium">{{ t('nav.overview') }}</span>
-                </router-link>
-                <button
-                    v-if="drawerObject"
-                    type="button"
-                    class="font-semibold text-[var(--text-muted)] hover:text-[var(--text)] text-sm truncate transition-colors cursor-pointer"
-                    :title="t('board.detailDrawer.close')"
-                    @click="closeAnyDrawer"
-                >
-                    {{ boardConfig?.alias || route.params.name }}
-                </button>
-                <span v-else class="font-semibold text-[var(--text)] text-sm truncate">
-                    {{ boardConfig?.alias || route.params.name }}
-                </span>
-                <template v-if="drawerObject">
-                    <span class="text-[var(--text-muted)] text-sm shrink-0">›</span>
-                    <span class="font-semibold text-[var(--text)] text-sm truncate">
-                        {{ getBoardObjectName(drawerObject) }}
-                    </span>
-                </template>
+            <!-- Left: Checkmk-style breadcrumb -->
+            <div class="min-w-0">
+                <CmkBreadcrumb :items="breadcrumbItems" />
             </div>
 
             <div
@@ -1100,6 +1064,8 @@ import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue'
 import RadarCanvas from '@/components/board/RadarCanvas.vue';
 import RemoveDowntimeModal from '@/components/board/RemoveDowntimeModal.vue';
 import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue';
+import type { BreadcrumbItem } from '@/components/cmk/CmkBreadcrumb.vue';
+import CmkBreadcrumb from '@/components/cmk/CmkBreadcrumb.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import { useBoardEditor } from '@/composables/useBoardEditor';
@@ -1907,6 +1873,18 @@ function closeAnyDrawer(): void {
     if (detailDrawerObject.value) closeDetail();
     if (flowDrawerObject.value) flowBoardRef.value?.closeDetail();
 }
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
+    const boardTitle = boardConfig.value?.alias || String(route.params.name ?? '');
+    const items: BreadcrumbItem[] = [{ title: t('home.title'), to: '/' }];
+    if (drawerObject.value) {
+        items.push({ title: boardTitle, onClick: closeAnyDrawer });
+        items.push({ title: getBoardObjectName(drawerObject.value) });
+    } else {
+        items.push({ title: boardTitle });
+    }
+    return items;
+});
 
 async function persistFlowView(patch: Record<string, unknown>): Promise<void> {
     const cfg = boardConfig.value;

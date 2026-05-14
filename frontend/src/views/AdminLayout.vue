@@ -1,46 +1,28 @@
 <template>
     <div class="flex-1 flex flex-col overflow-hidden">
-        <!-- Top nav bar — only visible when the sidebar is hidden (Checkmk deployment / SSO) -->
-        <nav
-            v-if="auth.ssoActive || auth.isCheckmkDeployment"
-            class="shrink-0 bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center gap-[4px]"
-            style="padding: 0 var(--dimension-6); height: 40px"
-        >
-            <router-link
-                to="/"
-                class="flex items-center gap-[6px] text-[13px] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors border-r border-[var(--border)]"
-                style="padding-right: 10px; margin-right: var(--dimension-4)"
+        <!-- Top header — only visible when sidebar is hidden (Checkmk deployment / SSO) -->
+        <template v-if="isCmk">
+            <div
+                class="shrink-0 bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center"
+                style="padding: 0 var(--dimension-6); height: 32px"
             >
-                <svg
-                    style="width: 14px; height: 14px; flex-shrink: 0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="1.5"
+                <CmkBreadcrumb :items="breadcrumbItems" />
+            </div>
+            <nav
+                class="cmk-tab-bar shrink-0 border-b border-[var(--border)] flex items-center"
+                style="padding: 0 var(--dimension-6); height: 32px"
+            >
+                <router-link
+                    v-for="item in adminNavItems"
+                    :key="item.to"
+                    :to="item.to"
+                    class="cmk-tab"
+                    :class="{ 'cmk-tab--active': isActive(item.to) }"
                 >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-                    />
-                </svg>
-                {{ t('nav.backToBoards') }}
-            </router-link>
-            <router-link
-                v-for="item in adminNavItems"
-                :key="item.to"
-                :to="item.to"
-                class="rounded text-[13px] transition-colors"
-                style="padding: 4px 10px"
-                :class="
-                    isActive(item.to)
-                        ? 'text-[var(--color-corporate-green-40)] bg-[var(--color-corporate-green-50)]/10 ring-1 ring-[var(--color-corporate-green-50)]/20'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
-                "
-            >
-                {{ item.label }}
-            </router-link>
-        </nav>
+                    {{ item.label }}
+                </router-link>
+            </nav>
+        </template>
         <main class="flex-1 overflow-auto" style="padding: var(--dimension-7) var(--dimension-8)">
             <router-view />
         </main>
@@ -48,30 +30,74 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 
+import type { BreadcrumbItem } from '@/components/cmk/CmkBreadcrumb.vue';
+import CmkBreadcrumb from '@/components/cmk/CmkBreadcrumb.vue';
 import { useAuthStore } from '@/stores/auth';
 
 const { t } = useI18n();
 const auth = useAuthStore();
 const route = useRoute();
 
-const isCmk = auth.ssoActive || auth.isCheckmkDeployment;
+const isCmk = computed(() => auth.ssoActive || auth.isCheckmkDeployment);
 
-const adminNavItems = [
+const adminNavItems = computed(() => [
     { to: '/admin/connections', label: t('admin.connections') },
     { to: '/admin/icons', label: t('admin.icons') },
-    ...(!isCmk
+    ...(!isCmk.value
         ? [
               { to: '/admin/users', label: t('admin.users') },
               { to: '/admin/roles', label: t('admin.rolesAndPermissions') },
           ]
         : []),
     { to: '/admin/settings', label: t('admin.settings') },
-];
+]);
 
 function isActive(path: string): boolean {
     return route.path === path || route.path.startsWith(path + '/');
 }
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
+    const current = adminNavItems.value.find((item) => isActive(item.to));
+    const items: BreadcrumbItem[] = [
+        { title: t('home.title'), to: '/' },
+        { title: t('nav.administration') },
+    ];
+    if (current) items.push({ title: current.label });
+    return items;
+});
 </script>
+
+<style scoped>
+.cmk-tab-bar {
+    background-color: var(--ux-theme-4);
+}
+
+.cmk-tab {
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 10px;
+    font-size: 13px;
+    color: var(--font-color-breadcrumb-interactive);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition:
+        color 120ms,
+        border-color 120ms;
+}
+
+.cmk-tab:hover {
+    border-bottom-color: var(--color-corporate-green-50);
+    color: var(--text);
+}
+
+.cmk-tab--active {
+    border-bottom-color: var(--color-corporate-green-50);
+    color: var(--text);
+    font-weight: 500;
+}
+</style>
