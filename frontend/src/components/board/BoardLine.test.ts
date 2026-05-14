@@ -105,3 +105,97 @@ describe('BoardLine – weather-color gradient', () => {
         expect(wrapper.find('defs').exists()).toBe(false);
     });
 });
+
+describe('BoardLine – styling regressions', () => {
+    it('plain lines do not render a dot at the endpoint', () => {
+        const wrapper = mount(BoardLine, {
+            props: {
+                object: makeLineObject({ line_style: 'plain' }),
+                state: noState,
+                editMode: false,
+            },
+        });
+        // Only the invisible hit-area + the visible stroke are expected; no
+        // decorative <circle> at the endpoint.
+        expect(wrapper.findAll('circle').length).toBe(0);
+    });
+
+    it('dashed line scales stroke-dasharray with line_width', () => {
+        const thin = mount(BoardLine, {
+            props: {
+                object: makeLineObject({ line_style: 'dashed', line_width: 2 }),
+                state: noState,
+                editMode: false,
+            },
+        });
+        const thick = mount(BoardLine, {
+            props: {
+                object: makeLineObject({ line_style: 'dashed', line_width: 15 }),
+                state: noState,
+                editMode: false,
+            },
+        });
+        const thinDash = thin.findAll('line').at(-1)!.attributes('stroke-dasharray');
+        const thickDash = thick.findAll('line').at(-1)!.attributes('stroke-dasharray');
+        expect(thinDash).toBeDefined();
+        expect(thickDash).toBeDefined();
+        // First number of "<gap> <dash>"
+        const thinFirst = parseFloat(thinDash!.split(' ')[0]);
+        const thickFirst = parseFloat(thickDash!.split(' ')[0]);
+        expect(thickFirst).toBeGreaterThan(thinFirst);
+    });
+
+    it('arrow_end shortens the stroke so the cap sits behind the arrow tip', () => {
+        const wrapper = mount(BoardLine, {
+            props: {
+                object: makeLineObject({
+                    line_style: 'arrow_end',
+                    line_width: 15,
+                    x: 0,
+                    y: 0,
+                    x2: 200,
+                    y2: 0,
+                }),
+                state: noState,
+                editMode: false,
+            },
+        });
+        const visibleLine = wrapper.findAll('line').at(-1)!;
+        const x2 = parseFloat(visibleLine.attributes('x2')!);
+        // Stroke must end before the arrow tip (x=200).
+        expect(x2).toBeLessThan(200);
+        // Arrow polygon's first vertex is the tip — should still anchor at x=200.
+        const polygon = wrapper.find('polygon');
+        expect(polygon.exists()).toBe(true);
+        const tip = polygon.attributes('points')!.split(' ')[0];
+        expect(parseFloat(tip.split(',')[0])).toBe(200);
+    });
+
+    it('arrow_inward (middle) arrows scale with line_width', () => {
+        const thin = mount(BoardLine, {
+            props: {
+                object: makeLineObject({ line_style: 'arrow_inward', line_width: 2 }),
+                state: noState,
+                editMode: false,
+            },
+        });
+        const thick = mount(BoardLine, {
+            props: {
+                object: makeLineObject({ line_style: 'arrow_inward', line_width: 15 }),
+                state: noState,
+                editMode: false,
+            },
+        });
+        // Both render the two midpoint triangles.
+        expect(thin.findAll('polygon').length).toBeGreaterThanOrEqual(2);
+        expect(thick.findAll('polygon').length).toBeGreaterThanOrEqual(2);
+        // The right triangle's points string encodes a base offset perpendicular
+        // to the line — at width=15 the triangle is geometrically larger.
+        const thinPoly = thin.findAll('polygon')[0].attributes('points')!;
+        const thickPoly = thick.findAll('polygon')[0].attributes('points')!;
+        // Compare the spread between the three vertices' x coordinates.
+        const xs = (s: string) => s.split(' ').map((p) => parseFloat(p.split(',')[0]));
+        const span = (s: string) => Math.max(...xs(s)) - Math.min(...xs(s));
+        expect(span(thickPoly)).toBeGreaterThan(span(thinPoly));
+    });
+});

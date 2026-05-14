@@ -37,23 +37,23 @@
             v-if="lineColorBorder && !useWeatherColor"
             :x1="x1"
             :y1="y1"
-            :x2="x2"
-            :y2="y2"
+            :x2="trimmedEnd.x2"
+            :y2="trimmedEnd.y2"
             :stroke="lineColorBorder"
             :stroke-width="strokeWidthBorder"
             stroke-linecap="round"
-            :stroke-dasharray="isDashed ? '6 4' : undefined"
+            :stroke-dasharray="dashArray"
             pointer-events="none"
         />
         <line
-            :x1="x1"
-            :y1="y1"
-            :x2="x2"
-            :y2="y2"
+            :x1="trimmedStart.x1"
+            :y1="trimmedStart.y1"
+            :x2="trimmedEnd.x2"
+            :y2="trimmedEnd.y2"
             :stroke="useWeatherColor ? `url(#${gradientId})` : effectiveLineColor"
             :stroke-width="strokeWidth"
             stroke-linecap="round"
-            :stroke-dasharray="isDashed ? '6 4' : undefined"
+            :stroke-dasharray="dashArray"
             pointer-events="none"
         />
         <!-- Arrow at endpoint -->
@@ -75,15 +75,6 @@
             <polygon :points="midArrows.left" :fill="effectiveLineColor" pointer-events="none" />
             <polygon :points="midArrows.right" :fill="effectiveLineColor" pointer-events="none" />
         </template>
-        <!-- Dot fallback for plain/dashed without arrows. -->
-        <circle
-            v-if="!hasEndArrow && !hasStartArrow && !isArrowInward"
-            :cx="x2"
-            :cy="y2"
-            r="4"
-            :fill="effectiveLineColor"
-            pointer-events="none"
-        />
         <!-- In/out perfdata labels in boxed badges flanking the midpoint
              at 25% / 75% along the line. -->
         <g v-if="wmLabelAnchors && wmLabelIn" pointer-events="none">
@@ -274,10 +265,15 @@ const hasStartArrow = computed(
     () => props.object.line_style === 'arrow_start' || props.object.line_style === 'arrow_both',
 );
 
+// Arrowhead size scales with stroke width so a 15-px line still has a visibly
+// distinct triangle, not a tip swallowed by the round line cap.
+const arrowLen = computed(() => Math.max(12, strokeWidth.value * 2.4));
+const arrowWidth = computed(() => Math.max(6, strokeWidth.value * 1.4));
+
 function arrowPoints(tx: number, ty: number, fx: number, fy: number): string {
     const angle = Math.atan2(ty - fy, tx - fx);
-    const len = 12,
-        w = 6;
+    const len = arrowLen.value;
+    const w = arrowWidth.value;
     const p1x = tx - len * Math.cos(angle) + w * Math.sin(angle);
     const p1y = ty - len * Math.sin(angle) - w * Math.cos(angle);
     const p2x = tx - len * Math.cos(angle) - w * Math.sin(angle);
@@ -285,20 +281,58 @@ function arrowPoints(tx: number, ty: number, fx: number, fy: number): string {
     return `${tx},${ty} ${p1x},${p1y} ${p2x},${p2y}`;
 }
 
+// Trim the line back from each endpoint that carries an arrow so the round
+// stroke cap sits underneath the triangle base instead of past the tip.
+const trimmedStart = computed(() => {
+    if (!hasStartArrow.value) return { x1: x1.value, y1: y1.value };
+    const dx = x2.value - x1.value;
+    const dy = y2.value - y1.value;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1) return { x1: x1.value, y1: y1.value };
+    const trim = arrowLen.value * 0.6;
+    return {
+        x1: x1.value + (dx / len) * trim,
+        y1: y1.value + (dy / len) * trim,
+    };
+});
+const trimmedEnd = computed(() => {
+    if (!hasEndArrow.value) return { x2: x2.value, y2: y2.value };
+    const dx = x2.value - x1.value;
+    const dy = y2.value - y1.value;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1) return { x2: x2.value, y2: y2.value };
+    const trim = arrowLen.value * 0.6;
+    return {
+        x2: x2.value - (dx / len) * trim,
+        y2: y2.value - (dy / len) * trim,
+    };
+});
+
+// Dash pattern scales with stroke width — a fixed "6 4" pattern collapses to
+// solid blocks once the line gets thicker than the dash length.
+const dashArray = computed(() => {
+    if (!isDashed.value) return undefined;
+    const w = strokeWidth.value;
+    return `${(w * 2.5).toFixed(1)} ${(w * 1.6).toFixed(1)}`;
+});
+
 // Midpoint inward-facing arrow pair: two triangles nearly touching at the
 // line midpoint, each tip pointing toward an endpoint.
 function midpointArrows(): { left: string; right: string } | null {
     const dx = x2.value - x1.value;
     const dy = y2.value - y1.value;
     const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 24) return null; // line too short to fit two arrows + gap
+    // Arrow size scales with stroke width so middle arrows stay visible
+    // (a fixed 8-px arrow vanishes inside a 15-px stroke).
+    const w = strokeWidth.value;
+    const arrowLen = Math.max(8, w * 2.0);
+    const arrowW = Math.max(5, w * 1.2);
+    if (len < arrowLen * 2 + 6) return null; // line too short to fit two arrows + gap
     const ux = dx / len;
     const uy = dy / len;
     const midX = (x1.value + x2.value) / 2;
     const midY = (y1.value + y2.value) / 2;
     const gap = 1;
-    const arrowLen = 8;
-    const arrowW = 5;
     // Tip toward (x2,y2): tip closer to midpoint, base further along the ray.
     const rTipX = midX + ux * gap;
     const rTipY = midY + uy * gap;
