@@ -9,6 +9,7 @@ import json as _json
 import logging
 import pkgutil
 import random
+import re
 import re as _re
 import threading
 import time
@@ -56,8 +57,15 @@ logger = logging.getLogger(__name__)
 _auth_user_ctx: ContextVar[str | None] = ContextVar("_auth_user_ctx", default=None)
 
 
+_EXPRESSION_PLACEHOLDER_RE = re.compile(r"\s*_EXPRESSION:\{[^}]*\}\s*")
+
+
 def _identity(x: str) -> str:
-    return x
+    # CMK's Title.localize for graphs that embed metric expressions emits raw
+    # `_EXPRESSION:{"metric":"…"}` placeholders when no real translator is
+    # supplied. Stripping them keeps the legend readable.
+    cleaned = _EXPRESSION_PLACEHOLDER_RE.sub(" ", x)
+    return " ".join(cleaned.split())
 
 
 @lru_cache(maxsize=1)
