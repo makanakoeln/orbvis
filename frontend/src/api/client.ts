@@ -479,6 +479,9 @@ export const settingsApi = {
 
     update: (data: GlobalSettings, token: string): Promise<GlobalSettings> =>
         request('/settings', { method: 'PUT', body: JSON.stringify(data) }, token),
+
+    getSchema: (token: string): Promise<Record<string, unknown>> =>
+        request('/settings/schema', {}, token),
 };
 
 // ---- Checkmk REST API (direct browser → CMK, same-origin session) ----

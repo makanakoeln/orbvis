@@ -430,6 +430,29 @@ declare module '@cmk/form/FormApp.vue' {
     export default component;
 }
 
+declare module '@cmk/form/FormEdit.vue' {
+    import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
+    import type { DefineComponent } from 'vue';
+    type Spec = NonNullable<VueFormspecComponents['components']>;
+    type Validation = NonNullable<VueFormspecComponents['validation_message']>[];
+    interface FormEditProps {
+        spec: Spec;
+        data: unknown;
+        backendValidation: Validation;
+    }
+    const component: DefineComponent<
+        FormEditProps,
+        object,
+        object,
+        object,
+        object,
+        object,
+        object,
+        { 'update:data': [value: unknown] }
+    >;
+    export default component;
+}
+
 declare module '@cmk/form/private/FormEditDispatcher/dispatch' {
     export function initializeComponentRegistry(): void;
     export function getComponent(type: string): unknown;

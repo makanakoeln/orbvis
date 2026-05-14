@@ -236,7 +236,10 @@ step "Setting up Python environment"
 if "${AS_ROOT[@]}" test -d "$VENV_DIR"; then
   ok "Virtualenv already exists, skipping creation"
 else
-  quietly "${AS_ROOT[@]}" "$PYTHON3" -m venv --symlinks "$VENV_DIR"
+  # --system-site-packages lets OrbVis import cmk.rulesets.v1 (and other
+  # cmk-plugin-apis modules) directly from the OMD site, which is the
+  # source of truth for FormSpec types. See feedback_prefer_cmk_over_own.
+  quietly "${AS_ROOT[@]}" "$PYTHON3" -m venv --symlinks --system-site-packages "$VENV_DIR"
 fi
 # Ensure venv python3 is a symlink so the OMD Python's RPATH is preserved.
 # When venv copies the binary instead of symlinking, libpython3.13 can't be
