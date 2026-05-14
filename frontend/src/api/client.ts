@@ -299,6 +299,25 @@ export const rolesApi = {
 
 // ---- Connections ----
 
+export const boardsApiFormSpec = {
+    getMetadataSchema: (token: string): Promise<Record<string, unknown>> =>
+        request('/boards/-/metadata-schema', {}, token),
+
+    getMetadata: (name: string, token: string): Promise<Record<string, unknown>> =>
+        request(`/boards/${encodeURIComponent(name)}/metadata`, {}, token),
+
+    updateMetadata: (
+        name: string,
+        form: Record<string, unknown>,
+        token: string,
+    ): Promise<unknown> =>
+        request(
+            `/boards/${encodeURIComponent(name)}/metadata`,
+            { method: 'PUT', body: JSON.stringify(form) },
+            token,
+        ),
+};
+
 export const connectionsApiFormSpec = {
     getSchema: (token: string): Promise<Record<string, unknown>> =>
         request('/connections/schema', {}, token),

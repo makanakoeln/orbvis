@@ -75,6 +75,11 @@ const router = createRouter({
                     component: () => import('@/views/admin/ConnectionFormSpecView.vue'),
                 },
                 {
+                    path: 'boards/:name/metadata',
+                    name: 'admin-board-metadata',
+                    component: () => import('@/views/admin/BoardMetadataFormSpecView.vue'),
+                },
+                {
                     path: 'icons',
                     name: 'admin-icons',
                     component: () => import('@/views/admin/ImagesView.vue'),

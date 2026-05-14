@@ -107,6 +107,66 @@ async def get_board(name: BoardName, current_user: User = Depends(get_current_us
     return cfg
 
 
+@router.get("/-/metadata-schema")
+async def get_board_metadata_schema(
+    _: User = Depends(get_current_user),
+) -> dict[str, object]:
+    from app.form_specs import serialize_form_spec
+    from app.form_specs.board_metadata import board_metadata_spec
+
+    return serialize_form_spec(board_metadata_spec())
+
+
+@router.get("/{name}/metadata")
+async def get_board_metadata(
+    name: BoardName, current_user: User = Depends(get_current_user)
+) -> dict[str, object]:
+    from app.form_specs.board_metadata import METADATA_FIELDS
+
+    _require_board_view(name, current_user)
+    cfg = board_service.get_board(name)
+    if cfg is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
+    return {field: getattr(cfg, field, None) for field in METADATA_FIELDS}
+
+
+@router.put("/{name}/metadata", response_model=BoardConfig)
+async def update_board_metadata(
+    name: BoardName,
+    form_data: dict[str, object],
+    request: Request,
+    current_user: User = Depends(get_current_user),
+) -> BoardConfig:
+    from app.form_specs.board_metadata import METADATA_FIELDS
+
+    _require_board_edit(name, current_user)
+    _require_not_readonly(name)
+    if not current_user.is_admin and (
+        form_data.get("hover_template") is not None or form_data.get("context_template") is not None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Editing hover/context templates requires admin privileges",
+        )
+    update_payload = {field: form_data[field] for field in METADATA_FIELDS if field in form_data}
+    update = BoardUpdate.model_validate(update_payload)
+    expected_version = _parse_if_match(request.headers.get("If-Match"))
+    try:
+        cfg = board_service.update_board(name, update, expected_version=expected_version)
+    except board_service.StaleBoardError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"reason": "stale_board", "current_version": exc.current_version},
+        ) from exc
+    if cfg is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
+    return cfg
+
+
 @router.get("/{name}/auto-objects", response_model=list[BoardObject])
 async def get_auto_objects(
     name: BoardName, current_user: User = Depends(get_current_user)
