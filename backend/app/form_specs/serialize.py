@@ -14,6 +14,7 @@ from cmk.rulesets.v1._localize import _Localizable
 from cmk.rulesets.v1.form_specs import (
     BooleanChoice,
     CascadingSingleChoice,
+    DefaultValue,
     Dictionary,
     FixedValue,
     Float,
@@ -57,6 +58,9 @@ def serialize_form_spec(spec: FormSpec[object]) -> dict[str, object]:
                     "name": name,
                     "required": el.required,
                     "parameter_form": serialize_form_spec(el.parameter_form),
+                    "default_value": _default_value(el.parameter_form),
+                    "render_only": el.render_only,
+                    "group": None,
                 }
                 for name, el in spec.elements.items()
             ],
@@ -126,6 +130,61 @@ def _common[T](spec: FormSpec[T], type_tag: str) -> dict[str, object]:
         "help": _loc(spec.help_text) or "",
         "validators": [],
     }
+
+
+try:
+    from cmk.gui.form_specs.visitors import DEFAULT_VALUE as _CMK_DEFAULT
+    from cmk.gui.form_specs.visitors import get_visitor as _cmk_get_visitor
+    from cmk.gui.form_specs.visitors._base import VisitorOptions as _CmkVisitorOptions
+
+    _CMK_VISITORS_AVAILABLE = True
+except ImportError:
+    _CMK_VISITORS_AVAILABLE = False
+
+
+def _default_value(spec: FormSpec[object]) -> object:
+    if _CMK_VISITORS_AVAILABLE:
+        try:
+            visitor = _cmk_get_visitor(spec, _CmkVisitorOptions(data_origin="disk"))
+            _, value = visitor.to_vue(_CMK_DEFAULT)
+            return value
+        except Exception:
+            pass
+    if isinstance(spec, String | MultilineText):
+        return spec.prefill.value if isinstance(spec.prefill, DefaultValue) else ""
+    if isinstance(spec, Integer | Float):
+        return spec.prefill.value if isinstance(spec.prefill, DefaultValue) else None
+    if isinstance(spec, BooleanChoice):
+        return spec.prefill.value if isinstance(spec.prefill, DefaultValue) else False
+    if isinstance(spec, SingleChoice):
+        if isinstance(spec.prefill, DefaultValue):
+            return _name(spec.prefill.value)
+        return None
+    if isinstance(spec, FixedValue):
+        return spec.value
+    if isinstance(spec, Password):
+        return ["explicit_password", "", "", False]
+    if isinstance(spec, CascadingSingleChoice):
+        first = spec.elements[0] if spec.elements else None
+        if isinstance(spec.prefill, DefaultValue):
+            chosen = next(
+                (e for e in spec.elements if e.name == spec.prefill.value),
+                first,
+            )
+        else:
+            chosen = first
+        if chosen is None:
+            return [None, None]
+        return [chosen.name, _default_value(chosen.parameter_form)]
+    if isinstance(spec, Dictionary):
+        return {
+            name: _default_value(el.parameter_form)
+            for name, el in spec.elements.items()
+            if el.required
+        }
+    if isinstance(spec, List):
+        return []
+    return None
 
 
 def _name(name: object) -> object:
