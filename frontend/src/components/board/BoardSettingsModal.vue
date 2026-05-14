@@ -23,24 +23,6 @@
             <div class="board-settings__scroll">
                 <!-- General -->
                 <div v-if="activeTab === 'general'" class="space-y-[10px]">
-                    <!-- Alias -->
-                    <div class="space-y-[4px]">
-                        <CmkLabel>{{ t('board.displayName') }}</CmkLabel>
-                        <CmkInput v-model="form.alias" field-size="FILL" />
-                    </div>
-
-                    <!-- Connection -->
-                    <div class="space-y-[4px]">
-                        <CmkLabel>{{ t('board.connection') }}</CmkLabel>
-                        <CmkDropdown
-                            :selected-option="form.connection_id || null"
-                            :options="connectionOptions"
-                            :width="'fill'"
-                            :label="t('board.connection')"
-                            @update:selected-option="form.connection_id = $event ?? ''"
-                        />
-                    </div>
-
                     <!-- Board type (read-only — switching type would invalidate type-specific
                          settings and the board geometry; cloning is the supported path).
                          Rendered as plain text (not Badge) so it doesn't suggest interaction. -->
@@ -51,47 +33,13 @@
                         <p class="board-settings__readonly-value">{{ boardTypeLabel }}</p>
                     </div>
 
-                    <!-- Rotation (positive toggle replaces the 0=disabled magic value) -->
-                    <div class="space-y-[4px]">
-                        <div class="flex items-center justify-between">
-                            <CmkLabel :help="t('board.autoRotateHint')">{{
-                                t('board.autoRotate')
-                            }}</CmkLabel>
-                            <CmkSwitch :data="rotationEnabled" @update:data="onToggleRotation" />
-                        </div>
-                        <div
-                            v-if="rotationEnabled"
-                            class="board-settings__detail flex items-center gap-[6px]"
-                        >
-                            <NumberInput
-                                v-model="form.rotation_interval"
-                                min="1"
-                                max="3600"
-                                class="w-[100px]"
-                            />
-                            <span class="text-sm text-[var(--text-muted)] shrink-0">{{
-                                t('board.rotationSuffix')
-                            }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Object defaults (per-board overrides of global icon defaults) -->
-                    <div class="board-settings__subsection">
-                        <p class="section-title">{{ t('board.objectDefaults') }}</p>
-                        <div class="space-y-[4px]">
-                            <CmkLabel>{{ t('board.iconSize') }}</CmkLabel>
-                            <div class="flex items-center gap-[5px]">
-                                <NumberInput
-                                    v-model="form.icon_size"
-                                    min="12"
-                                    max="96"
-                                    :placeholder="String(settingsStore.settings.icon_size)"
-                                    class="w-[100px]"
-                                />
-                                <span class="text-sm text-[var(--text-muted)] shrink-0">px</span>
-                            </div>
-                        </div>
-                    </div>
+                    <FormEdit
+                        v-if="formSchema"
+                        v-model:data="formSpecData"
+                        :spec="formSchema"
+                        :backend-validation="[]"
+                    />
+                    <CmkLoading v-else-if="schemaLoading" />
 
                     <!-- Worldmap settings -->
                     <template v-if="form.map_type === 'worldmap'">
@@ -271,55 +219,6 @@
                         </div>
                     </template>
 
-                    <!-- Templates -->
-                    <div class="board-settings__subsection space-y-[8px]">
-                        <p class="section-title">{{ t('boardSettings.templates') }}</p>
-                        <div class="space-y-[4px]">
-                            <CmkLabel :help="t('board.templateHint')">{{
-                                t('board.hoverTemplate')
-                            }}</CmkLabel>
-                            <CmkInput
-                                v-model="form.hover_template"
-                                :placeholder="t('board.templatePlaceholder')"
-                                field-size="FILL"
-                            />
-                        </div>
-                        <div class="space-y-[4px]">
-                            <CmkLabel :help="t('board.templateHint')">{{
-                                t('board.contextTemplate')
-                            }}</CmkLabel>
-                            <CmkInput
-                                v-model="form.context_template"
-                                :placeholder="t('board.templatePlaceholder')"
-                                field-size="FILL"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Click action -->
-                    <div class="board-settings__subsection space-y-[4px]">
-                        <div>
-                            <CmkLabel>{{ t('board.clickAction') }}</CmkLabel>
-                        </div>
-                        <CmkDropdown
-                            :selected-option="form.click_action"
-                            :options="clickActionOptions"
-                            :width="'fill'"
-                            label=""
-                            @update:selected-option="
-                                form.click_action = ($event ?? 'link') as 'link' | 'none'
-                            "
-                        />
-                    </div>
-
-                    <!-- Show in lists toggle -->
-                    <div class="board-settings__subsection flex items-center justify-between">
-                        <CmkLabel :help="t('board.showInListsHint')">{{
-                            t('board.showInLists')
-                        }}</CmkLabel>
-                        <CmkSwitch v-model:data="form.show_in_lists" />
-                    </div>
-
                     <!-- Background (static only) -->
                     <div
                         v-if="form.map_type === 'static'"
@@ -459,17 +358,18 @@ import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
 import CmkLabel from '@cmk/components/CmkLabel.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkSlideInDialog from '@cmk/components/CmkSlideInDialog.vue';
-import CmkSwitch from '@cmk/components/CmkSwitch.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
+import FormEdit from '@cmk/form/FormEdit.vue';
+import { initializeComponentRegistry } from '@cmk/form/private/FormEditDispatcher/dispatch';
+import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { ApiError, boardsApi, connectionsApi, rolesApi } from '@/api/client';
+import { ApiError, boardsApi, boardsApiFormSpec, connectionsApi, rolesApi } from '@/api/client';
 import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { useAuthStore } from '@/stores/auth';
-import { useSettingsStore } from '@/stores/settings';
 import type {
     BoardRead,
     ConnectionConfig,
@@ -496,7 +396,6 @@ const emit = defineEmits<{ close: []; updated: [] }>();
 
 const { t } = useI18n();
 const auth = useAuthStore();
-const settingsStore = useSettingsStore();
 
 const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => {
     const isCmk = auth.ssoActive || auth.isCheckmkDeployment;
@@ -564,10 +463,21 @@ const form = ref({
 const connections = ref<ConnectionConfig[]>([]);
 const saving = ref(false);
 
-const connectionOptions = computed(() => ({
-    type: 'fixed' as const,
-    suggestions: connections.value.map((b) => ({ name: b.id, title: b.label || b.id })),
-}));
+type Schema = NonNullable<VueFormspecComponents['components']>;
+initializeComponentRegistry();
+const formSchema = ref<Schema | null>(null);
+const schemaLoading = ref(true);
+const formSpecData = ref<Record<string, unknown>>({
+    alias: props.board.alias,
+    connection_id: props.board.connection_id,
+    icon_size: props.board.icon_size,
+    rotation_interval: props.board.rotation_interval ?? 0,
+    click_action: props.board.click_action ?? 'link',
+    show_in_lists: props.board.show_in_lists !== false,
+    hover_template: props.board.hover_template ?? '',
+    context_template: props.board.context_template ?? '',
+});
+
 const boardTypeLabel = computed(
     () =>
         boardTypeOptions(t).find((o) => o.name === form.value.map_type)?.title ??
@@ -576,11 +486,6 @@ const boardTypeLabel = computed(
 
 const boardTitle = computed(() => t('board.settingsTitle') + ' — ' + props.board.name);
 
-const rotationEnabled = computed(() => (form.value.rotation_interval ?? 0) > 0);
-
-function onToggleRotation(checked: boolean) {
-    form.value.rotation_interval = checked ? Math.max(form.value.rotation_interval || 30, 1) : 0;
-}
 const worldmapAutoSourceOptions = computed(() => ({
     type: 'fixed' as const,
     suggestions: [
@@ -597,13 +502,6 @@ const radarFilterOptions = computed(() => ({
         { name: 'servicegroup', title: t('board.filterTypeServicegroup') },
         { name: 'all_hosts', title: t('board.filterTypeAllHosts') },
         { name: 'all_services', title: t('board.filterTypeAllServices') },
-    ],
-}));
-const clickActionOptions = computed(() => ({
-    type: 'fixed' as const,
-    suggestions: [
-        { name: 'link', title: t('board.clickActionLink') },
-        { name: 'none', title: t('board.clickActionNone') },
     ],
 }));
 const saveError = ref('');
@@ -646,20 +544,21 @@ async function save() {
         } else {
             view = { type: form.value.map_type };
         }
+        const fs = formSpecData.value as Record<string, unknown>;
         await boardsApi.update(
             props.board.name,
             {
-                alias: form.value.alias,
-                connection_id: form.value.connection_id,
-                icon_size: form.value.icon_size,
-                rotation_interval: form.value.rotation_interval,
-                click_action: form.value.click_action,
-                show_in_lists: form.value.show_in_lists,
+                alias: (fs.alias as string) ?? props.board.alias,
+                connection_id: (fs.connection_id as string) ?? props.board.connection_id,
+                icon_size: (fs.icon_size as number | null | undefined) ?? null,
+                rotation_interval: (fs.rotation_interval as number | null | undefined) ?? 0,
+                click_action: (fs.click_action as 'link' | 'none' | undefined) ?? 'link',
+                show_in_lists: (fs.show_in_lists as boolean | undefined) ?? true,
                 background_image: form.value.background_image || null,
                 background_color: form.value.background_color || null,
                 view,
-                hover_template: form.value.hover_template || null,
-                context_template: form.value.context_template || null,
+                hover_template: ((fs.hover_template as string) ?? '') || null,
+                context_template: ((fs.context_template as string) ?? '') || null,
             },
             auth.accessToken!,
             props.board.version ?? null,
@@ -765,8 +664,14 @@ async function savePermissions() {
 }
 
 onMounted(async () => {
-    const [bs] = await Promise.all([connectionsApi.list(auth.accessToken!), loadPermissions()]);
+    const [bs, spec] = await Promise.all([
+        connectionsApi.list(auth.accessToken!),
+        boardsApiFormSpec.getMetadataSchema(auth.accessToken!).catch((): null => null),
+        loadPermissions(),
+    ]);
     connections.value = bs;
+    schemaLoading.value = false;
+    if (spec) formSchema.value = spec as unknown as Schema;
 });
 </script>
 
