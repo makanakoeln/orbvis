@@ -742,10 +742,12 @@
                     <section v-if="object.type !== 'line'">
                         <p class="section-title">{{ t('boardSettings.label') }}</p>
                         <div class="space-y-[8px]">
-                            <CmkCheckbox
-                                v-model="form.label.show"
-                                :label="t('boardSettings.showLabel')"
-                            />
+                            <div class="field-row">
+                                <label class="field-label">{{
+                                    t('boardSettings.showLabel')
+                                }}</label>
+                                <CmkCheckbox v-model="form.label.show" />
+                            </div>
                             <div :class="!form.label.show ? 'opacity-40 pointer-events-none' : ''">
                                 <div class="space-y-[8px]">
                                     <div v-if="object.type !== 'textbox'" class="field-row">
@@ -937,16 +939,14 @@
                                     />
                                 </div>
                             </template>
-                            <div v-if="form.display.mode !== 'gadget'" class="field-row">
-                                <label class="field-label">{{
+                            <div
+                                v-if="form.display.mode !== 'gadget'"
+                                class="field-row items-start"
+                            >
+                                <label class="field-label" style="margin-top: 6px">{{
                                     t('boardSettings.customIcon')
                                 }}</label>
-                                <CmkInput
-                                    v-model="form.display.image"
-                                    placeholder="filename.png"
-                                    field-size="FILL"
-                                    class="flex-1"
-                                />
+                                <ImagePicker v-model="form.display.image" class="flex-1" />
                             </div>
                         </div>
                     </section>
@@ -1210,6 +1210,7 @@ import { parsePerfData } from '@/utils/perf';
 import { compileRegex } from '@/utils/regex';
 
 import AutocompleteInput from './AutocompleteInput.vue';
+import ImagePicker from './ImagePicker.vue';
 
 const { t } = useI18n();
 

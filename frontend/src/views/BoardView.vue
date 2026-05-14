@@ -1592,9 +1592,20 @@ function _closePropsModal() {
 }
 
 async function onPropsModalSave(updates: Record<string, unknown>) {
-    if (propsModalObject.value)
+    if (!propsModalObject.value) {
+        _closePropsModal();
+        return;
+    }
+    try {
         await editor.updateObjectProperties(propsModalObject.value.id, updates);
-    _closePropsModal();
+    } catch (e) {
+        toast.error(e instanceof Error ? e.message : t('boardSettings.saveFailed'));
+    } finally {
+        // Always close the modal so its local "saving" state resets even if
+        // the backend rejected the update — otherwise the Save button stays
+        // stuck on "Saving…" with no feedback.
+        _closePropsModal();
+    }
 }
 
 async function onPropsModalDelete() {

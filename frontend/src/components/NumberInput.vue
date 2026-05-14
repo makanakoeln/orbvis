@@ -99,7 +99,15 @@ const maxVal = computed(() => (attrs.max !== undefined ? Number(attrs.max) : und
 
 function onInput(e: Event) {
     const val = (e.target as HTMLInputElement).value;
-    emit('update:modelValue', val === '' ? null : Number(val));
+    if (val === '') {
+        emit('update:modelValue', null);
+        return;
+    }
+    let next = Number(val);
+    if (Number.isNaN(next)) return;
+    if (minVal.value !== undefined) next = Math.max(minVal.value, next);
+    if (maxVal.value !== undefined) next = Math.min(maxVal.value, next);
+    emit('update:modelValue', next);
 }
 
 function step(dir: 1 | -1) {
