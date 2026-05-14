@@ -411,7 +411,7 @@ async function openCreate() {
     if (formSchema.value) {
         const dv = (formSchema.value as { default_value?: unknown }).default_value;
         if (dv && typeof dv === 'object') {
-            formSpecData.value = JSON.parse(JSON.stringify(dv));
+            formSpecData.value = structuredClone(dv) as Record<string, unknown>;
         }
     }
 }

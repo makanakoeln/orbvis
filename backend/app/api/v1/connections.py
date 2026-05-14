@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.api.v1.deps import get_current_user, require_admin, resolve_auth_user
 from app.connections.base import ConnectionBase, ServiceRow, TopologyRow, topology_problem_rank
@@ -65,7 +65,10 @@ async def get_connection_form_data(
 
 
 class FormCreateBody(BaseModel):
-    id: str
+    # ID lands on disk as a filename and in URLs — restrict to a safe charset.
+    # Path-traversal via ``id="../foo"`` would otherwise let an admin overwrite
+    # neighbouring connection JSONs (admin-only endpoint, but defense in depth).
+    id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
     form: dict[str, object]
 
 
@@ -90,7 +93,7 @@ async def test_connection_from_form(
 ) -> TestResult:
     """Test FormSpec connection data without saving — used by the edit dialog."""
     try:
-        cfg = form_data_to_config(body.form, existing=None, connection_id=body.id or "preview")
+        cfg = form_data_to_config(body.form, existing=None, connection_id=body.id)
     except ValueError as exc:
         return TestResult(ok=False, message=str(exc))
     try:

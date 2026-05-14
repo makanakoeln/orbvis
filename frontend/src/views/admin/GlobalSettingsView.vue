@@ -129,8 +129,8 @@ async function load() {
             settingsApi.get(token),
         ]);
         schema.value = spec as unknown as Schema;
-        initialData.value = JSON.parse(JSON.stringify(values));
-        data.value = JSON.parse(JSON.stringify(values));
+        initialData.value = structuredClone(values);
+        data.value = structuredClone(values);
     } catch (e: unknown) {
         loadError.value = e instanceof Error ? e.message : 'Failed to load settings';
     } finally {
@@ -139,7 +139,7 @@ async function load() {
 }
 
 function resetForm() {
-    data.value = JSON.parse(JSON.stringify(initialData.value));
+    data.value = structuredClone(initialData.value);
     savedOk.value = false;
     saveError.value = '';
 }
@@ -152,8 +152,8 @@ async function handleSave() {
     savedOk.value = false;
     try {
         const updated = await settingsApi.update(data.value as GlobalSettings, token);
-        initialData.value = JSON.parse(JSON.stringify(updated));
-        data.value = JSON.parse(JSON.stringify(updated));
+        initialData.value = structuredClone(updated);
+        data.value = structuredClone(updated);
         savedOk.value = true;
         if (savedOkTimer) clearTimeout(savedOkTimer);
         savedOkTimer = setTimeout(() => {

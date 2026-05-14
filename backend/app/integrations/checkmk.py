@@ -11,7 +11,7 @@ import threading
 import time as _time
 from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from app.core.config import settings
 
@@ -70,7 +70,10 @@ def exec_mk_file(path: Path, defaults: dict[str, Any]) -> dict[str, Any]:
     return ns
 
 
-def get_monitoring_core() -> str | None:
+MonitoringCore = Literal["cmc", "nagios"]
+
+
+def get_monitoring_core() -> MonitoringCore | None:
     """Return 'cmc', 'nagios', or None (not in OMD or file unreadable).
 
     Reads CONFIG_CORE from $OMD_ROOT/etc/omd/site.conf — stable across CMK 2.3–master.
@@ -86,7 +89,10 @@ def get_monitoring_core() -> str | None:
         return None
     for line in text.splitlines():
         if line.strip().startswith("CONFIG_CORE="):
-            return line.split("=", 1)[1].strip().strip("'\"")
+            value = line.split("=", 1)[1].strip().strip("'\"")
+            if value in ("cmc", "nagios"):
+                return value  # type: ignore[return-value]
+            return None
     log.debug("get_monitoring_core: CONFIG_CORE not found in %s", site_conf)
     return None
 

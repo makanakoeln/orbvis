@@ -9,6 +9,7 @@ Only the subset of FormSpec types OrbVis uses is implemented here.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 from cmk.rulesets.v1._localize import _Localizable
 from cmk.rulesets.v1.form_specs import (
@@ -28,6 +29,20 @@ from cmk.rulesets.v1.form_specs import (
     SingleChoice,
     String,
 )
+
+
+@dataclass(frozen=True, kw_only=True)
+class OrbDictGroup(DictGroup):  # type: ignore[misc]
+    """DictGroup + optional ``layout`` / explicit ``key`` for OrbVis FormSpecs.
+
+    CMK's DictGroup only carries title + help; the vendored FormDictionary
+    component reads ``group.layout`` ("vertical" stacks sections, "horizontal"
+    arranges siblings inline). Adds an explicit ``key`` so groups with the
+    same title don't collide.
+    """
+
+    layout: Literal["vertical", "horizontal"] = "vertical"
+    key: str | None = None
 
 
 def _identity(s: str) -> str:
@@ -143,9 +158,6 @@ def serialize_form_spec(spec: FormSpec[object]) -> dict[str, object]:
 
 
 def _group(el: DictElement[object]) -> dict[str, object] | None:
-    # Lazy import to avoid a circular dep: __init__.py pulls in this module.
-    from app.form_specs import OrbDictGroup
-
     group = el.group
     if not isinstance(group, DictGroup):
         return None

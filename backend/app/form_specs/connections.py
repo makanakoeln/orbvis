@@ -10,6 +10,8 @@ discriminator.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from app.schemas.connection import REDACTED_SECRET, ConnectionConfig
 
 from cmk.rulesets.v1 import Help, Label, Title
@@ -196,7 +198,10 @@ def _test_branch() -> FixedValue:
     )
 
 
-def connection_spec(monitoring_core: str | None = None) -> Dictionary:
+MonitoringCore = Literal["cmc", "nagios"]
+
+
+def connection_spec(monitoring_core: MonitoringCore | None = None) -> Dictionary:
     """Build the FormSpec; drop automation_user/secret when CMC is detected.
 
     monitoring_core is ``"cmc"`` / ``"nagios"`` / None. ``None`` includes all
