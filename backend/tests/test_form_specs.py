@@ -185,7 +185,9 @@ def test_connection_config_to_form_data_livestatus_branch() -> None:
     assert type_field[0] == "livestatus"
     branch = type_field[1]
     assert isinstance(branch, dict)
-    assert branch["socket_path"] == "/omd/sites/SITE/tmp/run/live"
+    # ``target`` is a CascadingSingleChoice [name, dict] that splits unix-socket
+    # from TCP — schaut nach dem Unix-socket-Pfad in der "socket" branch.
+    assert branch["target"] == ["socket", {"socket_path": "/omd/sites/SITE/tmp/run/live"}]
     assert branch["automation_secret"] == "topsecret"
     # Icinga2 fields must not leak into a livestatus branch
     assert "icinga2_url" not in branch
@@ -222,3 +224,62 @@ def test_connection_form_data_to_config_rejects_unknown_type() -> None:
         assert "Unknown backend type" in str(exc)
     else:
         raise AssertionError("Expected ValueError")
+
+
+def test_connection_roundtrip_livestatus_tcp() -> None:
+    from app.form_specs.connections import config_to_form_data, form_data_to_config
+    from app.schemas.connection import ConnectionConfig
+
+    cfg = ConnectionConfig(
+        id="tcp_live",
+        type="livestatus",
+        label="Remote",
+        host="livestatus.example.com",
+        port=6557,
+        timeout=10.0,
+    )
+    form = config_to_form_data(cfg)
+    branch = form["type"][1]
+    assert branch["target"] == [
+        "tcp",
+        {"host": "livestatus.example.com", "port": 6557},
+    ]
+    assert "socket_path" not in branch
+    rebuilt = form_data_to_config(form, connection_id="tcp_live")
+    assert rebuilt.host == "livestatus.example.com"
+    assert rebuilt.port == 6557
+    assert rebuilt.socket_path is None
+
+
+def test_connection_roundtrip_icinga2() -> None:
+    from app.form_specs.connections import config_to_form_data, form_data_to_config
+    from app.schemas.connection import ConnectionConfig
+
+    cfg = ConnectionConfig(
+        id="icinga",
+        type="icinga2",
+        label="Icinga",
+        icinga2_url="https://icinga.example.com:5665",
+        icinga2_username="root",
+        icinga2_password="secret",
+        icinga2_verify_ssl=True,
+        timeout=15.0,
+    )
+    form = config_to_form_data(cfg)
+    branch = form["type"][1]
+    assert branch["icinga2_url"] == "https://icinga.example.com:5665"
+    assert branch["icinga2_verify_ssl"] is True
+    rebuilt = form_data_to_config(form, connection_id="icinga")
+    assert rebuilt.type == "icinga2"
+    assert rebuilt.icinga2_url == "https://icinga.example.com:5665"
+
+
+def test_connection_roundtrip_test_backend() -> None:
+    from app.form_specs.connections import config_to_form_data, form_data_to_config
+    from app.schemas.connection import ConnectionConfig
+
+    cfg = ConnectionConfig(id="demo", type="test", label="Demo")
+    form = config_to_form_data(cfg)
+    assert form["type"] == ["test", None]
+    rebuilt = form_data_to_config(form, connection_id="demo")
+    assert rebuilt.type == "test"

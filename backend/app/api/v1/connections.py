@@ -51,7 +51,7 @@ async def list_backends(_: User = Depends(require_admin)) -> list[ConnectionConf
 
 @router.get("/schema")
 async def get_connection_schema(_: User = Depends(require_admin)) -> dict[str, object]:
-    return serialize_form_spec(connection_spec())
+    return serialize_form_spec(connection_spec(cmk_integration.get_monitoring_core()))
 
 
 @router.get("/{connection_id}/form")

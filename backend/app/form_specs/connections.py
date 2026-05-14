@@ -28,12 +28,9 @@ from cmk.rulesets.v1.form_specs import (
     String,
 )
 
-# Field sets per type — kept in one place so the converter doesn't drift
-# from the FormSpec branch definitions below.
+# Livestatus branch fields outside the ``target`` cascading choice. The
+# converter splits target (socket vs TCP) explicitly below.
 _LIVESTATUS_FIELDS = (
-    "socket_path",
-    "host",
-    "port",
     "timeout",
     "checkmk_url",
     "automation_user",
@@ -48,69 +45,103 @@ _ICINGA2_FIELDS = (
 )
 
 
-def _livestatus_branch() -> Dictionary:
-    return Dictionary(
-        title=Title("Livestatus connection"),
-        elements={
-            "socket_path": DictElement(
-                parameter_form=String(
-                    title=Title("Unix socket path"),
-                    help_text=Help(
-                        "Either the Unix socket path OR host+port, not both. "
-                        "When OrbVis runs inside an OMD site, the socket is at "
-                        "tmp/run/live."
-                    ),
-                    prefill=InputHint("/omd/sites/<site>/tmp/run/live"),
-                    field_size=FieldSize.LARGE,
+def _livestatus_target() -> CascadingSingleChoice:
+    return CascadingSingleChoice(
+        title=Title("Connection target"),
+        help_text=Help(
+            "Pick Unix socket when OrbVis runs inside the same OMD site as the "
+            "monitoring core (path is at tmp/run/live). Pick TCP for remote "
+            "Livestatus / xinetd setups."
+        ),
+        elements=[
+            CascadingSingleChoiceElement(
+                name="socket",
+                title=Title("Unix socket"),
+                parameter_form=Dictionary(
+                    title=Title("Unix socket"),
+                    elements={
+                        "socket_path": DictElement(
+                            required=True,
+                            parameter_form=String(
+                                title=Title("Socket path"),
+                                prefill=InputHint("/omd/sites/<site>/tmp/run/live"),
+                                field_size=FieldSize.LARGE,
+                            ),
+                        ),
+                    },
                 ),
             ),
-            "host": DictElement(
-                parameter_form=String(
-                    title=Title("TCP host"),
-                    prefill=InputHint("livestatus.example.com"),
-                    field_size=FieldSize.LARGE,
+            CascadingSingleChoiceElement(
+                name="tcp",
+                title=Title("TCP (host + port)"),
+                parameter_form=Dictionary(
+                    title=Title("TCP endpoint"),
+                    elements={
+                        "host": DictElement(
+                            required=True,
+                            parameter_form=String(
+                                title=Title("Host"),
+                                prefill=InputHint("livestatus.example.com"),
+                                field_size=FieldSize.LARGE,
+                            ),
+                        ),
+                        "port": DictElement(
+                            required=True,
+                            parameter_form=Integer(
+                                title=Title("Port"),
+                                prefill=DefaultValue(6557),
+                            ),
+                        ),
+                    },
                 ),
             ),
-            "port": DictElement(
-                parameter_form=Integer(
-                    title=Title("TCP port"),
-                    prefill=DefaultValue(6557),
-                ),
-            ),
-            "timeout": DictElement(
-                required=True,
-                parameter_form=Integer(
-                    title=Title("Timeout"),
-                    unit_symbol="s",
-                    prefill=DefaultValue(10),
-                ),
-            ),
-            "checkmk_url": DictElement(
-                parameter_form=String(
-                    title=Title("Checkmk URL"),
-                    help_text=Help(
-                        "Used for deep links into the Checkmk GUI. Leave empty "
-                        "to inherit the global setting."
-                    ),
-                    prefill=InputHint("/<site>/check_mk"),
-                    field_size=FieldSize.LARGE,
-                ),
-            ),
-            "automation_user": DictElement(
-                parameter_form=String(
-                    title=Title("Automation user"),
-                    help_text=Help(
-                        "Required for actions (acknowledge, downtime) against the Checkmk REST API."
-                    ),
-                ),
-            ),
-            "automation_secret": DictElement(
-                parameter_form=Password(
-                    title=Title("Automation secret"),
-                ),
-            ),
-        },
+        ],
+        prefill=DefaultValue("socket"),
     )
+
+
+def _livestatus_branch(include_automation: bool = True) -> Dictionary:
+    elements: dict[str, DictElement[object]] = {
+        "target": DictElement(
+            required=True,
+            parameter_form=_livestatus_target(),
+        ),
+        "timeout": DictElement(
+            required=True,
+            parameter_form=Integer(
+                title=Title("Timeout"),
+                unit_symbol="s",
+                prefill=DefaultValue(10),
+            ),
+        ),
+        "checkmk_url": DictElement(
+            parameter_form=String(
+                title=Title("Checkmk URL"),
+                help_text=Help(
+                    "Used for deep links into the Checkmk GUI. Leave empty "
+                    "to inherit the global setting."
+                ),
+                prefill=InputHint("/<site>/check_mk"),
+                field_size=FieldSize.LARGE,
+            ),
+        ),
+    }
+    if include_automation:
+        elements["automation_user"] = DictElement(
+            parameter_form=String(
+                title=Title("Automation user"),
+                help_text=Help(
+                    "Nagios core only. CMC sites can fetch metric history via "
+                    "Livestatus rrddata — no REST API credentials needed."
+                ),
+            ),
+        )
+        elements["automation_secret"] = DictElement(
+            parameter_form=Password(
+                title=Title("Automation secret"),
+            ),
+        )
+    return Dictionary(title=Title("Livestatus connection"), elements=elements)
 
 
 def _icinga2_branch() -> Dictionary:
@@ -165,8 +196,13 @@ def _test_branch() -> FixedValue:
     )
 
 
-def connection_spec() -> Dictionary:
-    # ID lives in the URL, not the FormSpec — edit only.
+def connection_spec(monitoring_core: str | None = None) -> Dictionary:
+    """Build the FormSpec; drop automation_user/secret when CMC is detected.
+
+    monitoring_core is ``"cmc"`` / ``"nagios"`` / None. ``None`` includes all
+    fields so remote / unknown setups stay editable.
+    """
+    include_automation = monitoring_core != "cmc"
     return Dictionary(
         title=Title("Edit connection"),
         help_text=Help(
@@ -189,7 +225,9 @@ def connection_spec() -> Dictionary:
                         CascadingSingleChoiceElement(
                             name="livestatus",
                             title=Title("Livestatus (Checkmk / Nagios)"),
-                            parameter_form=_livestatus_branch(),
+                            parameter_form=_livestatus_branch(
+                                include_automation=include_automation
+                            ),
                         ),
                         CascadingSingleChoiceElement(
                             name="icinga2",
@@ -215,10 +253,23 @@ def config_to_form_data(cfg: ConnectionConfig) -> dict[str, object]:
     ``id`` is excluded — it's the URL-segment in the edit endpoint.
     """
     payload = cfg.model_dump()
-    branch_fields = _ICINGA2_FIELDS if cfg.type == "icinga2" else _LIVESTATUS_FIELDS
     branch_data: dict[str, object] = {}
-    if cfg.type != "test":
-        for field in branch_fields:
+    if cfg.type == "livestatus":
+        for field in _LIVESTATUS_FIELDS:
+            value = payload.get(field)
+            if value is not None:
+                branch_data[field] = value
+        # Target is a CascadingSingleChoice on the wire: ['socket', {socket_path}]
+        # or ['tcp', {host, port}]. TCP wins when host is set, socket otherwise.
+        if cfg.host:
+            branch_data["target"] = [
+                "tcp",
+                {"host": cfg.host, "port": cfg.port if cfg.port is not None else 6557},
+            ]
+        else:
+            branch_data["target"] = ["socket", {"socket_path": cfg.socket_path or ""}]
+    elif cfg.type == "icinga2":
+        for field in _ICINGA2_FIELDS:
             value = payload.get(field)
             if value is not None:
                 branch_data[field] = value
@@ -255,7 +306,18 @@ def form_data_to_config(
         "label": form.get("label", ""),
     }
     if isinstance(branch, dict):
-        raw.update(branch)
+        if type_name == "livestatus":
+            raw.update({k: v for k, v in branch.items() if k != "target"})
+            target = branch.get("target")
+            if isinstance(target, list | tuple) and len(target) == 2:
+                target_name, target_value = target
+                if target_name == "tcp" and isinstance(target_value, dict):
+                    raw["host"] = target_value.get("host")
+                    raw["port"] = target_value.get("port")
+                elif target_name == "socket" and isinstance(target_value, dict):
+                    raw["socket_path"] = target_value.get("socket_path")
+        else:
+            raw.update(branch)
     if existing is not None:
         if raw.get("automation_secret") == REDACTED_SECRET:
             raw["automation_secret"] = existing.automation_secret

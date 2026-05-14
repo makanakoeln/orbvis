@@ -90,7 +90,20 @@ def serialize_form_spec(spec: FormSpec[object]) -> dict[str, object]:
     if isinstance(spec, BooleanChoice):
         return _common(spec, "boolean_choice") | {"label": _loc(spec.label)}
     if isinstance(spec, Password):
-        return _common(spec, "password") | {}
+        # FormPassword expects password_store_choices + i18n strings — OrbVis has
+        # no password-store, so we emit an empty list and labels for the dropdown
+        # the user never gets to see in store mode.
+        return _common(spec, "password") | {
+            "password_store_choices": [],
+            "i18n": {
+                "explicit_password": "Explicit password",
+                "password_store": "Stored password",
+                "no_password_store_choices": "No password store available",
+                "password_choice_invalid": "Invalid password choice",
+                "choose_password_from_store": "Choose stored password",
+                "choose_password_type": "Choose password type",
+            },
+        }
     if isinstance(spec, FixedValue):
         return _common(spec, "fixed_value") | {
             "label": _loc(spec.label),
@@ -110,6 +123,10 @@ def serialize_form_spec(spec: FormSpec[object]) -> dict[str, object]:
                     "name": el.name,
                     "title": _loc(el.title),
                     "parameter_form": serialize_form_spec(el.parameter_form),
+                    # Frontend FormCascadingSingleChoice reads this when the
+                    # user switches branches — without it the new branch's
+                    # body crashes on `'host' in undefined`.
+                    "default_value": _default_value(el.parameter_form),
                 }
                 for el in spec.elements
             ],
