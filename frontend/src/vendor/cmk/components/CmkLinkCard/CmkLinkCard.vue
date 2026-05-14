@@ -1,17 +1,17 @@
 <!--
 Copyright (C) 2025 Checkmk GmbH - License: GNU General Public License v2
-Vendored from cmk-frontend-vue.
-
-OrbVis patch: replaced TranslatedString with plain string (OrbVis i18n
-returns strings directly via vue-i18n).
+This file is part of Checkmk (https://checkmk.com). It is subject to the terms and
+conditions defined in the file COPYING, which is part of this source code package.
 -->
 <script setup lang="ts">
-import type { SimpleIcons } from '@cmk/components/CmkIcon';
-import CmkIcon from '@cmk/components/CmkIcon';
-import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
-import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { computed } from 'vue';
+
+import type { SimpleIcons } from '@/components/CmkIcon';
+import CmkIcon from '@/components/CmkIcon';
+import CmkHeading from '@/components/typography/CmkHeading.vue';
+import CmkParagraph from '@/components/typography/CmkParagraph.vue';
+import type { TranslatedString } from '@/lib/i18nString';
 
 const cmkLinkCardVariants = cva('', {
     variants: {
@@ -32,11 +32,10 @@ const cmkLinkCardVariants = cva('', {
 
 export type CmkLinkCardBorders = VariantProps<typeof cmkLinkCardVariants>['borders'];
 export type CmkLinkCardContrast = VariantProps<typeof cmkLinkCardVariants>['contrast'];
-
 interface CmkLinkCardProps {
     iconName?: SimpleIcons | undefined;
-    title: string;
-    subtitle?: string;
+    title: TranslatedString;
+    subtitle?: TranslatedString;
     url?: string | undefined;
     callback?: () => void;
     openInNewTab: boolean;
@@ -120,6 +119,7 @@ const classes = computed(() => [
         outline: var(--default-border-color-green) auto 1px;
     }
 
+    /* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
     &.disabled {
         opacity: 0.5;
         pointer-events: none;

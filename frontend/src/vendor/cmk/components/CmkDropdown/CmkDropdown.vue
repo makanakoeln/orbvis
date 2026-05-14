@@ -4,287 +4,313 @@ This file is part of Checkmk (https://checkmk.com). It is subject to the terms a
 conditions defined in the file COPYING, which is part of this source code package.
 -->
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, ref, useSlots, useTemplateRef } from 'vue';
 
-export interface Suggestion {
-    name: string | null;
+import CmkLoading from '@/components/CmkLoading.vue';
+import CmkSuggestions, {
+    ErrorResponse,
+    NoSelection,
+    Selection,
+    SelectionWithTitle,
+    type Suggestion,
+    type Suggestions,
+    type SuggestionValue,
+} from '@/components/CmkSuggestions';
+import ArrowDown from '@/components/graphics/ArrowDown.vue';
+import CmkLabelRequired from '@/components/user-input/CmkLabelRequired.vue';
+import { untranslated } from '@/lib/i18n';
+import type { TranslatedString } from '@/lib/i18nString';
+import useClickOutside from '@/lib/useClickOutside';
+import { immediateWatch } from '@/lib/watch';
+
+import CmkInlineValidation from '../user-input/CmkInlineValidation.vue';
+import CmkDropdownButton, { type ButtonVariants } from './CmkDropdownButton.vue';
+import TruncateText from './TruncateText.vue';
+
+export interface DropdownOption {
+    name: string;
     title: string;
 }
 
-export interface SuggestionsFixed {
-    type: 'fixed';
-    suggestions: Suggestion[];
-}
-
-interface SuggestionsFiltered {
-    type: 'filtered';
-    suggestions: Suggestion[];
-}
-
-interface SuggestionsCallbackFiltered {
-    type: 'callback-filtered';
-    querySuggestions: (q: string) => Promise<unknown>;
-}
-
-interface Props {
-    options: SuggestionsFixed | SuggestionsFiltered | SuggestionsCallbackFiltered;
-    label: string;
-    selectedOption?: string | null;
+const {
+    selectedOption: selectedOptionPublic,
+    inputHint = untranslated(''),
+    noResultsHint = '',
+    disabled = false,
+    componentId = null,
+    noElementsText = untranslated(''),
+    required = false,
+    width,
+    options,
+    label,
+    formValidation = false,
+} = defineProps<{
+    selectedOption: string | null;
+    options: Suggestions;
+    inputHint?: TranslatedString;
+    noResultsHint?: TranslatedString;
     disabled?: boolean;
+    componentId?: string | null;
+    noElementsText?: TranslatedString;
     required?: boolean;
-    inputHint?: string;
-    noResultsHint?: string;
-    noElementsText?: string;
-    width?: 'default' | 'half' | 'fill';
+    label: TranslatedString;
+    width?: ButtonVariants['width'];
     formValidation?: boolean;
-}
+}>();
 
-const props = defineProps<Props>();
-const emit = defineEmits<{ 'update:selectedOption': [value: string | null] }>();
+const vClickOutside = useClickOutside();
 
-// list max-height (240) + search bar (~34) + borders
-const MENU_MAX_HEIGHT = 280;
+const buttonLabel = ref<TranslatedString>(inputHint);
+const callbackFilteredErrorMessage = ref<string | null>(null);
+const callbackFilteredLoading = ref<boolean>(false);
+const internallyDisabled = ref<boolean>(false);
 
-const open = ref(false);
-const query = ref('');
-const container = ref<HTMLElement | null>(null);
-const trigger = ref<HTMLElement | null>(null);
-const menuStyle = ref<{ top: string; bottom: string; left: string; minWidth: string }>({
-    top: '0px',
-    bottom: 'auto',
-    left: '0px',
-    minWidth: '0px',
-});
+const selectedOption = ref<SuggestionValue>(new NoSelection());
 
-const suggestions = computed((): Suggestion[] => {
-    if (props.options.type === 'fixed') return props.options.suggestions;
-    if (props.options.type === 'filtered') return props.options.suggestions;
-    return [];
-});
+const emit = defineEmits<{
+    (e: 'update:selectedOption', value: string | null): void;
+}>();
 
-const filtered = computed(() => {
-    if (!query.value) return suggestions.value;
-    const q = query.value.toLowerCase();
-    return suggestions.value.filter((s) => s.title.toLowerCase().includes(q));
-});
+immediateWatch(
+    () => ({
+        newValue: selectedOptionPublic,
+        newOptions: options,
+    }),
+    async ({ newValue, newOptions }) => {
+        callbackFilteredLoading.value = false;
+        if (newOptions.type === 'callback-filtered' && newValue !== null) {
+            internallyDisabled.value = true;
+            callbackFilteredLoading.value = true;
+        }
+        const currentSelectionState = await getCurrentSelectionState(newOptions, newValue);
+        callbackFilteredLoading.value = false;
+        internallyDisabled.value = false;
+        // Only update if the selected option hasn't changed again while awaiting
+        if (newValue === selectedOptionPublic) {
+            buttonLabel.value = currentSelectionState.buttonLabel;
+            selectedOption.value = currentSelectionState.value;
+        }
+    },
+);
 
-const selectedTitle = computed(() => {
-    const found = suggestions.value.find((s) => s.name === props.selectedOption);
-    return found ? found.title : (props.selectedOption ?? '');
-});
+/**
+ * This function might have a performance impact as it might trigger a callback to fetch
+ * suggestions. It should only be called when necessary.
+ */
+async function getCurrentSelectionState(
+    options: Suggestions,
+    selected: string | null,
+): Promise<{ value: SuggestionValue; buttonLabel: TranslatedString }> {
+    let currentOptions: Suggestion[];
+    switch (options.type) {
+        case 'filtered':
+        case 'fixed': {
+            if (options.suggestions.length === 0) {
+                return { value: new NoSelection(), buttonLabel: noElementsText || inputHint };
+            } else if (selected === null) {
+                return { value: new NoSelection(), buttonLabel: inputHint };
+            }
+            currentOptions = options.suggestions;
+            break;
+        }
+        case 'callback-filtered': {
+            if (selected === null) {
+                return { value: new NoSelection(), buttonLabel: inputHint };
+            }
+            const result = await options.querySuggestions(selected);
 
-function updateMenuPosition() {
-    if (!trigger.value) return;
-    const r = trigger.value.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - r.bottom;
-    if (spaceBelow < MENU_MAX_HEIGHT && r.top > spaceBelow) {
-        menuStyle.value = {
-            top: 'auto',
-            bottom: `${window.innerHeight - r.top + 4}px`,
-            left: `${r.left}px`,
-            minWidth: `${r.width}px`,
-        };
+            if (result instanceof ErrorResponse) {
+                callbackFilteredErrorMessage.value = result.error;
+                return { value: new Selection(selected), buttonLabel: untranslated(selected) };
+            } else {
+                callbackFilteredErrorMessage.value = null;
+                currentOptions = result.choices;
+            }
+            break;
+        }
+    }
+    if (currentOptions.length === 0) {
+        return { value: new NoSelection(), buttonLabel: noElementsText };
     } else {
-        menuStyle.value = {
-            top: `${r.bottom + 4}px`,
-            bottom: 'auto',
-            left: `${r.left}px`,
-            minWidth: `${r.width}px`,
-        };
+        const selectedSuggestion = currentOptions.find((s: Suggestion) => s.name === selected);
+        if (selectedSuggestion) {
+            if (selectedSuggestion.name === null) {
+                return {
+                    value: new NoSelection(),
+                    buttonLabel: inputHint,
+                };
+            }
+            return {
+                value: new SelectionWithTitle(selectedSuggestion.name, selectedSuggestion.title),
+                buttonLabel: selectedSuggestion.title,
+            };
+        } else {
+            return { value: new Selection(selected), buttonLabel: untranslated(selected) };
+        }
     }
 }
 
-function toggle() {
-    if (props.disabled) return;
-    open.value = !open.value;
-    if (open.value) {
-        query.value = '';
-        updateMenuPosition();
+const canOpenDropdown = computed(() => {
+    if (internallyDisabled.value === true) {
+        return false;
+    }
+    if (options.type === 'filtered' || options.type === 'fixed') {
+        if (!noResultsHint && options.suggestions.length === 0) {
+            return false;
+        }
+        return true;
+    }
+    return true; // assume something is available via callback/backend
+    // we don't know the number of available suggestions, as this is handled by CmkSuggestions,
+    // so we just assume we have something to display, although maybe, we don't have.
+});
+
+const suggestionsShown = ref(false);
+const suggestionsRef = ref<InstanceType<typeof CmkSuggestions> | null>(null);
+const comboboxButtonRef =
+    useTemplateRef<InstanceType<typeof CmkDropdownButton>>('comboboxButtonRef');
+
+function showSuggestions(): void {
+    if (!disabled && canOpenDropdown.value) {
+        suggestionsShown.value = !suggestionsShown.value;
+        if (!suggestionsShown.value) {
+            return;
+        }
+
+        nextTick(async () => {
+            if (suggestionsRef.value) {
+                const suggestionsRect = suggestionsRef.value.$el.getBoundingClientRect();
+                if (window.innerHeight - suggestionsRect.bottom < suggestionsRect.height) {
+                    suggestionsRef.value.$el.style.bottom = `calc(2 * var(--spacing))`;
+                } else {
+                    suggestionsRef.value.$el.style.removeProperty('bottom');
+                }
+                await suggestionsRef.value.focus();
+            }
+        });
     }
 }
 
-function select(s: Suggestion) {
-    emit('update:selectedOption', s.name);
-    open.value = false;
-    query.value = '';
+function hideSuggestions(): void {
+    suggestionsShown.value = false;
+    comboboxButtonRef.value?.focus();
 }
 
-function onClickOutside(e: MouseEvent) {
-    if (!open.value) return;
-    if (container.value && !container.value.contains(e.target as Node)) {
-        open.value = false;
+function handleUpdate(selected: Suggestion | null): void {
+    // CmkSuggestion tells us to change our value
+    const newValue =
+        selected === null || selected.name === null
+            ? new NoSelection()
+            : new SelectionWithTitle(selected.name, selected.title);
+    selectedOption.value = newValue;
+    emit('update:selectedOption', newValue.getName());
+    callbackFilteredErrorMessage.value = null;
+    hideSuggestions();
+}
+
+const slots = useSlots();
+const group = computed<ButtonVariants['group']>(() => {
+    const hasButtonsStart = !!slots['buttons-start'];
+    const hasButtonsEnd = !!slots['buttons-end'];
+    if (hasButtonsStart && hasButtonsEnd) {
+        return 'center';
+    } else if (hasButtonsStart) {
+        return 'end';
+    } else if (hasButtonsEnd) {
+        return 'start';
+    } else {
+        return 'no';
     }
-}
-
-onMounted(() => document.addEventListener('mousedown', onClickOutside));
-onBeforeUnmount(() => document.removeEventListener('mousedown', onClickOutside));
+});
 </script>
 
 <template>
     <div
-        ref="container"
+        v-click-outside="
+            () => {
+                if (suggestionsShown) suggestionsShown = false;
+            }
+        "
         class="cmk-dropdown"
-        :class="[`cmk-dropdown--${width ?? 'default'}`, { 'cmk-dropdown--disabled': disabled }]"
+        :class="{ 'cmk-dropdown__fill': width === 'fill' }"
     >
-        <button
-            ref="trigger"
-            type="button"
-            class="cmk-dropdown__trigger"
+        <CmkInlineValidation
+            v-if="callbackFilteredErrorMessage !== null"
+            :validation="[callbackFilteredErrorMessage]"
+        ></CmkInlineValidation>
+        <slot name="buttons-start"></slot>
+        <CmkDropdownButton
+            v-bind="componentId!! ? { id: componentId } : {}"
+            ref="comboboxButtonRef"
+            :aria-label="label"
+            :aria-expanded="suggestionsShown"
             :disabled="disabled"
-            @click="toggle"
+            :multiple-choices-available="canOpenDropdown"
+            :value-is-selected="!(selectedOption instanceof NoSelection)"
+            :group="group"
+            :width="width"
+            :class="{ 'cmk-dropdown__validation-error': formValidation }"
+            @click="showSuggestions"
         >
-            <span class="cmk-dropdown__value">{{
-                selectedTitle || label || inputHint || '…'
-            }}</span>
-            <svg
-                class="cmk-dropdown__chevron"
-                :class="{ 'cmk-dropdown__chevron--open': open }"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                />
-            </svg>
-        </button>
-
-        <Teleport to="body">
-            <div v-if="open" class="cmk-dropdown__menu" :style="menuStyle">
-                <input
-                    v-if="options.type !== 'fixed' || suggestions.length > 8"
-                    v-model="query"
-                    class="cmk-dropdown__search"
-                    type="text"
-                    :placeholder="inputHint ?? ''"
-                    @click.stop
-                />
-                <ul class="cmk-dropdown__list">
-                    <li v-if="filtered.length === 0" class="cmk-dropdown__no-results">
-                        {{ noResultsHint ?? noElementsText ?? 'No results' }}
-                    </li>
-                    <li
-                        v-for="s in filtered"
-                        :key="String(s.name)"
-                        class="cmk-dropdown__item"
-                        :class="{ 'cmk-dropdown__item--selected': s.name === selectedOption }"
-                        @mousedown.prevent="select(s)"
-                    >
-                        {{ s.title }}
-                    </li>
-                </ul>
-            </div>
-        </Teleport>
+            <template v-if="callbackFilteredLoading">
+                <CmkLoading />
+            </template>
+            <span v-if="!callbackFilteredLoading && buttonLabel" style="display: contents"
+                ><TruncateText :text="buttonLabel" /></span
+            ><CmkLabelRequired
+                :show="required && selectedOption instanceof NoSelection"
+                :space="'before'" />
+            <template v-if="!callbackFilteredLoading && !buttonLabel">&nbsp;</template>
+            <ArrowDown
+                class="cmk-dropdown--arrow"
+                :class="{ rotated: suggestionsShown, disabled: disabled || !canOpenDropdown }"
+        /></CmkDropdownButton>
+        <slot name="buttons-end"></slot>
+        <CmkSuggestions
+            v-if="!!suggestionsShown"
+            ref="suggestionsRef"
+            role="option"
+            :suggestions="options"
+            :selected-suggestion="selectedOption"
+            :no-results-hint="noResultsHint"
+            @request-close-suggestions="hideSuggestions"
+            @select-suggestion="handleUpdate"
+        />
     </div>
 </template>
 
 <style scoped>
 .cmk-dropdown {
-    position: relative;
     display: inline-block;
-}
-.cmk-dropdown--default {
-    min-width: 140px;
-}
-.cmk-dropdown--half {
-    width: 50%;
-}
-.cmk-dropdown--fill {
-    width: 100%;
-}
-
-.cmk-dropdown__trigger {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-    padding: 4px 8px;
-    font-size: 13px;
-    background: var(--bg-surface, #1e1e1e);
-    color: var(--text, #ccc);
-    border: 1px solid var(--border, #3a3a3a);
-    border-radius: 4px;
-    cursor: pointer;
-    text-align: left;
-    transition: border-color 150ms;
-}
-.cmk-dropdown__trigger:hover:not(:disabled) {
-    border-color: var(--color-corporate-green-50, #0f9b5e);
-}
-.cmk-dropdown__trigger:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.cmk-dropdown__value {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    position: relative;
     white-space: nowrap;
+    align-self: flex-start;
+
+    .cmk-dropdown--arrow {
+        flex-shrink: 0;
+        width: 0.7em;
+        color: var(--dropdown-arrow-color);
+        margin-left: auto;
+        padding: 0 4px;
+        margin-top: -1px;
+
+        /* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
+        &.rotated {
+            transform: rotate(180deg);
+        }
+
+        /* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
+        &.disabled {
+            opacity: 0.4;
+        }
+    }
 }
 
-.cmk-dropdown__chevron {
-    width: 12px;
-    height: 12px;
-    flex-shrink: 0;
-    transition: transform 200ms;
-}
-.cmk-dropdown__chevron--open {
-    transform: rotate(180deg);
-}
-
-.cmk-dropdown__menu {
-    position: fixed;
-    z-index: 9999;
-    background: var(--bg-surface, #1e1e1e);
-    border: 1px solid var(--border, #3a3a3a);
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    overflow: hidden;
-}
-
-.cmk-dropdown__search {
+.cmk-dropdown__fill {
     width: 100%;
-    box-sizing: border-box;
-    padding: 6px 8px;
-    font-size: 12px;
-    background: transparent;
-    color: var(--text, #ccc);
-    border: none;
-    border-bottom: 1px solid var(--border, #3a3a3a);
-    outline: none;
 }
 
-.cmk-dropdown__list {
-    list-style: none;
-    margin: 0;
-    padding: 4px 0;
-    max-height: 240px;
-    overflow-y: auto;
-}
-
-.cmk-dropdown__item {
-    padding: 5px 10px;
-    font-size: 13px;
-    cursor: pointer;
-    color: var(--text, #ccc);
-    transition: background 100ms;
-}
-.cmk-dropdown__item:hover {
-    background: var(--bg-hover, rgba(255, 255, 255, 0.06));
-}
-.cmk-dropdown__item--selected {
-    color: var(--color-corporate-green-50, #0f9b5e);
-    font-weight: 500;
-}
-
-.cmk-dropdown__no-results {
-    padding: 8px 10px;
-    font-size: 12px;
-    color: var(--color-daylight-grey-60, #6b6b6b);
+.cmk-dropdown__validation-error {
+    border: 1px solid var(--inline-error-border-color);
 }
 </style>

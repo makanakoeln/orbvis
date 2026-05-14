@@ -4,40 +4,50 @@ This file is part of Checkmk (https://checkmk.com). It is subject to the terms a
 conditions defined in the file COPYING, which is part of this source code package.
 -->
 <script setup lang="ts">
-interface ToggleButtonOption {
+import type { TranslatedString } from '@/lib/i18nString';
+
+export type ToggleButtonOption = {
     label: string;
     value: string;
-    disabled?: boolean | string;
-}
+    tooltip?: TranslatedString | undefined;
+    disabled?: boolean | string | undefined;
+    disabledTooltip?: TranslatedString | undefined;
+};
 
-const props = defineProps<{
+export interface ToggleButtonGroupProps {
     options: ToggleButtonOption[];
     modelValue?: string | null;
-}>();
-
-const emit = defineEmits<{
-    'update:modelValue': [value: string];
-}>();
-
-function select(value: string) {
-    emit('update:modelValue', value);
 }
 
-function isDisabled(option: ToggleButtonOption): boolean {
-    return option.disabled === true || typeof option.disabled === 'string';
+const props = defineProps<ToggleButtonGroupProps>();
+
+const emit = defineEmits({
+    'update:modelValue': (_value: string) => true,
+});
+
+const isSelected = (value: string) => props.modelValue !== null && value === props.modelValue;
+const isDisabled = (disabled: boolean | string | undefined) =>
+    disabled === true || disabled === 'true';
+function setSelectedOption(value: string) {
+    emit('update:modelValue', value);
 }
 </script>
 
 <template>
-    <div class="cmk-toggle-button-group" role="group">
+    <div class="toggle_buttons_container">
         <button
             v-for="option in options"
             :key="option.value"
             type="button"
-            class="cmk-toggle-button"
-            :class="{ 'cmk-toggle-button--active': props.modelValue === option.value }"
-            :disabled="isDisabled(option)"
-            @click="select(option.value)"
+            class="toggle_option"
+            :class="{
+                selected: isSelected(option.value),
+                disabled: isDisabled(option.disabled),
+            }"
+            :aria-label="`Toggle ${option.label}`"
+            :disabled="isDisabled(option.disabled)"
+            :title="isDisabled(option.disabled) ? option.disabledTooltip : option.tooltip"
+            @click.prevent="setSelectedOption(option.value)"
         >
             {{ option.label }}
         </button>
@@ -45,48 +55,53 @@ function isDisabled(option: ToggleButtonOption): boolean {
 </template>
 
 <style scoped>
-.cmk-toggle-button-group {
-    display: inline-flex !important;
-    width: auto !important;
-    border-radius: 4px;
-    overflow: hidden;
-    border: 1px solid var(--border, #3a3a3a);
+/* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
+.toggle_buttons_container {
+    width: max-content;
+    max-width: 100%;
+    margin-bottom: 8px;
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid var(--toggle-button-group-border-color);
+    background-color: var(--toggle-button-group-inactive-bg-color);
+    display: flex;
+    flex-wrap: wrap;
 }
 
-.cmk-toggle-button {
-    flex: none !important;
-    padding: 4px 10px;
-    font-size: 12px;
-    line-height: 1.5;
-    background: transparent;
-    color: var(--text, #ccc);
+/* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
+.toggle_option {
+    height: auto;
+    min-width: 150px;
     border: none;
-    border-left: 1px solid var(--border, #3a3a3a);
-    cursor: pointer;
-    transition:
-        background 150ms,
-        color 150ms;
+    background-color: var(--toggle-button-group-inactive-bg-color);
+    color: var(--toggle-button-group-inactive-text-color);
+    margin: 0 2px;
+    padding: 3px;
+    font-weight: var(--font-weight-default);
 }
 
-.cmk-toggle-button:first-child {
-    border-left: none;
-}
-
-.cmk-toggle-button:hover:not(:disabled) {
-    background: var(--bg-hover, rgba(255, 255, 255, 0.06));
-}
-
-.cmk-toggle-button--active {
-    background: var(--color-corporate-green-50, #0f9b5e);
-    color: #fff;
-}
-
-.cmk-toggle-button--active:hover:not(:disabled) {
-    background: var(--color-corporate-green-50, #0f9b5e);
-}
-
-.cmk-toggle-button:disabled {
-    opacity: 0.4;
+/* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
+.toggle_option:is(:disabled) {
+    color: var(--toggle-button-group-disabled-text-color);
     cursor: not-allowed;
+    background-color: var(--toggle-button-group-inactive-bg-color);
+}
+
+/* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
+.toggle_option:is(:disabled:hover) {
+    background-color: var(--toggle-button-group-inactive-bg-color);
+}
+
+/* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
+.toggle_option:hover:not(:is(.selected, .disabled)) {
+    background-color: rgb(from var(--toggle-button-group-hover-bg-color) r g b / 60%);
+}
+
+/* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
+.selected {
+    border: 1px solid var(--toggle-button-group-border-color);
+    background-color: var(--toggle-button-group-active-bg-color);
+    color: var(--toggle-button-group-active-text-color);
+    font-weight: var(--font-weight-bold);
 }
 </style>

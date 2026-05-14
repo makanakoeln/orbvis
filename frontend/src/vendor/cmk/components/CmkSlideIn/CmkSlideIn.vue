@@ -2,16 +2,6 @@
 Copyright (C) 2024 Checkmk GmbH - License: GNU General Public License v2
 This file is part of Checkmk (https://checkmk.com). It is subject to the terms and
 conditions defined in the file COPYING, which is part of this source code package.
-
-Vendored from cmk-frontend-vue (2.6 master) with OrbVis-specific patches:
-  - Added size variant `narrow` (width 360px) for triage drawers.
-  - Added `modal` prop (default true). When false, the overlay/backdrop is
-    skipped and the underlying page stays interactive — the operator triages
-    one host without losing access to the surrounding board.
-  - Body overflow lock only applies in modal mode.
-  - Added `portalTo` prop (CSS selector); when set, overrides the default
-    body / #content_area target so the slide-in can live inside a specific
-    container (e.g. the board canvas) instead of the page body.
 -->
 <script setup lang="ts">
 import { cva, type VariantProps } from 'class-variance-authority';
@@ -20,17 +10,25 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
 import { useSlideInStack } from './useSlideInStack';
 
+// *************************************************************************************************
+// Two different variants of SlideIn overlay are required
+// * div for index page [CMK-27892 / CMK-26086]
+// * DialogOverlay for inner iframe [CMK-28534]
+// div: inner iframe html-body will keep `pointer-events: none` forever after closing
+// DialogOverlay: the SlideIn blocks the whole page including sidebar and menubar
+//
+// As DialogContent exists outside our vue app hierarchy, we manually apply our global vue CSS class
+// *************************************************************************************************
+
 const slideInVariants = cva('', {
     variants: {
         size: {
             medium: 'cmk-slide-in--size-medium',
             small: 'cmk-slide-in--size-small',
-            narrow: 'cmk-slide-in--size-narrow',
         },
         borderColor: {
             default: 'cmk-slide-in--border-green',
             purple: 'cmk-slide-in--border-purple',
-            none: 'cmk-slide-in--border-none',
         },
     },
     defaultVariants: {
@@ -44,16 +42,14 @@ export type SlideInVariants = VariantProps<typeof slideInVariants>;
 export interface CmkSlideInProps {
     open: boolean;
     size?: SlideInVariants['size'];
-    isIndexPage?: boolean | undefined;
+    isIndexPage?: boolean | undefined; // will be removed after the removal of the iframe
     ariaLabel?: string | undefined;
     stackPriority?: number | undefined;
     borderColor?: SlideInVariants['borderColor'];
     initialFocusTarget?: HTMLElement | undefined;
-    modal?: boolean;
-    portalTo?: string;
 }
 
-const props = withDefaults(defineProps<CmkSlideInProps>(), { modal: true });
+const props = defineProps<CmkSlideInProps>();
 const emit = defineEmits(['close']);
 const dialogContentRef = ref<InstanceType<typeof DialogContent>>();
 
@@ -93,18 +89,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <DialogRoot v-if="open" :open="effectiveOpen" :modal="modal && !isIndexPage">
-        <DialogPortal :to="portalTo ?? (isIndexPage ? '#content_area' : 'body')">
+    <DialogRoot v-if="open" :open="effectiveOpen" :modal="!isIndexPage">
+        <DialogPortal :to="isIndexPage ? '#content_area' : 'body'">
             <DialogOverlay
-                v-if="modal && !isIndexPage && effectiveOpen"
+                v-if="!isIndexPage && effectiveOpen"
                 class="cmk-slide-in__overlay"
                 @click="emit('close')"
             />
-            <div
-                v-if="modal && effectiveOpen"
-                class="cmk-slide-in__overlay"
-                @click="emit('close')"
-            />
+            <div v-if="effectiveOpen" class="cmk-slide-in__overlay" @click="emit('close')" />
             <DialogContent
                 ref="dialogContentRef"
                 class="cmk-vue-app cmk-slide-in__container"
@@ -114,8 +106,6 @@ onBeforeUnmount(() => {
                 @escape-key-down="emit('close')"
                 @open-auto-focus.prevent
                 @close-auto-focus.prevent
-                @pointer-down-outside="modal ? null : $event.preventDefault()"
-                @interact-outside="modal ? null : $event.preventDefault()"
             >
                 <slot />
             </DialogContent>
@@ -123,9 +113,8 @@ onBeforeUnmount(() => {
     </DialogRoot>
 </template>
 
-<style>
-/* Body lock only applies when running in modal mode. */
-body:has(.cmk-slide-in__container[data-modal='true']) {
+<style v-if="!isIndexPage">
+body:has(.cmk-slide-in__container) {
     overflow: hidden;
 }
 </style>
@@ -137,12 +126,12 @@ body:has(.cmk-slide-in__container[data-modal='true']) {
     display: flex;
     flex-direction: column;
     position: absolute;
-    z-index: var(--z-index-modal, 30);
+    z-index: var(--z-index-modal);
     top: 0;
     right: 0;
     bottom: 0;
     border-left: 4px solid var(--default-border-color-green);
-    background: var(--default-bg-color, var(--bg-surface));
+    background: var(--default-bg-color);
 
     &:focus,
     &:focus-visible {
@@ -154,21 +143,12 @@ body:has(.cmk-slide-in__container[data-modal='true']) {
         max-width: 768px;
     }
 
-    &.cmk-slide-in--size-narrow {
-        width: 360px;
-        max-width: 100vw;
-    }
-
     &.cmk-slide-in--border-green {
         border-left-color: var(--default-border-color-green);
     }
 
     &.cmk-slide-in--border-purple {
         border-left-color: var(--border-color-purple);
-    }
-
-    &.cmk-slide-in--border-none {
-        border-left: none;
     }
 
     &[data-state='open'] {
@@ -180,6 +160,7 @@ body:has(.cmk-slide-in__container[data-modal='true']) {
     }
 }
 
+/* Cannot use var() here, see https://drafts.csswg.org/css-env-1/ */
 @media screen and (width <= 1024px) {
     .cmk-slide-in--size-medium {
         width: 100%;
@@ -223,7 +204,7 @@ body:has(.cmk-slide-in__container[data-modal='true']) {
     position: absolute;
     inset: 0;
     animation: cmk-slide-in__overlay-show 150ms cubic-bezier(0.16, 1, 0.3, 1);
-    z-index: var(--z-index-modal-overlay-offset, 29);
+    z-index: var(--z-index-modal-overlay-offset);
 }
 
 @keyframes cmk-slide-in__overlay-show {

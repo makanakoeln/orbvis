@@ -4,57 +4,85 @@ This file is part of Checkmk (https://checkmk.com). It is subject to the terms a
 conditions defined in the file COPYING, which is part of this source code package.
 -->
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 
-const props = defineProps<{
+interface CmkCollapsibleProps {
     open: boolean;
-    contentId?: string;
-}>();
+    contentId?: string | undefined;
+}
 
-const innerOverflow = ref<'hidden' | 'visible'>(props.open ? 'visible' : 'hidden');
-let timer: ReturnType<typeof setTimeout> | null = null;
+const props = defineProps<CmkCollapsibleProps>();
+
+const contentRef = ref<HTMLElement | null>(null);
+const heightCSS = ref<string>('auto');
 
 watch(
-    () => props.open,
-    (val) => {
-        if (timer) clearTimeout(timer);
-        if (val) {
-            timer = setTimeout(() => {
-                innerOverflow.value = 'visible';
-            }, 210);
-        } else {
-            innerOverflow.value = 'hidden';
+    () => [props.open, contentRef.value],
+    async () => {
+        await nextTick();
+        if (contentRef.value) {
+            // Temporarily disable transitions and animations to get the correct height
+            const currentTransitionDuration = contentRef.value.style.transitionDuration;
+            const currentAnimationName = contentRef.value.style.animationName;
+            contentRef.value.style.transitionDuration = '0ms';
+            contentRef.value.style.animationName = 'none';
+
+            const height = contentRef.value.getBoundingClientRect().height;
+            heightCSS.value = `${height}px`;
+
+            // Re-enable transitions and animations
+            contentRef.value.style.transitionDuration = currentTransitionDuration;
+            contentRef.value.style.animationName = currentAnimationName;
         }
     },
+    { immediate: true },
 );
-
-onBeforeUnmount(() => {
-    if (timer) clearTimeout(timer);
-});
 </script>
 
 <template>
-    <div :id="contentId" class="cmk-collapsible" :class="{ 'cmk-collapsible--open': open }">
-        <div class="cmk-collapsible__inner" :style="{ overflow: innerOverflow }">
-            <slot></slot>
+    <Transition name="content">
+        <div v-show="open" :id="contentId" ref="contentRef">
+            <slot />
         </div>
-    </div>
+    </Transition>
 </template>
 
-<style scoped>
-.cmk-collapsible {
-    display: grid !important;
-    grid-template-rows: 0fr;
+<style scoped lang="scss">
+.content-enter-active {
+    animation: slideDown 300ms ease-out;
     overflow: hidden;
-    transition: grid-template-rows 200ms ease;
 }
 
-.cmk-collapsible--open {
-    grid-template-rows: 1fr;
+.content-leave-active {
+    animation: slideUp 300ms ease-out;
+    overflow: hidden;
 }
 
-.cmk-collapsible__inner {
-    min-height: 0;
-    overflow: hidden;
+@mixin zero-height {
+    height: 0;
+    opacity: 0;
+}
+
+@mixin full-height {
+    height: v-bind('heightCSS');
+    opacity: 1;
+}
+
+@keyframes slideDown {
+    from {
+        @include zero-height;
+    }
+    to {
+        @include full-height;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        @include full-height;
+    }
+    to {
+        @include zero-height;
+    }
 }
 </style>

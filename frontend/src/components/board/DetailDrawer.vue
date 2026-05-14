@@ -1,9 +1,9 @@
 <template>
     <CmkSlideIn
         :open="!!object"
-        size="narrow"
+        size="small"
         :modal="false"
-        border-color="none"
+        border-color="default"
         :aria-label="displayName"
         :portal-to="portalTarget"
         @close="emit('close')"
@@ -863,7 +863,7 @@ import { CmkChip } from '@/vendor/cmk/components/CmkChip';
 import { CmkCode } from '@/vendor/cmk/components/CmkCode';
 import CmkIcon from '@/vendor/cmk/components/CmkIcon';
 import CmkSlideIn from '@/vendor/cmk/components/CmkSlideIn';
-import { CmkTab, CmkTabContent, CmkTabs } from '@/vendor/cmk/components/CmkTabs';
+import CmkTabs, { CmkTab, CmkTabContent } from '@/vendor/cmk/components/CmkTabs';
 
 import MetricChart from './MetricChart.vue';
 

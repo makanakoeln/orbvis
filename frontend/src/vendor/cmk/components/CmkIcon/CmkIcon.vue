@@ -6,10 +6,10 @@ conditions defined in the file COPYING, which is part of this source code packag
 <script setup lang="ts">
 import { ref, watchEffect } from 'vue';
 
-import { useTheme } from '../../lib/useTheme.ts';
-import { cmkIconVariants } from './icons.constants.ts';
-import type { CmkIconProps } from './types.ts';
-import { getIconPath } from './utils.ts';
+import { useTheme } from '../../lib/useTheme';
+import { cmkIconVariants } from './icons.constants';
+import type { CmkIconProps } from './types';
+import { getIconPath } from './utils';
 
 const props = defineProps<CmkIconProps>();
 const { theme } = useTheme();

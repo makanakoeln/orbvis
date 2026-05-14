@@ -7,9 +7,10 @@ conditions defined in the file COPYING, which is part of this source code packag
 import { cva, type VariantProps } from 'class-variance-authority';
 import { computed, onUnmounted, watch } from 'vue';
 
-import CmkIcon from '../components/CmkIcon';
-import CmkMultitoneIcon from '../components/CmkIcon/CmkMultitoneIcon.vue';
-import usei18n from '../lib/i18n';
+import CmkIcon from '@/components/CmkIcon';
+import CmkMultitoneIcon from '@/components/CmkIcon/CmkMultitoneIcon.vue';
+import usei18n from '@/lib/i18n';
+
 import CmkHeading from './typography/CmkHeading.vue';
 
 const { _t } = usei18n();
@@ -52,8 +53,8 @@ const open = defineModel<boolean>('open', { default: true });
 let timeoutId: number | null = null;
 
 watch(
-    open,
-    (newOpen) => {
+    [open, () => props.autoDismiss],
+    ([newOpen]) => {
         if (timeoutId !== null) {
             clearTimeout(timeoutId);
             timeoutId = null;
@@ -102,7 +103,12 @@ const alertIconColor = computed(() => {
 </script>
 
 <template>
-    <div v-if="open" class="cmk-alert-box" :class="propsCva({ variant, size })">
+    <div
+        v-if="open"
+        class="cmk-alert-box"
+        :class="propsCva({ variant, size })"
+        :role="variant === 'error' || variant === 'warning' ? 'alert' : 'status'"
+    >
         <div class="cmk-alert-box__icon">
             <CmkIcon v-if="variant === 'loading'" name="load-graph" size="large" />
             <CmkMultitoneIcon

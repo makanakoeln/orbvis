@@ -86,4 +86,28 @@ defineProps<CmkTabProps>();
         background: var(--ux-theme-0);
     }
 }
+
+.cmk-tab__variant-info {
+    border-top: 1px solid var(--color-dark-blue-50);
+    border-left: 1px solid var(--color-dark-blue-50);
+    border-right: 1px solid var(--color-dark-blue-50) !important;
+}
+
+.cmk-tab__variant-success {
+    border-top: 1px solid var(--color-corporate-green-50);
+    border-left: 1px solid var(--color-corporate-green-50);
+    border-right: 1px solid var(--color-corporate-green-50) !important;
+}
+
+.cmk-tab__variant-warning {
+    border-top: 1px solid var(--color-yellow-50);
+    border-left: 1px solid var(--color-yellow-50);
+    border-right: 1px solid var(--color-yellow-50) !important;
+}
+
+.cmk-tab__variant-error {
+    border-top: 1px solid var(--color-dark-red-50);
+    border-left: 1px solid var(--color-dark-red-50);
+    border-right: 1px solid var(--color-dark-red-50) !important;
+}
 </style>

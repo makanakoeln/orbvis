@@ -8,8 +8,8 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { Label } from 'reka-ui';
 import { computed, useAttrs } from 'vue';
 
-import CmkHelpText from '../components/CmkHelpText.vue';
-import type { TranslatedString } from '../lib/i18nString';
+import CmkHelpText from '@/components/CmkHelpText.vue';
+import type { TranslatedString } from '@/lib/i18nString';
 
 defineOptions({
     inheritAttrs: false,
@@ -35,6 +35,7 @@ const labelVariants = cva('', {
 type LabelVariants = VariantProps<typeof labelVariants>;
 
 export interface LabelProps {
+    /** `for` is required when the label is associated with an input — must match the input's id for a11y. */
     for?: string;
     variant?: LabelVariants['variant'];
     dots?: boolean | undefined;

@@ -7,12 +7,12 @@ conditions defined in the file COPYING, which is part of this source code packag
 import { CheckboxIndicator, CheckboxRoot } from 'reka-ui';
 import { computed } from 'vue';
 
-import CmkHtml from '../../components/CmkHtml.vue';
-import CmkLabel from '../../components/CmkLabel.vue';
-import CmkSpace from '../../components/CmkSpace.vue';
-import CmkInlineValidation from '../../components/user-input/CmkInlineValidation.vue';
-import type { TranslatedString } from '../../lib/i18nString';
-import useId from '../../lib/useId';
+import CmkHtml from '@/components/CmkHtml.vue';
+import CmkLabel from '@/components/CmkLabel.vue';
+import CmkSpace from '@/components/CmkSpace.vue';
+import CmkInlineValidation from '@/components/user-input/CmkInlineValidation.vue';
+import type { TranslatedString } from '@/lib/i18nString';
+import useId from '@/lib/useId';
 
 defineOptions({ inheritAttrs: false });
 
@@ -137,23 +137,23 @@ span {
     margin: 0;
     vertical-align: middle; /* otherwise will jump without cmk-frontend styles when checked/unchecked */
 
+    .cmk-checkbox:not(.cmk-checkbox__disabled) & {
+        &:hover {
+            cursor: pointer;
+            background-color: var(--input-hover-bg-color);
+        }
+    }
+
+    .cmk-checkbox.cmk-checkbox__disabled & {
+        cursor: not-allowed;
+    }
+
+    .cmk-checkbox.cmk-checkbox__disabled & > .cmk-checkbox__label {
+        cursor: not-allowed;
+    }
+
     &.cmk-checkbox__button--error {
         border: 1px solid var(--inline-error-border-color);
     }
-}
-
-.cmk-checkbox:not(.cmk-checkbox__disabled) :deep(.cmk-checkbox__button) {
-    &:hover {
-        cursor: pointer;
-        background-color: var(--input-hover-bg-color);
-    }
-}
-
-.cmk-checkbox.cmk-checkbox__disabled :deep(.cmk-checkbox__button) {
-    cursor: not-allowed;
-}
-
-.cmk-checkbox.cmk-checkbox__disabled :deep(.cmk-checkbox__button) > .cmk-checkbox__label {
-    cursor: not-allowed;
 }
 </style>

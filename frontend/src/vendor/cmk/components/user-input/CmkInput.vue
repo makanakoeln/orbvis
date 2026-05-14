@@ -11,9 +11,10 @@ conditions defined in the file COPYING, which is part of this source code packag
 import { cva, type VariantProps } from 'class-variance-authority';
 import { computed, ref, watch } from 'vue';
 
-import CmkSpace from '../../components/CmkSpace.vue';
-import CmkInlineValidation from '../../components/user-input/CmkInlineValidation.vue';
-import { immediateWatch } from '../../lib/watch';
+import CmkSpace from '@/components/CmkSpace.vue';
+import CmkInlineValidation from '@/components/user-input/CmkInlineValidation.vue';
+import { immediateWatch } from '@/lib/watch';
+
 import { inputSizes } from './sizes';
 
 defineOptions({ inheritAttrs: false });

@@ -1,6 +1,7 @@
 <!--
 Copyright (C) 2025 Checkmk GmbH - License: GNU General Public License v2
-Vendored from cmk-frontend-vue.
+This file is part of Checkmk (https://checkmk.com). It is subject to the terms and
+conditions defined in the file COPYING, which is part of this source code package.
 -->
 <script setup lang="ts">
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot } from 'reka-ui';
@@ -31,10 +32,11 @@ watch(
         <DialogPortal>
             <!-- @vue-ignore @click is not a property of DialogOverlay -->
             <DialogOverlay class="cmk-popup__overlay" @click="emit('close')" />
-            <!-- @vue-ignore aria-describedby is not a property of DialogContent -->
+            <!-- As this element exists outside our vue app hierarchy, we manually apply our global Vue CSS class -->
+            <!-- @vue-ignore aria-describedby it not a property of DialogContent -->
             <DialogContent
                 ref="dialogContentRef"
-                class="cmk-popup__container"
+                class="cmk-vue-app cmk-popup__container"
                 :aria-describedby="undefined"
                 @escape-key-down="emit('close')"
                 @open-auto-focus.prevent
@@ -48,17 +50,17 @@ watch(
 
 <style scoped>
 .cmk-popup__container {
-    min-width: 320px;
+    min-width: 450px;
     display: flex;
     flex-direction: column;
     position: fixed;
+    align-items: center;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: var(--z-index-modal);
-    box-shadow: 0 20px 60px rgb(0 0 0 / 50%);
-    border-radius: var(--dimension-3);
-    overflow: hidden;
+    background: var(--default-bg-color);
+    padding: var(--dimension-8);
 
     &[data-state='open'] {
         animation: cmk-popup__container-show 0.2s ease-in-out;

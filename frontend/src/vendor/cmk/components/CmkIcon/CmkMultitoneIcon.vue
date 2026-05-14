@@ -6,7 +6,8 @@ conditions defined in the file COPYING, which is part of this source code packag
 <script setup generic="IconName extends CmkMultitoneIconNames" lang="ts">
 import { computed, ref } from 'vue';
 
-import { immediateWatch } from '../../lib/watch';
+import { immediateWatch } from '@/lib/watch';
+
 import { cmkMultitoneIconVariants, oneColorIcons, twoColorIcons } from './icons.constants.ts';
 import type {
     CmkMultitoneIconColor,

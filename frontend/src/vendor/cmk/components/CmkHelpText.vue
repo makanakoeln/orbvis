@@ -10,9 +10,10 @@ import CmkTooltip, {
     CmkTooltipContent,
     CmkTooltipProvider,
     CmkTooltipTrigger,
-} from '../components/CmkTooltip';
-import type { TranslatedString } from '../lib/i18nString';
-import { getUserFrontendConfig } from '../lib/userConfig';
+} from '@/components/CmkTooltip';
+import type { TranslatedString } from '@/lib/i18nString';
+import { getUserFrontendConfig } from '@/lib/userConfig';
+
 import CmkHtml from './CmkHtml.vue';
 import CmkIconButton from './CmkIconButton.vue';
 import CmkScrollContainer from './CmkScrollContainer.vue';

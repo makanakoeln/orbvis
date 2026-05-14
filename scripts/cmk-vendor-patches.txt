@@ -11,4 +11,8 @@ form/private/FormEditDispatcher/dispatch.ts           Pilot subset of registered
 form/private/forms/FormConditionChoices/utils.ts      Minimal stub — condition_choices type isn't part of OrbVis schemas.
 form/private/forms/FormString.vue                     lucide-vue-next/X icon stubbed (only used in autocompleter branch).
 components/CmkIcon/utils.ts                           OrbVis runtime URL resolution — icons are loaded from the OMD-site /<site>/check_mk/themes/ path, not from the Vite asset graph.
+components/CmkIcon/icons.constants.ts                 Plain "themes/..." strings instead of upstream's "~cmk-frontend/..."-prefixed Vite imports — paired with the runtime resolver in utils.ts.
+components/CmkIcon/CmkIcon.vue                        useTheme import switched from "@/lib/useTheme" to "../../lib/useTheme" so vue-tsc resolves it without OrbVis-side path aliases.
+components/CmkIconButton.vue                          @/components/CmkIcon switched to ./CmkIcon so Vue's compiler-sfc resolves the type-only import without aliases.
+components/graphics/RnbwCursor.vue                    Dropped useless initial assignment to supportLinearFiltering; eslint no-useless-assignment was failing the strict pre-commit hook.
 components/CmkSlideInDialog.vue                       i18n adapter — vue-i18n instead of cmk's vendored usei18n hook.

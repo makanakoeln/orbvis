@@ -47,6 +47,10 @@ export default defineConfig({
         if (source.startsWith('@/')) {
           const resolved = path.resolve(CMK_SRC, source.slice(2))
           if (resolved in CMK_STUBS) return { id: CMK_STUBS[resolved] }
+          // Probe extensions/index files for directory imports (e.g. `@/components/CmkIcon`).
+          for (const ext of ['', '.ts', '.vue', '/index.ts', '/index.vue']) {
+            if (existsSync(resolved + ext)) return { id: resolved + ext }
+          }
           return { id: resolved }
         }
         // Case 2: Vite already resolved @/ to OrbVis src path — redirect to CMK src

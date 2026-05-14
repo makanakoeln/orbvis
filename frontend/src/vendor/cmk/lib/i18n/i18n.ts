@@ -6,7 +6,8 @@
 import { computed, getCurrentInstance, type Ref, ref } from 'vue';
 import { createGettext, type Translations } from 'vue3-gettext';
 
-import type { TranslatedString } from '../../lib/i18nString';
+import type { TranslatedString } from '@/lib/i18nString';
+
 import { dummyT, dummyTn, dummyTnp, dummyTp } from './i18nDummy';
 
 const AVAILABLE_LANGUAGES: Record<string, string> = {

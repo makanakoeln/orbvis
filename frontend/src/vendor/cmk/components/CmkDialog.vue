@@ -1,29 +1,36 @@
 <!--
 Copyright (C) 2024 Checkmk GmbH - License: GNU General Public License v2
-Vendored from cmk-frontend-vue.
-
-OrbVis patch: removed the `dismissalButton` feature (the "don't show me again"
-button). It depends on cmk-shared-typing's UserDismissWarning enum and CMK's
-user-config persistence endpoint, neither of which OrbVis ships. The remaining
-icon-box + title + message + buttons layout is identical to upstream.
+This file is part of Checkmk (https://checkmk.com). It is subject to the terms and
+conditions defined in the file COPYING, which is part of this source code package.
 -->
 <script setup lang="ts">
 import { cva, type VariantProps } from 'class-variance-authority';
-import { computed } from 'vue';
+import type { components } from 'cmk-shared-typing/typescript/openapi_internal';
+import { computed, onMounted, ref } from 'vue';
 
-import CmkButton, { type ButtonProps } from './CmkButton.vue';
-import CmkIcon from './CmkIcon';
-import CmkMultitoneIcon from './CmkIcon/CmkMultitoneIcon.vue';
-import CmkSpace from './CmkSpace.vue';
-
-type ButtonVariant = NonNullable<ButtonProps['variant']>;
+import type { ButtonVariants } from '@/components/CmkButton';
+import CmkButton from '@/components/CmkButton';
+import CmkIcon from '@/components/CmkIcon';
+import CmkMultitoneIcon from '@/components/CmkIcon/CmkMultitoneIcon.vue';
+import CmkSpace from '@/components/CmkSpace.vue';
+import type { TranslatedString } from '@/lib/i18nString';
+import { persistWarningDismissal } from '@/lib/rest-api-client/userConfig';
+import usePersistentRef from '@/lib/usePersistentRef';
+import { isWarningDismissed } from '@/lib/userConfig';
 
 export interface CmkDialogProps {
-    title?: string;
-    message: string;
-    buttons?: { title: string; variant: ButtonVariant; onclick: () => void }[];
+    title?: TranslatedString | undefined;
+    message: TranslatedString;
+    buttons?: {
+        title: TranslatedString;
+        variant: ButtonVariants['variant'];
+        onclick: () => void;
+    }[];
+    dismissalButton?: { title: TranslatedString; key: DismissalButtonKey };
     variant?: Variants;
 }
+
+export type DismissalButtonKey = components['schemas']['UserDismissWarning']['warning'];
 
 const props = defineProps<CmkDialogProps>();
 
@@ -43,6 +50,21 @@ const propsCva = cva('', {
 });
 
 export type Variants = VariantProps<typeof propsCva>['variant'];
+
+const dialogHidden = props.dismissalButton
+    ? usePersistentRef(props.dismissalButton.key, false, (v) => v as boolean, 'session')
+    : ref(false);
+
+async function hideContent(event?: Event) {
+    if (props.dismissalButton) {
+        // Stop event propagation to prevent affecting parent components
+        event?.stopPropagation();
+
+        dialogHidden.value = true;
+
+        await persistWarningDismissal(props.dismissalButton.key);
+    }
+}
 
 const alertIconName = computed(() => {
     switch (props.variant) {
@@ -65,10 +87,16 @@ const alertIconColor = computed(() => {
             return { custom: 'white' };
     }
 });
+
+onMounted(() => {
+    if (props.dismissalButton) {
+        dialogHidden.value = isWarningDismissed(props.dismissalButton.key, dialogHidden.value);
+    }
+});
 </script>
 
 <template>
-    <div class="cmk-dialog help">
+    <div v-if="!dialogHidden" class="cmk-dialog help">
         <div :class="['cmk-dialog__icon-box', propsCva({ variant: props.variant })]">
             <CmkIcon v-if="variant === 'loading'" name="load-graph" class="cmk-dialog__icon" />
             <CmkMultitoneIcon
@@ -81,8 +109,8 @@ const alertIconColor = computed(() => {
         <div class="cmk-dialog__content">
             <span v-if="props.title" class="cmk-dialog__title">{{ props.title }}<br /></span>
             <span>{{ props.message }}</span>
-            <div v-if="(props.buttons?.length ?? 0) > 0" class="buttons">
-                <CmkSpace direction="vertical" />
+            <div v-if="(props.buttons?.length ?? 0) > 0 || props.dismissalButton" class="buttons">
+                <CmkSpace :direction="'vertical'" />
                 <!-- eslint-disable vue/valid-v-for since no unique identifier is present for key -->
                 <template v-for="button in props.buttons">
                     <CmkButton :variant="button.variant" @click="button.onclick">
@@ -91,6 +119,9 @@ const alertIconColor = computed(() => {
                     <CmkSpace />
                 </template>
                 <!-- eslint-enable vue/valid-v-for -->
+                <CmkButton v-if="props.dismissalButton" @click="hideContent($event)">
+                    {{ props.dismissalButton.title }}
+                </CmkButton>
             </div>
         </div>
     </div>

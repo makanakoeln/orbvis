@@ -1,3 +1,11 @@
-export { default as CmkTab } from './CmkTab.vue';
-export { default as CmkTabContent } from './CmkTabContent.vue';
-export { default as CmkTabs } from './CmkTabs.vue';
+/**
+ * Copyright (C) 2025 Checkmk GmbH - License: GNU General Public License v2
+ * This file is part of Checkmk (https://checkmk.com). It is subject to the terms and
+ * conditions defined in the file COPYING, which is part of this source code package.
+ */
+import CmkTab from './CmkTab.vue';
+import CmkTabContent from './CmkTabContent.vue';
+import CmkTabs from './CmkTabs.vue';
+
+export default CmkTabs;
+export { CmkTab, CmkTabContent };
