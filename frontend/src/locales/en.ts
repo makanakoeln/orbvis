@@ -612,6 +612,11 @@ export default {
         usedAsBackground: 'as background',
         usedByObjects: '{n} object | {n} objects',
         openBoard: 'Open board',
+        uploadedImages: 'Uploaded images',
+        builtinIcons: 'Built-in icons',
+        searchIcons: 'Search images…',
+        noMatches: 'No matches for "{q}"',
+        noUploadsYet: 'No images uploaded yet — upload to add custom icons',
         boardPermissions: 'Board Permissions',
         wildcardNote:
             'Permissions marked with * apply via a wildcard rule and cannot be changed here.',

@@ -98,78 +98,129 @@
             <CmkLoading />
         </div>
 
-        <div
-            v-else-if="!icons.length"
-            class="text-center py-[40px] text-[var(--text-muted)] text-sm"
-        >
-            <svg
-                class="mx-auto text-[var(--text-muted)]"
-                style="width: 32px; height: 32px; margin-bottom: var(--dimension-4)"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.5"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+        <template v-else>
+            <!-- Search bar (mirrors the ImagePicker search styling so both
+                 surfaces feel like the same product). -->
+            <div class="image-search" style="margin-bottom: var(--dimension-6)">
+                <svg
+                    class="image-search__icon"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
+                    />
+                </svg>
+                <input
+                    v-model="query"
+                    type="text"
+                    :placeholder="t('admin.searchIcons')"
+                    class="image-search__input"
                 />
-            </svg>
-            {{ t('admin.noIcons') }}
-        </div>
-
-        <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-[8px]">
-            <div
-                v-for="icon in icons"
-                :key="icon.name"
-                class="group relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl flex flex-col items-center gap-[6px] hover:ring-[var(--default-form-element-border-color)] transition-all"
-                style="padding: var(--dimension-4)"
-            >
-                <img
-                    :src="`${BASE_URL}${icon.url}`"
-                    :alt="icon.name"
-                    class="object-contain"
-                    style="width: 40px; height: 40px"
-                    :class="icon.name.endsWith('.svg') ? 'svg-icon' : ''"
-                />
-                <p
-                    class="text-[10px] text-[var(--text-muted)] font-mono text-center truncate w-full"
-                    :title="icon.name"
-                >
-                    {{ icon.name }}
-                </p>
-                <span
-                    v-if="icon.builtin"
-                    class="absolute text-[8px] uppercase tracking-wide font-semibold text-[var(--text-muted)] bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded px-1 py-[1px]"
-                    style="top: 4px; left: 4px"
-                    :title="t('admin.builtinImageCannotDelete')"
-                >
-                    {{ t('admin.builtinImage') }}
-                </span>
-                <button
-                    v-if="!icon.builtin"
-                    class="absolute rounded bg-[var(--color-light-red-50)]/0 hover:bg-[var(--color-light-red-50)]/20 text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
-                    style="top: 4px; right: 4px; width: 18px; height: 18px"
-                    :title="t('common.delete')"
-                    @click="onDeleteClick(icon.name)"
-                >
-                    <svg
-                        style="width: 12px; height: 12px"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2.5"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M6 18L18 6M6 6l12 12"
-                        />
-                    </svg>
-                </button>
             </div>
-        </div>
+
+            <!-- Custom uploads first — operator's own material is the most
+                 actionable bucket on this page. -->
+            <section style="margin-bottom: var(--dimension-7)">
+                <CmkHeading type="h3" class="section-title">
+                    {{ t('admin.uploadedImages') }} ({{ filteredCustom.length }})
+                </CmkHeading>
+                <div
+                    v-if="!customIcons.length"
+                    class="text-center py-[28px] text-[var(--text-muted)] text-sm"
+                >
+                    {{ t('admin.noUploadsYet') }}
+                </div>
+                <div
+                    v-else-if="!filteredCustom.length"
+                    class="text-[var(--text-muted)] text-sm py-[12px]"
+                >
+                    {{ t('admin.noMatches', { q: query }) }}
+                </div>
+                <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-[8px]">
+                    <div
+                        v-for="icon in filteredCustom"
+                        :key="icon.name"
+                        class="group relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl flex flex-col items-center gap-[6px] hover:ring-[var(--default-form-element-border-color)] transition-all"
+                        style="padding: var(--dimension-4)"
+                    >
+                        <img
+                            :src="`${BASE_URL}${icon.url}`"
+                            :alt="icon.name"
+                            class="object-contain"
+                            style="width: 40px; height: 40px"
+                            :class="icon.name.endsWith('.svg') ? 'svg-icon' : ''"
+                        />
+                        <p
+                            class="text-[10px] text-[var(--text-muted)] font-mono text-center truncate w-full"
+                            :title="icon.name"
+                        >
+                            {{ icon.name }}
+                        </p>
+                        <button
+                            class="absolute rounded bg-[var(--color-light-red-50)]/0 hover:bg-[var(--color-light-red-50)]/20 text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                            style="top: 4px; right: 4px; width: 18px; height: 18px"
+                            :title="t('common.delete')"
+                            @click="onDeleteClick(icon.name)"
+                        >
+                            <svg
+                                style="width: 12px; height: 12px"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="2.5"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Built-in library — read-only, no per-tile badge needed: the
+                 section header already conveys the category. -->
+            <section>
+                <CmkHeading type="h3" class="section-title">
+                    {{ t('admin.builtinIcons') }} ({{ filteredBuiltin.length }})
+                </CmkHeading>
+                <div
+                    v-if="!filteredBuiltin.length"
+                    class="text-[var(--text-muted)] text-sm py-[12px]"
+                >
+                    {{ t('admin.noMatches', { q: query }) }}
+                </div>
+                <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-[8px]">
+                    <div
+                        v-for="icon in filteredBuiltin"
+                        :key="icon.name"
+                        class="group relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl flex flex-col items-center gap-[6px] hover:ring-[var(--default-form-element-border-color)] transition-all"
+                        style="padding: var(--dimension-4)"
+                    >
+                        <img
+                            :src="`${BASE_URL}${icon.url}`"
+                            :alt="icon.name"
+                            class="object-contain"
+                            style="width: 40px; height: 40px"
+                            :class="icon.name.endsWith('.svg') ? 'svg-icon' : ''"
+                        />
+                        <p
+                            class="text-[10px] text-[var(--text-muted)] font-mono text-center truncate w-full"
+                            :title="icon.name"
+                        >
+                            {{ icon.name }}
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </template>
     </div>
 </template>
 
@@ -182,7 +233,7 @@ import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkSlideInDialog from '@cmk/components/CmkSlideInDialog.vue';
 import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
 import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError, imagesApi } from '@/api/client';
@@ -198,6 +249,18 @@ const fileInputEl = ref<HTMLInputElement | null>(null);
 const icons = ref<ImageEntry[]>([]);
 const loading = ref(false);
 const uploadError = ref('');
+const query = ref('');
+
+const customIcons = computed(() => icons.value.filter((i) => !i.builtin));
+const builtinIcons = computed(() => icons.value.filter((i) => i.builtin));
+
+function matchesQuery(name: string): boolean {
+    const q = query.value.trim().toLowerCase();
+    return q === '' || name.toLowerCase().includes(q);
+}
+
+const filteredCustom = computed(() => customIcons.value.filter((i) => matchesQuery(i.name)));
+const filteredBuiltin = computed(() => builtinIcons.value.filter((i) => matchesQuery(i.name)));
 
 async function fetchIcons() {
     loading.value = true;
@@ -319,5 +382,47 @@ onMounted(fetchIcons);
     position: sticky;
     bottom: 0;
     background: var(--bg-surface);
+}
+
+.section-title {
+    font-size: var(--font-size-normal);
+    color: var(--text-muted);
+    margin-bottom: var(--dimension-4);
+}
+
+.image-search {
+    position: relative;
+    max-width: 320px;
+}
+
+.image-search__icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.image-search__input {
+    width: 100%;
+    padding: 6px 12px 6px 30px;
+    background: var(--default-form-element-bg-color);
+    border: 1px solid var(--default-form-element-border-color);
+    border-radius: var(--border-radius);
+    color: var(--text);
+    font-size: var(--font-size-small);
+    transition: border-color 0.15s;
+}
+
+.image-search__input::placeholder {
+    color: var(--default-form-element-placeholder-color);
+}
+
+.image-search__input:focus {
+    outline: none;
+    border-color: var(--color-corporate-green-50);
 }
 </style>
