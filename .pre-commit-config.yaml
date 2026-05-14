@@ -122,3 +122,11 @@ repos:
         files: ^frontend/(package\.json|package-lock\.json)$
         pass_filenames: false
         stages: [pre-push]
+
+      - id: pip-audit
+        name: pip-audit (backend deps)
+        entry: bash -c 'cd backend && .venv/bin/pip-audit .'
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [pre-push]
