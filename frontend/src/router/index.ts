@@ -65,6 +65,11 @@ const router = createRouter({
                     component: () => import('@/views/admin/GlobalSettingsView.vue'),
                 },
                 {
+                    path: 'formspec-pilot',
+                    name: 'admin-formspec-pilot',
+                    component: () => import('@/views/admin/FormSpecPilotView.vue'),
+                },
+                {
                     path: 'icons',
                     name: 'admin-icons',
                     component: () => import('@/views/admin/ImagesView.vue'),

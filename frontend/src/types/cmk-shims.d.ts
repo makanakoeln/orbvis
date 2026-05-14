@@ -413,3 +413,24 @@ declare module '@cmk/components/CmkLinkCard/CmkLinkCardContainer.vue' {
     const component: DefineComponent<CmkLinkCardContainerProps>;
     export default component;
 }
+
+declare module '@cmk/form/FormApp.vue' {
+    import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
+    import type { DefineComponent } from 'vue';
+    type Spec = NonNullable<VueFormspecComponents['components']>;
+    type Validation = NonNullable<VueFormspecComponents['validation_message']>[];
+    interface FormAppProps {
+        id: string;
+        spec: Spec;
+        data: unknown;
+        validation: Validation;
+        display_mode: 'edit' | 'readonly' | 'both';
+    }
+    const component: DefineComponent<FormAppProps>;
+    export default component;
+}
+
+declare module '@cmk/form/private/FormEditDispatcher/dispatch' {
+    export function initializeComponentRegistry(): void;
+    export function getComponent(type: string): unknown;
+}
