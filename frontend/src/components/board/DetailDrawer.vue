@@ -793,40 +793,22 @@
                     >
                         {{ t('board.detailDrawer.addCommentLabel') }}
                     </CmkButton>
-                    <details v-if="canCommand" class="detail-drawer__more">
-                        <summary
-                            class="detail-drawer__btn detail-drawer__btn--more"
-                            :title="t('board.detailDrawer.moreActions')"
-                        >
-                            {{ t('board.detailDrawer.moreActions') }}
-                        </summary>
-                        <div class="detail-drawer__more-menu" role="menu">
-                            <button
-                                v-if="state?.notifications_enabled !== false"
-                                type="button"
-                                class="detail-drawer__more-item"
-                                role="menuitem"
-                                @click="
-                                    closeMoreMenu($event);
-                                    emit('disable-notifications');
-                                "
-                            >
-                                {{ t('board.detailDrawer.disableNotificationsLabel') }}
-                            </button>
-                            <button
-                                v-else
-                                type="button"
-                                class="detail-drawer__more-item"
-                                role="menuitem"
-                                @click="
-                                    closeMoreMenu($event);
-                                    emit('enable-notifications');
-                                "
-                            >
-                                {{ t('board.detailDrawer.enableNotificationsLabel') }}
-                            </button>
-                        </div>
-                    </details>
+                    <CmkButton
+                        v-if="canCommand && state?.notifications_enabled !== false"
+                        variant="optional"
+                        class="detail-drawer__action"
+                        @click="emit('disable-notifications')"
+                    >
+                        {{ t('board.detailDrawer.disableNotificationsLabel') }}
+                    </CmkButton>
+                    <CmkButton
+                        v-else-if="canCommand"
+                        variant="optional"
+                        class="detail-drawer__action"
+                        @click="emit('enable-notifications')"
+                    >
+                        {{ t('board.detailDrawer.enableNotificationsLabel') }}
+                    </CmkButton>
                 </div>
             </footer>
 
@@ -949,11 +931,6 @@ onUnmounted(() => {
     if (_tick) clearInterval(_tick);
     _tick = null;
 });
-
-function closeMoreMenu(e: Event): void {
-    const details = (e.currentTarget as HTMLElement).closest('details');
-    if (details) (details as HTMLDetailsElement).open = false;
-}
 
 const auth = useAuthStore();
 
@@ -2670,61 +2647,6 @@ useMutationObserver(
 }
 
 .detail-drawer__btn:hover {
-    background: var(--bg-hover);
-}
-
-.detail-drawer__more {
-    position: relative;
-}
-
-/* stylelint-disable-next-line no-descending-specificity */
-.detail-drawer__more > summary {
-    list-style: none;
-    cursor: pointer;
-}
-
-.detail-drawer__more > summary::-webkit-details-marker {
-    display: none;
-}
-
-.detail-drawer__btn--more {
-    user-select: none;
-}
-
-.detail-drawer__more[open] > summary {
-    background: var(--bg-hover);
-    border-color: var(--text-muted);
-}
-
-.detail-drawer__more-menu {
-    position: absolute;
-    bottom: calc(100% + 4px);
-    right: 0;
-    min-width: 180px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--border-radius);
-    box-shadow: 0 -4px 12px rgb(0 0 0 / 35%);
-    padding: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    z-index: 2;
-}
-
-.detail-drawer__more-item {
-    background: transparent;
-    color: var(--text);
-    border: none;
-    border-radius: var(--border-radius);
-    padding: 8px 10px;
-    text-align: left;
-    font: inherit;
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.detail-drawer__more-item:hover {
     background: var(--bg-hover);
 }
 
