@@ -16,3 +16,4 @@ components/CmkIcon/CmkIcon.vue                        useTheme import switched f
 components/CmkIconButton.vue                          @/components/CmkIcon switched to ./CmkIcon so Vue's compiler-sfc resolves the type-only import without aliases.
 components/graphics/RnbwCursor.vue                    Dropped useless initial assignment to supportLinearFiltering; eslint no-useless-assignment was failing the strict pre-commit hook.
 components/CmkSlideInDialog.vue                       i18n adapter — vue-i18n instead of cmk's vendored usei18n hook.
+components/CmkDropdown/CmkDropdown.vue                box-sizing: content-box on .cmk-dropdown--arrow — Tailwind's global border-box reset would otherwise shrink the SVG content to 1.8 px once padding is subtracted.

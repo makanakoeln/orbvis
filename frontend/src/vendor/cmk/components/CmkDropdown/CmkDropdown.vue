@@ -288,6 +288,7 @@ const group = computed<ButtonVariants['group']>(() => {
 
     .cmk-dropdown--arrow {
         flex-shrink: 0;
+        box-sizing: content-box;
         width: 0.7em;
         color: var(--dropdown-arrow-color);
         margin-left: auto;
