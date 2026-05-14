@@ -1,15 +1,13 @@
 <template>
-    <OrbModal :open="true" closable @close="$emit('close')">
-        <template #header>
-            <span class="board-settings__title">
-                {{ t('board.settingsTitle') }}
-                <span class="board-settings__name">{{ board.name }}</span>
-            </span>
-        </template>
-
+    <CmkSlideInDialog
+        :open="true"
+        :header="{ title: boardTitle, closeButton: true }"
+        size="small"
+        @close="$emit('close')"
+    >
         <div class="board-settings__body">
-            <!-- Tabs -->
-            <div class="board-settings__tabs">
+            <!-- Tabs (only when there's more than one) -->
+            <div v-if="tabs.length > 1" class="board-settings__tabs">
                 <button
                     v-for="tab in tabs"
                     :key="tab.id"
@@ -22,7 +20,7 @@
                 </button>
             </div>
 
-            <CmkScrollContainer class="board-settings__scroll">
+            <div class="board-settings__scroll">
                 <!-- General -->
                 <div v-if="activeTab === 'general'" class="space-y-[10px]">
                     <!-- Alias -->
@@ -31,18 +29,55 @@
                         <CmkInput v-model="form.alias" field-size="FILL" />
                     </div>
 
-                    <!-- Connection + Icon size -->
-                    <div class="grid grid-cols-[1fr_7rem] gap-[8px]">
-                        <div class="space-y-[4px]">
-                            <CmkLabel>{{ t('board.connection') }}</CmkLabel>
-                            <CmkDropdown
-                                :selected-option="form.connection_id || null"
-                                :options="connectionOptions"
-                                :width="'fill'"
-                                :label="t('board.connection')"
-                                @update:selected-option="form.connection_id = $event ?? ''"
-                            />
+                    <!-- Connection -->
+                    <div class="space-y-[4px]">
+                        <CmkLabel>{{ t('board.connection') }}</CmkLabel>
+                        <CmkDropdown
+                            :selected-option="form.connection_id || null"
+                            :options="connectionOptions"
+                            :width="'fill'"
+                            :label="t('board.connection')"
+                            @update:selected-option="form.connection_id = $event ?? ''"
+                        />
+                    </div>
+
+                    <!-- Board type (read-only — switching type would invalidate type-specific
+                         settings and the board geometry; cloning is the supported path).
+                         Rendered as plain text (not Badge) so it doesn't suggest interaction. -->
+                    <div class="space-y-[4px]">
+                        <CmkLabel :help="t('board.boardTypeImmutable')">{{
+                            t('board.boardType')
+                        }}</CmkLabel>
+                        <p class="board-settings__readonly-value">{{ boardTypeLabel }}</p>
+                    </div>
+
+                    <!-- Rotation (positive toggle replaces the 0=disabled magic value) -->
+                    <div class="space-y-[4px]">
+                        <div class="flex items-center justify-between">
+                            <CmkLabel :help="t('board.autoRotateHint')">{{
+                                t('board.autoRotate')
+                            }}</CmkLabel>
+                            <CmkSwitch :data="rotationEnabled" @update:data="onToggleRotation" />
                         </div>
+                        <div
+                            v-if="rotationEnabled"
+                            class="board-settings__detail flex items-center gap-[6px]"
+                        >
+                            <NumberInput
+                                v-model="form.rotation_interval"
+                                min="1"
+                                max="3600"
+                                class="w-[100px]"
+                            />
+                            <span class="text-sm text-[var(--text-muted)] shrink-0">{{
+                                t('board.rotationSuffix')
+                            }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Object defaults (per-board overrides of global icon defaults) -->
+                    <div class="board-settings__subsection">
+                        <p class="section-title">{{ t('board.objectDefaults') }}</p>
                         <div class="space-y-[4px]">
                             <CmkLabel>{{ t('board.iconSize') }}</CmkLabel>
                             <div class="flex items-center gap-[5px]">
@@ -51,44 +86,11 @@
                                     min="12"
                                     max="96"
                                     :placeholder="String(settingsStore.settings.icon_size)"
-                                    class="w-full"
+                                    class="w-[100px]"
                                 />
                                 <span class="text-sm text-[var(--text-muted)] shrink-0">px</span>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Rotation interval -->
-                    <div class="space-y-[4px]">
-                        <CmkLabel>{{ t('board.rotationInterval') }}</CmkLabel>
-                        <div class="flex items-center gap-[6px]">
-                            <NumberInput
-                                v-model="form.rotation_interval"
-                                min="0"
-                                max="3600"
-                                class="w-[100px]"
-                            />
-                            <span class="text-sm text-[var(--text-muted)] shrink-0">{{
-                                t('board.rotationSuffix')
-                            }}</span>
-                        </div>
-                        <p class="text-sm text-[var(--text-muted)]">
-                            {{ t('board.rotationIntervalHint') }}
-                        </p>
-                    </div>
-
-                    <!-- Board type -->
-                    <div class="space-y-[4px]">
-                        <CmkLabel>{{ t('board.boardType') }}</CmkLabel>
-                        <CmkDropdown
-                            :selected-option="form.map_type || null"
-                            :options="mapTypeOptions"
-                            :width="'fill'"
-                            :label="t('board.boardType')"
-                            @update:selected-option="
-                                form.map_type = ($event ?? '') as typeof form.map_type
-                            "
-                        />
                     </div>
 
                     <!-- Worldmap settings -->
@@ -113,7 +115,9 @@
                                 />
                             </div>
                             <div class="space-y-[4px]">
-                                <CmkLabel>{{ t('board.zoom') }}</CmkLabel>
+                                <CmkLabel :help="t('board.worldmapHint')">{{
+                                    t('board.zoom')
+                                }}</CmkLabel>
                                 <NumberInput
                                     v-model="form.worldmap_zoom"
                                     min="1"
@@ -141,19 +145,15 @@
                                 class="w-full"
                             />
                         </div>
-                        <p class="text-sm text-[var(--text-muted)]">
-                            {{ t('board.worldmapHint') }}
-                        </p>
 
                         <!-- Automap: dynamically populate the board from
                                  host geo-coords (orbvis_lat/orbvis_lng labels
                                  or LAT/LONG custom variables). Mirrors NagVis
                                  automap with lat/lng. -->
-                        <div
-                            class="space-y-[4px] border-t border-[var(--border)]"
-                            style="padding-top: var(--dimension-4)"
-                        >
-                            <CmkLabel>{{ t('board.autoSource') }}</CmkLabel>
+                        <div class="board-settings__subsection space-y-[4px]">
+                            <CmkLabel :help="t('board.autoSourceHint')">{{
+                                t('board.autoSource')
+                            }}</CmkLabel>
                             <CmkDropdown
                                 :selected-option="form.worldmap_auto_source || ''"
                                 :options="worldmapAutoSourceOptions"
@@ -173,9 +173,6 @@
                                 :placeholder="t('board.autoFilterValuePlaceholder')"
                                 field-size="FILL"
                             />
-                            <p class="text-sm text-[var(--text-muted)]">
-                                {{ t('board.autoSourceHint') }}
-                            </p>
                         </div>
                     </template>
 
@@ -191,7 +188,9 @@
                         </div>
                         <div class="grid grid-cols-2 gap-[8px]">
                             <div class="space-y-[4px]">
-                                <CmkLabel>{{ t('board.flowChildLayers') }}</CmkLabel>
+                                <CmkLabel :help="t('board.flowHint')">{{
+                                    t('board.flowChildLayers')
+                                }}</CmkLabel>
                                 <NumberInput
                                     v-model="form.flow_child_layers"
                                     :min="-1"
@@ -201,7 +200,9 @@
                                 />
                             </div>
                             <div class="space-y-[4px]">
-                                <CmkLabel>{{ t('board.flowParentLayers') }}</CmkLabel>
+                                <CmkLabel :help="t('board.flowHint')">{{
+                                    t('board.flowParentLayers')
+                                }}</CmkLabel>
                                 <NumberInput
                                     v-model="form.flow_parent_layers"
                                     :min="-1"
@@ -211,13 +212,12 @@
                                 />
                             </div>
                         </div>
-                        <p class="text-sm text-[var(--text-muted)]">
-                            {{ t('board.flowHint') }}
-                        </p>
 
                         <div class="grid grid-cols-2 gap-[8px]">
                             <div class="space-y-[4px]">
-                                <CmkLabel>{{ t('board.flowTopAffectedHosts') }}</CmkLabel>
+                                <CmkLabel :help="t('board.flowLimitsHint')">{{
+                                    t('board.flowTopAffectedHosts')
+                                }}</CmkLabel>
                                 <NumberInput
                                     v-model="form.flow_top_affected_hosts"
                                     :min="0"
@@ -227,7 +227,9 @@
                                 />
                             </div>
                             <div class="space-y-[4px]">
-                                <CmkLabel>{{ t('board.flowMaxServicesPerHost') }}</CmkLabel>
+                                <CmkLabel :help="t('board.flowLimitsHint')">{{
+                                    t('board.flowMaxServicesPerHost')
+                                }}</CmkLabel>
                                 <NumberInput
                                     v-model="form.flow_max_services_per_host"
                                     :min="0"
@@ -237,9 +239,6 @@
                                 />
                             </div>
                         </div>
-                        <p class="text-sm text-[var(--text-muted)]">
-                            {{ t('board.flowLimitsHint') }}
-                        </p>
                     </template>
 
                     <!-- Radar settings -->
@@ -273,47 +272,39 @@
                     </template>
 
                     <!-- Templates -->
-                    <div
-                        class="space-y-[4px] border-t border-[var(--border)]"
-                        style="padding-top: var(--dimension-4)"
-                    >
-                        <label
-                            class="text-sm font-medium text-[var(--text-muted)] block mt-[6px]"
-                            >{{ t('boardSettings.templates') }}</label
-                        >
-                        <label class="text-sm text-[var(--text-muted)] block mt-[8px]">{{
-                            t('board.hoverTemplate')
-                        }}</label>
-                        <CmkInput
-                            v-model="form.hover_template"
-                            :placeholder="t('board.templatePlaceholder')"
-                            field-size="FILL"
-                        />
-                        <label class="text-sm text-[var(--text-muted)] block mt-[6px]">{{
-                            t('board.contextTemplate')
-                        }}</label>
-                        <CmkInput
-                            v-model="form.context_template"
-                            :placeholder="t('board.templatePlaceholder')"
-                            field-size="FILL"
-                        />
-                        <p class="text-sm text-[var(--text-muted)]">
-                            {{ t('board.templateHint') }}
-                        </p>
+                    <div class="board-settings__subsection space-y-[8px]">
+                        <p class="section-title">{{ t('boardSettings.templates') }}</p>
+                        <div class="space-y-[4px]">
+                            <CmkLabel :help="t('board.templateHint')">{{
+                                t('board.hoverTemplate')
+                            }}</CmkLabel>
+                            <CmkInput
+                                v-model="form.hover_template"
+                                :placeholder="t('board.templatePlaceholder')"
+                                field-size="FILL"
+                            />
+                        </div>
+                        <div class="space-y-[4px]">
+                            <CmkLabel :help="t('board.templateHint')">{{
+                                t('board.contextTemplate')
+                            }}</CmkLabel>
+                            <CmkInput
+                                v-model="form.context_template"
+                                :placeholder="t('board.templatePlaceholder')"
+                                field-size="FILL"
+                            />
+                        </div>
                     </div>
 
                     <!-- Click action -->
-                    <div
-                        class="border-t border-[var(--border)]"
-                        style="padding-top: var(--dimension-4)"
-                    >
-                        <label
-                            class="text-sm font-medium text-[var(--text-muted)] block mb-[6px]"
-                            >{{ t('board.clickAction') }}</label
-                        >
+                    <div class="board-settings__subsection space-y-[4px]">
+                        <div>
+                            <CmkLabel>{{ t('board.clickAction') }}</CmkLabel>
+                        </div>
                         <CmkDropdown
                             :selected-option="form.click_action"
                             :options="clickActionOptions"
+                            :width="'fill'"
                             label=""
                             @update:selected-option="
                                 form.click_action = ($event ?? 'link') as 'link' | 'none'
@@ -322,89 +313,34 @@
                     </div>
 
                     <!-- Show in lists toggle -->
-                    <div
-                        class="flex items-center justify-between border-t border-[var(--border)]"
-                        style="padding: 8px 0 4px"
-                    >
-                        <div>
-                            <div class="text-sm font-medium text-[var(--text)]">
-                                {{ t('board.showInLists') }}
-                            </div>
-                            <div class="text-sm text-[var(--text-muted)] mt-[2px]">
-                                {{ t('board.showInListsHint') }}
-                            </div>
-                        </div>
+                    <div class="board-settings__subsection flex items-center justify-between">
+                        <CmkLabel :help="t('board.showInListsHint')">{{
+                            t('board.showInLists')
+                        }}</CmkLabel>
                         <CmkSwitch v-model:data="form.show_in_lists" />
                     </div>
 
-                    <!-- Background image (static only) -->
+                    <!-- Background (static only) -->
                     <div
                         v-if="form.map_type === 'static'"
-                        class="space-y-[4px] border-t border-[var(--border)]"
-                        style="padding-top: var(--dimension-4)"
+                        class="board-settings__subsection space-y-[8px]"
                     >
-                        <label
-                            class="text-sm font-medium text-[var(--text-muted)] block mt-[6px]"
-                            >{{ t('board.backgroundImage') }}</label
-                        >
-                        <div class="flex gap-[6px] mt-[4px]">
-                            <CmkInput
+                        <p class="section-title">{{ t('boardSettings.background') }}</p>
+                        <div class="space-y-[4px]">
+                            <CmkLabel>{{ t('board.backgroundImage') }}</CmkLabel>
+                            <ImagePicker
                                 v-model="form.background_image"
-                                placeholder="filename.png"
-                                field-size="FILL"
+                                :placeholder="t('board.backgroundImagePlaceholder')"
                             />
-                            <label
-                                class="flex items-center bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer transition-all shrink-0"
-                                style="padding: 5px 10px"
-                            >
-                                {{ t('common.upload') }}
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    class="hidden"
-                                    @change="uploadBackground"
-                                />
-                            </label>
-                            <button
-                                v-if="form.background_image"
-                                type="button"
-                                class="bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] hover:ring-[var(--color-light-red-50)] rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] transition-all shrink-0"
-                                style="padding: 5px 10px"
-                                :title="t('board.deleteBackground')"
-                                @click="deleteBackground"
-                            >
-                                <svg
-                                    style="width: 14px; height: 14px"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                                    />
-                                </svg>
-                            </button>
                         </div>
-                        <p v-if="uploadError" class="text-[var(--color-light-red-40)] text-sm">
-                            {{ uploadError }}
-                        </p>
-                        <p v-if="uploadOk" class="text-[var(--color-corporate-green-50)] text-xs">
-                            {{ t('board.uploadedSuccessfully') }}
-                        </p>
-
-                        <label
-                            class="text-sm font-medium text-[var(--text-muted)] block mt-[10px]"
-                            style="margin-top: var(--dimension-5)"
-                            >{{ t('board.backgroundColor') }}</label
-                        >
-                        <ColorInput
-                            v-model="form.background_color"
-                            :none-label="t('common.none')"
-                            default-color="#1f2937"
-                        />
+                        <div class="space-y-[4px]">
+                            <CmkLabel>{{ t('board.backgroundColor') }}</CmkLabel>
+                            <ColorInput
+                                v-model="form.background_color"
+                                :enable-label="t('common.useColor')"
+                                default-color="#1f2937"
+                            />
+                        </div>
                     </div>
 
                     <p v-if="saveError" class="text-xs text-[var(--color-light-red-40)]">
@@ -503,18 +439,18 @@
                         </p>
                     </div>
                 </div>
-            </CmkScrollContainer>
-        </div>
+            </div>
 
-        <template #footer>
-            <CmkButton variant="secondary" @click="$emit('close')">
-                {{ t('common.cancel') }}
-            </CmkButton>
-            <CmkButton variant="primary" :disabled="saving" @click="save">
-                {{ saving ? t('common.saving') : t('common.save') }}
-            </CmkButton>
-        </template>
-    </OrbModal>
+            <div class="board-settings__footer">
+                <CmkButton variant="secondary" @click="$emit('close')">
+                    {{ t('common.cancel') }}
+                </CmkButton>
+                <CmkButton variant="primary" :disabled="saving" @click="save">
+                    {{ saving ? t('common.saving') : t('common.save') }}
+                </CmkButton>
+            </div>
+        </div>
+    </CmkSlideInDialog>
 </template>
 
 <script setup lang="ts">
@@ -522,7 +458,7 @@ import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
 import CmkLabel from '@cmk/components/CmkLabel.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
-import CmkScrollContainer from '@cmk/components/CmkScrollContainer.vue';
+import CmkSlideInDialog from '@cmk/components/CmkSlideInDialog.vue';
 import CmkSwitch from '@cmk/components/CmkSwitch.vue';
 import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
@@ -532,7 +468,6 @@ import { useI18n } from 'vue-i18n';
 import { ApiError, boardsApi, connectionsApi, rolesApi } from '@/api/client';
 import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
-import OrbModal from '@/components/OrbModal.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useSettingsStore } from '@/stores/settings';
 import type {
@@ -545,6 +480,8 @@ import type {
     WorldmapView,
 } from '@/types/api';
 import { boardTypeOptions } from '@/utils/dropdownOptions';
+
+import ImagePicker from './ImagePicker.vue';
 
 // Mirror of backend `Settings.flow_board_*` defaults — shown as placeholder so
 // the user knows which value applies when the field is left empty.
@@ -631,10 +568,19 @@ const connectionOptions = computed(() => ({
     type: 'fixed' as const,
     suggestions: connections.value.map((b) => ({ name: b.id, title: b.label || b.id })),
 }));
-const mapTypeOptions = computed(() => ({
-    type: 'fixed' as const,
-    suggestions: boardTypeOptions(t),
-}));
+const boardTypeLabel = computed(
+    () =>
+        boardTypeOptions(t).find((o) => o.name === form.value.map_type)?.title ??
+        form.value.map_type,
+);
+
+const boardTitle = computed(() => t('board.settingsTitle') + ' — ' + props.board.name);
+
+const rotationEnabled = computed(() => (form.value.rotation_interval ?? 0) > 0);
+
+function onToggleRotation(checked: boolean) {
+    form.value.rotation_interval = checked ? Math.max(form.value.rotation_interval || 30, 1) : 0;
+}
 const worldmapAutoSourceOptions = computed(() => ({
     type: 'fixed' as const,
     suggestions: [
@@ -661,8 +607,6 @@ const clickActionOptions = computed(() => ({
     ],
 }));
 const saveError = ref('');
-const uploadError = ref('');
-const uploadOk = ref(false);
 
 async function save() {
     saving.value = true;
@@ -733,30 +677,6 @@ async function save() {
         }
     } finally {
         saving.value = false;
-    }
-}
-
-async function uploadBackground(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    uploadError.value = '';
-    uploadOk.value = false;
-    try {
-        const result = await boardsApi.uploadBackground(props.board.name, file, auth.accessToken!);
-        form.value.background_image = result.filename;
-        uploadOk.value = true;
-    } catch (e: unknown) {
-        uploadError.value = e instanceof Error ? e.message : 'Upload failed';
-    }
-}
-
-async function deleteBackground() {
-    uploadError.value = '';
-    try {
-        await boardsApi.deleteBackground(props.board.name, auth.accessToken!);
-        form.value.background_image = '';
-    } catch (e: unknown) {
-        uploadError.value = e instanceof Error ? e.message : 'Delete failed';
     }
 }
 
@@ -851,25 +771,39 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.board-settings__title {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
+@reference "tailwindcss";
 
-.board-settings__name {
-    font-family: monospace;
-    font-size: var(--font-size-normal);
-    font-weight: var(--font-weight-default);
-    color: var(--text-muted);
+.section-title {
+    @apply text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase mb-[6px] leading-none;
 }
 
 .board-settings__body {
     display: flex;
     flex-direction: column;
-    width: 34rem;
-    max-width: 90vw;
-    max-height: 65vh;
+    padding-bottom: var(--dimension-4);
+}
+
+/* Read-only display for unchangeable values (e.g. board type). Plain text
+   on the form background so it doesn't suggest a button or pill. */
+.board-settings__readonly-value {
+    font-size: var(--font-size-normal);
+    color: var(--text);
+    margin: 0;
+    padding: var(--dimension-1) 0;
+}
+
+/* Detail field that appears below a toggle, slightly indented and spaced so
+   the operator sees the relationship at a glance. */
+.board-settings__detail {
+    margin-top: var(--dimension-2);
+    margin-left: var(--dimension-5);
+}
+
+/* Section separator between logical clusters in the form. */
+.board-settings__subsection {
+    padding-top: var(--dimension-5);
+    margin-top: var(--dimension-3);
+    border-top: 1px solid var(--border);
 }
 
 .board-settings__tabs {
@@ -904,5 +838,21 @@ onMounted(async () => {
     flex: 1;
     min-height: 0;
     padding-top: var(--dimension-5);
+}
+
+.board-settings__footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--dimension-3);
+    padding: var(--dimension-4) 0;
+    background: linear-gradient(
+        to top,
+        var(--bg-surface) 0%,
+        var(--bg-surface) 75%,
+        transparent 100%
+    );
+    margin-top: var(--dimension-5);
 }
 </style>

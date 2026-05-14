@@ -136,6 +136,16 @@ declare module '@cmk/components/CmkLoading.vue' {
     export default component;
 }
 
+declare module '@cmk/components/CmkHelpText.vue' {
+    import type { DefineComponent } from 'vue';
+    interface CmkHelpTextProps {
+        help: string;
+        ariaLabel?: string;
+    }
+    const component: DefineComponent<CmkHelpTextProps>;
+    export default component;
+}
+
 declare module '@cmk/components/CmkSwitch.vue' {
     import type { DefineComponent } from 'vue';
     const component: DefineComponent<

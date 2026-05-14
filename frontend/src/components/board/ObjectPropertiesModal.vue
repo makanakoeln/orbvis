@@ -229,7 +229,7 @@
                                 }}</label>
                                 <ColorInput
                                     v-model="form.textbox_background"
-                                    none-label="transparent"
+                                    :enable-label="t('common.useColor')"
                                     default-color="#1a1a2e"
                                 />
                             </div>
@@ -239,7 +239,7 @@
                                 }}</label>
                                 <ColorInput
                                     v-model="form.textbox_border"
-                                    none-label="default"
+                                    :enable-label="t('common.useColor')"
                                     default-color="#e5e5e5"
                                 />
                             </div>
@@ -593,7 +593,7 @@
                                     }}</label>
                                     <ColorInput
                                         v-model="form.line_color"
-                                        :none-label="t('boardSettings.lineColorAuto')"
+                                        :enable-label="t('common.useColor')"
                                         default-color="#ffffff"
                                     />
                                 </div>
@@ -603,7 +603,7 @@
                                     }}</label>
                                     <ColorInput
                                         v-model="form.line_color_border"
-                                        none-label="none"
+                                        :enable-label="t('common.useColor')"
                                         default-color="#000000"
                                     />
                                 </div>
@@ -837,7 +837,7 @@
                                                 }}</label>
                                                 <ColorInput
                                                     v-model="form.label.background"
-                                                    none-label="transparent"
+                                                    :enable-label="t('common.useColor')"
                                                     none-value="transparent"
                                                     default-color="#000000"
                                                 />
@@ -848,7 +848,7 @@
                                                 }}</label>
                                                 <ColorInput
                                                     v-model="form.label_border"
-                                                    none-label="default"
+                                                    :enable-label="t('common.useColor')"
                                                     default-color="#e5e5e5"
                                                 />
                                             </div>

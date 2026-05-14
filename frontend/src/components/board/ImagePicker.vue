@@ -51,7 +51,7 @@
                 />
             </svg>
             <span :class="modelValue ? 'text-[var(--text-muted)]' : 'text-[var(--text-muted)]'">
-                {{ modelValue ? t('boardSettings.customIcon') : t('boardSettings.iconName') }}
+                {{ modelValue ? t('boardSettings.customIcon') : emptyLabel }}
             </span>
             <svg
                 class="w-3.5 h-3.5 text-[var(--text-muted)] ml-auto transition-transform duration-150"
@@ -318,8 +318,14 @@ const BASE_URL = import.meta.env.BASE_URL;
 const { t } = useI18n();
 const auth = useAuthStore();
 
-defineProps<{ modelValue: string }>();
+const props = defineProps<{
+    modelValue: string;
+    /** Override the placeholder label shown when no image is selected. */
+    placeholder?: string;
+}>();
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
+
+const emptyLabel = computed(() => props.placeholder ?? t('boardSettings.iconName'));
 
 const open = ref(false);
 const query = ref('');
