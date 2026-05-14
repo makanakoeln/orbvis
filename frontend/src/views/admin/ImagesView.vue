@@ -38,15 +38,61 @@
         <!-- Upload feedback -->
         <CmkAlertBox v-if="uploadError" variant="error">{{ uploadError }}</CmkAlertBox>
 
+        <!-- Image is not in use → simple confirm dialog. -->
         <OrbConfirmDialog
-            :open="dialogReady && !!deleteTargetName"
-            :title="deleteDialogTitle"
-            :message="deleteDialogMessage"
+            :open="dialogReady && !!deleteTargetName && !pendingUsage.length"
+            :title="deleteTargetName ? t('admin.deleteIcon', { name: deleteTargetName }) : ''"
+            :message="t('board.cannotBeUndone')"
             :confirm-label="t('common.delete')"
-            :extra-buttons="boardLinkButtons"
             @confirm="confirmDeleteIcon"
             @cancel="cancelDelete"
         />
+
+        <!-- Image is referenced by N boards → CMK SlideIn with link cards.
+             Mirrors CMK's WATO pattern (see watolib/timeperiods.py +
+             CmkSlideInDialog/CmkLinkCard) so a long usage list scrolls
+             gracefully and operators can jump to each affected board. -->
+        <CmkSlideInDialog
+            :open="dialogReady && !!deleteTargetName && pendingUsage.length > 0"
+            :header="{
+                title: t('admin.imageInUseTitle'),
+                icon: { name: 'warning', size: 'large' },
+                closeButton: true,
+            }"
+            size="medium"
+            border-color="warning"
+            @close="cancelDelete"
+        >
+            <div class="image-usage-pane">
+                <CmkParagraph class="image-usage-pane__intro">
+                    {{
+                        t('admin.imageInUseBody', {
+                            name: deleteTargetName,
+                            count: pendingUsage.length,
+                        })
+                    }}
+                </CmkParagraph>
+                <CmkLinkCardContainer>
+                    <CmkLinkCard
+                        v-for="entry in pendingUsage"
+                        :key="entry.board"
+                        icon-name="dashboard-main"
+                        :title="entry.alias || entry.board"
+                        :subtitle="usageSubtitle(entry)"
+                        :open-in-new-tab="false"
+                        :callback="() => openAffectedBoard(entry)"
+                    />
+                </CmkLinkCardContainer>
+                <div class="image-usage-pane__actions">
+                    <CmkButton variant="secondary" @click="cancelDelete">
+                        {{ t('common.cancel') }}
+                    </CmkButton>
+                    <CmkButton variant="warning" @click="confirmDeleteIcon">
+                        {{ t('common.delete') }}
+                    </CmkButton>
+                </div>
+            </div>
+        </CmkSlideInDialog>
 
         <div v-if="loading" class="flex items-center justify-center py-8">
             <CmkLoading />
@@ -130,10 +176,13 @@
 <script setup lang="ts">
 import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
+import CmkLinkCard from '@cmk/components/CmkLinkCard/CmkLinkCard.vue';
+import CmkLinkCardContainer from '@cmk/components/CmkLinkCard/CmkLinkCardContainer.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
+import CmkSlideInDialog from '@cmk/components/CmkSlideInDialog.vue';
 import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
 import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
@@ -204,32 +253,17 @@ async function onDeleteClick(name: string) {
     }
 }
 
-const deleteDialogTitle = computed(() => {
-    const name = deleteTargetName.value;
-    if (!name) return '';
-    if (pendingUsage.value.length) return t('admin.imageInUseTitle');
-    return t('admin.deleteIcon', { name });
-});
+function usageSubtitle(entry: ImageUsageEntry): string {
+    const parts: string[] = [];
+    if (entry.is_background) parts.push(t('admin.usedAsBackground'));
+    if (entry.object_ids.length) parts.push(t('admin.usedByObjects', entry.object_ids.length));
+    return parts.join(', ');
+}
 
-const deleteDialogMessage = computed(() => {
-    const name = deleteTargetName.value;
-    if (!name) return '';
-    if (!pendingUsage.value.length) return t('board.cannotBeUndone');
-    return t('admin.imageInUseBody', { name, count: pendingUsage.value.length });
-});
-
-// Renders one CMK info-button per referencing board so users can jump straight
-// to the affected board. Mirrors CMK's own pattern (NotificationFallbackWarning):
-// CmkDialog's message is plain text, so navigation lives on buttons.
-const boardLinkButtons = computed(() =>
-    pendingUsage.value.map((entry) => ({
-        title: entry.alias || entry.board,
-        onclick: () => {
-            cancelDelete();
-            router.push(`/boards/${entry.board}`);
-        },
-    })),
-);
+function openAffectedBoard(entry: ImageUsageEntry) {
+    cancelDelete();
+    router.push(`/boards/${entry.board}`);
+}
 
 function cancelDelete() {
     deleteTargetName.value = null;
@@ -263,3 +297,27 @@ async function confirmDeleteIcon() {
 
 onMounted(fetchIcons);
 </script>
+
+<style scoped>
+.image-usage-pane {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-5);
+    padding-bottom: var(--dimension-6);
+}
+
+.image-usage-pane__intro {
+    line-height: 1.5;
+}
+
+.image-usage-pane__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--dimension-3);
+    padding-top: var(--dimension-4);
+    border-top: 1px solid var(--border);
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-surface);
+}
+</style>

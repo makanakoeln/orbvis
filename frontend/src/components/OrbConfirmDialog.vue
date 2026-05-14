@@ -28,12 +28,6 @@ type ButtonVariant =
     | 'danger'
     | 'info';
 
-interface ExtraButton {
-    title: string;
-    variant?: ButtonVariant;
-    onclick: () => void;
-}
-
 const props = withDefaults(
     defineProps<{
         open: boolean;
@@ -43,11 +37,6 @@ const props = withDefaults(
         cancelLabel?: string;
         confirmVariant?: ButtonVariant;
         variant?: DialogVariant;
-        // Additional buttons rendered before the confirm/cancel pair. Use this
-        // for in-dialog actions like "Open referenced board X" — mirrors the
-        // CMK pattern (e.g. NotificationFallbackWarning) of attaching links
-        // as buttons rather than embedding <a> in the message.
-        extraButtons?: ExtraButton[];
     }>(),
     {
         message: '',
@@ -55,7 +44,6 @@ const props = withDefaults(
         cancelLabel: '',
         confirmVariant: 'warning',
         variant: 'warning',
-        extraButtons: () => [],
     },
 );
 
@@ -63,11 +51,6 @@ const emit = defineEmits<{ confirm: []; cancel: [] }>();
 const { t } = useI18n();
 
 const dialogButtons = computed(() => [
-    ...props.extraButtons.map((b) => ({
-        title: b.title,
-        variant: (b.variant ?? 'info') as ButtonVariant,
-        onclick: b.onclick,
-    })),
     {
         title: props.confirmLabel || t('common.confirm'),
         variant: props.confirmVariant,
@@ -113,6 +96,5 @@ const dialogButtons = computed(() => [
     margin-top: var(--dimension-6) !important;
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
 }
 </style>

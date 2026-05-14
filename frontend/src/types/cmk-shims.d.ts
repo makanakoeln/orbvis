@@ -350,3 +350,56 @@ declare module '@cmk/components/typography/CmkParagraph.vue' {
     const component: DefineComponent<object>;
     export default component;
 }
+
+declare module '@cmk/components/CmkSlideInDialog.vue' {
+    import type { DefineComponent } from 'vue';
+    interface CmkSlideInDialogProps {
+        open: boolean;
+        size?: 'small' | 'medium' | 'large';
+        isIndexPage?: boolean;
+        stackPriority?: number;
+        header?: {
+            title: string;
+            icon?: { name: string; size?: string };
+            closeButton: boolean;
+        };
+        borderColor?: 'default' | 'success' | 'warning' | 'danger' | 'info';
+    }
+    const component: DefineComponent<
+        CmkSlideInDialogProps,
+        object,
+        object,
+        object,
+        object,
+        object,
+        object,
+        { close: [] }
+    >;
+    export default component;
+}
+
+declare module '@cmk/components/CmkLinkCard/CmkLinkCard.vue' {
+    import type { DefineComponent } from 'vue';
+    interface CmkLinkCardProps {
+        iconName?: string;
+        title: string;
+        subtitle?: string;
+        url?: string;
+        callback?: () => void;
+        openInNewTab: boolean;
+        disabled?: boolean;
+        borders?: 'standard' | 'borderless';
+        contrast?: 'standard' | 'high';
+    }
+    const component: DefineComponent<CmkLinkCardProps>;
+    export default component;
+}
+
+declare module '@cmk/components/CmkLinkCard/CmkLinkCardContainer.vue' {
+    import type { DefineComponent } from 'vue';
+    interface CmkLinkCardContainerProps {
+        orientation?: 'vertical' | 'horizontal';
+    }
+    const component: DefineComponent<CmkLinkCardContainerProps>;
+    export default component;
+}
