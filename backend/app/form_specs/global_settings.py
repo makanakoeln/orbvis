@@ -1,13 +1,15 @@
 # Copyright (C) 2025 OrbVis - License: GNU General Public License v2
 """FormSpec for the Global Settings admin surface.
 
-Pilot scope mirrors the Pydantic ``GlobalSettings`` model 1:1 for every
-field that maps cleanly to a vendored FormSpec component. Colour fields
-and optional discriminated unions wait for follow-up vendor work — they
-fall back to the existing Pydantic-backed POST until then.
+Mirrors the Pydantic ``GlobalSettings`` model 1:1 for every field that maps
+cleanly to a vendored FormSpec component. Grouped into topical sections so
+the vendored FormDictionary renders them as labelled groups instead of a
+flat list.
 """
 
 from __future__ import annotations
+
+from app.form_specs import OrbDictGroup
 
 from cmk.rulesets.v1 import Help, Label, Title
 from cmk.rulesets.v1.form_specs import (
@@ -15,11 +17,41 @@ from cmk.rulesets.v1.form_specs import (
     DefaultValue,
     DictElement,
     Dictionary,
+    FieldSize,
     InputHint,
     Integer,
     SingleChoice,
     SingleChoiceElement,
     String,
+)
+
+_DEFAULTS = OrbDictGroup(
+    title=Title("Object defaults"),
+    help_text=Help("Applied to newly placed objects unless the board overrides them."),
+    key="defaults",
+)
+_LABELS = OrbDictGroup(
+    title=Title("Labels"),
+    help_text=Help("Caption text shown next to icons."),
+    key="labels",
+)
+_BOARD_DEFAULTS = OrbDictGroup(
+    title=Title("Board defaults"),
+    help_text=Help("Pre-selected values when creating a new board."),
+    key="board_defaults",
+)
+_TEMPLATES = OrbDictGroup(
+    title=Title("Tooltip & context-menu templates"),
+    help_text=Help(
+        "Global fallbacks used when a board or object defines no template "
+        "of its own. Placeholders: {{name}}, {{state}}, {{output}}."
+    ),
+    key="templates",
+)
+_SYSTEM = OrbDictGroup(
+    title=Title("System"),
+    help_text=Help("Runtime / integration options."),
+    key="system",
 )
 
 
@@ -33,6 +65,7 @@ def global_settings_spec() -> Dictionary:
         elements={
             "icon_size": DictElement(
                 required=True,
+                group=_DEFAULTS,
                 parameter_form=Integer(
                     title=Title("Icon size"),
                     help_text=Help("Default pixel size for object icons on a board."),
@@ -42,6 +75,7 @@ def global_settings_spec() -> Dictionary:
             ),
             "view_type": DictElement(
                 required=True,
+                group=_DEFAULTS,
                 parameter_form=SingleChoice(
                     title=Title("View type"),
                     elements=[
@@ -54,6 +88,7 @@ def global_settings_spec() -> Dictionary:
             ),
             "z": DictElement(
                 required=True,
+                group=_DEFAULTS,
                 parameter_form=Integer(
                     title=Title("Stacking order (Z)"),
                     help_text=Help("Higher value = drawn in front."),
@@ -62,6 +97,7 @@ def global_settings_spec() -> Dictionary:
             ),
             "url_target": DictElement(
                 required=True,
+                group=_DEFAULTS,
                 parameter_form=SingleChoice(
                     title=Title("Link target"),
                     elements=[
@@ -74,6 +110,7 @@ def global_settings_spec() -> Dictionary:
             ),
             "label_show": DictElement(
                 required=True,
+                group=_LABELS,
                 parameter_form=BooleanChoice(
                     title=Title("Show object labels"),
                     label=Label("Display labels under each object"),
@@ -82,6 +119,7 @@ def global_settings_spec() -> Dictionary:
             ),
             "label_size": DictElement(
                 required=True,
+                group=_LABELS,
                 parameter_form=Integer(
                     title=Title("Label size"),
                     unit_symbol="px",
@@ -90,6 +128,7 @@ def global_settings_spec() -> Dictionary:
             ),
             "label_x": DictElement(
                 required=True,
+                group=_LABELS,
                 parameter_form=Integer(
                     title=Title("Label X offset"),
                     prefill=DefaultValue(0),
@@ -97,6 +136,7 @@ def global_settings_spec() -> Dictionary:
             ),
             "label_y": DictElement(
                 required=True,
+                group=_LABELS,
                 parameter_form=Integer(
                     title=Title("Label Y offset"),
                     prefill=DefaultValue(0),
@@ -104,13 +144,16 @@ def global_settings_spec() -> Dictionary:
             ),
             "default_backend_id": DictElement(
                 required=True,
+                group=_BOARD_DEFAULTS,
                 parameter_form=String(
                     title=Title("Default connection"),
                     help_text=Help("Connection ID pre-selected when creating a new board."),
+                    field_size=FieldSize.LARGE,
                 ),
             ),
             "default_map_type": DictElement(
                 required=True,
+                group=_BOARD_DEFAULTS,
                 parameter_form=SingleChoice(
                     title=Title("Default board type"),
                     elements=[
@@ -122,27 +165,8 @@ def global_settings_spec() -> Dictionary:
                     prefill=DefaultValue("static"),
                 ),
             ),
-            "hover_template": DictElement(
-                parameter_form=String(
-                    title=Title("Hover template"),
-                    help_text=Help(
-                        "Global fallback shown on hover when a board or object has no "
-                        "template of its own. Use {{name}}, {{state}}, {{output}} etc."
-                    ),
-                    prefill=InputHint("e.g. {{name}} is {{state}}"),
-                ),
-            ),
-            "context_template": DictElement(
-                parameter_form=String(
-                    title=Title("Context template"),
-                    help_text=Help(
-                        "Right-click context-menu fallback. Same placeholders as the "
-                        "hover template."
-                    ),
-                    prefill=InputHint("e.g. {{name}} is {{state}}"),
-                ),
-            ),
             "checkmk_url": DictElement(
+                group=_BOARD_DEFAULTS,
                 parameter_form=String(
                     title=Title("Checkmk base URL"),
                     help_text=Help(
@@ -150,9 +174,31 @@ def global_settings_spec() -> Dictionary:
                         "Auto-populated when OrbVis runs inside a Checkmk OMD site."
                     ),
                     prefill=InputHint("https://checkmk.example.com/mysite"),
+                    field_size=FieldSize.LARGE,
+                ),
+            ),
+            "hover_template": DictElement(
+                group=_TEMPLATES,
+                parameter_form=String(
+                    title=Title("Hover template"),
+                    help_text=Help("Shown on hover when a board has no template of its own."),
+                    prefill=InputHint("e.g. {{name}} is {{state}}"),
+                    field_size=FieldSize.LARGE,
+                ),
+            ),
+            "context_template": DictElement(
+                group=_TEMPLATES,
+                parameter_form=String(
+                    title=Title("Context-menu template"),
+                    help_text=Help(
+                        "Right-click fallback. Same placeholders as the hover template."
+                    ),
+                    prefill=InputHint("e.g. {{name}} is {{state}}"),
+                    field_size=FieldSize.LARGE,
                 ),
             ),
             "log_level": DictElement(
+                group=_SYSTEM,
                 parameter_form=SingleChoice(
                     title=Title("Log level"),
                     help_text=Help(

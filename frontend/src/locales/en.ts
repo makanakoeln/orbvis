@@ -569,7 +569,11 @@ export default {
         alias2: 'Alias',
         objectsHeader: 'Objects',
         connectionId: 'Connection ID',
-        connectionIdHint: '(no spaces)',
+        connectionIdHint:
+            'Letters, digits, hyphens and underscores only — used in URLs and configs',
+        connectionIdRequired: 'Connection ID is required',
+        connectionIdInvalid: 'Only letters, digits, hyphens (-) and underscores (_) allowed',
+        connectionIdTaken: 'A connection with this ID already exists',
         displayLabel: 'Display label',
         connection: 'Connection',
         mustChangePassword: 'Must change password on next login',
@@ -643,6 +647,9 @@ export default {
     settings: {
         title: 'Global Settings',
         subtitle: 'Default values applied when creating new boards and objects',
+        unsavedChanges: 'Unsaved changes',
+        unsavedChangesHint:
+            'You have changed at least one field — save or cancel before leaving the page',
         iconDefaults: 'Icon defaults',
         lineDefaults: 'Line defaults',
         labelDefaults: 'Label defaults',

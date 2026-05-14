@@ -64,6 +64,45 @@ async def get_connection_form_data(
     return config_to_form_data(_redact(existing))
 
 
+class FormCreateBody(BaseModel):
+    id: str
+    form: dict[str, object]
+
+
+@router.post("/form", response_model=ConnectionConfig, status_code=status.HTTP_201_CREATED)
+async def create_connection_from_form(
+    body: FormCreateBody, _: User = Depends(require_admin)
+) -> ConnectionConfig:
+    try:
+        created = form_data_to_config(body.form, existing=None, connection_id=body.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+    try:
+        result = connection_service.create(created)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+    return _redact(result)
+
+
+@router.post("/form/test-connection", response_model=TestResult)
+async def test_connection_from_form(
+    body: FormCreateBody, _: User = Depends(require_admin)
+) -> TestResult:
+    """Test FormSpec connection data without saving — used by the edit dialog."""
+    try:
+        cfg = form_data_to_config(body.form, existing=None, connection_id=body.id or "preview")
+    except ValueError as exc:
+        return TestResult(ok=False, message=str(exc))
+    try:
+        connection = connection_service.build_instance(cfg)
+        ok = await connection.is_available()
+        return TestResult(
+            ok=ok, message="Connection successful" if ok else "Connection not reachable"
+        )
+    except Exception as exc:
+        return TestResult(ok=False, message=str(exc))
+
+
 @router.put("/{connection_id}/form", response_model=ConnectionConfig)
 async def update_connection_from_form(
     connection_id: str,

@@ -325,10 +325,28 @@ export const connectionsApiFormSpec = {
     getFormData: (id: string, token: string): Promise<Record<string, unknown>> =>
         request(`/connections/${encodeURIComponent(id)}/form`, {}, token),
 
+    createFromForm: (
+        id: string,
+        form: Record<string, unknown>,
+        token: string,
+    ): Promise<ConnectionConfig> =>
+        request('/connections/form', { method: 'POST', body: JSON.stringify({ id, form }) }, token),
+
     updateFromForm: (id: string, form: Record<string, unknown>, token: string): Promise<unknown> =>
         request(
             `/connections/${encodeURIComponent(id)}/form`,
             { method: 'PUT', body: JSON.stringify(form) },
+            token,
+        ),
+
+    testFromForm: (
+        id: string,
+        form: Record<string, unknown>,
+        token: string,
+    ): Promise<{ ok: boolean; message: string }> =>
+        request(
+            '/connections/form/test-connection',
+            { method: 'POST', body: JSON.stringify({ id, form }) },
             token,
         ),
 };

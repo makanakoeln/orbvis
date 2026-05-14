@@ -572,7 +572,12 @@ export default {
         alias2: 'Alias',
         objectsHeader: 'Objekte',
         connectionId: 'Connection-ID',
-        connectionIdHint: '(keine Leerzeichen)',
+        connectionIdHint:
+            'Nur Buchstaben, Ziffern, Bindestriche und Unterstriche — wird in URLs und Konfigurationen verwendet',
+        connectionIdRequired: 'Connection-ID ist erforderlich',
+        connectionIdInvalid:
+            'Nur Buchstaben, Ziffern, Bindestriche (-) und Unterstriche (_) erlaubt',
+        connectionIdTaken: 'Eine Connection mit dieser ID existiert bereits',
         displayLabel: 'Anzeigename',
         connection: 'Verbindung',
         mustChangePassword: 'Muss das Passwort bei der nächsten Anmeldung ändern',
@@ -646,6 +651,9 @@ export default {
     settings: {
         title: 'Globale Einstellungen',
         subtitle: 'Standardwerte für neue Boards und Objekte',
+        unsavedChanges: 'Ungespeicherte Änderungen',
+        unsavedChangesHint:
+            'Es wurde mindestens ein Feld geändert — speichern oder verwerfen, bevor die Seite verlassen wird',
         iconDefaults: 'Symbol-Standardwerte',
         lineDefaults: 'Linien-Standardwerte',
         labelDefaults: 'Beschriftungs-Standardwerte',

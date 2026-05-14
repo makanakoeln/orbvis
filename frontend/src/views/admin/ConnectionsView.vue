@@ -92,7 +92,6 @@
                         :key="b.id"
                         class="hover:bg-[var(--bg-hover)] transition-colors"
                     >
-                        <!-- Status -->
                         <td style="padding: 6px 12px">
                             <button
                                 :disabled="statusLoading[b.id]"
@@ -131,7 +130,6 @@
                                             : (statusMessages[b.id] ?? t('common.test'))
                                     }}
                                 </span>
-                                <!-- Refresh icon — visible on hover to signal clickability -->
                                 <svg
                                     class="text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-colors opacity-0 group-hover:opacity-100 shrink-0"
                                     style="width: 11px; height: 11px"
@@ -244,303 +242,79 @@
             @cancel="deleteTarget = null"
         />
 
-        <OrbModal
+        <CmkSlideInDialog
+            v-if="dialog.open"
             :open="dialog.open"
-            :title="
-                dialog.mode === 'create'
-                    ? t('admin.addConnectionTitle')
-                    : ((formSchema as { title?: string } | null)?.title ??
-                      t('admin.editConnection'))
-            "
-            closable
-            @close="dialog.open = false"
+            size="small"
+            :header="{
+                title:
+                    dialog.mode === 'create'
+                        ? t('admin.addConnectionTitle')
+                        : t('admin.editConnection'),
+                closeButton: true,
+            }"
+            @close="closeDialog"
         >
-            <form class="connections-dialog__form" @submit.prevent="save">
-                <div v-if="dialog.mode === 'create'" class="space-y-[4px]">
-                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                        t('admin.connectionId')
-                    }}</label>
-                    <CmkInput v-model="form.id" placeholder="cmk_heute" field-size="FILL" />
-                    <p class="text-sm text-[var(--text-muted)]">
+            <div class="connection-edit__body">
+                <div class="connection-edit__id">
+                    <CmkLabel>{{ t('admin.connectionId') }}</CmkLabel>
+                    <CmkInput
+                        v-if="dialog.mode === 'create'"
+                        v-model="dialogId"
+                        placeholder="cmk_heute"
+                        field-size="FILL"
+                    />
+                    <p v-else class="connection-edit__id-readonly">{{ dialogId }}</p>
+                    <p
+                        v-if="dialog.mode === 'create'"
+                        class="text-sm text-[var(--text-muted)]"
+                        style="margin-top: var(--dimension-2)"
+                    >
                         {{ t('admin.connectionIdHint') }}
                     </p>
                 </div>
 
-                <!-- Create mode: legacy custom form (owns the ID + inline test). -->
-                <template v-if="dialog.mode === 'create'">
-                    <div class="space-y-[4px]">
-                        <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                            t('admin.displayLabel')
-                        }}</label>
-                        <CmkInput
-                            v-model="form.label"
-                            placeholder="Checkmk heute"
-                            field-size="FILL"
-                        />
-                    </div>
-
-                    <div class="space-y-[4px]">
-                        <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                            t('admin.type')
-                        }}</label>
-                        <CmkDropdown
-                            :selected-option="form.type || null"
-                            :options="connectionTypeOptions"
-                            :width="'fill'"
-                            :label="t('admin.type')"
-                            @update:selected-option="form.type = ($event ?? '') as typeof form.type"
-                        />
-                    </div>
-
-                    <template v-if="form.type === 'livestatus'">
-                        <!-- Unix socket -->
-                        <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                t('admin.unixSocket')
-                            }}</label>
-                            <CmkInput
-                                v-model="form.socket_path"
-                                placeholder="/omd/sites/heute/tmp/run/live"
-                                field-size="FILL"
-                            />
-                        </div>
-
-                        <!-- OR divider -->
-                        <div class="relative flex items-center gap-[8px]">
-                            <div class="flex-1 border-t border-[var(--border)]" />
-                            <span class="text-sm text-[var(--text-muted)] shrink-0">{{
-                                t('admin.orTcp')
-                            }}</span>
-                            <div class="flex-1 border-t border-[var(--border)]" />
-                        </div>
-
-                        <!-- TCP Host + Port -->
-                        <div class="grid grid-cols-[1fr_7rem] gap-[8px]">
-                            <div class="space-y-[4px]">
-                                <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                    t('admin.tcpHost')
-                                }}</label>
-                                <CmkInput
-                                    v-model="form.host"
-                                    placeholder="192.168.1.10"
-                                    field-size="FILL"
-                                />
-                            </div>
-                            <div class="space-y-[4px]">
-                                <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                    t('admin.port')
-                                }}</label>
-                                <NumberInput
-                                    v-model="form.port"
-                                    min="1"
-                                    max="65535"
-                                    class="w-full"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Checkmk URL + Automation + Timeout -->
-                        <div class="border-t border-[var(--border)] pt-[12px] space-y-[12px]">
-                            <div class="space-y-[4px]">
-                                <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                    t('admin.checkmkUrl')
-                                }}</label>
-                                <CmkInput
-                                    v-model="form.checkmk_url"
-                                    placeholder="http://localhost/heute"
-                                    field-size="FILL"
-                                />
-                                <p class="text-sm text-[var(--text-muted)]">
-                                    {{ t('admin.contextLinks') }}
-                                </p>
-                            </div>
-                            <template v-if="!isCmc">
-                                <div class="grid grid-cols-2 gap-[8px]">
-                                    <div class="space-y-[4px]">
-                                        <label
-                                            class="text-sm font-medium text-[var(--text-muted)]"
-                                            >{{ t('admin.automationUser') }}</label
-                                        >
-                                        <CmkInput
-                                            v-model="form.automation_user"
-                                            placeholder="automation"
-                                            field-size="FILL"
-                                        />
-                                    </div>
-                                    <div class="space-y-[4px]">
-                                        <label
-                                            class="text-sm font-medium text-[var(--text-muted)]"
-                                            >{{ t('admin.automationSecret') }}</label
-                                        >
-                                        <CmkInput
-                                            v-model="form.automation_secret"
-                                            type="password"
-                                            placeholder="••••••••"
-                                            field-size="FILL"
-                                        />
-                                    </div>
-                                </div>
-                                <p class="text-sm text-[var(--text-muted)]">
-                                    {{ t('admin.automationHint') }}
-                                </p>
-                            </template>
-                            <p v-else class="text-sm text-[var(--text-muted)]">
-                                {{ t('admin.automationHintCmc') }}
-                            </p>
-                            <div class="space-y-[4px]">
-                                <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                    t('admin.timeout')
-                                }}</label>
-                                <NumberInput
-                                    v-model="form.timeout"
-                                    min="1"
-                                    max="120"
-                                    step="0.5"
-                                    class="w-[112px]"
-                                />
-                                <p class="text-sm text-[var(--text-muted)]">seconds</p>
-                            </div>
-                        </div>
-                    </template>
-
-                    <template v-if="form.type === 'icinga2'">
-                        <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                t('admin.icinga2Url')
-                            }}</label>
-                            <CmkInput
-                                v-model="form.icinga2_url"
-                                placeholder="https://localhost:5665"
-                                field-size="FILL"
-                            />
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-[8px]">
-                            <div class="space-y-[4px]">
-                                <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                    t('admin.icinga2Username')
-                                }}</label>
-                                <CmkInput
-                                    v-model="form.icinga2_username"
-                                    placeholder="root"
-                                    field-size="FILL"
-                                />
-                            </div>
-                            <div class="space-y-[4px]">
-                                <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                    t('admin.icinga2Password')
-                                }}</label>
-                                <CmkInput
-                                    v-model="form.icinga2_password"
-                                    type="password"
-                                    field-size="FILL"
-                                />
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-[8px]">
-                            <CmkCheckbox
-                                v-model="form.icinga2_verify_ssl"
-                                :label="t('admin.icinga2VerifySsl')"
-                            />
-                        </div>
-
-                        <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                t('admin.timeout')
-                            }}</label>
-                            <NumberInput
-                                v-model="form.timeout"
-                                min="1"
-                                max="120"
-                                step="0.5"
-                                class="w-[112px]"
-                            />
-                            <p class="text-sm text-[var(--text-muted)]">seconds</p>
-                        </div>
-                    </template>
-
-                    <!-- Test result -->
-                    <div
-                        v-if="dialogTest.ran"
-                        class="flex items-center gap-[8px] rounded-lg ring-1 text-sm"
-                        style="padding: var(--dimension-4) 12px"
-                        :class="
-                            dialogTest.ok
-                                ? 'bg-[var(--color-corporate-green-50)]/8 ring-[var(--color-corporate-green-50)]/20 text-[var(--color-corporate-green-50)]'
-                                : 'bg-[var(--color-light-red-50)]/8 ring-[var(--color-light-red-50)]/20 text-[var(--color-light-red-40)]'
-                        "
-                    >
-                        <span
-                            class="rounded-full shrink-0"
-                            style="width: 8px; height: 8px"
-                            :class="
-                                dialogTest.ok
-                                    ? 'bg-[var(--color-corporate-green-50)]'
-                                    : 'bg-[var(--color-light-red-40)]'
-                            "
-                        />
-                        {{ dialogTest.message }}
-                    </div>
-
-                    <p
-                        v-if="formError"
-                        class="text-[var(--color-light-red-40)] text-sm flex items-center gap-[6px]"
-                    >
-                        <svg
-                            class="shrink-0"
-                            style="width: 12px; height: 12px"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"
-                            />
-                        </svg>
-                        {{ formError }}
-                    </p>
-                </template>
-
-                <!-- Edit mode: FormSpec-driven (cascading by backend type). -->
-                <template v-else>
-                    <div class="space-y-[4px]">
-                        <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                            t('admin.connectionId')
-                        }}</label>
-                        <p class="font-mono text-sm text-[var(--text)]">{{ dialog.editId }}</p>
-                    </div>
-                    <FormEdit
-                        v-if="formSchema"
-                        v-model:data="formSpecData"
-                        :spec="formSchema"
-                        :backend-validation="[]"
-                    />
-                    <p v-if="formError" class="text-[var(--color-light-red-40)] text-sm">
-                        {{ formError }}
-                    </p>
-                </template>
-            </form>
-            <template #footer>
-                <CmkButton variant="secondary" @click="dialog.open = false">
-                    {{ t('common.cancel') }}
-                </CmkButton>
-                <CmkButton
-                    v-if="dialog.mode === 'create'"
-                    variant="optional"
-                    :disabled="dialogTest.loading"
-                    @click="testDialog"
+                <div v-if="schemaError" class="text-sm text-[var(--color-light-red-40)]">
+                    {{ schemaError }}
+                </div>
+                <div
+                    v-else-if="!formSchema"
+                    class="flex items-center justify-center py-6 text-[var(--text-muted)]"
                 >
-                    {{ dialogTest.loading ? t('common.testing') : t('common.test') }}
-                </CmkButton>
-                <CmkButton variant="primary" :disabled="saving" @click="save">
-                    {{ saving ? t('common.saving') : t('common.save') }}
-                </CmkButton>
-            </template>
-        </OrbModal>
+                    <CmkLoading />
+                </div>
+                <FormEdit
+                    v-else
+                    v-model:data="formSpecData"
+                    :spec="formSchema"
+                    :backend-validation="[]"
+                />
+
+                <CmkAlertBox v-if="dialogTest.ran" :variant="dialogTest.ok ? 'success' : 'error'">
+                    {{ dialogTest.message }}
+                </CmkAlertBox>
+
+                <p v-if="formError" class="text-[var(--color-light-red-40)] text-sm">
+                    {{ formError }}
+                </p>
+
+                <div class="connection-edit__footer">
+                    <CmkButton variant="secondary" @click="closeDialog">
+                        {{ t('common.cancel') }}
+                    </CmkButton>
+                    <CmkButton
+                        variant="optional"
+                        :disabled="dialogTest.loading || !formSchema"
+                        @click="testDialog"
+                    >
+                        {{ dialogTest.loading ? t('common.testing') : t('common.test') }}
+                    </CmkButton>
+                    <CmkButton variant="primary" :disabled="saving || !formSchema" @click="save">
+                        {{ saving ? t('common.saving') : t('common.save') }}
+                    </CmkButton>
+                </div>
+            </div>
+        </CmkSlideInDialog>
     </div>
 </template>
 
@@ -548,26 +322,28 @@
 import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
 import CmkBadge from '@cmk/components/CmkBadge.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
+import CmkLabel from '@cmk/components/CmkLabel.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
+import CmkSlideInDialog from '@cmk/components/CmkSlideInDialog.vue';
 import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
 import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
-import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import FormEdit from '@cmk/form/FormEdit.vue';
 import { initializeComponentRegistry } from '@cmk/form/private/FormEditDispatcher/dispatch';
 import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi, connectionsApiFormSpec } from '@/api/client';
-import NumberInput from '@/components/NumberInput.vue';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
-import OrbModal from '@/components/OrbModal.vue';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import { useConnectionsStore } from '@/stores/connections';
 import type { ConnectionConfig } from '@/types/api';
+
+type Schema = NonNullable<VueFormspecComponents['components']>;
+
+initializeComponentRegistry();
 
 const { t } = useI18n();
 const store = useConnectionsStore();
@@ -596,96 +372,89 @@ async function testAll() {
     for (const b of store.connections) testExisting(b.id);
 }
 
-const monitoringCore = ref<'cmc' | 'nagios' | null>(null);
-const isCmc = computed(() => monitoringCore.value === 'cmc');
+const deleteTarget = ref<string | null>(null);
+const dialog = reactive({ open: false, mode: 'create' as 'create' | 'edit' });
+const saving = ref(false);
+const formError = ref('');
+const schemaError = ref('');
+const dialogId = ref('');
+const dialogTest = reactive({ loading: false, ran: false, ok: false, message: '' });
 
-async function fetchContext(connectionId: string) {
-    monitoringCore.value = null;
+const formSchema = ref<Schema | null>(null);
+const formSpecData = ref<Record<string, unknown>>({});
+
+async function ensureSchema() {
+    if (formSchema.value) return;
     try {
-        const ctx = await connectionsApi.context(connectionId, auth.accessToken!);
-        monitoringCore.value = ctx.monitoring_core;
-    } catch {
-        // fail safe: alle Felder anzeigen
+        const spec = await connectionsApiFormSpec.getSchema(auth.accessToken!);
+        formSchema.value = spec as unknown as Schema;
+    } catch (e: unknown) {
+        schemaError.value = e instanceof Error ? e.message : 'Schema load failed';
     }
 }
 
-const deleteTarget = ref<string | null>(null);
-const dialog = reactive({ open: false, mode: 'create' as 'create' | 'edit', editId: '' });
-const saving = ref(false);
-const formError = ref('');
-const dialogTest = reactive({ loading: false, ran: false, ok: false, message: '' });
-
-// Edit mode: FormSpec-driven schema + nested form data (cascading by type).
-// Create mode keeps the legacy custom form because it owns the ID and the
-// inline Test button workflow we don't want to disrupt yet.
-type Schema = NonNullable<VueFormspecComponents['components']>;
-const formSchema = ref<Schema | null>(null);
-const formSpecData = ref<Record<string, unknown>>({});
-initializeComponentRegistry();
-
-const emptyForm = (): ConnectionConfig => ({
-    id: '',
-    type: 'livestatus',
-    label: '',
-    socket_path: null,
-    host: null,
-    port: null,
-    timeout: 10,
-    checkmk_url: null,
-    automation_user: null,
-    automation_secret: null,
-    icinga2_url: null,
-    icinga2_username: null,
-    icinga2_password: null,
-    icinga2_verify_ssl: true,
-});
-const form = reactive<ConnectionConfig>(emptyForm());
-
-const connectionTypeOptions = computed(() => ({
-    type: 'fixed' as const,
-    suggestions: [
-        { name: 'livestatus', title: t('admin.connectionTypeLivestatus') },
-        { name: 'icinga2', title: t('admin.connectionTypeIcinga2') },
-        { name: 'test', title: t('admin.connectionTypeTest') },
-    ],
-}));
-
-function openCreate() {
-    Object.assign(form, emptyForm());
+function prepareDialog(mode: 'create' | 'edit', id: string) {
     Object.assign(dialogTest, { loading: false, ran: false, ok: false, message: '' });
     formError.value = '';
-    dialog.mode = 'create';
+    schemaError.value = '';
+    dialog.mode = mode;
+    dialogId.value = id;
+    formSpecData.value = {};
     dialog.open = true;
-    if (store.connections.length > 0) fetchContext(store.connections[0].id);
+}
+
+async function openCreate() {
+    prepareDialog('create', '');
+    await ensureSchema();
+    // After schema arrives, seed defaults so the cascading 'type' starts on
+    // livestatus instead of an empty body.
+    if (formSchema.value) {
+        const dv = (formSchema.value as { default_value?: unknown }).default_value;
+        if (dv && typeof dv === 'object') {
+            formSpecData.value = JSON.parse(JSON.stringify(dv));
+        }
+    }
 }
 
 async function openEdit(b: ConnectionConfig) {
-    Object.assign(form, { ...b });
-    Object.assign(dialogTest, { loading: false, ran: false, ok: false, message: '' });
-    formError.value = '';
-    dialog.mode = 'edit';
-    dialog.editId = b.id;
-    dialog.open = true;
-    fetchContext(b.id);
-    const token = auth.accessToken;
-    if (!token) return;
+    prepareDialog('edit', b.id);
+    const fdataPromise = connectionsApiFormSpec.getFormData(b.id, auth.accessToken!);
+    await ensureSchema();
     try {
-        const [spec, fdata] = await Promise.all([
-            connectionsApiFormSpec.getSchema(token),
-            connectionsApiFormSpec.getFormData(b.id, token),
-        ]);
-        formSchema.value = spec as unknown as Schema;
-        formSpecData.value = fdata;
+        formSpecData.value = await fdataPromise;
     } catch (e: unknown) {
-        formError.value = e instanceof Error ? e.message : 'Schema load failed';
+        formError.value = e instanceof Error ? e.message : 'Failed to load connection data';
     }
 }
 
+function closeDialog() {
+    dialog.open = false;
+}
+
+function validateNewId(): string | null {
+    if (dialog.mode !== 'create') return null;
+    const id = dialogId.value.trim();
+    if (!id) return t('admin.connectionIdRequired');
+    if (!/^[A-Za-z0-9_-]+$/.test(id)) return t('admin.connectionIdInvalid');
+    if (store.connections.some((c) => c.id === id)) return t('admin.connectionIdTaken');
+    return null;
+}
+
 async function testDialog() {
-    dialogTest.loading = true;
+    formError.value = '';
     dialogTest.ran = false;
+    const idError = validateNewId();
+    if (idError) {
+        formError.value = idError;
+        return;
+    }
+    dialogTest.loading = true;
     try {
-        const result = await connectionsApi.testConnection({ ...form }, auth.accessToken!);
+        const result = await connectionsApiFormSpec.testFromForm(
+            dialogId.value.trim(),
+            formSpecData.value,
+            auth.accessToken!,
+        );
         dialogTest.ok = result.ok;
         dialogTest.message = result.message;
         dialogTest.ran = true;
@@ -700,20 +469,22 @@ async function testDialog() {
 
 async function save() {
     formError.value = '';
+    const idError = validateNewId();
+    if (idError) {
+        formError.value = idError;
+        return;
+    }
     saving.value = true;
     try {
+        const id = dialogId.value.trim();
         if (dialog.mode === 'create') {
-            await store.createConnection({ ...form });
+            await connectionsApiFormSpec.createFromForm(id, formSpecData.value, auth.accessToken!);
             toast.success(t('admin.connectionCreated'));
         } else {
-            await connectionsApiFormSpec.updateFromForm(
-                dialog.editId,
-                formSpecData.value,
-                auth.accessToken!,
-            );
-            await store.fetchConnections();
+            await connectionsApiFormSpec.updateFromForm(id, formSpecData.value, auth.accessToken!);
             toast.success(t('admin.connectionUpdated'));
         }
+        await store.fetchConnections();
         dialog.open = false;
         testAll();
     } catch (e: unknown) {
@@ -744,11 +515,43 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.connections-dialog__form {
+.connection-edit__body {
     display: flex;
     flex-direction: column;
     gap: var(--dimension-5);
-    width: 30rem;
-    max-width: 90vw;
+    padding-bottom: var(--dimension-5);
+}
+
+.connection-edit__id {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-2);
+}
+
+.connection-edit__id-readonly {
+    font-family: var(--font-family-mono, monospace);
+    font-size: 0.875rem;
+    color: var(--text);
+    padding: var(--dimension-3) var(--dimension-4);
+    background: var(--bg-elevated, var(--bg-hover));
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    width: max-content;
+}
+
+.connection-edit__footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--dimension-3);
+    padding: var(--dimension-4) 0;
+    background: linear-gradient(
+        to top,
+        var(--bg-surface) 0%,
+        var(--bg-surface) 75%,
+        transparent 100%
+    );
+    margin-top: var(--dimension-3);
 }
 </style>

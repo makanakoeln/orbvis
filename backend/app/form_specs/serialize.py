@@ -15,6 +15,8 @@ from cmk.rulesets.v1.form_specs import (
     BooleanChoice,
     CascadingSingleChoice,
     DefaultValue,
+    DictElement,
+    DictGroup,
     Dictionary,
     FixedValue,
     Float,
@@ -60,7 +62,7 @@ def serialize_form_spec(spec: FormSpec[object]) -> dict[str, object]:
                     "parameter_form": serialize_form_spec(el.parameter_form),
                     "default_value": _default_value(el.parameter_form),
                     "render_only": el.render_only,
-                    "group": None,
+                    "group": _group(el),
                 }
                 for name, el in spec.elements.items()
             ],
@@ -121,6 +123,28 @@ def serialize_form_spec(spec: FormSpec[object]) -> dict[str, object]:
             "editable_order": spec.editable_order,
         }
     raise TypeError(f"FormSpec type {type(spec).__name__} not serialisable yet")
+
+
+def _group(el: DictElement[object]) -> dict[str, object] | None:
+    # Lazy import to avoid a circular dep: __init__.py pulls in this module.
+    from app.form_specs import OrbDictGroup
+
+    group = el.group
+    if not isinstance(group, DictGroup):
+        return None
+    title = _loc(group.title) or ""
+    help_text = _loc(group.help_text) or ""
+    if isinstance(group, OrbDictGroup):
+        layout = group.layout
+        key = group.key or _slugify(title) or "group"
+    else:
+        layout = "vertical"
+        key = _slugify(title) or "group"
+    return {"key": key, "title": title, "help": help_text, "layout": layout}
+
+
+def _slugify(text: str) -> str:
+    return "".join(c.lower() if c.isalnum() else "_" for c in text).strip("_")
 
 
 def _common[T](spec: FormSpec[T], type_tag: str) -> dict[str, object]:

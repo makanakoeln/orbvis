@@ -20,6 +20,7 @@ from cmk.rulesets.v1.form_specs import (
     DefaultValue,
     DictElement,
     Dictionary,
+    FieldSize,
     FixedValue,
     InputHint,
     Integer,
@@ -60,12 +61,14 @@ def _livestatus_branch() -> Dictionary:
                         "tmp/run/live."
                     ),
                     prefill=InputHint("/omd/sites/<site>/tmp/run/live"),
+                    field_size=FieldSize.LARGE,
                 ),
             ),
             "host": DictElement(
                 parameter_form=String(
                     title=Title("TCP host"),
                     prefill=InputHint("livestatus.example.com"),
+                    field_size=FieldSize.LARGE,
                 ),
             ),
             "port": DictElement(
@@ -90,6 +93,7 @@ def _livestatus_branch() -> Dictionary:
                         "to inherit the global setting."
                     ),
                     prefill=InputHint("/<site>/check_mk"),
+                    field_size=FieldSize.LARGE,
                 ),
             ),
             "automation_user": DictElement(
@@ -118,6 +122,7 @@ def _icinga2_branch() -> Dictionary:
                 parameter_form=String(
                     title=Title("Icinga2 URL"),
                     prefill=InputHint("https://icinga.example.com:5665"),
+                    field_size=FieldSize.LARGE,
                 ),
             ),
             "icinga2_username": DictElement(
@@ -173,6 +178,7 @@ def connection_spec() -> Dictionary:
                 parameter_form=String(
                     title=Title("Display label"),
                     help_text=Help("Shown in board pickers and the connection list."),
+                    field_size=FieldSize.LARGE,
                 ),
             ),
             "type": DictElement(

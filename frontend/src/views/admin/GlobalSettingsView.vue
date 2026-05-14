@@ -1,6 +1,6 @@
 <template>
-    <div class="max-w-2xl">
-        <div style="margin-bottom: var(--dimension-6)">
+    <div class="settings-page">
+        <div class="settings-page__header">
             <CmkHeading type="h2">
                 {{ heading }}
             </CmkHeading>
@@ -13,19 +13,21 @@
             <CmkLoading />
         </div>
 
-        <div v-else-if="loadError" class="text-sm text-[var(--color-light-red-40)]">
-            {{ loadError }}
-        </div>
+        <CmkAlertBox v-else-if="loadError" variant="error">{{ loadError }}</CmkAlertBox>
 
         <template v-else-if="schema">
-            <div class="settings__form">
+            <div class="settings-page__form">
                 <FormEdit v-model:data="data" :spec="schema" :backend-validation="validation" />
             </div>
 
-            <div
-                class="flex items-center justify-end gap-[8px]"
-                style="margin-top: var(--dimension-5)"
-            >
+            <div class="settings-page__savebar">
+                <span
+                    v-if="dirty"
+                    class="settings-page__dirty"
+                    :title="t('settings.unsavedChangesHint')"
+                >
+                    {{ t('settings.unsavedChanges') }}
+                </span>
                 <Transition
                     enter-from-class="opacity-0 translate-x-2"
                     enter-active-class="transition-all duration-200"
@@ -67,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
 import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
@@ -176,10 +179,41 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.settings__form {
+.settings-page {
+    max-width: 56rem;
+    padding-bottom: 5rem;
+}
+
+.settings-page__header {
+    margin-bottom: var(--dimension-6);
+}
+
+.settings-page__form {
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: var(--dimension-6);
+}
+
+.settings-page__savebar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--dimension-4);
+    margin-top: var(--dimension-5);
+    padding: var(--dimension-4) var(--dimension-5);
+    background: var(--bg-elevated, var(--bg-surface));
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+}
+
+.settings-page__dirty {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-right: auto;
 }
 </style>
