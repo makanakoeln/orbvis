@@ -821,10 +821,18 @@ const isSvgIcon = computed(() => {
 });
 
 const customIconStyle = computed(() => {
-    const base = {
-        width: `${props.iconSize}px`,
-        height: `${props.iconSize}px`,
-    };
+    // For type=image the iconSize is the *bound*, not a forced square — let
+    // the image render at its natural aspect and just cap the largest side.
+    // Otherwise (host/service with custom icon) keep the square slot the
+    // state ring expects.
+    const base =
+        props.object.type === 'image'
+            ? {
+                  maxWidth: `${props.iconSize}px`,
+                  maxHeight: `${props.iconSize}px`,
+                  display: 'block',
+              }
+            : { width: `${props.iconSize}px`, height: `${props.iconSize}px` };
     if (!props.selected) return base;
     const glow = 'drop-shadow(0 0 6px var(--color-corporate-green-50))';
     const filter = isSvgIcon.value && isDark.value ? `invert(1) ${glow}` : glow;
@@ -833,9 +841,8 @@ const customIconStyle = computed(() => {
 
 const shouldShowRing = computed(
     () =>
-        !['textbox', 'line', 'host'].includes(props.object.type) &&
+        !['textbox', 'line', 'host', 'image'].includes(props.object.type) &&
         props.object.display?.mode !== 'gadget' &&
-        !(props.object.type === 'image' && imgLoadFailed.value) &&
         props.state?.state !== 'NOT_FOUND' &&
         props.state?.state !== 'NO_PERMISSION',
 );
