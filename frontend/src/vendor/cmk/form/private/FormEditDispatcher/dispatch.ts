@@ -7,9 +7,12 @@
 import { type Component } from 'vue';
 
 import FormBooleanChoice from '@/form/private/forms/FormBooleanChoice.vue';
+import FormCascadingSingleChoice from '@/form/private/forms/FormCascadingSingleChoice.vue';
 import FormDictionary from '@/form/private/forms/FormDictionary/FormDictionary.vue';
+import FormFixedValue from '@/form/private/forms/FormFixedValue.vue';
 import FormFloat from '@/form/private/forms/FormFloat.vue';
 import FormInteger from '@/form/private/forms/FormInteger.vue';
+import FormPassword from '@/form/private/forms/FormPassword.vue';
 import FormSingleChoice from '@/form/private/forms/FormSingleChoice.vue';
 import FormString from '@/form/private/forms/FormString.vue';
 
@@ -17,9 +20,12 @@ import { setComponentRegistry } from './componentRegistry';
 
 const components: Record<string, Component> = {
     boolean_choice: FormBooleanChoice,
+    cascading_single_choice: FormCascadingSingleChoice,
     dictionary: FormDictionary,
+    fixed_value: FormFixedValue,
     float: FormFloat,
     integer: FormInteger,
+    password: FormPassword,
     single_choice: FormSingleChoice,
     string: FormString,
 };

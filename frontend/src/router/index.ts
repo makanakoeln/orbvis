@@ -70,6 +70,11 @@ const router = createRouter({
                     component: () => import('@/views/admin/FormSpecPilotView.vue'),
                 },
                 {
+                    path: 'connections/:id/form',
+                    name: 'admin-connection-form',
+                    component: () => import('@/views/admin/ConnectionFormSpecView.vue'),
+                },
+                {
                     path: 'icons',
                     name: 'admin-icons',
                     component: () => import('@/views/admin/ImagesView.vue'),

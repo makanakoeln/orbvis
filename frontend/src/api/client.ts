@@ -299,6 +299,21 @@ export const rolesApi = {
 
 // ---- Connections ----
 
+export const connectionsApiFormSpec = {
+    getSchema: (token: string): Promise<Record<string, unknown>> =>
+        request('/connections/schema', {}, token),
+
+    getFormData: (id: string, token: string): Promise<Record<string, unknown>> =>
+        request(`/connections/${encodeURIComponent(id)}/form`, {}, token),
+
+    updateFromForm: (id: string, form: Record<string, unknown>, token: string): Promise<unknown> =>
+        request(
+            `/connections/${encodeURIComponent(id)}/form`,
+            { method: 'PUT', body: JSON.stringify(form) },
+            token,
+        ),
+};
+
 export const connectionsApi = {
     list: (token: string): Promise<ConnectionConfig[]> => request('/connections', {}, token),
 

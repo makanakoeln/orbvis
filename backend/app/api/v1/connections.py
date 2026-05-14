@@ -15,6 +15,12 @@ from pydantic import BaseModel
 from app.api.v1.deps import get_current_user, require_admin, resolve_auth_user
 from app.connections.base import ConnectionBase, ServiceRow, TopologyRow, topology_problem_rank
 from app.core.config import settings
+from app.form_specs import serialize_form_spec
+from app.form_specs.connections import (
+    config_to_form_data,
+    connection_spec,
+    form_data_to_config,
+)
 from app.integrations import checkmk as cmk_integration
 from app.models.user import User
 from app.schemas.board import AggregationInfo, AggregationNode
@@ -41,6 +47,46 @@ class TestResult(BaseModel):
 @router.get("", response_model=list[ConnectionConfig])
 async def list_backends(_: User = Depends(require_admin)) -> list[ConnectionConfig]:
     return [_redact(b) for b in connection_service.load_all()]
+
+
+@router.get("/schema")
+async def get_connection_schema(_: User = Depends(require_admin)) -> dict[str, object]:
+    return serialize_form_spec(connection_spec())
+
+
+@router.get("/{connection_id}/form")
+async def get_connection_form_data(
+    connection_id: str, _: User = Depends(require_admin)
+) -> dict[str, object]:
+    existing = next((b for b in connection_service.load_all() if b.id == connection_id), None)
+    if existing is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+    return config_to_form_data(_redact(existing))
+
+
+@router.put("/{connection_id}/form", response_model=ConnectionConfig)
+async def update_connection_from_form(
+    connection_id: str,
+    form_data: dict[str, object],
+    _: User = Depends(require_admin),
+) -> ConnectionConfig:
+    existing = next((b for b in connection_service.load_all() if b.id == connection_id), None)
+    if existing is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+    try:
+        updated = form_data_to_config(form_data, existing=existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+    if updated.id != connection_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Connection ID cannot be changed",
+        )
+    result = connection_service.update(connection_id, updated)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+    _invalidate_topology_cache(connection_id)
+    return _redact(result)
 
 
 @router.post("", response_model=ConnectionConfig, status_code=status.HTTP_201_CREATED)
