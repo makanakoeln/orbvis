@@ -1,0 +1,14 @@
+# Intentional patches to vendored Checkmk frontend files.
+# Format: <path-relative-to-frontend/src/vendor/cmk>  <one-line rationale>
+# Lines beginning with '#' are comments. Empty lines ignored.
+#
+# Add a new entry whenever you knowingly diverge from upstream — the drift
+# check then prints a yellow "patched" row instead of a red "drift" one.
+
+form/FormReadonly.vue                                 OrbVis stub — only Edit mode is used; full upstream pulls in unused render helpers.
+form/private/FormAutocompleter/FormAutocompleter.vue  OrbVis stub — autocompleter branch never triggered (no spec.autocompleter in our schemas).
+form/private/FormEditDispatcher/dispatch.ts           Pilot subset of registered forms (Boolean/Cascading/Dictionary/FixedValue/Float/Integer/Password/SingleChoice/String).
+form/private/forms/FormConditionChoices/utils.ts      Minimal stub — condition_choices type isn't part of OrbVis schemas.
+form/private/forms/FormString.vue                     lucide-vue-next/X icon stubbed (only used in autocompleter branch).
+components/CmkIcon/utils.ts                           OrbVis runtime URL resolution — icons are loaded from the OMD-site /<site>/check_mk/themes/ path, not from the Vite asset graph.
+components/CmkSlideInDialog.vue                       i18n adapter — vue-i18n instead of cmk's vendored usei18n hook.
