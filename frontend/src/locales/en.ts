@@ -604,6 +604,14 @@ export default {
         uploadIcon: 'Upload Image',
         noIcons: 'No images uploaded yet',
         deleteIcon: 'Delete image "{name}"?',
+        builtinImage: 'Built-in',
+        builtinImageCannotDelete: 'Built-in images cannot be deleted',
+        imageInUseTitle: 'Image is still in use',
+        imageInUseBody:
+            'The image "{name}" is referenced by {count} board(s). Deleting it will leave those boards without an image. Continue?',
+        usedAsBackground: 'as background',
+        usedByObjects: '{n} object | {n} objects',
+        openBoard: 'Open board',
         boardPermissions: 'Board Permissions',
         wildcardNote:
             'Permissions marked with * apply via a wildcard rule and cannot be changed here.',

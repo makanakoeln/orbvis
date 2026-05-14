@@ -39,13 +39,66 @@
         <CmkAlertBox v-if="uploadError" variant="error">{{ uploadError }}</CmkAlertBox>
 
         <OrbConfirmDialog
-            :open="!!deleteTargetName"
+            :open="!!deleteTargetName && !pendingUsage.length"
             :title="deleteTargetName ? t('admin.deleteIcon', { name: deleteTargetName }) : ''"
             :message="t('board.cannotBeUndone')"
             :confirm-label="t('common.delete')"
             @confirm="confirmDeleteIcon"
-            @cancel="deleteTargetName = null"
+            @cancel="cancelDelete"
         />
+
+        <OrbModal v-if="pendingUsage.length" :open="true" @close="cancelDelete">
+            <div style="padding: var(--dimension-6); max-width: 480px">
+                <CmkHeading type="h3" style="margin-bottom: var(--dimension-3)">
+                    {{ t('admin.imageInUseTitle') }}
+                </CmkHeading>
+                <CmkParagraph style="margin-bottom: var(--dimension-4)">
+                    {{
+                        t('admin.imageInUseBody', {
+                            name: deleteTargetName,
+                            count: pendingUsage.length,
+                        })
+                    }}
+                </CmkParagraph>
+                <ul
+                    class="space-y-[6px]"
+                    style="margin-bottom: var(--dimension-5); max-height: 240px; overflow-y: auto"
+                >
+                    <li
+                        v-for="entry in pendingUsage"
+                        :key="entry.board"
+                        class="flex items-center justify-between gap-[8px] text-sm"
+                    >
+                        <router-link
+                            :to="`/board/${entry.board}`"
+                            class="text-[var(--color-corporate-green-50)] hover:underline truncate"
+                            :title="t('admin.openBoard')"
+                        >
+                            {{ entry.alias || entry.board }}
+                        </router-link>
+                        <span class="text-xs text-[var(--text-muted)] shrink-0">
+                            <template v-if="entry.is_background">{{
+                                t('admin.usedAsBackground')
+                            }}</template>
+                            <template v-if="entry.is_background && entry.object_ids.length"
+                                >,
+                            </template>
+                            <template v-if="entry.object_ids.length">{{
+                                t('admin.usedByObjects', entry.object_ids.length)
+                            }}</template>
+                        </span>
+                    </li>
+                </ul>
+                <div class="flex justify-end gap-[8px]">
+                    <CmkButton variant="secondary" @click="cancelDelete">
+                        {{ t('common.cancel') }}
+                    </CmkButton>
+                    <CmkButton variant="warning" @click="confirmDeleteIcon(true)">
+                        {{ t('common.delete') }}
+                    </CmkButton>
+                </div>
+            </div>
+        </OrbModal>
 
         <div v-if="loading" class="flex items-center justify-center py-8">
             <CmkLoading />
@@ -92,11 +145,20 @@
                 >
                     {{ icon.name }}
                 </p>
+                <span
+                    v-if="icon.builtin"
+                    class="absolute text-[8px] uppercase tracking-wide font-semibold text-[var(--text-muted)] bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded px-1 py-[1px]"
+                    style="top: 4px; left: 4px"
+                    :title="t('admin.builtinImageCannotDelete')"
+                >
+                    {{ t('admin.builtinImage') }}
+                </span>
                 <button
+                    v-if="!icon.builtin"
                     class="absolute rounded bg-[var(--color-light-red-50)]/0 hover:bg-[var(--color-light-red-50)]/20 text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
                     style="top: 4px; right: 4px; width: 18px; height: 18px"
                     :title="t('common.delete')"
-                    @click="deleteTargetName = icon.name"
+                    @click="onDeleteClick(icon.name)"
                 >
                     <svg
                         style="width: 12px; height: 12px"
@@ -126,10 +188,11 @@ import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { imagesApi } from '@/api/client';
+import { ApiError, imagesApi } from '@/api/client';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
+import OrbModal from '@/components/OrbModal.vue';
 import { useAuthStore } from '@/stores/auth';
-import type { ImageEntry } from '@/types/api';
+import type { ImageEntry, ImageUsageEntry } from '@/types/api';
 
 const BASE_URL = import.meta.env.BASE_URL;
 const { t } = useI18n();
@@ -171,16 +234,42 @@ async function uploadIcons(event: Event) {
 }
 
 const deleteTargetName = ref<string | null>(null);
+const pendingUsage = ref<ImageUsageEntry[]>([]);
 
-async function confirmDeleteIcon() {
+async function onDeleteClick(name: string) {
+    deleteTargetName.value = name;
+    pendingUsage.value = [];
+    try {
+        const usage = await imagesApi.usage(name, auth.accessToken!);
+        if (usage.length) pendingUsage.value = usage;
+    } catch {
+        // best-effort: fall through to confirm dialog if usage check fails
+    }
+}
+
+function cancelDelete() {
+    deleteTargetName.value = null;
+    pendingUsage.value = [];
+}
+
+async function confirmDeleteIcon(force = false) {
     const name = deleteTargetName.value;
     if (!name) return;
-    deleteTargetName.value = null;
     try {
-        await imagesApi.delete(name, auth.accessToken!);
+        await imagesApi.delete(name, auth.accessToken!, force);
         icons.value = icons.value.filter((i) => i.name !== name);
+        cancelDelete();
     } catch (e: unknown) {
+        if (e instanceof ApiError && e.status === 409) {
+            // Server-side double-check picked up usage we didn't see locally.
+            const detail = e.detail as { usage?: ImageUsageEntry[] } | null;
+            if (detail?.usage?.length) {
+                pendingUsage.value = detail.usage;
+                return;
+            }
+        }
         uploadError.value = e instanceof Error ? e.message : 'Delete failed';
+        cancelDelete();
     }
 }
 

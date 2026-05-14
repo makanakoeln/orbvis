@@ -14,6 +14,7 @@ from app.api.v1.deps import get_current_user, require_admin
 from app.core.config import settings
 from app.core.image_security import ICON_MIME_TYPES, ICON_SUFFIXES, is_valid_image
 from app.models.user import User
+from app.services import board_service
 
 router = APIRouter()
 
@@ -21,9 +22,18 @@ router = APIRouter()
 class ImageListEntry(TypedDict):
     name: str
     url: str
+    builtin: bool
+
+
+class ImageUsageEntry(TypedDict):
+    board: str
+    alias: str | None
+    object_ids: list[str]
+    is_background: bool
 
 
 _MAX_ICON_BYTES = 2 * 1024 * 1024  # 2 MB
+_BUILTIN_DIR = Path(__file__).resolve().parents[2] / "builtin_icons"
 
 
 def _images_dir() -> Path:
@@ -32,16 +42,68 @@ def _images_dir() -> Path:
     return d
 
 
+def _builtin_names() -> set[str]:
+    if not _BUILTIN_DIR.is_dir():
+        return set()
+    return {
+        p.name for p in _BUILTIN_DIR.iterdir() if p.is_file() and p.suffix.lower() in ICON_SUFFIXES
+    }
+
+
+def _is_builtin(name: str) -> bool:
+    return name in _builtin_names()
+
+
+def _find_image_usage(name: str) -> list[ImageUsageEntry]:
+    """Return all boards that reference *name* as object icon or background."""
+    usage: list[ImageUsageEntry] = []
+    for board in board_service.list_boards():
+        cfg = board_service.get_board(board.name)
+        if cfg is None:
+            continue
+        object_ids: list[str] = []
+        for obj in cfg.objects:
+            obj_image = obj.image_src
+            if obj.display is not None and obj.display.image:
+                obj_image = obj.display.image
+            if obj_image == name:
+                object_ids.append(obj.id)
+        is_background = cfg.background_image == name
+        if object_ids or is_background:
+            usage.append(
+                {
+                    "board": cfg.name,
+                    "alias": cfg.alias,
+                    "object_ids": object_ids,
+                    "is_background": is_background,
+                }
+            )
+    return usage
+
+
 @router.get("", response_model=list[ImageListEntry])
 async def list_images(
     _current_user: User = Depends(get_current_user),
 ) -> list[ImageListEntry]:
     d = _images_dir()
+    builtins = _builtin_names()
     result: list[ImageListEntry] = []
     for f in sorted(d.iterdir()):
         if f.is_file() and f.suffix.lower() in ICON_SUFFIXES:
-            result.append({"name": f.name, "url": f"images/{f.name}"})
+            result.append(
+                {"name": f.name, "url": f"images/{f.name}", "builtin": f.name in builtins}
+            )
     return result
+
+
+@router.get("/{name}/usage", response_model=list[ImageUsageEntry])
+async def image_usage(
+    name: str,
+    _current_user: User = Depends(get_current_user),
+) -> list[ImageUsageEntry]:
+    if "/" in name or "\\" in name or name in ("", ".", ".."):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
+    return _find_image_usage(name)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -85,20 +147,28 @@ async def upload_image(
         Path(tmp_path).unlink(missing_ok=True)
         raise
 
+    builtin = _is_builtin(filename)
     return JSONResponse(
-        {"name": filename, "url": f"images/{filename}"}, status_code=status.HTTP_201_CREATED
+        {"name": filename, "url": f"images/{filename}", "builtin": builtin},
+        status_code=status.HTTP_201_CREATED,
     )
 
 
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_image(
     name: str,
+    force: bool = False,
     _: User = Depends(require_admin),
 ) -> None:
     d = _images_dir().resolve()
     # Reject obvious traversal attempts before hitting the filesystem.
     if "/" in name or "\\" in name or name in ("", ".", ".."):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
+    if _is_builtin(name):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Built-in images cannot be deleted",
+        )
     # Resolve both paths strictly and compare via is_relative_to so symlinks
     # pointing outside the images dir are caught — str.startswith could be
     # tricked by a symlink whose target lives above the images dir.
@@ -110,4 +180,15 @@ async def delete_image(
         ) from None
     if not path.is_relative_to(d):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
+    if not force:
+        usage = _find_image_usage(name)
+        if usage:
+            # 409 Conflict signals to the client: image still in use, force=true required.
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "message": f"Image '{name}' is in use",
+                    "usage": usage,
+                },
+            )
     path.unlink()

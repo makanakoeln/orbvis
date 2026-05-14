@@ -607,6 +607,14 @@ export default {
         uploadIcon: 'Bild hochladen',
         noIcons: 'Noch keine Bilder hochgeladen',
         deleteIcon: 'Bild „{name}" löschen?',
+        builtinImage: 'Mitgeliefert',
+        builtinImageCannotDelete: 'Mitgelieferte Bilder können nicht gelöscht werden',
+        imageInUseTitle: 'Bild wird noch verwendet',
+        imageInUseBody:
+            'Das Bild „{name}" wird auf {count} Board(s) verwendet. Beim Löschen verlieren diese Boards das Bild. Trotzdem löschen?',
+        usedAsBackground: 'als Hintergrund',
+        usedByObjects: '{n} Objekt | {n} Objekte',
+        openBoard: 'Board öffnen',
         boardPermissions: 'Board-Berechtigungen',
         wildcardNote:
             'Mit * markierte Berechtigungen gelten über eine Wildcard-Regel und können hier nicht geändert werden.',

@@ -440,6 +440,14 @@ export interface WebSocketTopologyUpdate {
 export interface ImageEntry {
     name: string;
     url: string;
+    builtin: boolean;
+}
+
+export interface ImageUsageEntry {
+    board: string;
+    alias: string | null;
+    object_ids: string[];
+    is_background: boolean;
 }
 
 export interface BoardPermissions {

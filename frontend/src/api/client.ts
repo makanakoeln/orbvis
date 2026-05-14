@@ -15,6 +15,7 @@ import type {
     GlobalSettings,
     GroupMember,
     ImageEntry,
+    ImageUsageEntry,
     MapStates,
     MetricGraphGroup,
     MetricHistoryResponse,
@@ -460,8 +461,15 @@ export const imagesApi = {
 
     upload: (file: File, token: string): Promise<ImageEntry> => uploadFile('/images', file, token),
 
-    delete: (name: string, token: string): Promise<void> =>
-        request(`/images/${encodeURIComponent(name)}`, { method: 'DELETE' }, token),
+    usage: (name: string, token: string): Promise<ImageUsageEntry[]> =>
+        request(`/images/${encodeURIComponent(name)}/usage`, {}, token),
+
+    delete: (name: string, token: string, force = false): Promise<void> =>
+        request(
+            `/images/${encodeURIComponent(name)}${force ? '?force=true' : ''}`,
+            { method: 'DELETE' },
+            token,
+        ),
 };
 
 // ---- Global Settings ----
