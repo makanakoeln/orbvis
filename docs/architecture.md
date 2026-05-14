@@ -34,9 +34,11 @@ the source of truth.
 ## Boards
 
 Boards are stored as JSON files in `BOARDS_DIR` (default
-`backend/boards/`, on OMD `$OMD_ROOT/local/share/orbvis/boards/`). Not in
+`backend/boards/`, on OMD `$OMD_ROOT/var/orbvis/boards/`). Not in
 the database — they are content, not state, and are easy to back up
-verbatim.
+verbatim. The `var/` location is deliberate: WATO's *Activate Changes*
+snapshot replicates the entire `local/` tree to remote sites, so
+placing user data there would replicate every board to every remote.
 
 Board types:
 

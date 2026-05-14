@@ -24,7 +24,7 @@ platforms are welcome.
 - A working OMD site (the default `APACHE_MODE=own` is required —
   `mkp enable` reloads the site Apache).
 - Python 3.12 available on the system. OrbVis creates its own venv under
-  `$OMD_ROOT/local/share/orbvis/venv/` using the site's `python3` if it
+  `$OMD_ROOT/var/orbvis/venv/` using the site's `python3` if it
   is 3.12+, otherwise the first system `python3` on `PATH`.
 
 ### Install
@@ -54,10 +54,12 @@ orbvis-setup
 `orbvis-setup` will:
 
 - Extract the pre-built frontend bundle to
-  `$OMD_ROOT/local/share/orbvis/htdocs/`
-- Create a Python venv and install the backend
+  `$OMD_ROOT/var/orbvis/htdocs/`
+- Create a Python venv at `$OMD_ROOT/var/orbvis/venv/` and install the
+  backend
 - Seed three demo boards on first install (skipped on upgrade)
-- Generate `.env` with a fresh `SECRET_KEY` (preserved on upgrade)
+- Generate `$OMD_ROOT/etc/orbvis/.env` with a fresh `SECRET_KEY`
+  (preserved on upgrade)
 - Write an Apache reverse-proxy snippet under
   `$OMD_ROOT/etc/apache/conf.d/orbvis.conf`
 - Register an OMD service so `omd start/stop/restart orbvis` works
@@ -130,10 +132,64 @@ removing the MKP without running the uninstall step first leaves a
 stopped OMD service and a stale Apache snippet behind that you would
 have to clean up by hand.
 
-User data is preserved under `$OMD_ROOT/local/share/orbvis/`
-(`boards/`, `orbvis.db`, `.env`, `backends.json`) so you can re-install
-later without losing anything. Delete that directory manually if you
-want a fully clean removal.
+User data is preserved under `$OMD_ROOT/var/orbvis/`
+(`boards/`, `orbvis.db`, `connections.json`) and `$OMD_ROOT/etc/orbvis/.env`
+so you can re-install later without losing anything. Delete those paths
+manually if you want a fully clean removal.
+
+If you installed an earlier OrbVis version that lived under
+`$OMD_ROOT/local/share/orbvis/`, `orbvis-setup` automatically migrates
+your data to the new layout on next run. Existing `boards/`, `orbvis.db`
+and `connections.json` are moved verbatim; the `.env` is moved to
+`etc/orbvis/.env`; venv/htdocs/server source are rebuilt in the new
+location. The legacy directory is removed once empty.
+
+### Distributed Checkmk setups (central + remote sites)
+
+OrbVis is designed to live on the **central site only** when you run a
+distributed Checkmk cluster. It opens Livestatus connections to all
+remote sites listed in `etc/check_mk/multisite.d/sites.mk` (same
+`MultiSiteConnection` the Checkmk GUI uses), so a single board can mix
+hosts and services from any number of remote sites transparently.
+
+**Why nothing OrbVis-related lives under `local/share/orbvis/`.** The
+WATO snapshot pushed by *Activate Changes* replicates the entire
+`local/` tree to every remote site
+(`cmk.gui.watolib.activate_changes.replication_paths`, ident=`local`).
+Putting boards, the SQLite DB or the Python venv there would balloon
+every snapshot and replicate user data we don't want on remotes.
+OrbVis therefore installs to `$OMD_ROOT/var/orbvis/` (data, venv,
+htdocs, src) and `$OMD_ROOT/etc/orbvis/` (admin `.env`) — neither path
+is in `replication_paths`, so *Activate Changes* leaves OrbVis
+untouched.
+
+The only OrbVis files inside `local/` are the three Checkmk GUI bridge
+plugins (`local/lib/python3/cmk/gui/plugins/{sidebar,wato}/orbvis_*.py`,
+~few KB total). They auto-detect whether OrbVis is installed on the
+current site by checking for `$OMD_ROOT/etc/apache/conf.d/orbvis.conf`
+— so even after the snapshot pushes the plugins to remotes that don't
+run OrbVis, the sidebar snapin renders *"OrbVis is not installed on
+this site."* instead of broken links.
+
+Three supported topologies:
+
+- **Central only (default for distributed setups).** OrbVis on the
+  master, Livestatus fan-out to all remotes. Users either click into
+  the central OrbVis directly (`https://<master>/<site>/orbvis/`) or,
+  if a remote site is reachable from the user's browser, can land on
+  the master via the Checkmk session cookie (the `etc/auth.secret`
+  HMAC is already shared with remotes by Checkmk, so SSO works).
+- **Standalone (single site or air-gapped customer remote).** Run
+  `orbvis-setup` on that site only. Boards are local; the
+  `MultiSiteConnection` falls back to the single-site fast path
+  automatically.
+- **Hybrid (central + isolated remote with its own OrbVis).** Both
+  sites install OrbVis independently — no data is shared between
+  them. The next *Activate Changes* leaves both installations alone
+  (data sits in `var/`+`etc/`); only the bridge plugins under
+  `local/lib/python3/cmk/gui/plugins/...` are pushed from master to
+  remote, which is fine because they're auto-detecting and version-
+  stable.
 
 ## 2. Standalone (.deb / .rpm)
 
@@ -310,7 +366,7 @@ only on `127.0.0.1`.
 
 `ALLOWED_ORIGINS` defaults to `http://localhost:5173` for development. In
 production behind a reverse proxy, set it to your real frontend URL via
-`backend/.env` (or, on OMD, `$OMD_ROOT/local/share/orbvis/.env`):
+`backend/.env` (or, on OMD, `$OMD_ROOT/etc/orbvis/.env`):
 
 ```
 ALLOWED_ORIGINS=https://monitoring.example.com

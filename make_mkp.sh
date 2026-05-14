@@ -189,11 +189,19 @@ SITE="${OMD_SITE:-}"
 ROOT="${OMD_ROOT:-}"
 [[ -z "$SITE" || -z "$ROOT" ]] && die "Run as the OMD site user (OMD_SITE / OMD_ROOT must be set).\nExample: su - <SITE> -c 'orbvis-setup'"
 
+# Layout: user data + install artefacts under var/orbvis/, admin config in
+# etc/orbvis/. Both paths sit outside cmk.gui.watolib.activate_changes
+# replication_paths so WATO "Activate Changes" never overwrites them.
+# The MKP itself still installs into local/lib/orbvis (CMK's MKP machinery
+# decides that); orbvis-setup extracts the bundled tarballs from there into
+# var/orbvis/ at install time.
 MKP_LIB="$ROOT/local/lib/orbvis"
-ORBVIS_DIR="$ROOT/local/share/orbvis"
+ORBVIS_DIR="$ROOT/var/orbvis"
+ORBVIS_ETC_DIR="$ROOT/etc/orbvis"
+LEGACY_DIR="$ROOT/local/share/orbvis"
 HTDOCS_DIR="$ORBVIS_DIR/htdocs"
 BOARDS_DIR="$ORBVIS_DIR/boards"
-ENV_FILE="$ORBVIS_DIR/.env"
+ENV_FILE="$ORBVIS_ETC_DIR/.env"
 CONNECTIONS_FILE="$ORBVIS_DIR/connections.json"
 DB_FILE="$ORBVIS_DIR/orbvis.db"
 VENV_DIR="$ORBVIS_DIR/venv"
@@ -203,16 +211,19 @@ LIVESTATUS_SOCKET="$ROOT/tmp/run/live"
 
 # Pick a TCP port that no other OrbVis install on this host already claims.
 # Reuse our own .env if present; otherwise scan all sibling sites' .env files
-# (a port reserved by a stopped site must still count as taken) plus the live
-# socket table, then pick the lowest free port from 8420 upward.
+# (both the new etc/orbvis/.env location and the legacy local/share/ one, so
+# a pre-migration install still surfaces its reserved port). Then pick the
+# lowest free port from 8420 upward.
 discover_port() {
   local existing port envf p
-  if [[ -f "$ENV_FILE" ]]; then
-    existing="$(grep -E '^ORBVIS_PORT=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)"
-    if [[ -n "$existing" ]]; then echo "$existing"; return; fi
-  fi
+  for probe in "$ENV_FILE" "$LEGACY_DIR/.env"; do
+    if [[ -f "$probe" ]]; then
+      existing="$(grep -E '^ORBVIS_PORT=' "$probe" | head -1 | cut -d= -f2- || true)"
+      if [[ -n "$existing" ]]; then echo "$existing"; return; fi
+    fi
+  done
   declare -A reserved=()
-  for envf in /omd/sites/*/local/share/orbvis/.env; do
+  for envf in /omd/sites/*/etc/orbvis/.env /omd/sites/*/local/share/orbvis/.env; do
     [[ -f "$envf" && "$envf" != "$ENV_FILE" ]] || continue
     p="$(grep -E '^ORBVIS_PORT=' "$envf" 2>/dev/null | head -1 | cut -d= -f2- || true)"
     [[ -n "$p" ]] && reserved[$p]=1
@@ -259,6 +270,8 @@ uninstall)
   rm -rf "$HTDOCS_DIR"
   rm -rf "$VENV_DIR"
   rm -rf "$MKP_LIB/server"
+  # Sweep up any leftovers from pre-migration installs under local/share/orbvis/.
+  rm -rf "$LEGACY_DIR/htdocs" "$LEGACY_DIR/venv" "$LEGACY_DIR/cmk_plugins"
   ok "Frontend, venv and backend source removed"
 
   echo ""
@@ -289,6 +302,43 @@ setup)
   echo -e "${BOLD}OrbVis Post-Install Setup${RESET}"
   echo "  Site: $SITE  ($ROOT)"
   echo ""
+
+  mkdir -p "$ORBVIS_DIR" "$ORBVIS_ETC_DIR"
+
+  # 0. Migrate data from legacy local/share/orbvis/ to var/orbvis/ + etc/orbvis/
+  #
+  # Up to v0.x OrbVis installed everything under $OMD_ROOT/local/share/orbvis/,
+  # which lives inside cmk.gui.watolib.activate_changes.replication_paths
+  # (ident="local"). Every WATO Activate Changes pushed boards/db/venv/htdocs
+  # to all remote sites. Move user data to var/orbvis/ and the .env to
+  # etc/orbvis/ — both paths sit outside the snapshot.
+  if [[ -d "$LEGACY_DIR" ]]; then
+    step "Migrating data from legacy local/share/orbvis/"
+    # ``backends.json`` is the pre-rename predecessor of ``connections.json``;
+    # the backend recognises it on startup, so move it along.
+    for sub in boards images orbvis.db connections.json backends.json settings.json; do
+      if [[ -e "$LEGACY_DIR/$sub" && ! -e "$ORBVIS_DIR/$sub" ]]; then
+        mv "$LEGACY_DIR/$sub" "$ORBVIS_DIR/$sub"
+      fi
+    done
+    if [[ -f "$LEGACY_DIR/.env" && ! -f "$ENV_FILE" ]]; then
+      mv "$LEGACY_DIR/.env" "$ENV_FILE"
+    fi
+    # Disposable artefacts; rebuilt below from the MKP-shipped tarballs.
+    rm -rf "$LEGACY_DIR/htdocs" "$LEGACY_DIR/venv" \
+           "$LEGACY_DIR/cmk_plugins" "$LEGACY_DIR/VERSION" \
+           "$LEGACY_DIR/CHANGELOG.md"
+    # User-data leftovers that didn't migrate because the destination
+    # already existed. Destination is canonical; drop the legacy copy so it
+    # can't leak via WATO replication.
+    for sub in boards images orbvis.db connections.json backends.json settings.json .env; do
+      [[ -e "$LEGACY_DIR/$sub" && -e "$ORBVIS_DIR/$sub" ]] && rm -rf "$LEGACY_DIR/$sub"
+    done
+    # Drop empty legacy directory so the next replication snapshot has
+    # nothing to delete on this site.
+    rmdir "$LEGACY_DIR" 2>/dev/null || true
+    ok "Migration complete"
+  fi
 
   # 1. Frontend: extract pre-built tarball
   step "Deploying frontend"

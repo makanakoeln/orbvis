@@ -75,25 +75,38 @@ CMK_VERSION=$(basename "${CMK_VERSION_RAW}" | sed 's/\.[a-z]*$//' 2>/dev/null ||
 
 # ---------------------------------------------------------------------------
 # Paths
+#
+# Layout (split between var/ and etc/ so the WATO replication snapshot, which
+# pushes the whole local/ tree to every remote site, leaves OrbVis untouched):
+#   etc/orbvis/        – admin-edited config (.env with SECRET_KEY etc.)
+#   var/orbvis/        – everything else: boards, db, connections, venv,
+#                        htdocs, backend source, plugin source
+# Neither path is in cmk.gui.watolib.activate_changes.replication_paths.
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ORBVIS_DIR="$SITE_ROOT/local/share/orbvis"
+ORBVIS_DIR="$SITE_ROOT/var/orbvis"
+ORBVIS_ETC_DIR="$SITE_ROOT/etc/orbvis"
+LEGACY_DIR="$SITE_ROOT/local/share/orbvis"
 HTDOCS_DIR="$ORBVIS_DIR/htdocs"
 BOARDS_DIR="$ORBVIS_DIR/boards"
-ENV_FILE="$ORBVIS_DIR/.env"
+ENV_FILE="$ORBVIS_ETC_DIR/.env"
 CONNECTIONS_FILE="$ORBVIS_DIR/connections.json"
 DB_FILE="$ORBVIS_DIR/orbvis.db"
 # Determine port: reuse existing from .env if present, else pick the lowest
 # free port from 8420 upward. Skip ports already reserved by other OrbVis
 # installs on this host (their .env may pin a port even while the site is
 # stopped) as well as anything currently bound in the live socket table.
+# Probe both the new (etc/orbvis/.env) and the legacy (local/share/orbvis/.env)
+# locations so a pre-migration install still surfaces its reserved port.
 BACKEND_PORT=""
-if "${AS_ROOT[@]}" test -f "$ENV_FILE" 2>/dev/null; then
-  BACKEND_PORT=$("${AS_ROOT[@]}" grep -E '^ORBVIS_PORT=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)
-fi
+for probe in "$ENV_FILE" "$LEGACY_DIR/.env"; do
+  if [[ -z "$BACKEND_PORT" ]] && "${AS_ROOT[@]}" test -f "$probe" 2>/dev/null; then
+    BACKEND_PORT=$("${AS_ROOT[@]}" grep -E '^ORBVIS_PORT=' "$probe" 2>/dev/null | head -1 | cut -d= -f2- || true)
+  fi
+done
 if [[ -z "$BACKEND_PORT" ]]; then
   declare -A RESERVED_PORTS=()
-  for envf in /omd/sites/*/local/share/orbvis/.env; do
+  for envf in /omd/sites/*/etc/orbvis/.env /omd/sites/*/local/share/orbvis/.env; do
     [[ -f "$envf" && "$envf" != "$ENV_FILE" ]] || continue
     p=$("${AS_ROOT[@]}" grep -E '^ORBVIS_PORT=' "$envf" 2>/dev/null | head -1 | cut -d= -f2- || true)
     [[ -n "$p" ]] && RESERVED_PORTS[$p]=1
@@ -165,6 +178,20 @@ if [[ "$ACTION" == "remove" ]]; then
   quietly "${AS_ROOT[@]}" rm -f "$APACHE_CONF" "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis"
   quietly "${AS_SITE[@]}" "$PYTHON3" -m pip uninstall -y orbvis-cmk 2>/dev/null || true
   quietly "${AS_ROOT[@]}" rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$CMK_PLUGINS_DST" "$DB_FILE" "$ENV_FILE" "$CONNECTIONS_FILE"
+  # Direct-written plugins from a previous MKP install — these get pushed via
+  # WATO replication, so leaving them behind would propagate stale entries
+  # to every remote site on the next Activate Changes.
+  for legacy_plugin in \
+      "$SITE_ROOT/local/lib/python3/cmk/gui/plugins/sidebar/orbvis_boards.py" \
+      "$SITE_ROOT/local/lib/python3/cmk/gui/plugins/wato/orbvis_menu.py" \
+      "$SITE_ROOT/local/lib/python3/cmk/gui/plugins/wato/orbvis_permissions.py"; do
+    quietly "${AS_ROOT[@]}" rm -f "$legacy_plugin"
+  done
+  # Sweep up any leftovers from pre-migration installs under local/share/orbvis/.
+  quietly "${AS_ROOT[@]}" rm -rf \
+    "$LEGACY_DIR/htdocs" "$LEGACY_DIR/venv" "$LEGACY_DIR/src" \
+    "$LEGACY_DIR/cmk_plugins" "$LEGACY_DIR/orbvis.db" \
+    "$LEGACY_DIR/.env" "$LEGACY_DIR/connections.json"
   ok "Files removed"
 
   step "Reloading Apache"
@@ -187,6 +214,81 @@ echo "  Site:    $SITE_ROOT"
 echo "  CMK:     $CMK_VERSION"
 echo "  URL:     https://$(hostname -f 2>/dev/null || hostname)$BASE_PATH/"
 : > "$LOG_FILE"
+
+# Ensure target directories exist before any step writes into them.
+quietly "${AS_ROOT[@]}" mkdir -p "$ORBVIS_DIR" "$ORBVIS_ETC_DIR"
+
+# 0. Migrate data from legacy local/share/orbvis/ to var/orbvis/ + etc/orbvis/
+#
+# Up to v0.x OrbVis lived entirely under $OMD_ROOT/local/share/orbvis/. That
+# directory is part of cmk.gui.watolib.activate_changes.replication_paths
+# (ident="local"), so every WATO "Activate Changes" pushed boards, db, venv
+# and htdocs to all remote sites. Move user data to var/orbvis/ (and the
+# admin .env to etc/orbvis/) where the snapshot doesn't reach. Idempotent.
+if "${AS_ROOT[@]}" test -d "$LEGACY_DIR" 2>/dev/null; then
+  MIGRATED=0
+  step "Migrating data from legacy local/share/orbvis/"
+
+  # User data: boards (incl. backgrounds), images, db, connections, settings.
+  # ``backends.json`` is the pre-rename predecessor of ``connections.json``;
+  # the backend's connection_service still recognises and renames it on
+  # startup, so we just move it along.
+  for sub in boards images orbvis.db connections.json backends.json settings.json; do
+    if "${AS_ROOT[@]}" test -e "$LEGACY_DIR/$sub" \
+       && ! "${AS_ROOT[@]}" test -e "$ORBVIS_DIR/$sub"; then
+      quietly "${AS_ROOT[@]}" mv "$LEGACY_DIR/$sub" "$ORBVIS_DIR/$sub"
+      MIGRATED=1
+    fi
+  done
+
+  # .env goes to etc/orbvis/. Path entries inside .env get rewritten below in
+  # step 4 since BOARDS_DIR / DATABASE_URL / CONNECTIONS_FILE all changed.
+  if "${AS_ROOT[@]}" test -f "$LEGACY_DIR/.env" \
+     && ! "${AS_ROOT[@]}" test -f "$ENV_FILE"; then
+    quietly "${AS_ROOT[@]}" mv "$LEGACY_DIR/.env" "$ENV_FILE"
+    MIGRATED=1
+  fi
+
+  # Disposable artefacts: drop the legacy venv (shebangs point at the old
+  # path) and htdocs/src/cmk_plugins (will be re-deployed below). The
+  # editable pip install registered in the site-python's easy-install.pth
+  # still points at the legacy cmk_plugins path; uninstall it so the
+  # re-install in step 7 picks up the new location.
+  if "${AS_ROOT[@]}" test -d "$LEGACY_DIR/venv"; then
+    quietly "${AS_SITE[@]}" "$LEGACY_DIR/venv/bin/python3" -m pip uninstall -y orbvis-cmk 2>/dev/null || true
+    quietly "${AS_SITE[@]}" "$PYTHON3" -m pip uninstall -y orbvis-cmk 2>/dev/null || true
+  fi
+  quietly "${AS_ROOT[@]}" rm -rf \
+    "$LEGACY_DIR/htdocs" "$LEGACY_DIR/venv" "$LEGACY_DIR/src" \
+    "$LEGACY_DIR/cmk_plugins" "$LEGACY_DIR/VERSION" "$LEGACY_DIR/CHANGELOG.md"
+
+  # User-data leftovers that didn't migrate because the destination already
+  # existed (e.g. settings.json written after a partial run). The destination
+  # is canonical; drop the legacy copy so it can't leak via WATO replication.
+  for sub in boards images orbvis.db connections.json backends.json settings.json .env; do
+    if "${AS_ROOT[@]}" test -e "$LEGACY_DIR/$sub" \
+       && "${AS_ROOT[@]}" test -e "$ORBVIS_DIR/$sub"; then
+      quietly "${AS_ROOT[@]}" rm -rf "$LEGACY_DIR/$sub"
+    fi
+  done
+
+  # Stop the OrbVis backend (if it's running on the legacy paths) so it
+  # doesn't keep file handles open while step 3/4 rebuilds the venv.
+  quietly "${AS_SITE[@]}" omd stop orbvis 2>/dev/null || true
+
+  # If nothing meaningful is left in $LEGACY_DIR, remove it entirely so the
+  # next replication snapshot has nothing to delete on this site.
+  if "${AS_ROOT[@]}" test -d "$LEGACY_DIR" \
+     && [[ -z "$("${AS_ROOT[@]}" ls -A "$LEGACY_DIR" 2>/dev/null || echo x)" ]]; then
+    quietly "${AS_ROOT[@]}" rmdir "$LEGACY_DIR"
+  fi
+
+  if [[ "$MIGRATED" == "1" ]]; then
+    ok "Migrated boards/db/connections/.env to var/orbvis + etc/orbvis"
+  else
+    ok "Legacy directory cleaned (no user data to migrate)"
+  fi
+fi
 
 # 1. Frontend
 if [[ -d "$SCRIPT_DIR/htdocs" ]]; then
@@ -502,6 +604,17 @@ ok "OrbVis registered as OMD service"
 
 # 7. Checkmk GUI plugins
 step "Installing Checkmk GUI plugins"
+# Sweep up direct-written plugins from a previous MKP install — having both
+# the editable install (below) and the MKP-shipped copies in
+# ``local/lib/python3/cmk/gui/plugins/...`` registers the same snapin twice
+# and trips CMK's startup duplicate check. The legacy copies also still
+# reference local/share/orbvis paths.
+for legacy_plugin in \
+    "$SITE_ROOT/local/lib/python3/cmk/gui/plugins/sidebar/orbvis_boards.py" \
+    "$SITE_ROOT/local/lib/python3/cmk/gui/plugins/wato/orbvis_menu.py" \
+    "$SITE_ROOT/local/lib/python3/cmk/gui/plugins/wato/orbvis_permissions.py"; do
+  quietly "${AS_ROOT[@]}" rm -f "$legacy_plugin"
+done
 quietly "${AS_ROOT[@]}" mkdir -p "$CMK_PLUGINS_DST"
 quietly "${AS_ROOT[@]}" cp -r "$CMK_PLUGINS_SRC/." "$CMK_PLUGINS_DST/"
 quietly "${AS_ROOT[@]}" chown -R "$SITE:$SITE" "$CMK_PLUGINS_DST"
@@ -510,7 +623,8 @@ ok "Checkmk GUI plugins installed"
 
 # 8. Ownership
 step "Setting file permissions"
-quietly "${AS_ROOT[@]}" chown -R "$SITE:$SITE" "$ORBVIS_DIR"
+quietly "${AS_ROOT[@]}" chown -R "$SITE:$SITE" "$ORBVIS_DIR" "$ORBVIS_ETC_DIR"
+quietly "${AS_ROOT[@]}" chmod 600 "$ENV_FILE"
 ok "Permissions set"
 
 # 9. Start services

@@ -89,7 +89,7 @@ python tools/cfg_importer.py --batch \
 Each `.cfg` becomes a `.json` with the same basename. Drop the resulting
 files into the boards directory:
 
-- **OMD MKP:** `$OMD_ROOT/local/share/orbvis/boards/`
+- **OMD MKP:** `$OMD_ROOT/var/orbvis/boards/`
 - **Standalone:** `<install-dir>/boards/`
 - **Dev:** `backend/boards/`
 
@@ -102,7 +102,7 @@ A single map can also be converted with
 NagVis stores map backgrounds under `etc/nagvis/maps/...` or
 `share/nagvis/htdocs/userfiles/images/maps/`. Copy the ones you need to:
 
-- **OMD MKP install:** `$OMD_ROOT/local/share/orbvis/boards/backgrounds/`
+- **OMD MKP install:** `$OMD_ROOT/var/orbvis/boards/backgrounds/`
 - **Standalone install:** `<install-dir>/boards/backgrounds/`
 
 The board JSON references them by filename only.

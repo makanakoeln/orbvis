@@ -48,10 +48,24 @@ def _user_may_view_board(name: str) -> bool:
         return True
 
 
-_BOARDS_DIR = pathlib.Path(os.environ.get("OMD_ROOT", "")) / "local" / "share" / "orbvis" / "boards"
+_OMD_ROOT = pathlib.Path(os.environ.get("OMD_ROOT", ""))
+_BOARDS_DIR = _OMD_ROOT / "var" / "orbvis" / "boards"
+_LOCAL_INSTALL_MARKER = _OMD_ROOT / "etc" / "apache" / "conf.d" / "orbvis.conf"
 _SITE = os.environ.get("OMD_SITE", "")
 _BASE_URL = f"/{_SITE}/orbvis/#/boards"
 _EDIT_URL = f"/{_SITE}/orbvis/#/"
+
+
+def _is_local_install() -> bool:
+    """Whether OrbVis is installed on this OMD site.
+
+    The plugin file itself may have been pushed here by the WATO replication
+    snapshot from a central site that runs OrbVis — in that case there's no
+    local backend to link to. The Apache drop-in is written by install_cmk.sh
+    / orbvis-setup and sits outside the replication paths, so its presence
+    indicates a real local install.
+    """
+    return _LOCAL_INSTALL_MARKER.is_file()
 
 
 def _get_boards() -> list[tuple[str, str]]:
@@ -90,6 +104,9 @@ class OrbVisBoardsSnapin(SidebarSnapin):
         return ["admin", "user", "guest"]
 
     def show(self) -> None:
+        if not _is_local_install():
+            html.p(_("OrbVis is not installed on this site."))
+            return
         boards = [(n, a) for n, a in _get_boards() if _user_may_view_board(n)]
         if not boards:
             html.p(_("No OrbVis boards found."))

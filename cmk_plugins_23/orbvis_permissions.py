@@ -14,9 +14,7 @@ try:
         permission_registry,
     )
 
-    _BOARDS_DIR = (
-        pathlib.Path(os.environ.get("OMD_ROOT", "")) / "local" / "share" / "orbvis" / "boards"
-    )
+    _BOARDS_DIR = pathlib.Path(os.environ.get("OMD_ROOT", "")) / "var" / "orbvis" / "boards"
 
     declare_permission_section("orbvis", _("OrbVis"), prio=75)
 
