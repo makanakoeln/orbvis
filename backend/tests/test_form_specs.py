@@ -177,7 +177,8 @@ def test_connection_config_to_form_data_livestatus_branch() -> None:
         automation_secret="topsecret",
     )
     form = config_to_form_data(cfg)
-    assert form["id"] == "live_1"
+    # id stays out of the form payload — it's the URL segment on save.
+    assert "id" not in form
     assert form["label"] == "Primary"
     type_field = form["type"]
     assert isinstance(type_field, list)

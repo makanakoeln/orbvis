@@ -161,20 +161,14 @@ def _test_branch() -> FixedValue:
 
 
 def connection_spec() -> Dictionary:
+    # ID lives in the URL, not the FormSpec — edit only.
     return Dictionary(
-        title=Title("Connection"),
+        title=Title("Edit connection"),
+        help_text=Help(
+            "Pick the backend type and fill in its connection details. "
+            "Stored secrets stay intact when you don't retype them."
+        ),
         elements={
-            "id": DictElement(
-                required=True,
-                parameter_form=String(
-                    title=Title("Connection ID"),
-                    help_text=Help(
-                        "Lowercase letters, digits, hyphen, underscore. "
-                        "Cannot be changed after creation."
-                    ),
-                    prefill=InputHint("live_1"),
-                ),
-            ),
             "label": DictElement(
                 parameter_form=String(
                     title=Title("Display label"),
@@ -210,7 +204,10 @@ def connection_spec() -> Dictionary:
 
 
 def config_to_form_data(cfg: ConnectionConfig) -> dict[str, object]:
-    """Flat ConnectionConfig → nested form-shape with cascading ``type``."""
+    """Flat ConnectionConfig → nested form-shape with cascading ``type``.
+
+    ``id`` is excluded — it's the URL-segment in the edit endpoint.
+    """
     payload = cfg.model_dump()
     branch_fields = _ICINGA2_FIELDS if cfg.type == "icinga2" else _LIVESTATUS_FIELDS
     branch_data: dict[str, object] = {}
@@ -220,24 +217,34 @@ def config_to_form_data(cfg: ConnectionConfig) -> dict[str, object]:
             if value is not None:
                 branch_data[field] = value
     return {
-        "id": payload["id"],
         "label": payload.get("label", ""),
         "type": [cfg.type, branch_data if cfg.type != "test" else None],
     }
 
 
 def form_data_to_config(
-    form: dict[str, object], existing: ConnectionConfig | None = None
+    form: dict[str, object],
+    existing: ConnectionConfig | None = None,
+    *,
+    connection_id: str | None = None,
 ) -> ConnectionConfig:
-    """Form-shape → ConnectionConfig, preserving REDACTED secrets from *existing*."""
+    """Form-shape → ConnectionConfig.
+
+    The connection ID comes from the URL (``connection_id``) or from
+    ``existing.id``; the form doesn't carry it. Stored secrets survive
+    the REDACTED sentinel round-trip from *existing*.
+    """
     type_field = form.get("type")
     if not isinstance(type_field, list | tuple) or len(type_field) != 2:
         raise ValueError("Malformed 'type' — expected [name, value] pair")
     type_name, branch = type_field
     if type_name not in ("livestatus", "icinga2", "test"):
         raise ValueError(f"Unknown backend type {type_name!r}")
+    final_id = connection_id or (existing.id if existing is not None else None)
+    if not final_id:
+        raise ValueError("Connection ID required")
     raw: dict[str, object] = {
-        "id": form.get("id"),
+        "id": final_id,
         "type": type_name,
         "label": form.get("label", ""),
     }

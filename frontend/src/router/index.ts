@@ -65,21 +65,6 @@ const router = createRouter({
                     component: () => import('@/views/admin/GlobalSettingsView.vue'),
                 },
                 {
-                    path: 'formspec-pilot',
-                    name: 'admin-formspec-pilot',
-                    component: () => import('@/views/admin/FormSpecPilotView.vue'),
-                },
-                {
-                    path: 'connections/:id/form',
-                    name: 'admin-connection-form',
-                    component: () => import('@/views/admin/ConnectionFormSpecView.vue'),
-                },
-                {
-                    path: 'boards/:name/metadata',
-                    name: 'admin-board-metadata',
-                    component: () => import('@/views/admin/BoardMetadataFormSpecView.vue'),
-                },
-                {
                     path: 'icons',
                     name: 'admin-icons',
                     component: () => import('@/views/admin/ImagesView.vue'),

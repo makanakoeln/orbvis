@@ -26,6 +26,10 @@ from cmk.rulesets.v1.form_specs import (
 def global_settings_spec() -> Dictionary:
     return Dictionary(
         title=Title("Global Settings"),
+        help_text=Help(
+            "Default values applied when creating new boards and objects. "
+            "Per-board overrides take precedence."
+        ),
         elements={
             "icon_size": DictElement(
                 required=True,

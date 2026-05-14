@@ -27,7 +27,12 @@ from cmk.rulesets.v1.form_specs import (
 
 def board_metadata_spec() -> Dictionary:
     return Dictionary(
-        title=Title("Board"),
+        title=Title("Board settings"),
+        help_text=Help(
+            "Metadata that applies to the whole board. Type-specific "
+            "view geometry and the background image stay in the custom "
+            "editor."
+        ),
         elements={
             "alias": DictElement(
                 required=True,

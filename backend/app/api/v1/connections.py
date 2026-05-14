@@ -74,14 +74,9 @@ async def update_connection_from_form(
     if existing is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
     try:
-        updated = form_data_to_config(form_data, existing=existing)
+        updated = form_data_to_config(form_data, existing=existing, connection_id=connection_id)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
-    if updated.id != connection_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Connection ID cannot be changed",
-        )
     result = connection_service.update(connection_id, updated)
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
