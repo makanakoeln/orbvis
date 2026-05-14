@@ -257,6 +257,20 @@ def get_user_contact_groups(username: str) -> list[str]:
     return list(cgs) if isinstance(cgs, (list, tuple)) else []
 
 
+def load_user_inline_help(username: str) -> bool:
+    """Mirror of ``LoggedInUser.inline_help_as_text`` via CMK's own loader."""
+    if not available:
+        return False
+    try:
+        from cmk.ccc.user import UserId
+        from cmk.gui.logged_in import load_user_file
+
+        return bool(load_user_file("help", UserId(username), False, lock=False))
+    except Exception as e:
+        log.debug("load_user_inline_help(%s) via CMK API failed (%s)", username, e)
+        return False
+
+
 def _load_user_fallback(username: str) -> dict[str, object]:
     """Direct file fallback when cmk.gui.userdb.store is unavailable."""
     try:

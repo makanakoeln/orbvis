@@ -42,6 +42,7 @@ const sampleUser: UserRead = {
     language: 'en',
     cmk_theme: null,
     cmk_language: null,
+    cmk_inline_help: false,
     roles: [],
     permissions: [],
 };

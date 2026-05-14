@@ -334,6 +334,7 @@ export interface UserRead {
     language: string;
     cmk_theme: string | null;
     cmk_language: string | null;
+    cmk_inline_help: boolean;
     roles: RoleRef[];
     permissions: PermissionRef[];
 }

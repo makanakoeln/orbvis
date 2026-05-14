@@ -13,6 +13,10 @@ const REFRESH_TOKEN_KEY = 'orbvis_refresh_token';
 const SSO_ACTIVE_KEY = 'orbvis_sso';
 
 // Derive Checkmk logout URL from current path: /heute/orbvis/... → /heute/check_mk/logout.py
+function applyInlineHelp(enabled: boolean): void {
+    document.body.classList.toggle('inline_help_as_text', enabled);
+}
+
 function _checkmkLogoutUrl(): string | null {
     const m = window.location.pathname.match(/^(\/[^/]+)\/orbvis/);
     return m ? `${m[1]}/check_mk/logout.py` : null;
@@ -95,6 +99,7 @@ export const useAuthStore = defineStore('auth', () => {
                     ? user.value.cmk_language
                     : (user.value.language ?? 'en');
             i18n.global.locale.value = lang as 'en' | 'de';
+            applyInlineHelp(user.value.cmk_inline_help);
             // Load global settings so they're available for new map/object creation
             useSettingsStore()
                 .load()
@@ -111,6 +116,7 @@ export const useAuthStore = defineStore('auth', () => {
                                 ? user.value.cmk_language
                                 : (user.value.language ?? 'en');
                         i18n.global.locale.value = lang2 as 'en' | 'de';
+                        applyInlineHelp(user.value.cmk_inline_help);
                         useSettingsStore()
                             .load()
                             .catch((e) => console.warn('[OrbVis] Failed to load settings:', e));

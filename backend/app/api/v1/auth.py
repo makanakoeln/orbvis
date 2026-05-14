@@ -108,6 +108,9 @@ async def me(current_user: User = Depends(get_current_user)) -> UserRead:
     result = UserRead.model_validate(current_user)
     result.cmk_theme = get_cmk_theme(current_user.name)
     result.cmk_language = get_cmk_language(current_user.name)
+    from app.integrations.checkmk import load_user_inline_help
+
+    result.cmk_inline_help = load_user_inline_help(current_user.name)
     return result
 
 

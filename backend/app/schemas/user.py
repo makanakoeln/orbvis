@@ -53,6 +53,7 @@ class UserRead(UserBase):
     permissions: list[PermissionRef] = []
     cmk_theme: str | None = None  # populated at runtime from ui_theme.mk, not stored in DB
     cmk_language: str | None = None  # populated at runtime from language.mk, not stored in DB
+    cmk_inline_help: bool = False  # mirrors LoggedInUser.inline_help_as_text
 
     model_config = {"from_attributes": True}
 
