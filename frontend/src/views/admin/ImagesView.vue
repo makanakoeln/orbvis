@@ -39,66 +39,14 @@
         <CmkAlertBox v-if="uploadError" variant="error">{{ uploadError }}</CmkAlertBox>
 
         <OrbConfirmDialog
-            :open="!!deleteTargetName && !pendingUsage.length"
-            :title="deleteTargetName ? t('admin.deleteIcon', { name: deleteTargetName }) : ''"
-            :message="t('board.cannotBeUndone')"
+            :open="dialogReady && !!deleteTargetName"
+            :title="deleteDialogTitle"
+            :message="deleteDialogMessage"
             :confirm-label="t('common.delete')"
+            :extra-buttons="boardLinkButtons"
             @confirm="confirmDeleteIcon"
             @cancel="cancelDelete"
         />
-
-        <OrbModal v-if="pendingUsage.length" :open="true" @close="cancelDelete">
-            <div style="padding: var(--dimension-6); max-width: 480px">
-                <CmkHeading type="h3" style="margin-bottom: var(--dimension-3)">
-                    {{ t('admin.imageInUseTitle') }}
-                </CmkHeading>
-                <CmkParagraph style="margin-bottom: var(--dimension-4)">
-                    {{
-                        t('admin.imageInUseBody', {
-                            name: deleteTargetName,
-                            count: pendingUsage.length,
-                        })
-                    }}
-                </CmkParagraph>
-                <ul
-                    class="space-y-[6px]"
-                    style="margin-bottom: var(--dimension-5); max-height: 240px; overflow-y: auto"
-                >
-                    <li
-                        v-for="entry in pendingUsage"
-                        :key="entry.board"
-                        class="flex items-center justify-between gap-[8px] text-sm"
-                    >
-                        <router-link
-                            :to="`/board/${entry.board}`"
-                            class="text-[var(--color-corporate-green-50)] hover:underline truncate"
-                            :title="t('admin.openBoard')"
-                        >
-                            {{ entry.alias || entry.board }}
-                        </router-link>
-                        <span class="text-xs text-[var(--text-muted)] shrink-0">
-                            <template v-if="entry.is_background">{{
-                                t('admin.usedAsBackground')
-                            }}</template>
-                            <template v-if="entry.is_background && entry.object_ids.length"
-                                >,
-                            </template>
-                            <template v-if="entry.object_ids.length">{{
-                                t('admin.usedByObjects', entry.object_ids.length)
-                            }}</template>
-                        </span>
-                    </li>
-                </ul>
-                <div class="flex justify-end gap-[8px]">
-                    <CmkButton variant="secondary" @click="cancelDelete">
-                        {{ t('common.cancel') }}
-                    </CmkButton>
-                    <CmkButton variant="warning" @click="confirmDeleteIcon(true)">
-                        {{ t('common.delete') }}
-                    </CmkButton>
-                </div>
-            </div>
-        </OrbModal>
 
         <div v-if="loading" class="flex items-center justify-center py-8">
             <CmkLoading />
@@ -185,18 +133,19 @@ import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
 import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 
 import { ApiError, imagesApi } from '@/api/client';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
-import OrbModal from '@/components/OrbModal.vue';
 import { useAuthStore } from '@/stores/auth';
 import type { ImageEntry, ImageUsageEntry } from '@/types/api';
 
 const BASE_URL = import.meta.env.BASE_URL;
 const { t } = useI18n();
 const auth = useAuthStore();
+const router = useRouter();
 
 const fileInputEl = ref<HTMLInputElement | null>(null);
 const icons = ref<ImageEntry[]>([]);
@@ -235,26 +184,65 @@ async function uploadIcons(event: Event) {
 
 const deleteTargetName = ref<string | null>(null);
 const pendingUsage = ref<ImageUsageEntry[]>([]);
+// Gate the dialog until the usage check resolves — otherwise the simple
+// "delete?" prompt flashes briefly before the in-use warning takes over.
+const dialogReady = ref(false);
 
 async function onDeleteClick(name: string) {
     deleteTargetName.value = name;
     pendingUsage.value = [];
+    dialogReady.value = false;
     try {
         const usage = await imagesApi.usage(name, auth.accessToken!);
         if (usage.length) pendingUsage.value = usage;
     } catch {
         // best-effort: fall through to confirm dialog if usage check fails
+    } finally {
+        // Only open the dialog after we know whether the image is in use, so
+        // we never have to swap the dialog content under the user.
+        if (deleteTargetName.value === name) dialogReady.value = true;
     }
 }
+
+const deleteDialogTitle = computed(() => {
+    const name = deleteTargetName.value;
+    if (!name) return '';
+    if (pendingUsage.value.length) return t('admin.imageInUseTitle');
+    return t('admin.deleteIcon', { name });
+});
+
+const deleteDialogMessage = computed(() => {
+    const name = deleteTargetName.value;
+    if (!name) return '';
+    if (!pendingUsage.value.length) return t('board.cannotBeUndone');
+    return t('admin.imageInUseBody', { name, count: pendingUsage.value.length });
+});
+
+// Renders one CMK info-button per referencing board so users can jump straight
+// to the affected board. Mirrors CMK's own pattern (NotificationFallbackWarning):
+// CmkDialog's message is plain text, so navigation lives on buttons.
+const boardLinkButtons = computed(() =>
+    pendingUsage.value.map((entry) => ({
+        title: entry.alias || entry.board,
+        onclick: () => {
+            cancelDelete();
+            router.push(`/boards/${entry.board}`);
+        },
+    })),
+);
 
 function cancelDelete() {
     deleteTargetName.value = null;
     pendingUsage.value = [];
+    dialogReady.value = false;
 }
 
-async function confirmDeleteIcon(force = false) {
+async function confirmDeleteIcon() {
     const name = deleteTargetName.value;
     if (!name) return;
+    // Force=true when usage was detected; the user just confirmed via the
+    // in-use warning. Without force the backend rejects with 409.
+    const force = pendingUsage.value.length > 0;
     try {
         await imagesApi.delete(name, auth.accessToken!, force);
         icons.value = icons.value.filter((i) => i.name !== name);
