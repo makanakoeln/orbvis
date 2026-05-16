@@ -692,7 +692,7 @@
                     style="width: 40px; height: 40px"
                     :class="
                         editor.editMode.value
-                            ? 'bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] ring-[var(--default-border-color)] text-[var(--text)] hover:text-white'
+                            ? 'bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] ring-[var(--default-border-color)] text-[var(--text)]'
                             : 'bg-[var(--bg-surface)]/80 hover:bg-[var(--bg-surface)] ring-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]'
                     "
                     :title="editor.editMode.value ? t('board.editing') : t('board.edit')"

@@ -41,8 +41,7 @@
                         <circle cx="14" cy="10" r="0.8" fill="currentColor" stroke="none" />
                     </svg>
                 </div>
-                <span
-                    class="font-bold text-[var(--text)] tracking-tight group-hover:text-white transition-colors truncate"
+                <span class="font-bold text-[var(--text)] tracking-tight transition-colors truncate"
                     >OrbVis</span
                 >
             </router-link>
