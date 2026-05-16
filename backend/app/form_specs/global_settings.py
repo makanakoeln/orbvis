@@ -146,7 +146,21 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                     field_size=FieldSize.LARGE,
                 ),
             ),
-            # ── Object defaults ──
+            # ── Object defaults (order: kind → size → behavior → advanced) ──
+            "view_type": DictElement(
+                required=True,
+                group=_DEFAULTS,
+                parameter_form=SingleChoice(
+                    title=Title("View type"),
+                    help_text=Help("How objects are rendered on a board."),
+                    elements=[
+                        SingleChoiceElement(name="icon", title=Title("Icon")),
+                        SingleChoiceElement(name="text", title=Title("Text only")),
+                        SingleChoiceElement(name="gadget", title=Title("Gadget")),
+                    ],
+                    prefill=DefaultValue("icon"),
+                ),
+            ),
             "icon_size": DictElement(
                 required=True,
                 group=_DEFAULTS,
@@ -157,24 +171,12 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                     prefill=DefaultValue(30),
                 ),
             ),
-            "view_type": DictElement(
-                required=True,
-                group=_DEFAULTS,
-                parameter_form=SingleChoice(
-                    title=Title("View type"),
-                    elements=[
-                        SingleChoiceElement(name="icon", title=Title("Icon")),
-                        SingleChoiceElement(name="text", title=Title("Text only")),
-                        SingleChoiceElement(name="gadget", title=Title("Gadget")),
-                    ],
-                    prefill=DefaultValue("icon"),
-                ),
-            ),
             "url_target": DictElement(
                 required=True,
                 group=_DEFAULTS,
                 parameter_form=SingleChoice(
                     title=Title("Link target"),
+                    help_text=Help("Where object links open."),
                     elements=[
                         SingleChoiceElement(name="_blank", title=Title("New tab")),
                         SingleChoiceElement(name="_self", title=Title("Same tab")),
@@ -216,7 +218,8 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                 group=_LABELS,
                 parameter_form=Integer(
                     title=Title("Label X offset"),
-                    help_text=Help("Per-pixel horizontal shift. Set once per install."),
+                    help_text=Help("Horizontal shift. Set once per install."),
+                    unit_symbol="px",
                     prefill=DefaultValue(0),
                 ),
             ),
@@ -225,7 +228,8 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                 group=_LABELS,
                 parameter_form=Integer(
                     title=Title("Label Y offset"),
-                    help_text=Help("Per-pixel vertical shift. Set once per install."),
+                    help_text=Help("Vertical shift. Set once per install."),
+                    unit_symbol="px",
                     prefill=DefaultValue(0),
                 ),
             ),

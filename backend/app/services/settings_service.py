@@ -29,6 +29,12 @@ def get_settings() -> GlobalSettings:
             data = GlobalSettings()
     if data.log_level is None:
         data.log_level = settings.log_level or ("DEBUG" if settings.debug else "INFO")
+    # Empty string for an Optional field is the legacy form of "unset"; turn it
+    # back into None so the FormSpec UI shows the toggle as off (the placeholder
+    # hint takes over visually instead of an active checkbox + empty input).
+    for opt_field in ("hover_template", "context_template", "checkmk_url"):
+        if getattr(data, opt_field) == "":
+            setattr(data, opt_field, None)
     return data
 
 

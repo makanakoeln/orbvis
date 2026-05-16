@@ -22,6 +22,7 @@ from cmk.rulesets.v1.form_specs import (
     FixedValue,
     Float,
     FormSpec,
+    InputHint,
     Integer,
     List,
     MultilineText,
@@ -86,21 +87,25 @@ def serialize_form_spec(spec: FormSpec[object]) -> dict[str, object]:
         return _common(spec, "string") | {
             "label": _loc(spec.label),
             "field_size": spec.field_size.name,
+            "input_hint": _input_hint(spec.prefill),
         }
     if isinstance(spec, MultilineText):
         return _common(spec, "multiline_text") | {
             "label": _loc(spec.label),
             "monospaced": spec.monospaced,
+            "input_hint": _input_hint(spec.prefill),
         }
     if isinstance(spec, Integer):
         return _common(spec, "integer") | {
             "label": _loc(spec.label),
             "unit": spec.unit_symbol,
+            "input_hint": _input_hint(spec.prefill),
         }
     if isinstance(spec, Float):
         return _common(spec, "float") | {
             "label": _loc(spec.label),
             "unit": spec.unit_symbol,
+            "input_hint": _input_hint(spec.prefill),
         }
     if isinstance(spec, BooleanChoice):
         return _common(spec, "boolean_choice") | {"label": _loc(spec.label)}
@@ -174,6 +179,19 @@ def _group(el: DictElement[object]) -> dict[str, object] | None:
 
 def _slugify(text: str) -> str:
     return "".join(c.lower() if c.isalnum() else "_" for c in text).strip("_")
+
+
+def _input_hint(prefill: object) -> object:
+    """Surface ``InputHint(value=...)`` as placeholder text on the wire.
+
+    DefaultValue is for the saved-value path (already handled by
+    ``_default_value``); InputHint is purely UI affordance — render it as
+    HTML placeholder via the FormSpec ``input_hint`` slot.
+    """
+    if isinstance(prefill, InputHint):
+        value = prefill.value
+        return value if value is not None else ""
+    return None
 
 
 def _common[T](spec: FormSpec[T], type_tag: str) -> dict[str, object]:

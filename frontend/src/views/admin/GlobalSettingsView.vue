@@ -1,70 +1,64 @@
 <template>
     <div class="settings-page">
         <div class="settings-page__header">
-            <CmkHeading type="h2">
-                {{ heading }}
-            </CmkHeading>
-            <CmkParagraph v-if="subtitle" class="admin-subtitle">
-                {{ subtitle }}
-            </CmkParagraph>
+            <CmkHeading type="h2">{{ heading }}</CmkHeading>
+            <CmkParagraph v-if="subtitle" class="admin-subtitle">{{ subtitle }}</CmkParagraph>
         </div>
 
-        <div v-if="loading" class="flex items-center justify-center py-8">
+        <div v-if="loading" class="flex items-center justify-center py-16">
             <CmkLoading />
         </div>
 
         <CmkAlertBox v-else-if="loadError" variant="error">{{ loadError }}</CmkAlertBox>
 
-        <template v-else-if="schema">
-            <div class="settings-page__form">
+        <div v-else-if="schema" class="settings-page__layout">
+            <nav class="settings-page__sidebar" aria-label="Settings sections">
+                <button
+                    v-for="g in groups"
+                    :key="g.key"
+                    type="button"
+                    class="settings-page__topic"
+                    :class="{ 'settings-page__topic--active': g.key === activeGroup }"
+                    @click="activeGroup = g.key"
+                >
+                    {{ g.title }}
+                </button>
+            </nav>
+
+            <div class="settings-page__detail" :data-active="activeGroup">
                 <FormEdit v-model:data="data" :spec="schema" :backend-validation="validation" />
             </div>
+        </div>
 
-            <div class="settings-page__savebar">
-                <span
-                    v-if="dirty"
-                    class="settings-page__dirty"
-                    :title="t('settings.unsavedChangesHint')"
-                >
-                    {{ t('settings.unsavedChanges') }}
+        <div v-if="!loading && schema" class="settings-page__savebar">
+            <span v-if="dirty" class="settings-page__dirty">
+                {{ t('settings.unsavedChanges') }}
+            </span>
+            <Transition
+                enter-from-class="opacity-0 translate-x-2"
+                enter-active-class="transition-all duration-200"
+                leave-to-class="opacity-0"
+                leave-active-class="transition-opacity duration-300"
+            >
+                <span v-if="savedOk" class="settings-page__saved-msg">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M4.5 12.75l6 6 9-13.5"
+                        />
+                    </svg>
+                    {{ t('common.saved') }}
                 </span>
-                <Transition
-                    enter-from-class="opacity-0 translate-x-2"
-                    enter-active-class="transition-all duration-200"
-                    leave-to-class="opacity-0"
-                    leave-active-class="transition-opacity duration-300"
-                >
-                    <span
-                        v-if="savedOk"
-                        class="flex items-center gap-[5px] text-sm text-[var(--color-corporate-green-50)]"
-                    >
-                        <svg
-                            style="width: 14px; height: 14px"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2.5"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M4.5 12.75l6 6 9-13.5"
-                            />
-                        </svg>
-                        {{ t('common.saved') }}
-                    </span>
-                </Transition>
-                <span v-if="saveError" class="text-sm text-[var(--color-light-red-40)]">{{
-                    saveError
-                }}</span>
-                <CmkButton variant="secondary" :disabled="!dirty" @click="resetForm">{{
-                    t('common.cancel')
-                }}</CmkButton>
-                <CmkButton variant="primary" :disabled="saving || !dirty" @click="handleSave">
-                    {{ saving ? t('common.saving') : t('common.save') }}
-                </CmkButton>
-            </div>
-        </template>
+            </Transition>
+            <span v-if="saveError" class="settings-page__error-msg">{{ saveError }}</span>
+            <CmkButton variant="secondary" :disabled="!dirty" @click="resetForm">
+                {{ t('common.cancel') }}
+            </CmkButton>
+            <CmkButton variant="primary" :disabled="saving || !dirty" @click="handleSave">
+                {{ saving ? t('common.saving') : t('common.save') }}
+            </CmkButton>
+        </div>
     </div>
 </template>
 
@@ -87,6 +81,16 @@ import type { GlobalSettings } from '@/types/api';
 type Schema = NonNullable<VueFormspecComponents['components']>;
 type Validation = NonNullable<VueFormspecComponents['validation_message']>[];
 
+interface SchemaElement {
+    name: string;
+    group?: { key?: string | null; title?: string | null } | null;
+}
+interface DictionarySchema {
+    elements?: SchemaElement[];
+    title?: string;
+    help?: string;
+}
+
 initializeComponentRegistry();
 
 const { t } = useI18n();
@@ -101,19 +105,29 @@ const schema = ref<Schema | null>(null);
 const data = ref<unknown>({});
 const initialData = ref<unknown>({});
 const validation = ref<Validation>([]);
+const activeGroup = ref<string>('');
 
 let savedOkTimer: ReturnType<typeof setTimeout> | null = null;
 let saveErrorTimer: ReturnType<typeof setTimeout> | null = null;
 
 const dirty = computed(() => JSON.stringify(data.value) !== JSON.stringify(initialData.value));
 
-const heading = computed(() => {
-    const s = schema.value as { title?: string } | null;
-    return s?.title ?? t('settings.title');
-});
-const subtitle = computed(() => {
-    const s = schema.value as { help?: string } | null;
-    return s?.help || t('settings.subtitle');
+const heading = computed(
+    () => (schema.value as DictionarySchema | null)?.title ?? t('settings.title'),
+);
+const subtitle = computed(
+    () => (schema.value as DictionarySchema | null)?.help || t('settings.subtitle'),
+);
+
+const groups = computed<{ key: string; title: string }[]>(() => {
+    const dict = schema.value as DictionarySchema | null;
+    if (!dict?.elements) return [];
+    const seen = new Map<string, string>();
+    for (const el of dict.elements) {
+        const key = el.group?.key ?? '-ungrouped-';
+        if (!seen.has(key)) seen.set(key, el.group?.title || key);
+    }
+    return Array.from(seen.entries()).map(([key, title]) => ({ key, title }));
 });
 
 async function load() {
@@ -131,6 +145,8 @@ async function load() {
         schema.value = spec as unknown as Schema;
         initialData.value = structuredClone(values);
         data.value = structuredClone(values);
+        // pre-select first group so the detail panel is never empty
+        activeGroup.value = groups.value[0]?.key ?? '';
     } catch (e: unknown) {
         loadError.value = e instanceof Error ? e.message : 'Failed to load settings';
     } finally {
@@ -171,7 +187,6 @@ async function handleSave() {
 }
 
 onMounted(load);
-
 onUnmounted(() => {
     if (savedOkTimer) clearTimeout(savedOkTimer);
     if (saveErrorTimer) clearTimeout(saveErrorTimer);
@@ -179,40 +194,104 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* WATO-style page: header + form share one column, no Card wrapper.
-   Wider column (72rem ~= 1152px) so a 1440px viewport doesn't feel half-empty,
-   centered so the form lives in the optical centre of the page. */
 .settings-page {
-    max-width: 72rem;
-    margin: 0 auto;
-    padding-bottom: 8rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
 }
 
 .settings-page__header {
+    padding: 0 var(--dimension-8) var(--dimension-6);
+}
+
+.settings-page__layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: var(--dimension-7);
+    padding: 0 var(--dimension-8);
+    flex: 1;
+    align-items: start;
+    min-height: 0;
+}
+
+/* Topic sidebar — WATO-style vertical nav with active-state highlight. */
+.settings-page__sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: sticky;
+    top: 0;
+    align-self: start;
+}
+
+.settings-page__topic {
+    text-align: left;
+    background: none;
+    border: 0;
+    border-left: 3px solid transparent;
+    padding: var(--dimension-3) var(--dimension-5);
+    font-size: 14px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition:
+        background-color 120ms,
+        color 120ms,
+        border-color 120ms;
+}
+
+.settings-page__topic:hover {
+    background: var(--bg-hover, rgb(255 255 255 / 4%));
+    color: var(--text);
+}
+
+.settings-page__topic--active {
+    border-left-color: var(--color-corporate-green-50);
+    background: rgb(21 209 160 / 12%);
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* Hide every group <tr> by default, then re-show the active one. Vue's
+   :deep() weakens specificity, so we hoist this rule with !important — the
+   alternative (v-show inside the vendored FormDictionary) would require a
+   bigger vendor patch. */
+.settings-page__detail :deep(tr[data-group]) {
+    display: none !important;
+}
+
+.settings-page__detail[data-active='board_defaults'] :deep(tr[data-group='board_defaults']),
+.settings-page__detail[data-active='system'] :deep(tr[data-group='system']),
+.settings-page__detail[data-active='defaults'] :deep(tr[data-group='defaults']),
+.settings-page__detail[data-active='labels'] :deep(tr[data-group='labels']),
+.settings-page__detail[data-active='templates'] :deep(tr[data-group='templates']) {
+    display: table-row !important;
+}
+
+/* Bigger group title (h3-ish) and visible help line under it, since the
+   sidebar already establishes the section context. */
+.settings-page__detail :deep(.form-dictionary__group-title) {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: var(--dimension-2);
+    padding: 0;
+    border: 0;
+}
+
+.settings-page__detail :deep(.form-help) {
+    color: var(--text-muted);
     margin-bottom: var(--dimension-6);
 }
 
-/* WATO-style group dividers: bigger heading + horizontal rule between
-   sections so the operator can see at a glance which group they're in. */
-.settings-page__form :deep(.form-dictionary__group-title) {
-    font-size: var(--font-size-large);
-    font-weight: 600;
-    margin-top: var(--dimension-6);
-    padding-top: var(--dimension-5);
-    padding-bottom: var(--dimension-3);
-    border-top: 1px solid var(--border);
+/* Consistent input width — kills the "60px Integer next to 432px String" mix. */
+.settings-page__detail :deep(.cmk-input--text),
+.settings-page__detail :deep(.cmk-dropdown__choice-button),
+.settings-page__detail :deep(input[type='text']) {
+    min-width: 320px;
+    max-width: 100%;
 }
 
-.settings-page__form
-    :deep(table.form-dictionary > tbody > tr:first-of-type .form-dictionary__group-title) {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: 0;
-}
-
-/* Sticky action bar — WATO-style border-top instead of a floating card.
-   Stays within the form column but with enough margin and visible border so
-   it doesn't overlap content above. */
+/* Full-width sticky save bar at the bottom of the viewport, outside the
+   72-rem form column. Border-top only — no floating card shadow (WATO-style). */
 .settings-page__savebar {
     position: sticky;
     bottom: 0;
@@ -222,14 +301,32 @@ onUnmounted(() => {
     justify-content: flex-end;
     gap: var(--dimension-4);
     margin-top: var(--dimension-7);
-    padding: var(--dimension-4) 0;
+    padding: var(--dimension-4) var(--dimension-8);
     background: var(--bg-surface);
     border-top: 1px solid var(--border);
 }
 
 .settings-page__dirty {
-    font-size: 0.85rem;
+    font-size: 13px;
     color: var(--text-muted);
     margin-right: auto;
+}
+
+.settings-page__saved-msg {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: var(--color-corporate-green-50);
+}
+
+.settings-page__saved-msg svg {
+    width: 14px;
+    height: 14px;
+}
+
+.settings-page__error-msg {
+    font-size: 13px;
+    color: var(--color-light-red-40);
 }
 </style>

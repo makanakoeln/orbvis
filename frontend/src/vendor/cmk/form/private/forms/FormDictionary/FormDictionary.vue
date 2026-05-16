@@ -110,7 +110,11 @@ const componentId = useId();
     >
         <tbody>
             <FormValidation :validation="validation.map((m) => m.message)"></FormValidation>
-            <tr v-for="group in groups" :key="`${componentId}.${group.groupKey}`">
+            <tr
+                v-for="group in groups"
+                :key="`${componentId}.${group.groupKey}`"
+                :data-group="group.groupKey"
+            >
                 <td class="form-dictionary__dictleft">
                     <div v-if="!!group.title" class="form-dictionary__group-title">
                         {{ group?.title }}

@@ -14,8 +14,15 @@ from app.services import connection_service, settings_service
 router = APIRouter()
 
 
-@router.get("", response_model=GlobalSettings)
+@router.get("", response_model=GlobalSettings, response_model_exclude_none=True)
 async def get_settings(current_user: User = Depends(get_current_user)) -> GlobalSettings:
+    """Return saved settings, omitting Optional fields that are unset.
+
+    The FormSpec frontend uses ``key in data`` to decide whether an optional
+    field's toggle is active — sending ``null`` would render an empty input
+    behind an "active" checkbox, which is confusing. Drop ``null`` so the
+    toggle stays off and the InputHint placeholder takes over.
+    """
     return settings_service.get_settings()
 
 
