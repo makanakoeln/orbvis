@@ -389,11 +389,9 @@ onUnmounted(() => {
     padding: var(--dimension-3) var(--dimension-5);
     font-size: 14px;
 
-    /* ``--text-muted`` is near-white in the CMK light theme — invisible on a
-       white sidebar background. Use the regular body text color and lean on
-       weight/active-styling instead to mark the inactive state. */
-    color: var(--text);
-    opacity: 0.7;
+    /* CMK's theme-aware dimmed-text token — readable on both the dark
+       surface and the white light-theme sidebar. */
+    color: var(--font-color-dimmed, var(--text-muted));
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -402,7 +400,6 @@ onUnmounted(() => {
     transition:
         background-color 120ms,
         color 120ms,
-        opacity 120ms,
         border-color 120ms;
 }
 
@@ -427,14 +424,13 @@ onUnmounted(() => {
 
 .settings-page__topic:hover {
     background: var(--bg-hover, rgb(127 127 127 / 8%));
-    opacity: 1;
+    color: var(--font-color, var(--text));
 }
 
 .settings-page__topic--active {
     border-left-color: var(--color-corporate-green-50);
     background: rgb(21 209 160 / 12%);
-    color: var(--text);
-    opacity: 1;
+    color: var(--font-color, var(--text));
     font-weight: 600;
 }
 

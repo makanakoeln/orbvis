@@ -148,6 +148,13 @@ html {
      --bg-surface (cards)   = --ux-theme-3   (Board-Cards, Tabellen)
    --default-bg-color MUSS unterscheidbar von --bg sein, damit CmkSlideIn sich abhebt. */
 body {
+    /* Bridge OrbVis token names onto CMK's theme-aware vars. CMK's
+       ``assets/cmk/variables.css`` keeps ``--font-color`` and
+       ``--font-color-dimmed`` correct in *both* light and dark modes, so
+       using them here means OrbVis automatically picks the right tone
+       per theme — no separate ``.light body`` override required.
+       The fallbacks are dark-theme values for OrbVis-only builds that
+       don't ship the CMK vars at all. */
     --bg: var(--ux-theme-1, #1c2228);
     --bg-surface: var(--ux-theme-3, #18181b);
     --bg-input: var(--default-form-element-bg-color, #27272a);
@@ -155,7 +162,7 @@ body {
     --bg-hover: var(--input-hover-bg-color, rgb(39 39 42 / 60%));
     --border: var(--default-border-color, rgb(255 255 255 / 6%));
     --text: var(--font-color, #f4f4f5);
-    --text-muted: rgb(255 255 255 / 70%);
+    --text-muted: var(--font-color-dimmed, rgb(255 255 255 / 70%));
     --accent: var(--color-corporate-green-50, rgb(21 209 160));
     --gauge-track: #3f3f46;
 

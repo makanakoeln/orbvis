@@ -317,11 +317,11 @@ onUnmounted(() => {
     padding: var(--dimension-3) var(--dimension-5);
     font-size: 14px;
 
-    /* Same theme-portable choice as GlobalSettingsView — ``--text-muted``
-       is near-white in the CMK light theme and disappears on the white
-       sidebar background. */
-    color: var(--text);
-    opacity: 0.7;
+    /* CMK's theme-aware dimmed-text token. See GlobalSettingsView for
+       the rationale — short version: ``--text-muted`` used to be
+       near-white in light theme until the body bridge in style.css
+       was wired to ``--font-color-dimmed``. */
+    color: var(--font-color-dimmed, var(--text-muted));
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -330,7 +330,6 @@ onUnmounted(() => {
     transition:
         background-color 120ms,
         color 120ms,
-        opacity 120ms,
         border-color 120ms;
 }
 
@@ -355,14 +354,13 @@ onUnmounted(() => {
 
 .settings-page__topic:hover {
     background: var(--bg-hover, rgb(127 127 127 / 8%));
-    opacity: 1;
+    color: var(--font-color, var(--text));
 }
 
 .settings-page__topic--active {
     border-left-color: var(--color-corporate-green-50);
     background: rgb(21 209 160 / 12%);
-    color: var(--text);
-    opacity: 1;
+    color: var(--font-color, var(--text));
     font-weight: 600;
 }
 
