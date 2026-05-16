@@ -538,6 +538,29 @@ PIDFILE="\$OMD_ROOT/tmp/run/orbvis.pid"
 LOGFILE="\$OMD_ROOT/var/log/orbvis.log"
 VENV="$VENV_DIR"
 ENV_FILE="$ENV_FILE"
+MKP_VERSION_FILE="$MKP_LIB/VERSION"
+INSTALLED_VERSION_FILE="$ORBVIS_DIR/.installed-version"
+SETUP_BIN="\$OMD_ROOT/local/bin/orbvis-setup"
+
+# Trigger orbvis-setup automatically when a newer MKP has been installed but
+# this site hasn't been refreshed yet (mkp update only replaces ~/local/, not
+# the per-site venv / Apache conf / data layout). ORBVIS_NO_RESTART avoids the
+# omd-recursion: orbvis-setup is told to skip its closing \`omd restart orbvis\`
+# because that's exactly what we're inside of.
+auto_refresh() {
+  [[ -f "\$MKP_VERSION_FILE" && -x "\$SETUP_BIN" ]] || return 0
+  local mkp_ver installed_ver
+  mkp_ver="\$(cat "\$MKP_VERSION_FILE" 2>/dev/null || true)"
+  installed_ver="\$(cat "\$INSTALLED_VERSION_FILE" 2>/dev/null || true)"
+  [[ -n "\$mkp_ver" && "\$mkp_ver" != "\$installed_ver" ]] || return 0
+  echo ""
+  echo "OrbVis: MKP version \$mkp_ver differs from installed \${installed_ver:-<none>}; running orbvis-setup..."
+  if ! ORBVIS_NO_RESTART=1 "\$SETUP_BIN" >> "\$LOGFILE" 2>&1; then
+    echo "WARN: orbvis-setup failed; see \$LOGFILE. Continuing with previous installation." >&2
+    return 1
+  fi
+  echo "OrbVis refreshed to \$mkp_ver"
+}
 
 case "\$1" in
   start)
@@ -545,6 +568,7 @@ case "\$1" in
       echo "orbvis already running (pid \$(cat "\$PIDFILE"))"
       exit 0
     fi
+    auto_refresh || true
     echo -n "Starting orbvis..."
     set -a; source "\$ENV_FILE"; set +a
     PORT="\${ORBVIS_PORT:-8420}"
@@ -586,14 +610,26 @@ EOF
   ln -sf "$INIT_SCRIPT" "$ROOT/etc/rc.d/85-orbvis" 2>/dev/null || true
   ok "OrbVis registered as OMD service"
 
-  # 8. Start services
+  # 8. Stamp installed version so the init script can detect when a later
+  # `mkp update` ships a newer VERSION and trigger an automatic refresh.
+  if [[ -f "$MKP_LIB/VERSION" ]]; then
+    cp "$MKP_LIB/VERSION" "$ORBVIS_DIR/.installed-version"
+  fi
+
+  # 9. Start services
   step "Reloading Apache"
   omd reload apache
   ok "Apache reloaded"
 
-  step "Starting OrbVis"
-  omd restart orbvis
-  ok "OrbVis started"
+  # ORBVIS_NO_RESTART lets the init script call us during its own start
+  # sequence without recursing into omd. The caller starts the backend itself.
+  if [[ "${ORBVIS_NO_RESTART:-0}" == "1" ]]; then
+    ok "OrbVis restart skipped (caller will start backend)"
+  else
+    step "Starting OrbVis"
+    omd restart orbvis
+    ok "OrbVis started"
+  fi
 
   HOST="$(hostname -f 2>/dev/null || hostname)"
   echo ""
