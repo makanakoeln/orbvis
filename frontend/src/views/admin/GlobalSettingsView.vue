@@ -21,7 +21,14 @@
                     :class="{ 'settings-page__topic--active': g.key === activeGroup }"
                     @click="activeGroup = g.key"
                 >
-                    {{ g.title }}
+                    <span class="settings-page__topic-title">{{ g.title }}</span>
+                    <span
+                        v-if="g.modified > 0"
+                        class="settings-page__topic-badge"
+                        :title="t('settings.modifiedHint', { n: g.modified })"
+                    >
+                        {{ g.modified }}
+                    </span>
                 </button>
             </nav>
 
@@ -101,15 +108,35 @@ const subtitle = computed(
     () => (schema.value as DictionarySchema | null)?.help || t('settings.subtitle'),
 );
 
-const groups = computed<{ key: string; title: string }[]>(() => {
+const groups = computed<{ key: string; title: string; modified: number }[]>(() => {
     const dict = schema.value as DictionarySchema | null;
     if (!dict?.elements) return [];
-    const seen = new Map<string, string>();
+    const cur = (data.value ?? {}) as Record<string, unknown>;
+    const orig = (initialData.value ?? {}) as Record<string, unknown>;
+    const acc = new Map<string, { title: string; modified: number }>();
     for (const el of dict.elements) {
         const key = el.group?.key ?? '-ungrouped-';
-        if (!seen.has(key)) seen.set(key, el.group?.title || key);
+        const title = el.group?.title || key;
+        const entry = acc.get(key) ?? { title, modified: 0 };
+        // Count "modified" as: field appears differently in current vs initial
+        // saved state (either toggled on/off or value changed). FormSpec uses
+        // ``key in data`` to decide active-state for optional fields, so we
+        // honour the same shape here.
+        const here = el.name in cur;
+        const before = el.name in orig;
+        if (
+            here !== before ||
+            (here && JSON.stringify(cur[el.name]) !== JSON.stringify(orig[el.name]))
+        ) {
+            entry.modified += 1;
+        }
+        acc.set(key, entry);
     }
-    return Array.from(seen.entries()).map(([key, title]) => ({ key, title }));
+    return Array.from(acc.entries()).map(([key, v]) => ({
+        key,
+        title: v.title,
+        modified: v.modified,
+    }));
 });
 
 async function load() {
@@ -215,10 +242,33 @@ onUnmounted(() => {
     font-size: 14px;
     color: var(--text-muted);
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--dimension-3);
     transition:
         background-color 120ms,
         color 120ms,
         border-color 120ms;
+}
+
+.settings-page__topic-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.settings-page__topic-badge {
+    flex-shrink: 0;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+    background: var(--color-corporate-green-50);
+    color: var(--bg-surface);
 }
 
 .settings-page__topic:hover {

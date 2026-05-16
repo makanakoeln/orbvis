@@ -653,6 +653,8 @@ export default {
         unsavedChanges: 'Unsaved changes',
         unsavedChangesHint:
             'You have changed at least one field — save or cancel before leaving the page',
+        modifiedHint:
+            'no changes | 1 field changed since last save | {n} fields changed since last save',
         iconDefaults: 'Icon defaults',
         lineDefaults: 'Line defaults',
         labelDefaults: 'Label defaults',
