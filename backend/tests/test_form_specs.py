@@ -283,3 +283,43 @@ def test_connection_roundtrip_test_backend() -> None:
     assert form["type"] == ["test", None]
     rebuilt = form_data_to_config(form, connection_id="demo")
     assert rebuilt.type == "test"
+
+
+def test_socket_path_rejects_relative() -> None:
+    from app.schemas.connection import ConnectionConfig
+
+    try:
+        ConnectionConfig(id="x", type="livestatus", socket_path="relative/path")
+    except ValueError as exc:
+        assert "absolute" in str(exc).lower()
+    else:
+        raise AssertionError("Expected ValueError for relative socket_path")
+
+
+def test_socket_path_rejects_dotdot() -> None:
+    from app.schemas.connection import ConnectionConfig
+
+    try:
+        ConnectionConfig(id="x", type="livestatus", socket_path="/omd/sites/../etc/shadow")
+    except ValueError as exc:
+        assert ".." in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for '..' in socket_path")
+
+
+def test_socket_path_rejects_nul_byte() -> None:
+    from app.schemas.connection import ConnectionConfig
+
+    try:
+        ConnectionConfig(id="x", type="livestatus", socket_path="/tmp/foo\x00bar")
+    except ValueError as exc:
+        assert "NUL" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for NUL in socket_path")
+
+
+def test_socket_path_accepts_absolute() -> None:
+    from app.schemas.connection import ConnectionConfig
+
+    cfg = ConnectionConfig(id="x", type="livestatus", socket_path="/omd/sites/foo/tmp/run/live")
+    assert cfg.socket_path == "/omd/sites/foo/tmp/run/live"

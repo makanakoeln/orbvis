@@ -19,6 +19,26 @@ _BLOCKED_HOSTS = frozenset(
 )
 
 
+def _validate_socket_path(value: str | None) -> str | None:
+    """Reject Unix-socket paths that an admin shouldn't be able to set.
+
+    Defense in depth: the FormSpec / API endpoints are already admin-gated, but
+    the path is fed to the Livestatus client without any further check. Without
+    these rules a careless admin could probe arbitrary files (``/etc/shadow``)
+    via the connection-test endpoint, or break the connection-storage layer
+    with a path containing NULs.
+    """
+    if value is None or value == "":
+        return value
+    if "\x00" in value:
+        raise ValueError("Socket path must not contain NUL byte")
+    if not value.startswith("/"):
+        raise ValueError("Socket path must be absolute")
+    if ".." in value.split("/"):
+        raise ValueError("Socket path must not contain '..'")
+    return value
+
+
 def _validate_safe_url(value: str | None) -> str | None:
     """Restrict checkmk_url / icinga2_url to safe forms.
 
@@ -79,6 +99,11 @@ class ConnectionConfig(BaseModel):
     def _safe_url(cls, v: str | None) -> str | None:
         return _validate_safe_url(v)
 
+    @field_validator("socket_path")
+    @classmethod
+    def _safe_socket_path(cls, v: str | None) -> str | None:
+        return _validate_socket_path(v)
+
 
 def _redact(cfg: ConnectionConfig) -> ConnectionConfig:
     """Return a copy of *cfg* with secrets replaced by ``REDACTED_SECRET``.
@@ -119,3 +144,8 @@ class ConnectionUpdate(BaseModel):
     @classmethod
     def _safe_url(cls, v: str | None) -> str | None:
         return _validate_safe_url(v)
+
+    @field_validator("socket_path")
+    @classmethod
+    def _safe_socket_path(cls, v: str | None) -> str | None:
+        return _validate_socket_path(v)
