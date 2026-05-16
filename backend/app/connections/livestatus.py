@@ -355,21 +355,6 @@ def _services_summary_from_row(row: LivestatusRow, base: int) -> ServicesSummary
     )
 
 
-class _ExtraFields(TypedDict, total=False):
-    """Tail columns of a Livestatus host/service row — mapped onto ObjectState."""
-
-    address: str
-    alias: str
-    last_check: float | None
-    next_check: float | None
-    state_type: str
-    current_attempt: int
-    max_attempts: int
-    last_state_change: float | None
-    notifications_enabled: bool
-    active_checks_enabled: bool
-
-
 class _MetricInfo(TypedDict):
     """Parsed perf_data entry (label + unit) used for rrddata queries."""
 

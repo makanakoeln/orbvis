@@ -74,19 +74,6 @@ export function fmtValueWithUnit(v: number, unit: string | null | undefined): st
     return `${num} ${prefix}${u}`;
 }
 
-export function fmtMetricVal(v: number, unit?: string): string {
-    // Time units stay in their natural integer scale ("1500 ms" beats "1.5k ms"),
-    // and avoids the SI logic mistaking ms for an Mega-prefix entirely.
-    if (unit && _NON_SI_PREFIXED_UNITS.has(unit)) return Math.round(v).toString();
-    // Single-char SI prefix units (e.g. "k" = kilobytes): scale to base unit so the
-    // magnitude formatting produces the correct combined prefix (116200 k → "116.2M").
-    if (isSingleCharSIPrefix(unit)) return fmtMagnitude(v * _SI_MULT[unit!]);
-    if (!unit || !/^[kKmMgGtT]/.test(unit)) return fmtMagnitude(v);
-    // Multi-char prefixed unit (e.g. "MB", "kB"): scale by SI prefix factor so magnitude
-    // formatting produces a readable combined value ("116130 MB" → "116.1G" + base "B").
-    return fmtMagnitude(v * (_SI_MULT[unit[0]] ?? 1));
-}
-
 // Converts a raw perf_data value to its base unit for use as ECharts series data.
 // ECharts handles scaling internally, so all series values must be in a consistent base unit.
 export function normalizeMetricValue(v: number, unit?: string): number {

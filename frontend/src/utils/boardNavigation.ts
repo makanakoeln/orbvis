@@ -1,4 +1,4 @@
-import type { BoardObject, ObjectState } from '@/types/api';
+import type { BoardObject } from '@/types/api';
 
 function _baseAndSite(
     checkmkUrl: string | null,
@@ -96,29 +96,6 @@ export function buildCheckmkSetupUrl(
             p.mode = 'bi_packs';
         }
         return _wrapInChrome(base, 'wato.py', new URLSearchParams(p));
-    }
-    return null;
-}
-
-export function buildCheckmkUrlFromState(
-    state: ObjectState,
-    checkmkUrl: string | null,
-): string | null {
-    const r = _baseAndSite(checkmkUrl);
-    if (!r) return null;
-    const { base, p } = r;
-
-    if (state.type === 'service' && state.object_id.includes(';')) {
-        const [host, svc] = state.object_id.split(';', 2);
-        p.view_name = 'service';
-        p.host = host;
-        p.service = svc;
-        return _wrapInChrome(base, 'view.py', new URLSearchParams(p));
-    }
-    if (state.type === 'host') {
-        p.view_name = 'hoststatus';
-        p.host = state.object_id;
-        return _wrapInChrome(base, 'view.py', new URLSearchParams(p));
     }
     return null;
 }
