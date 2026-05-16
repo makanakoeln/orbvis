@@ -31,11 +31,12 @@ from cmk.rulesets.v1.form_specs import (
     FixedValue,
     InputHint,
     Integer,
+    MultilineText,
     SingleChoice,
     SingleChoiceElement,
     String,
 )
-from cmk.rulesets.v1.form_specs.validators import MatchRegex
+from cmk.rulesets.v1.form_specs.validators import MatchRegex, NumberInRange
 
 _BOARD_DEFAULTS = OrbDictGroup(
     title=Title("Board defaults"),
@@ -155,6 +156,7 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                     help_text=Help("Default pixel size for object icons on a board."),
                     unit_symbol="px",
                     prefill=DefaultValue(30),
+                    custom_validate=(NumberInRange(min_value=8, max_value=256),),
                 ),
             ),
             # Elements come from app.object_options.LINE_STYLES — the
@@ -166,7 +168,10 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                 group=_OBJECT_APPEARANCE,
                 parameter_form=SingleChoice(
                     title=Title("Line style"),
-                    help_text=Help("Default stroke style for connection lines."),
+                    help_text=Help(
+                        "Default stroke style for new objects of type 'line'. "
+                        "Has no effect on icons, text or gadgets."
+                    ),
                     elements=[
                         SingleChoiceElement(name=name, title=Title(title))
                         for name, title in LINE_STYLES
@@ -183,20 +188,15 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                     elements=[
                         SingleChoiceElement(name="_blank", title=Title("New tab")),
                         SingleChoiceElement(name="_self", title=Title("Same tab")),
-                        SingleChoiceElement(name="_top", title=Title("Top frame")),
                     ],
                     prefill=DefaultValue("_blank"),
                 ),
             ),
-            "z": DictElement(
-                required=True,
-                group=_OBJECT_APPEARANCE,
-                parameter_form=Integer(
-                    title=Title("Stacking order (Z)"),
-                    help_text=Help("Higher value = drawn in front. Touched once per install."),
-                    prefill=DefaultValue(1),
-                ),
-            ),
+            # "Stacking order (Z)" intentionally omitted from the Global
+            # Settings UI — default 1 is fine for ~every install, and the
+            # per-object EditPanel exposes the field where it actually
+            # matters (the few maps that need explicit layering). Pydantic
+            # storage keeps the field with default=1 for backward-compat.
             # ── Object defaults / Labels ──
             # CascadingSingleChoice is the canonical FormSpec way to model
             # "field only matters when this toggle is on". The endpoint
@@ -279,24 +279,26 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                 ),
             ),
             # ── Object defaults / Templates ──
+            # MultilineText (not String) because realistic templates run
+            # several lines — HTML markup, multiple placeholders, leading
+            # newline for layout. A single-line field forces operators to
+            # type unreadable one-liners.
             "hover_template": DictElement(
                 group=_OBJECT_TEMPLATES,
-                parameter_form=String(
+                parameter_form=MultilineText(
                     title=Title("Hover template"),
                     help_text=Help("Shown on hover when a board has no template of its own."),
                     prefill=InputHint("e.g. {{name}} is {{state}}"),
-                    field_size=FieldSize.LARGE,
                 ),
             ),
             "context_template": DictElement(
                 group=_OBJECT_TEMPLATES,
-                parameter_form=String(
+                parameter_form=MultilineText(
                     title=Title("Context-menu template"),
                     help_text=Help(
                         "Right-click fallback. Same placeholders as the hover template."
                     ),
                     prefill=InputHint("e.g. {{name}} is {{state}}"),
-                    field_size=FieldSize.LARGE,
                 ),
             ),
         },

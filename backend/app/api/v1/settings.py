@@ -72,7 +72,6 @@ def _to_form(s: GlobalSettings) -> dict[str, Any]:
         "icon_size": s.icon_size,
         "line_style": s.line_style,
         "url_target": s.url_target,
-        "z": s.z,
         "labels": labels,
         # Optional templates only included when set, matching the flat
         # ``response_model_exclude_none`` behaviour upstream.
@@ -112,7 +111,9 @@ def _from_form(form: dict[str, Any], current: GlobalSettings) -> GlobalSettings:
             icon_size=int(form.get("icon_size", current.icon_size)),
             view_type=str(form.get("view_type", current.view_type)),
             url_target=str(form.get("url_target", current.url_target)),
-            z=int(form.get("z", current.z)),
+            # Stacking order is no longer exposed in the Global Settings
+            # UI — preserve whatever is already on disk.
+            z=current.z,
             line_style=form.get("line_style"),
             label_show=label_show,
             label_size=label_size,

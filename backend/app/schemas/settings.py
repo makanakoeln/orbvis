@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
@@ -36,11 +36,25 @@ def _validate_color(v: object) -> str:
 ColorString = Annotated[str, BeforeValidator(_validate_color)]
 
 
+def _validate_icon_size(v: object) -> int:
+    if not isinstance(v, int) or isinstance(v, bool):
+        raise ValueError("Icon size must be an integer between 8 and 256 pixels.")
+    if v < 8 or v > 256:
+        raise ValueError("Icon size must be between 8 and 256 pixels.")
+    return v
+
+
+# Same BeforeValidator trick as ColorString: hand-rolled message wins
+# over Pydantic's default "Input should be greater than or equal to 8"
+# when surfaced through the FormEdit validation banner.
+IconSize = Annotated[int, BeforeValidator(_validate_icon_size)]
+
+
 class GlobalSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     # Object appearance
-    icon_size: int = 30
+    icon_size: IconSize = Field(default=30)
     view_type: str = "icon"
     url_target: str = "_blank"
     z: int = 1

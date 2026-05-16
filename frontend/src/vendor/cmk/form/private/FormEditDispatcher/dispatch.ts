@@ -12,6 +12,7 @@ import FormDictionary from '@/form/private/forms/FormDictionary/FormDictionary.v
 import FormFixedValue from '@/form/private/forms/FormFixedValue.vue';
 import FormFloat from '@/form/private/forms/FormFloat.vue';
 import FormInteger from '@/form/private/forms/FormInteger.vue';
+import FormMultilineText from '@/form/private/forms/FormMultilineText.vue';
 import FormOrbColor from '@/form/private/forms/FormOrbColor.vue';
 import FormPassword from '@/form/private/forms/FormPassword.vue';
 import FormSingleChoice from '@/form/private/forms/FormSingleChoice.vue';
@@ -26,6 +27,7 @@ const components: Record<string, Component> = {
     fixed_value: FormFixedValue,
     float: FormFloat,
     integer: FormInteger,
+    multiline_text: FormMultilineText,
     password: FormPassword,
     single_choice: FormSingleChoice,
     string: FormString,
