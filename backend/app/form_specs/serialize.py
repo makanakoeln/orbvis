@@ -32,6 +32,20 @@ from cmk.rulesets.v1.form_specs import (
 )
 
 
+# cmk.rulesets.v1.form_specs ships untyped (.pyi-less) for downstream
+# consumers, so mypy sees `String` as `Any`; the subclass is legitimate at
+# runtime — that's exactly how upstream defines its own form-specs internally.
+class OrbColorString(String):  # type: ignore[misc]
+    """String FormSpec that the frontend renders with a native color picker.
+
+    Storage and validation stay String — keeping API + Pydantic shape stable —
+    but the wire type is rewritten to ``orb_color`` so the dispatcher swaps
+    in FormOrbColor.vue. CMK has no first-party color FormSpec (verified
+    against cmk-frontend-vue 2.5), so this is the smallest add-on that
+    keeps the rest of the FormSpec stack unmodified.
+    """
+
+
 @dataclass(frozen=True, kw_only=True)
 class OrbDictGroup(DictGroup):  # type: ignore[misc]
     """DictGroup + optional ``layout`` / explicit ``key`` for OrbVis FormSpecs.
@@ -82,6 +96,12 @@ def serialize_form_spec(spec: FormSpec[object]) -> dict[str, object]:
                 }
                 for name, el in spec.elements.items()
             ],
+        }
+    if isinstance(spec, OrbColorString):
+        return _common(spec, "orb_color") | {
+            "label": _loc(spec.label),
+            "field_size": spec.field_size.name,
+            "input_hint": _input_hint(spec.prefill),
         }
     if isinstance(spec, String):
         return _common(spec, "string") | {

@@ -7,6 +7,7 @@ used by API endpoints. The vendored frontend dispatcher under
 
 from app.form_specs.serialize import (
     FormSpecValidationMessage,
+    OrbColorString,
     OrbDictGroup,
     serialize_form_spec,
 )
@@ -53,6 +54,7 @@ __all__ = [
     "List",
     "Message",
     "MultilineText",
+    "OrbColorString",
     "OrbDictGroup",
     "Password",
     "SingleChoice",

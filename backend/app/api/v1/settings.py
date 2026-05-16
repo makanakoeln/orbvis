@@ -9,6 +9,7 @@ from app.form_specs import serialize_form_spec
 from app.form_specs.global_settings import global_settings_spec
 from app.form_specs.system_settings import system_settings_spec
 from app.models.user import User
+from app.object_options import LINE_STYLES
 from app.schemas.settings import GlobalSettings, SystemSettings
 from app.services import connection_service, settings_service
 
@@ -33,6 +34,21 @@ async def get_settings(current_user: User = Depends(get_current_user)) -> Global
 @router.put("", response_model=GlobalSettings)
 async def update_settings(data: GlobalSettings, _: User = Depends(require_admin)) -> GlobalSettings:
     return settings_service.save_global_settings(data)
+
+
+@router.get("/object-options")
+async def get_object_options(
+    _: User = Depends(get_current_user),
+) -> dict[str, list[dict[str, str]]]:
+    """Canonical name+title catalogues for per-object choice fields.
+
+    Served as plain JSON (not FormSpec) because the per-object EditPanel
+    in the frontend renders these via its own non-FormSpec dropdowns —
+    same data backs both Global Settings FormSpec and the EditPanel.
+    """
+    return {
+        "line_styles": [{"name": name, "title": title} for name, title in LINE_STYLES],
+    }
 
 
 @router.get("/schema")

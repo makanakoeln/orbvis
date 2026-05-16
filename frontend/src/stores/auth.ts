@@ -104,6 +104,14 @@ export const useAuthStore = defineStore('auth', () => {
             useSettingsStore()
                 .load()
                 .catch((e) => console.warn('[OrbVis] Failed to load settings:', e));
+            // Load object-option registry (line styles, …) so dropdowns
+            // in the EditPanel / Global Settings stay in sync. Lazy import
+            // keeps the auth store free of a circular dep through pinia.
+            import('@/stores/objectOptions').then((m) => {
+                m.useObjectOptionsStore()
+                    .ensureLoaded()
+                    .catch((e) => console.warn('[OrbVis] Failed to load object options:', e));
+            });
         } catch {
             // Access token may be expired — try refresh before giving up
             if (refreshToken.value) {

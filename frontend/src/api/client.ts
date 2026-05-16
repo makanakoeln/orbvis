@@ -537,6 +537,20 @@ export const settingsApi = {
         request('/settings/schema', {}, token),
 };
 
+// ---- Object option catalogues (line styles etc.) ----
+
+export interface ObjectOption {
+    name: string;
+    title: string;
+}
+export interface ObjectOptions {
+    line_styles: ObjectOption[];
+}
+
+export const objectOptionsApi = {
+    get: (token: string): Promise<ObjectOptions> => request('/settings/object-options', {}, token),
+};
+
 // ---- System Settings (logging + Checkmk integration) ----
 
 export const systemSettingsApi = {

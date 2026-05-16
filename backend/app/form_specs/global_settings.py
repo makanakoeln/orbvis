@@ -16,7 +16,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from app.form_specs import OrbDictGroup
+from app.form_specs import OrbColorString, OrbDictGroup
+from app.object_options import LINE_STYLES
 
 from cmk.rulesets.v1 import Help, Label, Message, Title
 from cmk.rulesets.v1.form_specs import (
@@ -58,10 +59,6 @@ _OBJECT_TEMPLATES = OrbDictGroup(
 )
 
 _COLOR_REGEX = r"^(#[0-9a-fA-F]{6}|transparent)$"
-_COLOR_HELP = Help(
-    "Hex code like '#1a73e8' or the literal 'transparent'. "
-    "Native color picker is not part of the FormSpec component set yet."
-)
 _COLOR_ERROR = Message("Use a 6-digit hex code like '#ffffff' or the literal 'transparent'.")
 
 
@@ -148,16 +145,21 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                     prefill=DefaultValue(30),
                 ),
             ),
+            # Elements come from app.object_options.LINE_STYLES — the
+            # canonical name+title list also served by the registry endpoint.
+            # The per-object EditPanel hits that same endpoint at boot, so the
+            # two surfaces can never drift again.
             "line_style": DictElement(
+                required=True,
                 group=_OBJECT_APPEARANCE,
                 parameter_form=SingleChoice(
                     title=Title("Line style"),
                     help_text=Help("Default stroke style for connection lines."),
                     elements=[
-                        SingleChoiceElement(name="solid", title=Title("Solid")),
-                        SingleChoiceElement(name="dashed", title=Title("Dashed")),
-                        SingleChoiceElement(name="dotted", title=Title("Dotted")),
+                        SingleChoiceElement(name=name, title=Title(title))
+                        for name, title in LINE_STYLES
                     ],
+                    prefill=DefaultValue("plain"),
                 ),
             ),
             "url_target": DictElement(
@@ -205,9 +207,8 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
             "label_color": DictElement(
                 required=True,
                 group=_OBJECT_LABELS,
-                parameter_form=String(
+                parameter_form=OrbColorString(
                     title=Title("Label color"),
-                    help_text=_COLOR_HELP,
                     prefill=DefaultValue("#ffffff"),
                     custom_validate=(MatchRegex(_COLOR_REGEX, error_msg=_COLOR_ERROR),),
                 ),
@@ -215,9 +216,8 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
             "label_background": DictElement(
                 required=True,
                 group=_OBJECT_LABELS,
-                parameter_form=String(
+                parameter_form=OrbColorString(
                     title=Title("Label background"),
-                    help_text=_COLOR_HELP,
                     prefill=DefaultValue("transparent"),
                     custom_validate=(MatchRegex(_COLOR_REGEX, error_msg=_COLOR_ERROR),),
                 ),

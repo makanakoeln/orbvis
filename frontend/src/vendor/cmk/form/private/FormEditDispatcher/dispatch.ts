@@ -12,6 +12,7 @@ import FormDictionary from '@/form/private/forms/FormDictionary/FormDictionary.v
 import FormFixedValue from '@/form/private/forms/FormFixedValue.vue';
 import FormFloat from '@/form/private/forms/FormFloat.vue';
 import FormInteger from '@/form/private/forms/FormInteger.vue';
+import FormOrbColor from '@/form/private/forms/FormOrbColor.vue';
 import FormPassword from '@/form/private/forms/FormPassword.vue';
 import FormSingleChoice from '@/form/private/forms/FormSingleChoice.vue';
 import FormString from '@/form/private/forms/FormString.vue';
@@ -28,6 +29,9 @@ const components: Record<string, Component> = {
     password: FormPassword,
     single_choice: FormSingleChoice,
     string: FormString,
+    // OrbVis-only: a String + native color picker. Emitted by
+    // backend OrbColorString — see app/form_specs/serialize.py.
+    orb_color: FormOrbColor,
 };
 
 export function initializeComponentRegistry() {

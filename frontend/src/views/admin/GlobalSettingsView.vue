@@ -56,7 +56,11 @@
                 </button>
             </nav>
 
-            <div class="settings-page__detail" :data-active="activeGroup">
+            <div
+                class="settings-page__detail"
+                :data-active="activeGroup"
+                :data-labels-hidden="labelsHidden ? '1' : null"
+            >
                 <FormEdit v-model:data="data" :spec="schema" :backend-validation="validation" />
             </div>
         </div>
@@ -148,6 +152,17 @@ const subtitle = computed(
 function sidebarKey(rawKey: string): string {
     return OBJECT_SUB_GROUPS.has(rawKey) ? OBJECT_VIRTUAL_KEY : rawKey;
 }
+
+// Reactively drives the CSS class that fades out label_size / label_color /
+// label_background / label_x / label_y when "Show object labels" is off.
+// We deliberately keep the saved values around (don't blank them out)
+// so toggling Show-labels back on restores everything the operator
+// painstakingly tuned. Backend storage stays flat — this is purely a
+// UX overlay, not a schema change.
+const labelsHidden = computed(() => {
+    const cur = (data.value ?? {}) as Record<string, unknown>;
+    return cur.label_show === false;
+});
 
 const sidebarGroups = computed<{ key: string; title: string; modified: number }[]>(() => {
     const dict = schema.value as DictionarySchema | null;
@@ -445,6 +460,27 @@ onUnmounted(() => {
 .settings-page__detail[data-active='object_defaults'] :deep(tr[data-group='object_labels']),
 .settings-page__detail[data-active='object_defaults'] :deep(tr[data-group='object_templates']) {
     display: table-row !important;
+}
+
+/* When "Show object labels" is off, the five label_* tuning fields are
+   inert: dimmed, hit-blocking, and aria-hidden. Operator sees the
+   toggle is the master switch — no need for them to wonder why the
+   size/color inputs are still drawing focus when nothing renders. The
+   "Show object labels" group itself stays interactive so the toggle
+   can be re-enabled. */
+.settings-page__detail[data-labels-hidden='1']
+    :deep(tr[data-group='object_labels'] [data-name='label_size']),
+.settings-page__detail[data-labels-hidden='1']
+    :deep(tr[data-group='object_labels'] [data-name='label_color']),
+.settings-page__detail[data-labels-hidden='1']
+    :deep(tr[data-group='object_labels'] [data-name='label_background']),
+.settings-page__detail[data-labels-hidden='1']
+    :deep(tr[data-group='object_labels'] [data-name='label_x']),
+.settings-page__detail[data-labels-hidden='1']
+    :deep(tr[data-group='object_labels'] [data-name='label_y']) {
+    opacity: 0.35;
+    pointer-events: none;
+    user-select: none;
 }
 
 /* Bigger group title (h3-ish) and visible help line under it, since the
