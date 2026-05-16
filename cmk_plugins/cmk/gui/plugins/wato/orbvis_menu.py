@@ -1,10 +1,30 @@
 # OrbVis – main navigation bar entry (after Setup)
 # Supports Checkmk 2.4, 2.5, and 2.6+
 
+import os
+import pathlib
+
 try:
     from cmk.ccc.site import url_prefix as _url_prefix
 except ImportError:
     from cmk.utils.site import url_prefix as _url_prefix  # CMK 2.3
+
+
+_OMD_ROOT = pathlib.Path(os.environ.get("OMD_ROOT", ""))
+_LOCAL_INSTALL_MARKER = _OMD_ROOT / "etc" / "apache" / "conf.d" / "orbvis.conf"
+
+
+def _is_local_install() -> bool:
+    """Whether OrbVis is installed on this OMD site.
+
+    The plugin file itself may have been pushed here by the WATO replication
+    snapshot from a central site that runs OrbVis — in that case there's no
+    local backend to link to, so registering a main-menu entry would render
+    a button that 404s on every click. Use the Apache vhost drop-in (etc/
+    apache/conf.d/orbvis.conf) as the install marker since it sits outside
+    the replication paths and is only written by install_cmk.sh / orbvis-setup.
+    """
+    return _LOCAL_INSTALL_MARKER.is_file()
 
 
 class _SelfActive(str):
@@ -65,7 +85,7 @@ try:
     from cmk.gui.type_defs import MegaMenu, TopicMenuItem, TopicMenuTopic
 
     def _orbvis_topics_24() -> list:
-        if not _user_may_use():
+        if not _is_local_install() or not _user_may_use():
             return []
         items = [
             TopicMenuItem(
@@ -128,7 +148,7 @@ try:
 
         def _patched_get_items_24(self):  # type: ignore[no-untyped-def]
             items = _orig_get_items_24(self)
-            if not _user_may_use():
+            if not _is_local_install() or not _user_may_use():
                 return [item for item in items if item.name != "orbvis"]
             return [
                 item._replace(icon=_SelfActive(str(item.icon))) if item.name == "orbvis" else item
@@ -149,7 +169,7 @@ except ImportError:
         from cmk.gui.utils.roles import UserPermissions
 
         def _orbvis_topics_25(user_permissions: UserPermissions) -> list:
-            if not _user_may_use():
+            if not _is_local_install() or not _user_may_use():
                 return []
             entries = [
                 MainMenuItem(
@@ -220,7 +240,7 @@ except ImportError:
             def _patched_show_25(
                 self, user_permissions: UserPermissions, popup_triggers: list
             ) -> None:  # type: ignore[no-untyped-def]
-                if _user_may_use():
+                if _is_local_install() and _user_may_use():
                     popup_triggers = [
                         pt._replace(icon=_SelfActive(str(pt.icon))) if pt.name == "orbvis" else pt
                         for pt in popup_triggers
@@ -258,7 +278,7 @@ except ImportError:
             type.__setattr__(NavItemIdEnum, _id, _member)
 
             def _orbvis_topics_26(user_permissions: UserPermissions) -> list:
-                if not _user_may_use():
+                if not _is_local_install() or not _user_may_use():
                     return []
                 entries = [
                     NavItemTopicEntry(

@@ -178,14 +178,14 @@ if [[ "$ACTION" == "remove" ]]; then
   quietly "${AS_ROOT[@]}" rm -f "$APACHE_CONF" "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis"
   quietly "${AS_SITE[@]}" "$PYTHON3" -m pip uninstall -y orbvis-cmk 2>/dev/null || true
   quietly "${AS_ROOT[@]}" rm -rf "$HTDOCS_DIR" "$VENV_DIR" "$ORBVIS_DIR/src" "$CMK_PLUGINS_DST" "$DB_FILE" "$ENV_FILE" "$CONNECTIONS_FILE"
-  # Direct-written plugins from a previous MKP install — these get pushed via
-  # WATO replication, so leaving them behind would propagate stale entries
-  # to every remote site on the next Activate Changes.
-  for legacy_plugin in \
+  # Bridge plugins live in local/ and are part of the WATO replication snapshot;
+  # leaving them behind would propagate broken links to every remote on the
+  # next Activate Changes.
+  for orbvis_plugin in \
       "$SITE_ROOT/local/lib/python3/cmk/gui/plugins/sidebar/orbvis_boards.py" \
       "$SITE_ROOT/local/lib/python3/cmk/gui/plugins/wato/orbvis_menu.py" \
       "$SITE_ROOT/local/lib/python3/cmk/gui/plugins/wato/orbvis_permissions.py"; do
-    quietly "${AS_ROOT[@]}" rm -f "$legacy_plugin"
+    quietly "${AS_ROOT[@]}" rm -f "$orbvis_plugin"
   done
   # Sweep up any leftovers from pre-migration installs under local/share/orbvis/.
   quietly "${AS_ROOT[@]}" rm -rf \
@@ -603,23 +603,38 @@ quietly "${AS_ROOT[@]}" ln -sf "$INIT_SCRIPT" "$SITE_ROOT/etc/rc.d/85-orbvis"
 ok "OrbVis registered as OMD service"
 
 # 7. Checkmk GUI plugins
+#
+# Bridge plugins are KB-sized and live under ``local/lib/python3/cmk/gui/plugins``
+# on purpose: that path *is* in cmk.gui.watolib.activate_changes.replication_paths
+# (ident="local"), so a WATO Activate Changes propagates them from the master
+# to every remote. The plugins themselves are auto-detecting — they check
+# ``etc/apache/conf.d/orbvis.conf`` (outside replication) and render
+# "OrbVis is not installed on this site" when the host doesn't run a local
+# backend, so the propagated copy is harmless on those remotes.
+#
+# An earlier iteration installed them via pip-editable into ``var/orbvis/``,
+# which kept the legacy duplicate-registration issue away but also stopped the
+# WATO sync from picking them up — broken in distributed setups. The
+# direct-copy path below is the documented design (see 2026-05-12 session
+# notes / docs/architecture.md).
 step "Installing Checkmk GUI plugins"
-# Sweep up direct-written plugins from a previous MKP install — having both
-# the editable install (below) and the MKP-shipped copies in
-# ``local/lib/python3/cmk/gui/plugins/...`` registers the same snapin twice
-# and trips CMK's startup duplicate check. The legacy copies also still
-# reference local/share/orbvis paths.
-for legacy_plugin in \
-    "$SITE_ROOT/local/lib/python3/cmk/gui/plugins/sidebar/orbvis_boards.py" \
-    "$SITE_ROOT/local/lib/python3/cmk/gui/plugins/wato/orbvis_menu.py" \
-    "$SITE_ROOT/local/lib/python3/cmk/gui/plugins/wato/orbvis_permissions.py"; do
-  quietly "${AS_ROOT[@]}" rm -f "$legacy_plugin"
+# Remove the old pip-editable install, if present. Repeated runs of this
+# script must not leave both the new direct copy AND the editable copy in
+# place — that's the duplicate-registration trap. Uninstall ``orbvis-cmk``
+# best-effort.
+quietly "${AS_SITE[@]}" "$PYTHON3" -m pip uninstall -y orbvis-cmk 2>/dev/null || true
+quietly "${AS_ROOT[@]}" rm -rf "$CMK_PLUGINS_DST"
+for plugin_relpath in \
+    "lib/python3/cmk/gui/plugins/sidebar/orbvis_boards.py" \
+    "lib/python3/cmk/gui/plugins/wato/orbvis_menu.py" \
+    "lib/python3/cmk/gui/plugins/wato/orbvis_permissions.py"; do
+  src="$CMK_PLUGINS_SRC/${plugin_relpath#lib/python3/}"
+  dst="$SITE_ROOT/local/$plugin_relpath"
+  quietly "${AS_ROOT[@]}" mkdir -p "$(dirname "$dst")"
+  quietly "${AS_ROOT[@]}" cp "$src" "$dst"
 done
-quietly "${AS_ROOT[@]}" mkdir -p "$CMK_PLUGINS_DST"
-quietly "${AS_ROOT[@]}" cp -r "$CMK_PLUGINS_SRC/." "$CMK_PLUGINS_DST/"
-quietly "${AS_ROOT[@]}" chown -R "$SITE:$SITE" "$CMK_PLUGINS_DST"
-quietly "${AS_SITE[@]}" "$PYTHON3" -m pip install --quiet -e "$CMK_PLUGINS_DST"
-ok "Checkmk GUI plugins installed"
+quietly "${AS_ROOT[@]}" chown -R "$SITE:$SITE" "$SITE_ROOT/local/lib/python3/cmk/gui/plugins"
+ok "Checkmk GUI plugins installed (in local/lib/, propagated via WATO sync)"
 
 # 8. Ownership
 step "Setting file permissions"
