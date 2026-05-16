@@ -10,21 +10,23 @@ from __future__ import annotations
 
 from app.form_specs import OrbDictGroup
 
-from cmk.rulesets.v1 import Help, Title
+from cmk.rulesets.v1 import Help, Message, Title
 from cmk.rulesets.v1.form_specs import (
     DefaultValue,
     DictElement,
     Dictionary,
     FieldSize,
     InputHint,
+    Integer,
     SingleChoice,
     SingleChoiceElement,
     String,
 )
+from cmk.rulesets.v1.form_specs.validators import MatchRegex, NumberInRange
 
 _LOGGING = OrbDictGroup(
     title=Title("Logging"),
-    help_text=Help("Backend log verbosity. Empty falls back to the LOG_LEVEL env var."),
+    help_text=Help("Backend log verbosity."),
     key="logging",
 )
 _CHECKMK = OrbDictGroup(
@@ -32,6 +34,17 @@ _CHECKMK = OrbDictGroup(
     help_text=Help("URL fallback used by connections without their own checkmk_url."),
     key="checkmk",
 )
+_RUNTIME = OrbDictGroup(
+    title=Title("Runtime tuning"),
+    help_text=Help("Polling cadence and session lifetime — affects every board."),
+    key="runtime",
+)
+
+# Reject path-only strings like ``/SITE`` that look like a URL but break
+# every per-connection fallback. The base URL has to be a proper absolute
+# http(s) URL the browser can hit.
+_URL_REGEX = r"^https?://.+"
+_URL_ERROR = Message("Must be a full URL starting with http:// or https://.")
 
 
 def system_settings_spec() -> Dictionary:
@@ -42,22 +55,31 @@ def system_settings_spec() -> Dictionary:
             "and apply across all boards."
         ),
         elements={
+            # ``env_default`` is a sentinel branch (not a real Python log
+            # level) — the /system/form mapper turns it into ``None`` so
+            # the runtime falls back to the LOG_LEVEL env var. Avoids the
+            # confusing optional-toggle the upstream FormDictionary draws
+            # when ``required`` is unset.
             "log_level": DictElement(
+                required=True,
                 group=_LOGGING,
                 parameter_form=SingleChoice(
                     title=Title("Log level"),
                     help_text=Help(
-                        "Backend log threshold. Empty falls back to the LOG_LEVEL "
-                        "environment variable."
+                        "Choose 'Use environment default' to follow the LOG_LEVEL "
+                        "environment variable. Any explicit level here overrides it."
                     ),
                     elements=[
+                        SingleChoiceElement(
+                            name="env_default", title=Title("Use environment default")
+                        ),
                         SingleChoiceElement(name="DEBUG", title=Title("Debug")),
                         SingleChoiceElement(name="INFO", title=Title("Info")),
                         SingleChoiceElement(name="WARNING", title=Title("Warning")),
                         SingleChoiceElement(name="ERROR", title=Title("Error")),
                         SingleChoiceElement(name="CRITICAL", title=Title("Critical")),
                     ],
-                    prefill=DefaultValue("INFO"),
+                    prefill=DefaultValue("env_default"),
                 ),
             ),
             "checkmk_url": DictElement(
@@ -65,11 +87,42 @@ def system_settings_spec() -> Dictionary:
                 parameter_form=String(
                     title=Title("Checkmk base URL"),
                     help_text=Help(
-                        "Fallback Checkmk URL for connections without their own. "
-                        "Auto-populated when OrbVis runs inside a Checkmk OMD site."
+                        "Fallback Checkmk URL used when a connection has no checkmk_url "
+                        "of its own. Auto-populated on OMD deployments; set explicitly "
+                        "in dev setups. Must be a full http(s) URL — leave unset to "
+                        "rely on per-connection values only."
                     ),
                     prefill=InputHint("https://checkmk.example.com/mysite"),
                     field_size=FieldSize.LARGE,
+                    custom_validate=(MatchRegex(_URL_REGEX, error_msg=_URL_ERROR),),
+                ),
+            ),
+            "state_refresh_interval": DictElement(
+                group=_RUNTIME,
+                parameter_form=Integer(
+                    title=Title("State refresh interval"),
+                    help_text=Help(
+                        "How often the backend re-polls connection state. Lower = "
+                        "more live but more load on the monitoring backend. "
+                        "Unchecked uses the STATE_REFRESH_INTERVAL env default."
+                    ),
+                    unit_symbol="s",
+                    prefill=DefaultValue(5),
+                    custom_validate=(NumberInRange(min_value=1, max_value=300),),
+                ),
+            ),
+            "access_token_expire_minutes": DictElement(
+                group=_RUNTIME,
+                parameter_form=Integer(
+                    title=Title("Login session lifetime"),
+                    help_text=Help(
+                        "How long an access token stays valid before the browser has "
+                        "to silently refresh. Short = more re-auth, better revocation. "
+                        "Unchecked uses the ACCESS_TOKEN_EXPIRE_MINUTES env default."
+                    ),
+                    unit_symbol="min",
+                    prefill=DefaultValue(60),
+                    custom_validate=(NumberInRange(min_value=5, max_value=1440),),
                 ),
             ),
         },

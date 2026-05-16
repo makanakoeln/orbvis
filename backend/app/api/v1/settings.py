@@ -73,10 +73,11 @@ def _to_form(s: GlobalSettings) -> dict[str, Any]:
         "line_style": s.line_style,
         "url_target": s.url_target,
         "labels": labels,
-        # Optional templates only included when set, matching the flat
+        # Optional templates / URLs only included when set, matching the flat
         # ``response_model_exclude_none`` behaviour upstream.
         **({"hover_template": s.hover_template} if s.hover_template is not None else {}),
         **({"context_template": s.context_template} if s.context_template is not None else {}),
+        **({"default_tile_url": s.default_tile_url} if s.default_tile_url is not None else {}),
     }
 
 
@@ -125,6 +126,7 @@ def _from_form(form: dict[str, Any], current: GlobalSettings) -> GlobalSettings:
             context_template=form.get("context_template"),
             default_backend_id=str(form.get("default_backend_id", current.default_backend_id)),
             default_map_type=str(form.get("default_map_type", current.default_map_type)),
+            default_tile_url=form.get("default_tile_url") or None,
         )
     except ValidationError as e:
         # Re-shape Pydantic's loc=["label_color"] into the nested form
@@ -209,6 +211,88 @@ async def update_system_settings(
     data: SystemSettings, _: User = Depends(require_admin)
 ) -> SystemSettings:
     return settings_service.save_system_settings(data)
+
+
+def _optional_str(v: object) -> str | None:
+    if v is None or v == "":
+        return None
+    if isinstance(v, str):
+        return v
+    raise ValueError(f"expected string, got {type(v).__name__}")
+
+
+def _optional_int(v: object) -> int | None:
+    if v is None or v == "":
+        return None
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return v
+    if isinstance(v, str):
+        return int(v)
+    raise ValueError(f"expected int-like value, got {type(v).__name__}")
+
+
+def _system_to_form(s: SystemSettings) -> dict[str, object]:
+    """Flat SystemSettings → FormSpec wire shape.
+
+    Maps the storage shape (``log_level: LogLevel | None``) into the
+    FormSpec singleton-with-sentinel shape (``log_level: "env_default"
+    | "DEBUG" | …``). The two int knobs piggy-back unchanged but get
+    dropped when ``None`` so the optional-toggle stays inactive.
+    """
+    out: dict[str, object] = {
+        "log_level": s.log_level if s.log_level is not None else "env_default",
+    }
+    if s.checkmk_url is not None:
+        out["checkmk_url"] = s.checkmk_url
+    if s.state_refresh_interval is not None:
+        out["state_refresh_interval"] = s.state_refresh_interval
+    if s.access_token_expire_minutes is not None:
+        out["access_token_expire_minutes"] = s.access_token_expire_minutes
+    return out
+
+
+def _system_from_form(form: dict[str, object]) -> SystemSettings:
+    raw_level = form.get("log_level", "env_default")
+    log_level: object
+    if raw_level == "env_default":
+        log_level = None
+    else:
+        log_level = raw_level
+    try:
+        return SystemSettings(
+            log_level=log_level,  # type: ignore[arg-type]
+            checkmk_url=_optional_str(form.get("checkmk_url")),
+            state_refresh_interval=_optional_int(form.get("state_refresh_interval")),
+            access_token_expire_minutes=_optional_int(form.get("access_token_expire_minutes")),
+        )
+    except ValidationError as e:
+        details: list[dict[str, object]] = []
+        for err in e.errors():
+            details.append(
+                {
+                    "loc": list(err.get("loc") or []),
+                    "msg": err.get("msg"),
+                    "type": err.get("type"),
+                    "input": err.get("input"),
+                }
+            )
+        raise HTTPException(status_code=422, detail=details) from e
+
+
+@router.get("/system/form")
+async def get_system_settings_form(_: User = Depends(get_current_user)) -> dict[str, object]:
+    return _system_to_form(settings_service.get_system_settings())
+
+
+@router.put("/system/form")
+async def update_system_settings_form(
+    data: dict[str, object],
+    _: User = Depends(require_admin),
+) -> dict[str, object]:
+    flat = _system_from_form(dict(data))
+    return _system_to_form(settings_service.save_system_settings(flat))
 
 
 @router.get("/system/schema")

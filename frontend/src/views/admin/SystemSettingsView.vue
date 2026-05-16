@@ -86,7 +86,6 @@ import { useFormSpecSchema } from '@/composables/useFormSpecSchema';
 import { useSaveBarState } from '@/composables/useSaveBarState';
 import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard';
 import { useAuthStore } from '@/stores/auth';
-import type { SystemSettings } from '@/types/api';
 
 type Validation = NonNullable<VueFormspecComponents['validation_message']>[];
 
@@ -172,7 +171,7 @@ async function load() {
         return;
     }
     try {
-        const [, values] = await Promise.all([loadSchema(), systemSettingsApi.get(token)]);
+        const [, values] = await Promise.all([loadSchema(), systemSettingsApi.getForm(token)]);
         if (schemaError.value) {
             loadError.value = schemaError.value;
             return;
@@ -200,7 +199,10 @@ async function handleSave() {
     saveError.value = '';
     savedOk.value = false;
     try {
-        const updated = await systemSettingsApi.update(data.value as SystemSettings, token);
+        const updated = await systemSettingsApi.updateForm(
+            data.value as Record<string, unknown>,
+            token,
+        );
         initialData.value = deepClone(updated);
         data.value = deepClone(updated);
         savedOk.value = true;
@@ -314,7 +316,12 @@ onUnmounted(() => {
     border-left: 3px solid transparent;
     padding: var(--dimension-3) var(--dimension-5);
     font-size: 14px;
-    color: var(--text-muted);
+
+    /* Same theme-portable choice as GlobalSettingsView — ``--text-muted``
+       is near-white in the CMK light theme and disappears on the white
+       sidebar background. */
+    color: var(--text);
+    opacity: 0.7;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -323,6 +330,7 @@ onUnmounted(() => {
     transition:
         background-color 120ms,
         color 120ms,
+        opacity 120ms,
         border-color 120ms;
 }
 
@@ -346,32 +354,37 @@ onUnmounted(() => {
 }
 
 .settings-page__topic:hover {
-    background: var(--bg-hover, rgb(255 255 255 / 4%));
-    color: var(--text);
+    background: var(--bg-hover, rgb(127 127 127 / 8%));
+    opacity: 1;
 }
 
 .settings-page__topic--active {
     border-left-color: var(--color-corporate-green-50);
     background: rgb(21 209 160 / 12%);
     color: var(--text);
+    opacity: 1;
     font-weight: 600;
 }
 
-.settings-page__detail :deep(tr[data-group]) {
+/* Match by exact key — nested FormDictionary rows (CascadingSingleChoice
+   branches etc.) use ``-ungrouped-N`` keys and would otherwise be hit by
+   a generic ``tr[data-group]`` blanket. */
+.settings-page__detail :deep(tr[data-group='logging']),
+.settings-page__detail :deep(tr[data-group='checkmk']),
+.settings-page__detail :deep(tr[data-group='runtime']) {
     display: none !important;
 }
 
 .settings-page__detail[data-active='logging'] :deep(tr[data-group='logging']),
-.settings-page__detail[data-active='checkmk'] :deep(tr[data-group='checkmk']) {
+.settings-page__detail[data-active='checkmk'] :deep(tr[data-group='checkmk']),
+.settings-page__detail[data-active='runtime'] :deep(tr[data-group='runtime']) {
     display: table-row !important;
 }
 
+/* Each sidebar entry maps 1:1 to a single group on this page — hide the
+   inline group-title because the sidebar already names it. */
 .settings-page__detail :deep(.form-dictionary__group-title) {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: var(--dimension-2);
-    padding: 0;
-    border: 0;
+    display: none;
 }
 
 .settings-page__detail :deep(.form-help) {

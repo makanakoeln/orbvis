@@ -58,9 +58,14 @@ def hash_password(password: str) -> str:
 
 
 def create_access_token(subject: str | int, expires_delta: timedelta | None = None) -> str:
-    expire = datetime.now(UTC) + (
-        expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
-    )
+    if expires_delta is None:
+        # Late import to avoid a security ↔ settings_service ↔ schemas cycle.
+        from app.services import settings_service
+
+        expires_delta = timedelta(
+            minutes=settings_service.get_effective_access_token_expire_minutes()
+        )
+    expire = datetime.now(UTC) + expires_delta
     payload = {"sub": str(subject), "exp": expire, "type": "access", "jti": uuid4().hex}
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 

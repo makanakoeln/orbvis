@@ -571,6 +571,15 @@ export const systemSettingsApi = {
 
     getSchema: (token: string): Promise<Record<string, unknown>> =>
         request('/settings/system/schema', {}, token),
+
+    // FormSpec-shaped pair. ``log_level`` is mapped to/from the
+    // "env_default" sentinel branch server-side so the FormEdit can
+    // render it as a plain SingleChoice instead of an optional toggle.
+    getForm: (token: string): Promise<Record<string, unknown>> =>
+        request('/settings/system/form', {}, token),
+
+    updateForm: (data: Record<string, unknown>, token: string): Promise<Record<string, unknown>> =>
+        request('/settings/system/form', { method: 'PUT', body: JSON.stringify(data) }, token),
 };
 
 // ---- Checkmk REST API (direct browser → CMK, same-origin session) ----

@@ -72,6 +72,9 @@ class GlobalSettings(BaseModel):
     # New-board defaults
     default_backend_id: str = "live_1"
     default_map_type: str = "static"
+    # Default tile URL applied to new Geo boards. ``None`` keeps the per-board
+    # default the BoardSettingsModal already picks (CartoDB dark in dark mode).
+    default_tile_url: str | None = None
 
 
 class SystemSettings(BaseModel):
@@ -81,4 +84,11 @@ class SystemSettings(BaseModel):
     log_level: LogLevel | None = None
     # Global Checkmk URL used as fallback when a connection has no checkmk_url set.
     # In Checkmk/OMD deployments this is auto-populated by the OrbVis backend on first boot.
+    # Empty string allowed for "no override"; non-empty must be a proper http(s) URL.
     checkmk_url: str | None = None
+    # Runtime knobs that used to live in env-only ``core/config.py``. Migrated
+    # here so an operator can tune them without restarting the backend, and
+    # so the values survive site upgrades that re-render the env file.
+    # ``None`` falls back to the ``Settings`` env default at request time.
+    state_refresh_interval: Annotated[int, Field(ge=1, le=300)] | None = None
+    access_token_expire_minutes: Annotated[int, Field(ge=5, le=1440)] | None = None

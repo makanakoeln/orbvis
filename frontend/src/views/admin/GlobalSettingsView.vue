@@ -388,7 +388,12 @@ onUnmounted(() => {
     border-left: 3px solid transparent;
     padding: var(--dimension-3) var(--dimension-5);
     font-size: 14px;
-    color: var(--text-muted);
+
+    /* ``--text-muted`` is near-white in the CMK light theme — invisible on a
+       white sidebar background. Use the regular body text color and lean on
+       weight/active-styling instead to mark the inactive state. */
+    color: var(--text);
+    opacity: 0.7;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -397,6 +402,7 @@ onUnmounted(() => {
     transition:
         background-color 120ms,
         color 120ms,
+        opacity 120ms,
         border-color 120ms;
 }
 
@@ -420,14 +426,15 @@ onUnmounted(() => {
 }
 
 .settings-page__topic:hover {
-    background: var(--bg-hover, rgb(255 255 255 / 4%));
-    color: var(--text);
+    background: var(--bg-hover, rgb(127 127 127 / 8%));
+    opacity: 1;
 }
 
 .settings-page__topic--active {
     border-left-color: var(--color-corporate-green-50);
     background: rgb(21 209 160 / 12%);
     color: var(--text);
+    opacity: 1;
     font-weight: 600;
 }
 
@@ -477,6 +484,15 @@ onUnmounted(() => {
 .settings-page__detail[data-active='object_defaults']
     :deep(tr[data-group='object_templates'] > td) {
     padding-bottom: var(--dimension-6);
+}
+
+/* When a sidebar entry maps 1:1 to a single group, hide the inline
+   title — the sidebar already shows "Board defaults". For "Object
+   defaults" the inline titles ("Appearance", "Labels", "Templates")
+   stay because they're distinct sub-headings within one sidebar entry. */
+.settings-page__detail[data-active='board_defaults']
+    :deep(tr[data-group='board_defaults'] .form-dictionary__group-title) {
+    display: none;
 }
 
 /* Bigger group title (h3-ish) and visible help line under it, since the

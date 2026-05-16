@@ -27,7 +27,7 @@ from app.core.websocket import manager
 from app.models.user import User
 from app.schemas.board import BoardConfig, FlowView
 from app.schemas.state import MapStates, ObjectState
-from app.services import board_service, state_service
+from app.services import board_service, settings_service, state_service
 from app.services.auth_service import authenticate_bearer_token
 
 logger = logging.getLogger(__name__)
@@ -207,7 +207,9 @@ async def _broadcast_loop(board_name: str) -> None:
                 user_count,
                 elapsed_ms,
             )
-            await asyncio.sleep(settings.state_refresh_interval)
+            # Read fresh each tick so changes from the System settings UI
+            # take effect without restarting the backend.
+            await asyncio.sleep(settings_service.get_effective_state_refresh_interval())
     except Exception:
         logger.exception("Broadcast loop error for board '%s'", board_name)
     finally:

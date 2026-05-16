@@ -76,18 +76,19 @@ _COLOR_ERROR = Message("Use a 6-digit hex code like '#ffffff' or the literal 'tr
 
 
 def _default_connection_element(connection_ids: Sequence[str]) -> DictElement[object]:
-    """Render Default connection as SingleChoice over actual connection IDs.
+    """Render Connection as SingleChoice over actual connection IDs.
 
     A free-text String let a typo silently break every newly created board's
-    state lookup. Empty list → keep field disabled with a helpful message.
+    state lookup. Empty list → keep field disabled with a helpful message
+    that nudges the operator toward the Connections page first.
     """
     if connection_ids:
         return DictElement(
             required=True,
             group=_BOARD_DEFAULTS,
             parameter_form=SingleChoice(
-                title=Title("Default connection"),
-                help_text=Help("Connection pre-selected when creating a new board."),
+                title=Title("Connection"),
+                help_text=Help("Pre-selected when creating a new board."),
                 elements=[
                     SingleChoiceElement(name=cid, title=Title(cid)) for cid in connection_ids
                 ],
@@ -98,10 +99,10 @@ def _default_connection_element(connection_ids: Sequence[str]) -> DictElement[ob
         required=True,
         group=_BOARD_DEFAULTS,
         parameter_form=String(
-            title=Title("Default connection"),
+            title=Title("Connection"),
             help_text=Help(
-                "Connection ID pre-selected when creating a new board. "
-                "Create a connection first to enable selection from a list."
+                "No connections configured yet. Open Administration → Connections "
+                "and add one — then come back here to set it as the default."
             ),
             field_size=FieldSize.LARGE,
         ),
@@ -123,7 +124,8 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                 required=True,
                 group=_BOARD_DEFAULTS,
                 parameter_form=SingleChoice(
-                    title=Title("Default board type"),
+                    title=Title("Board type"),
+                    help_text=Help("Pre-selected board type in the 'New board' modal."),
                     elements=[
                         SingleChoiceElement(name="static", title=Title("Static board")),
                         SingleChoiceElement(name="worldmap", title=Title("Geo board")),
@@ -131,6 +133,22 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                         SingleChoiceElement(name="radar", title=Title("Radar")),
                     ],
                     prefill=DefaultValue("static"),
+                ),
+            ),
+            # Optional — most installs use the same tile server everywhere, so
+            # pin it here once instead of pasting the URL into every Geo board.
+            # ``None`` keeps each board's per-board ``tile_url`` choice intact.
+            "default_tile_url": DictElement(
+                group=_BOARD_DEFAULTS,
+                parameter_form=String(
+                    title=Title("Default tile URL (Geo boards)"),
+                    help_text=Help(
+                        "Map-tile server applied to new Geo boards. Use the OSM-style "
+                        "template syntax with {z}/{x}/{y}. Leave unset to let each "
+                        "board pick its own default."
+                    ),
+                    prefill=InputHint("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
+                    field_size=FieldSize.LARGE,
                 ),
             ),
             # ── Object defaults / Appearance ──

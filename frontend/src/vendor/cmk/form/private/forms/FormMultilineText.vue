@@ -53,7 +53,34 @@ const style = computed(() => {
 </template>
 
 <style scoped>
+/* OrbVis additions on top of the upstream vendored file: the raw
+   <textarea> picks up no theme background / border, so in dark mode it
+   ends up as a near-invisible black rectangle on a near-black surface.
+   These rules pull the same theme vars CmkInput uses so the textarea
+   matches single-line inputs visually. */
+textarea {
+    background: var(--default-form-element-bg-color, var(--ux-theme-0, #1f2937));
+    color: var(--font-color, #e5e7eb);
+    border: 1px solid var(--default-form-element-border-color, var(--ux-theme-3, #4b5563));
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 13px;
+    resize: vertical;
+    min-height: 80px;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--color-corporate-green-50, #15d1a0);
+}
+
+textarea::placeholder {
+    color: var(--text-muted, #9ca3af);
+    opacity: 0.6;
+}
+
 .form-multiline-text__validation-error {
-    border: 1px solid var(--inline-error-border-color);
+    border-color: var(--inline-error-border-color, #ef4444);
 }
 </style>

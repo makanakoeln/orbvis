@@ -85,19 +85,42 @@ def save_global_settings(data: GlobalSettings) -> GlobalSettings:
 
 
 def get_system_settings() -> SystemSettings:
+    """Return the raw stored ``SystemSettings`` — ``None`` means *unset*.
+
+    Don't apply env-fallbacks here; callers that need the effective value
+    use ``get_effective_*`` helpers below. Saving back through the API
+    would otherwise persist whatever the env defaulted to and silently
+    pin the operator to today's env value.
+    """
     data = SystemSettings.model_validate(_read_raw())
-    if data.log_level is None:
-        data.log_level = settings.log_level or ("DEBUG" if settings.debug else "INFO")
     if data.checkmk_url == "":
         data.checkmk_url = None
     return data
+
+
+def get_effective_log_level() -> str:
+    data = get_system_settings()
+    return data.log_level or settings.log_level or ("DEBUG" if settings.debug else "INFO")
+
+
+def get_effective_state_refresh_interval() -> int:
+    data = get_system_settings()
+    return data.state_refresh_interval or settings.state_refresh_interval
+
+
+def get_effective_access_token_expire_minutes() -> int:
+    data = get_system_settings()
+    return data.access_token_expire_minutes or settings.access_token_expire_minutes
 
 
 def save_system_settings(data: SystemSettings) -> SystemSettings:
     raw = _read_raw()
     raw.update(data.model_dump())
     _write_raw(raw)
-    apply_log_level(data.log_level)
+    # Use the effective level (storage overrides env) so toggling the
+    # UI back to "Use environment default" takes effect immediately
+    # instead of waiting for the next restart.
+    apply_log_level(get_effective_log_level())
     return data
 
 

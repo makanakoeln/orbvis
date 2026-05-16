@@ -8,6 +8,7 @@ import pytest
 
 from app.schemas.settings import GlobalSettings, SystemSettings
 from app.services.settings_service import (
+    get_effective_log_level,
     get_global_settings,
     get_system_settings,
     save_global_settings,
@@ -89,7 +90,10 @@ def test_save_global_settings_preserves_system_fields(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_get_system_settings_returns_env_log_level(tmp_path, monkeypatch):
+def test_get_system_settings_keeps_unset_log_level_none(tmp_path, monkeypatch):
+    # ``get_system_settings`` no longer layers in env fallbacks — it returns
+    # the raw stored shape so callers can distinguish "operator set it" from
+    # "env default is in play". ``get_effective_log_level`` is the layered view.
     _patch(monkeypatch, tmp_path)
     monkeypatch.setattr("app.core.config.settings.log_level", "WARNING")
     monkeypatch.setattr("app.services.settings_service.settings.log_level", "WARNING")
@@ -97,7 +101,8 @@ def test_get_system_settings_returns_env_log_level(tmp_path, monkeypatch):
     monkeypatch.setattr("app.services.settings_service.settings.debug", False)
     result = get_system_settings()
     assert isinstance(result, SystemSettings)
-    assert result.log_level == "WARNING"
+    assert result.log_level is None
+    assert get_effective_log_level() == "WARNING"
 
 
 def test_save_system_settings_preserves_global_fields(tmp_path, monkeypatch):
@@ -215,8 +220,11 @@ async def test_get_system_settings_api(client, admin_token, tmp_path, monkeypatc
     )
     assert response.status_code == 200
     body = response.json()
-    # Optional fields omitted when None; log_level falls back to a non-None value.
-    assert "log_level" in body
+    # ``/system`` now returns the raw stored state — ``response_model_exclude_none``
+    # drops keys that the operator hasn't explicitly set yet, so an empty body
+    # is the correct shape on a fresh install. The layered "effective" view
+    # is queried via ``get_effective_*`` helpers, not this endpoint.
+    assert isinstance(body, dict)
 
 
 @pytest.mark.asyncio
