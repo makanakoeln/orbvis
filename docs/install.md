@@ -86,23 +86,29 @@ below for who can see which boards on first login.
 
 ### Upgrade
 
-Re-add and re-enable the MKP, then run `orbvis-setup` again. User data
-(`boards/`, `orbvis.db`, `.env`, `backends.json`) is preserved.
+Re-add and re-enable the MKP, then restart the site. The OrbVis init
+script compares the installed VERSION against the one shipped in the
+new MKP and runs `orbvis-setup` automatically when they differ. User
+data (`boards/`, `orbvis.db`, `.env`, `connections.json`) is preserved.
 
 ```bash
 omd su <site>
 mkp disable orbvis
 mkp add ~/orbvis-cmk-2.5.mkp     # overwrites the old version
 mkp enable orbvis
-orbvis-setup                      # extracts the new server + htdocs, restarts the daemon
+exit
+omd restart <site>                # auto_refresh in init.d/orbvis runs orbvis-setup
 ```
 
-If you upload the new MKP through the Checkmk GUI (*Setup → Maintenance
-→ Extension packages → Upload package*), you **still** have to run
-`orbvis-setup` once on the command line as the site user — the upload
-only stores the package; only `orbvis-setup` extracts the bundled
-`server.tar.gz` / `htdocs.tar.gz` into the site and restarts the OrbVis
-daemon. Skipping it leaves the site running the previous version.
+The same auto-refresh fires when you upload the new MKP through the
+Checkmk GUI (*Setup → Maintenance → Extension packages → Upload
+package*) and then restart the site. You can still run `orbvis-setup`
+manually if you want to refresh immediately without a full site
+restart:
+
+```bash
+omd su <site> -c orbvis-setup
+```
 
 After the upgrade, force-reload the OrbVis tab once in the browser
 (`Ctrl+Shift+R`, or `Cmd+Shift+R` on macOS). The browser caches the old
