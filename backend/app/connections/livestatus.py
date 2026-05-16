@@ -1244,16 +1244,20 @@ class LivestatusConnection(ConnectionBase):
         """Fallback: get metric names via Checkmk REST API service endpoint."""
         if not service:
             return []
-        url = (
-            base_url
-            + "/api/1.0/domain-types/service/collections/all"
-            + f"?host_name={host}&columns=metrics&columns=description"
-        )
+        # 2.5 removed the GET flavour of /domain-types/service/collections/all
+        # (deprecated since 2.4); the POST endpoint takes host_name and
+        # columns in the JSON body.
+        url = base_url + "/api/1.0/domain-types/service/collections/all"
         try:
             async with httpx.AsyncClient(verify=self._verify_ssl, timeout=self._timeout) as client:
-                resp = await client.get(
+                resp = await client.post(
                     url,
-                    headers={"Authorization": auth_header, "Accept": "application/json"},
+                    headers={
+                        "Authorization": auth_header,
+                        "Accept": "application/json",
+                        "Content-Type": "application/json",
+                    },
+                    json={"host_name": host, "columns": ["metrics", "description"]},
                 )
                 if resp.status_code != 200:
                     return []
