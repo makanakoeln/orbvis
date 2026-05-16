@@ -30,55 +30,34 @@
             </div>
         </div>
 
-        <div v-if="!loading && schema" class="settings-page__savebar">
-            <span v-if="dirty" class="settings-page__dirty">
-                {{ t('settings.unsavedChanges') }}
-            </span>
-            <Transition
-                enter-from-class="opacity-0 translate-x-2"
-                enter-active-class="transition-all duration-200"
-                leave-to-class="opacity-0"
-                leave-active-class="transition-opacity duration-300"
-            >
-                <span v-if="savedOk" class="settings-page__saved-msg">
-                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none">
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M4.5 12.75l6 6 9-13.5"
-                        />
-                    </svg>
-                    {{ t('common.saved') }}
-                </span>
-            </Transition>
-            <span v-if="saveError" class="settings-page__error-msg">{{ saveError }}</span>
-            <CmkButton variant="secondary" :disabled="!dirty" @click="resetForm">
-                {{ t('common.cancel') }}
-            </CmkButton>
-            <CmkButton variant="primary" :disabled="saving || !dirty" @click="handleSave">
-                {{ saving ? t('common.saving') : t('common.save') }}
-            </CmkButton>
-        </div>
+        <OrbSaveBar
+            v-if="!loading && schema"
+            :dirty="dirty"
+            :saving="saving"
+            :saved-ok="savedOk"
+            :error="saveError"
+            @save="handleSave"
+            @cancel="resetForm"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
 import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
-import CmkButton from '@cmk/components/CmkButton.vue';
 import CmkLoading from '@cmk/components/CmkLoading.vue';
 import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
 import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
 import FormEdit from '@cmk/form/FormEdit.vue';
-import { initializeComponentRegistry } from '@cmk/form/private/FormEditDispatcher/dispatch';
 import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { settingsApi } from '@/api/client';
+import OrbSaveBar from '@/components/OrbSaveBar.vue';
+import { useFormSpecSchema } from '@/composables/useFormSpecSchema';
 import { useAuthStore } from '@/stores/auth';
 import type { GlobalSettings } from '@/types/api';
 
-type Schema = NonNullable<VueFormspecComponents['components']>;
 type Validation = NonNullable<VueFormspecComponents['validation_message']>[];
 
 interface SchemaElement {
@@ -91,17 +70,20 @@ interface DictionarySchema {
     help?: string;
 }
 
-initializeComponentRegistry();
-
 const { t } = useI18n();
 const auth = useAuthStore();
+
+const {
+    schema,
+    error: schemaError,
+    load: loadSchema,
+} = useFormSpecSchema('settings', () => settingsApi.getSchema(auth.accessToken ?? ''));
 
 const loading = ref(true);
 const loadError = ref('');
 const saving = ref(false);
 const saveError = ref('');
 const savedOk = ref(false);
-const schema = ref<Schema | null>(null);
 const data = ref<unknown>({});
 const initialData = ref<unknown>({});
 const validation = ref<Validation>([]);
@@ -138,11 +120,11 @@ async function load() {
         return;
     }
     try {
-        const [spec, values] = await Promise.all([
-            settingsApi.getSchema(token),
-            settingsApi.get(token),
-        ]);
-        schema.value = spec as unknown as Schema;
+        const [, values] = await Promise.all([loadSchema(), settingsApi.get(token)]);
+        if (schemaError.value) {
+            loadError.value = schemaError.value;
+            return;
+        }
         initialData.value = structuredClone(values);
         data.value = structuredClone(values);
         // pre-select first group so the detail panel is never empty
@@ -288,41 +270,6 @@ onUnmounted(() => {
 .settings-page__detail :deep(input[type='text']) {
     min-width: 320px;
     max-width: 100%;
-}
-
-/* Full-width sticky save bar at the bottom of the viewport, outside the
-   72-rem form column. Border-top only — no floating card shadow (WATO-style). */
-.settings-page__savebar {
-    position: sticky;
-    bottom: 0;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--dimension-4);
-    margin-top: var(--dimension-7);
-    padding: var(--dimension-4) var(--dimension-8);
-    background: var(--bg-surface);
-    border-top: 1px solid var(--border);
-}
-
-.settings-page__dirty {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-right: auto;
-}
-
-.settings-page__saved-msg {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 13px;
-    color: var(--color-corporate-green-50);
-}
-
-.settings-page__saved-msg svg {
-    width: 14px;
-    height: 14px;
 }
 
 .settings-page__error-msg {

@@ -21,6 +21,9 @@ export default {
         saved: 'Saved',
         none: 'None',
         useColor: 'Use color',
+        unsavedChanges: 'Unsaved changes',
+        unsavedChangesHint:
+            'You have changed at least one field — save or cancel before leaving the page',
     },
     auth: {
         username: 'Username',

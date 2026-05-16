@@ -21,6 +21,9 @@ export default {
         saved: 'Gespeichert',
         none: 'Keine',
         useColor: 'Farbe verwenden',
+        unsavedChanges: 'Ungespeicherte Änderungen',
+        unsavedChangesHint:
+            'Es wurde mindestens ein Feld geändert — speichern oder verwerfen, bevor die Seite verlassen wird',
     },
     auth: {
         username: 'Benutzername',
