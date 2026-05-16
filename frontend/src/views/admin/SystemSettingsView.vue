@@ -80,13 +80,13 @@ import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_for
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { settingsApi } from '@/api/client';
+import { systemSettingsApi } from '@/api/client';
 import OrbUnsavedChangesDialog from '@/components/OrbUnsavedChangesDialog.vue';
 import { useFormSpecSchema } from '@/composables/useFormSpecSchema';
 import { useSaveBarState } from '@/composables/useSaveBarState';
 import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard';
 import { useAuthStore } from '@/stores/auth';
-import type { GlobalSettings } from '@/types/api';
+import type { SystemSettings } from '@/types/api';
 
 type Validation = NonNullable<VueFormspecComponents['validation_message']>[];
 
@@ -100,16 +100,8 @@ interface DictionarySchema {
     help?: string;
 }
 
-// Backend emits one DictGroup per section. Object-related sub-groups are
-// rolled up into a single sidebar entry "Object defaults" so the operator
-// sees one entry instead of three; the FormDictionary still renders the
-// three sub-headings underneath for visual hierarchy.
-const OBJECT_SUB_GROUPS = new Set(['object_appearance', 'object_labels', 'object_templates']);
-const OBJECT_VIRTUAL_KEY = 'object_defaults';
-
-// structuredClone fails on Vue's reactive proxies. Settings payloads are
-// pure JSON (string/number/boolean/array/object), so a stringify round-trip
-// is both safe and works on the proxied refs.
+// structuredClone fails on Vue's reactive proxies; settings payloads are
+// pure JSON so a stringify round-trip is the safe equivalent.
 function deepClone<T>(value: T): T {
     return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -121,7 +113,7 @@ const {
     schema,
     error: schemaError,
     load: loadSchema,
-} = useFormSpecSchema('settings', () => settingsApi.getSchema(auth.accessToken ?? ''));
+} = useFormSpecSchema('system-settings', () => systemSettingsApi.getSchema(auth.accessToken ?? ''));
 
 const loading = ref(true);
 const loadError = ref('');
@@ -139,15 +131,11 @@ let saveErrorTimer: ReturnType<typeof setTimeout> | null = null;
 const dirty = computed(() => JSON.stringify(data.value) !== JSON.stringify(initialData.value));
 
 const heading = computed(
-    () => (schema.value as DictionarySchema | null)?.title ?? t('settings.title'),
+    () => (schema.value as DictionarySchema | null)?.title ?? t('system.title'),
 );
 const subtitle = computed(
-    () => (schema.value as DictionarySchema | null)?.help || t('settings.subtitle'),
+    () => (schema.value as DictionarySchema | null)?.help || t('system.subtitle'),
 );
-
-function sidebarKey(rawKey: string): string {
-    return OBJECT_SUB_GROUPS.has(rawKey) ? OBJECT_VIRTUAL_KEY : rawKey;
-}
 
 const sidebarGroups = computed<{ key: string; title: string; modified: number }[]>(() => {
     const dict = schema.value as DictionarySchema | null;
@@ -156,10 +144,8 @@ const sidebarGroups = computed<{ key: string; title: string; modified: number }[
     const orig = (initialData.value ?? {}) as Record<string, unknown>;
     const acc = new Map<string, { title: string; modified: number }>();
     for (const el of dict.elements) {
-        const rawKey = el.group?.key ?? '-ungrouped-';
-        const key = sidebarKey(rawKey);
-        const title =
-            key === OBJECT_VIRTUAL_KEY ? t('settings.objectDefaults') : el.group?.title || rawKey;
+        const key = el.group?.key ?? '-ungrouped-';
+        const title = el.group?.title || key;
         const entry = acc.get(key) ?? { title, modified: 0 };
         const here = el.name in cur;
         const before = el.name in orig;
@@ -186,14 +172,13 @@ async function load() {
         return;
     }
     try {
-        const [, values] = await Promise.all([loadSchema(), settingsApi.get(token)]);
+        const [, values] = await Promise.all([loadSchema(), systemSettingsApi.get(token)]);
         if (schemaError.value) {
             loadError.value = schemaError.value;
             return;
         }
         initialData.value = deepClone(values);
         data.value = deepClone(values);
-        // pre-select first group so the detail panel is never empty
         activeGroup.value = sidebarGroups.value[0]?.key ?? '';
     } catch (e: unknown) {
         loadError.value = e instanceof Error ? e.message : 'Failed to load settings';
@@ -215,7 +200,7 @@ async function handleSave() {
     saveError.value = '';
     savedOk.value = false;
     try {
-        const updated = await settingsApi.update(data.value as GlobalSettings, token);
+        const updated = await systemSettingsApi.update(data.value as SystemSettings, token);
         initialData.value = deepClone(updated);
         data.value = deepClone(updated);
         savedOk.value = true;
@@ -262,10 +247,6 @@ onUnmounted(() => {
     padding: var(--dimension-7) var(--dimension-8) var(--dimension-6);
 }
 
-/* `.settings-page__savebar` is added directly onto the CmkAlertBox root
-   via Vue's class-fallthrough — turns the box into a sticky page-top
-   notification and flips its heading+body stack to a row so action
-   buttons sit inline right of the heading. */
 .settings-page__savebar {
     position: sticky;
     top: 0;
@@ -290,8 +271,6 @@ onUnmounted(() => {
     gap: var(--dimension-3);
 }
 
-/* Shrink the buttons one notch (32 → 28 px) so they don't crowd the
-   compact alert bar — keeps Cancel/Save visually below the heading line. */
 .settings-page__savebar :deep(.cmk-button) {
     height: var(--dimension-9);
 }
@@ -319,7 +298,6 @@ onUnmounted(() => {
     min-height: 0;
 }
 
-/* Topic sidebar — WATO-style vertical nav with active-state highlight. */
 .settings-page__sidebar {
     display: flex;
     flex-direction: column;
@@ -379,23 +357,15 @@ onUnmounted(() => {
     font-weight: 600;
 }
 
-/* Hide every group <tr> by default, then re-show the active sidebar group's
-   row(s). Vue's :deep() weakens specificity, so we hoist this rule with
-   !important — the alternative (v-show inside the vendored FormDictionary)
-   would require a bigger vendor patch. */
 .settings-page__detail :deep(tr[data-group]) {
     display: none !important;
 }
 
-.settings-page__detail[data-active='board_defaults'] :deep(tr[data-group='board_defaults']),
-.settings-page__detail[data-active='object_defaults'] :deep(tr[data-group='object_appearance']),
-.settings-page__detail[data-active='object_defaults'] :deep(tr[data-group='object_labels']),
-.settings-page__detail[data-active='object_defaults'] :deep(tr[data-group='object_templates']) {
+.settings-page__detail[data-active='logging'] :deep(tr[data-group='logging']),
+.settings-page__detail[data-active='checkmk'] :deep(tr[data-group='checkmk']) {
     display: table-row !important;
 }
 
-/* Bigger group title (h3-ish) and visible help line under it, since the
-   sidebar already establishes the section context. */
 .settings-page__detail :deep(.form-dictionary__group-title) {
     font-size: 18px;
     font-weight: 600;
@@ -409,16 +379,10 @@ onUnmounted(() => {
     margin-bottom: var(--dimension-6);
 }
 
-/* Consistent input width — kills the "60px Integer next to 432px String" mix. */
 .settings-page__detail :deep(.cmk-input--text),
 .settings-page__detail :deep(.cmk-dropdown__choice-button),
 .settings-page__detail :deep(input[type='text']) {
     min-width: 320px;
     max-width: 100%;
-}
-
-.settings-page__error-msg {
-    font-size: 13px;
-    color: var(--color-light-red-40);
 }
 </style>

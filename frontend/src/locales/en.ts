@@ -24,6 +24,11 @@ export default {
         unsavedChanges: 'Unsaved changes',
         unsavedChangesHint:
             'You have changed at least one field — save or cancel before leaving the page',
+        unsavedConfirmTitle: 'Discard unsaved changes?',
+        unsavedConfirmMessage:
+            'You have unsaved changes on this page. Leaving now will discard them.',
+        discardChanges: 'Discard changes',
+        stayOnPage: 'Stay on page',
     },
     auth: {
         username: 'Username',
@@ -646,10 +651,16 @@ export default {
         importBoard: 'Import',
         importOverwrite: 'Board "{name}" already exists. Overwrite?',
         importFailed: 'Import failed',
+        system: 'System',
+    },
+    system: {
+        title: 'System',
+        subtitle: 'Runtime and integration options. Applies across all boards.',
     },
     settings: {
         title: 'Global Settings',
         subtitle: 'Default values applied when creating new boards and objects',
+        objectDefaults: 'Object defaults',
         unsavedChanges: 'Unsaved changes',
         unsavedChangesHint:
             'You have changed at least one field — save or cancel before leaving the page',

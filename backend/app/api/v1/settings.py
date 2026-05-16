@@ -1,4 +1,4 @@
-"""Global settings endpoints."""
+"""Global + system settings endpoints."""
 
 from __future__ import annotations
 
@@ -7,28 +7,32 @@ from fastapi import APIRouter, Depends
 from app.api.v1.deps import get_current_user, require_admin
 from app.form_specs import serialize_form_spec
 from app.form_specs.global_settings import global_settings_spec
+from app.form_specs.system_settings import system_settings_spec
 from app.models.user import User
-from app.schemas.settings import GlobalSettings
+from app.schemas.settings import GlobalSettings, SystemSettings
 from app.services import connection_service, settings_service
 
 router = APIRouter()
 
 
+# ── Global (board / object defaults) ──────────────────────────────────────
+
+
 @router.get("", response_model=GlobalSettings, response_model_exclude_none=True)
 async def get_settings(current_user: User = Depends(get_current_user)) -> GlobalSettings:
-    """Return saved settings, omitting Optional fields that are unset.
+    """Return saved defaults, omitting Optional fields that are unset.
 
     The FormSpec frontend uses ``key in data`` to decide whether an optional
     field's toggle is active — sending ``null`` would render an empty input
     behind an "active" checkbox, which is confusing. Drop ``null`` so the
     toggle stays off and the InputHint placeholder takes over.
     """
-    return settings_service.get_settings()
+    return settings_service.get_global_settings()
 
 
 @router.put("", response_model=GlobalSettings)
 async def update_settings(data: GlobalSettings, _: User = Depends(require_admin)) -> GlobalSettings:
-    return settings_service.save_settings(data)
+    return settings_service.save_global_settings(data)
 
 
 @router.get("/schema")
@@ -40,3 +44,23 @@ async def get_settings_schema(
     # instead of accepting a typo.
     connection_ids = [c.id for c in connection_service.load_all()]
     return serialize_form_spec(global_settings_spec(connection_ids))
+
+
+# ── System (runtime / integration) ────────────────────────────────────────
+
+
+@router.get("/system", response_model=SystemSettings, response_model_exclude_none=True)
+async def get_system_settings(_: User = Depends(get_current_user)) -> SystemSettings:
+    return settings_service.get_system_settings()
+
+
+@router.put("/system", response_model=SystemSettings)
+async def update_system_settings(
+    data: SystemSettings, _: User = Depends(require_admin)
+) -> SystemSettings:
+    return settings_service.save_system_settings(data)
+
+
+@router.get("/system/schema")
+async def get_system_settings_schema(_: User = Depends(require_admin)) -> dict[str, object]:
+    return serialize_form_spec(system_settings_spec())

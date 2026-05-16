@@ -24,6 +24,11 @@ export default {
         unsavedChanges: 'Ungespeicherte Änderungen',
         unsavedChangesHint:
             'Es wurde mindestens ein Feld geändert — speichern oder verwerfen, bevor die Seite verlassen wird',
+        unsavedConfirmTitle: 'Ungespeicherte Änderungen verwerfen?',
+        unsavedConfirmMessage:
+            'Es gibt ungespeicherte Änderungen auf dieser Seite. Beim Verlassen gehen sie verloren.',
+        discardChanges: 'Änderungen verwerfen',
+        stayOnPage: 'Auf der Seite bleiben',
     },
     auth: {
         username: 'Benutzername',
@@ -650,10 +655,16 @@ export default {
         importBoard: 'Importieren',
         importOverwrite: 'Board „{name}" existiert bereits. Überschreiben?',
         importFailed: 'Import fehlgeschlagen',
+        system: 'System',
+    },
+    system: {
+        title: 'System',
+        subtitle: 'Laufzeit- und Integrations-Optionen. Gelten boardübergreifend.',
     },
     settings: {
         title: 'Globale Einstellungen',
         subtitle: 'Standardwerte für neue Boards und Objekte',
+        objectDefaults: 'Objekt-Standards',
         unsavedChanges: 'Ungespeicherte Änderungen',
         unsavedChangesHint:
             'Es wurde mindestens ein Feld geändert — speichern oder verwerfen, bevor die Seite verlassen wird',

@@ -241,7 +241,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await asyncio.to_thread(_run_migrations)
     logger.info("Database initialized.")
 
-    settings_service.apply_log_level(settings_service.get_settings().log_level)
+    settings_service.apply_log_level(settings_service.get_system_settings().log_level)
 
     # One-shot data migration: rename pre-rename `backends.json` and rewrite
     # `backend_id` keys in board files. Idempotent on subsequent boots.
@@ -256,10 +256,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # In Checkmk/OMD mode: auto-set global checkmk_url if not configured yet
     if settings.checkmk_omd_root and settings.checkmk_site:
-        _gs = settings_service.get_settings()
-        if not _gs.checkmk_url:
-            _gs.checkmk_url = f"/{settings.checkmk_site}"
-            settings_service.save_settings(_gs)
+        _sys = settings_service.get_system_settings()
+        if not _sys.checkmk_url:
+            _sys.checkmk_url = f"/{settings.checkmk_site}"
+            settings_service.save_system_settings(_sys)
             logger.info("Auto-set global checkmk_url to /%s", settings.checkmk_site)
 
     # In Checkmk/OMD mode: auto-create a Livestatus connection if none exists yet

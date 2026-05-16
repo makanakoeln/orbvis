@@ -1,11 +1,15 @@
 # Copyright (C) 2025 OrbVis - License: GNU General Public License v2
-"""FormSpec for the Global Settings admin surface.
+"""FormSpec for the Global Settings admin surface (board / object defaults).
 
-Mirrors the Pydantic ``GlobalSettings`` model 1:1 for every field that maps
-cleanly to a vendored FormSpec component. Grouped into topical sections so
-the vendored FormDictionary renders them as labelled groups instead of a
-flat list. Group order is operator-driven: things touched per-onboarding /
-during incidents come first, "set once" fields go to the end.
+Two top-level groups feed the sidebar:
+
+- ``board_defaults`` — selected when creating a new board.
+- ``object_*`` — selected when placing a new object. Split into three
+  sub-groups (``object_appearance`` / ``object_labels`` / ``object_templates``)
+  so the frontend can render visual sub-sections under one sidebar entry.
+
+Runtime / integration settings (logging, Checkmk URL) live in
+``system_settings.py`` and have their own admin tab.
 """
 
 from __future__ import annotations
@@ -14,7 +18,7 @@ from collections.abc import Sequence
 
 from app.form_specs import OrbDictGroup
 
-from cmk.rulesets.v1 import Help, Label, Title
+from cmk.rulesets.v1 import Help, Label, Message, Title
 from cmk.rulesets.v1.form_specs import (
     BooleanChoice,
     DefaultValue,
@@ -27,35 +31,38 @@ from cmk.rulesets.v1.form_specs import (
     SingleChoiceElement,
     String,
 )
+from cmk.rulesets.v1.form_specs.validators import MatchRegex
 
 _BOARD_DEFAULTS = OrbDictGroup(
     title=Title("Board defaults"),
     help_text=Help("Pre-selected values when creating a new board."),
     key="board_defaults",
 )
-_SYSTEM = OrbDictGroup(
-    title=Title("System"),
-    help_text=Help("Runtime / integration options touched during incidents."),
-    key="system",
+_OBJECT_APPEARANCE = OrbDictGroup(
+    title=Title("Appearance"),
+    help_text=Help("How objects are rendered by default on a new board."),
+    key="object_appearance",
 )
-_DEFAULTS = OrbDictGroup(
-    title=Title("Object defaults"),
-    help_text=Help("Applied to newly placed objects unless the board overrides them."),
-    key="defaults",
-)
-_LABELS = OrbDictGroup(
+_OBJECT_LABELS = OrbDictGroup(
     title=Title("Labels"),
     help_text=Help("Caption text shown next to icons."),
-    key="labels",
+    key="object_labels",
 )
-_TEMPLATES = OrbDictGroup(
-    title=Title("Tooltip & context-menu templates"),
+_OBJECT_TEMPLATES = OrbDictGroup(
+    title=Title("Templates"),
     help_text=Help(
         "Global fallbacks used when a board or object defines no template "
         "of its own. Placeholders: {{name}}, {{state}}, {{output}}."
     ),
-    key="templates",
+    key="object_templates",
 )
+
+_COLOR_REGEX = r"^(#[0-9a-fA-F]{6}|transparent)$"
+_COLOR_HELP = Help(
+    "Hex code like '#1a73e8' or the literal 'transparent'. "
+    "Native color picker is not part of the FormSpec component set yet."
+)
+_COLOR_ERROR = Message("Use a 6-digit hex code like '#ffffff' or the literal 'transparent'.")
 
 
 def _default_connection_element(connection_ids: Sequence[str]) -> DictElement[object]:
@@ -100,7 +107,7 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
             "Per-board overrides take precedence."
         ),
         elements={
-            # ── Board defaults (operator-priority 1: per-onboarding) ──
+            # ── Board defaults ──
             "default_backend_id": _default_connection_element(cids),
             "default_map_type": DictElement(
                 required=True,
@@ -116,40 +123,10 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                     prefill=DefaultValue("static"),
                 ),
             ),
-            # ── System (operator-priority 2: incidents) ──
-            "log_level": DictElement(
-                group=_SYSTEM,
-                parameter_form=SingleChoice(
-                    title=Title("Log level"),
-                    help_text=Help(
-                        "Backend log threshold. Empty falls back to the LOG_LEVEL "
-                        "environment variable."
-                    ),
-                    elements=[
-                        SingleChoiceElement(name="DEBUG", title=Title("Debug")),
-                        SingleChoiceElement(name="INFO", title=Title("Info")),
-                        SingleChoiceElement(name="WARNING", title=Title("Warning")),
-                        SingleChoiceElement(name="ERROR", title=Title("Error")),
-                        SingleChoiceElement(name="CRITICAL", title=Title("Critical")),
-                    ],
-                ),
-            ),
-            "checkmk_url": DictElement(
-                group=_SYSTEM,
-                parameter_form=String(
-                    title=Title("Checkmk base URL"),
-                    help_text=Help(
-                        "Fallback Checkmk URL for connections without their own. "
-                        "Auto-populated when OrbVis runs inside a Checkmk OMD site."
-                    ),
-                    prefill=InputHint("https://checkmk.example.com/mysite"),
-                    field_size=FieldSize.LARGE,
-                ),
-            ),
-            # ── Object defaults (order: kind → size → behavior → advanced) ──
+            # ── Object defaults / Appearance ──
             "view_type": DictElement(
                 required=True,
-                group=_DEFAULTS,
+                group=_OBJECT_APPEARANCE,
                 parameter_form=SingleChoice(
                     title=Title("View type"),
                     help_text=Help("How objects are rendered on a board."),
@@ -163,7 +140,7 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
             ),
             "icon_size": DictElement(
                 required=True,
-                group=_DEFAULTS,
+                group=_OBJECT_APPEARANCE,
                 parameter_form=Integer(
                     title=Title("Icon size"),
                     help_text=Help("Default pixel size for object icons on a board."),
@@ -171,9 +148,21 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                     prefill=DefaultValue(30),
                 ),
             ),
+            "line_style": DictElement(
+                group=_OBJECT_APPEARANCE,
+                parameter_form=SingleChoice(
+                    title=Title("Line style"),
+                    help_text=Help("Default stroke style for connection lines."),
+                    elements=[
+                        SingleChoiceElement(name="solid", title=Title("Solid")),
+                        SingleChoiceElement(name="dashed", title=Title("Dashed")),
+                        SingleChoiceElement(name="dotted", title=Title("Dotted")),
+                    ],
+                ),
+            ),
             "url_target": DictElement(
                 required=True,
-                group=_DEFAULTS,
+                group=_OBJECT_APPEARANCE,
                 parameter_form=SingleChoice(
                     title=Title("Link target"),
                     help_text=Help("Where object links open."),
@@ -187,17 +176,17 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
             ),
             "z": DictElement(
                 required=True,
-                group=_DEFAULTS,
+                group=_OBJECT_APPEARANCE,
                 parameter_form=Integer(
                     title=Title("Stacking order (Z)"),
                     help_text=Help("Higher value = drawn in front. Touched once per install."),
                     prefill=DefaultValue(1),
                 ),
             ),
-            # ── Labels ──
+            # ── Object defaults / Labels ──
             "label_show": DictElement(
                 required=True,
-                group=_LABELS,
+                group=_OBJECT_LABELS,
                 parameter_form=BooleanChoice(
                     title=Title("Show object labels"),
                     label=Label("Display labels under each object"),
@@ -206,16 +195,36 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
             ),
             "label_size": DictElement(
                 required=True,
-                group=_LABELS,
+                group=_OBJECT_LABELS,
                 parameter_form=Integer(
                     title=Title("Label size"),
                     unit_symbol="px",
                     prefill=DefaultValue(11),
                 ),
             ),
+            "label_color": DictElement(
+                required=True,
+                group=_OBJECT_LABELS,
+                parameter_form=String(
+                    title=Title("Label color"),
+                    help_text=_COLOR_HELP,
+                    prefill=DefaultValue("#ffffff"),
+                    custom_validate=(MatchRegex(_COLOR_REGEX, error_msg=_COLOR_ERROR),),
+                ),
+            ),
+            "label_background": DictElement(
+                required=True,
+                group=_OBJECT_LABELS,
+                parameter_form=String(
+                    title=Title("Label background"),
+                    help_text=_COLOR_HELP,
+                    prefill=DefaultValue("transparent"),
+                    custom_validate=(MatchRegex(_COLOR_REGEX, error_msg=_COLOR_ERROR),),
+                ),
+            ),
             "label_x": DictElement(
                 required=True,
-                group=_LABELS,
+                group=_OBJECT_LABELS,
                 parameter_form=Integer(
                     title=Title("Label X offset"),
                     help_text=Help("Horizontal shift. Set once per install."),
@@ -225,7 +234,7 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
             ),
             "label_y": DictElement(
                 required=True,
-                group=_LABELS,
+                group=_OBJECT_LABELS,
                 parameter_form=Integer(
                     title=Title("Label Y offset"),
                     help_text=Help("Vertical shift. Set once per install."),
@@ -233,9 +242,9 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                     prefill=DefaultValue(0),
                 ),
             ),
-            # ── Templates ──
+            # ── Object defaults / Templates ──
             "hover_template": DictElement(
-                group=_TEMPLATES,
+                group=_OBJECT_TEMPLATES,
                 parameter_form=String(
                     title=Title("Hover template"),
                     help_text=Help("Shown on hover when a board has no template of its own."),
@@ -244,7 +253,7 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                 ),
             ),
             "context_template": DictElement(
-                group=_TEMPLATES,
+                group=_OBJECT_TEMPLATES,
                 parameter_form=String(
                     title=Title("Context-menu template"),
                     help_text=Help(

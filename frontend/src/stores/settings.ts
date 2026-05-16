@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
-import { settingsApi } from '@/api/client';
+import { settingsApi, systemSettingsApi } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
-import type { GlobalSettings } from '@/types/api';
+import type { GlobalSettings, SystemSettings } from '@/types/api';
 
 function token() {
     return useAuthStore().accessToken ?? '';
@@ -25,18 +25,28 @@ export const SETTINGS_DEFAULTS: GlobalSettings = {
     default_map_type: 'static',
     hover_template: null,
     context_template: null,
+};
+
+export const SYSTEM_DEFAULTS: SystemSettings = {
     log_level: null,
+    checkmk_url: null,
 };
 
 export const useSettingsStore = defineStore('settings', () => {
     const settings = ref<GlobalSettings>({ ...SETTINGS_DEFAULTS });
+    const system = ref<SystemSettings>({ ...SYSTEM_DEFAULTS });
     const loading = ref(false);
 
     async function load(): Promise<void> {
         if (!token()) return;
         loading.value = true;
         try {
-            settings.value = await settingsApi.get(token());
+            const [global, sys] = await Promise.all([
+                settingsApi.get(token()),
+                systemSettingsApi.get(token()),
+            ]);
+            settings.value = global;
+            system.value = sys;
         } catch {
             // Fall back to built-in defaults
         } finally {
@@ -48,5 +58,9 @@ export const useSettingsStore = defineStore('settings', () => {
         settings.value = await settingsApi.update(data, token());
     }
 
-    return { settings, loading, load, save };
+    async function saveSystem(data: SystemSettings): Promise<void> {
+        system.value = await systemSettingsApi.update(data, token());
+    }
+
+    return { settings, system, loading, load, save, saveSystem };
 });

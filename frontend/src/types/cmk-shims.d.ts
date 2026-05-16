@@ -345,6 +345,29 @@ declare module '@cmk/components/CmkPopup.vue' {
     export default component;
 }
 
+declare module '@cmk/components/CmkPopupDialog.vue' {
+    import type { DefineComponent } from 'vue';
+    interface CmkPopupDialogProps {
+        open: boolean;
+        icon?: string;
+        title: string;
+        text?: string;
+        okButtonText?: string;
+        stayOpenOverlayClick?: boolean;
+    }
+    const component: DefineComponent<
+        CmkPopupDialogProps,
+        object,
+        object,
+        object,
+        object,
+        object,
+        object,
+        { close: [] }
+    >;
+    export default component;
+}
+
 declare module '@cmk/components/typography/CmkHeading.vue' {
     import type { DefineComponent } from 'vue';
     interface CmkHeadingProps {

@@ -23,6 +23,7 @@ import type {
     PerfometerResult,
     PermissionRead,
     RoleRead,
+    SystemSettings,
     TokenResponse,
     UserRead,
 } from '@/types/api';
@@ -534,6 +535,18 @@ export const settingsApi = {
 
     getSchema: (token: string): Promise<Record<string, unknown>> =>
         request('/settings/schema', {}, token),
+};
+
+// ---- System Settings (logging + Checkmk integration) ----
+
+export const systemSettingsApi = {
+    get: (token: string): Promise<SystemSettings> => request('/settings/system', {}, token),
+
+    update: (data: SystemSettings, token: string): Promise<SystemSettings> =>
+        request('/settings/system', { method: 'PUT', body: JSON.stringify(data) }, token),
+
+    getSchema: (token: string): Promise<Record<string, unknown>> =>
+        request('/settings/system/schema', {}, token),
 };
 
 // ---- Checkmk REST API (direct browser → CMK, same-origin session) ----

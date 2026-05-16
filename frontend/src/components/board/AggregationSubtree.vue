@@ -192,7 +192,7 @@ function syntheticState(obj: BoardObject, node: AggregationNode): ObjectState {
 
 function onNodeClick(node: AggregationNode) {
     if (node.node_type !== 'bi_leaf' || !node.host_name) return;
-    const url = buildCheckmkUrl(syntheticObject(node), settingsStore.settings.checkmk_url ?? null);
+    const url = buildCheckmkUrl(syntheticObject(node), settingsStore.system.checkmk_url ?? null);
     if (url) openUrl(url, '_blank');
 }
 

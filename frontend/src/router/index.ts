@@ -65,6 +65,11 @@ const router = createRouter({
                     component: () => import('@/views/admin/GlobalSettingsView.vue'),
                 },
                 {
+                    path: 'system',
+                    name: 'admin-system',
+                    component: () => import('@/views/admin/SystemSettingsView.vue'),
+                },
+                {
                     path: 'icons',
                     name: 'admin-icons',
                     component: () => import('@/views/admin/ImagesView.vue'),

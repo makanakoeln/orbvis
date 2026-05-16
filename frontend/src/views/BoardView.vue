@@ -1219,7 +1219,7 @@ const checkmkUrl = computed(() => {
     const connUrl = bid
         ? (connectionsStore.connections.find((b) => b.id === bid)?.checkmk_url ?? null)
         : null;
-    return connUrl ?? settingsStore.settings.checkmk_url ?? null;
+    return connUrl ?? settingsStore.system.checkmk_url ?? null;
 });
 
 async function reloadBoard() {

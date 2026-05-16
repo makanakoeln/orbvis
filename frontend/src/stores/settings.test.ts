@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SETTINGS_DEFAULTS, useSettingsStore } from './settings';
 
-const { mockSettingsApi } = vi.hoisted(() => ({
+const { mockSettingsApi, mockSystemSettingsApi } = vi.hoisted(() => ({
     mockSettingsApi: { get: vi.fn(), update: vi.fn() },
+    mockSystemSettingsApi: { get: vi.fn().mockResolvedValue({}), update: vi.fn() },
 }));
 
 vi.mock('@/api/client', () => ({
     settingsApi: mockSettingsApi,
+    systemSettingsApi: mockSystemSettingsApi,
     authApi: {
         login: vi.fn(),
         sso: vi.fn().mockRejectedValue(new Error('no sso')),

@@ -54,6 +54,7 @@ const adminNavItems = computed(() => [
           ]
         : []),
     { to: '/admin/settings', label: t('admin.settings') },
+    { to: '/admin/system', label: t('admin.system') },
 ]);
 
 function isActive(path: string): boolean {
