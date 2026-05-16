@@ -4,16 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import importlib
 import json as _json
 import logging
-import pkgutil
 import random
 import re
 import re as _re
 import threading
 import time
-import types
 from collections.abc import AsyncIterator, Iterator, Mapping
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
@@ -40,6 +37,7 @@ from app.connections.base import (
 from app.core.config import settings
 from app.integrations import checkmk as _cmk_integration
 from app.integrations import checkmk_sites as _cmk_sites
+from app.integrations.cmk_plugins import get_plugin_dirs, iter_graphing_modules
 from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.state import (
     CommentInfo,
@@ -66,43 +64,6 @@ def _identity(x: str) -> str:
     # supplied. Stripping them keeps the legend readable.
     cleaned = _EXPRESSION_PLACEHOLDER_RE.sub(" ", x)
     return " ".join(cleaned.split())
-
-
-@lru_cache(maxsize=1)
-def _get_plugin_dirs() -> set[Path]:
-    """Return all cmk.plugins sub-package directories.
-
-    walk_packages does not recurse into namespace packages without __init__.py
-    (e.g. ``collection``), so we enumerate subdirectories on disk directly.
-    """
-    try:
-        import cmk.plugins as _p
-    except ImportError:
-        return set()
-    dirs: set[Path] = set()
-    for p in _p.__path__:
-        try:
-            dirs.update(d for d in Path(p).iterdir() if d.is_dir())
-        except OSError:
-            pass
-    return dirs
-
-
-def _iter_graphing_modules(plugin_dirs: set[Path]) -> Iterator[types.ModuleType]:
-    """Yield imported graphing submodules for all plugin directories."""
-    for plugin_dir in plugin_dirs:
-        graphing_pkg = f"cmk.plugins.{plugin_dir.name}.graphing"
-        try:
-            graphing_mod = importlib.import_module(graphing_pkg)
-        except Exception:
-            continue
-        for _finder, submod_name, _ispkg in pkgutil.iter_modules(
-            graphing_mod.__path__, f"{graphing_pkg}."
-        ):
-            try:
-                yield importlib.import_module(submod_name)
-            except Exception:
-                continue
 
 
 def _extract_quantity_metrics(qty: object) -> Iterator[str]:
@@ -154,7 +115,7 @@ def _load_cmk_graphing_data() -> _CMKGraphingData:
     except ImportError:
         return _CMKGraphingData()
     data = _CMKGraphingData()
-    for mod in _iter_graphing_modules(_get_plugin_dirs()):
+    for mod in iter_graphing_modules(get_plugin_dirs()):
         for attr in dir(mod):
             obj = getattr(mod, attr)
             if attr.startswith("metric_") and isinstance(obj, _gm.Metric):

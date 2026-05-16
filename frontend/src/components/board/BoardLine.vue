@@ -194,7 +194,7 @@ import { metricsApi } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import type { BoardObject, ObjectState, PerfometerResult } from '@/types/api';
 import { getMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf';
-import { STATE_COLORS } from '@/utils/stateColors';
+import { stateColor } from '@/utils/stateColors';
 
 const authStore = useAuthStore();
 
@@ -232,12 +232,7 @@ const y2 = computed(
     () => (props.dragCoords?.y2 ?? props.object.y2 ?? props.object.y + 50) * canvasScale.value.sy,
 );
 
-const lineColor = computed(
-    () =>
-        props.object.line_color ??
-        STATE_COLORS[props.state?.state ?? 'PENDING'] ??
-        STATE_COLORS['PENDING'],
-);
+const lineColor = computed(() => props.object.line_color ?? stateColor(props.state?.state));
 const lineColorBorder = computed(() => props.object.line_color_border ?? null);
 
 const isDashed = computed(() => props.object.line_style === 'dashed');

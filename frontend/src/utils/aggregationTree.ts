@@ -1,4 +1,4 @@
-import type { AggregationNode } from '@/types/api';
+import type { AggregationNode, MonitoringState } from '@/types/api';
 
 export type BiStateCode = 0 | 1 | 2 | 3;
 
@@ -7,6 +7,15 @@ export const BI_STATE_LABEL: Record<number, string> = {
     1: 'WARN',
     2: 'CRIT',
     3: 'UNKN',
+};
+
+// Same codes mapped to MonitoringState names — used where BI nodes mix with
+// host/service state-color lookups (stateColor() expects "OK"/"WARNING"/...).
+export const BI_STATE_FULL_LABEL: Record<number, MonitoringState> = {
+    0: 'OK',
+    1: 'WARNING',
+    2: 'CRITICAL',
+    3: 'UNKNOWN',
 };
 
 export const BI_STATE_TONE: Record<number, 'ok' | 'warn' | 'crit' | 'unknown'> = {

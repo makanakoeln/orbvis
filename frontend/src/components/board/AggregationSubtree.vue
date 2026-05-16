@@ -97,7 +97,8 @@ import { hierarchy, type HierarchyNode, tree as d3Tree } from 'd3';
 import { computed } from 'vue';
 
 import { useSettingsStore } from '@/stores/settings';
-import type { AggregationNode, BoardObject, MonitoringState, ObjectState } from '@/types/api';
+import type { AggregationNode, BoardObject, ObjectState } from '@/types/api';
+import { BI_STATE_FULL_LABEL } from '@/utils/aggregationTree';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { ACKNOWLEDGED_COLOR, DOWNTIME_COLOR, stateColor } from '@/utils/stateColors';
 
@@ -130,16 +131,8 @@ const LABEL_PAD = 60; // extra horizontal padding for label overflow
 // trace rather than another state colour.
 const WORST_PATH_COLOR = 'rgb(244 114 182)';
 
-// BI state codes (cmk.bi.bi_aggregation.BIStates) → service-style labels.
-const BI_STATE_LABEL: Record<number, MonitoringState> = {
-    0: 'OK',
-    1: 'WARNING',
-    2: 'CRITICAL',
-    3: 'UNKNOWN',
-};
-
 function stateColorFor(node: AggregationNode): string {
-    return stateColor(BI_STATE_LABEL[node.state] ?? 'PENDING');
+    return stateColor(BI_STATE_FULL_LABEL[node.state] ?? 'PENDING');
 }
 
 function strokeFor(node: AggregationNode): string {
@@ -153,7 +146,7 @@ function truncate(s: string): string {
 }
 
 function tooltipFor(node: AggregationNode): string {
-    const stateLabel = BI_STATE_LABEL[node.state] ?? 'PENDING';
+    const stateLabel = BI_STATE_FULL_LABEL[node.state] ?? 'PENDING';
     const flags: string[] = [];
     if (node.in_downtime) flags.push('downtime');
     if (node.acknowledged) flags.push('ack');
@@ -181,7 +174,7 @@ function syntheticState(obj: BoardObject, node: AggregationNode): ObjectState {
     return {
         object_id: obj.id,
         type: obj.type,
-        state: BI_STATE_LABEL[node.state] ?? 'PENDING',
+        state: BI_STATE_FULL_LABEL[node.state] ?? 'PENDING',
         output: '',
         perf_data: '',
         acknowledged: node.acknowledged ?? false,

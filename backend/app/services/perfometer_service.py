@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import importlib
 import logging
-import pkgutil
 import re
-import types
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import lru_cache
-from pathlib import Path
+
+from app.integrations.cmk_plugins import get_plugin_dirs, iter_graphing_modules
 
 logger = logging.getLogger(__name__)
 
@@ -135,34 +133,6 @@ _COLOR_HEX: dict[str, str] = {
 }
 
 
-def _get_plugin_dirs() -> set[Path]:
-    try:
-        import cmk.plugins as _p
-    except ImportError:
-        return set()
-    dirs: set[Path] = set()
-    for p in _p.__path__:
-        try:
-            dirs.update(d for d in Path(p).iterdir() if d.is_dir())
-        except OSError:
-            pass
-    return dirs
-
-
-def _iter_graphing_modules(plugin_dirs: set[Path]) -> Iterator[types.ModuleType]:
-    for plugin_dir in plugin_dirs:
-        pkg = f"cmk.plugins.{plugin_dir.name}.graphing"
-        try:
-            mod = importlib.import_module(pkg)
-        except Exception:
-            continue
-        for _finder, submod_name, _ispkg in pkgutil.iter_modules(mod.__path__, f"{pkg}."):
-            try:
-                yield importlib.import_module(submod_name)
-            except Exception:
-                continue
-
-
 @lru_cache(maxsize=1)
 def _load_plugins() -> _PluginData:
     try:
@@ -172,12 +142,12 @@ def _load_plugins() -> _PluginData:
         return _PluginData()
 
     data = _PluginData()
-    plugin_dirs = _get_plugin_dirs()
+    plugin_dirs = get_plugin_dirs()
     if not plugin_dirs:
         logger.debug("No cmk.plugins directories found")
         return data
 
-    for mod in _iter_graphing_modules(plugin_dirs):
+    for mod in iter_graphing_modules(plugin_dirs):
         for attr in dir(mod):
             obj = getattr(mod, attr)
             if attr.startswith("perfometer_") and isinstance(
@@ -537,7 +507,7 @@ def _metric_title_map() -> dict[str, str]:
         from cmk.graphing.v1 import metrics as _gm
     except ImportError:
         return titles
-    for mod in _iter_graphing_modules(_get_plugin_dirs()):
+    for mod in iter_graphing_modules(get_plugin_dirs()):
         for attr in dir(mod):
             obj = getattr(mod, attr)
             if isinstance(obj, _gm.Metric):

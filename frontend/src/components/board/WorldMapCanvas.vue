@@ -18,7 +18,7 @@ import type {
 } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';
 import { objectMatchesFilter } from '@/utils/objectFilter';
-import { STATE_COLORS } from '@/utils/stateColors';
+import { stateColor as stateColorFromName } from '@/utils/stateColors';
 
 const props = defineProps<{
     config: BoardConfig;
@@ -65,8 +65,7 @@ const lines = new Map<string, LineEntry>();
 const DEFAULT_TILE_URL = `${import.meta.env.BASE_URL}api/v1/maps/tiles/{z}/{x}/{y}.png`;
 
 function stateColor(id: string): string {
-    const s = props.states[id]?.state;
-    return STATE_COLORS[s ?? ''] ?? STATE_COLORS['PENDING'];
+    return stateColorFromName(props.states[id]?.state);
 }
 
 function escapeHtml(s: string): string {
