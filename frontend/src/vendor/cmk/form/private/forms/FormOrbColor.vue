@@ -16,7 +16,7 @@ provides three coordinated controls:
   so the operator never wonders why dragging the picker does nothing.
 -->
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 
 // Lives alongside the other vendored form components so the `@/...`
 // vendor-relative import scheme just works and tsconfig's vendor-exclude
@@ -78,13 +78,6 @@ function toggleTransparent() {
         value.value = 'transparent';
     }
 }
-
-// Reading the picker while a non-hex text is typed produces a
-// browser-default color — without this, opening the picker after
-// typing "transparent" would silently switch back to #000000.
-watch(value, () => {
-    // intentionally no-op: the computed above keeps the swatch in sync
-});
 </script>
 
 <template>
