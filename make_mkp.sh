@@ -158,7 +158,11 @@ tar czf "$TMPDIR/lib/orbvis/server.tar.gz" \
 # server tarball so the backend (which searches lib/orbvis/{,server/}) can
 # find them at runtime — otherwise the in-app changelog modal stays empty.
 cp "$SCRIPT_DIR/CHANGELOG.md" "$TMPDIR/lib/orbvis/CHANGELOG.md"
-cp "$SCRIPT_DIR/VERSION"      "$TMPDIR/lib/orbvis/VERSION"
+# Write $VERSION (which may have been bumped via --version) rather than
+# copying $SCRIPT_DIR/VERSION verbatim — otherwise the bundled VERSION file
+# never matches the MKP metadata, which breaks the init.d/orbvis auto_refresh
+# trigger (it compares this file against $ORBVIS_DIR/.installed-version).
+printf '%s\n' "$VERSION" > "$TMPDIR/lib/orbvis/VERSION"
 
 # Demo boards ship inside the wheel; backend seeds them on first start.
 
