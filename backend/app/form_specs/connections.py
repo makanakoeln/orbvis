@@ -340,9 +340,26 @@ def form_data_to_config(
                     raw["socket_path"] = target_value.get("socket_path")
         else:
             raw.update(branch)
+    # Password fields come from the FormSpec as a 4-tuple
+    # ``[type, store_id, explicit_value, store_used]``. ConnectionConfig
+    # expects a plain string — unwrap to the explicit value.
+    for pwd_field in ("automation_secret", "icinga2_password"):
+        raw[pwd_field] = _unwrap_password(raw.get(pwd_field))
     if existing is not None:
         if raw.get("automation_secret") == REDACTED_SECRET:
             raw["automation_secret"] = existing.automation_secret
         if raw.get("icinga2_password") == REDACTED_SECRET:
             raw["icinga2_password"] = existing.icinga2_password
     return ConnectionConfig.model_validate(raw)
+
+
+def _unwrap_password(value: object) -> object:
+    """FormSpec Password emits ``[type, store_id, explicit, used]``.
+
+    OrbVis only supports explicit passwords (no password store), so we keep
+    the explicit slot and discard the rest. Already-flat strings (e.g. from
+    legacy callers) pass through unchanged.
+    """
+    if isinstance(value, list | tuple) and len(value) == 4 and value[0] == "explicit_password":
+        return value[2] or None
+    return value

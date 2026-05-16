@@ -323,3 +323,24 @@ def test_socket_path_accepts_absolute() -> None:
 
     cfg = ConnectionConfig(id="x", type="livestatus", socket_path="/omd/sites/foo/tmp/run/live")
     assert cfg.socket_path == "/omd/sites/foo/tmp/run/live"
+
+
+def test_connection_form_data_unwraps_password_tuple() -> None:
+    """FormSpec emits passwords as [type, store_id, explicit, used] — backend must unwrap."""
+    from app.form_specs.connections import form_data_to_config
+
+    form = {
+        "label": "icinga",
+        "type": [
+            "icinga2",
+            {
+                "icinga2_url": "https://icinga.example.com:5665",
+                "icinga2_username": "root",
+                "icinga2_password": ["explicit_password", "", "secret123", False],
+                "icinga2_verify_ssl": True,
+                "timeout": 15,
+            },
+        ],
+    }
+    cfg = form_data_to_config(form, connection_id="icinga")
+    assert cfg.icinga2_password == "secret123"
