@@ -12,15 +12,28 @@ older single-flat-file installations is automatic.
 
 from __future__ import annotations
 
+import re
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, BeforeValidator, ConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 # Hex (#rrggbb) or the literal "transparent". Mirrors the FormSpec MatchRegex
 # in global_settings.py so the API rejects bad values the same way the UI does.
-ColorString = Annotated[str, StringConstraints(pattern=r"^(#[0-9a-fA-F]{6}|transparent)$")]
+# A BeforeValidator (not StringConstraints) so the 422 detail carries a
+# human-readable msg the FormEdit can surface verbatim, instead of Pydantic's
+# default "String should match pattern '^(#…)$'" regex dump.
+_COLOR_RE = re.compile(r"^(#[0-9a-fA-F]{6}|transparent)$")
+
+
+def _validate_color(v: object) -> str:
+    if not isinstance(v, str) or not _COLOR_RE.match(v):
+        raise ValueError("Use a 6-digit hex code like '#ffffff' or the literal 'transparent'.")
+    return v
+
+
+ColorString = Annotated[str, BeforeValidator(_validate_color)]
 
 
 class GlobalSettings(BaseModel):

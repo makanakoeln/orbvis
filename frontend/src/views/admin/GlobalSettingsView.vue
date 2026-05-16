@@ -80,7 +80,7 @@ import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_for
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { settingsApi } from '@/api/client';
+import { ApiError, settingsApi } from '@/api/client';
 import OrbUnsavedChangesDialog from '@/components/OrbUnsavedChangesDialog.vue';
 import { useFormSpecSchema } from '@/composables/useFormSpecSchema';
 import { useSaveBarState } from '@/composables/useSaveBarState';
@@ -208,12 +208,45 @@ function resetForm() {
     saveError.value = '';
 }
 
+// FastAPI 422 returns `{ detail: [{ loc: ["body", "<field>", ...], msg, type, input, ctx }] }`.
+// FormEdit expects `{ location: [<field>, ...], message, replacement_value }` and uses the
+// location array to highlight the matching nested dict element. Strip the leading "body"
+// segment and pull the input back through as the replacement value so the field re-renders
+// with the rejected text instead of snapping back to the previous saved value.
+interface PydanticError {
+    loc: (string | number)[];
+    msg: string;
+    type?: string;
+    input?: unknown;
+    ctx?: Record<string, unknown>;
+}
+function toFormValidation(detail: unknown): { messages: Validation; summary: string } | null {
+    if (!Array.isArray(detail)) return null;
+    const errs = detail as PydanticError[];
+    if (!errs.length || !errs.every((e) => Array.isArray(e?.loc) && typeof e?.msg === 'string')) {
+        return null;
+    }
+    // Pydantic's BeforeValidator wraps the raised ValueError as
+    // "Value error, <our message>" — strip that prefix so the field-level
+    // hint matches what the FormSpec MatchRegex shows server-side.
+    const clean = (m: string): string => m.replace(/^Value error,\s*/, '');
+    const messages: Validation = errs.map((e) => ({
+        location: e.loc.filter((s) => s !== 'body').map((s) => String(s)),
+        message: clean(e.msg),
+        replacement_value: e.input ?? null,
+    }));
+    const first = errs[0];
+    const field = first.loc.filter((s) => s !== 'body').join('.') || 'value';
+    return { messages, summary: t('settings.validationFailed', { field, msg: clean(first.msg) }) };
+}
+
 async function handleSave() {
     const token = auth.accessToken;
     if (!token) return;
     saving.value = true;
     saveError.value = '';
     savedOk.value = false;
+    validation.value = [];
     try {
         const updated = await settingsApi.update(data.value as GlobalSettings, token);
         initialData.value = deepClone(updated);
@@ -224,11 +257,31 @@ async function handleSave() {
             savedOk.value = false;
         }, 3000);
     } catch (e: unknown) {
-        saveError.value = e instanceof Error ? e.message : t('admin.saveFailed');
+        if (e instanceof ApiError && e.status === 422) {
+            // ApiError.detail is the raw body { detail: PydanticError[] | string }
+            const body = (e.detail as { detail?: unknown } | null)?.detail;
+            const parsed = toFormValidation(body);
+            if (parsed) {
+                validation.value = parsed.messages;
+                saveError.value = parsed.summary;
+                // jump to the first sidebar group that contains the invalid field
+                const dict = schema.value as DictionarySchema | null;
+                const firstField = parsed.messages[0]?.location[0];
+                if (dict?.elements && firstField) {
+                    const el = dict.elements.find((x) => x.name === firstField);
+                    const rawKey = el?.group?.key ?? '';
+                    if (rawKey) activeGroup.value = sidebarKey(rawKey);
+                }
+            } else {
+                saveError.value = e.message;
+            }
+        } else {
+            saveError.value = e instanceof Error ? e.message : t('admin.saveFailed');
+        }
         if (saveErrorTimer) clearTimeout(saveErrorTimer);
         saveErrorTimer = setTimeout(() => {
             saveError.value = '';
-        }, 5000);
+        }, 8000);
     } finally {
         saving.value = false;
     }

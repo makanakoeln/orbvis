@@ -670,6 +670,7 @@ export default {
             'Es wurde mindestens ein Feld geändert — speichern oder verwerfen, bevor die Seite verlassen wird',
         modifiedHint:
             'keine Änderungen | 1 Feld seit dem letzten Speichern geändert | {n} Felder seit dem letzten Speichern geändert',
+        validationFailed: 'Speichern nicht möglich: {field} — {msg}',
         iconDefaults: 'Symbol-Standardwerte',
         lineDefaults: 'Linien-Standardwerte',
         labelDefaults: 'Beschriftungs-Standardwerte',
