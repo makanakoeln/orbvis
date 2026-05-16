@@ -188,7 +188,7 @@
                                     :title="t('common.delete')"
                                     @click="deleteTarget = b.id"
                                 >
-                                    <CmkIcon name="remove" size="small" />
+                                    <CmkIcon name="delete" size="small" />
                                 </button>
                             </div>
                         </td>

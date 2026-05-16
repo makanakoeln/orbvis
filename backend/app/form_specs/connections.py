@@ -10,6 +10,7 @@ discriminator.
 
 from __future__ import annotations
 
+import os
 from typing import Literal
 
 from app.schemas.connection import REDACTED_SECRET, ConnectionConfig
@@ -47,6 +48,20 @@ _ICINGA2_FIELDS = (
 )
 
 
+def _omd_socket_prefill() -> InputHint | DefaultValue:
+    """Auto-fill the OMD livestatus socket when OrbVis runs inside an OMD site.
+
+    Saves the operator from retyping /omd/sites/<site>/tmp/run/live on every
+    new connection. Falls back to a placeholder hint when not in OMD.
+    """
+    omd_root = os.environ.get("OMD_ROOT")
+    if omd_root:
+        # /tmp/run/live is the OMD Livestatus Unix-domain socket, not a
+        # temp-file path — bandit B108 is a false positive here.
+        return DefaultValue(f"{omd_root}/tmp/run/live")  # nosec B108
+    return InputHint("/omd/sites/<site>/tmp/run/live")
+
+
 def _livestatus_target() -> CascadingSingleChoice:
     return CascadingSingleChoice(
         title=Title("Connection target"),
@@ -66,7 +81,7 @@ def _livestatus_target() -> CascadingSingleChoice:
                             required=True,
                             parameter_form=String(
                                 title=Title("Socket path"),
-                                prefill=InputHint("/omd/sites/<site>/tmp/run/live"),
+                                prefill=_omd_socket_prefill(),
                                 field_size=FieldSize.LARGE,
                             ),
                         ),
@@ -239,9 +254,11 @@ def connection_spec(monitoring_core: MonitoringCore | None = None) -> Dictionary
                             title=Title("Icinga2 REST API"),
                             parameter_form=_icinga2_branch(),
                         ),
+                        # Demo backend lives last so an operator can't pick it
+                        # by accident as the first option in the dropdown.
                         CascadingSingleChoiceElement(
                             name="test",
-                            title=Title("Test backend (demo)"),
+                            title=Title("Test backend (demo data)"),
                             parameter_form=_test_branch(),
                         ),
                     ],

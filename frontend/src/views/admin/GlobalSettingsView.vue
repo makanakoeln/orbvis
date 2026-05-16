@@ -179,22 +179,40 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* WATO-style page: header + form share one column, no Card wrapper.
+   Wider column (72rem ~= 1152px) so a 1440px viewport doesn't feel half-empty,
+   centered so the form lives in the optical centre of the page. */
 .settings-page {
-    max-width: 56rem;
-    padding-bottom: 5rem;
+    max-width: 72rem;
+    margin: 0 auto;
+    padding-bottom: 8rem;
 }
 
 .settings-page__header {
     margin-bottom: var(--dimension-6);
 }
 
-.settings-page__form {
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: var(--dimension-6);
+/* WATO-style group dividers: bigger heading + horizontal rule between
+   sections so the operator can see at a glance which group they're in. */
+.settings-page__form :deep(.form-dictionary__group-title) {
+    font-size: var(--font-size-large);
+    font-weight: 600;
+    margin-top: var(--dimension-6);
+    padding-top: var(--dimension-5);
+    padding-bottom: var(--dimension-3);
+    border-top: 1px solid var(--border);
 }
 
+.settings-page__form
+    :deep(table.form-dictionary > tbody > tr:first-of-type .form-dictionary__group-title) {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+}
+
+/* Sticky action bar — WATO-style border-top instead of a floating card.
+   Stays within the form column but with enough margin and visible border so
+   it doesn't overlap content above. */
 .settings-page__savebar {
     position: sticky;
     bottom: 0;
@@ -203,12 +221,10 @@ onUnmounted(() => {
     align-items: center;
     justify-content: flex-end;
     gap: var(--dimension-4);
-    margin-top: var(--dimension-5);
-    padding: var(--dimension-4) var(--dimension-5);
-    background: var(--bg-elevated, var(--bg-surface));
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+    margin-top: var(--dimension-7);
+    padding: var(--dimension-4) 0;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border);
 }
 
 .settings-page__dirty {
