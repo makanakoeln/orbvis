@@ -949,7 +949,7 @@
                         <!-- Card body -->
                         <div style="padding: 10px 12px">
                             <div
-                                class="font-semibold text-[var(--text)] group-hover:text-white transition-colors truncate"
+                                class="font-semibold text-[var(--text)] transition-colors truncate"
                                 style="font-size: 13px; margin-bottom: 5px"
                                 :title="map.alias || map.name"
                             >

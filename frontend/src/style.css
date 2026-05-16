@@ -269,8 +269,13 @@ input.cmk-input:disabled {
     border-color: var(--color-corporate-green-50);
 }
 
+/* The X is drawn with ``fill="currentcolor"``, so this is what determines
+   whether the tick shows. CMK upstream pinned it to ``#fff`` which is
+   invisible on the light-theme checkbox background. Bridge it to the
+   regular font color (CMK's theme-aware ``--font-color``: white on dark,
+   dark on light) so the check is legible in both themes. */
 .cmk-checkbox__indicator {
-    color: #fff;
+    color: var(--font-color, #fff);
 }
 
 .cmk-checkbox__label {

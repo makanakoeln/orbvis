@@ -23,6 +23,16 @@
             <div class="board-settings__scroll">
                 <!-- General -->
                 <div v-if="activeTab === 'general'" class="space-y-[10px]">
+                    <!-- ID (read-only) — mirror ConnectionsView's "Connection ID"
+                         field so both settings surfaces present the immutable
+                         identifier the same way. The board name is the
+                         filesystem-level key; renaming requires the explicit
+                         "Clone" action. -->
+                    <div class="space-y-[4px]">
+                        <CmkLabel>{{ t('admin.boardId') }}</CmkLabel>
+                        <p class="board-settings__readonly-value">{{ props.board.name }}</p>
+                    </div>
+
                     <!-- Board type (read-only — switching type would invalidate type-specific
                          settings and the board geometry; cloning is the supported path).
                          Rendered as plain text (not Badge) so it doesn't suggest interaction. -->
