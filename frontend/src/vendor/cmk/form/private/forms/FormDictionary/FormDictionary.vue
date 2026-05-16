@@ -132,7 +132,6 @@ const componentId = useId();
                                 v-if="!dict_element.dict_config.render_only"
                                 class="form-dictionary__group_elem"
                                 role="group"
-                                :data-name="dict_element.dict_config.name"
                                 :aria-label="dict_element.dict_config.parameter_form.title"
                             >
                                 <template v-if="titleRequired(dict_element.dict_config)">

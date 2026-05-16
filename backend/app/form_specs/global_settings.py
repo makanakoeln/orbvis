@@ -19,13 +19,15 @@ from collections.abc import Sequence
 from app.form_specs import OrbColorString, OrbDictGroup
 from app.object_options import LINE_STYLES
 
-from cmk.rulesets.v1 import Help, Label, Message, Title
+from cmk.rulesets.v1 import Help, Message, Title
 from cmk.rulesets.v1.form_specs import (
-    BooleanChoice,
+    CascadingSingleChoice,
+    CascadingSingleChoiceElement,
     DefaultValue,
     DictElement,
     Dictionary,
     FieldSize,
+    FixedValue,
     InputHint,
     Integer,
     SingleChoice,
@@ -186,60 +188,82 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                 ),
             ),
             # ── Object defaults / Labels ──
-            "label_show": DictElement(
+            # CascadingSingleChoice is the canonical FormSpec way to model
+            # "field only matters when this toggle is on". The endpoint
+            # ``GET /settings/form`` maps this nested shape onto the flat
+            # ``label_*`` keys still used by every board renderer; the
+            # hidden branch keeps the saved tuning values around so the
+            # operator can flip Show off → on without losing color/size.
+            "labels": DictElement(
                 required=True,
                 group=_OBJECT_LABELS,
-                parameter_form=BooleanChoice(
-                    title=Title("Show object labels"),
-                    label=Label("Display labels under each object"),
-                    prefill=DefaultValue(True),
-                ),
-            ),
-            "label_size": DictElement(
-                required=True,
-                group=_OBJECT_LABELS,
-                parameter_form=Integer(
-                    title=Title("Label size"),
-                    unit_symbol="px",
-                    prefill=DefaultValue(11),
-                ),
-            ),
-            "label_color": DictElement(
-                required=True,
-                group=_OBJECT_LABELS,
-                parameter_form=OrbColorString(
-                    title=Title("Label color"),
-                    prefill=DefaultValue("#ffffff"),
-                    custom_validate=(MatchRegex(_COLOR_REGEX, error_msg=_COLOR_ERROR),),
-                ),
-            ),
-            "label_background": DictElement(
-                required=True,
-                group=_OBJECT_LABELS,
-                parameter_form=OrbColorString(
-                    title=Title("Label background"),
-                    prefill=DefaultValue("transparent"),
-                    custom_validate=(MatchRegex(_COLOR_REGEX, error_msg=_COLOR_ERROR),),
-                ),
-            ),
-            "label_x": DictElement(
-                required=True,
-                group=_OBJECT_LABELS,
-                parameter_form=Integer(
-                    title=Title("Label X offset"),
-                    help_text=Help("Horizontal shift. Set once per install."),
-                    unit_symbol="px",
-                    prefill=DefaultValue(0),
-                ),
-            ),
-            "label_y": DictElement(
-                required=True,
-                group=_OBJECT_LABELS,
-                parameter_form=Integer(
-                    title=Title("Label Y offset"),
-                    help_text=Help("Vertical shift. Set once per install."),
-                    unit_symbol="px",
-                    prefill=DefaultValue(0),
+                parameter_form=CascadingSingleChoice(
+                    title=Title("Object labels"),
+                    help_text=Help("Caption text shown next to icons."),
+                    elements=[
+                        CascadingSingleChoiceElement(
+                            name="hidden",
+                            title=Title("Don't display labels"),
+                            parameter_form=FixedValue(value=None),
+                        ),
+                        CascadingSingleChoiceElement(
+                            name="shown",
+                            title=Title("Display labels under each object"),
+                            parameter_form=Dictionary(
+                                elements={
+                                    "size": DictElement(
+                                        required=True,
+                                        parameter_form=Integer(
+                                            title=Title("Size"),
+                                            unit_symbol="px",
+                                            prefill=DefaultValue(11),
+                                        ),
+                                    ),
+                                    "color": DictElement(
+                                        required=True,
+                                        parameter_form=OrbColorString(
+                                            title=Title("Color"),
+                                            prefill=DefaultValue("#ffffff"),
+                                            custom_validate=(
+                                                MatchRegex(_COLOR_REGEX, error_msg=_COLOR_ERROR),
+                                            ),
+                                        ),
+                                    ),
+                                    "background": DictElement(
+                                        required=True,
+                                        parameter_form=OrbColorString(
+                                            title=Title("Background"),
+                                            prefill=DefaultValue("transparent"),
+                                            custom_validate=(
+                                                MatchRegex(_COLOR_REGEX, error_msg=_COLOR_ERROR),
+                                            ),
+                                        ),
+                                    ),
+                                    "x_offset": DictElement(
+                                        required=True,
+                                        parameter_form=Integer(
+                                            title=Title("X offset"),
+                                            help_text=Help(
+                                                "Horizontal shift. Set once per install."
+                                            ),
+                                            unit_symbol="px",
+                                            prefill=DefaultValue(0),
+                                        ),
+                                    ),
+                                    "y_offset": DictElement(
+                                        required=True,
+                                        parameter_form=Integer(
+                                            title=Title("Y offset"),
+                                            help_text=Help("Vertical shift. Set once per install."),
+                                            unit_symbol="px",
+                                            prefill=DefaultValue(0),
+                                        ),
+                                    ),
+                                },
+                            ),
+                        ),
+                    ],
+                    prefill=DefaultValue("shown"),
                 ),
             ),
             # ── Object defaults / Templates ──

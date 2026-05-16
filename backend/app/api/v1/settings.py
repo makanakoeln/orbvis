@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import ValidationError
 
 from app.api.v1.deps import get_current_user, require_admin
 from app.form_specs import serialize_form_spec
@@ -34,6 +37,136 @@ async def get_settings(current_user: User = Depends(get_current_user)) -> Global
 @router.put("", response_model=GlobalSettings)
 async def update_settings(data: GlobalSettings, _: User = Depends(require_admin)) -> GlobalSettings:
     return settings_service.save_global_settings(data)
+
+
+# ── FormSpec form view ────────────────────────────────────────────────────
+#
+# Storage on disk + the regular ``GET/PUT /settings`` endpoints stay flat
+# (``label_show``, ``label_size``, …) so every existing consumer keeps
+# working unchanged. The ``/form`` pair below reshapes that flat record
+# into the nested CascadingSingleChoice payload the FormSpec dispatcher
+# expects, and unpacks it again on save. Hidden ⇒ flat ``label_show=False``
+# while preserving the last-known tuning values, so the operator can
+# toggle Show off → on without losing their color/size tweaks.
+
+
+def _to_form(s: GlobalSettings) -> dict[str, Any]:
+    labels: list[Any]
+    if s.label_show:
+        labels = [
+            "shown",
+            {
+                "size": s.label_size,
+                "color": s.label_color,
+                "background": s.label_background,
+                "x_offset": s.label_x,
+                "y_offset": s.label_y,
+            },
+        ]
+    else:
+        labels = ["hidden", None]
+    return {
+        "default_backend_id": s.default_backend_id,
+        "default_map_type": s.default_map_type,
+        "view_type": s.view_type,
+        "icon_size": s.icon_size,
+        "line_style": s.line_style,
+        "url_target": s.url_target,
+        "z": s.z,
+        "labels": labels,
+        # Optional templates only included when set, matching the flat
+        # ``response_model_exclude_none`` behaviour upstream.
+        **({"hover_template": s.hover_template} if s.hover_template is not None else {}),
+        **({"context_template": s.context_template} if s.context_template is not None else {}),
+    }
+
+
+def _from_form(form: dict[str, Any], current: GlobalSettings) -> GlobalSettings:
+    labels = form.get("labels")
+    if not isinstance(labels, list) or len(labels) != 2:
+        raise HTTPException(status_code=422, detail="labels must be a [kind, payload] pair")
+    kind, payload = labels
+    if kind == "shown":
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=422, detail="labels.shown payload must be an object")
+        label_show = True
+        label_size = int(payload.get("size", current.label_size))
+        label_color = str(payload.get("color", current.label_color))
+        label_background = str(payload.get("background", current.label_background))
+        label_x = int(payload.get("x_offset", current.label_x))
+        label_y = int(payload.get("y_offset", current.label_y))
+    elif kind == "hidden":
+        # Preserve last-known tuning values — toggling Show off shouldn't
+        # erase the operator's careful color/size choices.
+        label_show = False
+        label_size = current.label_size
+        label_color = current.label_color
+        label_background = current.label_background
+        label_x = current.label_x
+        label_y = current.label_y
+    else:
+        raise HTTPException(status_code=422, detail=f"unknown labels branch: {kind!r}")
+
+    try:
+        return GlobalSettings(
+            icon_size=int(form.get("icon_size", current.icon_size)),
+            view_type=str(form.get("view_type", current.view_type)),
+            url_target=str(form.get("url_target", current.url_target)),
+            z=int(form.get("z", current.z)),
+            line_style=form.get("line_style"),
+            label_show=label_show,
+            label_size=label_size,
+            label_color=label_color,
+            label_background=label_background,
+            label_x=label_x,
+            label_y=label_y,
+            hover_template=form.get("hover_template"),
+            context_template=form.get("context_template"),
+            default_backend_id=str(form.get("default_backend_id", current.default_backend_id)),
+            default_map_type=str(form.get("default_map_type", current.default_map_type)),
+        )
+    except ValidationError as e:
+        # Re-shape Pydantic's loc=["label_color"] into the nested form
+        # loc=["labels", "shown", "color"] so the FormEdit highlights the
+        # actual rendered field instead of a key that doesn't exist in
+        # the form view.
+        flat_to_nested = {
+            "label_size": ["labels", "shown", "size"],
+            "label_color": ["labels", "shown", "color"],
+            "label_background": ["labels", "shown", "background"],
+            "label_x": ["labels", "shown", "x_offset"],
+            "label_y": ["labels", "shown", "y_offset"],
+        }
+        details: list[dict[str, Any]] = []
+        for err in e.errors():
+            loc: list[Any] = list(err.get("loc") or [])
+            first = str(loc[0]) if loc else ""
+            if first in flat_to_nested:
+                loc = list(flat_to_nested[first]) + loc[1:]
+            details.append(
+                {
+                    "loc": loc,
+                    "msg": err.get("msg"),
+                    "type": err.get("type"),
+                    "input": err.get("input"),
+                }
+            )
+        raise HTTPException(status_code=422, detail=details) from e
+
+
+@router.get("/form")
+async def get_settings_form(_: User = Depends(get_current_user)) -> dict[str, object]:
+    return _to_form(settings_service.get_global_settings())
+
+
+@router.put("/form")
+async def update_settings_form(
+    data: dict[str, object],
+    _: User = Depends(require_admin),
+) -> dict[str, object]:
+    current = settings_service.get_global_settings()
+    flat = _from_form(dict(data), current)
+    return _to_form(settings_service.save_global_settings(flat))
 
 
 @router.get("/object-options")

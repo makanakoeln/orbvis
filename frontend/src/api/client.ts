@@ -535,6 +535,16 @@ export const settingsApi = {
 
     getSchema: (token: string): Promise<Record<string, unknown>> =>
         request('/settings/schema', {}, token),
+
+    // FormSpec-shaped sibling of get/update. Storage stays flat (so every
+    // ``useSettingsStore`` consumer keeps using ``settings.label_color`` etc.
+    // unchanged); the backend pair below packs/unpacks ``labels`` into a
+    // CascadingSingleChoice payload for FormEdit.
+    getForm: (token: string): Promise<Record<string, unknown>> =>
+        request('/settings/form', {}, token),
+
+    updateForm: (data: Record<string, unknown>, token: string): Promise<Record<string, unknown>> =>
+        request('/settings/form', { method: 'PUT', body: JSON.stringify(data) }, token),
 };
 
 // ---- Object option catalogues (line styles etc.) ----
