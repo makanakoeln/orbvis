@@ -1,7 +1,0 @@
-Total messages: 2 (Errors: 1, Warnings: 1)
-
-[ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://klappclub/ZWEIFUENF/orbvis/api/v1/auth/sso:0
-[WARNING] [OrbVis] SSO failed: ApiError: No valid Checkmk session
-    at $ (http://klappclub/ZWEIFUENF/orbvis/assets/index-Ct3EMWda.js:57:21532)
-    at async d (http://klappclub/ZWEIFUENF/orbvis/assets/index-Ct3EMWda.js:57:92120)
-    at async Bk (http://klappclub/ZWEIFUENF/orbvis/assets/index-Ct3EMWda.js:57:90383) @ http://klappclub/ZWEIFUENF/orbvis/assets/index-Ct3EMWda.js:56
