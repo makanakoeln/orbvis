@@ -9,7 +9,8 @@ Only the subset of FormSpec types OrbVis uses is implemented here.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+
+from app.vendor.cmk_form_specs_extended import DictGroupExtended, DictionaryGroupLayout
 
 from cmk.rulesets.v1._localize import _Localizable
 from cmk.rulesets.v1.form_specs import (
@@ -47,16 +48,21 @@ class OrbColorString(String):  # type: ignore[misc]
 
 
 @dataclass(frozen=True, kw_only=True)
-class OrbDictGroup(DictGroup):  # type: ignore[misc]
-    """DictGroup + optional ``layout`` / explicit ``key`` for OrbVis FormSpecs.
+class OrbDictGroup(DictGroupExtended):
+    """``DictGroupExtended`` + explicit ``key`` for OrbVis FormSpecs.
 
-    CMK's DictGroup only carries title + help; the vendored FormDictionary
-    component reads ``group.layout`` ("vertical" stacks sections, "horizontal"
-    arranges siblings inline). Adds an explicit ``key`` so groups with the
-    same title don't collide.
+    Inherits ``layout`` (horizontal/vertical/two_columns) from the
+    vendored ``DictGroupExtended``, but flips the default back to
+    ``vertical`` — most OrbVis groups want stacked sections, and only
+    a small number (e.g. label X/Y offsets) opt into horizontal.
+
+    CMK identifies groups by ``repr(title)+repr(help_text)`` in its
+    visitor — fragile when titles repeat or are empty — so ``key``
+    stays as an OrbVis-side field for the sidebar mapping in
+    GlobalSettingsView (board_defaults, object_appearance, …).
     """
 
-    layout: Literal["vertical", "horizontal"] = "vertical"
+    layout: DictionaryGroupLayout = DictionaryGroupLayout.vertical
     key: str | None = None
 
 
@@ -188,11 +194,13 @@ def _group(el: DictElement[object]) -> dict[str, object] | None:
         return None
     title = _loc(group.title) or ""
     help_text = _loc(group.help_text) or ""
-    if isinstance(group, OrbDictGroup):
-        layout = group.layout
-        key = group.key or _slugify(title) or "group"
+    if isinstance(group, DictGroupExtended):
+        layout = group.layout.value
     else:
-        layout = "vertical"
+        layout = DictionaryGroupLayout.vertical.value
+    if isinstance(group, OrbDictGroup) and group.key:
+        key = group.key
+    else:
         key = _slugify(title) or "group"
     return {"key": key, "title": title, "help": help_text, "layout": layout}
 

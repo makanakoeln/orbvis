@@ -18,6 +18,7 @@ from collections.abc import Sequence
 
 from app.form_specs import OrbColorString, OrbDictGroup
 from app.object_options import LINE_STYLES
+from app.vendor.cmk_form_specs_extended import DictionaryGroupLayout
 
 from cmk.rulesets.v1 import Help, Message, Title
 from cmk.rulesets.v1.form_specs import (
@@ -58,6 +59,15 @@ _OBJECT_TEMPLATES = OrbDictGroup(
         "of its own. Placeholders: {{name}}, {{state}}, {{output}}."
     ),
     key="object_templates",
+)
+# Empty title/help — the FormDictionary renders only the layout=horizontal
+# class on the elements wrapper, no extra section heading. Keeps X / Y
+# offset readable as one row instead of two stacked single-number rows.
+_LABEL_OFFSETS = OrbDictGroup(
+    title=Title(""),
+    help_text=Help(""),
+    layout=DictionaryGroupLayout.horizontal,
+    key="label_offsets",
 )
 
 _COLOR_REGEX = r"^(#[0-9a-fA-F]{6}|transparent)$"
@@ -241,6 +251,7 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                                     ),
                                     "x_offset": DictElement(
                                         required=True,
+                                        group=_LABEL_OFFSETS,
                                         parameter_form=Integer(
                                             title=Title("X offset"),
                                             help_text=Help(
@@ -252,6 +263,7 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
                                     ),
                                     "y_offset": DictElement(
                                         required=True,
+                                        group=_LABEL_OFFSETS,
                                         parameter_form=Integer(
                                             title=Title("Y offset"),
                                             help_text=Help("Vertical shift. Set once per install."),
