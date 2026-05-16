@@ -229,11 +229,13 @@ if "${AS_ROOT[@]}" test -d "$LEGACY_DIR" 2>/dev/null; then
   MIGRATED=0
   step "Migrating data from legacy local/share/orbvis/"
 
-  # User data: boards (incl. backgrounds), images, db, connections, settings.
-  # ``backends.json`` is the pre-rename predecessor of ``connections.json``;
-  # the backend's connection_service still recognises and renames it on
-  # startup, so we just move it along.
-  for sub in boards images orbvis.db connections.json backends.json settings.json; do
+  # User data: boards (incl. backgrounds), images, db, connections, settings,
+  # tile cache. ``backends.json`` is the pre-rename predecessor of
+  # ``connections.json``; the backend's connection_service still recognises
+  # and renames it on startup, so we just move it along. ``tiles`` is the
+  # OSM tile cache the worldmap proxy writes — large + per-site, must not
+  # live under local/ (would propagate megabytes to every remote).
+  for sub in boards images orbvis.db connections.json backends.json settings.json tiles; do
     if "${AS_ROOT[@]}" test -e "$LEGACY_DIR/$sub" \
        && ! "${AS_ROOT[@]}" test -e "$ORBVIS_DIR/$sub"; then
       quietly "${AS_ROOT[@]}" mv "$LEGACY_DIR/$sub" "$ORBVIS_DIR/$sub"
@@ -265,7 +267,7 @@ if "${AS_ROOT[@]}" test -d "$LEGACY_DIR" 2>/dev/null; then
   # User-data leftovers that didn't migrate because the destination already
   # existed (e.g. settings.json written after a partial run). The destination
   # is canonical; drop the legacy copy so it can't leak via WATO replication.
-  for sub in boards images orbvis.db connections.json backends.json settings.json .env; do
+  for sub in boards images orbvis.db connections.json backends.json settings.json tiles .env; do
     if "${AS_ROOT[@]}" test -e "$LEGACY_DIR/$sub" \
        && "${AS_ROOT[@]}" test -e "$ORBVIS_DIR/$sub"; then
       quietly "${AS_ROOT[@]}" rm -rf "$LEGACY_DIR/$sub"

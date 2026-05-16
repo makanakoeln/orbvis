@@ -315,8 +315,10 @@ setup)
   if [[ -d "$LEGACY_DIR" ]]; then
     step "Migrating data from legacy local/share/orbvis/"
     # ``backends.json`` is the pre-rename predecessor of ``connections.json``;
-    # the backend recognises it on startup, so move it along.
-    for sub in boards images orbvis.db connections.json backends.json settings.json; do
+    # the backend recognises it on startup, so move it along. ``tiles`` is
+    # the OSM cache — must move out of local/ to keep it out of the WATO
+    # replication snapshot.
+    for sub in boards images orbvis.db connections.json backends.json settings.json tiles; do
       if [[ -e "$LEGACY_DIR/$sub" && ! -e "$ORBVIS_DIR/$sub" ]]; then
         mv "$LEGACY_DIR/$sub" "$ORBVIS_DIR/$sub"
       fi
@@ -331,7 +333,7 @@ setup)
     # User-data leftovers that didn't migrate because the destination
     # already existed. Destination is canonical; drop the legacy copy so it
     # can't leak via WATO replication.
-    for sub in boards images orbvis.db connections.json backends.json settings.json .env; do
+    for sub in boards images orbvis.db connections.json backends.json settings.json tiles .env; do
       [[ -e "$LEGACY_DIR/$sub" && -e "$ORBVIS_DIR/$sub" ]] && rm -rf "$LEGACY_DIR/$sub"
     done
     # Drop empty legacy directory so the next replication snapshot has
