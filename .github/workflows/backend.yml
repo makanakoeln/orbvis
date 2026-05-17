@@ -27,12 +27,15 @@ jobs:
     env:
       # OrbVis's form_specs/* import cmk.rulesets.v1 at module load. The
       # package is not on PyPI — it lives in checkmk/packages/cmk-plugin-apis/
-      # and is provided by OMD in real deployments. For CI we sparse-clone the
-      # checkmk repo and put the package directory on PYTHONPATH, mirroring
-      # the local dev setup (CMK_PLUGIN_APIS env in tools/release-test/standalone).
+      # and is provided by OMD in real deployments. For pytest we sparse-clone
+      # the checkmk repo and pass the package directory via PYTHONPATH at
+      # invocation time. mypy intentionally does NOT see it: the repo-root
+      # mypy config silences cmk.* via ignore_missing_imports, matching the
+      # local dev experience where cmk types are opaque (any mismatch against
+      # upstream's evolving generics belongs in a deliberate refactor, not
+      # surfaced as a CI failure on every push).
       CMK_REF: master
       CMK_APIS: ${{ github.workspace }}/_cmk-plugin-apis
-      PYTHONPATH: ${{ github.workspace }}/_cmk-plugin-apis
 
     steps:
       - uses: actions/checkout@v4
@@ -83,6 +86,10 @@ jobs:
       - name: Test + coverage gate
         # Baseline ~50%; Folge-PRs heben die Schwelle stufenweise in Richtung 75%.
         # Gate bewusst unter dem aktuellen Stand, damit kein Zufallsbruch.
+        # PYTHONPATH only exported here so pytest can import cmk.rulesets.v1
+        # for the FormSpec test suite — mypy/ruff/bandit ran above without it.
+        env:
+          PYTHONPATH: ${{ env.CMK_APIS }}
         run: pytest --cov=app --cov-report=term-missing --cov-fail-under=45
 
   docker-build-backend:
