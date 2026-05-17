@@ -43,9 +43,9 @@ _DISPLAY = OrbDictGroup(
     key="display",
 )
 _TEMPLATES = OrbDictGroup(
-    title=Title("Tooltip & context-menu templates"),
+    title=Title("Templates"),
     help_text=Help(
-        "Override the global hover / context-menu fallback for this board. "
+        "Per-board overrides for the global hover / context-menu fallback. "
         "Placeholders: {{name}}, {{state}}, {{output}}, {{host}}, {{service}}."
     ),
     key="templates",
@@ -127,8 +127,10 @@ def board_metadata_spec(
                 group=_BEHAVIOR,
                 parameter_form=Integer(
                     title=Title("Auto-rotate interval"),
-                    help_text=Help("Seconds until the next board is shown in the rotation."),
-                    label=Label("0 = disabled"),
+                    help_text=Help(
+                        "Seconds until the next board is shown in the rotation. "
+                        "0 disables auto-rotate for this board."
+                    ),
                     unit_symbol="s",
                     prefill=DefaultValue(0),
                 ),
@@ -164,9 +166,11 @@ def board_metadata_spec(
                 parameter_form=String(
                     title=Title("Hover template"),
                     help_text=Help(
-                        "Overrides the global hover template for this board. "
-                        "Available placeholders: {{name}}, {{state}}, {{output}}, "
-                        "{{host}}, {{service}}. Example: '{{name}} is {{state}} — {{output}}'."
+                        "Leave unchecked to inherit the global Hover template "
+                        "(Settings → Object defaults). When enabled, overrides "
+                        "the global default for this board only. "
+                        "Placeholders: {{name}}, {{state}}, {{output}}, "
+                        "{{host}}, {{service}}."
                     ),
                     prefill=InputHint("e.g. {{name}} is {{state}}"),
                     field_size=FieldSize.LARGE,
@@ -177,9 +181,10 @@ def board_metadata_spec(
                 parameter_form=String(
                     title=Title("Context template"),
                     help_text=Help(
-                        "Right-click context-menu fallback. Same placeholders as "
-                        "the hover template: {{name}}, {{state}}, {{output}}, "
-                        "{{host}}, {{service}}."
+                        "Leave unchecked to inherit the global Context template "
+                        "(Settings → Object defaults). When enabled, overrides "
+                        "the global default for this board only. Same "
+                        "placeholders as the hover template."
                     ),
                     prefill=InputHint("e.g. {{name}} is {{state}}"),
                     field_size=FieldSize.LARGE,

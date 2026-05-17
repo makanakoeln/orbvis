@@ -370,7 +370,7 @@ import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import FormEdit from '@cmk/form/FormEdit.vue';
 import { initializeComponentRegistry } from '@cmk/form/private/FormEditDispatcher/dispatch';
 import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError, boardsApi, boardsApiFormSpec, connectionsApi, rolesApi } from '@/api/client';
@@ -475,16 +475,23 @@ type Schema = NonNullable<VueFormspecComponents['components']>;
 initializeComponentRegistry(orbFormComponents);
 const formSchema = ref<Schema | null>(null);
 const schemaLoading = ref(true);
-const formSpecData = ref<Record<string, unknown>>({
+// Optional fields are omitted entirely when the board has no value, so the
+// FormSpec dispatcher renders them as un-checked (= inherit global defaults).
+// Setting them to '' / null would leave the checkbox enabled with an empty
+// value, which reads as "override with nothing" — the opposite of what an
+// operator who hasn't touched the field expects.
+const formSpecDataInitial: Record<string, unknown> = {
     alias: props.board.alias,
     connection_id: props.board.connection_id,
-    icon_size: props.board.icon_size,
     rotation_interval: props.board.rotation_interval ?? 0,
     click_action: props.board.click_action ?? 'link',
     show_in_lists: props.board.show_in_lists !== false,
-    hover_template: props.board.hover_template ?? '',
-    context_template: props.board.context_template ?? '',
-});
+};
+if (props.board.icon_size != null) formSpecDataInitial.icon_size = props.board.icon_size;
+if (props.board.hover_template) formSpecDataInitial.hover_template = props.board.hover_template;
+if (props.board.context_template)
+    formSpecDataInitial.context_template = props.board.context_template;
+const formSpecData = ref<Record<string, unknown>>(formSpecDataInitial);
 
 const boardTypeLabel = computed(
     () =>
@@ -594,15 +601,15 @@ const permLoading = ref(false);
 const permDraft = reactive(new Map<string, boolean>());
 
 // Snapshot the initial form state so we can disable Save when nothing
-// changed and confirm before discarding edits on cancel/close.
-const initialSnapshot = JSON.stringify({
-    form: form.value,
-    formSpec: formSpecData.value,
-});
+// changed and confirm before discarding edits on cancel/close. Re-taken
+// after FormEdit settles in onMounted because the visitor may normalise
+// formSpecData on first render (e.g. fill optional fields with defaults),
+// which would otherwise look like a user edit.
+const initialSnapshot = ref(JSON.stringify({ form: form.value, formSpec: formSpecData.value }));
 const isDirty = computed(
     () =>
-        JSON.stringify({ form: form.value, formSpec: formSpecData.value }) !== initialSnapshot ||
-        permDraft.size > 0,
+        JSON.stringify({ form: form.value, formSpec: formSpecData.value }) !==
+            initialSnapshot.value || permDraft.size > 0,
 );
 
 function requestClose() {
@@ -697,14 +704,28 @@ onMounted(async () => {
     connections.value = bs;
     schemaLoading.value = false;
     if (spec) formSchema.value = spec as unknown as Schema;
+    // Wait for FormEdit's first render to normalise formSpecData, then
+    // snapshot again so isDirty doesn't fire on the visitor's own defaults.
+    await nextTick();
+    initialSnapshot.value = JSON.stringify({
+        form: form.value,
+        formSpec: formSpecData.value,
+    });
 });
 </script>
 
 <style scoped>
 @reference "tailwindcss";
 
+/* Matches the FormDictionary group-title style (bold, normal case) so the
+   custom type-specific sections (Background, Topology, Map view, Filter)
+   read as siblings of the FormSpec-rendered "Identification", "Behavior",
+   etc. — instead of looking like a separate kind of heading. */
 .section-title {
-    @apply text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase mb-[6px] leading-none;
+    font-weight: bold;
+    font-size: var(--font-size-normal);
+    color: var(--text);
+    margin: 0 0 var(--dimension-3);
 }
 
 .board-settings__body {
@@ -753,6 +774,32 @@ onMounted(async () => {
     padding-top: var(--dimension-5);
     margin-top: var(--dimension-3);
     border-top: 1px solid var(--border);
+}
+
+/* Hairline divider between each top-level section (Background/Topology/etc.
+   and every FormSpec group) — mirrors the GlobalSettings layout so the
+   slide-in shares the same visual rhythm. The first section sits flush
+   under the chip row, so we only add the divider from the second onward.
+   Vue's :deep() doesn't accept comma lists, hence the duplicated rule. */
+.board-settings__scroll
+    > div
+    > .board-settings__type-section
+    + :deep(.form-dictionary)
+    tr[data-group]
+    > td,
+.board-settings__scroll :deep(.form-dictionary) tr[data-group] + tr[data-group] > td {
+    border-top: 1px solid var(--border);
+    padding-top: var(--dimension-5);
+    padding-bottom: var(--dimension-5);
+}
+
+.board-settings__type-section + :deep(.form-dictionary) {
+    margin-top: 0;
+}
+
+.board-settings__type-section {
+    padding-bottom: var(--dimension-5);
+    border-bottom: 1px solid var(--border);
 }
 
 .board-settings__tabs {
