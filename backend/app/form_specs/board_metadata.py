@@ -138,13 +138,16 @@ def board_metadata_spec(
             "click_action": DictElement(
                 required=True,
                 group=_BEHAVIOR,
-                parameter_form=SingleChoice(
-                    title=Title("Click action"),
-                    elements=[
-                        SingleChoiceElement(name="link", title=Title("Open link")),
-                        SingleChoiceElement(name="none", title=Title("No action")),
-                    ],
-                    prefill=DefaultValue("link"),
+                parameter_form=BooleanChoice(
+                    title=Title("Interactive"),
+                    label=Label("Clicks open object details or follow links"),
+                    help_text=Help(
+                        "Turn off for read-only lobby / TV displays where clicks "
+                        "should do nothing. When on (default), clicks open the "
+                        "details slide-in, follow an object URL, or navigate to "
+                        "a linked sub-board."
+                    ),
+                    prefill=DefaultValue(True),
                 ),
             ),
             "show_in_lists": DictElement(

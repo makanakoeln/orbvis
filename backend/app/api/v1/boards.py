@@ -153,6 +153,11 @@ async def update_board_metadata(
             detail="Editing hover/context templates requires admin privileges",
         )
     update_payload = {field: form_data[field] for field in METADATA_FIELDS if field in form_data}
+    # FormSpec now renders click_action as a BooleanChoice ("Interactive") so
+    # the form-data shape is bool. Map back to the on-wire literal that
+    # BoardUpdate validates.
+    if isinstance(update_payload.get("click_action"), bool):
+        update_payload["click_action"] = "link" if update_payload["click_action"] else "none"
     update = BoardUpdate.model_validate(update_payload)
     expected_version = _parse_if_match(request.headers.get("If-Match"))
     try:

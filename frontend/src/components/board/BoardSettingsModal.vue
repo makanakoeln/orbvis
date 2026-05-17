@@ -480,11 +480,14 @@ const schemaLoading = ref(true);
 // Setting them to '' / null would leave the checkbox enabled with an empty
 // value, which reads as "override with nothing" — the opposite of what an
 // operator who hasn't touched the field expects.
+// click_action is stored on the wire as 'link' | 'none' but the FormSpec
+// renders it as a BooleanChoice ("Interactive"). Translate at the form
+// boundary so the wire schema stays stable.
 const formSpecDataInitial: Record<string, unknown> = {
     alias: props.board.alias,
     connection_id: props.board.connection_id,
     rotation_interval: props.board.rotation_interval ?? 0,
-    click_action: props.board.click_action ?? 'link',
+    click_action: props.board.click_action !== 'none',
     show_in_lists: props.board.show_in_lists !== false,
 };
 if (props.board.icon_size != null) formSpecDataInitial.icon_size = props.board.icon_size;
@@ -567,7 +570,7 @@ async function save() {
                 connection_id: (fs.connection_id as string) ?? props.board.connection_id,
                 icon_size: (fs.icon_size as number | null | undefined) ?? null,
                 rotation_interval: (fs.rotation_interval as number | null | undefined) ?? 0,
-                click_action: (fs.click_action as 'link' | 'none' | undefined) ?? 'link',
+                click_action: (fs.click_action as boolean | undefined) === false ? 'none' : 'link',
                 show_in_lists: (fs.show_in_lists as boolean | undefined) ?? true,
                 background_image: form.value.background_image || null,
                 background_color: form.value.background_color || null,
