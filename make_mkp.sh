@@ -103,7 +103,15 @@ else
     Install a newer Node (e.g. via nvm: 'nvm install 22 && nvm use 22')."
   cd "$SCRIPT_DIR/frontend"
   npm install --silent
-  VITE_BASE_PATH=./ npm run build -- --base='./' --logLevel=warn
+  VITE_BASE_PATH=./ npm run build -- --base='./' --logLevel=warn 2>&1 | awk '
+    /didn.t resolve at build time, it will remain unchanged to be resolved at runtime/ { next }
+    /^\[plugin builtin:vite-reporter\]/ { next }
+    /^\(!\) Some chunks are larger than/ { next }
+    /^- Using dynamic import\(\) to code-split/ { next }
+    /^- Use build\.rolldownOptions/ { next }
+    /^- Adjust chunk size limit/ { next }
+    { is_blank = ($0 ~ /^[[:space:]]*$/); if (is_blank && prev_blank) next; prev_blank = is_blank; print }
+  '
   ok "Frontend built"
 fi
 
@@ -465,24 +473,34 @@ EOF
   # 6. Apache configuration
   step "Writing Apache configuration"
 
-  # Locate mod_proxy.so — CMK 2.4 bundles its own, CMK 2.3 uses the system Apache binary
-  # and therefore needs the system module path (Ubuntu/Debian: /usr/lib/apache2/modules/).
   PROXY_SO=""
   PROXY_HTTP_SO=""
+  PROXY_WSTUNNEL_SO=""
   for _dir in \
       "$ROOT/lib/apache/modules" \
       "/usr/lib/apache2/modules" \
       "/usr/lib64/httpd/modules" \
       "/usr/lib/httpd/modules"; do
-    if [[ -f "$_dir/mod_proxy.so" && -f "$_dir/mod_proxy_http.so" ]]; then
-      PROXY_SO="$_dir/mod_proxy.so"
-      PROXY_HTTP_SO="$_dir/mod_proxy_http.so"
-      break
-    fi
+    [[ -z "$PROXY_SO" && -f "$_dir/mod_proxy.so" ]] && PROXY_SO="$_dir/mod_proxy.so"
+    [[ -z "$PROXY_HTTP_SO" && -f "$_dir/mod_proxy_http.so" ]] && PROXY_HTTP_SO="$_dir/mod_proxy_http.so"
+    [[ -z "$PROXY_WSTUNNEL_SO" && -f "$_dir/mod_proxy_wstunnel.so" ]] && PROXY_WSTUNNEL_SO="$_dir/mod_proxy_wstunnel.so"
   done
 
   if [[ -z "$PROXY_SO" ]]; then
     warn "mod_proxy.so not found — API proxy will be disabled. Backend API will be unreachable."
+  fi
+  if [[ -z "$PROXY_WSTUNNEL_SO" ]]; then
+    warn "mod_proxy_wstunnel.so not found — WebSocket state stream will be unreachable."
+  fi
+
+  WSTUNNEL_LOAD=""
+  WS_PROXY=""
+  if [[ -n "$PROXY_WSTUNNEL_SO" ]]; then
+    WSTUNNEL_LOAD="<IfModule !mod_proxy_wstunnel.c>
+    LoadModule proxy_wstunnel_module $PROXY_WSTUNNEL_SO
+</IfModule>"
+    WS_PROXY="ProxyPass        /$SITE/orbvis/api/v1/ws  ws://127.0.0.1:$BACKEND_PORT/api/v1/ws
+ProxyPassReverse /$SITE/orbvis/api/v1/ws  ws://127.0.0.1:$BACKEND_PORT/api/v1/ws"
   fi
 
   cat > "$APACHE_CONF" << EOF
@@ -496,6 +514,7 @@ EOF
 <IfModule !mod_proxy_http.c>
     LoadModule proxy_http_module $PROXY_HTTP_SO
 </IfModule>
+$WSTUNNEL_LOAD
 
 Alias /$SITE/orbvis $HTDOCS_DIR
 
@@ -511,10 +530,10 @@ Alias /$SITE/orbvis $HTDOCS_DIR
     FallbackResource /$SITE/orbvis/index.html
 </Directory>
 
-<Location /$SITE/orbvis/api>
-    ProxyPass        http://127.0.0.1:$BACKEND_PORT/api
-    ProxyPassReverse http://127.0.0.1:$BACKEND_PORT/api
-</Location>
+# WS must come before the catch-all /api ProxyPass (Apache first-match).
+$WS_PROXY
+ProxyPass        /$SITE/orbvis/api  http://127.0.0.1:$BACKEND_PORT/api
+ProxyPassReverse /$SITE/orbvis/api  http://127.0.0.1:$BACKEND_PORT/api
 
 <Location /$SITE/orbvis/images>
     ProxyPass        http://127.0.0.1:$BACKEND_PORT/images
@@ -553,8 +572,10 @@ auto_refresh() {
   mkp_ver="\$(cat "\$MKP_VERSION_FILE" 2>/dev/null || true)"
   installed_ver="\$(cat "\$INSTALLED_VERSION_FILE" 2>/dev/null || true)"
   [[ -n "\$mkp_ver" && "\$mkp_ver" != "\$installed_ver" ]] || return 0
+  local banner="OrbVis: MKP version \$mkp_ver differs from installed \${installed_ver:-<none>}; running orbvis-setup..."
   echo ""
-  echo "OrbVis: MKP version \$mkp_ver differs from installed \${installed_ver:-<none>}; running orbvis-setup..."
+  echo "\$banner"
+  echo "\$banner" >> "\$LOGFILE"
   if ! ORBVIS_NO_RESTART=1 "\$SETUP_BIN" >> "\$LOGFILE" 2>&1; then
     echo "WARN: orbvis-setup failed; see \$LOGFILE. Continuing with previous installation." >&2
     return 1
