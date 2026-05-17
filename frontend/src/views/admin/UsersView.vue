@@ -301,18 +301,18 @@
 </template>
 
 <script setup lang="ts">
-import CmkBadge from '@cmk/components/CmkBadge.vue';
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkLabel from '@cmk/components/CmkLabel.vue';
-import CmkLoading from '@cmk/components/CmkLoading.vue';
-import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
-import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
-import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
-import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { rolesApi, usersApi } from '@/api/client';
+import CmkBadge from '@/components/cmk/CmkBadge';
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkLabel from '@/components/cmk/CmkLabel';
+import CmkLoading from '@/components/cmk/CmkLoading';
+import CmkHeading from '@/components/cmk/typography/CmkHeading';
+import CmkParagraph from '@/components/cmk/typography/CmkParagraph';
+import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
+import CmkInput from '@/components/cmk/user-input/CmkInput';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import OrbModal from '@/components/OrbModal.vue';
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue';

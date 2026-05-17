@@ -1176,16 +1176,16 @@
 </template>
 
 <script setup lang="ts">
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkColorPicker from '@cmk/components/CmkColorPicker.vue';
-import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
-import CmkScrollContainer from '@cmk/components/CmkScrollContainer.vue';
-import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
-import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { boardsApi, connectionsApi } from '@/api/client';
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkColorPicker from '@/components/cmk/CmkColorPicker';
+import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown';
+import CmkScrollContainer from '@/components/cmk/CmkScrollContainer';
+import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
+import CmkInput from '@/components/cmk/user-input/CmkInput';
 import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';

@@ -225,18 +225,18 @@
 </template>
 
 <script setup lang="ts">
-import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkLinkCard from '@cmk/components/CmkLinkCard/CmkLinkCard.vue';
-import CmkLinkCardContainer from '@cmk/components/CmkLinkCard/CmkLinkCardContainer.vue';
-import CmkLoading from '@cmk/components/CmkLoading.vue';
-import CmkSlideInDialog from '@cmk/components/CmkSlideInDialog.vue';
-import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
-import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError, imagesApi } from '@/api/client';
+import CmkAlertBox from '@/components/cmk/CmkAlertBox';
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkLinkCard from '@/components/cmk/CmkLinkCard/CmkLinkCard';
+import CmkLinkCardContainer from '@/components/cmk/CmkLinkCard/CmkLinkCardContainer';
+import CmkLoading from '@/components/cmk/CmkLoading';
+import CmkSlideInDialog from '@/components/cmk/CmkSlideInDialog';
+import CmkHeading from '@/components/cmk/typography/CmkHeading';
+import CmkParagraph from '@/components/cmk/typography/CmkParagraph';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import { useAuthStore } from '@/stores/auth';
 import type { ImageEntry, ImageUsageEntry } from '@/types/api';

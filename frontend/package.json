@@ -9,8 +9,10 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:standalone": "VITE_BUILD_TARGET=standalone vite",
     "dev:cmk-source": "CMK_FRONTEND_VUE_SRC=${CMK_FRONTEND_VUE_SRC:-$HOME/git/checkmk/packages/cmk-frontend-vue/src} vite",
     "build": "vue-tsc && vite build",
+    "build:standalone": "VITE_BUILD_TARGET=standalone vue-tsc && VITE_BUILD_TARGET=standalone vite build",
     "build:cmk-source": "CMK_FRONTEND_VUE_SRC=${CMK_FRONTEND_VUE_SRC:-$HOME/git/checkmk/packages/cmk-frontend-vue/src} vue-tsc && CMK_FRONTEND_VUE_SRC=${CMK_FRONTEND_VUE_SRC:-$HOME/git/checkmk/packages/cmk-frontend-vue/src} vite build",
     "preview": "vite preview",
     "drift-check": "../scripts/sync-cmk-vendor.sh",

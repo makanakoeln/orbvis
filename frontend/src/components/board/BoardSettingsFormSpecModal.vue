@@ -360,13 +360,6 @@
 </template>
 
 <script setup lang="ts">
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
-import CmkLabel from '@cmk/components/CmkLabel.vue';
-import CmkLoading from '@cmk/components/CmkLoading.vue';
-import CmkSlideInDialog from '@cmk/components/CmkSlideInDialog.vue';
-import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
-import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import FormEdit from '@cmk/form/FormEdit.vue';
 import { initializeComponentRegistry } from '@cmk/form/private/FormEditDispatcher/dispatch';
 import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
@@ -374,6 +367,13 @@ import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError, boardsApi, boardsApiFormSpec, connectionsApi, rolesApi } from '@/api/client';
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown';
+import CmkLabel from '@/components/cmk/CmkLabel';
+import CmkLoading from '@/components/cmk/CmkLoading';
+import CmkSlideInDialog from '@/components/cmk/CmkSlideInDialog';
+import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
+import CmkInput from '@/components/cmk/user-input/CmkInput';
 import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { orbFormComponents } from '@/composables/orbFormComponents';

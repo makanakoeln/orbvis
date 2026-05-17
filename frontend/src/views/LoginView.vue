@@ -171,13 +171,13 @@
 </template>
 
 <script setup lang="ts">
-import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import ChangelogModal from '@/components/ChangelogModal.vue';
+import CmkAlertBox from '@/components/cmk/CmkAlertBox';
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkInput from '@/components/cmk/user-input/CmkInput';
 import { useAuthStore } from '@/stores/auth';
 
 const { t } = useI18n();

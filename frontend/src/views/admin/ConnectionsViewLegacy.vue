@@ -504,19 +504,19 @@
 </template>
 
 <script setup lang="ts">
-import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
-import CmkBadge from '@cmk/components/CmkBadge.vue';
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
-import CmkLoading from '@cmk/components/CmkLoading.vue';
-import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
-import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
-import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
-import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
+import CmkAlertBox from '@/components/cmk/CmkAlertBox';
+import CmkBadge from '@/components/cmk/CmkBadge';
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown';
+import CmkLoading from '@/components/cmk/CmkLoading';
+import CmkHeading from '@/components/cmk/typography/CmkHeading';
+import CmkParagraph from '@/components/cmk/typography/CmkParagraph';
+import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
+import CmkInput from '@/components/cmk/user-input/CmkInput';
 import NumberInput from '@/components/NumberInput.vue';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import OrbModal from '@/components/OrbModal.vue';

@@ -41,14 +41,14 @@
 </template>
 
 <script setup lang="ts">
-import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkLabel from '@cmk/components/CmkLabel.vue';
-import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
+import CmkAlertBox from '@/components/cmk/CmkAlertBox';
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkLabel from '@/components/cmk/CmkLabel';
+import CmkInput from '@/components/cmk/user-input/CmkInput';
 import OrbModal from '@/components/OrbModal.vue';
 import { useStatesStore } from '@/stores/states';
 import type { BoardObject } from '@/types/api';

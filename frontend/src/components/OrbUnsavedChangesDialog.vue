@@ -13,11 +13,12 @@
 </template>
 
 <script setup lang="ts">
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkPopupDialog from '@cmk/components/CmkPopupDialog.vue';
-import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkPopupDialog from '@/components/cmk/CmkPopupDialog';
+import CmkParagraph from '@/components/cmk/typography/CmkParagraph';
 
 const { t } = useI18n();
 

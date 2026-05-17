@@ -1194,7 +1194,6 @@
 </template>
 
 <script setup lang="ts">
-import CmkButton from '@cmk/components/CmkButton.vue';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { useI18n } from 'vue-i18n';
@@ -1203,6 +1202,7 @@ import { useRouter } from 'vue-router';
 import { boardsApi } from '@/api/client';
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue';
 import CreateBoardModal from '@/components/board/CreateBoardModal.vue';
+import CmkButton from '@/components/cmk/CmkButton';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import OrbModal from '@/components/OrbModal.vue';

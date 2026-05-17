@@ -328,12 +328,12 @@
 </template>
 
 <script setup lang="ts">
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown';
 import NumberInput from '@/components/NumberInput.vue';
 import type { NewObjectDraft } from '@/composables/useBoardEditor';
 import { useAuthStore } from '@/stores/auth';

@@ -287,16 +287,6 @@
 </template>
 
 <script setup lang="ts">
-import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
-import CmkBadge from '@cmk/components/CmkBadge.vue';
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkIcon from '@cmk/components/CmkIcon';
-import CmkLabel from '@cmk/components/CmkLabel.vue';
-import CmkLoading from '@cmk/components/CmkLoading.vue';
-import CmkSlideInDialog from '@cmk/components/CmkSlideInDialog.vue';
-import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
-import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
-import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import FormEdit from '@cmk/form/FormEdit.vue';
 import { initializeComponentRegistry } from '@cmk/form/private/FormEditDispatcher/dispatch';
 import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
@@ -304,6 +294,16 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi, connectionsApiFormSpec } from '@/api/client';
+import CmkAlertBox from '@/components/cmk/CmkAlertBox';
+import CmkBadge from '@/components/cmk/CmkBadge';
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkIcon from '@/components/cmk/CmkIcon';
+import CmkLabel from '@/components/cmk/CmkLabel';
+import CmkLoading from '@/components/cmk/CmkLoading';
+import CmkSlideInDialog from '@/components/cmk/CmkSlideInDialog';
+import CmkHeading from '@/components/cmk/typography/CmkHeading';
+import CmkParagraph from '@/components/cmk/typography/CmkParagraph';
+import CmkInput from '@/components/cmk/user-input/CmkInput';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import { orbFormComponents } from '@/composables/orbFormComponents';
 import { useToast } from '@/composables/useToast';

@@ -21,10 +21,11 @@
 </template>
 
 <script setup lang="ts">
-import CmkColorPicker from '@cmk/components/CmkColorPicker.vue';
-import CmkSwitch from '@cmk/components/CmkSwitch.vue';
-import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed } from 'vue';
+
+import CmkColorPicker from '@/components/cmk/CmkColorPicker';
+import CmkSwitch from '@/components/cmk/CmkSwitch';
+import CmkInput from '@/components/cmk/user-input/CmkInput';
 
 const props = defineProps<{
     modelValue: string | null | undefined;

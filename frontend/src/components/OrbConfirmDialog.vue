@@ -13,10 +13,11 @@
 </template>
 
 <script setup lang="ts">
-import CmkDialog from '@cmk/components/CmkDialog.vue';
-import CmkPopup from '@cmk/components/CmkPopup.vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+
+import CmkDialog from '@/components/cmk/CmkDialog';
+import CmkPopup from '@/components/cmk/CmkPopup';
 
 type DialogVariant = 'error' | 'warning' | 'success' | 'info';
 type ButtonVariant =

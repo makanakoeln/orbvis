@@ -828,12 +828,12 @@
 </template>
 
 <script setup lang="ts">
-import CmkCheckbox from '@cmk/components/user-input/CmkCheckbox.vue';
 import { useMutationObserver } from '@vueuse/core';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi, metricsApi } from '@/api/client';
+import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
 import { fmtValueWithUnit } from '@/composables/useMetricChart';
 import { useAuthStore } from '@/stores/auth';
 import type {

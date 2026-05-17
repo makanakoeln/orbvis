@@ -70,17 +70,17 @@
 </template>
 
 <script setup lang="ts">
-import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkLoading from '@cmk/components/CmkLoading.vue';
-import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
-import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
 import FormEdit from '@cmk/form/FormEdit.vue';
 import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { systemSettingsApi } from '@/api/client';
+import CmkAlertBox from '@/components/cmk/CmkAlertBox';
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkLoading from '@/components/cmk/CmkLoading';
+import CmkHeading from '@/components/cmk/typography/CmkHeading';
+import CmkParagraph from '@/components/cmk/typography/CmkParagraph';
 import OrbUnsavedChangesDialog from '@/components/OrbUnsavedChangesDialog.vue';
 import { useFormSpecSchema } from '@/composables/useFormSpecSchema';
 import { useSaveBarState } from '@/composables/useSaveBarState';

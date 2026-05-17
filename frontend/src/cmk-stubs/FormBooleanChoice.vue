@@ -9,8 +9,9 @@ with the slider instead. Registered through ``orbFormComponents`` so
 the vendored upstream file stays byte-identical.
 -->
 <script setup lang="ts">
-import CmkSwitch from '@cmk/components/CmkSwitch.vue';
 import type { BooleanChoice } from 'cmk-shared-typing/typescript/vue_formspec_components';
+
+import CmkSwitch from '@/components/cmk/CmkSwitch';
 
 defineProps<{
     spec: BooleanChoice;

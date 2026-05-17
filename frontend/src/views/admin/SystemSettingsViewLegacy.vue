@@ -183,17 +183,17 @@
 </template>
 
 <script setup lang="ts">
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkCollapsible from '@cmk/components/CmkCollapsible/CmkCollapsible.vue';
-import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
-import CmkHelpText from '@cmk/components/CmkHelpText.vue';
-import CmkLoading from '@cmk/components/CmkLoading.vue';
-import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
-import CmkParagraph from '@cmk/components/typography/CmkParagraph.vue';
-import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkCollapsible from '@/components/cmk/CmkCollapsible/CmkCollapsible';
+import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown';
+import CmkHelpText from '@/components/cmk/CmkHelpText';
+import CmkLoading from '@/components/cmk/CmkLoading';
+import CmkHeading from '@/components/cmk/typography/CmkHeading';
+import CmkParagraph from '@/components/cmk/typography/CmkParagraph';
+import CmkInput from '@/components/cmk/user-input/CmkInput';
 import { useSettingsStore } from '@/stores/settings';
 import type { LogLevel, SystemSettings } from '@/types/api';
 

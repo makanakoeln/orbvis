@@ -28,11 +28,11 @@
 </template>
 
 <script setup lang="ts">
-import CmkButton from '@cmk/components/CmkButton.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
+import CmkButton from '@/components/cmk/CmkButton';
 import OrbModal from '@/components/OrbModal.vue';
 import type { BoardObject } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';

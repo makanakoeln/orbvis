@@ -41,10 +41,11 @@
 </template>
 
 <script setup lang="ts">
-import CmkPopup from '@cmk/components/CmkPopup.vue';
-import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
 import { DialogTitle } from 'reka-ui';
 import { useI18n } from 'vue-i18n';
+
+import CmkPopup from '@/components/cmk/CmkPopup';
+import CmkHeading from '@/components/cmk/typography/CmkHeading';
 
 withDefaults(
     defineProps<{

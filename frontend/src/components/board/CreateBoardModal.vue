@@ -92,14 +92,14 @@
 </template>
 
 <script setup lang="ts">
-import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkDropdown from '@cmk/components/CmkDropdown/CmkDropdown.vue';
-import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError } from '@/api/client';
+import CmkAlertBox from '@/components/cmk/CmkAlertBox';
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown';
+import CmkInput from '@/components/cmk/user-input/CmkInput';
 import OrbModal from '@/components/OrbModal.vue';
 import { useBoardsStore } from '@/stores/boards';
 import { useConnectionsStore } from '@/stores/connections';

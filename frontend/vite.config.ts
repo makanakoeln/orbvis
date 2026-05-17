@@ -14,6 +14,32 @@ const CMK_SRC = process.env.CMK_FRONTEND_VUE_SRC
 
 const ORBVIS_SRC = fileURLToPath(new URL('./src', import.meta.url))
 
+// VITE_BUILD_TARGET=standalone produces a Checkmk-free bundle. The
+// wrapper layer under ``frontend/src/components/cmk/`` re-exports
+// vendored CMK components by default; in standalone mode, the
+// component aliases below redirect specific components to native
+// OrbVis replacements under ``frontend/src/components/cmk-standalone/``.
+// Wrappers without a redirect still resolve to the vendored variant
+// (work-in-progress — these will move to standalone over time).
+const STANDALONE = process.env.VITE_BUILD_TARGET === 'standalone'
+
+const STANDALONE_OVERRIDES: { find: RegExp; replacement: string }[] = STANDALONE
+  ? [
+      {
+        find: /^@cmk\/components\/CmkButton\.vue$/,
+        replacement: `${ORBVIS_SRC}/components/cmk-standalone/CmkButton.vue`,
+      },
+      {
+        find: /^@cmk\/components\/CmkLoading\.vue$/,
+        replacement: `${ORBVIS_SRC}/components/cmk-standalone/CmkLoading.vue`,
+      },
+      {
+        find: /^@cmk\/components\/user-input\/CmkInput\.vue$/,
+        replacement: `${ORBVIS_SRC}/components/cmk-standalone/CmkInput.vue`,
+      },
+    ]
+  : []
+
 // Stub redirects keep OrbVis-specific overrides outside the vendored
 // tree so vendor files stay byte-identical to upstream and the
 // drift-check stays quiet. The resolver below intercepts imports that
@@ -85,18 +111,30 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(appVersion),
   },
   resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      '@cmk': CMK_SRC,
-      'cmk-shared-typing': fileURLToPath(new URL('./src/cmk-stubs/cmk-shared-typing', import.meta.url)),
-      'pofile': fileURLToPath(new URL('./src/vendor/empty-module.ts', import.meta.url)),
+    // Order matters: STANDALONE_OVERRIDES must come before the generic
+    // `@cmk` alias so the exact-file regex hits first.
+    alias: [
+      ...STANDALONE_OVERRIDES,
+      { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+      { find: '@cmk', replacement: CMK_SRC },
+      {
+        find: 'cmk-shared-typing',
+        replacement: fileURLToPath(new URL('./src/cmk-stubs/cmk-shared-typing', import.meta.url)),
+      },
+      {
+        find: 'pofile',
+        replacement: fileURLToPath(new URL('./src/vendor/empty-module.ts', import.meta.url)),
+      },
       // Upstream FormString.vue imports an X icon from lucide-vue-next
       // that only renders inside the autocompleter clear-button — a
       // branch the OrbVis Pilot never enters. Aliasing the package to
       // a local stub keeps the vendored file byte-identical to upstream
       // without pulling in the lucide-vue-next dependency.
-      'lucide-vue-next': fileURLToPath(new URL('./src/cmk-stubs/lucide-vue-next.ts', import.meta.url)),
-    },
+      {
+        find: 'lucide-vue-next',
+        replacement: fileURLToPath(new URL('./src/cmk-stubs/lucide-vue-next.ts', import.meta.url)),
+      },
+    ],
   },
   server: {
     port: 5173,

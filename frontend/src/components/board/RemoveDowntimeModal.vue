@@ -37,13 +37,13 @@
 </template>
 
 <script setup lang="ts">
-import CmkAlertBox from '@cmk/components/CmkAlertBox.vue';
-import CmkButton from '@cmk/components/CmkButton.vue';
-import CmkScrollContainer from '@cmk/components/CmkScrollContainer.vue';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { cmkApi } from '@/api/client';
+import CmkAlertBox from '@/components/cmk/CmkAlertBox';
+import CmkButton from '@/components/cmk/CmkButton';
+import CmkScrollContainer from '@/components/cmk/CmkScrollContainer';
 import OrbModal from '@/components/OrbModal.vue';
 import type { DowntimeEntry } from '@/types/api';
 
