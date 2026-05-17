@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from app.api.v1.deps import get_current_user, require_admin
 from app.form_specs import serialize_form_spec
+from app.form_specs._wire_types import AnyWireFormSpec
 from app.form_specs.global_settings import global_settings_spec
 from app.form_specs.system_settings import system_settings_spec
 from app.models.user import User
@@ -190,7 +191,7 @@ async def get_object_options(
 @router.get("/schema")
 async def get_settings_schema(
     _: User = Depends(require_admin),
-) -> dict[str, object]:
+) -> AnyWireFormSpec:
     # Default-Connection is a SingleChoice over actual connection IDs — load
     # them here so the FormSpec validates the saved value against real targets
     # instead of accepting a typo.
@@ -296,5 +297,5 @@ async def update_system_settings_form(
 
 
 @router.get("/system/schema")
-async def get_system_settings_schema(_: User = Depends(require_admin)) -> dict[str, object]:
+async def get_system_settings_schema(_: User = Depends(require_admin)) -> AnyWireFormSpec:
     return serialize_form_spec(system_settings_spec())

@@ -26,6 +26,7 @@ from app.core.image_security import (
     BACKGROUND_SUFFIXES,
     is_valid_image,
 )
+from app.form_specs._wire_types import AnyWireFormSpec
 from app.models.role import Role
 from app.models.user import User
 from app.schemas.board import (
@@ -110,7 +111,7 @@ async def get_board(name: BoardName, current_user: User = Depends(get_current_us
 @router.get("/-/metadata-schema")
 async def get_board_metadata_schema(
     _: User = Depends(get_current_user),
-) -> dict[str, object]:
+) -> AnyWireFormSpec:
     from app.form_specs import serialize_form_spec
     from app.form_specs.board_metadata import board_metadata_spec
 

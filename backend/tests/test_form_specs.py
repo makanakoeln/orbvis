@@ -7,9 +7,9 @@ cmk-plugin-apis).
 
 from __future__ import annotations
 
-from app.form_specs import serialize_form_spec, validate_form_data
+from app.form_specs import OrbColorString, serialize_form_spec, validate_form_data
 
-from cmk.rulesets.v1 import Label, Title
+from cmk.rulesets.v1 import Label, Message, Title
 from cmk.rulesets.v1.form_specs import (
     BooleanChoice,
     DefaultValue,
@@ -20,6 +20,7 @@ from cmk.rulesets.v1.form_specs import (
     SingleChoiceElement,
     String,
 )
+from cmk.rulesets.v1.form_specs.validators import MatchRegex, NumberInRange
 
 
 def _global_settings_spec() -> Dictionary:
@@ -344,3 +345,93 @@ def test_connection_form_data_unwraps_password_tuple() -> None:
     }
     cfg = form_data_to_config(form, connection_id="icinga")
     assert cfg.icinga2_password == "secret123"
+
+
+# ── custom_validate (Step F) ───────────────────────────────────────────
+
+
+def test_custom_validate_match_regex_fails_for_invalid_string() -> None:
+    """MatchRegex on a String must surface as a FormSpecValidationMessage."""
+    spec = Dictionary(
+        title=Title("S"),
+        elements={
+            "color": DictElement(
+                required=True,
+                parameter_form=OrbColorString(
+                    title=Title("Color"),
+                    custom_validate=(
+                        MatchRegex(
+                            r"^(#[0-9a-fA-F]{6}|transparent)$",
+                            error_msg=Message("Use a 6-digit hex or 'transparent'."),
+                        ),
+                    ),
+                ),
+            ),
+        },
+    )
+    errors = validate_form_data(spec, {"color": "not-a-hex"})
+    assert any(e.location == ["color"] and "hex" in e.message for e in errors), (
+        f"expected MatchRegex error, got {errors}"
+    )
+
+
+def test_custom_validate_passes_for_valid_string() -> None:
+    spec = Dictionary(
+        title=Title("S"),
+        elements={
+            "color": DictElement(
+                required=True,
+                parameter_form=OrbColorString(
+                    title=Title("Color"),
+                    custom_validate=(
+                        MatchRegex(
+                            r"^(#[0-9a-fA-F]{6}|transparent)$",
+                            error_msg=Message("Invalid."),
+                        ),
+                    ),
+                ),
+            ),
+        },
+    )
+    assert validate_form_data(spec, {"color": "#ffffff"}) == []
+    assert validate_form_data(spec, {"color": "transparent"}) == []
+
+
+def test_custom_validate_skipped_on_shape_mismatch() -> None:
+    """If the shape check fails, custom_validate must not run — mirrors CMK's
+    3-stage validate where stage 3 only triggers on a clean stage-1/2.
+    """
+    spec = Dictionary(
+        title=Title("S"),
+        elements={
+            "color": DictElement(
+                required=True,
+                parameter_form=OrbColorString(
+                    title=Title("Color"),
+                    custom_validate=(MatchRegex(r"^never$", error_msg=Message("regex")),),
+                ),
+            ),
+        },
+    )
+    errors = validate_form_data(spec, {"color": 123})
+    # Only the type-mismatch error — no regex error, because shape already failed.
+    assert len(errors) == 1
+    assert "Expected string" in errors[0].message
+
+
+def test_custom_validate_number_in_range_on_integer() -> None:
+    spec = Dictionary(
+        title=Title("S"),
+        elements={
+            "port": DictElement(
+                required=True,
+                parameter_form=Integer(
+                    title=Title("Port"),
+                    custom_validate=(NumberInRange(min_value=1, max_value=65535),),
+                ),
+            ),
+        },
+    )
+    assert validate_form_data(spec, {"port": 6557}) == []
+    errors = validate_form_data(spec, {"port": 0})
+    assert any(e.location == ["port"] for e in errors)

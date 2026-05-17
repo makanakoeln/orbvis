@@ -16,6 +16,7 @@ from app.api.v1.deps import get_current_user, require_admin, resolve_auth_user
 from app.connections.base import ConnectionBase, ServiceRow, TopologyRow, topology_problem_rank
 from app.core.config import settings
 from app.form_specs import serialize_form_spec
+from app.form_specs._wire_types import AnyWireFormSpec
 from app.form_specs.connections import (
     config_to_form_data,
     connection_spec,
@@ -50,7 +51,7 @@ async def list_backends(_: User = Depends(require_admin)) -> list[ConnectionConf
 
 
 @router.get("/schema")
-async def get_connection_schema(_: User = Depends(require_admin)) -> dict[str, object]:
+async def get_connection_schema(_: User = Depends(require_admin)) -> AnyWireFormSpec:
     return serialize_form_spec(connection_spec(cmk_integration.get_monitoring_core()))
 
 
