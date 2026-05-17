@@ -3,7 +3,7 @@
         :open="true"
         :header="{ title: boardTitle, closeButton: true }"
         size="small"
-        @close="$emit('close')"
+        @close="requestClose"
     >
         <div class="board-settings__body">
             <!-- Tabs (only when there's more than one) -->
@@ -43,16 +43,37 @@
                         <p class="board-settings__readonly-value">{{ boardTypeLabel }}</p>
                     </div>
 
-                    <FormEdit
-                        v-if="formSchema"
-                        v-model:data="formSpecData"
-                        :spec="formSchema"
-                        :backend-validation="[]"
-                    />
-                    <CmkLoading v-else-if="schemaLoading" />
+                    <!-- Type-specific section first so the operator sees the
+                         board's most distinctive controls (background image,
+                         flow topology, radar filter, map view) right after the
+                         ID header and before the generic FormSpec settings. -->
+
+                    <!-- Background (static only) -->
+                    <div
+                        v-if="form.map_type === 'static'"
+                        class="board-settings__type-section space-y-[8px]"
+                    >
+                        <p class="section-title">{{ t('boardSettings.background') }}</p>
+                        <div class="space-y-[4px]">
+                            <CmkLabel>{{ t('board.backgroundImage') }}</CmkLabel>
+                            <ImagePicker
+                                v-model="form.background_image"
+                                :placeholder="t('board.backgroundImagePlaceholder')"
+                            />
+                        </div>
+                        <div class="space-y-[4px]">
+                            <CmkLabel>{{ t('board.backgroundColor') }}</CmkLabel>
+                            <ColorInput
+                                v-model="form.background_color"
+                                :enable-label="t('common.useColor')"
+                                default-color="#1f2937"
+                            />
+                        </div>
+                    </div>
 
                     <!-- Worldmap settings -->
                     <template v-if="form.map_type === 'worldmap'">
+                        <p class="section-title">{{ t('boardSettings.mapView') }}</p>
                         <div class="grid grid-cols-3 gap-[8px]">
                             <div class="space-y-[4px]">
                                 <CmkLabel>{{ t('board.latitude') }}</CmkLabel>
@@ -136,6 +157,7 @@
 
                     <!-- Flow settings -->
                     <template v-if="form.map_type === 'flow'">
+                        <p class="section-title">{{ t('boardSettings.topology') }}</p>
                         <div class="space-y-[4px]">
                             <CmkLabel>{{ t('board.flowRoot') }}</CmkLabel>
                             <CmkInput
@@ -201,6 +223,7 @@
 
                     <!-- Radar settings -->
                     <template v-if="form.map_type === 'radar'">
+                        <p class="section-title">{{ t('boardSettings.radarFilter') }}</p>
                         <div class="grid grid-cols-2 gap-[8px]">
                             <div class="space-y-[4px]">
                                 <CmkLabel>{{ t('board.filterType') }}</CmkLabel>
@@ -229,28 +252,13 @@
                         </div>
                     </template>
 
-                    <!-- Background (static only) -->
-                    <div
-                        v-if="form.map_type === 'static'"
-                        class="board-settings__subsection space-y-[8px]"
-                    >
-                        <p class="section-title">{{ t('boardSettings.background') }}</p>
-                        <div class="space-y-[4px]">
-                            <CmkLabel>{{ t('board.backgroundImage') }}</CmkLabel>
-                            <ImagePicker
-                                v-model="form.background_image"
-                                :placeholder="t('board.backgroundImagePlaceholder')"
-                            />
-                        </div>
-                        <div class="space-y-[4px]">
-                            <CmkLabel>{{ t('board.backgroundColor') }}</CmkLabel>
-                            <ColorInput
-                                v-model="form.background_color"
-                                :enable-label="t('common.useColor')"
-                                default-color="#1f2937"
-                            />
-                        </div>
-                    </div>
+                    <FormEdit
+                        v-if="formSchema"
+                        v-model:data="formSpecData"
+                        :spec="formSchema"
+                        :backend-validation="[]"
+                    />
+                    <CmkLoading v-else-if="schemaLoading" />
 
                     <p v-if="saveError" class="text-xs text-[var(--color-light-red-40)]">
                         {{ saveError }}
@@ -351,10 +359,10 @@
             </div>
 
             <div class="board-settings__footer">
-                <CmkButton variant="secondary" @click="$emit('close')">
+                <CmkButton variant="secondary" @click="requestClose">
                     {{ t('common.cancel') }}
                 </CmkButton>
-                <CmkButton variant="primary" :disabled="saving" @click="save">
+                <CmkButton variant="primary" :disabled="saving || !isDirty" @click="save">
                     {{ saving ? t('common.saving') : t('common.save') }}
                 </CmkButton>
             </div>
@@ -595,6 +603,23 @@ const permRoles = ref<RoleRead[]>([]);
 const permLoading = ref(false);
 // Draft: key = `${role_id}-${act}`, value = desired checked state (undefined = use server state)
 const permDraft = reactive(new Map<string, boolean>());
+
+// Snapshot the initial form state so we can disable Save when nothing
+// changed and confirm before discarding edits on cancel/close.
+const initialSnapshot = JSON.stringify({
+    form: form.value,
+    formSpec: formSpecData.value,
+});
+const isDirty = computed(
+    () =>
+        JSON.stringify({ form: form.value, formSpec: formSpecData.value }) !== initialSnapshot ||
+        permDraft.size > 0,
+);
+
+function requestClose() {
+    if (isDirty.value && !window.confirm(t('board.discardChangesConfirm'))) return;
+    emit('close');
+}
 
 async function loadPermissions() {
     permLoading.value = true;

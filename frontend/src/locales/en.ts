@@ -150,6 +150,7 @@ export default {
         boardSubtitle: 'ID: {name}',
         staleConflict:
             'Board changed elsewhere — close and reopen to apply your edit on top of the latest version.',
+        discardChangesConfirm: 'Discard your unsaved changes?',
         deleteBackground: 'Remove background image',
         notificationsOn: 'Browser notifications enabled — click to disable',
         notificationsOff: 'Enable browser notifications for state changes',
@@ -367,6 +368,9 @@ export default {
         offsetX: 'Offset X',
         offsetY: 'Offset Y',
         background: 'Background',
+        topology: 'Topology',
+        mapView: 'Map view',
+        radarFilter: 'Filter',
         appearance: 'Appearance',
         viewType: 'View type',
         viewTypeIcon: 'Icon',

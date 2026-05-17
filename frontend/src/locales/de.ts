@@ -160,6 +160,7 @@ export default {
         boardSubtitle: 'ID: {name}',
         staleConflict:
             'Board wurde zwischenzeitlich geändert — bitte schließen und neu öffnen, damit deine Änderung auf der aktuellen Version basiert.',
+        discardChangesConfirm: 'Ungespeicherte Änderungen verwerfen?',
         deleteBackground: 'Hintergrundbild entfernen',
         saveChanges: 'Änderungen speichern',
         hoverTemplate: 'Hover-Template',
@@ -370,6 +371,9 @@ export default {
         offsetX: 'Offset X',
         offsetY: 'Offset Y',
         background: 'Hintergrund',
+        topology: 'Topologie',
+        mapView: 'Kartenansicht',
+        radarFilter: 'Filter',
         appearance: 'Darstellung',
         viewType: 'Ansichtstyp',
         viewTypeIcon: 'Symbol',

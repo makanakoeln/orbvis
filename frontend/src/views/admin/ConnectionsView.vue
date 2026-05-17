@@ -273,7 +273,11 @@
                     >
                         {{ dialogTest.loading ? t('common.testing') : t('common.test') }}
                     </CmkButton>
-                    <CmkButton variant="primary" :disabled="saving || !formSchema" @click="save">
+                    <CmkButton
+                        variant="primary"
+                        :disabled="saving || !formSchema || !isDirty"
+                        @click="save"
+                    >
                         {{ saving ? t('common.saving') : t('common.save') }}
                     </CmkButton>
                 </div>
@@ -296,7 +300,7 @@ import CmkInput from '@cmk/components/user-input/CmkInput.vue';
 import FormEdit from '@cmk/form/FormEdit.vue';
 import { initializeComponentRegistry } from '@cmk/form/private/FormEditDispatcher/dispatch';
 import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { connectionsApi, connectionsApiFormSpec } from '@/api/client';
@@ -349,6 +353,14 @@ const dialogTest = reactive({ loading: false, ran: false, ok: false, message: ''
 const formSchema = ref<Schema | null>(null);
 const formSpecData = ref<Record<string, unknown>>({});
 
+// Snapshot the form state at open time so we can disable Save when nothing
+// changed and confirm before discarding edits on cancel/close.
+const initialSnapshot = ref('');
+const isDirty = computed(
+    () =>
+        JSON.stringify({ id: dialogId.value, data: formSpecData.value }) !== initialSnapshot.value,
+);
+
 async function ensureSchema() {
     if (formSchema.value) return;
     try {
@@ -366,6 +378,7 @@ function prepareDialog(mode: 'create' | 'edit', id: string) {
     dialog.mode = mode;
     dialogId.value = id;
     formSpecData.value = {};
+    initialSnapshot.value = JSON.stringify({ id, data: {} });
     dialog.open = true;
 }
 
@@ -380,6 +393,7 @@ async function openCreate() {
             formSpecData.value = structuredClone(dv) as Record<string, unknown>;
         }
     }
+    initialSnapshot.value = JSON.stringify({ id: dialogId.value, data: formSpecData.value });
 }
 
 async function openEdit(b: ConnectionConfig) {
@@ -388,12 +402,14 @@ async function openEdit(b: ConnectionConfig) {
     await ensureSchema();
     try {
         formSpecData.value = await fdataPromise;
+        initialSnapshot.value = JSON.stringify({ id: dialogId.value, data: formSpecData.value });
     } catch (e: unknown) {
         formError.value = e instanceof Error ? e.message : 'Failed to load connection data';
     }
 }
 
 function closeDialog() {
+    if (isDirty.value && !window.confirm(t('board.discardChangesConfirm'))) return;
     dialog.open = false;
 }
 

@@ -110,6 +110,18 @@ def board_metadata_spec(
                 group=_IDENTIFICATION,
                 parameter_form=_connection_form(connection_choices),
             ),
+            "icon_size": DictElement(
+                group=_DISPLAY,
+                parameter_form=Integer(
+                    title=Title("Icon size override"),
+                    help_text=Help(
+                        "Leave the field disabled to inherit the global Icon "
+                        "defaults. Individual objects on the board can still "
+                        "override this."
+                    ),
+                    unit_symbol="px",
+                ),
+            ),
             "rotation_interval": DictElement(
                 required=True,
                 group=_BEHAVIOR,
@@ -147,14 +159,6 @@ def board_metadata_spec(
                         "to work for users who already have view permission."
                     ),
                     prefill=DefaultValue(True),
-                ),
-            ),
-            "icon_size": DictElement(
-                group=_DISPLAY,
-                parameter_form=Integer(
-                    title=Title("Icon size override"),
-                    help_text=Help("Leave empty to inherit the global Icon defaults."),
-                    unit_symbol="px",
                 ),
             ),
             "hover_template": DictElement(

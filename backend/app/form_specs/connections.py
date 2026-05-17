@@ -14,6 +14,7 @@ import logging
 import os
 from typing import Literal
 
+from app.form_specs import OrbDictGroup
 from app.schemas.connection import REDACTED_SECRET, ConnectionConfig
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,19 @@ from cmk.rulesets.v1.form_specs import (
     Integer,
     Password,
     String,
+)
+
+# Nagios cores need an automation account to fetch metric history via REST.
+# CMC sites get rrddata over Livestatus so the credentials never apply — when
+# the deployment is detected as CMC we drop the whole group from the spec.
+_REST_CREDENTIALS = OrbDictGroup(
+    title=Title("Checkmk REST API credentials"),
+    help_text=Help(
+        "Only used to fetch metric history from Nagios cores; CMC sites "
+        "stream metrics over Livestatus. Leave both fields empty when in "
+        "doubt — connection testing still works."
+    ),
+    key="rest_credentials",
 )
 
 # Livestatus branch fields outside the ``target`` cascading choice. The
@@ -148,17 +162,16 @@ def _livestatus_branch(include_automation: bool = True) -> Dictionary:
     }
     if include_automation:
         elements["automation_user"] = DictElement(
+            group=_REST_CREDENTIALS,
             parameter_form=String(
-                title=Title("Automation user"),
-                help_text=Help(
-                    "Nagios core only. CMC sites can fetch metric history via "
-                    "Livestatus rrddata — no REST API credentials needed."
-                ),
+                title=Title("User"),
+                prefill=InputHint("automation"),
             ),
         )
         elements["automation_secret"] = DictElement(
+            group=_REST_CREDENTIALS,
             parameter_form=Password(
-                title=Title("Automation secret"),
+                title=Title("Secret"),
             ),
         )
     return Dictionary(title=Title("Livestatus connection"), elements=elements)
