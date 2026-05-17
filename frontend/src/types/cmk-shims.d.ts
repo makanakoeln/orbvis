@@ -477,6 +477,13 @@ declare module '@cmk/form/FormEdit.vue' {
 }
 
 declare module '@cmk/form/private/FormEditDispatcher/dispatch' {
-    export function initializeComponentRegistry(): void;
+    import type { Component } from 'vue';
+    export function initializeComponentRegistry(extra?: Record<string, Component>): void;
     export function getComponent(type: string): unknown;
+}
+
+declare module '@cmk/form/private/forms/FormOrbColor.vue' {
+    import type { DefineComponent } from 'vue';
+    const component: DefineComponent<Record<string, unknown>>;
+    export default component;
 }

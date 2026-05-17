@@ -379,6 +379,7 @@ import { useI18n } from 'vue-i18n';
 import { ApiError, boardsApi, boardsApiFormSpec, connectionsApi, rolesApi } from '@/api/client';
 import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
+import { orbFormComponents } from '@/composables/orbFormComponents';
 import { useAuthStore } from '@/stores/auth';
 import type {
     BoardRead,
@@ -474,7 +475,7 @@ const connections = ref<ConnectionConfig[]>([]);
 const saving = ref(false);
 
 type Schema = NonNullable<VueFormspecComponents['components']>;
-initializeComponentRegistry();
+initializeComponentRegistry(orbFormComponents);
 const formSchema = ref<Schema | null>(null);
 const schemaLoading = ref(true);
 const formSpecData = ref<Record<string, unknown>>({

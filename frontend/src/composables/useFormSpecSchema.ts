@@ -11,6 +11,8 @@ import { initializeComponentRegistry } from '@cmk/form/private/FormEditDispatche
 import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
 import { type Ref, ref } from 'vue';
 
+import { orbFormComponents } from '@/composables/orbFormComponents';
+
 export type FormSpecSchema = NonNullable<VueFormspecComponents['components']>;
 
 const cache = new Map<string, FormSpecSchema>();
@@ -18,7 +20,7 @@ let registryInitialised = false;
 
 function ensureRegistry(): void {
     if (registryInitialised) return;
-    initializeComponentRegistry();
+    initializeComponentRegistry(orbFormComponents);
     registryInitialised = true;
 }
 

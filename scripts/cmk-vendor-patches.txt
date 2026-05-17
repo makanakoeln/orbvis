@@ -7,7 +7,7 @@
 
 form/FormReadonly.vue                                 OrbVis stub — only Edit mode is used; full upstream pulls in unused render helpers.
 form/private/FormAutocompleter/FormAutocompleter.vue  OrbVis stub — autocompleter branch never triggered (no spec.autocompleter in our schemas).
-form/private/FormEditDispatcher/dispatch.ts           Pilot subset of registered forms (Boolean/Cascading/Dictionary/FixedValue/Float/Integer/Password/SingleChoice/String).
+form/private/FormEditDispatcher/dispatch.ts           Pilot subset of registered forms + opt-in extra-components parameter for OrbVis custom widgets (see composables/orbFormComponents.ts).
 form/private/forms/FormConditionChoices/utils.ts      Minimal stub — condition_choices type isn't part of OrbVis schemas.
 form/private/forms/FormString.vue                     lucide-vue-next/X icon stubbed (only used in autocompleter branch).
 components/CmkIcon/utils.ts                           OrbVis runtime URL resolution — icons are loaded from the OMD-site /<site>/check_mk/themes/ path, not from the Vite asset graph.

@@ -301,6 +301,7 @@ import { useI18n } from 'vue-i18n';
 
 import { connectionsApi, connectionsApiFormSpec } from '@/api/client';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
+import { orbFormComponents } from '@/composables/orbFormComponents';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import { useConnectionsStore } from '@/stores/connections';
@@ -308,7 +309,7 @@ import type { ConnectionConfig } from '@/types/api';
 
 type Schema = NonNullable<VueFormspecComponents['components']>;
 
-initializeComponentRegistry();
+initializeComponentRegistry(orbFormComponents);
 
 const { t } = useI18n();
 const store = useConnectionsStore();

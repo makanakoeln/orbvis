@@ -1,8 +1,12 @@
 /**
  * Copyright (C) 2024 Checkmk GmbH - License: GNU General Public License v2
  * Vendored from cmk-frontend-vue; OrbVis Pilot subset (no autocompleter,
- * no levels, no Catalog/DualList/etc.). When new FormSpec types are added
- * to OrbVis, also add the matching import and registry entry here.
+ * no levels, no Catalog/DualList/etc.).
+ *
+ * The OrbVis-only extension is opt-in via the ``extra`` parameter of
+ * ``initializeComponentRegistry`` — downstream consumers pass their own
+ * type→component map without editing this vendored file. See
+ * ``frontend/src/composables/orbFormComponents.ts`` for the OrbVis map.
  */
 import { type Component } from 'vue';
 
@@ -13,7 +17,6 @@ import FormFixedValue from '@/form/private/forms/FormFixedValue.vue';
 import FormFloat from '@/form/private/forms/FormFloat.vue';
 import FormInteger from '@/form/private/forms/FormInteger.vue';
 import FormMultilineText from '@/form/private/forms/FormMultilineText.vue';
-import FormOrbColor from '@/form/private/forms/FormOrbColor.vue';
 import FormPassword from '@/form/private/forms/FormPassword.vue';
 import FormSingleChoice from '@/form/private/forms/FormSingleChoice.vue';
 import FormString from '@/form/private/forms/FormString.vue';
@@ -31,13 +34,10 @@ const components: Record<string, Component> = {
     password: FormPassword,
     single_choice: FormSingleChoice,
     string: FormString,
-    // OrbVis-only: a String + native color picker. Emitted by
-    // backend OrbColorString — see app/form_specs/serialize.py.
-    orb_color: FormOrbColor,
 };
 
-export function initializeComponentRegistry() {
-    setComponentRegistry(components);
+export function initializeComponentRegistry(extra: Record<string, Component> = {}) {
+    setComponentRegistry({ ...components, ...extra });
 }
 
 export { getComponent } from './componentRegistry';
