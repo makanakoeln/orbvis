@@ -39,7 +39,7 @@ from app.schemas.board import (
     BoardRead,
     BoardUpdate,
 )
-from app.services import board_service, state_service
+from app.services import board_service, connection_service, state_service
 from app.services.cfg_parser import cfg_to_board
 
 router = APIRouter()
@@ -115,7 +115,8 @@ async def get_board_metadata_schema(
     from app.form_specs import serialize_form_spec
     from app.form_specs.board_metadata import board_metadata_spec
 
-    return serialize_form_spec(board_metadata_spec())
+    connection_choices = [(c.id, c.label or c.id) for c in connection_service.load_all()]
+    return serialize_form_spec(board_metadata_spec(connection_choices=connection_choices))
 
 
 @router.get("/{name}/metadata")

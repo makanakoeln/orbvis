@@ -52,7 +52,39 @@ _TEMPLATES = OrbDictGroup(
 )
 
 
-def board_metadata_spec() -> Dictionary:
+def _connection_form(choices: list[tuple[str, str]] | None) -> SingleChoice | String:
+    # Empty list keeps the form editable on fresh installs that have no
+    # connections registered yet — falls back to free-text so the operator
+    # can still type the ID they're about to create.
+    if not choices:
+        return String(
+            title=Title("Connection"),
+            help_text=Help(
+                "Connection ID this board pulls monitoring data from. "
+                "Individual objects can override this."
+            ),
+            prefill=InputHint("live_1"),
+            field_size=FieldSize.LARGE,
+        )
+    return SingleChoice(
+        title=Title("Connection"),
+        help_text=Help(
+            "Monitoring connection this board pulls data from. "
+            "Individual objects can override this."
+        ),
+        elements=[
+            SingleChoiceElement(
+                name=cid,
+                title=Title(f"{label} ({cid})") if label != cid else Title(cid),
+            )
+            for cid, label in choices
+        ],
+    )
+
+
+def board_metadata_spec(
+    connection_choices: list[tuple[str, str]] | None = None,
+) -> Dictionary:
     return Dictionary(
         title=Title("Board settings"),
         help_text=Help(
@@ -76,15 +108,7 @@ def board_metadata_spec() -> Dictionary:
             "connection_id": DictElement(
                 required=True,
                 group=_IDENTIFICATION,
-                parameter_form=String(
-                    title=Title("Connection"),
-                    help_text=Help(
-                        "Connection ID this board pulls monitoring data from. "
-                        "Individual objects can override this."
-                    ),
-                    prefill=InputHint("live_1"),
-                    field_size=FieldSize.LARGE,
-                ),
+                parameter_form=_connection_form(connection_choices),
             ),
             "rotation_interval": DictElement(
                 required=True,
@@ -115,8 +139,13 @@ def board_metadata_spec() -> Dictionary:
                 required=True,
                 group=_BEHAVIOR,
                 parameter_form=BooleanChoice(
-                    title=Title("Show in board list"),
-                    label=Label("When disabled, this board is hidden from regular users"),
+                    title=Title("Visibility"),
+                    label=Label("Show this board in the boards list"),
+                    help_text=Help(
+                        "When unchecked, the board is hidden from regular users "
+                        "in the boards list and dashboard. Direct links continue "
+                        "to work for users who already have view permission."
+                    ),
                     prefill=DefaultValue(True),
                 ),
             ),
