@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from app.form_specs._helpers import group_dict, input_hint, loc, name
+from app.form_specs._helpers import group_dict, input_hint, loc, name, tr
 from app.form_specs._registry import (
     FormSpecVisitor,
     get_visitor,
@@ -130,6 +130,11 @@ class DictionaryVisitor(FormSpecVisitor[Dictionary]):
             "help": loc(spec.help_text) or "",
             "validators": [],
             "elements": elements,
+            # Per-element groups carry the canonical DictionaryGroup payload
+            # via WireDictElement.group; no top-level group dedupe needed.
+            "groups": [],
+            "no_elements_text": "",
+            "additional_static_elements": None,
         }
 
     def default_value(self, spec: Dictionary) -> object:
@@ -147,6 +152,13 @@ class DictionaryVisitor(FormSpecVisitor[Dictionary]):
     ) -> list[FormSpecValidationMessage]:
         if not isinstance(data, dict):
             return type_mismatch(location, "object", data)
+        return []
+
+    def _validate_nested(
+        self, spec: Dictionary, data: object, location: list[str]
+    ) -> list[FormSpecValidationMessage]:
+        if not isinstance(data, dict):
+            return []
         errors: list[FormSpecValidationMessage] = []
         for key, el in spec.elements.items():
             if key in data:
@@ -177,6 +189,7 @@ class StringVisitor(FormSpecVisitor[String]):
             "label": loc(spec.label),
             "field_size": spec.field_size.name,
             "input_hint": input_hint(spec.prefill),
+            "autocompleter": None,
         }
 
     def default_value(self, spec: String) -> object:
@@ -204,6 +217,7 @@ class OrbColorStringVisitor(FormSpecVisitor[OrbColorString]):
             "label": loc(spec.label),
             "field_size": spec.field_size.name,
             "input_hint": input_hint(spec.prefill),
+            "autocompleter": None,
         }
 
     def default_value(self, spec: OrbColorString) -> object:
@@ -231,6 +245,7 @@ class MultilineTextVisitor(FormSpecVisitor[MultilineText]):
             "label": loc(spec.label),
             "monospaced": spec.monospaced,
             "input_hint": input_hint(spec.prefill),
+            "macro_support": False,
         }
 
     def default_value(self, spec: MultilineText) -> object:
@@ -316,6 +331,8 @@ class BooleanChoiceVisitor(FormSpecVisitor[BooleanChoice]):
             "help": loc(spec.help_text) or "",
             "validators": [],
             "label": loc(spec.label),
+            "text_on": tr("On"),
+            "text_off": tr("Off"),
         }
 
     def default_value(self, spec: BooleanChoice) -> object:
@@ -348,12 +365,12 @@ class PasswordVisitor(FormSpecVisitor[Password]):
             "validators": [],
             "password_store_choices": [],
             "i18n": {
-                "explicit_password": "Explicit password",
-                "password_store": "Stored password",
-                "no_password_store_choices": "No password store available",
-                "password_choice_invalid": "Invalid password choice",
-                "choose_password_from_store": "Choose stored password",
-                "choose_password_type": "Choose password type",
+                "explicit_password": tr("Explicit password"),
+                "password_store": tr("Stored password"),
+                "no_password_store_choices": tr("No password store available"),
+                "password_choice_invalid": tr("Invalid password choice"),
+                "choose_password_from_store": tr("Choose stored password"),
+                "choose_password_type": tr("Choose password type"),
             },
         }
 
@@ -413,6 +430,8 @@ class SingleChoiceVisitor(FormSpecVisitor[SingleChoice]):
             "label": loc(spec.label),
             "no_elements_text": loc(spec.no_elements_text),
             "elements": elements,
+            "frozen": False,
+            "input_hint": None,
         }
 
     def default_value(self, spec: SingleChoice) -> object:
@@ -463,6 +482,8 @@ class CascadingSingleChoiceVisitor(FormSpecVisitor[CascadingSingleChoice]):
             "validators": [],
             "label": loc(spec.label),
             "elements": elements,
+            "no_elements_text": "",
+            "input_hint": None,
         }
 
     def default_value(self, spec: CascadingSingleChoice) -> object:
@@ -489,12 +510,25 @@ class CascadingSingleChoiceVisitor(FormSpecVisitor[CascadingSingleChoice]):
     ) -> list[FormSpecValidationMessage]:
         if not isinstance(data, list | tuple) or len(data) != 2:
             return [msg(location, "Expected [choice, value] pair", data)]
+        choice, _ = data
+        if not any(branch.name == choice for branch in spec.elements):
+            return [msg(location, f"Unknown choice {choice!r}", data)]
+        return []
+
+    def _validate_nested(
+        self, spec: CascadingSingleChoice, data: object, location: list[str]
+    ) -> list[FormSpecValidationMessage]:
+        if not isinstance(data, list | tuple) or len(data) != 2:
+            return []
         choice, value = data
         for branch in spec.elements:
             if branch.name == choice:
-                visitor = get_visitor(branch.parameter_form)
-                return visitor.validate(branch.parameter_form, value, location)
-        return [msg(location, f"Unknown choice {choice!r}", data)]
+                return list(
+                    get_visitor(branch.parameter_form).validate(
+                        branch.parameter_form, value, location
+                    )
+                )
+        return []
 
 
 # ── List ───────────────────────────────────────────────────────────────
@@ -504,16 +538,18 @@ class ListVisitor(FormSpecVisitor[List]):
     spec_type = List
 
     def serialize(self, spec: List) -> WireList:
+        element_visitor = get_visitor(spec.element_template)
         return {
             "type": "list",
             "title": loc(spec.title),
             "help": loc(spec.help_text) or "",
             "validators": [],
-            "element_template": get_visitor(spec.element_template).serialize(spec.element_template),
+            "element_template": element_visitor.serialize(spec.element_template),
             "add_element_label": loc(spec.add_element_label),
             "remove_element_label": loc(spec.remove_element_label),
             "no_element_label": loc(spec.no_element_label),
             "editable_order": spec.editable_order,
+            "element_default_value": element_visitor.default_value(spec.element_template),
         }
 
     def default_value(self, spec: List) -> object:
@@ -524,6 +560,13 @@ class ListVisitor(FormSpecVisitor[List]):
     ) -> list[FormSpecValidationMessage]:
         if not isinstance(data, list):
             return type_mismatch(location, "array", data)
+        return []
+
+    def _validate_nested(
+        self, spec: List, data: object, location: list[str]
+    ) -> list[FormSpecValidationMessage]:
+        if not isinstance(data, list):
+            return []
         out: list[FormSpecValidationMessage] = []
         elem_visitor = get_visitor(spec.element_template)
         for idx, item in enumerate(data):

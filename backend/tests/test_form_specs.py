@@ -69,7 +69,7 @@ def test_serialize_emits_dictionary_with_typed_children() -> None:
 
     assert json_spec["type"] == "dictionary"
     assert json_spec["title"] == "Global Settings"
-    elements = {el["name"]: el for el in json_spec["elements"]}  # type: ignore[union-attr]
+    elements = {el["name"]: el for el in json_spec["elements"]}
     assert elements["icon_size"]["required"] is True
     assert elements["icon_size"]["parameter_form"]["type"] == "integer"
     assert elements["icon_size"]["parameter_form"]["unit"] == "px"

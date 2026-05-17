@@ -8,6 +8,8 @@ modules stay readable.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from app.vendor.cmk_form_specs_extended import DictGroupExtended, DictionaryGroupLayout
 
 from cmk.rulesets.v1._localize import _Localizable
@@ -18,8 +20,36 @@ def identity(s: str) -> str:
     return s
 
 
+# Module-level localizer slot. Default is identity so MKP / standalone builds
+# emit untranslated strings; the built-in build wires this to cmk.gui.i18n._
+# at startup (see app.main.lifespan) so OrbVis strings go through the same
+# gettext catalog as the rest of the Checkmk UI.
+_localize_fn: Callable[[str], str] = identity
+
+
+def set_localizer(fn: Callable[[str], str]) -> None:
+    global _localize_fn
+    _localize_fn = fn
+
+
 def loc(text: _Localizable | None) -> str | None:
-    return None if text is None else text.localize(identity)
+    return None if text is None else text.localize(_localize_fn)
+
+
+def loc_required(text: _Localizable) -> str:
+    """Non-Optional localize for messages that are always present."""
+    result: str = text.localize(_localize_fn)
+    return result
+
+
+def tr(text: str) -> str:
+    """Translate a raw UI string via the active localizer.
+
+    For Localizable objects (Title/Help/Label/Message) prefer :func:`loc`;
+    use ``tr`` only for inline literals that don't already wrap a
+    :class:`_Localizable` (e.g. the password-widget i18n labels).
+    """
+    return _localize_fn(text)
 
 
 def common(spec: FormSpec[object], type_tag: str) -> dict[str, object]:

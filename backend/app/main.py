@@ -61,6 +61,7 @@ from app.connections.test import TestConnection
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.security import hash_password
+from app.form_specs._helpers import set_localizer
 from app.integrations import checkmk as cmk_integration
 from app.models.permission import Permission
 from app.models.role import Role
@@ -226,6 +227,17 @@ def _run_migrations() -> None:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: startup and shutdown."""
     cmk_integration.setup()
+
+    # Wire FormSpec strings (Title/Help/Label/Message + raw labels via tr())
+    # through the Checkmk gettext catalog once cmk.* is importable. Standalone
+    # / MKP builds keep the identity default — no behaviour change there.
+    try:
+        from cmk.gui.i18n import _ as _cmk_gettext
+
+        set_localizer(_cmk_gettext)
+        logger.debug("FormSpec localizer wired to cmk.gui.i18n._")
+    except ImportError:
+        pass
 
     # SECRET_KEY enforcement lives in app.core.config — production-mode startup
     # without a key already fails at Settings() instantiation.

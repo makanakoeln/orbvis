@@ -54,6 +54,12 @@ class _Base(TypedDict):
 class WireDictionary(_Base):
     type: Literal["dictionary"]
     elements: list[WireDictElement]
+    # Required by the canonical cmk.shared_typing.Dictionary dataclass.
+    # OrbVis groups are derived per-element via WireDictionaryGroup (see
+    # group_dict in _helpers), so the top-level ``groups`` list stays empty.
+    groups: list[WireDictionaryGroup]
+    no_elements_text: str
+    additional_static_elements: object
 
 
 class WireString(_Base):
@@ -61,6 +67,7 @@ class WireString(_Base):
     label: str | None
     field_size: str
     input_hint: object
+    autocompleter: object
 
 
 class WireOrbColor(_Base):
@@ -68,6 +75,7 @@ class WireOrbColor(_Base):
     label: str | None
     field_size: str
     input_hint: object
+    autocompleter: object
 
 
 class WireMultilineText(_Base):
@@ -75,6 +83,7 @@ class WireMultilineText(_Base):
     label: str | None
     monospaced: bool
     input_hint: object
+    macro_support: bool
 
 
 class WireInteger(_Base):
@@ -94,6 +103,8 @@ class WireFloat(_Base):
 class WireBooleanChoice(_Base):
     type: Literal["boolean_choice"]
     label: str | None
+    text_on: str
+    text_off: str
 
 
 class WirePasswordI18n(TypedDict):
@@ -122,12 +133,16 @@ class WireSingleChoice(_Base):
     label: str | None
     no_elements_text: str | None
     elements: list[WireSingleChoiceElement]
+    frozen: bool
+    input_hint: object
 
 
 class WireCascadingSingleChoice(_Base):
     type: Literal["cascading_single_choice"]
     label: str | None
     elements: list[WireCascadingChoiceElement]
+    no_elements_text: str
+    input_hint: object
 
 
 class WireList(_Base):
@@ -137,6 +152,7 @@ class WireList(_Base):
     remove_element_label: str | None
     no_element_label: str | None
     editable_order: bool
+    element_default_value: object
 
 
 AnyWireFormSpec = (
