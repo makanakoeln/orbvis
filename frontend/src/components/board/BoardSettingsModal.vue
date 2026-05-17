@@ -30,7 +30,7 @@
                          "Clone" action. -->
                     <div class="space-y-[4px]">
                         <CmkLabel>{{ t('admin.boardId') }}</CmkLabel>
-                        <p class="board-settings__readonly-value">{{ props.board.name }}</p>
+                        <p class="board-settings__id-readonly">{{ props.board.name }}</p>
                     </div>
 
                     <!-- Board type (read-only — switching type would invalidate type-specific
@@ -705,6 +705,18 @@ onMounted(async () => {
     color: var(--text);
     margin: 0;
     padding: var(--dimension-1) 0;
+}
+
+.board-settings__id-readonly {
+    font-family: var(--font-family-mono, monospace);
+    font-size: 0.875rem;
+    color: var(--text);
+    padding: var(--dimension-3) var(--dimension-4);
+    background: var(--bg-elevated, var(--bg-hover));
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    width: max-content;
+    margin: 0;
 }
 
 /* Detail field that appears below a toggle, slightly indented and spaced so
