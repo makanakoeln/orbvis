@@ -419,6 +419,41 @@ def test_custom_validate_skipped_on_shape_mismatch() -> None:
     assert "Expected string" in errors[0].message
 
 
+def test_unwrap_password_handles_explicit_tuple() -> None:
+    from app.form_specs.connections import _unwrap_password
+
+    assert _unwrap_password(["explicit_password", "", "topsecret", False]) == "topsecret"
+    assert _unwrap_password(("explicit_password", "", "topsecret", True)) == "topsecret"
+
+
+def test_unwrap_password_empty_explicit_returns_none() -> None:
+    from app.form_specs.connections import _unwrap_password
+
+    assert _unwrap_password(["explicit_password", "", "", False]) is None
+
+
+def test_unwrap_password_passes_through_strings_and_none() -> None:
+    from app.form_specs.connections import _unwrap_password
+
+    assert _unwrap_password("plain") == "plain"
+    assert _unwrap_password(None) is None
+
+
+def test_unwrap_password_unknown_shape_logs_and_passes_through(caplog) -> None:  # type: ignore[no-untyped-def]
+    """If CMK ever ships a different password tuple shape, we want a log line
+    (not a silent miscast and not an IndexError).
+    """
+    import logging
+
+    from app.form_specs.connections import _unwrap_password
+
+    weird = ["cmk_postprocessed", "stored_password", ("pwid", "")]
+    with caplog.at_level(logging.WARNING):
+        result = _unwrap_password(weird)
+    assert result is weird
+    assert any("Unknown FormSpec password shape" in r.message for r in caplog.records)
+
+
 def test_custom_validate_number_in_range_on_integer() -> None:
     spec = Dictionary(
         title=Title("S"),

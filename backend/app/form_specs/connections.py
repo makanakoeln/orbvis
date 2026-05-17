@@ -10,10 +10,13 @@ discriminator.
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Literal
 
 from app.schemas.connection import REDACTED_SECRET, ConnectionConfig
+
+logger = logging.getLogger(__name__)
 
 from cmk.rulesets.v1 import Help, Label, Title
 from cmk.rulesets.v1.form_specs import (
@@ -357,9 +360,22 @@ def _unwrap_password(value: object) -> object:
     """FormSpec Password emits ``[type, store_id, explicit, used]``.
 
     OrbVis only supports explicit passwords (no password store), so we keep
-    the explicit slot and discard the rest. Already-flat strings (e.g. from
-    legacy callers) pass through unchanged.
+    the explicit slot and discard the rest. Pattern-matches the wire shape
+    instead of indexing ``value[2]`` so a CMK-side tuple change shows up as
+    a fallthrough (logged) rather than an IndexError at runtime.
+    Already-flat strings (e.g. from legacy callers or the REDACTED sentinel)
+    pass through unchanged.
     """
-    if isinstance(value, list | tuple) and len(value) == 4 and value[0] == "explicit_password":
-        return value[2] or None
-    return value
+    match value:
+        case ["explicit_password", _, str(explicit), bool()]:
+            return explicit or None
+        case ("explicit_password", _, str(explicit), bool()):
+            return explicit or None
+        case str() | None:
+            return value
+        case _:
+            logger.warning(
+                "Unknown FormSpec password shape, passing through unchanged",
+                extra={"value_type": type(value).__name__},
+            )
+            return value
