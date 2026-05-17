@@ -26,7 +26,7 @@ from app.core.image_security import (
     BACKGROUND_SUFFIXES,
     is_valid_image,
 )
-from app.form_specs._wire_types import AnyWireFormSpec
+from app.form_specs import FORM_SPECS_AVAILABLE
 from app.models.role import Role
 from app.models.user import User
 from app.schemas.board import (
@@ -41,6 +41,11 @@ from app.schemas.board import (
 )
 from app.services import board_service, connection_service, state_service
 from app.services.cfg_parser import cfg_to_board
+
+if FORM_SPECS_AVAILABLE:
+    from app.form_specs import serialize_form_spec
+    from app.form_specs._wire_types import AnyWireFormSpec
+    from app.form_specs.board_metadata import METADATA_FIELDS, board_metadata_spec
 
 router = APIRouter()
 
@@ -108,70 +113,66 @@ async def get_board(name: BoardName, current_user: User = Depends(get_current_us
     return cfg
 
 
-@router.get("/-/metadata-schema")
-async def get_board_metadata_schema(
-    _: User = Depends(get_current_user),
-) -> AnyWireFormSpec:
-    from app.form_specs import serialize_form_spec
-    from app.form_specs.board_metadata import board_metadata_spec
+if FORM_SPECS_AVAILABLE:
 
-    connection_choices = [(c.id, c.label or c.id) for c in connection_service.load_all()]
-    return serialize_form_spec(board_metadata_spec(connection_choices=connection_choices))
+    @router.get("/-/metadata-schema")
+    async def get_board_metadata_schema(
+        _: User = Depends(get_current_user),
+    ) -> AnyWireFormSpec:
+        connection_choices = [(c.id, c.label or c.id) for c in connection_service.load_all()]
+        return serialize_form_spec(board_metadata_spec(connection_choices=connection_choices))
 
+    @router.get("/{name}/metadata")
+    async def get_board_metadata(
+        name: BoardName, current_user: User = Depends(get_current_user)
+    ) -> dict[str, object]:
+        _require_board_view(name, current_user)
+        cfg = board_service.get_board(name)
+        if cfg is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+            )
+        return {field: getattr(cfg, field, None) for field in METADATA_FIELDS}
 
-@router.get("/{name}/metadata")
-async def get_board_metadata(
-    name: BoardName, current_user: User = Depends(get_current_user)
-) -> dict[str, object]:
-    from app.form_specs.board_metadata import METADATA_FIELDS
-
-    _require_board_view(name, current_user)
-    cfg = board_service.get_board(name)
-    if cfg is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
-        )
-    return {field: getattr(cfg, field, None) for field in METADATA_FIELDS}
-
-
-@router.put("/{name}/metadata", response_model=BoardConfig)
-async def update_board_metadata(
-    name: BoardName,
-    form_data: dict[str, object],
-    request: Request,
-    current_user: User = Depends(get_current_user),
-) -> BoardConfig:
-    from app.form_specs.board_metadata import METADATA_FIELDS
-
-    _require_board_edit(name, current_user)
-    _require_not_readonly(name)
-    if not current_user.is_admin and (
-        form_data.get("hover_template") is not None or form_data.get("context_template") is not None
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Editing hover/context templates requires admin privileges",
-        )
-    update_payload = {field: form_data[field] for field in METADATA_FIELDS if field in form_data}
-    # FormSpec now renders click_action as a BooleanChoice ("Interactive") so
-    # the form-data shape is bool. Map back to the on-wire literal that
-    # BoardUpdate validates.
-    if isinstance(update_payload.get("click_action"), bool):
-        update_payload["click_action"] = "link" if update_payload["click_action"] else "none"
-    update = BoardUpdate.model_validate(update_payload)
-    expected_version = _parse_if_match(request.headers.get("If-Match"))
-    try:
-        cfg = board_service.update_board(name, update, expected_version=expected_version)
-    except board_service.StaleBoardError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"reason": "stale_board", "current_version": exc.current_version},
-        ) from exc
-    if cfg is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
-        )
-    return cfg
+    @router.put("/{name}/metadata", response_model=BoardConfig)
+    async def update_board_metadata(
+        name: BoardName,
+        form_data: dict[str, object],
+        request: Request,
+        current_user: User = Depends(get_current_user),
+    ) -> BoardConfig:
+        _require_board_edit(name, current_user)
+        _require_not_readonly(name)
+        if not current_user.is_admin and (
+            form_data.get("hover_template") is not None
+            or form_data.get("context_template") is not None
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Editing hover/context templates requires admin privileges",
+            )
+        update_payload = {
+            field: form_data[field] for field in METADATA_FIELDS if field in form_data
+        }
+        # FormSpec renders click_action as a BooleanChoice ("Interactive") so
+        # the form-data shape is bool. Map back to the on-wire literal that
+        # BoardUpdate validates.
+        if isinstance(update_payload.get("click_action"), bool):
+            update_payload["click_action"] = "link" if update_payload["click_action"] else "none"
+        update = BoardUpdate.model_validate(update_payload)
+        expected_version = _parse_if_match(request.headers.get("If-Match"))
+        try:
+            cfg = board_service.update_board(name, update, expected_version=expected_version)
+        except board_service.StaleBoardError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"reason": "stale_board", "current_version": exc.current_version},
+            ) from exc
+        if cfg is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+            )
+        return cfg
 
 
 @router.get("/{name}/auto-objects", response_model=list[BoardObject])

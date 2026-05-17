@@ -15,6 +15,12 @@ the dispatcher tag differs.
 
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip(
+    "cmk.rulesets.v1", reason="Standalone build ships without cmk.rulesets.v1", exc_type=ImportError
+)
+
 from dataclasses import fields, is_dataclass
 
 from app.form_specs import OrbColorString, serialize_form_spec

@@ -14,6 +14,10 @@ from typing import cast
 
 import pytest
 
+pytest.importorskip(
+    "cmk.rulesets.v1", reason="Standalone build ships without cmk.rulesets.v1", exc_type=ImportError
+)
+
 from app.form_specs import OrbColorString, serialize_form_spec, validate_form_data
 from app.form_specs._helpers import identity, set_localizer
 from app.form_specs._wire_types import WireDictElement, WireDictionary, WirePassword

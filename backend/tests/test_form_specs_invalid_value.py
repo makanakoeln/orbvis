@@ -10,6 +10,12 @@ contract for each visitor that owns a parse step.
 
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip(
+    "cmk.rulesets.v1", reason="Standalone build ships without cmk.rulesets.v1", exc_type=ImportError
+)
+
 import app.form_specs._visitors  # noqa: F401 — side-effect: registers visitors
 from app.form_specs import validate_form_data
 from app.form_specs._registry import InvalidValue, get_visitor

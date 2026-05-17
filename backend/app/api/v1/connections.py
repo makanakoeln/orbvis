@@ -15,14 +15,17 @@ from pydantic import BaseModel, Field
 from app.api.v1.deps import get_current_user, require_admin, resolve_auth_user
 from app.connections.base import ConnectionBase, ServiceRow, TopologyRow, topology_problem_rank
 from app.core.config import settings
-from app.form_specs import serialize_form_spec
-from app.form_specs._wire_types import AnyWireFormSpec
-from app.form_specs.connections import (
-    config_to_form_data,
-    connection_spec,
-    form_data_to_config,
-)
+from app.form_specs import FORM_SPECS_AVAILABLE
 from app.integrations import checkmk as cmk_integration
+
+if FORM_SPECS_AVAILABLE:
+    from app.form_specs import serialize_form_spec
+    from app.form_specs._wire_types import AnyWireFormSpec
+    from app.form_specs.connections import (
+        config_to_form_data,
+        connection_spec,
+        form_data_to_config,
+    )
 from app.models.user import User
 from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.connection import (
@@ -50,81 +53,84 @@ async def list_backends(_: User = Depends(require_admin)) -> list[ConnectionConf
     return [_redact(b) for b in connection_service.load_all()]
 
 
-@router.get("/schema")
-async def get_connection_schema(_: User = Depends(require_admin)) -> AnyWireFormSpec:
-    return serialize_form_spec(connection_spec(cmk_integration.get_monitoring_core()))
+if FORM_SPECS_AVAILABLE:
 
+    class FormCreateBody(BaseModel):
+        # ID lands on disk as a filename and in URLs — restrict to a safe charset.
+        # Path-traversal via ``id="../foo"`` would otherwise let an admin overwrite
+        # neighbouring connection JSONs (admin-only endpoint, but defense in depth).
+        id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+        form: dict[str, object]
 
-@router.get("/{connection_id}/form")
-async def get_connection_form_data(
-    connection_id: str, _: User = Depends(require_admin)
-) -> dict[str, object]:
-    existing = next((b for b in connection_service.load_all() if b.id == connection_id), None)
-    if existing is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
-    return config_to_form_data(_redact(existing))
+    @router.get("/schema")
+    async def get_connection_schema(_: User = Depends(require_admin)) -> AnyWireFormSpec:
+        return serialize_form_spec(connection_spec(cmk_integration.get_monitoring_core()))
 
+    @router.get("/{connection_id}/form")
+    async def get_connection_form_data(
+        connection_id: str, _: User = Depends(require_admin)
+    ) -> dict[str, object]:
+        existing = next((b for b in connection_service.load_all() if b.id == connection_id), None)
+        if existing is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found"
+            )
+        return config_to_form_data(_redact(existing))
 
-class FormCreateBody(BaseModel):
-    # ID lands on disk as a filename and in URLs — restrict to a safe charset.
-    # Path-traversal via ``id="../foo"`` would otherwise let an admin overwrite
-    # neighbouring connection JSONs (admin-only endpoint, but defense in depth).
-    id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
-    form: dict[str, object]
+    @router.post("/form", response_model=ConnectionConfig, status_code=status.HTTP_201_CREATED)
+    async def create_connection_from_form(
+        body: FormCreateBody, _: User = Depends(require_admin)
+    ) -> ConnectionConfig:
+        try:
+            created = form_data_to_config(body.form, existing=None, connection_id=body.id)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+        try:
+            result = connection_service.create(created)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+        return _redact(result)
 
+    @router.post("/form/test-connection", response_model=TestResult)
+    async def test_connection_from_form(
+        body: FormCreateBody, _: User = Depends(require_admin)
+    ) -> TestResult:
+        """Test FormSpec connection data without saving — used by the edit dialog."""
+        try:
+            cfg = form_data_to_config(body.form, existing=None, connection_id=body.id)
+        except ValueError as exc:
+            return TestResult(ok=False, message=str(exc))
+        try:
+            connection = connection_service.build_instance(cfg)
+            ok = await connection.is_available()
+            return TestResult(
+                ok=ok, message="Connection successful" if ok else "Connection not reachable"
+            )
+        except Exception as exc:
+            return TestResult(ok=False, message=str(exc))
 
-@router.post("/form", response_model=ConnectionConfig, status_code=status.HTTP_201_CREATED)
-async def create_connection_from_form(
-    body: FormCreateBody, _: User = Depends(require_admin)
-) -> ConnectionConfig:
-    try:
-        created = form_data_to_config(body.form, existing=None, connection_id=body.id)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
-    try:
-        result = connection_service.create(created)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
-    return _redact(result)
-
-
-@router.post("/form/test-connection", response_model=TestResult)
-async def test_connection_from_form(
-    body: FormCreateBody, _: User = Depends(require_admin)
-) -> TestResult:
-    """Test FormSpec connection data without saving — used by the edit dialog."""
-    try:
-        cfg = form_data_to_config(body.form, existing=None, connection_id=body.id)
-    except ValueError as exc:
-        return TestResult(ok=False, message=str(exc))
-    try:
-        connection = connection_service.build_instance(cfg)
-        ok = await connection.is_available()
-        return TestResult(
-            ok=ok, message="Connection successful" if ok else "Connection not reachable"
-        )
-    except Exception as exc:
-        return TestResult(ok=False, message=str(exc))
-
-
-@router.put("/{connection_id}/form", response_model=ConnectionConfig)
-async def update_connection_from_form(
-    connection_id: str,
-    form_data: dict[str, object],
-    _: User = Depends(require_admin),
-) -> ConnectionConfig:
-    existing = next((b for b in connection_service.load_all() if b.id == connection_id), None)
-    if existing is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
-    try:
-        updated = form_data_to_config(form_data, existing=existing, connection_id=connection_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
-    result = connection_service.update(connection_id, updated)
-    if result is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
-    _invalidate_topology_cache(connection_id)
-    return _redact(result)
+    @router.put("/{connection_id}/form", response_model=ConnectionConfig)
+    async def update_connection_from_form(
+        connection_id: str,
+        form_data: dict[str, object],
+        _: User = Depends(require_admin),
+    ) -> ConnectionConfig:
+        existing = next((b for b in connection_service.load_all() if b.id == connection_id), None)
+        if existing is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found"
+            )
+        try:
+            updated = form_data_to_config(form_data, existing=existing, connection_id=connection_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+        result = connection_service.update(connection_id, updated)
+        if result is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found"
+            )
+        _invalidate_topology_cache(connection_id)
+        return _redact(result)
 
 
 @router.post("", response_model=ConnectionConfig, status_code=status.HTTP_201_CREATED)

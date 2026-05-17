@@ -88,10 +88,6 @@ jobs:
   docker-build-backend:
     runs-on: ubuntu-latest
 
-    env:
-      CMK_REF: master
-      CMK_APIS: ${{ github.workspace }}/_cmk-plugin-apis
-
     steps:
       - uses: actions/checkout@v4
 
@@ -101,28 +97,13 @@ jobs:
       - name: Build backend image
         run: docker build . -f backend/Dockerfile --tag orbvis-backend:test
 
-      - name: Fetch cmk-plugin-apis (form_specs runtime dep)
-        working-directory: ${{ github.workspace }}
-        run: |
-          git clone --depth 1 --filter=blob:none --no-checkout \
-              --branch "$CMK_REF" \
-              https://github.com/Checkmk/checkmk.git _cmk-src
-          cd _cmk-src
-          git sparse-checkout init --cone
-          git sparse-checkout set packages/cmk-plugin-apis
-          git checkout
-          mv packages/cmk-plugin-apis "$CMK_APIS"
-
       - name: Smoke test backend image
-        # ENVIRONMENT=testing skips app.core.config's production SECRET_KEY check.
-        # PYTHONPATH/-v mounts cmk-plugin-apis read-only — backend/Dockerfile
-        # intentionally does NOT install it (OMD provides cmk in production;
-        # standalone uses tools/release-test/standalone/backend.Dockerfile
-        # which installs from a build context).
+        # The production / Standalone image ships without cmk.rulesets.v1 —
+        # app.form_specs detects that and FORM_SPECS_AVAILABLE stays False,
+        # so the FormSpec /form + /schema endpoints simply don't register.
+        # ENVIRONMENT=testing skips the production SECRET_KEY check.
         run: |
           docker run --rm \
             -e ENVIRONMENT=testing \
-            -e PYTHONPATH=/cmk-apis \
-            -v "$CMK_APIS:/cmk-apis:ro" \
             orbvis-backend:test \
             python -c "from app.main import app; print('OK')"

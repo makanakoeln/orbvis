@@ -7,6 +7,12 @@ cmk-plugin-apis).
 
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip(
+    "cmk.rulesets.v1", reason="Standalone build ships without cmk.rulesets.v1", exc_type=ImportError
+)
+
 from app.form_specs import OrbColorString, serialize_form_spec, validate_form_data
 
 from cmk.rulesets.v1 import Label, Message, Title
