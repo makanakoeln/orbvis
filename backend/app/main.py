@@ -263,7 +263,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Always provide the built-in test connection (no config needed)
     register_connection("test", TestConnection())
 
-    # Load and activate all persisted connection configs
     connection_service.activate_all()
 
     # In Checkmk/OMD mode: auto-set global checkmk_url if not configured yet

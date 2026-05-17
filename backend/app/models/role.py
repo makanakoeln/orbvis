@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from app.models.permission import Permission
     from app.models.user import User
 
-# Association tables
 users2roles = Table(
     "users2roles",
     Base.metadata,

@@ -33,7 +33,6 @@ async def create_user_endpoint(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> UserRead:
-    # Check uniqueness
     existing = await db.execute(select(User).where(User.name == data.name))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")

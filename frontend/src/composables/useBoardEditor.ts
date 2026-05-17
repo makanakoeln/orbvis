@@ -44,7 +44,6 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     const auth = useAuthStore();
     const boardsStore = useBoardsStore();
 
-    // --- Edit mode ---
     const editMode = ref(false);
     function toggleEditMode() {
         editMode.value = !editMode.value;
@@ -54,26 +53,22 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         }
     }
 
-    // --- Selection ---
     const selectedObjectId = ref<string | null>(null);
     function selectObject(id: string | null) {
         selectedObjectId.value = id;
     }
 
-    // --- Post-drag callback (so MapView can sync snapshot + EditPanel) ---
     let _onDragSaved: ((id: string) => void) | null = null;
     function setDragSavedCallback(cb: (id: string) => void) {
         _onDragSaved = cb;
     }
 
-    // --- Grid snapping ---
     const snapGrid = ref(0); // 0 = off, 10 or 20 = snap to grid
     function _snap(v: number): number {
         if (!snapGrid.value) return v;
         return Math.round(v / snapGrid.value) * snapGrid.value;
     }
 
-    // --- Shared drag state ---
     const dragTarget = ref<DragTarget | null>(null);
     let _canvasEl: HTMLElement | null = null;
 
@@ -97,8 +92,6 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
             y: event.clientY - rect.top + parent.scrollTop,
         };
     }
-
-    // --- Document-level drag handlers (line drag only) ---
 
     function _onDocMouseMove(event: MouseEvent) {
         event.preventDefault();
@@ -171,7 +164,6 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         });
     }
 
-    // --- Save object position (called from BoardCanvas object-drag-end event) ---
     async function saveObjectPosition(id: string, x: number, y: number) {
         const objects = boardsStore.currentBoard?.objects ?? [];
         // Nudge to free spot if the drop lands on top of another object — otherwise
@@ -215,7 +207,6 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         return { x: _snap(x), y: _snap(y) };
     }
 
-    // --- Line drag ---
     function startLineDrag(
         event: MouseEvent,
         obj: BoardObject,
@@ -241,7 +232,6 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         event.stopPropagation();
     }
 
-    // --- End line drag (save to backend, patch store locally) ---
     async function endLineDrag() {
         const t = dragTarget.value;
         if (!t || t.kind !== 'line') return;
@@ -274,7 +264,6 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         }
     }
 
-    // --- Update object properties (from EditPanel) ---
     async function updateObjectProperties(id: string, updates: Record<string, unknown>) {
         const updated = await boardsApi.updateObject(mapName.value, id, updates, auth.accessToken!);
         const objects = boardsStore.currentBoard?.objects;
@@ -284,7 +273,6 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         }
     }
 
-    // --- Place new object ---
     const placing = ref(false);
     const draft = reactive<NewObjectDraft>({
         type: '',
@@ -394,7 +382,6 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         }
     }
 
-    // --- Place new object at geographic coordinates (worldmap) ---
     async function placeAtLatLng(lat: number, lng: number) {
         if (!placing.value || !draft.type) return;
         placing.value = false;
@@ -457,7 +444,6 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         return moveObjectToLatLng(id, lat, lng, 2);
     }
 
-    // --- Reset all edit state when navigating to a different map ---
     function resetForNewMap() {
         editMode.value = false;
         selectedObjectId.value = null;
@@ -474,7 +460,6 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         Object.keys(toRaw(lineDragPositions)).forEach((k) => delete lineDragPositions[k]);
     }
 
-    // --- Delete ---
     async function deleteSelected() {
         const id = selectedObjectId.value;
         if (!id) return;
@@ -491,7 +476,6 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         }
     }
 
-    // --- Duplicate selected object ---
     async function duplicateSelected() {
         const id = selectedObjectId.value;
         if (!id || !boardsStore.currentBoard) return;
@@ -517,7 +501,6 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         }
     }
 
-    // --- Cancel placing ---
     function cancelPlacing() {
         placing.value = false;
     }

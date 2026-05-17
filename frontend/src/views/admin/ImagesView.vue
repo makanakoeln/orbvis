@@ -288,7 +288,6 @@ async function uploadIcons(event: Event) {
     } catch (e: unknown) {
         uploadError.value = e instanceof Error ? e.message : 'Upload failed';
     }
-    // Reset file input
     (event.target as HTMLInputElement).value = '';
 }
 

@@ -57,7 +57,6 @@ function buildRing(
             .attr('class', 'arc-root')
             .attr('pointer-events', 'none')
             .attr('transform', `translate(${size / 2},${size / 2})`);
-        // Entrance animation
         g.attr('transform', `translate(${size / 2},${size / 2}) scale(0.6)`)
             .attr('opacity', '0')
             .transition()
@@ -70,7 +69,6 @@ function buildRing(
     const arcGen = arc();
 
     if (pct === null) {
-        // No perf_data: simple state-color ring at 35% opacity
         let ring = g.select<SVGPathElement>('path.state-ring');
         if (ring.empty()) {
             ring = g.append('path').attr('class', 'state-ring');
@@ -88,7 +86,6 @@ function buildRing(
     } else {
         g.select('path.state-ring').remove();
 
-        // Track
         let track = g.select<SVGPathElement>('path.arc-track');
         if (track.empty()) {
             track = g.append('path').attr('class', 'arc-track');
@@ -105,7 +102,6 @@ function buildRing(
             )
             .attr('fill', 'rgba(255,255,255,0.12)');
 
-        // Progress arc
         const targetAngle = START_ANGLE + (pct / 100) * 2 * Math.PI;
         let fg = g.select<SVGPathElement & { _currentEndAngle?: number }>('path.arc-fg');
         if (fg.empty()) {
@@ -141,7 +137,6 @@ function buildRing(
             });
     }
 
-    // Pulse ring for critical states
     g.select('circle.pulse-ring').remove();
 }
 
@@ -206,7 +201,6 @@ export function useArcRing(opts: ArcRingOptions) {
                 render();
                 return;
             }
-            // Animate state ring color if visible
             const ring = g.select<SVGPathElement>('path.state-ring');
             if (!ring.empty()) {
                 const interp = interpolateLab(oldColor, newColor);
@@ -218,7 +212,6 @@ export function useArcRing(opts: ArcRingOptions) {
         { flush: 'post' },
     );
 
-    // Pulse for critical states
     watch(
         opts.stateColor,
         (color) => {
