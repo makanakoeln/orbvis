@@ -127,10 +127,8 @@ def board_metadata_spec(
                 group=_BEHAVIOR,
                 parameter_form=Integer(
                     title=Title("Auto-rotate interval"),
-                    help_text=Help(
-                        "Seconds until the next board is shown in the rotation. "
-                        "0 disables auto-rotate for this board."
-                    ),
+                    help_text=Help("Seconds until the next board is shown in the rotation."),
+                    label=Label("0 = disabled"),
                     unit_symbol="s",
                     prefill=DefaultValue(0),
                 ),
@@ -165,7 +163,11 @@ def board_metadata_spec(
                 group=_TEMPLATES,
                 parameter_form=String(
                     title=Title("Hover template"),
-                    help_text=Help("Overrides the global hover template for this board."),
+                    help_text=Help(
+                        "Overrides the global hover template for this board. "
+                        "Available placeholders: {{name}}, {{state}}, {{output}}, "
+                        "{{host}}, {{service}}. Example: '{{name}} is {{state}} — {{output}}'."
+                    ),
                     prefill=InputHint("e.g. {{name}} is {{state}}"),
                     field_size=FieldSize.LARGE,
                 ),
@@ -176,7 +178,8 @@ def board_metadata_spec(
                     title=Title("Context template"),
                     help_text=Help(
                         "Right-click context-menu fallback. Same placeholders as "
-                        "the hover template."
+                        "the hover template: {{name}}, {{state}}, {{output}}, "
+                        "{{host}}, {{service}}."
                     ),
                     prefill=InputHint("e.g. {{name}} is {{state}}"),
                     field_size=FieldSize.LARGE,

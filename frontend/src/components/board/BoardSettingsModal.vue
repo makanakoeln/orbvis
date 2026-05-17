@@ -23,24 +23,13 @@
             <div class="board-settings__scroll">
                 <!-- General -->
                 <div v-if="activeTab === 'general'" class="space-y-[10px]">
-                    <!-- ID (read-only) — mirror ConnectionsView's "Connection ID"
-                         field so both settings surfaces present the immutable
-                         identifier the same way. The board name is the
-                         filesystem-level key; renaming requires the explicit
-                         "Clone" action. -->
-                    <div class="space-y-[4px]">
-                        <CmkLabel>{{ t('admin.boardId') }}</CmkLabel>
-                        <p class="board-settings__id-readonly">{{ props.board.name }}</p>
-                    </div>
-
-                    <!-- Board type (read-only — switching type would invalidate type-specific
-                         settings and the board geometry; cloning is the supported path).
-                         Rendered as plain text (not Badge) so it doesn't suggest interaction. -->
-                    <div class="space-y-[4px]">
-                        <CmkLabel :help="t('board.boardTypeImmutable')">{{
-                            t('board.boardType')
-                        }}</CmkLabel>
-                        <p class="board-settings__readonly-value">{{ boardTypeLabel }}</p>
+                    <!-- ID + Board type as a compact chip row. Both are
+                         read-only — switching either would invalidate
+                         per-type settings and the filesystem key; cloning is
+                         the supported rename/conversion path. -->
+                    <div class="board-settings__id-row" :title="t('board.boardTypeImmutable')">
+                        <span class="board-settings__id-chip">{{ props.board.name }}</span>
+                        <span class="board-settings__type-chip">{{ boardTypeLabel }}</span>
                     </div>
 
                     <!-- Type-specific section first so the operator sees the
@@ -724,25 +713,32 @@ onMounted(async () => {
     padding-bottom: var(--dimension-4);
 }
 
-/* Read-only display for unchangeable values (e.g. board type). Plain text
-   on the form background so it doesn't suggest a button or pill. */
-.board-settings__readonly-value {
-    font-size: var(--font-size-normal);
-    color: var(--text);
-    margin: 0;
-    padding: var(--dimension-1) 0;
+/* Compact chip row that combines the read-only board ID and type at the top
+   of the settings — replaces two full label/value blocks so the editable
+   form starts closer to the slide-in header. */
+.board-settings__id-row {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-3);
+    flex-wrap: wrap;
 }
 
-.board-settings__id-readonly {
+.board-settings__id-chip {
     font-family: var(--font-family-mono, monospace);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: var(--text);
-    padding: var(--dimension-3) var(--dimension-4);
+    padding: 4px var(--dimension-3);
     background: var(--bg-elevated, var(--bg-hover));
-    border-radius: 6px;
+    border-radius: 999px;
     border: 1px solid var(--border);
-    width: max-content;
-    margin: 0;
+}
+
+.board-settings__type-chip {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    padding: 4px var(--dimension-3);
+    border-radius: 999px;
+    border: 1px dashed var(--border);
 }
 
 /* Detail field that appears below a toggle, slightly indented and spaced so

@@ -5,12 +5,12 @@
             <span>{{ enableLabel }}</span>
         </label>
         <CmkColorPicker
-            :data="modelValue ?? defaultColor"
+            :data="displayedColor"
             :disabled="!enabled"
             @update:data="enabled && emit('update:modelValue', $event)"
         />
         <CmkInput
-            :model-value="enabled ? (modelValue ?? '') : ''"
+            :model-value="enabled ? displayedColor : ''"
             :placeholder="defaultColor"
             field-size="FILL"
             class="flex-1"
@@ -39,7 +39,16 @@ const emit = defineEmits<{ 'update:modelValue': [string | null] }>();
 const enabled = computed(() => {
     const v = props.modelValue;
     const none = props.noneValue ?? null;
-    return none === null ? v != null : v != null && v !== none;
+    if (v == null || v === '') return false;
+    return none === null ? true : v !== none;
+});
+
+// Swatch and hex-input both bind to this so the operator never sees the
+// picker and the textbox showing different colors while picking. Falls back
+// to the default tint when nothing is set yet.
+const displayedColor = computed(() => {
+    const v = props.modelValue;
+    return v != null && v !== '' ? v : props.defaultColor;
 });
 
 function setEnabled(checked: boolean) {
