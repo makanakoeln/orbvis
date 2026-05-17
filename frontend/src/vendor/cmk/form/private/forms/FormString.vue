@@ -5,11 +5,8 @@ conditions defined in the file COPYING, which is part of this source code packag
 -->
 <script setup lang="ts">
 import type * as FormSpec from 'cmk-shared-typing/typescript/vue_formspec_components';
-import { computed, defineComponent, h } from 'vue';
-
-// OrbVis stub for lucide-vue-next/X icon. Autocompleter branch is not
-// triggered by the Pilot, so this never renders at runtime.
-const X = defineComponent({ render: () => h('span') });
+import { X } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 import CmkDropdownButton from '@/components/CmkDropdown/CmkDropdownButton.vue';
 import CmkSpace from '@/components/CmkSpace.vue';

@@ -1,22 +1,20 @@
 <!--
 Copyright (C) 2025 Checkmk GmbH - License: GNU General Public License v2
-Vendored from cmk-frontend-vue.
-
-OrbVis patches:
-- CMK's `usei18n` is not vendored; replaced with vue-i18n's `useI18n` and a
-  `t('common.close')` fallback for the close button label.
-- Imports rewritten to OrbVis path aliases (@cmk/...).
+This file is part of Checkmk (https://checkmk.com). It is subject to the terms and
+conditions defined in the file COPYING, which is part of this source code package.
 -->
 <script setup lang="ts">
-import CmkIcon, { type CmkIconProps } from '@cmk/components/CmkIcon';
-import CmkScrollContainer from '@cmk/components/CmkScrollContainer.vue';
-import CmkSlideIn, { type SlideInVariants } from '@cmk/components/CmkSlideIn';
-import CmkHeading from '@cmk/components/typography/CmkHeading.vue';
 import { DialogClose, DialogTitle } from 'reka-ui';
 import { computed, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
 
-const { t } = useI18n();
+import CmkIcon, { type CmkIconProps } from '@/components/CmkIcon';
+import CmkSlideIn, { type SlideInVariants } from '@/components/CmkSlideIn';
+import usei18n from '@/lib/i18n';
+
+import CmkScrollContainer from './CmkScrollContainer.vue';
+import CmkHeading from './typography/CmkHeading.vue';
+
+const { _t } = usei18n();
 
 const scrollContainerRef = ref<InstanceType<typeof CmkScrollContainer>>();
 const scrollContainerEl = computed(() => {
@@ -27,7 +25,7 @@ const scrollContainerEl = computed(() => {
 export interface CmkSlideInDialogProps {
     open: boolean;
     size?: SlideInVariants['size'];
-    isIndexPage?: boolean | undefined;
+    isIndexPage?: boolean | undefined; // will be removed after the removal of the iframe
     stackPriority?: number | undefined;
     header?: {
         title: string;
@@ -62,7 +60,7 @@ const emit = defineEmits(['close']);
                 class="cmk-slide-in-dialog__close"
                 @click="emit('close')"
             >
-                <CmkIcon :aria-label="t('common.close')" name="close" size="xsmall" />
+                <CmkIcon :aria-label="_t('Close')" name="close" size="xsmall" />
             </DialogClose>
         </DialogTitle>
 
@@ -72,7 +70,7 @@ const emit = defineEmits(['close']);
             class="cmk-slide-in-dialog__content"
             tabindex="0"
             role="region"
-            :aria-label="header?.title ?? t('common.close')"
+            :aria-label="header?.title ?? _t('Content')"
         >
             <slot />
         </CmkScrollContainer>

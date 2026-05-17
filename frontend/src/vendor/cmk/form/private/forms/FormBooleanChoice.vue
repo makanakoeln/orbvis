@@ -6,8 +6,9 @@ conditions defined in the file COPYING, which is part of this source code packag
 <script setup lang="ts">
 import type { BooleanChoice } from 'cmk-shared-typing/typescript/vue_formspec_components';
 
-import CmkSwitch from '@/components/CmkSwitch.vue';
+import CmkCheckbox from '@/components/user-input/CmkCheckbox.vue';
 import { useValidation, type ValidationMessages } from '@/form/private/validation';
+import { untranslated } from '@/lib/i18n';
 
 const props = defineProps<{
     spec: BooleanChoice;
@@ -23,26 +24,10 @@ const [validation, value] = useValidation<boolean>(
 </script>
 
 <template>
-    <!-- OrbVis vendor patch: BooleanChoice in OrbVis are always *state*
-         toggles (Visibility, Use color, Verify SSL, …), never accept/confirm
-         checkboxes. CmkSwitch reads as a state more clearly, so we render
-         the same data with the slider instead of CmkCheckbox. -->
-    <label class="form-boolean-choice">
-        <CmkSwitch v-model:data="value" />
-        <span v-if="spec.label" class="form-boolean-choice__label">{{ spec.label }}</span>
-    </label>
+    <CmkCheckbox
+        v-model="value"
+        :label="untranslated(spec.label ?? '')"
+        :help="untranslated(spec.title ? '' : spec.help)"
+        :external-errors="validation"
+    />
 </template>
-
-<style scoped>
-.form-boolean-choice {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--dimension-3, 8px);
-    cursor: pointer;
-}
-
-.form-boolean-choice__label {
-    color: var(--text);
-    font-size: var(--font-size-normal);
-}
-</style>

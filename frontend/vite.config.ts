@@ -14,11 +14,26 @@ const CMK_SRC = process.env.CMK_FRONTEND_VUE_SRC
 
 const ORBVIS_SRC = fileURLToPath(new URL('./src', import.meta.url))
 
+// Stub redirects keep OrbVis-specific overrides outside the vendored
+// tree so vendor files stay byte-identical to upstream and the
+// drift-check stays quiet. The resolver below intercepts imports that
+// land on a CMK path and rewrites them to the local stub.
 const CMK_STUBS: Record<string, string> = {
-  // CmkIcon: vendored vendor builds runtime URLs (see CmkIcon/utils.ts) and
-  // can be used directly. Only CmkMultitoneIcon still needs the stub because
-  // its multi-tone SVG handling assumes the Vite asset graph.
+  // CmkMultitoneIcon's multi-tone SVG handling assumes the Vite asset
+  // graph — keep the local stub.
   [`${CMK_SRC}/components/CmkIcon/CmkMultitoneIcon.vue`]: `${ORBVIS_SRC}/components/cmk-stubs/CmkMultitoneIcon.vue`,
+  // FormReadonly pulls in form types we don't vendor; the Pilot only
+  // renders in edit mode, so a minimal stub is enough.
+  [`${CMK_SRC}/form/FormReadonly.vue`]: `${ORBVIS_SRC}/cmk-stubs/FormReadonly.vue`,
+  // FormAutocompleter is statically imported by FormString.vue but
+  // never reached at runtime (spec.autocompleter is never set).
+  [`${CMK_SRC}/form/private/FormAutocompleter/FormAutocompleter.vue`]: `${ORBVIS_SRC}/cmk-stubs/FormAutocompleter.vue`,
+  // CmkIcon ships its asset paths as Vite asset imports
+  // (`~cmk-frontend/themes/...?url&no-inline`). OrbVis loads the icons
+  // from the sibling OMD-site `/<site>/check_mk/themes/...` path at
+  // runtime; both the constants table and the URL builder are stubbed.
+  [`${CMK_SRC}/components/CmkIcon/icons.constants.ts`]: `${ORBVIS_SRC}/cmk-stubs/CmkIcon/icons.constants.ts`,
+  [`${CMK_SRC}/components/CmkIcon/utils.ts`]: `${ORBVIS_SRC}/cmk-stubs/CmkIcon/utils.ts`,
 }
 
 const isCmkFile = (id: string) =>
@@ -75,6 +90,12 @@ export default defineConfig({
       '@cmk': CMK_SRC,
       'cmk-shared-typing': fileURLToPath(new URL('./src/cmk-stubs/cmk-shared-typing', import.meta.url)),
       'pofile': fileURLToPath(new URL('./src/vendor/empty-module.ts', import.meta.url)),
+      // Upstream FormString.vue imports an X icon from lucide-vue-next
+      // that only renders inside the autocompleter clear-button — a
+      // branch the OrbVis Pilot never enters. Aliasing the package to
+      // a local stub keeps the vendored file byte-identical to upstream
+      // without pulling in the lucide-vue-next dependency.
+      'lucide-vue-next': fileURLToPath(new URL('./src/cmk-stubs/lucide-vue-next.ts', import.meta.url)),
     },
   },
   server: {

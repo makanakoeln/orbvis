@@ -8,8 +8,15 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "cmk-shared-typing/*": ["./src/cmk-stubs/cmk-shared-typing/*"]
+      // ``@/*`` resolves OrbVis-source first, then falls back to the
+      // vendored CMK tree. Vendor files use upstream CMK's ``@/...``
+      // import style; we keep them byte-identical to upstream by letting
+      // tsconfig resolve the alias the same way Vite already does at
+      // runtime. The two source trees do not overlap (no OrbVis file
+      // shadows a vendor path), so the fallback is unambiguous.
+      "@/*": ["./src/*", "./src/vendor/cmk/*"],
+      "cmk-shared-typing/*": ["./src/cmk-stubs/cmk-shared-typing/*"],
+      "lucide-vue-next": ["./src/cmk-stubs/lucide-vue-next.ts"]
     },
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,

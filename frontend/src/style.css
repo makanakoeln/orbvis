@@ -134,6 +134,14 @@ input:-webkit-autofill:focus {
     pointer-events: auto;
 }
 
+/* Tailwind's preflight applies `* { box-sizing: border-box }`, which on the
+   CmkDropdown arrow shrinks the SVG content area to 1.8px once its 0.7em
+   padding is subtracted. Override locally so the arrow keeps its intended
+   size without touching the vendored CmkDropdown.vue. */
+.cmk-dropdown--arrow {
+    box-sizing: content-box;
+}
+
 /* Tailwind-zinc Klassen sind durch CMK-Token (--text, --text-muted, --border, --bg-*)
    ersetzt; theme-spezifische Anpassungen passieren über die Token. */
 
