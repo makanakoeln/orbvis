@@ -23,21 +23,30 @@ const ORBVIS_SRC = fileURLToPath(new URL('./src', import.meta.url))
 // (work-in-progress — these will move to standalone over time).
 const STANDALONE = process.env.VITE_BUILD_TARGET === 'standalone'
 
+// Listing format: vendor-path (relative to ``@cmk/components/``) →
+// orbvis-path (relative to ``cmk-standalone/``). The build target maps
+// the first to the second so wrapper layer code under
+// ``@/components/cmk/*`` lands on the OrbVis-native implementation
+// instead of the vendored one.
+const STANDALONE_COMPONENT_MAP: Record<string, string> = {
+  'CmkAlertBox.vue': 'CmkAlertBox.vue',
+  'CmkBadge.vue': 'CmkBadge.vue',
+  'CmkButton.vue': 'CmkButton.vue',
+  'CmkHelpText.vue': 'CmkHelpText.vue',
+  'CmkLabel.vue': 'CmkLabel.vue',
+  'CmkLoading.vue': 'CmkLoading.vue',
+  'CmkSwitch.vue': 'CmkSwitch.vue',
+  'typography/CmkHeading.vue': 'typography/CmkHeading.vue',
+  'typography/CmkParagraph.vue': 'typography/CmkParagraph.vue',
+  'user-input/CmkCheckbox.vue': 'user-input/CmkCheckbox.vue',
+  'user-input/CmkInput.vue': 'user-input/CmkInput.vue',
+}
+
 const STANDALONE_OVERRIDES: { find: RegExp; replacement: string }[] = STANDALONE
-  ? [
-      {
-        find: /^@cmk\/components\/CmkButton\.vue$/,
-        replacement: `${ORBVIS_SRC}/components/cmk-standalone/CmkButton.vue`,
-      },
-      {
-        find: /^@cmk\/components\/CmkLoading\.vue$/,
-        replacement: `${ORBVIS_SRC}/components/cmk-standalone/CmkLoading.vue`,
-      },
-      {
-        find: /^@cmk\/components\/user-input\/CmkInput\.vue$/,
-        replacement: `${ORBVIS_SRC}/components/cmk-standalone/CmkInput.vue`,
-      },
-    ]
+  ? Object.entries(STANDALONE_COMPONENT_MAP).map(([vendor, standalone]) => ({
+      find: new RegExp(`^@cmk/components/${vendor.replace(/\./g, '\\.')}$`),
+      replacement: `${ORBVIS_SRC}/components/cmk-standalone/${standalone}`,
+    }))
   : []
 
 // Stub redirects keep OrbVis-specific overrides outside the vendored
