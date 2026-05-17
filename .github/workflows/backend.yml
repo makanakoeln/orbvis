@@ -24,6 +24,16 @@ jobs:
       run:
         working-directory: backend
 
+    env:
+      # OrbVis's form_specs/* import cmk.rulesets.v1 at module load. The
+      # package is not on PyPI — it lives in checkmk/packages/cmk-plugin-apis/
+      # and is provided by OMD in real deployments. For CI we sparse-clone the
+      # checkmk repo and put the package directory on PYTHONPATH, mirroring
+      # the local dev setup (CMK_PLUGIN_APIS env in tools/release-test/standalone).
+      CMK_REF: master
+      CMK_APIS: ${{ github.workspace }}/_cmk-plugin-apis
+      PYTHONPATH: ${{ github.workspace }}/_cmk-plugin-apis
+
     steps:
       - uses: actions/checkout@v4
 
@@ -31,6 +41,18 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
+
+      - name: Fetch cmk-plugin-apis (form_specs runtime dep)
+        working-directory: ${{ github.workspace }}
+        run: |
+          git clone --depth 1 --filter=blob:none --no-checkout \
+              --branch "$CMK_REF" \
+              https://github.com/Checkmk/checkmk.git _cmk-src
+          cd _cmk-src
+          git sparse-checkout init --cone
+          git sparse-checkout set packages/cmk-plugin-apis
+          git checkout
+          mv packages/cmk-plugin-apis "$CMK_APIS"
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
@@ -66,6 +88,10 @@ jobs:
   docker-build-backend:
     runs-on: ubuntu-latest
 
+    env:
+      CMK_REF: master
+      CMK_APIS: ${{ github.workspace }}/_cmk-plugin-apis
+
     steps:
       - uses: actions/checkout@v4
 
@@ -75,12 +101,28 @@ jobs:
       - name: Build backend image
         run: docker build . -f backend/Dockerfile --tag orbvis-backend:test
 
+      - name: Fetch cmk-plugin-apis (form_specs runtime dep)
+        working-directory: ${{ github.workspace }}
+        run: |
+          git clone --depth 1 --filter=blob:none --no-checkout \
+              --branch "$CMK_REF" \
+              https://github.com/Checkmk/checkmk.git _cmk-src
+          cd _cmk-src
+          git sparse-checkout init --cone
+          git sparse-checkout set packages/cmk-plugin-apis
+          git checkout
+          mv packages/cmk-plugin-apis "$CMK_APIS"
+
       - name: Smoke test backend image
-        # Run in testing mode so app.core.config's production-SECRET_KEY check
-        # doesn't abort. The smoke test only verifies `from app.main import app`
-        # succeeds — it never boots the server.
+        # ENVIRONMENT=testing skips app.core.config's production SECRET_KEY check.
+        # PYTHONPATH/-v mounts cmk-plugin-apis read-only — backend/Dockerfile
+        # intentionally does NOT install it (OMD provides cmk in production;
+        # standalone uses tools/release-test/standalone/backend.Dockerfile
+        # which installs from a build context).
         run: |
           docker run --rm \
             -e ENVIRONMENT=testing \
+            -e PYTHONPATH=/cmk-apis \
+            -v "$CMK_APIS:/cmk-apis:ro" \
             orbvis-backend:test \
             python -c "from app.main import app; print('OK')"
