@@ -101,6 +101,17 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
     return response.json();
 }
 
+// ---- Capabilities ----
+
+export interface Capabilities {
+    form_specs: boolean;
+}
+
+export const capabilitiesApi = {
+    // Unauthenticated — feature flags are public.
+    get: (): Promise<Capabilities> => request('/capabilities'),
+};
+
 // ---- Auth ----
 
 export const authApi = {

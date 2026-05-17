@@ -22,10 +22,15 @@ import ToastContainer from '@/components/ToastContainer.vue';
 import { useChangelog } from '@/composables/useChangelog';
 import { useTheme } from '@/composables/useTheme';
 import { useAuthStore } from '@/stores/auth';
+import { useCapabilitiesStore } from '@/stores/capabilities';
 
 useTheme();
 const route = useRoute();
 const auth = useAuthStore();
+// Fetch backend capability flags as early as possible so the Login screen
+// and admin views see the correct form_specs flag on first paint. Errors
+// fall back to the optimistic FormSpec-available default (see store).
+useCapabilitiesStore().ensureLoaded();
 
 const showShell = computed(
     () =>

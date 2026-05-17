@@ -388,6 +388,17 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "version": APP_VERSION}
 
 
+@app.get("/api/v1/capabilities")
+async def get_capabilities() -> dict[str, bool]:
+    """Runtime feature flags consumed by the SPA at bootstrap.
+
+    The Standalone build ships without ``cmk.rulesets.v1`` — ``form_specs``
+    is then False and the admin views render their legacy non-FormSpec
+    forms against the flat pydantic CRUD endpoints.
+    """
+    return {"form_specs": FORM_SPECS_AVAILABLE}
+
+
 @app.get("/api/changelog")
 async def get_changelog() -> PlainTextResponse:
     return PlainTextResponse(_CHANGELOG)
