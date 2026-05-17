@@ -10,9 +10,17 @@
 </template>
 
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue';
+
 import { useCapabilitiesStore } from '@/stores/capabilities';
-import ConnectionsFormSpecView from '@/views/admin/ConnectionsFormSpecView.vue';
 import ConnectionsViewLegacy from '@/views/admin/ConnectionsViewLegacy.vue';
+
+// FormSpec view loads lazily so the vendored cmk-frontend-vue form
+// stack lands in a separate chunk — the standalone build never fetches
+// it because capabilities.formSpecs stays false.
+const ConnectionsFormSpecView = defineAsyncComponent(
+    () => import('@/views/admin/ConnectionsFormSpecView.vue'),
+);
 
 const capabilities = useCapabilitiesStore();
 </script>

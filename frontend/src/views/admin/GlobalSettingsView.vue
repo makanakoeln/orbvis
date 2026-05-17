@@ -14,9 +14,14 @@
 </template>
 
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue';
+
 import { useCapabilitiesStore } from '@/stores/capabilities';
-import GlobalSettingsFormSpecView from '@/views/admin/GlobalSettingsFormSpecView.vue';
 import GlobalSettingsViewLegacy from '@/views/admin/GlobalSettingsViewLegacy.vue';
+
+const GlobalSettingsFormSpecView = defineAsyncComponent(
+    () => import('@/views/admin/GlobalSettingsFormSpecView.vue'),
+);
 
 const capabilities = useCapabilitiesStore();
 </script>

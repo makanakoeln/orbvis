@@ -11,9 +11,14 @@
 </template>
 
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue';
+
 import { useCapabilitiesStore } from '@/stores/capabilities';
-import SystemSettingsFormSpecView from '@/views/admin/SystemSettingsFormSpecView.vue';
 import SystemSettingsViewLegacy from '@/views/admin/SystemSettingsViewLegacy.vue';
+
+const SystemSettingsFormSpecView = defineAsyncComponent(
+    () => import('@/views/admin/SystemSettingsFormSpecView.vue'),
+);
 
 const capabilities = useCapabilitiesStore();
 </script>

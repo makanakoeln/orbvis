@@ -25,10 +25,15 @@
 </template>
 
 <script setup lang="ts">
-import BoardSettingsFormSpecModal from '@/components/board/BoardSettingsFormSpecModal.vue';
+import { defineAsyncComponent } from 'vue';
+
 import BoardSettingsModalLegacy from '@/components/board/BoardSettingsModalLegacy.vue';
 import { useCapabilitiesStore } from '@/stores/capabilities';
 import type { BoardRead } from '@/types/api';
+
+const BoardSettingsFormSpecModal = defineAsyncComponent(
+    () => import('@/components/board/BoardSettingsFormSpecModal.vue'),
+);
 
 defineProps<{
     board: BoardRead;
