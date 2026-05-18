@@ -1,6 +1,6 @@
 [project]
 name = "orbvis-backend"
-version = "0.2.0"
+version = "0.3.0"
 description = "OrbVis Backend - FastAPI based monitoring visualization"
 license = { text = "GPL-2.0-only" }
 requires-python = ">=3.12"

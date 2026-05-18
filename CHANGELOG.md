@@ -4,6 +4,48 @@ All notable changes to OrbVis are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-05-18
+
+Iterative release on top of 0.2.0. Settings, connections and dialogs now follow Checkmk's look and feel, and OrbVis can run standalone outside Checkmk.
+
+### Features
+
+- Settings redesigned in Checkmk's WATO style with a master/detail layout, sticky save bar, per-group "modified" badges and a one-click reset to factory defaults on every field
+- Connection editor reworked: pick between Unix socket and TCP, with the OMD socket prefilled and clearer credential grouping
+- Board editor: dedicated "+" button to add objects, action bar follows the selected object, properties popup can be moved around, fewer accidental selects and double-clicks
+- Board canvas: zoom now scales the background and objects together, text-mode objects render as state-colored text, custom icons get a soft highlight
+- Image library: separate tabs for built-in and uploaded images, search, drag-and-drop upload for board backgrounds, clearer "image in use" warning with quick links
+- Detail drawer is now a slimmer non-modal slide-in with a state-colored edge — easier to keep open while you work
+- BI aggregations: bulk-acknowledge contributing leaves, summary/details toggle, respect for the configured expand depth
+- Board filter accepts the same prefixes as Checkmk's quicksearch (`h:`, `s:`, `hg:`, `sg:`, `id:`)
+- Refreshed dialogs across the app (comments, acknowledge, downtime, board create, change password, user settings, admin pages)
+- Light theme polished: sidebar visibility, checkbox marks, board cards and form contrast
+- User data moved out of `local/share/orbvis/` to `$OMD_ROOT/var/orbvis/` (boards, SQLite DB, venv, htdocs) and `$OMD_ROOT/etc/orbvis/` (`.env`). Avoids replicating OrbVis data across remote sites on *Activate Changes*. Existing installs are migrated automatically by `orbvis-setup`
+- MKP updates now self-heal — when the bundled version differs from what's installed, OrbVis runs the setup step on its own
+
+### Security
+
+- Textbox content is no longer rendered as HTML (XSS hardening)
+- Host and service actions are restricted to admins
+- Connection paths and IDs are validated against path traversal
+- Board line colors are validated and legacy invalid values are sanitized on load
+- Dependency bumps for known CVEs in `python-multipart`, `mako` (via Alembic) and `sanitize-html`
+
+### Bug Fixes
+
+- BI aggregation state now stays correct even when batched state calls return empty
+- Settings save bar no longer bleeds through scrolled content
+- Settings "modified" indicator no longer flags untouched optional fields
+- Number inputs keep your typed digits instead of clamping mid-typing
+- Adding a background image no longer shifts existing objects on the board
+- Save becomes active again after replacing a background image with the same filename
+- Worldmap marker labels are centered under the icon and respect the configured size
+- Hover tooltips and edit modal headers show the raw object identifier instead of the label override
+- Compatibility with Checkmk 2.5 for service-collection queries
+- The backend service starts reliably under OMD with proper liveness checks
+- Help tooltips and dropdown arrows render correctly across themes
+- Dropdowns stay clickable inside dialogs
+
 ## [0.2.0] - 2026-05-10
 
 Iterative release on top of 0.1.0 with no public-API changes.
