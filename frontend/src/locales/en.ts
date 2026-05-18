@@ -355,7 +355,7 @@ export default {
         endX: 'End X',
         showLabel: 'Show label',
         labelText: 'Label text',
-        labelOnLine: 'Label on the line',
+        lineLabel: 'Line label',
         position: 'Position',
         lat: 'Lat',
         lng: 'Lng',

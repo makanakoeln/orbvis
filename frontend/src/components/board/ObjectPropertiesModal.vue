@@ -675,11 +675,10 @@
                             </div>
                             <div v-if="form.label.show" class="field-row">
                                 <label class="field-label">{{
-                                    t('boardSettings.labelText')
+                                    t('boardSettings.lineLabel')
                                 }}</label>
                                 <CmkInput
                                     v-model="form.label.text"
-                                    :placeholder="t('boardSettings.labelOnLine')"
                                     field-size="FILL"
                                     class="flex-1"
                                 />

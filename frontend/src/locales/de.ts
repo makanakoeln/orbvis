@@ -358,7 +358,7 @@ export default {
         endX: 'Ende X',
         showLabel: 'Beschriftung anzeigen',
         labelText: 'Beschriftungstext',
-        labelOnLine: 'Beschriftung auf der Linie',
+        lineLabel: 'Linien-Beschriftung',
         position: 'Position',
         lat: 'Breite',
         lng: 'Länge',
