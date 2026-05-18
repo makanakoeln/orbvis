@@ -89,7 +89,15 @@ const props = defineProps<{
     modelValue: string;
     boardName: string;
 }>();
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
+// `replaced` fires on every successful upload, even when the resulting
+// filename is unchanged. The backend stores the bg under a fixed
+// `<board>.<ext>` name, so an in-place replacement leaves modelValue
+// identical — without a side-channel signal the parent's isDirty check
+// wouldn't see the change and the Save button would stay disabled.
+const emit = defineEmits<{
+    'update:modelValue': [value: string];
+    replaced: [];
+}>();
 
 const BASE_URL = import.meta.env.BASE_URL;
 const cacheBust = ref(Date.now());
@@ -123,6 +131,7 @@ async function onFileChange(event: Event) {
         );
         cacheBust.value = Date.now();
         emit('update:modelValue', filename);
+        emit('replaced');
     } catch (e: unknown) {
         error.value = e instanceof Error ? e.message : 'Upload failed';
     } finally {

@@ -48,6 +48,7 @@
                             <BackgroundImageUpload
                                 v-model="form.background_image"
                                 :board-name="props.board.name"
+                                @replaced="bgReplaced = true"
                             />
                         </div>
                         <div class="space-y-[4px]">
@@ -609,10 +610,16 @@ const permDraft = reactive(new Map<string, boolean>());
 // formSpecData on first render (e.g. fill optional fields with defaults),
 // which would otherwise look like a user edit.
 const initialSnapshot = ref(JSON.stringify({ form: form.value, formSpec: formSpecData.value }));
+// Tracks bg-image replace-uploads where the resulting filename is identical
+// (backend stores under `<board>.<ext>`), so the snapshot comparison can't
+// pick them up on its own.
+const bgReplaced = ref(false);
 const isDirty = computed(
     () =>
         JSON.stringify({ form: form.value, formSpec: formSpecData.value }) !==
-            initialSnapshot.value || permDraft.size > 0,
+            initialSnapshot.value ||
+        permDraft.size > 0 ||
+        bgReplaced.value,
 );
 
 function requestClose() {
