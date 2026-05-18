@@ -6,6 +6,16 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Kill child processes on exit
 trap 'kill $(jobs -p) 2>/dev/null' EXIT INT TERM
 
+# Load root .env (created by bootstrap.sh) so SECRET_KEY etc. are available
+# to alembic and uvicorn, which run from backend/ and would otherwise miss it.
+if [[ -f "$SCRIPT_DIR/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/.env"
+  set +a
+fi
+export ENVIRONMENT="${ENVIRONMENT:-development}"
+
 cd "$SCRIPT_DIR/backend"
 
 # Run database migrations before starting the server (fresh install or upgrade)
