@@ -83,6 +83,8 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
         <button
             :id="componentId ?? undefined"
             type="button"
+            role="combobox"
+            aria-haspopup="listbox"
             class="orb-dropdown__button"
             :class="{
                 'orb-dropdown__button--disabled': disabled,
