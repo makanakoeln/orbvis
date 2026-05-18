@@ -646,6 +646,16 @@ onUnmounted(() => {
     margin-bottom: var(--dimension-6);
 }
 
+/* Add breathing room between FormDictionary group rows. Native CMK
+   only uses the title's vertical margin to space groups, which crowds
+   the Object-defaults page where three sub-sections (Appearance,
+   Labels, Templates) live under one sidebar entry. This is pure
+   spacing — no border or background — so it stays compatible with the
+   FormDictionary structure. */
+.settings-page__detail :deep(tr[data-group] + tr[data-group] > td) {
+    padding-top: var(--dimension-6);
+}
+
 .settings-page__error-msg {
     font-size: 13px;
     color: var(--color-light-red-40);

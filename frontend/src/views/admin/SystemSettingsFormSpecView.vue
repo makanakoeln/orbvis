@@ -408,4 +408,10 @@ onUnmounted(() => {
     color: var(--text-muted);
     margin-bottom: var(--dimension-6);
 }
+
+/* Match Global Settings — add vertical breathing room between
+   FormDictionary group rows without a border. */
+.settings-page__detail :deep(tr[data-group] + tr[data-group] > td) {
+    padding-top: var(--dimension-6);
+}
 </style>
