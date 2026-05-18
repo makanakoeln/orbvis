@@ -1603,7 +1603,14 @@ const checkInfoRows = computed<MetaRow[]>(() => {
     const rows: MetaRow[] = [];
     const now = Math.floor(Date.now() / 1000);
 
-    if (typeof s.current_attempt === 'number' && typeof s.max_attempts === 'number') {
+    // BI aggregations have no notion of check attempts — Checkmk reports 0/0
+    // which would only confuse the operator.
+    const objType = props.object?.type;
+    if (
+        objType !== 'aggregation' &&
+        typeof s.current_attempt === 'number' &&
+        typeof s.max_attempts === 'number'
+    ) {
         const isSoft = s.state_type === 'SOFT' || s.state_type === 'soft';
         rows.push({
             label: t('board.detailDrawer.attemptLabel'),
