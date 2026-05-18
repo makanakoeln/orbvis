@@ -22,6 +22,20 @@ REPO_ROOT = Path(__file__).parent.parent
 VERSION_FILE = REPO_ROOT / "VERSION"
 CHANGELOG_FILE = REPO_ROOT / "CHANGELOG.md"
 
+# Static version locations kept in sync with VERSION.
+# Each entry: (relative path, line-anchored regex template, expected match count).
+# `{old}` is substituted with re.escape(old_version) so we only ever replace the
+# exact previous version literal — dependency `"version"` fields in package-lock
+# stay untouched even if a transitive dep happens to share the version string.
+STATIC_VERSION_FILES: list[tuple[str, str, int]] = [
+    ("backend/pyproject.toml", r'(?m)^(version\s*=\s*"){old}(")', 1),
+    ("cmk_plugins/pyproject.toml", r'(?m)^(version\s*=\s*"){old}(")', 1),
+    ("frontend/package.json", r'(?m)^(\s*"version":\s*"){old}(")', 1),
+    # package-lock.json carries the project version at the JSON root AND inside
+    # the `packages[""]` self-entry. Both appear before any dependency block.
+    ("frontend/package-lock.json", r'(?m)^(\s*"version":\s*"){old}(")', 2),
+]
+
 # Commit verb → changelog category
 CATEGORY_RULES: list[tuple[re.Pattern, str]] = [
     (re.compile(r"^(add|introduce|implement|support|enable|create|new)\b", re.I), "Added"),
@@ -120,6 +134,33 @@ def open_in_editor(content: str) -> str:
         Path(tmp).unlink(missing_ok=True)
 
 
+def update_static_versions(old_version: str, new_version: str) -> list[Path]:
+    """Rewrite the version literal in every file listed in STATIC_VERSION_FILES.
+
+    Aborts the whole bump if any file is missing or doesn't contain the
+    expected number of matches — a partial bump would silently drift.
+    """
+    old_q = re.escape(old_version)
+    updated: list[Path] = []
+    for rel, template, expected in STATIC_VERSION_FILES:
+        path = REPO_ROOT / rel
+        if not path.exists():
+            print(f"Refusing to bump: {rel} not found.")
+            sys.exit(1)
+        content = path.read_text()
+        pattern = re.compile(template.format(old=old_q))
+        new_content, n = pattern.subn(rf"\g<1>{new_version}\g<2>", content, count=expected)
+        if n != expected:
+            print(
+                f"Refusing to bump: expected {expected} match(es) of version "
+                f"{old_version!r} in {rel}, found {n}."
+            )
+            sys.exit(1)
+        path.write_text(new_content)
+        updated.append(path)
+    return updated
+
+
 def prepend_to_changelog(entry: str) -> None:
     original = CHANGELOG_FILE.read_text()
     # Insert after the header block (before first "## [")
@@ -187,10 +228,17 @@ def main() -> None:
 
     VERSION_FILE.write_text(new_version + "\n")
     prepend_to_changelog(edited)
+    static_updated = update_static_versions(current_version, new_version)
 
     print(f"\nDone. VERSION={new_version}, CHANGELOG.md updated.")
+    print("Also bumped:")
+    for path in static_updated:
+        print(f"  - {path.relative_to(REPO_ROOT)}")
     print("\nNext steps — copy & paste:\n")
-    print("  git add VERSION CHANGELOG.md")
+    add_paths = " ".join(
+        ["VERSION", "CHANGELOG.md", *[str(p.relative_to(REPO_ROOT)) for p in static_updated]]
+    )
+    print(f"  git add {add_paths}")
     print(f"  git commit -m 'version: bump to {new_version}'")
     print(f"  git tag v{new_version}")
     print("  git push && git push --tags")
