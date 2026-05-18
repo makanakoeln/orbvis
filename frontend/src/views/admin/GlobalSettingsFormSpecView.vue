@@ -673,14 +673,6 @@ onUnmounted(() => {
     margin-bottom: var(--dimension-6);
 }
 
-/* Consistent input width — kills the "60px Integer next to 432px String" mix. */
-.settings-page__detail :deep(.cmk-input--text),
-.settings-page__detail :deep(.cmk-dropdown__choice-button),
-.settings-page__detail :deep(input[type='text']) {
-    min-width: 320px;
-    max-width: 100%;
-}
-
 .settings-page__error-msg {
     font-size: 13px;
     color: var(--color-light-red-40);

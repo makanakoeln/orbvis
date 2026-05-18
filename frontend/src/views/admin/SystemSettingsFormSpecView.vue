@@ -410,11 +410,4 @@ onUnmounted(() => {
     color: var(--text-muted);
     margin-bottom: var(--dimension-6);
 }
-
-.settings-page__detail :deep(.cmk-input--text),
-.settings-page__detail :deep(.cmk-dropdown__choice-button),
-.settings-page__detail :deep(input[type='text']) {
-    min-width: 320px;
-    max-width: 100%;
-}
 </style>
