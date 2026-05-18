@@ -146,6 +146,8 @@ export default {
         groupName: 'Group name',
         backgroundImage: 'Background image',
         backgroundImagePlaceholder: 'Select image…',
+        uploadBackground: 'Upload background image…',
+        replaceBackground: 'Replace…',
         backgroundColor: 'Background color',
         boardSubtitle: 'ID: {name}',
         staleConflict:

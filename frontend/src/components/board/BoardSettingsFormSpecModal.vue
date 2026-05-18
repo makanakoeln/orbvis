@@ -45,9 +45,9 @@
                         <p class="section-title">{{ t('boardSettings.background') }}</p>
                         <div class="space-y-[4px]">
                             <CmkLabel>{{ t('board.backgroundImage') }}</CmkLabel>
-                            <ImagePicker
+                            <BackgroundImageUpload
                                 v-model="form.background_image"
-                                :placeholder="t('board.backgroundImagePlaceholder')"
+                                :board-name="props.board.name"
                             />
                         </div>
                         <div class="space-y-[4px]">
@@ -389,7 +389,7 @@ import type {
 } from '@/types/api';
 import { boardTypeOptions } from '@/utils/dropdownOptions';
 
-import ImagePicker from './ImagePicker.vue';
+import BackgroundImageUpload from './BackgroundImageUpload.vue';
 
 // Mirror of backend `Settings.flow_board_*` defaults — shown as placeholder so
 // the user knows which value applies when the field is left empty.

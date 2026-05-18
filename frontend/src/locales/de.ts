@@ -156,6 +156,8 @@ export default {
         serviceLayoutDonut: 'Donut',
         backgroundImage: 'Hintergrundbild',
         backgroundImagePlaceholder: 'Bild auswählen…',
+        uploadBackground: 'Hintergrundbild hochladen…',
+        replaceBackground: 'Ersetzen…',
         backgroundColor: 'Hintergrundfarbe',
         boardSubtitle: 'ID: {name}',
         staleConflict:
