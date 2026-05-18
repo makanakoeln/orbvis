@@ -671,6 +671,7 @@ export default {
         title: 'Globale Einstellungen',
         subtitle: 'Standardwerte für neue Boards und Objekte',
         objectDefaults: 'Objekt-Standards',
+        resetToFactory: 'Feld auf Werkseinstellung zurücksetzen',
         unsavedChanges: 'Ungespeicherte Änderungen',
         unsavedChangesHint:
             'Es wurde mindestens ein Feld geändert — speichern oder verwerfen, bevor die Seite verlassen wird',

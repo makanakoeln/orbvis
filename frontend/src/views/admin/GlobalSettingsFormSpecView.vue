@@ -72,7 +72,7 @@
 <script setup lang="ts">
 import FormEdit from '@cmk/form/FormEdit.vue';
 import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError, settingsApi } from '@/api/client';
@@ -92,6 +92,8 @@ type Validation = NonNullable<VueFormspecComponents['validation_message']>[];
 interface SchemaElement {
     name: string;
     group?: { key?: string | null; title?: string | null } | null;
+    default_value?: unknown;
+    parameter_form?: { title?: string };
 }
 interface DictionarySchema {
     elements?: SchemaElement[];
@@ -206,6 +208,84 @@ function resetForm() {
     savedOk.value = false;
     saveError.value = '';
 }
+
+/* ── Factory defaults ───────────────────────────────────────────────────── */
+/*  Compute which top-level fields currently differ from the FormSpec
+    ``prefill`` (i.e. the factory default). Used to render a small dot beside
+    the field title and a per-field reset button next to it. Per-field reset
+    is wired DOM-side (rather than via the vendored FormDictionary template)
+    to keep the cmk-frontend-vue vendor copy untouched. */
+const factoryDefaults = computed<Record<string, unknown>>(() => {
+    const dict = schema.value as DictionarySchema | null;
+    const out: Record<string, unknown> = {};
+    for (const el of dict?.elements ?? []) {
+        if ('default_value' in el) out[el.name] = el.default_value;
+    }
+    return out;
+});
+
+const factoryDiffByTitle = computed<Map<string, string>>(() => {
+    const cur = (data.value ?? {}) as Record<string, unknown>;
+    const dict = schema.value as DictionarySchema | null;
+    const m = new Map<string, string>();
+    for (const el of dict?.elements ?? []) {
+        if (!('default_value' in el)) continue;
+        const factory = factoryDefaults.value[el.name];
+        const here = cur[el.name];
+        if (JSON.stringify(here) === JSON.stringify(factory)) continue;
+        const title = el.parameter_form?.title;
+        if (title) m.set(title, el.name);
+    }
+    return m;
+});
+
+function resetFieldToFactory(name: string) {
+    const factory = factoryDefaults.value[name];
+    const next = { ...(data.value as Record<string, unknown>) };
+    if (factory === undefined) {
+        delete next[name];
+    } else {
+        next[name] = deepClone(factory);
+    }
+    data.value = next;
+}
+
+async function syncFactoryDecorations() {
+    await nextTick();
+    const root = document.querySelector('.settings-page__detail');
+    if (!root) return;
+    const diff = factoryDiffByTitle.value;
+    for (const el of root.querySelectorAll<HTMLElement>('.form-dictionary__group_elem')) {
+        const title = el.getAttribute('aria-label') ?? '';
+        const fieldName = diff.get(title);
+        const existing = el.querySelector(':scope > .orb-factory-reset');
+        if (fieldName) {
+            el.classList.add('orb-factory-modified');
+            if (!existing) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'orb-factory-reset';
+                btn.dataset.name = fieldName;
+                btn.title = t('settings.resetToFactory');
+                btn.textContent = '↺';
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const n = (e.currentTarget as HTMLElement).dataset.name;
+                    if (n) resetFieldToFactory(n);
+                });
+                el.appendChild(btn);
+            }
+        } else {
+            el.classList.remove('orb-factory-modified');
+            existing?.remove();
+        }
+    }
+}
+
+watch([factoryDiffByTitle, activeGroup, () => loading.value], () => {
+    void syncFactoryDecorations();
+});
 
 // FastAPI 422 returns `{ detail: [{ loc: ["body", "<field>", ...], msg, type, input, ctx }] }`.
 // FormEdit expects `{ location: [<field>, ...], message, replacement_value }` and uses the
@@ -390,6 +470,47 @@ onUnmounted(() => {
     flex: 1;
     align-items: start;
     min-height: 0;
+}
+
+/* Factory-default decorations — applied via DOM by syncFactoryDecorations().
+   The dot sits before the field title so the operator can spot which fields
+   they've moved away from the shipped defaults at a glance; the small ↺
+   button next to the form widget reverts that single field. */
+.settings-page__detail :deep(.form-dictionary__group_elem.orb-factory-modified) {
+    position: relative;
+}
+
+.settings-page__detail
+    :deep(.form-dictionary__group_elem.orb-factory-modified > .cmk-label__container::before),
+.settings-page__detail
+    :deep(.form-dictionary__group_elem.orb-factory-modified > .cmk-checkbox__container::before) {
+    content: '●';
+    color: var(--color-warning, #ffd000);
+    margin-right: 4px;
+    font-size: 9px;
+    vertical-align: middle;
+}
+
+.settings-page__detail :deep(.orb-factory-reset) {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-surface);
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 1;
+}
+
+.settings-page__detail :deep(.orb-factory-reset:hover) {
+    color: var(--text);
+    border-color: var(--color-warning, #ffd000);
 }
 
 /* Topic sidebar — WATO-style vertical nav with active-state highlight. */

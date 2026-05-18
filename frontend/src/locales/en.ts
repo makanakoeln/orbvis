@@ -667,6 +667,7 @@ export default {
         title: 'Global Settings',
         subtitle: 'Default values applied when creating new boards and objects',
         objectDefaults: 'Object defaults',
+        resetToFactory: 'Reset this field to the factory default',
         unsavedChanges: 'Unsaved changes',
         unsavedChangesHint:
             'You have changed at least one field — save or cancel before leaving the page',
