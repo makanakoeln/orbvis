@@ -442,6 +442,7 @@
                     object.type === 'aggregation' && (object.expand_depth ?? 0) > 0 && state?.tree
                 "
                 :tree="state.tree"
+                :max-depth="object.expand_depth ?? 0"
                 :icon-size="iconSize"
                 @node-enter="(o, s, e) => $emit('subtree-enter', o, s, e)"
                 @node-leave="$emit('subtree-leave')"

@@ -218,17 +218,26 @@
                                     v-if="aggregationSummary"
                                     class="detail-drawer__pane-section detail-drawer__section--aggregation"
                                 >
-                                    <h3 class="detail-drawer__section-heading">
-                                        {{ t('board.detailDrawer.aggregationSummary') }}
-                                    </h3>
+                                    <div class="detail-drawer__section-head">
+                                        <h3 class="detail-drawer__section-heading">
+                                            {{ t('board.detailDrawer.aggregationSummary') }}
+                                        </h3>
+                                        <CmkToggleButtonGroup
+                                            v-if="(object.expand_depth ?? 0) > 0"
+                                            :model-value="aggregationView"
+                                            :options="aggregationViewOptions"
+                                            @update:model-value="setAggregationView"
+                                        />
+                                    </div>
+
                                     <div
                                         class="detail-drawer__chips"
                                         :style="{
-                                            gridTemplateColumns: `repeat(${aggregationSummary.chips.length}, 1fr)`,
+                                            gridTemplateColumns: `repeat(${activeChips.length}, 1fr)`,
                                         }"
                                     >
                                         <button
-                                            v-for="chip in aggregationSummary.chips"
+                                            v-for="chip in activeChips"
                                             :key="chip.state"
                                             type="button"
                                             class="detail-drawer__chip"
@@ -247,14 +256,31 @@
                                             }}</span>
                                         </button>
                                     </div>
+
+                                    <!-- Worst-leaf path only fits the Details view; once the list
+                                         is cut at a tree depth, naming a deeper leaf is misleading. -->
                                     <div
-                                        v-if="aggregationSummary.worstPath"
+                                        v-if="
+                                            aggregationView === 'details' &&
+                                            aggregationSummary.worstPath
+                                        "
                                         class="detail-drawer__list-text"
                                     >
                                         {{ t('board.detailDrawer.worstLeaf') }}:
                                         <span class="detail-drawer__list-strong">{{
                                             aggregationSummary.worstPath
                                         }}</span>
+                                    </div>
+                                    <div
+                                        v-if="aggregationView === 'summary'"
+                                        class="detail-drawer__list-text detail-drawer__tree-intro"
+                                    >
+                                        {{
+                                            t('board.detailDrawer.aggregationTreeIntro', {
+                                                count: aggregationSummary.treeRows.length,
+                                                depth: aggregationSummary.treeDepth,
+                                            })
+                                        }}
                                     </div>
                                     <!--
                                         Stale-data hint: livestatus to a federated
@@ -270,6 +296,8 @@
                                     >
                                         ⚠ {{ t('board.detailDrawer.aggregationStale') }}
                                     </div>
+                                    <!-- Bulk-ack always targets real bi_leaf hosts/services —
+                                         that's what Checkmk's command pipeline accepts. -->
                                     <button
                                         v-if="aggregationProblemLeaves.length && canCommand"
                                         type="button"
@@ -283,24 +311,28 @@
                                         }}
                                     </button>
                                     <ul
-                                        v-if="aggregationSummary.leaves.length"
+                                        v-if="aggregationListRows.length"
                                         class="detail-drawer__list"
                                     >
                                         <li
-                                            v-for="leaf in aggregationSummary.leaves"
-                                            :key="leaf.id"
-                                            class="detail-drawer__list-row detail-drawer__list-row--clickable"
-                                            @click="onAggregationLeafClick(leaf)"
+                                            v-for="row in aggregationListRows"
+                                            :key="row.id"
+                                            class="detail-drawer__list-row"
+                                            :class="{
+                                                'detail-drawer__list-row--clickable':
+                                                    !!row.hostName,
+                                            }"
+                                            @click="onAggregationLeafClick(row)"
                                         >
                                             <span
                                                 class="detail-drawer__list-dot"
-                                                :class="`detail-drawer__list-dot--${leaf.tone}`"
+                                                :class="`detail-drawer__list-dot--${row.tone}`"
                                             />
                                             <span class="detail-drawer__list-text">
-                                                {{ leaf.label }}
+                                                {{ row.label }}
                                             </span>
                                             <span class="detail-drawer__list-state">{{
-                                                leaf.stateLabel
+                                                row.stateLabel
                                             }}</span>
                                         </li>
                                     </ul>
@@ -844,10 +876,8 @@ import type {
     PerfometerResult,
 } from '@/types/api';
 import {
-    aggregationLeafId,
     BI_STATE_LABEL as BI_STATE_LABEL_MAP,
     BI_STATE_TONE,
-    countLeavesByState,
     walkAggregationLeavesWithPath,
 } from '@/utils/aggregationTree';
 import { buildCheckmkSetupUrl, buildCheckmkUrl } from '@/utils/boardNavigation';
@@ -860,6 +890,7 @@ import { CmkChip } from '@/vendor/cmk/components/CmkChip';
 import { CmkCode } from '@/vendor/cmk/components/CmkCode';
 import CmkIcon from '@/vendor/cmk/components/CmkIcon';
 import CmkTabs, { CmkTab, CmkTabContent } from '@/vendor/cmk/components/CmkTabs';
+import CmkToggleButtonGroup from '@/vendor/cmk/components/CmkToggleButtonGroup.vue';
 
 import MetricChart from './MetricChart.vue';
 import StatusSlideIn from './StatusSlideIn.vue';
@@ -1239,22 +1270,72 @@ interface AggregationLeafRow {
 
 interface AggregationSummary {
     chips: SummaryChip[];
-    /** "host01 / Service X" for the highest-state leaf, or null if all OK. */
     worstPath: string | null;
     leaves: AggregationLeafRow[];
+    /** Nodes at depth=`expand_depth` (or shallower terminal bi_leaves). */
+    treeRows: AggregationLeafRow[];
+    treeChips: SummaryChip[];
+    treeDepth: number;
+}
+
+type AggregationView = 'summary' | 'details';
+
+// Operator-facing labels for the BI severity ordering: CRIT > WARN > UNKN > OK.
+// Used for chip layout, "worst leaf" sort, and tree-node count breakdown.
+const BI_CHIP_ORDER: readonly number[] = [2, 1, 3, 0];
+
+function _aggregationRow(node: AggregationNode, path: string[]): AggregationLeafRow {
+    const fullPath = [...path, node.name];
+    return {
+        id: fullPath.join('::'),
+        label: node.name,
+        stateLabel: BI_STATE_LABEL_MAP[node.state] ?? String(node.state),
+        tone: BI_STATE_TONE[node.state] ?? 'unknown',
+        path: fullPath,
+        hostName: node.host_name ?? null,
+        serviceDescription: node.service_description ?? null,
+        state: node.state,
+    };
 }
 
 function _walkAggregationLeaves(node: AggregationNode): AggregationLeafRow[] {
-    return walkAggregationLeavesWithPath(node).map(({ leaf, path }) => ({
-        id: aggregationLeafId(leaf),
-        label: leaf.name,
-        stateLabel: BI_STATE_LABEL_MAP[leaf.state] ?? String(leaf.state),
-        tone: BI_STATE_TONE[leaf.state] ?? 'unknown',
-        path,
-        hostName: leaf.host_name ?? null,
-        serviceDescription: leaf.service_description ?? null,
-        state: leaf.state,
+    return walkAggregationLeavesWithPath(node).map(({ leaf, path }) =>
+        _aggregationRow(leaf, path.slice(0, -1)),
+    );
+}
+
+// Collect nodes at exactly `targetDepth` below root. A branch shorter than
+// targetDepth terminates at its real bi_leaf — no synthetic placeholders.
+// Root itself is never returned (caller starts with empty path).
+function _nodesAtDepth(
+    node: AggregationNode,
+    targetDepth: number,
+    path: string[] = [],
+): AggregationLeafRow[] {
+    if (targetDepth === 0) {
+        return path.length > 0 ? [_aggregationRow(node, path)] : [];
+    }
+    if (node.children.length === 0) {
+        return path.length > 0 ? [_aggregationRow(node, path)] : [];
+    }
+    const next = [...path, node.name];
+    return node.children.flatMap((c) => _nodesAtDepth(c, targetDepth - 1, next));
+}
+
+function _chipsFromCounts(counts: Record<number, number>): SummaryChip[] {
+    return BI_CHIP_ORDER.map((s) => ({
+        state: BI_STATE_LABEL_MAP[s],
+        count: counts[s] ?? 0,
+        label: BI_STATE_LABEL_MAP[s],
+        tone: BI_STATE_TONE[s] ?? 'unknown',
+        url: null,
     }));
+}
+
+function _countByState(rows: ReadonlyArray<{ state: number }>): Record<number, number> {
+    const out: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
+    for (const r of rows) out[r.state] = (out[r.state] ?? 0) + 1;
+    return out;
 }
 
 // Checkmk's filter machinery takes a single "svc_state" / "host_state" filter
@@ -1318,26 +1399,78 @@ const aggregationSummary = computed<AggregationSummary | null>(() => {
     const leaves = _walkAggregationLeaves(tree);
     if (!leaves.length) return null;
 
-    const counts = countLeavesByState(leaves.map((l) => ({ state: l.state }) as AggregationNode));
-    const chipOrder: number[] = [2, 1, 3, 0];
-    const chips: SummaryChip[] = chipOrder.map((s) => ({
-        state: BI_STATE_LABEL_MAP[s],
-        count: counts[s] ?? 0,
-        label: BI_STATE_LABEL_MAP[s],
-        tone: BI_STATE_TONE[s] ?? 'unknown',
-        url: null,
-    }));
+    const chips = _chipsFromCounts(_countByState(leaves));
 
-    // The worst leaf bubbles up first by sort order — reuse the chip
-    // order so we get a deterministic "worst path" even if multiple
-    // leaves tie (CRIT > WARN > UNKN > OK).
+    // Worst-leaf sort follows BI_CHIP_ORDER so ties resolve deterministically
+    // to the highest-severity slot (CRIT > WARN > UNKN > OK).
     const sorted = [...leaves].sort(
-        (a, b) => chipOrder.indexOf(a.state) - chipOrder.indexOf(b.state),
+        (a, b) => BI_CHIP_ORDER.indexOf(a.state) - BI_CHIP_ORDER.indexOf(b.state),
     );
     const worst = sorted.find((l) => l.state > 0) ?? null;
     const worstPath = worst ? worst.path.join(' › ') : null;
 
-    return { chips, worstPath, leaves: sorted };
+    const expandDepth = obj.expand_depth ?? 0;
+    if (expandDepth === 0) {
+        return {
+            chips,
+            worstPath,
+            leaves: sorted,
+            treeRows: [],
+            treeChips: [],
+            treeDepth: 0,
+        };
+    }
+
+    const treeRows = _nodesAtDepth(tree, expandDepth);
+    const treeChips = _chipsFromCounts(_countByState(treeRows));
+
+    return {
+        chips,
+        worstPath,
+        leaves: sorted,
+        treeRows,
+        treeChips,
+        treeDepth: expandDepth,
+    };
+});
+
+const aggregationView = ref<AggregationView>('summary');
+// Re-pick the default view only when the operator switches to a different
+// object — otherwise an edit to expand_depth would clobber a manual tab
+// choice in the open drawer.
+watch(
+    () => props.object?.id,
+    () => {
+        aggregationView.value = (props.object?.expand_depth ?? 0) > 0 ? 'summary' : 'details';
+    },
+    { immediate: true },
+);
+
+const aggregationViewOptions = computed(() => {
+    const d = aggregationSummary.value?.treeDepth ?? 1;
+    return [
+        {
+            label: t('board.detailDrawer.aggregationViewSummary', { depth: d }),
+            value: 'summary',
+        },
+        { label: t('board.detailDrawer.aggregationViewDetails'), value: 'details' },
+    ];
+});
+
+function setAggregationView(v: string): void {
+    if (v === 'summary' || v === 'details') aggregationView.value = v;
+}
+
+const aggregationListRows = computed<AggregationLeafRow[]>(() => {
+    const s = aggregationSummary.value;
+    if (!s) return [];
+    return aggregationView.value === 'summary' ? s.treeRows : s.leaves;
+});
+
+const activeChips = computed<SummaryChip[]>(() => {
+    const s = aggregationSummary.value;
+    if (!s) return [];
+    return aggregationView.value === 'summary' ? s.treeChips : s.chips;
 });
 
 function onAggregationLeafClick(leaf: AggregationLeafRow): void {
@@ -2520,6 +2653,23 @@ useMutationObserver(
     gap: 8px;
 }
 
+.detail-drawer__section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.detail-drawer__section-head .detail-drawer__section-heading {
+    margin: 0;
+}
+
+.detail-drawer__tree-intro {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
 .detail-drawer__section--aggregation .detail-drawer__list {
     display: flex;
     flex-direction: column;
@@ -2529,11 +2679,14 @@ useMutationObserver(
     margin: 0;
 }
 
-.detail-drawer__list-row--clickable {
+.detail-drawer__section--aggregation .detail-drawer__list-row {
     display: grid;
     grid-template-columns: 8px 1fr auto;
     align-items: center;
     gap: 8px;
+}
+
+.detail-drawer__list-row--clickable {
     cursor: pointer;
 }
 

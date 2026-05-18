@@ -211,6 +211,9 @@ export default {
             aggregationSummary: 'Aggregation',
             worstLeaf: 'Schwerwiegendstes Element',
             bulkAcknowledge: '{count} betroffene Elemente bestätigen',
+            aggregationViewSummary: 'Übersicht (Tiefe {depth})',
+            aggregationViewDetails: 'Details',
+            aggregationTreeIntro: '{count} Knoten auf Tiefe {depth} unterhalb der Root.',
             bulkAckOk: '{count} Elemente bestätigt',
             aggregationStale:
                 'Verbindung zu mindestens einer Federation-Site ist gestört — angezeigte Element-States sind möglicherweise nicht aktuell.',

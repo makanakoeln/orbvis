@@ -105,7 +105,16 @@ import { ACKNOWLEDGED_COLOR, DOWNTIME_COLOR, stateColor } from '@/utils/stateCol
 const props = defineProps<{
     tree: AggregationNode;
     iconSize: number;
+    maxDepth: number;
 }>();
+
+function trimToDepth(node: AggregationNode, remaining: number): AggregationNode {
+    if (node.children.length === 0) return node;
+    if (remaining <= 0) return { ...node, children: [] };
+    return { ...node, children: node.children.map((c) => trimToDepth(c, remaining - 1)) };
+}
+
+const trimmedTree = computed(() => trimToDepth(props.tree, props.maxDepth));
 
 const emit = defineEmits<{
     'node-enter': [obj: BoardObject, state: ObjectState, event: MouseEvent];
@@ -215,7 +224,7 @@ interface RenderedLink {
 // never cross. nodeSize gives a stable per-node footprint regardless of tree
 // width — much more predictable than forceSimulation for strict hierarchies.
 const layout = computed(() => {
-    const root: HierarchyNode<AggregationNode> = hierarchy(props.tree, (n) => n.children);
+    const root: HierarchyNode<AggregationNode> = hierarchy(trimmedTree.value, (n) => n.children);
     const layoutFn = d3Tree<AggregationNode>().nodeSize([hSpacing.value, vSpacing.value]);
     return layoutFn(root);
 });

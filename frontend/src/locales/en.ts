@@ -208,6 +208,9 @@ export default {
             aggregationSummary: 'Aggregation',
             worstLeaf: 'Worst leaf',
             bulkAcknowledge: 'Acknowledge {count} contributing leaves',
+            aggregationViewSummary: 'Summary (depth {depth})',
+            aggregationViewDetails: 'Details',
+            aggregationTreeIntro: '{count} nodes at depth {depth} below the root.',
             bulkAckOk: 'Acknowledged {count} leaves',
             aggregationStale:
                 'Connection to at least one federation site is unhealthy — leaf states shown may be out of date.',
