@@ -33,11 +33,17 @@ async def get_perfometer(
     _current_user: User = Depends(get_current_user),
 ) -> PerfometerResultOut | None:
     connection = state_service.get_connection(connection_id)
-    if not isinstance(connection, LivestatusConnection):
+    if connection is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Connection not found or not a Livestatus connection",
+            detail="Connection not found",
         )
+    # Non-Livestatus backends (TestBackend, Icinga2) cannot supply perf-data
+    # in the form the perfometer compiler expects. Returning null keeps the
+    # gadget rendering quiet — the gauge falls back to its raw value, and
+    # the console doesn't fill with 404s on every demo board.
+    if not isinstance(connection, LivestatusConnection):
+        return None
 
     perf_data, check_command = await connection.get_service_perf_and_cmd(host, service)
     if not perf_data:

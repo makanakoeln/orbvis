@@ -50,19 +50,23 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function _doInit(): Promise<void> {
         // Try Checkmk SSO via session cookie (auth_<site>); only works when served through OMD Apache.
+        // Skip outright when the URL doesn't have a Checkmk site prefix — the SSO endpoint can't
+        // succeed in standalone, and probing it just logs a console 401 on every load.
         // Retry once on network errors (server may still be starting up), but not on HTTP 401.
         let ssoTokens = null;
-        for (let attempt = 0; attempt < 2; attempt++) {
-            try {
-                ssoTokens = await authApi.sso();
-                break;
-            } catch (e: unknown) {
-                if (e instanceof TypeError && attempt === 0) {
-                    // Network-level failure (server not ready yet) — wait briefly and retry
-                    await new Promise((r) => setTimeout(r, 600));
-                } else {
-                    console.warn('[OrbVis] SSO failed:', e);
-                    break; // HTTP 401 or second failure: SSO not available
+        if (isCheckmkDeployment.value) {
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    ssoTokens = await authApi.sso();
+                    break;
+                } catch (e: unknown) {
+                    if (e instanceof TypeError && attempt === 0) {
+                        // Network-level failure (server not ready yet) — wait briefly and retry
+                        await new Promise((r) => setTimeout(r, 600));
+                    } else {
+                        console.warn('[OrbVis] SSO failed:', e);
+                        break; // HTTP 401 or second failure: SSO not available
+                    }
                 }
             }
         }
