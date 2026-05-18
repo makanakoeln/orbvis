@@ -224,6 +224,16 @@ const factoryDefaults = computed<Record<string, unknown>>(() => {
     return out;
 });
 
+// Optional DictElements (checkbox-toggled, no ``required=True``) get an
+// ``InputHint`` rather than a real ``DefaultValue``. The schema still emits
+// ``default_value: ""`` for those, but the live payload simply omits the key
+// when the checkbox is off. Treat both shapes — absent key vs empty
+// hint-placeholder — as equivalent so unchanged optional fields don't get
+// flagged as modified.
+function isEmptyValue(v: unknown): boolean {
+    return v === undefined || v === null || v === '';
+}
+
 const factoryDiffByTitle = computed<Map<string, string>>(() => {
     const cur = (data.value ?? {}) as Record<string, unknown>;
     const dict = schema.value as DictionarySchema | null;
@@ -232,6 +242,7 @@ const factoryDiffByTitle = computed<Map<string, string>>(() => {
         if (!('default_value' in el)) continue;
         const factory = factoryDefaults.value[el.name];
         const here = cur[el.name];
+        if (isEmptyValue(here) && isEmptyValue(factory)) continue;
         if (JSON.stringify(here) === JSON.stringify(factory)) continue;
         const title = el.parameter_form?.title;
         if (title) m.set(title, el.name);
