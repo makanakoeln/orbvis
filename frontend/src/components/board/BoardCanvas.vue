@@ -271,7 +271,6 @@ const emit = defineEmits<{
 }>();
 
 const canvasEl = ref<HTMLDivElement | null>(null);
-const bgImageSize = ref<{ width: number; height: number } | null>(null);
 
 // Local pointer-capture drag state
 const _dragId = ref<string | null>(null);
@@ -301,7 +300,6 @@ function _snap(v: number): number {
     return Math.round(v / props.snapGrid) * props.snapGrid;
 }
 
-const bgImageFailed = ref(false);
 const bgImageCacheKey = ref(Date.now());
 
 const bgImageUrl = computed(() => {
@@ -312,40 +310,27 @@ const bgImageUrl = computed(() => {
 
 watch(
     () => props.config.background_image,
-    (bg) => {
-        bgImageFailed.value = false;
+    () => {
         bgImageCacheKey.value = Date.now();
-        if (!bg) {
-            bgImageSize.value = null;
-            return;
-        }
-        const img = new Image();
-        img.onload = () => {
-            bgImageSize.value = { width: img.naturalWidth, height: img.naturalHeight };
-        };
-        img.onerror = () => {
-            bgImageFailed.value = true;
-            bgImageSize.value = null;
-        };
-        img.src = bgImageUrl.value!;
     },
-    { immediate: true },
 );
 
-const canvasWidth = computed(() => {
-    const fromObjects = props.config.objects.reduce(
+// Canvas size is derived from object extents only. The bg-image is stretched
+// (background-size: 100% 100%), so letting its natural size widen the canvas
+// would re-anchor every object's percentage position when the image loads or
+// swaps.
+const canvasWidth = computed(() =>
+    props.config.objects.reduce(
         (m, o) => Math.max(m, o.x + (o.type === 'graph' ? (o.graph_width ?? 400) : 150)),
         800,
-    );
-    return Math.max(fromObjects, bgImageSize.value?.width ?? 0);
-});
-const canvasHeight = computed(() => {
-    const fromObjects = props.config.objects.reduce(
+    ),
+);
+const canvasHeight = computed(() =>
+    props.config.objects.reduce(
         (m, o) => Math.max(m, o.y + (o.type === 'graph' ? (o.graph_height ?? 200) : 150)),
         600,
-    );
-    return Math.max(fromObjects, bgImageSize.value?.height ?? 0);
-});
+    ),
+);
 
 const canvasStyle = computed(() => {
     const bg = props.config.background_image;
@@ -365,14 +350,7 @@ const canvasStyle = computed(() => {
                   zoom: String(coverFactor.value * userZoom.value),
               };
     if (color) base.backgroundColor = color;
-    if (bg && !bgImageFailed.value) {
-        // Stretch the image to fill the canvas. Canvas dimensions already
-        // expand to encompass both the natural image size and the object
-        // extent (whichever is larger), so 100% 100% never squashes the
-        // image below its natural size for fresh boards designed at native
-        // bg dimensions, and faithfully covers the full object extent for
-        // boards from 0.1.0 where object coords were saved in the
-        // stretched-canvas coordinate system.
+    if (bg) {
         base.backgroundImage = `url(${url})`;
         base.backgroundRepeat = 'no-repeat';
         base.backgroundSize = '100% 100%';
