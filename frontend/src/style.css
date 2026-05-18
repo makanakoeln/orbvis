@@ -290,3 +290,19 @@ input.cmk-input:disabled {
     color: var(--font-color);
     font-size: 13px;
 }
+
+/* CmkHelpText overrides — vendor uses ``style scoped`` (specificity 0,2,0)
+   so app-level rules need !important to win without patching the vendor. */
+.cmk-help-text__trigger {
+    /* Vendor sets vertical-align: text-top which floats the (i) icon to the
+       top of the line box; ``middle`` centres it on the label baseline. */
+    vertical-align: middle !important;
+    margin-bottom: 0 !important;
+}
+
+.cmk-help-text__content {
+    /* Vendor ships with 16px padding on all sides, which turns a single line
+       of help text into a chunky three-line-tall box. Shrink the vertical
+       padding so the popup hugs the text. */
+    padding: 6px 12px !important;
+}
