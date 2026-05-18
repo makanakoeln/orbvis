@@ -595,12 +595,24 @@ case "\$1" in
     PORT="\${ORBVIS_PORT:-8420}"
     cd "$MKP_LIB/server"  # extracted by orbvis-setup step 2
     "\$VENV/bin/python3" -m alembic upgrade head >> "\$LOGFILE" 2>&1
-    "\$VENV/bin/python3" -m uvicorn app.main:app \\
+    # setsid + nohup + </dev/null detaches from the calling session so SIGHUP
+    # on \`omd su -i bash -c orbvis-setup\` exit doesn't take uvicorn down.
+    setsid nohup "\$VENV/bin/python3" -m uvicorn app.main:app \\
       --host 127.0.0.1 --port "\$PORT" \\
       --log-level warning \\
-      >> "\$LOGFILE" 2>&1 &
-    echo \$! > "\$PIDFILE"
-    echo " OK (pid \$(cat "\$PIDFILE"))"
+      </dev/null >> "\$LOGFILE" 2>&1 &
+    PID=\$!
+    echo \$PID > "\$PIDFILE"
+    sleep 1
+    if kill -0 "\$PID" 2>/dev/null; then
+      echo " OK (pid \$PID)"
+    else
+      rm -f "\$PIDFILE"
+      echo " FAILED"
+      echo "uvicorn died within 1s; see \$LOGFILE" >&2
+      tail -20 "\$LOGFILE" >&2
+      exit 1
+    fi
     ;;
   stop)
     if [[ -f "\$PIDFILE" ]]; then
