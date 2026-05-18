@@ -276,8 +276,9 @@ async function syncFactoryDecorations() {
     for (const el of root.querySelectorAll<HTMLElement>('.form-dictionary__group_elem')) {
         const title = el.getAttribute('aria-label') ?? '';
         const fieldName = diff.get(title);
-        const existing = el.querySelector(':scope > .orb-factory-reset');
-        if (fieldName) {
+        const labelHost = el.querySelector<HTMLElement>('.cmk-label__container .cmk-label--nowrap');
+        const existing = el.querySelector('.orb-factory-reset');
+        if (fieldName && labelHost) {
             el.classList.add('orb-factory-modified');
             if (!existing) {
                 const btn = document.createElement('button');
@@ -292,7 +293,9 @@ async function syncFactoryDecorations() {
                     const n = (e.currentTarget as HTMLElement).dataset.name;
                     if (n) resetFieldToFactory(n);
                 });
-                el.appendChild(btn);
+                labelHost.appendChild(btn);
+            } else if (existing.parentElement !== labelHost) {
+                labelHost.appendChild(existing);
             }
         } else {
             el.classList.remove('orb-factory-modified');
@@ -493,41 +496,45 @@ onUnmounted(() => {
 /* Factory-default decorations — applied via DOM by syncFactoryDecorations().
    The dot sits before the field title so the operator can spot which fields
    they've moved away from the shipped defaults at a glance; the small ↺
-   button next to the form widget reverts that single field. */
-.settings-page__detail :deep(.form-dictionary__group_elem.orb-factory-modified) {
-    position: relative;
+   button next to the label reverts that single field. */
+.settings-page__detail
+    :deep(.form-dictionary__group_elem.orb-factory-modified > .cmk-label__container),
+.settings-page__detail
+    :deep(.form-dictionary__group_elem.orb-factory-modified > .cmk-checkbox__container) {
+    display: inline-flex;
+    align-items: center;
 }
 
 .settings-page__detail
     :deep(.form-dictionary__group_elem.orb-factory-modified > .cmk-label__container::before),
 .settings-page__detail
     :deep(.form-dictionary__group_elem.orb-factory-modified > .cmk-checkbox__container::before) {
-    content: '●';
-    color: var(--color-warning, #ffd000);
-    margin-right: 4px;
-    font-size: 9px;
-    vertical-align: middle;
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-warning, #ffd000);
+    margin-right: 5px;
+    flex-shrink: 0;
 }
 
 .settings-page__detail :deep(.orb-factory-reset) {
-    position: absolute;
-    top: 2px;
-    right: 0;
-    width: 22px;
-    height: 22px;
+    margin-left: 6px;
+    width: 18px;
+    height: 18px;
     padding: 0;
-    border: 1px solid var(--border);
+    border: 1px solid transparent;
     border-radius: 4px;
-    background: var(--bg-surface);
-    color: var(--text-muted);
-    font-size: 13px;
-    cursor: pointer;
+    background: transparent;
+    color: var(--font-color, #fff);
+    font-size: 14px;
     line-height: 1;
-    z-index: 1;
+    cursor: pointer;
+    vertical-align: middle;
 }
 
 .settings-page__detail :deep(.orb-factory-reset:hover) {
-    color: var(--text);
+    color: var(--color-warning, #ffd000);
     border-color: var(--color-warning, #ffd000);
 }
 
