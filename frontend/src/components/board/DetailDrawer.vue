@@ -1,9 +1,6 @@
 <template>
-    <CmkSlideIn
+    <StatusSlideIn
         :open="!!object"
-        size="small"
-        :modal="false"
-        border-color="default"
         :aria-label="displayName"
         :portal-to="portalTarget"
         @close="emit('close')"
@@ -824,7 +821,7 @@
                 </CmkButton>
             </footer>
         </div>
-    </CmkSlideIn>
+    </StatusSlideIn>
 </template>
 
 <script setup lang="ts">
@@ -862,10 +859,10 @@ import CmkButton from '@/vendor/cmk/components/CmkButton.vue';
 import { CmkChip } from '@/vendor/cmk/components/CmkChip';
 import { CmkCode } from '@/vendor/cmk/components/CmkCode';
 import CmkIcon from '@/vendor/cmk/components/CmkIcon';
-import CmkSlideIn from '@/vendor/cmk/components/CmkSlideIn';
 import CmkTabs, { CmkTab, CmkTabContent } from '@/vendor/cmk/components/CmkTabs';
 
 import MetricChart from './MetricChart.vue';
+import StatusSlideIn from './StatusSlideIn.vue';
 
 function stateBgColor(state: string): string {
     const c = stateColor(state);
@@ -884,7 +881,7 @@ const props = defineProps<{
     checkmkUrl?: string | null;
     /** Board's connection_id — used to fetch on-demand object details. */
     connectionId?: string | null;
-    /** CSS selector for the CmkSlideIn portal target. Defaults to body. */
+    /** CSS selector for the StatusSlideIn portal target. Defaults to body. */
     portalTarget?: string;
     /** Hostnames currently on the board — topology entries to those hosts
      * become clickable buttons that emit `select-host` for the parent to act on. */
@@ -1879,9 +1876,8 @@ useMutationObserver(
 
 <style scoped>
 .detail-drawer {
-    /* Mounted as the slot of CmkSlideIn (vendor/cmk/components/CmkSlideIn);
-       the SlideIn handles size, position, animation, focus-trap. We just
-       provide the inner column layout. */
+    /* Mounted inside StatusSlideIn — the shell handles size, position and
+       animation; this block only owns the inner column layout. */
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
