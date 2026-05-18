@@ -622,33 +622,6 @@ onUnmounted(() => {
     display: table-row !important;
 }
 
-/* Visual divider between Object-defaults sub-sections (Appearance,
-   Labels, Templates). CMK upstream's FormDictionary separates groups
-   with whitespace only — fine for one or two short groups, but the
-   three sub-sections in Object defaults are noticeably different
-   lengths and benefit from an explicit hairline. Matches the WATO
-   look (border-top + padding) without introducing a new container
-   component. The nested FormDictionary inside ``labels.shown`` uses
-   ``-ungrouped-N`` keys and is excluded by the exact-match selectors.
-   Vue's :deep() doesn't accept comma-separated selectors as a single
-   argument, so each :deep(...) wraps exactly one selector. */
-.settings-page__detail[data-active='object_defaults'] :deep(tr[data-group='object_labels'] > td),
-.settings-page__detail[data-active='object_defaults']
-    :deep(tr[data-group='object_templates'] > td) {
-    border-top: 1px solid rgb(255 255 255 / 12%);
-    padding-top: var(--dimension-6);
-}
-
-/* Pad each section's bottom so subsequent dividers don't sit flush
-   against the last input row. */
-.settings-page__detail[data-active='object_defaults']
-    :deep(tr[data-group='object_appearance'] > td),
-.settings-page__detail[data-active='object_defaults'] :deep(tr[data-group='object_labels'] > td),
-.settings-page__detail[data-active='object_defaults']
-    :deep(tr[data-group='object_templates'] > td) {
-    padding-bottom: var(--dimension-6);
-}
-
 /* When a sidebar entry maps 1:1 to a single group, hide the inline
    title — the sidebar already shows "Board defaults". For "Object
    defaults" the inline titles ("Appearance", "Labels", "Templates")
