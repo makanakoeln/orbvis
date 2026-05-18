@@ -323,18 +323,27 @@ onUnmounted(() => {
     top: 0;
     z-index: 6;
     margin: 0;
-    isolation: isolate;
 }
 
-/* CmkAlertBox renders its variant color at low alpha — lay down an opaque
-   page-background layer behind the alert so scrolled content cannot bleed
-   through the sticky bar. */
-.settings-page__savebar::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--bg);
-    z-index: -1;
+/* CmkAlertBox renders each variant's tint at 25-50 % alpha (mixed onto
+   ``transparent``), which lets scrolled page content show through the sticky
+   bar. Re-flatten every variant onto the page background so the hue stays
+   visible while the bar becomes fully opaque. */
+.settings-page__savebar.cmk-alert-box--warning {
+    background-color: color-mix(in srgb, var(--color-yellow-50) 25%, var(--bg));
+}
+
+.settings-page__savebar.cmk-alert-box--error {
+    background: color-mix(in srgb, var(--color-dark-red-50) 50%, var(--bg));
+}
+
+.settings-page__savebar.cmk-alert-box--success {
+    background: color-mix(in srgb, var(--color-corporate-green-50) 25%, var(--bg));
+}
+
+.settings-page__savebar.cmk-alert-box--info,
+.settings-page__savebar.cmk-alert-box--loading {
+    background-color: color-mix(in srgb, var(--color-dark-blue-50) 25%, var(--bg));
 }
 
 .settings-page__savebar :deep(.cmk-alert-box__text) {
