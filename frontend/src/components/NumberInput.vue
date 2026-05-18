@@ -7,6 +7,8 @@
             class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:hidden [&::-webkit-inner-spin-button]:hidden"
             style="padding: 5px 24px 5px 8px"
             @input="onInput"
+            @change="onCommit"
+            @blur="onCommit"
             @keydown.up.prevent="step(1)"
             @keydown.down.prevent="step(-1)"
         />
@@ -103,11 +105,22 @@ function onInput(e: Event) {
         emit('update:modelValue', null);
         return;
     }
+    const next = Number(val);
+    if (Number.isNaN(next)) return;
+    // Don't clamp during typing — a partial value like "1" must survive long
+    // enough for the user to add the next digit "11". Final clamping happens
+    // on commit (blur/change/step buttons).
+    emit('update:modelValue', next);
+}
+
+function onCommit(e: Event) {
+    const val = (e.target as HTMLInputElement).value;
+    if (val === '') return;
     let next = Number(val);
     if (Number.isNaN(next)) return;
     if (minVal.value !== undefined) next = Math.max(minVal.value, next);
     if (maxVal.value !== undefined) next = Math.min(maxVal.value, next);
-    emit('update:modelValue', next);
+    if (next !== props.modelValue) emit('update:modelValue', next);
 }
 
 function step(dir: 1 | -1) {
