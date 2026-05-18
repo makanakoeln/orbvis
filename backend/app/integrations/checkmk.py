@@ -414,23 +414,11 @@ def cmk_bi_get_aggregations_states(
         bi_filter = BIAggregationFilter([], [], [], names, [], [])
         results = computer.compute_result_for_filter(bi_filter)  # type: ignore[attr-defined]
         out = _bi_results_to_dict(results)
-        # Surface unmatched names — most common cause is a saved aggregation_id
-        # whose resolved title in cmk.bi has since changed (template rename,
-        # host removed). Without this hint the only symptom is a PENDING badge.
-        missing = [n for n in names if n not in out]
-        if missing:
-            log.warning(
-                "OrbVis BI: %d of %d aggregations had no computed state: %s",
-                len(missing),
-                len(names),
-                missing,
-            )
-        else:
-            log.debug(
-                "OrbVis BI: requested %d aggregations, computed %d states",
-                len(names),
-                len(out),
-            )
+        log.debug(
+            "OrbVis BI: requested %d aggregations, computed %d states",
+            len(aggregation_names),
+            len(out),
+        )
         return out
     except Exception:
         log.warning("cmk.bi compute failed for %s", aggregation_names, exc_info=True)

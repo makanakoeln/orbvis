@@ -13,6 +13,19 @@ from app.core.config import settings
 from app.schemas.board import AggregationNode, BoardConfig, BoardObject, RadarView, WorldmapView
 from app.schemas.state import MapStates, ObjectState, ServicesSummary
 
+# AggregationNode.state uses cmk.bi integer codes; map them to OrbVis'
+# monitoring-state strings for ObjectState.state when we have to derive
+# the badge state from the tree root.
+_BI_INT_TO_STATE: dict[int, str] = {
+    -2: "UNKNOWN",
+    -1: "PENDING",
+    0: "OK",
+    1: "WARNING",
+    2: "CRITICAL",
+    3: "UNKNOWN",
+    4: "UNKNOWN",
+}
+
 # Late import to avoid the connections-API module being imported at startup.
 # TopologyNode lives there because it's the response_model of /topology;
 # the snapshot diff helpers below are the only state_service consumers.
@@ -455,12 +468,25 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
         for obj in aggregation_objs:
             assert obj.aggregation_id is not None
             raw = aggr_batch.get(obj.aggregation_id)
+            tree = tree_map.get((obj.aggregation_id, max(obj.expand_depth, drawer_tree_depth)))
+            # Some BI aggregations (e.g. static non-host templates) come back
+            # empty from the batched state call but render fine through the
+            # per-aggregation tree call. Fall back to the tree root so the
+            # canvas badge isn't stuck on PENDING while the slidein shows
+            # the real states underneath.
+            if raw is None and tree is not None:
+                raw = ObjectState(
+                    object_id=obj.id,
+                    type="aggregation",
+                    state=_BI_INT_TO_STATE.get(tree.state, "UNKNOWN"),
+                    acknowledged=tree.acknowledged,
+                    in_downtime=tree.in_downtime,
+                )
             s = (
                 ObjectState(**{**raw.model_dump(), "object_id": obj.id})
                 if raw is not None
                 else ObjectState(object_id=obj.id, type="aggregation", state="PENDING", stale=True)
             )
-            tree = tree_map.get((obj.aggregation_id, max(obj.expand_depth, drawer_tree_depth)))
             if tree is not None:
                 s = s.model_copy(update={"tree": tree})
             results[obj.id] = s
