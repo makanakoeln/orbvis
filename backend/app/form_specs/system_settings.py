@@ -24,20 +24,19 @@ from cmk.rulesets.v1.form_specs import (
 )
 from cmk.rulesets.v1.form_specs.validators import MatchRegex, NumberInRange
 
-_LOGGING = OrbDictGroup(
-    title=Title("Logging"),
-    help_text=Help("Backend log verbosity."),
-    key="logging",
+# Single "Server" group bundles log verbosity, poll cadence and session
+# lifetime. Splitting them into Logging / Runtime / etc. produced 1-field
+# sidebar sections that looked broken; the operator audit flagged the same
+# concern, so they live together under one heading.
+_SERVER = OrbDictGroup(
+    title=Title("Server runtime"),
+    help_text=Help("Log verbosity, poll cadence and session lifetime — applies to every board."),
+    key="server",
 )
 _CHECKMK = OrbDictGroup(
     title=Title("Checkmk integration"),
     help_text=Help("URL fallback used by connections without their own checkmk_url."),
     key="checkmk",
-)
-_RUNTIME = OrbDictGroup(
-    title=Title("Runtime tuning"),
-    help_text=Help("Polling cadence and session lifetime — affects every board."),
-    key="runtime",
 )
 
 # Reject path-only strings like ``/SITE`` that look like a URL but break
@@ -62,7 +61,7 @@ def system_settings_spec() -> Dictionary:
             # when ``required`` is unset.
             "log_level": DictElement(
                 required=True,
-                group=_LOGGING,
+                group=_SERVER,
                 parameter_form=SingleChoice(
                     title=Title("Log level"),
                     help_text=Help(
@@ -98,7 +97,7 @@ def system_settings_spec() -> Dictionary:
                 ),
             ),
             "state_refresh_interval": DictElement(
-                group=_RUNTIME,
+                group=_SERVER,
                 parameter_form=Integer(
                     title=Title("State refresh interval"),
                     help_text=Help(
@@ -112,7 +111,7 @@ def system_settings_spec() -> Dictionary:
                 ),
             ),
             "access_token_expire_minutes": DictElement(
-                group=_RUNTIME,
+                group=_SERVER,
                 parameter_form=Integer(
                     title=Title("Login session lifetime"),
                     help_text=Help(

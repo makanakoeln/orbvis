@@ -388,15 +388,13 @@ onUnmounted(() => {
 /* Match by exact key — nested FormDictionary rows (CascadingSingleChoice
    branches etc.) use ``-ungrouped-N`` keys and would otherwise be hit by
    a generic ``tr[data-group]`` blanket. */
-.settings-page__detail :deep(tr[data-group='logging']),
-.settings-page__detail :deep(tr[data-group='checkmk']),
-.settings-page__detail :deep(tr[data-group='runtime']) {
+.settings-page__detail :deep(tr[data-group='server']),
+.settings-page__detail :deep(tr[data-group='checkmk']) {
     display: none !important;
 }
 
-.settings-page__detail[data-active='logging'] :deep(tr[data-group='logging']),
-.settings-page__detail[data-active='checkmk'] :deep(tr[data-group='checkmk']),
-.settings-page__detail[data-active='runtime'] :deep(tr[data-group='runtime']) {
+.settings-page__detail[data-active='server'] :deep(tr[data-group='server']),
+.settings-page__detail[data-active='checkmk'] :deep(tr[data-group='checkmk']) {
     display: table-row !important;
 }
 
