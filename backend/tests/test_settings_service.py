@@ -46,6 +46,17 @@ def test_get_global_settings_reads_existing_file(tmp_path, monkeypatch):
     assert result.icon_size == 64
 
 
+def test_get_global_settings_migrates_legacy_url_target_and_line_style(tmp_path, monkeypatch):
+    _patch(monkeypatch, tmp_path)
+    settings_file = tmp_path / "settings.json"
+    settings_file.write_text(
+        json.dumps({"url_target": "_top", "line_style": None}), encoding="utf-8"
+    )
+    result = get_global_settings()
+    assert result.url_target == "_blank"
+    assert result.line_style == "plain"
+
+
 def test_get_global_settings_returns_defaults_on_malformed_json(tmp_path, monkeypatch):
     _patch(monkeypatch, tmp_path)
     settings_file = tmp_path / "settings.json"
@@ -162,7 +173,7 @@ async def test_put_settings_api_admin(client, admin_token, tmp_path, monkeypatch
             "label_y": 0,
             "url_target": "_blank",
             "z": 1,
-            "line_style": None,
+            "line_style": "plain",
             "default_backend_id": "live_1",
             "default_map_type": "static",
             "hover_template": None,

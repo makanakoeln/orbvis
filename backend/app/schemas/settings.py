@@ -56,9 +56,16 @@ class GlobalSettings(BaseModel):
     # Object appearance
     icon_size: IconSize = Field(default=30)
     view_type: str = "icon"
-    url_target: str = "_blank"
+    # Older settings.json may store legacy frame targets like "_top"; coerce to
+    # a value the FormSpec dropdown can render with its title.
+    url_target: Annotated[
+        str,
+        BeforeValidator(lambda v: v if v in {"_blank", "_self"} else "_blank"),
+    ] = "_blank"
     z: int = 1
-    line_style: str | None = None
+    # ``None`` is a legacy state from before the FormSpec migration — coerce it
+    # so the dropdown renders the factory default instead of an empty field.
+    line_style: Annotated[str, BeforeValidator(lambda v: v or "plain")] = "plain"
     # Object labels
     label_show: bool = True
     label_size: int = 11

@@ -159,7 +159,7 @@ if FORM_SPECS_AVAILABLE:
                 # Stacking order is no longer exposed in the Global Settings
                 # UI — preserve whatever is already on disk.
                 z=current.z,
-                line_style=form.get("line_style"),
+                line_style=str(form.get("line_style") or current.line_style),
                 label_show=label_show,
                 label_size=label_size,
                 label_color=label_color,
