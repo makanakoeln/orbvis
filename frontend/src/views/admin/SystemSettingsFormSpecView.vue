@@ -254,6 +254,18 @@ onUnmounted(() => {
     top: 0;
     z-index: 6;
     margin: 0;
+    isolation: isolate;
+}
+
+/* CmkAlertBox renders its variant color at low alpha — lay down an opaque
+   page-background layer behind the alert so scrolled content cannot bleed
+   through the sticky bar. */
+.settings-page__savebar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    z-index: -1;
 }
 
 .settings-page__savebar :deep(.cmk-alert-box__text) {
