@@ -52,27 +52,27 @@
             </div>
             <div class="create-board__field">
                 <label class="create-board__label">{{ t('board.boardType') }}</label>
-                <CmkDropdown
-                    :selected-option="form.view_type || null"
-                    :options="mapTypeOptions"
-                    :width="'fill'"
-                    :label="t('board.boardType')"
-                    @update:selected-option="form.view_type = $event ?? ''"
-                />
-                <p class="create-board__hint">
-                    <template v-if="form.view_type === 'static'">{{
-                        t('board.boardTypeStaticDesc')
-                    }}</template>
-                    <template v-else-if="form.view_type === 'worldmap'">{{
-                        t('board.boardTypeGeoBoardDesc')
-                    }}</template>
-                    <template v-else-if="form.view_type === 'flow'">{{
-                        t('board.boardTypeFlowBoardDesc')
-                    }}</template>
-                    <template v-else-if="form.view_type === 'radar'">{{
-                        t('board.boardTypeRadarDesc')
-                    }}</template>
-                </p>
+                <div
+                    class="create-board__type-grid"
+                    role="radiogroup"
+                    :aria-label="t('board.boardType')"
+                >
+                    <button
+                        v-for="opt in boardTypeCards"
+                        :key="opt.name"
+                        type="button"
+                        role="radio"
+                        :aria-checked="form.view_type === opt.name"
+                        class="create-board__type-card"
+                        :class="{
+                            'create-board__type-card--selected': form.view_type === opt.name,
+                        }"
+                        @click="form.view_type = opt.name"
+                    >
+                        <span class="create-board__type-card-title">{{ opt.title }}</span>
+                        <span class="create-board__type-card-desc">{{ opt.desc }}</span>
+                    </button>
+                </div>
             </div>
         </form>
 
@@ -122,10 +122,19 @@ const connectionOptions = computed(() => ({
     type: 'fixed' as const,
     suggestions: connectionsStore.connections.map((b) => ({ name: b.id, title: b.label || b.id })),
 }));
-const mapTypeOptions = computed(() => ({
-    type: 'fixed' as const,
-    suggestions: boardTypeOptions(t),
-}));
+const boardTypeCards = computed(() =>
+    boardTypeOptions(t).map((o) => ({
+        ...o,
+        desc:
+            o.name === 'static'
+                ? t('board.boardTypeStaticDesc')
+                : o.name === 'worldmap'
+                  ? t('board.boardTypeGeoBoardDesc')
+                  : o.name === 'flow'
+                    ? t('board.boardTypeFlowBoardDesc')
+                    : t('board.boardTypeRadarDesc'),
+    })),
+);
 
 const _NAME_RE = /^[a-zA-Z0-9_-]+$/;
 const nameError = ref('');
@@ -223,5 +232,51 @@ async function submit() {
     color: var(--color-yellow-50);
     font-weight: 600;
     text-decoration: underline;
+}
+
+.create-board__type-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--dimension-3);
+}
+
+.create-board__type-card {
+    text-align: left;
+    padding: var(--dimension-4) var(--dimension-5);
+    background: var(--default-form-element-bg-color);
+    border: 1px solid var(--default-form-element-border-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition:
+        border-color 120ms,
+        background-color 120ms;
+}
+
+.create-board__type-card:hover {
+    border-color: var(--color-corporate-green-50);
+}
+
+.create-board__type-card--selected {
+    border-color: var(--color-corporate-green-50);
+    background: color-mix(
+        in srgb,
+        var(--color-corporate-green-50) 10%,
+        var(--default-form-element-bg-color)
+    );
+}
+
+.create-board__type-card-title {
+    font-size: var(--font-size-normal);
+    font-weight: 600;
+    color: var(--text);
+}
+
+.create-board__type-card-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.35;
 }
 </style>
