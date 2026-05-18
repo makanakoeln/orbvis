@@ -21,7 +21,27 @@ OrbVis links optionally against Checkmk (https://checkmk.com/) when
 running inside an OMD site. It uses Checkmk's Livestatus protocol and
 its htpasswd / auth-cookie formats. Checkmk is licensed under
 GPL-2.0-only (Raw edition) plus commercial licenses for the
-Enterprise / Cloud editions; OrbVis bundles no Checkmk source.
+Enterprise / Cloud editions.
+
+Vendored Checkmk components
+---------------------------
+
+OrbVis bundles a small, tracked subset of Checkmk source under
+GPL-2.0-only:
+
+  * frontend/src/vendor/cmk/
+        Subset of cmk-frontend-vue (Vue 3 components and the FormSpec
+        dispatcher). Copyright Checkmk GmbH, GPL-2.0-only.
+
+  * backend/app/vendor/
+        cmk_form_specs_extended.py and cmk_shared_typing/, vendored
+        from cmk.rulesets.internal. Copyright Checkmk GmbH,
+        GPL-2.0-only.
+
+The vendored files are kept in sync with upstream via
+scripts/sync-cmk-vendor.sh. Any OrbVis-side modifications are listed in
+scripts/cmk-vendor-patches.txt. License terms are unchanged from
+upstream (GPL-2.0-only, identical to OrbVis itself).
 
 Third-party software
 --------------------

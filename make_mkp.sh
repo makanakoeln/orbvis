@@ -709,7 +709,7 @@ py_list() { printf "'%s', " "$@"; }
 {
   echo "{"
   echo "  'author': 'OrbVis Project',"
-  printf "  'description': 'OrbVis - modern monitoring visualization for Checkmk, successor to NagVis.\\\\n\\\\nAfter install, run orbvis-setup once as the site user.',\\n"
+  printf "  'description': 'OrbVis - modern monitoring visualization for Checkmk, successor to NagVis.\\\\n\\\\nBundles a small subset of cmk-frontend-vue (GPL-2.0); see NOTICE.\\\\n\\\\nAfter install, run orbvis-setup once as the site user.',\\n"
   echo "  'download_url': '',"
   echo "  'files': {"
   echo "    'bin': [$(py_list "${BIN_FILES[@]}")],"
