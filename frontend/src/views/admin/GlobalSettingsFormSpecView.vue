@@ -91,6 +91,7 @@ type Validation = NonNullable<VueFormspecComponents['validation_message']>[];
 
 interface SchemaElement {
     name: string;
+    required?: boolean;
     group?: { key?: string | null; title?: string | null } | null;
     default_value?: unknown;
     parameter_form?: { title?: string };
@@ -224,26 +225,28 @@ const factoryDefaults = computed<Record<string, unknown>>(() => {
     return out;
 });
 
-// Optional DictElements (checkbox-toggled, no ``required=True``) get an
-// ``InputHint`` rather than a real ``DefaultValue``. The schema still emits
-// ``default_value: ""`` for those, but the live payload simply omits the key
-// when the checkbox is off. Treat both shapes — absent key vs empty
-// hint-placeholder — as equivalent so unchanged optional fields don't get
-// flagged as modified.
-function isEmptyValue(v: unknown): boolean {
-    return v === undefined || v === null || v === '';
-}
-
 const factoryDiffByTitle = computed<Map<string, string>>(() => {
     const cur = (data.value ?? {}) as Record<string, unknown>;
     const dict = schema.value as DictionarySchema | null;
     const m = new Map<string, string>();
     for (const el of dict?.elements ?? []) {
         if (!('default_value' in el)) continue;
-        const factory = factoryDefaults.value[el.name];
+        // Optional DictElements (no ``required=True``, prefilled with
+        // ``InputHint``) ship with the checkbox off — the live payload
+        // simply omits the key. The schema still emits ``default_value: ""``
+        // as the hint placeholder, so a present key with empty value would
+        // wrongly compare equal. Drive the comparison off key-presence
+        // instead: factory state is "key absent" for these fields, so
+        // enabling the checkbox at all counts as a modification.
+        const optionalUnset = el.required === false;
         const here = cur[el.name];
-        if (isEmptyValue(here) && isEmptyValue(factory)) continue;
-        if (JSON.stringify(here) === JSON.stringify(factory)) continue;
+        const factory = factoryDefaults.value[el.name];
+        if (optionalUnset) {
+            if (!(el.name in cur)) continue; // checkbox stayed off → unchanged
+            // checkbox on (even with empty value) → modified
+        } else if (JSON.stringify(here) === JSON.stringify(factory)) {
+            continue;
+        }
         const title = el.parameter_form?.title;
         if (title) m.set(title, el.name);
     }
@@ -251,9 +254,13 @@ const factoryDiffByTitle = computed<Map<string, string>>(() => {
 });
 
 function resetFieldToFactory(name: string) {
+    const dict = schema.value as DictionarySchema | null;
+    const el = dict?.elements?.find((e) => e.name === name);
     const factory = factoryDefaults.value[name];
     const next = { ...(data.value as Record<string, unknown>) };
-    if (factory === undefined) {
+    // Optional fields reset to "checkbox off" (key absent), not to the empty
+    // InputHint placeholder.
+    if (factory === undefined || el?.required === false) {
         delete next[name];
     } else {
         next[name] = deepClone(factory);
