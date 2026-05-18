@@ -15,7 +15,7 @@
             >
                 <div v-if="saveBarHasActions" class="settings-page__savebar-actions">
                     <CmkButton variant="optional" :disabled="saving" @click="resetForm">
-                        {{ t('common.cancel') }}
+                        {{ t('common.discardChanges') }}
                     </CmkButton>
                     <CmkButton variant="primary" :disabled="saving" @click="handleSave">
                         {{ saving ? t('common.saving') : t('common.save') }}
