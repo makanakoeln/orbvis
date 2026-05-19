@@ -1464,7 +1464,7 @@ class LivestatusConnection(ConnectionBase):
           (compiler:309, data_fetcher:363/424) read ``row[0]`` as site_id and
           ``row[1]+`` as actual data — we replicate that here.
         """
-        from cmk.livestatus_client._connection import LivestatusResponse
+        from cmk.livestatus_client import LivestatusResponse
 
         del fetch_full_data  # bi_fetch_full_data isn't needed
 
