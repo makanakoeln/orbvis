@@ -145,71 +145,15 @@
                         </div>
                     </template>
 
-                    <!-- Flow settings -->
-                    <template v-if="form.map_type === 'flow'">
-                        <p class="section-title">{{ t('boardSettings.topology') }}</p>
-                        <div class="space-y-[4px]">
-                            <CmkLabel>{{ t('board.flowRoot') }}</CmkLabel>
-                            <CmkInput
-                                v-model="form.flow_root"
-                                :placeholder="t('board.flowRootPlaceholder')"
-                                field-size="FILL"
-                            />
-                        </div>
-                        <div class="grid grid-cols-2 gap-[8px]">
-                            <div class="space-y-[4px]">
-                                <CmkLabel :help="t('board.flowHint')">{{
-                                    t('board.flowChildLayers')
-                                }}</CmkLabel>
-                                <NumberInput
-                                    v-model="form.flow_child_layers"
-                                    :min="-1"
-                                    :max="20"
-                                    :placeholder="t('board.flowLayersPlaceholder')"
-                                    class="w-full"
-                                />
-                            </div>
-                            <div class="space-y-[4px]">
-                                <CmkLabel :help="t('board.flowHint')">{{
-                                    t('board.flowParentLayers')
-                                }}</CmkLabel>
-                                <NumberInput
-                                    v-model="form.flow_parent_layers"
-                                    :min="-1"
-                                    :max="20"
-                                    :placeholder="t('board.flowLayersPlaceholder')"
-                                    class="w-full"
-                                />
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-[8px]">
-                            <div class="space-y-[4px]">
-                                <CmkLabel :help="t('board.flowLimitsHint')">{{
-                                    t('board.flowTopAffectedHosts')
-                                }}</CmkLabel>
-                                <NumberInput
-                                    v-model="form.flow_top_affected_hosts"
-                                    :min="0"
-                                    :max="1000"
-                                    :placeholder="String(FLOW_TOP_AFFECTED_HOSTS_DEFAULT)"
-                                    class="w-full"
-                                />
-                            </div>
-                            <div class="space-y-[4px]">
-                                <CmkLabel :help="t('board.flowLimitsHint')">{{
-                                    t('board.flowMaxServicesPerHost')
-                                }}</CmkLabel>
-                                <NumberInput
-                                    v-model="form.flow_max_services_per_host"
-                                    :min="0"
-                                    :max="500"
-                                    :placeholder="String(FLOW_MAX_SERVICES_PER_HOST_DEFAULT)"
-                                    class="w-full"
-                                />
-                            </div>
-                        </div>
-                    </template>
+                    <!-- Flow settings: served as a FormSpec so titles/help
+                         and the Integer-input look match the rest of the
+                         Checkmk FormSpec UI. -->
+                    <FormEdit
+                        v-if="form.map_type === 'flow' && flowViewFormSchema"
+                        v-model:data="flowViewFormSpecData"
+                        :spec="flowViewFormSchema"
+                        :backend-validation="[]"
+                    />
 
                     <!-- Radar settings -->
                     <template v-if="form.map_type === 'radar'">
@@ -392,11 +336,6 @@ import { boardTypeOptions } from '@/utils/dropdownOptions';
 
 import BackgroundImageUpload from './BackgroundImageUpload.vue';
 
-// Mirror of backend `Settings.flow_board_*` defaults — shown as placeholder so
-// the user knows which value applies when the field is left empty.
-const FLOW_TOP_AFFECTED_HOSTS_DEFAULT = 25;
-const FLOW_MAX_SERVICES_PER_HOST_DEFAULT = 50;
-
 const props = defineProps<{
     board: BoardRead;
     worldmapView?: { lat: number; lng: number; zoom: number } | null;
@@ -458,11 +397,6 @@ const form = ref({
     worldmap_tile_saturate: wmv?.tile_saturate ?? (null as number | null),
     radar_filter: rv?.filter ?? 'hostgroup',
     radar_filter_value: rv?.filter_value ?? '',
-    flow_root: fv?.root ?? '',
-    flow_child_layers: fv?.child_layers ?? (null as number | null),
-    flow_parent_layers: fv?.parent_layers ?? (null as number | null),
-    flow_top_affected_hosts: fv?.top_affected_hosts ?? (null as number | null),
-    flow_max_services_per_host: fv?.max_services_per_host ?? (null as number | null),
     hover_template: props.board.hover_template ?? '',
     context_template: props.board.context_template ?? '',
     background_image: props.board.background_image ?? '',
@@ -496,6 +430,20 @@ if (props.board.hover_template) formSpecDataInitial.hover_template = props.board
 if (props.board.context_template)
     formSpecDataInitial.context_template = props.board.context_template;
 const formSpecData = ref<Record<string, unknown>>(formSpecDataInitial);
+
+// Separate FormSpec data bag for the Flow `view` block. Same omit-when-null
+// convention as the metadata schema: a missing key reads as "inherit", which
+// matches FlowView's `None = use default` semantics.
+const flowViewFormSpecDataInitial: Record<string, unknown> = {};
+if (fv?.root) flowViewFormSpecDataInitial.root = fv.root;
+if (fv?.child_layers != null) flowViewFormSpecDataInitial.child_layers = fv.child_layers;
+if (fv?.parent_layers != null) flowViewFormSpecDataInitial.parent_layers = fv.parent_layers;
+if (fv?.top_affected_hosts != null)
+    flowViewFormSpecDataInitial.top_affected_hosts = fv.top_affected_hosts;
+if (fv?.max_services_per_host != null)
+    flowViewFormSpecDataInitial.max_services_per_host = fv.max_services_per_host;
+const flowViewFormSpecData = ref<Record<string, unknown>>(flowViewFormSpecDataInitial);
+const flowViewFormSchema = ref<Schema | null>(null);
 
 const boardTypeLabel = computed(
     () =>
@@ -552,13 +500,16 @@ async function save() {
                 filter_value: form.value.radar_filter_value,
             };
         } else if (form.value.map_type === 'flow') {
+            const fvd = flowViewFormSpecData.value;
+            const rootRaw = (fvd.root as string | undefined)?.trim();
             view = {
                 type: 'flow',
-                root: form.value.flow_root.trim() || null,
-                child_layers: form.value.flow_child_layers,
-                parent_layers: form.value.flow_parent_layers,
-                top_affected_hosts: form.value.flow_top_affected_hosts,
-                max_services_per_host: form.value.flow_max_services_per_host,
+                root: rootRaw ? rootRaw : null,
+                child_layers: (fvd.child_layers as number | null | undefined) ?? null,
+                parent_layers: (fvd.parent_layers as number | null | undefined) ?? null,
+                top_affected_hosts: (fvd.top_affected_hosts as number | null | undefined) ?? null,
+                max_services_per_host:
+                    (fvd.max_services_per_host as number | null | undefined) ?? null,
             };
         } else {
             view = { type: form.value.map_type };
@@ -609,15 +560,24 @@ const permDraft = reactive(new Map<string, boolean>());
 // after FormEdit settles in onMounted because the visitor may normalise
 // formSpecData on first render (e.g. fill optional fields with defaults),
 // which would otherwise look like a user edit.
-const initialSnapshot = ref(JSON.stringify({ form: form.value, formSpec: formSpecData.value }));
+const initialSnapshot = ref(
+    JSON.stringify({
+        form: form.value,
+        formSpec: formSpecData.value,
+        flowView: flowViewFormSpecData.value,
+    }),
+);
 // Tracks bg-image replace-uploads where the resulting filename is identical
 // (backend stores under `<board>.<ext>`), so the snapshot comparison can't
 // pick them up on its own.
 const bgReplaced = ref(false);
 const isDirty = computed(
     () =>
-        JSON.stringify({ form: form.value, formSpec: formSpecData.value }) !==
-            initialSnapshot.value ||
+        JSON.stringify({
+            form: form.value,
+            formSpec: formSpecData.value,
+            flowView: flowViewFormSpecData.value,
+        }) !== initialSnapshot.value ||
         permDraft.size > 0 ||
         bgReplaced.value,
 );
@@ -706,20 +666,27 @@ async function savePermissions() {
 }
 
 onMounted(async () => {
-    const [bs, spec] = await Promise.all([
+    const flowSchemaPromise =
+        form.value.map_type === 'flow'
+            ? boardsApiFormSpec.getFlowViewSchema(auth.accessToken!).catch((): null => null)
+            : Promise.resolve(null);
+    const [bs, spec, flowSpec] = await Promise.all([
         connectionsApi.list(auth.accessToken!),
         boardsApiFormSpec.getMetadataSchema(auth.accessToken!).catch((): null => null),
+        flowSchemaPromise,
         loadPermissions(),
     ]);
     connections.value = bs;
     schemaLoading.value = false;
     if (spec) formSchema.value = spec as unknown as Schema;
+    if (flowSpec) flowViewFormSchema.value = flowSpec as unknown as Schema;
     // Wait for FormEdit's first render to normalise formSpecData, then
     // snapshot again so isDirty doesn't fire on the visitor's own defaults.
     await nextTick();
     initialSnapshot.value = JSON.stringify({
         form: form.value,
         formSpec: formSpecData.value,
+        flowView: flowViewFormSpecData.value,
     });
 });
 </script>

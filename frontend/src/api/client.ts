@@ -315,6 +315,9 @@ export const boardsApiFormSpec = {
     getMetadataSchema: (token: string): Promise<Record<string, unknown>> =>
         request('/boards/-/metadata-schema', {}, token),
 
+    getFlowViewSchema: (token: string): Promise<Record<string, unknown>> =>
+        request('/boards/-/flow-view-schema', {}, token),
+
     getMetadata: (name: string, token: string): Promise<Record<string, unknown>> =>
         request(`/boards/${encodeURIComponent(name)}/metadata`, {}, token),
 

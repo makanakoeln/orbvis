@@ -26,6 +26,7 @@ from cmk.rulesets.v1.form_specs import (
     SingleChoiceElement,
     String,
 )
+from cmk.rulesets.v1.form_specs.validators import NumberInRange
 
 _IDENTIFICATION = OrbDictGroup(
     title=Title("Identification"),
@@ -210,3 +211,83 @@ METADATA_FIELDS = (
     "hover_template",
     "context_template",
 )
+
+
+_TOPOLOGY = OrbDictGroup(
+    title=Title("Topology"),
+    help_text=Help(
+        "Which slice of the host graph this Flow board renders, and how "
+        "many service rows are drawn per host."
+    ),
+    key="topology",
+)
+
+
+def flow_view_spec() -> Dictionary:
+    """FormSpec for the per-board fields of :class:`schemas.board.FlowView`.
+
+    Mirrors the field ranges declared on the Pydantic model so the
+    serialized schema and the on-wire validation can't drift.
+    Every field is optional — unchecked means "use the global default".
+    """
+    return Dictionary(
+        title=Title("Flow topology"),
+        elements={
+            "root": DictElement(
+                group=_TOPOLOGY,
+                parameter_form=String(
+                    title=Title("Root host"),
+                    help_text=Help(
+                        "Host the topology is anchored on. Leave unchecked "
+                        "to render the full topology."
+                    ),
+                    prefill=InputHint("e.g. core-router-01"),
+                    field_size=FieldSize.LARGE,
+                ),
+            ),
+            "child_layers": DictElement(
+                group=_TOPOLOGY,
+                parameter_form=Integer(
+                    title=Title("Child layers"),
+                    help_text=Help(
+                        "Hops downward from the root. -1 means unlimited. "
+                        "Leave unchecked to inherit unlimited."
+                    ),
+                    custom_validate=(NumberInRange(min_value=-1, max_value=20),),
+                ),
+            ),
+            "parent_layers": DictElement(
+                group=_TOPOLOGY,
+                parameter_form=Integer(
+                    title=Title("Parent layers"),
+                    help_text=Help(
+                        "Hops upward from the root. -1 means unlimited. "
+                        "Leave unchecked to inherit none."
+                    ),
+                    custom_validate=(NumberInRange(min_value=-1, max_value=20),),
+                ),
+            ),
+            "top_affected_hosts": DictElement(
+                group=_TOPOLOGY,
+                parameter_form=Integer(
+                    title=Title("Hosts with service detail"),
+                    help_text=Help(
+                        "How many top-affected hosts get service detail. "
+                        "Leave unchecked to inherit the global default."
+                    ),
+                    custom_validate=(NumberInRange(min_value=0, max_value=1000),),
+                ),
+            ),
+            "max_services_per_host": DictElement(
+                group=_TOPOLOGY,
+                parameter_form=Integer(
+                    title=Title("Services per host"),
+                    help_text=Help(
+                        "Maximum services rendered per host. Leave "
+                        "unchecked to inherit the global default."
+                    ),
+                    custom_validate=(NumberInRange(min_value=0, max_value=500),),
+                ),
+            ),
+        },
+    )

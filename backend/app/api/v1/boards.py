@@ -45,7 +45,11 @@ from app.services.cfg_parser import cfg_to_board
 if FORM_SPECS_AVAILABLE:
     from app.form_specs import serialize_form_spec
     from app.form_specs._wire_types import AnyWireFormSpec
-    from app.form_specs.board_metadata import METADATA_FIELDS, board_metadata_spec
+    from app.form_specs.board_metadata import (
+        METADATA_FIELDS,
+        board_metadata_spec,
+        flow_view_spec,
+    )
 
 router = APIRouter()
 
@@ -121,6 +125,12 @@ if FORM_SPECS_AVAILABLE:
     ) -> AnyWireFormSpec:
         connection_choices = [(c.id, c.label or c.id) for c in connection_service.load_all()]
         return serialize_form_spec(board_metadata_spec(connection_choices=connection_choices))
+
+    @router.get("/-/flow-view-schema")
+    async def get_board_flow_view_schema(
+        _: User = Depends(get_current_user),
+    ) -> AnyWireFormSpec:
+        return serialize_form_spec(flow_view_spec())
 
     @router.get("/{name}/metadata")
     async def get_board_metadata(
