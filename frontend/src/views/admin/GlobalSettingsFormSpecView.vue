@@ -656,6 +656,34 @@ onUnmounted(() => {
     padding-top: var(--dimension-6);
 }
 
+/* Hairline between Object-defaults sub-sections (Appearance, Labels,
+   Templates). Structural :has() — picks the second-and-later rows
+   whose td contains a ``.form-dictionary__group-title`` div, so the
+   nested FormDictionary inside ``labels.shown`` (whose inner rows use
+   ``-ungrouped-N`` keys without a title) is naturally excluded. No
+   reliance on the FormDictionary ``data-group`` attribute. */
+.settings-page__detail[data-active='object_defaults']
+    :deep(
+        .form-dictionary
+            > tbody
+            > tr:has(> td > .form-dictionary__group-title)
+            + tr:has(> td > .form-dictionary__group-title)
+            > td.form-dictionary__dictleft
+    ) {
+    border-top: 1px solid rgb(255 255 255 / 12%);
+    padding-top: var(--dimension-6);
+}
+
+.settings-page__detail[data-active='object_defaults']
+    :deep(
+        .form-dictionary
+            > tbody
+            > tr:has(> td > .form-dictionary__group-title)
+            > td.form-dictionary__dictleft
+    ) {
+    padding-bottom: var(--dimension-6);
+}
+
 .settings-page__error-msg {
     font-size: 13px;
     color: var(--color-light-red-40);
