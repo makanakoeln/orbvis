@@ -394,6 +394,8 @@ export default {
         urlAutoHint: 'Automatically derived from Checkmk URL when left empty',
         targetTopFrame: 'Top frame',
         saveFailed: 'Save failed',
+        radarEmptyTitle: 'No objects found',
+        radarEmptyHintLead: 'Adjust the filter via board settings',
         templates: 'Templates',
         onlyHardStates: 'Only hard states',
         recognizeServices: 'Consider services',

@@ -397,6 +397,8 @@ export default {
         targetSameTab: 'Gleicher Tab',
         targetTopFrame: 'Übergeordneter Frame',
         saveFailed: 'Speichern fehlgeschlagen',
+        radarEmptyTitle: 'Keine Objekte gefunden',
+        radarEmptyHintLead: 'Filter über die Board-Einstellungen anpassen',
         templates: 'Templates',
         onlyHardStates: 'Nur Hard-States',
         recognizeServices: 'Services berücksichtigen',
