@@ -231,7 +231,7 @@ def flow_view_spec() -> Dictionary:
     Every field is optional — unchecked means "use the global default".
     """
     return Dictionary(
-        title=Title("Flow topology"),
+        title=Title("Topology"),
         elements={
             "root": DictElement(
                 group=_TOPOLOGY,

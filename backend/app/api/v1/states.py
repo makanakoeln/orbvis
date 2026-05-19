@@ -65,11 +65,17 @@ async def _fetch_topology_for_user(
 
     services_per_host = settings.flow_board_max_services_per_host
     top_affected_hosts = settings.flow_board_top_affected_hosts
+    root: str | None = None
+    child_layers: int | None = None
+    parent_layers: int | None = None
     if isinstance(cfg.view, FlowView):
         if cfg.view.max_services_per_host is not None:
             services_per_host = cfg.view.max_services_per_host
         if cfg.view.top_affected_hosts is not None:
             top_affected_hosts = cfg.view.top_affected_hosts
+        root = cfg.view.root
+        child_layers = cfg.view.child_layers
+        parent_layers = cfg.view.parent_layers
 
     async def _build() -> list[TopologyNode]:
         return await build_topology_response(
@@ -77,6 +83,9 @@ async def _fetch_topology_for_user(
             include_services=True,
             services_per_host=services_per_host,
             top_affected_hosts=top_affected_hosts,
+            root=root,
+            child_layers=child_layers,
+            parent_layers=parent_layers,
         )
 
     try:

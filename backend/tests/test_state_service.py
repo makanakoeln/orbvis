@@ -466,3 +466,36 @@ def test_drop_topology_snapshot_clears_all_users_for_board():
     state_service.drop_topology_snapshot("b1")
     assert all(k[0] != "b1" for k in state_service._topology_snapshots)
     assert ("b2", None) in state_service._topology_snapshots
+
+
+@pytest.mark.asyncio
+async def test_fetch_topology_passes_flow_view_filter(mock_connection, monkeypatch):
+    """Per-board root/child_layers/parent_layers must reach build_topology_response.
+
+    Regression for the bug where the WS push path ignored these fields,
+    silently overriding the filtered REST response with a full topology.
+    """
+    from app.api.v1 import states as states_api
+    from app.schemas.board import FlowView
+
+    monkeypatch.setattr(state_service, "_connections", {"live_1": mock_connection})
+
+    captured: dict[str, object] = {}
+
+    async def fake_build(connection, **kwargs):
+        captured.update(kwargs)
+        return []
+
+    monkeypatch.setattr(states_api, "build_topology_response", fake_build)
+
+    cfg = BoardConfig(
+        name="flow1",
+        alias="Flow 1",
+        connection_id="live_1",
+        view=FlowView(root="core-router-01", child_layers=2, parent_layers=1),
+    )
+    await states_api._fetch_topology_for_user(cfg, auth_user=None)
+
+    assert captured["root"] == "core-router-01"
+    assert captured["child_layers"] == 2
+    assert captured["parent_layers"] == 1
