@@ -33,16 +33,21 @@ const noState: ObjectState = {
 };
 
 // A weather-coloured line is the orthogonal `line_weather_color: true` flag,
-// independent of the chosen shape. These tests pin the gradient render path.
+// independent of the chosen shape. The directional in→out gradient only
+// renders when a *second* outbound metric is configured — with only one
+// metric, the line uses a solid color (previously a hardcoded 0%→60% opacity
+// fade made the right half look broken).
 const weatherProps = {
     line_style: 'arrow_inward' as const,
     line_weather_color: true,
     host_name: 'h',
     service_description: 's',
+    weathermap_metric: 'in',
+    weathermap_metric_out: 'out',
 };
 
 describe('BoardLine – weather-color gradient', () => {
-    it('renders a <defs> linearGradient when line_weather_color is set', () => {
+    it('renders a <defs> linearGradient when both in/out metrics are configured', () => {
         const wrapper = mount(BoardLine, {
             props: {
                 object: makeLineObject(weatherProps),
@@ -103,6 +108,27 @@ describe('BoardLine – weather-color gradient', () => {
             },
         });
         expect(wrapper.find('defs').exists()).toBe(false);
+    });
+
+    it('falls back to a solid stroke when only the inbound metric is set', () => {
+        const wrapper = mount(BoardLine, {
+            props: {
+                object: makeLineObject({
+                    line_style: 'arrow_inward',
+                    line_weather_color: true,
+                    host_name: 'h',
+                    service_description: 's',
+                    weathermap_metric: 'in',
+                }),
+                state: noState,
+                editMode: false,
+            },
+        });
+        expect(wrapper.find('linearGradient').exists()).toBe(false);
+        const stroked = wrapper
+            .findAll('line')
+            .find((l) => l.attributes('stroke')?.startsWith('url('));
+        expect(stroked).toBeUndefined();
     });
 });
 

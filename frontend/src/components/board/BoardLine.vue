@@ -18,8 +18,10 @@
             @mouseleave="!editMode && $emit('hover-leave')"
         />
 
-        <!-- Optional gradient stroke when the line carries a weather-color flag. -->
-        <defs v-if="useWeatherColor">
+        <!-- In→Out utilization gradient. Only meaningful when a second
+             outbound metric is configured; otherwise we fall back to a solid
+             stroke (see :stroke binding below) to avoid a misleading fade. -->
+        <defs v-if="useWeatherColor && hasDirectionalGradient">
             <linearGradient
                 :id="gradientId"
                 gradientUnits="userSpaceOnUse"
@@ -28,8 +30,8 @@
                 :x2="x2"
                 :y2="y2"
             >
-                <stop offset="0%" :stop-color="effectiveLineColor" />
-                <stop offset="100%" :stop-color="effectiveLineColor" stop-opacity="0.6" />
+                <stop offset="0%" :stop-color="wmColorIn" />
+                <stop offset="100%" :stop-color="wmColorOut" />
             </linearGradient>
         </defs>
         <!-- Border/outline line (rendered behind) — skipped when using a gradient. -->
@@ -50,7 +52,11 @@
             :y1="trimmedStart.y1"
             :x2="trimmedEnd.x2"
             :y2="trimmedEnd.y2"
-            :stroke="useWeatherColor ? `url(#${gradientId})` : effectiveLineColor"
+            :stroke="
+                useWeatherColor && hasDirectionalGradient
+                    ? `url(#${gradientId})`
+                    : effectiveLineColor
+            "
             :stroke-width="strokeWidth"
             stroke-linecap="round"
             :stroke-dasharray="dashArray"
@@ -396,6 +402,19 @@ const wmPct = computed(() => {
     return m ? utilPercent(m) : 0;
 });
 const wmColor = computed(() => utilColor(wmPct.value));
+const wmColorIn = computed(() =>
+    wmMetricIn.value ? utilColor(utilPercent(wmMetricIn.value)) : wmColor.value,
+);
+const wmColorOut = computed(() =>
+    wmMetricOut.value ? utilColor(utilPercent(wmMetricOut.value)) : wmColor.value,
+);
+// Only render the in→out gradient when a distinct outbound metric is
+// configured; with only one metric, a fade-out looks like a rendering bug.
+const hasDirectionalGradient = computed(
+    () =>
+        !!props.object.weathermap_metric_out &&
+        props.object.weathermap_metric_out !== props.object.weathermap_metric,
+);
 
 const showsPerfdataLabels = computed(
     () => props.object.line_perfdata_label != null && props.object.line_perfdata_label !== 'none',

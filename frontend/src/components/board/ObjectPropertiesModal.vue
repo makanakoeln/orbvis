@@ -1839,6 +1839,10 @@ const displayName = computed(() => getBoardObjectIdentifier(props.object));
 
 async function save() {
     saveError.value = '';
+    if (props.object.type === 'line' && form.line_weather_color && !form.weathermap_metric.trim()) {
+        saveError.value = t('boardSettings.metricRequiredWeathermap');
+        return;
+    }
     saving.value = true;
     try {
         const updates: Record<string, unknown> = {

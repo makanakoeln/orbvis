@@ -396,6 +396,8 @@ export default {
         saveFailed: 'Save failed',
         radarEmptyTitle: 'No objects found',
         radarEmptyHintLead: 'Adjust the filter via board settings',
+        metricRequiredWeathermap:
+            'Pick a metric — weather coloring needs one to colorize the line.',
         biLineColor: 'Subtree line',
         biLineWidth: 'Subtree width',
         templates: 'Templates',

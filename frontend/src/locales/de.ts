@@ -399,6 +399,8 @@ export default {
         saveFailed: 'Speichern fehlgeschlagen',
         radarEmptyTitle: 'Keine Objekte gefunden',
         radarEmptyHintLead: 'Filter über die Board-Einstellungen anpassen',
+        metricRequiredWeathermap:
+            'Bitte eine Metrik wählen — ohne Metrik kann die Linie nicht eingefärbt werden.',
         biLineColor: 'Subtree-Linie',
         biLineWidth: 'Subtree-Linienstärke',
         templates: 'Templates',
