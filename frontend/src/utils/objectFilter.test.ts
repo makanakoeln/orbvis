@@ -87,6 +87,15 @@ describe('objectMatchesFilter', () => {
             expect(objectMatchesFilter(svc, 'h:web s:ping')).toBe(false);
         });
 
+        it('tolerates whitespace between prefix and value (CMK parity)', () => {
+            expect(objectMatchesFilter(svc, 'h: web')).toBe(true);
+            expect(objectMatchesFilter(svc, 's:   http')).toBe(true);
+            expect(objectMatchesFilter(hg, 'hg: linux')).toBe(true);
+            expect(objectMatchesFilter(sg, 'sg: db')).toBe(true);
+            expect(objectMatchesFilter(svc, 'h: web s: http')).toBe(true);
+            expect(objectMatchesFilter(svc, 'h: web s: ping')).toBe(false);
+        });
+
         it('unknown prefix falls through to substring match', () => {
             expect(objectMatchesFilter(svc, 'xyz:web')).toBe(false);
             expect(objectMatchesFilter(svc, 'web-srv')).toBe(true);

@@ -30,9 +30,13 @@ interface Term {
     needle: string;
 }
 
+const PREFIX_KEYS = Object.keys(PREFIX_MAP).join('|');
+const PREFIX_WS_RE = new RegExp(`(^|\\s)(${PREFIX_KEYS}):\\s+(?=\\S)`, 'g');
+
 function parseTerms(query: string): Term[] {
     const terms: Term[] = [];
-    for (const raw of query.trim().toLowerCase().split(/\s+/)) {
+    const normalized = query.trim().toLowerCase().replace(PREFIX_WS_RE, '$1$2:');
+    for (const raw of normalized.split(/\s+/)) {
         if (!raw) continue;
         const colon = raw.indexOf(':');
         if (colon > 0) {
