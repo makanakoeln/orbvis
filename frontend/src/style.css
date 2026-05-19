@@ -142,6 +142,18 @@ input:-webkit-autofill:focus {
     box-sizing: content-box;
 }
 
+/* CMK's legacy theme caps every input at ``height: 15px``, paints
+   search filters with ``--input-nested-background-color`` (the lighter
+   shade select2 uses), and zeros ``outline-style``. Without those rules
+   the Suggestions filter grows to ~41px via ``field-sizing: content``,
+   stays at the darker ``--ux-theme-3``, and gains Chrome's default
+   focus ring. */
+.cmk-suggestions span.input input {
+    height: 15px;
+    background: var(--input-nested-background-color, rgb(63 75 93));
+    outline: none;
+}
+
 /* Tailwind-zinc Klassen sind durch CMK-Token (--text, --text-muted, --border, --bg-*)
    ersetzt; theme-spezifische Anpassungen passieren über die Token. */
 
