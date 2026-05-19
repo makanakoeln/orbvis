@@ -612,7 +612,11 @@
                                 />
                             </div>
                             <div class="grid grid-cols-2 gap-[8px]">
-                                <div class="field-row col-span-2">
+                                <!-- Line/Border color are ignored once weather coloring
+                                     drives the stroke (the renderer pulls wmColor and
+                                     skips the border altogether), so hide them to keep
+                                     the dialog honest about what actually takes effect. -->
+                                <div v-if="!form.line_weather_color" class="field-row col-span-2">
                                     <label class="field-label">{{
                                         t('boardSettings.lineColor')
                                     }}</label>
@@ -622,7 +626,7 @@
                                         default-color="#ffffff"
                                     />
                                 </div>
-                                <div class="field-row col-span-2">
+                                <div v-if="!form.line_weather_color" class="field-row col-span-2">
                                     <label class="field-label">{{
                                         t('boardSettings.lineColorBorder')
                                     }}</label>
