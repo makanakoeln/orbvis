@@ -107,7 +107,7 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
         font-size: ${txtSize}px;
         font-weight: 600;
         white-space: nowrap;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
+        text-shadow: -1px -1px 0 rgba(0,0,0,0.85), 1px -1px 0 rgba(0,0,0,0.85), -1px 1px 0 rgba(0,0,0,0.85), 1px 1px 0 rgba(0,0,0,0.85);
         padding: 1px 6px;
         border-radius: 4px;
         background: rgba(0,0,0,0.55);
@@ -151,18 +151,22 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
             : '';
     const labelOffsetX = obj.label?.x ?? 0;
     const labelOffsetY = obj.label?.y ?? 0;
+    // Snap the centered-then-offset translate to whole pixels. Without round(),
+    // calc(-50% + Xpx) lands on a fractional pixel whenever the label width is
+    // odd, which made small fonts render visibly smeared.
     const labelHtml =
         label && !textOnly
             ? `<div style="
         position:absolute;
         top:100%;
         left:50%;
-        transform: translate(calc(-50% + ${labelOffsetX}px), ${labelOffsetY}px);
+        transform: translate(round(calc(-50% + ${labelOffsetX}px), 1px), round(${labelOffsetY}px, 1px));
         text-align: center;
         color: ${labelColor};
         font-size: ${labelSize}px;
         font-weight: 500;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
+        text-shadow: -1px -1px 0 rgba(0,0,0,0.85), 1px -1px 0 rgba(0,0,0,0.85), -1px 1px 0 rgba(0,0,0,0.85), 1px 1px 0 rgba(0,0,0,0.85);
+        text-rendering: geometricPrecision;
         white-space: nowrap;
         margin-top: 3px;
         ${labelBgStyle}
@@ -289,7 +293,7 @@ function makeLineLabelIcon(text: string, label: LabelConfig): L.DivIcon {
         label.background && label.background !== 'transparent' ? label.background : 'transparent';
     const shadow =
         bg === 'transparent'
-            ? 'text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);'
+            ? 'text-shadow: -1px -1px 0 rgba(0,0,0,0.85), 1px -1px 0 rgba(0,0,0,0.85), -1px 1px 0 rgba(0,0,0,0.85), 1px 1px 0 rgba(0,0,0,0.85);'
             : '';
     return L.divIcon({
         className: '',
