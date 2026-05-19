@@ -72,3 +72,4 @@ reports/
 !docs/**/*.png
 !frontend/public/*.png
 !frontend/src/**/*.png
+audit/
