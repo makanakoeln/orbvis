@@ -60,7 +60,10 @@
                 </div>
 
                 <!-- Scrollable body -->
-                <CmkScrollContainer class="flex-1 min-h-0 space-y-[2px]" style="padding: 10px 16px">
+                <CmkScrollContainer
+                    class="flex-1 min-h-0 space-y-[14px]"
+                    style="padding: 10px 16px"
+                >
                     <!-- === MONITORING OBJECT === -->
                     <section
                         v-if="
