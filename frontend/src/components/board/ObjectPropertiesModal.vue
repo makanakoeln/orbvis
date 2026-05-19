@@ -186,6 +186,28 @@
                                         :title="t('boardSettings.expandDepthHelp')"
                                     />
                                 </div>
+                                <div v-if="(form.expand_depth ?? 0) > 0" class="field-row">
+                                    <label class="field-label">{{
+                                        t('boardSettings.biLineColor')
+                                    }}</label>
+                                    <ColorInput
+                                        v-model="form.line_color"
+                                        :enable-label="t('common.useColor')"
+                                        default-color="#a1a1aa"
+                                    />
+                                </div>
+                                <div v-if="(form.expand_depth ?? 0) > 0" class="field-row">
+                                    <label class="field-label">{{
+                                        t('boardSettings.biLineWidth')
+                                    }}</label>
+                                    <NumberInput
+                                        v-model="form.line_width"
+                                        :min="1"
+                                        :max="20"
+                                        :placeholder="t('boardSettings.lineWidthDefault')"
+                                        class="flex-1"
+                                    />
+                                </div>
                             </template>
                         </div>
                     </section>

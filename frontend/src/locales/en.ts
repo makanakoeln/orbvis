@@ -396,6 +396,8 @@ export default {
         saveFailed: 'Save failed',
         radarEmptyTitle: 'No objects found',
         radarEmptyHintLead: 'Adjust the filter via board settings',
+        biLineColor: 'Subtree line',
+        biLineWidth: 'Subtree width',
         templates: 'Templates',
         onlyHardStates: 'Only hard states',
         recognizeServices: 'Consider services',

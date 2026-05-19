@@ -444,6 +444,8 @@
                 :tree="state.tree"
                 :max-depth="object.expand_depth ?? 0"
                 :icon-size="iconSize"
+                :line-color="object.line_color"
+                :line-width="object.line_width"
                 @node-enter="(o, s, e) => $emit('subtree-enter', o, s, e)"
                 @node-leave="$emit('subtree-leave')"
             />

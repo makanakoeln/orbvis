@@ -399,6 +399,8 @@ export default {
         saveFailed: 'Speichern fehlgeschlagen',
         radarEmptyTitle: 'Keine Objekte gefunden',
         radarEmptyHintLead: 'Filter über die Board-Einstellungen anpassen',
+        biLineColor: 'Subtree-Linie',
+        biLineWidth: 'Subtree-Linienstärke',
         templates: 'Templates',
         onlyHardStates: 'Nur Hard-States',
         recognizeServices: 'Services berücksichtigen',

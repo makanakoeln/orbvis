@@ -13,8 +13,8 @@
             :y1="link.y1"
             :x2="link.x2"
             :y2="link.y2"
-            :stroke="link.onWorstPath ? WORST_PATH_COLOR : 'rgb(113 113 122 / 0.5)'"
-            :stroke-width="link.onWorstPath ? 2.5 : 1"
+            :stroke="link.onWorstPath ? WORST_PATH_COLOR : resolvedLineColor"
+            :stroke-width="link.onWorstPath ? worstPathLineWidth : resolvedLineWidth"
         />
         <!-- Root is the BoardObject icon itself, so skip it here -->
         <g
@@ -106,7 +106,20 @@ const props = defineProps<{
     tree: AggregationNode;
     iconSize: number;
     maxDepth: number;
+    lineColor?: string | null;
+    lineWidth?: number | null;
 }>();
+
+// Default subtree line: zinc-400 at full alpha (1.5px) reads on both light and
+// dark map tiles. The legacy "zinc-500 @ 50% alpha, 1px" washed out anywhere
+// the map background was busy.
+const DEFAULT_LINE_COLOR = 'rgb(161 161 170)';
+const DEFAULT_LINE_WIDTH = 1.5;
+const resolvedLineColor = computed(() => props.lineColor || DEFAULT_LINE_COLOR);
+const resolvedLineWidth = computed(() => props.lineWidth ?? DEFAULT_LINE_WIDTH);
+// Worst-path edges stay one step thicker than the regular tree edges so the
+// highlight still reads when the operator picks a custom heavy stroke.
+const worstPathLineWidth = computed(() => resolvedLineWidth.value + 1.5);
 
 function trimToDepth(node: AggregationNode, remaining: number): AggregationNode {
     if (node.children.length === 0) return node;
