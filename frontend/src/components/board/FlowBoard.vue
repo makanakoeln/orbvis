@@ -215,6 +215,12 @@
             @enable-notifications="onContextMenuToggleNotifications(true)"
             @disable-notifications="onContextMenuToggleNotifications(false)"
         />
+
+        <BoardZoomResetPill
+            :zoom="displayZoomK"
+            :visible="manualZoomActive && !loading && !error"
+            @reset="fitView()"
+        />
     </div>
 
     <AckModal
@@ -279,6 +285,7 @@ import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
 import AckModal from '@/components/board/AckModal.vue';
+import BoardZoomResetPill from '@/components/board/BoardZoomResetPill.vue';
 import CommentModal from '@/components/board/CommentModal.vue';
 import ContextMenu from '@/components/board/ContextMenu.vue';
 import DetailDrawer from '@/components/board/DetailDrawer.vue';
@@ -1239,7 +1246,13 @@ let panActiveFlag = false;
 // in deliberately.
 const LOD_LOW_SCALE = 0.8;
 let lodLow = false;
+// `currentZoomK` is read from hot-path renderers (donut arc, host labels,
+// site scale) per zoom frame; keeping it as a plain let avoids ref proxy
+// overhead. `displayZoomK` is the reactive mirror consumed by the pill
+// template only.
 let currentZoomK = 1;
+const displayZoomK = ref(1);
+const manualZoomActive = ref(false);
 
 function refreshDonutWidths(): void {
     if (!svgEl.value) return;
@@ -1300,6 +1313,7 @@ function flushZoomTransform(): void {
         applyLod();
     }
     currentZoomK = t.k;
+    displayZoomK.value = t.k;
     // Donut widths and host-label offsets are refreshed on zoom end, not per
     // frame — rebinding 500+ donut path d-attributes mid-zoom is the main
     // source of stutter on dense boards.
@@ -1360,6 +1374,7 @@ function bfsLevels(topoNodes: TopologyNode[]): Map<string, number> {
 function fitView({ animated = true }: { animated?: boolean } = {}) {
     const svg = svgEl.value;
     if (!svg || !zoomBeh || !lastFNodes.length) return;
+    manualZoomActive.value = false;
     const W = svg.clientWidth || 900;
     const H = svg.clientHeight || 600;
     const PAD = 64;
@@ -1443,6 +1458,15 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         (el.node() as SVGSVGElement & { __zoom_attached?: boolean }).__zoom_attached = true;
         zoomBeh = zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.15, 3])
+            // d3's default wheelDelta applies a x10 multiplier when ctrlKey is
+            // set (so trackpad pinch-zoom matches), but on a mouse wheel that
+            // makes ctrl+wheel feel like an order of magnitude bigger jump per
+            // tick than a bare wheel. Drop the multiplier so both gestures use
+            // the same per-tick step.
+            .wheelDelta(
+                (event) =>
+                    -event.deltaY * (event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002),
+            )
             // Shift+drag is reserved for lasso multi-select; let the lasso
             // listener handle those events instead of panning.
             .filter((event) => {
@@ -1476,6 +1500,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 if (pendingZoomRaf === null) {
                     pendingZoomRaf = requestAnimationFrame(flushZoomTransform);
                 }
+                // sourceEvent is null when the transform was issued
+                // programmatically (e.g. fitView). Only flag manual zoom for
+                // real user gestures so the pill stays hidden right after a
+                // fit-to-view.
+                if (event.sourceEvent) manualZoomActive.value = true;
                 // Defer pan-active until an actual transform change (rather
                 // than mousedown) so a bare click on a service — which has
                 // no d3-drag pointer-capture — still receives its click

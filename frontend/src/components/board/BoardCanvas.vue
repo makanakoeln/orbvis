@@ -106,20 +106,11 @@
             />
         </div>
 
-        <!-- Zoom indicator + reset (only visible when zoomed). Teleported to
-             <body> so it escapes the canvas's CSS `zoom` (which would otherwise
-             scale this fixed-positioned pill along with the rest). -->
-        <Teleport to="body">
-            <button
-                v-if="userZoom !== 1 && !editMode"
-                type="button"
-                class="board-zoom-reset"
-                title="Reset to fit"
-                @click="resetZoom"
-            >
-                {{ Math.round(userZoom * 100) }}% ↺
-            </button>
-        </Teleport>
+        <BoardZoomResetPill
+            :zoom="userZoom"
+            :visible="userZoom !== 1 && !editMode"
+            @reset="resetZoom"
+        />
 
         <!-- Hover popup -->
         <HoverMenu
@@ -226,6 +217,7 @@ import { resolveTemplate } from '@/utils/template';
 import AckModal from './AckModal.vue';
 import BoardLine from './BoardLine.vue';
 import BoardObject from './BoardObject.vue';
+import BoardZoomResetPill from './BoardZoomResetPill.vue';
 import CommentModal from './CommentModal.vue';
 import ContextMenu from './ContextMenu.vue';
 import DowntimeModal from './DowntimeModal.vue';
@@ -336,19 +328,20 @@ const canvasStyle = computed(() => {
     const bg = props.config.background_image;
     const url = bgImageUrl.value;
     const color = props.config.background_color;
-    // At userZoom=1 the canvas fills the pane (asymmetric stretch — operators
-    // want the wallpaper look). At userZoom>1 it switches to native pixel
-    // size so CSS zoom can scale bg + objects together; coverFactor keeps the
-    // first zoom step visually close to the stretched default so the aspect
-    // snap at z=1→1.01 is as small as possible.
+    // Anchor the canvas to the pane's pixel dimensions (not 100%) so CSS
+    // `zoom` actually grows the element visually — on a percentage-sized
+    // element Chrome divides the layout box by zoom and multiplies it back,
+    // leaving the visual size unchanged (only descendants with pixel sizes
+    // would visibly grow, which is why bg-image stayed put while objects
+    // scaled).
+    const pane = paneSize.value;
     const base: Record<string, string> =
-        userZoom.value === 1
-            ? { width: '100%', height: '100%' }
-            : {
-                  width: `${canvasWidth.value}px`,
-                  height: `${canvasHeight.value}px`,
-                  zoom: String(coverFactor.value * userZoom.value),
-              };
+        pane.width && pane.height
+            ? { width: `${pane.width}px`, height: `${pane.height}px` }
+            : { width: '100%', height: '100%' };
+    if (userZoom.value !== 1) {
+        base.zoom = String(userZoom.value);
+    }
     if (color) base.backgroundColor = color;
     if (bg) {
         base.backgroundImage = `url(${url})`;
@@ -358,20 +351,11 @@ const canvasStyle = computed(() => {
     return base;
 });
 
-// ZOOM_MIN=1 so operators cannot zoom out below "bg fills pane" — that view
-// has no informational value for monitoring.
 const ZOOM_MIN = 1;
 const ZOOM_MAX = 4;
+const ZOOM_STEP = 1.05;
 const userZoom = ref(1);
-
-const coverFactor = computed(() => {
-    const pane = paneSize.value;
-    if (!pane.width || !pane.height) return 1;
-    if (!canvasWidth.value || !canvasHeight.value) return 1;
-    const fx = pane.width / canvasWidth.value;
-    const fy = pane.height / canvasHeight.value;
-    return Math.max(fx, fy);
-});
+const paneSize = ref<{ width: number; height: number }>({ width: 0, height: 0 });
 
 function onCanvasWheel(event: WheelEvent): void {
     // ctrl+wheel = zoom (matches browsers' image-viewer / map convention).
@@ -379,7 +363,7 @@ function onCanvasWheel(event: WheelEvent): void {
     // Edit mode is fixed at user_zoom=1 so drag-coord math stays simple.
     if (props.editMode || !event.ctrlKey) return;
     event.preventDefault();
-    const factor = event.deltaY < 0 ? 1.1 : 1 / 1.1;
+    const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
     const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, userZoom.value * factor));
     if (next === userZoom.value) return;
     // Anchor zoom around the cursor: scroll the outer container so the point
@@ -413,7 +397,6 @@ const canvasScale = computed(() => ({
     sy: canvasHeight.value > 0 ? canvasDisplaySize.value.height / canvasHeight.value : 1,
 }));
 provide('canvasScale', canvasScale);
-const paneSize = ref<{ width: number; height: number }>({ width: 0, height: 0 });
 let canvasResizeObserver: ResizeObserver | null = null;
 let paneResizeObserver: ResizeObserver | null = null;
 
@@ -779,27 +762,3 @@ function getMapPosition(event: MouseEvent): { x: number; y: number } {
 
 defineExpose({ getCanvasEl: () => canvasEl.value, getMapPosition, resetZoom });
 </script>
-
-<style scoped>
-.board-zoom-reset {
-    /* Sits left of the BoardSearch filter (top:5 right:5 inside the canvas
-       wrapper, ≈ 200 px wide). Vertical 48 px clears the 36 px topbar. */
-    position: fixed;
-    top: 48px;
-    right: calc(var(--dimension-5) + 215px);
-    z-index: 6;
-    padding: 6px 14px;
-    border-radius: var(--border-radius);
-    background: rgb(24 24 27 / 85%);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    backdrop-filter: blur(6px);
-}
-
-.board-zoom-reset:hover {
-    border-color: var(--color-corporate-green-50);
-}
-</style>
