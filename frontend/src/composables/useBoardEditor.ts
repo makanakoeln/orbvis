@@ -189,9 +189,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     }
 
     function _avoidOverlap(id: string, x: number, y: number, objects: readonly BoardObject[]) {
-        // Only nudge on pixel-perfect overlap; a larger radius would silently
-        // displace deliberate near-drops and feel like an editor bug.
-        const COLLISION_RADIUS = 2;
+        const COLLISION_RADIUS = 12;
         const STEP = 28;
         const MAX_STEPS = 8;
         for (let i = 0; i < MAX_STEPS; i++) {
