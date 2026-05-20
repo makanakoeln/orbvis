@@ -67,7 +67,7 @@ OrbVis-only.
 | Real-time push (WebSocket)                       | ❌     | ➕     |
 | Acknowledged + downtime indicators               | ✅     | ✅     |
 | `only_hard_states`, `recognize_services`         | ✅     | ✅     |
-| BI aggregations (Checkmk Business Intelligence)  | ❌     | ➕     |
+| BI aggregations (Checkmk Business Intelligence)  | ✅ [^5] | ✅ [^5] |
 
 ### Auth & permissions
 
@@ -99,6 +99,12 @@ OrbVis-only.
 WATO permission system (`orbvis.view_*`, `orbvis.edit_*`). The internal
 mod/act/obj role table is only used in standalone deployments. See
 [`docs/install.md#permissions--access-control`](install.md#permissions--access-control).
+
+[^5]: NagVis ships an `mkbi` backend that polls the Multisite
+`view.py?view_name=aggr_all_api` JSON endpoint per request. OrbVis runs
+`cmk.bi.compiler` / `cmk.bi.computer` in-process when deployed inside an
+OMD site, which avoids the HTTP round-trip and exposes the full
+aggregation tree.
 
 ### Operations
 
