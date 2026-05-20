@@ -307,21 +307,39 @@ watch(
     },
 );
 
-// Canvas size is derived from object extents only. The bg-image is stretched
-// (background-size: 100% 100%), so letting its natural size widen the canvas
-// would re-anchor every object's percentage position when the image loads or
-// swaps.
-const canvasWidth = computed(() =>
-    props.config.objects.reduce(
-        (m, o) => Math.max(m, o.x + (o.type === 'graph' ? (o.graph_width ?? 400) : 150)),
-        800,
-    ),
+// Canvas extents are sticky: a live `computed` would re-resize on every drag
+// and re-anchor all other objects under the percent-based positioning below.
+const _widthExtent = (o: BoardObjectType) =>
+    o.x + (o.type === 'graph' ? (o.graph_width ?? 400) : 150);
+const _heightExtent = (o: BoardObjectType) =>
+    o.y + (o.type === 'graph' ? (o.graph_height ?? 200) : 150);
+const canvasWidth = ref(800);
+const canvasHeight = ref(600);
+function _setIfChanged(ref_: typeof canvasWidth, next: number) {
+    if (ref_.value !== next) ref_.value = next;
+}
+watch(
+    () => props.config,
+    () => {
+        _setIfChanged(
+            canvasWidth,
+            props.config.objects.reduce((m, o) => Math.max(m, _widthExtent(o)), 800),
+        );
+        _setIfChanged(
+            canvasHeight,
+            props.config.objects.reduce((m, o) => Math.max(m, _heightExtent(o)), 600),
+        );
+    },
+    { immediate: true },
 );
-const canvasHeight = computed(() =>
-    props.config.objects.reduce(
-        (m, o) => Math.max(m, o.y + (o.type === 'graph' ? (o.graph_height ?? 200) : 150)),
-        600,
-    ),
+watch(
+    () => props.config.objects.length,
+    () => {
+        for (const o of props.config.objects) {
+            _setIfChanged(canvasWidth, Math.max(canvasWidth.value, _widthExtent(o)));
+            _setIfChanged(canvasHeight, Math.max(canvasHeight.value, _heightExtent(o)));
+        }
+    },
 );
 
 const canvasStyle = computed(() => {
