@@ -312,6 +312,8 @@ export default {
         noGroups: 'Keine Gruppen verfügbar',
         noHostgroups: 'Keine Hostgruppen in dieser Site konfiguriert',
         noServicegroups: 'Keine Servicegruppen in dieser Site konfiguriert',
+        requiredFieldsMissing: 'Bitte alle Pflichtfelder ausfüllen.',
+        fieldRequired: '{field} ist ein Pflichtfeld.',
         noBoards: 'Keine weiteren Boards vorhanden',
         noMetrics: 'Keine Metriken verfügbar',
         noGraphTemplates: 'Keine Graph-Templates verfügbar',

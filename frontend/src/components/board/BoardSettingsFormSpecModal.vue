@@ -62,7 +62,10 @@
                     </div>
 
                     <!-- Worldmap settings -->
-                    <template v-if="form.map_type === 'worldmap'">
+                    <div
+                        v-if="form.map_type === 'worldmap'"
+                        class="board-settings__type-section space-y-[8px]"
+                    >
                         <p class="section-title">{{ t('boardSettings.mapView') }}</p>
                         <div class="grid grid-cols-3 gap-[8px]">
                             <div class="space-y-[4px]">
@@ -133,17 +136,28 @@
                                         '') as typeof form.worldmap_auto_source
                                 "
                             />
-                            <CmkInput
+                            <div
                                 v-if="
                                     form.worldmap_auto_source === 'hostgroup' ||
                                     form.worldmap_auto_source === 'servicegroup'
                                 "
-                                v-model="form.worldmap_auto_filter_value"
-                                :placeholder="t('board.autoFilterValuePlaceholder')"
-                                field-size="FILL"
-                            />
+                                class="space-y-[4px]"
+                            >
+                                <CmkLabel>
+                                    {{ t('board.groupName') }}<CmkLabelRequired space="before" />
+                                </CmkLabel>
+                                <CmkInput
+                                    v-model="form.worldmap_auto_filter_value"
+                                    :placeholder="t('board.autoFilterValuePlaceholder')"
+                                    field-size="FILL"
+                                    :class="{
+                                        'orb-input-invalid':
+                                            saveAttempted && !form.worldmap_auto_filter_value,
+                                    }"
+                                />
+                            </div>
                         </div>
-                    </template>
+                    </div>
 
                     <!-- Flow settings: served as a FormSpec so titles/help
                          and the Integer-input look match the rest of the
@@ -156,7 +170,10 @@
                     />
 
                     <!-- Radar settings -->
-                    <template v-if="form.map_type === 'radar'">
+                    <div
+                        v-if="form.map_type === 'radar'"
+                        class="board-settings__type-section space-y-[8px]"
+                    >
                         <p class="section-title">{{ t('boardSettings.radarFilter') }}</p>
                         <div class="grid grid-cols-2 gap-[8px]">
                             <div class="space-y-[4px]">
@@ -177,26 +194,41 @@
                                 class="space-y-[4px]"
                             >
                                 <CmkLabel>{{ t('board.groupName') }}</CmkLabel>
-                                <CmkInput
-                                    v-model="form.radar_filter_value"
-                                    placeholder="e.g. linux-servers"
-                                    field-size="FILL"
+                                <CmkDropdown
+                                    :selected-option="form.radar_filter_value || null"
+                                    :options="radarGroupOptions"
+                                    :width="'fill'"
+                                    :label="t('board.groupName')"
+                                    :input-hint="t('boardSettings.groupName')"
+                                    :required="true"
+                                    :form-validation="saveAttempted && !form.radar_filter_value"
+                                    :no-elements-text="
+                                        t(
+                                            form.radar_filter === 'hostgroup'
+                                                ? 'boardSettings.noHostgroups'
+                                                : 'boardSettings.noServicegroups',
+                                        )
+                                    "
+                                    @update:selected-option="form.radar_filter_value = $event ?? ''"
                                 />
                             </div>
                         </div>
-                    </template>
+                    </div>
 
                     <FormEdit
                         v-if="formSchema"
                         v-model:data="formSpecData"
                         :spec="formSchema"
-                        :backend-validation="[]"
+                        :backend-validation="formBackendValidation"
                     />
                     <CmkLoading v-else-if="schemaLoading" />
 
-                    <p v-if="saveError" class="text-xs text-[var(--color-light-red-40)]">
-                        {{ saveError }}
-                    </p>
+                    <ul
+                        v-if="errorMessages.length"
+                        class="text-xs text-[var(--color-light-red-40)] space-y-0.5"
+                    >
+                        <li v-for="(msg, i) in errorMessages" :key="i">{{ msg }}</li>
+                    </ul>
                 </div>
 
                 <!-- Permissions -->
@@ -296,7 +328,11 @@
                 <CmkButton variant="secondary" @click="requestClose">
                     {{ t('common.cancel') }}
                 </CmkButton>
-                <CmkButton variant="primary" :disabled="saving || !isDirty" @click="save">
+                <CmkButton
+                    variant="primary"
+                    :disabled="saving || !isDirty || (saveAttempted && !customSectionValid)"
+                    @click="save"
+                >
                     {{ saving ? t('common.saving') : t('common.save') }}
                 </CmkButton>
             </div>
@@ -305,9 +341,13 @@
 </template>
 
 <script setup lang="ts">
+import CmkLabelRequired from '@cmk/components/user-input/CmkLabelRequired.vue';
 import FormEdit from '@cmk/form/FormEdit.vue';
 import { initializeComponentRegistry } from '@cmk/form/private/FormEditDispatcher/dispatch';
-import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components';
+import type {
+    ValidationMessage,
+    VueFormspecComponents,
+} from 'cmk-shared-typing/typescript/vue_formspec_components';
 import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -322,6 +362,7 @@ import CmkInput from '@/components/cmk/user-input/CmkInput';
 import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { orbFormComponents } from '@/composables/orbFormComponents';
+import { useRadarGroups } from '@/composables/useRadarGroups';
 import { useAuthStore } from '@/stores/auth';
 import type {
     BoardRead,
@@ -333,6 +374,7 @@ import type {
     WorldmapView,
 } from '@/types/api';
 import { boardTypeOptions } from '@/utils/dropdownOptions';
+import { toFormValidation } from '@/utils/formValidation';
 
 import BackgroundImageUpload from './BackgroundImageUpload.vue';
 
@@ -473,9 +515,56 @@ const radarFilterOptions = computed(() => ({
 }));
 const saveError = ref('');
 
+const { names: radarGroupNames } = useRadarGroups(form, () => auth.accessToken);
+
+const radarGroupOptions = computed(() => ({
+    type: 'filtered' as const,
+    suggestions: radarGroupNames.value.map((name) => ({ name, title: name })),
+}));
+
+const saveAttempted = ref(false);
+const formBackendValidation = ref<ValidationMessage[]>([]);
+
+const customMissingFields = computed<string[]>(() => {
+    const missing: string[] = [];
+    if (
+        form.value.map_type === 'radar' &&
+        (form.value.radar_filter === 'hostgroup' || form.value.radar_filter === 'servicegroup') &&
+        !form.value.radar_filter_value
+    ) {
+        missing.push(t('board.groupName'));
+    }
+    if (
+        form.value.map_type === 'worldmap' &&
+        (form.value.worldmap_auto_source === 'hostgroup' ||
+            form.value.worldmap_auto_source === 'servicegroup') &&
+        !form.value.worldmap_auto_filter_value
+    ) {
+        missing.push(t('board.groupName'));
+    }
+    return missing;
+});
+const customSectionValid = computed(() => customMissingFields.value.length === 0);
+
+const errorMessages = computed<string[]>(() => {
+    const out: string[] = [];
+    if (saveAttempted.value) {
+        for (const f of customMissingFields.value) {
+            out.push(t('boardSettings.fieldRequired', { field: f }));
+        }
+    }
+    if (saveError.value) out.push(saveError.value);
+    return out;
+});
+
 async function save() {
+    saveAttempted.value = true;
+    if (!customSectionValid.value) {
+        return;
+    }
     saving.value = true;
     saveError.value = '';
+    formBackendValidation.value = [];
     try {
         // Always save any pending permission changes
         if (permDraft.size > 0) {
@@ -536,11 +625,17 @@ async function save() {
         emit('updated');
         emit('close');
     } catch (e: unknown) {
-        // 409 means another operator saved this board after we opened it.
-        // Surface a clear message instead of the generic "An error occurred"
-        // so the operator can reload and reconcile.
         if (e instanceof ApiError && e.status === 409) {
             saveError.value = t('board.staleConflict');
+        } else if (e instanceof ApiError && e.status === 422) {
+            const detail = (e.detail as { detail?: unknown } | null)?.detail;
+            const parsed = toFormValidation(detail, new Set(Object.keys(formSpecData.value)));
+            if (parsed) {
+                formBackendValidation.value = parsed.messages;
+                saveError.value = parsed.stray.map((m) => m.message).join(' ');
+            } else {
+                saveError.value = e.message;
+            }
         } else {
             saveError.value = e instanceof Error ? e.message : 'An error occurred';
         }
@@ -700,9 +795,13 @@ onMounted(async () => {
    etc. — instead of looking like a separate kind of heading. */
 .section-title {
     font-weight: bold;
-    font-size: var(--font-size-normal);
+    font-size: var(--font-size-large);
     color: var(--text);
     margin: 0 0 var(--dimension-3);
+}
+
+.orb-input-invalid :deep(input) {
+    border-color: var(--form-element-required-color);
 }
 
 .board-settings__body {
@@ -770,7 +869,12 @@ onMounted(async () => {
     padding-bottom: var(--dimension-5);
 }
 
-.board-settings__type-section + :deep(.form-dictionary) {
+.board-settings__scroll :deep(.form-dictionary) > tbody > tr[data-group]:first-child > td {
+    padding-top: var(--dimension-5);
+    padding-bottom: var(--dimension-5);
+}
+
+.board-settings__type-section ~ :deep(.form-dictionary) {
     margin-top: 0;
 }
 

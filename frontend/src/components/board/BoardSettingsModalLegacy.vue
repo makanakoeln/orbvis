@@ -262,10 +262,18 @@
                                 class="space-y-[4px]"
                             >
                                 <CmkLabel>{{ t('board.groupName') }}</CmkLabel>
-                                <CmkInput
+                                <AutocompleteInput
                                     v-model="form.radar_filter_value"
-                                    placeholder="e.g. linux-servers"
-                                    field-size="FILL"
+                                    :suggestions="radarGroupNames"
+                                    :loading="loadingRadarGroups"
+                                    :placeholder="t('boardSettings.groupName')"
+                                    :empty-text="
+                                        t(
+                                            form.radar_filter === 'hostgroup'
+                                                ? 'boardSettings.noHostgroups'
+                                                : 'boardSettings.noServicegroups',
+                                        )
+                                    "
                                 />
                             </div>
                         </div>
@@ -468,6 +476,7 @@ import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
 import CmkInput from '@/components/cmk/user-input/CmkInput';
 import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
+import { useRadarGroups } from '@/composables/useRadarGroups';
 import { useAuthStore } from '@/stores/auth';
 import { useSettingsStore } from '@/stores/settings';
 import type {
@@ -481,6 +490,7 @@ import type {
 } from '@/types/api';
 import { boardTypeOptions } from '@/utils/dropdownOptions';
 
+import AutocompleteInput from './AutocompleteInput.vue';
 import BackgroundImageUpload from './BackgroundImageUpload.vue';
 
 // Mirror of backend `Settings.flow_board_*` defaults — shown as placeholder so
@@ -607,6 +617,11 @@ const clickActionOptions = computed(() => ({
     ],
 }));
 const saveError = ref('');
+
+const { names: radarGroupNames, loading: loadingRadarGroups } = useRadarGroups(
+    form,
+    () => auth.accessToken,
+);
 
 async function save() {
     saving.value = true;

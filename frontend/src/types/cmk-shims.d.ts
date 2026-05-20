@@ -487,3 +487,13 @@ declare module '@cmk/form/private/forms/FormOrbColor.vue' {
     const component: DefineComponent<Record<string, unknown>>;
     export default component;
 }
+
+declare module '@cmk/components/user-input/CmkLabelRequired.vue' {
+    import type { DefineComponent } from 'vue';
+    interface CmkLabelRequiredProps {
+        show?: boolean;
+        space?: 'before' | 'after' | 'both' | null;
+    }
+    const component: DefineComponent<CmkLabelRequiredProps>;
+    export default component;
+}

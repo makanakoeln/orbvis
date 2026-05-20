@@ -309,6 +309,8 @@ export default {
         noGroups: 'No groups available',
         noHostgroups: 'No host groups configured in this site',
         noServicegroups: 'No service groups configured in this site',
+        requiredFieldsMissing: 'Please fill in the required fields.',
+        fieldRequired: '{field} is required.',
         noBoards: 'No other boards available',
         noMetrics: 'No metrics available',
         noGraphTemplates: 'No graph templates available',
