@@ -715,6 +715,11 @@ async function save() {
         } else if (form.value.map_type === 'flow') {
             const fvd = flowViewFormSpecData.value;
             const rootRaw = (fvd.root as string | undefined)?.trim();
+            // Refetch right before saving so service_layout / positions
+            // edits the operator made inside the live-preview iframe
+            // aren't trampled by this PUT.
+            const fresh = await boardsApi.get(props.board.name, auth.accessToken!);
+            const freshFlow = fresh.view?.type === 'flow' ? fresh.view : null;
             view = {
                 type: 'flow',
                 root: rootRaw ? rootRaw : null,
@@ -723,6 +728,8 @@ async function save() {
                 top_affected_hosts: (fvd.top_affected_hosts as number | null | undefined) ?? null,
                 max_services_per_host:
                     (fvd.max_services_per_host as number | null | undefined) ?? null,
+                service_layout: freshFlow?.service_layout ?? null,
+                positions: freshFlow?.positions ?? {},
             };
         } else {
             view = { type: form.value.map_type };

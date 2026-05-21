@@ -208,6 +208,7 @@ export default {
             problemsPill: '{critical} crit · {warning} warn',
             topKHint:
                 'Showing service detail for the top {shown} of {total} most affected hosts — others are aggregated as donuts',
+            topKHintShort: 'Services shown for {shown} of {total} hosts',
             searchPlaceholder: 'Filter — h:host  s:service  hg:  sg:',
             problemsOnlyToggle: 'Show only hosts with problems',
             bulkSelected: '{count} selected',

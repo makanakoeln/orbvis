@@ -128,7 +128,7 @@
             v-if="topKBreakdown.omitted > 0 && needsServiceDetail"
             class="flow-hint flow-hint--topk"
         >
-            {{ t('board.flow.topKHint', topKBreakdown) }}
+            {{ t(preview ? 'board.flow.topKHintShort' : 'board.flow.topKHint', topKBreakdown) }}
         </div>
 
         <!-- Hover popup -->

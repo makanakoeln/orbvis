@@ -211,6 +211,7 @@ export default {
             problemsPill: '{critical} krit. · {warning} warn.',
             topKHint:
                 'Service-Details für die {shown} von {total} am stärksten betroffenen Hosts werden gezeigt — übrige Hosts sind als Donut aggregiert',
+            topKHintShort: 'Services für {shown} von {total} Hosts angezeigt',
             searchPlaceholder: 'Filter — h:host  s:service  hg:  sg:',
             problemsOnlyToggle: 'Nur Hosts mit Problemen anzeigen',
             bulkSelected: '{count} ausgewählt',
