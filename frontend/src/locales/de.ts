@@ -146,6 +146,8 @@ export default {
         filterTypeAllHosts: 'Alle Hosts',
         filterTypeAllServices: 'Alle Services',
         groupName: 'Gruppenname',
+        radarGroupNameHint:
+            'Hosts (oder Hosts mit Services) dieser Checkmk-Gruppe werden live aus der Connection geladen. Die Gruppe muss in Checkmk WATO existieren.',
         notificationsOn: 'Browser-Benachrichtigungen aktiv — klicken zum Deaktivieren',
         notificationsOff: 'Browser-Benachrichtigungen bei Zustandsänderungen aktivieren',
         services: 'Services',

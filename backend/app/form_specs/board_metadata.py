@@ -208,7 +208,8 @@ def board_metadata_spec(
                         "(Settings → Object defaults). When enabled, overrides "
                         "the global default for this board only. "
                         "Placeholders: {{name}}, {{state}}, {{output}}, "
-                        "{{host}}, {{service}}."
+                        "{{host}}, {{service}}. "
+                        "Example: '{{name}}: {{state}}' renders as 'db-prod-01: CRIT'."
                     ),
                     prefill=InputHint("e.g. {{name}} is {{state}}"),
                     field_size=FieldSize.LARGE,
@@ -222,7 +223,9 @@ def board_metadata_spec(
                         "Leave unchecked to inherit the global Context template "
                         "(Settings → Object defaults). When enabled, overrides "
                         "the global default for this board only. Same "
-                        "placeholders as the hover template."
+                        "placeholders as the hover template. "
+                        "Example: 'Service {{service}} on {{host}}' renders as "
+                        "'Service HTTP on web-srv-01'."
                     ),
                     prefill=InputHint("e.g. {{name}} is {{state}}"),
                     field_size=FieldSize.LARGE,

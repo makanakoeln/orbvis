@@ -144,6 +144,8 @@ export default {
         filterTypeAllHosts: 'All hosts',
         filterTypeAllServices: 'All services',
         groupName: 'Group name',
+        radarGroupNameHint:
+            'Hosts (or hosts hosting a service) belonging to this Checkmk group are pulled live from the connection. Group must exist in Checkmk WATO.',
         backgroundImage: 'Background image',
         backgroundImagePlaceholder: 'Select image…',
         uploadBackground: 'Upload background image…',

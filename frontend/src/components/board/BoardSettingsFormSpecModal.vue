@@ -197,7 +197,9 @@
                                         "
                                         class="space-y-[4px]"
                                     >
-                                        <CmkLabel>{{ t('board.groupName') }}</CmkLabel>
+                                        <CmkLabel :help="t('board.radarGroupNameHint')">{{
+                                            t('board.groupName')
+                                        }}</CmkLabel>
                                         <CmkDropdown
                                             :selected-option="form.radar_filter_value || null"
                                             :options="radarGroupOptions"
