@@ -2138,7 +2138,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             contextMenu.visible = true;
         })
         .on('mouseenter', (event: MouseEvent, d) => {
-            if (d.nodeType === 'site') return;
+            if (props.preview || d.nodeType === 'site') return;
             const nodeRect = (event.currentTarget as SVGGElement).getBoundingClientRect();
             hoverMenu.object = boardObjectFromFNode(d);
             hoverMenu.state = objectStateFromFNode(d);
@@ -2154,9 +2154,13 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // Always attach drag to host + site nodes — readonly boards stay
     // interactive (just no persistence), so demos feel as alive as live
     // boards. The persistence path inside drag.end checks props.readonly.
-    nodeEnter
-        .filter((d) => d.nodeType === 'host' || d.nodeType === 'site')
-        .call(dragBehavior as never);
+    // Preview iframes (settings live preview) skip drag entirely since
+    // the iframe is meant to be a snapshot view.
+    if (!props.preview) {
+        nodeEnter
+            .filter((d) => d.nodeType === 'host' || d.nodeType === 'site')
+            .call(dragBehavior as never);
+    }
 
     // Site root nodes (synthetic): rounded rect with site name.
     const siteEnter = nodeEnter.filter((d) => d.nodeType === 'site');
