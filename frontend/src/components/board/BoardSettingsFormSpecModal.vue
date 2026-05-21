@@ -20,7 +20,7 @@
                 </button>
             </div>
 
-            <div class="board-settings__scroll">
+            <div ref="scrollEl" class="board-settings__scroll">
                 <!-- General -->
                 <div v-if="activeTab === 'general'" class="space-y-[10px]">
                     <!-- ID + Board type as a compact chip row. Both are
@@ -31,6 +31,23 @@
                         <span class="board-settings__id-chip">{{ props.board.name }}</span>
                         <span class="board-settings__type-chip">{{ boardTypeLabel }}</span>
                     </div>
+
+                    <!-- Section jump-nav so the operator can skip past long
+                         FormSpec groups without scrolling the whole form. -->
+                    <nav
+                        v-if="sectionNav.length > 1"
+                        class="board-settings__section-nav"
+                        :aria-label="t('boardSettings.sectionNav')"
+                    >
+                        <CmkButton
+                            v-for="s in sectionNav"
+                            :key="s.key"
+                            variant="optional"
+                            @click="scrollToSection(s.key)"
+                        >
+                            {{ s.label }}
+                        </CmkButton>
+                    </nav>
 
                     <!-- Generic metadata (Identification, Display, Behavior,
                          Templates) renders first so the operator can name and
@@ -47,6 +64,7 @@
                     <!-- Background (static only) -->
                     <div
                         v-if="form.map_type === 'static'"
+                        data-section="background"
                         class="board-settings__type-section space-y-[8px]"
                     >
                         <p class="section-title">{{ t('boardSettings.background') }}</p>
@@ -71,6 +89,7 @@
                     <!-- Worldmap settings -->
                     <div
                         v-if="form.map_type === 'worldmap'"
+                        data-section="mapview"
                         class="board-settings__type-section space-y-[8px]"
                     >
                         <p class="section-title">{{ t('boardSettings.mapView') }}</p>
@@ -169,16 +188,19 @@
                     <!-- Flow settings: served as a FormSpec so titles/help
                          and the Integer-input look match the rest of the
                          Checkmk FormSpec UI. -->
-                    <FormEdit
-                        v-if="form.map_type === 'flow' && flowViewFormSchema"
-                        v-model:data="flowViewFormSpecData"
-                        :spec="flowViewFormSchema"
-                        :backend-validation="[]"
-                    />
+                    <div v-if="form.map_type === 'flow'" data-section="topology">
+                        <FormEdit
+                            v-if="flowViewFormSchema"
+                            v-model:data="flowViewFormSpecData"
+                            :spec="flowViewFormSchema"
+                            :backend-validation="[]"
+                        />
+                    </div>
 
                     <!-- Radar settings -->
                     <div
                         v-if="form.map_type === 'radar'"
+                        data-section="radarFilter"
                         class="board-settings__type-section space-y-[8px]"
                     >
                         <p class="section-title">{{ t('boardSettings.radarFilter') }}</p>
@@ -232,7 +254,21 @@
 
                 <!-- Permissions -->
                 <div v-else-if="activeTab === 'permissions'">
-                    <div v-if="permLoading" class="flex items-center justify-center py-8">
+                    <!-- Inside a Checkmk deployment, board view/edit is gated
+                         by the CMK role permissions (orbvis.see, orbvis.edit).
+                         The OrbVis role table is not the source of truth here,
+                         so we show a read-only summary and deep-link instead
+                         of letting the operator edit a copy that doesn't
+                         apply. -->
+                    <div v-if="isCmkDeployment" class="space-y-4">
+                        <p class="text-sm text-[var(--text)]">
+                            {{ t('board.permissionsCmkIntro') }}
+                        </p>
+                        <CmkButton variant="secondary" @click="openCmkRoles">
+                            {{ t('board.permissionsCmkOpen') }}
+                        </CmkButton>
+                    </div>
+                    <div v-else-if="permLoading" class="flex items-center justify-center py-8">
                         <CmkLoading />
                     </div>
                     <div v-else>
@@ -374,6 +410,7 @@ import type {
     RoleRead,
     WorldmapView,
 } from '@/types/api';
+import { openUrl } from '@/utils/boardNavigation';
 import { boardTypeOptions } from '@/utils/dropdownOptions';
 import { toFormValidation } from '@/utils/formValidation';
 
@@ -389,14 +426,19 @@ const { t } = useI18n();
 const auth = useAuthStore();
 const toast = useToast();
 
-const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => {
-    const isCmk = auth.ssoActive || auth.isCheckmkDeployment;
-    return [
-        { id: 'general', label: t('admin.settings') },
-        ...(!isCmk ? [{ id: 'permissions' as const, label: t('admin.boardPermissions') }] : []),
-    ];
-});
+const isCmkDeployment = computed(() => auth.ssoActive || auth.isCheckmkDeployment);
+const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => [
+    { id: 'general', label: t('admin.settings') },
+    { id: 'permissions', label: t('admin.boardPermissions') },
+]);
 const activeTab = ref<'general' | 'permissions'>('general');
+
+// CMK roles editor — same OMD site as the OrbVis path prefix; matches
+// the regex used in stores/auth.ts for the logout URL.
+const cmkRolesUrl = computed(() => {
+    const m = window.location.pathname.match(/^(\/[^/]+)\/orbvis/);
+    return m ? `${m[1]}/check_mk/wato.py?mode=roles` : '/check_mk/wato.py?mode=roles';
+});
 
 // ── General ────────────────────────────────────────────────────────────────
 
@@ -495,7 +537,48 @@ const boardTypeLabel = computed(
         form.value.map_type,
 );
 
-const boardTitle = computed(() => t('board.settingsTitle') + ' — ' + props.board.name);
+// Header shows the human-readable alias; the technical slug stays
+// visible as a small chip inside the modal body for operators who need
+// to script against it.
+const boardTitle = computed(
+    () => t('board.settingsTitle') + ' — ' + (form.value.alias || props.board.name),
+);
+
+// Section jump-nav. Keys must match FormDictionary's `data-group` (from
+// OrbDictGroup.key) for FormSpec sections, or `data-section` for the
+// custom Vue sections (background/mapview/radarFilter).
+const sectionNav = computed<{ key: string; label: string }[]>(() => {
+    const nav = [
+        { key: 'identification', label: t('boardSettings.identification') },
+        { key: 'display', label: t('boardSettings.displayDefaults') },
+        { key: 'behavior', label: t('boardSettings.behavior') },
+        { key: 'templates', label: t('boardSettings.templates') },
+    ];
+    if (form.value.map_type === 'static') {
+        nav.push({ key: 'background', label: t('boardSettings.background') });
+    } else if (form.value.map_type === 'worldmap') {
+        nav.push({ key: 'mapview', label: t('boardSettings.mapView') });
+    } else if (form.value.map_type === 'radar') {
+        nav.push({ key: 'radarFilter', label: t('boardSettings.radarFilter') });
+    } else if (form.value.map_type === 'flow') {
+        nav.push({ key: 'topology', label: t('boardSettings.hostsAndLayer') });
+    }
+    return nav;
+});
+
+const scrollEl = ref<HTMLElement | null>(null);
+function scrollToSection(key: string) {
+    const root = scrollEl.value;
+    if (!root) return;
+    const anchor =
+        root.querySelector<HTMLElement>(`[data-group="${key}"]`) ||
+        root.querySelector<HTMLElement>(`[data-section="${key}"]`);
+    if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function openCmkRoles() {
+    openUrl(cmkRolesUrl.value, '_blank');
+}
 
 const worldmapAutoSourceOptions = computed(() => ({
     type: 'fixed' as const,
@@ -852,6 +935,19 @@ onMounted(async () => {
     padding: 4px var(--dimension-3);
     border-radius: 999px;
     border: 1px dashed var(--border);
+}
+
+/* Section jump-nav. Sticky so the operator can navigate sections without
+   losing the anchor while scrolling a long form. */
+.board-settings__section-nav {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--dimension-2);
+    padding: var(--dimension-2) 0;
+    background: var(--bg-surface);
 }
 
 /* Detail field that appears below a toggle, slightly indented and spaced so
