@@ -37,6 +37,13 @@
                             />
                             <CmkLoading v-else-if="schemaLoading" />
 
+                            <div v-if="templatePreview" class="board-settings__template-preview">
+                                <span class="board-settings__template-preview-label">{{
+                                    t('board.templatePreviewLabel')
+                                }}</span>
+                                <code>{{ templatePreview }}</code>
+                            </div>
+
                             <!-- Background (static only) -->
                             <div
                                 v-if="form.map_type === 'static'"
@@ -456,9 +463,11 @@ import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
 import type {
+    BoardObject,
     BoardRead,
     ConnectionConfig,
     FlowView,
+    ObjectState,
     PermissionRead,
     RadarView,
     RoleRead,
@@ -466,6 +475,7 @@ import type {
 } from '@/types/api';
 import { openUrl } from '@/utils/boardNavigation';
 import { toFormValidation } from '@/utils/formValidation';
+import { interpolateTemplate } from '@/utils/template';
 
 import BackgroundImageUpload from './BackgroundImageUpload.vue';
 
@@ -589,6 +599,36 @@ if (fv?.max_services_per_host != null)
     flowViewFormSpecDataInitial.max_services_per_host = fv.max_services_per_host;
 const flowViewFormSpecData = ref<Record<string, unknown>>(flowViewFormSpecDataInitial);
 const flowViewFormSchema = ref<Schema | null>(null);
+
+const templatePreview = computed(() => {
+    const tpl = (formSpecData.value.hover_template as string | undefined)?.trim();
+    if (!tpl) return '';
+    const sampleObject: BoardObject = {
+        id: 'demo',
+        type: 'service',
+        host_name: 'db-prod-01',
+        service_description: 'HTTP',
+        x: 0,
+        y: 0,
+        z: 0,
+        url_target: '_self',
+    };
+    const sampleState: ObjectState = {
+        object_id: 'demo',
+        type: 'service',
+        state: 'CRITICAL',
+        output: 'TCP connection refused',
+        perf_data: '',
+        acknowledged: false,
+        in_downtime: false,
+        stale: false,
+    };
+    try {
+        return interpolateTemplate(tpl, sampleObject, sampleState);
+    } catch {
+        return '';
+    }
+});
 
 const boardTitle = computed(() => {
     const alias = form.value.alias || props.board.name;
@@ -1103,6 +1143,25 @@ onBeforeUnmount(() => {
 
 .board-settings__footer-spacer {
     flex: 1;
+}
+
+.board-settings__template-preview {
+    display: flex;
+    align-items: baseline;
+    gap: var(--dimension-3);
+    padding: var(--dimension-2) var(--dimension-3);
+    background: var(--bg-elevated, var(--bg-hover));
+    border-radius: var(--dimension-2);
+    font-size: 0.75rem;
+}
+
+.board-settings__template-preview-label {
+    color: var(--text-muted);
+}
+
+.board-settings__template-preview code {
+    color: var(--text);
+    font-family: var(--font-family-mono, monospace);
 }
 
 /* Detail field that appears below a toggle, slightly indented and spaced so

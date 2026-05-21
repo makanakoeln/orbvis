@@ -160,6 +160,7 @@ export default {
         saveDisabledInvalid: 'Fix the highlighted fields to save',
         saveShortcutTooltip: 'Save ({shortcut})',
         openBoard: 'Open board',
+        templatePreviewLabel: 'Hover preview:',
         permissionsCmkIntro:
             'Board view and edit are gated by Checkmk role permissions (orbvis.see, orbvis.edit). Manage them in Checkmk WATO.',
         permissionsCmkOpen: 'Open role editor in Checkmk',
