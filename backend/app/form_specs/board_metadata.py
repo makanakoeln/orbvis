@@ -58,14 +58,15 @@ _TEMPLATES = OrbDictGroup(
 )
 
 
-def _connection_choice_title(cid: str, label: str, backend: str) -> str:
-    """Format a SingleChoice title as ``label (id) · backend``."""
+def _connection_choice_title(cid: str, label: str, backend: str, alive: bool) -> str:
+    """Format a SingleChoice title as ``label (id) · backend  status``."""
     head = f"{label} ({cid})" if label and label != cid else cid
-    return f"{head} · {backend}" if backend else head
+    body = f"{head} · {backend}" if backend else head
+    return f"{body}  {'●' if alive else '⚠ offline'}"
 
 
 def _connection_form(
-    choices: Sequence[tuple[str, str, str]] | None,
+    choices: Sequence[tuple[str, str, str, bool]] | None,
 ) -> SingleChoice | String:
     # Empty list keeps the form editable on fresh installs that have no
     # connections registered yet — falls back to free-text so the operator
@@ -89,15 +90,15 @@ def _connection_form(
         elements=[
             SingleChoiceElement(
                 name=cid,
-                title=Title(_connection_choice_title(cid, label, backend)),
+                title=Title(_connection_choice_title(cid, label, backend, alive)),
             )
-            for cid, label, backend in choices
+            for cid, label, backend, alive in choices
         ],
     )
 
 
 def board_metadata_spec(
-    connection_choices: Sequence[tuple[str, str, str]] | None = None,
+    connection_choices: Sequence[tuple[str, str, str, bool]] | None = None,
 ) -> Dictionary:
     return Dictionary(
         title=Title("Board settings"),

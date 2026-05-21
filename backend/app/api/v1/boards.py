@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import tempfile
 from pathlib import Path
@@ -125,8 +126,22 @@ if FORM_SPECS_AVAILABLE:
     async def get_board_metadata_schema(
         _: User = Depends(get_current_user),
     ) -> AnyWireFormSpec:
+        connections = connection_service.load_all()
+
+        async def _alive(cid: str) -> bool:
+            backend = state_service.get_connection(cid)
+            if backend is None:
+                return False
+            try:
+                return await backend.is_available()
+            except Exception:
+                return False
+
+        ids = [c.id for c in connections]
+        alives = await asyncio.gather(*(_alive(cid) for cid in ids))
+        health = dict(zip(ids, alives, strict=True))
         connection_choices = [
-            (c.id, c.label or c.id, c.type) for c in connection_service.load_all()
+            (c.id, c.label or c.id, c.type, health.get(c.id, False)) for c in connections
         ]
         return serialize_form_spec(board_metadata_spec(connection_choices=connection_choices))
 
