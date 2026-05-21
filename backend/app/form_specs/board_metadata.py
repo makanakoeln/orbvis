@@ -16,10 +16,13 @@ from app.form_specs import OrbDictGroup
 from cmk.rulesets.v1 import Help, Label, Title
 from cmk.rulesets.v1.form_specs import (
     BooleanChoice,
+    CascadingSingleChoice,
+    CascadingSingleChoiceElement,
     DefaultValue,
     DictElement,
     Dictionary,
     FieldSize,
+    FixedValue,
     InputHint,
     Integer,
     SingleChoice,
@@ -126,14 +129,34 @@ def board_metadata_spec(
             "rotation_interval": DictElement(
                 required=True,
                 group=_BEHAVIOR,
-                parameter_form=Integer(
-                    title=Title("Auto-rotate interval"),
+                # Modeled as CascadingSingleChoice so "off" is an explicit
+                # branch instead of the magic value 0; the API endpoint
+                # (and the host modal) flattens it back to the on-wire int.
+                parameter_form=CascadingSingleChoice(
+                    title=Title("Auto-rotate"),
                     help_text=Help(
-                        "Seconds until the next board is shown in the rotation. "
-                        "0 disables auto-rotate for this board."
+                        "Show the next board in the rotation after the chosen "
+                        "interval. Pick Off to keep this board open until the "
+                        "operator switches manually."
                     ),
-                    unit_symbol="s",
-                    prefill=DefaultValue(0),
+                    prefill=DefaultValue("off"),
+                    elements=[
+                        CascadingSingleChoiceElement(
+                            name="off",
+                            title=Title("Off"),
+                            parameter_form=FixedValue(value=None),
+                        ),
+                        CascadingSingleChoiceElement(
+                            name="every",
+                            title=Title("Every N seconds"),
+                            parameter_form=Integer(
+                                title=Title("Interval"),
+                                unit_symbol="s",
+                                prefill=DefaultValue(30),
+                                custom_validate=(NumberInRange(min_value=1),),
+                            ),
+                        ),
+                    ],
                 ),
             ),
             "click_action": DictElement(
@@ -213,8 +236,24 @@ METADATA_FIELDS = (
 )
 
 
+def rotation_to_form(interval: object) -> list[object]:
+    """Flat ``rotation_interval`` int → CascadingSingleChoice wire shape."""
+    if isinstance(interval, int) and interval > 0:
+        return ["every", interval]
+    return ["off", None]
+
+
+def rotation_from_form(cascading: object) -> int:
+    """CascadingSingleChoice wire shape → flat ``rotation_interval`` int."""
+    if isinstance(cascading, list | tuple) and len(cascading) == 2:
+        choice, value = cascading
+        if choice == "every" and isinstance(value, int):
+            return int(value)
+    return 0
+
+
 _TOPOLOGY = OrbDictGroup(
-    title=Title("Topology"),
+    title=Title("Hosts & Layer"),
     help_text=Help(
         "Which slice of the host graph this Flow board renders, and how "
         "many service rows are drawn per host."
@@ -231,7 +270,7 @@ def flow_view_spec() -> Dictionary:
     Every field is optional — unchecked means "use the global default".
     """
     return Dictionary(
-        title=Title("Topology"),
+        title=Title("Hosts & Layer"),
         elements={
             "root": DictElement(
                 group=_TOPOLOGY,
@@ -250,9 +289,11 @@ def flow_view_spec() -> Dictionary:
                 parameter_form=Integer(
                     title=Title("Child layers"),
                     help_text=Help(
-                        "Hops downward from the root. -1 means unlimited. "
-                        "Leave unchecked to inherit unlimited."
+                        "Hops downward from the root. -1 means unlimited "
+                        "(default), 0–20 otherwise. Leave unchecked to "
+                        "inherit the global default."
                     ),
+                    prefill=DefaultValue(-1),
                     custom_validate=(NumberInRange(min_value=-1, max_value=20),),
                 ),
             ),
@@ -261,9 +302,11 @@ def flow_view_spec() -> Dictionary:
                 parameter_form=Integer(
                     title=Title("Parent layers"),
                     help_text=Help(
-                        "Hops upward from the root. -1 means unlimited. "
-                        "Leave unchecked to inherit none."
+                        "Hops upward from the root. -1 means unlimited, "
+                        "0 means none (default), max 20. Leave unchecked "
+                        "to inherit the global default."
                     ),
+                    prefill=DefaultValue(0),
                     custom_validate=(NumberInRange(min_value=-1, max_value=20),),
                 ),
             ),
@@ -272,9 +315,11 @@ def flow_view_spec() -> Dictionary:
                 parameter_form=Integer(
                     title=Title("Hosts with service detail"),
                     help_text=Help(
-                        "How many top-affected hosts get service detail. "
-                        "Leave unchecked to inherit the global default."
+                        "How many top-affected hosts get service detail "
+                        "(0–1000). Leave unchecked to inherit the global "
+                        "default (25)."
                     ),
+                    prefill=DefaultValue(25),
                     custom_validate=(NumberInRange(min_value=0, max_value=1000),),
                 ),
             ),
@@ -283,9 +328,10 @@ def flow_view_spec() -> Dictionary:
                 parameter_form=Integer(
                     title=Title("Services per host"),
                     help_text=Help(
-                        "Maximum services rendered per host. Leave "
-                        "unchecked to inherit the global default."
+                        "Maximum services rendered per host (0–500). "
+                        "Leave unchecked to inherit the global default (50)."
                     ),
+                    prefill=DefaultValue(50),
                     custom_validate=(NumberInRange(min_value=0, max_value=500),),
                 ),
             ),

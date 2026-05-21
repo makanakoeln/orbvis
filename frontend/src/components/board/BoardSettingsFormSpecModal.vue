@@ -32,10 +32,17 @@
                         <span class="board-settings__type-chip">{{ boardTypeLabel }}</span>
                     </div>
 
-                    <!-- Type-specific section first so the operator sees the
-                         board's most distinctive controls (background image,
-                         flow topology, radar filter, map view) right after the
-                         ID header and before the generic FormSpec settings. -->
+                    <!-- Generic metadata (Identification, Display, Behavior,
+                         Templates) renders first so the operator can name and
+                         wire up the board before tuning type-specific
+                         topology / map view / filter blocks below. -->
+                    <FormEdit
+                        v-if="formSchema"
+                        v-model:data="formSpecData"
+                        :spec="formSchema"
+                        :backend-validation="formBackendValidation"
+                    />
+                    <CmkLoading v-else-if="schemaLoading" />
 
                     <!-- Background (static only) -->
                     <div
@@ -215,14 +222,6 @@
                         </div>
                     </div>
 
-                    <FormEdit
-                        v-if="formSchema"
-                        v-model:data="formSpecData"
-                        :spec="formSchema"
-                        :backend-validation="formBackendValidation"
-                    />
-                    <CmkLoading v-else-if="schemaLoading" />
-
                     <ul
                         v-if="errorMessages.length"
                         class="text-xs text-[var(--color-light-red-40)] space-y-0.5"
@@ -331,6 +330,7 @@
                 <CmkButton
                     variant="primary"
                     :disabled="saving || !isDirty || (saveAttempted && !customSectionValid)"
+                    :title="saveButtonTitle || undefined"
                     @click="save"
                 >
                     {{ saving ? t('common.saving') : t('common.save') }}
@@ -363,6 +363,7 @@ import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
 import { orbFormComponents } from '@/composables/orbFormComponents';
 import { useRadarGroups } from '@/composables/useRadarGroups';
+import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import type {
     BoardRead,
@@ -386,6 +387,7 @@ const emit = defineEmits<{ close: []; updated: [] }>();
 
 const { t } = useI18n();
 const auth = useAuthStore();
+const toast = useToast();
 
 const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => {
     const isCmk = auth.ssoActive || auth.isCheckmkDeployment;
@@ -453,17 +455,17 @@ initializeComponentRegistry(orbFormComponents);
 const formSchema = ref<Schema | null>(null);
 const schemaLoading = ref(true);
 // Optional fields are omitted entirely when the board has no value, so the
-// FormSpec dispatcher renders them as un-checked (= inherit global defaults).
-// Setting them to '' / null would leave the checkbox enabled with an empty
-// value, which reads as "override with nothing" — the opposite of what an
-// operator who hasn't touched the field expects.
-// click_action is stored on the wire as 'link' | 'none' but the FormSpec
-// renders it as a BooleanChoice ("Interactive"). Translate at the form
-// boundary so the wire schema stays stable.
+// FormSpec dispatcher renders them as un-checked (= inherit global defaults);
+// '' / null would leave the checkbox enabled with an empty value, which reads
+// as "override with nothing".
+// click_action is a BooleanChoice in the FormSpec but 'link'|'none' on the
+// wire; rotation_interval is a CascadingSingleChoice but a flat int on the
+// wire. Both are flattened on save() below.
+const rotationInterval = props.board.rotation_interval ?? 0;
 const formSpecDataInitial: Record<string, unknown> = {
     alias: props.board.alias,
     connection_id: props.board.connection_id,
-    rotation_interval: props.board.rotation_interval ?? 0,
+    rotation_interval: rotationInterval > 0 ? ['every', rotationInterval] : ['off', null],
     click_action: props.board.click_action !== 'none',
     show_in_lists: props.board.show_in_lists !== false,
 };
@@ -604,13 +606,19 @@ async function save() {
             view = { type: form.value.map_type };
         }
         const fs = formSpecData.value as Record<string, unknown>;
+        const rotRaw = fs.rotation_interval;
+        let rotationInt = 0;
+        if (Array.isArray(rotRaw) && rotRaw.length === 2) {
+            const [choice, value] = rotRaw;
+            if (choice === 'every' && typeof value === 'number') rotationInt = value;
+        }
         await boardsApi.update(
             props.board.name,
             {
                 alias: (fs.alias as string) ?? props.board.alias,
                 connection_id: (fs.connection_id as string) ?? props.board.connection_id,
                 icon_size: (fs.icon_size as number | null | undefined) ?? null,
-                rotation_interval: (fs.rotation_interval as number | null | undefined) ?? 0,
+                rotation_interval: rotationInt,
                 click_action: (fs.click_action as boolean | undefined) === false ? 'none' : 'link',
                 show_in_lists: (fs.show_in_lists as boolean | undefined) ?? true,
                 background_image: form.value.background_image || null,
@@ -622,6 +630,7 @@ async function save() {
             auth.accessToken!,
             props.board.version ?? null,
         );
+        toast.success(t('board.savedToast'));
         emit('updated');
         emit('close');
     } catch (e: unknown) {
@@ -676,6 +685,13 @@ const isDirty = computed(
         permDraft.size > 0 ||
         bgReplaced.value,
 );
+
+const saveButtonTitle = computed(() => {
+    if (saving.value) return '';
+    if (!isDirty.value) return t('board.saveDisabledClean');
+    if (saveAttempted.value && !customSectionValid.value) return t('board.saveDisabledInvalid');
+    return '';
+});
 
 function requestClose() {
     if (isDirty.value && !window.confirm(t('board.discardChangesConfirm'))) return;

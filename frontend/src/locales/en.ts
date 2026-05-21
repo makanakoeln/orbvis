@@ -153,6 +153,9 @@ export default {
         staleConflict:
             'Board changed elsewhere — close and reopen to apply your edit on top of the latest version.',
         discardChangesConfirm: 'Discard your unsaved changes?',
+        savedToast: 'Board settings saved',
+        saveDisabledClean: 'No changes to save',
+        saveDisabledInvalid: 'Fix the highlighted fields to save',
         deleteBackground: 'Remove background image',
         notificationsOn: 'Browser notifications enabled — click to disable',
         notificationsOff: 'Enable browser notifications for state changes',

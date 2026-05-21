@@ -49,6 +49,8 @@ if FORM_SPECS_AVAILABLE:
         METADATA_FIELDS,
         board_metadata_spec,
         flow_view_spec,
+        rotation_from_form,
+        rotation_to_form,
     )
 
 router = APIRouter()
@@ -142,7 +144,9 @@ if FORM_SPECS_AVAILABLE:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
             )
-        return {field: getattr(cfg, field, None) for field in METADATA_FIELDS}
+        payload: dict[str, object] = {field: getattr(cfg, field, None) for field in METADATA_FIELDS}
+        payload["rotation_interval"] = rotation_to_form(payload.get("rotation_interval"))
+        return payload
 
     @router.put("/{name}/metadata", response_model=BoardConfig)
     async def update_board_metadata(
@@ -169,6 +173,10 @@ if FORM_SPECS_AVAILABLE:
         # BoardUpdate validates.
         if isinstance(update_payload.get("click_action"), bool):
             update_payload["click_action"] = "link" if update_payload["click_action"] else "none"
+        if "rotation_interval" in update_payload:
+            update_payload["rotation_interval"] = rotation_from_form(
+                update_payload["rotation_interval"]
+            )
         update = BoardUpdate.model_validate(update_payload)
         expected_version = _parse_if_match(request.headers.get("If-Match"))
         try:

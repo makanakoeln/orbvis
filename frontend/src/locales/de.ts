@@ -163,6 +163,9 @@ export default {
         staleConflict:
             'Board wurde zwischenzeitlich geändert — bitte schließen und neu öffnen, damit deine Änderung auf der aktuellen Version basiert.',
         discardChangesConfirm: 'Ungespeicherte Änderungen verwerfen?',
+        savedToast: 'Board-Einstellungen gespeichert',
+        saveDisabledClean: 'Keine Änderungen zu speichern',
+        saveDisabledInvalid: 'Markierte Felder korrigieren, dann speichern',
         deleteBackground: 'Hintergrundbild entfernen',
         saveChanges: 'Änderungen speichern',
         hoverTemplate: 'Hover-Template',
