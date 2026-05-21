@@ -162,6 +162,7 @@ export default {
         resetChanges: 'Reset',
         resetDisabledClean: 'Nothing to reset',
         versionLabel: 'v{version}',
+        exportBoardAction: 'Export as JSON',
         dangerZone: 'Danger zone',
         deleteBoardHint:
             'Deleting removes the board configuration permanently. Existing object data on other boards is unaffected.',

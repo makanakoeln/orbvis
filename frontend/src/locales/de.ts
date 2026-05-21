@@ -172,6 +172,7 @@ export default {
         resetChanges: 'Zurücksetzen',
         resetDisabledClean: 'Nichts zurückzusetzen',
         versionLabel: 'v{version}',
+        exportBoardAction: 'Als JSON exportieren',
         dangerZone: 'Gefahrenzone',
         deleteBoardHint:
             'Löschen entfernt die Board-Konfiguration unwiderruflich. Objektdaten auf anderen Boards bleiben unberührt.',

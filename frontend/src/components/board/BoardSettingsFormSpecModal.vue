@@ -27,9 +27,34 @@
                          read-only — switching either would invalidate
                          per-type settings and the filesystem key; cloning is
                          the supported rename/conversion path. -->
-                    <div class="board-settings__id-row" :title="t('board.boardTypeImmutable')">
+                    <div class="board-settings__id-row">
                         <span class="board-settings__id-chip">{{ props.board.name }}</span>
-                        <span class="board-settings__type-chip">{{ boardTypeLabel }}</span>
+                        <details
+                            ref="typeMenuEl"
+                            class="board-settings__type-chip-menu"
+                            :title="t('board.boardTypeImmutable')"
+                        >
+                            <summary class="board-settings__type-chip">
+                                {{ boardTypeLabel }}
+                                <span aria-hidden="true">▾</span>
+                            </summary>
+                            <div class="board-settings__type-chip-actions">
+                                <button
+                                    type="button"
+                                    class="board-settings__type-chip-action"
+                                    @click="quickClone"
+                                >
+                                    {{ t('admin.cloneBoardAction') }}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="board-settings__type-chip-action"
+                                    @click="quickExport"
+                                >
+                                    {{ t('board.exportBoardAction') }}
+                                </button>
+                            </div>
+                        </details>
                     </div>
 
                     <!-- Section jump-nav so the operator can skip past long
@@ -449,7 +474,7 @@ const props = defineProps<{
     board: BoardRead;
     worldmapView?: { lat: number; lng: number; zoom: number } | null;
 }>();
-const emit = defineEmits<{ close: []; updated: [] }>();
+const emit = defineEmits<{ close: []; updated: []; clone: [name: string] }>();
 
 const { t } = useI18n();
 const auth = useAuthStore();
@@ -607,6 +632,27 @@ function scrollToSection(key: string) {
 
 function openCmkRoles() {
     openUrl(cmkRolesUrl.value, '_blank');
+}
+
+const typeMenuEl = ref<HTMLDetailsElement | null>(null);
+
+function closeTypeMenu() {
+    if (typeMenuEl.value) typeMenuEl.value.open = false;
+}
+
+function quickClone() {
+    closeTypeMenu();
+    emit('clone', props.board.name);
+    emit('close');
+}
+
+async function quickExport() {
+    closeTypeMenu();
+    try {
+        await boardsApi.exportBoard(props.board.name, auth.accessToken!);
+    } catch (e: unknown) {
+        saveError.value = e instanceof Error ? e.message : 'An error occurred';
+    }
 }
 
 const worldmapAutoSourceOptions = computed(() => ({
@@ -1012,6 +1058,50 @@ onBeforeUnmount(() => {
     padding: 4px var(--dimension-3);
     border-radius: 999px;
     border: 1px dashed var(--border);
+    cursor: pointer;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--dimension-2);
+}
+
+.board-settings__type-chip::-webkit-details-marker {
+    display: none;
+}
+
+.board-settings__type-chip-menu {
+    position: relative;
+}
+
+.board-settings__type-chip-actions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: var(--dimension-2);
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    min-width: 180px;
+    padding: var(--dimension-2);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--dimension-3);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 30%);
+}
+
+.board-settings__type-chip-action {
+    text-align: left;
+    padding: var(--dimension-2) var(--dimension-3);
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    font-size: 0.875rem;
+    cursor: pointer;
+    border-radius: var(--dimension-2);
+}
+
+.board-settings__type-chip-action:hover {
+    background: var(--bg-hover);
 }
 
 /* Section jump-nav. Sticky so the operator can navigate sections without
