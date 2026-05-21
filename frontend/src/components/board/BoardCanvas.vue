@@ -108,7 +108,7 @@
 
         <BoardZoomResetPill
             :zoom="userZoom"
-            :visible="userZoom !== 1 && !editMode"
+            :visible="userZoom !== 1 && !editMode && !preview"
             @reset="resetZoom"
         />
 
