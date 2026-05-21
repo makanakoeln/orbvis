@@ -134,6 +134,7 @@ def board_metadata_spec(
                         "override this."
                     ),
                     unit_symbol="px",
+                    prefill=DefaultValue(30),
                 ),
             ),
             "rotation_interval": DictElement(
@@ -290,7 +291,7 @@ def flow_view_spec() -> Dictionary:
                         "Host the topology is anchored on. Leave unchecked "
                         "to render the full topology."
                     ),
-                    prefill=InputHint("e.g. core-router-01"),
+                    prefill=InputHint("Choose root host…"),
                     field_size=FieldSize.LARGE,
                 ),
             ),
@@ -303,6 +304,7 @@ def flow_view_spec() -> Dictionary:
                         "(default), 0–20 otherwise. Leave unchecked to "
                         "inherit the global default."
                     ),
+                    unit_symbol="layers",
                     prefill=DefaultValue(-1),
                     custom_validate=(NumberInRange(min_value=-1, max_value=20),),
                 ),
@@ -316,6 +318,7 @@ def flow_view_spec() -> Dictionary:
                         "0 means none (default), max 20. Leave unchecked "
                         "to inherit the global default."
                     ),
+                    unit_symbol="layers",
                     prefill=DefaultValue(0),
                     custom_validate=(NumberInRange(min_value=-1, max_value=20),),
                 ),
@@ -329,6 +332,7 @@ def flow_view_spec() -> Dictionary:
                         "(0–1000). Leave unchecked to inherit the global "
                         "default (25)."
                     ),
+                    unit_symbol="hosts",
                     prefill=DefaultValue(25),
                     custom_validate=(NumberInRange(min_value=0, max_value=1000),),
                 ),
@@ -341,6 +345,7 @@ def flow_view_spec() -> Dictionary:
                         "Maximum services rendered per host (0–500). "
                         "Leave unchecked to inherit the global default (50)."
                     ),
+                    unit_symbol="services",
                     prefill=DefaultValue(50),
                     custom_validate=(NumberInRange(min_value=0, max_value=500),),
                 ),
