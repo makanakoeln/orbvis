@@ -1045,10 +1045,9 @@ onBeforeUnmount(() => {
 }
 
 .board-settings__preview-label {
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    opacity: 0.7;
 }
 
 .board-settings__preview-stage {
