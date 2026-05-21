@@ -16,7 +16,7 @@
 
         <!-- Zoom controls -->
         <div
-            v-if="!loading && !error"
+            v-if="!loading && !error && !preview"
             class="absolute bottom-4 left-4 z-10 flex flex-col overflow-hidden rounded-xl ring-1 ring-[var(--border)] shadow-xl shadow-black/40"
         >
             <button
@@ -74,7 +74,7 @@
             </button>
         </div>
 
-        <div v-if="!loading && !error && !detailObject" class="flow-search">
+        <div v-if="!loading && !error && !detailObject && !preview" class="flow-search">
             <svg
                 style="width: 12px; height: 12px"
                 fill="none"
@@ -315,6 +315,7 @@ const props = defineProps<{
     clickAction?: ClickAction;
     checkmkUrl?: string | null;
     flowView?: FlowView | null;
+    preview?: boolean;
 }>();
 const emit = defineEmits<{
     (e: 'update:serviceLayout', value: ServiceLayout): void;

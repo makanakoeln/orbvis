@@ -284,9 +284,10 @@ input.cmk-input:disabled {
     accent-color: var(--color-corporate-green-50);
 }
 
+/* Match CMK GUI: the indicator carries the checked signal, not the
+   background. Upstream relies on Radix to toggle the indicator only. */
 .cmk-checkbox__button[data-state='checked'] {
-    background: var(--color-corporate-green-50);
-    border-color: var(--color-corporate-green-50);
+    border-color: var(--default-form-element-border-color);
 }
 
 /* The X is drawn with ``fill="currentcolor"``, so this is what determines

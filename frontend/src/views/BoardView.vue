@@ -2,7 +2,7 @@
     <div class="flex flex-col flex-1 overflow-hidden bg-[var(--bg)]">
         <!-- Slim map-specific topbar -->
         <div
-            v-if="!isKiosk"
+            v-if="!isKiosk && !isPreview"
             class="bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center justify-between shrink-0 z-30"
             style="padding: 0 var(--dimension-6); height: 36px"
         >
@@ -385,10 +385,11 @@
                     ref="flowBoardRef"
                     :connection-id="boardConfig.connection_id"
                     :service-layout="serviceLayout"
-                    :readonly="isKiosk || boardConfig?.readonly"
+                    :readonly="isKiosk || isPreview || boardConfig?.readonly"
                     :click-action="boardConfig.click_action"
                     :checkmk-url="checkmkUrl"
                     :flow-view="boardConfig.view.type === 'flow' ? boardConfig.view : null"
+                    :preview="isPreview"
                     @update:service-layout="onServiceLayoutChanged"
                     @update:problems="flowProblems = $event"
                     @drawer-object="flowDrawerObject = $event"
@@ -1104,6 +1105,7 @@ const settingsStore = useSettingsStore();
 
 const boardName = computed(() => route.params.name as string);
 const isKiosk = computed(() => !!route.meta.kiosk);
+const isPreview = computed(() => route.query.preview === '1');
 
 function openKioskInNewTab() {
     const url = router.resolve({ name: 'board-kiosk', params: { name: boardName.value } }).href;

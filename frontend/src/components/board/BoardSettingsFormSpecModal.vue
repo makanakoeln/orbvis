@@ -21,7 +21,7 @@
                     </button>
                 </div>
 
-                <div ref="scrollEl" class="board-settings__scroll">
+                <div class="board-settings__scroll">
                     <!-- General -->
                     <div v-if="activeTab === 'general'" class="space-y-[10px]">
                         <!-- ID + Board type as a compact chip row. Both are
@@ -58,23 +58,6 @@
                             </details>
                         </div>
 
-                        <!-- Section jump-nav so the operator can skip past long
-                         FormSpec groups without scrolling the whole form. -->
-                        <nav
-                            v-if="sectionNav.length > 1"
-                            class="board-settings__section-nav"
-                            :aria-label="t('boardSettings.sectionNav')"
-                        >
-                            <CmkButton
-                                v-for="s in sectionNav"
-                                :key="s.key"
-                                variant="optional"
-                                @click="scrollToSection(s.key)"
-                            >
-                                {{ s.label }}
-                            </CmkButton>
-                        </nav>
-
                         <!-- Generic metadata (Identification, Display, Behavior,
                          Templates) renders first so the operator can name and
                          wire up the board before tuning type-specific
@@ -90,7 +73,6 @@
                         <!-- Background (static only) -->
                         <div
                             v-if="form.map_type === 'static'"
-                            data-section="background"
                             class="board-settings__type-section space-y-[8px]"
                         >
                             <p class="section-title">{{ t('boardSettings.background') }}</p>
@@ -115,7 +97,6 @@
                         <!-- Worldmap settings -->
                         <div
                             v-if="form.map_type === 'worldmap'"
-                            data-section="mapview"
                             class="board-settings__type-section space-y-[8px]"
                         >
                             <p class="section-title">{{ t('boardSettings.mapView') }}</p>
@@ -215,19 +196,16 @@
                         <!-- Flow settings: served as a FormSpec so titles/help
                          and the Integer-input look match the rest of the
                          Checkmk FormSpec UI. -->
-                        <div v-if="form.map_type === 'flow'" data-section="topology">
-                            <FormEdit
-                                v-if="flowViewFormSchema"
-                                v-model:data="flowViewFormSpecData"
-                                :spec="flowViewFormSchema"
-                                :backend-validation="[]"
-                            />
-                        </div>
+                        <FormEdit
+                            v-if="form.map_type === 'flow' && flowViewFormSchema"
+                            v-model:data="flowViewFormSpecData"
+                            :spec="flowViewFormSchema"
+                            :backend-validation="[]"
+                        />
 
                         <!-- Radar settings -->
                         <div
                             v-if="form.map_type === 'radar'"
-                            data-section="radarFilter"
                             class="board-settings__type-section space-y-[8px]"
                         >
                             <p class="section-title">{{ t('boardSettings.radarFilter') }}</p>
@@ -279,33 +257,14 @@
                         >
                             <li v-for="(msg, i) in errorMessages" :key="i">{{ msg }}</li>
                         </ul>
-
-                        <!-- Danger zone — keep deletion accessible without
-                         leaving the settings dialog. Collapsed by default so
-                         it doesn't compete with the normal Save/Cancel flow. -->
-                        <details class="board-settings__danger-zone">
-                            <summary class="board-settings__danger-zone-summary">
-                                {{ t('board.dangerZone') }}
-                            </summary>
-                            <div class="board-settings__danger-zone-body">
-                                <p class="text-sm text-[var(--text-muted)]">
-                                    {{ t('board.deleteBoardHint') }}
-                                </p>
-                                <CmkButton variant="danger" @click="deleteBoard">
-                                    {{ t('board.deleteBoardAction') }}
-                                </CmkButton>
-                            </div>
-                        </details>
                     </div>
 
                     <!-- Permissions -->
                     <div v-else-if="activeTab === 'permissions'">
-                        <!-- Inside a Checkmk deployment, board view/edit is gated
-                         by the CMK role permissions (orbvis.see, orbvis.edit).
-                         The OrbVis role table is not the source of truth here,
-                         so we show a read-only summary and deep-link instead
-                         of letting the operator edit a copy that doesn't
-                         apply. -->
+                        <!-- Inside a Checkmk deployment, CMK role permissions
+                         (orbvis.see/edit) are the source of truth, not the
+                         OrbVis role table. Show a read-only summary plus a
+                         deep-link to WATO instead. -->
                         <div v-if="isCmkDeployment" class="space-y-4">
                             <p class="text-sm text-[var(--text)]">
                                 {{ t('board.permissionsCmkIntro') }}
@@ -410,6 +369,9 @@
                 </div>
 
                 <div class="board-settings__footer">
+                    <CmkButton variant="danger" @click="deleteBoard">
+                        {{ t('board.deleteBoardAction') }}
+                    </CmkButton>
                     <CmkButton
                         variant="optional"
                         :disabled="!isDirty || saving"
@@ -419,7 +381,7 @@
                         {{ t('board.resetChanges') }}
                     </CmkButton>
                     <span class="board-settings__footer-meta">
-                        {{ t('board.versionLabel', { version: props.board.version ?? 0 }) }}
+                        {{ t('board.versionLabel', { version: localVersion ?? 0 }) }}
                         <span class="board-settings__footer-shortcut">{{ saveShortcutHint }}</span>
                     </span>
                     <CmkButton variant="secondary" @click="requestClose">
@@ -436,11 +398,7 @@
                 </div>
             </div>
 
-            <!-- Live preview pane: iframes the board itself so the operator
-                 can see the effect of their save without leaving the modal.
-                 Hidden on narrow viewports where there's no room for two
-                 columns. The previewKey bump on `updated` forces a reload
-                 so the iframe re-fetches after every save. -->
+            <!-- Hidden on narrow viewports where two columns don't fit. -->
             <aside class="board-settings__preview">
                 <div class="board-settings__preview-toolbar">
                     <span class="board-settings__preview-label">{{ t('board.previewLabel') }}</span>
@@ -515,9 +473,8 @@ const toast = useToast();
 
 const isCmkDeployment = computed(() => auth.ssoActive || auth.isCheckmkDeployment);
 
-// Expose the current connection id so custom FormSpec widgets (in
-// particular FormOrbHostAutocomplete) can pull suggestions from the
-// matching backend without re-discovering it from the props.
+// Picked up by FormOrbHostAutocomplete via inject; tracks connection
+// changes so suggestions follow what the operator just picked.
 const currentConnectionId = computed(
     () => (formSpecData.value.connection_id as string | undefined) ?? props.board.connection_id,
 );
@@ -528,8 +485,7 @@ const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => 
 ]);
 const activeTab = ref<'general' | 'permissions'>('general');
 
-// CMK roles editor — same OMD site as the OrbVis path prefix; matches
-// the regex used in stores/auth.ts for the logout URL.
+// Same OMD site as the OrbVis path prefix; mirrors stores/auth.ts.
 const cmkRolesUrl = computed(() => {
     const m = window.location.pathname.match(/^(\/[^/]+)\/orbvis/);
     return m ? `${m[1]}/check_mk/wato.py?mode=roles` : '/check_mk/wato.py?mode=roles';
@@ -632,44 +588,9 @@ const boardTypeLabel = computed(
         form.value.map_type,
 );
 
-// Header shows the human-readable alias; the technical slug stays
-// visible as a small chip inside the modal body for operators who need
-// to script against it.
 const boardTitle = computed(
     () => t('board.settingsTitle') + ' — ' + (form.value.alias || props.board.name),
 );
-
-// Section jump-nav. Keys must match FormDictionary's `data-group` (from
-// OrbDictGroup.key) for FormSpec sections, or `data-section` for the
-// custom Vue sections (background/mapview/radarFilter).
-const sectionNav = computed<{ key: string; label: string }[]>(() => {
-    const nav = [
-        { key: 'identification', label: t('boardSettings.identification') },
-        { key: 'display', label: t('boardSettings.displayDefaults') },
-        { key: 'behavior', label: t('boardSettings.behavior') },
-        { key: 'templates', label: t('boardSettings.templates') },
-    ];
-    if (form.value.map_type === 'static') {
-        nav.push({ key: 'background', label: t('boardSettings.background') });
-    } else if (form.value.map_type === 'worldmap') {
-        nav.push({ key: 'mapview', label: t('boardSettings.mapView') });
-    } else if (form.value.map_type === 'radar') {
-        nav.push({ key: 'radarFilter', label: t('boardSettings.radarFilter') });
-    } else if (form.value.map_type === 'flow') {
-        nav.push({ key: 'topology', label: t('boardSettings.hostsAndLayer') });
-    }
-    return nav;
-});
-
-const scrollEl = ref<HTMLElement | null>(null);
-function scrollToSection(key: string) {
-    const root = scrollEl.value;
-    if (!root) return;
-    const anchor =
-        root.querySelector<HTMLElement>(`[data-group="${key}"]`) ||
-        root.querySelector<HTMLElement>(`[data-section="${key}"]`);
-    if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
 
 function openCmkRoles() {
     openUrl(cmkRolesUrl.value, '_blank');
@@ -811,7 +732,7 @@ async function save() {
             const [choice, value] = rotRaw;
             if (choice === 'every' && typeof value === 'number') rotationInt = value;
         }
-        await boardsApi.update(
+        const updated = await boardsApi.update(
             props.board.name,
             {
                 alias: (fs.alias as string) ?? props.board.alias,
@@ -827,12 +748,20 @@ async function save() {
                 context_template: ((fs.context_template as string) ?? '') || null,
             },
             auth.accessToken!,
-            props.board.version ?? null,
+            localVersion.value,
         );
+        // Stay open so the preview can refresh; bump version tracker
+        // so the next save's If-Match doesn't 409.
+        localVersion.value = updated.version ?? localVersion.value;
+        initialSnapshot.value = JSON.stringify({
+            form: form.value,
+            formSpec: formSpecData.value,
+            flowView: flowViewFormSpecData.value,
+        });
+        saveAttempted.value = false;
         toast.success(t('board.savedToast'));
         previewKey.value++;
         emit('updated');
-        emit('close');
     } catch (e: unknown) {
         if (e instanceof ApiError && e.status === 409) {
             saveError.value = t('board.staleConflict');
@@ -871,6 +800,9 @@ const initialSnapshot = ref(
         flowView: flowViewFormSpecData.value,
     }),
 );
+// Tracks the persisted board version so subsequent saves use the
+// up-to-date If-Match header instead of the now-stale props value.
+const localVersion = ref<number | null>(props.board.version ?? null);
 // Tracks bg-image replace-uploads where the resulting filename is identical
 // (backend stores under `<board>.<ext>`), so the snapshot comparison can't
 // pick them up on its own.
@@ -914,8 +846,7 @@ function resetChanges() {
     saveError.value = '';
 }
 
-// Show ⌘ on macOS, Ctrl on the rest; the binding itself uses metaKey on
-// macOS and ctrlKey on every other platform.
+// Show ⌘ on macOS, Ctrl elsewhere.
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
 const saveShortcutHint = isMac ? '⌘S' : 'Ctrl+S';
 
@@ -928,11 +859,10 @@ function handleKeydown(e: KeyboardEvent) {
     }
 }
 
-// Preview-pane iframe — refreshes via `previewKey` bump whenever the
-// board persists, plus a manual reload button for the operator.
 const previewKey = ref(0);
+// Hash-routing places query params inside the fragment, not before it.
 const previewUrl = computed(
-    () => `${window.location.pathname}#/boards/${encodeURIComponent(props.board.name)}`,
+    () => `${window.location.pathname}#/boards/${encodeURIComponent(props.board.name)}?preview=1`,
 );
 function reloadPreview() {
     previewKey.value++;
@@ -1208,19 +1138,6 @@ onBeforeUnmount(() => {
     background: var(--bg-hover);
 }
 
-/* Section jump-nav. Sticky so the operator can navigate sections without
-   losing the anchor while scrolling a long form. */
-.board-settings__section-nav {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--dimension-2);
-    padding: var(--dimension-2) 0;
-    background: var(--bg-surface);
-}
-
 .board-settings__footer-meta {
     flex: 1;
     display: flex;
@@ -1232,27 +1149,6 @@ onBeforeUnmount(() => {
 
 .board-settings__footer-shortcut {
     font-family: var(--font-family-mono, monospace);
-}
-
-.board-settings__danger-zone {
-    margin-top: var(--dimension-6);
-    padding: var(--dimension-3) var(--dimension-4);
-    border: 1px solid var(--color-light-red-40);
-    border-radius: var(--dimension-3);
-    background: rgb(var(--color-light-red-40-rgb, 200 30 30) / 5%);
-}
-
-.board-settings__danger-zone-summary {
-    cursor: pointer;
-    font-weight: 600;
-    color: var(--color-light-red-40);
-}
-
-.board-settings__danger-zone-body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--dimension-3);
-    margin-top: var(--dimension-3);
 }
 
 /* Detail field that appears below a toggle, slightly indented and spaced so
