@@ -416,6 +416,11 @@
             </aside>
         </div>
     </CmkSlideInDialog>
+    <OrbUnsavedChangesDialog
+        :open="discardDialogOpen"
+        @confirm="confirmDiscard"
+        @cancel="cancelDiscard"
+    />
 </template>
 
 <script setup lang="ts">
@@ -439,6 +444,7 @@ import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
 import CmkInput from '@/components/cmk/user-input/CmkInput';
 import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
+import OrbUnsavedChangesDialog from '@/components/OrbUnsavedChangesDialog.vue';
 import { orbFormComponents } from '@/composables/orbFormComponents';
 import { useRadarGroups } from '@/composables/useRadarGroups';
 import { useToast } from '@/composables/useToast';
@@ -831,9 +837,20 @@ const saveButtonTitle = computed(() => {
     return '';
 });
 
+const discardDialogOpen = ref(false);
 function requestClose() {
-    if (isDirty.value && !window.confirm(t('board.discardChangesConfirm'))) return;
+    if (isDirty.value) {
+        discardDialogOpen.value = true;
+        return;
+    }
     emit('close');
+}
+function confirmDiscard() {
+    discardDialogOpen.value = false;
+    emit('close');
+}
+function cancelDiscard() {
+    discardDialogOpen.value = false;
 }
 
 function resetChanges() {
