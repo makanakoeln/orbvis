@@ -397,9 +397,6 @@
                     {{ t('board.resetChanges') }}
                 </CmkButton>
                 <span class="board-settings__footer-spacer" />
-                <CmkButton variant="optional" :disabled="isDirty" @click="openBoard">
-                    {{ t('board.openBoard') }}
-                </CmkButton>
                 <CmkButton variant="danger" @click="deleteBoard">
                     {{ t('board.deleteBoardAction') }}
                 </CmkButton>
@@ -641,7 +638,6 @@ function openCmkRoles() {
 }
 
 function openBoard() {
-    if (isDirty.value) return;
     emit('close');
     window.location.hash = `#/boards/${encodeURIComponent(props.board.name)}`;
 }
@@ -794,7 +790,10 @@ async function save() {
             flowView: flowViewFormSpecData.value,
         });
         saveAttempted.value = false;
-        toast.success(t('board.savedToast'));
+        toast.success(t('board.savedToast'), {
+            label: t('board.openBoard'),
+            onClick: openBoard,
+        });
         previewLoading.value = true;
         previewKey.value++;
         emit('updated');
