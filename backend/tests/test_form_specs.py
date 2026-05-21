@@ -249,13 +249,20 @@ def test_connection_roundtrip_livestatus_tcp() -> None:
     branch = form["type"][1]
     assert branch["target"] == [
         "tcp",
-        {"host": "livestatus.example.com", "port": 6557},
+        {
+            "host": "livestatus.example.com",
+            "port": 6557,
+            "tls": True,
+            "tls_verify": False,
+        },
     ]
     assert "socket_path" not in branch
     rebuilt = form_data_to_config(form, connection_id="tcp_live")
     assert rebuilt.host == "livestatus.example.com"
     assert rebuilt.port == 6557
     assert rebuilt.socket_path is None
+    assert rebuilt.tls is True
+    assert rebuilt.tls_verify is False
 
 
 def test_connection_roundtrip_icinga2() -> None:

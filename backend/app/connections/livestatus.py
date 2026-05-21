@@ -9,6 +9,7 @@ import logging
 import random
 import re
 import re as _re
+import ssl
 import threading
 import time
 from collections.abc import AsyncIterator, Iterator, Mapping
@@ -48,6 +49,17 @@ from app.schemas.state import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class LivestatusProtocolError(RuntimeError):
+    """Raised when the Livestatus wire response is missing or malformed.
+
+    Distinct from connect-level errors (refused / timeout) so callers can
+    tell "I couldn't reach the socket" apart from "I reached something but
+    it didn't speak Livestatus" — the latter is the classic symptom of a
+    plain TCP probe against a TLS-wrapped listener.
+    """
+
 
 # When set, every Livestatus query in the current asyncio task includes
 # ``AuthUser: <username>`` so Livestatus only returns objects the user
@@ -621,6 +633,8 @@ class LivestatusConnection(ConnectionBase):
         socket_path: str = "/var/run/nagios/rw/live",
         host: str | None = None,
         port: int = 6557,
+        tls: bool = True,
+        tls_verify: bool = False,
         timeout: float = 10.0,
         checkmk_url: str | None = None,
         automation_user: str | None = None,
@@ -630,6 +644,15 @@ class LivestatusConnection(ConnectionBase):
         self._socket_path = socket_path
         self._host = host
         self._port = port
+        # TLS only applies to the TCP path. OMD's `LIVESTATUS_TLS=on` wraps
+        # the 6557 listener in stunnel; opening a plain TCP socket against
+        # it succeeds at the TCP layer but the stunnel side drops the bytes,
+        # so every query silently returns garbage. Built once at init so a
+        # high-fanout flow-board burst doesn't rebuild the context per
+        # connection.
+        self._tls = tls
+        self._tls_verify = tls_verify
+        self._ssl_ctx: ssl.SSLContext | None = self._build_ssl_context() if (tls and host) else None
         self._timeout = timeout
         self._checkmk_url = checkmk_url
         self._automation_user = automation_user
@@ -1388,6 +1411,10 @@ class LivestatusConnection(ConnectionBase):
         )
 
     async def is_available(self) -> bool:
+        # ``_query_raw`` now raises ``LivestatusProtocolError`` for empty /
+        # unparseable wire responses, so a missing exception here genuinely
+        # means the connection talked Livestatus end-to-end. The query
+        # itself can return zero rows for an empty cluster — that's fine.
         try:
             await self._query("GET hosts\nColumns: name\nLimit: 1\n")
             return True
@@ -1962,6 +1989,20 @@ class LivestatusConnection(ConnectionBase):
             logger.info("Livestatus site %s recovered", sid)
         self._mc_dead = current
 
+    def _build_ssl_context(self) -> ssl.SSLContext:
+        """Build the SSLContext for TLS-wrapped Livestatus TCP connections.
+
+        ``tls_verify`` flips both peer-cert validation and hostname matching:
+        OMD's stunnel ships a self-signed per-site CA, so verify-on without
+        a manually pre-trusted CA bundle would always fail. The default
+        (off) follows the same pragmatic choice as ``icinga2_verify_ssl``.
+        """
+        ctx = ssl.create_default_context()
+        if not self._tls_verify:
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+        return ctx
+
     async def _open_connection(
         self,
     ) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
@@ -1980,7 +2021,12 @@ class LivestatusConnection(ConnectionBase):
             try:
                 if self._host:
                     return await asyncio.wait_for(
-                        asyncio.open_connection(self._host, self._port),
+                        asyncio.open_connection(
+                            self._host,
+                            self._port,
+                            ssl=self._ssl_ctx,
+                            server_hostname=self._host if self._ssl_ctx else None,
+                        ),
                         timeout=self._timeout,
                     )
                 return await asyncio.wait_for(
@@ -2009,18 +2055,27 @@ class LivestatusConnection(ConnectionBase):
             writer.write(lql.encode())
             await writer.drain()
 
-            # Fixed-16 response header: "200          42\n"
+            # Fixed-16 response header: "200          42\n". An empty read
+            # means the peer closed before sending any response — typically
+            # a TLS-wrapped listener rejecting our plain LQL. Surface as a
+            # protocol error so callers don't mistake it for "0 rows".
             header = await asyncio.wait_for(reader.read(16), timeout=self._timeout)
             if not header:
-                return []
-            status = 0
-            length = 0
+                raise LivestatusProtocolError(
+                    "Livestatus closed connection before sending a response header "
+                    "(TLS mismatch or remote shutdown?)"
+                )
+            status: int
+            length: int
             try:
                 status = int(header[:3])
                 length = int(header[4:15].strip())
-            except ValueError:
-                logger.warning("Livestatus returned unexpected response: %r", header)
-                return []
+            except ValueError as exc:
+                # Garbage in the first 16 bytes is the standard symptom of a
+                # plain-TCP probe against a TLS-wrapped listener.
+                raise LivestatusProtocolError(
+                    f"Livestatus returned unparseable response header {header!r}"
+                ) from exc
 
             body = b""
             while len(body) < length:
@@ -2032,8 +2087,12 @@ class LivestatusConnection(ConnectionBase):
                 body += chunk
 
             if status != 200:
-                logger.error("Livestatus error %d: %s", status, body.decode())
-                return []
+                # Body carries the human-readable error from livestatus
+                # (bad filter, unknown column, …). Surface it instead of
+                # silently returning [] so the caller sees the cause.
+                raise LivestatusProtocolError(
+                    f"Livestatus error {status}: {body.decode(errors='replace')}"
+                )
 
             text = body.decode("utf-8").strip()
             if not text:

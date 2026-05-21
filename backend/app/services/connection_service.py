@@ -134,6 +134,8 @@ def build_instance(cfg: ConnectionConfig) -> ConnectionBase:
         socket_path=cfg.socket_path or "/var/run/nagios/rw/live",
         host=cfg.host,
         port=cfg.port if cfg.port is not None else 6557,
+        tls=cfg.tls,
+        tls_verify=cfg.tls_verify,
         timeout=cfg.timeout,
         checkmk_url=cfg.checkmk_url,
         automation_user=cfg.automation_user,

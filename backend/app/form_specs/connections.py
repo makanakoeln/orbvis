@@ -126,6 +126,30 @@ def _livestatus_target() -> CascadingSingleChoice:
                                 prefill=DefaultValue(6557),
                             ),
                         ),
+                        "tls": DictElement(
+                            required=True,
+                            parameter_form=BooleanChoice(
+                                title=Title("TLS"),
+                                label=Label("Use TLS (matches OMD LIVESTATUS_TLS=on)"),
+                                help_text=Help(
+                                    "OMD wraps the 6557 listener in stunnel by default. "
+                                    "Disable only when the remote endpoint is plain TCP."
+                                ),
+                                prefill=DefaultValue(True),
+                            ),
+                        ),
+                        "tls_verify": DictElement(
+                            required=True,
+                            parameter_form=BooleanChoice(
+                                title=Title("Verify TLS certificate"),
+                                label=Label("Reject self-signed or invalid certificates"),
+                                help_text=Help(
+                                    "OMD ships a self-signed per-site CA — leave this off "
+                                    "unless your endpoint presents a publicly trusted cert."
+                                ),
+                                prefill=DefaultValue(False),
+                            ),
+                        ),
                     },
                 ),
             ),
@@ -302,7 +326,12 @@ def config_to_form_data(cfg: ConnectionConfig) -> dict[str, object]:
         if cfg.host:
             branch_data["target"] = [
                 "tcp",
-                {"host": cfg.host, "port": cfg.port if cfg.port is not None else 6557},
+                {
+                    "host": cfg.host,
+                    "port": cfg.port if cfg.port is not None else 6557,
+                    "tls": cfg.tls,
+                    "tls_verify": cfg.tls_verify,
+                },
             ]
         else:
             branch_data["target"] = ["socket", {"socket_path": cfg.socket_path or ""}]
@@ -352,6 +381,10 @@ def form_data_to_config(
                 if target_name == "tcp" and isinstance(target_value, dict):
                     raw["host"] = target_value.get("host")
                     raw["port"] = target_value.get("port")
+                    if "tls" in target_value:
+                        raw["tls"] = target_value.get("tls")
+                    if "tls_verify" in target_value:
+                        raw["tls_verify"] = target_value.get("tls_verify")
                 elif target_name == "socket" and isinstance(target_value, dict):
                     raw["socket_path"] = target_value.get("socket_path")
         else:

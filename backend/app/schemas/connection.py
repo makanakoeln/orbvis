@@ -84,6 +84,16 @@ class ConnectionConfig(BaseModel):
     host: str | None = Field(default=None, max_length=255)
     # Optional: unix-socket-only setups have no port; UI also emits null when cleared.
     port: int | None = Field(default=None, ge=1, le=65535)
+    # TLS for the TCP livestatus path (OMD's `LIVESTATUS_TLS=on` ships stunnel
+    # on the 6557 listener). Ignored for unix-socket connections. Defaults to
+    # on because every supported OMD version enables TLS by default in current
+    # site setups, and a plain TCP connect against a TLS port looks "open" but
+    # silently returns garbage — see livestatus.py _query_raw.
+    tls: bool = True
+    # Default off: OMD ships a self-signed per-site CA which would otherwise
+    # need an explicit CA bundle to verify. Admins running with a properly
+    # signed cert can opt in.
+    tls_verify: bool = False
     timeout: float = Field(default=10.0, ge=0.1, le=300.0)
     checkmk_url: str | None = Field(default=None, description="e.g. /<site>/check_mk")
     automation_user: str | None = Field(default=None, max_length=200)
@@ -131,6 +141,8 @@ class ConnectionUpdate(BaseModel):
     socket_path: str | None = Field(default=None, max_length=512)
     host: str | None = Field(default=None, max_length=255)
     port: int | None = Field(default=None, ge=1, le=65535)
+    tls: bool = True
+    tls_verify: bool = False
     timeout: float = Field(default=10.0, ge=0.1, le=300.0)
     checkmk_url: str | None = None
     automation_user: str | None = Field(default=None, max_length=200)
