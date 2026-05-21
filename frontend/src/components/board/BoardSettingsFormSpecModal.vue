@@ -385,7 +385,10 @@
                 >
                     {{ t('board.resetChanges') }}
                 </CmkButton>
-                <span class="board-settings__footer-spacer" />
+                <span class="board-settings__footer-meta">
+                    {{ t('board.versionLabel', { version: props.board.version ?? 0 }) }}
+                    <span class="board-settings__footer-shortcut">{{ saveShortcutHint }}</span>
+                </span>
                 <CmkButton variant="secondary" @click="requestClose">
                     {{ t('common.cancel') }}
                 </CmkButton>
@@ -410,7 +413,7 @@ import type {
     ValidationMessage,
     VueFormspecComponents,
 } from 'cmk-shared-typing/typescript/vue_formspec_components';
-import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError, boardsApi, boardsApiFormSpec, connectionsApi, rolesApi } from '@/api/client';
@@ -823,6 +826,20 @@ function resetChanges() {
     saveError.value = '';
 }
 
+// Show ⌘ on macOS, Ctrl on the rest; the binding itself uses metaKey on
+// macOS and ctrlKey on every other platform.
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
+const saveShortcutHint = isMac ? '⌘S' : 'Ctrl+S';
+
+function handleKeydown(e: KeyboardEvent) {
+    const modifier = isMac ? e.metaKey : e.ctrlKey;
+    if (!modifier) return;
+    if (e.key === 's' || e.key === 'S' || e.key === 'Enter') {
+        e.preventDefault();
+        if (!saving.value && isDirty.value && customSectionValid.value) save();
+    }
+}
+
 async function deleteBoard() {
     const label = props.board.alias || props.board.name;
     if (!window.confirm(t('board.deleteBoardConfirm', { name: label }))) return;
@@ -937,6 +954,11 @@ onMounted(async () => {
         formSpec: formSpecData.value,
         flowView: flowViewFormSpecData.value,
     });
+    window.addEventListener('keydown', handleKeydown);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('keydown', handleKeydown);
 });
 </script>
 
@@ -1005,8 +1027,17 @@ onMounted(async () => {
     background: var(--bg-surface);
 }
 
-.board-settings__footer-spacer {
+.board-settings__footer-meta {
     flex: 1;
+    display: flex;
+    align-items: baseline;
+    gap: var(--dimension-3);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.board-settings__footer-shortcut {
+    font-family: var(--font-family-mono, monospace);
 }
 
 .board-settings__danger-zone {

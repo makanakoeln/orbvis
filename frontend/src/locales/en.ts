@@ -161,6 +161,7 @@ export default {
         permissionsCmkOpen: 'Open role editor in Checkmk',
         resetChanges: 'Reset',
         resetDisabledClean: 'Nothing to reset',
+        versionLabel: 'v{version}',
         dangerZone: 'Danger zone',
         deleteBoardHint:
             'Deleting removes the board configuration permanently. Existing object data on other boards is unaffected.',

@@ -171,6 +171,7 @@ export default {
         permissionsCmkOpen: 'Rolleneditor in Checkmk öffnen',
         resetChanges: 'Zurücksetzen',
         resetDisabledClean: 'Nichts zurückzusetzen',
+        versionLabel: 'v{version}',
         dangerZone: 'Gefahrenzone',
         deleteBoardHint:
             'Löschen entfernt die Board-Konfiguration unwiderruflich. Objektdaten auf anderen Boards bleiben unberührt.',
