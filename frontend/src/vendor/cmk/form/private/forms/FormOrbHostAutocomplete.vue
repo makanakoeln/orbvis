@@ -59,17 +59,25 @@ const dropdownOptions = computed(() => ({
     type: 'filtered' as const,
     suggestions: hosts.value.map((name) => ({ name, title: name })),
 }));
+
+// CmkDropdown emits ``null`` when cleared; the FormSpec data is a
+// plain string, so map back and forth at the binding boundary.
+const dropdownValue = computed<string | null>({
+    get: () => value.value || null,
+    set: (v) => {
+        value.value = v ?? '';
+    },
+});
 </script>
 
 <template>
     <div class="form-orb-host-autocomplete">
         <CmkDropdown
-            :selected-option="value || null"
+            v-model:selected-option="dropdownValue"
             :options="dropdownOptions"
             :label="spec.title ?? ''"
             :input-hint="spec.input_hint ?? ''"
             width="fill"
-            @update:selected-option="value = $event ?? ''"
         />
         <FormValidation :validation="validation" />
     </div>

@@ -369,9 +369,6 @@
                 </div>
 
                 <div class="board-settings__footer">
-                    <CmkButton variant="danger" @click="deleteBoard">
-                        {{ t('board.deleteBoardAction') }}
-                    </CmkButton>
                     <CmkButton
                         variant="optional"
                         :disabled="!isDirty || saving"
@@ -384,6 +381,9 @@
                         {{ t('board.versionLabel', { version: localVersion ?? 0 }) }}
                         <span class="board-settings__footer-shortcut">{{ saveShortcutHint }}</span>
                     </span>
+                    <CmkButton variant="danger" @click="deleteBoard">
+                        {{ t('board.deleteBoardAction') }}
+                    </CmkButton>
                     <CmkButton variant="secondary" @click="requestClose">
                         {{ t('common.cancel') }}
                     </CmkButton>
@@ -401,12 +401,18 @@
             <!-- Hidden on narrow viewports where two columns don't fit. -->
             <aside class="board-settings__preview">
                 <span class="board-settings__preview-label">{{ t('board.previewLabel') }}</span>
-                <iframe
-                    :key="previewKey"
-                    :src="previewUrl"
-                    class="board-settings__preview-frame"
-                    :title="t('board.previewLabel')"
-                />
+                <div class="board-settings__preview-stage">
+                    <iframe
+                        :key="previewKey"
+                        :src="previewUrl"
+                        class="board-settings__preview-frame"
+                        :title="t('board.previewLabel')"
+                        @load="previewLoading = false"
+                    />
+                    <div v-if="previewLoading" class="board-settings__preview-loading">
+                        <CmkLoading />
+                    </div>
+                </div>
             </aside>
         </div>
     </CmkSlideInDialog>
@@ -437,6 +443,7 @@ import { orbFormComponents } from '@/composables/orbFormComponents';
 import { useRadarGroups } from '@/composables/useRadarGroups';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
+import { useBoardsStore } from '@/stores/boards';
 import type {
     BoardRead,
     ConnectionConfig,
@@ -460,6 +467,7 @@ const emit = defineEmits<{ close: []; updated: []; clone: [name: string] }>();
 
 const { t } = useI18n();
 const auth = useAuthStore();
+const boardsStore = useBoardsStore();
 const toast = useToast();
 
 const isCmkDeployment = computed(() => auth.ssoActive || auth.isCheckmkDeployment);
@@ -744,6 +752,12 @@ async function save() {
         // Stay open so the preview can refresh; bump version tracker
         // so the next save's If-Match doesn't 409.
         localVersion.value = updated.version ?? localVersion.value;
+        // Push the just-saved config straight into the store so the
+        // background BoardView re-renders immediately, without a
+        // currentBoard=null flicker from a follow-up fetchBoard.
+        if (boardsStore.currentBoard?.name === updated.name) {
+            boardsStore.currentBoard = updated;
+        }
         initialSnapshot.value = JSON.stringify({
             form: form.value,
             formSpec: formSpecData.value,
@@ -751,6 +765,7 @@ async function save() {
         });
         saveAttempted.value = false;
         toast.success(t('board.savedToast'));
+        previewLoading.value = true;
         previewKey.value++;
         emit('updated');
     } catch (e: unknown) {
@@ -851,6 +866,7 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 const previewKey = ref(0);
+const previewLoading = ref(true);
 // Hash-routing places query params inside the fragment, not before it.
 const previewUrl = computed(
     () => `${window.location.pathname}#/boards/${encodeURIComponent(props.board.name)}?preview=1`,
@@ -1032,6 +1048,12 @@ onBeforeUnmount(() => {
     letter-spacing: 0.05em;
 }
 
+.board-settings__preview-stage {
+    position: relative;
+    flex: 1;
+    display: flex;
+}
+
 .board-settings__preview-frame {
     flex: 1;
     width: 100%;
@@ -1039,6 +1061,17 @@ onBeforeUnmount(() => {
     border: 1px solid var(--border);
     border-radius: var(--dimension-3);
     background: var(--bg-elevated, var(--bg-hover));
+}
+
+.board-settings__preview-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elevated, var(--bg-hover));
+    border: 1px solid var(--border);
+    border-radius: var(--dimension-3);
 }
 
 @media (width <= 900px) {
