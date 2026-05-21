@@ -1,8 +1,5 @@
 <template>
     <div class="flex-1 overflow-auto bg-[var(--bg)] p-6">
-        <!-- Loading state: states haven't arrived yet (initial mount,
-             reconnect after settings save, …). Sits in place of the
-             empty/populated grid so the operator gets feedback. -->
         <div v-if="loading" class="flex items-center justify-center h-full">
             <CmkLoading />
         </div>
@@ -249,8 +246,6 @@ const sortedStates = computed(() => {
     const filtered = needle
         ? all.filter((s) => displayName(s).toLowerCase().includes(needle))
         : all;
-    // Compact mode (live preview iframe) trims to the worst-N so the
-    // operator still sees the severity head without endless scrolling.
     return props.compact ? filtered.slice(0, COMPACT_LIMIT) : filtered;
 });
 

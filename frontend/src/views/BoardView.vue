@@ -1223,10 +1223,6 @@ const isLoading = computed(
     () => boardsStore.loading || (statesStore.initialLoad && !boardsStore.error),
 );
 
-// Radar paints its own spinner inside the canvas area so the operator
-// sees feedback while states are loading or reconnecting after a save
-// that swapped the connection. The outer ``isLoading`` overlay only
-// fires for the very first mount; this covers the in-between state.
 const isRadarLoading = computed(
     () =>
         statesStore.initialLoad ||

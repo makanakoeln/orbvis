@@ -548,9 +548,6 @@ onMounted(() => {
     applyTileSettings();
     syncMarkers();
     syncLines();
-    // Preview iframe: auto-fit so the operator sees the whole object
-    // distribution instead of the saved camera position (which was
-    // calibrated for the full-screen view).
     if (props.preview) fitAll();
     resizeObserver = new ResizeObserver(() => leafletMap?.invalidateSize());
     resizeObserver.observe(mapEl.value);

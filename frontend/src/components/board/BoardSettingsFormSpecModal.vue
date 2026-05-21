@@ -440,8 +440,7 @@ const toast = useToast();
 
 const isCmkDeployment = computed(() => auth.ssoActive || auth.isCheckmkDeployment);
 
-// Picked up by FormOrbHostAutocomplete via inject; tracks connection
-// changes so suggestions follow what the operator just picked.
+// Picked up by FormOrbHostAutocomplete via inject.
 const currentConnectionId = computed(
     () => (formSpecData.value.connection_id as string | undefined) ?? props.board.connection_id,
 );
@@ -653,9 +652,7 @@ async function save() {
         } else if (form.value.map_type === 'flow') {
             const fvd = flowViewFormSpecData.value;
             const rootRaw = (fvd.root as string | undefined)?.trim();
-            // Refetch right before saving so service_layout / positions
-            // edits the operator made inside the live-preview iframe
-            // aren't trampled by this PUT.
+            // Preserve service_layout / positions written by the preview iframe.
             const fresh = await boardsApi.get(props.board.name, auth.accessToken!);
             const freshFlow = fresh.view?.type === 'flow' ? fresh.view : null;
             view = {
@@ -697,12 +694,7 @@ async function save() {
             auth.accessToken!,
             localVersion.value,
         );
-        // Stay open so the preview can refresh; bump version tracker
-        // so the next save's If-Match doesn't 409.
         localVersion.value = updated.version ?? localVersion.value;
-        // Push the just-saved config straight into the store so the
-        // background BoardView re-renders immediately, without a
-        // currentBoard=null flicker from a follow-up fetchBoard.
         if (boardsStore.currentBoard?.name === updated.name) {
             boardsStore.currentBoard = updated;
         }
