@@ -1,8 +1,14 @@
 <template>
     <div class="flex-1 overflow-auto bg-[var(--bg)] p-6">
+        <!-- Loading state: states haven't arrived yet (initial mount,
+             reconnect after settings save, …). Sits in place of the
+             empty/populated grid so the operator gets feedback. -->
+        <div v-if="loading" class="flex items-center justify-center h-full">
+            <CmkLoading />
+        </div>
         <!-- Empty state -->
         <div
-            v-if="!sortedStates.length"
+            v-else-if="!sortedStates.length"
             class="flex flex-col items-center justify-center h-full text-center"
         >
             <div
@@ -50,123 +56,129 @@
         </div>
 
         <!-- Summary bar -->
-        <div v-else class="mb-5 flex items-center gap-4 flex-wrap">
-            <span class="text-xs text-[var(--text-muted)]">{{ sortedStates.length }} objects</span>
-            <div class="flex items-center gap-3 flex-wrap">
-                <span
-                    v-for="s in summary"
-                    :key="s.state"
-                    class="flex items-center gap-1.5 text-xs font-medium"
-                    :class="stateTextClass(s.state)"
+        <template v-else>
+            <div class="mb-5 flex items-center gap-4 flex-wrap">
+                <span class="text-xs text-[var(--text-muted)]"
+                    >{{ sortedStates.length }} objects</span
                 >
-                    <span class="w-1.5 h-1.5 rounded-full" :class="stateDotClass(s.state)" />
-                    {{ s.count }} {{ s.state }}
-                </span>
-            </div>
-        </div>
-
-        <!-- Grid -->
-        <div
-            class="grid"
-            :class="compact ? 'gap-1.5' : 'gap-2.5'"
-            :style="
-                compact
-                    ? 'grid-template-columns: repeat(auto-fill, minmax(140px, 1fr))'
-                    : 'grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))'
-            "
-        >
-            <div
-                v-for="state in sortedStates"
-                :key="state.object_id"
-                class="rounded-xl ring-1 transition-all duration-200 cursor-pointer"
-                :class="[
-                    cardClass(state.state),
-                    compact ? 'p-2' : 'p-3.5 hover:-translate-y-0.5 hover:shadow-lg',
-                ]"
-                @click="onCardClick(state, $event)"
-            >
-                <!-- Name -->
-                <div class="flex items-start justify-between gap-2 mb-2">
+                <div class="flex items-center gap-3 flex-wrap">
                     <span
-                        class="font-mono font-semibold leading-tight break-all"
-                        :class="[nameClass(state.state), compact ? 'text-[10px]' : 'text-xs']"
+                        v-for="s in summary"
+                        :key="s.state"
+                        class="flex items-center gap-1.5 text-xs font-medium"
+                        :class="stateTextClass(s.state)"
                     >
-                        {{ displayName(state) }}
+                        <span class="w-1.5 h-1.5 rounded-full" :class="stateDotClass(s.state)" />
+                        {{ s.count }} {{ s.state }}
                     </span>
-                    <!-- Ack / Downtime icons -->
-                    <div v-if="!compact" class="flex gap-1 shrink-0 mt-0.5">
-                        <span
-                            v-if="state.acknowledged"
-                            title="Acknowledged"
-                            class="text-[var(--text-muted)] opacity-70"
-                        >
-                            <svg
-                                class="w-3 h-3"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="2"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                            </svg>
-                        </span>
-                        <span
-                            v-if="state.in_downtime"
-                            title="In downtime"
-                            class="text-[var(--text-muted)] opacity-70"
-                        >
-                            <svg
-                                class="w-3 h-3"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="2"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                            </svg>
-                        </span>
-                    </div>
                 </div>
-
-                <!-- State badge -->
-                <span
-                    class="inline-flex items-center gap-1 font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
-                    :class="[badgeClass(state.state), compact ? 'text-[9px]' : 'text-[10px]']"
-                >
-                    <span class="w-1 h-1 rounded-full" :class="stateDotClass(state.state)" />
-                    {{ state.state }}
-                </span>
-
-                <!-- Output -->
-                <p
-                    v-if="state.output && !compact"
-                    class="text-[11px] mt-2 leading-snug opacity-60 line-clamp-2"
-                    :class="nameClass(state.state)"
-                >
-                    {{ state.output }}
-                </p>
             </div>
+
+            <!-- Grid -->
             <div
-                v-if="compactOverflow > 0"
-                class="text-xs text-[var(--text-muted)] italic flex items-center justify-center p-2"
+                class="grid"
+                :class="compact ? 'gap-1.5' : 'gap-2.5'"
+                :style="
+                    compact
+                        ? 'grid-template-columns: repeat(auto-fill, minmax(140px, 1fr))'
+                        : 'grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))'
+                "
             >
-                +{{ compactOverflow }} more
+                <div
+                    v-for="state in sortedStates"
+                    :key="state.object_id"
+                    class="rounded-xl ring-1 transition-all duration-200 cursor-pointer"
+                    :class="[
+                        cardClass(state.state),
+                        compact ? 'p-2' : 'p-3.5 hover:-translate-y-0.5 hover:shadow-lg',
+                    ]"
+                    @click="onCardClick(state, $event)"
+                >
+                    <!-- Name -->
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <span
+                            class="font-mono font-semibold leading-tight break-all"
+                            :class="[nameClass(state.state), compact ? 'text-[10px]' : 'text-xs']"
+                        >
+                            {{ displayName(state) }}
+                        </span>
+                        <!-- Ack / Downtime icons -->
+                        <div v-if="!compact" class="flex gap-1 shrink-0 mt-0.5">
+                            <span
+                                v-if="state.acknowledged"
+                                title="Acknowledged"
+                                class="text-[var(--text-muted)] opacity-70"
+                            >
+                                <svg
+                                    class="w-3 h-3"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
+                            </span>
+                            <span
+                                v-if="state.in_downtime"
+                                title="In downtime"
+                                class="text-[var(--text-muted)] opacity-70"
+                            >
+                                <svg
+                                    class="w-3 h-3"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- State badge -->
+                    <span
+                        class="inline-flex items-center gap-1 font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+                        :class="[badgeClass(state.state), compact ? 'text-[9px]' : 'text-[10px]']"
+                    >
+                        <span class="w-1 h-1 rounded-full" :class="stateDotClass(state.state)" />
+                        {{ state.state }}
+                    </span>
+
+                    <!-- Output -->
+                    <p
+                        v-if="state.output && !compact"
+                        class="text-[11px] mt-2 leading-snug opacity-60 line-clamp-2"
+                        :class="nameClass(state.state)"
+                    >
+                        {{ state.output }}
+                    </p>
+                </div>
+                <div
+                    v-if="compactOverflow > 0"
+                    class="text-xs text-[var(--text-muted)] italic flex items-center justify-center p-2"
+                >
+                    +{{ compactOverflow }} more
+                </div>
             </div>
-        </div>
+        </template>
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+
+import CmkLoading from '@/components/cmk/CmkLoading';
 
 const { t } = useI18n();
 
@@ -178,6 +190,7 @@ const props = defineProps<{
     readonly?: boolean;
     filterNeedle?: string;
     compact?: boolean;
+    loading?: boolean;
 }>();
 
 const emit = defineEmits<{
