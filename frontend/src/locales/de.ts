@@ -169,6 +169,14 @@ export default {
         permissionsCmkIntro:
             'Anzeige- und Bearbeitungsrechte werden über Checkmk-Rollen gesteuert (orbvis.see, orbvis.edit). Verwaltung erfolgt in Checkmk WATO.',
         permissionsCmkOpen: 'Rolleneditor in Checkmk öffnen',
+        resetChanges: 'Zurücksetzen',
+        resetDisabledClean: 'Nichts zurückzusetzen',
+        dangerZone: 'Gefahrenzone',
+        deleteBoardHint:
+            'Löschen entfernt die Board-Konfiguration unwiderruflich. Objektdaten auf anderen Boards bleiben unberührt.',
+        deleteBoardAction: 'Board löschen…',
+        deleteBoardConfirm: 'Board „{name}" löschen? Dies kann nicht rückgängig gemacht werden.',
+        deletedToast: 'Board „{name}" gelöscht',
         deleteBackground: 'Hintergrundbild entfernen',
         saveChanges: 'Änderungen speichern',
         hoverTemplate: 'Hover-Template',

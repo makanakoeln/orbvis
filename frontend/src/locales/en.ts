@@ -159,6 +159,14 @@ export default {
         permissionsCmkIntro:
             'Board view and edit are gated by Checkmk role permissions (orbvis.see, orbvis.edit). Manage them in Checkmk WATO.',
         permissionsCmkOpen: 'Open role editor in Checkmk',
+        resetChanges: 'Reset',
+        resetDisabledClean: 'Nothing to reset',
+        dangerZone: 'Danger zone',
+        deleteBoardHint:
+            'Deleting removes the board configuration permanently. Existing object data on other boards is unaffected.',
+        deleteBoardAction: 'Delete board…',
+        deleteBoardConfirm: 'Delete board "{name}"? This cannot be undone.',
+        deletedToast: 'Board "{name}" deleted',
         deleteBackground: 'Remove background image',
         notificationsOn: 'Browser notifications enabled — click to disable',
         notificationsOff: 'Enable browser notifications for state changes',

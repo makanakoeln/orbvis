@@ -250,6 +250,23 @@
                     >
                         <li v-for="(msg, i) in errorMessages" :key="i">{{ msg }}</li>
                     </ul>
+
+                    <!-- Danger zone — keep deletion accessible without
+                         leaving the settings dialog. Collapsed by default so
+                         it doesn't compete with the normal Save/Cancel flow. -->
+                    <details class="board-settings__danger-zone">
+                        <summary class="board-settings__danger-zone-summary">
+                            {{ t('board.dangerZone') }}
+                        </summary>
+                        <div class="board-settings__danger-zone-body">
+                            <p class="text-sm text-[var(--text-muted)]">
+                                {{ t('board.deleteBoardHint') }}
+                            </p>
+                            <CmkButton variant="danger" @click="deleteBoard">
+                                {{ t('board.deleteBoardAction') }}
+                            </CmkButton>
+                        </div>
+                    </details>
                 </div>
 
                 <!-- Permissions -->
@@ -360,6 +377,15 @@
             </div>
 
             <div class="board-settings__footer">
+                <CmkButton
+                    variant="optional"
+                    :disabled="!isDirty || saving"
+                    :title="isDirty ? undefined : t('board.resetDisabledClean')"
+                    @click="resetChanges"
+                >
+                    {{ t('board.resetChanges') }}
+                </CmkButton>
+                <span class="board-settings__footer-spacer" />
                 <CmkButton variant="secondary" @click="requestClose">
                     {{ t('common.cancel') }}
                 </CmkButton>
@@ -781,6 +807,35 @@ function requestClose() {
     emit('close');
 }
 
+function resetChanges() {
+    const snapshot = JSON.parse(initialSnapshot.value) as {
+        form: typeof form.value;
+        formSpec: Record<string, unknown>;
+        flowView: Record<string, unknown>;
+    };
+    form.value = snapshot.form;
+    formSpecData.value = snapshot.formSpec;
+    flowViewFormSpecData.value = snapshot.flowView;
+    permDraft.clear();
+    bgReplaced.value = false;
+    saveAttempted.value = false;
+    formBackendValidation.value = [];
+    saveError.value = '';
+}
+
+async function deleteBoard() {
+    const label = props.board.alias || props.board.name;
+    if (!window.confirm(t('board.deleteBoardConfirm', { name: label }))) return;
+    try {
+        await boardsApi.delete(props.board.name, auth.accessToken!);
+        toast.success(t('board.deletedToast', { name: label }));
+        emit('updated');
+        emit('close');
+    } catch (e: unknown) {
+        saveError.value = e instanceof Error ? e.message : 'An error occurred';
+    }
+}
+
 async function loadPermissions() {
     permLoading.value = true;
     try {
@@ -948,6 +1003,31 @@ onMounted(async () => {
     gap: var(--dimension-2);
     padding: var(--dimension-2) 0;
     background: var(--bg-surface);
+}
+
+.board-settings__footer-spacer {
+    flex: 1;
+}
+
+.board-settings__danger-zone {
+    margin-top: var(--dimension-6);
+    padding: var(--dimension-3) var(--dimension-4);
+    border: 1px solid var(--color-light-red-40);
+    border-radius: var(--dimension-3);
+    background: rgb(var(--color-light-red-40-rgb, 200 30 30) / 5%);
+}
+
+.board-settings__danger-zone-summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-light-red-40);
+}
+
+.board-settings__danger-zone-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-3);
+    margin-top: var(--dimension-3);
 }
 
 /* Detail field that appears below a toggle, slightly indented and spaced so
