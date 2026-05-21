@@ -11,6 +11,8 @@ because they need live previews / pickers FormSpec doesn't ship.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from app.form_specs import OrbDictGroup
 
 from cmk.rulesets.v1 import Help, Label, Title
@@ -56,7 +58,15 @@ _TEMPLATES = OrbDictGroup(
 )
 
 
-def _connection_form(choices: list[tuple[str, str]] | None) -> SingleChoice | String:
+def _connection_choice_title(cid: str, label: str, backend: str) -> str:
+    """Format a SingleChoice title as ``label (id) · backend``."""
+    head = f"{label} ({cid})" if label and label != cid else cid
+    return f"{head} · {backend}" if backend else head
+
+
+def _connection_form(
+    choices: Sequence[tuple[str, str, str]] | None,
+) -> SingleChoice | String:
     # Empty list keeps the form editable on fresh installs that have no
     # connections registered yet — falls back to free-text so the operator
     # can still type the ID they're about to create.
@@ -79,15 +89,15 @@ def _connection_form(choices: list[tuple[str, str]] | None) -> SingleChoice | St
         elements=[
             SingleChoiceElement(
                 name=cid,
-                title=Title(f"{label} ({cid})") if label != cid else Title(cid),
+                title=Title(_connection_choice_title(cid, label, backend)),
             )
-            for cid, label in choices
+            for cid, label, backend in choices
         ],
     )
 
 
 def board_metadata_spec(
-    connection_choices: list[tuple[str, str]] | None = None,
+    connection_choices: Sequence[tuple[str, str, str]] | None = None,
 ) -> Dictionary:
     return Dictionary(
         title=Title("Board settings"),

@@ -125,7 +125,9 @@ if FORM_SPECS_AVAILABLE:
     async def get_board_metadata_schema(
         _: User = Depends(get_current_user),
     ) -> AnyWireFormSpec:
-        connection_choices = [(c.id, c.label or c.id) for c in connection_service.load_all()]
+        connection_choices = [
+            (c.id, c.label or c.id, c.type) for c in connection_service.load_all()
+        ]
         return serialize_form_spec(board_metadata_spec(connection_choices=connection_choices))
 
     @router.get("/-/flow-view-schema")
