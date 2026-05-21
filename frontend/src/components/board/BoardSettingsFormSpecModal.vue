@@ -438,7 +438,7 @@ import type {
     ValidationMessage,
     VueFormspecComponents,
 } from 'cmk-shared-typing/typescript/vue_formspec_components';
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError, boardsApi, boardsApiFormSpec, connectionsApi, rolesApi } from '@/api/client';
@@ -481,6 +481,14 @@ const auth = useAuthStore();
 const toast = useToast();
 
 const isCmkDeployment = computed(() => auth.ssoActive || auth.isCheckmkDeployment);
+
+// Expose the current connection id so custom FormSpec widgets (in
+// particular FormOrbHostAutocomplete) can pull suggestions from the
+// matching backend without re-discovering it from the props.
+const currentConnectionId = computed(
+    () => (formSpecData.value.connection_id as string | undefined) ?? props.board.connection_id,
+);
+provide('orbConnectionId', currentConnectionId);
 const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => [
     { id: 'general', label: t('admin.settings') },
     { id: 'permissions', label: t('admin.boardPermissions') },

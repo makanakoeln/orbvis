@@ -15,6 +15,7 @@ try:
         FormSpecValidationMessage,
         OrbColorString,
         OrbDictGroup,
+        OrbHostString,
         serialize_form_spec,
     )
     from app.form_specs.validate import validate_form_data
@@ -67,6 +68,7 @@ __all__ = [
     "MultilineText",
     "OrbColorString",
     "OrbDictGroup",
+    "OrbHostString",
     "Password",
     "SingleChoice",
     "SingleChoiceElement",

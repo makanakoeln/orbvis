@@ -12,6 +12,7 @@
  *     override win.
  */
 import FormOrbColor from '@cmk/form/private/forms/FormOrbColor.vue';
+import FormOrbHostAutocomplete from '@cmk/form/private/forms/FormOrbHostAutocomplete.vue';
 import { type Component } from 'vue';
 
 import FormBooleanChoice from '@/cmk-stubs/FormBooleanChoice.vue';
@@ -21,6 +22,10 @@ export const orbFormComponents: Record<string, Component> = {
     // type tag emitted by ``OrbColorStringVisitor`` — a String with a
     // native color picker swap in the frontend.
     orb_color: FormOrbColor,
+    // type tag emitted by ``OrbHostStringVisitor`` — a String that
+    // pulls host-name suggestions from the parent modal's connection_id
+    // (provided via inject('orbConnectionId')).
+    orb_host_autocomplete: FormOrbHostAutocomplete,
     // Override upstream's CmkCheckbox-based boolean form with a
     // CmkSwitch-based one — OrbVis BooleanChoices are always state
     // toggles, not accept/confirm checkboxes.

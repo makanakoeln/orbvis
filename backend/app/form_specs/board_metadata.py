@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from app.form_specs import OrbDictGroup
+from app.form_specs import OrbDictGroup, OrbHostString
 
 from cmk.rulesets.v1 import Help, Label, Title
 from cmk.rulesets.v1.form_specs import (
@@ -284,7 +284,7 @@ def flow_view_spec() -> Dictionary:
         elements={
             "root": DictElement(
                 group=_TOPOLOGY,
-                parameter_form=String(
+                parameter_form=OrbHostString(
                     title=Title("Root host"),
                     help_text=Help(
                         "Host the topology is anchored on. Leave unchecked "

@@ -38,6 +38,19 @@ class OrbColorString(String):  # type: ignore[misc]
     """
 
 
+class OrbHostString(String):  # type: ignore[misc]
+    """String FormSpec rendered with a host-name autocomplete in the frontend.
+
+    Same wrapper trick as :class:`OrbColorString`: the wire type
+    ``orb_host_autocomplete`` swaps in ``FormOrbHostAutocomplete.vue``,
+    which pulls suggestions from the connection the host modal already
+    knows about. CMK's built-in ``MonitoredHost`` would do the same job
+    but isn't reachable from the vendored frontend without un-stubbing
+    ``FormAutocompleter`` — out of scope for the FormSpec-vendoring
+    contract.
+    """
+
+
 @dataclass(frozen=True, kw_only=True)
 class OrbDictGroup(DictGroupExtended):
     """``DictGroupExtended`` + explicit ``key`` for OrbVis FormSpecs.

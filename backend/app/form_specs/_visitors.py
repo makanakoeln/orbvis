@@ -41,12 +41,13 @@ from app.form_specs._wire_types import (
     WireList,
     WireMultilineText,
     WireOrbColor,
+    WireOrbHostAutocomplete,
     WirePassword,
     WireSingleChoice,
     WireSingleChoiceElement,
     WireString,
 )
-from app.form_specs.serialize import FormSpecValidationMessage, OrbColorString
+from app.form_specs.serialize import FormSpecValidationMessage, OrbColorString, OrbHostString
 
 from cmk.rulesets.v1.form_specs import (
     BooleanChoice,
@@ -227,6 +228,34 @@ class OrbColorStringVisitor(FormSpecVisitor[OrbColorString]):
 
     def _validate_shape(
         self, spec: OrbColorString, data: object, location: list[str]
+    ) -> list[FormSpecValidationMessage]:
+        if not isinstance(data, str):
+            return type_mismatch(location, "string", data)
+        return []
+
+
+class OrbHostStringVisitor(FormSpecVisitor[OrbHostString]):
+    spec_type = OrbHostString
+
+    def serialize(self, spec: OrbHostString) -> WireOrbHostAutocomplete:
+        return {
+            "type": "orb_host_autocomplete",
+            "title": loc(spec.title),
+            "help": loc(spec.help_text) or "",
+            "validators": [],
+            "label": loc(spec.label),
+            "field_size": spec.field_size.name,
+            "input_hint": input_hint(spec.prefill),
+            "autocompleter": None,
+        }
+
+    def default_value(self, spec: OrbHostString) -> object:
+        return cmk_default_or(
+            spec, lambda s: s.prefill.value if isinstance(s.prefill, DefaultValue) else ""
+        )
+
+    def _validate_shape(
+        self, spec: OrbHostString, data: object, location: list[str]
     ) -> list[FormSpecValidationMessage]:
         if not isinstance(data, str):
             return type_mismatch(location, "string", data)
@@ -580,6 +609,7 @@ class ListVisitor(FormSpecVisitor[List]):
 register(DictionaryVisitor())
 register(StringVisitor())
 register(OrbColorStringVisitor())
+register(OrbHostStringVisitor())
 register(MultilineTextVisitor())
 register(IntegerVisitor())
 register(FloatVisitor())

@@ -78,6 +78,14 @@ class WireOrbColor(_Base):
     autocompleter: object
 
 
+class WireOrbHostAutocomplete(_Base):
+    type: Literal["orb_host_autocomplete"]
+    label: str | None
+    field_size: str
+    input_hint: object
+    autocompleter: object
+
+
 class WireMultilineText(_Base):
     type: Literal["multiline_text"]
     label: str | None
@@ -159,6 +167,7 @@ AnyWireFormSpec = (
     WireDictionary
     | WireString
     | WireOrbColor
+    | WireOrbHostAutocomplete
     | WireMultilineText
     | WireInteger
     | WireFloat
