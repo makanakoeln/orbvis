@@ -377,10 +377,7 @@
                     >
                         {{ t('board.resetChanges') }}
                     </CmkButton>
-                    <span class="board-settings__footer-meta">
-                        {{ t('board.versionLabel', { version: localVersion ?? 0 }) }}
-                        <span class="board-settings__footer-shortcut">{{ saveShortcutHint }}</span>
-                    </span>
+                    <span class="board-settings__footer-spacer" />
                     <CmkButton variant="danger" @click="deleteBoard">
                         {{ t('board.deleteBoardAction') }}
                     </CmkButton>
@@ -390,7 +387,7 @@
                     <CmkButton
                         variant="primary"
                         :disabled="saving || !isDirty || (saveAttempted && !customSectionValid)"
-                        :title="saveButtonTitle || undefined"
+                        :title="saveButtonTooltip"
                         @click="save"
                     >
                         {{ saving ? t('common.saving') : t('common.save') }}
@@ -830,11 +827,11 @@ const isDirty = computed(
         bgReplaced.value,
 );
 
-const saveButtonTitle = computed(() => {
-    if (saving.value) return '';
+const saveButtonTooltip = computed(() => {
+    if (saving.value) return undefined;
     if (!isDirty.value) return t('board.saveDisabledClean');
     if (saveAttempted.value && !customSectionValid.value) return t('board.saveDisabledInvalid');
-    return '';
+    return saveShortcutHint;
 });
 
 const discardDialogOpen = ref(false);
@@ -1169,17 +1166,8 @@ onBeforeUnmount(() => {
     background: var(--bg-hover);
 }
 
-.board-settings__footer-meta {
+.board-settings__footer-spacer {
     flex: 1;
-    display: flex;
-    align-items: baseline;
-    gap: var(--dimension-3);
-    color: var(--text-muted);
-    font-size: 0.75rem;
-}
-
-.board-settings__footer-shortcut {
-    font-family: var(--font-family-mono, monospace);
 }
 
 /* Detail field that appears below a toggle, slightly indented and spaced so
