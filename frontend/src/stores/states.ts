@@ -346,6 +346,16 @@ export const useStatesStore = defineStore('states', () => {
         disconnect,
         getState,
         refreshNow: _fetchStates,
+        // Same as refreshNow but flips ``initialLoad`` so views can render
+        // a spinner while the refetch is in flight (after settings save).
+        async refreshWithIndicator(): Promise<void> {
+            initialLoad.value = true;
+            try {
+                await _fetchStates();
+            } finally {
+                initialLoad.value = false;
+            }
+        },
         refreshAfterCommand(): void {
             // CMK processes commands async — refresh immediately and again after a short delay
             void _fetchStates();

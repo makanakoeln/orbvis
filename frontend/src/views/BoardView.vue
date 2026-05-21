@@ -1966,11 +1966,12 @@ function openSettings() {
 }
 
 async function onSettingsUpdated() {
-    // The settings modal pushes the saved config straight into the
-    // store, so refetching here would null currentBoard briefly and
-    // unmount the canvas. Just refresh the rotation timer instead.
+    // Settings save may have changed the connection or filter; refresh
+    // monitoring states so the canvas reflects the new scope. Flipping
+    // ``initialLoad`` gives radar / flow boards a spinner in the gap.
     stopRotation();
     scheduleRotation(boardsStore.currentBoard?.rotation_interval ?? 0);
+    await statesStore.refreshWithIndicator();
 }
 
 // ---- Rotation ----
