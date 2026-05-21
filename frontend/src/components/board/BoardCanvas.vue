@@ -435,6 +435,12 @@ onMounted(() => {
     canvasDisplaySize.value = { width: el.clientWidth, height: el.clientHeight };
     const pane = findScrollAncestor(el);
     if (pane) paneSize.value = { width: pane.clientWidth, height: pane.clientHeight };
+    if (props.preview && pane) {
+        const fitX = pane.clientWidth / canvasWidth.value;
+        const fitY = pane.clientHeight / canvasHeight.value;
+        const fit = Math.min(fitX, fitY, 1);
+        if (fit < 1) userZoom.value = fit;
+    }
     if (typeof ResizeObserver === 'undefined') return;
     canvasResizeObserver = new ResizeObserver((entries) => {
         const entry = entries[0];

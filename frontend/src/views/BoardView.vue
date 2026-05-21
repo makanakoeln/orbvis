@@ -429,7 +429,9 @@
                 </div>
                 <template v-else-if="boardConfig">
                     <BoardSearch
-                        v-if="boardConfig.objects.length > 0 && !editor.editMode.value"
+                        v-if="
+                            boardConfig.objects.length > 0 && !editor.editMode.value && !isPreview
+                        "
                         v-model="boardFilterNeedle"
                     />
                     <!-- Empty board hint -->
