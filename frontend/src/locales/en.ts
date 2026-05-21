@@ -162,7 +162,6 @@ export default {
         resetChanges: 'Reset',
         resetDisabledClean: 'Nothing to reset',
         versionLabel: 'v{version}',
-        exportBoardAction: 'Export as JSON',
         previewLabel: 'Live preview',
         deleteBoardAction: 'Delete board…',
         deleteBoardConfirm: 'Delete board "{name}"? This cannot be undone.',

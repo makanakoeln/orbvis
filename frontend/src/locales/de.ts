@@ -172,7 +172,6 @@ export default {
         resetChanges: 'Zurücksetzen',
         resetDisabledClean: 'Nichts zurückzusetzen',
         versionLabel: 'v{version}',
-        exportBoardAction: 'Als JSON exportieren',
         previewLabel: 'Live-Vorschau',
         deleteBoardAction: 'Board löschen…',
         deleteBoardConfirm: 'Board „{name}" löschen? Dies kann nicht rückgängig gemacht werden.',

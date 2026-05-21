@@ -14,7 +14,6 @@
         :worldmap-view="worldmapView"
         @close="emit('close')"
         @updated="emit('updated')"
-        @clone="emit('clone', $event)"
     />
     <BoardSettingsModalLegacy
         v-else
@@ -44,7 +43,6 @@ defineProps<{
 const emit = defineEmits<{
     close: [];
     updated: [];
-    clone: [name: string];
 }>();
 
 const capabilities = useCapabilitiesStore();

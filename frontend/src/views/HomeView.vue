@@ -1138,7 +1138,6 @@
         :board="settingsBoard"
         @close="settingsBoard = null"
         @updated="boardsStore.fetchBoards()"
-        @clone="cloneBoardByName"
     />
 
     <!-- Import FAB (admin only) -->
@@ -1340,11 +1339,6 @@ function cloneBoard(map: BoardRead) {
     nextTick(() => {
         cloneInputEl.value?.select();
     });
-}
-
-function cloneBoardByName(name: string) {
-    const map = boardsStore.boards.find((b) => b.name === name);
-    if (map) cloneBoard(map);
 }
 
 function onCloneNameInput(e: Event) {
