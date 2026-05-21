@@ -27,6 +27,7 @@ const props = defineProps<{
     placing: boolean;
     selectedObjectId: string | null;
     filterNeedle?: string;
+    preview?: boolean;
 }>();
 
 const settingsStore = useSettingsStore();
@@ -201,16 +202,21 @@ function syncMarkers() {
             const marker = markers.get(objId)!;
             marker.setLatLng([lat, lng]);
             marker.setIcon(icon);
-            if (props.editMode) marker.dragging?.enable();
+            if (props.editMode && !props.preview) marker.dragging?.enable();
             else marker.dragging?.disable();
         } else {
-            const marker = L.marker([lat, lng], { icon, draggable: props.editMode });
+            const marker = L.marker([lat, lng], {
+                icon,
+                draggable: props.editMode && !props.preview,
+            });
             marker.on('click', (e: L.LeafletMouseEvent) => {
+                if (props.preview) return;
                 L.DomEvent.stopPropagation(e);
                 const current = props.config.objects.find((o) => o.id === objId);
                 if (current) emit('object-click', current, e.originalEvent);
             });
             marker.on('contextmenu', (e: L.LeafletMouseEvent) => {
+                if (props.preview) return;
                 L.DomEvent.stopPropagation(e);
                 const current = props.config.objects.find((o) => o.id === objId);
                 if (!current) return;
@@ -226,10 +232,12 @@ function syncMarkers() {
                 }
             });
             marker.on('mouseover', (e: L.LeafletMouseEvent) => {
+                if (props.preview) return;
                 const current = props.config.objects.find((o) => o.id === objId);
                 if (current) emit('object-hover', current, e.originalEvent);
             });
             marker.on('mouseout', () => {
+                if (props.preview) return;
                 emit('object-hover-leave');
             });
             marker.on('dragend', () => {
@@ -445,11 +453,13 @@ function syncLines() {
 
             const objId = obj.id;
             polyline.on('click', (e: L.LeafletMouseEvent) => {
+                if (props.preview) return;
                 L.DomEvent.stopPropagation(e);
                 const cur = props.config.objects.find((o) => o.id === objId);
                 if (cur) emit('object-click', cur, e.originalEvent);
             });
             polyline.on('contextmenu', (e: L.LeafletMouseEvent) => {
+                if (props.preview) return;
                 L.DomEvent.stopPropagation(e);
                 const cur = props.config.objects.find((o) => o.id === objId);
                 if (!cur) return;
@@ -463,10 +473,12 @@ function syncLines() {
                     );
             });
             polyline.on('mouseover', (e: L.LeafletMouseEvent) => {
+                if (props.preview) return;
                 const cur = props.config.objects.find((o) => o.id === objId);
                 if (cur) emit('object-hover', cur, e.originalEvent);
             });
             polyline.on('mouseout', () => {
+                if (props.preview) return;
                 emit('object-hover-leave');
             });
             handle1.on('dragend', () => {
@@ -536,6 +548,10 @@ onMounted(() => {
     applyTileSettings();
     syncMarkers();
     syncLines();
+    // Preview iframe: auto-fit so the operator sees the whole object
+    // distribution instead of the saved camera position (which was
+    // calibrated for the full-screen view).
+    if (props.preview) fitAll();
     resizeObserver = new ResizeObserver(() => leafletMap?.invalidateSize());
     resizeObserver.observe(mapEl.value);
 });

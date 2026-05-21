@@ -244,6 +244,7 @@ const props = defineProps<{
      * spatial layout — same approach as FlowBoard's filter.
      */
     filterNeedle?: string;
+    preview?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -645,6 +646,7 @@ function onLineClick(line: BoardObjectType) {
 }
 
 function onObjectClick(obj: BoardObjectType, event?: MouseEvent) {
+    if (props.preview) return;
     // Suppress navigation click if the pointer just completed a real drag move
     if (_didMove.value) return;
     closeMenus();
@@ -683,6 +685,7 @@ const contextMenu = reactive({
 });
 
 function openHoverMenu(event: MouseEvent, obj: BoardObjectType) {
+    if (props.preview) return;
     hoverMenu.object = obj;
     hoverMenu.stateOverride = null;
     hoverMenu.x = event.pageX + 12;

@@ -67,26 +67,34 @@
 
         <!-- Grid -->
         <div
-            class="grid gap-2.5"
-            style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))"
+            class="grid"
+            :class="compact ? 'gap-1.5' : 'gap-2.5'"
+            :style="
+                compact
+                    ? 'grid-template-columns: repeat(auto-fill, minmax(140px, 1fr))'
+                    : 'grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))'
+            "
         >
             <div
                 v-for="state in sortedStates"
                 :key="state.object_id"
-                class="rounded-xl p-3.5 ring-1 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer"
-                :class="cardClass(state.state)"
+                class="rounded-xl ring-1 transition-all duration-200 cursor-pointer"
+                :class="[
+                    cardClass(state.state),
+                    compact ? 'p-2' : 'p-3.5 hover:-translate-y-0.5 hover:shadow-lg',
+                ]"
                 @click="onCardClick(state, $event)"
             >
                 <!-- Name -->
                 <div class="flex items-start justify-between gap-2 mb-2">
                     <span
-                        class="font-mono text-xs font-semibold leading-tight break-all"
-                        :class="nameClass(state.state)"
+                        class="font-mono font-semibold leading-tight break-all"
+                        :class="[nameClass(state.state), compact ? 'text-[10px]' : 'text-xs']"
                     >
                         {{ displayName(state) }}
                     </span>
                     <!-- Ack / Downtime icons -->
-                    <div class="flex gap-1 shrink-0 mt-0.5">
+                    <div v-if="!compact" class="flex gap-1 shrink-0 mt-0.5">
                         <span
                             v-if="state.acknowledged"
                             title="Acknowledged"
@@ -130,8 +138,8 @@
 
                 <!-- State badge -->
                 <span
-                    class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
-                    :class="badgeClass(state.state)"
+                    class="inline-flex items-center gap-1 font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+                    :class="[badgeClass(state.state), compact ? 'text-[9px]' : 'text-[10px]']"
                 >
                     <span class="w-1 h-1 rounded-full" :class="stateDotClass(state.state)" />
                     {{ state.state }}
@@ -139,12 +147,18 @@
 
                 <!-- Output -->
                 <p
-                    v-if="state.output"
+                    v-if="state.output && !compact"
                     class="text-[11px] mt-2 leading-snug opacity-60 line-clamp-2"
                     :class="nameClass(state.state)"
                 >
                     {{ state.output }}
                 </p>
+            </div>
+            <div
+                v-if="compactOverflow > 0"
+                class="text-xs text-[var(--text-muted)] italic flex items-center justify-center p-2"
+            >
+                +{{ compactOverflow }} more
             </div>
         </div>
     </div>
@@ -163,6 +177,7 @@ const props = defineProps<{
     checkmkUrl?: string | null;
     readonly?: boolean;
     filterNeedle?: string;
+    compact?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -195,6 +210,7 @@ function stateToBoardObject(state: ObjectState): BoardObject {
 }
 
 function onCardClick(state: ObjectState, event: MouseEvent) {
+    if (props.compact) return;
     emit('object-click', stateToBoardObject(state), event);
 }
 
@@ -210,15 +226,29 @@ const severity: Record<string, number> = {
     OK: 0,
 };
 
+const COMPACT_LIMIT = 12;
+
 const sortedStates = computed(() => {
     const needle = (props.filterNeedle ?? '').trim().toLowerCase();
     const all = Object.values(props.states).sort(
         (a, b) => (severity[b.state] ?? 0) - (severity[a.state] ?? 0),
     );
-    if (!needle) return all;
-    // Radar cards have no spatial layout, so filtering (rather than dimming)
-    // produces a more useful view: only matching hosts/services remain visible.
-    return all.filter((s) => displayName(s).toLowerCase().includes(needle));
+    const filtered = needle
+        ? all.filter((s) => displayName(s).toLowerCase().includes(needle))
+        : all;
+    // Compact mode (live preview iframe) trims to the worst-N so the
+    // operator still sees the severity head without endless scrolling.
+    return props.compact ? filtered.slice(0, COMPACT_LIMIT) : filtered;
+});
+
+const compactOverflow = computed(() => {
+    if (!props.compact) return 0;
+    const needle = (props.filterNeedle ?? '').trim().toLowerCase();
+    const total = needle
+        ? Object.values(props.states).filter((s) => displayName(s).toLowerCase().includes(needle))
+              .length
+        : Object.values(props.states).length;
+    return Math.max(0, total - COMPACT_LIMIT);
 });
 
 const summary = computed(() => {

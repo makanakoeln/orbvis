@@ -333,32 +333,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="board-settings__footer">
-                    <CmkButton
-                        variant="optional"
-                        :disabled="!isDirty || saving"
-                        :title="isDirty ? undefined : t('board.resetDisabledClean')"
-                        @click="resetChanges"
-                    >
-                        {{ t('board.resetChanges') }}
-                    </CmkButton>
-                    <span class="board-settings__footer-spacer" />
-                    <CmkButton variant="danger" @click="deleteBoard">
-                        {{ t('board.deleteBoardAction') }}
-                    </CmkButton>
-                    <CmkButton variant="secondary" @click="requestClose">
-                        {{ t('common.close') }}
-                    </CmkButton>
-                    <CmkButton
-                        variant="primary"
-                        :disabled="saving || !isDirty || (saveAttempted && !customSectionValid)"
-                        :title="saveButtonTooltip"
-                        @click="save"
-                    >
-                        {{ saving ? t('common.saving') : t('common.save') }}
-                    </CmkButton>
-                </div>
             </div>
 
             <!-- Hidden on narrow viewports where two columns don't fit. -->
@@ -377,6 +351,32 @@
                     </div>
                 </div>
             </aside>
+        </div>
+
+        <div class="board-settings__footer">
+            <CmkButton
+                variant="optional"
+                :disabled="!isDirty || saving"
+                :title="isDirty ? undefined : t('board.resetDisabledClean')"
+                @click="resetChanges"
+            >
+                {{ t('board.resetChanges') }}
+            </CmkButton>
+            <span class="board-settings__footer-spacer" />
+            <CmkButton variant="danger" @click="deleteBoard">
+                {{ t('board.deleteBoardAction') }}
+            </CmkButton>
+            <CmkButton variant="secondary" @click="requestClose">
+                {{ t('common.close') }}
+            </CmkButton>
+            <CmkButton
+                variant="primary"
+                :disabled="saving || !isDirty || (saveAttempted && !customSectionValid)"
+                :title="saveButtonTooltip"
+                @click="save"
+            >
+                {{ saving ? t('common.saving') : t('common.save') }}
+            </CmkButton>
         </div>
     </CmkSlideInDialog>
     <OrbUnsavedChangesDialog
@@ -1126,15 +1126,10 @@ onBeforeUnmount(() => {
     position: sticky;
     bottom: 0;
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
     gap: var(--dimension-3);
     padding: var(--dimension-4) 0;
-    background: linear-gradient(
-        to top,
-        var(--bg-surface) 0%,
-        var(--bg-surface) 75%,
-        transparent 100%
-    );
-    margin-top: var(--dimension-5);
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border);
 }
 </style>

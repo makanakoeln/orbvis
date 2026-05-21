@@ -309,6 +309,7 @@
                     :placing="editor.placing.value"
                     :selected-object-id="editor.selectedObjectId.value"
                     :filter-needle="boardFilterNeedle"
+                    :preview="isPreview"
                     @object-click="onObjectClick"
                     @object-contextmenu="onObjectContextMenu"
                     @object-contextmenu-view="onWorldmapContextMenuView"
@@ -323,13 +324,16 @@
                         boardConfig &&
                         boardConfig.objects.length > 0 &&
                         !editor.editMode.value &&
-                        !boardsStore.error
+                        !boardsStore.error &&
+                        !isPreview
                     "
                     v-model="boardFilterNeedle"
                 />
                 <!-- Fit all button -->
                 <button
-                    v-if="boardConfig && boardConfig.objects.some((o) => o.lat != null)"
+                    v-if="
+                        boardConfig && !isPreview && boardConfig.objects.some((o) => o.lat != null)
+                    "
                     :title="t('board.fitAll')"
                     class="absolute z-[1000] leaflet-control-fit-all bg-white hover:bg-zinc-100 text-zinc-700 border border-[var(--border)] rounded text-xs font-medium shadow transition-colors"
                     style="padding: 2px 4px; top: 80px; left: 10px"
@@ -368,12 +372,13 @@
                 <RadarCanvas
                     :states="statesStore.states"
                     :checkmk-url="checkmkUrl"
-                    :readonly="isKiosk || boardConfig?.readonly"
+                    :readonly="isKiosk || isPreview || boardConfig?.readonly"
+                    :compact="isPreview"
                     :filter-needle="boardFilterNeedle"
                     @object-click="onObjectClick"
                 />
                 <BoardSearch
-                    v-if="boardConfig && !editor.editMode.value"
+                    v-if="boardConfig && !editor.editMode.value && !isPreview"
                     v-model="boardFilterNeedle"
                 />
             </div>
@@ -456,15 +461,16 @@
                         ref="canvasRef"
                         :config="boardConfig"
                         :states="statesStore.states"
-                        :edit-mode="editor.editMode.value"
+                        :edit-mode="editor.editMode.value && !isPreview"
                         :placing="editor.placing.value"
                         :line-drag-positions="editor.lineDragPositions"
                         :selected-object-id="editor.selectedObjectId.value"
                         :checkmk-url="checkmkUrl"
-                        :is-admin="auth.isAdmin && !isKiosk"
+                        :is-admin="auth.isAdmin && !isKiosk && !isPreview"
                         :icon-size-override="undefined"
                         :snap-grid="editor.snapGrid.value"
                         :filter-needle="boardFilterNeedle"
+                        :preview="isPreview"
                         @object-drag-start="isDragging = true"
                         @object-drag-end="
                             (id, x, y) => {
