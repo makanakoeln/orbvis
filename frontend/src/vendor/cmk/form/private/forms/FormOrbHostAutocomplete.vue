@@ -60,6 +60,12 @@ const dropdownOptions = computed(() => ({
     suggestions: hosts.value.map((name) => ({ name, title: name })),
 }));
 
+const hostStaleWarning = computed(() =>
+    value.value && hosts.value.length && !hosts.value.includes(value.value)
+        ? `Host "${value.value}" not in current connection`
+        : '',
+);
+
 // CmkDropdown emits ``null`` when cleared; the FormSpec data is a
 // plain string, so map back and forth at the binding boundary.
 const dropdownValue = computed<string | null>({
@@ -79,6 +85,9 @@ const dropdownValue = computed<string | null>({
             :input-hint="spec.input_hint ?? ''"
             width="fill"
         />
+        <p v-if="hostStaleWarning" class="form-orb-host-autocomplete__warning">
+            {{ hostStaleWarning }}
+        </p>
         <FormValidation :validation="validation" />
     </div>
 </template>
@@ -88,5 +97,10 @@ const dropdownValue = computed<string | null>({
     display: flex;
     flex-direction: column;
     gap: 4px;
+}
+
+.form-orb-host-autocomplete__warning {
+    font-size: 0.75rem;
+    color: var(--color-warning);
 }
 </style>

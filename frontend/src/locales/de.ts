@@ -174,7 +174,9 @@ export default {
         versionLabel: 'v{version}',
         previewLabel: 'Live-Vorschau',
         deleteBoardAction: 'Board löschen…',
-        deleteBoardConfirm: 'Board „{name}" löschen? Dies kann nicht rückgängig gemacht werden.',
+        deleteBoardTitle: 'Board „{name}" löschen?',
+        deleteBoardWarning:
+            'Die Board-Konfiguration wird unwiderruflich entfernt. Objektdaten auf anderen Boards bleiben unberührt.',
         deletedToast: 'Board „{name}" gelöscht',
         deleteBackground: 'Hintergrundbild entfernen',
         saveChanges: 'Änderungen speichern',

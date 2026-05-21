@@ -164,7 +164,9 @@ export default {
         versionLabel: 'v{version}',
         previewLabel: 'Live preview',
         deleteBoardAction: 'Delete board…',
-        deleteBoardConfirm: 'Delete board "{name}"? This cannot be undone.',
+        deleteBoardTitle: 'Delete board "{name}"?',
+        deleteBoardWarning:
+            'This permanently removes the board configuration. Existing object data on other boards is unaffected.',
         deletedToast: 'Board "{name}" deleted',
         deleteBackground: 'Remove background image',
         notificationsOn: 'Browser notifications enabled — click to disable',

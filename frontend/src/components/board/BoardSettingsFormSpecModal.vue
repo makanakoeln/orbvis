@@ -410,6 +410,16 @@
         @confirm="confirmDiscard"
         @cancel="cancelDiscard"
     />
+    <OrbConfirmDialog
+        :open="deleteDialogOpen"
+        variant="error"
+        :title="t('board.deleteBoardTitle', { name: props.board.alias || props.board.name })"
+        :message="t('board.deleteBoardWarning')"
+        :confirm-label="t('board.deleteBoardAction')"
+        confirm-variant="danger"
+        @confirm="confirmDelete"
+        @cancel="deleteDialogOpen = false"
+    />
 </template>
 
 <script setup lang="ts">
@@ -433,6 +443,7 @@ import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
 import CmkInput from '@/components/cmk/user-input/CmkInput';
 import ColorInput from '@/components/ColorInput.vue';
 import NumberInput from '@/components/NumberInput.vue';
+import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import OrbUnsavedChangesDialog from '@/components/OrbUnsavedChangesDialog.vue';
 import { orbFormComponents } from '@/composables/orbFormComponents';
 import { useRadarGroups } from '@/composables/useRadarGroups';
@@ -849,9 +860,13 @@ const previewUrl = computed(
     () => `${window.location.pathname}#/boards/${encodeURIComponent(props.board.name)}?preview=1`,
 );
 
-async function deleteBoard() {
+const deleteDialogOpen = ref(false);
+function deleteBoard() {
+    deleteDialogOpen.value = true;
+}
+async function confirmDelete() {
+    deleteDialogOpen.value = false;
     const label = props.board.alias || props.board.name;
-    if (!window.confirm(t('board.deleteBoardConfirm', { name: label }))) return;
     try {
         await boardsApi.delete(props.board.name, auth.accessToken!);
         toast.success(t('board.deletedToast', { name: label }));
