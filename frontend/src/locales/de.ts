@@ -174,7 +174,6 @@ export default {
         versionLabel: 'v{version}',
         exportBoardAction: 'Als JSON exportieren',
         previewLabel: 'Live-Vorschau',
-        previewReload: 'Vorschau neu laden',
         deleteBoardAction: 'Board löschen…',
         deleteBoardConfirm: 'Board „{name}" löschen? Dies kann nicht rückgängig gemacht werden.',
         deletedToast: 'Board „{name}" gelöscht',

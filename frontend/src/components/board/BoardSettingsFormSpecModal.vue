@@ -400,16 +400,7 @@
 
             <!-- Hidden on narrow viewports where two columns don't fit. -->
             <aside class="board-settings__preview">
-                <div class="board-settings__preview-toolbar">
-                    <span class="board-settings__preview-label">{{ t('board.previewLabel') }}</span>
-                    <CmkButton
-                        variant="optional"
-                        :title="t('board.previewReload')"
-                        @click="reloadPreview"
-                    >
-                        ↻
-                    </CmkButton>
-                </div>
+                <span class="board-settings__preview-label">{{ t('board.previewLabel') }}</span>
                 <iframe
                     :key="previewKey"
                     :src="previewUrl"
@@ -864,9 +855,6 @@ const previewKey = ref(0);
 const previewUrl = computed(
     () => `${window.location.pathname}#/boards/${encodeURIComponent(props.board.name)}?preview=1`,
 );
-function reloadPreview() {
-    previewKey.value++;
-}
 
 async function deleteBoard() {
     const label = props.board.alias || props.board.name;
@@ -1035,13 +1023,6 @@ onBeforeUnmount(() => {
     top: 0;
     align-self: flex-start;
     max-height: calc(100vh - 120px);
-}
-
-.board-settings__preview-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--dimension-3);
 }
 
 .board-settings__preview-label {

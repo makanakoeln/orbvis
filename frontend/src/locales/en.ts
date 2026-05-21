@@ -164,7 +164,6 @@ export default {
         versionLabel: 'v{version}',
         exportBoardAction: 'Export as JSON',
         previewLabel: 'Live preview',
-        previewReload: 'Reload preview',
         deleteBoardAction: 'Delete board…',
         deleteBoardConfirm: 'Delete board "{name}"? This cannot be undone.',
         deletedToast: 'Board "{name}" deleted',
