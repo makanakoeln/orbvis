@@ -5,378 +5,404 @@
         size="medium"
         @close="requestClose"
     >
-        <div class="board-settings__layout">
-            <div class="board-settings__body">
-                <!-- Tabs (only when there's more than one) -->
-                <div v-if="tabs.length > 1" class="board-settings__tabs">
-                    <button
-                        v-for="tab in tabs"
-                        :key="tab.id"
-                        type="button"
-                        class="board-settings__tab"
-                        :class="{ 'board-settings__tab--active': activeTab === tab.id }"
-                        @click="activeTab = tab.id"
-                    >
-                        {{ tab.label }}
-                    </button>
-                </div>
+        <div class="board-settings__shell">
+            <div class="board-settings__layout">
+                <div class="board-settings__body">
+                    <!-- Tabs (only when there's more than one) -->
+                    <div v-if="tabs.length > 1" class="board-settings__tabs">
+                        <button
+                            v-for="tab in tabs"
+                            :key="tab.id"
+                            type="button"
+                            class="board-settings__tab"
+                            :class="{ 'board-settings__tab--active': activeTab === tab.id }"
+                            @click="activeTab = tab.id"
+                        >
+                            {{ tab.label }}
+                        </button>
+                    </div>
 
-                <div class="board-settings__scroll">
-                    <!-- General -->
-                    <div v-if="activeTab === 'general'" class="space-y-[10px]">
-                        <!-- Generic metadata (Identification, Display, Behavior,
+                    <div class="board-settings__scroll">
+                        <!-- General -->
+                        <div v-if="activeTab === 'general'" class="space-y-[10px]">
+                            <!-- Generic metadata (Identification, Display, Behavior,
                          Templates) renders first so the operator can name and
                          wire up the board before tuning type-specific
                          topology / map view / filter blocks below. -->
-                        <FormEdit
-                            v-if="formSchema"
-                            v-model:data="formSpecData"
-                            :spec="formSchema"
-                            :backend-validation="formBackendValidation"
-                        />
-                        <CmkLoading v-else-if="schemaLoading" />
+                            <FormEdit
+                                v-if="formSchema"
+                                v-model:data="formSpecData"
+                                :spec="formSchema"
+                                :backend-validation="formBackendValidation"
+                            />
+                            <CmkLoading v-else-if="schemaLoading" />
 
-                        <!-- Background (static only) -->
-                        <div
-                            v-if="form.map_type === 'static'"
-                            class="board-settings__type-section space-y-[8px]"
-                        >
-                            <p class="section-title">{{ t('boardSettings.background') }}</p>
-                            <div class="space-y-[4px]">
-                                <CmkLabel>{{ t('board.backgroundImage') }}</CmkLabel>
-                                <BackgroundImageUpload
-                                    v-model="form.background_image"
-                                    :board-name="props.board.name"
-                                    @replaced="bgReplaced = true"
-                                />
-                            </div>
-                            <div class="space-y-[4px]">
-                                <CmkLabel>{{ t('board.backgroundColor') }}</CmkLabel>
-                                <ColorInput
-                                    v-model="form.background_color"
-                                    :enable-label="t('common.useColor')"
-                                    default-color="#1f2937"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Worldmap settings -->
-                        <div
-                            v-if="form.map_type === 'worldmap'"
-                            class="board-settings__type-section space-y-[8px]"
-                        >
-                            <p class="section-title">{{ t('boardSettings.mapView') }}</p>
-                            <div class="grid grid-cols-3 gap-[8px]">
+                            <!-- Background (static only) -->
+                            <div
+                                v-if="form.map_type === 'static'"
+                                class="board-settings__type-section space-y-[8px]"
+                            >
+                                <p class="section-title">{{ t('boardSettings.background') }}</p>
                                 <div class="space-y-[4px]">
-                                    <CmkLabel>{{ t('board.latitude') }}</CmkLabel>
-                                    <NumberInput
-                                        v-model="form.worldmap_lat"
-                                        step="any"
-                                        :precision="10"
-                                        class="w-full"
+                                    <CmkLabel>{{ t('board.backgroundImage') }}</CmkLabel>
+                                    <BackgroundImageUpload
+                                        v-model="form.background_image"
+                                        :board-name="props.board.name"
+                                        @replaced="bgReplaced = true"
                                     />
                                 </div>
                                 <div class="space-y-[4px]">
-                                    <CmkLabel>{{ t('board.longitude') }}</CmkLabel>
-                                    <NumberInput
-                                        v-model="form.worldmap_lng"
-                                        step="any"
-                                        :precision="10"
-                                        class="w-full"
+                                    <CmkLabel>{{ t('board.backgroundColor') }}</CmkLabel>
+                                    <ColorInput
+                                        v-model="form.background_color"
+                                        :enable-label="t('common.useColor')"
+                                        default-color="#1f2937"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- Worldmap settings -->
+                            <div
+                                v-if="form.map_type === 'worldmap'"
+                                class="board-settings__type-section space-y-[8px]"
+                            >
+                                <p class="section-title">{{ t('boardSettings.mapView') }}</p>
+                                <div class="grid grid-cols-3 gap-[8px]">
+                                    <div class="space-y-[4px]">
+                                        <CmkLabel>{{ t('board.latitude') }}</CmkLabel>
+                                        <NumberInput
+                                            v-model="form.worldmap_lat"
+                                            step="any"
+                                            :precision="10"
+                                            class="w-full"
+                                        />
+                                    </div>
+                                    <div class="space-y-[4px]">
+                                        <CmkLabel>{{ t('board.longitude') }}</CmkLabel>
+                                        <NumberInput
+                                            v-model="form.worldmap_lng"
+                                            step="any"
+                                            :precision="10"
+                                            class="w-full"
+                                        />
+                                    </div>
+                                    <div class="space-y-[4px]">
+                                        <CmkLabel :help="t('board.worldmapHint')">{{
+                                            t('board.zoom')
+                                        }}</CmkLabel>
+                                        <NumberInput
+                                            v-model="form.worldmap_zoom"
+                                            min="1"
+                                            max="18"
+                                            class="w-full"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="space-y-[4px]">
+                                    <CmkLabel>{{ t('board.tileUrl') }}</CmkLabel>
+                                    <CmkInput
+                                        v-model="form.worldmap_tile_url"
+                                        :placeholder="t('board.tileUrlPlaceholder')"
+                                        field-size="FILL"
                                     />
                                 </div>
                                 <div class="space-y-[4px]">
-                                    <CmkLabel :help="t('board.worldmapHint')">{{
-                                        t('board.zoom')
-                                    }}</CmkLabel>
+                                    <CmkLabel>{{ t('board.tileSaturate') }}</CmkLabel>
                                     <NumberInput
-                                        v-model="form.worldmap_zoom"
-                                        min="1"
-                                        max="18"
+                                        v-model="form.worldmap_tile_saturate"
+                                        :min="0"
+                                        :max="100"
+                                        :step="5"
+                                        :placeholder="t('board.tileSaturatePlaceholder')"
                                         class="w-full"
                                     />
                                 </div>
-                            </div>
-                            <div class="space-y-[4px]">
-                                <CmkLabel>{{ t('board.tileUrl') }}</CmkLabel>
-                                <CmkInput
-                                    v-model="form.worldmap_tile_url"
-                                    :placeholder="t('board.tileUrlPlaceholder')"
-                                    field-size="FILL"
-                                />
-                            </div>
-                            <div class="space-y-[4px]">
-                                <CmkLabel>{{ t('board.tileSaturate') }}</CmkLabel>
-                                <NumberInput
-                                    v-model="form.worldmap_tile_saturate"
-                                    :min="0"
-                                    :max="100"
-                                    :step="5"
-                                    :placeholder="t('board.tileSaturatePlaceholder')"
-                                    class="w-full"
-                                />
-                            </div>
 
-                            <!-- Automap: dynamically populate the board from
+                                <!-- Automap: dynamically populate the board from
                                  host geo-coords (orbvis_lat/orbvis_lng labels
                                  or LAT/LONG custom variables). Mirrors NagVis
                                  automap with lat/lng. -->
-                            <div class="board-settings__subsection space-y-[4px]">
-                                <CmkLabel :help="t('board.autoSourceHint')">{{
-                                    t('board.autoSource')
-                                }}</CmkLabel>
-                                <CmkDropdown
-                                    :selected-option="form.worldmap_auto_source || ''"
-                                    :options="worldmapAutoSourceOptions"
-                                    :width="'fill'"
-                                    :label="t('board.autoSource')"
-                                    @update:selected-option="
-                                        form.worldmap_auto_source = ($event ??
-                                            '') as typeof form.worldmap_auto_source
-                                    "
-                                />
-                                <div
-                                    v-if="
-                                        form.worldmap_auto_source === 'hostgroup' ||
-                                        form.worldmap_auto_source === 'servicegroup'
-                                    "
-                                    class="space-y-[4px]"
-                                >
-                                    <CmkLabel>
-                                        {{ t('board.groupName')
-                                        }}<CmkLabelRequired space="before" />
-                                    </CmkLabel>
-                                    <CmkInput
-                                        v-model="form.worldmap_auto_filter_value"
-                                        :placeholder="t('board.autoFilterValuePlaceholder')"
-                                        field-size="FILL"
-                                        :class="{
-                                            'orb-input-invalid':
-                                                saveAttempted && !form.worldmap_auto_filter_value,
-                                        }"
+                                <div class="board-settings__subsection space-y-[4px]">
+                                    <CmkLabel :help="t('board.autoSourceHint')">{{
+                                        t('board.autoSource')
+                                    }}</CmkLabel>
+                                    <CmkDropdown
+                                        :selected-option="form.worldmap_auto_source || ''"
+                                        :options="worldmapAutoSourceOptions"
+                                        :width="'fill'"
+                                        :label="t('board.autoSource')"
+                                        @update:selected-option="
+                                            form.worldmap_auto_source = ($event ??
+                                                '') as typeof form.worldmap_auto_source
+                                        "
                                     />
+                                    <div
+                                        v-if="
+                                            form.worldmap_auto_source === 'hostgroup' ||
+                                            form.worldmap_auto_source === 'servicegroup'
+                                        "
+                                        class="space-y-[4px]"
+                                    >
+                                        <CmkLabel>
+                                            {{ t('board.groupName')
+                                            }}<CmkLabelRequired space="before" />
+                                        </CmkLabel>
+                                        <CmkInput
+                                            v-model="form.worldmap_auto_filter_value"
+                                            :placeholder="t('board.autoFilterValuePlaceholder')"
+                                            field-size="FILL"
+                                            :class="{
+                                                'orb-input-invalid':
+                                                    saveAttempted &&
+                                                    !form.worldmap_auto_filter_value,
+                                            }"
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Flow settings: served as a FormSpec so titles/help
+                            <!-- Flow settings: served as a FormSpec so titles/help
                          and the Integer-input look match the rest of the
                          Checkmk FormSpec UI. -->
-                        <FormEdit
-                            v-if="form.map_type === 'flow' && flowViewFormSchema"
-                            v-model:data="flowViewFormSpecData"
-                            :spec="flowViewFormSchema"
-                            :backend-validation="[]"
-                        />
+                            <FormEdit
+                                v-if="form.map_type === 'flow' && flowViewFormSchema"
+                                v-model:data="flowViewFormSpecData"
+                                :spec="flowViewFormSchema"
+                                :backend-validation="[]"
+                            />
 
-                        <!-- Radar settings -->
-                        <div
-                            v-if="form.map_type === 'radar'"
-                            class="board-settings__type-section space-y-[8px]"
-                        >
-                            <p class="section-title">{{ t('boardSettings.radarFilter') }}</p>
-                            <div class="grid grid-cols-2 gap-[8px]">
-                                <div class="space-y-[4px]">
-                                    <CmkLabel>{{ t('board.filterType') }}</CmkLabel>
-                                    <CmkDropdown
-                                        :selected-option="form.radar_filter || null"
-                                        :options="radarFilterOptions"
-                                        :width="'fill'"
-                                        :label="t('board.filterType')"
-                                        @update:selected-option="form.radar_filter = $event ?? ''"
-                                    />
-                                </div>
-                                <div
-                                    v-if="
-                                        form.radar_filter === 'hostgroup' ||
-                                        form.radar_filter === 'servicegroup'
-                                    "
-                                    class="space-y-[4px]"
-                                >
-                                    <CmkLabel>{{ t('board.groupName') }}</CmkLabel>
-                                    <CmkDropdown
-                                        :selected-option="form.radar_filter_value || null"
-                                        :options="radarGroupOptions"
-                                        :width="'fill'"
-                                        :label="t('board.groupName')"
-                                        :input-hint="t('boardSettings.groupName')"
-                                        :required="true"
-                                        :form-validation="saveAttempted && !form.radar_filter_value"
-                                        :no-elements-text="
-                                            t(
-                                                form.radar_filter === 'hostgroup'
-                                                    ? 'boardSettings.noHostgroups'
-                                                    : 'boardSettings.noServicegroups',
-                                            )
+                            <!-- Radar settings -->
+                            <div
+                                v-if="form.map_type === 'radar'"
+                                class="board-settings__type-section space-y-[8px]"
+                            >
+                                <p class="section-title">{{ t('boardSettings.radarFilter') }}</p>
+                                <div class="grid grid-cols-2 gap-[8px]">
+                                    <div class="space-y-[4px]">
+                                        <CmkLabel>{{ t('board.filterType') }}</CmkLabel>
+                                        <CmkDropdown
+                                            :selected-option="form.radar_filter || null"
+                                            :options="radarFilterOptions"
+                                            :width="'fill'"
+                                            :label="t('board.filterType')"
+                                            @update:selected-option="
+                                                form.radar_filter = $event ?? ''
+                                            "
+                                        />
+                                    </div>
+                                    <div
+                                        v-if="
+                                            form.radar_filter === 'hostgroup' ||
+                                            form.radar_filter === 'servicegroup'
                                         "
-                                        @update:selected-option="
-                                            form.radar_filter_value = $event ?? ''
-                                        "
-                                    />
+                                        class="space-y-[4px]"
+                                    >
+                                        <CmkLabel>{{ t('board.groupName') }}</CmkLabel>
+                                        <CmkDropdown
+                                            :selected-option="form.radar_filter_value || null"
+                                            :options="radarGroupOptions"
+                                            :width="'fill'"
+                                            :label="t('board.groupName')"
+                                            :input-hint="t('boardSettings.groupName')"
+                                            :required="true"
+                                            :form-validation="
+                                                saveAttempted && !form.radar_filter_value
+                                            "
+                                            :no-elements-text="
+                                                t(
+                                                    form.radar_filter === 'hostgroup'
+                                                        ? 'boardSettings.noHostgroups'
+                                                        : 'boardSettings.noServicegroups',
+                                                )
+                                            "
+                                            @update:selected-option="
+                                                form.radar_filter_value = $event ?? ''
+                                            "
+                                        />
+                                    </div>
                                 </div>
                             </div>
+
+                            <ul
+                                v-if="errorMessages.length"
+                                class="text-xs text-[var(--color-light-red-40)] space-y-0.5"
+                            >
+                                <li v-for="(msg, i) in errorMessages" :key="i">{{ msg }}</li>
+                            </ul>
                         </div>
 
-                        <ul
-                            v-if="errorMessages.length"
-                            class="text-xs text-[var(--color-light-red-40)] space-y-0.5"
-                        >
-                            <li v-for="(msg, i) in errorMessages" :key="i">{{ msg }}</li>
-                        </ul>
-                    </div>
-
-                    <!-- Permissions -->
-                    <div v-else-if="activeTab === 'permissions'">
-                        <!-- Inside a Checkmk deployment, CMK role permissions
+                        <!-- Permissions -->
+                        <div v-else-if="activeTab === 'permissions'">
+                            <!-- Inside a Checkmk deployment, CMK role permissions
                          (orbvis.see/edit) are the source of truth, not the
                          OrbVis role table. Show a read-only summary plus a
                          deep-link to WATO instead. -->
-                        <div v-if="isCmkDeployment" class="space-y-4">
-                            <p class="text-sm text-[var(--text)]">
-                                {{ t('board.permissionsCmkIntro') }}
-                            </p>
-                            <CmkButton variant="secondary" @click="openCmkRoles">
-                                {{ t('board.permissionsCmkOpen') }}
-                            </CmkButton>
+                            <div v-if="isCmkDeployment" class="space-y-4">
+                                <p class="text-sm text-[var(--text)]">
+                                    {{ t('board.permissionsCmkIntro') }}
+                                </p>
+                                <CmkButton variant="secondary" @click="openCmkRoles">
+                                    {{ t('board.permissionsCmkOpen') }}
+                                </CmkButton>
+                            </div>
+                            <div
+                                v-else-if="permLoading"
+                                class="flex items-center justify-center py-8"
+                            >
+                                <CmkLoading />
+                            </div>
+                            <div v-else>
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b border-[var(--border)]">
+                                            <th
+                                                class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
+                                                style="
+                                                    padding: var(--dimension-3) var(--dimension-4);
+                                                "
+                                            >
+                                                {{ t('admin.role') }}
+                                            </th>
+                                            <th
+                                                class="text-center text-sm font-semibold text-[var(--text-muted)] tracking-wider w-20"
+                                                style="
+                                                    padding: var(--dimension-3) var(--dimension-4);
+                                                "
+                                            >
+                                                {{ t('common.view') }}
+                                            </th>
+                                            <th
+                                                class="text-center text-sm font-semibold text-[var(--text-muted)] tracking-wider w-20"
+                                                style="
+                                                    padding: var(--dimension-3) var(--dimension-4);
+                                                "
+                                            >
+                                                {{ t('common.edit') }}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-[var(--border)]">
+                                        <tr
+                                            v-for="role in permRoles"
+                                            :key="role.role_id"
+                                            class="hover:bg-[var(--bg-hover)]"
+                                        >
+                                            <td
+                                                class="font-medium text-[var(--text)]"
+                                                style="
+                                                    padding: var(--dimension-3) var(--dimension-4);
+                                                "
+                                            >
+                                                {{ role.name }}
+                                            </td>
+                                            <td
+                                                class="text-center"
+                                                style="
+                                                    padding: var(--dimension-3) var(--dimension-4);
+                                                "
+                                            >
+                                                <div
+                                                    class="flex items-center justify-center gap-[3px]"
+                                                >
+                                                    <CmkCheckbox
+                                                        :model-value="hasDraftPerm(role, 'view')"
+                                                        :disabled="hasWildcard(role, 'view')"
+                                                        @update:model-value="
+                                                            toggleDraftPerm(role, 'view')
+                                                        "
+                                                    />
+                                                    <span
+                                                        v-if="hasWildcard(role, 'view')"
+                                                        class="text-[10px] text-[var(--text-muted)]"
+                                                        :title="t('admin.viaWildcardRule')"
+                                                        >*</span
+                                                    >
+                                                </div>
+                                            </td>
+                                            <td
+                                                class="text-center"
+                                                style="
+                                                    padding: var(--dimension-3) var(--dimension-4);
+                                                "
+                                            >
+                                                <div
+                                                    class="flex items-center justify-center gap-[3px]"
+                                                >
+                                                    <CmkCheckbox
+                                                        :model-value="hasDraftPerm(role, 'edit')"
+                                                        :disabled="hasWildcard(role, 'edit')"
+                                                        @update:model-value="
+                                                            toggleDraftPerm(role, 'edit')
+                                                        "
+                                                    />
+                                                    <span
+                                                        v-if="hasWildcard(role, 'edit')"
+                                                        class="text-[10px] text-[var(--text-muted)]"
+                                                        :title="t('admin.viaWildcardRule')"
+                                                        >*</span
+                                                    >
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <p
+                                    v-if="!permRoles.length"
+                                    class="text-center py-6 text-[var(--text-muted)] text-sm"
+                                >
+                                    {{ t('admin.noRoles') }}
+                                </p>
+                                <p class="text-sm text-[var(--text-muted)] mt-3 px-1">
+                                    * {{ t('admin.wildcardNote') }}
+                                </p>
+                            </div>
                         </div>
-                        <div v-else-if="permLoading" class="flex items-center justify-center py-8">
+                    </div>
+                </div>
+
+                <!-- Hidden on narrow viewports where two columns don't fit. -->
+                <aside class="board-settings__preview">
+                    <span class="board-settings__preview-label">{{ t('board.previewLabel') }}</span>
+                    <div class="board-settings__preview-stage">
+                        <iframe
+                            :key="previewKey"
+                            :src="previewUrl"
+                            class="board-settings__preview-frame"
+                            :title="t('board.previewLabel')"
+                            @load="previewLoading = false"
+                        />
+                        <div v-if="previewLoading" class="board-settings__preview-loading">
                             <CmkLoading />
                         </div>
-                        <div v-else>
-                            <table class="w-full text-sm">
-                                <thead>
-                                    <tr class="border-b border-[var(--border)]">
-                                        <th
-                                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                                            style="padding: var(--dimension-3) var(--dimension-4)"
-                                        >
-                                            {{ t('admin.role') }}
-                                        </th>
-                                        <th
-                                            class="text-center text-sm font-semibold text-[var(--text-muted)] tracking-wider w-20"
-                                            style="padding: var(--dimension-3) var(--dimension-4)"
-                                        >
-                                            {{ t('common.view') }}
-                                        </th>
-                                        <th
-                                            class="text-center text-sm font-semibold text-[var(--text-muted)] tracking-wider w-20"
-                                            style="padding: var(--dimension-3) var(--dimension-4)"
-                                        >
-                                            {{ t('common.edit') }}
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-[var(--border)]">
-                                    <tr
-                                        v-for="role in permRoles"
-                                        :key="role.role_id"
-                                        class="hover:bg-[var(--bg-hover)]"
-                                    >
-                                        <td
-                                            class="font-medium text-[var(--text)]"
-                                            style="padding: var(--dimension-3) var(--dimension-4)"
-                                        >
-                                            {{ role.name }}
-                                        </td>
-                                        <td
-                                            class="text-center"
-                                            style="padding: var(--dimension-3) var(--dimension-4)"
-                                        >
-                                            <div class="flex items-center justify-center gap-[3px]">
-                                                <CmkCheckbox
-                                                    :model-value="hasDraftPerm(role, 'view')"
-                                                    :disabled="hasWildcard(role, 'view')"
-                                                    @update:model-value="
-                                                        toggleDraftPerm(role, 'view')
-                                                    "
-                                                />
-                                                <span
-                                                    v-if="hasWildcard(role, 'view')"
-                                                    class="text-[10px] text-[var(--text-muted)]"
-                                                    :title="t('admin.viaWildcardRule')"
-                                                    >*</span
-                                                >
-                                            </div>
-                                        </td>
-                                        <td
-                                            class="text-center"
-                                            style="padding: var(--dimension-3) var(--dimension-4)"
-                                        >
-                                            <div class="flex items-center justify-center gap-[3px]">
-                                                <CmkCheckbox
-                                                    :model-value="hasDraftPerm(role, 'edit')"
-                                                    :disabled="hasWildcard(role, 'edit')"
-                                                    @update:model-value="
-                                                        toggleDraftPerm(role, 'edit')
-                                                    "
-                                                />
-                                                <span
-                                                    v-if="hasWildcard(role, 'edit')"
-                                                    class="text-[10px] text-[var(--text-muted)]"
-                                                    :title="t('admin.viaWildcardRule')"
-                                                    >*</span
-                                                >
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <p
-                                v-if="!permRoles.length"
-                                class="text-center py-6 text-[var(--text-muted)] text-sm"
-                            >
-                                {{ t('admin.noRoles') }}
-                            </p>
-                            <p class="text-sm text-[var(--text-muted)] mt-3 px-1">
-                                * {{ t('admin.wildcardNote') }}
-                            </p>
-                        </div>
                     </div>
-                </div>
+                </aside>
             </div>
 
-            <!-- Hidden on narrow viewports where two columns don't fit. -->
-            <aside class="board-settings__preview">
-                <span class="board-settings__preview-label">{{ t('board.previewLabel') }}</span>
-                <div class="board-settings__preview-stage">
-                    <iframe
-                        :key="previewKey"
-                        :src="previewUrl"
-                        class="board-settings__preview-frame"
-                        :title="t('board.previewLabel')"
-                        @load="previewLoading = false"
-                    />
-                    <div v-if="previewLoading" class="board-settings__preview-loading">
-                        <CmkLoading />
-                    </div>
-                </div>
-            </aside>
-        </div>
-
-        <div class="board-settings__footer">
-            <CmkButton
-                variant="optional"
-                :disabled="!isDirty || saving"
-                :title="isDirty ? undefined : t('board.resetDisabledClean')"
-                @click="resetChanges"
-            >
-                {{ t('board.resetChanges') }}
-            </CmkButton>
-            <span class="board-settings__footer-spacer" />
-            <CmkButton variant="danger" @click="deleteBoard">
-                {{ t('board.deleteBoardAction') }}
-            </CmkButton>
-            <CmkButton variant="secondary" @click="requestClose">
-                {{ t('common.close') }}
-            </CmkButton>
-            <CmkButton
-                variant="primary"
-                :disabled="saving || !isDirty || (saveAttempted && !customSectionValid)"
-                :title="saveButtonTooltip"
-                @click="save"
-            >
-                {{ saving ? t('common.saving') : t('common.save') }}
-            </CmkButton>
+            <div class="board-settings__footer">
+                <CmkButton
+                    variant="optional"
+                    :disabled="!isDirty || saving"
+                    :title="isDirty ? undefined : t('board.resetDisabledClean')"
+                    @click="resetChanges"
+                >
+                    {{ t('board.resetChanges') }}
+                </CmkButton>
+                <span class="board-settings__footer-spacer" />
+                <CmkButton variant="danger" @click="deleteBoard">
+                    {{ t('board.deleteBoardAction') }}
+                </CmkButton>
+                <CmkButton variant="secondary" @click="requestClose">
+                    {{ t('common.close') }}
+                </CmkButton>
+                <CmkButton
+                    variant="primary"
+                    :disabled="saving || !isDirty || (saveAttempted && !customSectionValid)"
+                    :title="saveButtonTooltip"
+                    @click="save"
+                >
+                    {{ saving ? t('common.saving') : t('common.save') }}
+                </CmkButton>
+            </div>
         </div>
     </CmkSlideInDialog>
     <OrbUnsavedChangesDialog
@@ -963,11 +989,20 @@ onBeforeUnmount(() => {
     border-color: var(--form-element-required-color);
 }
 
+.board-settings__shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
 .board-settings__layout {
     display: flex;
     flex-direction: row;
     gap: var(--dimension-5);
-    min-height: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
 }
 
 .board-settings__body {
@@ -1115,8 +1150,7 @@ onBeforeUnmount(() => {
 }
 
 .board-settings__footer {
-    position: sticky;
-    bottom: 0;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: var(--dimension-3);
