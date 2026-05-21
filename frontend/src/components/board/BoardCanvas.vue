@@ -436,10 +436,10 @@ onMounted(() => {
     const pane = findScrollAncestor(el);
     if (pane) paneSize.value = { width: pane.clientWidth, height: pane.clientHeight };
     if (props.preview && pane) {
-        const fitX = pane.clientWidth / canvasWidth.value;
-        const fitY = pane.clientHeight / canvasHeight.value;
-        const fit = Math.min(fitX, fitY, 1);
-        if (fit < 1) userZoom.value = fit;
+        // Fit by width only — vertical overflow scrolls inside the preview,
+        // which is friendlier than shrinking to an unreadable 10–15%.
+        const fit = Math.min(pane.clientWidth / canvasWidth.value, 1);
+        if (fit < 1) userZoom.value = Math.max(fit, 0.35);
     }
     if (typeof ResizeObserver === 'undefined') return;
     canvasResizeObserver = new ResizeObserver((entries) => {
