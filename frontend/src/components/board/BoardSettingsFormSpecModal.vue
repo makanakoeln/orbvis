@@ -382,14 +382,17 @@
 
             <div class="board-settings__footer">
                 <CmkButton
+                    v-if="isDirty"
                     variant="optional"
-                    :disabled="!isDirty || saving"
-                    :title="isDirty ? undefined : t('board.resetDisabledClean')"
+                    :disabled="saving"
                     @click="resetChanges"
                 >
                     {{ t('board.resetChanges') }}
                 </CmkButton>
                 <span class="board-settings__footer-spacer" />
+                <CmkButton variant="optional" :disabled="isDirty" @click="openBoard">
+                    {{ t('board.openBoard') }}
+                </CmkButton>
                 <CmkButton variant="danger" @click="deleteBoard">
                     {{ t('board.deleteBoardAction') }}
                 </CmkButton>
@@ -587,12 +590,20 @@ if (fv?.max_services_per_host != null)
 const flowViewFormSpecData = ref<Record<string, unknown>>(flowViewFormSpecDataInitial);
 const flowViewFormSchema = ref<Schema | null>(null);
 
-const boardTitle = computed(
-    () => t('board.settingsTitle') + ' — ' + (form.value.alias || props.board.name),
-);
+const boardTitle = computed(() => {
+    const alias = form.value.alias || props.board.name;
+    const head = t('board.settingsTitle') + ' — ' + alias;
+    return alias === props.board.name ? head : `${head} · ${props.board.name}`;
+});
 
 function openCmkRoles() {
     openUrl(cmkRolesUrl.value, '_blank');
+}
+
+function openBoard() {
+    if (isDirty.value) return;
+    emit('close');
+    window.location.hash = `#/boards/${encodeURIComponent(props.board.name)}`;
 }
 
 const worldmapAutoSourceOptions = computed(() => ({
@@ -1077,8 +1088,16 @@ onBeforeUnmount(() => {
 }
 
 @media (width <= 900px) {
+    .board-settings__layout {
+        flex-direction: column;
+    }
+
     .board-settings__preview {
         display: none;
+    }
+
+    .board-settings__body {
+        flex: 1 1 100%;
     }
 }
 

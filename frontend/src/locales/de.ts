@@ -169,6 +169,7 @@ export default {
         saveDisabledClean: 'Keine Änderungen zu speichern',
         saveDisabledInvalid: 'Markierte Felder korrigieren, dann speichern',
         saveShortcutTooltip: 'Speichern ({shortcut})',
+        openBoard: 'Board öffnen',
         permissionsCmkIntro:
             'Anzeige- und Bearbeitungsrechte werden über Checkmk-Rollen gesteuert (orbvis.see, orbvis.edit). Verwaltung erfolgt in Checkmk WATO.',
         permissionsCmkOpen: 'Rolleneditor in Checkmk öffnen',
