@@ -158,6 +158,7 @@ export default {
         savedToast: 'Board settings saved',
         saveDisabledClean: 'No changes to save',
         saveDisabledInvalid: 'Fix the highlighted fields to save',
+        saveShortcutTooltip: 'Save ({shortcut})',
         permissionsCmkIntro:
             'Board view and edit are gated by Checkmk role permissions (orbvis.see, orbvis.edit). Manage them in Checkmk WATO.',
         permissionsCmkOpen: 'Open role editor in Checkmk',

@@ -168,6 +168,7 @@ export default {
         savedToast: 'Board-Einstellungen gespeichert',
         saveDisabledClean: 'Keine Änderungen zu speichern',
         saveDisabledInvalid: 'Markierte Felder korrigieren, dann speichern',
+        saveShortcutTooltip: 'Speichern ({shortcut})',
         permissionsCmkIntro:
             'Anzeige- und Bearbeitungsrechte werden über Checkmk-Rollen gesteuert (orbvis.see, orbvis.edit). Verwaltung erfolgt in Checkmk WATO.',
         permissionsCmkOpen: 'Rolleneditor in Checkmk öffnen',

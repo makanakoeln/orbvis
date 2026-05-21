@@ -807,7 +807,7 @@ const saveButtonTooltip = computed(() => {
     if (saving.value) return undefined;
     if (!isDirty.value) return t('board.saveDisabledClean');
     if (saveAttempted.value && !customSectionValid.value) return t('board.saveDisabledInvalid');
-    return saveShortcutHint;
+    return t('board.saveShortcutTooltip', { shortcut: saveShortcutHint });
 });
 
 const discardDialogOpen = ref(false);
