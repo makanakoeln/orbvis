@@ -385,7 +385,7 @@
                         {{ t('board.deleteBoardAction') }}
                     </CmkButton>
                     <CmkButton variant="secondary" @click="requestClose">
-                        {{ t('common.cancel') }}
+                        {{ t('common.close') }}
                     </CmkButton>
                     <CmkButton
                         variant="primary"

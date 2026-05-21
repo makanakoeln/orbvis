@@ -31,7 +31,12 @@ export const useBoardsStore = defineStore('boards', () => {
     async function fetchBoard(name: string) {
         loading.value = true;
         error.value = null;
-        currentBoard.value = null; // clear stale data immediately
+        // Only blank out the canvas when switching to a different board.
+        // Refreshing the same board (post-save) keeps the old config
+        // visible until the new one arrives so the page doesn't flicker.
+        if (currentBoard.value?.name !== name) {
+            currentBoard.value = null;
+        }
         try {
             const cfg = await boardsApi.get(name, token());
             // Worldmap boards with auto_source merge transient hosts on top of

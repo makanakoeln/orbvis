@@ -1,10 +1,7 @@
 <template>
     <div class="absolute inset-0 bg-[var(--bg)]">
-        <div
-            v-if="loading"
-            class="flex items-center justify-center h-full text-[var(--text-muted)] text-sm"
-        >
-            Loading topology…
+        <div v-if="loading" class="flex items-center justify-center h-full">
+            <CmkLoading />
         </div>
         <div
             v-else-if="error"
@@ -292,6 +289,7 @@ import DetailDrawer from '@/components/board/DetailDrawer.vue';
 import DowntimeModal from '@/components/board/DowntimeModal.vue';
 import HoverMenu from '@/components/board/HoverMenu.vue';
 import RemoveDowntimeModal from '@/components/board/RemoveDowntimeModal.vue';
+import CmkLoading from '@/components/cmk/CmkLoading';
 import { useD3Cleanup } from '@/composables/useD3Cleanup';
 import { useObjectActions } from '@/composables/useObjectActions';
 import { useAuthStore } from '@/stores/auth';
@@ -1342,6 +1340,9 @@ const flowViewKey = computed(() => {
 watch(flowViewKey, () => {
     nodeCache.clear();
     _hasFitOnce = false;
+    // Show the loading state while the new topology arrives so the
+    // canvas doesn't keep displaying the previous root host's nodes.
+    loading.value = true;
     fetchTopology();
 });
 
