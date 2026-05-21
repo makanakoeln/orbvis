@@ -1340,8 +1340,7 @@ const flowViewKey = computed(() => {
 watch(flowViewKey, () => {
     nodeCache.clear();
     _hasFitOnce = false;
-    // Show the loading state while the new topology arrives so the
-    // canvas doesn't keep displaying the previous root host's nodes.
+    // Hide the previous root's nodes while the new topology arrives.
     loading.value = true;
     fetchTopology();
 });

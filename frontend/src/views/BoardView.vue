@@ -1953,7 +1953,9 @@ function openSettings() {
 }
 
 async function onSettingsUpdated() {
-    await reloadBoard();
+    // The settings modal pushes the saved config straight into the
+    // store, so refetching here would null currentBoard briefly and
+    // unmount the canvas. Just refresh the rotation timer instead.
     stopRotation();
     scheduleRotation(boardsStore.currentBoard?.rotation_interval ?? 0);
 }
