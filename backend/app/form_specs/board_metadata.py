@@ -149,7 +149,9 @@ def board_metadata_spec(
                     help_text=Help(
                         "Show the next board in the rotation after the chosen "
                         "interval. Pick Off to keep this board open until the "
-                        "operator switches manually."
+                        "operator switches manually. Rotation order follows "
+                        "the boards list; only boards with auto-rotate enabled "
+                        "participate."
                     ),
                     prefill=DefaultValue("off"),
                     elements=[
