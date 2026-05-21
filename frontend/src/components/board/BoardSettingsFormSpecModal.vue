@@ -1021,7 +1021,20 @@ onMounted(async () => {
     ]);
     connections.value = bs;
     schemaLoading.value = false;
-    if (spec) formSchema.value = spec as unknown as Schema;
+    if (spec) {
+        // Radar renders cards in a grid without hover / context popups,
+        // so the template fields would never apply — drop them from
+        // the schema for these boards to avoid operator confusion.
+        if (form.value.map_type === 'radar') {
+            const dict = spec as { elements?: { name: string }[] };
+            if (Array.isArray(dict.elements)) {
+                dict.elements = dict.elements.filter(
+                    (el) => el.name !== 'hover_template' && el.name !== 'context_template',
+                );
+            }
+        }
+        formSchema.value = spec as unknown as Schema;
+    }
     if (flowSpec) flowViewFormSchema.value = flowSpec as unknown as Schema;
     // Wait for FormEdit's first render to normalise formSpecData, then
     // snapshot again so isDirty doesn't fire on the visitor's own defaults.

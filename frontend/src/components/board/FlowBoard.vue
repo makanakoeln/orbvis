@@ -139,6 +139,9 @@
             :x="hoverMenu.x"
             :y="hoverMenu.y"
             :connection-id="props.connectionId"
+            :template="
+                resolveTemplate(null, props.hoverTemplate, settingsStore.settings.hover_template)
+            "
         />
 
         <DetailDrawer
@@ -202,6 +205,13 @@
             :x="contextMenu.x"
             :y="contextMenu.y"
             :checkmk-url="props.checkmkUrl ?? null"
+            :template="
+                resolveTemplate(
+                    null,
+                    props.contextTemplate,
+                    settingsStore.settings.context_template,
+                )
+            "
             @close="closeContextMenu"
             @acknowledge="onContextMenuAck"
             @remove-ack="onContextMenuRemoveAck"
@@ -293,6 +303,7 @@ import CmkLoading from '@/components/cmk/CmkLoading';
 import { useD3Cleanup } from '@/composables/useD3Cleanup';
 import { useObjectActions } from '@/composables/useObjectActions';
 import { useAuthStore } from '@/stores/auth';
+import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
 import type {
     BoardObject,
@@ -305,6 +316,7 @@ import type {
 } from '@/types/api';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { stateColor } from '@/utils/stateColors';
+import { resolveTemplate } from '@/utils/template';
 
 const props = defineProps<{
     connectionId: string;
@@ -314,6 +326,8 @@ const props = defineProps<{
     checkmkUrl?: string | null;
     flowView?: FlowView | null;
     preview?: boolean;
+    hoverTemplate?: string | null;
+    contextTemplate?: string | null;
 }>();
 const emit = defineEmits<{
     (e: 'update:serviceLayout', value: ServiceLayout): void;
@@ -327,6 +341,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const auth = useAuthStore();
 const statesStore = useStatesStore();
+const settingsStore = useSettingsStore();
 
 const NODE_R = 18;
 const SVC_R_MAX = 11; // service node radius at low service count

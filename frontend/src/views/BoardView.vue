@@ -396,6 +396,8 @@
                     :checkmk-url="checkmkUrl"
                     :flow-view="boardConfig.view.type === 'flow' ? boardConfig.view : null"
                     :preview="isPreview"
+                    :hover-template="boardConfig.hover_template"
+                    :context-template="boardConfig.context_template"
                     @update:service-layout="onServiceLayoutChanged"
                     @update:problems="flowProblems = $event"
                     @drawer-object="flowDrawerObject = $event"
