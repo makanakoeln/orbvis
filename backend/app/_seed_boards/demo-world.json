@@ -19,7 +19,7 @@
       "lng": 10.0,
       "z": 1,
       "host_name": "router01",
-      "label": { "show": true, "text": "router01\nHamburg", "x": 0, "y": 34, "size": 11, "color": "#ffffff", "background": "transparent" },
+      "label": { "show": true, "text": "router01\nHamburg", "x": 0, "y": 0, "size": 11, "color": "#ffffff", "background": "transparent" },
       "display": { "mode": "icon" }
     },
     {
@@ -32,7 +32,7 @@
       "z": 1,
       "host_name": "router01",
       "service_description": "CPU Load",
-      "label": { "show": true, "text": "CPU Load", "x": 0, "y": 56, "size": 10, "color": "#ffffff", "background": "transparent" },
+      "label": { "show": true, "text": "CPU Load", "x": 0, "y": 0, "size": 10, "color": "#ffffff", "background": "transparent" },
       "display": { "mode": "gadget", "gadget_type": "gauge" }
     },
     {
@@ -44,7 +44,7 @@
       "lng": 11.58,
       "z": 1,
       "host_name": "mailserver",
-      "label": { "show": true, "text": "mailserver\nM\u00fcnchen", "x": 0, "y": 34, "size": 11, "color": "#ffffff", "background": "transparent" },
+      "label": { "show": true, "text": "mailserver\nM\u00fcnchen", "x": 0, "y": 0, "size": 11, "color": "#ffffff", "background": "transparent" },
       "display": { "mode": "icon" }
     },
     {
@@ -56,7 +56,7 @@
       "lng": 6.59,
       "z": 1,
       "host_name": "fileserver",
-      "label": { "show": true, "text": "fileserver\nBedburg (Erft)", "x": 0, "y": 34, "size": 11, "color": "#ffffff", "background": "transparent" },
+      "label": { "show": true, "text": "fileserver\nBedburg (Erft)", "x": 0, "y": 0, "size": 11, "color": "#ffffff", "background": "transparent" },
       "display": { "mode": "icon" }
     },
     {
@@ -69,7 +69,7 @@
       "z": 1,
       "host_name": "fileserver",
       "service_description": "Disk /",
-      "label": { "show": true, "text": "Disk /", "x": 0, "y": 34, "size": 10, "color": "#ffffff", "background": "transparent" },
+      "label": { "show": true, "text": "Disk /", "x": 0, "y": 0, "size": 10, "color": "#ffffff", "background": "transparent" },
       "display": { "mode": "icon" }
     }
   ]

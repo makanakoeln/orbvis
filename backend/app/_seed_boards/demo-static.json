@@ -23,7 +23,7 @@
         "show": true,
         "text": "localhost",
         "x": 0,
-        "y": 34,
+        "y": 0,
         "size": 11,
         "color": "#ffffff",
         "background": "transparent"
@@ -43,7 +43,7 @@
         "show": true,
         "text": "router01",
         "x": 0,
-        "y": 34,
+        "y": 0,
         "size": 11,
         "color": "#ffffff",
         "background": "transparent"
@@ -63,7 +63,7 @@
         "show": true,
         "text": "fileserver",
         "x": 0,
-        "y": 34,
+        "y": 0,
         "size": 11,
         "color": "#ffffff",
         "background": "transparent"
@@ -131,7 +131,7 @@
         "show": true,
         "text": null,
         "x": 0,
-        "y": 34,
+        "y": 0,
         "size": 10,
         "color": "#ffffff",
         "background": "transparent"
@@ -152,7 +152,7 @@
         "show": true,
         "text": null,
         "x": 0,
-        "y": 34,
+        "y": 0,
         "size": 10,
         "color": "#ffffff",
         "background": "transparent"
@@ -173,7 +173,7 @@
         "show": true,
         "text": "CPU Load",
         "x": 0,
-        "y": 56,
+        "y": 0,
         "size": 10,
         "color": "#ffffff",
         "background": "transparent"
@@ -195,7 +195,7 @@
         "show": true,
         "text": "Disk /",
         "x": 0,
-        "y": 56,
+        "y": 0,
         "size": 10,
         "color": "#ffffff",
         "background": "transparent"
@@ -217,7 +217,7 @@
         "show": true,
         "text": "Memory",
         "x": 0,
-        "y": 56,
+        "y": 0,
         "size": 10,
         "color": "#ffffff",
         "background": "transparent"
@@ -238,7 +238,7 @@
         "show": true,
         "text": "linux-servers",
         "x": 0,
-        "y": 34,
+        "y": 0,
         "size": 11,
         "color": "#ffffff",
         "background": "transparent"
@@ -258,7 +258,7 @@
         "show": true,
         "text": "web-services",
         "x": 0,
-        "y": 34,
+        "y": 0,
         "size": 11,
         "color": "#ffffff",
         "background": "transparent"
@@ -278,7 +278,7 @@
         "show": true,
         "text": "image",
         "x": 0,
-        "y": 34,
+        "y": 0,
         "size": 10,
         "color": "#ffffff",
         "background": "transparent"
@@ -295,7 +295,7 @@
         "show": true,
         "text": "map \u2192 World",
         "x": 0,
-        "y": 34,
+        "y": 0,
         "size": 10,
         "color": "#ffffff",
         "background": "transparent"
@@ -364,7 +364,7 @@
         "show": true,
         "text": "Web stack",
         "x": 0,
-        "y": 34,
+        "y": 0,
         "size": 11,
         "color": "#ffffff",
         "background": "transparent"
