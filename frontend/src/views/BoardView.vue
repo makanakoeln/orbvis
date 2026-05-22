@@ -1763,7 +1763,11 @@ function onObjectClick(obj: BoardObject, event?: MouseEvent) {
         return;
     }
     if (event && (event.ctrlKey || event.metaKey)) {
-        const cmkUrl = buildCheckmkUrl(obj, checkmkUrl.value);
+        const cmkUrl = buildCheckmkUrl(
+            obj,
+            checkmkUrl.value,
+            statesStore.getState(obj.id)?.site_id,
+        );
         if (cmkUrl) openUrl(cmkUrl, '_blank');
         return;
     }

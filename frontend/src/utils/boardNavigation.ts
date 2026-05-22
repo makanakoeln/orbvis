@@ -2,11 +2,13 @@ import type { BoardObject } from '@/types/api';
 
 function _baseAndSite(
     checkmkUrl: string | null,
+    siteOverride?: string | null,
 ): { base: string; p: Record<string, string> } | null {
     const base = checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
     if (!base) return null;
     const parts = base.split('/');
-    const site = parts[parts.length - 1] || null;
+    const pathSite = parts[parts.length - 1] || null;
+    const site = siteOverride || pathSite;
     const p: Record<string, string> = {};
     if (site) p.site = site;
     return { base, p };
@@ -23,8 +25,12 @@ function _wrapInChrome(base: string, viewPath: string, viewParams: URLSearchPara
     return `${base}/check_mk/index.py?${outer}`;
 }
 
-export function buildCheckmkUrl(obj: BoardObject, checkmkUrl: string | null): string | null {
-    const r = _baseAndSite(checkmkUrl);
+export function buildCheckmkUrl(
+    obj: BoardObject,
+    checkmkUrl: string | null,
+    siteOverride?: string | null,
+): string | null {
+    const r = _baseAndSite(checkmkUrl, siteOverride);
     if (!r) return null;
     const { base, p } = r;
 
@@ -84,8 +90,9 @@ export function buildCheckmkSetupUrl(
     obj: BoardObject,
     checkmkUrl: string | null,
     packId?: string | null,
+    siteOverride?: string | null,
 ): string | null {
-    const r = _baseAndSite(checkmkUrl);
+    const r = _baseAndSite(checkmkUrl, siteOverride);
     if (!r) return null;
     const { base, p } = r;
     if (obj.type === 'aggregation') {

@@ -2135,7 +2135,11 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 return;
             }
             if (event.ctrlKey || event.metaKey) {
-                const url = buildCheckmkUrl(boardObjectFromFNode(d), props.checkmkUrl ?? null);
+                const url = buildCheckmkUrl(
+                    boardObjectFromFNode(d),
+                    props.checkmkUrl ?? null,
+                    objectStateFromFNode(d).site_id,
+                );
                 if (url) openUrl(url, '_blank');
                 return;
             }

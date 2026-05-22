@@ -277,8 +277,8 @@ const base = computed(() => {
     return props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '') ?? null;
 });
 
-// Extract site name from last path segment, e.g. "http://host/heute" → "heute"
 const site = computed(() => {
+    if (props.state?.site_id) return props.state.site_id;
     if (!base.value) return null;
     const parts = base.value.split('/');
     return parts[parts.length - 1] || null;

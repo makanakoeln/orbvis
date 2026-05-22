@@ -1189,7 +1189,9 @@ const displayName = computed(() => (props.object ? getBoardObjectName(props.obje
 const typeLabel = computed(() => (props.object ? getObjectTypeLabel(props.object) : ''));
 
 const checkmkUrlFull = computed(() =>
-    props.object ? buildCheckmkUrl(props.object, props.checkmkUrl ?? null) : null,
+    props.object
+        ? buildCheckmkUrl(props.object, props.checkmkUrl ?? null, props.state?.site_id)
+        : null,
 );
 // Lookup of aggregation_id → pack_id, populated lazily when this drawer
 // shows a BI aggregation. Lets buildCheckmkSetupUrl deep-link into the
@@ -1226,7 +1228,12 @@ const checkmkSetupUrlFull = computed(() => {
     if (!props.object) return null;
     const aggId = props.object.aggregation_id ?? null;
     const packId = aggId ? aggregationPackIds.value[aggId] : null;
-    return buildCheckmkSetupUrl(props.object, props.checkmkUrl ?? null, packId ?? null);
+    return buildCheckmkSetupUrl(
+        props.object,
+        props.checkmkUrl ?? null,
+        packId ?? null,
+        props.state?.site_id,
+    );
 });
 
 const problemsUrlFull = computed(() => {
