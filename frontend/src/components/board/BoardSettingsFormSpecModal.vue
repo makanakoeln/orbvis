@@ -374,11 +374,12 @@
                     <span class="board-settings__preview-label">{{ t('board.previewLabel') }}</span>
                     <div class="board-settings__preview-stage">
                         <iframe
+                            ref="previewIframe"
                             :key="previewKey"
                             :src="previewUrl"
                             class="board-settings__preview-frame"
                             :title="t('board.previewLabel')"
-                            @load="previewLoading = false"
+                            @load="onPreviewLoaded"
                         />
                         <div v-if="previewLoading" class="board-settings__preview-loading">
                             <CmkLoading />
@@ -439,7 +440,7 @@ import type {
     ValidationMessage,
     VueFormspecComponents,
 } from 'cmk-shared-typing/typescript/vue_formspec_components';
-import { computed, nextTick, onBeforeUnmount, onMounted, provide, reactive, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError, boardsApi, boardsApiFormSpec, connectionsApi, rolesApi } from '@/api/client';
@@ -472,13 +473,16 @@ import type {
 } from '@/types/api';
 import { openUrl } from '@/utils/boardNavigation';
 import { toFormValidation } from '@/utils/formValidation';
+import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge';
 import { interpolateTemplate } from '@/utils/template';
+import { useDebounceFn } from '@/vendor/cmk/lib/useDebounce';
 
 import BackgroundImageUpload from './BackgroundImageUpload.vue';
 
 const props = defineProps<{
     board: BoardRead;
     worldmapView?: { lat: number; lng: number; zoom: number } | null;
+    parentMapSize?: { width: number; height: number } | null;
 }>();
 const emit = defineEmits<{ close: []; updated: [] }>();
 
@@ -717,43 +721,16 @@ async function save() {
         if (permDraft.size > 0) {
             await savePermissions();
         }
-        let view: Record<string, unknown>;
-        if (form.value.map_type === 'worldmap') {
-            view = {
-                type: 'worldmap',
-                lat: form.value.worldmap_lat,
-                lng: form.value.worldmap_lng,
-                zoom: form.value.worldmap_zoom,
-                auto_source: form.value.worldmap_auto_source || null,
-                auto_filter_value: form.value.worldmap_auto_filter_value,
-                tile_url: form.value.worldmap_tile_url || null,
-                tile_saturate: form.value.worldmap_tile_saturate,
-            };
-        } else if (form.value.map_type === 'radar') {
-            view = {
-                type: 'radar',
-                filter: form.value.radar_filter,
-                filter_value: form.value.radar_filter_value,
-            };
-        } else if (form.value.map_type === 'flow') {
-            const fvd = flowViewFormSpecData.value;
-            const rootRaw = (fvd.root as string | undefined)?.trim();
+        let view: Record<string, unknown> = buildViewFromForm();
+        if (form.value.map_type === 'flow') {
             // Preserve service_layout / positions written by the preview iframe.
             const fresh = await boardsApi.get(props.board.name, auth.accessToken!);
             const freshFlow = fresh.view?.type === 'flow' ? fresh.view : null;
             view = {
-                type: 'flow',
-                root: rootRaw ? rootRaw : null,
-                child_layers: (fvd.child_layers as number | null | undefined) ?? null,
-                parent_layers: (fvd.parent_layers as number | null | undefined) ?? null,
-                top_affected_hosts: (fvd.top_affected_hosts as number | null | undefined) ?? null,
-                max_services_per_host:
-                    (fvd.max_services_per_host as number | null | undefined) ?? null,
+                ...view,
                 service_layout: freshFlow?.service_layout ?? null,
                 positions: freshFlow?.positions ?? {},
             };
-        } else {
-            view = { type: form.value.map_type };
         }
         const fs = formSpecData.value as Record<string, unknown>;
         const rotRaw = fs.rotation_interval;
@@ -828,9 +805,20 @@ const permDraft = reactive(new Map<string, boolean>());
 // after FormEdit settles in onMounted because the visitor may normalise
 // formSpecData on first render (e.g. fill optional fields with defaults),
 // which would otherwise look like a user edit.
+// Baseline reflektiert die Disk-Config (nicht die via worldmapView vorbefüllten
+// Form-Werte), sodass isDirty nach Rechtsklick-Prefill korrekt anschlägt.
+function snapshotForm(): Record<string, unknown> {
+    if (!wmv) return { ...form.value };
+    return {
+        ...form.value,
+        worldmap_lat: wmv.lat,
+        worldmap_lng: wmv.lng,
+        worldmap_zoom: wmv.zoom,
+    };
+}
 const initialSnapshot = ref(
     JSON.stringify({
-        form: form.value,
+        form: snapshotForm(),
         formSpec: formSpecData.value,
         flowView: flowViewFormSpecData.value,
     }),
@@ -907,10 +895,105 @@ function handleKeydown(e: KeyboardEvent) {
 
 const previewKey = ref(0);
 const previewLoading = ref(true);
-// Hash-routing places query params inside the fragment, not before it.
+const previewIframe = ref<HTMLIFrameElement | null>(null);
 const previewUrl = computed(
     () => `${window.location.pathname}#/boards/${encodeURIComponent(props.board.name)}?preview=1`,
 );
+
+function buildViewFromForm(): Record<string, unknown> {
+    if (form.value.map_type === 'worldmap') {
+        return {
+            type: 'worldmap',
+            lat: form.value.worldmap_lat,
+            lng: form.value.worldmap_lng,
+            zoom: form.value.worldmap_zoom,
+            auto_source: form.value.worldmap_auto_source || null,
+            auto_filter_value: form.value.worldmap_auto_filter_value,
+            tile_url: form.value.worldmap_tile_url || null,
+            tile_saturate: form.value.worldmap_tile_saturate,
+        };
+    }
+    if (form.value.map_type === 'radar') {
+        return {
+            type: 'radar',
+            filter: form.value.radar_filter,
+            filter_value: form.value.radar_filter_value,
+        };
+    }
+    if (form.value.map_type === 'flow') {
+        const fvd = flowViewFormSpecData.value as Record<string, unknown>;
+        const rootRaw = (fvd.root as string | undefined)?.trim();
+        return {
+            type: 'flow',
+            root: rootRaw || null,
+            child_layers: (fvd.child_layers as number | null | undefined) ?? null,
+            parent_layers: (fvd.parent_layers as number | null | undefined) ?? null,
+            top_affected_hosts: (fvd.top_affected_hosts as number | null | undefined) ?? null,
+            max_services_per_host: (fvd.max_services_per_host as number | null | undefined) ?? null,
+        };
+    }
+    return { type: form.value.map_type };
+}
+
+function buildPreviewPatch(): Record<string, unknown> {
+    const fs = formSpecData.value as Record<string, unknown>;
+    return {
+        alias: (fs.alias as string) ?? props.board.alias,
+        icon_size: (fs.icon_size as number | null | undefined) ?? null,
+        hover_template: (fs.hover_template as string) ?? '',
+        context_template: (fs.context_template as string) ?? '',
+        background_image: form.value.background_image || null,
+        background_color: form.value.background_color || null,
+        view: buildViewFromForm(),
+    };
+}
+
+const worldmapViewEdited = ref(false);
+watch(
+    () => [form.value.worldmap_lat, form.value.worldmap_lng, form.value.worldmap_zoom],
+    () => {
+        worldmapViewEdited.value = true;
+    },
+);
+
+function postPreviewPatch() {
+    const win = previewIframe.value?.contentWindow;
+    if (!win) return;
+    const patch = buildPreviewPatch();
+    // Solange der User keine view-Felder editiert hat, rauszoomen, bis der
+    // Preview den gleichen geographischen Bereich wie das Eltern-Board zeigt.
+    if (
+        form.value.map_type === 'worldmap' &&
+        !worldmapViewEdited.value &&
+        props.parentMapSize &&
+        previewIframe.value
+    ) {
+        const previewW = previewIframe.value.getBoundingClientRect().width;
+        const parentW = props.parentMapSize.width;
+        if (previewW > 0 && parentW > 0) {
+            const view = patch.view as Record<string, unknown> & { zoom: number };
+            view.zoom = view.zoom + Math.log2(previewW / parentW);
+        }
+    }
+    win.postMessage({ source: PREVIEW_EDIT, patch }, window.location.origin);
+}
+
+const schedulePreviewPost = useDebounceFn(postPreviewPatch, 120);
+
+function onPreviewLoaded() {
+    previewLoading.value = false;
+    postPreviewPatch();
+}
+
+function onPreviewReady(ev: MessageEvent) {
+    if (ev.origin !== window.location.origin) return;
+    const data = ev.data as { source?: string } | null;
+    if (!data || data.source !== PREVIEW_READY) return;
+    if (ev.source !== previewIframe.value?.contentWindow) return;
+    postPreviewPatch();
+}
+
+watch([form, formSpecData, flowViewFormSpecData], schedulePreviewPost, { deep: true });
 
 const deleteDialogOpen = ref(false);
 function deleteBoard() {
@@ -1039,15 +1122,17 @@ onMounted(async () => {
     // snapshot again so isDirty doesn't fire on the visitor's own defaults.
     await nextTick();
     initialSnapshot.value = JSON.stringify({
-        form: form.value,
+        form: snapshotForm(),
         formSpec: formSpecData.value,
         flowView: flowViewFormSpecData.value,
     });
     window.addEventListener('keydown', handleKeydown);
+    window.addEventListener('message', onPreviewReady);
 });
 
 onBeforeUnmount(() => {
     window.removeEventListener('keydown', handleKeydown);
+    window.removeEventListener('message', onPreviewReady);
 });
 </script>
 
@@ -1120,9 +1205,9 @@ onBeforeUnmount(() => {
 }
 
 .board-settings__preview-frame {
-    flex: 1;
+    flex: none;
     width: 100%;
-    min-height: 400px;
+    aspect-ratio: 4 / 3;
     border: 1px solid var(--border);
     border-radius: var(--dimension-3);
     background: var(--bg-elevated, var(--bg-hover));

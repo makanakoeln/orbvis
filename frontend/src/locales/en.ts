@@ -467,6 +467,7 @@ export default {
         graphTimeWindow: 'Time window',
     },
     contextMenu: {
+        saveCurrentViewAsDefault: 'Save current view as default',
         hostInCheckmk: 'Host in Checkmk',
         hostProblemServices: 'Problem services',
         serviceInCheckmk: 'Service in Checkmk',

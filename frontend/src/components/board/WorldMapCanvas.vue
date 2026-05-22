@@ -39,6 +39,10 @@ const emit = defineEmits<{
     'object-hover': [obj: BoardObjectType, event: MouseEvent];
     'object-hover-leave': [];
     'canvas-latlng-click': [lat: number, lng: number];
+    'canvas-contextmenu-view': [
+        view: { lat: number; lng: number; zoom: number },
+        screen: { x: number; y: number },
+    ];
     'latlng-drag-end': [id: string, lat: number, lng: number];
     'latlng2-drag-end': [id: string, lat: number, lng: number];
 }>();
@@ -539,18 +543,38 @@ onMounted(() => {
     leafletMap = L.map(mapEl.value, {
         center: [wv?.lat ?? 51, wv?.lng ?? 10],
         zoom: wv?.zoom ?? 5,
+        zoomSnap: 0.25,
     });
     leafletMap.on('click', (e) => {
         if (props.placing) {
             emit('canvas-latlng-click', e.latlng.lat, e.latlng.lng);
         }
     });
+    leafletMap.on('contextmenu', (e: L.LeafletMouseEvent) => {
+        if (!props.editMode || props.preview) return;
+        if (!leafletMap) return;
+        e.originalEvent.preventDefault();
+        const c = leafletMap.getCenter();
+        emit(
+            'canvas-contextmenu-view',
+            { lat: c.lat, lng: c.lng, zoom: leafletMap.getZoom() },
+            { x: e.originalEvent.clientX, y: e.originalEvent.clientY },
+        );
+    });
     applyTileSettings();
     syncMarkers();
     syncLines();
-    if (props.preview) fitAll();
     resizeObserver = new ResizeObserver(() => leafletMap?.invalidateSize());
     resizeObserver.observe(mapEl.value);
+    if (props.preview) {
+        // Iframe-Container ist beim Init oft noch 0×0; ein RAF später ist er
+        // gemessen und die Karte muss sich auf den richtigen Center neu setzen.
+        requestAnimationFrame(() => {
+            if (!leafletMap) return;
+            leafletMap.invalidateSize();
+            if (wv) leafletMap.setView([wv.lat, wv.lng], wv.zoom);
+        });
+    }
 });
 
 onUnmounted(() => {
@@ -564,7 +588,13 @@ onUnmounted(() => {
 });
 
 watch(
-    () => [props.config.objects, props.states, props.selectedObjectId, props.editMode],
+    () => [
+        props.config.objects,
+        props.config.icon_size,
+        props.states,
+        props.selectedObjectId,
+        props.editMode,
+    ],
     () => {
         syncMarkers();
         syncLines();
@@ -606,11 +636,32 @@ watch(() => {
     return [wv?.tile_url, wv?.tile_saturate];
 }, applyTileSettings);
 
+watch(
+    () => {
+        const wv =
+            props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null;
+        return wv ? `${wv.lat}|${wv.lng}|${wv.zoom}` : '';
+    },
+    () => {
+        if (!leafletMap) return;
+        const wv =
+            props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null;
+        if (!wv) return;
+        leafletMap.setView([wv.lat, wv.lng], wv.zoom);
+    },
+);
+
 function getView() {
     if (!leafletMap) return null;
     const c = leafletMap.getCenter();
     return { lat: c.lat, lng: c.lng, zoom: leafletMap.getZoom() };
 }
 
-defineExpose({ getView, fitAll });
+function getContainerSize(): { width: number; height: number } | null {
+    if (!mapEl.value) return null;
+    const r = mapEl.value.getBoundingClientRect();
+    return { width: r.width, height: r.height };
+}
+
+defineExpose({ getView, getContainerSize, fitAll });
 </script>

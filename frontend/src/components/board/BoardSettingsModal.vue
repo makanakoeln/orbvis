@@ -12,6 +12,7 @@
         v-if="capabilities.formSpecs"
         :board="board"
         :worldmap-view="worldmapView"
+        :parent-map-size="parentMapSize"
         @close="emit('close')"
         @updated="emit('updated')"
     />
@@ -38,6 +39,7 @@ const BoardSettingsFormSpecModal = defineAsyncComponent(
 defineProps<{
     board: BoardRead;
     worldmapView?: { lat: number; lng: number; zoom: number } | null;
+    parentMapSize?: { width: number; height: number } | null;
 }>();
 
 const emit = defineEmits<{

@@ -470,6 +470,7 @@ export default {
         graphTimeWindow: 'Zeitfenster',
     },
     contextMenu: {
+        saveCurrentViewAsDefault: 'Aktuelle Ansicht als Standard speichern',
         hostInCheckmk: 'Host in Checkmk',
         hostProblemServices: 'Problematische Services',
         serviceInCheckmk: 'Service in Checkmk',

@@ -316,6 +316,7 @@
                     @object-hover="onWorldmapHover"
                     @object-hover-leave="onWorldmapHoverLeave"
                     @canvas-latlng-click="onCanvasLatLngClick"
+                    @canvas-contextmenu-view="onWorldmapCanvasContextMenu"
                     @latlng-drag-end="onLatLngDragEnd"
                     @latlng2-drag-end="onLatLng2DragEnd"
                 />
@@ -982,6 +983,29 @@
             @enable-notifications="onWorldmapCtxToggleNotifications(true)"
             @disable-notifications="onWorldmapCtxToggleNotifications(false)"
         />
+        <div
+            v-if="isWorldmap && worldmapCanvasCtxMenu.visible"
+            class="fixed z-50 bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-xl py-1.5 min-w-56"
+            :style="{ left: `${worldmapCanvasCtxMenu.x}px`, top: `${worldmapCanvasCtxMenu.y}px` }"
+            @click.stop
+        >
+            <button
+                type="button"
+                class="flex items-center gap-2 w-full px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors text-left"
+                @click="onWorldmapCanvasCtxSaveAsDefault"
+            >
+                <svg
+                    class="w-3.5 h-3.5 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{{ t('contextMenu.saveCurrentViewAsDefault') }}</span>
+            </button>
+        </div>
         <AckModal
             v-if="worldmapAckModal && checkmkUrl"
             :object="worldmapAckModal"
@@ -1039,6 +1063,7 @@
             v-if="showSettings && boardConfigAsRead"
             :board="boardConfigAsRead"
             :worldmap-view="settingsWorldmapView"
+            :parent-map-size="settingsParentMapSize"
             @close="showSettings = false"
             @updated="onSettingsUpdated"
         />
@@ -1100,6 +1125,7 @@ import type { TourStep } from '@/types/tour';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
 import { placeableObjectTypes } from '@/utils/dropdownOptions';
 import { getBoardObjectIdentifier, getBoardObjectName, getObjectTypeLabel } from '@/utils/naming';
+import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge';
 import { resolveTemplate } from '@/utils/template';
 import CmkLoading from '@/vendor/cmk/components/CmkLoading.vue';
 
@@ -1379,6 +1405,12 @@ const worldmapCtxMenu = reactive({
     x: 0,
     y: 0,
 });
+const worldmapCanvasCtxMenu = reactive({
+    visible: false,
+    x: 0,
+    y: 0,
+    view: null as { lat: number; lng: number; zoom: number } | null,
+});
 
 function onWorldmapHover(obj: BoardObject, event: MouseEvent) {
     worldmapHover.object = obj;
@@ -1570,6 +1602,25 @@ async function onWorldmapCtxForceCheck() {
 function closeWorldmapMenus() {
     worldmapHover.visible = false;
     worldmapCtxMenu.visible = false;
+    worldmapCanvasCtxMenu.visible = false;
+}
+
+function onWorldmapCanvasContextMenu(
+    view: { lat: number; lng: number; zoom: number },
+    screen: { x: number; y: number },
+) {
+    worldmapCanvasCtxMenu.view = view;
+    worldmapCanvasCtxMenu.x = screen.x;
+    worldmapCanvasCtxMenu.y = screen.y;
+    worldmapCanvasCtxMenu.visible = true;
+}
+
+function onWorldmapCanvasCtxSaveAsDefault() {
+    if (!worldmapCanvasCtxMenu.view) return;
+    settingsWorldmapView.value = { ...worldmapCanvasCtxMenu.view };
+    settingsParentMapSize.value = worldmapCanvasRef.value?.getContainerSize() ?? null;
+    worldmapCanvasCtxMenu.visible = false;
+    showSettings.value = true;
 }
 
 function _closePropsModal() {
@@ -1962,15 +2013,15 @@ const serviceLayoutOptions = computed(() => [
 ]);
 const showSettings = ref(false);
 const settingsWorldmapView = ref<{ lat: number; lng: number; zoom: number } | null>(null);
+const settingsParentMapSize = ref<{ width: number; height: number } | null>(null);
 
 function openSettings() {
     if (!boardConfig.value) return;
-    const cfg = boardConfig.value;
-    if (cfg.view.type === 'worldmap' && worldmapCanvasRef.value) {
-        settingsWorldmapView.value = worldmapCanvasRef.value.getView() ?? null;
-    } else {
-        settingsWorldmapView.value = null;
-    }
+    settingsWorldmapView.value = null;
+    settingsParentMapSize.value =
+        boardConfig.value.view.type === 'worldmap'
+            ? (worldmapCanvasRef.value?.getContainerSize() ?? null)
+            : null;
     showSettings.value = true;
 }
 
@@ -2073,16 +2124,36 @@ function onFullscreenChange() {
     }
 }
 
+function onPreviewMessage(ev: MessageEvent) {
+    if (ev.origin !== window.location.origin) return;
+    const data = ev.data as { source?: string; patch?: Record<string, unknown> } | null;
+    if (!data || data.source !== PREVIEW_EDIT || !data.patch) return;
+    const cur = boardsStore.currentBoard;
+    if (!cur) return;
+    Object.assign(cur, data.patch);
+}
+
 onMounted(() => {
     if (auth.isAdmin) connectionsStore.fetchConnections();
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('fullscreenchange', onFullscreenChange);
+    window.addEventListener('message', onPreviewMessage);
 });
+
+watch(
+    () => boardsStore.currentBoard?.name,
+    (name) => {
+        if (!name || !isPreview.value || window.parent === window) return;
+        window.parent.postMessage({ source: PREVIEW_READY }, window.location.origin);
+    },
+    { immediate: true },
+);
 
 onUnmounted(() => {
     statesStore.disconnect();
     stopRotation();
     document.removeEventListener('keydown', onKeyDown);
     document.removeEventListener('fullscreenchange', onFullscreenChange);
+    window.removeEventListener('message', onPreviewMessage);
 });
 </script>
