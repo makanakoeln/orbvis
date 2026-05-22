@@ -584,6 +584,7 @@
                 v-if="
                     auth.isAdmin &&
                     !isKiosk &&
+                    !isPreview &&
                     boardConfig &&
                     !boardConfig.readonly &&
                     !isFlowmap &&
