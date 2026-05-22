@@ -74,10 +74,10 @@
             <!-- Grid -->
             <div
                 class="grid"
-                :class="compact ? 'gap-1.5' : 'gap-2.5'"
+                :class="compact ? 'gap-1' : 'gap-2.5'"
                 :style="
                     compact
-                        ? 'grid-template-columns: repeat(auto-fill, minmax(140px, 1fr))'
+                        ? 'grid-template-columns: repeat(auto-fill, minmax(110px, 1fr))'
                         : 'grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))'
                 "
             >

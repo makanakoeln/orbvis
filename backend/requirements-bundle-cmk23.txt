@@ -1,0 +1,4 @@
+# CMK 2.3 alone is missing httpx/httpcore in its OMD site-python.
+# Bundle them only for the 2.3 target so the wheelhouse stays smaller for 2.4+.
+-r requirements-bundle.txt
+httpx>=0.28.0

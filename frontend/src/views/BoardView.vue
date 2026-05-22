@@ -2179,6 +2179,17 @@ function onPreviewMessage(ev: MessageEvent) {
     const cur = boardsStore.currentBoard;
     if (!cur) return;
     Object.assign(cur, data.patch);
+    // Radar boards filter server-side, so the disk-cfg state stream can't
+    // reflect a live-edited filter. Push the unsaved filter into the next
+    // states fetch as an override.
+    const view = (
+        data.patch as { view?: { type?: string; filter?: string; filter_value?: string } }
+    ).view;
+    if (view && view.type === 'radar') {
+        statesStore.setRadarOverride(view.filter ?? null, view.filter_value ?? '');
+    } else if (view) {
+        statesStore.setRadarOverride(null);
+    }
 }
 
 onMounted(() => {

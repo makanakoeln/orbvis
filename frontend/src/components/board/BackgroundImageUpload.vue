@@ -97,6 +97,7 @@ const props = defineProps<{
 const emit = defineEmits<{
     'update:modelValue': [value: string];
     replaced: [];
+    'version-bumped': [version: number];
 }>();
 
 const BASE_URL = import.meta.env.BASE_URL;
@@ -124,7 +125,7 @@ async function onFileChange(event: Event) {
     error.value = '';
     uploading.value = true;
     try {
-        const { filename } = await boardsApi.uploadBackground(
+        const { filename, version } = await boardsApi.uploadBackground(
             props.boardName,
             file,
             auth.accessToken!,
@@ -132,6 +133,7 @@ async function onFileChange(event: Event) {
         cacheBust.value = Date.now();
         emit('update:modelValue', filename);
         emit('replaced');
+        if (typeof version === 'number') emit('version-bumped', version);
     } catch (e: unknown) {
         error.value = e instanceof Error ? e.message : 'Upload failed';
     } finally {
@@ -143,8 +145,9 @@ async function onFileChange(event: Event) {
 async function remove() {
     error.value = '';
     try {
-        await boardsApi.deleteBackground(props.boardName, auth.accessToken!);
+        const { version } = await boardsApi.deleteBackground(props.boardName, auth.accessToken!);
         emit('update:modelValue', '');
+        if (typeof version === 'number') emit('version-bumped', version);
     } catch (e: unknown) {
         error.value = e instanceof Error ? e.message : 'Delete failed';
     }

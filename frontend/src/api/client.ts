@@ -182,8 +182,21 @@ export const boardsApi = {
     delete: (name: string, token: string): Promise<void> =>
         request(`/boards/${name}`, { method: 'DELETE' }, token),
 
-    getStates: (name: string, token: string): Promise<MapStates> =>
-        request(`/boards/${name}/states`, {}, token),
+    getStates: (
+        name: string,
+        token: string,
+        radarOverride?: { filter: string; filterValue: string } | null,
+    ): Promise<MapStates> => {
+        let path = `/boards/${name}/states`;
+        if (radarOverride) {
+            const qs = new URLSearchParams({
+                radar_filter: radarOverride.filter,
+                radar_filter_value: radarOverride.filterValue,
+            });
+            path += `?${qs.toString()}`;
+        }
+        return request(path, {}, token);
+    },
 
     addObject: (boardName: string, obj: BoardObject, token: string): Promise<BoardConfig> =>
         request(
@@ -214,9 +227,10 @@ export const boardsApi = {
         boardName: string,
         file: File,
         token: string,
-    ): Promise<{ filename: string }> => uploadFile(`/boards/${boardName}/background`, file, token),
+    ): Promise<{ filename: string; version: number | null }> =>
+        uploadFile(`/boards/${boardName}/background`, file, token),
 
-    deleteBackground: (boardName: string, token: string): Promise<void> =>
+    deleteBackground: (boardName: string, token: string): Promise<{ version: number | null }> =>
         request(`/boards/${boardName}/background`, { method: 'DELETE' }, token),
 
     clone: (

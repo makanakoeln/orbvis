@@ -356,8 +356,7 @@ if ! "${AS_ROOT[@]}" test -f "$VENV_DIR/bin/pip"; then
   quietly "${AS_ROOT[@]}" "$SITE_ROOT/bin/pip3" install --prefix="$VENV_DIR" pip \
     || die "Cannot install pip into virtualenv (tried $SITE_ROOT/bin/pip3)."
 fi
-step "Installing backend dependencies"
-quietly "${AS_ROOT[@]}" "$VENV_DIR/bin/pip" install --quiet --upgrade pip
+step "Installing backend"
 # rsync rather than cp -r so dev artefacts (backends.json, connections.json,
 # *.db, boards/) from the source checkout never leak into the installed copy.
 quietly "${AS_ROOT[@]}" rsync -a --delete \
@@ -374,10 +373,17 @@ quietly "${AS_ROOT[@]}" rsync -a --delete \
   "$SCRIPT_DIR/backend/" "$ORBVIS_DIR/src/"
 quietly "${AS_ROOT[@]}" cp "$SCRIPT_DIR/VERSION" "$ORBVIS_DIR/VERSION"
 quietly "${AS_ROOT[@]}" cp "$SCRIPT_DIR/CHANGELOG.md" "$ORBVIS_DIR/CHANGELOG.md"
-quietly "${AS_ROOT[@]}" "$VENV_DIR/bin/pip" install --quiet -e "$ORBVIS_DIR/src"
-# Clean up dev artefacts that earlier installs may have left behind in src/.
+# Dev path: when a local wheels/ directory exists, install offline-style so
+# we mirror the production MKP path. Otherwise pip resolves remaining deps
+# (python-multipart) from PyPI for devs with internet access.
+if [[ -d "$SCRIPT_DIR/wheels" ]]; then
+  quietly "${AS_ROOT[@]}" "$VENV_DIR/bin/pip" install --quiet --no-warn-conflicts \
+    --no-index --find-links="$SCRIPT_DIR/wheels" -e "$ORBVIS_DIR/src"
+else
+  quietly "${AS_ROOT[@]}" "$VENV_DIR/bin/pip" install --quiet -e "$ORBVIS_DIR/src"
+fi
 quietly "${AS_ROOT[@]}" rm -f "$ORBVIS_DIR/src/backends.json" "$ORBVIS_DIR/src/connections.json"
-ok "Backend dependencies installed"
+ok "Backend installed"
 
 # 4. Configuration
 step "Writing configuration"
@@ -390,7 +396,7 @@ SECRET_KEY="${EXISTING_SECRET:-$("$PYTHON3" -c 'import secrets; print(secrets.to
 "${AS_ROOT[@]}" tee "$ENV_FILE" > /dev/null <<EOF
 BOARDS_DIR=$BOARDS_DIR
 CONNECTIONS_FILE=$CONNECTIONS_FILE
-DATABASE_URL=sqlite+aiosqlite:///$DB_FILE
+DATABASE_URL=sqlite:///$DB_FILE
 SECRET_KEY=$SECRET_KEY
 STATE_REFRESH_INTERVAL=15
 CHECKMK_HTPASSWD=$SITE_ROOT/etc/htpasswd
@@ -473,9 +479,6 @@ fi
 <IfModule !mod_proxy_http.c>
     LoadModule proxy_http_module $APACHE_MODULES_DIR/mod_proxy_http.so
 </IfModule>
-<IfModule !mod_proxy_wstunnel.c>
-    LoadModule proxy_wstunnel_module $APACHE_MODULES_DIR/mod_proxy_wstunnel.so
-</IfModule>
 <IfModule !mod_headers.c>
     LoadModule headers_module $APACHE_MODULES_DIR/mod_headers.so
 </IfModule>
@@ -501,12 +504,9 @@ Alias /$SITE/orbvis $HTDOCS_DIR
     </FilesMatch>
 </Directory>
 
-# WebSocket and HTTP proxies declared at the top level: ProxyPass directives
-# here use strict first-match-wins. Order matters: WS sub-path and any
-# exclusions (Swagger-UI assets) must precede the broader /api ProxyPass.
+# Exclusions (Swagger-UI assets) must precede the broader /api ProxyPass
+# (Apache ProxyPass directives use strict first-match-wins).
 $SWAGGER_UI_PROXYBYPASS
-ProxyPass        /$SITE/orbvis/api/v1/ws  ws://127.0.0.1:$BACKEND_PORT/api/v1/ws
-ProxyPassReverse /$SITE/orbvis/api/v1/ws  ws://127.0.0.1:$BACKEND_PORT/api/v1/ws
 ProxyPass        /$SITE/orbvis/api        http://127.0.0.1:$BACKEND_PORT/api
 ProxyPassReverse /$SITE/orbvis/api        http://127.0.0.1:$BACKEND_PORT/api
 
@@ -551,7 +551,7 @@ case "\$1" in
     PORT="\${ORBVIS_PORT:-8420}"
     export LD_LIBRARY_PATH="\$OMD_ROOT/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
     cd "$ORBVIS_DIR/src"
-    "\$VENV/bin/python3" -m alembic upgrade head >> "\$LOGFILE" 2>&1
+    # Schema is ensured during the FastAPI lifespan (sqlite3.executescript).
     # Invoke uvicorn through the venv python: when OMD's site-python
     # already provides the uvicorn module (cmk-agent-receiver pulls it
     # in), \`pip install -e\` skips dropping the \`uvicorn\` console

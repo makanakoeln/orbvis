@@ -1,7 +1,8 @@
-"""Authentication business logic."""
+"""Authentication business logic — stdlib sqlite3, no ORM."""
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import hmac as _hmac
@@ -9,11 +10,12 @@ import logging
 import pathlib
 import re
 import secrets
+import sqlite3
+from typing import Any
 
 import bcrypt as _bcrypt
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import _jwt
 from app.core.config import settings
 from app.core.security import (
     create_access_token,
@@ -22,6 +24,8 @@ from app.core.security import (
     verify_password,
 )
 from app.integrations import checkmk as cmk_integration
+from app.models.permission import Permission
+from app.models.role import Role
 from app.models.user import User
 from app.schemas.auth import TokenResponse
 from app.schemas.user import UserCreate
@@ -36,20 +40,72 @@ def _hmac_sha256_hex(secret: bytes, msg: bytes) -> str:
 # Checkmk usernames: letters, digits, @, dot, hyphen, underscore.
 # Validated before use in filesystem paths to prevent path traversal.
 _USERNAME_RE = re.compile(r"^[a-zA-Z0-9@._-]+$")
-
-# Languages supported by OrbVis — used when mapping CMK language codes.
 _SUPPORTED_LANGUAGES = {"en", "de"}
 
-# Pre-computed bcrypt hash used as a timing dummy when no DB user is found.
-# Derived deterministically from SECRET_KEY so every worker in a multi-process
-# deployment uses the *same* dummy — otherwise response-timing could still
-# leak "which worker saw the login" and, more subtly, differ from a valid
-# user's verify cost when bcrypt cost parameters shift between dummy hashes.
-# The derived pre-image never appears on the wire; bcrypt salting ensures the
-# hash itself is still unique per-process even with the same pre-image.
+# Timing dummy: derived deterministically from SECRET_KEY so every worker uses
+# the *same* pre-image and bcrypt-verify cost matches a real user's path.
 _DUMMY_HASH: str = hash_password(
     hashlib.sha256(f"orbvis-dummy|{settings.secret_key}".encode()).hexdigest()
 )
+
+_USER_COLS = "user_id, name, password, is_active, is_admin, must_change_password, theme, language"
+
+
+def _row_to_user(row: sqlite3.Row) -> User:
+    return User(
+        user_id=row["user_id"],
+        name=row["name"],
+        password=row["password"],
+        is_active=bool(row["is_active"]),
+        is_admin=bool(row["is_admin"]),
+        must_change_password=bool(row["must_change_password"]),
+        theme=row["theme"],
+        language=row["language"],
+    )
+
+
+def _load_roles_for_user(conn: sqlite3.Connection, user_id: int) -> list[Role]:
+    role_rows = conn.execute(
+        """
+        SELECT r.role_id, r.name
+        FROM roles r
+        JOIN users2roles u2r ON u2r.role_id = r.role_id
+        WHERE u2r.user_id = ?
+        """,
+        (user_id,),
+    ).fetchall()
+    if not role_rows:
+        return []
+    roles = {r["role_id"]: Role(role_id=r["role_id"], name=r["name"]) for r in role_rows}
+    placeholders = ",".join(["?"] * len(roles))
+    perm_rows = conn.execute(
+        f"""
+        SELECT p.perm_id, p.mod, p.act, p.obj, r2p.role_id
+        FROM permissions p
+        JOIN roles2perms r2p ON r2p.perm_id = p.perm_id
+        WHERE r2p.role_id IN ({placeholders})
+        """,  # nosec B608 — placeholders are "?" markers, not user input
+        tuple(roles.keys()),
+    ).fetchall()
+    for row in perm_rows:
+        roles[row["role_id"]].permissions.append(
+            Permission(perm_id=row["perm_id"], mod=row["mod"], act=row["act"], obj=row["obj"])
+        )
+    return list(roles.values())
+
+
+def _fetch_user(conn: sqlite3.Connection, where: str, params: tuple[Any, ...]) -> User | None:
+    # `where` is hand-written by the caller (not user input); the f-string is
+    # safe and the placeholders bind real parameters.
+    row = conn.execute(
+        f"SELECT {_USER_COLS} FROM users WHERE {where}",  # nosec B608
+        params,
+    ).fetchone()
+    if row is None:
+        return None
+    user = _row_to_user(row)
+    user.roles = _load_roles_for_user(conn, user.user_id)
+    return user
 
 
 def get_cmk_language(username: str) -> str | None:
@@ -91,7 +147,6 @@ def get_cmk_theme(username: str) -> str | None:
     if cmk_integration.available:
         raw = cmk_integration.load_user(username).get("ui_theme")
     else:
-        # Fallback: read ui_theme.mk directly (plain-text, not a Python expression)
         theme_file = (
             pathlib.Path(settings.checkmk_omd_root)
             / "var"
@@ -101,7 +156,6 @@ def get_cmk_theme(username: str) -> str | None:
             / "ui_theme.mk"
         )
         raw = theme_file.read_text().strip() if theme_file.is_file() else None
-    # "facelift" → light, "modern-dark" / absent → dark (CMK default)
     return "light" if raw == "facelift" else "dark"
 
 
@@ -132,7 +186,6 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
         if not secret_path.is_file():
             logger.warning("SSO: auth.secret not found at %s", secret_path)
             return None
-        # Read raw bytes — Checkmk writes and reads the secret without any stripping.
         secret = secret_path.read_bytes()
 
         serial_path = pathlib.Path(omd_root) / "var" / "check_mk" / "web" / username / "serial.mk"
@@ -143,8 +196,6 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
             except ValueError:
                 logger.warning("SSO: could not parse serial from %s", serial_path)
 
-        # CMK 2.4: no separators; CMK 2.5+: colon-delimited. Try both.
-        # Bitwise | instead of `or` ensures both sides always execute (no short-circuit timing leak).
         msg_25 = f"{username}:{session_id}:{serial}".encode()
         msg_24 = f"{username}{session_id}{serial}".encode()
         if not (
@@ -196,20 +247,16 @@ def _verify_htpasswd(username: str, password: str) -> bool:
             if len(parts) != 2 or parts[0] != username:
                 continue
             hashed = parts[1]
-            # Apache htpasswd uses SHA1 ({SHA}), bcrypt ($2y$/$2b$),
-            # MD5/APR1 ($apr1$), or SHA-crypt ($5$/$6$) via crypt(3).
             try:
                 if hashed.startswith("{SHA}"):
                     digest = base64.b64encode(
                         hashlib.sha1(password.encode(), usedforsecurity=False).digest()
                     ).decode()
                     return f"{{SHA}}{digest}" == hashed
-                # bcrypt ($2y$ or $2b$)
                 if hashed.startswith("$2y$") or hashed.startswith("$2b$"):
                     return _bcrypt.checkpw(
                         password.encode(), hashed.replace("$2y$", "$2b$").encode()
                     )
-                # MD5 / APR1 ($apr1$) and SHA-crypt ($5$/$6$) via crypt(3)
                 return _crypt_verify(password, hashed)
             except Exception:
                 return False
@@ -218,16 +265,16 @@ def _verify_htpasswd(username: str, password: str) -> bool:
     return False
 
 
-async def authenticate_user(db: AsyncSession, username: str, password: str) -> User | None:
+async def authenticate_user(conn: sqlite3.Connection, username: str, password: str) -> User | None:
     """Return User if credentials are valid, else None.
 
     Checks orbvis DB first; falls back to Checkmk htpasswd if configured.
 
-    Timing note: verify_password (bcrypt, ~100 ms) is always called – even when no
-    DB user is found – to prevent response-timing attacks that enumerate valid usernames.
+    Timing note: verify_password (bcrypt, ~100 ms) is always called – even when
+    no DB user is found – to prevent response-timing attacks that enumerate
+    valid usernames.
     """
-    result = await db.execute(select(User).where(User.name == username))
-    user = result.scalar_one_or_none()
+    user = await asyncio.to_thread(_fetch_user, conn, "name = ?", (username,))
 
     if user is not None:
         if not user.is_active:
@@ -237,25 +284,24 @@ async def authenticate_user(db: AsyncSession, username: str, password: str) -> U
         if verify_password(password, user.password):
             return user
     else:
-        # No DB user found. Run a dummy bcrypt check so an attacker cannot infer
-        # username existence from the faster code path.
         verify_password(password, _DUMMY_HASH)
 
     # Checkmk htpasswd fallback
     if _verify_htpasswd(username, password):
         if user is None:
-            user = await get_or_create_sso_user(db, username)
-        # Sync admin flag for htpasswd users – only when CHECKMK_OMD_ROOT is configured.
-        # Without OMD_ROOT we cannot determine CMK roles, so we preserve the existing flag
-        # rather than incorrectly clearing admin status.
+            user = await get_or_create_sso_user(conn, username)
         elif settings.checkmk_omd_root:
             is_admin = _is_checkmk_admin(username)
             if user.is_admin != is_admin:
+                await asyncio.to_thread(_set_admin_flag, conn, user.user_id, is_admin)
                 user.is_admin = is_admin
-                await db.flush()
         return user
 
     return None
+
+
+def _set_admin_flag(conn: sqlite3.Connection, user_id: int, is_admin: bool) -> None:
+    conn.execute("UPDATE users SET is_admin = ? WHERE user_id = ?", (1 if is_admin else 0, user_id))
 
 
 def create_tokens(user: User) -> TokenResponse:
@@ -265,21 +311,16 @@ def create_tokens(user: User) -> TokenResponse:
     )
 
 
-async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
-    result = await db.execute(select(User).where(User.user_id == user_id))
-    return result.scalar_one_or_none()
+async def get_user_by_id(conn: sqlite3.Connection, user_id: int) -> User | None:
+    return await asyncio.to_thread(_fetch_user, conn, "user_id = ?", (user_id,))
 
 
-async def authenticate_bearer_token(db: AsyncSession, token: str) -> User | None:
+async def authenticate_bearer_token(conn: sqlite3.Connection, token: str) -> User | None:
     """Decode a bearer JWT, verify it's an active access token, load the user.
 
-    Shared by FastAPI HTTP deps and the WebSocket handshake so both paths reject
+    Shared by FastAPI HTTP deps and the SSE handshake so both paths reject
     non-access tokens, blocklisted tokens, and inactive users identically.
-    Returns ``None`` on any validation failure; callers translate that to the
-    protocol-appropriate error response.
     """
-    import jwt as _jwt  # local import — core.security already re-exports these
-
     from app.core.security import decode_token, is_token_blocked
 
     try:
@@ -294,14 +335,13 @@ async def authenticate_bearer_token(db: AsyncSession, token: str) -> User | None
     if jti and is_token_blocked(jti):
         return None
 
-    user = await get_user_by_id(db, user_id)
+    user = await get_user_by_id(conn, user_id)
     if user is None or not user.is_active:
         return None
     return user
 
 
 def _is_checkmk_admin(username: str) -> bool:
-    """Check whether a Checkmk user has the 'admin' role."""
     if not settings.checkmk_omd_root:
         logger.warning("CHECKMK_OMD_ROOT not set – cannot determine Checkmk role for %s", username)
         return False
@@ -317,7 +357,6 @@ def _is_checkmk_admin(username: str) -> bool:
             is_admin,
         )
         return is_admin
-    # Fallback: read users.mk directly via exec()
     users_mk = (
         pathlib.Path(settings.checkmk_omd_root)
         / "etc"
@@ -348,44 +387,70 @@ def _is_checkmk_admin(username: str) -> bool:
         return False
 
 
-async def get_or_create_sso_user(db: AsyncSession, username: str) -> User:
-    """Find existing user by name or create a new one for SSO login.
+def _insert_user_sync(
+    conn: sqlite3.Connection,
+    name: str,
+    password: str,
+    is_active: bool,
+    is_admin: bool,
+    must_change_password: bool = False,
+) -> int:
+    cursor = conn.execute(
+        """
+        INSERT INTO users (name, password, is_active, is_admin, must_change_password)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            name,
+            password,
+            1 if is_active else 0,
+            1 if is_admin else 0,
+            1 if must_change_password else 0,
+        ),
+    )
+    user_id = cursor.lastrowid
+    assert user_id is not None
+    return user_id
 
-    Admin status is determined by the user's Checkmk role.
-    Existing users' admin flag is updated on every login in case their role changed.
-    """
+
+async def get_or_create_sso_user(conn: sqlite3.Connection, username: str) -> User:
     is_admin = _is_checkmk_admin(username)
 
-    result = await db.execute(select(User).where(User.name == username))
-    user = result.scalar_one_or_none()
+    user = await asyncio.to_thread(_fetch_user, conn, "name = ?", (username,))
     if user is not None:
-        # Sync admin flag in case the Checkmk role changed since last login
         if user.is_admin != is_admin:
+            await asyncio.to_thread(_set_admin_flag, conn, user.user_id, is_admin)
             user.is_admin = is_admin
-            await db.flush()
         return user
 
-    user = User(
-        name=username,
-        password=hash_password(secrets.token_hex(32)),
-        is_active=True,
-        is_admin=is_admin,
-    )
-    db.add(user)
-    await db.flush()
-    await db.refresh(user)
+    def _create() -> int:
+        return _insert_user_sync(
+            conn,
+            name=username,
+            password=hash_password(secrets.token_hex(32)),
+            is_active=True,
+            is_admin=is_admin,
+        )
+
+    user_id = await asyncio.to_thread(_create)
     logger.info("Created SSO user: %s (admin=%s)", username, is_admin)
+    user = await get_user_by_id(conn, user_id)
+    assert user is not None
     return user
 
 
-async def create_user(db: AsyncSession, data: UserCreate) -> User:
-    user = User(
-        name=data.name,
-        password=hash_password(data.password),
-        is_active=data.is_active,
-        is_admin=data.is_admin,
-    )
-    db.add(user)
-    await db.flush()
-    await db.refresh(user)
+async def create_user(conn: sqlite3.Connection, data: UserCreate) -> User:
+    def _create() -> int:
+        return _insert_user_sync(
+            conn,
+            name=data.name,
+            password=hash_password(data.password),
+            is_active=data.is_active,
+            is_admin=data.is_admin,
+            must_change_password=data.must_change_password,
+        )
+
+    user_id = await asyncio.to_thread(_create)
+    user = await get_user_by_id(conn, user_id)
+    assert user is not None
     return user

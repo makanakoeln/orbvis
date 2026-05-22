@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import logging
+import sqlite3
 from datetime import UTC, datetime, timedelta
 
-import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import bearer, get_current_user
+from app.core import _jwt
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.ratelimit import login_limiter
@@ -41,7 +41,7 @@ router = APIRouter()
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    data: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)
+    data: LoginRequest, request: Request, db: sqlite3.Connection = Depends(get_db)
 ) -> TokenResponse:
     client_ip = request.client.host if request.client else "unknown"
     if login_limiter.is_blocked(client_ip):
@@ -64,7 +64,9 @@ async def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+async def refresh_token(
+    data: RefreshRequest, db: sqlite3.Connection = Depends(get_db)
+) -> TokenResponse:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid refresh token",
@@ -76,10 +78,10 @@ async def refresh_token(data: RefreshRequest, db: AsyncSession = Depends(get_db)
         user_id = int(str(payload["sub"]))
         jti = str(payload.get("jti", ""))
         exp = payload.get("exp")
-    except (jwt.PyJWTError, KeyError, ValueError):
+    except (_jwt.PyJWTError, KeyError, ValueError):
         raise credentials_exception from None
 
-    # Reject reuse of a refresh token that was already rotated or explicitly logged out.
+    # Reject reuse of a refresh token that was already rotated or logged out.
     if jti and is_token_blocked(jti):
         raise credentials_exception
 
@@ -87,7 +89,6 @@ async def refresh_token(data: RefreshRequest, db: AsyncSession = Depends(get_db)
     if user is None or not user.is_active:
         raise credentials_exception
 
-    # Rotate: invalidate the old refresh token so it cannot be used again.
     if jti:
         expiry = (
             datetime.fromtimestamp(float(str(exp)), tz=UTC)
@@ -115,11 +116,11 @@ async def me(current_user: User = Depends(get_current_user)) -> UserRead:
 
 
 @router.get("/sso", response_model=TokenResponse)
-async def sso_login(request: Request, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+async def sso_login(request: Request, db: sqlite3.Connection = Depends(get_db)) -> TokenResponse:
     """SSO via Checkmk session cookie (auth_<site>).
 
-    The browser automatically sends the Checkmk cookie with every same-origin request.
-    The backend validates the cookie HMAC against the OMD auth.secret file.
+    The browser sends the Checkmk cookie with every same-origin request; the
+    backend validates the cookie HMAC against the OMD auth.secret file.
     """
     site = settings.checkmk_site
     cookie_name = f"auth_{site}" if site else None

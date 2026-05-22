@@ -1,18 +1,16 @@
-"""State endpoints + WebSocket for real-time updates."""
+"""State endpoints + Server-Sent Events for real-time updates."""
 
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
+import sqlite3
+from collections.abc import AsyncIterator
+from typing import Literal, cast
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    WebSocket,
-    status,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import StreamingResponse
 
 from app.api.v1.connections import TopologyNode, build_topology_response
 from app.api.v1.deps import can_view_board as _can_view_board
@@ -20,45 +18,33 @@ from app.api.v1.deps import can_view_board_by_name as _can_view_board_by_name
 from app.api.v1.deps import get_current_user, resolve_auth_user
 from app.api.v1.types import BoardName
 from app.core.config import settings
-from app.core.database import AsyncSessionLocal
-from app.core.middleware import is_same_origin
+from app.core.database import get_db
 from app.core.ratelimit import ws_connect_limiter
-from app.core.websocket import manager
+from app.core.sse import Subscriber, manager
 from app.models.user import User
-from app.schemas.board import BoardConfig, FlowView
+from app.schemas.board import BoardConfig, FlowView, RadarView
 from app.schemas.state import MapStates, ObjectState
 from app.services import board_service, settings_service, state_service
 from app.services.auth_service import authenticate_bearer_token
 
 logger = logging.getLogger(__name__)
 
-# WebSocket close codes (application range 4000–4999, per RFC 6455).
-# 4001 is used uniformly for "auth failed" so clients can trigger a re-login
-# on any auth-related rejection without needing to distinguish reasons.
-_WS_CLOSE_AUTH_FAILED = 4001
-_WS_CLOSE_NO_PERMISSION = 4003
-_WS_CLOSE_NOT_FOUND = 4004
-_WS_CLOSE_RATE_LIMITED = 4008
-
 router = APIRouter()
 
 
-# One shared broadcast task per active board – avoids O(n²) fetch × broadcast behaviour.
-# Without this each connected client would independently fetch and broadcast to all clients.
+# Shared broadcast task per active board — avoids O(n²) fetch × broadcast.
+# Without this every connected client would independently fetch the topology
+# + states and push to all clients.
 _broadcast_tasks: dict[str, asyncio.Task[None]] = {}
+
+# Heartbeat cadence for SSE keepalives. Sized below typical Apache ProxyTimeout
+# (60 s default in OMD) so the stream doesn't get torn down on idle boards.
+_SSE_KEEPALIVE_INTERVAL = 30.0
 
 
 async def _fetch_topology_for_user(
     cfg: BoardConfig, auth_user: str | None
 ) -> list[TopologyNode] | None:
-    """Fetch the live topology + services for a Flow Board under auth_user.
-
-    Returns None when the connection is unregistered or unavailable (so the
-    caller can skip broadcasting without leaking errors to clients). Always
-    pulls service detail for the top-K affected hosts so subscribed clients
-    can render any service layout (off/donut don't need it but the diff
-    encoding only sends host rows that actually changed, so the cost is bounded).
-    """
     connection = state_service.get_connection(cfg.connection_id)
     if connection is None:
         return None
@@ -102,29 +88,6 @@ async def _fetch_topology_for_user(
         return None
 
 
-async def _send_topology_to(
-    cfg: BoardConfig,
-    auth_user: str | None,
-    targets: list[WebSocket],
-    *,
-    force_full: bool,
-) -> None:
-    """Compute the topology delta for (board, auth_user) and push it to *targets*.
-
-    Empty deltas are skipped unless `force_full=True`.
-    """
-    if not targets:
-        return
-    nodes = await _fetch_topology_for_user(cfg, auth_user)
-    if nodes is None:
-        return
-    delta = state_service.compute_topology_delta(cfg.name, auth_user, nodes, force_full=force_full)
-    if not (force_full or delta.added or delta.changed or delta.removed):
-        return
-    msg = json.dumps({"type": "topology_update", "map": cfg.name, "delta": delta.model_dump()})
-    await manager.send_to_connections(cfg.name, targets, msg)
-
-
 def _build_states_msg(
     board_name: str,
     states: MapStates,
@@ -132,10 +95,6 @@ def _build_states_msg(
     removed_ids: list[str],
     full: bool,
 ) -> str:
-    """Encode a state-update message. When full=False, ``states.states`` holds
-    only added/changed entries and ``removed_ids`` carries entries gone from
-    the previous tick — frontend merges instead of replaces.
-    """
     return json.dumps(
         {
             "type": "state_update",
@@ -152,33 +111,50 @@ def _build_states_msg(
     )
 
 
+async def _push_topology_to(
+    cfg: BoardConfig,
+    auth_user: str | None,
+    targets: list[Subscriber],
+    *,
+    force_full: bool,
+) -> None:
+    if not targets:
+        return
+    nodes = await _fetch_topology_for_user(cfg, auth_user)
+    if nodes is None:
+        return
+    delta = state_service.compute_topology_delta(cfg.name, auth_user, nodes, force_full=force_full)
+    if not (force_full or delta.added or delta.changed or delta.removed):
+        return
+    msg = json.dumps({"type": "topology_update", "map": cfg.name, "delta": delta.model_dump()})
+    manager.push(cfg.name, targets, msg)
+
+
 async def _broadcast_loop(board_name: str) -> None:
-    """Fetch states once per interval and push to all clients subscribed to this board.
+    """Fetch states once per interval and push to all subscribers.
 
-    When CHECKMK_OMD_ROOT is configured, connections are grouped by auth_user and
-    each group receives states filtered to its user's contact groups.  Otherwise a
-    single shared query is issued for efficiency.
+    With CHECKMK_OMD_ROOT, subscribers are grouped by auth_user and each group
+    receives states filtered to its user's contact groups. Otherwise a single
+    shared query is issued.
 
-    Updates are delta-encoded against the previous tick's snapshot per
-    (board, auth_user) — only added/changed states travel the wire, plus
-    object_ids that disappeared. The first tick after the loop starts (or when
-    a snapshot is dropped) is full so newly-attached clients converge.
+    Delta-encoded per (board, auth_user): only added/changed states travel the
+    wire, plus object_ids that disappeared. The first tick (or after a snapshot
+    is dropped) is full so newly-attached subscribers converge.
 
-    For Flow Boards (`view.type == "flow"`) the loop additionally pushes
-    `topology_update` messages with delta encoding so the FlowBoard component
-    can render without its own REST polling.
+    Flow Boards additionally receive ``topology_update`` deltas so the FlowBoard
+    component renders without its own REST polling.
     """
     logger.debug("Broadcast loop started for board '%s'", board_name)
     try:
-        while manager.get_connection_count(board_name) > 0:
+        while manager.get_subscriber_count(board_name) > 0:
             cfg = board_service.get_board(board_name)
             tick_start = asyncio.get_event_loop().time()
             user_count = 0
             if cfg is not None:
                 if settings.checkmk_omd_root:
-                    grouped = manager.get_connections_grouped(board_name)
+                    grouped = manager.get_subscribers_grouped(board_name)
                     user_count = len(grouped)
-                    for auth_user, connections in grouped.items():
+                    for auth_user, subs in grouped.items():
                         can_view = (
                             (lambda n, u=auth_user: _can_view_board_by_name(u, n))
                             if auth_user is not None
@@ -194,21 +170,21 @@ async def _broadcast_loop(board_name: str) -> None:
                             msg = _build_states_msg(
                                 board_name, states, to_send, removed_ids, is_full
                             )
-                            await manager.send_to_connections(board_name, connections, msg)
+                            manager.push(board_name, subs, msg)
                         if cfg.view.type == "flow":
-                            await _send_topology_to(cfg, auth_user, connections, force_full=False)
+                            await _push_topology_to(cfg, auth_user, subs, force_full=False)
                 else:
                     user_count = 1
                     states = await state_service.get_board_states(cfg)
                     to_send, removed_ids, is_full = state_service.compute_states_delta(
                         board_name, None, states.states
                     )
-                    connections = list(manager.get_connections_grouped(board_name).get(None, []))
+                    subs = list(manager.get_subscribers_grouped(board_name).get(None, []))
                     if is_full or to_send or removed_ids:
                         msg = _build_states_msg(board_name, states, to_send, removed_ids, is_full)
-                        await manager.send_to_connections(board_name, connections, msg)
+                        manager.push(board_name, subs, msg)
                     if cfg.view.type == "flow":
-                        await _send_topology_to(cfg, None, connections, force_full=False)
+                        await _push_topology_to(cfg, None, subs, force_full=False)
             elapsed_ms = (asyncio.get_event_loop().time() - tick_start) * 1000
             logger.debug(
                 "Broadcast tick board=%s user_groups=%d elapsed=%.0fms",
@@ -216,8 +192,8 @@ async def _broadcast_loop(board_name: str) -> None:
                 user_count,
                 elapsed_ms,
             )
-            # Read fresh each tick so changes from the System settings UI
-            # take effect without restarting the backend.
+            # Read interval fresh each tick so System-Settings changes apply
+            # without restarting the backend.
             await asyncio.sleep(settings_service.get_effective_state_refresh_interval())
     except Exception:
         logger.exception("Broadcast loop error for board '%s'", board_name)
@@ -228,14 +204,39 @@ async def _broadcast_loop(board_name: str) -> None:
         logger.debug("Broadcast loop stopped for board '%s'", board_name)
 
 
+_RADAR_FILTERS: set[str] = {"hostgroup", "servicegroup", "all_hosts", "all_services"}
+
+
 @router.get("/boards/{name}/states", response_model=MapStates)
 async def get_board_states(
-    name: BoardName, current_user: User = Depends(get_current_user)
+    name: BoardName,
+    current_user: User = Depends(get_current_user),
+    radar_filter: str | None = None,
+    radar_filter_value: str | None = None,
 ) -> MapStates:
     cfg = board_service.get_board(name)
     if cfg is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
+    # Settings-preview override for radar boards. Both query params arrive
+    # together so we never mix disk-state filter with a half-edited override.
+    if (
+        cfg.view.type == "radar"
+        and radar_filter is not None
+        and radar_filter_value is not None
+        and radar_filter in _RADAR_FILTERS
+    ):
+        cfg = cfg.model_copy(
+            update={
+                "view": RadarView(
+                    filter=cast(
+                        Literal["hostgroup", "servicegroup", "all_hosts", "all_services"],
+                        radar_filter,
+                    ),
+                    filter_value=radar_filter_value,
+                )
+            }
         )
     auth_user = resolve_auth_user(current_user.name, current_user.is_admin)
     return await state_service.get_board_states(
@@ -245,80 +246,67 @@ async def get_board_states(
     )
 
 
-@router.websocket("/ws/boards/{name}")
-async def websocket_board_states(
+@router.get("/sse/boards/{name}")
+async def sse_board_states(
     name: BoardName,
-    websocket: WebSocket,
-) -> None:
-    """WebSocket endpoint: streams state updates for a board.
+    request: Request,
+    token: str = Query(..., description="JWT access token (EventSource can't set Authorization)"),
+    db: sqlite3.Connection = Depends(get_db),
+) -> StreamingResponse:
+    """SSE endpoint streaming state + topology updates for a board.
 
-    Authentication: the client must send {"type": "auth", "token": "<access_token>"}
-    as the very first message after the connection is opened. The token is never
-    passed in the URL to avoid leaking it into server logs and browser history.
-
-    Hardening: connects are rate-limited per client IP, and the auth-message
-    timeout is short (3 s) so stalled or silent connections don't tie up slots.
+    Authentication: ``?token=`` query parameter (EventSource cannot set custom
+    headers). Browsers may log query strings; trade-off accepted because the
+    access-token TTL is short (60 min by default). For a tighter setup, fetch
+    a short-lived ticket via POST and use that.
     """
-    client_ip = websocket.client.host if websocket.client else "unknown"
+    client_ip = request.client.host if request.client else "unknown"
     if ws_connect_limiter.is_blocked(client_ip):
-        # Too many connects from this IP in the recent window — reject without accept.
-        await websocket.close(code=_WS_CLOSE_RATE_LIMITED)
-        return
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Rate limited")
     ws_connect_limiter.record(client_ip)
 
-    # Origin guard: browsers don't enforce same-origin on WS, so block hostile
-    # cross-origin pages. Same-origin or explicit allowlist; missing header =
-    # non-browser client.
-    origin = websocket.headers.get("origin")
-    if (
-        origin
-        and origin not in settings.allowed_origins
-        and not is_same_origin(origin, websocket.scope.get("headers", []))
-    ):
-        await websocket.close(code=_WS_CLOSE_AUTH_FAILED)
-        return
-
-    await websocket.accept()
-    try:
-        raw = await asyncio.wait_for(websocket.receive_text(), timeout=3.0)
-        msg = json.loads(raw)
-        if msg.get("type") != "auth" or not isinstance(msg.get("token"), str):
-            await websocket.close(code=_WS_CLOSE_AUTH_FAILED)
-            return
-        token: str = msg["token"]
-    except Exception:
-        await websocket.close(code=_WS_CLOSE_AUTH_FAILED)
-        return
-
-    async with AsyncSessionLocal() as db:
-        user = await authenticate_bearer_token(db, token)
-        if user is None:
-            await websocket.close(code=_WS_CLOSE_AUTH_FAILED)
-            return
-        if not _can_view_board(user, name):
-            await websocket.close(code=_WS_CLOSE_NO_PERMISSION)
-            return
-        ws_auth_user = resolve_auth_user(user.name, user.is_admin)
+    user = await authenticate_bearer_token(db, token)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    if not _can_view_board(user, name):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="No board view permission"
+        )
 
     cfg = board_service.get_board(name)
     if cfg is None:
-        await websocket.close(code=_WS_CLOSE_NOT_FOUND)
-        return
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
 
-    await manager.connect(name, websocket, already_accepted=True, auth_user=ws_auth_user)
+    auth_user = resolve_auth_user(user.name, user.is_admin)
+    sub = manager.subscribe(name, auth_user)
 
     if name not in _broadcast_tasks or _broadcast_tasks[name].done():
         _broadcast_tasks[name] = asyncio.create_task(_broadcast_loop(name))
 
-    # First-paint push for Flow Boards: don't make the client wait up to one
-    # broadcast tick (state_refresh_interval) for the initial topology.
+    # First-paint topology for Flow Boards so the client doesn't wait a full
+    # broadcast tick before the initial render.
     if cfg.view.type == "flow":
-        await _send_topology_to(cfg, ws_auth_user, [websocket], force_full=True)
+        await _push_topology_to(cfg, auth_user, [sub], force_full=True)
 
-    try:
-        while True:
-            await websocket.receive()
-    except Exception:
-        pass
-    finally:
-        manager.disconnect(name, websocket)
+    async def event_stream() -> AsyncIterator[bytes]:
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    msg = await asyncio.wait_for(sub.queue.get(), timeout=_SSE_KEEPALIVE_INTERVAL)
+                    yield f"data: {msg}\n\n".encode()
+                except TimeoutError:
+                    yield b": keepalive\n\n"
+        finally:
+            manager.unsubscribe(name, sub)
+
+    headers = {
+        # Apache buffers proxied responses by default; opt out so events flow
+        # through immediately.
+        "X-Accel-Buffering": "no",
+        "Cache-Control": "no-cache, no-store",
+    }
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=headers)

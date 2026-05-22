@@ -208,6 +208,7 @@
 import { computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue';
 
 import { useObjectActions } from '@/composables/useObjectActions';
+import { useBoardsStore } from '@/stores/boards';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api';
@@ -293,6 +294,7 @@ function _snap(v: number): number {
     return Math.round(v / props.snapGrid) * props.snapGrid;
 }
 
+const boardsStore = useBoardsStore();
 const bgImageCacheKey = ref(Date.now());
 
 const bgImageUrl = computed(() => {
@@ -305,6 +307,13 @@ watch(
     () => props.config.background_image,
     () => {
         bgImageCacheKey.value = Date.now();
+    },
+);
+
+watch(
+    () => boardsStore.bgRefreshTicks[props.config.name],
+    (tick) => {
+        if (tick) bgImageCacheKey.value = tick;
     },
 );
 
@@ -343,6 +352,17 @@ watch(
     },
 );
 
+// Settings-preview fit: when rendered inside the Settings modal iframe the
+// pane is much smaller than the parent canvas, so object pixel-positions
+// look oversized against the shrunk-to-fit background image. Compute a
+// shrink factor that maps the parent-sized content into the preview pane.
+const previewFitZoom = computed(() => {
+    if (!props.preview) return 1;
+    const pane = paneSize.value;
+    if (!pane.width || !pane.height || !canvasWidth.value || !canvasHeight.value) return 1;
+    return Math.min(1, pane.width / canvasWidth.value, pane.height / canvasHeight.value);
+});
+
 const canvasStyle = computed(() => {
     const bg = props.config.background_image;
     const url = bgImageUrl.value;
@@ -354,12 +374,25 @@ const canvasStyle = computed(() => {
     // would visibly grow, which is why bg-image stayed put while objects
     // scaled).
     const pane = paneSize.value;
-    const base: Record<string, string> =
-        pane.width && pane.height
-            ? { width: `${pane.width}px`, height: `${pane.height}px` }
-            : { width: '100%', height: '100%' };
-    if (userZoom.value !== 1) {
-        base.zoom = String(userZoom.value);
+    const fit = previewFitZoom.value;
+    let base: Record<string, string>;
+    if (props.preview && fit < 1 && canvasWidth.value && canvasHeight.value) {
+        // Lay the element out at full content size so absolute-positioned
+        // objects keep their coordinates, then shrink the whole thing via
+        // CSS zoom — content + bg-image scale together.
+        base = {
+            width: `${canvasWidth.value}px`,
+            height: `${canvasHeight.value}px`,
+            zoom: String(fit),
+        };
+    } else {
+        base =
+            pane.width && pane.height
+                ? { width: `${pane.width}px`, height: `${pane.height}px` }
+                : { width: '100%', height: '100%' };
+        if (userZoom.value !== 1) {
+            base.zoom = String(userZoom.value);
+        }
     }
     if (color) base.backgroundColor = color;
     if (bg) {

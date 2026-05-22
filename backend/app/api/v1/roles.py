@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+import sqlite3
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import require_admin
 from app.core.database import get_db
@@ -17,39 +18,68 @@ from app.schemas.role import RoleCreate, RoleRead
 router = APIRouter()
 
 
-# ---- Roles ----
+def _load_role(db: sqlite3.Connection, role_id: int) -> Role | None:
+    row = db.execute("SELECT role_id, name FROM roles WHERE role_id = ?", (role_id,)).fetchone()
+    if row is None:
+        return None
+    role = Role(role_id=row["role_id"], name=row["name"])
+    role.permissions = [
+        Permission(perm_id=p["perm_id"], mod=p["mod"], act=p["act"], obj=p["obj"])
+        for p in db.execute(
+            """
+            SELECT p.perm_id, p.mod, p.act, p.obj
+            FROM permissions p
+            JOIN roles2perms r2p ON r2p.perm_id = p.perm_id
+            WHERE r2p.role_id = ?
+            """,
+            (role_id,),
+        ).fetchall()
+    ]
+    return role
 
 
 @router.get("", response_model=list[RoleRead])
 async def list_roles(
-    db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
+    db: sqlite3.Connection = Depends(get_db), _: User = Depends(require_admin)
 ) -> list[RoleRead]:
-    result = await db.execute(select(Role))
-    return [RoleRead.model_validate(r) for r in result.scalars().all()]
+    def _list() -> list[Role]:
+        return [
+            r
+            for row in db.execute("SELECT role_id, name FROM roles ORDER BY role_id").fetchall()
+            for r in [_load_role(db, row["role_id"])]
+            if r is not None
+        ]
+
+    roles = await asyncio.to_thread(_list)
+    return [RoleRead.model_validate(r) for r in roles]
 
 
 @router.post("", response_model=RoleRead, status_code=status.HTTP_201_CREATED)
 async def create_role(
     data: RoleCreate,
-    db: AsyncSession = Depends(get_db),
+    db: sqlite3.Connection = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> RoleRead:
-    existing = await db.execute(select(Role).where(Role.name == data.name))
-    if existing.scalar_one_or_none():
+    def _create() -> int | None:
+        existing = db.execute("SELECT 1 FROM roles WHERE name = ?", (data.name,)).fetchone()
+        if existing:
+            return None
+        cursor = db.execute("INSERT INTO roles (name) VALUES (?)", (data.name,))
+        return cursor.lastrowid
+
+    role_id = await asyncio.to_thread(_create)
+    if role_id is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Role name already exists")
-    role = Role(name=data.name)
-    db.add(role)
-    await db.flush()
-    await db.refresh(role)
+    role = await asyncio.to_thread(_load_role, db, role_id)
+    assert role is not None
     return RoleRead.model_validate(role)
 
 
 @router.get("/{role_id}", response_model=RoleRead)
 async def get_role(
-    role_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
+    role_id: int, db: sqlite3.Connection = Depends(get_db), _: User = Depends(require_admin)
 ) -> RoleRead:
-    result = await db.execute(select(Role).where(Role.role_id == role_id))
-    role = result.scalar_one_or_none()
+    role = await asyncio.to_thread(_load_role, db, role_id)
     if role is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     return RoleRead.model_validate(role)
@@ -57,36 +87,51 @@ async def get_role(
 
 @router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_role(
-    role_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
+    role_id: int, db: sqlite3.Connection = Depends(get_db), _: User = Depends(require_admin)
 ) -> None:
-    result = await db.execute(select(Role).where(Role.role_id == role_id))
-    role = result.scalar_one_or_none()
-    if role is None:
+    def _delete() -> bool:
+        row = db.execute("SELECT 1 FROM roles WHERE role_id = ?", (role_id,)).fetchone()
+        if row is None:
+            return False
+        db.execute("DELETE FROM roles WHERE role_id = ?", (role_id,))
+        return True
+
+    if not await asyncio.to_thread(_delete):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
-    await db.delete(role)
-
-
-# ---- Permissions ----
 
 
 @router.get("/permissions/", response_model=list[PermissionRead])
 async def list_permissions(
-    db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
+    db: sqlite3.Connection = Depends(get_db), _: User = Depends(require_admin)
 ) -> list[PermissionRead]:
-    result = await db.execute(select(Permission))
-    return [PermissionRead.model_validate(p) for p in result.scalars().all()]
+    def _list() -> list[Permission]:
+        return [
+            Permission(perm_id=r["perm_id"], mod=r["mod"], act=r["act"], obj=r["obj"])
+            for r in db.execute(
+                "SELECT perm_id, mod, act, obj FROM permissions ORDER BY perm_id"
+            ).fetchall()
+        ]
+
+    perms = await asyncio.to_thread(_list)
+    return [PermissionRead.model_validate(p) for p in perms]
 
 
 @router.post("/permissions/", response_model=PermissionRead, status_code=status.HTTP_201_CREATED)
 async def create_permission(
     data: PermissionCreate,
-    db: AsyncSession = Depends(get_db),
+    db: sqlite3.Connection = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> PermissionRead:
-    perm = Permission(mod=data.mod, act=data.act, obj=data.obj)
-    db.add(perm)
-    await db.flush()
-    await db.refresh(perm)
+    def _create() -> Permission:
+        cursor = db.execute(
+            "INSERT INTO permissions (mod, act, obj) VALUES (?, ?, ?)",
+            (data.mod, data.act, data.obj),
+        )
+        perm_id = cursor.lastrowid
+        assert perm_id is not None
+        return Permission(perm_id=perm_id, mod=data.mod, act=data.act, obj=data.obj)
+
+    perm = await asyncio.to_thread(_create)
     return PermissionRead.model_validate(perm)
 
 
@@ -94,21 +139,28 @@ async def create_permission(
 async def assign_permission(
     role_id: int,
     perm_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: sqlite3.Connection = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> RoleRead:
-    role_result = await db.execute(select(Role).where(Role.role_id == role_id))
-    role = role_result.scalar_one_or_none()
+    def _assign() -> tuple[Role | None, bool]:
+        r = db.execute("SELECT 1 FROM roles WHERE role_id = ?", (role_id,)).fetchone()
+        if r is None:
+            return None, False
+        p = db.execute("SELECT 1 FROM permissions WHERE perm_id = ?", (perm_id,)).fetchone()
+        if p is None:
+            return None, True
+        db.execute(
+            "INSERT OR IGNORE INTO roles2perms (role_id, perm_id) VALUES (?, ?)",
+            (role_id, perm_id),
+        )
+        return _load_role(db, role_id), True
+
+    role, role_existed = await asyncio.to_thread(_assign)
     if role is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
-    perm_result = await db.execute(select(Permission).where(Permission.perm_id == perm_id))
-    perm = perm_result.scalar_one_or_none()
-    if perm is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Permission not found")
-    if perm not in role.permissions:
-        role.permissions.append(perm)
-    await db.flush()
-    await db.refresh(role)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Permission not found" if role_existed else "Role not found",
+        )
     return RoleRead.model_validate(role)
 
 
@@ -116,11 +168,18 @@ async def assign_permission(
 async def remove_permission(
     role_id: int,
     perm_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: sqlite3.Connection = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> None:
-    role_result = await db.execute(select(Role).where(Role.role_id == role_id))
-    role = role_result.scalar_one_or_none()
-    if role is None:
+    def _delete() -> bool:
+        row = db.execute("SELECT 1 FROM roles WHERE role_id = ?", (role_id,)).fetchone()
+        if row is None:
+            return False
+        db.execute(
+            "DELETE FROM roles2perms WHERE role_id = ? AND perm_id = ?",
+            (role_id, perm_id),
+        )
+        return True
+
+    if not await asyncio.to_thread(_delete):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
-    role.permissions = [p for p in role.permissions if p.perm_id != perm_id]

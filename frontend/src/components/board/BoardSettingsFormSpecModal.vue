@@ -1069,6 +1069,27 @@ watch(
     },
 );
 
+// External re-apply: when the parent re-sets ``worldmapView`` (e.g. via the
+// "save current view as default" right-click action on the parent canvas) and
+// the modal is already open, ``initWorldmapCoords`` has long since run — we
+// must reflect the new view into the form so the preview repaints.
+watch(
+    () => props.worldmapView,
+    (next) => {
+        if (!next) return;
+        if (
+            form.value.worldmap_lat === next.lat &&
+            form.value.worldmap_lng === next.lng &&
+            form.value.worldmap_zoom === next.zoom
+        ) {
+            return;
+        }
+        form.value.worldmap_lat = next.lat;
+        form.value.worldmap_lng = next.lng;
+        form.value.worldmap_zoom = next.zoom;
+    },
+);
+
 function postPreviewPatch() {
     const win = previewIframe.value?.contentWindow;
     if (!win) return;
@@ -1306,9 +1327,11 @@ onBeforeUnmount(() => {
 }
 
 .board-settings__preview-label {
-    font-size: 0.6875rem;
-    color: var(--text-muted);
-    opacity: 0.7;
+    font-size: var(--font-size-small, 0.8125rem);
+    font-weight: 600;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 .board-settings__preview-stage {

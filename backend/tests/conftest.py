@@ -3,50 +3,47 @@
 from __future__ import annotations
 
 import os
+import sqlite3
+import tempfile
+from pathlib import Path
 
 # Force a testing environment + deterministic SECRET_KEY before anything imports
 # app.core.config — otherwise production-mode config validation aborts the tests.
 os.environ.setdefault("ENVIRONMENT", "testing")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
 
+# Per-test database file — set before app.core.config reads DATABASE_URL.
+_TMPDIR = Path(tempfile.mkdtemp(prefix="orbvis-test-"))
+_DB_PATH = _TMPDIR / "test.db"
+os.environ.setdefault("DATABASE_URL", f"sqlite:///{_DB_PATH}")
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
 
 from app.connections.base import ConnectionBase
-from app.core.database import Base, get_db
+from app.core.database import _connect, _ensure_schema, get_db
 from app.core.security import hash_password
 from app.main import app
 from app.models.user import User
 
-TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
-test_engine = create_async_engine(TEST_DB_URL, echo=False)
-TestSessionLocal = async_sessionmaker(bind=test_engine, class_=AsyncSession, expire_on_commit=False)
-
-
-@pytest_asyncio.fixture(autouse=True)
-async def setup_db():
-    import app.models  # noqa: F401
-
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+@pytest.fixture(autouse=True)
+def setup_db():
+    if _DB_PATH.exists():
+        _DB_PATH.unlink()
+    _ensure_schema()
     yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+    if _DB_PATH.exists():
+        _DB_PATH.unlink()
 
 
 @pytest.fixture(autouse=True)
 def _reset_board_cache():
     # Module-level board cache leaks between tests because tests reuse names
-    # like "src-board" against different tmp_paths. Clear before and after.
+    # like "src-board" against different tmp_paths.
     from app.services import board_service
 
     def _wipe() -> None:
@@ -61,14 +58,18 @@ def _reset_board_cache():
     _wipe()
 
 
-@pytest_asyncio.fixture
-async def db_session():
-    async with TestSessionLocal() as session:
-        yield session
+@pytest.fixture
+def db_session() -> sqlite3.Connection:
+    """Provide a per-test sqlite3 connection (was AsyncSession pre-refactor)."""
+    conn = _connect()
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 @pytest_asyncio.fixture
-async def client(db_session: AsyncSession):
+async def client(db_session: sqlite3.Connection):
     async def override_get_db():
         yield db_session
 
@@ -78,18 +79,35 @@ async def client(db_session: AsyncSession):
     app.dependency_overrides.clear()
 
 
-@pytest_asyncio.fixture
-async def admin_user(db_session: AsyncSession) -> User:
-    user = User(
-        name="admin",
-        password=hash_password("secret"),
-        is_active=True,
-        is_admin=True,
+def _insert_user(
+    conn: sqlite3.Connection,
+    *,
+    name: str,
+    password: str,
+    is_active: bool = True,
+    is_admin: bool = False,
+) -> User:
+    cursor = conn.execute(
+        """
+        INSERT INTO users (name, password, is_active, is_admin, must_change_password)
+        VALUES (?, ?, ?, ?, 0)
+        """,
+        (name, password, 1 if is_active else 0, 1 if is_admin else 0),
     )
-    db_session.add(user)
-    await db_session.commit()
-    await db_session.refresh(user)
-    return user
+    user_id = cursor.lastrowid
+    assert user_id is not None
+    return User(
+        user_id=user_id,
+        name=name,
+        password=password,
+        is_active=is_active,
+        is_admin=is_admin,
+    )
+
+
+@pytest.fixture
+def admin_user(db_session: sqlite3.Connection) -> User:
+    return _insert_user(db_session, name="admin", password=hash_password("secret"), is_admin=True)
 
 
 @pytest_asyncio.fixture
@@ -100,18 +118,11 @@ async def admin_token(client, admin_user):
     return response.json()["access_token"]
 
 
-@pytest_asyncio.fixture
-async def regular_user(db_session: AsyncSession) -> User:
-    user = User(
-        name="regular",
-        password=hash_password("secret"),
-        is_active=True,
-        is_admin=False,
+@pytest.fixture
+def regular_user(db_session: sqlite3.Connection) -> User:
+    return _insert_user(
+        db_session, name="regular", password=hash_password("secret"), is_admin=False
     )
-    db_session.add(user)
-    await db_session.commit()
-    await db_session.refresh(user)
-    return user
 
 
 @pytest_asyncio.fixture
@@ -124,7 +135,6 @@ async def regular_token(client, regular_user):
 
 @pytest.fixture
 def mock_connection() -> MagicMock:
-    """A MagicMock implementing ConnectionBase for unit tests."""
     connection = MagicMock(spec=ConnectionBase)
     connection.connection_id = "mock_connection"
     connection.is_available = AsyncMock(return_value=True)

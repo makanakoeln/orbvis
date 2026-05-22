@@ -23,14 +23,12 @@ export interface MetricPoint {
 }
 const HISTORY_MAX = 10080; // up to 7d at 1min resolution
 
-// Base path without trailing slash, e.g. '/heute/orbvis' or ''
-// When built with --base=./ (relative), fall back to window.location.pathname
-// because WebSocket requires an absolute path.
+// Base path without trailing slash, e.g. '/heute/orbvis' or ''.
+// When built with --base=./ (relative), fall back to window.location.pathname.
 const _base = import.meta.env.BASE_URL.startsWith('.')
     ? window.location.pathname.replace(/\/+$/, '')
     : import.meta.env.BASE_URL.replace(/\/$/, '');
 
-// States considered "bad" (descending severity)
 const _BAD_STATES = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN']);
 const _SEVERITY: Record<string, number> = {
     OK: 0,
@@ -47,12 +45,12 @@ function _notifyStateChange(obj: ObjectState, prev: ObjectState | undefined) {
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     const prevSev = _SEVERITY[prev?.state ?? 'OK'] ?? 0;
     const newSev = _SEVERITY[obj.state] ?? 0;
-    if (newSev <= prevSev) return; // only notify on worsening
+    if (newSev <= prevSev) return;
     if (!_BAD_STATES.has(obj.state)) return;
     const name = obj.object_id;
     new Notification(`OrbVis: ${obj.state}`, {
         body: name,
-        tag: name, // de-duplicate: same object → replace existing notification
+        tag: name,
     });
 }
 
@@ -60,16 +58,16 @@ export const useStatesStore = defineStore('states', () => {
     const states = ref<Record<string, ObjectState>>({}); // keyed by object_id
     const history = ref<Record<string, MetricSnapshot[]>>({});
     const metricValues = ref<Record<string, Record<string, MetricPoint[]>>>({});
-    const metricTitles = ref<Record<string, Record<string, string>>>({}); // objectId → metricId → title
-    const metricGraphs = ref<Record<string, MetricGraphGroup[]>>({}); // objectId → graph groups
+    const metricTitles = ref<Record<string, Record<string, string>>>({});
+    const metricGraphs = ref<Record<string, MetricGraphGroup[]>>({});
     const connected = ref(false);
     const lastUpdate = ref<number | null>(null);
     const initialLoad = ref(false);
-    // Flow Board topology pushed via WS (separate from `states` because it
-    // tracks dynamically discovered hosts, not configured BoardObjects).
     const topology = ref<TopologyNode[]>([]);
-    const topologyReady = ref(false); // true after first topology_update arrives
-    const wsAvailable = ref(true); // false once we fall back to HTTP polling
+    const topologyReady = ref(false);
+    // Kept under the historical name for compatibility with views; false after
+    // we fall back to HTTP polling because SSE didn't work.
+    const wsAvailable = ref(true);
     const _LS_NOTIF = 'orbvis_notifications';
     const notificationsEnabled = ref(
         typeof Notification !== 'undefined' &&
@@ -99,7 +97,6 @@ export const useStatesStore = defineStore('states', () => {
         const arr = history.value[objectId] ?? [];
         arr.push({ ts, pct: utilPercent(metrics[0]) });
         history.value[objectId] = arr.length > HISTORY_MAX ? arr.slice(-HISTORY_MAX) : arr;
-        // Per-metric value history
         const mv = metricValues.value[objectId] ?? {};
         for (const m of metrics) {
             const mArr = mv[m.label] ?? [];
@@ -109,16 +106,15 @@ export const useStatesStore = defineStore('states', () => {
         metricValues.value[objectId] = mv;
     }
 
-    let ws: WebSocket | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let sse: EventSource | null = null;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     let currentMap: string | null = null;
     let currentToken: string | undefined = undefined;
-    // true once we determined WebSocket doesn't work and switched to polling
+    // True after we determined SSE doesn't work and switched permanently to polling.
     let pollingMode = false;
 
     async function connectToMap(mapName: string, token?: string) {
-        if (currentMap === mapName && (ws?.readyState === WebSocket.OPEN || pollTimer)) return;
+        if (currentMap === mapName && (sse?.readyState === EventSource.OPEN || pollTimer)) return;
         disconnect();
         currentMap = mapName;
         currentToken = token;
@@ -132,12 +128,17 @@ export const useStatesStore = defineStore('states', () => {
         else _startPolling();
     }
 
+    // Settings-preview override: when the radar filter is live-edited in the
+    // Settings modal, the preview iframe sets this so the next fetch carries
+    // the unsaved filter as query params instead of using the disk-cfg filter.
+    const radarOverride = ref<{ filter: string; filterValue: string } | null>(null);
+
     async function _fetchStates() {
         if (!currentMap || !currentToken) return;
         const mapAtStart = currentMap;
         try {
-            const data = await boardsApi.getStates(mapAtStart, currentToken);
-            if (currentMap !== mapAtStart) return; // board changed while fetching
+            const data = await boardsApi.getStates(mapAtStart, currentToken, radarOverride.value);
+            if (currentMap !== mapAtStart) return;
             const newStates: Record<string, ObjectState> = {};
             const ts = Date.now() / 1000;
             for (const s of data.states) {
@@ -152,7 +153,6 @@ export const useStatesStore = defineStore('states', () => {
             lastUpdate.value = ts;
             connected.value = data.connection_ok;
         } catch {
-            // Backend unreachable or auth error – show as offline
             connected.value = false;
         }
     }
@@ -179,30 +179,23 @@ export const useStatesStore = defineStore('states', () => {
 
     function _connect() {
         if (!currentMap || !currentToken) return;
-        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        // Token is sent as the first message after the handshake — never in the URL —
-        // to prevent it from leaking into server logs and browser history.
-        const url = `${protocol}://${window.location.host}${_base}/api/v1/ws/boards/${currentMap}`;
-        ws = new WebSocket(url);
+        // SSE: GET endpoint, token in query string (EventSource cannot set
+        // Authorization). Access-token TTL is short (60 min default), so the
+        // exposure window is bounded.
+        const url = `${_base}/api/v1/sse/boards/${encodeURIComponent(
+            currentMap,
+        )}?token=${encodeURIComponent(currentToken)}`;
+        sse = new EventSource(url);
         let opened = false;
 
-        ws.onopen = () => {
+        sse.onopen = () => {
             opened = true;
-            ws?.send(JSON.stringify({ type: 'auth', token: currentToken }));
-            // Do NOT set connected=true here. The first state_update message sets
-            // connected via msg.states.connection_ok, which correctly reflects whether the
-            // monitoring backend is reachable – not just whether the WS handshake succeeded.
-            // Setting true here would override a connection_ok=false from the pre-connect
-            // _fetchStates() call and show "Live" when the monitoring backend is actually down.
         };
 
-        ws.onmessage = (event) => {
+        sse.onmessage = (event) => {
             try {
                 const msg: WebSocketStateUpdate | WebSocketTopologyUpdate = JSON.parse(event.data);
                 if (msg.type === 'state_update') {
-                    // `full` defaults to true so old servers (or the first tick of a
-                    // fresh broadcast loop) replace the map. Delta ticks set it to
-                    // false and only carry added/changed states + removed_ids.
                     const isFull = msg.full ?? true;
                     for (const s of msg.states.states) {
                         if (notificationsEnabled.value)
@@ -233,39 +226,31 @@ export const useStatesStore = defineStore('states', () => {
             }
         };
 
-        ws.onclose = () => {
+        sse.onerror = () => {
+            // EventSource auto-reconnects on transient errors; close + fall back
+            // to polling only when the very first connect failed (proxy without
+            // streaming support, auth rejected etc.).
             if (!opened) {
-                // Never opened: WebSocket not available (e.g. reverse proxy without WS support).
-                // Switch permanently to HTTP polling for this session.
                 pollingMode = true;
                 wsAvailable.value = false;
-                ws = null;
+                sse?.close();
+                sse = null;
                 _startPolling();
                 return;
             }
-            // Was open but dropped – try reconnect
             connected.value = false;
-            reconnectTimer = setTimeout(_connect, 5000);
-        };
-
-        ws.onerror = () => {
-            ws?.close();
         };
     }
 
     function disconnect() {
-        if (reconnectTimer) {
-            clearTimeout(reconnectTimer);
-            reconnectTimer = null;
-        }
         if (pollTimer) {
             clearInterval(pollTimer);
             pollTimer = null;
         }
-        if (ws) {
-            ws.onclose = null;
-            ws.close();
-            ws = null;
+        if (sse) {
+            sse.onerror = null;
+            sse.close();
+            sse = null;
         }
         connected.value = false;
         initialLoad.value = false;
@@ -301,14 +286,12 @@ export const useStatesStore = defineStore('states', () => {
                 accessToken,
             );
             if (!data || !Object.keys(data.series).length) return;
-            // Store titles (overwrite — server always has the authoritative title)
             if (Object.keys(data.titles).length) {
                 metricTitles.value[objectId] = { ...data.titles };
             }
             if (data.graphs?.length) {
                 metricGraphs.value[objectId] = data.graphs;
             }
-            // Merge: historical points first, live WebSocket points on top (deduplicated by ts)
             const mv: Record<string, MetricPoint[]> = { ...(metricValues.value[objectId] ?? {}) };
             for (const [label, pts] of Object.entries(data.series)) {
                 const existing = mv[label] ?? [];
@@ -320,7 +303,7 @@ export const useStatesStore = defineStore('states', () => {
             }
             metricValues.value[objectId] = mv;
         } catch {
-            // Backend doesn't support metric history (plain Nagios) — silently ignore
+            // Backend doesn't support metric history (plain Nagios) — silently ignore.
         }
     }
 
@@ -346,8 +329,6 @@ export const useStatesStore = defineStore('states', () => {
         disconnect,
         getState,
         refreshNow: _fetchStates,
-        // Same as refreshNow but flips ``initialLoad`` so views can render
-        // a spinner while the refetch is in flight (after settings save).
         async refreshWithIndicator(): Promise<void> {
             initialLoad.value = true;
             try {
@@ -357,12 +338,16 @@ export const useStatesStore = defineStore('states', () => {
             }
         },
         refreshAfterCommand(): void {
-            // CMK processes commands async — refresh immediately and again after a short delay
             void _fetchStates();
             setTimeout(() => void _fetchStates(), 1500);
         },
         toggleNotifications,
         prefillMetricHistory,
         clearMetricValues,
+        setRadarOverride(filter: string | null, filterValue?: string): void {
+            radarOverride.value =
+                filter && typeof filterValue === 'string' ? { filter, filterValue } : null;
+            void _fetchStates();
+        },
     };
 });

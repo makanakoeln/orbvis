@@ -1,42 +1,71 @@
-"""Async SQLAlchemy database setup."""
+"""Stdlib sqlite3 wrapper — replaces SQLAlchemy + aiosqlite + alembic.
 
-from collections.abc import AsyncGenerator
+Schema lives in core/schema.sql, applied idempotently at startup. Service-layer
+queries are wrapped in ``asyncio.to_thread`` (via ``db_run``) so the async
+surface to FastAPI handlers stays the same.
+"""
 
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
-from sqlalchemy.orm import DeclarativeBase
+from __future__ import annotations
+
+import asyncio
+import logging
+import sqlite3
+from collections.abc import AsyncGenerator, Callable
+from pathlib import Path
 
 from app.core.config import settings
 
-engine = create_async_engine(
-    settings.database_url,
-    echo=settings.debug,
-    future=True,
-)
+logger = logging.getLogger(__name__)
 
-AsyncSessionLocal = async_sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False,
-)
+_SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 
 
-class Base(DeclarativeBase):
-    pass
+def _resolve_db_path() -> str:
+    # Accept the legacy SQLAlchemy URL forms so on-disk databases from the
+    # previous setup keep working without operator action.
+    url = settings.database_url
+    for prefix in ("sqlite+aiosqlite://", "sqlite+pysqlite://", "sqlite://"):
+        if url.startswith(prefix):
+            url = url[len(prefix) :]
+            break
+    if url.startswith("/"):
+        url = url[1:]
+    return url or ":memory:"
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency for database sessions."""
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
+def _connect() -> sqlite3.Connection:
+    conn = sqlite3.connect(
+        _resolve_db_path(),
+        # FastAPI yields the connection to threadpool workers via db_run.
+        check_same_thread=False,
+        # autocommit; explicit BEGIN/COMMIT where transactionality matters.
+        isolation_level=None,
+    )
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
+async def get_db() -> AsyncGenerator[sqlite3.Connection, None]:
+    conn = _connect()
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+
+async def db_run[**P, T](fn: Callable[P, T], /, *args: P.args, **kwargs: P.kwargs) -> T:
+    return await asyncio.to_thread(fn, *args, **kwargs)
+
+
+def _ensure_schema() -> None:
+    # Drop the legacy alembic_version table so on-disk layout converges with
+    # fresh installs after the alembic dependency is gone.
+    conn = _connect()
+    try:
+        conn.executescript(_SCHEMA_PATH.read_text())
+        conn.execute("DROP TABLE IF EXISTS alembic_version")
+    finally:
+        conn.close()
+    logger.info("Database schema ensured (%s)", _resolve_db_path())

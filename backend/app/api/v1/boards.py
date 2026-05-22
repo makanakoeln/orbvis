@@ -4,14 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sqlite3
 import tempfile
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.api.v1.deps import (
     can_edit_board,
@@ -28,7 +26,6 @@ from app.core.image_security import (
     is_valid_image,
 )
 from app.form_specs import FORM_SPECS_AVAILABLE
-from app.models.role import Role
 from app.models.user import User
 from app.schemas.board import (
     BoardClone,
@@ -356,27 +353,29 @@ async def import_cfg(
 async def get_board_permissions(
     name: BoardName,
     _: User = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
+    db: sqlite3.Connection = Depends(get_db),
 ) -> BoardPermissionsRead:
-    """Return which roles have direct (non-wildcard) view/edit permissions on this board."""
-    # Eager-load the permissions so the subsequent `role.permissions` loop is
-    # one batched SELECT, not N+1 lazy loads. Role.permissions is already
-    # `lazy="selectin"` on the model, but stating the intent here keeps the
-    # query path explicit and survives future model-config changes.
-    result = await db.execute(select(Role).options(selectinload(Role.permissions)))
-    roles = result.scalars().all()
+    def _query() -> BoardPermissionsRead:
+        rows = db.execute(
+            """
+            SELECT r.name AS role_name, p.act
+            FROM permissions p
+            JOIN roles2perms r2p ON r2p.perm_id = p.perm_id
+            JOIN roles r        ON r.role_id = r2p.role_id
+            WHERE p.mod = 'map' AND p.obj = ?
+            """,
+            (name,),
+        ).fetchall()
+        view_roles: list[str] = []
+        edit_roles: list[str] = []
+        for row in rows:
+            if row["act"] == "view" and row["role_name"] not in view_roles:
+                view_roles.append(row["role_name"])
+            elif row["act"] == "edit" and row["role_name"] not in edit_roles:
+                edit_roles.append(row["role_name"])
+        return BoardPermissionsRead(view=view_roles, edit=edit_roles)
 
-    view_roles: list[str] = []
-    edit_roles: list[str] = []
-    for role in roles:
-        for perm in role.permissions:
-            if perm.mod == "map" and perm.obj == name:
-                if perm.act == "view" and role.name not in view_roles:
-                    view_roles.append(role.name)
-                elif perm.act == "edit" and role.name not in edit_roles:
-                    edit_roles.append(role.name)
-
-    return BoardPermissionsRead(view=view_roles, edit=edit_roles)
+    return await asyncio.to_thread(_query)
 
 
 # ----- Background image -----
@@ -431,14 +430,14 @@ async def upload_background(
         Path(tmp_path).unlink(missing_ok=True)
         raise
 
-    board_service.update_board(name, BoardUpdate(background_image=filename))
-    return JSONResponse({"filename": filename})
+    updated = board_service.update_board(name, BoardUpdate(background_image=filename))
+    return JSONResponse({"filename": filename, "version": updated.version if updated else None})
 
 
-@router.delete("/{name}/background", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{name}/background")
 async def delete_background(
     name: BoardName, current_user: User = Depends(get_current_user)
-) -> None:
+) -> JSONResponse:
     _require_board_edit(name, current_user)
     _require_not_readonly(name)
     if board_service.get_board(name) is None:
@@ -448,7 +447,8 @@ async def delete_background(
     bg_dir = Path(settings.boards_dir) / "backgrounds"
     for f in bg_dir.glob(f"{name}.*"):
         f.unlink(missing_ok=True)
-    board_service.update_board(name, BoardUpdate(background_image=None))
+    updated = board_service.update_board(name, BoardUpdate(background_image=None))
+    return JSONResponse({"version": updated.version if updated else None})
 
 
 # ----- Object sub-resources -----

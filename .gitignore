@@ -73,3 +73,5 @@ reports/
 !frontend/public/*.png
 !frontend/src/**/*.png
 audit/
+orbvis-cmk-*.mkp
+orbvis-cmk-*.zip

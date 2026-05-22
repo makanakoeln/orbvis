@@ -544,6 +544,15 @@ onMounted(() => {
         center: [wv?.lat ?? 51, wv?.lng ?? 10],
         zoom: wv?.zoom ?? 5,
         zoomSnap: 0.25,
+        // Preview is non-interactive: hide zoom buttons and disable user input
+        // so the Settings preview shows a static view that mirrors the form.
+        zoomControl: !props.preview,
+        dragging: !props.preview,
+        scrollWheelZoom: !props.preview,
+        doubleClickZoom: !props.preview,
+        boxZoom: !props.preview,
+        keyboard: !props.preview,
+        touchZoom: !props.preview,
     });
     leafletMap.on('click', (e) => {
         if (props.placing) {

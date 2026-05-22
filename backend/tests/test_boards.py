@@ -200,7 +200,8 @@ async def test_delete_background(client, admin_token, tmp_path, monkeypatch):
         "/api/v1/boards/src-board/background",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert resp.status_code == 204
+    assert resp.status_code == 200
+    assert isinstance(resp.json().get("version"), int)
     assert not bg_file.exists()
 
     # background_image should be cleared

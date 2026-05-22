@@ -1,0 +1,8 @@
+# Runtime dep we ship inside the MKP wheelhouse because OMD's site-python
+# carries an older copy (0.0.22 / 0.0.27 across CMK 2.3-2.6) that is below
+# our CVE floor.
+#
+# Everything else in pyproject.toml is either covered by OMD or replaced by
+# stdlib code: SQLAlchemy/alembic/mako/aiosqlite → sqlite3 + schema.sql,
+# PyJWT → app.core._jwt, pydantic-settings → app.core._env, websockets → SSE.
+python-multipart>=0.0.28

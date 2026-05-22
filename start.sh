@@ -3,11 +3,8 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Kill child processes on exit
 trap 'kill $(jobs -p) 2>/dev/null' EXIT INT TERM
 
-# Load root .env (created by bootstrap.sh) so SECRET_KEY etc. are available
-# to alembic and uvicorn, which run from backend/ and would otherwise miss it.
 if [[ -f "$SCRIPT_DIR/.env" ]]; then
   set -a
   # shellcheck disable=SC1091
@@ -18,48 +15,14 @@ export ENVIRONMENT="${ENVIRONMENT:-development}"
 
 cd "$SCRIPT_DIR/backend"
 
-# Run database migrations before starting the server (fresh install or upgrade)
-echo "Running database migrations..."
-.venv/bin/python3 -m alembic upgrade head
-
-# Ensure admin/admin user exists (no forced password change)
-echo "Setting up dev admin user..."
-"$SCRIPT_DIR/backend/.venv/bin/python3" - <<'PYEOF'
-import asyncio, sys
-sys.path.insert(0, '.')
-
-async def main():
-    from app.core.database import AsyncSessionLocal
-    from app.core.security import hash_password
-    from app.models.user import User
-    from sqlalchemy import select
-
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(select(User).where(User.name == 'admin').limit(1))
-        user = result.scalar_one_or_none()
-        if user is None:
-            user = User(name='admin', password=hash_password('admin'), is_active=True, is_admin=True, must_change_password=False)
-            db.add(user)
-        else:
-            user.password = hash_password('admin')
-            user.is_admin = True
-            user.must_change_password = False
-        await db.commit()
-
-asyncio.run(main())
-PYEOF
-
-echo ""
-echo "============================================"
-echo "  Admin login:    admin / admin"
-echo "============================================"
-echo ""
+# Schema + default admin are handled by the FastAPI lifespan now; no alembic.
+# When CHECKMK_OMD_ROOT is unset the lifespan creates a random-password admin
+# and prints it once to stdout, so the first start tells the operator how to
+# log in. Subsequent starts find an admin and skip the seeding.
 
 echo "Starting OrbVis backend on :8080 ..."
-cd "$SCRIPT_DIR/backend"
 .venv/bin/uvicorn app.main:app --app-dir . --host 127.0.0.1 --port 8080 --reload &
 
-# Wait until the backend accepts connections before starting the frontend
 "$SCRIPT_DIR/backend/.venv/bin/python3" -c "
 import socket, time, sys
 for _ in range(50):

@@ -194,15 +194,19 @@ def test_get_cmk_language_no_file_returns_none(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+def _insert_test_user(conn, name: str, password: str, is_active: bool = True) -> None:
+    from app.core.security import hash_password
+
+    conn.execute(
+        "INSERT INTO users (name, password, is_active, is_admin, must_change_password) "
+        "VALUES (?, ?, ?, 0, 0)",
+        (name, hash_password(password), 1 if is_active else 0),
+    )
+
+
 @pytest.mark.asyncio
 async def test_authenticate_user_correct_credentials(db_session):
-    from app.core.security import hash_password
-    from app.models.user import User
-
-    user = User(name="testauth", password=hash_password("correct"), is_active=True)
-    db_session.add(user)
-    await db_session.commit()
-
+    _insert_test_user(db_session, "testauth", "correct")
     result = await authenticate_user(db_session, "testauth", "correct")
     assert result is not None
     assert result.name == "testauth"
@@ -210,26 +214,14 @@ async def test_authenticate_user_correct_credentials(db_session):
 
 @pytest.mark.asyncio
 async def test_authenticate_user_wrong_password(db_session):
-    from app.core.security import hash_password
-    from app.models.user import User
-
-    user = User(name="authuser2", password=hash_password("correct"), is_active=True)
-    db_session.add(user)
-    await db_session.commit()
-
+    _insert_test_user(db_session, "authuser2", "correct")
     result = await authenticate_user(db_session, "authuser2", "wrongpw")
     assert result is None
 
 
 @pytest.mark.asyncio
 async def test_authenticate_user_inactive_returns_none(db_session):
-    from app.core.security import hash_password
-    from app.models.user import User
-
-    user = User(name="inactive", password=hash_password("pw"), is_active=False)
-    db_session.add(user)
-    await db_session.commit()
-
+    _insert_test_user(db_session, "inactive", "pw", is_active=False)
     result = await authenticate_user(db_session, "inactive", "pw")
     assert result is None
 

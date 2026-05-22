@@ -171,26 +171,21 @@ async def test_update_own_password(client, regular_token, regular_user):
 async def test_update_must_change_password_cleared(client, db_session):
     """User changing their OWN password clears must_change_password flag."""
     from app.core.security import hash_password
-    from app.models.user import User
 
-    u = User(
-        name="pwchange",
-        password=hash_password("oldpw123"),
-        is_active=True,
-        must_change_password=True,
+    cursor = db_session.execute(
+        "INSERT INTO users (name, password, is_active, is_admin, must_change_password) "
+        "VALUES (?, ?, 1, 0, 1)",
+        ("pwchange", hash_password("oldpw123")),
     )
-    db_session.add(u)
-    await db_session.commit()
-    await db_session.refresh(u)
+    user_id = cursor.lastrowid
 
-    # Login as that user
     login = await client.post(
         "/api/v1/auth/login", json={"username": "pwchange", "password": "oldpw123"}
     )
     token = login.json()["access_token"]
 
     response = await client.patch(
-        f"/api/v1/users/{u.user_id}",
+        f"/api/v1/users/{user_id}",
         json={"password": "newpassword123"},
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -214,15 +209,16 @@ async def test_update_other_user_password_requires_explicit_permission(
 @pytest.mark.asyncio
 async def test_delete_user_admin(client, admin_token, db_session):
     from app.core.security import hash_password
-    from app.models.user import User
 
-    u = User(name="todelete", password=hash_password("x"), is_active=True)
-    db_session.add(u)
-    await db_session.commit()
-    await db_session.refresh(u)
+    cursor = db_session.execute(
+        "INSERT INTO users (name, password, is_active, is_admin, must_change_password) "
+        "VALUES (?, ?, 1, 0, 0)",
+        ("todelete", hash_password("x")),
+    )
+    user_id = cursor.lastrowid
 
     response = await client.delete(
-        f"/api/v1/users/{u.user_id}",
+        f"/api/v1/users/{user_id}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 204
@@ -247,25 +243,19 @@ async def test_delete_nonexistent_user(client, admin_token):
 
 @pytest.mark.asyncio
 async def test_assign_and_remove_role(client, admin_token, admin_user, db_session):
-    from app.models.role import Role
+    cursor = db_session.execute("INSERT INTO roles (name) VALUES (?)", ("testrole",))
+    role_id = cursor.lastrowid
 
-    role = Role(name="testrole")
-    db_session.add(role)
-    await db_session.commit()
-    await db_session.refresh(role)
-
-    # assign
     response = await client.post(
-        f"/api/v1/users/{admin_user.user_id}/roles/{role.role_id}",
+        f"/api/v1/users/{admin_user.user_id}/roles/{role_id}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
     role_names = [r["name"] for r in response.json()["roles"]]
     assert "testrole" in role_names
 
-    # remove
     response = await client.delete(
-        f"/api/v1/users/{admin_user.user_id}/roles/{role.role_id}",
+        f"/api/v1/users/{admin_user.user_id}/roles/{role_id}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 204

@@ -11,6 +11,11 @@ export const useBoardsStore = defineStore('boards', () => {
     const currentBoard = ref<BoardConfig | null>(null);
     const loading = ref(false);
     const error = ref<string | null>(null);
+    const bgRefreshTicks = ref<Record<string, number>>({});
+
+    function bumpBgRefreshTick(name: string) {
+        bgRefreshTicks.value[name] = Date.now();
+    }
 
     function token(): string {
         return useAuthStore().accessToken ?? '';
@@ -103,6 +108,8 @@ export const useBoardsStore = defineStore('boards', () => {
         currentBoard,
         loading,
         error,
+        bgRefreshTicks,
+        bumpBgRefreshTick,
         fetchBoards,
         fetchBoard,
         createBoard,
