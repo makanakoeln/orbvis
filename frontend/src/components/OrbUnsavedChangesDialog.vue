@@ -59,3 +59,15 @@ watch(
     gap: var(--dimension-3);
 }
 </style>
+
+<style>
+/* Der Dialog kommt aus einem Slide-In (z-index-modal). Beide Container teilen
+   sich dieselbe Stack-Ebene; wenn das Slide-In nach dem Schließen-Versuch
+   neu geöffnet wird (z. B. Map-View-Picker), landet es im DOM hinter dem
+   gerade gemounteten Popup-Portal — der gleiche z-index reicht dann nicht.
+   Ein expliziter Offset legt den Discard-Dialog garantiert obenauf. */
+body:has(.cmk-slide-in__container) .cmk-popup__container,
+body:has(.cmk-slide-in__container) .cmk-popup__overlay {
+    z-index: calc(var(--z-index-modal) + 10);
+}
+</style>

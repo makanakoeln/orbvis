@@ -1,9 +1,9 @@
 <template>
     <CmkSlideInDialog
-        :open="true"
+        :open="!isPickingView"
         :header="{ title: boardTitle, closeButton: true }"
-        size="medium"
-        @close="requestClose"
+        :size="showPreview ? 'medium' : 'small'"
+        @close="onSlideInClose"
     >
         <div class="board-settings__shell">
             <div class="board-settings__layout">
@@ -56,6 +56,7 @@
                                         v-model="form.background_image"
                                         :board-name="props.board.name"
                                         @replaced="bgReplaced = true"
+                                        @version-bumped="onBoardVersionBumped"
                                     />
                                 </div>
                                 <div class="space-y-[4px]">
@@ -74,36 +75,64 @@
                                 class="board-settings__type-section space-y-[8px]"
                             >
                                 <p class="section-title">{{ t('boardSettings.mapView') }}</p>
-                                <div class="grid grid-cols-3 gap-[8px]">
-                                    <div class="space-y-[4px]">
-                                        <CmkLabel>{{ t('board.latitude') }}</CmkLabel>
-                                        <NumberInput
-                                            v-model="form.worldmap_lat"
-                                            step="any"
-                                            :precision="10"
-                                            class="w-full"
-                                        />
+                                <div class="board-settings__coord-row">
+                                    <div class="grid grid-cols-3 gap-[8px] flex-1">
+                                        <div class="space-y-[4px]">
+                                            <CmkLabel>{{ t('board.latitude') }}</CmkLabel>
+                                            <NumberInput
+                                                v-model="form.worldmap_lat"
+                                                step="any"
+                                                :precision="10"
+                                                class="w-full"
+                                            />
+                                        </div>
+                                        <div class="space-y-[4px]">
+                                            <CmkLabel>{{ t('board.longitude') }}</CmkLabel>
+                                            <NumberInput
+                                                v-model="form.worldmap_lng"
+                                                step="any"
+                                                :precision="10"
+                                                class="w-full"
+                                            />
+                                        </div>
+                                        <div class="space-y-[4px]">
+                                            <CmkLabel :help="t('board.worldmapHint')">{{
+                                                t('board.zoom')
+                                            }}</CmkLabel>
+                                            <NumberInput
+                                                v-model="form.worldmap_zoom"
+                                                min="1"
+                                                max="18"
+                                                class="w-full"
+                                            />
+                                        </div>
                                     </div>
-                                    <div class="space-y-[4px]">
-                                        <CmkLabel>{{ t('board.longitude') }}</CmkLabel>
-                                        <NumberInput
-                                            v-model="form.worldmap_lng"
-                                            step="any"
-                                            :precision="10"
-                                            class="w-full"
-                                        />
-                                    </div>
-                                    <div class="space-y-[4px]">
-                                        <CmkLabel :help="t('board.worldmapHint')">{{
-                                            t('board.zoom')
-                                        }}</CmkLabel>
-                                        <NumberInput
-                                            v-model="form.worldmap_zoom"
-                                            min="1"
-                                            max="18"
-                                            class="w-full"
-                                        />
-                                    </div>
+                                    <CmkButton
+                                        variant="secondary"
+                                        class="board-settings__pick-btn"
+                                        :title="t('board.pickFromMapHint')"
+                                        @click="startWorldmapViewPick"
+                                    >
+                                        <svg
+                                            width="14"
+                                            height="14"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            aria-hidden="true"
+                                        >
+                                            <circle cx="12" cy="12" r="8" />
+                                            <line x1="12" y1="2" x2="12" y2="6" />
+                                            <line x1="12" y1="18" x2="12" y2="22" />
+                                            <line x1="2" y1="12" x2="6" y2="12" />
+                                            <line x1="18" y1="12" x2="22" y2="12" />
+                                            <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                                        </svg>
+                                        <span>{{ t('board.pickFromMap') }}</span>
+                                    </CmkButton>
                                 </div>
                                 <div class="space-y-[4px]">
                                     <CmkLabel>{{ t('board.tileUrl') }}</CmkLabel>
@@ -370,7 +399,7 @@
                 </div>
 
                 <!-- Hidden on narrow viewports where two columns don't fit. -->
-                <aside class="board-settings__preview">
+                <aside v-if="showPreview" class="board-settings__preview">
                     <span class="board-settings__preview-label">{{ t('board.previewLabel') }}</span>
                     <div class="board-settings__preview-stage">
                         <iframe
@@ -396,6 +425,35 @@
                     @click="resetChanges"
                 >
                     {{ t('board.resetChanges') }}
+                </CmkButton>
+                <CmkButton variant="optional" @click="togglePreview">
+                    <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                        style="margin-right: 6px"
+                    >
+                        <template v-if="showPreview">
+                            <path
+                                d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+                            />
+                            <path
+                                d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.46 18.46 0 0 1-2.16 3.19"
+                            />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                        </template>
+                        <template v-else>
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                        </template>
+                    </svg>
+                    {{ showPreview ? t('board.hidePreview') : t('board.showPreview') }}
                 </CmkButton>
                 <span class="board-settings__footer-spacer" />
                 <CmkButton variant="danger" @click="deleteBoard">
@@ -484,7 +542,50 @@ const props = defineProps<{
     worldmapView?: { lat: number; lng: number; zoom: number } | null;
     parentMapSize?: { width: number; height: number } | null;
 }>();
-const emit = defineEmits<{ close: []; updated: [] }>();
+const emit = defineEmits<{
+    close: [];
+    updated: [];
+    pickWorldmapView: [done: (view: { lat: number; lng: number; zoom: number } | null) => void];
+    worldmapViewChange: [view: { lat: number; lng: number; zoom: number }];
+}>();
+
+const PREVIEW_PREF_KEY = 'orbvis.boardSettings.previewVisible';
+const showPreview = ref(
+    typeof window !== 'undefined' && window.localStorage?.getItem(PREVIEW_PREF_KEY) === '1',
+);
+function togglePreview() {
+    showPreview.value = !showPreview.value;
+    try {
+        window.localStorage?.setItem(PREVIEW_PREF_KEY, showPreview.value ? '1' : '0');
+    } catch {
+        // Private-Mode / Storage voll – Toggle wirkt nur in dieser Sitzung.
+    }
+}
+
+const isPickingView = ref(false);
+function startWorldmapViewPick() {
+    if (isPickingView.value) return;
+    isPickingView.value = true;
+    emit('pickWorldmapView', (view) => {
+        isPickingView.value = false;
+        if (view) {
+            form.value.worldmap_lat = view.lat;
+            form.value.worldmap_lng = view.lng;
+            form.value.worldmap_zoom = view.zoom;
+            // Pick liefert Parent-Canvas-Werte: Preview-Zoom-Kompensation
+            // wieder aktivieren, sobald der watch worldmapViewEdited gesetzt hat.
+            nextTick(() => {
+                worldmapViewEdited.value = false;
+            });
+        }
+    });
+}
+function onSlideInClose() {
+    // Während des Pickens schließt das Slide-In nur visuell — Esc/Backdrop sollen
+    // den Pick nicht beenden und auch nicht den Discard-Dialog auslösen.
+    if (isPickingView.value) return;
+    requestClose();
+}
 
 const { t } = useI18n();
 const auth = useAuthStore();
@@ -766,6 +867,10 @@ async function save() {
             formSpec: formSpecData.value,
             flowView: flowViewFormSpecData.value,
         });
+        if (bgReplaced.value) {
+            boardsStore.bumpBgRefreshTick(props.board.name);
+        }
+        bgReplaced.value = false;
         saveAttempted.value = false;
         toast.success(t('board.savedToast'), {
             label: t('board.openBoard'),
@@ -826,6 +931,11 @@ const initialSnapshot = ref(
 // Tracks the persisted board version so subsequent saves use the
 // up-to-date If-Match header instead of the now-stale props value.
 const localVersion = ref<number | null>(props.board.version ?? null);
+function onBoardVersionBumped(version: number) {
+    localVersion.value = version;
+    previewLoading.value = true;
+    previewKey.value++;
+}
 // Tracks bg-image replace-uploads where the resulting filename is identical
 // (backend stores under `<board>.<ext>`), so the snapshot comparison can't
 // pick them up on its own.
@@ -951,8 +1061,11 @@ function buildPreviewPatch(): Record<string, unknown> {
 const worldmapViewEdited = ref(false);
 watch(
     () => [form.value.worldmap_lat, form.value.worldmap_lng, form.value.worldmap_zoom],
-    () => {
+    ([lat, lng, zoom]) => {
         worldmapViewEdited.value = true;
+        if (form.value.map_type === 'worldmap') {
+            emit('worldmapViewChange', { lat, lng, zoom });
+        }
     },
 );
 
@@ -1240,6 +1353,21 @@ onBeforeUnmount(() => {
 
 .board-settings__footer-spacer {
     flex: 1;
+}
+
+.board-settings__coord-row {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--dimension-3);
+}
+
+.board-settings__pick-btn {
+    flex-shrink: 0;
+    gap: var(--dimension-2);
+}
+
+.board-settings__pick-btn svg {
+    flex-shrink: 0;
 }
 
 .board-settings__template-preview {

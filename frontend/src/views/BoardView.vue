@@ -286,6 +286,7 @@
             <div
                 v-if="isWorldmap"
                 class="flex-1 overflow-hidden bg-[var(--bg)] relative"
+                :class="{ 'worldmap-pick-active': worldmapPickActive }"
                 @click="closeWorldmapMenus"
             >
                 <div
@@ -365,6 +366,19 @@
                     >
                         {{ t('board.backToOverview') }}
                     </router-link>
+                </div>
+                <div
+                    v-if="worldmapPickActive"
+                    class="absolute z-[2000] top-4 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-2 rounded-lg shadow-2xl bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)]"
+                    @click.stop
+                >
+                    <span class="text-sm text-[var(--text)]">{{ t('board.pickViewBanner') }}</span>
+                    <CmkButton variant="primary" @click="applyWorldmapPick">
+                        {{ t('board.pickViewApply') }}
+                    </CmkButton>
+                    <CmkButton variant="secondary" @click="cancelWorldmapPick">
+                        {{ t('common.cancel') }}
+                    </CmkButton>
                 </div>
             </div>
 
@@ -1066,6 +1080,8 @@
             :parent-map-size="settingsParentMapSize"
             @close="showSettings = false"
             @updated="onSettingsUpdated"
+            @pick-worldmap-view="onSettingsPickWorldmapView"
+            @worldmap-view-change="onSettingsWorldmapViewChange"
         />
 
         <OnboardingTour
@@ -1104,6 +1120,7 @@ import RemoveDowntimeModal from '@/components/board/RemoveDowntimeModal.vue';
 import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue';
 import type { BreadcrumbItem } from '@/components/cmk/CmkBreadcrumb.vue';
 import CmkBreadcrumb from '@/components/cmk/CmkBreadcrumb.vue';
+import CmkButton from '@/components/cmk/CmkButton';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import { useBoardEditor } from '@/composables/useBoardEditor';
@@ -2015,6 +2032,37 @@ const showSettings = ref(false);
 const settingsWorldmapView = ref<{ lat: number; lng: number; zoom: number } | null>(null);
 const settingsParentMapSize = ref<{ width: number; height: number } | null>(null);
 
+const worldmapPickActive = ref(false);
+let worldmapPickResolver:
+    | ((view: { lat: number; lng: number; zoom: number } | null) => void)
+    | null = null;
+
+function onSettingsPickWorldmapView(
+    done: (view: { lat: number; lng: number; zoom: number } | null) => void,
+) {
+    worldmapPickResolver = done;
+    worldmapPickActive.value = true;
+}
+
+function applyWorldmapPick() {
+    const view = worldmapCanvasRef.value?.getView() ?? null;
+    const resolver = worldmapPickResolver;
+    worldmapPickResolver = null;
+    worldmapPickActive.value = false;
+    resolver?.(view);
+}
+
+function cancelWorldmapPick() {
+    const resolver = worldmapPickResolver;
+    worldmapPickResolver = null;
+    worldmapPickActive.value = false;
+    resolver?.(null);
+}
+
+function onSettingsWorldmapViewChange(view: { lat: number; lng: number; zoom: number }) {
+    worldmapCanvasRef.value?.setView(view.lat, view.lng, view.zoom);
+}
+
 function openSettings() {
     if (!boardConfig.value) return;
     settingsWorldmapView.value = null;
@@ -2157,3 +2205,14 @@ onUnmounted(() => {
     window.removeEventListener('message', onPreviewMessage);
 });
 </script>
+
+<style>
+/* Fadenkreuz, solange das Settings-Slide-In den View-Picker aktiviert hat —
+   überschreibt Leaflets eigene grab/grabbing-Cursor (unscoped, da Leaflet sich
+   nicht an Vues data-v-… hängt). */
+.worldmap-pick-active .leaflet-grab,
+.worldmap-pick-active .leaflet-dragging .leaflet-grab,
+.worldmap-pick-active .leaflet-container {
+    cursor: crosshair !important;
+}
+</style>

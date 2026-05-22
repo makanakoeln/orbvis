@@ -15,6 +15,8 @@
         :parent-map-size="parentMapSize"
         @close="emit('close')"
         @updated="emit('updated')"
+        @pick-worldmap-view="emit('pickWorldmapView', $event)"
+        @worldmap-view-change="emit('worldmapViewChange', $event)"
     />
     <BoardSettingsModalLegacy
         v-else
@@ -22,6 +24,8 @@
         :worldmap-view="worldmapView"
         @close="emit('close')"
         @updated="emit('updated')"
+        @pick-worldmap-view="emit('pickWorldmapView', $event)"
+        @worldmap-view-change="emit('worldmapViewChange', $event)"
     />
 </template>
 
@@ -45,6 +49,8 @@ defineProps<{
 const emit = defineEmits<{
     close: [];
     updated: [];
+    pickWorldmapView: [done: (view: { lat: number; lng: number; zoom: number } | null) => void];
+    worldmapViewChange: [view: { lat: number; lng: number; zoom: number }];
 }>();
 
 const capabilities = useCapabilitiesStore();

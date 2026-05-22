@@ -124,6 +124,12 @@ export default {
             'Hosts werden aus Monitoring-Daten automatisch übernommen (orbvis_lat/orbvis_lng-Labels oder LAT/LONG-Custom-Variablen). Sie erscheinen zusammen mit manuell platzierten Objekten.',
         worldmapHint:
             'Zuerst die Karte verschieben/zoomen, dann Einstellungen erneut öffnen, um die aktuelle Ansicht zu speichern.',
+        pickFromMap: 'Aus Karte wählen',
+        pickFromMapHint: 'Schließt die Einstellungen, die Karte wird zur Auswahl scharfgeschaltet.',
+        pickViewBanner: 'Karte verschieben/zoomen, dann übernehmen.',
+        pickViewApply: 'Übernehmen',
+        showPreview: 'Vorschau einblenden',
+        hidePreview: 'Vorschau ausblenden',
         tileUrl: 'Tile-Server URL',
         tileUrlPlaceholder: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         tileSaturate: 'Karten-Sättigung (%)',

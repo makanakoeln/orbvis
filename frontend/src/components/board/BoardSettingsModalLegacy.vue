@@ -1,9 +1,9 @@
 <template>
     <CmkSlideInDialog
-        :open="true"
+        :open="!isPickingView"
         :header="{ title: boardTitle, closeButton: true }"
         size="small"
-        @close="$emit('close')"
+        @close="onSlideInClose"
     >
         <div class="board-settings__body">
             <!-- Tabs (only when there's more than one) -->
@@ -95,36 +95,64 @@
 
                     <!-- Worldmap settings -->
                     <template v-if="form.map_type === 'worldmap'">
-                        <div class="grid grid-cols-3 gap-[8px]">
-                            <div class="space-y-[4px]">
-                                <CmkLabel>{{ t('board.latitude') }}</CmkLabel>
-                                <NumberInput
-                                    v-model="form.worldmap_lat"
-                                    step="any"
-                                    :precision="10"
-                                    class="w-full"
-                                />
+                        <div class="board-settings__coord-row">
+                            <div class="grid grid-cols-3 gap-[8px] flex-1">
+                                <div class="space-y-[4px]">
+                                    <CmkLabel>{{ t('board.latitude') }}</CmkLabel>
+                                    <NumberInput
+                                        v-model="form.worldmap_lat"
+                                        step="any"
+                                        :precision="10"
+                                        class="w-full"
+                                    />
+                                </div>
+                                <div class="space-y-[4px]">
+                                    <CmkLabel>{{ t('board.longitude') }}</CmkLabel>
+                                    <NumberInput
+                                        v-model="form.worldmap_lng"
+                                        step="any"
+                                        :precision="10"
+                                        class="w-full"
+                                    />
+                                </div>
+                                <div class="space-y-[4px]">
+                                    <CmkLabel :help="t('board.worldmapHint')">{{
+                                        t('board.zoom')
+                                    }}</CmkLabel>
+                                    <NumberInput
+                                        v-model="form.worldmap_zoom"
+                                        min="1"
+                                        max="18"
+                                        class="w-full"
+                                    />
+                                </div>
                             </div>
-                            <div class="space-y-[4px]">
-                                <CmkLabel>{{ t('board.longitude') }}</CmkLabel>
-                                <NumberInput
-                                    v-model="form.worldmap_lng"
-                                    step="any"
-                                    :precision="10"
-                                    class="w-full"
-                                />
-                            </div>
-                            <div class="space-y-[4px]">
-                                <CmkLabel :help="t('board.worldmapHint')">{{
-                                    t('board.zoom')
-                                }}</CmkLabel>
-                                <NumberInput
-                                    v-model="form.worldmap_zoom"
-                                    min="1"
-                                    max="18"
-                                    class="w-full"
-                                />
-                            </div>
+                            <CmkButton
+                                variant="secondary"
+                                class="board-settings__pick-btn"
+                                :title="t('board.pickFromMapHint')"
+                                @click="startWorldmapViewPick"
+                            >
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <circle cx="12" cy="12" r="8" />
+                                    <line x1="12" y1="2" x2="12" y2="6" />
+                                    <line x1="12" y1="18" x2="12" y2="22" />
+                                    <line x1="2" y1="12" x2="6" y2="12" />
+                                    <line x1="18" y1="12" x2="22" y2="12" />
+                                    <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                                </svg>
+                                <span>{{ t('board.pickFromMap') }}</span>
+                            </CmkButton>
                         </div>
                         <div class="space-y-[4px]">
                             <CmkLabel>{{ t('board.tileUrl') }}</CmkLabel>
@@ -339,6 +367,7 @@
                             <BackgroundImageUpload
                                 v-model="form.background_image"
                                 :board-name="props.board.name"
+                                @version-bumped="onBoardVersionBumped"
                             />
                         </div>
                         <div class="space-y-[4px]">
@@ -462,7 +491,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { ApiError, boardsApi, connectionsApi, rolesApi } from '@/api/client';
@@ -502,7 +531,30 @@ const props = defineProps<{
     board: BoardRead;
     worldmapView?: { lat: number; lng: number; zoom: number } | null;
 }>();
-const emit = defineEmits<{ close: []; updated: [] }>();
+const emit = defineEmits<{
+    close: [];
+    updated: [];
+    pickWorldmapView: [done: (view: { lat: number; lng: number; zoom: number } | null) => void];
+    worldmapViewChange: [view: { lat: number; lng: number; zoom: number }];
+}>();
+
+const isPickingView = ref(false);
+function startWorldmapViewPick() {
+    if (isPickingView.value) return;
+    isPickingView.value = true;
+    emit('pickWorldmapView', (view) => {
+        isPickingView.value = false;
+        if (view) {
+            form.value.worldmap_lat = view.lat;
+            form.value.worldmap_lng = view.lng;
+            form.value.worldmap_zoom = view.zoom;
+        }
+    });
+}
+function onSlideInClose() {
+    if (isPickingView.value) return;
+    emit('close');
+}
 
 const { t } = useI18n();
 const auth = useAuthStore();
@@ -516,6 +568,11 @@ const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => 
     ];
 });
 const activeTab = ref<'general' | 'permissions'>('general');
+
+const localVersion = ref<number | null>(props.board.version ?? null);
+function onBoardVersionBumped(version: number) {
+    localVersion.value = version;
+}
 
 // ── General ────────────────────────────────────────────────────────────────
 
@@ -573,6 +630,15 @@ const form = ref({
 
 const connections = ref<ConnectionConfig[]>([]);
 const saving = ref(false);
+
+watch(
+    () => [form.value.worldmap_lat, form.value.worldmap_lng, form.value.worldmap_zoom] as const,
+    ([lat, lng, zoom]) => {
+        if (form.value.map_type === 'worldmap') {
+            emit('worldmapViewChange', { lat, lng, zoom });
+        }
+    },
+);
 
 const connectionOptions = computed(() => ({
     type: 'fixed' as const,
@@ -677,7 +743,7 @@ async function save() {
                 context_template: form.value.context_template || null,
             },
             auth.accessToken!,
-            props.board.version ?? null,
+            localVersion.value,
         );
         emit('updated');
         emit('close');
@@ -869,5 +935,20 @@ onMounted(async () => {
         transparent 100%
     );
     margin-top: var(--dimension-5);
+}
+
+.board-settings__coord-row {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--dimension-3);
+}
+
+.board-settings__pick-btn {
+    flex-shrink: 0;
+    gap: var(--dimension-2);
+}
+
+.board-settings__pick-btn svg {
+    flex-shrink: 0;
 }
 </style>

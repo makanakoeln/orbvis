@@ -555,9 +555,10 @@ onMounted(() => {
         if (!leafletMap) return;
         e.originalEvent.preventDefault();
         const c = leafletMap.getCenter();
+        // round zoom: leaflet zoomSnap=0.25 → backend WorldmapView.zoom is int
         emit(
             'canvas-contextmenu-view',
-            { lat: c.lat, lng: c.lng, zoom: leafletMap.getZoom() },
+            { lat: c.lat, lng: c.lng, zoom: Math.round(leafletMap.getZoom()) },
             { x: e.originalEvent.clientX, y: e.originalEvent.clientY },
         );
     });
@@ -654,7 +655,7 @@ watch(
 function getView() {
     if (!leafletMap) return null;
     const c = leafletMap.getCenter();
-    return { lat: c.lat, lng: c.lng, zoom: leafletMap.getZoom() };
+    return { lat: c.lat, lng: c.lng, zoom: Math.round(leafletMap.getZoom()) };
 }
 
 function getContainerSize(): { width: number; height: number } | null {
@@ -663,5 +664,9 @@ function getContainerSize(): { width: number; height: number } | null {
     return { width: r.width, height: r.height };
 }
 
-defineExpose({ getView, getContainerSize, fitAll });
+function setView(lat: number, lng: number, zoom: number) {
+    leafletMap?.setView([lat, lng], zoom);
+}
+
+defineExpose({ getView, getContainerSize, setView, fitAll });
 </script>
