@@ -225,9 +225,23 @@ export default {
             topKHint:
                 'Service-Details für die {shown} von {total} am stärksten betroffenen Hosts werden gezeigt — übrige Hosts sind als Donut aggregiert',
             topKHintShort: 'Services für {shown} von {total} Hosts angezeigt',
-            searchPlaceholder: 'Filter — h:host  s:service  hg:  sg:',
             problemsOnlyToggle: 'Nur Hosts mit Problemen anzeigen',
             bulkSelected: '{count} ausgewählt',
+        },
+        search: {
+            placeholder: "Suchen — '/' für Operatoren",
+            clear: 'Suche leeren',
+            operatorHelpTitle: 'Suchoperatoren einblenden',
+            operatorDropdownTitle: "'/' tippen, um einen Suchoperator zu wählen",
+            operatorInfo:
+                'Ohne Präfix wird in allen Feldern gesucht. Mehrere Begriffe werden UND-verknüpft.',
+            operator: {
+                host: 'Host',
+                service: 'Service',
+                hostgroup: 'Hostgruppe',
+                servicegroup: 'Servicegruppe',
+                id: 'Objekt-ID',
+            },
         },
         detailDrawer: {
             close: 'Schließen',

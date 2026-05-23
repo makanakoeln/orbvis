@@ -71,58 +71,31 @@
             </button>
         </div>
 
-        <div v-if="!loading && !error && !detailObject && !preview" class="flow-search">
-            <svg
-                style="width: 12px; height: 12px"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-                class="text-[var(--text-muted)] shrink-0"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 105.62 5.62a7.5 7.5 0 0011.03 11.03z"
-                />
-            </svg>
-            <input
-                v-model="filterText"
-                :placeholder="t('board.flow.searchPlaceholder')"
-                type="search"
-                class="flow-search__input"
-                aria-label="Search hosts and services"
-            />
-            <button
-                v-if="filterText"
-                type="button"
-                class="flow-search__clear"
-                @click="filterText = ''"
-            >
-                ×
-            </button>
-            <button
-                type="button"
-                class="flow-search__toggle"
-                :class="{ 'flow-search__toggle--active': stateFilter === 'problems' }"
-                :title="t('board.flow.problemsOnlyToggle')"
-                @click="stateFilter = stateFilter === 'problems' ? 'all' : 'problems'"
-            >
-                <svg
-                    style="width: 12px; height: 12px"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
+        <BoardSearch v-if="!loading && !error && !detailObject && !preview" v-model="filterText">
+            <template #trailing>
+                <button
+                    type="button"
+                    class="flow-search__toggle"
+                    :class="{ 'flow-search__toggle--active': stateFilter === 'problems' }"
+                    :title="t('board.flow.problemsOnlyToggle')"
+                    @click="stateFilter = stateFilter === 'problems' ? 'all' : 'problems'"
                 >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                    />
-                </svg>
-            </button>
-        </div>
+                    <svg
+                        style="width: 12px; height: 12px"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                        />
+                    </svg>
+                </button>
+            </template>
+        </BoardSearch>
 
         <div
             v-if="topKBreakdown.omitted > 0 && needsServiceDetail"
@@ -292,6 +265,7 @@ import { useI18n } from 'vue-i18n';
 
 import { connectionsApi } from '@/api/client';
 import AckModal from '@/components/board/AckModal.vue';
+import BoardSearch from '@/components/board/BoardSearch.vue';
 import BoardZoomResetPill from '@/components/board/BoardZoomResetPill.vue';
 import CommentModal from '@/components/board/CommentModal.vue';
 import ContextMenu from '@/components/board/ContextMenu.vue';
@@ -2574,55 +2548,6 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     pointer-events: none;
     max-width: 70%;
     text-align: center;
-}
-
-.flow-search {
-    position: absolute;
-    top: var(--dimension-5);
-    right: var(--dimension-5);
-    z-index: 6;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
-    border-radius: var(--border-radius);
-    background: rgb(24 24 27 / 85%);
-    border: 1px solid var(--border);
-    backdrop-filter: blur(6px);
-    min-width: 200px;
-}
-
-.flow-search__input {
-    flex: 1;
-    min-width: 0;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--text);
-    font-size: 11px;
-    padding: 2px 0;
-}
-
-.flow-search__input::placeholder {
-    color: var(--text-muted);
-}
-
-.flow-search__clear {
-    width: 16px;
-    height: 16px;
-    line-height: 14px;
-    text-align: center;
-    border-radius: 50%;
-    background: var(--bg-hover);
-    color: var(--text-muted);
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    padding: 0;
-}
-
-.flow-search__clear:hover {
-    color: var(--text);
 }
 
 .flow-search__toggle {
