@@ -433,7 +433,7 @@ export default {
         templates: 'Templates',
         onlyHardStates: 'Only hard states',
         recognizeServices: 'Consider services',
-        labelAdvanced: 'Position & Background',
+        labelAdvanced: 'Background & border',
         borderColor: 'Border color',
         maxLength: 'Max length',
         noLimit: 'no limit',

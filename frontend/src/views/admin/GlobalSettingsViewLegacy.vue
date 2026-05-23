@@ -339,17 +339,10 @@
                                                 style="margin-bottom: 3px"
                                                 >{{ t('boardSettings.color') }}</span
                                             >
-                                            <div class="flex gap-[8px]">
-                                                <CmkColorPicker
-                                                    :data="form.label_color"
-                                                    @update:data="form.label_color = $event"
-                                                />
-                                                <CmkInput
-                                                    v-model="form.label_color"
-                                                    placeholder="#ffffff"
-                                                    field-size="SMALL"
-                                                />
-                                            </div>
+                                            <ColorInput
+                                                v-model="form.label_color"
+                                                default-color="#ffffff"
+                                            />
                                         </label>
                                     </div>
                                 </div>
@@ -481,7 +474,6 @@ import { useI18n } from 'vue-i18n';
 
 import CmkButton from '@/components/cmk/CmkButton';
 import CmkCollapsible from '@/components/cmk/CmkCollapsible/CmkCollapsible';
-import CmkColorPicker from '@/components/cmk/CmkColorPicker';
 import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown';
 import CmkHelpText from '@/components/cmk/CmkHelpText';
 import CmkLoading from '@/components/cmk/CmkLoading';

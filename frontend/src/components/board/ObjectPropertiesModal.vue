@@ -119,16 +119,17 @@
                                 </div>
                             </template>
                             <template v-if="object.type === 'host' || object.type === 'service'">
-                                <CmkCheckbox
-                                    v-model="form.only_hard_states"
-                                    :label="t('boardSettings.onlyHardStates')"
-                                />
-                            </template>
-                            <template v-if="object.type === 'host'">
-                                <CmkCheckbox
-                                    v-model="form.recognize_services"
-                                    :label="t('boardSettings.recognizeServices')"
-                                />
+                                <div class="flex flex-col gap-[6px]">
+                                    <CmkCheckbox
+                                        v-model="form.only_hard_states"
+                                        :label="t('boardSettings.onlyHardStates')"
+                                    />
+                                    <CmkCheckbox
+                                        v-if="object.type === 'host'"
+                                        v-model="form.recognize_services"
+                                        :label="t('boardSettings.recognizeServices')"
+                                    />
+                                </div>
                             </template>
                             <template
                                 v-if="object.type === 'hostgroup' || object.type === 'servicegroup'"
@@ -801,19 +802,26 @@
                                                 class="flex-1"
                                             />
                                         </div>
-                                        <div class="field-row">
+                                        <div class="field-row col-span-2">
                                             <label class="field-label">{{
                                                 t('boardSettings.color')
                                             }}</label>
-                                            <div class="flex gap-[8px] flex-1 items-center">
-                                                <CmkColorPicker v-model:data="form.label.color" />
-                                                <CmkInput
-                                                    v-model="form.label.color"
-                                                    placeholder="#ffffff"
-                                                    field-size="FILL"
-                                                    class="flex-1"
-                                                />
-                                            </div>
+                                            <ColorInput
+                                                v-model="form.label.color"
+                                                default-color="#ffffff"
+                                            />
+                                        </div>
+                                        <div class="field-row">
+                                            <label class="field-label">{{
+                                                t('boardSettings.offsetX')
+                                            }}</label>
+                                            <NumberInput v-model="form.label.x" class="flex-1" />
+                                        </div>
+                                        <div class="field-row">
+                                            <label class="field-label">{{
+                                                t('boardSettings.offsetY')
+                                            }}</label>
+                                            <NumberInput v-model="form.label.y" class="flex-1" />
                                         </div>
                                         <div class="col-span-2">
                                             <button
@@ -841,24 +849,6 @@
                                             </button>
                                         </div>
                                         <template v-if="showLabelAdvanced">
-                                            <div class="field-row">
-                                                <label class="field-label">{{
-                                                    t('boardSettings.offsetX')
-                                                }}</label>
-                                                <NumberInput
-                                                    v-model="form.label.x"
-                                                    class="flex-1"
-                                                />
-                                            </div>
-                                            <div class="field-row">
-                                                <label class="field-label">{{
-                                                    t('boardSettings.offsetY')
-                                                }}</label>
-                                                <NumberInput
-                                                    v-model="form.label.y"
-                                                    class="flex-1"
-                                                />
-                                            </div>
                                             <div class="field-row col-span-2">
                                                 <label class="field-label">{{
                                                     t('boardSettings.background')
@@ -1209,7 +1199,6 @@ import { useI18n } from 'vue-i18n';
 
 import { boardsApi, connectionsApi } from '@/api/client';
 import CmkButton from '@/components/cmk/CmkButton';
-import CmkColorPicker from '@/components/cmk/CmkColorPicker';
 import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown';
 import CmkScrollContainer from '@/components/cmk/CmkScrollContainer';
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';

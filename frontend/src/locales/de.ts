@@ -436,7 +436,7 @@ export default {
         templates: 'Templates',
         onlyHardStates: 'Nur Hard-States',
         recognizeServices: 'Services berücksichtigen',
-        labelAdvanced: 'Position & Hintergrund',
+        labelAdvanced: 'Hintergrund & Rahmen',
         borderColor: 'Rahmenfarbe',
         maxLength: 'Max. Länge',
         noLimit: 'kein Limit',
