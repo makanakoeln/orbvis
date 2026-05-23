@@ -15,9 +15,9 @@ import type { BoardObject } from '@/types/api';
  * AND-combined.
  */
 
-type Field = 'host' | 'service' | 'hostgroup' | 'servicegroup' | 'id' | 'any';
+export type FilterField = 'host' | 'service' | 'hostgroup' | 'servicegroup' | 'id' | 'any';
 
-const PREFIX_MAP: Record<string, Field> = {
+const PREFIX_MAP: Record<string, FilterField> = {
     h: 'host',
     s: 'service',
     hg: 'hostgroup',
@@ -25,16 +25,16 @@ const PREFIX_MAP: Record<string, Field> = {
     id: 'id',
 };
 
-interface Term {
-    field: Field;
+export interface FilterTerm {
+    field: FilterField;
     needle: string;
 }
 
 const PREFIX_KEYS = Object.keys(PREFIX_MAP).join('|');
 const PREFIX_WS_RE = new RegExp(`(^|\\s)(${PREFIX_KEYS}):\\s+(?=\\S)`, 'g');
 
-function parseTerms(query: string): Term[] {
-    const terms: Term[] = [];
+export function parseFilterTerms(query: string): FilterTerm[] {
+    const terms: FilterTerm[] = [];
     const normalized = query.trim().toLowerCase().replace(PREFIX_WS_RE, '$1$2:');
     for (const raw of normalized.split(/\s+/)) {
         if (!raw) continue;
@@ -53,7 +53,22 @@ function parseTerms(query: string): Term[] {
     return terms;
 }
 
-function fieldValue(obj: BoardObject, field: Field): string[] {
+/**
+ * Generic matcher: the caller supplies a resolver mapping a FilterField to the
+ * string values that should be searched on the underlying entity. Sharing this
+ * keeps Static/Geo/Flow/Radar quicksearch behavior in sync.
+ */
+export function matchesFilterTerms(
+    terms: FilterTerm[],
+    getValues: (field: FilterField) => string[],
+): boolean {
+    if (terms.length === 0) return true;
+    return terms.every(({ field, needle }) =>
+        getValues(field).some((v) => v.toLowerCase().includes(needle)),
+    );
+}
+
+function boardObjectFieldValue(obj: BoardObject, field: FilterField): string[] {
     switch (field) {
         case 'host':
             return [obj.host_name ?? ''];
@@ -79,9 +94,6 @@ function fieldValue(obj: BoardObject, field: Field): string[] {
 }
 
 export function objectMatchesFilter(obj: BoardObject, query: string): boolean {
-    const terms = parseTerms(query);
-    if (terms.length === 0) return true;
-    return terms.every(({ field, needle }) =>
-        fieldValue(obj, field).some((v) => v.toLowerCase().includes(needle)),
-    );
+    const terms = parseFilterTerms(query);
+    return matchesFilterTerms(terms, (field) => boardObjectFieldValue(obj, field));
 }

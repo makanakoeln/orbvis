@@ -176,10 +176,10 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import CmkLoading from '@/components/cmk/CmkLoading';
+import type { BoardObject, ObjectState } from '@/types/api';
+import { type FilterField, matchesFilterTerms, parseFilterTerms } from '@/utils/objectFilter';
 
 const { t } = useI18n();
-
-import type { BoardObject, ObjectState } from '@/types/api';
 
 const props = defineProps<{
     states: Record<string, ObjectState>;
@@ -238,23 +238,42 @@ const severity: Record<string, number> = {
 
 const COMPACT_LIMIT = 12;
 
+const filterTerms = computed(() => parseFilterTerms(props.filterNeedle ?? ''));
+
+function radarFieldValue(s: ObjectState, field: FilterField): string[] {
+    const isService = s.type === 'service' && s.object_id.includes(';');
+    const [host, svc] = isService ? s.object_id.split(';', 2) : [s.object_id, ''];
+    switch (field) {
+        case 'host':
+            return s.type === 'host' || isService ? [host, s.alias ?? ''] : [];
+        case 'service':
+            return isService ? [svc] : [];
+        case 'id':
+            return [s.object_id];
+        case 'any':
+            return [s.object_id, host, svc, s.alias ?? ''];
+        case 'hostgroup':
+        case 'servicegroup':
+            return [];
+    }
+}
+
+function stateMatchesFilter(s: ObjectState): boolean {
+    return matchesFilterTerms(filterTerms.value, (field) => radarFieldValue(s, field));
+}
+
 const sortedStates = computed(() => {
-    const needle = (props.filterNeedle ?? '').trim().toLowerCase();
     const all = Object.values(props.states).sort(
         (a, b) => (severity[b.state] ?? 0) - (severity[a.state] ?? 0),
     );
-    const filtered = needle
-        ? all.filter((s) => displayName(s).toLowerCase().includes(needle))
-        : all;
+    const filtered = filterTerms.value.length ? all.filter(stateMatchesFilter) : all;
     return props.compact ? filtered.slice(0, COMPACT_LIMIT) : filtered;
 });
 
 const compactOverflow = computed(() => {
     if (!props.compact) return 0;
-    const needle = (props.filterNeedle ?? '').trim().toLowerCase();
-    const total = needle
-        ? Object.values(props.states).filter((s) => displayName(s).toLowerCase().includes(needle))
-              .length
+    const total = filterTerms.value.length
+        ? Object.values(props.states).filter(stateMatchesFilter).length
         : Object.values(props.states).length;
     return Math.max(0, total - COMPACT_LIMIT);
 });

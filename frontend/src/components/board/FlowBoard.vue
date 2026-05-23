@@ -315,6 +315,7 @@ import type {
     TopologyNode,
 } from '@/types/api';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
+import { type FilterField, matchesFilterTerms, parseFilterTerms } from '@/utils/objectFilter';
 import { stateColor } from '@/utils/stateColors';
 import { resolveTemplate } from '@/utils/template';
 
@@ -865,7 +866,7 @@ const needsServiceDetail = computed(() => needsServices(props.serviceLayout));
 type StateFilter = 'all' | 'problems';
 const filterText = ref('');
 const stateFilter = ref<StateFilter>('all');
-const filterNeedle = computed(() => filterText.value.trim().toLowerCase());
+const filterTerms = computed(() => parseFilterTerms(filterText.value));
 
 function nodeHasProblem(d: FNode): boolean {
     if (d.nodeType === 'host') {
@@ -875,17 +876,31 @@ function nodeHasProblem(d: FNode): boolean {
     return d.state !== 'OK' && d.state !== 'PENDING';
 }
 
-function nodeMatchesFilter(d: FNode): boolean {
-    if (stateFilter.value === 'problems' && !nodeHasProblem(d)) return false;
-    const needle = filterNeedle.value;
-    if (!needle) return true;
-    if (d.id.toLowerCase().includes(needle)) return true;
-    if (d.nodeType === 'service' && d.hostId?.toLowerCase().includes(needle)) return true;
-    if (d.nodeType === 'host' && d.topo?.alias?.toLowerCase().includes(needle)) return true;
-    return false;
+function flowFieldValue(d: FNode, field: FilterField): string[] {
+    const isService = d.nodeType === 'service';
+    const svcName = isService ? d.id.split('::').slice(1).join('::') : '';
+    const hostName = isService || d.nodeType === 'more' ? (d.hostId ?? '') : d.id;
+    switch (field) {
+        case 'host':
+            return [hostName, d.topo?.alias ?? d.parentTopo?.alias ?? ''];
+        case 'service':
+            return [svcName];
+        case 'id':
+            return [d.id];
+        case 'any':
+            return [d.id, hostName, svcName, d.topo?.alias ?? '', d.parentTopo?.alias ?? ''];
+        case 'hostgroup':
+        case 'servicegroup':
+            return [];
+    }
 }
 
-const filterIsActive = computed(() => stateFilter.value !== 'all' || filterNeedle.value.length > 0);
+function nodeMatchesFilter(d: FNode): boolean {
+    if (stateFilter.value === 'problems' && !nodeHasProblem(d)) return false;
+    return matchesFilterTerms(filterTerms.value, (field) => flowFieldValue(d, field));
+}
+
+const filterIsActive = computed(() => stateFilter.value !== 'all' || filterTerms.value.length > 0);
 
 watch([filterText, stateFilter], () => {
     if (svgEl.value) applyFilterOpacity();
