@@ -42,6 +42,35 @@ export class ApiError extends Error {
     }
 }
 
+function formatApiErrorBody(body: unknown, status: number): string {
+    if (body && typeof body === 'object') {
+        const d = (body as { detail?: unknown; message?: unknown }).detail;
+        if (typeof d === 'string') return d;
+        if (typeof (body as { message?: unknown }).message === 'string') {
+            return (body as { message: string }).message;
+        }
+        if (Array.isArray(d)) {
+            const parts = d
+                .filter(
+                    (it): it is { loc?: unknown[]; msg?: string } => !!it && typeof it === 'object',
+                )
+                .map((it) => {
+                    const loc = Array.isArray(it.loc)
+                        ? it.loc
+                              .filter((p) => p !== 'body' && p !== 'query' && p !== 'path')
+                              .map((p) => String(p))
+                              .join('.')
+                        : '';
+                    const rawMsg = (it.msg ?? '').replace(/^Value error,\s*/, '');
+                    return loc ? `${loc}: ${rawMsg}` : rawMsg;
+                })
+                .filter(Boolean);
+            if (parts.length) return parts.join('; ');
+        }
+    }
+    return `HTTP ${status}`;
+}
+
 const METHOD_OVERRIDE = new Set(['PATCH', 'PUT', 'DELETE']);
 
 async function uploadFile<T>(path: string, file: File, token: string): Promise<T> {
@@ -54,12 +83,7 @@ async function uploadFile<T>(path: string, file: File, token: string): Promise<T
     });
     if (!response.ok) {
         const detail = await response.json().catch(() => null);
-        const msg = detail?.detail ?? detail?.message ?? `HTTP ${response.status}`;
-        throw new ApiError(
-            response.status,
-            typeof msg === 'string' ? msg : `HTTP ${response.status}`,
-            detail,
-        );
+        throw new ApiError(response.status, formatApiErrorBody(detail, response.status), detail);
     }
     return response.json();
 }
@@ -89,12 +113,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
     if (!response.ok) {
         const detail = await response.json().catch(() => null);
-        const msg = detail?.detail ?? detail?.message ?? `HTTP ${response.status}`;
-        throw new ApiError(
-            response.status,
-            typeof msg === 'string' ? msg : `HTTP ${response.status}`,
-            detail,
-        );
+        throw new ApiError(response.status, formatApiErrorBody(detail, response.status), detail);
     }
 
     if (response.status === 204) return undefined as T;
