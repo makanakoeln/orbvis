@@ -905,6 +905,12 @@ const textboxStyle = computed(() => {
     };
 });
 
+const labelTransform = computed(() => {
+    const x = props.object.label?.x ?? 0;
+    const y = props.object.label?.y ?? 0;
+    return x || y ? `translate(${x}px, ${y}px)` : undefined;
+});
+
 const labelStyle = computed(() => {
     const bg = props.object.label?.background;
     return {
@@ -916,6 +922,7 @@ const labelStyle = computed(() => {
         outline: props.object.label_border
             ? `1px solid ${props.object.label_border}`
             : '1px solid rgba(255,255,255,0.12)',
+        transform: labelTransform.value,
     };
 });
 
@@ -931,6 +938,7 @@ const textOnlyStyle = computed(() => {
         outline: props.object.label_border
             ? `1px solid ${props.object.label_border}`
             : '1px solid rgba(255,255,255,0.12)',
+        transform: labelTransform.value,
     };
 });
 

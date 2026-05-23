@@ -338,8 +338,8 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
                               .pop()
                               ?.replace(/\.[^/.]+$/, '') ?? null)
                         : null),
-                x: s.label_x,
-                y: s.label_y,
+                x: 0,
+                y: 0,
                 size: s.label_size,
                 color: s.label_color,
                 background: s.label_background,
@@ -403,8 +403,8 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
             label: {
                 show: s.label_show,
                 text: draft.label_text || null,
-                x: s.label_x,
-                y: s.label_y,
+                x: 0,
+                y: 0,
                 size: s.label_size,
                 color: s.label_color,
                 background: s.label_background,

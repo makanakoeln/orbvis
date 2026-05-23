@@ -71,8 +71,6 @@ class GlobalSettings(BaseModel):
     label_size: int = 11
     label_color: ColorString = "#ffffff"
     label_background: ColorString = "transparent"
-    label_x: int = 0
-    label_y: int = 0
     # Object templates
     hover_template: str | None = None
     context_template: str | None = None

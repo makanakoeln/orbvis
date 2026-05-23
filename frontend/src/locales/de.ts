@@ -726,7 +726,6 @@ export default {
         lineDefaults: 'Linien-Standardwerte',
         labelDefaults: 'Beschriftungs-Standardwerte',
         labelAppearance: 'Darstellung',
-        labelPosition: 'Position',
         newBoardDefaults: 'Standardwerte für neue Boards',
         groupBoardCreation: 'Beim Anlegen eines neuen Boards',
         groupObjectDefaults: 'Beim Rendern von Objekten auf Boards',

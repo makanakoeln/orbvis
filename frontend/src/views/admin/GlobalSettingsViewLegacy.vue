@@ -363,28 +363,6 @@
                                         default-color="#000000"
                                     />
                                 </div>
-
-                                <div class="label-subsection">
-                                    <p class="section-title">{{ t('settings.labelPosition') }}</p>
-                                    <div class="flex gap-[12px] items-start">
-                                        <label class="block">
-                                            <span
-                                                class="text-sm text-[var(--text-muted)] block"
-                                                style="margin-bottom: 3px"
-                                                >{{ t('boardSettings.offsetX') }}</span
-                                            >
-                                            <NumberInput v-model="form.label_x" class="w-[80px]" />
-                                        </label>
-                                        <label class="block">
-                                            <span
-                                                class="text-sm text-[var(--text-muted)] block"
-                                                style="margin-bottom: 3px"
-                                                >{{ t('boardSettings.offsetY') }}</span
-                                            >
-                                            <NumberInput v-model="form.label_y" class="w-[80px]" />
-                                        </label>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </CmkCollapsible>

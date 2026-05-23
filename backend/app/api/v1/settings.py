@@ -102,8 +102,6 @@ if FORM_SPECS_AVAILABLE:
                     "size": s.label_size,
                     "color": s.label_color,
                     "background": s.label_background,
-                    "x_offset": s.label_x,
-                    "y_offset": s.label_y,
                 },
             ]
         else:
@@ -137,8 +135,6 @@ if FORM_SPECS_AVAILABLE:
             label_size = int(payload.get("size", current.label_size))
             label_color = str(payload.get("color", current.label_color))
             label_background = str(payload.get("background", current.label_background))
-            label_x = int(payload.get("x_offset", current.label_x))
-            label_y = int(payload.get("y_offset", current.label_y))
         elif kind == "hidden":
             # Preserve last-known tuning values — toggling Show off shouldn't
             # erase the operator's careful color/size choices.
@@ -146,8 +142,6 @@ if FORM_SPECS_AVAILABLE:
             label_size = current.label_size
             label_color = current.label_color
             label_background = current.label_background
-            label_x = current.label_x
-            label_y = current.label_y
         else:
             raise HTTPException(status_code=422, detail=f"unknown labels branch: {kind!r}")
 
@@ -164,8 +158,6 @@ if FORM_SPECS_AVAILABLE:
                 label_size=label_size,
                 label_color=label_color,
                 label_background=label_background,
-                label_x=label_x,
-                label_y=label_y,
                 hover_template=form.get("hover_template"),
                 context_template=form.get("context_template"),
                 default_backend_id=str(form.get("default_backend_id", current.default_backend_id)),
@@ -181,8 +173,6 @@ if FORM_SPECS_AVAILABLE:
                 "label_size": ["labels", "shown", "size"],
                 "label_color": ["labels", "shown", "color"],
                 "label_background": ["labels", "shown", "background"],
-                "label_x": ["labels", "shown", "x_offset"],
-                "label_y": ["labels", "shown", "y_offset"],
             }
             details: list[dict[str, Any]] = []
             for err in e.errors():

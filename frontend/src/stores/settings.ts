@@ -16,8 +16,6 @@ export const SETTINGS_DEFAULTS: GlobalSettings = {
     label_size: 11,
     label_color: '#ffffff',
     label_background: 'transparent',
-    label_x: 0,
-    label_y: 0,
     url_target: '_blank',
     z: 1,
     line_style: null,

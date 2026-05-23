@@ -397,8 +397,6 @@ export interface GlobalSettings {
     label_size: number;
     label_color: string;
     label_background: string;
-    label_x: number;
-    label_y: number;
     url_target: string;
     z: number;
     line_style?: LineStyle | null;

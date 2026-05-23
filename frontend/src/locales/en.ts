@@ -722,7 +722,6 @@ export default {
         lineDefaults: 'Line defaults',
         labelDefaults: 'Label defaults',
         labelAppearance: 'Appearance',
-        labelPosition: 'Position',
         newBoardDefaults: 'New board defaults',
         groupBoardCreation: 'When creating a new board',
         groupObjectDefaults: 'When rendering objects on a board',
