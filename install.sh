@@ -236,7 +236,18 @@ else
   echo "==> Building Vue frontend (base=$BASE_PATH/)..."
   cd "$SCRIPT_DIR/frontend"
   "$NPM" install --silent
-  "$NPM" run build -- --base="$BASE_PATH/"
+  # Filter the vendored CmkIcon "didn't resolve at build time" runtime-asset
+  # notices and the chunk-size advisory: both are upstream noise that we can't
+  # action, and they drown out genuine build output (mirrors make_mkp.sh).
+  "$NPM" run build:standalone -- --base="$BASE_PATH/" --logLevel=warn 2>&1 | awk '
+    /didn.t resolve at build time, it will remain unchanged to be resolved at runtime/ { next }
+    /^\[plugin builtin:vite-reporter\]/ { next }
+    /^\(!\) Some chunks are larger than/ { next }
+    /^- Using dynamic import\(\) to code-split/ { next }
+    /^- Use build\.rolldownOptions/ { next }
+    /^- Adjust chunk size limit/ { next }
+    { is_blank = ($0 ~ /^[[:space:]]*$/); if (is_blank && prev_blank) next; prev_blank = is_blank; print }
+  '
 
   echo "==> Deploying frontend to $HTDOCS_DIR..."
   sudo rm -rf "$HTDOCS_DIR"
