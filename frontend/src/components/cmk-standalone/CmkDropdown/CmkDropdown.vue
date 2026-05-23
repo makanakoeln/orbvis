@@ -11,6 +11,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 export interface DropdownOption {
     name: string;
     title: string;
+    muted?: boolean;
+    divider?: boolean;
 }
 
 export interface SuggestionsFixed {
@@ -109,17 +111,34 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
         </button>
         <slot name="buttons-end" />
         <ul v-if="open" class="orb-dropdown__menu" role="listbox">
-            <li
-                v-for="opt in options.suggestions"
-                :key="opt.name"
-                class="orb-dropdown__option"
-                :class="{ 'orb-dropdown__option--selected': opt.name === selectedOption }"
-                role="option"
-                :aria-selected="opt.name === selectedOption"
-                @click="select(opt)"
-            >
-                {{ opt.title }}
-            </li>
+            <template v-for="opt in options.suggestions" :key="opt.name">
+                <li v-if="opt.divider" class="orb-dropdown__divider" role="separator" />
+                <li
+                    class="orb-dropdown__option"
+                    :class="{
+                        'orb-dropdown__option--selected': opt.name === selectedOption,
+                        'orb-dropdown__option--muted': opt.muted,
+                    }"
+                    role="option"
+                    :aria-selected="opt.name === selectedOption"
+                    @click="select(opt)"
+                >
+                    <span>{{ opt.title }}</span>
+                    <svg
+                        v-if="opt.name === selectedOption"
+                        class="orb-dropdown__option-check"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                </li>
+            </template>
         </ul>
     </div>
 </template>
@@ -209,6 +228,10 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 }
 
 .orb-dropdown__option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     padding: 4px 10px;
     font-size: 13px;
     cursor: pointer;
@@ -216,11 +239,36 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 }
 
 .orb-dropdown__option:hover {
-    background: var(--bg-hover, rgb(255 255 255 / 8%));
+    background: rgb(255 255 255 / 14%);
 }
 
 .orb-dropdown__option--selected {
-    background: var(--color-corporate-green-50, #15d1a0);
-    color: black;
+    background: color-mix(in srgb, var(--color-corporate-green-50, #15d1a0) 12%, transparent);
+    color: var(--font-color, #f4f4f5);
+    font-weight: 600;
+}
+
+.orb-dropdown__option--selected:hover {
+    background: color-mix(in srgb, var(--color-corporate-green-50, #15d1a0) 22%, transparent);
+}
+
+.orb-dropdown__option-check {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    color: var(--color-corporate-green-50, #15d1a0);
+}
+
+.orb-dropdown__option--muted > span:first-child {
+    font-style: italic;
+    color: var(--font-color-dimmed, #9ca3af);
+}
+
+.orb-dropdown__divider {
+    height: 1px;
+    margin: 4px 0;
+    background: var(--border, rgb(255 255 255 / 8%));
+    padding: 0;
+    cursor: default;
 }
 </style>
