@@ -50,7 +50,16 @@ def load_all() -> list[ConnectionConfig]:
         return []
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
-    return [ConnectionConfig.model_validate(b) for b in data]
+    out: list[ConnectionConfig] = []
+    # Skipping invalid entries instead of raising so one stale record doesn't
+    # abort lifespan startup.
+    for raw in data:
+        try:
+            out.append(ConnectionConfig.model_validate(raw))
+        except Exception as exc:
+            entry_id = raw.get("id", "<no-id>") if isinstance(raw, dict) else "<not-a-dict>"
+            logger.warning("Skipping invalid connection %r: %s", entry_id, exc)
+    return out
 
 
 def _save_all(connections: list[ConnectionConfig]) -> None:
