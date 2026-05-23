@@ -26,11 +26,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Build frontend
+      - name: Install frontend deps
         working-directory: frontend
-        run: |
-          npm install --silent
-          npm run build -- --base=./
+        run: npm install --silent
+
+      - name: Build frontend (standalone — for .deb/.rpm)
+        working-directory: frontend
+        run: npm run build:standalone -- --base=./
 
       - name: Read version
         run: echo "VERSION=$(cat VERSION)" >> "$GITHUB_ENV"
@@ -47,6 +49,10 @@ jobs:
           mkdir -p dist
           VERSION="$VERSION" nfpm package --packager deb --target dist/
           VERSION="$VERSION" nfpm package --packager rpm --target dist/
+
+      - name: Build frontend (CMK — for .mkp)
+        working-directory: frontend
+        run: npm run build -- --base=./
 
       - name: Build MKP packages
         run: |
