@@ -257,7 +257,12 @@
                     <label class="text-sm font-medium text-[var(--text-muted)]">{{
                         t('admin.connectionId')
                     }}</label>
-                    <CmkInput v-model="form.id" placeholder="cmk_heute" field-size="FILL" />
+                    <CmkInput
+                        v-model="form.id"
+                        :placeholder="idPlaceholder"
+                        field-size="FILL"
+                        :external-errors="fieldErrors.id"
+                    />
                     <p class="text-sm text-[var(--text-muted)]">
                         {{ t('admin.connectionIdHint') }}
                     </p>
@@ -267,7 +272,11 @@
                     <label class="text-sm font-medium text-[var(--text-muted)]">{{
                         t('admin.displayLabel')
                     }}</label>
-                    <CmkInput v-model="form.label" placeholder="Checkmk heute" field-size="FILL" />
+                    <CmkInput
+                        v-model="form.label"
+                        :placeholder="labelPlaceholder"
+                        field-size="FILL"
+                    />
                 </div>
 
                 <div class="space-y-[4px]">
@@ -284,37 +293,44 @@
                 </div>
 
                 <template v-if="form.type === 'livestatus'">
-                    <!-- Unix socket -->
+                    <!-- Transport: socket vs TCP -->
                     <div class="space-y-[4px]">
+                        <label class="text-sm font-medium text-[var(--text-muted)]">{{
+                            t('admin.livestatusTransport')
+                        }}</label>
+                        <CmkDropdown
+                            :selected-option="livestatusMode"
+                            :options="livestatusModeOptions"
+                            :width="'fill'"
+                            :label="t('admin.livestatusTransport')"
+                            @update:selected-option="onLivestatusModeChange($event)"
+                        />
+                    </div>
+
+                    <!-- Unix socket -->
+                    <div v-if="livestatusMode === 'socket'" class="space-y-[4px]">
                         <label class="text-sm font-medium text-[var(--text-muted)]">{{
                             t('admin.unixSocket')
                         }}</label>
                         <CmkInput
                             v-model="form.socket_path"
-                            placeholder="/omd/sites/heute/tmp/run/live"
+                            placeholder="/var/run/check_mk/live"
                             field-size="FILL"
+                            :external-errors="fieldErrors.socket_path"
                         />
                     </div>
 
-                    <!-- OR divider -->
-                    <div class="relative flex items-center gap-[8px]">
-                        <div class="flex-1 border-t border-[var(--border)]" />
-                        <span class="text-sm text-[var(--text-muted)] shrink-0">{{
-                            t('admin.orTcp')
-                        }}</span>
-                        <div class="flex-1 border-t border-[var(--border)]" />
-                    </div>
-
                     <!-- TCP Host + Port -->
-                    <div class="grid grid-cols-[1fr_7rem] gap-[8px]">
+                    <div v-else class="grid grid-cols-[1fr_7rem] gap-[8px]">
                         <div class="space-y-[4px]">
                             <label class="text-sm font-medium text-[var(--text-muted)]">{{
                                 t('admin.tcpHost')
                             }}</label>
                             <CmkInput
                                 v-model="form.host"
-                                placeholder="192.168.1.10"
+                                placeholder="monitoring.example.com"
                                 field-size="FILL"
+                                :external-errors="fieldErrors.host"
                             />
                         </div>
                         <div class="space-y-[4px]">
@@ -333,7 +349,7 @@
                             }}</label>
                             <CmkInput
                                 v-model="form.checkmk_url"
-                                placeholder="http://localhost/heute"
+                                placeholder="http://monitoring.example.com/mysite"
                                 field-size="FILL"
                             />
                             <p class="text-sm text-[var(--text-muted)]">
@@ -394,8 +410,9 @@
                         }}</label>
                         <CmkInput
                             v-model="form.icinga2_url"
-                            placeholder="https://localhost:5665"
+                            placeholder="https://icinga.example.com:5665"
                             field-size="FILL"
+                            :external-errors="fieldErrors.icinga2_url"
                         />
                     </div>
 
@@ -495,7 +512,12 @@
                 <CmkButton variant="optional" :disabled="dialogTest.loading" @click="testDialog">
                     {{ dialogTest.loading ? t('common.testing') : t('common.test') }}
                 </CmkButton>
-                <CmkButton variant="primary" :disabled="saving" @click="save">
+                <CmkButton
+                    variant="primary"
+                    :disabled="saving || !isFormValid"
+                    :title="!isFormValid ? saveBlockedTitle : ''"
+                    @click="save"
+                >
                     {{ saving ? t('common.saving') : t('common.save') }}
                 </CmkButton>
             </template>
@@ -507,7 +529,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { connectionsApi } from '@/api/client';
+import { ApiError, connectionsApi } from '@/api/client';
 import CmkAlertBox from '@/components/cmk/CmkAlertBox';
 import CmkBadge from '@/components/cmk/CmkBadge';
 import CmkButton from '@/components/cmk/CmkButton';
@@ -571,6 +593,74 @@ const saving = ref(false);
 const formError = ref('');
 const dialogTest = reactive({ loading: false, ran: false, ok: false, message: '' });
 
+// Clearing the other transport's fields on flip keeps "what you see saved" honest.
+type LivestatusMode = 'socket' | 'tcp';
+const livestatusMode = ref<LivestatusMode>('socket');
+const livestatusModeOptions = computed(() => ({
+    type: 'fixed' as const,
+    suggestions: [
+        { name: 'socket', title: t('admin.livestatusTransportSocket') },
+        { name: 'tcp', title: t('admin.livestatusTransportTcp') },
+    ],
+}));
+function onLivestatusModeChange(next: string | null) {
+    if (next !== 'socket' && next !== 'tcp') return;
+    livestatusMode.value = next;
+    if (next === 'socket') {
+        form.host = null;
+        form.port = null;
+    } else {
+        form.socket_path = null;
+    }
+}
+
+const idPlaceholder = computed(() => {
+    if (form.type === 'icinga2') return 'icinga-prod';
+    if (form.type === 'test') return 'demo';
+    return 'cmk-prod';
+});
+const labelPlaceholder = computed(() => {
+    if (form.type === 'icinga2') return 'Icinga 2 — production';
+    if (form.type === 'test') return 'Demo data';
+    return 'Checkmk production';
+});
+
+const fieldErrors = reactive<Record<string, string[]>>({});
+function clearFieldErrors() {
+    for (const k of Object.keys(fieldErrors)) delete fieldErrors[k];
+}
+
+const ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+const liveValidationErrors = computed<Record<string, string>>(() => {
+    const errs: Record<string, string> = {};
+    if (dialog.mode === 'create') {
+        const id = (form.id || '').trim();
+        if (!id) {
+            errs.id = t('admin.fieldRequired');
+        } else if (!ID_PATTERN.test(id)) {
+            errs.id = t('admin.connectionIdInvalid');
+        }
+    }
+    if (form.type === 'livestatus') {
+        if (livestatusMode.value === 'socket') {
+            if (!(form.socket_path || '').trim()) errs.socket_path = t('admin.fieldRequired');
+        } else {
+            if (!(form.host || '').trim()) errs.host = t('admin.fieldRequired');
+        }
+    } else if (form.type === 'icinga2') {
+        if (!(form.icinga2_url || '').trim()) errs.icinga2_url = t('admin.fieldRequired');
+    }
+    return errs;
+});
+const isFormValid = computed(() => Object.keys(liveValidationErrors.value).length === 0);
+const saveBlockedTitle = computed(() => {
+    const errs = liveValidationErrors.value;
+    const fields = Object.keys(errs);
+    if (!fields.length) return '';
+    return t('admin.saveBlocked') + ' ' + fields.map((f) => `${f}: ${errs[f]}`).join('; ');
+});
+
 const emptyForm = (): ConnectionConfig => ({
     id: '',
     type: 'livestatus',
@@ -594,7 +684,12 @@ const connectionTypeOptions = computed(() => ({
     suggestions: [
         { name: 'livestatus', title: t('admin.connectionTypeLivestatus') },
         { name: 'icinga2', title: t('admin.connectionTypeIcinga2') },
-        { name: 'test', title: t('admin.connectionTypeTest') },
+        {
+            name: 'test',
+            title: t('admin.connectionTypeTest'),
+            muted: true,
+            divider: true,
+        },
     ],
 }));
 
@@ -602,6 +697,8 @@ function openCreate() {
     Object.assign(form, emptyForm());
     Object.assign(dialogTest, { loading: false, ran: false, ok: false, message: '' });
     formError.value = '';
+    clearFieldErrors();
+    livestatusMode.value = 'socket';
     dialog.mode = 'create';
     dialog.open = true;
     if (store.connections.length > 0) fetchContext(store.connections[0].id);
@@ -611,10 +708,34 @@ function openEdit(b: ConnectionConfig) {
     Object.assign(form, { ...b });
     Object.assign(dialogTest, { loading: false, ran: false, ok: false, message: '' });
     formError.value = '';
+    clearFieldErrors();
+    livestatusMode.value = b.host ? 'tcp' : 'socket';
     dialog.mode = 'edit';
     dialog.editId = b.id;
     dialog.open = true;
     fetchContext(b.id);
+}
+
+// Cross-field model_validator errors carry `loc: ["body"]` only — those land
+// in formError; per-field errors get their last loc segment as the field key.
+function populateFieldErrors(detail: unknown): boolean {
+    clearFieldErrors();
+    if (!Array.isArray(detail)) return false;
+    let handled = false;
+    for (const it of detail as { loc?: unknown[]; msg?: string }[]) {
+        const msg = (it?.msg ?? '').replace(/^Value error,\s*/, '');
+        const loc = Array.isArray(it?.loc) ? it.loc.filter((p) => p !== 'body') : [];
+        if (loc.length === 0) {
+            formError.value = msg;
+            handled = true;
+            continue;
+        }
+        const field = String(loc[loc.length - 1]);
+        if (!fieldErrors[field]) fieldErrors[field] = [];
+        fieldErrors[field].push(msg);
+        handled = true;
+    }
+    return handled;
 }
 
 async function testDialog() {
@@ -636,6 +757,13 @@ async function testDialog() {
 
 async function save() {
     formError.value = '';
+    clearFieldErrors();
+    if (!isFormValid.value) {
+        for (const [field, msg] of Object.entries(liveValidationErrors.value)) {
+            fieldErrors[field] = [msg];
+        }
+        return;
+    }
     saving.value = true;
     try {
         if (dialog.mode === 'create') {
@@ -649,7 +777,16 @@ async function save() {
         dialog.open = false;
         testAll();
     } catch (e: unknown) {
-        formError.value = e instanceof Error ? e.message : t('admin.saveFailed');
+        const handled =
+            e instanceof ApiError &&
+            populateFieldErrors(
+                e.detail && typeof e.detail === 'object'
+                    ? (e.detail as { detail?: unknown }).detail
+                    : undefined,
+            );
+        if (!handled) {
+            formError.value = e instanceof Error ? e.message : t('admin.saveFailed');
+        }
     } finally {
         saving.value = false;
     }
