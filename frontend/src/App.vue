@@ -36,7 +36,8 @@ const showShell = computed(
     () =>
         auth.user !== null &&
         !['login', 'change-password'].includes(route.name as string) &&
-        !route.meta.kiosk,
+        !route.meta.kiosk &&
+        route.query.preview !== '1',
 );
 
 const { changelogVisible: showChangelog, checkChangelog, dismissChangelog } = useChangelog();
