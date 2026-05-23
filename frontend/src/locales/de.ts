@@ -21,6 +21,7 @@ export default {
         saved: 'Gespeichert',
         none: 'Keine',
         useColor: 'Farbe verwenden',
+        invalidHex: "Hex-Code im Format '#ffffff' oder 'transparent' verwenden",
         unsavedChanges: 'Ungespeicherte Änderungen',
         unsavedChangesHint:
             'Es wurde mindestens ein Feld geändert — speichern oder verwerfen, bevor die Seite verlassen wird',

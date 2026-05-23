@@ -21,6 +21,7 @@ export default {
         saved: 'Saved',
         none: 'None',
         useColor: 'Use color',
+        invalidHex: "Use a 6-digit hex code like '#ffffff' or 'transparent'",
         unsavedChanges: 'Unsaved changes',
         unsavedChangesHint:
             'You have changed at least one field — save or cancel before leaving the page',
