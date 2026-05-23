@@ -96,7 +96,7 @@
                             >{{ label }}</span
                         >
                         <span
-                            class="text-[9px] font-mono font-semibold shrink-0 whitespace-nowrap"
+                            class="text-[9px] font-semibold tabular-nums shrink-0 whitespace-nowrap"
                             :style="{ color: CHART_PALETTE[idx % CHART_PALETTE.length] }"
                             >{{
                                 fmtValueWithUnit(
