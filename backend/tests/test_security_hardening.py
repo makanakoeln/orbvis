@@ -24,7 +24,7 @@ class TestBackendUrlValidation:
         ],
     )
     def test_accepts_safe_urls(self, url: str | None) -> None:
-        ConnectionConfig(id="b1", checkmk_url=url)
+        ConnectionConfig(id="b1", type="test", checkmk_url=url)
 
     @pytest.mark.parametrize(
         "url",
@@ -54,6 +54,7 @@ class TestBackendSecretRedaction:
     def test_redact_replaces_secrets(self) -> None:
         cfg = ConnectionConfig(
             id="b1",
+            type="test",
             automation_secret="real-secret",
             icinga2_password="real-pw",
         )
@@ -62,7 +63,7 @@ class TestBackendSecretRedaction:
         assert redacted.icinga2_password == REDACTED_SECRET
 
     def test_redact_keeps_none(self) -> None:
-        cfg = ConnectionConfig(id="b1")
+        cfg = ConnectionConfig(id="b1", type="test")
         redacted = _redact(cfg)
         assert redacted.automation_secret is None
         assert redacted.icinga2_password is None

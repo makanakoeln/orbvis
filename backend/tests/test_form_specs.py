@@ -207,6 +207,7 @@ def test_connection_form_data_to_config_preserves_redacted_secret() -> None:
     stored = ConnectionConfig(
         id="live_1",
         type="livestatus",
+        socket_path="/run/live",
         timeout=10.0,
         automation_user="automation",
         automation_secret="REAL-SECRET",

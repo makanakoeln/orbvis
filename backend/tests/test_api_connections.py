@@ -128,7 +128,9 @@ async def test_update_backend_not_found(client, admin_token, tmp_path, monkeypat
     _patch(monkeypatch, tmp_path)
     response = await client.put(
         "/api/v1/connections/nonexistent",
-        json={"type": "livestatus", "label": "X"},
+        # socket_path keeps the body itself valid; the 404 then comes from the
+        # route's "no such connection" check, not from schema validation.
+        json={"type": "livestatus", "label": "X", "socket_path": "/run/live"},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 404

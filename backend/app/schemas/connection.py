@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # Hosts that should never be reached via the credentialed outbound HTTP path:
 # cloud-provider metadata services that would happily hand back IAM tokens to
@@ -114,6 +114,22 @@ class ConnectionConfig(BaseModel):
     def _safe_socket_path(cls, v: str | None) -> str | None:
         return _validate_socket_path(v)
 
+    @model_validator(mode="after")
+    def _require_type_targets(self) -> ConnectionConfig:
+        _require_type_targets(self)
+        return self
+
+
+def _require_type_targets(cfg: ConnectionConfig | ConnectionUpdate) -> None:
+    if cfg.type == "livestatus":
+        has_socket = bool((cfg.socket_path or "").strip())
+        has_host = bool((cfg.host or "").strip())
+        if not has_socket and not has_host:
+            raise ValueError("Livestatus connection needs either a Unix socket path or a TCP host")
+    elif cfg.type == "icinga2":
+        if not (cfg.icinga2_url or "").strip():
+            raise ValueError("Icinga2 connection needs an API URL")
+
 
 def _redact(cfg: ConnectionConfig) -> ConnectionConfig:
     """Return a copy of *cfg* with secrets replaced by ``REDACTED_SECRET``.
@@ -161,3 +177,8 @@ class ConnectionUpdate(BaseModel):
     @classmethod
     def _safe_socket_path(cls, v: str | None) -> str | None:
         return _validate_socket_path(v)
+
+    @model_validator(mode="after")
+    def _require_type_targets_update(self) -> ConnectionUpdate:
+        _require_type_targets(self)
+        return self
