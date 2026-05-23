@@ -5,15 +5,15 @@
         <!-- Background -->
         <div class="absolute inset-0 pointer-events-none">
             <div
-                class="absolute -top-48 -left-48 w-[600px] h-[600px] rounded-full blur-3xl"
+                class="absolute -top-48 -left-48 w-[550px] h-[550px] rounded-full blur-3xl"
                 style="
-                    background: radial-gradient(circle, rgb(21 209 160 / 12%) 0%, transparent 70%);
+                    background: radial-gradient(circle, rgb(21 209 160 / 9%) 0%, transparent 70%);
                 "
             />
             <div
-                class="absolute -bottom-48 -right-48 w-[500px] h-[500px] rounded-full blur-3xl"
+                class="absolute -bottom-48 -right-48 w-[550px] h-[550px] rounded-full blur-3xl"
                 style="
-                    background: radial-gradient(circle, rgb(21 209 160 / 6%) 0%, transparent 70%);
+                    background: radial-gradient(circle, rgb(21 209 160 / 9%) 0%, transparent 70%);
                 "
             />
             <div
