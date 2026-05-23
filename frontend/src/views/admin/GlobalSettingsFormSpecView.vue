@@ -1,5 +1,44 @@
 <template>
     <div class="settings-page">
+        <div class="settings-page__body">
+            <header class="settings-page__header">
+                <CmkHeading type="h2">{{ heading }}</CmkHeading>
+                <CmkParagraph v-if="subtitle" class="admin-subtitle">{{ subtitle }}</CmkParagraph>
+            </header>
+
+            <div v-if="loading" class="flex items-center justify-center py-16">
+                <CmkLoading />
+            </div>
+
+            <CmkAlertBox v-else-if="loadError" variant="error">{{ loadError }}</CmkAlertBox>
+
+            <div v-else-if="schema" class="settings-page__layout">
+                <nav class="settings-page__sidebar" aria-label="Settings sections">
+                    <button
+                        v-for="g in sidebarGroups"
+                        :key="g.key"
+                        type="button"
+                        class="settings-page__topic"
+                        :class="{ 'settings-page__topic--active': g.key === activeGroup }"
+                        @click="activeGroup = g.key"
+                    >
+                        <span class="settings-page__topic-title">{{ g.title }}</span>
+                        <span
+                            v-if="g.modified > 0"
+                            class="settings-page__topic-badge"
+                            :title="t('settings.modifiedHint', { n: g.modified })"
+                        >
+                            {{ g.modified }}
+                        </span>
+                    </button>
+                </nav>
+
+                <div class="settings-page__detail" :data-active="activeGroup">
+                    <FormEdit v-model:data="data" :spec="schema" :backend-validation="validation" />
+                </div>
+            </div>
+        </div>
+
         <Transition
             enter-from-class="settings-page__savebar--enter-from"
             enter-active-class="settings-page__savebar--enter-active"
@@ -23,43 +62,6 @@
                 </div>
             </CmkAlertBox>
         </Transition>
-
-        <header class="settings-page__header">
-            <CmkHeading type="h2">{{ heading }}</CmkHeading>
-            <CmkParagraph v-if="subtitle" class="admin-subtitle">{{ subtitle }}</CmkParagraph>
-        </header>
-
-        <div v-if="loading" class="flex items-center justify-center py-16">
-            <CmkLoading />
-        </div>
-
-        <CmkAlertBox v-else-if="loadError" variant="error">{{ loadError }}</CmkAlertBox>
-
-        <div v-else-if="schema" class="settings-page__layout">
-            <nav class="settings-page__sidebar" aria-label="Settings sections">
-                <button
-                    v-for="g in sidebarGroups"
-                    :key="g.key"
-                    type="button"
-                    class="settings-page__topic"
-                    :class="{ 'settings-page__topic--active': g.key === activeGroup }"
-                    @click="activeGroup = g.key"
-                >
-                    <span class="settings-page__topic-title">{{ g.title }}</span>
-                    <span
-                        v-if="g.modified > 0"
-                        class="settings-page__topic-badge"
-                        :title="t('settings.modifiedHint', { n: g.modified })"
-                    >
-                        {{ g.modified }}
-                    </span>
-                </button>
-            </nav>
-
-            <div class="settings-page__detail" :data-active="activeGroup">
-                <FormEdit v-model:data="data" :spec="schema" :backend-validation="validation" />
-            </div>
-        </div>
 
         <OrbUnsavedChangesDialog
             :open="leaveDialogOpen"
@@ -408,7 +410,16 @@ onUnmounted(() => {
 .settings-page {
     display: flex;
     flex-direction: column;
-    min-height: 100%;
+    height: 100%;
+    min-height: 0;
+}
+
+/* Inner scroll container so the savebar can sit as a fixed bottom row
+   without overlapping any field while the page scrolls. */
+.settings-page__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .settings-page__header {
@@ -416,13 +427,10 @@ onUnmounted(() => {
 }
 
 /* `.settings-page__savebar` is added directly onto the CmkAlertBox root
-   via Vue's class-fallthrough — turns the box into a sticky page-top
-   notification and flips its heading+body stack to a row so action
-   buttons sit inline right of the heading. */
+   via Vue's class-fallthrough — the box sits as its own row at the bottom
+   of the page, outside the scroll area, and flips its heading+body stack
+   to a row so action buttons sit inline right of the heading. */
 .settings-page__savebar {
-    position: sticky;
-    top: 0;
-    z-index: 6;
     margin: 0;
 }
 
@@ -473,7 +481,7 @@ onUnmounted(() => {
 .settings-page__savebar--enter-from,
 .settings-page__savebar--leave-to {
     opacity: 0;
-    transform: translateY(-6px);
+    transform: translateY(6px);
 }
 
 .settings-page__savebar--enter-active,
