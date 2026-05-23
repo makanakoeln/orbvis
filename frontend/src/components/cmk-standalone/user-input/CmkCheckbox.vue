@@ -56,7 +56,26 @@ const hasError = computed(() => !!externalErrors?.length);
                 </CheckboxIndicator>
             </CheckboxRoot>
             <label v-if="label" :for="id" class="orb-checkbox__label">{{ label }}</label>
-            <span v-if="help" class="orb-checkbox__help" :title="help">&nbsp;?</span>
+            <span
+                v-if="help"
+                class="orb-checkbox__help"
+                :title="help"
+                aria-label="More information"
+            >
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="12" x2="12" y2="16" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+            </span>
         </div>
         <ul v-if="hasError" class="orb-checkbox__errors">
             <li v-for="(msg, idx) in externalErrors" :key="idx">{{ msg }}</li>
@@ -143,8 +162,21 @@ const hasError = computed(() => !!externalErrors?.length);
 }
 
 .orb-checkbox__help {
+    display: inline-flex;
+    align-items: center;
     color: var(--font-color-dimmed, #9ca3af);
     cursor: help;
+    margin-left: 4px;
+    transition: color 120ms ease;
+}
+
+.orb-checkbox__help:hover {
+    color: var(--font-color, #f4f4f5);
+}
+
+.orb-checkbox__help svg {
+    width: 12px;
+    height: 12px;
 }
 
 .orb-checkbox__errors {

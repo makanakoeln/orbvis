@@ -39,7 +39,21 @@ const delegated = computed(() => {
                 ]"
                 ><slot
             /></label>
-            <span v-if="help" class="orb-label__help" :title="help">&nbsp;?</span>
+            <span v-if="help" class="orb-label__help" :title="help" aria-label="More information">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="12" x2="12" y2="16" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+            </span>
         </span>
         <div v-if="dots" class="orb-label__dots" />
     </div>
@@ -74,9 +88,22 @@ const delegated = computed(() => {
 }
 
 .orb-label__help {
+    display: inline-flex;
+    align-items: center;
     color: var(--font-color-dimmed, #9ca3af);
     cursor: help;
-    margin-left: 2px;
+    margin-left: 4px;
+    vertical-align: middle;
+    transition: color 120ms ease;
+}
+
+.orb-label__help:hover {
+    color: var(--font-color, #f4f4f5);
+}
+
+.orb-label__help svg {
+    width: 12px;
+    height: 12px;
 }
 
 .orb-label__dots {
