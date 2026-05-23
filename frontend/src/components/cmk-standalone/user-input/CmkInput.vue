@@ -69,7 +69,10 @@ watch(
         <ul v-if="validation.length > 0" class="orb-input__errors">
             <li v-for="(msg, idx) in validation" :key="idx">{{ msg }}</li>
         </ul>
-        <div class="orb-input__field-row">
+        <div
+            class="orb-input__field-row"
+            :class="{ 'orb-input__field-row--fill': fieldSize === 'FILL' }"
+        >
             <input
                 ref="inputRef"
                 v-model="data"
@@ -98,6 +101,10 @@ watch(
     display: inline-flex;
     align-items: center;
     gap: 6px;
+}
+
+.orb-input__field-row--fill {
+    display: flex;
 }
 
 .orb-input__field {
