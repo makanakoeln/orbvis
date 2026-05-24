@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import asyncio
 import base64
 import hashlib
@@ -164,6 +165,10 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
 
     Cookie format: username:session_id:hmac_hex
     HMAC = HMAC-SHA256(auth_secret, b"username" + b"session_id" + b"serial").hex()
+
+    The HMAC alone is *not* enough: Checkmk sets the cookie immediately after
+    the password step, before WebAuthn/TOTP, so we additionally require that
+    the persisted session has reached the fully-logged-in state.
     """
     omd_root = settings.checkmk_omd_root
     if not omd_root:
@@ -182,13 +187,14 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
             logger.warning("SSO: rejecting cookie with unsafe username: %r", username)
             return None
 
-        secret_path = pathlib.Path(omd_root) / "etc" / "auth.secret"
+        root = pathlib.Path(omd_root)
+        secret_path = root / "etc" / "auth.secret"
         if not secret_path.is_file():
             logger.warning("SSO: auth.secret not found at %s", secret_path)
             return None
         secret = secret_path.read_bytes()
 
-        serial_path = pathlib.Path(omd_root) / "var" / "check_mk" / "web" / username / "serial.mk"
+        serial_path = root / "var" / "check_mk" / "web" / username / "serial.mk"
         serial = 0
         if serial_path.is_file():
             try:
@@ -204,10 +210,97 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
         ):
             logger.warning("SSO: HMAC mismatch for user %r (serial=%d)", username, serial)
             return None
+
+        if not _is_session_fully_authenticated(root, username, session_id):
+            logger.warning(
+                "SSO: rejecting cookie for %r — session %s has not completed 2FA / login",
+                username,
+                session_id[:8] + "…",
+            )
+            return None
         return username
     except Exception as e:
         logger.warning("SSO: cookie validation failed: %s", e)
         return None
+
+
+def _is_session_fully_authenticated(omd_root: pathlib.Path, username: str, session_id: str) -> bool:
+    """Return True iff the CMK session has finished every login step.
+
+    Mirrors the gate ``cmk.gui.wsgi.applications.utils.ensure_authentication``
+    applies inside the GUI. The on-disk session-info layout differs between
+    Checkmk versions — 2.3/2.4 use the boolean fields ``logged_out`` and
+    ``two_factor_completed``, 2.5+ collapsed both into a ``session_state``
+    state machine where only ``"logged_in"`` is fully authenticated.
+
+    Conservative on failure: if the session can't be located or parsed, we
+    return False so an attacker can't ride a stale or evicted cookie.
+    """
+    info = _load_session_info(omd_root, username, session_id)
+    if info is None:
+        return False
+
+    # CMK 2.5+: explicit state machine wins when present.
+    state = info.get("session_state")
+    if isinstance(state, str):
+        return state == "logged_in"
+
+    # CMK 2.3/2.4: boolean flags. Logged-out blocks first; 2FA gate only
+    # applies when the user actually has 2FA credentials registered.
+    if info.get("logged_out") is True:
+        return False
+    if _user_has_two_factor_configured(omd_root, username):
+        return info.get("two_factor_completed") is True
+    return True
+
+
+def _load_session_info(
+    omd_root: pathlib.Path, username: str, session_id: str
+) -> dict[str, Any] | None:
+    """Parse ``var/check_mk/web/<user>/session_info.mk`` and pick one session.
+
+    CMK writes the file with ``repr({k: asdict(v) for ...})`` in every
+    supported version, so ``ast.literal_eval`` round-trips it safely.
+    """
+    path = omd_root / "var" / "check_mk" / "web" / username / "session_info.mk"
+    try:
+        raw = path.read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeDecodeError):
+        return None
+    if not raw:
+        return None
+    try:
+        sessions = ast.literal_eval(raw)
+    except (ValueError, SyntaxError):
+        logger.warning("SSO: could not parse %s", path)
+        return None
+    if not isinstance(sessions, dict):
+        return None
+    info = sessions.get(session_id)
+    return info if isinstance(info, dict) else None
+
+
+def _user_has_two_factor_configured(omd_root: pathlib.Path, username: str) -> bool:
+    """Mirror of CMK's ``is_two_factor_login_enabled`` (2.3 – 2.6+).
+
+    The credentials file holds a dict with ``webauthn_credentials`` and
+    ``totp_credentials`` mappings; the user is 2FA-enabled iff either has at
+    least one entry.
+    """
+    path = omd_root / "var" / "check_mk" / "web" / username / "two_factor_credentials.mk"
+    try:
+        raw = path.read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeDecodeError):
+        return False
+    if not raw:
+        return False
+    try:
+        creds = ast.literal_eval(raw)
+    except (ValueError, SyntaxError):
+        return False
+    if not isinstance(creds, dict):
+        return False
+    return bool(creds.get("webauthn_credentials") or creds.get("totp_credentials"))
 
 
 def _crypt_verify(password: str, hashed: str) -> bool:

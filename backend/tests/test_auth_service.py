@@ -92,13 +92,40 @@ def test_verify_htpasswd_skips_comment_lines(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def _make_cookie(tmp_path, username: str, session_id: str, serial: int = 0) -> str:
+def _make_cookie(
+    tmp_path,
+    username: str,
+    session_id: str,
+    serial: int = 0,
+    *,
+    session_state: str = "logged_in",
+    two_factor_completed: bool = True,
+    logged_out: bool = False,
+    write_session_file: bool = True,
+    two_factor_credentials: dict | None = None,
+) -> str:
     secret = b"mysecret"
     (tmp_path / "etc").mkdir(exist_ok=True)
     (tmp_path / "etc" / "auth.secret").write_bytes(secret)
     user_dir = tmp_path / "var" / "check_mk" / "web" / username
     user_dir.mkdir(parents=True, exist_ok=True)
     (user_dir / "serial.mk").write_text(str(serial), encoding="utf-8")
+    if write_session_file:
+        # Mirror CMK's on-disk shape (repr of {session_id: asdict(SessionInfo)}).
+        # 2.5+ uses session_state; 2.3/2.4 uses logged_out + two_factor_completed.
+        session_info = {
+            "session_id": session_id,
+            "session_state": session_state,
+            "logged_out": logged_out,
+            "two_factor_completed": two_factor_completed,
+        }
+        (user_dir / "session_info.mk").write_text(
+            repr({session_id: session_info}), encoding="utf-8"
+        )
+    if two_factor_credentials is not None:
+        (user_dir / "two_factor_credentials.mk").write_text(
+            repr(two_factor_credentials), encoding="utf-8"
+        )
     msg = f"{username}{session_id}{serial}".encode()
     cookie_hash = _hmac.new(key=secret, msg=msg, digestmod=hashlib.sha256).digest().hex()
     return f"{username}:{session_id}:{cookie_hash}"
@@ -149,6 +176,110 @@ def test_validate_cookie_wrong_format(tmp_path, monkeypatch):
     (tmp_path / "etc" / "auth.secret").write_bytes(b"secret")
     # Missing parts — only 2 colons
     assert validate_checkmk_cookie("user:onlyonepart") is None
+
+
+def test_validate_cookie_rejects_pending_2fa_25(tmp_path, monkeypatch):
+    """CMK 2.5+: session_state != 'logged_in' must block SSO even with valid HMAC."""
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    cookie = _make_cookie(
+        tmp_path, "alice", "sess123", serial=5, session_state="second_factor_auth_needed"
+    )
+    assert validate_checkmk_cookie(cookie) is None
+
+
+def test_validate_cookie_rejects_credentials_needed(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    cookie = _make_cookie(
+        tmp_path, "alice", "sess123", serial=5, session_state="credentials_needed"
+    )
+    assert validate_checkmk_cookie(cookie) is None
+
+
+def test_validate_cookie_rejects_pending_2fa_24(tmp_path, monkeypatch):
+    """CMK 2.3/2.4: 2FA-enabled user with two_factor_completed=False must be rejected.
+
+    Simulates the older session_info.mk shape (no session_state field).
+    """
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    secret = b"mysecret"
+    (tmp_path / "etc").mkdir(exist_ok=True)
+    (tmp_path / "etc" / "auth.secret").write_bytes(secret)
+    user_dir = tmp_path / "var" / "check_mk" / "web" / "alice"
+    user_dir.mkdir(parents=True, exist_ok=True)
+    (user_dir / "serial.mk").write_text("0", encoding="utf-8")
+    (user_dir / "session_info.mk").write_text(
+        repr({"sess123": {"logged_out": False, "two_factor_completed": False}}),
+        encoding="utf-8",
+    )
+    (user_dir / "two_factor_credentials.mk").write_text(
+        repr(
+            {
+                "webauthn_credentials": {"cred1": {"id": "x"}},
+                "totp_credentials": {},
+                "backup_codes": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    msg = b"alicesess1230"
+    cookie_hash = _hmac.new(key=secret, msg=msg, digestmod=hashlib.sha256).digest().hex()
+    assert validate_checkmk_cookie(f"alice:sess123:{cookie_hash}") is None
+
+
+def test_validate_cookie_accepts_24_without_2fa_configured(tmp_path, monkeypatch):
+    """CMK 2.3/2.4: user without any 2FA credentials passes the legacy gate."""
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    secret = b"mysecret"
+    (tmp_path / "etc").mkdir(exist_ok=True)
+    (tmp_path / "etc" / "auth.secret").write_bytes(secret)
+    user_dir = tmp_path / "var" / "check_mk" / "web" / "alice"
+    user_dir.mkdir(parents=True, exist_ok=True)
+    (user_dir / "serial.mk").write_text("0", encoding="utf-8")
+    (user_dir / "session_info.mk").write_text(
+        repr({"sess123": {"logged_out": False, "two_factor_completed": False}}),
+        encoding="utf-8",
+    )
+    msg = b"alicesess1230"
+    cookie_hash = _hmac.new(key=secret, msg=msg, digestmod=hashlib.sha256).digest().hex()
+    assert validate_checkmk_cookie(f"alice:sess123:{cookie_hash}") == "alice"
+
+
+def test_validate_cookie_rejects_logged_out_24(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    cookie = _make_cookie(
+        tmp_path,
+        "alice",
+        "sess123",
+        serial=5,
+        session_state=None,  # type: ignore[arg-type]
+        logged_out=True,
+    )
+    assert validate_checkmk_cookie(cookie) is None
+
+
+def test_validate_cookie_rejects_unknown_session_id(tmp_path, monkeypatch):
+    """Cookie HMAC valid but session_id not in session_info.mk (e.g. evicted)."""
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    cookie = _make_cookie(tmp_path, "alice", "sess123", serial=5)
+    user_dir = tmp_path / "var" / "check_mk" / "web" / "alice"
+    # Overwrite session file with a different session id
+    (user_dir / "session_info.mk").write_text(
+        repr({"OTHER_SESSION": {"session_state": "logged_in"}}), encoding="utf-8"
+    )
+    assert validate_checkmk_cookie(cookie) is None
+
+
+def test_validate_cookie_rejects_missing_session_file(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    cookie = _make_cookie(tmp_path, "alice", "sess123", serial=5, write_session_file=False)
+    assert validate_checkmk_cookie(cookie) is None
 
 
 # ---------------------------------------------------------------------------
