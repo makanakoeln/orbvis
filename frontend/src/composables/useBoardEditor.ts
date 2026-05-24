@@ -16,6 +16,8 @@ export interface NewObjectDraft {
     group_name: string;
     board_name: string;
     aggregation_id: string;
+    object_types: 'host' | 'service';
+    object_filter: string;
     expand_depth: number;
     label_text: string;
     image_src: string;
@@ -281,6 +283,8 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         group_name: '',
         board_name: '',
         aggregation_id: '',
+        object_types: 'host' as 'host' | 'service',
+        object_filter: '',
         expand_depth: 0,
         label_text: '',
         image_src: '',
@@ -300,6 +304,8 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         draft.group_name = '';
         draft.board_name = '';
         draft.aggregation_id = '';
+        draft.object_types = 'host';
+        draft.object_filter = '';
         draft.expand_depth = 0;
         draft.label_text = '';
         draft.image_src = '';
@@ -327,6 +333,8 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
             group_name: draft.group_name || undefined,
             map_name: draft.board_name || undefined,
             aggregation_id: draft.aggregation_id || undefined,
+            object_types: draft.type === 'dyngroup' ? draft.object_types : undefined,
+            object_filter: draft.type === 'dyngroup' ? draft.object_filter || undefined : undefined,
             expand_depth: draft.expand_depth || undefined,
             label: {
                 show: s.label_show,
@@ -399,6 +407,8 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
             group_name: draft.group_name || undefined,
             map_name: draft.board_name || undefined,
             aggregation_id: draft.aggregation_id || undefined,
+            object_types: draft.type === 'dyngroup' ? draft.object_types : undefined,
+            object_filter: draft.type === 'dyngroup' ? draft.object_filter || undefined : undefined,
             expand_depth: draft.expand_depth || undefined,
             label: {
                 show: s.label_show,
@@ -454,6 +464,8 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         draft.service_description = '';
         draft.group_name = '';
         draft.board_name = '';
+        draft.object_types = 'host';
+        draft.object_filter = '';
         draft.label_text = '';
         draft.image_src = '';
         draft.graph_url = '';

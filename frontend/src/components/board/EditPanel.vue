@@ -238,6 +238,20 @@
                 </div>
             </template>
 
+            <template v-else-if="draft.type === 'dyngroup'">
+                <select v-model="draft.object_types" class="field">
+                    <option value="host">host</option>
+                    <option value="service">service</option>
+                </select>
+                <textarea
+                    v-model="draft.object_filter"
+                    class="field font-mono text-xs"
+                    rows="3"
+                    spellcheck="false"
+                    placeholder="Filter: host_name ~ ^web\n"
+                />
+            </template>
+
             <template v-else-if="draft.type === 'line'">
                 <AutocompleteInput
                     v-model="draft.host_name"
@@ -403,6 +417,8 @@ const canPlace = computed(() => {
         case 'hostgroup':
         case 'servicegroup':
             return !!d.group_name;
+        case 'dyngroup':
+            return !!d.object_filter.trim();
         case 'map':
             return !!d.board_name;
         case 'aggregation':

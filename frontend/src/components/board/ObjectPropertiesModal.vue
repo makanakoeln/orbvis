@@ -148,6 +148,30 @@
                                     />
                                 </div>
                             </template>
+                            <template v-if="object.type === 'dyngroup'">
+                                <div class="field-row">
+                                    <label class="field-label">Object type</label>
+                                    <select v-model="form.object_types" class="form-input flex-1">
+                                        <option value="host">host</option>
+                                        <option value="service">service</option>
+                                    </select>
+                                </div>
+                                <div class="field-row">
+                                    <label class="field-label">Livestatus filter</label>
+                                    <textarea
+                                        v-model="form.object_filter"
+                                        class="form-input flex-1 font-mono text-xs"
+                                        rows="4"
+                                        spellcheck="false"
+                                        placeholder="Filter: host_name ~ ^web\n"
+                                    />
+                                </div>
+                                <p class="text-xs text-[var(--text-muted)] mt-1">
+                                    One or more <code>Filter:</code> lines, each terminated by a
+                                    literal <code>\n</code>. Forwarded verbatim to Livestatus
+                                    against <code>GET hosts/services</code>.
+                                </p>
+                            </template>
                             <template v-if="object.type === 'map'">
                                 <div class="field-row">
                                     <label class="field-label">{{
@@ -1486,6 +1510,8 @@ const form = reactive({
     group_name: '',
     map_name: '',
     aggregation_id: '',
+    object_types: 'host' as 'host' | 'service',
+    object_filter: '',
     expand_depth: 0,
     line_style: null as string | null,
     line_color: null as string | null,
@@ -1562,6 +1588,8 @@ watch(
         form.group_name = obj.group_name ?? '';
         form.map_name = obj.map_name ?? '';
         form.aggregation_id = obj.aggregation_id ?? '';
+        form.object_types = obj.object_types ?? 'host';
+        form.object_filter = obj.object_filter ?? '';
         form.expand_depth = obj.expand_depth ?? 0;
         form.line_style = obj.line_style ?? null;
         form.line_color = obj.line_color ?? null;
@@ -1913,6 +1941,10 @@ async function save() {
         if (props.object.type === 'aggregation') {
             updates.aggregation_id = form.aggregation_id || null;
             updates.expand_depth = form.expand_depth ?? 0;
+        }
+        if (props.object.type === 'dyngroup') {
+            updates.object_types = form.object_types;
+            updates.object_filter = form.object_filter || null;
         }
 
         if (props.object.type === 'line') {

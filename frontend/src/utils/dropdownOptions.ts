@@ -38,6 +38,7 @@ export function placeableObjectTypes(t: T): { name: ObjectType; title: string }[
         { name: 'service', title: t('boardSettings.typeService') },
         { name: 'hostgroup', title: t('boardSettings.typeHostgroup') },
         { name: 'servicegroup', title: t('boardSettings.typeServicegroup') },
+        { name: 'dyngroup', title: 'Dynamic group' },
         { name: 'map', title: t('boardSettings.typeMap') },
         { name: 'aggregation', title: t('boardSettings.typeAggregation') },
         { name: 'line', title: t('boardSettings.typeLine') },
