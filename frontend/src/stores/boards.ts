@@ -7,6 +7,7 @@ import type {
     BoardBulkEditResult,
     BoardConfig,
     BoardRead,
+    RenderMode,
 } from '@/types/api';
 
 import { useAuthStore } from './auth';
@@ -70,6 +71,7 @@ export const useBoardsStore = defineStore('boards', () => {
         connectionId = 'live_1',
         boardType = 'static',
         iconSize?: number | null,
+        renderMode: RenderMode = 'default',
     ) {
         const cfg = await boardsApi.create(
             {
@@ -78,6 +80,7 @@ export const useBoardsStore = defineStore('boards', () => {
                 connection_id: connectionId,
                 icon_size: iconSize,
                 view: { type: boardType },
+                render_mode: renderMode,
             },
             token(),
         );
@@ -99,6 +102,7 @@ export const useBoardsStore = defineStore('boards', () => {
             show_in_lists: true, // BoardConfig does not carry this; list endpoint defaults it
             hover_template: cfg.hover_template ?? null,
             context_template: cfg.context_template ?? null,
+            render_mode: cfg.render_mode ?? 'default',
         });
         return cfg;
     }

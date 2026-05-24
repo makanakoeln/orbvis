@@ -77,6 +77,7 @@ class GlobalSettings(BaseModel):
     # New-board defaults
     default_backend_id: str = "live_1"
     default_map_type: str = "static"
+    default_render_mode: Literal["default", "nagvis_classic"] = "default"
     # Default tile URL applied to new Geo boards. ``None`` keeps the per-board
     # default the BoardSettingsModal already picks (CartoDB dark in dark mode).
     default_tile_url: str | None = None

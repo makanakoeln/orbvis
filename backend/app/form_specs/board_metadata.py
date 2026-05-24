@@ -127,6 +127,25 @@ def board_metadata_spec(
                     prefill=DefaultValue(30),
                 ),
             ),
+            "render_mode": DictElement(
+                required=True,
+                group=_DISPLAY,
+                parameter_form=SingleChoice(
+                    title=Title("Rendering style"),
+                    help_text=Help(
+                        "OrbVis renders objects centered on their coordinates "
+                        "with the modern glass look. NagVis-classic anchors "
+                        "objects top-left, draws flat textboxes on a light "
+                        "canvas and is auto-selected when importing a legacy "
+                        "NagVis .cfg map for a 1:1 result."
+                    ),
+                    elements=[
+                        SingleChoiceElement(name="default", title=Title("OrbVis (default)")),
+                        SingleChoiceElement(name="nagvis_classic", title=Title("NagVis-classic")),
+                    ],
+                    prefill=DefaultValue("default"),
+                ),
+            ),
             "rotation_interval": DictElement(
                 required=True,
                 group=_BEHAVIOR,
@@ -234,6 +253,7 @@ METADATA_FIELDS = (
     "alias",
     "connection_id",
     "icon_size",
+    "render_mode",
     "rotation_interval",
     "click_action",
     "show_in_lists",

@@ -166,6 +166,7 @@ def create_board(data: BoardCreate) -> BoardConfig:
             icon_size=data.icon_size,
             connection_id=data.connection_id,
             view=data.view,
+            render_mode=data.render_mode,
         )
         _save_board(cfg)
         return cfg
@@ -439,4 +440,5 @@ def _to_read(cfg: BoardConfig) -> BoardRead:
         hover_template=cfg.hover_template,
         context_template=cfg.context_template,
         show_in_lists=cfg.show_in_lists,
+        render_mode=cfg.render_mode,
     )

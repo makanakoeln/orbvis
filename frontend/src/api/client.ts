@@ -173,6 +173,7 @@ export const boardsApi = {
             connection_id?: string;
             icon_size?: number | null;
             view?: Record<string, unknown>;
+            render_mode?: string;
         },
         token: string,
     ): Promise<BoardConfig> =>

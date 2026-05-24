@@ -216,6 +216,11 @@ export default {
         clickAction: 'Klickaktion',
         clickActionLink: 'Link öffnen',
         clickActionNone: 'Keine Aktion',
+        renderMode: 'Darstellungsstil',
+        renderModeHint:
+            'NagVis-klassisch verankert Objekte oben links mit flachen Textboxen auf hellem Hintergrund (automatisch bei importierten NagVis-Karten). OrbVis ist der moderne, zentrierte Glas-Stil.',
+        renderModeDefault: 'OrbVis (Standard)',
+        renderModeNagvisClassic: 'NagVis-klassisch',
         showInLists: 'Im Board-Verzeichnis anzeigen',
         showInListsHint: 'Wenn deaktiviert, wird dieses Board für reguläre Benutzer ausgeblendet',
         noPermission: 'Keine Berechtigung',

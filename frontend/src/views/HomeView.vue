@@ -251,10 +251,15 @@
                             style="height: 144px"
                         >
                             <img
-                                v-if="map.background_image && !map.name.startsWith('demo-')"
+                                v-if="
+                                    map.background_image &&
+                                    !map.name.startsWith('demo-') &&
+                                    !bgImageFailed[map.name]
+                                "
                                 :src="`${baseUrl}boards/backgrounds/${map.background_image}`"
                                 :alt="map.alias || map.name"
                                 class="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity duration-200"
+                                @error="bgImageFailed[map.name] = true"
                             />
                             <!-- Worldmap thumbnail -->
                             <WorldMapThumbnail
@@ -1343,7 +1348,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -1381,6 +1386,9 @@ import { sanitizeBoardName } from '@/utils/naming';
 
 const { t } = useI18n();
 const baseUrl = import.meta.env.BASE_URL;
+// Boards whose background image 404s (e.g. an imported map_image that was never
+// uploaded) fall back to the board-type thumbnail.
+const bgImageFailed = reactive<Record<string, boolean>>({});
 const auth = useAuthStore();
 const boardsStore = useBoardsStore();
 const router = useRouter();

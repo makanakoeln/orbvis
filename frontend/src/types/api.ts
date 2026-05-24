@@ -221,6 +221,7 @@ export interface BoardRead {
     show_in_lists?: boolean;
     hover_template?: string | null;
     context_template?: string | null;
+    render_mode?: RenderMode;
 }
 
 export interface BoardBulkDeleteFailure {
@@ -432,6 +433,7 @@ export interface GlobalSettings {
     line_style?: LineStyle | null;
     default_backend_id: string;
     default_map_type: string;
+    default_render_mode?: RenderMode;
     hover_template?: string | null;
     context_template?: string | null;
     board_list_view?: BoardListView;

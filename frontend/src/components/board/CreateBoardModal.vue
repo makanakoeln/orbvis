@@ -190,6 +190,7 @@ async function submit() {
             form.value.connection_id,
             form.value.view_type,
             null,
+            settingsStore.settings.default_render_mode ?? 'default',
         );
     } catch (err) {
         if (err instanceof ApiError) {

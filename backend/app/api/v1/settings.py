@@ -109,6 +109,7 @@ if FORM_SPECS_AVAILABLE:
         return {
             "default_backend_id": s.default_backend_id,
             "default_map_type": s.default_map_type,
+            "default_render_mode": s.default_render_mode,
             "view_type": s.view_type,
             "icon_size": s.icon_size,
             "line_style": s.line_style,
@@ -162,6 +163,11 @@ if FORM_SPECS_AVAILABLE:
                 context_template=form.get("context_template"),
                 default_backend_id=str(form.get("default_backend_id", current.default_backend_id)),
                 default_map_type=str(form.get("default_map_type", current.default_map_type)),
+                default_render_mode=(
+                    "nagvis_classic"
+                    if form.get("default_render_mode") == "nagvis_classic"
+                    else "default"
+                ),
                 default_tile_url=form.get("default_tile_url") or None,
             )
         except ValidationError as e:

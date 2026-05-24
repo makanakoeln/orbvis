@@ -1253,6 +1253,7 @@ const boardConfigAsRead = computed<import('@/types/api').BoardRead | null>(() =>
         readonly: cfg.readonly,
         hover_template: cfg.hover_template,
         context_template: cfg.context_template,
+        render_mode: cfg.render_mode,
     };
 });
 const canvasRef = ref<InstanceType<typeof BoardCanvas> | null>(null);

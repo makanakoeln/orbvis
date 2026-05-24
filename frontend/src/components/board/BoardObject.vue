@@ -228,7 +228,7 @@
         @mouseleave="$emit('hover-leave')"
         @contextmenu.prevent="$emit('context-menu', $event)"
     >
-        {{ object.label?.text || 'Text' }}
+        {{ textboxText }}
     </div>
 
     <!-- Gadget -->
@@ -940,6 +940,16 @@ const TYPE_CHARS: Record<string, string> = {
 };
 const typeChar = computed(() => TYPE_CHARS[props.object.type] ?? '?');
 
+// [worker_last_run] is a legacy NagVis macro for the timestamp of the last
+// monitoring fetch; resolve it from the live state-update time.
+const textboxText = computed(() => {
+    const raw = props.object.label?.text || 'Text';
+    if (!raw.includes('[worker_last_run]')) return raw;
+    const ts = statesStore.lastUpdate;
+    const stamp = ts ? new Date(ts * 1000).toLocaleString('sv-SE').replace('T', ' ') : '—';
+    return raw.replaceAll('[worker_last_run]', stamp);
+});
+
 const textboxStyle = computed(() => {
     const override = props.resizeOverride;
     const w = override?.width ?? props.object.textbox_width;
@@ -961,7 +971,12 @@ const textboxStyle = computed(() => {
         // borderColor alone won't paint without width+style.
         border: border ? `1px solid ${border}` : undefined,
         borderRadius: classic ? '0' : undefined,
-        padding: classic ? '0' : undefined,
+        // Classic mirrors NagVis' .box: content-box sizing + 2px side padding +
+        // natural line-height, so the text fills the box and sits as centered
+        // as it does in NagVis instead of being pushed down by a tall leading.
+        boxSizing: classic ? ('content-box' as const) : undefined,
+        padding: classic ? '0 2px' : undefined,
+        lineHeight: classic ? 'normal' : undefined,
         color: customColor ?? (classic ? '#000000' : 'var(--text)'),
         fontSize: label?.size ? `${label.size}px` : undefined,
         fontWeight: label?.weight ?? undefined,

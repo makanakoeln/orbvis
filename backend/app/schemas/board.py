@@ -385,6 +385,7 @@ class BoardCreate(BaseModel):
     icon_size: int | None = None
     connection_id: str = "live_1"
     view: BoardView = Field(default_factory=StaticView)
+    render_mode: RenderMode = "default"
 
 
 class BoardUpdate(BaseModel):
@@ -402,6 +403,7 @@ class BoardUpdate(BaseModel):
     context_template: str | None = None
     rotation_interval: int | None = None
     show_in_lists: bool | None = None
+    render_mode: RenderMode | None = None
 
 
 class BoardRead(BaseModel):
@@ -424,6 +426,7 @@ class BoardRead(BaseModel):
     show_in_lists: bool = True
     hover_template: str | None = None
     context_template: str | None = None
+    render_mode: RenderMode = "default"
 
 
 class BoardObjectUpdate(BaseModel):

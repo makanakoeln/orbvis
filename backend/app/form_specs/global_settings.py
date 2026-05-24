@@ -129,6 +129,24 @@ def global_settings_spec(
                     prefill=DefaultValue("static"),
                 ),
             ),
+            "default_render_mode": DictElement(
+                required=True,
+                group=_BOARD_DEFAULTS,
+                parameter_form=SingleChoice(
+                    title=Title("Rendering style"),
+                    help_text=Help(
+                        "Pre-selected rendering style for new boards. NagVis-classic "
+                        "anchors objects top-left with flat textboxes on a light "
+                        "canvas; imported NagVis maps switch to it automatically "
+                        "regardless of this default."
+                    ),
+                    elements=[
+                        SingleChoiceElement(name="default", title=Title("OrbVis (default)")),
+                        SingleChoiceElement(name="nagvis_classic", title=Title("NagVis-classic")),
+                    ],
+                    prefill=DefaultValue("default"),
+                ),
+            ),
             # Optional — most installs use the same tile server everywhere, so
             # pin it here once instead of pasting the URL into every Geo board.
             # ``None`` keeps each board's per-board ``tile_url`` choice intact.

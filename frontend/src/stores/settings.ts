@@ -21,6 +21,7 @@ export const SETTINGS_DEFAULTS: GlobalSettings = {
     line_style: null,
     default_backend_id: 'live_1',
     default_map_type: 'static',
+    default_render_mode: 'default',
     hover_template: null,
     context_template: null,
     board_list_view: 'cards',

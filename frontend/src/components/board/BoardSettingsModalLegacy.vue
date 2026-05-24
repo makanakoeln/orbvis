@@ -359,6 +359,29 @@
                                 />
                             </div>
 
+                            <!-- Rendering style (static boards) -->
+                            <div
+                                v-if="form.map_type === 'static'"
+                                class="board-settings__subsection space-y-[4px]"
+                            >
+                                <div>
+                                    <CmkLabel :help="t('board.renderModeHint')">{{
+                                        t('board.renderMode')
+                                    }}</CmkLabel>
+                                </div>
+                                <CmkDropdown
+                                    :selected-option="form.render_mode"
+                                    :options="renderModeOptions"
+                                    :width="'fill'"
+                                    label=""
+                                    @update:selected-option="
+                                        form.render_mode = ($event ?? 'default') as
+                                            | 'default'
+                                            | 'nagvis_classic'
+                                    "
+                                />
+                            </div>
+
                             <!-- Show in lists toggle -->
                             <div
                                 class="board-settings__subsection flex items-center justify-between"
@@ -693,6 +716,7 @@ const form = ref({
     icon_size: props.board.icon_size,
     rotation_interval: props.board.rotation_interval,
     click_action: (props.board.click_action ?? 'link') as 'link' | 'none',
+    render_mode: (props.board.render_mode ?? 'default') as 'default' | 'nagvis_classic',
     show_in_lists: props.board.show_in_lists !== false,
     map_type: props.board.view.type,
     worldmap_auto_source: (wmv?.auto_source ?? '') as
@@ -773,6 +797,13 @@ const clickActionOptions = computed(() => ({
         { name: 'none', title: t('board.clickActionNone') },
     ],
 }));
+const renderModeOptions = computed(() => ({
+    type: 'fixed' as const,
+    suggestions: [
+        { name: 'default', title: t('board.renderModeDefault') },
+        { name: 'nagvis_classic', title: t('board.renderModeNagvisClassic') },
+    ],
+}));
 const saveError = ref('');
 
 const { names: radarGroupNames, loading: loadingRadarGroups } = useRadarGroups(
@@ -826,6 +857,7 @@ async function save() {
                 icon_size: form.value.icon_size,
                 rotation_interval: form.value.rotation_interval,
                 click_action: form.value.click_action,
+                render_mode: form.value.render_mode,
                 show_in_lists: form.value.show_in_lists,
                 background_image: form.value.background_image || null,
                 background_color: form.value.background_color || null,
