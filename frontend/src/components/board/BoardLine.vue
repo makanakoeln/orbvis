@@ -488,10 +488,8 @@ const hasDirectionalGradient = computed(
         props.object.weathermap_metric_out !== props.object.weathermap_metric,
 );
 
-// Fill stroke for the colored line: the directional in→out gradient when
-// weather-colouring is live with two metrics, otherwise the solid color. The
-// gradient uses userSpaceOnUse, so arrow_inward's two half-lines can both
-// reference it and still show the correct slice.
+// userSpaceOnUse gradient, so arrow_inward's two half-lines can share the same
+// url() reference and each still show the correct slice.
 const fillStroke = computed(() =>
     useWeatherColor.value && hasDirectionalGradient.value
         ? `url(#${gradientId.value})`
