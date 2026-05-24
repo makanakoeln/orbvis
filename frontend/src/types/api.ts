@@ -182,6 +182,8 @@ export interface BoardObject {
 
 export type ClickAction = 'link' | 'none';
 
+export type RenderMode = 'default' | 'nagvis_classic';
+
 export interface BoardConfig {
     name: string;
     alias: string;
@@ -195,6 +197,7 @@ export interface BoardConfig {
     context_template?: string | null;
     background_image?: string | null;
     background_color?: string | null;
+    render_mode?: RenderMode;
     version?: number;
     view: BoardView;
     objects: BoardObject[];

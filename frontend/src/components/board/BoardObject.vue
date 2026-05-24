@@ -213,10 +213,15 @@
     <!-- Textbox -->
     <div
         v-else-if="object.type === 'textbox'"
-        class="px-2.5 py-1.5 rounded-lg text-sm font-medium whitespace-pre-wrap pointer-events-none transition-all overflow-auto"
+        class="text-sm font-medium whitespace-pre-wrap pointer-events-none transition-all"
         :class="[
-            object.textbox_border ? '' : 'ring-1',
-            selected ? 'ring-[var(--color-corporate-green-50)]' : 'ring-[var(--border)]',
+            isNagvisClassic ? 'overflow-visible' : 'px-2.5 py-1.5 rounded-lg overflow-auto',
+            !isNagvisClassic && !object.textbox_border ? 'ring-1' : '',
+            selected && !isNagvisClassic
+                ? 'ring-[var(--color-corporate-green-50)]'
+                : !isNagvisClassic
+                  ? 'ring-[var(--border)]'
+                  : '',
         ]"
         :style="textboxStyle"
         @mouseenter="$emit('hover', $event)"
@@ -282,6 +287,8 @@
     <div
         v-else
         class="flex flex-col items-center"
+        :class="isNagvisClassic ? 'relative' : ''"
+        :style="iconWrapperStyle"
         @mouseenter="$emit('hover', $event)"
         @mouseleave="$emit('hover-leave')"
         @contextmenu.prevent="$emit('context-menu', $event)"
@@ -299,6 +306,39 @@
                 :class="isSvgIcon ? 'svg-icon' : ''"
                 @error="imgLoadFailed = true"
             />
+            <!-- Asset-missing placeholder: broken-image glyph so importer
+                 misses are visually obvious without dragging the user into the
+                 filename string. -->
+            <div
+                v-else-if="object.type === 'image' && imgLoadFailed && isNagvisClassic"
+                class="flex items-center justify-center pointer-events-none"
+                :style="{
+                    width: `${object.display?.image_size ?? iconSize ?? 60}px`,
+                    height: `${object.display?.image_size ?? iconSize ?? 60}px`,
+                    border: '1px dashed #b45309',
+                    background: 'rgba(254, 243, 199, 0.85)',
+                    color: '#b45309',
+                    borderRadius: '2px',
+                }"
+                :title="`Asset missing: ${object.image_src ?? object.display?.image ?? ''}`"
+            >
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    :style="{
+                        width: `${Math.min(Math.round((object.display?.image_size ?? iconSize ?? 60) * 0.55), 32)}px`,
+                        height: `${Math.min(Math.round((object.display?.image_size ?? iconSize ?? 60) * 0.55), 32)}px`,
+                    }"
+                >
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M3 17l6-6 4 4 4-4 4 4" />
+                    <line x1="3" y1="3" x2="21" y2="21" />
+                </svg>
+            </div>
             <!-- State circle fallback — SVG for crisp sub-pixel text centering -->
             <!-- Not shown for type=image: if the image fails, the object simply becomes invisible -->
             <svg
@@ -391,7 +431,7 @@
 
             <!-- Stale data badge -->
             <span
-                v-if="state?.stale"
+                v-if="state?.stale && !isNagvisClassic"
                 class="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--color-pending)] text-[var(--text)] flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
                 title="Stale data"
             >
@@ -411,7 +451,7 @@
             </span>
             <!-- Acknowledged badge -->
             <span
-                v-if="state?.acknowledged"
+                v-if="state?.acknowledged && !isNagvisClassic"
                 class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--color-warning)] text-zinc-900 flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
                 title="Acknowledged"
             >
@@ -431,7 +471,7 @@
             </span>
             <!-- Downtime badge -->
             <span
-                v-if="state?.in_downtime"
+                v-if="state?.in_downtime && !isNagvisClassic"
                 class="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-[var(--color-light-blue-50)] text-white flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
                 title="In downtime"
             >
@@ -456,7 +496,8 @@
         <!-- Label -->
         <div
             v-if="object.label?.show && state?.state !== 'NO_PERMISSION'"
-            class="mt-1.5 font-medium whitespace-nowrap pointer-events-none px-1.5 py-0.5 rounded"
+            class="font-medium whitespace-nowrap pointer-events-none"
+            :class="isNagvisClassic ? '' : 'mt-1.5 px-1.5 py-0.5 rounded'"
             :style="labelStyle"
         >
             {{ displayName }}
@@ -500,7 +541,10 @@ const props = defineProps<{
     editMode?: boolean;
     resizeOverride?: { width: number; height: number };
     connectionId?: string;
+    renderMode?: 'default' | 'nagvis_classic';
 }>();
+
+const isNagvisClassic = computed(() => props.renderMode === 'nagvis_classic');
 
 defineEmits<{
     hover: [event: MouseEvent];
@@ -847,6 +891,7 @@ const customIconStyle = computed(() => {
 
 const shouldShowRing = computed(
     () =>
+        !isNagvisClassic.value &&
         !['textbox', 'line', 'host', 'image'].includes(props.object.type) &&
         props.object.display?.mode !== 'gadget' &&
         props.state?.state !== 'NOT_FOUND' &&
@@ -903,6 +948,7 @@ const textboxStyle = computed(() => {
     const bg = props.object.textbox_background;
     const label = props.object.label;
     const hasCustomBg = bg && bg !== 'transparent';
+    const classic = isNagvisClassic.value;
     // Default LabelConfig.color is "#ffffff" — only honour the imported color
     // when the user picked something else, so OrbVis-native boxes stay on the
     // themed text-color over the glass background.
@@ -910,17 +956,27 @@ const textboxStyle = computed(() => {
         label?.color && label.color !== '#ffffff' && label.color !== '#FFFFFF' ? label.color : null;
     return {
         // Blur turns an opaque imported background into a frosted smear.
-        backdropFilter: hasCustomBg ? undefined : 'blur(4px)',
-        background: bg ?? 'var(--bg-glass)',
+        backdropFilter: classic ? 'none' : hasCustomBg ? undefined : 'blur(4px)',
+        background: bg ?? (classic ? 'transparent' : 'var(--bg-glass)'),
         // borderColor alone won't paint without width+style.
         border: border ? `1px solid ${border}` : undefined,
-        color: customColor ?? 'var(--text)',
+        borderRadius: classic ? '0' : undefined,
+        padding: classic ? '0' : undefined,
+        color: customColor ?? (classic ? '#000000' : 'var(--text)'),
         fontSize: label?.size ? `${label.size}px` : undefined,
         fontWeight: label?.weight ?? undefined,
         textAlign: label?.align ?? undefined,
         width: w ? `${w}px` : undefined,
         height: h ? `${h}px` : undefined,
     };
+});
+
+const iconWrapperStyle = computed(() => {
+    if (!isNagvisClassic.value) return undefined;
+    // Clamp width to the icon so a wider label can't shift the icon right via
+    // flex items-center expansion — NagVis pins the icon's top-left to (x,y).
+    const size = props.object.display?.image_size ?? props.iconSize;
+    return { width: `${size}px` };
 });
 
 const labelTransform = computed(() => {
@@ -932,20 +988,47 @@ const labelTransform = computed(() => {
 const labelStyle = computed(() => {
     const bg = props.object.label?.background;
     const width = props.object.label?.width;
+    const classic = isNagvisClassic.value;
+    const hasExplicitBg = bg && bg !== 'transparent';
+    const lx = props.object.label?.x ?? 0;
+    const ly = props.object.label?.y ?? 0;
+    // Classic anchors the label absolutely at (object_x + label_x,
+    // object_y + label_y) — NagVis treats label_y as the absolute Y offset,
+    // not as a delta on top of an already-stacked flex layout.
+    const position = classic
+        ? {
+              position: 'absolute' as const,
+              left: '50%',
+              top: `${ly}px`,
+              transform: `translateX(calc(-50% + ${lx}px))`,
+          }
+        : { transform: labelTransform.value };
+    // Classic mirrors NagVis' .box border (matches the actual element border,
+    // so the rendered line lines up with NagVis pixel-for-pixel); default mode
+    // uses outline to avoid bumping the flex layout it lives inside.
+    const borderStyles = props.object.label_border
+        ? classic
+            ? { border: `1px solid ${props.object.label_border}`, padding: '0 2px' }
+            : { outline: `1px solid ${props.object.label_border}` }
+        : classic
+          ? {}
+          : { outline: '1px solid rgba(255,255,255,0.12)' };
     return {
         fontSize: `${props.object.label?.size ?? 11}px`,
-        color: props.object.label?.color ?? '#e4e4e7',
-        background: bg && bg !== 'transparent' ? bg : 'rgba(0,0,0,0.65)',
-        backdropFilter: 'blur(4px)',
-        textShadow: '0 1px 3px rgba(0,0,0,0.9)',
-        outline: props.object.label_border
-            ? `1px solid ${props.object.label_border}`
-            : '1px solid rgba(255,255,255,0.12)',
-        transform: labelTransform.value,
-        // NagVis label_width wraps long labels at a fixed pixel width.
+        // Classic tightens line-height to NagVis' span box so the label keeps
+        // the same height and doesn't overhang its container.
+        lineHeight: classic ? '1.2' : undefined,
+        color: props.object.label?.color ?? (classic ? '#000000' : '#e4e4e7'),
+        background: hasExplicitBg ? bg : classic ? 'transparent' : 'rgba(0,0,0,0.65)',
+        backdropFilter: classic ? 'none' : 'blur(4px)',
+        textShadow: classic ? 'none' : '0 1px 3px rgba(0,0,0,0.9)',
+        ...borderStyles,
+        ...position,
+        // NagVis label_width clamps width but only wraps on whitespace — single
+        // tokens like "SW01" overflow rather than splitting mid-word.
         width: width ? `${width}px` : undefined,
-        whiteSpace: width ? 'normal' : undefined,
-        wordBreak: width ? ('break-word' as const) : undefined,
+        whiteSpace: width ? (classic ? 'nowrap' : 'normal') : undefined,
+        wordBreak: width && !classic ? ('break-word' as const) : undefined,
     };
 });
 

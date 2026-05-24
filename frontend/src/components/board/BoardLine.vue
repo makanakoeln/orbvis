@@ -34,34 +34,87 @@
                 <stop offset="100%" :stop-color="wmColorOut" />
             </linearGradient>
         </defs>
-        <!-- Border/outline line (rendered behind) — skipped when using a gradient. -->
-        <line
-            v-if="lineColorBorder && !useWeatherColor"
-            :x1="x1"
-            :y1="y1"
-            :x2="trimmedEnd.x2"
-            :y2="trimmedEnd.y2"
-            :stroke="lineColorBorder"
-            :stroke-width="strokeWidthBorder"
-            stroke-linecap="round"
-            :stroke-dasharray="dashArray"
-            pointer-events="none"
-        />
-        <line
-            :x1="trimmedStart.x1"
-            :y1="trimmedStart.y1"
-            :x2="trimmedEnd.x2"
-            :y2="trimmedEnd.y2"
-            :stroke="
-                useWeatherColor && hasDirectionalGradient
-                    ? `url(#${gradientId})`
-                    : effectiveLineColor
-            "
-            :stroke-width="strokeWidth"
-            stroke-linecap="round"
-            :stroke-dasharray="dashArray"
-            pointer-events="none"
-        />
+        <!-- arrow_inward draws as two half-lines that each stop at their
+             midpoint arrowhead base, mirroring NagVis' two-segment rendering
+             so the stroke doesn't run through the meeting arrows. -->
+        <template v-if="isArrowInward && inwardSegments">
+            <line
+                v-if="lineColorBorder"
+                :x1="x1"
+                :y1="y1"
+                :x2="inwardSegments.leftX"
+                :y2="inwardSegments.leftY"
+                :stroke="lineColorBorder"
+                :stroke-width="strokeWidthBorder"
+                stroke-linecap="round"
+                :stroke-dasharray="dashArray"
+                pointer-events="none"
+            />
+            <line
+                v-if="lineColorBorder"
+                :x1="x2"
+                :y1="y2"
+                :x2="inwardSegments.rightX"
+                :y2="inwardSegments.rightY"
+                :stroke="lineColorBorder"
+                :stroke-width="strokeWidthBorder"
+                stroke-linecap="round"
+                :stroke-dasharray="dashArray"
+                pointer-events="none"
+            />
+            <line
+                :x1="x1"
+                :y1="y1"
+                :x2="inwardSegments.leftX"
+                :y2="inwardSegments.leftY"
+                :stroke="effectiveLineColor"
+                :stroke-width="strokeWidth"
+                stroke-linecap="round"
+                :stroke-dasharray="dashArray"
+                pointer-events="none"
+            />
+            <line
+                :x1="x2"
+                :y1="y2"
+                :x2="inwardSegments.rightX"
+                :y2="inwardSegments.rightY"
+                :stroke="effectiveLineColor"
+                :stroke-width="strokeWidth"
+                stroke-linecap="round"
+                :stroke-dasharray="dashArray"
+                pointer-events="none"
+            />
+        </template>
+        <template v-else>
+            <!-- Border/outline line rendered behind the colored fill. -->
+            <line
+                v-if="lineColorBorder"
+                :x1="x1"
+                :y1="y1"
+                :x2="trimmedEnd.x2"
+                :y2="trimmedEnd.y2"
+                :stroke="lineColorBorder"
+                :stroke-width="strokeWidthBorder"
+                stroke-linecap="round"
+                :stroke-dasharray="dashArray"
+                pointer-events="none"
+            />
+            <line
+                :x1="trimmedStart.x1"
+                :y1="trimmedStart.y1"
+                :x2="trimmedEnd.x2"
+                :y2="trimmedEnd.y2"
+                :stroke="
+                    useWeatherColor && hasDirectionalGradient
+                        ? `url(#${gradientId})`
+                        : effectiveLineColor
+                "
+                :stroke-width="strokeWidth"
+                stroke-linecap="round"
+                :stroke-dasharray="dashArray"
+                pointer-events="none"
+            />
+        </template>
         <!-- Arrow at endpoint -->
         <polygon
             v-if="hasEndArrow"
@@ -317,29 +370,30 @@ const dashArray = computed(() => {
     return `${(w * 2.5).toFixed(1)} ${(w * 1.6).toFixed(1)}`;
 });
 
+// NagVis arrow geometry: head length and half-width both 2x the full stroke
+// (= 4x its half-width line_width), tips meeting at the midpoint.
+const INWARD_GAP = 1;
+const inwardArrowLen = computed(() => Math.max(8, strokeWidth.value * 2.0));
+
 // Midpoint inward-facing arrow pair: two triangles nearly touching at the
 // line midpoint, each tip pointing toward an endpoint.
 function midpointArrows(): { left: string; right: string } | null {
     const dx = x2.value - x1.value;
     const dy = y2.value - y1.value;
     const len = Math.sqrt(dx * dx + dy * dy);
-    // Arrow size scales with stroke width so middle arrows stay visible
-    // (a fixed 8-px arrow vanishes inside a 15-px stroke).
     const w = strokeWidth.value;
-    const arrowLen = Math.max(8, w * 2.0);
-    const arrowW = Math.max(5, w * 1.2);
+    const arrowLen = inwardArrowLen.value;
+    const arrowW = Math.max(5, w);
     if (len < arrowLen * 2 + 6) return null; // line too short to fit two arrows + gap
     const ux = dx / len;
     const uy = dy / len;
     const midX = (x1.value + x2.value) / 2;
     const midY = (y1.value + y2.value) / 2;
-    const gap = 1;
-    // Tip toward (x2,y2): tip closer to midpoint, base further along the ray.
+    const gap = INWARD_GAP;
     const rTipX = midX + ux * gap;
     const rTipY = midY + uy * gap;
     const rBaseX = midX + ux * (gap + arrowLen);
     const rBaseY = midY + uy * (gap + arrowLen);
-    // Tip toward (x1,y1): mirror.
     const lTipX = midX - ux * gap;
     const lTipY = midY - uy * gap;
     const lBaseX = midX - ux * (gap + arrowLen);
@@ -353,6 +407,26 @@ function midpointArrows(): { left: string; right: string } | null {
 }
 
 const midArrows = computed(() => midpointArrows());
+
+// Endpoints for the two half-lines: each stops at its arrowhead base so the
+// stroke doesn't run through the meeting arrows.
+const inwardSegments = computed(() => {
+    const dx = x2.value - x1.value;
+    const dy = y2.value - y1.value;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1) return null;
+    const ux = dx / len;
+    const uy = dy / len;
+    const midX = (x1.value + x2.value) / 2;
+    const midY = (y1.value + y2.value) / 2;
+    const back = INWARD_GAP + inwardArrowLen.value;
+    return {
+        leftX: midX - ux * back,
+        leftY: midY - uy * back,
+        rightX: midX + ux * back,
+        rightY: midY + uy * back,
+    };
+});
 
 // Anchor positions for the inbound/outbound bandwidth labels.
 // Placed at ~25%/75% along the line so they always sit clear of the midpoint

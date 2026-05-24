@@ -237,6 +237,7 @@ BoardView = Annotated[
 ]
 
 ClickAction = Literal["link", "none"]
+RenderMode = Literal["default", "nagvis_classic"]
 
 
 class BoardObject(BaseModel):
@@ -363,6 +364,9 @@ class BoardConfig(BaseModel):
     context_template: str | None = None
     background_image: str | None = None
     background_color: str | None = None
+    # Default keeps existing boards on the OrbVis renderer; "nagvis_classic"
+    # opts an imported board into top-left anchoring + flat styling.
+    render_mode: RenderMode = "default"
     # Monotonically incremented per persisted change. Compared against the
     # client's ``If-Match`` header on update; mismatch returns 409 Conflict so
     # two operators editing the same board don't silently lose changes.

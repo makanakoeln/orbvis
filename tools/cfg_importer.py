@@ -143,7 +143,7 @@ class Coord:
 
 # NagVis object_ids are hex-ish strings (e.g. ``5148ed``); accept any
 # alphanumeric+underscore identifier so external imports also resolve.
-_REL_COORD_RE = re.compile(r"^([A-Za-z0-9_]+)%(-?\d+)$")
+_REL_COORD_RE = re.compile(r"^([A-Za-z0-9_]+)%([+-]?\d+)$")
 
 
 def _parse_coord(value: str) -> Coord:
@@ -328,6 +328,27 @@ def _label_x(raw: str | None) -> int:
         return 0
 
 
+def _label_y(raw: str | None) -> int:
+    """Parse legacy ``label_y``.
+
+    NagVis default ``bottom`` puts the label top at ``object_y + icon_height``
+    (22 for the default iconset). Numeric values stay as pixel offsets.
+    """
+    if raw is None:
+        return 22
+    v = raw.strip().lower()
+    if v in ("", "bottom"):
+        return 22
+    if v == "top":
+        return 0
+    if v == "center":
+        return -11
+    try:
+        return int(v.lstrip("+"))
+    except ValueError:
+        return 22
+
+
 def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
     """Build a LabelConfig dict from legacy properties.
 
@@ -337,15 +358,13 @@ def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
     """
     style = _parse_label_style(p.get("label_style"))
     raw_bg = p.get("label_background") or style.get("background")
-    # OrbVis defaults the label text to white. When the importer carries an
-    # opaque light background through, that turns the text invisible — fall
-    # back to black so imported NagVis labels stay readable.
-    default_color = "#000000" if _bg_is_opaque_light(raw_bg) else "#ffffff"
+    # NagVis canvas is light, so default to black; flip only for opaque-dark bg.
+    default_color = "#ffffff" if _bg_is_opaque_dark(raw_bg) else "#000000"
     return {
         "show": _bool(p.get("label_show"), show_default),
         "text": _label_text(p.get("label_text")),
         "x": _label_x(p.get("label_x")),
-        "y": _int(p.get("label_y"), 34),
+        "y": _label_y(p.get("label_y")),
         "size": _int(p.get("label_size"), style.get("size", 11)),
         "color": p.get("label_color") or style.get("color", default_color),
         "background": raw_bg or "transparent",
@@ -353,12 +372,12 @@ def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
     }
 
 
-def _bg_is_opaque_light(value: str | None) -> bool:
+def _bg_brightness(value: str | None) -> float | None:
     if not value:
-        return False
+        return None
     v = value.strip().lower()
     if v in {"transparent", ""}:
-        return False
+        return None
     if v.startswith("#") and len(v) in (4, 7):
         try:
             if len(v) == 4:
@@ -366,9 +385,19 @@ def _bg_is_opaque_light(value: str | None) -> bool:
             else:
                 r, g, b = int(v[1:3], 16), int(v[3:5], 16), int(v[5:7], 16)
         except ValueError:
-            return False
-        return (r + g + b) / 3 > 180
-    return False
+            return None
+        return (r + g + b) / 3
+    return None
+
+
+def _bg_is_opaque_light(value: str | None) -> bool:
+    b = _bg_brightness(value)
+    return b is not None and b > 180
+
+
+def _bg_is_opaque_dark(value: str | None) -> bool:
+    b = _bg_brightness(value)
+    return b is not None and b < 100
 
 
 def _attach_pending_refs(obj: dict[str, Any], **coords: Coord) -> None:
@@ -487,11 +516,15 @@ def _line_obj_common(p: dict[str, str], raw_id: str) -> dict[str, Any]:
         "x2": x2.value,
         "y2": y2.value,
         "label": label,
+        # NagVis default line_color_border = #000000; outline renders behind
+        # the colored fill.
+        "line_color_border": _color_or_default(p.get("line_color_border"), "#000000"),
         **type_attrs,
     }
     _attach_pending_refs(obj, x=x, y=y, x2=x2, y2=y2)
-    if "line_width" in p:
-        obj["line_width"] = _int(p["line_width"])
+    # NagVis line_width is the polygon half-width (-w to +w); OrbVis renders
+    # it as full stroke width. Double on import.
+    obj["line_width"] = _int(p.get("line_width"), 3) * 2
     return obj
 
 
@@ -540,18 +573,12 @@ def _handle_shape(p: dict[str, str], raw_id: str) -> dict[str, Any]:
 
 
 def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, Any]:
-    # NagVis textbox x/y is top-left; OrbVis centers objects on x/y. We can
-    # only translate when the size is numeric — for ``w=auto`` we fall back to
-    # using the legacy top-left position as the OrbVis center.
+    # nagvis_classic anchors top-left; keep raw NagVis coords for 1:1 layout.
     x = _parse_coord(p.get("x", "0"))
     y = _parse_coord(p.get("y", "0"))
 
     width = _auto_size(p.get("w"))
     height = _auto_size(p.get("h"))
-    if width is not None:
-        x.value += width // 2
-    if height is not None:
-        y.value += height // 2
 
     raw_text = p.get("text") or None
     html_style: dict[str, Any] = {}
@@ -587,12 +614,12 @@ def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, Any]:
         obj["textbox_width"] = width
     if height is not None:
         obj["textbox_height"] = height
-    border = _color_or_default(p.get("border_color"), None)
-    if border is not None:
-        obj["textbox_border"] = border
-    # NagVis textbox default is opaque white; persist it so OrbVis doesn't
-    # swap in its dark glass fallback.
-    obj["textbox_background"] = _color_or_default(p.get("background_color"), "#FFFFFF")
+    # NagVis textbox border_color default is #e5e5e5 (light gray); explicit
+    # #000000 in cfg renders prominent black, unset stays subtle.
+    obj["textbox_border"] = _color_or_default(p.get("border_color"), "#e5e5e5")
+    # NagVis default background is transparent; lets lines drawn under the
+    # textbox stay visible on the white canvas.
+    obj["textbox_background"] = _color_or_default(p.get("background_color"), "transparent")
     _attach_pending_refs(obj, x=x, y=y)
     return obj
 
@@ -657,6 +684,8 @@ def _handle_monitor_block(legacy_type: str, p: dict[str, str], raw_id: str) -> d
         "z": _int(p.get("z"), 10),
         "label": _label(p),
         "display": display,
+        # NagVis .box CSS draws every label with a 1px solid border (#e5e5e5).
+        "label_border": (p.get("label_border") or "#e5e5e5").strip(),
     }
     _apply_type_specific(obj, legacy_type, p)
     _apply_object_backend(obj, p)
@@ -742,6 +771,10 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
         "hover_template": None,
         "context_template": None,
         "background_image": None,
+        # cfg-imports render with NagVis-classic top-left anchoring + flat look.
+        "render_mode": "nagvis_classic",
+        # NagVis falls back to a white canvas when map_image is missing.
+        "background_color": "#ffffff",
         "view": {"type": "static"},
         "objects": [],
     }

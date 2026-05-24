@@ -75,17 +75,17 @@ def test_coord_invalid_returns_zero():
 
 def test_line_coords_comma_separated():
     p = {"x": "10,20", "y": "30,40"}
-    assert _line_coords(p) == (10, 30, 20, 40)
+    assert tuple(c.value for c in _line_coords(p)) == (10, 30, 20, 40)
 
 
 def test_line_coords_separate_keys():
     p = {"x": "10", "y": "30", "x2": "20", "y2": "40"}
-    assert _line_coords(p) == (10, 30, 20, 40)
+    assert tuple(c.value for c in _line_coords(p)) == (10, 30, 20, 40)
 
 
 def test_line_coords_defaults_to_zero():
     p: dict = {}
-    assert _line_coords(p) == (0, 0, 0, 0)
+    assert tuple(c.value for c in _line_coords(p)) == (0, 0, 0, 0)
 
 
 # ---------------------------------------------------------------------------
@@ -243,7 +243,7 @@ def test_cfg_to_board_shape():
 
 
 def test_cfg_to_board_textbox_coordinates():
-    # x + w//2, y + h//2
+    # nagvis_classic anchors top-left, so raw NagVis coords are preserved
     content = (
         "define textbox {\n"
         "    object_id = 6\n"
@@ -256,8 +256,8 @@ def test_cfg_to_board_textbox_coordinates():
     )
     board = cfg_to_board(content, "test")
     obj = board["objects"][0]
-    assert obj["x"] == 200  # 100 + 200//2
-    assert obj["y"] == 220  # 200 + 40//2
+    assert obj["x"] == 100
+    assert obj["y"] == 200
 
 
 def test_cfg_to_board_textbox_br_to_newline():
@@ -355,6 +355,9 @@ def test_fixture_global_settings(all_objects_board):
     assert all_objects_board["connection_id"] == "ZWEIFUENF"
     assert all_objects_board["icon_size"] == 30  # iconset=std_big
     assert all_objects_board["view"] == {"type": "static"}
+    # cfg-import boards opt into the NagVis-classic renderer with a white canvas
+    assert all_objects_board["render_mode"] == "nagvis_classic"
+    assert all_objects_board["background_color"] == "#ffffff"
 
 
 def test_fixture_object_count(all_objects_board):
@@ -441,7 +444,8 @@ def test_fixture_service_bound_weathermap_line_carries_metrics(all_objects_board
     assert o["weathermap_metric_out"] == "out"
     # Per-line stroke width is a configurable attribute (default 3 upstream),
     # so an explicit value must round-trip into the imported board.
-    assert o["line_width"] == 5
+    # cfg's line_width=5 is NagVis half-width; doubled on import.
+    assert o["line_width"] == 10
 
 
 def test_legacy_weathermap_style_migrates_to_arrow_inward():
@@ -492,8 +496,8 @@ def test_fixture_textbox_html_stripped(all_objects_board):
     assert isinstance(label, dict)
     # <b>…</b> and other tags stripped, <br> → \n, &nbsp; → real space
     assert label["text"] == "Hello World\nsecond line"
-    # legacy textbox x/y is top-left; OrbVis centers, so x/y shifts by w/2,h/2
-    assert (o["x"], o["y"]) == (200 + 150, 820 + 30)
+    # nagvis_classic anchors top-left, so x/y are the raw NagVis coords
+    assert (o["x"], o["y"]) == (200, 820)
 
 
 def test_fixture_shape_imports_as_image(all_objects_board):

@@ -85,26 +85,99 @@ def _bool(v: str | None, default: bool = False) -> bool:
     return (v or "").strip().lower() in ("1", "true", "yes") if v is not None else default
 
 
-def _coord(v: str) -> int:
+_REL_COORD_RE = re.compile(r"^([A-Za-z0-9_]+)%([+-]?\d+)$")
+_PERCENT_COORD_RE = re.compile(r"^[+-]?\d+%([+-]?\d+)$")
+
+
+class _Coord:
+    """NagVis coordinate. ``ref`` is the referenced object_id if relative."""
+
+    __slots__ = ("offset", "ref", "value")
+
+    def __init__(self, value: int, ref: str | None = None, offset: int | None = None):
+        self.value = value
+        self.ref = ref
+        self.offset = offset
+
+
+def _parse_coord(v: str) -> _Coord:
     v = v.strip()
     if v.lstrip("-").isdigit():
-        return int(v)
-    m = re.match(r"-?\d+%(-?\d+)", v)
-    return int(m.group(1)) if m else 0
+        return _Coord(int(v))
+    # Percent-of-canvas (legacy NagVis "50%100" = 50% + 100 offset) collapses
+    # to the offset; the percent portion of the original viewport reference is
+    # dropped, matching pre-existing behaviour.
+    m = _PERCENT_COORD_RE.match(v)
+    if m:
+        return _Coord(int(m.group(1)))
+    m = _REL_COORD_RE.match(v)
+    if m:
+        return _Coord(value=int(m.group(2)), ref=m.group(1), offset=int(m.group(2)))
+    return _Coord(0)
 
 
-def _line_coords(p: dict[str, str]) -> tuple[int, int, int, int]:
+def _coord(v: str) -> int:
+    return _parse_coord(v).value
+
+
+def _attach_pending(obj: dict[str, object], **coords: _Coord) -> None:
+    refs = {k: c for k, c in coords.items() if c.ref is not None}
+    if refs:
+        obj["_pending_refs"] = {k: {"ref": c.ref, "offset": c.offset or 0} for k, c in refs.items()}
+
+
+def _resolve_pending_refs(objects: list[dict[str, object]]) -> None:
+    """Resolve ``_pending_refs`` against the raw NagVis object_id index.
+
+    Iterates up to 5 passes so transitive chains (A → B → C) settle; NagVis
+    itself warns about cycles so deeper chains are unexpected.
+    """
+    by_raw: dict[str, dict[str, object]] = {}
+    for obj in objects:
+        raw_id = str(obj.get("id", "")).split("_", 1)[-1]
+        if raw_id:
+            by_raw[raw_id] = obj
+    for _ in range(5):
+        changed = False
+        for obj in objects:
+            refs = obj.get("_pending_refs")
+            if not isinstance(refs, dict):
+                continue
+            for axis, ref in list(refs.items()):
+                target = by_raw.get(ref["ref"])
+                if target is None:
+                    continue
+                # x2/y2 reuse the target's x/y — NagVis only stores one endpoint
+                # per object, lines reuse it by axis-name match.
+                base_axis = "x" if axis in ("x", "x2") else "y"
+                target_refs = target.get("_pending_refs")
+                if isinstance(target_refs, dict) and base_axis in target_refs:
+                    continue
+                base_val = target.get(base_axis, 0)
+                assert isinstance(base_val, int)
+                obj[axis] = base_val + int(ref["offset"])
+                refs.pop(axis)
+                changed = True
+            if not refs:
+                obj.pop("_pending_refs", None)
+        if not changed:
+            break
+    for obj in objects:
+        obj.pop("_pending_refs", None)
+
+
+def _line_coords(p: dict[str, str]) -> tuple[_Coord, _Coord, _Coord, _Coord]:
     rx, ry = p.get("x", "0"), p.get("y", "0")
     if "," in rx:
         x1s, x2s = rx.split(",", 1)
-        x, x2 = _coord(x1s), _coord(x2s)
+        x, x2 = _parse_coord(x1s), _parse_coord(x2s)
     else:
-        x, x2 = _coord(rx), _coord(p.get("x2", "0"))
+        x, x2 = _parse_coord(rx), _parse_coord(p.get("x2", "0"))
     if "," in ry:
         y1s, y2s = ry.split(",", 1)
-        y, y2 = _coord(y1s), _coord(y2s)
+        y, y2 = _parse_coord(y1s), _parse_coord(y2s)
     else:
-        y, y2 = _coord(ry), _coord(p.get("y2", "0"))
+        y, y2 = _parse_coord(ry), _parse_coord(p.get("y2", "0"))
     return x, y, x2, y2
 
 
@@ -135,12 +208,12 @@ def _label_x(raw: str | None) -> int:
         return 0
 
 
-def _bg_is_opaque_light(value: str | None) -> bool:
+def _bg_brightness(value: str | None) -> float | None:
     if not value:
-        return False
+        return None
     v = value.strip().lower()
     if v in {"transparent", ""}:
-        return False
+        return None
     if v.startswith("#") and len(v) in (4, 7):
         try:
             if len(v) == 4:
@@ -148,21 +221,53 @@ def _bg_is_opaque_light(value: str | None) -> bool:
             else:
                 r, g, b = int(v[1:3], 16), int(v[3:5], 16), int(v[5:7], 16)
         except ValueError:
-            return False
-        return (r + g + b) / 3 > 180
-    return False
+            return None
+        return (r + g + b) / 3
+    return None
+
+
+def _bg_is_opaque_light(value: str | None) -> bool:
+    b = _bg_brightness(value)
+    return b is not None and b > 180
+
+
+def _bg_is_opaque_dark(value: str | None) -> bool:
+    b = _bg_brightness(value)
+    return b is not None and b < 100
+
+
+def _label_y(raw: str | None) -> int:
+    """Parse legacy ``label_y``.
+
+    NagVis defaults to ``bottom`` which places the label top flush with the
+    icon's bottom edge — that's ``label_top = object_y + icon_height``. With
+    OrbVis' 22-px default icon that's 22. Anything explicit (``+25``, ``-3``,
+    ``0``) is honoured as a relative pixel offset.
+    """
+    if raw is None:
+        return 22
+    v = raw.strip().lower()
+    if v in ("", "bottom"):
+        return 22
+    if v == "top":
+        return 0
+    if v == "center":
+        return -11
+    try:
+        return int(v.lstrip("+"))
+    except ValueError:
+        return 22
 
 
 def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, object]:
     raw_bg = p.get("label_background", "transparent")
-    # OrbVis defaults to white text; flip to black on opaque light backgrounds
-    # so imported NagVis labels don't disappear.
-    default_color = "#000000" if _bg_is_opaque_light(raw_bg) else "#ffffff"
+    # NagVis canvas is light, so default to black; flip only for opaque-dark bg.
+    default_color = "#ffffff" if _bg_is_opaque_dark(raw_bg) else "#000000"
     return {
         "show": _bool(p.get("label_show"), show_default),
         "text": _label_text(p.get("label_text")),
         "x": _label_x(p.get("label_x")),
-        "y": _int(p.get("label_y"), 34),
+        "y": _label_y(p.get("label_y")),
         "size": _int(p.get("label_size"), 11),
         "color": p.get("label_color", default_color),
         "background": raw_bg,
@@ -221,16 +326,21 @@ def _line_obj_common(p: dict[str, str], raw_id: str) -> dict[str, object]:
     obj: dict[str, object] = {
         "id": f"line_{raw_id}",
         "type": "line",
-        "x": x,
-        "y": y,
+        "x": x.value,
+        "y": y.value,
         "z": _int(p.get("z"), 1),
-        "x2": x2,
-        "y2": y2,
+        "x2": x2.value,
+        "y2": y2.value,
         "label": {"show": False},
+        # NagVis default line_color_border = #000000; renders the colored fill
+        # over a black outline.
+        "line_color_border": (p.get("line_color_border") or "").strip() or "#000000",
         **type_attrs,
     }
-    if "line_width" in p:
-        obj["line_width"] = _int(p["line_width"])
+    _attach_pending(obj, x=x, y=y, x2=x2, y2=y2)
+    # NagVis line_width is the polygon half-width (-w to +w); OrbVis renders
+    # it as full stroke width. Double on import.
+    obj["line_width"] = _int(p.get("line_width"), 3) * 2
     return obj
 
 
@@ -267,15 +377,18 @@ def _handle_line_block(p: dict[str, str], raw_id: str) -> dict[str, object]:
 
 
 def _handle_shape(p: dict[str, str], raw_id: str) -> dict[str, object]:
-    return {
+    x, y = _parse_coord(p.get("x", "0")), _parse_coord(p.get("y", "0"))
+    obj: dict[str, object] = {
         "id": f"image_{raw_id}",
         "type": "image",
-        "x": _coord(p.get("x", "0")),
-        "y": _coord(p.get("y", "0")),
+        "x": x.value,
+        "y": y.value,
         "z": _int(p.get("z"), 1),
         "image_src": p.get("icon") or None,
         "label": {"show": False},
     }
+    _attach_pending(obj, x=x, y=y)
+    return obj
 
 
 # HTML <font size="N"> maps to fixed pixel sizes (legacy spec).
@@ -349,9 +462,9 @@ def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, object]:
     height = (
         _int(p.get("h"), 40) if (p.get("h") or "").strip().lower() not in {"auto", ""} else None
     )
-    # legacy textbox x/y is top-left; OrbVis centers objects — offset by half w/h
-    tx = _coord(p.get("x", "0")) + (width // 2 if width else 0)
-    ty = _coord(p.get("y", "0")) + (height // 2 if height else 0)
+    # nagvis_classic anchors top-left; keep raw NagVis coords for 1:1 layout.
+    tx = _parse_coord(p.get("x", "0"))
+    ty = _parse_coord(p.get("y", "0"))
     label: dict[str, object] = {
         "show": True,
         "text": raw_text,
@@ -368,21 +481,22 @@ def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, object]:
     obj: dict[str, object] = {
         "id": f"textbox_{raw_id}",
         "type": "textbox",
-        "x": tx,
-        "y": ty,
+        "x": tx.value,
+        "y": ty.value,
         "z": _int(p.get("z"), 1),
         "label": label,
-        # NagVis textbox default is opaque white; persist it so OrbVis doesn't
-        # swap in its dark glass fallback.
-        "textbox_background": (p.get("background_color") or "").strip() or "#FFFFFF",
+        # NagVis default is transparent; lets lines drawn under the textbox
+        # stay visible on the white canvas.
+        "textbox_background": (p.get("background_color") or "").strip() or "transparent",
     }
+    _attach_pending(obj, x=tx, y=ty)
     if width is not None:
         obj["textbox_width"] = width
     if height is not None:
         obj["textbox_height"] = height
-    border = (p.get("border_color") or "").strip()
-    if border:
-        obj["textbox_border"] = border
+    # NagVis textbox border_color default is #e5e5e5 (light gray); explicit
+    # #000000 in cfg renders prominent black, unset stays subtle.
+    obj["textbox_border"] = (p.get("border_color") or "").strip() or "#e5e5e5"
     return obj
 
 
@@ -435,15 +549,19 @@ def _apply_type_specific(obj: dict[str, object], block_type: str, p: dict[str, s
 def _handle_monitor_block(block_type: str, p: dict[str, str], raw_id: str) -> dict[str, object]:
     """host / service / hostgroup / servicegroup / map / aggr."""
     orbvis_type = "aggregation" if block_type == "aggr" else block_type
+    x, y = _parse_coord(p.get("x", "0")), _parse_coord(p.get("y", "0"))
     obj: dict[str, object] = {
         "id": f"{orbvis_type}_{raw_id}",
         "type": orbvis_type,
-        "x": _coord(p.get("x", "0")),
-        "y": _coord(p.get("y", "0")),
+        "x": x.value,
+        "y": y.value,
         "z": _int(p.get("z"), 1),
         "label": _label(p),
         "display": _build_display(p),
+        # NagVis .box CSS draws every label with a 1px solid border (#e5e5e5).
+        "label_border": (p.get("label_border") or "#e5e5e5").strip(),
     }
+    _attach_pending(obj, x=x, y=y)
     _apply_type_specific(obj, block_type, p)
     if "url" in p:
         obj["url"] = p["url"]
@@ -479,6 +597,10 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, object]:
         "hover_template": None,
         "context_template": None,
         "background_image": None,
+        # cfg-imports render with NagVis-classic top-left anchoring + flat look.
+        "render_mode": "nagvis_classic",
+        # NagVis falls back to a white canvas when map_image is missing.
+        "background_color": "#ffffff",
         "view": {"type": "static"},
         "objects": [],
     }
@@ -496,6 +618,8 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, object]:
         obj = _handle_object_block(block_type, p, raw_id)
         if obj is not None:
             objects.append(obj)
+
+    _resolve_pending_refs(objects)
 
     view = board.get("view")
     if isinstance(view, dict) and view.get("type") == "flow":

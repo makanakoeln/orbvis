@@ -97,6 +97,7 @@
                 :edit-mode="editMode"
                 :resize-override="localResizeDimensions[obj.id]"
                 :connection-id="config.connection_id"
+                :render-mode="config.render_mode ?? 'default'"
                 @hover="!editMode && openHoverMenu($event, obj)"
                 @hover-leave="!editMode && closeHoverMenu()"
                 @graph-resize-start="onGraphResizeStart($event, obj)"
@@ -335,6 +336,7 @@ const _heightExtent = (o: BoardObjectType) =>
     o.y + (o.type === 'graph' ? (o.graph_height ?? 200) : 150);
 const canvasWidth = ref(800);
 const canvasHeight = ref(600);
+const isNagvisClassic = computed(() => props.config.render_mode === 'nagvis_classic');
 function _setIfChanged(ref_: typeof canvasWidth, next: number) {
     if (ref_.value !== next) ref_.value = next;
 }
@@ -395,6 +397,14 @@ const canvasStyle = computed(() => {
             height: `${canvasHeight.value}px`,
             zoom: String(fit),
         };
+    } else if (isNagvisClassic.value && canvasWidth.value && canvasHeight.value) {
+        // NagVis renders at native pixel size with scrollbars instead of
+        // asymmetric-stretching to fit the pane.
+        base = {
+            width: `${canvasWidth.value}px`,
+            height: `${canvasHeight.value}px`,
+        };
+        if (userZoom.value !== 1) base.zoom = String(userZoom.value);
     } else {
         base =
             pane.width && pane.height
@@ -448,14 +458,16 @@ function resetZoom(): void {
 const canvasCursorClass = computed(() => {
     if (props.placing) return 'cursor-crosshair';
     if (_panActive.value) return 'cursor-grabbing';
-    if (!props.editMode && userZoom.value > 1) return 'cursor-grab';
+    if (!props.editMode && (userZoom.value > 1 || isNagvisClassic.value)) return 'cursor-grab';
     return '';
 });
 
 function onCanvasPointerDown(event: PointerEvent): void {
     if (event.button !== 0) return;
     if (props.editMode || props.placing) return;
-    if (userZoom.value <= 1) return;
+    // Pan-on-drag activates whenever the canvas overflows the pane: either
+    // the user zoomed in, or nagvis_classic renders at native size.
+    if (userZoom.value <= 1 && !isNagvisClassic.value) return;
     if ((event.target as HTMLElement | null)?.closest('[data-object-id]')) return;
     const scroller = findScrollAncestor(canvasEl.value);
     if (!scroller) return;
@@ -558,10 +570,12 @@ function objectWrapperStyle(obj: BoardObjectType) {
     // same bg-pixel regardless of how the canvas is scaled to fit the pane.
     const w = canvasWidth.value || 1;
     const h = canvasHeight.value || 1;
+    // nagvis_classic anchors top-left; default centers on (x, y).
+    const transform = isNagvisClassic.value ? 'none' : 'translate(-50%, -50%)';
     return {
         left: `${(pos.x / w) * 100}%`,
         top: `${(pos.y / h) * 100}%`,
-        transform: 'translate(-50%, -50%)',
+        transform,
         cursor,
         zIndex,
         opacity: matchesSearch(obj) ? 1 : 0.25,

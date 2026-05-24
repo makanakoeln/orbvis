@@ -259,7 +259,7 @@ def test_textbox_auto_size_does_not_shift_position(tmp_path: Path):
     assert "textbox_height" not in obj
 
 
-def test_textbox_numeric_size_shifts_to_center_and_persists(tmp_path: Path):
+def test_textbox_numeric_size_keeps_raw_coords(tmp_path: Path):
     cfg_text = textwrap.dedent("""
         define textbox {
             text=hello
@@ -278,8 +278,9 @@ def test_textbox_numeric_size_shifts_to_center_and_persists(tmp_path: Path):
     obj = blocks_to_board_json(blocks, "tb-num")["objects"][0]
     assert obj["textbox_width"] == 300
     assert obj["textbox_height"] == 40
-    assert obj["x"] == 250  # 100 + 300/2
-    assert obj["y"] == 220  # 200 + 40/2
+    # nagvis_classic anchors top-left, raw NagVis coords stay untouched
+    assert obj["x"] == 100
+    assert obj["y"] == 200
     assert obj["textbox_background"] == "#222222"
     assert obj["textbox_border"] == "transparent"
 
@@ -401,6 +402,22 @@ def test_background_color_imported(tmp_path: Path):
     blocks = parse_cfg_file(cfg)
     result = blocks_to_board_json(blocks, "bg")
     assert result["background_color"] == "#e8e8e8"
+
+
+def test_import_sets_nagvis_classic_render_mode(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define global {
+            alias=Demo
+        }
+    """)
+    cfg = tmp_path / "rm.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    result = blocks_to_board_json(blocks, "rm")
+    assert result["render_mode"] == "nagvis_classic"
+    # NagVis-Default ohne map_image: weißer Canvas, damit OrbVis-Dark-Theme
+    # nicht durchschlägt.
+    assert result["background_color"] == "#ffffff"
 
 
 def test_gadget_speedometer(tmp_path: Path):
