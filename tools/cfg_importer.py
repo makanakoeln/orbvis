@@ -268,7 +268,8 @@ def _extract_html_style(html: str) -> dict[str, Any]:
     out: dict[str, Any] = {}
     m = re.search(r'<font[^>]*color=["\']([^"\']+)', html, re.IGNORECASE)
     if not m:
-        m = re.search(r'color\s*:\s*([^;"\']+)', html, re.IGNORECASE)
+        # Lookbehind keeps `background-color:` from matching as a `color:` suffix.
+        m = re.search(r'(?<![-\w])color\s*:\s*([^;"\']+)', html, re.IGNORECASE)
     if m:
         out["color"] = m.group(1).strip()
     m = re.search(r'font-size\s*:\s*([^;"\']+)', html, re.IGNORECASE)

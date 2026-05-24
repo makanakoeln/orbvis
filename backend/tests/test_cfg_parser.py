@@ -272,6 +272,25 @@ def test_cfg_to_board_textbox_html_stripped():
     assert board["objects"][0]["label"]["text"] == "Bold text"
 
 
+def test_cfg_to_board_textbox_background_color_is_not_text_color():
+    # `background-color:` must not be picked up as the `color:` text color.
+    content = (
+        "define textbox {\n    x = 0\n    y = 0\n"
+        '    text = <span style="background-color:#222222">Hi</span>\n}\n'
+    )
+    board = cfg_to_board(content, "test")
+    assert board["objects"][0]["label"]["color"] == "#000000"
+
+
+def test_cfg_to_board_textbox_explicit_color_after_background():
+    content = (
+        "define textbox {\n    x = 0\n    y = 0\n"
+        '    text = <span style="background-color:#222;color:#0f0">Hi</span>\n}\n'
+    )
+    board = cfg_to_board(content, "test")
+    assert board["objects"][0]["label"]["color"] == "#0f0"
+
+
 # ---------------------------------------------------------------------------
 # cfg_to_board — url_target mapping
 # ---------------------------------------------------------------------------
