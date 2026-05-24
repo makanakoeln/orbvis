@@ -990,7 +990,7 @@ const iconWrapperStyle = computed(() => {
     if (!isNagvisClassic.value) return undefined;
     // Clamp width to the icon so a wider label can't shift the icon right via
     // flex items-center expansion — NagVis pins the icon's top-left to (x,y).
-    const size = props.object.display?.image_size ?? props.iconSize;
+    const size = props.object.display?.image_size ?? props.iconSize ?? 60;
     return { width: `${size}px` };
 });
 
