@@ -1856,6 +1856,8 @@ function objectHasMonitoringTarget(obj: BoardObject): boolean {
         case 'hostgroup':
         case 'servicegroup':
             return Boolean(obj.group_name);
+        case 'dyngroup':
+            return Boolean(obj.object_filter);
         case 'aggregation':
             return Boolean(obj.aggregation_id);
         default:

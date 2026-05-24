@@ -1632,11 +1632,15 @@ const checkInfoRows = computed<MetaRow[]>(() => {
     const rows: MetaRow[] = [];
     const now = Math.floor(Date.now() / 1000);
 
-    // BI aggregations have no notion of check attempts — Checkmk reports 0/0
-    // which would only confuse the operator.
+    // Aggregators have no check attempts of their own — 0/0 would confuse.
     const objType = props.object?.type;
+    const isAggregator =
+        objType === 'aggregation' ||
+        objType === 'hostgroup' ||
+        objType === 'servicegroup' ||
+        objType === 'dyngroup';
     if (
-        objType !== 'aggregation' &&
+        !isAggregator &&
         typeof s.current_attempt === 'number' &&
         typeof s.max_attempts === 'number'
     ) {
