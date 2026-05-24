@@ -58,15 +58,8 @@ _TEMPLATES = OrbDictGroup(
 )
 
 
-def _connection_choice_title(cid: str, label: str, backend: str, alive: bool) -> str:
-    """Format a SingleChoice title as ``label (id) · backend  status``."""
-    head = f"{label} ({cid})" if label and label != cid else cid
-    body = f"{head} · {backend}" if backend else head
-    return f"{body}  {'●' if alive else '⚠ offline'}"
-
-
 def _connection_form(
-    choices: Sequence[tuple[str, str, str, bool]] | None,
+    choices: Sequence[tuple[str, str]] | None,
 ) -> SingleChoice | String:
     # Empty list keeps the form editable on fresh installs that have no
     # connections registered yet — falls back to free-text so the operator
@@ -88,17 +81,13 @@ def _connection_form(
             "Individual objects can override this."
         ),
         elements=[
-            SingleChoiceElement(
-                name=cid,
-                title=Title(_connection_choice_title(cid, label, backend, alive)),
-            )
-            for cid, label, backend, alive in choices
+            SingleChoiceElement(name=cid, title=Title(label or cid)) for cid, label in choices
         ],
     )
 
 
 def board_metadata_spec(
-    connection_choices: Sequence[tuple[str, str, str, bool]] | None = None,
+    connection_choices: Sequence[tuple[str, str]] | None = None,
 ) -> Dictionary:
     return Dictionary(
         title=Title("Board settings"),
@@ -258,7 +247,7 @@ BULK_METADATA_FIELDS = tuple(f for f in METADATA_FIELDS if f != "alias")
 
 
 def _build_bulk_metadata_spec(
-    connection_choices: Sequence[tuple[str, str, str, bool]] | None,
+    connection_choices: Sequence[tuple[str, str]] | None,
 ) -> Dictionary:
     # required=False makes FormEdit render a per-field activation checkbox,
     # so only the elements the operator ticks end up in the wire payload.
@@ -284,7 +273,7 @@ def _build_bulk_metadata_spec(
 
 
 def board_bulk_metadata_spec(
-    connection_choices: Sequence[tuple[str, str, str, bool]] | None = None,
+    connection_choices: Sequence[tuple[str, str]] | None = None,
 ) -> Dictionary:
     return _build_bulk_metadata_spec(connection_choices)
 

@@ -64,14 +64,16 @@ _COLOR_REGEX = r"^(#[0-9a-fA-F]{6}|transparent)$"
 _COLOR_ERROR = Message("Use a 6-digit hex code like '#ffffff' or the literal 'transparent'.")
 
 
-def _default_connection_element(connection_ids: Sequence[str]) -> DictElement[object]:
-    """Render Connection as SingleChoice over actual connection IDs.
+def _default_connection_element(
+    connection_choices: Sequence[tuple[str, str]],
+) -> DictElement[object]:
+    """Render Connection as SingleChoice over actual connections.
 
     A free-text String let a typo silently break every newly created board's
     state lookup. Empty list → keep field disabled with a helpful message
     that nudges the operator toward the Connections page first.
     """
-    if connection_ids:
+    if connection_choices:
         return DictElement(
             required=True,
             group=_BOARD_DEFAULTS,
@@ -79,9 +81,10 @@ def _default_connection_element(connection_ids: Sequence[str]) -> DictElement[ob
                 title=Title("Connection"),
                 help_text=Help("Pre-selected when creating a new board."),
                 elements=[
-                    SingleChoiceElement(name=cid, title=Title(cid)) for cid in connection_ids
+                    SingleChoiceElement(name=cid, title=Title(label or cid))
+                    for cid, label in connection_choices
                 ],
-                prefill=DefaultValue(connection_ids[0]),
+                prefill=DefaultValue(connection_choices[0][0]),
             ),
         )
     return DictElement(
@@ -98,8 +101,10 @@ def _default_connection_element(connection_ids: Sequence[str]) -> DictElement[ob
     )
 
 
-def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Dictionary:
-    cids = tuple(connection_ids or ())
+def global_settings_spec(
+    connection_choices: Sequence[tuple[str, str]] | None = None,
+) -> Dictionary:
+    choices = tuple(connection_choices or ())
     return Dictionary(
         title=Title("Global Settings"),
         help_text=Help(
@@ -108,7 +113,7 @@ def global_settings_spec(connection_ids: Sequence[str] | None = None) -> Diction
         ),
         elements={
             # ── Board defaults ──
-            "default_backend_id": _default_connection_element(cids),
+            "default_backend_id": _default_connection_element(choices),
             "default_map_type": DictElement(
                 required=True,
                 group=_BOARD_DEFAULTS,

@@ -210,8 +210,8 @@ if FORM_SPECS_AVAILABLE:
         # Default-Connection is a SingleChoice over actual connection IDs — load
         # them here so the FormSpec validates the saved value against real targets
         # instead of accepting a typo.
-        connection_ids = [c.id for c in connection_service.load_all()]
-        return serialize_form_spec(global_settings_spec(connection_ids))
+        connection_choices = [(c.id, c.label) for c in connection_service.load_all()]
+        return serialize_form_spec(global_settings_spec(connection_choices))
 
     def _optional_str(v: object) -> str | None:
         if v is None or v == "":
