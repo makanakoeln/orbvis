@@ -198,6 +198,7 @@ export interface BoardConfig {
     background_image?: string | null;
     background_color?: string | null;
     render_mode?: RenderMode;
+    show_in_lists?: boolean;
     version?: number;
     view: BoardView;
     objects: BoardObject[];

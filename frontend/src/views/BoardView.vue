@@ -1242,6 +1242,7 @@ const boardConfigAsRead = computed<import('@/types/api').BoardRead | null>(() =>
         name: cfg.name,
         alias: cfg.alias,
         background_image: cfg.background_image,
+        background_color: cfg.background_color,
         icon_size: cfg.icon_size,
         connection_id: cfg.connection_id,
         view_type: cfg.view.type,
@@ -1251,9 +1252,11 @@ const boardConfigAsRead = computed<import('@/types/api').BoardRead | null>(() =>
         sort_order: cfg.sort_order,
         click_action: cfg.click_action,
         readonly: cfg.readonly,
+        show_in_lists: cfg.show_in_lists,
         hover_template: cfg.hover_template,
         context_template: cfg.context_template,
         render_mode: cfg.render_mode,
+        version: cfg.version,
     };
 });
 const canvasRef = ref<InstanceType<typeof BoardCanvas> | null>(null);
