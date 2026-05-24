@@ -92,9 +92,26 @@ ObjectType = Literal[
 ]
 
 
-# Forwarded to Livestatus verbatim — restrict to Filter: lines so GET / Stats:
-# / Columns: cannot be injected. Mirrors NagVis MATCH_LIVESTATUS_FILTER.
-DYNGROUP_FILTER_RE = re.compile(r"^(?:Filter: [^\n]+(?:\\n|\n))+$")
+# A dyngroup filter is forwarded to Livestatus. Only the safe filter-combinator
+# headers may appear — anything else (Stats:, Columns:, OutputFormat:, GET,
+# AuthUser:, …) would change the query semantics or exfiltrate data.
+_SAFE_FILTER_LINE_RE = re.compile(r"^(?:Filter|And|Or|Negate): .+$")
+
+
+def normalize_object_filter(value: str) -> str:
+    """Validate and canonicalise a dyngroup Livestatus filter.
+
+    NagVis stores filters with literal ``\\n`` separators and unescapes them at
+    query time, so a single Filter: line often arrives without a real newline.
+    We normalise to real newlines and require every logical line to be a safe
+    combinator header — otherwise an escaped newline could smuggle in
+    ``Stats:``/``Columns:``/``GET`` headers (the regex ``[^\\n]+`` previously let
+    the literal ``\\n`` through untouched).
+    """
+    lines = [ln.strip() for ln in value.replace("\\n", "\n").splitlines() if ln.strip()]
+    if not lines or not all(_SAFE_FILTER_LINE_RE.fullmatch(ln) for ln in lines):
+        raise ValueError("object_filter must be one or more 'Filter: …' lines")
+    return "\n".join(lines) + "\n"
 
 
 class AggregationInfo(BaseModel):
@@ -330,9 +347,7 @@ class BoardObject(BaseModel):
     def _validate_object_filter(cls, v: str | None) -> str | None:
         if v is None or not v.strip():
             return None
-        if not DYNGROUP_FILTER_RE.fullmatch(v):
-            raise ValueError("object_filter must be one or more 'Filter: …\\n' lines")
-        return v
+        return normalize_object_filter(v)
 
     @model_validator(mode="before")
     @classmethod
@@ -503,9 +518,7 @@ class BoardObjectUpdate(BaseModel):
     def _validate_object_filter(cls, v: str | None) -> str | None:
         if v is None or not v.strip():
             return None
-        if not DYNGROUP_FILTER_RE.fullmatch(v):
-            raise ValueError("object_filter must be one or more 'Filter: …\\n' lines")
-        return v
+        return normalize_object_filter(v)
 
     @model_validator(mode="before")
     @classmethod

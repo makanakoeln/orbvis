@@ -923,8 +923,8 @@ class LivestatusConnection(ConnectionBase):
 
     async def get_dyngroup_state(self, object_types: str, object_filter: str) -> ObjectState:
         # NagVis-style: feed the validated filter into GET hosts/services and
-        # aggregate worst-of. Filter regex enforcement happens at the schema
-        # layer (DYNGROUP_FILTER_RE) so we don't double-check here.
+        # aggregate worst-of. normalize_object_filter at the schema layer has
+        # already restricted this to safe Filter:/And:/Or: lines.
         lql_filter = object_filter.replace("\\n", "\n")
         if not lql_filter.endswith("\n"):
             lql_filter += "\n"

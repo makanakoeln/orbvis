@@ -27,7 +27,7 @@ if FORM_SPECS_AVAILABLE:
         form_data_to_config,
     )
 from app.models.user import User
-from app.schemas.board import DYNGROUP_FILTER_RE, AggregationInfo, AggregationNode
+from app.schemas.board import AggregationInfo, AggregationNode, normalize_object_filter
 from app.schemas.connection import (
     REDACTED_SECRET,
     ConnectionConfig,
@@ -737,9 +737,7 @@ class DyngroupMembersRequest(BaseModel):
     @field_validator("object_filter")
     @classmethod
     def _validate_filter(cls, v: str) -> str:
-        if not DYNGROUP_FILTER_RE.fullmatch(v):
-            raise ValueError("object_filter must be one or more 'Filter: …\\n' lines")
-        return v
+        return normalize_object_filter(v)
 
 
 @router.post(

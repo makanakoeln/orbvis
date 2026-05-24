@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.core.image_security import is_safe_svg
-from app.schemas.board import BoardObject, BoardObjectUpdate
+from app.schemas.board import BoardObject, BoardObjectUpdate, normalize_object_filter
 from app.schemas.connection import REDACTED_SECRET, ConnectionConfig, _redact
 
 
@@ -115,3 +115,48 @@ class TestSvgSafety:
             b"</svg>"
         )
         assert is_safe_svg(bad) is False
+
+
+class TestDyngroupFilterValidation:
+    """object_filter is forwarded to Livestatus, so non-Filter headers must not
+    survive — including ones smuggled in via an escaped ``\\n``."""
+
+    def test_single_line_without_trailing_newline_is_accepted(self) -> None:
+        # NagVis stores single-filter dyngroups without a trailing separator.
+        assert normalize_object_filter("Filter: host_name ~ ^web") == "Filter: host_name ~ ^web\n"
+
+    def test_normalises_literal_backslash_n_separator(self) -> None:
+        out = normalize_object_filter("Filter: a\\nFilter: b")
+        assert out == "Filter: a\nFilter: b\n"
+
+    def test_accepts_combinator_headers(self) -> None:
+        out = normalize_object_filter("Filter: a\\nFilter: b\\nOr: 2")
+        assert out == "Filter: a\nFilter: b\nOr: 2\n"
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "Filter: a\\nStats: state = 0",
+            "Filter: a\\nColumns: name address",
+            "Filter: a\\nOutputFormat: python",
+            "Filter: a\\nGET hosts",
+            "Filter: a\\nAuthUser: admin",
+            "Stats: state = 0",
+            "GET hosts",
+        ],
+    )
+    def test_rejects_injected_headers(self, value: str) -> None:
+        with pytest.raises(ValueError):
+            normalize_object_filter(value)
+
+    def test_board_object_rejects_injection(self) -> None:
+        with pytest.raises(ValidationError):
+            BoardObject(
+                id="d1",
+                type="dyngroup",
+                object_filter="Filter: a\\nStats: state = 0",
+            )
+
+    def test_board_object_update_normalises_filter(self) -> None:
+        obj = BoardObjectUpdate(object_filter="Filter: host_name ~ ^web")
+        assert obj.object_filter == "Filter: host_name ~ ^web\n"
