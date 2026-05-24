@@ -158,8 +158,8 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
 
 <style scoped>
 .board-search {
-    position: absolute;
-    top: var(--dimension-5);
+    position: fixed;
+    top: calc(36px + var(--dimension-5));
     right: var(--dimension-5);
     z-index: 6;
     display: flex;

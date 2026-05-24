@@ -21,12 +21,10 @@ defineEmits<{ reset: [] }>();
 </script>
 
 <style scoped>
-/* Sits left of the BoardSearch filter (top:5 right:5 inside the canvas
-   wrapper, ≈ 200 px wide). Vertical 48 px clears the 36 px topbar. */
 .board-zoom-reset {
     position: fixed;
-    top: 48px;
-    right: calc(var(--dimension-5) + 215px);
+    bottom: var(--dimension-5);
+    left: var(--dimension-5);
     z-index: 6;
     padding: 6px 14px;
     border-radius: var(--border-radius);

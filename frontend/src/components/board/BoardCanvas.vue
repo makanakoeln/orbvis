@@ -2,11 +2,12 @@
     <div
         ref="canvasEl"
         class="relative select-none bg-[var(--bg)]"
-        :class="placing ? 'cursor-crosshair' : ''"
+        :class="canvasCursorClass"
         :style="canvasStyle"
         :data-native-width="canvasWidth"
         :data-native-height="canvasHeight"
         @click="onCanvasClick"
+        @pointerdown="onCanvasPointerDown"
         @pointermove.prevent="onCanvasPointerMove"
         @pointerup="onCanvasPointerUp"
         @pointercancel="onCanvasPointerUp"
@@ -281,6 +282,15 @@ const localDragPositions = reactive<Record<string, { x: number; y: number }>>({}
 // deselect the just-selected object.
 const _suppressNextCanvasClick = ref(false);
 
+// Pan-drag state (view mode, zoomed > 1)
+const _panActive = ref(false);
+const _panPointerId = ref<number | null>(null);
+const _panStartX = ref(0);
+const _panStartY = ref(0);
+const _panStartScrollLeft = ref(0);
+const _panStartScrollTop = ref(0);
+const _panScroller = ref<HTMLElement | null>(null);
+
 // Graph resize state
 const _resizeId = ref<string | null>(null);
 const _resizeInitW = ref(0);
@@ -410,16 +420,11 @@ const userZoom = ref(1);
 const paneSize = ref<{ width: number; height: number }>({ width: 0, height: 0 });
 
 function onCanvasWheel(event: WheelEvent): void {
-    // ctrl+wheel = zoom (matches browsers' image-viewer / map convention).
-    // Bare wheel keeps the outer container's natural scroll behaviour.
-    // Edit mode is fixed at user_zoom=1 so drag-coord math stays simple.
-    if (props.editMode || !event.ctrlKey) return;
+    if (props.editMode) return;
     event.preventDefault();
     const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
     const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, userZoom.value * factor));
     if (next === userZoom.value) return;
-    // Anchor zoom around the cursor: scroll the outer container so the point
-    // under the mouse stays under the mouse after the size change.
     const outer = findScrollAncestor(canvasEl.value);
     if (outer) {
         const rect = canvasEl.value!.getBoundingClientRect();
@@ -438,6 +443,30 @@ function onCanvasWheel(event: WheelEvent): void {
 
 function resetZoom(): void {
     userZoom.value = 1;
+}
+
+const canvasCursorClass = computed(() => {
+    if (props.placing) return 'cursor-crosshair';
+    if (_panActive.value) return 'cursor-grabbing';
+    if (!props.editMode && userZoom.value > 1) return 'cursor-grab';
+    return '';
+});
+
+function onCanvasPointerDown(event: PointerEvent): void {
+    if (event.button !== 0) return;
+    if (props.editMode || props.placing) return;
+    if (userZoom.value <= 1) return;
+    if ((event.target as HTMLElement | null)?.closest('[data-object-id]')) return;
+    const scroller = findScrollAncestor(canvasEl.value);
+    if (!scroller) return;
+    _panActive.value = true;
+    _panPointerId.value = event.pointerId;
+    _panStartX.value = event.clientX;
+    _panStartY.value = event.clientY;
+    _panStartScrollLeft.value = scroller.scrollLeft;
+    _panStartScrollTop.value = scroller.scrollTop;
+    _panScroller.value = scroller;
+    canvasEl.value?.setPointerCapture(event.pointerId);
 }
 
 // canvasScale feeds child SVG layers (lines, arrows, line labels) that draw
@@ -599,6 +628,13 @@ function onGraphResizeStart(event: PointerEvent, obj: BoardObjectType) {
 }
 
 function onCanvasPointerMove(event: PointerEvent) {
+    if (_panActive.value && _panScroller.value) {
+        const scroller = _panScroller.value;
+        scroller.scrollLeft = _panStartScrollLeft.value - (event.clientX - _panStartX.value);
+        scroller.scrollTop = _panStartScrollTop.value - (event.clientY - _panStartY.value);
+        return;
+    }
+
     // Handle graph resize
     const rid = _resizeId.value;
     if (rid) {
@@ -636,6 +672,21 @@ function onCanvasPointerMove(event: PointerEvent) {
 }
 
 function onCanvasPointerUp(event: PointerEvent) {
+    if (_panActive.value) {
+        _panActive.value = false;
+        if (_panPointerId.value !== null) {
+            try {
+                canvasEl.value?.releasePointerCapture(_panPointerId.value);
+            } catch {
+                // pointer may already be released
+            }
+        }
+        _panPointerId.value = null;
+        _panScroller.value = null;
+        _suppressNextCanvasClick.value = true;
+        return;
+    }
+
     // Finalize graph resize
     const rid = _resizeId.value;
     if (rid) {
