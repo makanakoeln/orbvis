@@ -80,6 +80,10 @@ class GlobalSettings(BaseModel):
     # Default tile URL applied to new Geo boards. ``None`` keeps the per-board
     # default the BoardSettingsModal already picks (CartoDB dark in dark mode).
     default_tile_url: str | None = None
+    # Per-user preference for the Home boards overview: visual card grid
+    # (default) or scannable table. Persisted so each operator keeps their
+    # preferred layout across browsers.
+    board_list_view: Literal["cards", "table"] = "cards"
 
 
 class SystemSettings(BaseModel):

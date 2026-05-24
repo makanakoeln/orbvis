@@ -23,6 +23,7 @@ export const SETTINGS_DEFAULTS: GlobalSettings = {
     default_map_type: 'static',
     hover_template: null,
     context_template: null,
+    board_list_view: 'cards',
 };
 
 export const SYSTEM_DEFAULTS: SystemSettings = {

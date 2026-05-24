@@ -252,6 +252,42 @@ METADATA_FIELDS = (
     "context_template",
 )
 
+# ``alias`` stays single-board: applying one alias to many would collapse
+# their identities. Everything else is safe to overwrite in bulk.
+BULK_METADATA_FIELDS = tuple(f for f in METADATA_FIELDS if f != "alias")
+
+
+def _build_bulk_metadata_spec(
+    connection_choices: Sequence[tuple[str, str, str, bool]] | None,
+) -> Dictionary:
+    # required=False makes FormEdit render a per-field activation checkbox,
+    # so only the elements the operator ticks end up in the wire payload.
+    single = board_metadata_spec(connection_choices)
+    elements = {
+        key: DictElement(
+            required=False,
+            group=elem.group,
+            parameter_form=elem.parameter_form,
+        )
+        for key, elem in single.elements.items()
+        if key in BULK_METADATA_FIELDS
+    }
+    return Dictionary(
+        title=Title("Apply to selected boards"),
+        help_text=Help(
+            "Pick the fields you want to overwrite on every selected board. "
+            "Unchecked fields stay untouched. Read-only demo boards are "
+            "skipped automatically."
+        ),
+        elements=elements,
+    )
+
+
+def board_bulk_metadata_spec(
+    connection_choices: Sequence[tuple[str, str, str, bool]] | None = None,
+) -> Dictionary:
+    return _build_bulk_metadata_spec(connection_choices)
+
 
 def rotation_to_form(interval: object) -> list[object]:
     """Flat ``rotation_interval`` int → CascadingSingleChoice wire shape."""

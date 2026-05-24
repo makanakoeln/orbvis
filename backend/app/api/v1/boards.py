@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import io
+import json
 import os
 import sqlite3
 import tempfile
+import zipfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.responses import JSONResponse
 
 from app.api.v1.deps import (
@@ -31,6 +34,10 @@ from app.schemas.board import (
     BoardBulkDelete,
     BoardBulkDeleteFailure,
     BoardBulkDeleteResult,
+    BoardBulkEdit,
+    BoardBulkEditFailure,
+    BoardBulkEditResult,
+    BoardBulkExport,
     BoardClone,
     BoardConfig,
     BoardCreate,
@@ -47,7 +54,9 @@ if FORM_SPECS_AVAILABLE:
     from app.form_specs import serialize_form_spec
     from app.form_specs._wire_types import AnyWireFormSpec
     from app.form_specs.board_metadata import (
+        BULK_METADATA_FIELDS,
         METADATA_FIELDS,
+        board_bulk_metadata_spec,
         board_metadata_spec,
         flow_view_spec,
         rotation_from_form,
@@ -122,6 +131,18 @@ async def get_board(name: BoardName, current_user: User = Depends(get_current_us
 
 if FORM_SPECS_AVAILABLE:
 
+    def _form_data_to_update_payload(
+        form_data: dict[str, object], allowed_fields: tuple[str, ...]
+    ) -> dict[str, object]:
+        # click_action: BooleanChoice bool → "link"/"none" literal.
+        # rotation_interval: CascadingSingleChoice tuple → flat int (0=off).
+        payload = {field: form_data[field] for field in allowed_fields if field in form_data}
+        if isinstance(payload.get("click_action"), bool):
+            payload["click_action"] = "link" if payload["click_action"] else "none"
+        if "rotation_interval" in payload:
+            payload["rotation_interval"] = rotation_from_form(payload["rotation_interval"])
+        return payload
+
     @router.get("/-/metadata-schema")
     async def get_board_metadata_schema(
         _: User = Depends(get_current_user),
@@ -182,18 +203,7 @@ if FORM_SPECS_AVAILABLE:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Editing hover/context templates requires admin privileges",
             )
-        update_payload = {
-            field: form_data[field] for field in METADATA_FIELDS if field in form_data
-        }
-        # FormSpec renders click_action as a BooleanChoice ("Interactive") so
-        # the form-data shape is bool. Map back to the on-wire literal that
-        # BoardUpdate validates.
-        if isinstance(update_payload.get("click_action"), bool):
-            update_payload["click_action"] = "link" if update_payload["click_action"] else "none"
-        if "rotation_interval" in update_payload:
-            update_payload["rotation_interval"] = rotation_from_form(
-                update_payload["rotation_interval"]
-            )
+        update_payload = _form_data_to_update_payload(form_data, METADATA_FIELDS)
         update = BoardUpdate.model_validate(update_payload)
         expected_version = _parse_if_match(request.headers.get("If-Match"))
         try:
@@ -208,6 +218,68 @@ if FORM_SPECS_AVAILABLE:
                 status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
             )
         return cfg
+
+    @router.get("/-/bulk-metadata-schema")
+    async def get_board_bulk_metadata_schema(
+        _: User = Depends(require_admin),
+    ) -> AnyWireFormSpec:
+        connections = connection_service.load_all()
+
+        async def _alive(cid: str) -> bool:
+            backend = state_service.get_connection(cid)
+            if backend is None:
+                return False
+            try:
+                return await backend.is_available()
+            except Exception:
+                return False
+
+        ids = [c.id for c in connections]
+        alives = await asyncio.gather(*(_alive(cid) for cid in ids))
+        health = dict(zip(ids, alives, strict=True))
+        connection_choices = [
+            (c.id, c.label or c.id, c.type, health.get(c.id, False)) for c in connections
+        ]
+        return serialize_form_spec(board_bulk_metadata_spec(connection_choices=connection_choices))
+
+    @router.post("/bulk-edit", response_model=BoardBulkEditResult)
+    async def bulk_edit_boards(
+        payload: BoardBulkEdit, current_user: User = Depends(require_admin)
+    ) -> BoardBulkEditResult:
+        update_payload = _form_data_to_update_payload(payload.updates, BULK_METADATA_FIELDS)
+        if not current_user.is_admin and (
+            update_payload.get("hover_template") is not None
+            or update_payload.get("context_template") is not None
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Editing hover/context templates requires admin privileges",
+            )
+        update = BoardUpdate.model_validate(update_payload)
+        updated: list[str] = []
+        failed: list[BoardBulkEditFailure] = []
+        seen: set[str] = set()
+        for name in payload.names:
+            if name in seen:
+                continue
+            seen.add(name)
+            cfg = board_service.get_board(name)
+            if cfg is None:
+                failed.append(BoardBulkEditFailure(name=name, reason="not found"))
+                continue
+            if cfg.readonly:
+                failed.append(BoardBulkEditFailure(name=name, reason="readonly"))
+                continue
+            try:
+                result = board_service.update_board(name, update)
+            except Exception as exc:
+                failed.append(BoardBulkEditFailure(name=name, reason=str(exc)))
+                continue
+            if result is None:
+                failed.append(BoardBulkEditFailure(name=name, reason="not found"))
+            else:
+                updated.append(name)
+        return BoardBulkEditResult(updated=updated, failed=failed)
 
 
 @router.get("/{name}/auto-objects", response_model=list[BoardObject])
@@ -313,6 +385,32 @@ async def bulk_delete_boards(
         except Exception as exc:
             failed.append(BoardBulkDeleteFailure(name=name, reason=str(exc)))
     return BoardBulkDeleteResult(deleted=deleted, failed=failed)
+
+
+@router.post("/bulk-export")
+async def bulk_export_boards(
+    payload: BoardBulkExport, current_user: User = Depends(get_current_user)
+) -> Response:
+    # Boards the user can't view are skipped silently — matches how the
+    # list endpoint filters them out, so the archive can't leak metadata.
+    buf = io.BytesIO()
+    seen: set[str] = set()
+    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name in payload.names:
+            if name in seen:
+                continue
+            seen.add(name)
+            if not (current_user.is_admin or can_view_board(current_user, name)):
+                continue
+            cfg = board_service.get_board(name)
+            if cfg is None:
+                continue
+            zf.writestr(f"{name}.json", json.dumps(cfg.model_dump(mode="json"), indent=2))
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="orbvis-boards.zip"'},
+    )
 
 
 @router.post("/{name}/clone", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)

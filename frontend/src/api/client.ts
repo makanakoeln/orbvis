@@ -6,6 +6,7 @@ import type {
     AggregationInfo,
     AggregationNode,
     BoardBulkDeleteResult,
+    BoardBulkEditResult,
     BoardConfig,
     BoardObject,
     BoardPermissions,
@@ -205,6 +206,39 @@ export const boardsApi = {
     bulkDelete: (names: string[], token: string): Promise<BoardBulkDeleteResult> =>
         request('/boards/bulk-delete', { method: 'POST', body: JSON.stringify({ names }) }, token),
 
+    bulkEdit: (
+        names: string[],
+        updates: Record<string, unknown>,
+        token: string,
+    ): Promise<BoardBulkEditResult> =>
+        request(
+            '/boards/bulk-edit',
+            { method: 'POST', body: JSON.stringify({ names, updates }) },
+            token,
+        ),
+
+    bulkExport: async (names: string[], token: string): Promise<void> => {
+        const response = await fetch(`${BASE_URL}/boards/bulk-export`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            credentials: 'include',
+            body: JSON.stringify({ names }),
+        });
+        if (!response.ok) {
+            throw new ApiError(response.status, `Bulk export failed (${response.status})`);
+        }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'orbvis-boards.zip';
+        a.click();
+        URL.revokeObjectURL(url);
+    },
+
     getStates: (
         name: string,
         token: string,
@@ -351,6 +385,9 @@ export const rolesApi = {
 export const boardsApiFormSpec = {
     getMetadataSchema: (token: string): Promise<Record<string, unknown>> =>
         request('/boards/-/metadata-schema', {}, token),
+
+    getBulkMetadataSchema: (token: string): Promise<Record<string, unknown>> =>
+        request('/boards/-/bulk-metadata-schema', {}, token),
 
     getFlowViewSchema: (token: string): Promise<Record<string, unknown>> =>
         request('/boards/-/flow-view-schema', {}, token),

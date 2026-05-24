@@ -500,3 +500,25 @@ class BoardBulkDeleteFailure(BaseModel):
 class BoardBulkDeleteResult(BaseModel):
     deleted: list[str]
     failed: list[BoardBulkDeleteFailure]
+
+
+class BoardBulkEdit(BaseModel):
+    names: Annotated[list[_BoardNameStr], Field(min_length=1, max_length=500)]
+    # Untyped dict on purpose: the API layer first runs the FormSpec wire
+    # conversions (rotation cascading → int, click_action bool → literal)
+    # and then validates the resulting subset against ``BoardUpdate``.
+    updates: dict[str, object]
+
+
+class BoardBulkEditFailure(BaseModel):
+    name: str
+    reason: str
+
+
+class BoardBulkEditResult(BaseModel):
+    updated: list[str]
+    failed: list[BoardBulkEditFailure]
+
+
+class BoardBulkExport(BaseModel):
+    names: Annotated[list[_BoardNameStr], Field(min_length=1, max_length=500)]

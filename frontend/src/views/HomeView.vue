@@ -55,6 +55,77 @@
                         </svg>
                     </button>
                 </div>
+                <div v-if="boardsStore.boards.length > 0" class="home-view-toggle">
+                    <CmkToggleButtonGroup
+                        v-if="capabilities.formSpecs"
+                        :model-value="viewMode"
+                        :options="viewModeOptions"
+                        @update:model-value="setViewMode($event)"
+                    />
+                    <div
+                        v-else
+                        class="inline-flex items-center bg-[var(--bg-input)] ring-1 ring-[var(--default-form-element-border-color)]/60 rounded overflow-hidden"
+                        role="group"
+                        :aria-label="t('home.viewCardsTitle')"
+                    >
+                        <button
+                            type="button"
+                            class="flex items-center justify-center transition-colors"
+                            :class="
+                                viewMode === 'cards'
+                                    ? 'bg-[var(--color-corporate-green-50)] text-[var(--button-primary-text-color,#000)]'
+                                    : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+                            "
+                            style="padding: 4px 8px; font-size: 12px; gap: 4px"
+                            :title="t('home.viewCardsTitle')"
+                            :aria-pressed="viewMode === 'cards'"
+                            @click="setViewMode('cards')"
+                        >
+                            <svg
+                                style="width: 12px; height: 12px"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
+                                />
+                            </svg>
+                            {{ t('home.viewCards') }}
+                        </button>
+                        <button
+                            type="button"
+                            class="flex items-center justify-center transition-colors border-l border-[var(--default-form-element-border-color)]/60"
+                            :class="
+                                viewMode === 'table'
+                                    ? 'bg-[var(--color-corporate-green-50)] text-[var(--button-primary-text-color,#000)]'
+                                    : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+                            "
+                            style="padding: 4px 8px; font-size: 12px; gap: 4px"
+                            :title="t('home.viewTableTitle')"
+                            :aria-pressed="viewMode === 'table'"
+                            @click="setViewMode('table')"
+                        >
+                            <svg
+                                style="width: 12px; height: 12px"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5"
+                                />
+                            </svg>
+                            {{ t('home.viewTable') }}
+                        </button>
+                    </div>
+                </div>
                 <button
                     v-if="auth.isAdmin"
                     data-tour="new-board"
@@ -152,7 +223,7 @@
 
             <!-- Board grid -->
             <VueDraggable
-                v-else
+                v-else-if="viewMode === 'cards'"
                 v-model="draggableBoards"
                 :disabled="!isDragEnabled"
                 data-tour="boards-grid"
@@ -170,36 +241,9 @@
                 <div
                     v-for="map in draggableBoards"
                     :key="map.name"
-                    :class="[
-                        isDragEnabled ? 'cursor-grab active:cursor-grabbing' : '',
-                        selectedBoards.has(map.name)
-                            ? 'ring-2 ring-[var(--color-corporate-green-50)]'
-                            : '',
-                    ]"
+                    :class="[isDragEnabled ? 'cursor-grab active:cursor-grabbing' : '']"
                     class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-[var(--color-corporate-green-50)]/40 rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-[2px] hover:shadow-lg hover:shadow-[var(--color-corporate-green-100)]/10"
                 >
-                    <div
-                        v-if="auth.isAdmin"
-                        class="board-card__select absolute z-10 flex items-center justify-center transition-opacity duration-150"
-                        :class="
-                            bulkActive || selectedBoards.has(map.name)
-                                ? 'opacity-100'
-                                : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
-                        "
-                        style="top: 8px; left: 8px"
-                    >
-                        <CmkCheckbox
-                            v-if="capabilities.formSpecs"
-                            :model-value="selectedBoards.has(map.name)"
-                            @update:model-value="toggleBoardSelection(map.name)"
-                        />
-                        <input
-                            v-else
-                            type="checkbox"
-                            :checked="selectedBoards.has(map.name)"
-                            @change="toggleBoardSelection(map.name)"
-                        />
-                    </div>
                     <router-link :to="`/boards/${map.name}`" class="block">
                         <!-- Thumbnail -->
                         <div
@@ -1116,6 +1160,22 @@
                     </div>
                 </div>
             </VueDraggable>
+
+            <!-- Table view -->
+            <BoardsTable
+                v-else
+                data-tour="boards-grid"
+                :boards="filteredBoards"
+                :selected-boards="selectedBoards"
+                :search-query="searchQuery"
+                :all-selected="allFilteredSelected"
+                @toggle-select="toggleBoardSelection"
+                @toggle-select-all="toggleSelectAllFiltered"
+                @open-settings="openSettings"
+                @clone="cloneBoard"
+                @export="exportBoard"
+                @delete="deleteBoard"
+            />
         </main>
     </div>
     <OrbConfirmDialog
@@ -1140,7 +1200,10 @@
             :busy="bulkBusy"
             :select-all-checked="allFilteredSelected"
             :select-all-label="t('admin.selectAllVisible', { n: filteredBoards.length })"
+            :can-edit="true"
             @cancel="clearSelection"
+            @edit="openBulkEdit"
+            @export="doBulkExport"
             @delete="openBulkDelete"
             @toggle-select-all="toggleSelectAllFiltered($event)"
         />
@@ -1151,10 +1214,21 @@
             :select-all-checked="allFilteredSelected"
             :select-all-label="t('admin.selectAllVisible', { n: filteredBoards.length })"
             @cancel="clearSelection"
+            @export="doBulkExport"
             @delete="openBulkDelete"
             @toggle-select-all="toggleSelectAllFiltered($event)"
         />
     </template>
+
+    <BoardBulkEditSlideIn
+        v-if="capabilities.formSpecs && showBulkEdit"
+        :open="showBulkEdit"
+        :names="editableSelectedNames"
+        :aliases="editableSelectedAliases"
+        :saving="bulkBusy"
+        @cancel="showBulkEdit = false"
+        @apply="doBulkEdit"
+    />
 
     <BoardBulkDeleteDialog
         v-if="capabilities.formSpecs"
@@ -1279,10 +1353,12 @@ import BoardBulkActionBar from '@/components/board/BoardBulkActionBar.vue';
 import BoardBulkActionBarLegacy from '@/components/board/BoardBulkActionBarLegacy.vue';
 import BoardBulkDeleteDialog from '@/components/board/BoardBulkDeleteDialog.vue';
 import BoardBulkDeleteDialogLegacy from '@/components/board/BoardBulkDeleteDialogLegacy.vue';
+import BoardBulkEditSlideIn from '@/components/board/BoardBulkEditSlideIn.vue';
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue';
+import BoardsTable from '@/components/board/BoardsTable.vue';
 import CreateBoardModal from '@/components/board/CreateBoardModal.vue';
 import CmkButton from '@/components/cmk/CmkButton';
-import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
+import CmkToggleButtonGroup from '@/components/cmk/CmkToggleButtonGroup';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import OrbModal from '@/components/OrbModal.vue';
@@ -1292,7 +1368,14 @@ import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
 import { useCapabilitiesStore } from '@/stores/capabilities';
-import type { BoardBulkDeleteFailure, BoardConfig, BoardRead, WorldmapView } from '@/types/api';
+import { useSettingsStore } from '@/stores/settings';
+import type {
+    BoardBulkDeleteFailure,
+    BoardConfig,
+    BoardListView,
+    BoardRead,
+    WorldmapView,
+} from '@/types/api';
 import type { TourStep } from '@/types/tour';
 import { sanitizeBoardName } from '@/utils/naming';
 
@@ -1330,13 +1413,41 @@ const tourSteps = computed<TourStep[]>(() => {
 });
 const confirmDelete = ref<{ name: string; alias: string } | null>(null);
 const capabilities = useCapabilitiesStore();
+const settingsStore = useSettingsStore();
 const toast = useToast();
+
+const viewMode = computed<BoardListView>(() =>
+    settingsStore.settings.board_list_view === 'table' ? 'table' : 'cards',
+);
+const viewModeOptions = computed(() => [
+    { label: t('home.viewCards'), value: 'cards' },
+    { label: t('home.viewTable'), value: 'table' },
+]);
+
+async function setViewMode(value: string) {
+    const next: BoardListView = value === 'table' ? 'table' : 'cards';
+    if (settingsStore.settings.board_list_view === next) return;
+    const previous = settingsStore.settings.board_list_view;
+    settingsStore.settings.board_list_view = next;
+    try {
+        await settingsStore.save({ ...settingsStore.settings, board_list_view: next });
+    } catch {
+        settingsStore.settings.board_list_view = previous;
+        toast.error(t('common.saveFailed'));
+    }
+}
 
 const selectedBoards = ref<Set<string>>(new Set());
 const confirmBulkDelete = ref(false);
 const bulkBusy = ref(false);
 const bulkFailures = ref<BoardBulkDeleteFailure[]>([]);
-const bulkActive = computed(() => selectedBoards.value.size > 0);
+
+watch(viewMode, (mode) => {
+    if (mode === 'cards' && selectedBoards.value.size > 0) {
+        selectedBoards.value = new Set();
+        bulkFailures.value = [];
+    }
+});
 
 function onCreated(name: string) {
     showCreate.value = false;
@@ -1419,6 +1530,78 @@ async function doBulkDelete() {
     } catch (e: unknown) {
         toast.error(e instanceof Error ? e.message : 'Bulk delete failed');
         confirmBulkDelete.value = false;
+    } finally {
+        bulkBusy.value = false;
+    }
+}
+
+const showBulkEdit = ref(false);
+
+const editableSelectedNames = computed(() => {
+    const writable = new Set(boardsStore.boards.filter((b) => !b.readonly).map((b) => b.name));
+    return selectedNames.value.filter((n) => writable.has(n));
+});
+
+const editableSelectedAliases = computed(() => {
+    const byName = new Map(boardsStore.boards.map((b) => [b.name, b.alias || b.name]));
+    return editableSelectedNames.value.map((n) => byName.get(n) ?? n);
+});
+
+function openBulkEdit() {
+    if (editableSelectedNames.value.length === 0) {
+        toast.error(t('admin.bulkEditNoneEditable'));
+        return;
+    }
+    if (editableSelectedNames.value.length === 1) {
+        const board = boardsStore.boards.find((b) => b.name === editableSelectedNames.value[0]);
+        if (board) {
+            openSettings(board);
+            return;
+        }
+    }
+    showBulkEdit.value = true;
+}
+
+async function doBulkEdit(updates: Record<string, unknown>) {
+    if (bulkBusy.value) return;
+    if (Object.keys(updates).length === 0) {
+        showBulkEdit.value = false;
+        return;
+    }
+    const targets = editableSelectedNames.value;
+    if (targets.length === 0) {
+        showBulkEdit.value = false;
+        return;
+    }
+    bulkBusy.value = true;
+    try {
+        const result = await boardsStore.bulkEditBoards(targets, updates);
+        showBulkEdit.value = false;
+        if (result.failed.length === 0) {
+            toast.success(t('admin.bulkEditSuccess', { n: result.updated.length }));
+        } else {
+            toast.error(
+                t('admin.bulkEditPartial', {
+                    ok: result.updated.length,
+                    fail: result.failed.length,
+                }),
+            );
+        }
+    } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : 'Bulk edit failed');
+    } finally {
+        bulkBusy.value = false;
+    }
+}
+
+async function doBulkExport() {
+    if (bulkBusy.value || selectedNames.value.length === 0) return;
+    bulkBusy.value = true;
+    try {
+        await boardsStore.bulkExportBoards(selectedNames.value);
+        toast.success(t('admin.bulkExportSuccess', { n: selectedNames.value.length }));
+    } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : 'Bulk export failed');
     } finally {
         bulkBusy.value = false;
     }
@@ -1580,7 +1763,7 @@ function worldmapZoom(map: BoardRead) {
 }
 
 onMounted(async () => {
-    await boardsStore.fetchBoards();
+    await Promise.all([boardsStore.fetchBoards(), settingsStore.load()]);
     if (!auth.user) return;
     const storageKey = `orbvis_onboarded_${auth.user.user_id}`;
     if (localStorage.getItem(storageKey)) return;
@@ -1645,7 +1828,20 @@ onMounted(async () => {
     margin-bottom: var(--dimension-4);
 }
 
-.board-card__select {
-    filter: drop-shadow(0 0 1.5px rgb(0 0 0 / 75%)) drop-shadow(0 0 1.5px rgb(255 255 255 / 65%));
+.home-view-toggle {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+
+.home-view-toggle :deep(.toggle_buttons_container) {
+    margin-bottom: 0;
+    padding: 3px;
+}
+
+.home-view-toggle :deep(.toggle_option) {
+    min-width: 60px;
+    font-size: 12px;
+    padding: 3px 10px;
 }
 </style>

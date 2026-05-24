@@ -223,6 +223,16 @@ export interface BoardBulkDeleteResult {
     failed: BoardBulkDeleteFailure[];
 }
 
+export interface BoardBulkEditFailure {
+    name: string;
+    reason: string;
+}
+
+export interface BoardBulkEditResult {
+    updated: string[];
+    failed: BoardBulkEditFailure[];
+}
+
 export interface ServicesSummary {
     ok: number;
     warning: number;
@@ -414,7 +424,10 @@ export interface GlobalSettings {
     default_map_type: string;
     hover_template?: string | null;
     context_template?: string | null;
+    board_list_view?: BoardListView;
 }
+
+export type BoardListView = 'cards' | 'table';
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
 
