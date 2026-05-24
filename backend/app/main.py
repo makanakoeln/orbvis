@@ -259,8 +259,47 @@ app = FastAPI(
 )
 
 
+def _swagger_ui_5_available() -> bool:
+    omd_root = settings.checkmk_omd_root
+    if not omd_root:
+        return True
+    openapi_dir = Path(omd_root) / "share/check_mk/web/htdocs/openapi"
+    if not openapi_dir.is_dir():
+        return False
+    for entry in openapi_dir.iterdir():
+        if entry.name.startswith("swagger-ui-5.") and (entry / "swagger-ui-bundle.js").is_file():
+            return True
+    return False
+
+
+_SWAGGER_UNAVAILABLE_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OrbVis API – Swagger UI unavailable</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:640px;margin:4rem auto;padding:0 1rem;color:#222;line-height:1.5}
+h1{font-size:1.4rem;margin-bottom:1rem}
+code{background:#f3f3f3;padding:.1em .35em;border-radius:3px}
+a{color:#1f6feb}
+</style>
+</head>
+<body>
+<h1>Interactive Swagger UI not available on this Checkmk site</h1>
+<p>OrbVis emits an <strong>OpenAPI&nbsp;3.1</strong> schema. Rendering it requires
+<strong>Swagger-UI&nbsp;5.x</strong>, which is shipped with <strong>Checkmk&nbsp;2.5</strong> and newer.
+This site bundles only Swagger-UI&nbsp;3, which cannot render OpenAPI&nbsp;3.1.</p>
+<p>The raw OpenAPI schema is still available at
+<a href="openapi.json">openapi.json</a> and works with any external Swagger-UI&nbsp;5 / Redoc / Postman / Insomnia client.</p>
+</body>
+</html>
+"""
+
+
 @app.get("/api/docs", include_in_schema=False)
 async def custom_swagger_ui_html() -> HTMLResponse:
+    if not _swagger_ui_5_available():
+        return HTMLResponse(_SWAGGER_UNAVAILABLE_HTML)
     return get_swagger_ui_html(
         openapi_url="openapi.json",
         title=f"{app.title} - Swagger UI",
