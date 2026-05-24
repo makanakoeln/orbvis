@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
 import { boardsApi } from '@/api/client';
-import type { BoardConfig, BoardRead } from '@/types/api';
+import type { BoardBulkDeleteResult, BoardConfig, BoardRead } from '@/types/api';
 
 import { useAuthStore } from './auth';
 
@@ -103,6 +103,15 @@ export const useBoardsStore = defineStore('boards', () => {
         boards.value = boards.value.filter((b) => b.name !== name);
     }
 
+    async function bulkDeleteBoards(names: string[]): Promise<BoardBulkDeleteResult> {
+        const result = await boardsApi.bulkDelete(names, token());
+        if (result.deleted.length > 0) {
+            const removed = new Set(result.deleted);
+            boards.value = boards.value.filter((b) => !removed.has(b.name));
+        }
+        return result;
+    }
+
     return {
         boards,
         currentBoard,
@@ -114,5 +123,6 @@ export const useBoardsStore = defineStore('boards', () => {
         fetchBoard,
         createBoard,
         deleteBoard,
+        bulkDeleteBoards,
     };
 });

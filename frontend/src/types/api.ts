@@ -213,6 +213,16 @@ export interface BoardRead {
     context_template?: string | null;
 }
 
+export interface BoardBulkDeleteFailure {
+    name: string;
+    reason: string;
+}
+
+export interface BoardBulkDeleteResult {
+    deleted: string[];
+    failed: BoardBulkDeleteFailure[];
+}
+
 export interface ServicesSummary {
     ok: number;
     warning: number;

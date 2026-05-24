@@ -28,6 +28,9 @@ from app.core.image_security import (
 from app.form_specs import FORM_SPECS_AVAILABLE
 from app.models.user import User
 from app.schemas.board import (
+    BoardBulkDelete,
+    BoardBulkDeleteFailure,
+    BoardBulkDeleteResult,
     BoardClone,
     BoardConfig,
     BoardCreate,
@@ -289,6 +292,27 @@ async def delete_board(name: BoardName, _: User = Depends(require_admin)) -> Non
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
         )
+
+
+@router.post("/bulk-delete", response_model=BoardBulkDeleteResult)
+async def bulk_delete_boards(
+    payload: BoardBulkDelete, _: User = Depends(require_admin)
+) -> BoardBulkDeleteResult:
+    deleted: list[str] = []
+    failed: list[BoardBulkDeleteFailure] = []
+    seen: set[str] = set()
+    for name in payload.names:
+        if name in seen:
+            continue
+        seen.add(name)
+        try:
+            if board_service.delete_board(name):
+                deleted.append(name)
+            else:
+                failed.append(BoardBulkDeleteFailure(name=name, reason="not found"))
+        except Exception as exc:
+            failed.append(BoardBulkDeleteFailure(name=name, reason=str(exc)))
+    return BoardBulkDeleteResult(deleted=deleted, failed=failed)
 
 
 @router.post("/{name}/clone", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)

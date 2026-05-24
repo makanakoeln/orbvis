@@ -209,13 +209,13 @@ def delete_board(name: str) -> bool:
     except ValueError:
         return False
     with _board_lock(name):
+        existed = name in _CACHE or path.exists()
         # Drop cache + cancel pending flush so a stale debounced write can't
         # recreate the file after we unlink it.
         _invalidate_cache(name)
-        if not path.exists():
-            return False
-        path.unlink()
-        return True
+        if path.exists():
+            path.unlink()
+        return existed
 
 
 def add_object(name: str, obj: BoardObject) -> BoardConfig | None:

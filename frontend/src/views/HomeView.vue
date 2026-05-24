@@ -170,9 +170,36 @@
                 <div
                     v-for="map in draggableBoards"
                     :key="map.name"
-                    :class="isDragEnabled ? 'cursor-grab active:cursor-grabbing' : ''"
+                    :class="[
+                        isDragEnabled ? 'cursor-grab active:cursor-grabbing' : '',
+                        selectedBoards.has(map.name)
+                            ? 'ring-2 ring-[var(--color-corporate-green-50)]'
+                            : '',
+                    ]"
                     class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-[var(--color-corporate-green-50)]/40 rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-[2px] hover:shadow-lg hover:shadow-[var(--color-corporate-green-100)]/10"
                 >
+                    <div
+                        v-if="auth.isAdmin"
+                        class="board-card__select absolute z-10 flex items-center justify-center transition-opacity duration-150"
+                        :class="
+                            bulkActive || selectedBoards.has(map.name)
+                                ? 'opacity-100'
+                                : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+                        "
+                        style="top: 8px; left: 8px"
+                    >
+                        <CmkCheckbox
+                            v-if="capabilities.formSpecs"
+                            :model-value="selectedBoards.has(map.name)"
+                            @update:model-value="toggleBoardSelection(map.name)"
+                        />
+                        <input
+                            v-else
+                            type="checkbox"
+                            :checked="selectedBoards.has(map.name)"
+                            @change="toggleBoardSelection(map.name)"
+                        />
+                    </div>
                     <router-link :to="`/boards/${map.name}`" class="block">
                         <!-- Thumbnail -->
                         <div
@@ -910,12 +937,12 @@
                                     style="font-size: 11px; padding: var(--dimension-2) 6px"
                                     :class="
                                         map.view.type === 'worldmap'
-                                            ? 'bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/30'
+                                            ? 'bg-cyan-500/15 text-cyan-800 ring-1 ring-cyan-600/40 dark:bg-cyan-500/20 dark:text-cyan-300 dark:ring-cyan-500/30'
                                             : map.view.type === 'radar'
-                                              ? 'bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30'
+                                              ? 'bg-violet-500/15 text-violet-800 ring-1 ring-violet-600/40 dark:bg-violet-500/20 dark:text-violet-300 dark:ring-violet-500/30'
                                               : map.view.type === 'flow'
-                                                ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30'
-                                                : 'bg-[var(--bg-surface)]/70 text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60'
+                                                ? 'bg-emerald-500/15 text-emerald-800 ring-1 ring-emerald-700/40 dark:bg-emerald-500/20 dark:text-emerald-300 dark:ring-emerald-500/30'
+                                                : 'bg-[var(--bg-surface)]/85 text-[var(--text)] ring-1 ring-[var(--default-border-color)]'
                                     "
                                 >
                                     {{ boardTypeLabel(map.view.type) }}
@@ -1106,6 +1133,46 @@
         @cancel="confirmDelete = null"
     />
 
+    <template v-if="auth.isAdmin">
+        <BoardBulkActionBar
+            v-if="capabilities.formSpecs"
+            :count="selectedCount"
+            :busy="bulkBusy"
+            :select-all-checked="allFilteredSelected"
+            :select-all-label="t('admin.selectAllVisible', { n: filteredBoards.length })"
+            @cancel="clearSelection"
+            @delete="openBulkDelete"
+            @toggle-select-all="toggleSelectAllFiltered($event)"
+        />
+        <BoardBulkActionBarLegacy
+            v-else
+            :count="selectedCount"
+            :busy="bulkBusy"
+            :select-all-checked="allFilteredSelected"
+            :select-all-label="t('admin.selectAllVisible', { n: filteredBoards.length })"
+            @cancel="clearSelection"
+            @delete="openBulkDelete"
+            @toggle-select-all="toggleSelectAllFiltered($event)"
+        />
+    </template>
+
+    <BoardBulkDeleteDialog
+        v-if="capabilities.formSpecs"
+        :open="confirmBulkDelete"
+        :names="selectedAliases"
+        :busy="bulkBusy"
+        @confirm="doBulkDelete"
+        @cancel="confirmBulkDelete = false"
+    />
+    <BoardBulkDeleteDialogLegacy
+        v-else
+        :open="confirmBulkDelete"
+        :names="selectedAliases"
+        :busy="bulkBusy"
+        @confirm="doBulkDelete"
+        @cancel="confirmBulkDelete = false"
+    />
+
     <OrbModal
         :open="!!confirmClone"
         :title="t('admin.cloneBoard')"
@@ -1208,17 +1275,24 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
 import { boardsApi } from '@/api/client';
+import BoardBulkActionBar from '@/components/board/BoardBulkActionBar.vue';
+import BoardBulkActionBarLegacy from '@/components/board/BoardBulkActionBarLegacy.vue';
+import BoardBulkDeleteDialog from '@/components/board/BoardBulkDeleteDialog.vue';
+import BoardBulkDeleteDialogLegacy from '@/components/board/BoardBulkDeleteDialogLegacy.vue';
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue';
 import CreateBoardModal from '@/components/board/CreateBoardModal.vue';
 import CmkButton from '@/components/cmk/CmkButton';
+import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue';
 import OrbModal from '@/components/OrbModal.vue';
 import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue';
 import { useChangelog } from '@/composables/useChangelog';
+import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
-import type { BoardConfig, BoardRead, WorldmapView } from '@/types/api';
+import { useCapabilitiesStore } from '@/stores/capabilities';
+import type { BoardBulkDeleteFailure, BoardConfig, BoardRead, WorldmapView } from '@/types/api';
 import type { TourStep } from '@/types/tour';
 import { sanitizeBoardName } from '@/utils/naming';
 
@@ -1255,6 +1329,14 @@ const tourSteps = computed<TourStep[]>(() => {
         : all;
 });
 const confirmDelete = ref<{ name: string; alias: string } | null>(null);
+const capabilities = useCapabilitiesStore();
+const toast = useToast();
+
+const selectedBoards = ref<Set<string>>(new Set());
+const confirmBulkDelete = ref(false);
+const bulkBusy = ref(false);
+const bulkFailures = ref<BoardBulkDeleteFailure[]>([]);
+const bulkActive = computed(() => selectedBoards.value.size > 0);
 
 function onCreated(name: string) {
     showCreate.value = false;
@@ -1269,6 +1351,77 @@ async function doDelete() {
     if (!confirmDelete.value) return;
     await boardsStore.deleteBoard(confirmDelete.value.name);
     confirmDelete.value = null;
+}
+
+function clearSelection() {
+    selectedBoards.value = new Set();
+    bulkFailures.value = [];
+}
+
+function toggleBoardSelection(name: string) {
+    const next = new Set(selectedBoards.value);
+    if (next.has(name)) next.delete(name);
+    else next.add(name);
+    selectedBoards.value = next;
+}
+
+const selectedCount = computed(() => selectedBoards.value.size);
+
+const allFilteredSelected = computed(() => {
+    const list = filteredBoards.value;
+    if (list.length === 0) return false;
+    return list.every((b) => selectedBoards.value.has(b.name));
+});
+
+function toggleSelectAllFiltered(checked: boolean) {
+    const next = new Set(selectedBoards.value);
+    if (checked) {
+        for (const b of filteredBoards.value) next.add(b.name);
+    } else {
+        for (const b of filteredBoards.value) next.delete(b.name);
+    }
+    selectedBoards.value = next;
+}
+
+const selectedNames = computed(() => Array.from(selectedBoards.value));
+
+const selectedAliases = computed(() => {
+    const byName = new Map(boardsStore.boards.map((b) => [b.name, b.alias || b.name]));
+    return selectedNames.value.map((n) => byName.get(n) ?? n);
+});
+
+function openBulkDelete() {
+    if (selectedCount.value === 0) return;
+    bulkFailures.value = [];
+    confirmBulkDelete.value = true;
+}
+
+async function doBulkDelete() {
+    if (bulkBusy.value) return;
+    bulkBusy.value = true;
+    try {
+        const result = await boardsStore.bulkDeleteBoards(selectedNames.value);
+        const okCount = result.deleted.length;
+        const failed = result.failed;
+        const okSet = new Set(result.deleted);
+        const remaining = new Set<string>();
+        for (const n of selectedBoards.value) {
+            if (!okSet.has(n)) remaining.add(n);
+        }
+        selectedBoards.value = remaining;
+        bulkFailures.value = failed;
+        confirmBulkDelete.value = false;
+        if (failed.length === 0) {
+            toast.success(t('admin.bulkDeleteSuccess', { n: okCount }));
+        } else {
+            toast.error(t('admin.bulkDeletePartial', { ok: okCount, fail: failed.length }));
+        }
+    } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : 'Bulk delete failed');
+        confirmBulkDelete.value = false;
+    } finally {
+        bulkBusy.value = false;
+    }
 }
 
 const importConflict = ref<{ name: string; action: () => Promise<unknown> } | null>(null);
@@ -1490,5 +1643,9 @@ onMounted(async () => {
     font-size: var(--font-size-large);
     color: var(--color-light-red-40);
     margin-bottom: var(--dimension-4);
+}
+
+.board-card__select {
+    filter: drop-shadow(0 0 1.5px rgb(0 0 0 / 75%)) drop-shadow(0 0 1.5px rgb(255 255 255 / 65%));
 }
 </style>

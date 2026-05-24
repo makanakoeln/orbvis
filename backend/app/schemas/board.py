@@ -483,3 +483,20 @@ class BoardPermissionsRead(BaseModel):
 
     view: list[str]
     edit: list[str]
+
+
+_BoardNameStr = Annotated[str, Field(min_length=1, max_length=100, pattern=r"^[a-zA-Z0-9_\-]+$")]
+
+
+class BoardBulkDelete(BaseModel):
+    names: Annotated[list[_BoardNameStr], Field(min_length=1, max_length=500)]
+
+
+class BoardBulkDeleteFailure(BaseModel):
+    name: str
+    reason: str
+
+
+class BoardBulkDeleteResult(BaseModel):
+    deleted: list[str]
+    failed: list[BoardBulkDeleteFailure]

@@ -5,6 +5,7 @@
 import type {
     AggregationInfo,
     AggregationNode,
+    BoardBulkDeleteResult,
     BoardConfig,
     BoardObject,
     BoardPermissions,
@@ -200,6 +201,9 @@ export const boardsApi = {
 
     delete: (name: string, token: string): Promise<void> =>
         request(`/boards/${name}`, { method: 'DELETE' }, token),
+
+    bulkDelete: (names: string[], token: string): Promise<BoardBulkDeleteResult> =>
+        request('/boards/bulk-delete', { method: 'POST', body: JSON.stringify({ names }) }, token),
 
     getStates: (
         name: string,

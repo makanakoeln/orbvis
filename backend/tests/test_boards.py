@@ -85,6 +85,58 @@ async def _create(client, token, tmp_path, monkeypatch, name="src-board"):
     )
 
 
+# ---- Bulk delete ----
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_mixed(client, admin_token, tmp_path, monkeypatch):
+    _patch(monkeypatch, tmp_path)
+    for n in ("alpha", "beta", "gamma"):
+        await client.post(
+            "/api/v1/boards",
+            json={"name": n},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+    resp = await client.post(
+        "/api/v1/boards/bulk-delete",
+        json={"names": ["alpha", "beta", "ghost", "alpha"]},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert sorted(body["deleted"]) == ["alpha", "beta"]
+    assert len(body["failed"]) == 1
+    assert body["failed"][0]["name"] == "ghost"
+    assert "not found" in body["failed"][0]["reason"].lower()
+
+    listing = await client.get("/api/v1/boards", headers={"Authorization": f"Bearer {admin_token}"})
+    remaining = {b["name"] for b in listing.json()}
+    assert remaining == {"gamma"}
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_rejects_empty(client, admin_token, tmp_path, monkeypatch):
+    _patch(monkeypatch, tmp_path)
+    resp = await client.post(
+        "/api/v1/boards/bulk-delete",
+        json={"names": []},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_rejects_bad_name(client, admin_token, tmp_path, monkeypatch):
+    _patch(monkeypatch, tmp_path)
+    resp = await client.post(
+        "/api/v1/boards/bulk-delete",
+        json={"names": ["../etc/passwd"]},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 422
+
+
 # ---- Clone ----
 
 
