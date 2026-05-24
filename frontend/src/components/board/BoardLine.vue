@@ -39,7 +39,7 @@
              so the stroke doesn't run through the meeting arrows. -->
         <template v-if="isArrowInward && inwardSegments">
             <line
-                v-if="lineColorBorder"
+                v-if="lineColorBorder && !useWeatherColor"
                 :x1="x1"
                 :y1="y1"
                 :x2="inwardSegments.leftX"
@@ -51,7 +51,7 @@
                 pointer-events="none"
             />
             <line
-                v-if="lineColorBorder"
+                v-if="lineColorBorder && !useWeatherColor"
                 :x1="x2"
                 :y1="y2"
                 :x2="inwardSegments.rightX"
@@ -67,7 +67,7 @@
                 :y1="y1"
                 :x2="inwardSegments.leftX"
                 :y2="inwardSegments.leftY"
-                :stroke="effectiveLineColor"
+                :stroke="fillStroke"
                 :stroke-width="strokeWidth"
                 stroke-linecap="round"
                 :stroke-dasharray="dashArray"
@@ -78,7 +78,7 @@
                 :y1="y2"
                 :x2="inwardSegments.rightX"
                 :y2="inwardSegments.rightY"
-                :stroke="effectiveLineColor"
+                :stroke="fillStroke"
                 :stroke-width="strokeWidth"
                 stroke-linecap="round"
                 :stroke-dasharray="dashArray"
@@ -88,7 +88,7 @@
         <template v-else>
             <!-- Border/outline line rendered behind the colored fill. -->
             <line
-                v-if="lineColorBorder"
+                v-if="lineColorBorder && !useWeatherColor"
                 :x1="x1"
                 :y1="y1"
                 :x2="trimmedEnd.x2"
@@ -104,11 +104,7 @@
                 :y1="trimmedStart.y1"
                 :x2="trimmedEnd.x2"
                 :y2="trimmedEnd.y2"
-                :stroke="
-                    useWeatherColor && hasDirectionalGradient
-                        ? `url(#${gradientId})`
-                        : effectiveLineColor
-                "
+                :stroke="fillStroke"
                 :stroke-width="strokeWidth"
                 stroke-linecap="round"
                 :stroke-dasharray="dashArray"
@@ -414,7 +410,9 @@ const inwardSegments = computed(() => {
     const dx = x2.value - x1.value;
     const dy = y2.value - y1.value;
     const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 1) return null;
+    // Same threshold as midpointArrows: below it the half-lines would overshoot
+    // past the opposite endpoint, so fall back to the single full-line render.
+    if (len < inwardArrowLen.value * 2 + 6) return null;
     const ux = dx / len;
     const uy = dy / len;
     const midX = (x1.value + x2.value) / 2;
@@ -488,6 +486,16 @@ const hasDirectionalGradient = computed(
     () =>
         !!props.object.weathermap_metric_out &&
         props.object.weathermap_metric_out !== props.object.weathermap_metric,
+);
+
+// Fill stroke for the colored line: the directional in→out gradient when
+// weather-colouring is live with two metrics, otherwise the solid color. The
+// gradient uses userSpaceOnUse, so arrow_inward's two half-lines can both
+// reference it and still show the correct slice.
+const fillStroke = computed(() =>
+    useWeatherColor.value && hasDirectionalGradient.value
+        ? `url(#${gradientId.value})`
+        : effectiveLineColor.value,
 );
 
 const showsPerfdataLabels = computed(
