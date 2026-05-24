@@ -901,16 +901,23 @@ const textboxStyle = computed(() => {
     const h = override?.height ?? props.object.textbox_height;
     const border = props.object.textbox_border;
     const bg = props.object.textbox_background;
-    const lblColor = props.object.label?.color;
+    const label = props.object.label;
     const hasCustomBg = bg && bg !== 'transparent';
+    // Default LabelConfig.color is "#ffffff" — only honour the imported color
+    // when the user picked something else, so OrbVis-native boxes stay on the
+    // themed text-color over the glass background.
+    const customColor =
+        label?.color && label.color !== '#ffffff' && label.color !== '#FFFFFF' ? label.color : null;
     return {
         // Blur turns an opaque imported background into a frosted smear.
         backdropFilter: hasCustomBg ? undefined : 'blur(4px)',
         background: bg ?? 'var(--bg-glass)',
         // borderColor alone won't paint without width+style.
         border: border ? `1px solid ${border}` : undefined,
-        // Theme text-color would clash with an explicit imported background.
-        color: hasCustomBg && lblColor ? lblColor : 'var(--text)',
+        color: customColor ?? 'var(--text)',
+        fontSize: label?.size ? `${label.size}px` : undefined,
+        fontWeight: label?.weight ?? undefined,
+        textAlign: label?.align ?? undefined,
         width: w ? `${w}px` : undefined,
         height: h ? `${h}px` : undefined,
     };

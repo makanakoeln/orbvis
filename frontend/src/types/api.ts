@@ -50,6 +50,8 @@ export interface LabelConfig {
     background: string;
     // Fixed pixel width that wraps long labels (NagVis label_width).
     width?: number | null;
+    weight?: 'normal' | 'bold' | null;
+    align?: 'left' | 'right' | 'center' | 'justify' | null;
 }
 
 export interface DisplayConfig {

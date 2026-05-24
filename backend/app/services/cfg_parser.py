@@ -278,21 +278,71 @@ def _handle_shape(p: dict[str, str], raw_id: str) -> dict[str, object]:
     }
 
 
+# HTML <font size="N"> maps to fixed pixel sizes (legacy spec).
+_FONT_SIZE_HTML = {"1": 10, "2": 13, "3": 16, "4": 18, "5": 24, "6": 32, "7": 48}
+_FONT_SIZE_KEYWORD = {
+    "xx-small": 9,
+    "x-small": 10,
+    "small": 13,
+    "medium": 16,
+    "large": 18,
+    "x-large": 24,
+    "xx-large": 32,
+}
+_ENTITY_RE = re.compile(r"&(?:amp|lt|gt|quot|nbsp|#39|apos);")
+_ENTITY_MAP = {
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&nbsp;": " ",
+    "&#39;": "'",
+    "&apos;": "'",
+}
+
+
+def _decode_html_entities(text: str) -> str:
+    return _ENTITY_RE.sub(lambda m: _ENTITY_MAP.get(m.group(0), m.group(0)), text)
+
+
+def _extract_html_style(html: str) -> dict[str, object]:
+    """Pull color/font-size/weight/text-align from inline HTML in a textbox."""
+    out: dict[str, object] = {}
+    m = re.search(r'<font[^>]*color=["\']([^"\']+)', html, re.IGNORECASE)
+    if not m:
+        m = re.search(r'color\s*:\s*([^;"\']+)', html, re.IGNORECASE)
+    if m:
+        out["color"] = m.group(1).strip()
+    m = re.search(r'font-size\s*:\s*([^;"\']+)', html, re.IGNORECASE)
+    if m:
+        v = m.group(1).strip().lower()
+        if v.endswith("px"):
+            try:
+                out["size"] = int(float(v[:-2]))
+            except ValueError:
+                pass
+        elif v in _FONT_SIZE_KEYWORD:
+            out["size"] = _FONT_SIZE_KEYWORD[v]
+    elif m := re.search(r'<font[^>]*\bsize=["\']?([1-7])', html, re.IGNORECASE):
+        out["size"] = _FONT_SIZE_HTML[m.group(1)]
+    if re.search(r"<b\b", html, re.IGNORECASE) or re.search(
+        r"font-weight\s*:\s*bold", html, re.IGNORECASE
+    ):
+        out["weight"] = "bold"
+    m = re.search(r"text-align\s*:\s*(left|right|center|justify)", html, re.IGNORECASE)
+    if m:
+        out["align"] = m.group(1).lower()
+    return out
+
+
 def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, object]:
     raw_text = p.get("text") or None
-    inline_color: str | None = None
+    html_style: dict[str, object] = {}
     if raw_text:
-        # OrbVis strips HTML for XSS; pull the first inline color first so
-        # dark text on a light imported background stays readable.
-        m = re.search(
-            r'(?:<font[^>]*color=["\']([^"\']+)|color\s*:\s*([^;"\']+))',
-            raw_text,
-            flags=re.IGNORECASE,
-        )
-        if m:
-            inline_color = (m.group(1) or m.group(2) or "").strip() or None
+        html_style = _extract_html_style(raw_text)
         raw_text = re.sub(r"<br\s*/?>", "\n", raw_text, flags=re.IGNORECASE)
         raw_text = re.sub(r"<[^>]+>", "", raw_text)
+        raw_text = _decode_html_entities(raw_text)
     width = (
         _int(p.get("w"), 200) if (p.get("w") or "").strip().lower() not in {"auto", ""} else None
     )
@@ -302,21 +352,26 @@ def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, object]:
     # legacy textbox x/y is top-left; OrbVis centers objects — offset by half w/h
     tx = _coord(p.get("x", "0")) + (width // 2 if width else 0)
     ty = _coord(p.get("y", "0")) + (height // 2 if height else 0)
+    label: dict[str, object] = {
+        "show": True,
+        "text": raw_text,
+        "x": 0,
+        "y": 0,
+        "size": html_style.get("size", 11),
+        "color": html_style.get("color", "#000000"),
+        "background": "transparent",
+    }
+    if "weight" in html_style:
+        label["weight"] = html_style["weight"]
+    if "align" in html_style:
+        label["align"] = html_style["align"]
     obj: dict[str, object] = {
         "id": f"textbox_{raw_id}",
         "type": "textbox",
         "x": tx,
         "y": ty,
         "z": _int(p.get("z"), 1),
-        "label": {
-            "show": True,
-            "text": raw_text,
-            "x": 0,
-            "y": 0,
-            "size": 11,
-            "color": inline_color or "#000000",
-            "background": "transparent",
-        },
+        "label": label,
         # NagVis textbox default is opaque white; persist it so OrbVis doesn't
         # swap in its dark glass fallback.
         "textbox_background": (p.get("background_color") or "").strip() or "#FFFFFF",

@@ -490,8 +490,8 @@ def test_fixture_textbox_html_stripped(all_objects_board):
     assert o["type"] == "textbox"
     label = o["label"]
     assert isinstance(label, dict)
-    # &nbsp; passes through; <b>…</b> and other tags stripped, <br> → \n
-    assert label["text"] == "Hello&nbsp;World\nsecond line"
+    # <b>…</b> and other tags stripped, <br> → \n, &nbsp; → real space
+    assert label["text"] == "Hello World\nsecond line"
     # legacy textbox x/y is top-left; OrbVis centers, so x/y shifts by w/2,h/2
     assert (o["x"], o["y"]) == (200 + 150, 820 + 30)
 
