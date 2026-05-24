@@ -1,5 +1,5 @@
 <template>
-    <div class="orb-color-input">
+    <div ref="rootEl" class="orb-color-input">
         <label v-if="enableLabel !== undefined" class="orb-color-input__toggle">
             <CmkSwitch :data="enabled" @update:data="setEnabled" />
             <span>{{ enableLabel }}</span>
@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import CmkColorPicker from '@/components/cmk/CmkColorPicker';
@@ -48,6 +48,12 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:modelValue': [string | null] }>();
 
 const { t } = useI18n();
+
+// Blur on teardown: the native color popup lingers if its input unmounts open.
+const rootEl = ref<HTMLElement | null>(null);
+onBeforeUnmount(() => {
+    rootEl.value?.querySelector<HTMLInputElement>('input[type="color"]')?.blur();
+});
 
 const enabled = computed(() => {
     if (props.enableLabel === undefined) return true;
