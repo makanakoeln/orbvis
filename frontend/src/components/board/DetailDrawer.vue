@@ -1030,23 +1030,44 @@ const memberSearch = ref('');
 const onlyProblems = ref(false);
 
 watch(
-    [() => props.object?.type, () => props.object?.group_name, () => props.connectionId],
-    async ([objType, groupName, connId]) => {
+    [
+        () => props.object?.type,
+        () => props.object?.group_name,
+        () => props.object?.object_filter,
+        () => props.object?.object_types,
+        () => props.connectionId,
+    ],
+    async ([objType, groupName, objFilter, objTypes, connId]) => {
         groupMembers.value = [];
         memberSearch.value = '';
         onlyProblems.value = false;
-        if (!connId || !auth.accessToken || !groupName) return;
-        if (objType !== 'hostgroup' && objType !== 'servicegroup') return;
+        if (!connId || !auth.accessToken) return;
+        const isHostOrServiceGroup = objType === 'hostgroup' || objType === 'servicegroup';
+        if (isHostOrServiceGroup && !groupName) return;
+        if (objType === 'dyngroup' && !objFilter) return;
+        if (!isHostOrServiceGroup && objType !== 'dyngroup') return;
         loadingMembers.value = true;
         try {
-            const rows = await connectionsApi.groupMembers(
-                connId,
-                objType,
-                groupName,
-                auth.accessToken,
-            );
+            const rows =
+                objType === 'dyngroup'
+                    ? await connectionsApi.dyngroupMembers(
+                          connId,
+                          objTypes ?? 'host',
+                          objFilter ?? '',
+                          auth.accessToken,
+                      )
+                    : await connectionsApi.groupMembers(
+                          connId,
+                          objType as 'hostgroup' | 'servicegroup',
+                          groupName ?? '',
+                          auth.accessToken,
+                      );
             // Stale-response guard.
-            if (props.object?.type === objType && props.object?.group_name === groupName) {
+            if (
+                props.object?.type === objType &&
+                props.object?.group_name === groupName &&
+                props.object?.object_filter === objFilter
+            ) {
                 groupMembers.value = rows;
             }
         } catch {
@@ -1110,7 +1131,10 @@ const truncatedMemberCount = computed(() =>
 );
 
 const isGroup = computed(
-    () => props.object?.type === 'hostgroup' || props.object?.type === 'servicegroup',
+    () =>
+        props.object?.type === 'hostgroup' ||
+        props.object?.type === 'servicegroup' ||
+        props.object?.type === 'dyngroup',
 );
 const isAggregation = computed(() => props.object?.type === 'aggregation');
 

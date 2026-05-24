@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.api.v1.deps import get_current_user, require_admin, resolve_auth_user
 from app.connections.base import ConnectionBase, ServiceRow, TopologyRow, topology_problem_rank
@@ -27,7 +27,7 @@ if FORM_SPECS_AVAILABLE:
         form_data_to_config,
     )
 from app.models.user import User
-from app.schemas.board import AggregationInfo, AggregationNode
+from app.schemas.board import DYNGROUP_FILTER_RE, AggregationInfo, AggregationNode
 from app.schemas.connection import (
     REDACTED_SECRET,
     ConnectionConfig,
@@ -727,6 +727,43 @@ async def list_group_members(
             rows = await connection.get_group_member_states(group_type, group_name)
     else:
         rows = await connection.get_group_member_states(group_type, group_name)
+    return [GroupMember.model_validate(dict(r)) for r in rows]
+
+
+class DyngroupMembersRequest(BaseModel):
+    object_types: Literal["host", "service"] = "host"
+    object_filter: str
+
+    @field_validator("object_filter")
+    @classmethod
+    def _validate_filter(cls, v: str) -> str:
+        if not DYNGROUP_FILTER_RE.fullmatch(v):
+            raise ValueError("object_filter must be one or more 'Filter: …\\n' lines")
+        return v
+
+
+@router.post(
+    "/{connection_id}/dyngroup-members",
+    response_model=list[GroupMember],
+)
+async def list_dyngroup_members(
+    connection_id: str,
+    body: DyngroupMembersRequest,
+    user: User = Depends(get_current_user),
+) -> list[GroupMember]:
+    """Return per-member state for a dyngroup filter (Members tab in drawer)."""
+    connection = get_connection(connection_id)
+    if connection is None:
+        return []
+    auth_user = resolve_auth_user(user.name, user.is_admin)
+    with_auth = getattr(connection, "with_auth_user", None)
+    if auth_user is not None and with_auth is not None:
+        async with with_auth(auth_user):
+            rows = await connection.get_dyngroup_member_states(
+                body.object_types, body.object_filter
+            )
+    else:
+        rows = await connection.get_dyngroup_member_states(body.object_types, body.object_filter)
     return [GroupMember.model_validate(dict(r)) for r in rows]
 
 

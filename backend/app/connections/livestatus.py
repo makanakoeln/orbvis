@@ -862,6 +862,65 @@ class LivestatusConnection(ConnectionBase):
         )
         return ObjectState(object_id="", type="servicegroup", state=worst, services_summary=summary)
 
+    async def get_dyngroup_member_states(
+        self, object_types: str, object_filter: str
+    ) -> list[GroupMemberRow]:
+        lql_filter = object_filter.replace("\\n", "\n")
+        if not lql_filter.endswith("\n"):
+            lql_filter += "\n"
+        if object_types == "service":
+            query = (
+                "GET services\n"
+                "Columns: host_name description state plugin_output acknowledged "
+                "scheduled_downtime_depth notifications_enabled last_state_change\n"
+                f"{lql_filter}"
+            )
+            rows = await self._query(query)
+            svc_out: list[GroupMemberRow] = []
+            for r in rows:
+                host = _row_str(r, 0)
+                svc = _row_str(r, 1)
+                if not host or not svc:
+                    continue
+                svc_out.append(
+                    GroupMemberRow(
+                        host=host,
+                        service=svc,
+                        state=_SERVICE_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
+                        output=_row_str(r, 3).split("\n", 1)[0],
+                        acknowledged=bool(_row_int(r, 4)),
+                        in_downtime=_row_int(r, 5) > 0,
+                        notifications_enabled=bool(_row_int(r, 6)),
+                        last_state_change=_row_float(r, 7) or None,
+                    )
+                )
+            return svc_out
+        query = (
+            "GET hosts\n"
+            "Columns: name state plugin_output acknowledged "
+            "scheduled_downtime_depth notifications_enabled last_state_change\n"
+            f"{lql_filter}"
+        )
+        rows = await self._query(query)
+        host_out: list[GroupMemberRow] = []
+        for r in rows:
+            name = _row_str(r, 0)
+            if not name:
+                continue
+            host_out.append(
+                GroupMemberRow(
+                    host=name,
+                    service="",
+                    state=_HOST_STATE_MAP.get(_row_int(r, 1), "UNKNOWN"),
+                    output=_row_str(r, 2).split("\n", 1)[0],
+                    acknowledged=bool(_row_int(r, 3)),
+                    in_downtime=_row_int(r, 4) > 0,
+                    notifications_enabled=bool(_row_int(r, 5)),
+                    last_state_change=_row_float(r, 6) or None,
+                )
+            )
+        return host_out
+
     async def get_dyngroup_state(self, object_types: str, object_filter: str) -> ObjectState:
         # NagVis-style: feed the validated filter into GET hosts/services and
         # aggregate worst-of. Filter regex enforcement happens at the schema

@@ -494,6 +494,22 @@ export const connectionsApi = {
             token,
         ),
 
+    dyngroupMembers: (
+        connectionId: string,
+        objectTypes: 'host' | 'service',
+        objectFilter: string,
+        token: string,
+    ): Promise<GroupMember[]> =>
+        request(
+            `/connections/${connectionId}/dyngroup-members`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ object_types: objectTypes, object_filter: objectFilter }),
+            },
+            token,
+        ),
+
     test: (connectionId: string, token: string): Promise<{ ok: boolean; message: string }> =>
         request(`/connections/${connectionId}/test`, {}, token),
 

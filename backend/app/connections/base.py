@@ -164,6 +164,12 @@ class ConnectionBase(ABC):
         """
         return ObjectState(object_id="", type="dyngroup", state="NOT_SUPPORTED")
 
+    async def get_dyngroup_member_states(
+        self, object_types: str, object_filter: str
+    ) -> list[GroupMemberRow]:
+        """Return per-member rows for a dyngroup filter. Default: empty."""
+        return []
+
     @abstractmethod
     async def get_objects(self, obj_type: str) -> list[str]:
         """Return list of object names of given type (host/service/hostgroup/…)."""
