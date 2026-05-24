@@ -430,6 +430,12 @@ async def upload_background(
         Path(tmp_path).unlink(missing_ok=True)
         raise
 
+    # Drop siblings with other formats — board config holds only one filename.
+    for stale in bg_dir.glob(f"{name}.*"):
+        if stale.resolve() == dest.resolve():
+            continue
+        stale.unlink(missing_ok=True)
+
     updated = board_service.update_board(name, BoardUpdate(background_image=filename))
     return JSONResponse({"filename": filename, "version": updated.version if updated else None})
 

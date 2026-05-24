@@ -177,6 +177,114 @@ async def test_import_board_overwrite(client, admin_token, tmp_path, monkeypatch
     assert resp.json()["alias"] == "Updated"
 
 
+_TINY_PNG = (
+    b"\x89PNG\r\n\x1a\n"
+    b"\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+    b"\x00\x00\x00\rIDATx\x9cc\xfc\xcf\xc0P\x0f\x00\x05\x01\x01\x02\xa0\xb5\xe1+\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+_TINY_GIF = b"GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
+
+
+@pytest.mark.asyncio
+async def test_upload_background_creates_file_and_sets_field(
+    client, admin_token, tmp_path, monkeypatch
+):
+    from pathlib import Path
+
+    await _create(client, admin_token, tmp_path, monkeypatch)
+    resp = await client.post(
+        "/api/v1/boards/src-board/background",
+        files={"file": ("hero.png", _TINY_PNG, "image/png")},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["filename"] == "src-board.png"
+    assert isinstance(body["version"], int)
+
+    bg_path = Path(tmp_path) / "backgrounds" / "src-board.png"
+    assert bg_path.exists()
+    assert bg_path.read_bytes() == _TINY_PNG
+
+    get_resp = await client.get(
+        "/api/v1/boards/src-board",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert get_resp.json()["background_image"] == "src-board.png"
+
+
+@pytest.mark.asyncio
+async def test_upload_background_replaces_existing_with_different_format(
+    client, admin_token, tmp_path, monkeypatch
+):
+    from pathlib import Path
+
+    await _create(client, admin_token, tmp_path, monkeypatch)
+    first = await client.post(
+        "/api/v1/boards/src-board/background",
+        files={"file": ("a.png", _TINY_PNG, "image/png")},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert first.status_code == 200
+    png_path = Path(tmp_path) / "backgrounds" / "src-board.png"
+    assert png_path.exists()
+
+    second = await client.post(
+        "/api/v1/boards/src-board/background",
+        files={"file": ("b.gif", _TINY_GIF, "image/gif")},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["filename"] == "src-board.gif"
+
+    gif_path = Path(tmp_path) / "backgrounds" / "src-board.gif"
+    assert gif_path.exists()
+    assert gif_path.read_bytes() == _TINY_GIF
+    get_resp = await client.get(
+        "/api/v1/boards/src-board",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert get_resp.json()["background_image"] == "src-board.gif"
+    assert not png_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_upload_background_rejects_unsupported_mime(
+    client, admin_token, tmp_path, monkeypatch
+):
+    await _create(client, admin_token, tmp_path, monkeypatch)
+    resp = await client.post(
+        "/api/v1/boards/src-board/background",
+        files={"file": ("evil.exe", b"MZ\x90\x00binary", "application/octet-stream")},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 415
+
+
+@pytest.mark.asyncio
+async def test_upload_background_rejects_wrong_magic_bytes(
+    client, admin_token, tmp_path, monkeypatch
+):
+    await _create(client, admin_token, tmp_path, monkeypatch)
+    resp = await client.post(
+        "/api/v1/boards/src-board/background",
+        files={"file": ("fake.png", b"not a png at all", "image/png")},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 415
+
+
+@pytest.mark.asyncio
+async def test_upload_background_404_for_missing_board(client, admin_token, tmp_path, monkeypatch):
+    _patch(monkeypatch, tmp_path)
+    resp = await client.post(
+        "/api/v1/boards/does-not-exist/background",
+        files={"file": ("a.png", _TINY_PNG, "image/png")},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 404
+
+
 # ---- Background delete ----
 
 

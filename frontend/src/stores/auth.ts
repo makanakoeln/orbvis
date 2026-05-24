@@ -49,12 +49,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     async function _doInit(): Promise<void> {
-        // Try Checkmk SSO via session cookie (auth_<site>); only works when served through OMD Apache.
-        // Skip outright when the URL doesn't have a Checkmk site prefix — the SSO endpoint can't
-        // succeed in standalone, and probing it just logs a console 401 on every load.
-        // Retry once on network errors (server may still be starting up), but not on HTTP 401.
+        // Skip the SSO probe when a non-SSO login was already established — otherwise
+        // every reload floods the network panel with 401s the user can't act on.
+        const hadSsoBefore = sessionStorage.getItem(SSO_ACTIVE_KEY) === '1';
+        const hasStoredToken = !!sessionStorage.getItem(ACCESS_TOKEN_KEY);
+        const skipSsoProbe = hasStoredToken && !hadSsoBefore;
         let ssoTokens = null;
-        if (isCheckmkDeployment.value) {
+        if (isCheckmkDeployment.value && !skipSsoProbe) {
             for (let attempt = 0; attempt < 2; attempt++) {
                 try {
                     ssoTokens = await authApi.sso();

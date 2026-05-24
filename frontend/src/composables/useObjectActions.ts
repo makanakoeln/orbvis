@@ -149,6 +149,7 @@ export function useObjectActions(
             hostFn: cmkApi.forceCheckHost,
             serviceFn: cmkApi.forceCheckService,
             errorKey: 'contextMenu.forceCheckFailed',
+            successKey: 'contextMenu.forceCheckSuccess',
         });
     }
 
@@ -161,6 +162,7 @@ export function useObjectActions(
                 ? cmkApi.enableNotificationsService
                 : cmkApi.disableNotificationsService,
             errorKey: 'contextMenu.toggleNotificationsFailed',
+            successKey: 'contextMenu.toggleNotificationsSuccess',
         });
     }
 

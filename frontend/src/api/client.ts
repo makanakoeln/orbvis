@@ -708,7 +708,10 @@ type CmkAction =
     | 'disable_notifications'
     | 'enable_checks'
     | 'disable_checks'
-    | 'remove_acknowledgement';
+    | 'remove_acknowledgement'
+    | 'acknowledge'
+    | 'add_comment'
+    | 'schedule_downtime';
 
 /**
  * Resolve the OrbVis API base from the CMK baseUrl the DetailDrawer
@@ -789,6 +792,13 @@ function cmkServiceAction(
     });
 }
 
+function toEpochSeconds(s: string): number {
+    const n = Number(s);
+    if (Number.isFinite(n) && n > 0) return Math.floor(n);
+    const t = Date.parse(s);
+    return Number.isFinite(t) ? Math.floor(t / 1000) : 0;
+}
+
 export const cmkApi = {
     acknowledgeHost(
         baseUrl: string,
@@ -798,8 +808,8 @@ export const cmkApi = {
         notify: boolean,
         persistent: boolean,
     ): Promise<void> {
-        return cmkRequest(baseUrl, '/domain-types/acknowledge/collections/host', {
-            acknowledge_type: 'host',
+        return orbvisCommand(baseUrl, 'host-action', {
+            action: 'acknowledge',
             host_name: hostname,
             comment,
             sticky,
@@ -817,8 +827,8 @@ export const cmkApi = {
         notify: boolean,
         persistent: boolean,
     ): Promise<void> {
-        return cmkRequest(baseUrl, '/domain-types/acknowledge/collections/service', {
-            acknowledge_type: 'service',
+        return orbvisCommand(baseUrl, 'service-action', {
+            action: 'acknowledge',
             host_name: hostname,
             service_description: serviceDescription,
             comment,
@@ -835,11 +845,11 @@ export const cmkApi = {
         endTime: string,
         comment: string,
     ): Promise<void> {
-        return cmkRequest(baseUrl, '/domain-types/downtime/collections/host', {
-            downtime_type: 'host',
+        return orbvisCommand(baseUrl, 'host-action', {
+            action: 'schedule_downtime',
             host_name: hostname,
-            start_time: startTime,
-            end_time: endTime,
+            start_time: toEpochSeconds(startTime),
+            end_time: toEpochSeconds(endTime),
             comment,
         });
     },
@@ -852,12 +862,12 @@ export const cmkApi = {
         endTime: string,
         comment: string,
     ): Promise<void> {
-        return cmkRequest(baseUrl, '/domain-types/downtime/collections/service', {
-            downtime_type: 'service',
+        return orbvisCommand(baseUrl, 'service-action', {
+            action: 'schedule_downtime',
             host_name: hostname,
-            service_descriptions: [serviceDescription],
-            start_time: startTime,
-            end_time: endTime,
+            service_description: serviceDescription,
+            start_time: toEpochSeconds(startTime),
+            end_time: toEpochSeconds(endTime),
             comment,
         });
     },
@@ -912,8 +922,8 @@ export const cmkApi = {
         cmkServiceAction(baseUrl, hostname, serviceDescription, 'force_check'),
 
     addCommentHost(baseUrl: string, hostname: string, comment: string): Promise<void> {
-        return cmkRequest(baseUrl, '/domain-types/comment/collections/host', {
-            comment_type: 'host',
+        return orbvisCommand(baseUrl, 'host-action', {
+            action: 'add_comment',
             host_name: hostname,
             comment,
         });
@@ -925,8 +935,8 @@ export const cmkApi = {
         serviceDescription: string,
         comment: string,
     ): Promise<void> {
-        return cmkRequest(baseUrl, '/domain-types/comment/collections/service', {
-            comment_type: 'service',
+        return orbvisCommand(baseUrl, 'service-action', {
+            action: 'add_comment',
             host_name: hostname,
             service_description: serviceDescription,
             comment,

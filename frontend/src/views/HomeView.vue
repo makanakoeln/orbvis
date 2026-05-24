@@ -934,6 +934,14 @@
                                     {{ t('home.hidden') }}
                                 </span>
                                 <span
+                                    v-if="map.readonly"
+                                    class="text-[10px] rounded-md font-medium bg-[var(--bg-surface)]/80 text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60 backdrop-blur-sm"
+                                    style="padding: var(--dimension-2) 5px"
+                                    :title="t('home.readonlyBoardTitle')"
+                                >
+                                    {{ t('home.readonly') }}
+                                </span>
+                                <span
                                     v-if="map.rotation_interval > 0"
                                     class="rounded-full font-medium bg-[var(--color-warning)]/20 text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/30 backdrop-blur-sm"
                                     style="font-size: 11px; padding: var(--dimension-2) 6px"

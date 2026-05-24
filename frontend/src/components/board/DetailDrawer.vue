@@ -917,6 +917,7 @@ const props = defineProps<{
     /** Hostnames currently on the board — topology entries to those hosts
      * become clickable buttons that emit `select-host` for the parent to act on. */
     selectableHosts?: string[];
+    readonly?: boolean;
 }>();
 
 const portalTarget = computed(() => props.portalTarget);
@@ -962,10 +963,7 @@ onUnmounted(() => {
 
 const auth = useAuthStore();
 
-// Operational commands (ack, downtime, force-check, comment, notifications) are
-// admin-only. Backend endpoints enforce this too; the UI mirrors the gate so
-// non-admin operators don't see buttons that would 403 on click.
-const canCommand = computed(() => auth.isAdmin);
+const canCommand = computed(() => auth.isAdmin && !props.readonly);
 
 // On-demand details kept separate from the streamed ObjectState — long_output,
 // comments, downtimes and topology rarely change but can be many KB each, so

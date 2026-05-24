@@ -15,6 +15,7 @@
                     "
                 />
                 <p v-if="nameError" class="create-board__error">{{ nameError }}</p>
+                <p v-else-if="nameWarning" class="create-board__warning">{{ nameWarning }}</p>
                 <p v-else class="create-board__hint">{{ t('admin.boardIdHint') }}</p>
             </div>
             <div class="create-board__field">
@@ -105,7 +106,7 @@ import { useBoardsStore } from '@/stores/boards';
 import { useConnectionsStore } from '@/stores/connections';
 import { useSettingsStore } from '@/stores/settings';
 import { boardTypeOptions } from '@/utils/dropdownOptions';
-import { sanitizeBoardName, slugToTitleCase } from '@/utils/naming';
+import { sanitizeBoardName, sanitizeStrippedChars, slugToTitleCase } from '@/utils/naming';
 
 const emit = defineEmits<{ close: []; created: [name: string] }>();
 
@@ -137,12 +138,23 @@ const boardTypeCards = computed(() =>
 );
 
 const _NAME_RE = /^[a-zA-Z0-9_-]+$/;
+const _MAX_NAME_LEN = 64;
 const nameError = ref('');
+const nameWarning = ref('');
 
 function onNameInput(e: Event) {
     nameTouched.value = true;
-    form.value.name = sanitizeBoardName((e.target as HTMLInputElement).value);
-    nameError.value = _NAME_RE.test(form.value.name) ? '' : t('admin.boardIdInvalid');
+    const raw = (e.target as HTMLInputElement).value;
+    const stripped = sanitizeStrippedChars(raw);
+    form.value.name = sanitizeBoardName(raw);
+    if (form.value.name.length > _MAX_NAME_LEN) {
+        nameError.value = t('admin.boardIdTooLong', { max: _MAX_NAME_LEN });
+    } else if (form.value.name && !_NAME_RE.test(form.value.name)) {
+        nameError.value = t('admin.boardIdInvalid');
+    } else {
+        nameError.value = '';
+    }
+    nameWarning.value = stripped ? t('admin.boardIdStripped') : '';
     if (!aliasTouched.value) {
         form.value.alias = slugToTitleCase(form.value.name);
     }
@@ -180,8 +192,14 @@ async function submit() {
             null,
         );
     } catch (err) {
-        if (err instanceof ApiError && err.status === 409) {
-            nameError.value = t('admin.boardIdTaken');
+        if (err instanceof ApiError) {
+            if (err.status === 409) {
+                nameError.value = t('admin.boardIdTaken');
+            } else if (err.status === 422) {
+                nameError.value = err.message || t('admin.boardIdInvalid');
+            } else {
+                nameError.value = err.message || `HTTP ${err.status}`;
+            }
         }
         return;
     }
@@ -219,6 +237,11 @@ async function submit() {
 .create-board__error {
     font-size: var(--font-size-normal);
     color: var(--color-light-red-40);
+}
+
+.create-board__warning {
+    font-size: var(--font-size-normal);
+    color: var(--color-yellow-50);
 }
 
 .create-board__hint {

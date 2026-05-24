@@ -530,6 +530,7 @@
                 :checkmk-url="checkmkUrl"
                 :connection-id="boardConfig?.connection_id ?? null"
                 :selectable-hosts="selectableHostNames"
+                :readonly="boardConfig?.readonly ?? false"
                 portal-target="#orbvis-board-shell"
                 @close="closeDetail"
                 @acknowledge="onDetailAck"

@@ -60,6 +60,8 @@ export default {
         rotationBadgeTitle: 'Wechselt alle {n} Sekunden',
         hidden: 'versteckt',
         hiddenBoard: 'Für reguläre Benutzer ausgeblendet',
+        readonly: 'nur lesbar',
+        readonlyBoardTitle: 'Demo-Board — kann nicht bearbeitet werden',
         search: 'Boards suchen…',
         clearSearch: 'Suche zurücksetzen',
         noSearchResults: 'Keine Boards für „{q}" gefunden',
@@ -443,6 +445,9 @@ export default {
         saveFailed: 'Speichern fehlgeschlagen',
         radarEmptyTitle: 'Keine Objekte gefunden',
         radarEmptyHintLead: 'Filter über die Board-Einstellungen anpassen',
+        radarPreviewLimit: 'Vorschau begrenzt — {hidden} weitere ausgeblendet',
+        radarPreviewLimitTitle:
+            'Die Vorschau zeigt nur die Objekte mit den schlechtesten Zuständen. Im Board werden alle {hidden} weiteren Objekte angezeigt.',
         metricRequiredWeathermap:
             'Bitte eine Metrik wählen — ohne Metrik kann die Linie nicht eingefärbt werden.',
         biLineColor: 'Subtree-Linie',
@@ -511,6 +516,8 @@ export default {
         noDowntimesFound: 'Keine aktiven Downtimes gefunden',
         forceCheck: 'Check erzwingen',
         forceCheckFailed: 'Check erzwingen fehlgeschlagen',
+        forceCheckSuccess: 'Check eingeplant',
+        toggleNotificationsSuccess: 'Benachrichtigungen aktualisiert',
         addComment: 'Kommentar hinzufügen…',
         removeAck: 'Quittierung entfernen',
         removeAckFailed: 'Fehler beim Entfernen der Quittierung',
@@ -635,6 +642,9 @@ export default {
             'Buchstaben, Ziffern, Bindestriche und Unterstriche — Leerzeichen werden automatisch zu Bindestrichen',
         boardIdInvalid: 'Nur Buchstaben, Ziffern, Bindestriche (-) und Unterstriche (_) erlaubt',
         boardIdTaken: 'Ein Board mit dieser ID existiert bereits',
+        boardIdStripped:
+            'Einige Zeichen wurden entfernt (Umlaute, Satzzeichen, Symbole sind nicht erlaubt)',
+        boardIdTooLong: 'Board-ID ist zu lang (max. {max} Zeichen)',
         alias: 'Anzeigename',
         type: 'Typ',
         alias2: 'Alias',

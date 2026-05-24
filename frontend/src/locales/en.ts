@@ -60,6 +60,8 @@ export default {
         rotationBadgeTitle: 'Rotates every {n} seconds',
         hidden: 'hidden',
         hiddenBoard: 'Hidden from regular users',
+        readonly: 'read-only',
+        readonlyBoardTitle: 'Demo board — cannot be edited',
         search: 'Search boards…',
         clearSearch: 'Clear search',
         noSearchResults: 'No boards match "{q}"',
@@ -440,6 +442,9 @@ export default {
         saveFailed: 'Save failed',
         radarEmptyTitle: 'No objects found',
         radarEmptyHintLead: 'Adjust the filter via board settings',
+        radarPreviewLimit: 'Preview limited — {hidden} more not shown',
+        radarPreviewLimitTitle:
+            'Preview shows the worst-state objects only. Open the board to see all {hidden} additional objects.',
         metricRequiredWeathermap:
             'Pick a metric — weather coloring needs one to colorize the line.',
         biLineColor: 'Subtree line',
@@ -508,6 +513,8 @@ export default {
         noDowntimesFound: 'No active downtimes found',
         forceCheck: 'Force check',
         forceCheckFailed: 'Force check failed',
+        forceCheckSuccess: 'Force check scheduled',
+        toggleNotificationsSuccess: 'Notifications updated',
         addComment: 'Add comment…',
         removeAck: 'Remove acknowledgement',
         removeAckFailed: 'Failed to remove acknowledgement',
@@ -632,6 +639,9 @@ export default {
             'Letters, digits, hyphens and underscores only — spaces become hyphens automatically',
         boardIdInvalid: 'Only letters, digits, hyphens (-) and underscores (_) allowed',
         boardIdTaken: 'A board with this ID already exists',
+        boardIdStripped:
+            'Some characters were removed (umlauts, punctuation, symbols are not allowed)',
+        boardIdTooLong: 'Board ID is too long (max {max} characters)',
         alias: 'Display name',
         type: 'Type',
         alias2: 'Alias',

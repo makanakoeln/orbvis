@@ -56,7 +56,9 @@
         <template v-else>
             <div class="mb-5 flex items-center gap-4 flex-wrap">
                 <span class="text-xs text-[var(--text-muted)]"
-                    >{{ sortedStates.length }} objects</span
+                    >{{ totalCount }} objects<template v-if="compactOverflow > 0"
+                        ><span class="italic"> (showing {{ sortedStates.length }})</span></template
+                    ></span
                 >
                 <div class="flex items-center gap-3 flex-wrap">
                     <span
@@ -163,8 +165,9 @@
                 <div
                     v-if="compactOverflow > 0"
                     class="text-xs text-[var(--text-muted)] italic flex items-center justify-center p-2"
+                    :title="t('boardSettings.radarPreviewLimitTitle', { hidden: compactOverflow })"
                 >
-                    +{{ compactOverflow }} more
+                    {{ t('boardSettings.radarPreviewLimit', { hidden: compactOverflow }) }}
                 </div>
             </div>
         </template>
@@ -270,12 +273,15 @@ const sortedStates = computed(() => {
     return props.compact ? filtered.slice(0, COMPACT_LIMIT) : filtered;
 });
 
+const totalCount = computed(() =>
+    filterTerms.value.length
+        ? Object.values(props.states).filter(stateMatchesFilter).length
+        : Object.values(props.states).length,
+);
+
 const compactOverflow = computed(() => {
     if (!props.compact) return 0;
-    const total = filterTerms.value.length
-        ? Object.values(props.states).filter(stateMatchesFilter).length
-        : Object.values(props.states).length;
-    return Math.max(0, total - COMPACT_LIMIT);
+    return Math.max(0, totalCount.value - COMPACT_LIMIT);
 });
 
 const summary = computed(() => {

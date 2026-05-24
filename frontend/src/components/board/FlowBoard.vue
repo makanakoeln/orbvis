@@ -123,6 +123,7 @@
             :checkmk-url="props.checkmkUrl ?? null"
             :connection-id="props.connectionId ?? null"
             :selectable-hosts="flowSelectableHosts"
+            :readonly="props.readonly ?? false"
             portal-target="#orbvis-board-shell"
             @close="closeDetail"
             @acknowledge="onDetailAck"
