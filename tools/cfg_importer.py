@@ -361,7 +361,18 @@ def _url_target(raw: str | None) -> str:
 
 
 _BLOCK_TYPES = frozenset(
-    {"host", "service", "hostgroup", "servicegroup", "map", "shape", "line", "textbox", "aggr"}
+    {
+        "host",
+        "service",
+        "hostgroup",
+        "servicegroup",
+        "dyngroup",
+        "map",
+        "shape",
+        "line",
+        "textbox",
+        "aggr",
+    }
 )
 
 
@@ -568,6 +579,10 @@ def _apply_type_specific(obj: dict[str, Any], legacy_type: str, p: dict[str, str
         obj["aggregation_id"] = p.get("aggr_name") or p.get("name")
         if "aggr_url" in p and "url" not in p:
             obj["url"] = p["aggr_url"]
+    elif legacy_type == "dyngroup":
+        ot = (p.get("object_types") or "host").strip().lower()
+        obj["object_types"] = "service" if ot == "service" else "host"
+        obj["object_filter"] = p.get("object_filter") or None
 
 
 def _handle_monitor_block(legacy_type: str, p: dict[str, str], raw_id: str) -> dict[str, Any]:

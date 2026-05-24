@@ -176,7 +176,18 @@ def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, object]
 
 
 _BLOCK_TYPES = frozenset(
-    {"host", "service", "hostgroup", "servicegroup", "map", "shape", "line", "textbox", "aggr"}
+    {
+        "host",
+        "service",
+        "hostgroup",
+        "servicegroup",
+        "dyngroup",
+        "map",
+        "shape",
+        "line",
+        "textbox",
+        "aggr",
+    }
 )
 
 
@@ -360,6 +371,10 @@ def _apply_type_specific(obj: dict[str, object], block_type: str, p: dict[str, s
         obj["aggregation_id"] = p.get("aggr_name") or p.get("name")
         if "aggr_url" in p and "url" not in p:
             obj["url"] = p["aggr_url"]
+    elif block_type == "dyngroup":
+        ot = (p.get("object_types") or "host").strip().lower()
+        obj["object_types"] = "service" if ot == "service" else "host"
+        obj["object_filter"] = p.get("object_filter") or None
 
 
 def _handle_monitor_block(block_type: str, p: dict[str, str], raw_id: str) -> dict[str, object]:

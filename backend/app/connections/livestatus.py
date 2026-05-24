@@ -862,6 +862,40 @@ class LivestatusConnection(ConnectionBase):
         )
         return ObjectState(object_id="", type="servicegroup", state=worst, services_summary=summary)
 
+    async def get_dyngroup_state(self, object_types: str, object_filter: str) -> ObjectState:
+        # NagVis-style: feed the validated filter into GET hosts/services and
+        # aggregate worst-of. Filter regex enforcement happens at the schema
+        # layer (DYNGROUP_FILTER_RE) so we don't double-check here.
+        lql_filter = object_filter.replace("\\n", "\n")
+        if not lql_filter.endswith("\n"):
+            lql_filter += "\n"
+        if object_types == "service":
+            rows = await self._query(f"GET services\nColumns: state\n{lql_filter}")
+            if not rows:
+                return ObjectState(object_id="", type="dyngroup", state="PENDING")
+            states = [_SERVICE_STATE_MAP.get(_row_int(r, 0), "UNKNOWN") for r in rows]
+            worst = max(states, key=lambda s: _SERVICE_SEVERITY.get(s, 0))
+            summary = ServicesSummary(
+                ok=sum(1 for s in states if s == "OK"),
+                warning=sum(1 for s in states if s == "WARNING"),
+                critical=sum(1 for s in states if s == "CRITICAL"),
+                unknown=sum(1 for s in states if s == "UNKNOWN"),
+                pending=sum(1 for s in states if s == "PENDING"),
+            )
+            return ObjectState(object_id="", type="dyngroup", state=worst, services_summary=summary)
+        rows = await self._query(f"GET hosts\nColumns: state\n{lql_filter}")
+        if not rows:
+            return ObjectState(object_id="", type="dyngroup", state="PENDING")
+        states = [_HOST_STATE_MAP.get(_row_int(r, 0), "UNKNOWN") for r in rows]
+        worst = max(states, key=lambda s: _HOST_SEVERITY.get(s, 0))
+        summary = ServicesSummary(
+            ok=sum(1 for s in states if s == "UP"),
+            critical=sum(1 for s in states if s == "DOWN"),
+            unknown=sum(1 for s in states if s == "UNREACHABLE"),
+            pending=sum(1 for s in states if s == "PENDING"),
+        )
+        return ObjectState(object_id="", type="dyngroup", state=worst, services_summary=summary)
+
     async def get_objects(self, obj_type: str) -> list[str]:
         if obj_type == "host":
             rows = await self._query("GET hosts\nColumns: name\n")

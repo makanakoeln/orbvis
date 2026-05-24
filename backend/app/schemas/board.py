@@ -81,6 +81,7 @@ ObjectType = Literal[
     "service",
     "hostgroup",
     "servicegroup",
+    "dyngroup",
     "map",
     "image",
     "line",
@@ -89,6 +90,11 @@ ObjectType = Literal[
     "graph",
     "aggregation",
 ]
+
+
+# Forwarded to Livestatus verbatim — restrict to Filter: lines so GET / Stats:
+# / Columns: cannot be injected. Mirrors NagVis MATCH_LIVESTATUS_FILTER.
+DYNGROUP_FILTER_RE = re.compile(r"^(?:Filter: [^\n]+(?:\\n|\n))+$")
 
 
 class AggregationInfo(BaseModel):
@@ -268,6 +274,9 @@ class BoardObject(BaseModel):
     cmk_label_value: str | None = None
     cmk_label_target: Literal["hosts", "services"] | None = None
     aggregation_id: str | None = None
+    # Dyngroup: arbitrary Livestatus filter producing a set of hosts/services.
+    object_types: Literal["host", "service"] | None = None
+    object_filter: str | None = None
     # 0 = root only, hard cap 10 levels — see backend.app.services.state_service.
     expand_depth: int = Field(default=0, ge=0, le=10)
     only_hard_states: bool = False
@@ -312,6 +321,15 @@ class BoardObject(BaseModel):
     @classmethod
     def _validate_line_colors(cls, v: str | None) -> str | None:
         return _validate_color(v)
+
+    @field_validator("object_filter")
+    @classmethod
+    def _validate_object_filter(cls, v: str | None) -> str | None:
+        if v is None or not v.strip():
+            return None
+        if not DYNGROUP_FILTER_RE.fullmatch(v):
+            raise ValueError("object_filter must be one or more 'Filter: …\\n' lines")
+        return v
 
     @model_validator(mode="before")
     @classmethod
@@ -430,6 +448,8 @@ class BoardObjectUpdate(BaseModel):
     cmk_label_value: str | None = None
     cmk_label_target: Literal["hosts", "services"] | None = None
     aggregation_id: str | None = None
+    object_types: Literal["host", "service"] | None = None
+    object_filter: str | None = None
     expand_depth: int | None = Field(default=None, ge=0, le=10)
     only_hard_states: bool | None = None
     recognize_services: bool | None = None
@@ -468,6 +488,15 @@ class BoardObjectUpdate(BaseModel):
     @classmethod
     def _validate_line_colors(cls, v: str | None) -> str | None:
         return _validate_color(v)
+
+    @field_validator("object_filter")
+    @classmethod
+    def _validate_object_filter(cls, v: str | None) -> str | None:
+        if v is None or not v.strip():
+            return None
+        if not DYNGROUP_FILTER_RE.fullmatch(v):
+            raise ValueError("object_filter must be one or more 'Filter: …\\n' lines")
+        return v
 
     @model_validator(mode="before")
     @classmethod

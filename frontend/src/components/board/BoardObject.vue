@@ -887,6 +887,7 @@ const TYPE_CHARS: Record<string, string> = {
     service: 'S',
     hostgroup: 'HG',
     servicegroup: 'SG',
+    dyngroup: 'DG',
     map: 'M',
     image: '◆',
     line: '—',
@@ -966,6 +967,7 @@ const displayName = computed(() => {
     else if (props.object.type === 'map') name = props.object.map_name ?? props.object.id;
     else if (props.object.type === 'aggregation')
         name = props.object.aggregation_id ?? props.object.id;
+    else if (props.object.type === 'dyngroup') name = props.object.id;
     const maxlen = props.object.label_maxlen;
     if (maxlen && maxlen > 0 && name.length > maxlen) return name.slice(0, maxlen) + '…';
     return name;

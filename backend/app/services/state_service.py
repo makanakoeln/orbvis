@@ -598,6 +598,10 @@ async def _get_object_state(connection: ConnectionBase, obj: BoardObject) -> Obj
             state = await connection.get_hostgroup_states(obj.group_name)
         elif obj.type == "servicegroup" and obj.group_name:
             state = await connection.get_servicegroup_states(obj.group_name)
+        elif obj.type == "dyngroup" and obj.object_filter:
+            state = await connection.get_dyngroup_state(
+                obj.object_types or "host", obj.object_filter
+            )
         elif obj.type == "line" and obj.host_name and obj.service_description:
             state = await connection.get_service_state(obj.host_name, obj.service_description)
         elif obj.type == "line" and obj.host_name:

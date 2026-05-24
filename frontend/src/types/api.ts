@@ -9,6 +9,7 @@ export type ObjectType =
     | 'service'
     | 'hostgroup'
     | 'servicegroup'
+    | 'dyngroup'
     | 'map'
     | 'image'
     | 'line'
@@ -145,6 +146,8 @@ export interface BoardObject {
     cmk_label_value?: string | null;
     cmk_label_target?: 'hosts' | 'services' | null;
     aggregation_id?: string | null;
+    object_types?: 'host' | 'service' | null;
+    object_filter?: string | null;
     expand_depth?: number;
     only_hard_states?: boolean;
     recognize_services?: boolean;
