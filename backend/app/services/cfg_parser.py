@@ -108,15 +108,65 @@ def _line_coords(p: dict[str, str]) -> tuple[int, int, int, int]:
     return x, y, x2, y2
 
 
+# NagVis [name] macro resolves to the object identifier; OrbVis uses
+# {{name}}. Dropping the label lets the renderer fall back to host_name
+# rather than printing the literal token.
+_BARE_NAME_RE = re.compile(r"^\s*\[name\]\s*$")
+
+
+def _label_text(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    if _BARE_NAME_RE.match(raw):
+        return None
+    return raw
+
+
+def _label_x(raw: str | None) -> int:
+    """Parse legacy ``label_x``. NagVis allows ``center`` to mean 0-offset."""
+    if raw is None:
+        return 0
+    v = raw.strip().lower()
+    if v == "center":
+        return 0
+    try:
+        return int(v.lstrip("+"))
+    except ValueError:
+        return 0
+
+
+def _bg_is_opaque_light(value: str | None) -> bool:
+    if not value:
+        return False
+    v = value.strip().lower()
+    if v in {"transparent", ""}:
+        return False
+    if v.startswith("#") and len(v) in (4, 7):
+        try:
+            if len(v) == 4:
+                r, g, b = (int(c * 2, 16) for c in v[1:])
+            else:
+                r, g, b = int(v[1:3], 16), int(v[3:5], 16), int(v[5:7], 16)
+        except ValueError:
+            return False
+        return (r + g + b) / 3 > 180
+    return False
+
+
 def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, object]:
+    raw_bg = p.get("label_background", "transparent")
+    # OrbVis defaults to white text; flip to black on opaque light backgrounds
+    # so imported NagVis labels don't disappear.
+    default_color = "#000000" if _bg_is_opaque_light(raw_bg) else "#ffffff"
     return {
         "show": _bool(p.get("label_show"), show_default),
-        "text": p.get("label_text") or None,
-        "x": _int(p.get("label_x")),
+        "text": _label_text(p.get("label_text")),
+        "x": _label_x(p.get("label_x")),
         "y": _int(p.get("label_y"), 34),
         "size": _int(p.get("label_size"), 11),
-        "color": p.get("label_color", "#ffffff"),
-        "background": p.get("label_background", "transparent"),
+        "color": p.get("label_color", default_color),
+        "background": raw_bg,
+        "width": _int(p.get("label_width")) or None,
     }
 
 
@@ -219,13 +269,29 @@ def _handle_shape(p: dict[str, str], raw_id: str) -> dict[str, object]:
 
 def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, object]:
     raw_text = p.get("text") or None
+    inline_color: str | None = None
     if raw_text:
+        # OrbVis strips HTML for XSS; pull the first inline color first so
+        # dark text on a light imported background stays readable.
+        m = re.search(
+            r'(?:<font[^>]*color=["\']([^"\']+)|color\s*:\s*([^;"\']+))',
+            raw_text,
+            flags=re.IGNORECASE,
+        )
+        if m:
+            inline_color = (m.group(1) or m.group(2) or "").strip() or None
         raw_text = re.sub(r"<br\s*/?>", "\n", raw_text, flags=re.IGNORECASE)
         raw_text = re.sub(r"<[^>]+>", "", raw_text)
+    width = (
+        _int(p.get("w"), 200) if (p.get("w") or "").strip().lower() not in {"auto", ""} else None
+    )
+    height = (
+        _int(p.get("h"), 40) if (p.get("h") or "").strip().lower() not in {"auto", ""} else None
+    )
     # legacy textbox x/y is top-left; OrbVis centers objects — offset by half w/h
-    tx = _coord(p.get("x", "0")) + _int(p.get("w"), 200) // 2
-    ty = _coord(p.get("y", "0")) + _int(p.get("h"), 40) // 2
-    return {
+    tx = _coord(p.get("x", "0")) + (width // 2 if width else 0)
+    ty = _coord(p.get("y", "0")) + (height // 2 if height else 0)
+    obj: dict[str, object] = {
         "id": f"textbox_{raw_id}",
         "type": "textbox",
         "x": tx,
@@ -237,10 +303,21 @@ def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, object]:
             "x": 0,
             "y": 0,
             "size": 11,
-            "color": "#ffffff",
+            "color": inline_color or "#000000",
             "background": "transparent",
         },
+        # NagVis textbox default is opaque white; persist it so OrbVis doesn't
+        # swap in its dark glass fallback.
+        "textbox_background": (p.get("background_color") or "").strip() or "#FFFFFF",
     }
+    if width is not None:
+        obj["textbox_width"] = width
+    if height is not None:
+        obj["textbox_height"] = height
+    border = (p.get("border_color") or "").strip()
+    if border:
+        obj["textbox_border"] = border
+    return obj
 
 
 def _build_display(p: dict[str, str]) -> dict[str, object]:

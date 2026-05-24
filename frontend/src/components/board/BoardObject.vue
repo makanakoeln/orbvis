@@ -213,8 +213,11 @@
     <!-- Textbox -->
     <div
         v-else-if="object.type === 'textbox'"
-        class="px-2.5 py-1.5 rounded-lg text-sm font-medium whitespace-pre-wrap pointer-events-none ring-1 transition-all overflow-auto"
-        :class="selected ? 'ring-[var(--color-corporate-green-50)]' : 'ring-[var(--border)]'"
+        class="px-2.5 py-1.5 rounded-lg text-sm font-medium whitespace-pre-wrap pointer-events-none transition-all overflow-auto"
+        :class="[
+            object.textbox_border ? '' : 'ring-1',
+            selected ? 'ring-[var(--color-corporate-green-50)]' : 'ring-[var(--border)]',
+        ]"
         :style="textboxStyle"
         @mouseenter="$emit('hover', $event)"
         @mouseleave="$emit('hover-leave')"
@@ -895,11 +898,18 @@ const textboxStyle = computed(() => {
     const override = props.resizeOverride;
     const w = override?.width ?? props.object.textbox_width;
     const h = override?.height ?? props.object.textbox_height;
+    const border = props.object.textbox_border;
+    const bg = props.object.textbox_background;
+    const lblColor = props.object.label?.color;
+    const hasCustomBg = bg && bg !== 'transparent';
     return {
-        backdropFilter: 'blur(4px)',
-        background: props.object.textbox_background ?? 'var(--bg-glass)',
-        borderColor: props.object.textbox_border ?? undefined,
-        color: 'var(--text)',
+        // Blur turns an opaque imported background into a frosted smear.
+        backdropFilter: hasCustomBg ? undefined : 'blur(4px)',
+        background: bg ?? 'var(--bg-glass)',
+        // borderColor alone won't paint without width+style.
+        border: border ? `1px solid ${border}` : undefined,
+        // Theme text-color would clash with an explicit imported background.
+        color: hasCustomBg && lblColor ? lblColor : 'var(--text)',
         width: w ? `${w}px` : undefined,
         height: h ? `${h}px` : undefined,
     };
@@ -913,6 +923,7 @@ const labelTransform = computed(() => {
 
 const labelStyle = computed(() => {
     const bg = props.object.label?.background;
+    const width = props.object.label?.width;
     return {
         fontSize: `${props.object.label?.size ?? 11}px`,
         color: props.object.label?.color ?? '#e4e4e7',
@@ -923,6 +934,10 @@ const labelStyle = computed(() => {
             ? `1px solid ${props.object.label_border}`
             : '1px solid rgba(255,255,255,0.12)',
         transform: labelTransform.value,
+        // NagVis label_width wraps long labels at a fixed pixel width.
+        width: width ? `${width}px` : undefined,
+        whiteSpace: width ? 'normal' : undefined,
+        wordBreak: width ? ('break-word' as const) : undefined,
     };
 });
 

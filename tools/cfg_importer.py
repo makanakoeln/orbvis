@@ -244,6 +244,33 @@ def _color_or_default(value: str | None, default: str | None) -> str | None:
     return v if v else default
 
 
+# NagVis [name] macro resolves to the object identifier; OrbVis uses
+# {{name}}. Dropping the label lets the renderer fall back to host_name
+# rather than printing the literal token.
+_BARE_NAME_RE = re.compile(r"^\s*\[name\]\s*$")
+
+
+def _label_text(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    if _BARE_NAME_RE.match(raw):
+        return None
+    return raw
+
+
+def _label_x(raw: str | None) -> int:
+    """Parse legacy ``label_x``. NagVis allows ``center`` to mean 0-offset."""
+    if raw is None:
+        return 0
+    v = raw.strip().lower()
+    if v == "center":
+        return 0
+    try:
+        return int(v.lstrip("+"))
+    except ValueError:
+        return 0
+
+
 def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
     """Build a LabelConfig dict from legacy properties.
 
@@ -252,15 +279,39 @@ def _label(p: dict[str, str], *, show_default: bool = True) -> dict[str, Any]:
     otherwise we recover values from the style string.
     """
     style = _parse_label_style(p.get("label_style"))
+    raw_bg = p.get("label_background") or style.get("background")
+    # OrbVis defaults the label text to white. When the importer carries an
+    # opaque light background through, that turns the text invisible — fall
+    # back to black so imported NagVis labels stay readable.
+    default_color = "#000000" if _bg_is_opaque_light(raw_bg) else "#ffffff"
     return {
         "show": _bool(p.get("label_show"), show_default),
-        "text": p.get("label_text") or None,
-        "x": _int(p.get("label_x")),
+        "text": _label_text(p.get("label_text")),
+        "x": _label_x(p.get("label_x")),
         "y": _int(p.get("label_y"), 34),
         "size": _int(p.get("label_size"), style.get("size", 11)),
-        "color": p.get("label_color") or style.get("color", "#ffffff"),
-        "background": p.get("label_background") or style.get("background", "transparent"),
+        "color": p.get("label_color") or style.get("color", default_color),
+        "background": raw_bg or "transparent",
+        "width": _int(p.get("label_width")) or None,
     }
+
+
+def _bg_is_opaque_light(value: str | None) -> bool:
+    if not value:
+        return False
+    v = value.strip().lower()
+    if v in {"transparent", ""}:
+        return False
+    if v.startswith("#") and len(v) in (4, 7):
+        try:
+            if len(v) == 4:
+                r, g, b = (int(c * 2, 16) for c in v[1:])
+            else:
+                r, g, b = int(v[1:3], 16), int(v[3:5], 16), int(v[5:7], 16)
+        except ValueError:
+            return False
+        return (r + g + b) / 3 > 180
+    return False
 
 
 def _attach_pending_refs(obj: dict[str, Any], **coords: Coord) -> None:
@@ -435,7 +486,17 @@ def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, Any]:
         y.value += height // 2
 
     raw_text = p.get("text") or None
+    inline_color: str | None = None
     if raw_text:
+        # OrbVis strips HTML for XSS; pull the first inline color first so
+        # dark text on a light imported background stays readable.
+        m = re.search(
+            r'(?:<font[^>]*color=["\']([^"\']+)|color\s*:\s*([^;"\']+))',
+            raw_text,
+            flags=re.IGNORECASE,
+        )
+        if m:
+            inline_color = (m.group(1) or m.group(2) or "").strip() or None
         raw_text = re.sub(r"<br\s*/?>", "\n", raw_text, flags=re.IGNORECASE)
         raw_text = re.sub(r"<[^>]+>", "", raw_text)
     style = _parse_label_style(p.get("style"))
@@ -452,7 +513,7 @@ def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, Any]:
             "x": 0,
             "y": 0,
             "size": style.get("size", 11),
-            "color": style.get("color", "#ffffff"),
+            "color": inline_color or style.get("color", "#000000"),
             "background": _color_or_default(p.get("background_color"), "transparent"),
         },
     }
@@ -463,9 +524,9 @@ def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, Any]:
     border = _color_or_default(p.get("border_color"), None)
     if border is not None:
         obj["textbox_border"] = border
-    bg = _color_or_default(p.get("background_color"), None)
-    if bg is not None:
-        obj["textbox_background"] = bg
+    # NagVis textbox default is opaque white; persist it so OrbVis doesn't
+    # swap in its dark glass fallback.
+    obj["textbox_background"] = _color_or_default(p.get("background_color"), "#FFFFFF")
     _attach_pending_refs(obj, x=x, y=y)
     return obj
 

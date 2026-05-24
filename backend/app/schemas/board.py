@@ -159,6 +159,8 @@ class LabelConfig(BaseModel):
     size: int = 11
     color: str = "#ffffff"
     background: str = "transparent"
+    # NagVis label_width — fixed pixel width that wraps long labels.
+    width: int | None = None
 
 
 class DisplayConfig(BaseModel):

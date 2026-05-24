@@ -47,6 +47,8 @@ export interface LabelConfig {
     size: number;
     color: string;
     background: string;
+    // Fixed pixel width that wraps long labels (NagVis label_width).
+    width?: number | null;
 }
 
 export interface DisplayConfig {
