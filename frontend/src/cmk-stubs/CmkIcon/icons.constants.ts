@@ -264,7 +264,6 @@ const lightIconGuitestPng = 'themes/facelift/images/icon_guitest.png';
 const lightIconHardStatesPng = 'themes/facelift/images/icon_hard_states.png';
 const lightIconHardwareSvg = 'themes/facelift/images/icon_hardware.svg';
 const lightIconHelpSvg = 'themes/facelift/images/icon_help.svg';
-const lightIconHelpActivatedSvg = 'themes/facelift/images/icon_help_activated.svg';
 const lightIconHierarchySvg = 'themes/facelift/images/icon_hierarchy.svg';
 const lightIconHistoryPng = 'themes/facelift/images/icon_history.png';
 const lightIconHomeSvg = 'themes/facelift/images/icon_home.svg';
@@ -1064,7 +1063,6 @@ export const unthemedIcons: Partial<Record<IconNames | '2fa' | '2fa-backup-codes
     guitest: lightIconGuitestPng,
     'hard-states': lightIconHardStatesPng,
     hardware: lightIconHardwareSvg,
-    'help-activated': lightIconHelpActivatedSvg,
     hierarchy: lightIconHierarchySvg,
     history: lightIconHistoryPng,
     host: lightIconHostPng,
@@ -1436,6 +1434,9 @@ export const themedIcons: Record<string, Partial<Record<IconNames, string>>> = {
         fixall: lightIconFixallSvg,
         'folder-blue': lightIconFolderBlueSvg,
         help: lightIconHelpSvg,
+        // icon_help_activated.svg is absent on CMK 2.3 and has no modern-dark
+        // variant anywhere; reuse info-circle so the open-help icon never 404s.
+        'help-activated': lightIconInfoCircleSvg,
         home: lightIconHomeSvg,
         'host-svc-problems': lightIconHostSvcProblemsSvg,
         hyphen: lightIconHyphenSvg,
@@ -1513,6 +1514,7 @@ export const themedIcons: Record<string, Partial<Record<IconNames, string>>> = {
         fixall: darkIconFixallSvg,
         'folder-blue': darkIconFolderBlueSvg,
         help: darkIconHelpSvg,
+        'help-activated': darkIconInfoCircleSvg,
         home: darkIconHomeSvg,
         'host-svc-problems': darkIconHostSvcProblemsSvg,
         hyphen: darkIconHyphenSvg,
