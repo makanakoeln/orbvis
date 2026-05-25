@@ -4,6 +4,52 @@ All notable changes to OrbVis are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-05-26
+
+Iterative release on top of 0.3.0. Boards gain a dynamic-group object type and a NagVis-faithful render mode, board settings become an in-place live-preview editor, and the backend sheds its heavy dependencies for a lean standard-library core.
+
+### Changed
+
+- Live updates now use **Server-Sent Events (SSE)** instead of WebSockets, with an automatic polling fallback. This rides through Checkmk's double-Apache proxy without special WebSocket-upgrade handling. The frontend negotiates the transport on its own — no configuration change needed.
+- **Leaner backend**: SQLAlchemy, Alembic and the `websockets` library are gone, replaced by the Python standard library (`sqlite3`, a built-in JWT implementation, env parsing). Fewer dependencies to ship and a smaller offline wheelhouse for air-gapped MKP installs. The local store is now SQLite-only — PostgreSQL is no longer supported (existing SQLite `DATABASE_URL` values keep working unchanged).
+- Release artefacts are split into a standalone bundle (`.deb` / `.rpm`) and a Checkmk bundle (MKP), each carrying only what its target needs.
+
+### Features
+
+- **Dynamic groups (dyngroup)**: a new board object that resolves its members live from a Livestatus filter, with an edit UI (filter textarea + type picker), a members tab in the detail drawer and a dedicated member-details endpoint
+- **NagVis classic render mode**: draws boards 1:1 the way NagVis did, for faithful `.cfg` imports — selectable per board and globally
+- **Board overview**: table-view toggle, bulk edit/export, bulk-delete via hover checkboxes, and per-board permission gating that hides columns and actions you can't use; board flags now sit inline next to the name
+- **Board settings reworked into a live-preview editor**: a side-by-side preview pane reflects every change as you make it, with section jump-navigation, host/group autocomplete, quick clone & export, a keyboard save shortcut and Checkmk-style confirm/discard dialogs; flow topology is now edited as a FormSpec
+- **Static-board navigation**: wheel-zoom without holding Ctrl, drag-to-pan and a sticky search bar; the quicksearch operator dropdown and `h:` / `s:` / `hg:` / `sg:` / `id:` prefixes now work on flow and radar boards too
+- **Connections**: TLS for TCP Livestatus, a transport dropdown, neutral placeholders with client-side validation and consistent label/id display across all dropdowns; invalid entries are skipped at startup instead of crashing the service
+- **Importer fidelity**: NagVis textbox font-size/weight/alignment with HTML-entity decoding, `[name]` macro and `label_width` resolution, textbox border/background defaults
+- API documentation page now serves Swagger UI 5 from Checkmk when available
+
+### Security
+
+- Dynamic-group Livestatus filters are hardened against header injection
+- SSO cookies are rejected when the Checkmk session has not completed 2FA
+- Dependency bump for `brace-expansion` (GHSA-jxxr-4gwj-5jf2)
+
+### Bug Fixes
+
+- Livestatus client imports work across Checkmk 2.3–2.5 again (`LivestatusResponse` from the top-level module)
+- The MKP init script is written atomically so an auto-refresh restart can't corrupt it
+- Flow board applies per-board root / child-layers / parent-layers on every topology push
+- Weathermap lines: redundant colour fields are hidden when weather colouring overrides them, save is blocked when a metric is missing, and the gradient fades only when the two metrics differ
+- Worldmap labels get a tight outline and pixel-snapped offset, fixing smudging at small sizes
+- Static-board zoom pins the canvas so the background image scales with the objects
+- Radar empty-state points at the board-settings gear instead of a removed on-demand filter
+- Board canvas pins its extents at load, so dragging one object no longer shifts the rest
+- The native colour picker dismisses cleanly when its input unmounts
+- Standalone: skip the SSO probe, proxy `/orbvis/images/` so built-in icons render, and return a null perfometer for non-Livestatus backends
+- Importer no longer matches a background colour as the textbox text colour
+- `nagvis_classic` icon width is clamped when the image size is unset
+- Flow board settings save no longer reports "Board changed elsewhere" after a background layout write (service-layout switch or host drag)
+- Board search opens the operator dropdown on the first `/` keystroke; quicksearch prefixes are case-sensitive (lowercase only) to match Checkmk
+- Check timing (next check / overdue) refreshes live again instead of freezing on board load, so "check overdue" no longer grows with the time the board stays open
+- Replacing or removing a board background now only takes effect on save — closing the settings without saving no longer persists it
+
 ## [0.3.0] - 2026-05-18
 
 Iterative release on top of 0.2.0. Settings, connections and dialogs now follow Checkmk's look and feel, and OrbVis can run standalone outside Checkmk.

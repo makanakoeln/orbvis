@@ -1,6 +1,6 @@
 [project]
 name = "orbvis-cmk"
-version = "0.3.0"
+version = "0.4.0"
 description = "OrbVis GUI extensions for Checkmk (sidebar snapin + main menu entry)"
 requires-python = ">=3.10"
 
