@@ -998,11 +998,12 @@
                                 </span>
                             </div>
                             <div
+                                v-if="auth.isAdmin"
                                 class="absolute flex items-center"
                                 style="top: 8px; right: 8px; gap: 5px"
                             >
                                 <span
-                                    v-if="map.show_in_lists === false && auth.isAdmin"
+                                    v-if="map.show_in_lists === false"
                                     class="text-[10px] rounded-md font-medium bg-[var(--bg-surface)]/80 text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60 backdrop-blur-sm"
                                     style="padding: var(--dimension-2) 5px"
                                     :title="t('home.hiddenBoard')"
@@ -1040,26 +1041,28 @@
                                 {{ map.alias || map.name }}
                             </div>
                             <div class="flex items-center min-w-0" style="gap: 6px">
-                                <svg
-                                    class="shrink-0 text-[var(--text-muted)]"
-                                    style="width: 12px; height: 12px"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z"
-                                    />
-                                </svg>
-                                <span
-                                    class="text-sm text-[var(--text-muted)] font-mono truncate"
-                                    :title="map.connection_id"
-                                    >{{ map.connection_id }}</span
-                                >
-                                <span class="text-[var(--text-muted)] shrink-0">·</span>
+                                <template v-if="auth.isAdmin">
+                                    <svg
+                                        class="shrink-0 text-[var(--text-muted)]"
+                                        style="width: 12px; height: 12px"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z"
+                                        />
+                                    </svg>
+                                    <span
+                                        class="text-sm text-[var(--text-muted)] font-mono truncate"
+                                        :title="map.connection_id"
+                                        >{{ map.connection_id }}</span
+                                    >
+                                    <span class="text-[var(--text-muted)] shrink-0">·</span>
+                                </template>
                                 <span
                                     v-if="
                                         map.readonly ||
@@ -1076,12 +1079,12 @@
                     </router-link>
 
                     <div
-                        v-if="auth.isAdmin"
+                        v-if="auth.isAdmin || map.can_edit"
                         class="flex items-center justify-end border-t border-[var(--border)] max-h-0 overflow-hidden group-hover:max-h-[36px] group-focus-within:max-h-[36px] transition-[max-height] duration-150"
                         style="gap: var(--dimension-2); padding: 0 6px"
                     >
                         <button
-                            v-if="!map.readonly"
+                            v-if="(auth.isAdmin || map.can_edit) && !map.readonly"
                             class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
                             :title="t('board.settingsTitle')"
                             @click.stop="openSettings(map)"
@@ -1106,6 +1109,7 @@
                             </svg>
                         </button>
                         <button
+                            v-if="auth.isAdmin"
                             class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-yellow-50)] hover:bg-[var(--color-warning)]/10 transition-all"
                             :title="t('admin.cloneBoard')"
                             @click.stop="cloneBoard(map)"
@@ -1125,6 +1129,7 @@
                             </svg>
                         </button>
                         <button
+                            v-if="auth.isAdmin"
                             class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5 transition-all"
                             :title="t('admin.exportBoard')"
                             @click.stop="exportBoard(map.name)"
@@ -1144,6 +1149,7 @@
                             </svg>
                         </button>
                         <button
+                            v-if="auth.isAdmin"
                             class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
                             :title="t('admin.deleteBoard', { name: map.alias || map.name })"
                             @click.stop="deleteBoard(map)"
@@ -1424,24 +1430,35 @@ const capabilities = useCapabilitiesStore();
 const settingsStore = useSettingsStore();
 const toast = useToast();
 
-const viewMode = computed<BoardListView>(() =>
-    settingsStore.settings.board_list_view === 'table' ? 'table' : 'cards',
+// Per-user view choice (all roles), read synchronously at setup so the first
+// render honours it; the global board_list_view is only the default otherwise.
+function viewModeStorageKey(): string {
+    return `orbvis_board_list_view_${auth.user?.user_id ?? 'anon'}`;
+}
+function readStoredViewMode(): BoardListView | null {
+    const v = localStorage.getItem(viewModeStorageKey());
+    return v === 'table' || v === 'cards' ? v : null;
+}
+const localViewMode = ref<BoardListView | null>(readStoredViewMode());
+
+const viewMode = computed<BoardListView>(
+    () =>
+        localViewMode.value ??
+        (settingsStore.settings.board_list_view === 'table' ? 'table' : 'cards'),
 );
 const viewModeOptions = computed(() => [
     { label: t('home.viewCards'), value: 'cards' },
     { label: t('home.viewTable'), value: 'table' },
 ]);
 
-async function setViewMode(value: string) {
+function setViewMode(value: string) {
     const next: BoardListView = value === 'table' ? 'table' : 'cards';
-    if (settingsStore.settings.board_list_view === next) return;
-    const previous = settingsStore.settings.board_list_view;
-    settingsStore.settings.board_list_view = next;
+    if (viewMode.value === next) return;
+    localViewMode.value = next;
     try {
-        await settingsStore.save({ ...settingsStore.settings, board_list_view: next });
+        localStorage.setItem(viewModeStorageKey(), next);
     } catch {
-        settingsStore.settings.board_list_view = previous;
-        toast.error(t('common.saveFailed'));
+        // localStorage unavailable (e.g. private mode); the in-memory ref still applies.
     }
 }
 

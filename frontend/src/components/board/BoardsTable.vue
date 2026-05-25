@@ -109,7 +109,7 @@
                             {{ boardTypeLabel(map.view.type) }}
                         </span>
                     </td>
-                    <td class="align-middle" style="padding: 6px 12px">
+                    <td v-if="auth.isAdmin" class="align-middle" style="padding: 6px 12px">
                         <div class="flex items-center min-w-0" style="gap: 6px">
                             <svg
                                 class="shrink-0 text-[var(--text-muted)]"
@@ -142,7 +142,7 @@
                         </span>
                         <span v-else>{{ map.object_count }}</span>
                     </td>
-                    <td class="align-middle" style="padding: 6px 12px">
+                    <td v-if="auth.isAdmin" class="align-middle" style="padding: 6px 12px">
                         <div class="flex flex-wrap items-center" style="gap: 4px">
                             <span
                                 v-if="map.show_in_lists === false"
@@ -171,14 +171,14 @@
                         </div>
                     </td>
                     <td
-                        v-if="auth.isAdmin"
+                        v-if="auth.isAdmin || anyEditable"
                         class="align-middle text-right"
                         style="padding: 6px 12px"
                         @click.stop
                     >
                         <div class="inline-flex items-center" style="gap: var(--dimension-2)">
                             <button
-                                v-if="!map.readonly"
+                                v-if="(auth.isAdmin || map.can_edit) && !map.readonly"
                                 class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
                                 :title="t('board.settingsTitle')"
                                 @click="$emit('open-settings', map)"
@@ -203,6 +203,7 @@
                                 </svg>
                             </button>
                             <button
+                                v-if="auth.isAdmin"
                                 class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-yellow-50)] hover:bg-[var(--color-warning)]/10 transition-all"
                                 :title="t('admin.cloneBoard')"
                                 @click="$emit('clone', map)"
@@ -222,6 +223,7 @@
                                 </svg>
                             </button>
                             <button
+                                v-if="auth.isAdmin"
                                 class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5 transition-all"
                                 :title="t('admin.exportBoard')"
                                 @click="$emit('export', map.name)"
@@ -241,6 +243,7 @@
                                 </svg>
                             </button>
                             <button
+                                v-if="auth.isAdmin"
                                 class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
                                 :title="t('admin.deleteBoard', { name: map.alias || map.name })"
                                 @click="$emit('delete', map)"
@@ -321,9 +324,19 @@ const COLUMNS: ReadonlyArray<{
     { id: 'actions', label: 'home.colActions', sortable: false, align: 'right' },
 ];
 
-const visibleColumns = computed(() =>
-    auth.isAdmin ? COLUMNS : COLUMNS.filter((c) => c.id !== 'actions'),
-);
+// A non-admin may still hold edit rights on individual boards; show the actions
+// column for them when at least one listed board is editable.
+const anyEditable = computed(() => props.boards.some((b) => b.can_edit === true));
+
+// connection and status are admin-oriented; non-admins get a plain read-only
+// list, plus the actions column only when they can edit some board.
+const visibleColumns = computed(() => {
+    if (auth.isAdmin) return COLUMNS;
+    const hidden = anyEditable.value
+        ? ['connection', 'status']
+        : ['connection', 'status', 'actions'];
+    return COLUMNS.filter((c) => !hidden.includes(c.id));
+});
 
 const sortState = ref<{ col: SortCol | null; dir: 'asc' | 'desc' }>({
     col: null,
