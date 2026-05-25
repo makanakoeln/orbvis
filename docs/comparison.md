@@ -7,7 +7,7 @@ NagVis successor. This is opinionated and pragmatic — not marketing.
 
 OrbVis covers the everyday NagVis workflow (boards, hosts/services,
 lines, weathermaps, hover info, context menus) with a modern stack and
-real-time WebSocket updates. A handful of NagVis features are not yet
+real-time updates over Server-Sent Events. A handful of NagVis features are not yet
 present (see *Missing*). For most installs the result is a strict
 upgrade; for installs that depend on the missing features, OrbVis is
 not a drop-in replacement *yet*.
@@ -19,8 +19,8 @@ not a drop-in replacement *yet*.
 | Backend language   | PHP 7+                        | Python 3.12 + FastAPI          |
 | Frontend stack     | Vanilla JS, jQuery            | Vue 3 + TypeScript + Vite      |
 | Map storage        | `.cfg` files                  | JSON files                     |
-| Auth store         | SQLite (`auth.db`)            | SQLAlchemy (SQLite/PostgreSQL) |
-| State delivery     | Polling via AJAX (~10 s)      | WebSocket push (default 15 s)  |
+| Auth store         | SQLite (`auth.db`)            | SQLite (stdlib `sqlite3`)      |
+| State delivery     | Polling via AJAX (~10 s)      | SSE push (default 15 s)        |
 | Backend protocol   | Livestatus, mklivestatus      | Livestatus (asyncio), Icinga2  |
 | RBAC model         | mod / act / obj triples       | mod / act / obj triples (same) |
 | Code base size     | ~52 kLOC PHP + JS             | ~30 kLOC Py + ~25 kLOC TS      |
@@ -64,7 +64,7 @@ OrbVis-only.
 | Livestatus (Unix socket)                         | ✅     | ✅     |
 | Livestatus (TCP)                                 | ✅     | ✅     |
 | Multiple backends per OrbVis instance            | ✅     | ✅     |
-| Real-time push (WebSocket)                       | ❌     | ➕     |
+| Real-time push (Server-Sent Events)              | ❌     | ➕     |
 | Acknowledged + downtime indicators               | ✅     | ✅     |
 | `only_hard_states`, `recognize_services`         | ✅     | ✅     |
 | BI aggregations (Checkmk Business Intelligence)  | ✅ [^5] | ✅ [^5] |
@@ -136,7 +136,7 @@ have. PRs welcome.
 
 Pick OrbVis if you want:
 
-- Real-time updates (WebSocket) instead of polling
+- Real-time updates (Server-Sent Events) instead of polling
 - A modern, type-safe codebase that's easier to extend
 - A force-directed topology view or a severity radar
 - Tight Checkmk visual integration (sidebar snapin, menu entry, SSO)

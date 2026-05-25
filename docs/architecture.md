@@ -10,16 +10,16 @@ the source of truth.
 │  Browser  ──────────────────────────────────────────────────────│
 │  Vue 3 SPA · TypeScript · Pinia · Vite · Tailwind · D3 v7        │
 └────────────┬──────────────────────────────────────┬──────────────┘
-             │ REST + JWT (access + refresh)        │ WebSocket
-             │ /api/v1/…                            │ /api/v1/ws/maps/{name}
+             │ REST + JWT (access + refresh)        │ Server-Sent Events
+             │ /api/v1/…                            │ /api/v1/sse/boards/{name}
              ▼                                      ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │  FastAPI backend                                                  │
 │  - app/api/v1/        endpoints (auth, maps, states, users, …)    │
 │  - app/services/      auth, map, state, backend                   │
 │  - app/backends/      livestatus (asyncio), test (demo)           │
-│  - app/core/          config, security, websocket, ratelimit, …   │
-│  - SQLAlchemy 2.0 async (SQLite default, PostgreSQL supported)    │
+│  - app/core/          config, security, sse, ratelimit, …         │
+│  - Python stdlib sqlite3 (SQLite database file)                   │
 └────────────┬───────────────────────────┬─────────────────────────┘
              │ Livestatus (Unix / TCP)   │ optional Checkmk SSO
              ▼                           ▼
@@ -57,15 +57,17 @@ The state pipeline:
 
 1. `state_service.refresh_loop()` polls the registered backends every
    `STATE_REFRESH_INTERVAL` seconds.
-2. Per board, a `BoardConnectionManager` keeps a set of WebSocket
-   clients. New states are pushed to all subscribers as
-   `{type: "state", payload: …}` JSON frames.
+2. Per board, the SSE `manager` keeps a set of `Subscriber`s. New
+   states are pushed to all subscribers as Server-Sent-Event `data:`
+   frames carrying `{type: "state", payload: …}` JSON.
 3. Clients get an initial snapshot when they connect (after auth) and
-   incremental updates from then on.
+   incremental (delta-encoded) updates from then on.
 
-The WebSocket auth handshake requires the first message to be
-`{type: "auth", token: "<access-token>"}`. The connection is closed if
-the token is missing, expired, or on the blocklist.
+Because `EventSource` cannot set an `Authorization` header, the access
+token is passed as a `?token=` query parameter and validated on connect;
+the connection is refused if the token is missing, expired, or on the
+blocklist. If the stream drops and cannot be re-established, the client
+falls back to periodic polling.
 
 ## Authentication
 
@@ -95,8 +97,8 @@ supported, with retry and connect-timeout handling.
 - `frontend/src/api/client.ts` — typed fetch wrapper, refresh-token
   rotation, automatic re-auth on 401
 - `frontend/src/stores/` — Pinia stores: `auth`, `maps`, `states`,
-  `backends`. The `states` store owns the WebSocket and reconnects
-  automatically on drop.
+  `backends`. The `states` store owns the SSE (`EventSource`) connection,
+  reconnects automatically on drop, and falls back to polling.
 - `frontend/src/components/map/` — `MapCanvas` (the SVG root), per-type
   object renderers, `HoverMenu`, `ContextMenu`, `EditPanel`,
   `WorldMapCanvas` (Leaflet wrapper).

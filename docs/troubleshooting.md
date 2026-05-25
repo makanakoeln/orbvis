@@ -109,26 +109,34 @@ chose; manual edits can drift. Re-run `orbvis-install` to regenerate.
 
 ## Frontend / browser
 
-### "WebSocket connection to … failed"
+### Live updates never arrive (Server-Sent Events)
 
-- The reverse proxy must forward `/api/v1/ws/...` with `Upgrade` and
-  `Connection: Upgrade` headers. The OMD MKP and standalone installers
-  both write a working config; if you customised the proxy, verify the
-  WS-upgrade rules.
-- The OrbVis backend rejects WS connections from origins not in
+Since 0.4.0 live updates use Server-Sent Events (a plain streaming
+`GET /api/v1/sse/boards/...`), not WebSockets — so no `Upgrade` /
+`Connection: Upgrade` proxy rules are needed any more.
+
+- The reverse proxy must **not buffer** the stream. nginx: set
+  `proxy_buffering off` (and don't gzip `text/event-stream`); Apache's
+  `mod_proxy` streams fine by default. The OMD MKP and standalone
+  installers write a working config out of the box.
+- The OrbVis backend rejects requests from origins not in
   `ALLOWED_ORIGINS`. Production: set this to your real frontend URL.
 
 ### Boards load but states never update
 
-The WebSocket connected but auth failed silently. Browser console will
-show a close frame with code 4401. Confirm the access token is fresh —
-log out and log in again to rotate.
+SSE auth failed. Because `EventSource` cannot send an `Authorization`
+header, the access token travels as a `?token=` query parameter; an
+expired or missing token makes the GET return `401`/`403`. Confirm the
+token is fresh — log out and log in again to rotate. If SSE cannot be
+established at all, OrbVis falls back to periodic polling, so stale-but-
+updating boards usually point at a blocked stream rather than auth.
 
 ### Real-time updates stop after a few minutes
 
-Some reverse proxies idle-timeout WebSockets after 60 seconds. OrbVis
-sends a ping every 30 s, but check your proxy timeout (nginx
-`proxy_read_timeout`, Apache `ProxyTimeout`) — bump it to at least 120.
+Some reverse proxies idle-timeout long-lived streams after 60 seconds.
+Check your proxy timeout (nginx `proxy_read_timeout`, Apache
+`ProxyTimeout`) — bump it to at least 120. EventSource reconnects
+automatically, but a too-short timeout causes a visible stutter.
 
 ## Imports / migration
 
