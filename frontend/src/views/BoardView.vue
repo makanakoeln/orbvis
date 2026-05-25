@@ -213,9 +213,9 @@
                     </svg>
                 </button>
 
-                <!-- Settings button (admin only, not for read-only boards) -->
+                <!-- Settings button (editors only, not for read-only boards) -->
                 <button
-                    v-if="auth.isAdmin && !boardConfig?.readonly"
+                    v-if="canEdit && !boardConfig?.readonly"
                     data-tour="board-settings"
                     class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
                     :title="t('board.boardSettings')"
@@ -471,9 +471,7 @@
                             />
                         </svg>
                         <p class="text-sm text-[var(--text-muted)]">
-                            <template v-if="auth.isAdmin">{{
-                                t('board.emptyBoardAdmin')
-                            }}</template>
+                            <template v-if="canEdit">{{ t('board.emptyBoardAdmin') }}</template>
                             <template v-else>{{ t('board.emptyBoard') }}</template>
                         </p>
                     </div>
@@ -486,7 +484,7 @@
                         :line-drag-positions="editor.lineDragPositions"
                         :selected-object-id="editor.selectedObjectId.value"
                         :checkmk-url="checkmkUrl"
-                        :is-admin="auth.isAdmin && !isKiosk && !isPreview"
+                        :is-admin="canEdit && !isKiosk && !isPreview"
                         :icon-size-override="undefined"
                         :snap-grid="editor.snapGrid.value"
                         :filter-needle="boardFilterNeedle"
@@ -598,7 +596,7 @@
         <Teleport to="body">
             <div
                 v-if="
-                    auth.isAdmin &&
+                    canEdit &&
                     !isKiosk &&
                     !isPreview &&
                     boardConfig &&
@@ -977,7 +975,7 @@
             :x="worldmapCtxMenu.x"
             :y="worldmapCtxMenu.y"
             :checkmk-url="checkmkUrl"
-            :show-edit="auth.isAdmin && !editor.editMode.value"
+            :show-edit="canEdit && !editor.editMode.value"
             :template="
                 resolveTemplate(
                     worldmapCtxMenu.object.context_template,
@@ -1235,6 +1233,13 @@ function onBoardTourStepBack(step: number) {
     }
 }
 const boardConfig = computed(() => boardsStore.currentBoard);
+// Whether the current user may edit *this* board: admins always, otherwise the
+// per-board capability the backend stamps on the board-list entry.
+const canEdit = computed(
+    () =>
+        auth.isAdmin ||
+        boardsStore.boards.find((b) => b.name === boardName.value)?.can_edit === true,
+);
 const boardConfigAsRead = computed<import('@/types/api').BoardRead | null>(() => {
     const cfg = boardsStore.currentBoard;
     if (!cfg) return null;
@@ -2201,6 +2206,9 @@ function onPreviewMessage(ev: MessageEvent) {
 
 onMounted(() => {
     if (auth.isAdmin) connectionsStore.fetchConnections();
+    // The board list carries per-board can_edit; ensure it's loaded even on a
+    // direct deep-link so non-admin editors get their edit affordances.
+    if (boardsStore.boards.length === 0) void boardsStore.fetchBoards();
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('fullscreenchange', onFullscreenChange);
     window.addEventListener('message', onPreviewMessage);

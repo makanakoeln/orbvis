@@ -456,7 +456,7 @@
                     {{ showPreview ? t('board.hidePreview') : t('board.showPreview') }}
                 </CmkButton>
                 <span class="board-settings__footer-spacer" />
-                <CmkButton variant="danger" @click="deleteBoard">
+                <CmkButton v-if="auth.isAdmin" variant="danger" @click="deleteBoard">
                     {{ t('board.deleteBoardAction') }}
                 </CmkButton>
                 <CmkButton variant="secondary" @click="requestClose">
@@ -599,10 +599,16 @@ const currentConnectionId = computed(
     () => (formSpecData.value.connection_id as string | undefined) ?? props.board.connection_id,
 );
 provide('orbConnectionId', currentConnectionId);
-const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => [
-    { id: 'general', label: t('admin.settings') },
-    { id: 'permissions', label: t('admin.boardPermissions') },
-]);
+// Deleting a board and managing its permissions are admin-only; a non-admin
+// with edit rights may change settings but not remove or re-share the board.
+const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() =>
+    auth.isAdmin
+        ? [
+              { id: 'general', label: t('admin.settings') },
+              { id: 'permissions', label: t('admin.boardPermissions') },
+          ]
+        : [{ id: 'general', label: t('admin.settings') }],
+);
 const activeTab = ref<'general' | 'permissions'>('general');
 
 // Same OMD site as the OrbVis path prefix; mirrors stores/auth.ts.
@@ -1232,11 +1238,13 @@ onMounted(async () => {
         form.value.map_type === 'flow'
             ? boardsApiFormSpec.getFlowViewSchema(auth.accessToken!).catch((): null => null)
             : Promise.resolve(null);
+    // connections.list and roles are admin-only; a non-admin editor's 403s must
+    // not reject this Promise.all (would leave schemaLoading stuck → spinner).
     const [bs, spec, flowSpec] = await Promise.all([
-        connectionsApi.list(auth.accessToken!),
+        connectionsApi.list(auth.accessToken!).catch((): ConnectionConfig[] => []),
         boardsApiFormSpec.getMetadataSchema(auth.accessToken!).catch((): null => null),
         flowSchemaPromise,
-        loadPermissions(),
+        auth.isAdmin ? loadPermissions() : Promise.resolve(),
     ]);
     connections.value = bs;
     schemaLoading.value = false;
