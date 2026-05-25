@@ -223,6 +223,7 @@ export interface BoardRead {
     hover_template?: string | null;
     context_template?: string | null;
     render_mode?: RenderMode;
+    can_edit?: boolean;
 }
 
 export interface BoardBulkDeleteFailure {

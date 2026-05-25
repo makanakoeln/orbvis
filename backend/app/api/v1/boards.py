@@ -92,8 +92,15 @@ def _require_not_readonly(name: str) -> None:
 async def list_boards(current_user: User = Depends(get_current_user)) -> list[BoardRead]:
     all_boards = board_service.list_boards()
     if current_user.is_admin:
+        for m in all_boards:
+            m.can_edit = True
         return all_boards
-    return [m for m in all_boards if can_view_board(current_user, m.name)]
+    visible: list[BoardRead] = []
+    for m in all_boards:
+        if can_view_board(current_user, m.name):
+            m.can_edit = can_edit_board(current_user, m.name)
+            visible.append(m)
+    return visible
 
 
 @router.post("/reorder", status_code=status.HTTP_204_NO_CONTENT)

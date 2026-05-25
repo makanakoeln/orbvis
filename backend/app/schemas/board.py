@@ -442,6 +442,9 @@ class BoardRead(BaseModel):
     hover_template: str | None = None
     context_template: str | None = None
     render_mode: RenderMode = "default"
+    # Per-user capability stamped by the list endpoint: whether the requesting
+    # user may edit this board (admins, or non-admins with edit permission).
+    can_edit: bool = False
 
 
 class BoardObjectUpdate(BaseModel):
