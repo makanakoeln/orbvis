@@ -92,13 +92,45 @@
                         />
                     </td>
                     <td class="align-middle" style="padding: 6px 12px">
-                        <router-link
-                            :to="`/boards/${map.name}`"
-                            class="font-semibold text-[var(--text)] hover:text-[var(--color-corporate-green-50)] transition-colors"
-                            :title="map.alias || map.name"
-                        >
-                            {{ map.alias || map.name }}
-                        </router-link>
+                        <div class="flex flex-wrap items-center" style="gap: 6px">
+                            <router-link
+                                :to="`/boards/${map.name}`"
+                                class="font-semibold text-[var(--text)] hover:text-[var(--color-corporate-green-50)] transition-colors"
+                                :title="map.alias || map.name"
+                            >
+                                {{ map.alias || map.name }}
+                            </router-link>
+                            <!-- Board-management flags inline with the name (admin-only);
+                                 a dedicated mostly-empty column isn't worth it. -->
+                            <template v-if="auth.isAdmin">
+                                <span
+                                    v-if="map.show_in_lists === false"
+                                    class="text-[10px] rounded-md font-medium bg-[var(--bg-surface)] text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60"
+                                    style="padding: var(--dimension-2) 5px"
+                                    :title="t('home.hiddenBoard')"
+                                >
+                                    {{ t('home.hidden') }}
+                                </span>
+                                <span
+                                    v-if="map.readonly"
+                                    class="text-[10px] rounded-md font-medium bg-[var(--bg-surface)] text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60"
+                                    style="padding: var(--dimension-2) 5px"
+                                    :title="t('home.readonlyBoardTitle')"
+                                >
+                                    {{ t('home.readonly') }}
+                                </span>
+                                <span
+                                    v-if="map.rotation_interval > 0"
+                                    class="rounded-full font-medium bg-[var(--color-warning)]/20 text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/30"
+                                    style="font-size: 11px; padding: var(--dimension-2) 6px"
+                                    :title="
+                                        t('home.rotationBadgeTitle', { n: map.rotation_interval })
+                                    "
+                                >
+                                    ↻ {{ map.rotation_interval }}s
+                                </span>
+                            </template>
+                        </div>
                     </td>
                     <td class="align-middle" style="padding: 6px 12px">
                         <span
@@ -141,34 +173,6 @@
                             {{ t('home.dynamicObjects') }}
                         </span>
                         <span v-else>{{ map.object_count }}</span>
-                    </td>
-                    <td v-if="auth.isAdmin" class="align-middle" style="padding: 6px 12px">
-                        <div class="flex flex-wrap items-center" style="gap: 4px">
-                            <span
-                                v-if="map.show_in_lists === false"
-                                class="text-[10px] rounded-md font-medium bg-[var(--bg-surface)] text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60"
-                                style="padding: var(--dimension-2) 5px"
-                                :title="t('home.hiddenBoard')"
-                            >
-                                {{ t('home.hidden') }}
-                            </span>
-                            <span
-                                v-if="map.readonly"
-                                class="text-[10px] rounded-md font-medium bg-[var(--bg-surface)] text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60"
-                                style="padding: var(--dimension-2) 5px"
-                                :title="t('home.readonlyBoardTitle')"
-                            >
-                                {{ t('home.readonly') }}
-                            </span>
-                            <span
-                                v-if="map.rotation_interval > 0"
-                                class="rounded-full font-medium bg-[var(--color-warning)]/20 text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/30"
-                                style="font-size: 11px; padding: var(--dimension-2) 6px"
-                                :title="t('home.rotationBadgeTitle', { n: map.rotation_interval })"
-                            >
-                                ↻ {{ map.rotation_interval }}s
-                            </span>
-                        </div>
                     </td>
                     <td
                         v-if="auth.isAdmin || anyEditable"
@@ -311,7 +315,7 @@ const capabilities = useCapabilitiesStore();
 type SortCol = 'name' | 'type' | 'connection' | 'objects';
 
 const COLUMNS: ReadonlyArray<{
-    id: SortCol | 'status' | 'actions';
+    id: SortCol | 'actions';
     label: string;
     sortable: boolean;
     align?: 'right';
@@ -320,7 +324,6 @@ const COLUMNS: ReadonlyArray<{
     { id: 'type', label: 'home.colType', sortable: true },
     { id: 'connection', label: 'home.colConnection', sortable: true },
     { id: 'objects', label: 'home.colObjects', sortable: true, align: 'right' },
-    { id: 'status', label: 'home.colStatus', sortable: false },
     { id: 'actions', label: 'home.colActions', sortable: false, align: 'right' },
 ];
 
@@ -328,13 +331,11 @@ const COLUMNS: ReadonlyArray<{
 // column for them when at least one listed board is editable.
 const anyEditable = computed(() => props.boards.some((b) => b.can_edit === true));
 
-// connection and status are admin-oriented; non-admins get a plain read-only
-// list, plus the actions column only when they can edit some board.
+// Connection is admin-oriented; non-admins get a plain read-only list, plus
+// the actions column only when they can edit some board.
 const visibleColumns = computed(() => {
     if (auth.isAdmin) return COLUMNS;
-    const hidden = anyEditable.value
-        ? ['connection', 'status']
-        : ['connection', 'status', 'actions'];
+    const hidden = anyEditable.value ? ['connection'] : ['connection', 'actions'];
     return COLUMNS.filter((c) => !hidden.includes(c.id));
 });
 
@@ -343,8 +344,8 @@ const sortState = ref<{ col: SortCol | null; dir: 'asc' | 'desc' }>({
     dir: 'asc',
 });
 
-function setSort(col: SortCol | 'status' | 'actions') {
-    if (col === 'status' || col === 'actions') return;
+function setSort(col: SortCol | 'actions') {
+    if (col === 'actions') return;
     if (sortState.value.col === col) {
         sortState.value.dir = sortState.value.dir === 'asc' ? 'desc' : 'asc';
     } else {
@@ -353,7 +354,7 @@ function setSort(col: SortCol | 'status' | 'actions') {
     }
 }
 
-function ariaSortFor(col: SortCol | 'status' | 'actions'): 'ascending' | 'descending' | 'none' {
+function ariaSortFor(col: SortCol | 'actions'): 'ascending' | 'descending' | 'none' {
     if (sortState.value.col !== col) return 'none';
     return sortState.value.dir === 'asc' ? 'ascending' : 'descending';
 }
