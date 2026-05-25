@@ -580,7 +580,15 @@ EOF
 
   # 7. OMD init script
   step "Registering OrbVis as OMD service"
-  cat > "$INIT_SCRIPT" << EOF
+  # auto_refresh (defined in the init script below) runs orbvis-setup from
+  # *inside* the still-executing init script during an upgrade restart.
+  # Rewriting $INIT_SCRIPT in place would corrupt that running shell: bash
+  # reads a script on demand by byte offset, so truncating it mid-run makes it
+  # resume parsing garbage (e.g. a stray "xit 1 ;;"). Stage the new script in a
+  # sibling temp file and rename() it into place — the running shell keeps its
+  # open fd on the old inode while the new content is swapped in atomically.
+  INIT_TMP="$(mktemp "$INIT_SCRIPT.XXXXXX")"
+  cat > "$INIT_TMP" << EOF
 #!/bin/bash
 # OMD init script for OrbVis backend
 
@@ -670,7 +678,8 @@ case "\$1" in
   *) echo "Usage: \$0 {start|stop|restart|status}"; exit 1 ;;
 esac
 EOF
-  chmod +x "$INIT_SCRIPT"
+  chmod +x "$INIT_TMP"
+  mv -f "$INIT_TMP" "$INIT_SCRIPT"
   ln -sf "$INIT_SCRIPT" "$ROOT/etc/rc.d/85-orbvis" 2>/dev/null || true
   ok "OrbVis registered as OMD service"
 
