@@ -407,6 +407,8 @@ function typeBadgeClass(type: string): string {
             return 'bg-violet-500/15 text-violet-800 ring-1 ring-violet-600/40 dark:bg-violet-500/20 dark:text-violet-300 dark:ring-violet-500/30';
         case 'flow':
             return 'bg-emerald-500/15 text-emerald-800 ring-1 ring-emerald-700/40 dark:bg-emerald-500/20 dark:text-emerald-300 dark:ring-emerald-500/30';
+        case 'static':
+            return 'bg-slate-500/15 text-slate-700 ring-1 ring-slate-500/40 dark:bg-slate-400/15 dark:text-slate-300 dark:ring-slate-400/30';
         default:
             return 'bg-[var(--bg-surface)] text-[var(--text)] ring-1 ring-[var(--default-border-color)]';
     }
