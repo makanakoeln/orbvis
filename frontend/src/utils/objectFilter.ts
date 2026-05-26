@@ -35,7 +35,10 @@ const PREFIX_WS_RE = new RegExp(`(^|\\s)(${PREFIX_KEYS}):\\s+(?=\\S)`, 'g');
 
 export function parseFilterTerms(query: string): FilterTerm[] {
     const terms: FilterTerm[] = [];
-    const normalized = query.trim().toLowerCase().replace(PREFIX_WS_RE, '$1$2:');
+    // Prefixes are case-sensitive (lowercase only), matching Checkmk where
+    // "S:"/"H:" are not operators — so the query is not lowercased before the
+    // prefix check; only each needle is, for case-insensitive value matching.
+    const normalized = query.trim().replace(PREFIX_WS_RE, '$1$2:');
     for (const raw of normalized.split(/\s+/)) {
         if (!raw) continue;
         const colon = raw.indexOf(':');
@@ -44,11 +47,11 @@ export function parseFilterTerms(query: string): FilterTerm[] {
             const value = raw.slice(colon + 1);
             const field = PREFIX_MAP[prefix];
             if (field && value) {
-                terms.push({ field, needle: value });
+                terms.push({ field, needle: value.toLowerCase() });
                 continue;
             }
         }
-        terms.push({ field: 'any', needle: raw });
+        terms.push({ field: 'any', needle: raw.toLowerCase() });
     }
     return terms;
 }

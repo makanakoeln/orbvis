@@ -121,7 +121,10 @@ function toggleDropdown() {
     if (dropdownOpen.value) inputRef.value?.focus();
 }
 function syncDropdownFromInput() {
-    if (local.value.trim().startsWith('/')) openDropdown();
+    // Read the live DOM value, not local/modelValue: on @input the v-model
+    // emit hasn't propagated back through the prop yet, so local still holds
+    // the previous keystroke and the "/" dropdown would open one char late.
+    if (inputRef.value?.value.trim().startsWith('/')) openDropdown();
 }
 
 function clearAll() {

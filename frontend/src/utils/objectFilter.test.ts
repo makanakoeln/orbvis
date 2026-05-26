@@ -100,5 +100,15 @@ describe('objectMatchesFilter', () => {
             expect(objectMatchesFilter(svc, 'xyz:web')).toBe(false);
             expect(objectMatchesFilter(svc, 'web-srv')).toBe(true);
         });
+
+        it('treats uppercase prefixes as plain text, not operators (CMK parity)', () => {
+            // lowercase is the operator; uppercase is searched verbatim
+            expect(objectMatchesFilter(svc, 's:http')).toBe(true);
+            expect(objectMatchesFilter(svc, 'S:http')).toBe(false);
+            expect(objectMatchesFilter(svc, 'h:web')).toBe(true);
+            expect(objectMatchesFilter(svc, 'H:web')).toBe(false);
+            expect(objectMatchesFilter(hg, 'hg:linux')).toBe(true);
+            expect(objectMatchesFilter(hg, 'HG:linux')).toBe(false);
+        });
     });
 });
