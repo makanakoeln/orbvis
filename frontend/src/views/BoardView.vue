@@ -1999,7 +1999,12 @@ async function persistFlowView(patch: Record<string, unknown>): Promise<void> {
     const newView = { ...cfg.view, ...patch };
     cfg.view = newView;
     try {
-        await boardsApi.update(cfg.name, { view: newView }, token);
+        const updated = await boardsApi.update(cfg.name, { view: newView }, token);
+        // Without this, the next If-Match-gated save (settings modal) sees a
+        // stale version and 409s on top of our own background layout write.
+        if (updated.version != null && (cfg.version == null || updated.version > cfg.version)) {
+            cfg.version = updated.version;
+        }
     } catch (err) {
         // Layout edits are low-stakes — log and let the next change retry.
         console.warn('Failed to persist flow view:', err);
