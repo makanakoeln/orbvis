@@ -499,3 +499,81 @@ async def test_fetch_topology_passes_flow_view_filter(mock_connection, monkeypat
     assert captured["root"] == "core-router-01"
     assert captured["child_layers"] == 2
     assert captured["parent_layers"] == 1
+
+
+# --- compute_states_delta: slim timing patches ------------------------------
+
+
+def _timed(object_id: str, state: str, *, last: float, nxt: float, attempt: int = 1) -> ObjectState:
+    return ObjectState(
+        object_id=object_id,
+        type="host",
+        state=state,
+        last_check=last,
+        next_check=nxt,
+        current_attempt=attempt,
+    )
+
+
+def test_timing_delta_first_call_is_full_without_timing() -> None:
+    board = "timing-board-1"
+    state_service.drop_states_snapshot(board)
+    cur = [_timed("h1", "UP", last=10, nxt=70)]
+
+    to_send, removed, full, timing = state_service.compute_states_delta(board, None, cur)
+
+    assert full is True
+    assert to_send == cur
+    assert removed == []
+    assert timing == []  # full send already carries timing inside the state
+
+
+def test_timing_only_change_rides_slim_patch_not_full_state() -> None:
+    board = "timing-board-2"
+    state_service.drop_states_snapshot(board)
+    state_service.compute_states_delta(board, None, [_timed("h1", "UP", last=10, nxt=70)])
+
+    # Same operational state, only the check times moved forward (SmartPing).
+    to_send, removed, full, timing = state_service.compute_states_delta(
+        board, None, [_timed("h1", "UP", last=70, nxt=130)]
+    )
+
+    assert full is False
+    assert removed == []
+    assert to_send == []  # no full re-send
+    assert [t.object_id for t in timing] == ["h1"]
+    assert timing[0].next_check == 130
+    assert timing[0].last_check == 70
+
+
+def test_operational_change_carries_timing_inline_not_duplicated() -> None:
+    board = "timing-board-3"
+    state_service.drop_states_snapshot(board)
+    state_service.compute_states_delta(board, None, [_timed("h1", "UP", last=10, nxt=70)])
+
+    # State flipped *and* timing moved: object is in to_send, so it must not
+    # also appear in the slim timing list.
+    to_send, removed, full, timing = state_service.compute_states_delta(
+        board, None, [_timed("h1", "DOWN", last=70, nxt=130)]
+    )
+
+    assert [s.object_id for s in to_send] == ["h1"]
+    assert full is False
+    assert removed == []
+    assert timing == []
+
+
+def test_no_change_sends_nothing() -> None:
+    board = "timing-board-4"
+    state_service.drop_states_snapshot(board)
+    same = [_timed("h1", "UP", last=10, nxt=70)]
+    state_service.compute_states_delta(board, None, same)
+
+    to_send, removed, full, timing = state_service.compute_states_delta(
+        board, None, [_timed("h1", "UP", last=10, nxt=70)]
+    )
+
+    assert full is False
+    assert to_send == []
+    assert removed == []
+    assert timing == []

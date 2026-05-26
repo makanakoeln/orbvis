@@ -450,6 +450,14 @@ export interface SystemSettings {
     checkmk_url?: string | null;
 }
 
+// Slim timing patch for fields excluded from the state change-hash; see backend ObjectTiming.
+export interface ObjectTiming {
+    object_id: string;
+    last_check?: number | null;
+    next_check?: number | null;
+    current_attempt?: number;
+}
+
 export interface WebSocketStateUpdate {
     type: 'state_update';
     map: string;
@@ -460,6 +468,8 @@ export interface WebSocketStateUpdate {
     states: MapStates;
     full?: boolean;
     removed_ids?: string[];
+    // Timing-only patches for objects not in `states.states`.
+    timing?: ObjectTiming[];
 }
 
 export interface TopologyDelta {

@@ -50,6 +50,17 @@ class ObjectState(BaseModel):
     services_summary: ServicesSummary | None = None
 
 
+class ObjectTiming(BaseModel):
+    """Slim check-timing patch for the fields excluded from the state-delta
+    hash. Without it they freeze on the client and "check overdue" grows with
+    the board's open time."""
+
+    object_id: str
+    last_check: float | None = None
+    next_check: float | None = None
+    current_attempt: int = 0
+
+
 class CommentInfo(BaseModel):
     id: int
     author: str

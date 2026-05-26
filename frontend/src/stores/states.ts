@@ -214,6 +214,15 @@ export const useStatesStore = defineStore('states', () => {
                             delete states.value[id];
                         }
                     }
+                    // Keep next-check / overdue live without re-sending full state every recheck.
+                    for (const tm of msg.timing ?? []) {
+                        const existing = states.value[tm.object_id];
+                        if (existing) {
+                            existing.last_check = tm.last_check ?? null;
+                            existing.next_check = tm.next_check ?? null;
+                            existing.current_attempt = tm.current_attempt ?? 0;
+                        }
+                    }
                     lastUpdate.value = msg.states.generated_at;
                     connected.value = msg.states.connection_ok;
                 } else if (msg.type === 'topology_update') {

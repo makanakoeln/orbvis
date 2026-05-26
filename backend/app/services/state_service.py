@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from app.connections.base import ServiceRow
 from app.core.config import settings
 from app.schemas.board import AggregationNode, BoardConfig, BoardObject, RadarView, WorldmapView
-from app.schemas.state import MapStates, ObjectState, ServicesSummary
+from app.schemas.state import MapStates, ObjectState, ObjectTiming, ServicesSummary
 
 # AggregationNode.state uses cmk.bi integer codes; map them to OrbVis'
 # monitoring-state strings for ObjectState.state when we have to derive
@@ -820,6 +820,13 @@ def drop_topology_snapshot(board_name: str, auth_user: str | None = None) -> Non
 
 # (board_name, auth_user) → (object_id → volatile-fields hash)
 _state_snapshots: dict[tuple[str, str | None], dict[str, int]] = {}
+# Separate from _state_snapshots so timing-only ticks ride a slim ObjectTiming
+# patch instead of forcing a full-state re-send.
+_timing_snapshots: dict[tuple[str, str | None], dict[str, int]] = {}
+
+
+def _hash_object_timing(s: ObjectState) -> int:
+    return hash((s.last_check, s.next_check, s.current_attempt))
 
 
 def _hash_object_state(s: ObjectState) -> int:
@@ -870,23 +877,30 @@ def compute_states_delta(
     current: list[ObjectState],
     *,
     force_full: bool = False,
-) -> tuple[list[ObjectState], list[str], bool]:
+) -> tuple[list[ObjectState], list[str], bool, list[ObjectTiming]]:
     """Diff `current` against the previous snapshot for (board, auth_user).
 
-    Returns ``(states_to_send, removed_ids, full)``:
+    Returns ``(states_to_send, removed_ids, full, timing)``:
     - ``states_to_send``: full list when ``full=True``; else only added or changed entries
     - ``removed_ids``: object_ids no longer present (only meaningful when ``full=False``)
     - ``full``: ``True`` on first call (no prior snapshot) or when ``force_full=True``
+    - ``timing``: slim check-timing patches for objects whose timing changed but
+      that aren't in ``states_to_send`` (those already carry fresh timing). Empty
+      on a full send, which carries timing inside the state objects.
 
-    Side effect: stores the new hashes so the next call diffs against this.
+    Side effect: stores the new state and timing hashes so the next call diffs
+    against this.
     """
     key = (board_name, auth_user)
     prev = _state_snapshots.get(key)
+    prev_timing = _timing_snapshots.get(key)
     new_hashes = {s.object_id: _hash_object_state(s) for s in current}
+    new_timing = {s.object_id: _hash_object_timing(s) for s in current}
 
     if force_full or prev is None:
         _state_snapshots[key] = new_hashes
-        return current, [], True
+        _timing_snapshots[key] = new_timing
+        return current, [], True, []
 
     by_id = {s.object_id: s for s in current}
     to_send = [
@@ -894,9 +908,22 @@ def compute_states_delta(
         for s in current
         if s.object_id not in prev or new_hashes[s.object_id] != prev[s.object_id]
     ]
+    to_send_ids = {s.object_id for s in to_send}
     removed = [oid for oid in prev if oid not in by_id]
+    timing = [
+        ObjectTiming(
+            object_id=s.object_id,
+            last_check=s.last_check,
+            next_check=s.next_check,
+            current_attempt=s.current_attempt,
+        )
+        for s in current
+        if s.object_id not in to_send_ids
+        and (prev_timing is None or new_timing[s.object_id] != prev_timing.get(s.object_id))
+    ]
     _state_snapshots[key] = new_hashes
-    return to_send, removed, False
+    _timing_snapshots[key] = new_timing
+    return to_send, removed, False, timing
 
 
 def drop_states_snapshot(board_name: str, auth_user: str | None = None) -> None:
@@ -906,6 +933,9 @@ def drop_states_snapshot(board_name: str, auth_user: str | None = None) -> None:
     """
     if auth_user is not None:
         _state_snapshots.pop((board_name, auth_user), None)
+        _timing_snapshots.pop((board_name, auth_user), None)
         return
     for key in [k for k in _state_snapshots if k[0] == board_name]:
         _state_snapshots.pop(key, None)
+    for key in [k for k in _timing_snapshots if k[0] == board_name]:
+        _timing_snapshots.pop(key, None)

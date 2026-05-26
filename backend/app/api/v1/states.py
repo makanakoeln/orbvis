@@ -23,7 +23,7 @@ from app.core.ratelimit import ws_connect_limiter
 from app.core.sse import Subscriber, manager
 from app.models.user import User
 from app.schemas.board import BoardConfig, FlowView, RadarView
-from app.schemas.state import MapStates, ObjectState
+from app.schemas.state import MapStates, ObjectState, ObjectTiming
 from app.services import board_service, settings_service, state_service
 from app.services.auth_service import authenticate_bearer_token
 
@@ -94,6 +94,7 @@ def _build_states_msg(
     to_send: list[ObjectState],
     removed_ids: list[str],
     full: bool,
+    timing: list[ObjectTiming],
 ) -> str:
     return json.dumps(
         {
@@ -107,6 +108,7 @@ def _build_states_msg(
             },
             "removed_ids": removed_ids,
             "full": full,
+            "timing": [tm.model_dump() for tm in timing],
         }
     )
 
@@ -163,12 +165,12 @@ async def _broadcast_loop(board_name: str) -> None:
                         states = await state_service.get_board_states(
                             cfg, auth_user=auth_user, can_view_board=can_view
                         )
-                        to_send, removed_ids, is_full = state_service.compute_states_delta(
+                        to_send, removed_ids, is_full, timing = state_service.compute_states_delta(
                             board_name, auth_user, states.states
                         )
-                        if is_full or to_send or removed_ids:
+                        if is_full or to_send or removed_ids or timing:
                             msg = _build_states_msg(
-                                board_name, states, to_send, removed_ids, is_full
+                                board_name, states, to_send, removed_ids, is_full, timing
                             )
                             manager.push(board_name, subs, msg)
                         if cfg.view.type == "flow":
@@ -176,12 +178,14 @@ async def _broadcast_loop(board_name: str) -> None:
                 else:
                     user_count = 1
                     states = await state_service.get_board_states(cfg)
-                    to_send, removed_ids, is_full = state_service.compute_states_delta(
+                    to_send, removed_ids, is_full, timing = state_service.compute_states_delta(
                         board_name, None, states.states
                     )
                     subs = list(manager.get_subscribers_grouped(board_name).get(None, []))
-                    if is_full or to_send or removed_ids:
-                        msg = _build_states_msg(board_name, states, to_send, removed_ids, is_full)
+                    if is_full or to_send or removed_ids or timing:
+                        msg = _build_states_msg(
+                            board_name, states, to_send, removed_ids, is_full, timing
+                        )
                         manager.push(board_name, subs, msg)
                     if cfg.view.type == "flow":
                         await _push_topology_to(cfg, None, subs, force_full=False)
