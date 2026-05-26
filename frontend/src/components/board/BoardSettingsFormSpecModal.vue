@@ -53,10 +53,9 @@
                                 <div class="space-y-[4px]">
                                     <CmkLabel>{{ t('board.backgroundImage') }}</CmkLabel>
                                     <BackgroundImageUpload
-                                        v-model="form.background_image"
-                                        :board-name="props.board.name"
-                                        @replaced="bgReplaced = true"
-                                        @version-bumped="onBoardVersionBumped"
+                                        v-model:pending-file="pendingBgFile"
+                                        v-model:pending-remove="pendingBgRemove"
+                                        :model-value="form.background_image"
                                     />
                                 </div>
                                 <div class="space-y-[4px]">
@@ -829,6 +828,25 @@ async function save() {
         if (permDraft.size > 0) {
             await savePermissions();
         }
+        // Stage-then-save: the chosen background only hits the server now, so
+        // closing without saving never persists it. Both endpoints bump the
+        // board version, so adopt it before the If-Match-gated update below.
+        if (pendingBgRemove.value) {
+            const { version } = await boardsApi.deleteBackground(
+                props.board.name,
+                auth.accessToken!,
+            );
+            form.value.background_image = '';
+            if (version != null) localVersion.value = version;
+        } else if (pendingBgFile.value) {
+            const { filename, version } = await boardsApi.uploadBackground(
+                props.board.name,
+                pendingBgFile.value,
+                auth.accessToken!,
+            );
+            form.value.background_image = filename;
+            if (version != null) localVersion.value = version;
+        }
         let view: Record<string, unknown> = buildViewFromForm();
         if (form.value.map_type === 'flow') {
             // Preserve service_layout / positions written by the preview iframe.
@@ -876,10 +894,11 @@ async function save() {
             formSpec: formSpecData.value,
             flowView: flowViewFormSpecData.value,
         });
-        if (bgReplaced.value) {
+        if (pendingBgFile.value || pendingBgRemove.value) {
             boardsStore.bumpBgRefreshTick(props.board.name);
         }
-        bgReplaced.value = false;
+        pendingBgFile.value = null;
+        pendingBgRemove.value = false;
         saveAttempted.value = false;
         toast.success(t('board.savedToast'), {
             label: t('board.openBoard'),
@@ -940,15 +959,10 @@ const initialSnapshot = ref(
 // Tracks the persisted board version so subsequent saves use the
 // up-to-date If-Match header instead of the now-stale props value.
 const localVersion = ref<number | null>(props.board.version ?? null);
-function onBoardVersionBumped(version: number) {
-    localVersion.value = version;
-    previewLoading.value = true;
-    previewKey.value++;
-}
-// Tracks bg-image replace-uploads where the resulting filename is identical
-// (backend stores under `<board>.<ext>`), so the snapshot comparison can't
-// pick them up on its own.
-const bgReplaced = ref(false);
+// Background image is staged here and only uploaded/removed on save, so closing
+// without saving leaves the server untouched (upload → save).
+const pendingBgFile = ref<File | null>(null);
+const pendingBgRemove = ref(false);
 const isDirty = computed(
     () =>
         JSON.stringify({
@@ -957,7 +971,8 @@ const isDirty = computed(
             flowView: flowViewFormSpecData.value,
         }) !== initialSnapshot.value ||
         permDraft.size > 0 ||
-        bgReplaced.value,
+        pendingBgFile.value !== null ||
+        pendingBgRemove.value,
 );
 
 const saveButtonTooltip = computed(() => {
@@ -993,7 +1008,8 @@ function resetChanges() {
     formSpecData.value = snapshot.formSpec;
     flowViewFormSpecData.value = snapshot.flowView;
     permDraft.clear();
-    bgReplaced.value = false;
+    pendingBgFile.value = null;
+    pendingBgRemove.value = false;
     saveAttempted.value = false;
     formBackendValidation.value = [];
     saveError.value = '';

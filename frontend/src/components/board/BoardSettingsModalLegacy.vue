@@ -401,9 +401,9 @@
                                 <div class="space-y-[4px]">
                                     <CmkLabel>{{ t('board.backgroundImage') }}</CmkLabel>
                                     <BackgroundImageUpload
-                                        v-model="form.background_image"
-                                        :board-name="props.board.name"
-                                        @version-bumped="onBoardVersionBumped"
+                                        v-model:pending-file="pendingBgFile"
+                                        v-model:pending-remove="pendingBgRemove"
+                                        :model-value="form.background_image"
                                     />
                                 </div>
                                 <div class="space-y-[4px]">
@@ -684,9 +684,10 @@ const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => 
 const activeTab = ref<'general' | 'permissions'>('general');
 
 const localVersion = ref<number | null>(props.board.version ?? null);
-function onBoardVersionBumped(version: number) {
-    localVersion.value = version;
-}
+// Background image is staged and only uploaded/removed on save, so closing
+// without saving leaves the server untouched (upload → save).
+const pendingBgFile = ref<File | null>(null);
+const pendingBgRemove = ref(false);
 
 // ── General ────────────────────────────────────────────────────────────────
 
@@ -818,6 +819,25 @@ async function save() {
         // Always save any pending permission changes
         if (permDraft.size > 0) {
             await savePermissions();
+        }
+        // Stage-then-save: the chosen background only hits the server now, so
+        // closing without saving never persists it. Both endpoints bump the
+        // board version, so adopt it before the If-Match-gated update below.
+        if (pendingBgRemove.value) {
+            const { version } = await boardsApi.deleteBackground(
+                props.board.name,
+                auth.accessToken!,
+            );
+            form.value.background_image = '';
+            if (version != null) localVersion.value = version;
+        } else if (pendingBgFile.value) {
+            const { filename, version } = await boardsApi.uploadBackground(
+                props.board.name,
+                pendingBgFile.value,
+                auth.accessToken!,
+            );
+            form.value.background_image = filename;
+            if (version != null) localVersion.value = version;
         }
         let view: Record<string, unknown>;
         if (form.value.map_type === 'worldmap') {

@@ -183,6 +183,7 @@ export default {
         backgroundImagePlaceholder: 'Bild auswählen…',
         uploadBackground: 'Hintergrundbild hochladen…',
         replaceBackground: 'Ersetzen…',
+        backgroundUnsaved: 'ungespeichert',
         backgroundColor: 'Hintergrundfarbe',
         boardSubtitle: 'ID: {name}',
         staleConflict:

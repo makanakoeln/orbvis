@@ -173,6 +173,7 @@ export default {
         backgroundImagePlaceholder: 'Select image…',
         uploadBackground: 'Upload background image…',
         replaceBackground: 'Replace…',
+        backgroundUnsaved: 'unsaved',
         backgroundColor: 'Background color',
         boardSubtitle: 'ID: {name}',
         staleConflict:

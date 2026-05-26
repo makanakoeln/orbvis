@@ -1,13 +1,13 @@
 <template>
     <div class="space-y-2">
-        <!-- Preview when a background is set -->
+        <!-- Preview when a background is set or staged -->
         <div
-            v-if="modelValue"
+            v-if="hasImage"
             class="flex items-center gap-3 px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--color-corporate-green-50)]/50 rounded-lg"
         >
             <img
                 v-if="!previewFailed"
-                :src="previewUrl"
+                :src="displayUrl"
                 class="w-12 h-12 object-cover rounded shrink-0"
                 @error="previewFailed = true"
             />
@@ -17,8 +17,11 @@
             >
                 ?
             </div>
-            <span class="flex-1 text-xs font-mono text-[var(--text)] truncate">
-                {{ modelValue }}
+            <span class="flex-1 min-w-0 text-xs font-mono text-[var(--text)] truncate">
+                {{ displayName }}
+                <span v-if="pendingFile" class="text-[var(--text-muted)]">
+                    · {{ t('board.backgroundUnsaved') }}
+                </span>
             </span>
             <label
                 class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
@@ -29,8 +32,8 @@
             <button
                 type="button"
                 class="text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] transition-colors"
-                :title="t('board.deleteBackground')"
-                @click="remove"
+                :title="pendingFile ? t('common.cancel') : t('board.deleteBackground')"
+                @click="removeOrCancel"
             >
                 <svg
                     class="w-3.5 h-3.5"
@@ -44,7 +47,7 @@
             </button>
         </div>
 
-        <!-- Upload button when empty -->
+        <!-- Upload button when empty (or pending removal) -->
         <label
             v-else
             class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text-muted)] hover:ring-[var(--color-corporate-green-50)] hover:text-[var(--text)] transition-all cursor-pointer focus-within:ring-[var(--color-corporate-green-50)]"
@@ -65,51 +68,44 @@
             {{ t('board.uploadBackground') }}
             <input type="file" :accept="ACCEPT_TYPES" class="hidden" @change="onFileChange" />
         </label>
-
-        <p v-if="error" class="text-xs text-[var(--color-light-red-40)]">{{ error }}</p>
-        <p v-else-if="uploading" class="text-xs text-[var(--text-muted)]">
-            {{ t('common.saving') }}…
-        </p>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-
-import { boardsApi } from '@/api/client';
-import { useAuthStore } from '@/stores/auth';
 
 const ACCEPT_TYPES = 'image/png,image/jpeg,image/svg+xml,image/webp,image/gif';
 
 const { t } = useI18n();
-const auth = useAuthStore();
 
 const props = defineProps<{
+    // Filename of the background already persisted on the server (display base).
     modelValue: string;
-    boardName: string;
+    // Staged selection: uploaded/deleted only when the parent saves the board.
+    pendingFile: File | null;
+    pendingRemove: boolean;
 }>();
-// `replaced` fires on every successful upload, even when the resulting
-// filename is unchanged. The backend stores the bg under a fixed
-// `<board>.<ext>` name, so an in-place replacement leaves modelValue
-// identical — without a side-channel signal the parent's isDirty check
-// wouldn't see the change and the Save button would stay disabled.
 const emit = defineEmits<{
-    'update:modelValue': [value: string];
-    replaced: [];
-    'version-bumped': [version: number];
+    'update:pendingFile': [value: File | null];
+    'update:pendingRemove': [value: boolean];
 }>();
 
 const BASE_URL = import.meta.env.BASE_URL;
 const cacheBust = ref(Date.now());
-const uploading = ref(false);
-const error = ref('');
 const previewFailed = ref(false);
 
-const previewUrl = computed(
-    () => `${BASE_URL}boards/backgrounds/${props.modelValue}?v=${cacheBust.value}`,
+// Object URL for the staged file so the preview reflects the pick before save.
+const pendingUrl = ref('');
+watch(
+    () => props.pendingFile,
+    (file) => {
+        previewFailed.value = false;
+        if (pendingUrl.value) URL.revokeObjectURL(pendingUrl.value);
+        pendingUrl.value = file ? URL.createObjectURL(file) : '';
+    },
+    { immediate: true },
 );
-
 watch(
     () => props.modelValue,
     () => {
@@ -117,39 +113,35 @@ watch(
         cacheBust.value = Date.now();
     },
 );
+onUnmounted(() => {
+    if (pendingUrl.value) URL.revokeObjectURL(pendingUrl.value);
+});
 
-async function onFileChange(event: Event) {
+const hasImage = computed(() =>
+    props.pendingFile ? true : props.pendingRemove ? false : !!props.modelValue,
+);
+const displayUrl = computed(() =>
+    props.pendingFile
+        ? pendingUrl.value
+        : `${BASE_URL}boards/backgrounds/${props.modelValue}?v=${cacheBust.value}`,
+);
+const displayName = computed(() => props.pendingFile?.name ?? props.modelValue);
+
+function onFileChange(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
+    input.value = '';
     if (!file) return;
-    error.value = '';
-    uploading.value = true;
-    try {
-        const { filename, version } = await boardsApi.uploadBackground(
-            props.boardName,
-            file,
-            auth.accessToken!,
-        );
-        cacheBust.value = Date.now();
-        emit('update:modelValue', filename);
-        emit('replaced');
-        if (typeof version === 'number') emit('version-bumped', version);
-    } catch (e: unknown) {
-        error.value = e instanceof Error ? e.message : 'Upload failed';
-    } finally {
-        uploading.value = false;
-        input.value = '';
-    }
+    emit('update:pendingRemove', false);
+    emit('update:pendingFile', file);
 }
 
-async function remove() {
-    error.value = '';
-    try {
-        const { version } = await boardsApi.deleteBackground(props.boardName, auth.accessToken!);
-        emit('update:modelValue', '');
-        if (typeof version === 'number') emit('version-bumped', version);
-    } catch (e: unknown) {
-        error.value = e instanceof Error ? e.message : 'Delete failed';
+function removeOrCancel() {
+    if (props.pendingFile) {
+        // Undo the staged pick, falling back to the persisted image.
+        emit('update:pendingFile', null);
+        return;
     }
+    emit('update:pendingRemove', true);
 }
 </script>
