@@ -30,6 +30,7 @@ Iterative release on top of 0.3.0. Boards gain a dynamic-group object type and a
 - Dynamic-group Livestatus filters are hardened against header injection
 - SSO cookies are rejected when the Checkmk session has not completed 2FA
 - Dependency bump for `brace-expansion` (GHSA-jxxr-4gwj-5jf2)
+- The `fastapi` dependency excludes the malicious 0.136.3 release (MAL-2026-4750), which pulls a backdoored `fastar` package at install time
 
 ### Bug Fixes
 

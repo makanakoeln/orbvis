@@ -5,7 +5,7 @@ description = "OrbVis Backend - FastAPI based monitoring visualization"
 license = { text = "GPL-2.0-only" }
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115.0",
+    "fastapi>=0.115.0,!=0.136.3",      # MAL-2026-4750 — 0.136.3 ships malicious fastar dep
     "uvicorn>=0.32.0",
     "pydantic>=2.10.0",
     "bcrypt>=4.0.0",
