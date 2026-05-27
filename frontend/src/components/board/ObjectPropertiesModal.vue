@@ -942,9 +942,11 @@
                                     min="1"
                                     max="512"
                                     :placeholder="
-                                        boardIconSize != null
-                                            ? String(boardIconSize)
-                                            : t('boardSettings.mapDefault')
+                                        form.display.mode === 'gadget'
+                                            ? String(GADGET_DEFAULT_SIZE)
+                                            : boardIconSize != null
+                                              ? String(boardIconSize)
+                                              : t('boardSettings.mapDefault')
                                     "
                                     class="w-24"
                                 />
@@ -1246,6 +1248,7 @@ import {
     flattenAggregationLeaves,
 } from '@/utils/aggregationTree';
 import { linePerfdataLabelOptions, lineStyleOptions } from '@/utils/dropdownOptions';
+import { GADGET_DEFAULT_SIZE } from '@/utils/gadget';
 import { getBoardObjectIdentifier } from '@/utils/naming';
 import { parsePerfData } from '@/utils/perf';
 import { compileRegex } from '@/utils/regex';

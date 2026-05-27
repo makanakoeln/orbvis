@@ -88,7 +88,7 @@
                 :icon-size="
                     obj.display?.image_size ??
                     (obj.display?.mode === 'gadget'
-                        ? 60
+                        ? GADGET_DEFAULT_SIZE
                         : (iconSizeOverride ??
                           config.icon_size ??
                           settingsStore.settings.icon_size))
@@ -214,6 +214,7 @@ import { useBoardsStore } from '@/stores/boards';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api';
+import { GADGET_DEFAULT_SIZE } from '@/utils/gadget';
 import { objectMatchesFilter } from '@/utils/objectFilter';
 import { resolveTemplate } from '@/utils/template';
 
