@@ -247,6 +247,7 @@ export default {
             topKHint:
                 'Service-Details für die {shown} von {total} am stärksten betroffenen Hosts werden gezeigt — übrige Hosts sind als Donut aggregiert',
             topKHintShort: 'Services für {shown} von {total} Hosts angezeigt',
+            topKHintDismiss: 'Hinweis ausblenden',
             problemsOnlyToggle: 'Nur Hosts mit Problemen anzeigen',
             bulkSelected: '{count} ausgewählt',
         },

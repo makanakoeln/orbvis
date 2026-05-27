@@ -102,10 +102,22 @@
         </BoardSearch>
 
         <div
-            v-if="topKBreakdown.omitted > 0 && needsServiceDetail"
+            v-if="topKBreakdown.omitted > 0 && needsServiceDetail && !topKHintDismissed"
             class="flow-hint flow-hint--topk"
         >
-            {{ t(preview ? 'board.flow.topKHintShort' : 'board.flow.topKHint', topKBreakdown) }}
+            <span>{{
+                t(preview ? 'board.flow.topKHintShort' : 'board.flow.topKHint', topKBreakdown)
+            }}</span>
+            <button
+                v-if="!preview"
+                type="button"
+                class="flow-hint__dismiss"
+                :title="t('board.flow.topKHintDismiss')"
+                :aria-label="t('board.flow.topKHintDismiss')"
+                @click="dismissTopKHint"
+            >
+                ×
+            </button>
         </div>
 
         <!-- Hover popup -->
@@ -837,6 +849,21 @@ const topKBreakdown = computed(() => {
 });
 
 const needsServiceDetail = computed(() => needsServices(props.serviceLayout));
+
+// The top-K hint explains a fixed concept, so once an operator has understood
+// it they can banish it for good — persist the dismissal across boards/reloads.
+const TOPK_HINT_DISMISSED_KEY = 'orbvis.flow.topkHintDismissed';
+const topKHintDismissed = ref(
+    typeof window !== 'undefined' && window.localStorage?.getItem(TOPK_HINT_DISMISSED_KEY) === '1',
+);
+function dismissTopKHint() {
+    topKHintDismissed.value = true;
+    try {
+        window.localStorage?.setItem(TOPK_HINT_DISMISSED_KEY, '1');
+    } catch {
+        // Private mode or storage full — the dismissal only lasts this session.
+    }
+}
 
 // Free-text filter: dim (don't hide) nodes that don't match so the spatial
 // context is preserved. Hiding would re-trigger force-collide and rearrange
@@ -2548,7 +2575,10 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     left: 50%;
     transform: translateX(-50%);
     z-index: 4;
-    padding: 4px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 4px 4px 10px;
     border-radius: var(--border-radius);
     background: rgb(24 24 27 / 85%);
     color: var(--text);
@@ -2558,6 +2588,29 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     pointer-events: none;
     max-width: 70%;
     text-align: center;
+}
+
+.flow-hint__dismiss {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.flow-hint__dismiss:hover {
+    color: var(--text);
+    background: rgb(255 255 255 / 10%);
 }
 
 .flow-search__toggle {
