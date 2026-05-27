@@ -192,6 +192,16 @@ body {
     margin: 0;
 }
 
+/* --bg-glass and --gauge-track have no CMK theme-aware equivalent, so unlike
+   the bridged tokens above they can't flip per theme. Their light values live
+   in the `.light` block on <html>, but the body declaration shadows them for
+   every descendant — leaving glass popups (HoverMenu) and gauge tracks dark in
+   light mode. Re-assert the light values at body scope so they actually win. */
+.light body {
+    --bg-glass: rgb(255 255 255 / 92%);
+    --gauge-track: #d4d4d8;
+}
+
 /* SVG icons loaded as <img> lose currentColor — invert makes black strokes white in dark mode.
    Only apply to monochrome SVGs (Tabler Icons style), not to coloured bitmaps. */
 .dark .svg-icon {
