@@ -102,7 +102,9 @@
         </BoardSearch>
 
         <div
-            v-if="topKBreakdown.omitted > 0 && needsServiceDetail && !topKHintDismissed"
+            v-if="
+                topKBreakdown.omitted > 0 && needsServiceDetail && (preview || !topKHintDismissed)
+            "
             class="flow-hint flow-hint--topk"
         >
             <span>{{
@@ -339,15 +341,12 @@ const NODE_R = 18;
 const SVC_R_MAX = 11; // service node radius at low service count
 const ORBIT_R_MIN = 80; // minimum orbit/fan radius
 
-// d3 aborts a whole render pass and logs an error if any geometry attribute
-// (transform / x / y) resolves to NaN. Force-sim positions can be transiently
-// undefined or NaN before the first tick settles — and `?? 0` does NOT catch
-// NaN — so every value that reaches the DOM, a force target, or the zoom
-// transform is funnelled through this guard. A single NaN slipping into the
-// zoom transform corrupts d3-zoom's internal state, turning every subsequent
-// pan/zoom into a NaN flood.
+// A NaN position reaching a geometry attr makes d3 abort the render; a NaN in
+// the zoom transform corrupts d3-zoom and floods every later frame. `?? 0`
+// doesn't catch NaN, so coordinates are funnelled through these guards.
 const finiteOr = (v: unknown, fallback = 0): number =>
     typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+const firstFinite = (a: unknown, b: unknown): number => finiteOr(a, finiteOr(b, NaN));
 
 // Scale service node radius down when a host has many services
 function svcR(N: number): number {
@@ -861,15 +860,17 @@ const topKBreakdown = computed(() => {
 const needsServiceDetail = computed(() => needsServices(props.serviceLayout));
 
 // The top-K hint explains a fixed concept, so once an operator has understood
-// it they can banish it for good — persist the dismissal across boards/reloads.
-const TOPK_HINT_DISMISSED_KEY = 'orbvis.flow.topkHintDismissed';
+// it they can banish it for good — persisted across boards/reloads. Scoped per
+// user so one operator's dismissal doesn't hide the hint from another sharing
+// the browser (matches the onboarding-tour key convention).
+const topKHintDismissedKey = `orbvis.flow.topkHintDismissed.${auth.user?.user_id ?? 'anon'}`;
 const topKHintDismissed = ref(
-    typeof window !== 'undefined' && window.localStorage?.getItem(TOPK_HINT_DISMISSED_KEY) === '1',
+    typeof window !== 'undefined' && window.localStorage?.getItem(topKHintDismissedKey) === '1',
 );
 function dismissTopKHint() {
     topKHintDismissed.value = true;
     try {
-        window.localStorage?.setItem(TOPK_HINT_DISMISSED_KEY, '1');
+        window.localStorage?.setItem(topKHintDismissedKey, '1');
     } catch {
         // Private mode or storage full — the dismissal only lasts this session.
     }
@@ -1433,12 +1434,14 @@ function fitView({ animated = true }: { animated?: boolean } = {}) {
     const W = svg.clientWidth || 900;
     const H = svg.clientHeight || 600;
     const PAD = 64;
-    // Only fit over nodes whose position is actually known: a node still
-    // settling (or one a coincident-force NaN'd for a tick) would otherwise
-    // poison the extent and make every term below NaN.
-    const xs = lastFNodes.map((n) => finiteOr(n.x ?? n.fx, NaN)).filter(Number.isFinite);
-    const ys = lastFNodes.map((n) => finiteOr(n.y ?? n.fy, NaN)).filter(Number.isFinite);
-    if (!xs.length || !ys.length) return;
+    // Fit only over nodes with a known position, kept as (x,y) pairs so a
+    // still-settling node can't poison the extent or split it across axes.
+    const pts = lastFNodes
+        .map((n) => ({ x: firstFinite(n.x, n.fx), y: firstFinite(n.y, n.fy) }))
+        .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+    if (!pts.length) return;
+    const xs = pts.map((p) => p.x);
+    const ys = pts.map((p) => p.y);
     const minX = Math.min(...xs) - NODE_R - PAD;
     const maxX = Math.max(...xs) + NODE_R + PAD;
     const minY = Math.min(...ys) - NODE_R - PAD;
@@ -2588,9 +2591,8 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
 }
 
 .flow-hint {
-    /* Bottom-left, immediately right of the zoom-control stack (bottom-4 left-4),
-       so the banner reads as a footnote to the controls instead of floating over
-       the topology center where it collided with the root node at some zooms. */
+    /* Beside the zoom controls rather than over the topology center, where it
+       collided with the root node at some zoom levels. */
     position: absolute;
     bottom: 16px;
     left: 56px;
