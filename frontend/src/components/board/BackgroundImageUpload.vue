@@ -6,13 +6,13 @@
             class="flex items-center gap-3 px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--color-corporate-green-50)]/50 rounded-lg"
         >
             <img
-                v-if="!previewFailed"
+                v-if="!previewFailed && displayUrl"
                 :src="displayUrl"
                 class="w-12 h-12 object-cover rounded shrink-0"
                 @error="previewFailed = true"
             />
             <div
-                v-else
+                v-else-if="previewFailed"
                 class="w-12 h-12 rounded shrink-0 bg-[var(--bg-hover)] flex items-center justify-center text-[10px] text-[var(--text-muted)]"
             >
                 ?
@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 const ACCEPT_TYPES = 'image/png,image/jpeg,image/svg+xml,image/webp,image/gif';
@@ -85,6 +85,10 @@ const props = defineProps<{
     // Staged selection: uploaded/deleted only when the parent saves the board.
     pendingFile: File | null;
     pendingRemove: boolean;
+    // data: URL of the staged file, provided by the parent. A data: URL (not a
+    // blob:) is required because Checkmk's CSP allows ``img-src ... data:`` but
+    // not blob:, so a blob: thumbnail would be silently blocked on OMD sites.
+    pendingPreviewUrl?: string | null;
 }>();
 const emit = defineEmits<{
     'update:pendingFile': [value: File | null];
@@ -95,16 +99,11 @@ const BASE_URL = import.meta.env.BASE_URL;
 const cacheBust = ref(Date.now());
 const previewFailed = ref(false);
 
-// Object URL for the staged file so the preview reflects the pick before save.
-const pendingUrl = ref('');
 watch(
     () => props.pendingFile,
-    (file) => {
+    () => {
         previewFailed.value = false;
-        if (pendingUrl.value) URL.revokeObjectURL(pendingUrl.value);
-        pendingUrl.value = file ? URL.createObjectURL(file) : '';
     },
-    { immediate: true },
 );
 watch(
     () => props.modelValue,
@@ -113,16 +112,13 @@ watch(
         cacheBust.value = Date.now();
     },
 );
-onUnmounted(() => {
-    if (pendingUrl.value) URL.revokeObjectURL(pendingUrl.value);
-});
 
 const hasImage = computed(() =>
     props.pendingFile ? true : props.pendingRemove ? false : !!props.modelValue,
 );
 const displayUrl = computed(() =>
     props.pendingFile
-        ? pendingUrl.value
+        ? (props.pendingPreviewUrl ?? '')
         : `${BASE_URL}boards/backgrounds/${props.modelValue}?v=${cacheBust.value}`,
 );
 const displayName = computed(() => props.pendingFile?.name ?? props.modelValue);

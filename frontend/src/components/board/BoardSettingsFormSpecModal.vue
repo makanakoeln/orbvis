@@ -56,6 +56,7 @@
                                         v-model:pending-file="pendingBgFile"
                                         v-model:pending-remove="pendingBgRemove"
                                         :model-value="form.background_image"
+                                        :pending-preview-url="pendingBgPreviewUrl"
                                     />
                                 </div>
                                 <div class="space-y-[4px]">
@@ -964,20 +965,23 @@ const localVersion = ref<number | null>(props.board.version ?? null);
 const pendingBgFile = ref<File | null>(null);
 const pendingBgRemove = ref(false);
 
-// Mirror the staged background file as a blob URL so the live preview can show
-// it before save — the server filename only exists after upload. Revoked on
-// change/close so we don't leak object URLs.
+// Mirror the staged background file as a data: URL so the live preview can show
+// it before save — the server filename only exists after upload. Must be a
+// data: URL (not blob:): Checkmk's CSP allows ``img-src ... data:`` but blocks
+// blob:, so a blob: URL would render nothing on OMD sites.
 const pendingBgPreviewUrl = ref<string | null>(null);
-watch(
-    pendingBgFile,
-    (file) => {
-        if (pendingBgPreviewUrl.value) URL.revokeObjectURL(pendingBgPreviewUrl.value);
-        pendingBgPreviewUrl.value = file ? URL.createObjectURL(file) : null;
-    },
-    { immediate: true },
-);
-onBeforeUnmount(() => {
-    if (pendingBgPreviewUrl.value) URL.revokeObjectURL(pendingBgPreviewUrl.value);
+let bgReadSeq = 0;
+watch(pendingBgFile, (file) => {
+    const seq = ++bgReadSeq;
+    if (!file) {
+        pendingBgPreviewUrl.value = null;
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+        if (seq === bgReadSeq) pendingBgPreviewUrl.value = reader.result as string;
+    };
+    reader.readAsDataURL(file);
 });
 const isDirty = computed(
     () =>
@@ -1093,9 +1097,6 @@ function buildPreviewPatch(): Record<string, unknown> {
         icon_size: (fs.icon_size as number | null | undefined) ?? null,
         hover_template: (fs.hover_template as string) ?? '',
         context_template: (fs.context_template as string) ?? '',
-        background_image: pendingBgRemove.value
-            ? null
-            : (pendingBgPreviewUrl.value ?? form.value.background_image) || null,
         background_color: form.value.background_color || null,
         view: buildViewFromForm(),
     };
@@ -1157,9 +1158,22 @@ function postPreviewPatch() {
 
 const schedulePreviewPost = useDebounceFn(postPreviewPatch, 120);
 
+// The background image (a potentially multi-MB data: URL) is posted on its own
+// channel, only when it changes — keeping it out of the debounced general patch
+// avoids re-cloning megabytes through postMessage on every unrelated edit.
+function postBgPatch() {
+    const win = previewIframe.value?.contentWindow;
+    if (!win) return;
+    const background_image = pendingBgRemove.value
+        ? null
+        : (pendingBgPreviewUrl.value ?? form.value.background_image) || null;
+    win.postMessage({ source: PREVIEW_EDIT, patch: { background_image } }, window.location.origin);
+}
+
 function onPreviewLoaded() {
     previewLoading.value = false;
     postPreviewPatch();
+    postBgPatch();
 }
 
 function onPreviewReady(ev: MessageEvent) {
@@ -1168,13 +1182,11 @@ function onPreviewReady(ev: MessageEvent) {
     if (!data || data.source !== PREVIEW_READY) return;
     if (ev.source !== previewIframe.value?.contentWindow) return;
     postPreviewPatch();
+    postBgPatch();
 }
 
-watch(
-    [form, formSpecData, flowViewFormSpecData, pendingBgFile, pendingBgRemove],
-    schedulePreviewPost,
-    { deep: true },
-);
+watch([form, formSpecData, flowViewFormSpecData], schedulePreviewPost, { deep: true });
+watch([pendingBgPreviewUrl, pendingBgRemove], postBgPatch);
 
 const deleteDialogOpen = ref(false);
 function deleteBoard() {
