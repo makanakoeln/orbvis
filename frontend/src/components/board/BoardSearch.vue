@@ -54,7 +54,7 @@
             </div>
             <ul class="board-search__operator-list">
                 <li
-                    v-for="op in OPERATORS"
+                    v-for="op in operators"
                     :key="op.prefix"
                     role="option"
                     class="board-search__operator"
@@ -87,7 +87,11 @@
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-const props = defineProps<{ modelValue: string; placeholder?: string }>();
+const props = defineProps<{
+    modelValue: string;
+    placeholder?: string;
+    excludePrefixes?: readonly string[];
+}>();
 const emit = defineEmits<{ 'update:modelValue': [string] }>();
 
 const { t } = useI18n();
@@ -99,6 +103,10 @@ const OPERATORS = [
     { prefix: 'sg', labelKey: 'board.search.operator.servicegroup' },
     { prefix: 'id', labelKey: 'board.search.operator.id' },
 ] as const;
+
+const operators = computed(() =>
+    OPERATORS.filter((op) => !props.excludePrefixes?.includes(op.prefix)),
+);
 
 const local = computed({
     get: () => props.modelValue,

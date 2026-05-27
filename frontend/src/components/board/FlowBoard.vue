@@ -71,7 +71,11 @@
             </button>
         </div>
 
-        <BoardSearch v-if="!loading && !error && !detailObject && !preview" v-model="filterText">
+        <BoardSearch
+            v-if="!loading && !error && !detailObject && !preview"
+            v-model="filterText"
+            :exclude-prefixes="['hg', 'sg']"
+        >
             <template #trailing>
                 <button
                     type="button"
@@ -841,7 +845,12 @@ const needsServiceDetail = computed(() => needsServices(props.serviceLayout));
 type StateFilter = 'all' | 'problems';
 const filterText = ref('');
 const stateFilter = ref<StateFilter>('all');
-const filterTerms = computed(() => parseFilterTerms(filterText.value));
+// Flow nodes are only hosts/services, so group operators can never match —
+// drop them instead of letting an `hg:`/`sg:` term filter everything away.
+const UNSUPPORTED_FLOW_FIELDS: ReadonlySet<FilterField> = new Set(['hostgroup', 'servicegroup']);
+const filterTerms = computed(() =>
+    parseFilterTerms(filterText.value).filter((term) => !UNSUPPORTED_FLOW_FIELDS.has(term.field)),
+);
 
 function nodeHasProblem(d: FNode): boolean {
     if (d.nodeType === 'host') {
