@@ -90,7 +90,10 @@
                 :font-size="size * 0.18"
                 font-weight="700"
                 fill="var(--gadget-text)"
-                style="filter: drop-shadow(0 1px 3px rgb(0 0 0 / 90%))"
+                stroke="rgb(0 0 0 / 0.9)"
+                :stroke-width="size * 0.05"
+                stroke-linejoin="round"
+                paint-order="stroke"
             >
                 {{ pct.toFixed(0) }}%
             </text>

@@ -97,14 +97,19 @@
     --color-unknown: #f80;
     --color-pending: #aaa;
 
-    /* Gadgets: immer dunkel (hardware look), kein .light-Override. */
+    /* Gadgets keep a dark "hardware" look in both themes (no .light override).
+       The value/label text is always light, so it must stay legible even when
+       it sits directly on a light board backdrop — hence the dark text outline
+       below and a neutral-grey track that shows on light and dark alike. */
     --gadget-bg: rgb(0 0 0 / 55%);
     --gadget-ring: rgb(255 255 255 / 15%);
     --gadget-bar-bg: rgb(0 0 0 / 50%);
-    --gadget-track: rgb(255 255 255 / 20%);
+    --gadget-track: rgb(120 120 130 / 50%);
     --gadget-text: #f4f4f5;
-    --gadget-text-dim: rgb(255 255 255 / 70%);
-    --shadow-text: 0 1px 3px rgb(0 0 0 / 90%);
+    --gadget-text-dim: rgb(255 255 255 / 80%);
+    --shadow-text:
+        1px 1px 0 rgb(0 0 0 / 90%), -1px 1px 0 rgb(0 0 0 / 90%), 1px -1px 0 rgb(0 0 0 / 90%),
+        -1px -1px 0 rgb(0 0 0 / 90%), 0 0 3px rgb(0 0 0 / 70%);
 }
 
 /* Override browser autofill yellow highlight */
