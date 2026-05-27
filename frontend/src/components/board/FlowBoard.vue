@@ -339,6 +339,16 @@ const NODE_R = 18;
 const SVC_R_MAX = 11; // service node radius at low service count
 const ORBIT_R_MIN = 80; // minimum orbit/fan radius
 
+// d3 aborts a whole render pass and logs an error if any geometry attribute
+// (transform / x / y) resolves to NaN. Force-sim positions can be transiently
+// undefined or NaN before the first tick settles — and `?? 0` does NOT catch
+// NaN — so every value that reaches the DOM, a force target, or the zoom
+// transform is funnelled through this guard. A single NaN slipping into the
+// zoom transform corrupts d3-zoom's internal state, turning every subsequent
+// pan/zoom into a NaN flood.
+const finiteOr = (v: unknown, fallback = 0): number =>
+    typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+
 // Scale service node radius down when a host has many services
 function svcR(N: number): number {
     if (N <= 6) return SVC_R_MAX;
@@ -383,7 +393,7 @@ const DONUT_BASE_WIDTH = 8;
 const DONUT_MIN_SCREEN_PX = 4;
 const DONUT_MAX_WIDTH = 24;
 function donutOuterRadius(zoomK: number): number {
-    const widthForMinScreen = DONUT_MIN_SCREEN_PX / Math.max(zoomK, 0.0001);
+    const widthForMinScreen = DONUT_MIN_SCREEN_PX / Math.max(finiteOr(zoomK, 1), 0.0001);
     const width = Math.min(DONUT_MAX_WIDTH, Math.max(DONUT_BASE_WIDTH, widthForMinScreen));
     return DONUT_INNER + width;
 }
@@ -1320,7 +1330,7 @@ function refreshHostLabelOffsets(): void {
 // (k≈0.25) the 110-px-wide rect would render as ~28px without this — too
 // small to read. At full zoom the scale stays 1 (no inflation).
 function siteScaleForZoom(zoomK: number): number {
-    const inv = 1 / Math.max(zoomK, 0.0001);
+    const inv = 1 / Math.max(finiteOr(zoomK, 1), 0.0001);
     return Math.min(3.5, Math.max(1, inv));
 }
 function refreshSiteScale(): void {
@@ -1329,7 +1339,7 @@ function refreshSiteScale(): void {
     select(svgEl.value)
         .selectAll<SVGGElement, FNode>('g.node')
         .filter((d) => d.nodeType === 'site')
-        .attr('transform', (d) => `translate(${d.x ?? 0},${d.y ?? 0}) scale(${scale})`);
+        .attr('transform', (d) => `translate(${finiteOr(d.x)},${finiteOr(d.y)}) scale(${scale})`);
 }
 
 function applyLod(): void {
@@ -1346,6 +1356,9 @@ function flushZoomTransform(): void {
     if (!pendingZoomTransform || !svgEl.value) return;
     const t = pendingZoomTransform;
     pendingZoomTransform = null;
+    // Refuse a corrupted transform rather than writing NaN into the DOM and
+    // caching a NaN zoom level that would cascade into every label / site glyph.
+    if (!Number.isFinite(t.k) || !Number.isFinite(t.x) || !Number.isFinite(t.y)) return;
     select(svgEl.value).select<SVGGElement>('g.zoom-layer').attr('transform', t.toString());
     const newLow = t.k < LOD_LOW_SCALE;
     if (newLow !== lodLow) {
@@ -1420,8 +1433,12 @@ function fitView({ animated = true }: { animated?: boolean } = {}) {
     const W = svg.clientWidth || 900;
     const H = svg.clientHeight || 600;
     const PAD = 64;
-    const xs = lastFNodes.map((n) => n.x ?? n.fx ?? 0);
-    const ys = lastFNodes.map((n) => n.y ?? n.fy ?? 0);
+    // Only fit over nodes whose position is actually known: a node still
+    // settling (or one a coincident-force NaN'd for a tick) would otherwise
+    // poison the extent and make every term below NaN.
+    const xs = lastFNodes.map((n) => finiteOr(n.x ?? n.fx, NaN)).filter(Number.isFinite);
+    const ys = lastFNodes.map((n) => finiteOr(n.y ?? n.fy, NaN)).filter(Number.isFinite);
+    if (!xs.length || !ys.length) return;
     const minX = Math.min(...xs) - NODE_R - PAD;
     const maxX = Math.max(...xs) + NODE_R + PAD;
     const minY = Math.min(...ys) - NODE_R - PAD;
@@ -1429,6 +1446,7 @@ function fitView({ animated = true }: { animated?: boolean } = {}) {
     const scale = Math.min(3, Math.max(0.15, Math.min(W / (maxX - minX), H / (maxY - minY))));
     const tx = W / 2 - scale * ((minX + maxX) / 2);
     const ty = H / 2 - scale * ((minY + maxY) / 2);
+    if (!Number.isFinite(scale) || !Number.isFinite(tx) || !Number.isFinite(ty)) return;
     const target = zoomIdentity.translate(tx, ty).scale(scale);
     const sel = select(svg);
     if (animated) {
@@ -1742,8 +1760,8 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     const anchorY = new Map<string, number>();
     for (const n of fNodes) {
         if (n.nodeType !== 'host') continue;
-        anchorX.set(n.id, n.x ?? 0);
-        anchorY.set(n.id, n.y ?? 0);
+        anchorX.set(n.id, finiteOr(n.x));
+        anchorY.set(n.id, finiteOr(n.y));
     }
 
     // Remove stale cached nodes
@@ -1854,8 +1872,8 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         for (const [hostId, services] of servicesByHost) {
             const host = nodeById.get(hostId);
             if (!host) continue;
-            const hx = host.x ?? 0;
-            const hy = host.y ?? 0;
+            const hx = finiteOr(host.x);
+            const hy = finiteOr(host.y);
             const N = services.length;
 
             if (props.serviceLayout === 'fan') {
@@ -2407,7 +2425,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     // The first paint can race the d3-force `initializeNodes` step on layout
     // switches that null out cached host positions, so coerce non-finite
     // coordinates to 0 to avoid SVG attribute errors (the next tick fixes them).
-    const _coord = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+    const _coord = finiteOr;
     function ticked() {
         updateFanPositions();
         linkMerge
