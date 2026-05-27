@@ -31,6 +31,7 @@ from app.services.auth_service import (
     get_cmk_theme,
     get_or_create_sso_user,
     get_user_by_id,
+    user_has_two_factor_enabled,
     validate_checkmk_cookie,
 )
 
@@ -58,6 +59,16 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
+        )
+    if user_has_two_factor_enabled(user.name):
+        logger.warning(
+            "login: refusing password-only login for %r — 2FA is enabled, SSO required",
+            user.name,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Two-factor authentication is enabled for this account. "
+            "Please sign in through Checkmk.",
         )
     logger.debug("login: success for user %r", user.name)
     return create_tokens(user)

@@ -14,6 +14,7 @@ from app.services.auth_service import (
     authenticate_user,
     get_cmk_language,
     get_or_create_sso_user,
+    user_has_two_factor_enabled,
     validate_checkmk_cookie,
 )
 
@@ -280,6 +281,68 @@ def test_validate_cookie_rejects_missing_session_file(tmp_path, monkeypatch):
     monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
     cookie = _make_cookie(tmp_path, "alice", "sess123", serial=5, write_session_file=False)
     assert validate_checkmk_cookie(cookie) is None
+
+
+# ---------------------------------------------------------------------------
+# user_has_two_factor_enabled
+# ---------------------------------------------------------------------------
+
+
+def _write_two_factor_credentials(tmp_path, username: str, creds: dict) -> None:
+    user_dir = tmp_path / "var" / "check_mk" / "web" / username
+    user_dir.mkdir(parents=True, exist_ok=True)
+    (user_dir / "two_factor_credentials.mk").write_text(repr(creds), encoding="utf-8")
+
+
+def test_two_factor_enabled_no_omd_root(monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", "")
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", "")
+    assert user_has_two_factor_enabled("alice") is False
+
+
+def test_two_factor_enabled_with_totp(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    _write_two_factor_credentials(
+        tmp_path,
+        "alice",
+        {"webauthn_credentials": {}, "totp_credentials": {"t1": {"secret": "x"}}},
+    )
+    assert user_has_two_factor_enabled("alice") is True
+
+
+def test_two_factor_enabled_with_webauthn(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    _write_two_factor_credentials(
+        tmp_path,
+        "alice",
+        {"webauthn_credentials": {"c1": {"id": "x"}}, "totp_credentials": {}},
+    )
+    assert user_has_two_factor_enabled("alice") is True
+
+
+def test_two_factor_disabled_when_no_credentials(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    assert user_has_two_factor_enabled("alice") is False
+
+
+def test_two_factor_disabled_when_empty_credentials(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    _write_two_factor_credentials(
+        tmp_path,
+        "alice",
+        {"webauthn_credentials": {}, "totp_credentials": {}, "backup_codes": []},
+    )
+    assert user_has_two_factor_enabled("alice") is False
+
+
+def test_two_factor_rejects_unsafe_username(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    assert user_has_two_factor_enabled("../etc/passwd") is False
 
 
 # ---------------------------------------------------------------------------

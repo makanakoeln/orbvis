@@ -303,6 +303,24 @@ def _user_has_two_factor_configured(omd_root: pathlib.Path, username: str) -> bo
     return bool(creds.get("webauthn_credentials") or creds.get("totp_credentials"))
 
 
+def user_has_two_factor_enabled(username: str) -> bool:
+    """Whether the Checkmk user has a second factor (WebAuthn/TOTP) registered.
+
+    Password-only form logins must be refused for these users: OrbVis cannot run
+    Checkmk's WebAuthn/TOTP challenge itself, so a 2FA user has to enter through
+    the SSO cookie path, which enforces the full Checkmk login state machine via
+    :func:`_is_session_fully_authenticated`. Without this gate the form login is
+    a 2FA bypass — the htpasswd fallback in :func:`authenticate_user` accepts a
+    bare password regardless of registered factors.
+
+    Returns False in standalone deployments where no OMD root is configured.
+    """
+    omd_root = settings.checkmk_omd_root
+    if not omd_root or not _USERNAME_RE.match(username):
+        return False
+    return _user_has_two_factor_configured(pathlib.Path(omd_root), username)
+
+
 def _crypt_verify(password: str, hashed: str) -> bool:
     """Verify a password against a crypt(3)-style hash (MD5/APR1/SHA-crypt).
 
