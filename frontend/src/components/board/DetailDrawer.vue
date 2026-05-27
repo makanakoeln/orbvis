@@ -2804,12 +2804,23 @@ useMutationObserver(
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 6px;
+    align-items: stretch;
 }
 
 /* CmkButton is inline-flex; stretch it across the grid cell so the actions
    line up. The --primary variant spans both columns for emphasis. */
 .detail-drawer__action {
     width: 100%;
+}
+
+/* Override CmkButton's fixed height so wrapped long labels are not clipped;
+   compound selector beats the scoped .cmk-button specificity. */
+.detail-drawer__actions-grid .detail-drawer__action {
+    height: auto;
+    min-height: var(--dimension-10, 32px);
+    padding-top: 4px;
+    padding-bottom: 4px;
+    line-height: 1.25;
 }
 
 .detail-drawer__action--primary {
