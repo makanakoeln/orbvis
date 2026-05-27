@@ -303,7 +303,6 @@
                 :style="customIconStyle"
                 draggable="false"
                 class="object-contain transition-all duration-300 select-none"
-                :class="isSvgIcon ? 'svg-icon' : ''"
                 @error="imgLoadFailed = true"
             />
             <!-- Asset-missing placeholder: broken-image glyph so importer
@@ -865,11 +864,6 @@ const ringUtilColor = computed(() => {
     return stateColorRgb.value;
 });
 
-const isSvgIcon = computed(() => {
-    const icon = props.object.display?.image ?? props.object.image_src;
-    return icon?.toLowerCase().endsWith('.svg') ?? false;
-});
-
 const customIconStyle = computed(() => {
     // For type=image the iconSize is the *bound*, not a forced square — let
     // the image render at its natural aspect and just cap the largest side.
@@ -883,10 +877,8 @@ const customIconStyle = computed(() => {
                   display: 'block',
               }
             : { width: `${props.iconSize}px`, height: `${props.iconSize}px` };
-    if (!props.selected) return base;
-    const glow = 'drop-shadow(0 0 6px var(--color-corporate-green-50))';
-    const filter = isSvgIcon.value && isDark.value ? `invert(1) ${glow}` : glow;
-    return { ...base, filter };
+    const glow = props.selected ? ' drop-shadow(0 0 6px var(--color-corporate-green-50))' : '';
+    return { ...base, filter: `var(--icon-halo)${glow}` };
 });
 
 const shouldShowRing = computed(

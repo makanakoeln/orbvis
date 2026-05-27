@@ -45,6 +45,12 @@
     --font-size-xlarge: 15px;
     --border-radius: 4px;
 
+    /* Keeps board icons legible on any backdrop regardless of theme — replaces
+       the theme-coupled .dark .svg-icon invert, which left dark boards shown in
+       the light theme with invisible icons and wrongly inverted coloured logos. */
+    --icon-halo: drop-shadow(0 0 1.5px rgb(0 0 0 / 60%))
+        drop-shadow(0 0 1.5px rgb(255 255 255 / 90%));
+
     /* CMK ux-theme scale (dark/midnight-grey) */
     --ux-theme-0: rgb(15 18 21);
     --ux-theme-1: rgb(28 34 40);
