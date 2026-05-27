@@ -2570,11 +2570,13 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
 }
 
 .flow-hint {
+    /* Bottom-left, immediately right of the zoom-control stack (bottom-4 left-4),
+       so the banner reads as a footnote to the controls instead of floating over
+       the topology center where it collided with the root node at some zooms. */
     position: absolute;
-    top: calc(var(--dimension-5) + 36px);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 4;
+    bottom: 16px;
+    left: 56px;
+    z-index: 6;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -2586,8 +2588,8 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     backdrop-filter: blur(6px);
     border: 1px solid var(--border);
     pointer-events: none;
-    max-width: 70%;
-    text-align: center;
+    max-width: min(60%, 520px);
+    text-align: left;
 }
 
 .flow-hint__dismiss {
