@@ -218,6 +218,7 @@
         <BoardZoomResetPill
             :zoom="displayZoomK"
             :visible="manualZoomActive && !loading && !error"
+            :offset="{ bottom: '98px', left: '16px' }"
             @reset="fitView()"
         />
     </div>

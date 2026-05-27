@@ -4,6 +4,7 @@
             v-if="visible"
             type="button"
             class="board-zoom-reset"
+            :style="offset"
             title="Reset to fit"
             @click="$emit('reset')"
         >
@@ -16,6 +17,7 @@
 defineProps<{
     zoom: number;
     visible: boolean;
+    offset?: { bottom?: string; left?: string };
 }>();
 defineEmits<{ reset: [] }>();
 </script>
