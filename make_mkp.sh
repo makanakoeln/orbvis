@@ -141,7 +141,7 @@ else
 fi
 
 # Frontend: single tarball → lib/orbvis/htdocs.tar.gz
-# orbvis-setup extracts it to $OMD_ROOT/local/share/orbvis/htdocs/
+# orbvis-setup extracts it to $OMD_ROOT/var/orbvis/htdocs/
 tar czf "$TMPDIR/lib/orbvis/htdocs.tar.gz" -C "$SCRIPT_DIR/frontend/dist" .
 
 # Backend: single tarball → lib/orbvis/server.tar.gz
@@ -185,9 +185,7 @@ python3 -m pip download \
   -r "$SCRIPT_DIR/backend/$BUNDLE_FILE" > /dev/null
 ok "Wheelhouse: $(find "$TMPDIR/lib/orbvis/wheels" -maxdepth 1 -type f | wc -l) wheels ($(du -sh "$TMPDIR/lib/orbvis/wheels" | cut -f1))"
 
-# CHANGELOG.md and VERSION live in the repo root; copy them next to the
-# server tarball so the backend (which searches lib/orbvis/{,server/}) can
-# find them at runtime — otherwise the in-app changelog modal stays empty.
+# Fallback copy; the backend reads the changelog from its own source tree.
 cp "$SCRIPT_DIR/CHANGELOG.md" "$TMPDIR/lib/orbvis/CHANGELOG.md"
 # Write $VERSION (which may have been bumped via --version) rather than
 # copying $SCRIPT_DIR/VERSION verbatim — otherwise the bundled VERSION file
@@ -240,6 +238,9 @@ ENV_FILE="$ORBVIS_ETC_DIR/.env"
 CONNECTIONS_FILE="$ORBVIS_DIR/connections.json"
 DB_FILE="$ORBVIS_DIR/orbvis.db"
 VENV_DIR="$ORBVIS_DIR/venv"
+# Outside local/ so a central's "Activate Changes" can't delete the daemon's
+# cwd out from under a remote (matches install_cmk.sh's var/orbvis/src).
+SERVER_DIR="$ORBVIS_DIR/src"
 APACHE_CONF="$ROOT/etc/apache/conf.d/orbvis.conf"
 INIT_SCRIPT="$ROOT/etc/init.d/orbvis"
 LIVESTATUS_SOCKET="$ROOT/tmp/run/live"
@@ -304,7 +305,8 @@ uninstall)
   step "Removing frontend and backend"
   rm -rf "$HTDOCS_DIR"
   rm -rf "$VENV_DIR"
-  rm -rf "$MKP_LIB/server"
+  rm -rf "$SERVER_DIR"
+  rm -rf "$MKP_LIB/server"  # pre-0.4.x extraction location
   # Sweep up any leftovers from pre-migration installs under local/share/orbvis/.
   rm -rf "$LEGACY_DIR/htdocs" "$LEGACY_DIR/venv" "$LEGACY_DIR/cmk_plugins"
   ok "Frontend, venv and backend source removed"
@@ -386,8 +388,10 @@ setup)
 
   # 2. Backend source: extract tarball
   step "Extracting backend source"
-  mkdir -p "$MKP_LIB/server"
-  tar xzf "$MKP_LIB/server.tar.gz" -C "$MKP_LIB/server"
+  rm -rf "$MKP_LIB/server"  # pre-0.4.x location, stop it leaking via replication
+  rm -rf "${SERVER_DIR:?}"
+  mkdir -p "$SERVER_DIR"
+  tar xzf "$MKP_LIB/server.tar.gz" -C "$SERVER_DIR"
   ok "Backend source extracted"
 
   # 3. Boards directory — backend seeds bundled demos on first start
@@ -632,7 +636,7 @@ case "\$1" in
     echo -n "Starting orbvis..."
     set -a; source "\$ENV_FILE"; set +a
     PORT="\${ORBVIS_PORT:-8420}"
-    cd "$MKP_LIB/server"  # extracted by orbvis-setup step 2
+    cd "$SERVER_DIR"  # extracted by orbvis-setup step 2
     # Schema is now ensured during the FastAPI lifespan (sqlite3.executescript).
     # setsid + nohup + </dev/null detaches from the calling session so SIGHUP
     # on \`omd su -i bash -c orbvis-setup\` exit doesn't take uvicorn down.
