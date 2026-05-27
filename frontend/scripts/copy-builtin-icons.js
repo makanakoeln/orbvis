@@ -35,16 +35,20 @@ const CURATED = [
 
   // Network
   'network', 'router', 'router-2',
+  'switch', 'load-balancer',
   'wifi', 'wifi-off',
-  'antenna', 'satellite',
+  'antenna', 'satellite', 'broadcast',
   'plug', 'plug-connected', 'plug-off',
 
   // Infrastructure
   'database', 'database-cog', 'database-off',
-  'cloud', 'cloud-off', 'cloud-computing',
-  'container',
+  'cloud', 'cloud-off', 'cloud-computing', 'cloud-data-connection',
+  'container', 'brand-docker',
   'building', 'building-2',
   'box',
+
+  // Services & web
+  'api', 'mail', 'world-www',
 
   // Monitoring & metrics
   'activity', 'heart-rate-monitor',
@@ -53,15 +57,15 @@ const CURATED = [
   'temperature',
 
   // Security
-  'shield', 'shield-check', 'shield-off',
+  'shield', 'shield-check', 'shield-off', 'shield-lock',
   'lock', 'lock-open',
-  'key',
-  'firewall',
+  'key', 'certificate',
+  'firewall-flame',
 
   // Topology
   'sitemap', 'hierarchy', 'hierarchy-2',
   'topology-star', 'topology-ring', 'topology-bus',
-  'git-fork',
+  'git-fork', 'affiliate',
 
   // Status & alerts
   'alert-triangle', 'alert-circle',
