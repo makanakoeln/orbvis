@@ -963,6 +963,22 @@ const localVersion = ref<number | null>(props.board.version ?? null);
 // without saving leaves the server untouched (upload → save).
 const pendingBgFile = ref<File | null>(null);
 const pendingBgRemove = ref(false);
+
+// Mirror the staged background file as a blob URL so the live preview can show
+// it before save — the server filename only exists after upload. Revoked on
+// change/close so we don't leak object URLs.
+const pendingBgPreviewUrl = ref<string | null>(null);
+watch(
+    pendingBgFile,
+    (file) => {
+        if (pendingBgPreviewUrl.value) URL.revokeObjectURL(pendingBgPreviewUrl.value);
+        pendingBgPreviewUrl.value = file ? URL.createObjectURL(file) : null;
+    },
+    { immediate: true },
+);
+onBeforeUnmount(() => {
+    if (pendingBgPreviewUrl.value) URL.revokeObjectURL(pendingBgPreviewUrl.value);
+});
 const isDirty = computed(
     () =>
         JSON.stringify({
@@ -1077,7 +1093,9 @@ function buildPreviewPatch(): Record<string, unknown> {
         icon_size: (fs.icon_size as number | null | undefined) ?? null,
         hover_template: (fs.hover_template as string) ?? '',
         context_template: (fs.context_template as string) ?? '',
-        background_image: form.value.background_image || null,
+        background_image: pendingBgRemove.value
+            ? null
+            : (pendingBgPreviewUrl.value ?? form.value.background_image) || null,
         background_color: form.value.background_color || null,
         view: buildViewFromForm(),
     };
@@ -1152,7 +1170,11 @@ function onPreviewReady(ev: MessageEvent) {
     postPreviewPatch();
 }
 
-watch([form, formSpecData, flowViewFormSpecData], schedulePreviewPost, { deep: true });
+watch(
+    [form, formSpecData, flowViewFormSpecData, pendingBgFile, pendingBgRemove],
+    schedulePreviewPost,
+    { deep: true },
+);
 
 const deleteDialogOpen = ref(false);
 function deleteBoard() {

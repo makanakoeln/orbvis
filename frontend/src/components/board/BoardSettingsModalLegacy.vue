@@ -689,6 +689,22 @@ const localVersion = ref<number | null>(props.board.version ?? null);
 const pendingBgFile = ref<File | null>(null);
 const pendingBgRemove = ref(false);
 
+// Mirror the staged background file as a blob URL so the live preview can show
+// it before save — the server filename only exists after upload. Revoked on
+// change/close so we don't leak object URLs.
+const pendingBgPreviewUrl = ref<string | null>(null);
+watch(
+    pendingBgFile,
+    (file) => {
+        if (pendingBgPreviewUrl.value) URL.revokeObjectURL(pendingBgPreviewUrl.value);
+        pendingBgPreviewUrl.value = file ? URL.createObjectURL(file) : null;
+    },
+    { immediate: true },
+);
+onBeforeUnmount(() => {
+    if (pendingBgPreviewUrl.value) URL.revokeObjectURL(pendingBgPreviewUrl.value);
+});
+
 // ── General ────────────────────────────────────────────────────────────────
 
 function initWorldmapCoords() {
@@ -951,7 +967,9 @@ function postPreviewPatch() {
         icon_size: form.value.icon_size,
         hover_template: form.value.hover_template || '',
         context_template: form.value.context_template || '',
-        background_image: form.value.background_image || null,
+        background_image: pendingBgRemove.value
+            ? null
+            : (pendingBgPreviewUrl.value ?? form.value.background_image) || null,
         background_color: form.value.background_color || null,
         view: buildPreviewView(),
     };
@@ -976,7 +994,7 @@ function onPreviewReady(ev: MessageEvent) {
     postPreviewPatch();
 }
 
-watch(form, schedulePreviewPost, { deep: true });
+watch([form, pendingBgFile, pendingBgRemove], schedulePreviewPost, { deep: true });
 
 // ── Permissions ────────────────────────────────────────────────────────────
 const permRoles = ref<RoleRead[]>([]);

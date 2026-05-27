@@ -312,6 +312,10 @@ const bgImageCacheKey = ref(Date.now());
 const bgImageUrl = computed(() => {
     const bg = props.config.background_image;
     if (!bg) return null;
+    // A live settings preview may patch in a blob:/data: URL for a background
+    // that hasn't been uploaded yet — use it verbatim instead of resolving it
+    // as a server-side filename.
+    if (/^(blob:|data:|https?:)/.test(bg)) return bg;
     return `${import.meta.env.BASE_URL}boards/backgrounds/${bg}?v=${bgImageCacheKey.value}`;
 });
 
