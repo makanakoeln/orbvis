@@ -7,8 +7,13 @@ import { useStatesStore } from '@/stores/states';
 import type { BoardObject, DowntimeEntry } from '@/types/api';
 
 interface DispatchOptions {
-    hostFn: (baseUrl: string, hostname: string) => Promise<void>;
-    serviceFn: (baseUrl: string, hostname: string, service: string) => Promise<void>;
+    hostFn: (baseUrl: string, hostname: string, siteId?: string | null) => Promise<void>;
+    serviceFn: (
+        baseUrl: string,
+        hostname: string,
+        service: string,
+        siteId?: string | null,
+    ) => Promise<void>;
     errorKey: string;
     successKey?: string;
 }
@@ -63,10 +68,11 @@ export function useObjectActions(
         { hostFn, serviceFn, errorKey, successKey }: DispatchOptions,
     ): Promise<void> {
         try {
+            const siteId = statesStore.getState(obj.id)?.site_id ?? null;
             if (obj.type === 'service' && obj.host_name && obj.service_description) {
-                await serviceFn(url, obj.host_name, obj.service_description);
+                await serviceFn(url, obj.host_name, obj.service_description, siteId);
             } else if (obj.host_name) {
-                await hostFn(url, obj.host_name);
+                await hostFn(url, obj.host_name, siteId);
             } else {
                 return;
             }

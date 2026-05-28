@@ -1565,15 +1565,17 @@ async function onWorldmapCtxRemoveAck() {
     const obj = worldmapCtxMenu.object;
     worldmapCtxMenu.visible = false;
     if (!obj || !checkmkUrl.value) return;
+    const siteId = statesStore.getState(obj.id)?.site_id ?? null;
     try {
         if (obj.type === 'service' && obj.host_name && obj.service_description) {
             await cmkApi.removeAcknowledgementService(
                 checkmkUrl.value,
                 obj.host_name,
                 obj.service_description,
+                siteId,
             );
         } else if (obj.host_name) {
-            await cmkApi.removeAcknowledgementHost(checkmkUrl.value, obj.host_name);
+            await cmkApi.removeAcknowledgementHost(checkmkUrl.value, obj.host_name, siteId);
         }
     } catch (err) {
         const detail = err instanceof Error ? err.message : '';
@@ -1589,17 +1591,20 @@ async function onWorldmapCtxToggleNotifications(enable: boolean) {
     const obj = worldmapCtxMenu.object;
     worldmapCtxMenu.visible = false;
     if (!obj || !checkmkUrl.value) return;
+    const siteId = statesStore.getState(obj.id)?.site_id ?? null;
     try {
         if (obj.type === 'service' && obj.host_name && obj.service_description) {
             await (enable ? cmkApi.enableNotificationsService : cmkApi.disableNotificationsService)(
                 checkmkUrl.value,
                 obj.host_name,
                 obj.service_description,
+                siteId,
             );
         } else if (obj.host_name) {
             await (enable ? cmkApi.enableNotificationsHost : cmkApi.disableNotificationsHost)(
                 checkmkUrl.value,
                 obj.host_name,
+                siteId,
             );
         }
     } catch {
@@ -1611,15 +1616,17 @@ async function onWorldmapCtxForceCheck() {
     const obj = worldmapCtxMenu.object;
     worldmapCtxMenu.visible = false;
     if (!obj || !checkmkUrl.value) return;
+    const siteId = statesStore.getState(obj.id)?.site_id ?? null;
     try {
         if (obj.type === 'service' && obj.host_name && obj.service_description) {
             await cmkApi.forceCheckService(
                 checkmkUrl.value,
                 obj.host_name,
                 obj.service_description,
+                siteId,
             );
         } else if (obj.host_name) {
-            await cmkApi.forceCheckHost(checkmkUrl.value, obj.host_name);
+            await cmkApi.forceCheckHost(checkmkUrl.value, obj.host_name, siteId);
         }
     } catch {
         toast.error(t('contextMenu.forceCheckFailed'));

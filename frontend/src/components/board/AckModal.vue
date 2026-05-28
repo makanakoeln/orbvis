@@ -46,6 +46,7 @@ import CmkButton from '@/components/cmk/CmkButton';
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
 import CmkInput from '@/components/cmk/user-input/CmkInput';
 import OrbModal from '@/components/OrbModal.vue';
+import { useStatesStore } from '@/stores/states';
 import type { BoardObject } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';
 
@@ -74,6 +75,8 @@ const isGroup = computed(
 const groupTypeLabel = computed(() =>
     props.object.type === 'hostgroup' ? t('ack.groupHostgroup') : t('ack.groupServicegroup'),
 );
+
+const statesStore = useStatesStore();
 
 onMounted(() => commentEl.value?.focus());
 
@@ -116,6 +119,7 @@ async function submit() {
                 sticky.value,
                 notify.value,
                 persistent.value,
+                statesStore.getState(props.object.id)?.site_id ?? null,
             );
         } else if (props.object.host_name) {
             await cmkApi.acknowledgeHost(
@@ -125,6 +129,7 @@ async function submit() {
                 sticky.value,
                 notify.value,
                 persistent.value,
+                statesStore.getState(props.object.id)?.site_id ?? null,
             );
         }
         success.value = true;

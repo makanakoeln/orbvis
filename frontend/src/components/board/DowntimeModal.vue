@@ -191,6 +191,7 @@ async function submit() {
                 start,
                 end,
                 commentText,
+                statesStore.getState(props.object.id)?.site_id ?? null,
             );
         } else if (props.object.host_name) {
             await cmkApi.downtimeHost(
@@ -199,6 +200,7 @@ async function submit() {
                 start,
                 end,
                 commentText,
+                statesStore.getState(props.object.id)?.site_id ?? null,
             );
         }
         success.value = true;

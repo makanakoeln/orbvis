@@ -34,6 +34,7 @@ import { useI18n } from 'vue-i18n';
 import { cmkApi } from '@/api/client';
 import CmkButton from '@/components/cmk/CmkButton';
 import OrbModal from '@/components/OrbModal.vue';
+import { useStatesStore } from '@/stores/states';
 import type { BoardObject } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';
 
@@ -51,6 +52,7 @@ const submitting = ref(false);
 const error = ref('');
 const success = ref(false);
 const commentEl = ref<HTMLInputElement | null>(null);
+const statesStore = useStatesStore();
 
 onMounted(() => {
     commentEl.value?.focus();
@@ -63,6 +65,7 @@ async function submit() {
     submitting.value = true;
     error.value = '';
     try {
+        const siteId = statesStore.getState(props.object.id)?.site_id ?? null;
         if (
             props.object.type === 'service' &&
             props.object.host_name &&
@@ -73,9 +76,15 @@ async function submit() {
                 props.object.host_name,
                 props.object.service_description,
                 comment.value,
+                siteId,
             );
         } else if (props.object.host_name) {
-            await cmkApi.addCommentHost(props.checkmkUrl, props.object.host_name, comment.value);
+            await cmkApi.addCommentHost(
+                props.checkmkUrl,
+                props.object.host_name,
+                comment.value,
+                siteId,
+            );
         }
         success.value = true;
         setTimeout(() => emit('close'), 1200);

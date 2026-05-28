@@ -789,7 +789,9 @@ async function orbvisCommand(
     cmkBaseUrl: string,
     target: 'host-action' | 'service-action',
     body: Record<string, unknown>,
+    siteId?: string | null,
 ): Promise<void> {
+    if (siteId) body = { ...body, site_id: siteId };
     // The cmkApi was originally session-cookie based (CMK SSO). Its
     // replacement uses OrbVis's own JWT. Read the same key the auth store
     // writes — keeping cmkApi callable from places without a vue-store
@@ -816,11 +818,21 @@ async function orbvisCommand(
     }
 }
 
-function cmkHostAction(baseUrl: string, hostname: string, action: CmkAction): Promise<void> {
-    return orbvisCommand(baseUrl, 'host-action', {
-        action,
-        host_name: hostname,
-    });
+function cmkHostAction(
+    baseUrl: string,
+    hostname: string,
+    action: CmkAction,
+    siteId?: string | null,
+): Promise<void> {
+    return orbvisCommand(
+        baseUrl,
+        'host-action',
+        {
+            action,
+            host_name: hostname,
+        },
+        siteId,
+    );
 }
 
 // ---- Metrics (perfometer) ----
@@ -842,12 +854,18 @@ function cmkServiceAction(
     hostname: string,
     serviceDescription: string,
     action: CmkAction,
+    siteId?: string | null,
 ): Promise<void> {
-    return orbvisCommand(baseUrl, 'service-action', {
-        action,
-        host_name: hostname,
-        service_description: serviceDescription,
-    });
+    return orbvisCommand(
+        baseUrl,
+        'service-action',
+        {
+            action,
+            host_name: hostname,
+            service_description: serviceDescription,
+        },
+        siteId,
+    );
 }
 
 function toEpochSeconds(s: string): number {
@@ -865,15 +883,21 @@ export const cmkApi = {
         sticky: boolean,
         notify: boolean,
         persistent: boolean,
+        siteId?: string | null,
     ): Promise<void> {
-        return orbvisCommand(baseUrl, 'host-action', {
-            action: 'acknowledge',
-            host_name: hostname,
-            comment,
-            sticky,
-            notify,
-            persistent,
-        });
+        return orbvisCommand(
+            baseUrl,
+            'host-action',
+            {
+                action: 'acknowledge',
+                host_name: hostname,
+                comment,
+                sticky,
+                notify,
+                persistent,
+            },
+            siteId,
+        );
     },
 
     acknowledgeService(
@@ -884,16 +908,22 @@ export const cmkApi = {
         sticky: boolean,
         notify: boolean,
         persistent: boolean,
+        siteId?: string | null,
     ): Promise<void> {
-        return orbvisCommand(baseUrl, 'service-action', {
-            action: 'acknowledge',
-            host_name: hostname,
-            service_description: serviceDescription,
-            comment,
-            sticky,
-            notify,
-            persistent,
-        });
+        return orbvisCommand(
+            baseUrl,
+            'service-action',
+            {
+                action: 'acknowledge',
+                host_name: hostname,
+                service_description: serviceDescription,
+                comment,
+                sticky,
+                notify,
+                persistent,
+            },
+            siteId,
+        );
     },
 
     downtimeHost(
@@ -902,14 +932,20 @@ export const cmkApi = {
         startTime: string,
         endTime: string,
         comment: string,
+        siteId?: string | null,
     ): Promise<void> {
-        return orbvisCommand(baseUrl, 'host-action', {
-            action: 'schedule_downtime',
-            host_name: hostname,
-            start_time: toEpochSeconds(startTime),
-            end_time: toEpochSeconds(endTime),
-            comment,
-        });
+        return orbvisCommand(
+            baseUrl,
+            'host-action',
+            {
+                action: 'schedule_downtime',
+                host_name: hostname,
+                start_time: toEpochSeconds(startTime),
+                end_time: toEpochSeconds(endTime),
+                comment,
+            },
+            siteId,
+        );
     },
 
     downtimeService(
@@ -919,15 +955,21 @@ export const cmkApi = {
         startTime: string,
         endTime: string,
         comment: string,
+        siteId?: string | null,
     ): Promise<void> {
-        return orbvisCommand(baseUrl, 'service-action', {
-            action: 'schedule_downtime',
-            host_name: hostname,
-            service_description: serviceDescription,
-            start_time: toEpochSeconds(startTime),
-            end_time: toEpochSeconds(endTime),
-            comment,
-        });
+        return orbvisCommand(
+            baseUrl,
+            'service-action',
+            {
+                action: 'schedule_downtime',
+                host_name: hostname,
+                service_description: serviceDescription,
+                start_time: toEpochSeconds(startTime),
+                end_time: toEpochSeconds(endTime),
+                comment,
+            },
+            siteId,
+        );
     },
 
     removeDowntimeHost(baseUrl: string, hostname: string): Promise<void> {
@@ -973,18 +1015,32 @@ export const cmkApi = {
         });
     },
 
-    forceCheckHost: (baseUrl: string, hostname: string) =>
-        cmkHostAction(baseUrl, hostname, 'force_check'),
+    forceCheckHost: (baseUrl: string, hostname: string, siteId?: string | null) =>
+        cmkHostAction(baseUrl, hostname, 'force_check', siteId),
 
-    forceCheckService: (baseUrl: string, hostname: string, serviceDescription: string) =>
-        cmkServiceAction(baseUrl, hostname, serviceDescription, 'force_check'),
+    forceCheckService: (
+        baseUrl: string,
+        hostname: string,
+        serviceDescription: string,
+        siteId?: string | null,
+    ) => cmkServiceAction(baseUrl, hostname, serviceDescription, 'force_check', siteId),
 
-    addCommentHost(baseUrl: string, hostname: string, comment: string): Promise<void> {
-        return orbvisCommand(baseUrl, 'host-action', {
-            action: 'add_comment',
-            host_name: hostname,
-            comment,
-        });
+    addCommentHost(
+        baseUrl: string,
+        hostname: string,
+        comment: string,
+        siteId?: string | null,
+    ): Promise<void> {
+        return orbvisCommand(
+            baseUrl,
+            'host-action',
+            {
+                action: 'add_comment',
+                host_name: hostname,
+                comment,
+            },
+            siteId,
+        );
     },
 
     addCommentService(
@@ -992,23 +1048,33 @@ export const cmkApi = {
         hostname: string,
         serviceDescription: string,
         comment: string,
+        siteId?: string | null,
     ): Promise<void> {
-        return orbvisCommand(baseUrl, 'service-action', {
-            action: 'add_comment',
-            host_name: hostname,
-            service_description: serviceDescription,
-            comment,
-        });
+        return orbvisCommand(
+            baseUrl,
+            'service-action',
+            {
+                action: 'add_comment',
+                host_name: hostname,
+                service_description: serviceDescription,
+                comment,
+            },
+            siteId,
+        );
     },
 
     // remove-ack via the OrbVis livestatus relay rather than CMK REST.
     // The REST endpoint /domain-types/acknowledge/actions/delete/invoke is
     // 2.4+ only — 2.3 sites would 404 on the old code path.
-    removeAcknowledgementHost: (baseUrl: string, hostname: string) =>
-        cmkHostAction(baseUrl, hostname, 'remove_acknowledgement'),
+    removeAcknowledgementHost: (baseUrl: string, hostname: string, siteId?: string | null) =>
+        cmkHostAction(baseUrl, hostname, 'remove_acknowledgement', siteId),
 
-    removeAcknowledgementService: (baseUrl: string, hostname: string, serviceDescription: string) =>
-        cmkServiceAction(baseUrl, hostname, serviceDescription, 'remove_acknowledgement'),
+    removeAcknowledgementService: (
+        baseUrl: string,
+        hostname: string,
+        serviceDescription: string,
+        siteId?: string | null,
+    ) => cmkServiceAction(baseUrl, hostname, serviceDescription, 'remove_acknowledgement', siteId),
 
     // ── Group bulk-actions ─────────────────────────────────────────────────
     // CMK's REST API supports ``acknowledge_type=hostgroup|servicegroup`` and
@@ -1084,27 +1150,43 @@ export const cmkApi = {
         });
     },
 
-    enableNotificationsHost: (baseUrl: string, hostname: string) =>
-        cmkHostAction(baseUrl, hostname, 'enable_notifications'),
+    enableNotificationsHost: (baseUrl: string, hostname: string, siteId?: string | null) =>
+        cmkHostAction(baseUrl, hostname, 'enable_notifications', siteId),
 
-    disableNotificationsHost: (baseUrl: string, hostname: string) =>
-        cmkHostAction(baseUrl, hostname, 'disable_notifications'),
+    disableNotificationsHost: (baseUrl: string, hostname: string, siteId?: string | null) =>
+        cmkHostAction(baseUrl, hostname, 'disable_notifications', siteId),
 
-    enableNotificationsService: (baseUrl: string, hostname: string, serviceDescription: string) =>
-        cmkServiceAction(baseUrl, hostname, serviceDescription, 'enable_notifications'),
+    enableNotificationsService: (
+        baseUrl: string,
+        hostname: string,
+        serviceDescription: string,
+        siteId?: string | null,
+    ) => cmkServiceAction(baseUrl, hostname, serviceDescription, 'enable_notifications', siteId),
 
-    disableNotificationsService: (baseUrl: string, hostname: string, serviceDescription: string) =>
-        cmkServiceAction(baseUrl, hostname, serviceDescription, 'disable_notifications'),
+    disableNotificationsService: (
+        baseUrl: string,
+        hostname: string,
+        serviceDescription: string,
+        siteId?: string | null,
+    ) => cmkServiceAction(baseUrl, hostname, serviceDescription, 'disable_notifications', siteId),
 
-    enableChecksHost: (baseUrl: string, hostname: string) =>
-        cmkHostAction(baseUrl, hostname, 'enable_checks'),
+    enableChecksHost: (baseUrl: string, hostname: string, siteId?: string | null) =>
+        cmkHostAction(baseUrl, hostname, 'enable_checks', siteId),
 
-    disableChecksHost: (baseUrl: string, hostname: string) =>
-        cmkHostAction(baseUrl, hostname, 'disable_checks'),
+    disableChecksHost: (baseUrl: string, hostname: string, siteId?: string | null) =>
+        cmkHostAction(baseUrl, hostname, 'disable_checks', siteId),
 
-    enableChecksService: (baseUrl: string, hostname: string, serviceDescription: string) =>
-        cmkServiceAction(baseUrl, hostname, serviceDescription, 'enable_checks'),
+    enableChecksService: (
+        baseUrl: string,
+        hostname: string,
+        serviceDescription: string,
+        siteId?: string | null,
+    ) => cmkServiceAction(baseUrl, hostname, serviceDescription, 'enable_checks', siteId),
 
-    disableChecksService: (baseUrl: string, hostname: string, serviceDescription: string) =>
-        cmkServiceAction(baseUrl, hostname, serviceDescription, 'disable_checks'),
+    disableChecksService: (
+        baseUrl: string,
+        hostname: string,
+        serviceDescription: string,
+        siteId?: string | null,
+    ) => cmkServiceAction(baseUrl, hostname, serviceDescription, 'disable_checks', siteId),
 };
