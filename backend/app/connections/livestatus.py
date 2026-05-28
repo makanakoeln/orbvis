@@ -510,7 +510,9 @@ def _build_state_from_row(
     return _apply_extra(state, row, include_address=include_address)
 
 
-def _parse_host_state_row(row: LivestatusRow) -> tuple[str, ObjectState]:
+def _parse_host_state_row(
+    row: LivestatusRow, *, site_id: str | None = None
+) -> tuple[str, ObjectState]:
     """Parse host row [name, state, output, perf_data, ack, downtime, ...extra]."""
     state = ObjectState(
         object_id="",
@@ -520,11 +522,14 @@ def _parse_host_state_row(row: LivestatusRow) -> tuple[str, ObjectState]:
         perf_data=_row_str(row, 3),
         acknowledged=_row_bool(row, 4, default=False),
         in_downtime=_row_int(row, 5) > 0,
+        site_id=site_id,
     )
     return _row_str(row, 0), _apply_extra(state, row, offset=6, include_address=True)
 
 
-def _parse_service_state_row(row: LivestatusRow) -> tuple[tuple[str, str], ObjectState]:
+def _parse_service_state_row(
+    row: LivestatusRow, *, site_id: str | None = None
+) -> tuple[tuple[str, str], ObjectState]:
     """Parse service row [host_name, description, state, output, perf_data, ack, downtime, ...extra]."""
     state = ObjectState(
         object_id="",
@@ -534,6 +539,7 @@ def _parse_service_state_row(row: LivestatusRow) -> tuple[tuple[str, str], Objec
         perf_data=_row_str(row, 4),
         acknowledged=_row_bool(row, 5, default=False),
         in_downtime=_row_int(row, 6) > 0,
+        site_id=site_id,
     )
     return (_row_str(row, 0), _row_str(row, 1)), _apply_extra(state, row, offset=7)
 
@@ -1789,33 +1795,36 @@ class LivestatusConnection(ConnectionBase):
         filters = "".join(f"Filter: name = {_ls_escape(h)}\n" for h in hostnames)
         if len(hostnames) > 1:
             filters += f"Or: {len(hostnames)}\n"
-        rows = await self._query(
+        tagged = await self._query_with_site(
             f"GET hosts\n"
             f"Columns: name {state_col} plugin_output perf_data acknowledged "
             f"scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
             f"{filters}"
         )
-        return dict(_parse_host_state_row(r) for r in rows)
+        fallback = settings.checkmk_site or "local"
+        return dict(_parse_host_state_row(r, site_id=sid or fallback) for sid, r in tagged)
 
     async def get_all_hosts_states(self, only_hard: bool = False) -> dict[str, ObjectState]:
         state_col = "last_hard_state" if only_hard else "state"
-        rows = await self._query(
+        tagged = await self._query_with_site(
             f"GET hosts\n"
             f"Columns: name {state_col} plugin_output perf_data acknowledged "
             f"scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
         )
-        return dict(_parse_host_state_row(r) for r in rows)
+        fallback = settings.checkmk_site or "local"
+        return dict(_parse_host_state_row(r, site_id=sid or fallback) for sid, r in tagged)
 
     async def get_all_services_states(
         self, only_hard: bool = False
     ) -> dict[tuple[str, str], ObjectState]:
         state_col = "last_hard_state" if only_hard else "state"
-        rows = await self._query(
+        tagged = await self._query_with_site(
             f"GET services\n"
             f"Columns: host_name description {state_col} plugin_output perf_data "
             f"acknowledged scheduled_downtime_depth {_SVC_EXTRA_COLS}\n"
         )
-        return dict(_parse_service_state_row(r) for r in rows)
+        fallback = settings.checkmk_site or "local"
+        return dict(_parse_service_state_row(r, site_id=sid or fallback) for sid, r in tagged)
 
     async def get_services_states(
         self, pairs: list[tuple[str, str]], only_hard: bool = False
@@ -1832,13 +1841,14 @@ class LivestatusConnection(ConnectionBase):
             )
         if len(pairs) > 1:
             filter_lines += f"Or: {len(pairs)}\n"
-        rows = await self._query(
+        tagged = await self._query_with_site(
             f"GET services\n"
             f"Columns: host_name description {state_col} plugin_output perf_data "
             f"acknowledged scheduled_downtime_depth {_SVC_EXTRA_COLS}\n"
             f"{filter_lines}"
         )
-        return dict(_parse_service_state_row(r) for r in rows)
+        fallback = settings.checkmk_site or "local"
+        return dict(_parse_service_state_row(r, site_id=sid or fallback) for sid, r in tagged)
 
     # Above this host count we drop the per-host filter list and post-filter
     # in Python — mirrors cmk.gui.nodevis.topology._fetch_data: the core
