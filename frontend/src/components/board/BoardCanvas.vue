@@ -339,21 +339,21 @@ const _widthExtent = (o: BoardObjectType) =>
     o.x + (o.type === 'graph' ? (o.graph_width ?? 400) : 150);
 const _heightExtent = (o: BoardObjectType) =>
     o.y + (o.type === 'graph' ? (o.graph_height ?? 200) : 150);
-const canvasWidth = ref(800);
-const canvasHeight = ref(600);
+const _bboxW = ref(800);
+const _bboxH = ref(600);
 const isNagvisClassic = computed(() => props.config.render_mode === 'nagvis_classic');
-function _setIfChanged(ref_: typeof canvasWidth, next: number) {
+function _setIfChanged(ref_: typeof _bboxW, next: number) {
     if (ref_.value !== next) ref_.value = next;
 }
 watch(
     () => props.config,
     () => {
         _setIfChanged(
-            canvasWidth,
+            _bboxW,
             props.config.objects.reduce((m, o) => Math.max(m, _widthExtent(o)), 800),
         );
         _setIfChanged(
-            canvasHeight,
+            _bboxH,
             props.config.objects.reduce((m, o) => Math.max(m, _heightExtent(o)), 600),
         );
     },
@@ -363,10 +363,42 @@ watch(
     () => props.config.objects.length,
     () => {
         for (const o of props.config.objects) {
-            _setIfChanged(canvasWidth, Math.max(canvasWidth.value, _widthExtent(o)));
-            _setIfChanged(canvasHeight, Math.max(canvasHeight.value, _heightExtent(o)));
+            _setIfChanged(_bboxW, Math.max(_bboxW.value, _widthExtent(o)));
+            _setIfChanged(_bboxH, Math.max(_bboxH.value, _heightExtent(o)));
         }
     },
+);
+
+const bgImageNaturalSize = ref<{ w: number; h: number } | null>(null);
+let _bgImageLoadToken = 0;
+watch(
+    [bgImageUrl, isNagvisClassic],
+    ([url, classic]) => {
+        const token = ++_bgImageLoadToken;
+        if (!classic || !url) {
+            bgImageNaturalSize.value = null;
+            return;
+        }
+        const img = new Image();
+        img.onload = () => {
+            if (token !== _bgImageLoadToken) return;
+            if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                bgImageNaturalSize.value = { w: img.naturalWidth, h: img.naturalHeight };
+            }
+        };
+        img.onerror = () => {
+            if (token === _bgImageLoadToken) bgImageNaturalSize.value = null;
+        };
+        img.src = url;
+    },
+    { immediate: true },
+);
+
+const canvasWidth = computed(() =>
+    isNagvisClassic.value && bgImageNaturalSize.value ? bgImageNaturalSize.value.w : _bboxW.value,
+);
+const canvasHeight = computed(() =>
+    isNagvisClassic.value && bgImageNaturalSize.value ? bgImageNaturalSize.value.h : _bboxH.value,
 );
 
 // Settings-preview fit: when rendered inside the Settings modal iframe the
