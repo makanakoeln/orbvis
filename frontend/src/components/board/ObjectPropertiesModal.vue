@@ -1282,9 +1282,8 @@ const statesStore = useStatesStore();
 const autoUrl = computed((): string | null => {
     const base = props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
     if (!base) return null;
-    const site = props.state?.site_id ?? (base.split('/').at(-1) || null);
     const p: Record<string, string> = {};
-    if (site) p.site = site;
+    if (props.state?.site_id) p.site = props.state.site_id;
     const { type } = props.object;
     const host = form.host_name;
     const svc = form.service_description;

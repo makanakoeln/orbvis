@@ -6,11 +6,10 @@ function _baseAndSite(
 ): { base: string; p: Record<string, string> } | null {
     const base = checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
     if (!base) return null;
-    const parts = base.split('/');
-    const pathSite = parts[parts.length - 1] || null;
-    const site = siteOverride || pathSite;
+    // Don't fall back to the URL's path segment — on a central that would pin
+    // the link to the central site id even for hosts on remotes.
     const p: Record<string, string> = {};
-    if (site) p.site = site;
+    if (siteOverride) p.site = siteOverride;
     return { base, p };
 }
 

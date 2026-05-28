@@ -277,12 +277,7 @@ const base = computed(() => {
     return props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '') ?? null;
 });
 
-const site = computed(() => {
-    if (props.state?.site_id) return props.state.site_id;
-    if (!base.value) return null;
-    const parts = base.value.split('/');
-    return parts[parts.length - 1] || null;
-});
+const site = computed(() => props.state?.site_id ?? null);
 
 const hostUrl = computed(() => {
     if (!base.value || !props.object.host_name) return null;

@@ -494,6 +494,7 @@ def _build_state_from_row(
     type_: str,
     *,
     include_address: bool = False,
+    site_id: str | None = None,
 ) -> ObjectState:
     """Construct an ObjectState from a livestatus row with the standard 5-column prefix."""
     state = ObjectState(
@@ -504,6 +505,7 @@ def _build_state_from_row(
         perf_data=_row_str(row, 2),
         acknowledged=_row_bool(row, 3, default=False),
         in_downtime=_row_int(row, 4) > 0,
+        site_id=site_id,
     )
     return _apply_extra(state, row, include_address=include_address)
 
@@ -712,10 +714,17 @@ class LivestatusConnection(ConnectionBase):
             f"Columns: state plugin_output perf_data acknowledged scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
             f"Filter: name = {_ls_escape(hostname)}\n"
         )
-        rows = await self._query(query)
-        if not rows:
+        tagged = await self._query_with_site(query)
+        if not tagged:
             return ObjectState(object_id="", type="host", state="PENDING")
-        return _build_state_from_row(rows[0], _HOST_STATE_MAP, "host", include_address=True)
+        sid, row = tagged[0]
+        return _build_state_from_row(
+            row,
+            _HOST_STATE_MAP,
+            "host",
+            include_address=True,
+            site_id=sid if sid is not None else (settings.checkmk_site or "local"),
+        )
 
     async def get_service_state(self, host: str, service: str) -> ObjectState:
         query = (
@@ -724,10 +733,16 @@ class LivestatusConnection(ConnectionBase):
             f"Filter: host_name = {_ls_escape(host)}\n"
             f"Filter: description = {_ls_escape(service)}\n"
         )
-        rows = await self._query(query)
-        if not rows:
+        tagged = await self._query_with_site(query)
+        if not tagged:
             return ObjectState(object_id="", type="service", state="PENDING")
-        return _build_state_from_row(rows[0], _SERVICE_STATE_MAP, "service")
+        sid, row = tagged[0]
+        return _build_state_from_row(
+            row,
+            _SERVICE_STATE_MAP,
+            "service",
+            site_id=sid if sid is not None else (settings.checkmk_site or "local"),
+        )
 
     async def get_service_perf_and_cmd(self, host: str, service: str) -> tuple[str, str]:
         """Return (perf_data, check_command) for a single service."""
@@ -798,10 +813,17 @@ class LivestatusConnection(ConnectionBase):
             f"Columns: last_hard_state plugin_output perf_data acknowledged scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
             f"Filter: name = {_ls_escape(hostname)}\n"
         )
-        rows = await self._query(query)
-        if not rows:
+        tagged = await self._query_with_site(query)
+        if not tagged:
             return ObjectState(object_id="", type="host", state="PENDING")
-        return _build_state_from_row(rows[0], _HOST_STATE_MAP, "host", include_address=True)
+        sid, row = tagged[0]
+        return _build_state_from_row(
+            row,
+            _HOST_STATE_MAP,
+            "host",
+            include_address=True,
+            site_id=sid if sid is not None else (settings.checkmk_site or "local"),
+        )
 
     async def get_service_hard_state(self, host: str, service: str) -> ObjectState:
         query = (
@@ -810,10 +832,16 @@ class LivestatusConnection(ConnectionBase):
             f"Filter: host_name = {_ls_escape(host)}\n"
             f"Filter: description = {_ls_escape(service)}\n"
         )
-        rows = await self._query(query)
-        if not rows:
+        tagged = await self._query_with_site(query)
+        if not tagged:
             return ObjectState(object_id="", type="service", state="PENDING")
-        return _build_state_from_row(rows[0], _SERVICE_STATE_MAP, "service")
+        sid, row = tagged[0]
+        return _build_state_from_row(
+            row,
+            _SERVICE_STATE_MAP,
+            "service",
+            site_id=sid if sid is not None else (settings.checkmk_site or "local"),
+        )
 
     async def get_hostgroup_states(self, group: str) -> ObjectState:
         # Distinguish "group does not exist" (NOT_FOUND) from "group exists but
