@@ -79,9 +79,10 @@ async def get_connection_objects(
     connection = get_connection(connection_id)
     if connection is None:
         return []
-    raw = await connection.get_objects(obj_type)
+    raw = await connection.get_objects(obj_type, host)
     if obj_type == "service" and host:
-        # raw items are "hostname;service_description" – filter and strip prefix
+        # raw items are "hostname;service_description"; defensive in case a
+        # backend ignores the host scope.
         prefix = f"{host};"
         return [item[len(prefix) :] for item in raw if item.startswith(prefix)]
     return raw

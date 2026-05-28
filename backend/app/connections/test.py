@@ -309,11 +309,12 @@ class TestConnection(ConnectionBase):
             output=f"Servicegroup {group}: {state}",
         )
 
-    async def get_objects(self, obj_type: str) -> list[str]:
+    async def get_objects(self, obj_type: str, host: str | None = None) -> list[str]:
         if obj_type == "host":
             return list(_DEMO_HOSTS)
         if obj_type == "service":
-            return [f"{h};{s}" for h in _DEMO_HOSTS for s in _DEMO_SERVICES]
+            hosts = [host] if host else list(_DEMO_HOSTS)
+            return [f"{h};{s}" for h in hosts for s in _DEMO_SERVICES]
         if obj_type == "hostgroup":
             return list(_DEMO_HOSTGROUPS)
         if obj_type == "servicegroup":

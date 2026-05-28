@@ -253,15 +253,16 @@ class Icinga2Connection(ConnectionBase):
             output=f"{len(results)} services, worst: {worst}",
         )
 
-    async def get_objects(self, obj_type: str) -> list[str]:
+    async def get_objects(self, obj_type: str, host: str | None = None) -> list[str]:
         try:
             if obj_type == "host":
                 results = await self._get_results("objects/hosts", params={"attrs": "name"})
                 return [_icinga_str(_icinga_dict(r, "attrs"), "name") for r in results]
             if obj_type == "service":
-                results = await self._get_results(
-                    "objects/services", params={"attrs": "host_name,name"}
-                )
+                params: IcingaParams = {"attrs": "host_name,name"}
+                if host:
+                    params["filter"] = f'service.host_name=="{_iq(host)}"'
+                results = await self._get_results("objects/services", params=params)
                 return [
                     f"{_icinga_str(_icinga_dict(r, 'attrs'), 'host_name')};"
                     f"{_icinga_str(_icinga_dict(r, 'attrs'), 'name')}"

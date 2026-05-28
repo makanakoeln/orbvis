@@ -75,9 +75,11 @@ async def test_get_backend_objects_returns_list(mock_connection, monkeypatch):
 @pytest.mark.asyncio
 async def test_get_backend_objects_service_filter(mock_connection, monkeypatch):
     monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
-    mock_connection.get_objects = AsyncMock(return_value=["srv1;CPU", "srv1;RAM", "srv2;CPU"])
+    mock_connection.get_objects = AsyncMock(return_value=["srv1;CPU", "srv1;RAM"])
     result = await get_connection_objects("mock", "service", host="srv1")
     assert result == ["CPU", "RAM"]
+    # host must reach the backend, else large environments time out
+    mock_connection.get_objects.assert_awaited_once_with("service", "srv1")
 
 
 # ---------------------------------------------------------------------------

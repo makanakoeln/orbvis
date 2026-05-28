@@ -989,12 +989,14 @@ class LivestatusConnection(ConnectionBase):
         )
         return ObjectState(object_id="", type="dyngroup", state=worst, services_summary=summary)
 
-    async def get_objects(self, obj_type: str) -> list[str]:
+    async def get_objects(self, obj_type: str, host: str | None = None) -> list[str]:
         if obj_type == "host":
             rows = await self._query("GET hosts\nColumns: name\n")
             return [_row_str(r, 0) for r in rows]
         if obj_type == "service":
-            rows = await self._query("GET services\nColumns: host_name description\n")
+            # Scope to one host — fetching every service times out at scale.
+            host_filter = f"Filter: host_name = {_ls_escape(host)}\n" if host else ""
+            rows = await self._query(f"GET services\nColumns: host_name description\n{host_filter}")
             return [f"{_row_str(r, 0)};{_row_str(r, 1)}" for r in rows]
         if obj_type == "hostgroup":
             rows = await self._query("GET hostgroups\nColumns: name\n")

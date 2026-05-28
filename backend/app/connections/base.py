@@ -171,8 +171,12 @@ class ConnectionBase(ABC):
         return []
 
     @abstractmethod
-    async def get_objects(self, obj_type: str) -> list[str]:
-        """Return list of object names of given type (host/service/hostgroup/…)."""
+    async def get_objects(self, obj_type: str, host: str | None = None) -> list[str]:
+        """Return list of object names of given type (host/service/hostgroup/…).
+
+        When *host* is given for ``obj_type == "service"`` the lookup is scoped
+        to that host so large environments don't fetch every service.
+        """
         ...
 
     @abstractmethod
