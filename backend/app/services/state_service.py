@@ -922,8 +922,16 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
         else:
             node.is_empty = True
             node.state = "EMPTY"
-        # Stable display order: folders before hosts, then alphabetical.
-        node.children.sort(key=lambda c: (c.kind != "folder", c.title.lower()))
+        # Display order: folders before hosts, then worst-severity first (so
+        # problems float to the top), then alphabetical. EMPTY/PENDING sink
+        # below healthy via the -1 default.
+        node.children.sort(
+            key=lambda c: (
+                c.kind != "folder",
+                -_COMBINED_SEVERITY.get(c.state, -1),
+                c.title.lower(),
+            )
+        )
 
     # Resolve the display root (stable folder_id first, then path; v3 §7.1).
     root_path = ""

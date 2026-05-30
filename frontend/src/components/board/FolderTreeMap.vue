@@ -2,19 +2,11 @@
     <div class="ftm">
         <div v-if="!root" class="ftm-placeholder">Waiting for folder data…</div>
         <template v-else>
-            <nav class="ftm-crumbs" aria-label="Folder path">
-                <button
-                    v-for="(crumb, i) in breadcrumb"
-                    :key="crumb.path"
-                    type="button"
-                    class="ftm-crumb"
-                    :class="{ 'ftm-crumb--current': i === breadcrumb.length - 1 }"
-                    @click="setFocus(crumb.path)"
-                >
-                    {{ crumb.title || 'Main'
-                    }}<span v-if="i < breadcrumb.length - 1" class="ftm-sep">›</span>
-                </button>
-            </nav>
+            <div class="ftm-bar">
+                <span class="ftm-root">{{ rootTitle }}</span>
+                <button type="button" class="ftm-btn" @click="expandAll">Expand all</button>
+                <button type="button" class="ftm-btn" @click="collapseAll">Collapse all</button>
+            </div>
             <div ref="hostEl" class="ftm-stage">
                 <svg ref="svgEl" class="ftm-svg" />
                 <div v-if="tip" class="ftm-tip" :style="{ left: tip.x + 'px', top: tip.y + 'px' }">
@@ -32,34 +24,36 @@
 
 <script setup lang="ts">
 import { hierarchy, type HierarchyRectangularNode, select, treemap, treemapSquarify } from 'd3';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode } from '@/types/api';
-import { severityPills, stateColor } from '@/utils/stateColors';
+import { severityPills, stateColor, stateRank } from '@/utils/stateColors';
 
 const props = defineProps<{ problemsOnly: boolean }>();
 const emit = defineEmits<{ 'select-host': [FolderTreeNode] }>();
 
 const states = useStatesStore();
 const root = computed<FolderTreeNode | null>(() => states.folderTree);
+const rootTitle = computed(() => currentRoot().title || 'Main');
 
 const svgEl = ref<SVGSVGElement | null>(null);
 const hostEl = ref<HTMLDivElement | null>(null);
 
 type FNode = HierarchyRectangularNode<FolderTreeNode>;
 
-const HEADER = 19; // folder title bar height
+const HEADER = 19; // expanded-folder title bar height
 const PROBLEM = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN']);
 const isProblem = (n: FolderTreeNode) => PROBLEM.has(n.state);
 
 const tip = ref<{ x: number; y: number; title: string; meta: string; color: string } | null>(null);
-const breadcrumb = ref<{ path: string; title: string }[]>([]);
 const empty = ref(false);
 
-// Imperative state, kept outside Vue reactivity.
-let focusPath = '';
-let lastPathSig = '';
+// Folders start collapsed (shown as solid status tiles); the operator expands
+// them in place, just like the List view. Path-keyed so it survives relayout.
+const expanded = reactive(new Set<string>());
+
+let lastSig = '';
 let dims = { w: 0, h: 0 };
 let resizeObs: ResizeObserver | null = null;
 
@@ -76,64 +70,62 @@ function currentRoot(): FolderTreeNode {
     return prune(root.value) ?? { ...root.value, children: [] };
 }
 
-function findNode(node: FolderTreeNode, path: string): FolderTreeNode | null {
-    if (node.path === path) return node;
-    const next = node.children?.find((c) => path === c.path || path.startsWith(c.path + '/'));
-    return next ? findNode(next, path) : null;
-}
-
-function chainTo(node: FolderTreeNode, target: string): { path: string; title: string }[] {
-    const acc = [{ path: node.path, title: node.title }];
-    if (node.path === target) return acc;
-    const next = node.children?.find((c) => target === c.path || target.startsWith(c.path + '/'));
-    return next ? acc.concat(chainTo(next, target)) : acc;
-}
-
-function leafValue(d: FolderTreeNode): number {
-    if (d.kind === 'host') return 1;
-    if (d.kind === 'folder' && d.is_empty) return 1; // keep empty folders visible
-    return 0;
-}
+// Layout node carries children only for the (always-open) root and explicitly
+// expanded folders; everything else is a leaf tile.
+const isExpanded = (d: FNode) => d.data.kind === 'folder' && (d.children?.length ?? 0) > 0;
 
 function fillFor(d: FNode): string {
     const n = d.data;
-    if (n.kind === 'host') return stateColor(n.state);
     if (n.kind === 'folder' && n.is_empty) return 'transparent';
-    if (isProblem(n)) return stateColor(n.state);
-    return 'var(--bg-surface)';
+    if (isExpanded(d)) return isProblem(n) ? stateColor(n.state) : 'var(--bg-surface)';
+    return stateColor(n.state); // host or collapsed folder → solid status tile
 }
 
 function fillOpacityFor(d: FNode): number {
     const n = d.data;
-    // Healthy hosts recede so problem tiles dominate the operator's eye.
-    if (n.kind === 'host') return isProblem(n) ? 1 : 0.4;
     if (n.kind === 'folder' && n.is_empty) return 1;
-    return isProblem(n) ? 0.12 : 0.4;
+    if (isExpanded(d)) return isProblem(n) ? 0.12 : 0.04; // faint backdrop for children
+    return isProblem(n) ? 1 : 0.4; // healthy tiles recede, problems dominate
 }
 
-function folderHeaderText(n: FolderTreeNode): string {
+function strokeFor(d: FNode): string {
+    const n = d.data;
+    if (n.kind === 'folder' && n.is_empty) return 'var(--text-muted)';
+    if (isExpanded(d) && isProblem(n)) return stateColor(n.state);
+    return 'var(--border)';
+}
+
+function folderLabel(n: FolderTreeNode): string {
     if (n.is_empty) return `${n.title} · empty`;
     const pills = severityPills(n.severity_counts);
     if (pills.length) return `${n.title} · ${pills[0].count} ${pills[0].state}`;
     return `${n.title} · ${n.host_count}`;
 }
 
-function strokeFor(d: FNode): string {
-    const n = d.data;
-    if (n.kind === 'folder' && isProblem(n)) return stateColor(n.state);
-    if (n.kind === 'folder' && n.is_empty) return 'var(--text-muted)';
-    return 'var(--border)';
+function allFolderPaths(node: FolderTreeNode, acc: string[] = []): string[] {
+    if (node.kind === 'folder') {
+        if (node.path) acc.push(node.path);
+        node.children.forEach((c) => allFolderPaths(c, acc));
+    }
+    return acc;
 }
 
-function layoutFocus(): FNode | null {
+function layout(): FNode | null {
     if (!dims.w || !dims.h) return null;
-    const focusData = findNode(currentRoot(), focusPath) ?? currentRoot();
-    breadcrumb.value = chainTo(currentRoot(), focusData.path);
-    const h = hierarchy<FolderTreeNode>(focusData, (d) =>
-        d.kind === 'folder' ? d.children : undefined,
-    )
-        .sum(leafValue)
-        .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+    const rootData = currentRoot();
+    const isOpen = (d: FolderTreeNode) =>
+        d.kind === 'folder' && d.children.length > 0 && (d === rootData || expanded.has(d.path));
+    const h = hierarchy<FolderTreeNode>(rootData, (d) => (isOpen(d) ? d.children : undefined))
+        // A collapsed folder is a leaf sized by its host count, so it stays
+        // visible without expanding; hosts count 1; open folders sum their kids
+        // (contribute 0 themselves).
+        .sum((d) => (d.kind === 'host' ? 1 : isOpen(d) ? 0 : Math.max(d.host_count, 1)))
+        // Worst severity first → problems cluster top-left; ties → bigger first.
+        .sort(
+            (a, b) =>
+                stateRank(b.data.state) - stateRank(a.data.state) ||
+                (b.value ?? 0) - (a.value ?? 0),
+        );
     return treemap<FolderTreeNode>()
         .tile(treemapSquarify.ratio(1))
         .size([dims.w, dims.h])
@@ -143,15 +135,26 @@ function layoutFocus(): FNode | null {
         .round(true)(h);
 }
 
-function pathSig(node: FNode): string {
+function visibleSig(node: FNode): string {
     return node
         .descendants()
         .map((d) => d.data.path)
         .join('|');
 }
 
-function setFocus(path: string): void {
-    focusPath = path;
+function toggleFolder(path: string): void {
+    if (expanded.has(path)) expanded.delete(path);
+    else expanded.add(path);
+    draw(true);
+}
+
+function expandAll(): void {
+    allFolderPaths(currentRoot()).forEach((p) => expanded.add(p));
+    draw(true);
+}
+
+function collapseAll(): void {
+    expanded.clear();
     draw(true);
 }
 
@@ -180,23 +183,17 @@ function showTip(event: MouseEvent, d: FNode): void {
 
 function draw(animate: boolean): void {
     if (!svgEl.value) return;
-    const laid = layoutFocus();
+    const laid = layout();
     if (!laid) return;
-    lastPathSig = pathSig(laid);
-    const nodes = laid.descendants().slice(1); // skip the focus node (it is the canvas)
+    lastSig = visibleSig(laid);
+    const nodes = laid.descendants().slice(1); // skip the root (it is the canvas)
     empty.value = nodes.length === 0;
 
-    const svg = select(svgEl.value)
-        .attr('viewBox', `0 0 ${dims.w} ${dims.h}`)
-        .on('click', () => {
-            // Click on empty canvas zooms out one level.
-            const parent = breadcrumb.value[breadcrumb.value.length - 2];
-            if (parent) setFocus(parent.path);
-        });
+    const svg = select(svgEl.value).attr('viewBox', `0 0 ${dims.w} ${dims.h}`);
     let g = svg.select<SVGGElement>('g.ftm-cells');
     if (g.empty()) g = svg.append('g').attr('class', 'ftm-cells');
 
-    const dur = animate ? 500 : 0;
+    const dur = animate ? 450 : 0;
 
     const cells = g
         .selectAll<SVGGElement, FNode>('g.ftm-cell')
@@ -219,7 +216,7 @@ function draw(animate: boolean): void {
         .on('click', (event: MouseEvent, d) => {
             event.stopPropagation();
             if (d.data.kind === 'host') emit('select-host', d.data);
-            else setFocus(d.data.path);
+            else toggleFolder(d.data.path);
         })
         .on('mousemove', showTip)
         .on('mouseleave', () => (tip.value = null));
@@ -248,26 +245,27 @@ function draw(animate: boolean): void {
         const w = d.x1 - d.x0;
         const h = d.y1 - d.y0;
         const t = select(this);
-        if (d.data.kind === 'folder') {
-            // Title sits in the header bar.
+        if (isExpanded(d)) {
+            // Expanded folder: title in the header bar.
             t.attr('x', 6)
                 .attr('y', 13)
                 .attr('text-anchor', 'start')
                 .style('display', w > 26 ? 'inline' : 'none')
-                .text(folderHeaderText(d.data));
+                .text(folderLabel(d.data));
         } else {
-            // Host label centered, only when the tile is big enough.
+            // Host or collapsed folder: centered label.
+            const label = d.data.kind === 'folder' ? folderLabel(d.data) : d.data.title;
             t.attr('x', w / 2)
                 .attr('y', h / 2 + 4)
                 .attr('text-anchor', 'middle')
                 .style('display', w > 46 && h > 18 ? 'inline' : 'none')
-                .text(d.data.title);
+                .text(label);
         }
     });
 }
 
-// Recolor without relayout when only states changed (same path set). Folder
-// header text carries live severity counts, so refresh it here too.
+// Recolor without relayout when only states changed (same visible set). Labels
+// carry live severity counts, so refresh their text too.
 function recolor(): void {
     if (!svgEl.value) return;
     const g = select(svgEl.value).select('g.ftm-cells');
@@ -278,7 +276,7 @@ function recolor(): void {
         .attr('fill-opacity', fillOpacityFor)
         .attr('stroke', strokeFor);
     g.selectAll<SVGTextElement, FNode>('g.ftm-cell text').text((d) =>
-        d.data.kind === 'folder' ? folderHeaderText(d.data) : d.data.title,
+        d.data.kind === 'folder' ? folderLabel(d.data) : d.data.title,
     );
 }
 
@@ -286,8 +284,8 @@ watch(
     [root, () => props.problemsOnly],
     () => {
         if (!root.value || !svgEl.value || !dims.w) return;
-        const laid = layoutFocus();
-        if (laid && pathSig(laid) === lastPathSig) recolor();
+        const laid = layout();
+        if (laid && visibleSig(laid) === lastSig) recolor();
         else draw(true);
     },
     { flush: 'post' },
@@ -318,38 +316,34 @@ onUnmounted(() => {
     overflow: hidden;
 }
 
-.ftm-crumbs {
+.ftm-bar {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 2px;
+    gap: 8px;
     padding: 6px 12px;
     font-size: 12px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
 }
 
-.ftm-crumb {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 2px 3px;
-    font-size: 12px;
-}
-
-.ftm-crumb:hover {
-    color: var(--text);
-}
-
-.ftm-crumb--current {
-    color: var(--text);
+.ftm-root {
     font-weight: 600;
+    color: var(--text);
+    margin-right: 4px;
 }
 
-.ftm-sep {
-    color: var(--text-muted);
-    margin-left: 4px;
+.ftm-btn {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.ftm-btn:hover {
+    background: var(--bg-hover);
 }
 
 .ftm-stage {

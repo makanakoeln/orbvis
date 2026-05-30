@@ -59,9 +59,8 @@
         />
         <div v-else class="ft-tree" role="tree">
             <FolderTreeRow
-                v-for="child in visibleRootChildren"
-                :key="child.path + ':' + child.kind + ':' + child.title"
-                :node="child"
+                v-if="rootDisplay"
+                :node="rootDisplay"
                 :depth="0"
                 :expanded="expanded"
                 :multi-site="multiSite"
@@ -124,13 +123,13 @@ watch(
     { immediate: true },
 );
 
-const PROBLEM_STATES = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN']);
-const visibleRootChildren = computed(() => {
-    if (!root.value) return [];
-    if (!problemsOnly.value) return root.value.children;
-    return root.value.children.filter((c) =>
-        c.kind === 'folder' ? c.problem_count > 0 : PROBLEM_STATES.has(c.state),
-    );
+// List renders the real root node ("Main") as the top row so the hierarchy
+// mirrors Checkmk's SETUP tree (root-level hosts sit under Main, not floating).
+// Standalone backends have no root .wato → fall back to "Main".
+const rootDisplay = computed<FolderTreeNode | null>(() => {
+    const r = root.value;
+    if (!r) return null;
+    return r.title ? r : { ...r, title: 'Main' };
 });
 
 const multiSite = computed(() => {

@@ -378,25 +378,26 @@ def _read_wato_info(wato_file: Path) -> dict[str, object] | None:
 
 
 def _walk_wato_folders(wato_root: Path) -> list[FolderInfo]:
-    """Every SETUP folder (incl. empty ones) with its real title + stable id.
+    """Every SETUP folder (incl. the "Main" root and empty ones) with its real
+    title + stable id.
 
-    The root folder ("") is skipped — it is never displayed and keeps the "Main"
-    breadcrumb. ``__id`` survives folder rename/move, so it feeds ``folder_id``
-    for stable ``root_folder`` scoping.
+    The root folder ("") is included so the tree carries Checkmk's real root
+    title ("Main") — both the List root row and the Map breadcrumb show it.
+    ``__id`` survives folder rename/move, so it feeds ``folder_id`` for stable
+    ``root_folder`` scoping.
     """
     folders: list[FolderInfo] = []
     for wato_file in wato_root.rglob(".wato"):
         rel = wato_file.parent.relative_to(wato_root)
         path = "" if rel == Path(".") else rel.as_posix()
-        if not path:
-            continue
         info = _read_wato_info(wato_file)
         title = info.get("title") if info else None
-        fid = info.get("__id") if info else None
+        fallback = path.rsplit("/", 1)[-1] if path else "Main"
         entry: FolderInfo = {
             "path": path,
-            "title": title if isinstance(title, str) and title else path.rsplit("/", 1)[-1],
+            "title": title if isinstance(title, str) and title else fallback,
         }
+        fid = info.get("__id") if info else None
         if isinstance(fid, str) and fid:
             entry["folder_id"] = fid
         folders.append(entry)

@@ -365,7 +365,7 @@ def test_walk_wato_folders_real_titles_and_empty(tmp_path):
     folders = _walk_wato_folders(wato)
     by_path = {f["path"]: f for f in folders}
 
-    assert "" not in by_path  # root skipped
+    assert by_path[""]["title"] == "Main directory"  # real root title carried through
     assert by_path["orbvis_dc"]["title"] == "Datacenters"  # real title, not slug
     assert by_path["orbvis_dc"]["folder_id"] == "id-dc"
     assert by_path["orbvis_dc/munich"]["title"] == "München"  # unicode preserved

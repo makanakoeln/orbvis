@@ -26,6 +26,24 @@ export function stateColor(state: string | undefined): string {
     return STATE_COLORS[state ?? 'PENDING'] ?? STATE_COLORS['PENDING'];
 }
 
+// Full severity ranking (mirrors backend _COMBINED_SEVERITY) for sorting —
+// worst-first when sorted descending. EMPTY sinks below healthy.
+const STATE_RANK: Record<string, number> = {
+    CRITICAL: 4,
+    DOWN: 3,
+    WARNING: 2,
+    UNKNOWN: 1,
+    UNREACHABLE: 1,
+    OK: 0,
+    UP: 0,
+    PENDING: -1,
+    EMPTY: -2,
+};
+
+export function stateRank(state: string | undefined): number {
+    return STATE_RANK[state ?? ''] ?? -1;
+}
+
 // Display severity (worst first) — mirrors backend _COMBINED_SEVERITY ranking.
 const SEVERITY_ORDER: Record<string, number> = {
     CRITICAL: 5,
