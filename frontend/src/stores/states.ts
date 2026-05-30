@@ -230,8 +230,11 @@ export const useStatesStore = defineStore('states', () => {
                     topologyReady.value = true;
                     lastUpdate.value = msg.delta.generated_at;
                 }
-            } catch {
-                /* ignore parse errors */
+            } catch (e) {
+                // A malformed frame must not kill the stream, but stay
+                // diagnosable: a serialization/protocol regression would
+                // otherwise silently freeze the board on stale state.
+                console.warn('[OrbVis] Failed to parse SSE message:', e);
             }
         };
 
