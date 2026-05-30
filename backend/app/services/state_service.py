@@ -753,6 +753,37 @@ def _combined_state_from_summary(host_state: str, summary: ServicesSummary | Non
     return max(candidates, key=lambda s: _COMBINED_SEVERITY.get(s, 0))
 
 
+async def list_connection_folders(connection_id: str) -> list[dict[str, str]]:
+    """Flat ``[{path, title}]`` list of a connection's SETUP folders for the
+    root-folder picker (concept v3 §4.4). Excludes the root; intermediate
+    folders are synthesised from host paths with prettified titles."""
+    connection = _connections.get(connection_id)
+    if connection is None:
+        return []
+    try:
+        data = await connection.get_folder_tree()
+    except Exception:
+        logger.exception("Folder list fetch failed for connection %s", connection_id)
+        return []
+
+    titles: dict[str, str] = {}
+
+    def add(path: str, title: str | None = None) -> None:
+        path = _norm_folder_path(path)
+        parts = path.split("/") if path else []
+        for i in range(1, len(parts) + 1):
+            sub = "/".join(parts[:i])
+            titles.setdefault(sub, _prettify_folder_title(parts[i - 1]))
+        if title and path:
+            titles[path] = title
+
+    for f in data.folders:
+        add(f["path"], f.get("title"))
+    for h in data.hosts:
+        add(h["folder_path"])
+    return [{"path": p, "title": titles[p]} for p in sorted(titles)]
+
+
 async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) -> MapStates:
     """Resolve + aggregate a SETUP folder-tree board (concept v3).
 

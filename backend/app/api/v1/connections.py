@@ -37,7 +37,11 @@ from app.schemas.connection import (
 )
 from app.schemas.state import ObjectDetails, ServicesSummary
 from app.services import connection_service
-from app.services.state_service import get_connection, get_connection_objects
+from app.services.state_service import (
+    get_connection,
+    get_connection_objects,
+    list_connection_folders,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -682,6 +686,22 @@ async def list_backend_objects(
 ) -> list[str]:
     """Return available object names from a connection (for editor autocomplete)."""
     return await get_connection_objects(connection_id, obj_type, host)
+
+
+class FolderOption(BaseModel):
+    """One SETUP folder for the foldertree root-folder picker."""
+
+    path: str
+    title: str
+
+
+@router.get("/{connection_id}/folders", response_model=list[FolderOption])
+async def list_backend_folders(
+    connection_id: str,
+    _: User = Depends(require_admin),
+) -> list[dict[str, str]]:
+    """Return the connection's SETUP folders (for the foldertree root picker)."""
+    return await list_connection_folders(connection_id)
 
 
 class GroupMember(BaseModel):

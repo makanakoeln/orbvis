@@ -153,6 +153,7 @@ export default {
         tileSaturate: 'Map saturation (%)',
         tileSaturatePlaceholder: '100 (default)',
         fitAll: 'Fit all objects',
+        ftRootFolderAll: '(all folders)',
         ftRootFolder: 'Root folder',
         ftRootFolderHint:
             'Show only this folder and below. Empty = whole tree. Accepts a folder path or its stable id.',

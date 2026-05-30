@@ -272,10 +272,14 @@
                                         <CmkLabel :help="t('board.ftRootFolderHint')">{{
                                             t('board.ftRootFolder')
                                         }}</CmkLabel>
-                                        <CmkInput
-                                            v-model="form.ft_root_folder"
-                                            :placeholder="t('board.ftRootFolderPlaceholder')"
-                                            field-size="FILL"
+                                        <CmkDropdown
+                                            :selected-option="form.ft_root_folder"
+                                            :options="ftRootFolderOptions"
+                                            :width="'fill'"
+                                            :label="t('board.ftRootFolder')"
+                                            @update:selected-option="
+                                                form.ft_root_folder = $event ?? ''
+                                            "
                                         />
                                     </div>
                                     <div class="space-y-[4px]">
@@ -847,6 +851,26 @@ const radarFilterOptions = computed(() => ({
 }));
 const saveError = ref('');
 
+const folderOptions = ref<{ path: string; title: string }[]>([]);
+const ftRootFolderOptions = computed(() => ({
+    type: 'fixed' as const,
+    suggestions: [
+        { name: '', title: t('board.ftRootFolderAll') },
+        ...folderOptions.value.map((f) => ({ name: f.path, title: f.title })),
+    ],
+}));
+async function loadFolderOptions() {
+    if (form.value.map_type !== 'foldertree' || !form.value.connection_id) return;
+    try {
+        folderOptions.value = await connectionsApi.folders(
+            form.value.connection_id,
+            auth.accessToken!,
+        );
+    } catch {
+        folderOptions.value = [];
+    }
+}
+
 const { names: radarGroupNames } = useRadarGroups(form, () => auth.accessToken);
 
 const radarGroupOptions = computed(() => ({
@@ -1385,6 +1409,7 @@ onMounted(async () => {
         auth.isAdmin ? loadPermissions() : Promise.resolve(),
     ]);
     connections.value = bs;
+    void loadFolderOptions();
     schemaLoading.value = false;
     if (spec) {
         // Radar renders cards in a grid without hover / context popups,

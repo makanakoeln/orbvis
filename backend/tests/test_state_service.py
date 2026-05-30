@@ -662,3 +662,15 @@ async def test_foldertree_root_scoping(_test_conn):
     assert tree.path == "network"
     # Subtree only — datacenters not reachable from this root.
     assert _find_node(tree, "datacenters") is None
+
+
+@pytest.mark.asyncio
+async def test_list_connection_folders(_test_conn):
+    folders = await state_service.list_connection_folders("test")
+    paths = [f["path"] for f in folders]
+    titles = {f["path"]: f["title"] for f in folders}
+    assert "" not in paths  # root excluded from the picker
+    assert "datacenters" in paths and "datacenters/muc" in paths
+    assert "staging" in paths  # empty folder still offered as a root choice
+    assert titles["datacenters/muc"] == "Munich"  # real title preserved
+    assert titles["network"] == "Network"  # prettified from slug

@@ -155,6 +155,7 @@ export default {
         tileSaturate: 'Karten-Sättigung (%)',
         tileSaturatePlaceholder: '100 (Standard)',
         fitAll: 'Alle Objekte einpassen',
+        ftRootFolderAll: '(alle Ordner)',
         ftRootFolder: 'Wurzelordner',
         ftRootFolderHint:
             'Nur diesen Ordner und darunter zeigen. Leer = ganzer Baum. Akzeptiert Ordnerpfad oder stabile ID.',

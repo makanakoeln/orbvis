@@ -468,6 +468,9 @@ export const connectionsApi = {
         return request(`/connections/${connectionId}/objects?${params}`, {}, token);
     },
 
+    folders: (connectionId: string, token: string): Promise<{ path: string; title: string }[]> =>
+        request(`/connections/${connectionId}/folders`, {}, token),
+
     aggregations: (connectionId: string, token: string): Promise<AggregationInfo[]> =>
         request(`/connections/${connectionId}/aggregations`, {}, token),
 
