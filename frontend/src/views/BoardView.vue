@@ -407,6 +407,7 @@
                             ? boardConfig.view
                             : { type: 'foldertree' }
                     "
+                    :preview="isPreview"
                     @select-host="onFolderHostSelect"
                 />
             </div>

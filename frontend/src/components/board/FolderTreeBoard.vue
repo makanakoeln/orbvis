@@ -1,6 +1,6 @@
 <template>
     <div class="ft-board">
-        <div class="ft-toolbar">
+        <div v-if="!preview" class="ft-toolbar">
             <div class="ft-segment" role="tablist">
                 <button
                     type="button"
@@ -55,6 +55,7 @@
         <FolderTreeMap
             v-else-if="mode === 'map'"
             :problems-only="problemsOnly"
+            :preview="preview"
             @select-host="$emit('select-host', $event)"
         />
         <div v-else class="ft-tree" role="tree">
@@ -81,7 +82,7 @@ import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode, FolderTreeView } from '@/types/api';
 import { severityPills } from '@/utils/stateColors';
 
-const props = defineProps<{ view: FolderTreeView }>();
+const props = defineProps<{ view: FolderTreeView; preview?: boolean }>();
 defineEmits<{ 'select-host': [FolderTreeNode] }>();
 
 const states = useStatesStore();

@@ -2,7 +2,7 @@
     <div class="ftm">
         <div v-if="!root" class="ftm-placeholder">Waiting for folder data…</div>
         <template v-else>
-            <div class="ftm-bar">
+            <div v-if="!preview" class="ftm-bar">
                 <button type="button" class="ftm-btn" @click="expandAll">Expand all</button>
                 <button type="button" class="ftm-btn" @click="collapseAll">Collapse all</button>
             </div>
@@ -29,7 +29,7 @@ import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode } from '@/types/api';
 import { severityPills, stateColorVar, stateRank } from '@/utils/stateColors';
 
-const props = defineProps<{ problemsOnly: boolean }>();
+const props = defineProps<{ problemsOnly: boolean; preview?: boolean }>();
 const emit = defineEmits<{ 'select-host': [FolderTreeNode] }>();
 
 const states = useStatesStore();
