@@ -204,7 +204,10 @@ function draw(animate: boolean): void {
     // Render the Main root too — as an outer container with a "Main" header — so
     // it is clear that the loose top-level host tiles are Main's direct hosts.
     const nodes = laid.descendants();
-    empty.value = (laid.children?.length ?? 0) === 0;
+    // "Empty" = the data root truly has no folders/hosts — NOT merely a collapsed
+    // Main (whose layout node then has no children). Otherwise the overlay would
+    // cover the single Main tile and swallow the click that re-expands it.
+    empty.value = currentRoot().children.length === 0;
 
     const svg = select(svgEl.value).attr('viewBox', `0 0 ${dims.w} ${dims.h}`);
     let g = svg.select<SVGGElement>('g.ftm-cells');
@@ -420,6 +423,7 @@ onUnmounted(() => {
 .ftm-placeholder--overlay {
     position: absolute;
     inset: 0;
+    pointer-events: none; /* never swallow clicks on the tiles beneath */
 }
 
 .ftm-tip {
