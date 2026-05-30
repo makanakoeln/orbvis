@@ -1275,7 +1275,8 @@ class LivestatusConnection(ConnectionBase):
                 for part in _re.findall(r"(?:'[^']+'|[^\s]+)=[^\s]*", state.perf_data)
             }
             return _match_graphs(metrics)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Graph template lookup failed for %s/%s: %s", host, service, exc)
             return []
 
     async def get_metric_history(

@@ -532,8 +532,10 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
                     board_cfg_cache=board_cfg_cache,
                     visited_maps=child_visited,
                 )
-            except Exception:
-                pass
+            except Exception as exc:
+                # A broken nested map-link shouldn't sink the parent board, but
+                # the failure is otherwise invisible — surface it at debug level.
+                logger.debug("Nested map-link state aggregation failed: %s", exc)
         for obj in map_objects:
             assert obj.map_name is not None
             entry = board_states.get(obj.map_name)
