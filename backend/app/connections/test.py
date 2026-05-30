@@ -6,7 +6,15 @@ import asyncio
 import math
 import time as _time
 
-from app.connections.base import ConnectionBase, MetricHistoryResult, ServiceRow, TopologyRow
+from app.connections.base import (
+    ConnectionBase,
+    FolderInfo,
+    FolderTreeData,
+    FolderTreeHostRow,
+    MetricHistoryResult,
+    ServiceRow,
+    TopologyRow,
+)
 from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.state import ObjectState, ServicesSummary
 
@@ -325,6 +333,44 @@ class TestConnection(ConnectionBase):
         if group_type in ("all_services", "servicegroup"):
             return [f"{h};{s}" for h in _DEMO_HOSTS for s in _DEMO_SERVICES]
         return list(_DEMO_HOSTS)
+
+    async def get_folder_tree(
+        self, *, only_hard: bool = False, sites: list[str] | None = None
+    ) -> FolderTreeData:
+        # Deterministic demo tree: nested folders, two empty folders
+        # (staging/decommissioned) and hosts spread across two sites.
+        folders: list[FolderInfo] = [
+            {"path": "", "title": "Main"},
+            {"path": "datacenters", "title": "Datacenters"},
+            {"path": "datacenters/muc", "title": "Munich"},
+            {"path": "datacenters/fra", "title": "Frankfurt"},
+            {"path": "network", "title": "Network"},
+            {"path": "staging", "title": "Staging"},
+            {"path": "decommissioned", "title": "Decommissioned"},
+        ]
+        placement = {
+            "localhost": ("datacenters/muc", "central"),
+            "fileserver": ("datacenters/muc", "central"),
+            "mailserver": ("datacenters/fra", "remote_fra"),
+            "router01": ("network", "central"),
+            "switch01": ("network", "remote_fra"),
+        }
+        summaries = await self.get_services_summary(list(placement))
+        hosts: list[FolderTreeHostRow] = []
+        for name, (folder, site) in placement.items():
+            if sites and site not in sites:
+                continue
+            hosts.append(
+                {
+                    "host_name": name,
+                    "folder_path": folder,
+                    "state": _PINNED_HOST_STATES.get(name, "UP"),
+                    "output": f"OK - {name} reachable",
+                    "site_id": site,
+                    "services_summary": summaries.get(name),
+                }
+            )
+        return FolderTreeData(folders=list(folders), hosts=hosts)
 
     async def get_topology(self) -> list[TopologyRow]:
         topology: list[tuple[str, list[str], str, str]] = [

@@ -133,7 +133,9 @@ const boardTypeCards = computed(() =>
                   ? t('board.boardTypeGeoBoardDesc')
                   : o.name === 'flow'
                     ? t('board.boardTypeFlowBoardDesc')
-                    : t('board.boardTypeRadarDesc'),
+                    : o.name === 'radar'
+                      ? t('board.boardTypeRadarDesc')
+                      : t('board.boardTypeFolderTreeDesc'),
     })),
 );
 

@@ -105,6 +105,17 @@ def _build_states_msg(
                 "states": [s.model_dump() for s in to_send],
                 "generated_at": states.generated_at,
                 "connection_ok": states.connection_ok,
+                # Foldertree boards carry the full resolved tree on every
+                # state_update (it's small). NOTE: the broadcast only fires on a
+                # host-state delta, so a *structure-only* change (host moved
+                # between folders / folder renamed without a state change) lags
+                # until the next state delta. Concept v3 §6/§8 plans a dedicated
+                # ``folder_tree_update`` event with its own diff to fix this;
+                # acceptable for the MVP since structure is derived from the
+                # live host rows (host add/remove already produces a delta).
+                "folder_tree": (
+                    states.folder_tree.model_dump() if states.folder_tree is not None else None
+                ),
             },
             "removed_ids": removed_ids,
             "full": full,

@@ -8,10 +8,17 @@ import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from app.connections.base import ServiceRow
+from app.connections.base import FolderTreeData, ServiceRow
 from app.core.config import settings
-from app.schemas.board import AggregationNode, BoardConfig, BoardObject, RadarView, WorldmapView
-from app.schemas.state import MapStates, ObjectState, ObjectTiming, ServicesSummary
+from app.schemas.board import (
+    AggregationNode,
+    BoardConfig,
+    BoardObject,
+    FolderTreeView,
+    RadarView,
+    WorldmapView,
+)
+from app.schemas.state import FolderTreeNode, MapStates, ObjectState, ObjectTiming, ServicesSummary
 
 # AggregationNode.state uses cmk.bi integer codes; map them to OrbVis'
 # monitoring-state strings for ObjectState.state when we have to derive
@@ -132,6 +139,9 @@ async def _execute_board_states(
     """Inner state-fetch implementation; must be called with auth context already set."""
     if cfg.view.type == "radar":
         return await _get_radar_states(cfg, connection)
+
+    if cfg.view.type == "foldertree":
+        return await _get_folder_tree_states(cfg, connection)
 
     # Inflate worldmap automap-source hosts into transient board objects so
     # the rest of the pipeline (state fetch, websocket diffing, frontend
@@ -716,6 +726,166 @@ async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> Map
     connection_ok = bool(states) and not all(s.stale for s in states)
     return MapStates(
         map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=connection_ok
+    )
+
+
+def _norm_folder_path(path: str) -> str:
+    return path.strip("/")
+
+
+def _prettify_folder_title(slug: str) -> str:
+    """Slug → readable title (concept v3 §1.1): '_'/'-' → space, Title-Case."""
+    pretty = " ".join(w.capitalize() for w in slug.replace("-", " ").replace("_", " ").split())
+    return pretty or "Main"
+
+
+def _combined_state_from_summary(host_state: str, summary: ServicesSummary | None) -> str:
+    """Worst of the host state and its service-summary counts."""
+    if summary is None:
+        return host_state
+    candidates = [host_state]
+    if summary.critical:
+        candidates.append("CRITICAL")
+    if summary.warning:
+        candidates.append("WARNING")
+    if summary.unknown:
+        candidates.append("UNKNOWN")
+    return max(candidates, key=lambda s: _COMBINED_SEVERITY.get(s, 0))
+
+
+async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) -> MapStates:
+    """Resolve + aggregate a SETUP folder-tree board (concept v3).
+
+    Folders bubble the worst state of everything below them; a (recursively)
+    hostless folder gets the synthetic ``EMPTY`` state, which is excluded from a
+    parent's worst-state roll-up. ``problems_only`` / ``show_empty_folders``
+    prune the tree; ``root_folder`` scopes it to a subtree.
+    """
+    fv = cfg.view if isinstance(cfg.view, FolderTreeView) else FolderTreeView()
+    fetch_ok = True
+    try:
+        data = await connection.get_folder_tree(
+            only_hard=fv.only_hard_states, sites=fv.sites or None
+        )
+    except Exception:
+        logger.exception("Folder-tree fetch failed for board %s", cfg.name)
+        data = FolderTreeData()
+        fetch_ok = False
+
+    nodes: dict[str, FolderTreeNode] = {}
+
+    def ensure_folder(path: str, title: str | None = None, folder_id: str = "") -> FolderTreeNode:
+        path = _norm_folder_path(path)
+        node = nodes.get(path)
+        if node is None:
+            leaf_slug = path.rsplit("/", 1)[-1] if path else ""
+            node = FolderTreeNode(
+                path=path,
+                title=title or _prettify_folder_title(leaf_slug),
+                kind="folder",
+                state="EMPTY",
+                is_empty=True,
+                folder_id=folder_id,
+            )
+            nodes[path] = node
+            if path:
+                parent = path.rsplit("/", 1)[0] if "/" in path else ""
+                ensure_folder(parent).children.append(node)
+        else:
+            if title and node.title == _prettify_folder_title(
+                path.rsplit("/", 1)[-1] if path else ""
+            ):
+                node.title = title
+            if folder_id and not node.folder_id:
+                node.folder_id = folder_id
+        return node
+
+    ensure_folder("")
+    for f in data.folders:
+        ensure_folder(f["path"], f.get("title"), f.get("folder_id", ""))
+
+    host_states: list[ObjectState] = []
+    for h in data.hosts:
+        fpath = _norm_folder_path(h["folder_path"])
+        folder = ensure_folder(fpath)
+        combined = _combined_state_from_summary(h["state"], h.get("services_summary"))
+        folder.children.append(
+            FolderTreeNode(
+                path=f"{fpath}/{h['host_name']}" if fpath else h["host_name"],
+                title=h["host_name"],
+                kind="host",
+                state=combined,
+                host_count=1,
+                output=h.get("output", ""),
+                acknowledged=h.get("acknowledged", False),
+                in_downtime=h.get("in_downtime", False),
+                site_id=h.get("site_id"),
+            )
+        )
+        host_states.append(
+            ObjectState(
+                object_id=h["host_name"],
+                type="host",
+                state=combined,
+                output=h.get("output", ""),
+                acknowledged=h.get("acknowledged", False),
+                in_downtime=h.get("in_downtime", False),
+                site_id=h.get("site_id"),
+                services_summary=h.get("services_summary"),
+            )
+        )
+
+    def finalize(node: FolderTreeNode) -> None:
+        if node.kind != "folder":
+            node.problem_count = 1 if _COMBINED_SEVERITY.get(node.state, 0) > 0 else 0
+            return
+        for child in node.children:
+            finalize(child)
+        node.host_count = sum(c.host_count for c in node.children)
+        node.problem_count = sum(c.problem_count for c in node.children)
+        non_empty = [c for c in node.children if not (c.kind == "folder" and c.is_empty)]
+        if non_empty:
+            node.is_empty = False
+            node.state = max(
+                (c.state for c in non_empty), key=lambda s: _COMBINED_SEVERITY.get(s, 0)
+            )
+        else:
+            node.is_empty = True
+            node.state = "EMPTY"
+        # Stable display order: folders before hosts, then alphabetical.
+        node.children.sort(key=lambda c: (c.kind != "folder", c.title.lower()))
+
+    # Resolve the display root (stable folder_id first, then path; v3 §7.1).
+    root_path = ""
+    if fv.root_folder:
+        by_id = next(
+            (p for p, n in nodes.items() if n.folder_id and n.folder_id == fv.root_folder), None
+        )
+        cand = _norm_folder_path(fv.root_folder)
+        root_path = by_id if by_id is not None else (cand if cand in nodes else "")
+    root = nodes.get(root_path) or nodes[""]
+    finalize(root)
+
+    def prune(node: FolderTreeNode) -> bool:
+        """Return True to keep; applies problems_only + show_empty_folders."""
+        if node.kind != "folder":
+            return (not fv.problems_only) or node.problem_count > 0
+        node.children = [c for c in node.children if prune(c)]
+        if fv.problems_only:
+            return node.problem_count > 0
+        if not fv.show_empty_folders and node.is_empty:
+            return False
+        return True
+
+    prune(root)
+
+    connection_ok = fetch_ok
+    return MapStates(
+        map_name=cfg.name,
+        states=host_states,
+        generated_at=time.time(),
+        connection_ok=connection_ok,
+        folder_tree=root,
     )
 
 

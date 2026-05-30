@@ -399,6 +399,17 @@
                 />
             </div>
 
+            <!-- Folder tree -->
+            <div v-else-if="isFolderTree" class="flex-1 relative overflow-hidden">
+                <FolderTreeBoard
+                    :view="
+                        boardConfig && boardConfig.view.type === 'foldertree'
+                            ? boardConfig.view
+                            : { type: 'foldertree' }
+                    "
+                />
+            </div>
+
             <!-- Flowmap -->
             <div v-else-if="isFlowmap" class="flex-1 relative overflow-hidden">
                 <FlowBoard
@@ -603,6 +614,7 @@
                     !boardConfig.readonly &&
                     !isFlowmap &&
                     !isRadar &&
+                    !isFolderTree &&
                     !drawerObject
                 "
                 class="fixed z-40 flex flex-col items-end gap-[10px]"
@@ -1112,6 +1124,7 @@ import DetailDrawer from '@/components/board/DetailDrawer.vue';
 import DowntimeModal from '@/components/board/DowntimeModal.vue';
 import EditPanel from '@/components/board/EditPanel.vue';
 import FlowBoard from '@/components/board/FlowBoard.vue';
+import FolderTreeBoard from '@/components/board/FolderTreeBoard.vue';
 import HoverMenu from '@/components/board/HoverMenu.vue';
 import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue';
 import RadarCanvas from '@/components/board/RadarCanvas.vue';
@@ -1270,6 +1283,7 @@ const worldmapCanvasRef = ref<InstanceType<typeof WorldMapCanvas> | null>(null);
 const isWorldmap = computed(() => boardConfig.value?.view.type === 'worldmap');
 const isFlowmap = computed(() => boardConfig.value?.view.type === 'flow');
 const isRadar = computed(() => boardConfig.value?.view.type === 'radar');
+const isFolderTree = computed(() => boardConfig.value?.view.type === 'foldertree');
 
 // Top-right search bar shared by static / worldmap / radar boards.
 // FlowBoard ships its own search because it filters d3 nodes directly.

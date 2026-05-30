@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.board import AggregationNode
 
@@ -112,8 +112,35 @@ class ObjectDetails(BaseModel):
     downtimes: list[DowntimeInfo] = []
 
 
+class FolderTreeNode(BaseModel):
+    """A node in a SETUP folder-tree board (concept v3).
+
+    ``kind`` distinguishes folders from host/service leaves. Folders carry an
+    aggregated worst-state across everything below them, or the synthetic
+    ``"EMPTY"`` state when (recursively) hostless — ``EMPTY`` is ranked outside
+    the normal severity scale and excluded from the parent's worst-state.
+    """
+
+    path: str  # folder path key, e.g. "datacenters/muc" ("" = root)
+    title: str  # display title (real, or prettified slug)
+    kind: Literal["folder", "host", "service"] = "folder"
+    state: str  # aggregated/own state; "EMPTY" for hostless folders
+    is_empty: bool = False
+    folder_id: str = ""  # stable WATO ``__id`` when known (v3 §7.1)
+    host_count: int = 0  # hosts at/below this node
+    problem_count: int = 0  # non-OK hosts/services at/below (for badges)
+    output: str = ""  # leaf plugin output
+    acknowledged: bool = False
+    in_downtime: bool = False
+    # Distributed monitoring: leaf hosts carry their originating site (v3 §5).
+    site_id: str | None = None
+    children: list[FolderTreeNode] = Field(default_factory=list)
+
+
 class MapStates(BaseModel):
     map_name: str
     states: list[ObjectState]
     generated_at: float  # unix timestamp
     connection_ok: bool = True  # False when the monitoring connection is unreachable
+    # Populated only for foldertree boards: the resolved + aggregated tree.
+    folder_tree: FolderTreeNode | None = None

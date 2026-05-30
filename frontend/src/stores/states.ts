@@ -3,6 +3,7 @@ import { ref } from 'vue';
 
 import { boardsApi, connectionsApi } from '@/api/client';
 import type {
+    FolderTreeNode,
     MetricGraphGroup,
     ObjectState,
     TopologyDelta,
@@ -65,6 +66,8 @@ export const useStatesStore = defineStore('states', () => {
     const initialLoad = ref(false);
     const topology = ref<TopologyNode[]>([]);
     const topologyReady = ref(false);
+    // Resolved + aggregated tree for foldertree boards (null for other types).
+    const folderTree = ref<FolderTreeNode | null>(null);
     // Kept under the historical name for compatibility with views; false after
     // we fall back to HTTP polling because SSE didn't work.
     const wsAvailable = ref(true);
@@ -159,6 +162,7 @@ export const useStatesStore = defineStore('states', () => {
             Object.assign(states.value, newStates);
             lastUpdate.value = ts;
             connected.value = data.connection_ok;
+            folderTree.value = data.folder_tree ?? null;
         } catch {
             connected.value = false;
         }
@@ -278,6 +282,7 @@ export const useStatesStore = defineStore('states', () => {
                     }
                     lastUpdate.value = msg.states.generated_at;
                     connected.value = msg.states.connection_ok;
+                    folderTree.value = msg.states.folder_tree ?? null;
                 } else if (msg.type === 'topology_update') {
                     _applyTopologyDelta(msg.delta);
                     topologyReady.value = true;
@@ -340,6 +345,7 @@ export const useStatesStore = defineStore('states', () => {
         metricGraphs.value = {};
         topology.value = [];
         topologyReady.value = false;
+        folderTree.value = null;
         currentMap = null;
         currentToken = undefined;
     }
@@ -402,6 +408,7 @@ export const useStatesStore = defineStore('states', () => {
         initialLoad,
         topology,
         topologyReady,
+        folderTree,
         wsAvailable,
         notificationsEnabled,
         connectToMap,

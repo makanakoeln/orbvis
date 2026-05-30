@@ -28,6 +28,8 @@ import httpx
 
 from app.connections.base import (
     ConnectionBase,
+    FolderTreeData,
+    FolderTreeHostRow,
     GeoHost,
     GraphGroup,
     GroupMemberRow,
@@ -338,6 +340,17 @@ def _services_summary_from_row(row: LivestatusRow, base: int) -> ServicesSummary
         unknown=_row_int(row, base + 3),
         pending=_row_int(row, base + 4),
     )
+
+
+def _folder_path_from_filename(filename: str) -> str:
+    """WATO ``host.filename`` → normalised folder path (concept v3 §1).
+
+    ``/wato/datacenters/muc/hosts.mk`` → ``datacenters/muc``; the root folder
+    (``/wato/hosts.mk``) and non-WATO/empty filenames → ``""``.
+    """
+    fn = filename.strip().removeprefix("/").removeprefix("wato/")
+    fn = fn.removesuffix("hosts.mk")
+    return fn.strip("/")
 
 
 class _MetricInfo(TypedDict):
@@ -1841,6 +1854,40 @@ class LivestatusConnection(ConnectionBase):
             f"scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
         )
         return dict(_parse_host_state_row(r, site_id=_default_site_id(sid)) for sid, r in tagged)
+
+    async def get_folder_tree(
+        self, *, only_hard: bool = False, sites: list[str] | None = None
+    ) -> FolderTreeData:
+        # MVP (concept v3 Phase 1): host rows tagged with their WATO folder
+        # (from ``filename``) + a service-count summary for worst-state bubbling.
+        # The folder structure + prettified titles are assembled in the state
+        # service; real titles / empty folders are Phase-3 enrichment.
+        state_col = "last_hard_state" if only_hard else "state"
+        tagged = await self._query_with_site(
+            f"GET hosts\n"
+            f"Columns: name filename {state_col} plugin_output acknowledged "
+            f"scheduled_downtime_depth num_services_ok num_services_warn "
+            f"num_services_crit num_services_unknown num_services_pending\n"
+        )
+        site_filter = set(sites) if sites else None
+        hosts: list[FolderTreeHostRow] = []
+        for sid, row in tagged:
+            site = _default_site_id(sid)
+            if site_filter is not None and site not in site_filter:
+                continue
+            hosts.append(
+                {
+                    "host_name": _row_str(row, 0),
+                    "folder_path": _folder_path_from_filename(_row_str(row, 1)),
+                    "state": _HOST_STATE_MAP.get(_row_int(row, 2), "UNKNOWN"),
+                    "output": _row_str(row, 3),
+                    "site_id": site,
+                    "acknowledged": _row_int(row, 4) > 0,
+                    "in_downtime": _row_int(row, 5) > 0,
+                    "services_summary": _services_summary_from_row(row, 6),
+                }
+            )
+        return FolderTreeData(folders=[], hosts=hosts)
 
     async def get_all_services_states(
         self, only_hard: bool = False

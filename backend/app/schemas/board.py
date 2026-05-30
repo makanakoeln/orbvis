@@ -248,8 +248,22 @@ class FlowView(BaseModel):
     service_layout: Literal["off", "donut", "fan", "orbit", "row"] | None = None
 
 
+class FolderTreeView(BaseModel):
+    type: Literal["foldertree"] = "foldertree"
+    # Stable WATO folder ``__id`` (preferred, survives rename/move) or path slug
+    # ("" = root / all folders). See concept v3 §7.1.
+    root_folder: str = ""
+    default_expand_depth: int = Field(default=1, ge=0, le=20)
+    show_services: bool = False
+    show_empty_folders: bool = True
+    problems_only: bool = False
+    only_hard_states: bool = False
+    # Distributed monitoring: scope to these site ids; empty = all sites (v3 §5).
+    sites: list[str] = Field(default_factory=list)
+
+
 BoardView = Annotated[
-    StaticView | WorldmapView | RadarView | FlowView,
+    StaticView | WorldmapView | RadarView | FlowView | FolderTreeView,
     Field(discriminator="type"),
 ]
 

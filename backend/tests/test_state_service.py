@@ -579,3 +579,86 @@ def test_no_change_sends_nothing() -> None:
     assert to_send == []
     assert removed == []
     assert timing == []
+
+
+# ---------------------------------------------------------------------------
+# Folder-tree board (concept v3)
+# ---------------------------------------------------------------------------
+
+
+def _folder_board(view_kwargs: dict | None = None) -> BoardConfig:
+    from app.schemas.board import FolderTreeView
+
+    return BoardConfig(
+        name="ft",
+        alias="FT",
+        connection_id="test",
+        view=FolderTreeView(**(view_kwargs or {})),
+        objects=[],
+    )
+
+
+def _find_node(node, path):
+    if node.path == path:
+        return node
+    for child in node.children:
+        found = _find_node(child, path)
+        if found is not None:
+            return found
+    return None
+
+
+@pytest.fixture
+def _test_conn(monkeypatch):
+    from app.connections.test import TestConnection
+
+    conn = TestConnection()
+    monkeypatch.setattr(state_service, "_connections", {"test": conn})
+    return conn
+
+
+@pytest.mark.asyncio
+async def test_foldertree_builds_tree_with_empty_folders(_test_conn):
+    result = await get_board_states(_folder_board())
+    tree = result.folder_tree
+    assert tree is not None and tree.path == ""
+    # Nested + empty folders present.
+    muc = _find_node(tree, "datacenters/muc")
+    assert muc is not None and muc.kind == "folder" and muc.host_count == 2
+    staging = _find_node(tree, "staging")
+    assert staging is not None and staging.is_empty and staging.state == "EMPTY"
+    # Container folder "datacenters" is not empty (has populated subfolders).
+    dc = _find_node(tree, "datacenters")
+    assert dc is not None and not dc.is_empty
+    # Empty folder is excluded from the root's worst-state.
+    assert tree.state != "EMPTY"
+
+
+@pytest.mark.asyncio
+async def test_foldertree_hide_empty_folders(_test_conn):
+    result = await get_board_states(_folder_board({"show_empty_folders": False}))
+    assert _find_node(result.folder_tree, "staging") is None
+    assert _find_node(result.folder_tree, "decommissioned") is None
+    # Populated folders remain.
+    assert _find_node(result.folder_tree, "datacenters/muc") is not None
+
+
+@pytest.mark.asyncio
+async def test_foldertree_sites_filter(_test_conn):
+    result = await get_board_states(_folder_board({"sites": ["central"]}))
+    tree = result.folder_tree
+    # Frankfurt only had a remote_fra host → no longer populated.
+    fra = _find_node(tree, "datacenters/fra")
+    assert fra is None or fra.is_empty
+    # central hosts still placed.
+    assert _find_node(tree, "datacenters/muc").host_count == 2
+    assert all(s.site_id == "central" for s in result.states)
+
+
+@pytest.mark.asyncio
+async def test_foldertree_root_scoping(_test_conn):
+    result = await get_board_states(_folder_board({"root_folder": "network"}))
+    tree = result.folder_tree
+    assert tree.path == "network"
+    # Subtree only — datacenters not reachable from this root.
+    assert _find_node(tree, "datacenters") is None

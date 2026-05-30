@@ -123,11 +123,14 @@ export default {
         boardTypeGeoBoard: 'Geo Board',
         boardTypeFlowBoard: 'Flow Board',
         boardTypeRadar: 'Radar (dynamischer Filter)',
+        boardTypeFolderTree: 'Ordnerbaum (SETUP-Ordner)',
         boardTypeStaticDesc:
             'Freie Positionierung von Objekten auf einer Fläche oder einem Hintergrundbild',
         boardTypeGeoBoardDesc: 'Objekte auf einer interaktiven Weltkarte mit Geo-Koordinaten',
         boardTypeFlowBoardDesc: 'Dynamische Baumstruktur aller Hosts und ihrer Beziehungen',
         boardTypeRadarDesc: 'Automatische Anzeige aller Hosts/Services einer Gruppe',
+        boardTypeFolderTreeDesc:
+            'Live-Statusbaum entlang der Checkmk-SETUP-Ordnerhierarchie mit Worst-State-Aggregation',
         latitude: 'Breitengrad',
         longitude: 'Längengrad',
         zoom: 'Zoom',

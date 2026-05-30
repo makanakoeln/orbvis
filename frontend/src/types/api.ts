@@ -106,7 +106,33 @@ export interface FlowView {
     positions?: Record<string, FlowNodePosition>;
     service_layout?: ServiceLayout | null;
 }
-export type BoardView = StaticView | WorldmapView | RadarView | FlowView;
+export interface FolderTreeView {
+    type: 'foldertree';
+    root_folder?: string;
+    default_expand_depth?: number;
+    show_services?: boolean;
+    show_empty_folders?: boolean;
+    problems_only?: boolean;
+    only_hard_states?: boolean;
+    sites?: string[];
+}
+export type BoardView = StaticView | WorldmapView | RadarView | FlowView | FolderTreeView;
+
+export interface FolderTreeNode {
+    path: string;
+    title: string;
+    kind: 'folder' | 'host' | 'service';
+    state: string;
+    is_empty: boolean;
+    folder_id: string;
+    host_count: number;
+    problem_count: number;
+    output: string;
+    acknowledged: boolean;
+    in_downtime: boolean;
+    site_id: string | null;
+    children: FolderTreeNode[];
+}
 
 // Bulk-ack target shape shared by DetailDrawer (emits) → BoardView
 // (handler) → BulkAckModal (props). One declaration so a future field
@@ -342,6 +368,7 @@ export interface MapStates {
     states: ObjectState[];
     generated_at: number;
     connection_ok: boolean;
+    folder_tree?: FolderTreeNode | null;
 }
 
 export interface TokenResponse {

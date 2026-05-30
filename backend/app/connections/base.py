@@ -117,6 +117,44 @@ class GraphGroup:
     metrics: list[str]  # ordered metric labels
 
 
+class FolderInfo(TypedDict):
+    """One WATO/SETUP folder for a foldertree board (concept v3).
+
+    ``path`` is the normalised folder path ("" = root, e.g. "datacenters/muc").
+    ``folder_id`` is the stable WATO ``__id`` when known (survives rename/move);
+    empty when only the Livestatus slug path is available.
+    """
+
+    path: str
+    title: str
+    folder_id: NotRequired[str]
+
+
+class FolderTreeHostRow(TypedDict):
+    """One host placed in the folder tree, with the state context needed to
+    bubble a folder's worst-state without a second round-trip."""
+
+    host_name: str
+    folder_path: str  # normalised ("" = root)
+    state: str
+    output: str
+    site_id: NotRequired[str | None]
+    acknowledged: NotRequired[bool]
+    in_downtime: NotRequired[bool]
+    services_summary: NotRequired[ServicesSummary | None]
+
+
+@dataclass
+class FolderTreeData:
+    """Raw folder-tree data from a connection: the folder structure (incl. empty
+    folders where the source can supply them) plus host rows tagged with their
+    folder. Tree assembly + worst-state bubbling happen connection-agnostically
+    in the state service (concept v3 §2.1)."""
+
+    folders: list[FolderInfo] = field(default_factory=list)
+    hosts: list[FolderTreeHostRow] = field(default_factory=list)
+
+
 @dataclass
 class MetricHistoryResult:
     """Combined result of a metric history fetch.
@@ -206,6 +244,18 @@ class ConnectionBase(ABC):
         ``group_name`` filters to that group.
         """
         return []
+
+    async def get_folder_tree(
+        self, *, only_hard: bool = False, sites: list[str] | None = None
+    ) -> FolderTreeData:
+        """Return SETUP folder structure + host rows for a foldertree board.
+
+        Default returns nothing (connections without a folder concept, e.g.
+        Icinga2). Checkmk/Livestatus derives folders from the ``filename``
+        column; ``sites`` (when given) scopes a federated query. Tree assembly
+        and worst-state bubbling happen in the state service.
+        """
+        return FolderTreeData()
 
     @abstractmethod
     async def get_topology(self) -> list[TopologyRow]:

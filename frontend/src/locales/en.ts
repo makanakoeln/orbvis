@@ -122,11 +122,14 @@ export default {
         boardTypeGeoBoard: 'Geo Board',
         boardTypeFlowBoard: 'Flow Board',
         boardTypeRadar: 'Radar (dynamic filter)',
+        boardTypeFolderTree: 'Folder tree (SETUP folders)',
         boardTypeStaticDesc: 'Free placement of objects on a canvas or background image',
         boardTypeGeoBoardDesc:
             'Objects positioned on an interactive world map using geo-coordinates',
         boardTypeFlowBoardDesc: 'Dynamic tree of all hosts and their relationships',
         boardTypeRadarDesc: 'Automatic display of all hosts/services matching a group filter',
+        boardTypeFolderTreeDesc:
+            'Live status tree along the Checkmk SETUP folder hierarchy, with worst-state roll-up',
         latitude: 'Latitude',
         longitude: 'Longitude',
         zoom: 'Zoom',

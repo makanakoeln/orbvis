@@ -54,6 +54,7 @@ export function boardTypeOptions(t: T) {
         { name: 'worldmap', title: t('board.boardTypeGeoBoard') },
         { name: 'flow', title: t('board.boardTypeFlowBoard') },
         { name: 'radar', title: t('board.boardTypeRadar') },
+        { name: 'foldertree', title: t('board.boardTypeFolderTree') },
     ];
 }
 
