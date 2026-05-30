@@ -1,8 +1,32 @@
 <template>
     <div class="ft-board">
         <div class="ft-toolbar">
-            <button type="button" class="ft-tool" @click="expandAll">Expand all</button>
-            <button type="button" class="ft-tool" @click="collapseAll">Collapse all</button>
+            <div class="ft-segment" role="tablist">
+                <button
+                    type="button"
+                    class="ft-seg"
+                    :class="{ 'ft-seg--active': mode === 'map' }"
+                    role="tab"
+                    :aria-selected="mode === 'map'"
+                    @click="mode = 'map'"
+                >
+                    Map
+                </button>
+                <button
+                    type="button"
+                    class="ft-seg"
+                    :class="{ 'ft-seg--active': mode === 'list' }"
+                    role="tab"
+                    :aria-selected="mode === 'list'"
+                    @click="mode = 'list'"
+                >
+                    List
+                </button>
+            </div>
+            <template v-if="mode === 'list'">
+                <button type="button" class="ft-tool" @click="expandAll">Expand all</button>
+                <button type="button" class="ft-tool" @click="collapseAll">Collapse all</button>
+            </template>
             <label class="ft-toggle-label">
                 <input v-model="problemsOnly" type="checkbox" />
                 Problems only
@@ -18,6 +42,11 @@
             No folders to show. The selected connection has no SETUP folders, or your filters hide
             them.
         </div>
+        <FolderTreeMap
+            v-else-if="mode === 'map'"
+            :problems-only="problemsOnly"
+            @select-host="$emit('select-host', $event)"
+        />
         <div v-else class="ft-tree" role="tree">
             <FolderTreeRow
                 v-for="child in visibleRootChildren"
@@ -37,6 +66,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 
+import FolderTreeMap from '@/components/board/FolderTreeMap.vue';
 import FolderTreeRow from '@/components/board/FolderTreeRow.vue';
 import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode, FolderTreeView } from '@/types/api';
@@ -47,6 +77,7 @@ defineEmits<{ 'select-host': [FolderTreeNode] }>();
 const states = useStatesStore();
 const root = computed<FolderTreeNode | null>(() => states.folderTree);
 
+const mode = ref<'map' | 'list'>('map');
 const expanded = reactive(new Set<string>());
 const problemsOnly = ref(props.view.problems_only ?? false);
 
@@ -147,6 +178,31 @@ function collapseAll() {
 
 .ft-tool:hover {
     background: var(--bg-hover);
+}
+
+.ft-segment {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.ft-seg {
+    font-size: 12px;
+    padding: 3px 12px;
+    border: none;
+    background: var(--bg-surface);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.ft-seg + .ft-seg {
+    border-left: 1px solid var(--border);
+}
+
+.ft-seg--active {
+    background: var(--accent);
+    color: white;
 }
 
 .ft-toggle-label {
