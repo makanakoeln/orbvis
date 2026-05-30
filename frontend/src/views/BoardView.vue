@@ -407,6 +407,7 @@
                             ? boardConfig.view
                             : { type: 'foldertree' }
                     "
+                    @select-host="onFolderHostSelect"
                 />
             </div>
 
@@ -1147,6 +1148,7 @@ import type {
     BoardObject,
     BulkAckTarget,
     DowntimeEntry,
+    FolderTreeNode,
     ObjectType,
     ServiceLayout,
 } from '@/types/api';
@@ -1798,6 +1800,22 @@ function onSelectHost(hostName: string, serviceDescription?: string | null) {
 
 function closeDetail() {
     detailDrawerObject.value = null;
+}
+
+function onFolderHostSelect(node: FolderTreeNode) {
+    // Folder-tree host leaves aren't persisted board objects; synthesise a host
+    // object keyed by the hostname so the drawer resolves its live state from
+    // the states map (foldertree emits host states keyed by host_name).
+    if (node.kind !== 'host') return;
+    onObjectClick({
+        id: node.title,
+        type: 'host',
+        host_name: node.title,
+        x: 0,
+        y: 0,
+        z: 0,
+        url_target: '_blank',
+    });
 }
 
 function onDetailAck() {
