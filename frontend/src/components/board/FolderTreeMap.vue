@@ -28,7 +28,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode } from '@/types/api';
-import { severityPills, stateColor, stateRank } from '@/utils/stateColors';
+import { severityPills, stateColorVar, stateRank } from '@/utils/stateColors';
 
 const props = defineProps<{ problemsOnly: boolean }>();
 const emit = defineEmits<{ 'select-host': [FolderTreeNode] }>();
@@ -77,8 +77,8 @@ const isExpanded = (d: FNode) => d.data.kind === 'folder' && (d.children?.length
 function fillFor(d: FNode): string {
     const n = d.data;
     if (n.kind === 'folder' && n.is_empty) return 'transparent';
-    if (isExpanded(d)) return isProblem(n) ? stateColor(n.state) : 'var(--bg-surface)';
-    return stateColor(n.state); // host or collapsed folder → solid status tile
+    if (isExpanded(d)) return isProblem(n) ? stateColorVar(n.state) : 'var(--bg-surface)';
+    return stateColorVar(n.state); // host or collapsed folder → solid status tile
 }
 
 function fillOpacityFor(d: FNode): number {
@@ -91,7 +91,7 @@ function fillOpacityFor(d: FNode): number {
 function strokeFor(d: FNode): string {
     const n = d.data;
     if (n.kind === 'folder' && n.is_empty) return 'var(--text-muted)';
-    if (isExpanded(d) && isProblem(n)) return stateColor(n.state);
+    if (isExpanded(d) && isProblem(n)) return stateColorVar(n.state);
     return 'var(--border)';
 }
 
@@ -100,6 +100,15 @@ function folderLabel(n: FolderTreeNode): string {
     const pills = severityPills(n.severity_counts);
     if (pills.length) return `${n.title} · ${pills[0].count} ${pills[0].state}`;
     return `${n.title} · ${n.host_count}`;
+}
+
+// A non-empty folder reads as a container: chevron (expand affordance) + title
+// in a header band. Hosts and empty folders are plain leaf tiles.
+const hasHeader = (d: FNode) => d.data.kind === 'folder' && !d.data.is_empty;
+
+function labelText(d: FNode): string {
+    if (hasHeader(d)) return `${isExpanded(d) ? '▾' : '▸'} ${folderLabel(d.data)}`;
+    return d.data.kind === 'folder' ? folderLabel(d.data) : d.data.title;
 }
 
 function allFolderPaths(node: FolderTreeNode, acc: string[] = []): string[] {
@@ -177,7 +186,7 @@ function showTip(event: MouseEvent, d: FNode): void {
         y: event.clientY - rect.top + 12,
         title: n.title,
         meta,
-        color: n.is_empty ? 'var(--text-muted)' : stateColor(n.state),
+        color: n.is_empty ? 'var(--text-muted)' : stateColorVar(n.state),
     };
 }
 
@@ -207,7 +216,8 @@ function draw(animate: boolean): void {
         .attr('class', 'ftm-cell')
         .style('opacity', 0)
         .attr('transform', (d) => `translate(${d.x0},${d.y0})`);
-    enter.append('rect');
+    enter.append('rect').attr('class', 'ftm-body');
+    enter.append('rect').attr('class', 'ftm-hdr');
     enter.append('text').attr('class', 'ftm-label');
 
     const merged = enter.merge(cells);
@@ -227,39 +237,51 @@ function draw(animate: boolean): void {
         .attr('transform', (d) => `translate(${d.x0},${d.y0})`);
 
     merged
-        .select('rect')
+        .select('rect.ftm-body')
         .attr('rx', 3)
         .attr('stroke-width', (d) => (d.data.kind === 'folder' && d.data.is_empty ? 1.4 : 1))
         .attr('stroke-dasharray', (d) =>
             d.data.kind === 'folder' && d.data.is_empty ? '4 3' : null,
         )
+        // fill/stroke via CSS style so the CMK `var(--color-state-*)` resolve
+        // (SVG presentation attributes can't); geometry/opacity still animate.
+        .style('fill', fillFor)
+        .style('stroke', strokeFor)
         .transition()
         .duration(dur)
         .attr('width', (d) => Math.max(0, d.x1 - d.x0))
         .attr('height', (d) => Math.max(0, d.y1 - d.y0))
-        .attr('fill', fillFor)
-        .attr('fill-opacity', fillOpacityFor)
-        .attr('stroke', strokeFor);
+        .attr('fill-opacity', fillOpacityFor);
+
+    // Folder header band (darkens the top strip into a "tab"); hidden for hosts
+    // and empty folders.
+    merged
+        .select('rect.ftm-hdr')
+        .attr('rx', 3)
+        .attr('fill', 'black')
+        .style('display', (d) => (hasHeader(d) ? null : 'none'))
+        .transition()
+        .duration(dur)
+        .attr('width', (d) => Math.max(0, d.x1 - d.x0))
+        .attr('height', (d) => Math.min(HEADER, Math.max(0, d.y1 - d.y0)))
+        .attr('fill-opacity', 0.18);
 
     merged.select<SVGTextElement>('text').each(function (d) {
         const w = d.x1 - d.x0;
         const h = d.y1 - d.y0;
-        const t = select(this);
-        if (isExpanded(d)) {
-            // Expanded folder: title in the header bar.
+        const t = select(this).text(labelText(d));
+        if (hasHeader(d)) {
+            // Folder: label sits in the header band, left-aligned next to chevron.
             t.attr('x', 6)
                 .attr('y', 13)
                 .attr('text-anchor', 'start')
-                .style('display', w > 26 ? 'inline' : 'none')
-                .text(folderLabel(d.data));
+                .style('display', w > 30 ? 'inline' : 'none');
         } else {
-            // Host or collapsed folder: centered label.
-            const label = d.data.kind === 'folder' ? folderLabel(d.data) : d.data.title;
+            // Host or empty folder: centered label.
             t.attr('x', w / 2)
                 .attr('y', h / 2 + 4)
                 .attr('text-anchor', 'middle')
-                .style('display', w > 46 && h > 18 ? 'inline' : 'none')
-                .text(label);
+                .style('display', w > 46 && h > 18 ? 'inline' : 'none');
         }
     });
 }
@@ -269,15 +291,13 @@ function draw(animate: boolean): void {
 function recolor(): void {
     if (!svgEl.value) return;
     const g = select(svgEl.value).select('g.ftm-cells');
-    g.selectAll<SVGRectElement, FNode>('g.ftm-cell rect')
+    g.selectAll<SVGRectElement, FNode>('rect.ftm-body')
+        .style('fill', fillFor)
+        .style('stroke', strokeFor)
         .transition()
         .duration(400)
-        .attr('fill', fillFor)
-        .attr('fill-opacity', fillOpacityFor)
-        .attr('stroke', strokeFor);
-    g.selectAll<SVGTextElement, FNode>('g.ftm-cell text').text((d) =>
-        d.data.kind === 'folder' ? folderLabel(d.data) : d.data.title,
-    );
+        .attr('fill-opacity', fillOpacityFor);
+    g.selectAll<SVGTextElement, FNode>('g.ftm-cell text').text(labelText);
 }
 
 watch(

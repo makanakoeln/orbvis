@@ -28,7 +28,7 @@
         <span
             v-if="!isEmpty"
             class="ft-dot"
-            :style="{ background: stateColor(node.state) }"
+            :style="{ background: stateColorVar(node.state) }"
             :title="node.state"
         />
 
@@ -73,7 +73,7 @@
 import { computed } from 'vue';
 
 import type { FolderTreeNode } from '@/types/api';
-import { severityPills, stateColor } from '@/utils/stateColors';
+import { severityPills, stateColorVar } from '@/utils/stateColors';
 
 const props = defineProps<{
     node: FolderTreeNode;

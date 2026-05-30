@@ -26,6 +26,25 @@ export function stateColor(state: string | undefined): string {
     return STATE_COLORS[state ?? 'PENDING'] ?? STATE_COLORS['PENDING'];
 }
 
+// Checkmk state colours as CSS custom properties (defined in style.css @theme,
+// shared with DetailDrawer etc.). Use these wherever a CSS `fill`/`background`
+// is set — i.e. HTML styles and SVG via `.style('fill', …)` (NOT `.attr`, which
+// can't resolve var()). Keeps the folder-tree on the CMK palette.
+const STATE_VAR: Record<string, string> = {
+    UP: '--color-state-up',
+    OK: '--color-state-ok',
+    DOWN: '--color-state-down',
+    CRITICAL: '--color-state-critical',
+    WARNING: '--color-state-warning',
+    UNREACHABLE: '--color-state-unreachable',
+    UNKNOWN: '--color-state-unknown',
+    PENDING: '--color-state-pending',
+};
+
+export function stateColorVar(state: string | undefined): string {
+    return `var(${STATE_VAR[state ?? 'PENDING'] ?? '--color-state-pending'})`;
+}
+
 // Full severity ranking (mirrors backend _COMBINED_SEVERITY) for sorting —
 // worst-first when sorted descending. EMPTY sinks below healthy.
 const STATE_RANK: Record<string, number> = {
@@ -73,7 +92,7 @@ export function severityPills(counts: Record<string, number> | undefined): Sever
         .map(([state, count]) => ({
             state,
             count,
-            bg: stateColor(state),
+            bg: stateColorVar(state),
             fg: LIGHT_STATES.has(state) ? '#1a1a1a' : '#ffffff',
         }));
 }
