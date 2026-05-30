@@ -33,7 +33,17 @@
             </label>
             <span class="ft-spacer" />
             <span v-if="root" class="ft-summary">
-                {{ root.host_count }} hosts · {{ root.problem_count }} with problems
+                {{ root.host_count }} hosts
+                <template v-if="summaryPills.length">
+                    <span
+                        v-for="p in summaryPills"
+                        :key="p.state"
+                        class="ft-summary-pill"
+                        :style="{ background: p.bg, color: p.fg }"
+                        >{{ p.count }} {{ p.state }}</span
+                    >
+                </template>
+                <span v-else class="ft-summary-ok">· all OK</span>
             </span>
         </div>
 
@@ -70,12 +80,14 @@ import FolderTreeMap from '@/components/board/FolderTreeMap.vue';
 import FolderTreeRow from '@/components/board/FolderTreeRow.vue';
 import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode, FolderTreeView } from '@/types/api';
+import { severityPills } from '@/utils/stateColors';
 
 const props = defineProps<{ view: FolderTreeView }>();
 defineEmits<{ 'select-host': [FolderTreeNode] }>();
 
 const states = useStatesStore();
 const root = computed<FolderTreeNode | null>(() => states.folderTree);
+const summaryPills = computed(() => severityPills(root.value?.severity_counts));
 
 const mode = ref<'map' | 'list'>('list');
 const expanded = reactive(new Set<string>());
@@ -219,7 +231,22 @@ function collapseAll() {
 }
 
 .ft-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 12px;
+    color: var(--text-muted);
+}
+
+.ft-summary-pill {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 7px;
+    border-radius: 9px;
+}
+
+.ft-summary-ok {
     color: var(--text-muted);
 }
 

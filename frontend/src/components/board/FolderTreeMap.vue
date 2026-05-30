@@ -36,7 +36,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode } from '@/types/api';
-import { stateColor } from '@/utils/stateColors';
+import { severityPills, stateColor } from '@/utils/stateColors';
 
 const props = defineProps<{ problemsOnly: boolean }>();
 const emit = defineEmits<{ 'select-host': [FolderTreeNode] }>();
@@ -105,9 +105,17 @@ function fillFor(d: FNode): string {
 
 function fillOpacityFor(d: FNode): number {
     const n = d.data;
-    if (n.kind === 'host') return 1;
+    // Healthy hosts recede so problem tiles dominate the operator's eye.
+    if (n.kind === 'host') return isProblem(n) ? 1 : 0.4;
     if (n.kind === 'folder' && n.is_empty) return 1;
     return isProblem(n) ? 0.12 : 0.4;
+}
+
+function folderHeaderText(n: FolderTreeNode): string {
+    if (n.is_empty) return `${n.title} · empty`;
+    const pills = severityPills(n.severity_counts);
+    if (pills.length) return `${n.title} · ${pills[0].count} ${pills[0].state}`;
+    return `${n.title} · ${n.host_count}`;
 }
 
 function strokeFor(d: FNode): string {
@@ -151,12 +159,16 @@ function showTip(event: MouseEvent, d: FNode): void {
     if (!hostEl.value) return;
     const rect = hostEl.value.getBoundingClientRect();
     const n = d.data;
+    const pills = severityPills(n.severity_counts);
+    const breakdown = pills.length
+        ? pills.map((p) => `${p.count} ${p.state}`).join(' · ')
+        : 'all OK';
     const meta =
         n.kind === 'host'
             ? n.state
             : n.is_empty
               ? 'empty · 0 hosts'
-              : `${n.host_count} hosts · ${n.problem_count} with problems`;
+              : `${n.host_count} hosts · ${breakdown}`;
     tip.value = {
         x: event.clientX - rect.left + 12,
         y: event.clientY - rect.top + 12,
@@ -242,11 +254,7 @@ function draw(animate: boolean): void {
                 .attr('y', 13)
                 .attr('text-anchor', 'start')
                 .style('display', w > 26 ? 'inline' : 'none')
-                .text(
-                    d.data.is_empty
-                        ? `${d.data.title} · empty`
-                        : `${d.data.title} · ${d.data.host_count}`,
-                );
+                .text(folderHeaderText(d.data));
         } else {
             // Host label centered, only when the tile is big enough.
             t.attr('x', w / 2)
@@ -258,16 +266,20 @@ function draw(animate: boolean): void {
     });
 }
 
-// Recolor without relayout when only states changed.
+// Recolor without relayout when only states changed (same path set). Folder
+// header text carries live severity counts, so refresh it here too.
 function recolor(): void {
     if (!svgEl.value) return;
-    select(svgEl.value)
-        .selectAll<SVGRectElement, FNode>('g.ftm-cell rect')
+    const g = select(svgEl.value).select('g.ftm-cells');
+    g.selectAll<SVGRectElement, FNode>('g.ftm-cell rect')
         .transition()
         .duration(400)
         .attr('fill', fillFor)
         .attr('fill-opacity', fillOpacityFor)
         .attr('stroke', strokeFor);
+    g.selectAll<SVGTextElement, FNode>('g.ftm-cell text').text((d) =>
+        d.data.kind === 'folder' ? folderHeaderText(d.data) : d.data.title,
+    );
 }
 
 watch(

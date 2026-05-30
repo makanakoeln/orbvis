@@ -128,7 +128,10 @@ class FolderTreeNode(BaseModel):
     is_empty: bool = False
     folder_id: str = ""  # stable WATO ``__id`` when known (v3 §7.1)
     host_count: int = 0  # hosts at/below this node
-    problem_count: int = 0  # non-OK hosts/services at/below (for badges)
+    problem_count: int = 0  # non-OK hosts at/below (for badges)
+    # Hosts at/below this node grouped by their combined state, problem states
+    # only (e.g. {"CRITICAL": 4, "WARNING": 46}). Powers severity-aware badges.
+    severity_counts: dict[str, int] = Field(default_factory=dict)
     output: str = ""  # leaf plugin output
     acknowledged: bool = False
     in_downtime: bool = False

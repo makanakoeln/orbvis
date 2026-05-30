@@ -127,6 +127,7 @@ export interface FolderTreeNode {
     folder_id: string;
     host_count: number;
     problem_count: number;
+    severity_counts: Record<string, number>;
     output: string;
     acknowledged: boolean;
     in_downtime: boolean;

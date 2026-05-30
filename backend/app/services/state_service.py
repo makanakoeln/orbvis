@@ -899,12 +899,20 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
 
     def finalize(node: FolderTreeNode) -> None:
         if node.kind != "folder":
-            node.problem_count = 1 if _COMBINED_SEVERITY.get(node.state, 0) > 0 else 0
+            is_problem = _COMBINED_SEVERITY.get(node.state, 0) > 0
+            node.problem_count = 1 if is_problem else 0
+            # Only hosts feed the severity breakdown; service leaves never do.
+            node.severity_counts = {node.state: 1} if is_problem and node.kind == "host" else {}
             return
         for child in node.children:
             finalize(child)
         node.host_count = sum(c.host_count for c in node.children)
         node.problem_count = sum(c.problem_count for c in node.children)
+        counts: dict[str, int] = {}
+        for child in node.children:
+            for st, n in child.severity_counts.items():
+                counts[st] = counts.get(st, 0) + n
+        node.severity_counts = counts
         non_empty = [c for c in node.children if not (c.kind == "folder" and c.is_empty)]
         if non_empty:
             node.is_empty = False
@@ -1175,6 +1183,7 @@ def _folder_tree_sig(node: FolderTreeNode) -> tuple[object, ...]:
         node.is_empty,
         node.host_count,
         node.problem_count,
+        tuple(sorted(node.severity_counts.items())),
         node.acknowledged,
         node.in_downtime,
         node.site_id,

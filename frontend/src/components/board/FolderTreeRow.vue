@@ -36,12 +36,16 @@
 
         <span v-if="isEmpty" class="ft-badge ft-badge--empty">empty · 0 hosts</span>
         <span v-else-if="node.kind === 'folder'" class="ft-meta">{{ node.host_count }} hosts</span>
-        <span
-            v-if="node.problem_count > 0 && node.kind === 'folder'"
-            class="ft-badge ft-badge--prob"
-            :title="`${node.problem_count} with problems`"
-            >{{ node.problem_count }}</span
-        >
+        <span v-if="node.kind === 'folder' && pills.length" class="ft-pills">
+            <span
+                v-for="p in pills"
+                :key="p.state"
+                class="ft-pill"
+                :style="{ background: p.bg, color: p.fg }"
+                :title="`${p.count} ${p.state}`"
+                >{{ p.count }}</span
+            >
+        </span>
 
         <span v-if="node.kind === 'host' && multiSite && node.site_id" class="ft-site">{{
             node.site_id
@@ -69,7 +73,7 @@
 import { computed } from 'vue';
 
 import type { FolderTreeNode } from '@/types/api';
-import { stateColor } from '@/utils/stateColors';
+import { severityPills, stateColor } from '@/utils/stateColors';
 
 const props = defineProps<{
     node: FolderTreeNode;
@@ -84,6 +88,7 @@ const emit = defineEmits<{ toggle: [string]; 'select-host': [FolderTreeNode] }>(
 const isEmpty = computed(() => props.node.kind === 'folder' && props.node.is_empty);
 const isOpen = computed(() => props.expanded.has(props.node.path));
 const isExpandable = computed(() => props.node.kind === 'folder' || props.node.children.length > 0);
+const pills = computed(() => severityPills(props.node.severity_counts));
 
 const PROBLEM = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN']);
 
@@ -186,10 +191,20 @@ function onRowClick() {
     border: 1px dashed var(--border);
 }
 
-.ft-badge--prob {
-    background: var(--color-state-critical, #ef4444);
-    color: white;
-    font-weight: 600;
+.ft-pills {
+    display: inline-flex;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.ft-pill {
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 9px;
+    min-width: 16px;
+    text-align: center;
 }
 
 .ft-site {

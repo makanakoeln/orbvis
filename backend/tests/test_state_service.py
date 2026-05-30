@@ -635,6 +635,19 @@ async def test_foldertree_builds_tree_with_empty_folders(_test_conn):
 
 
 @pytest.mark.asyncio
+async def test_foldertree_severity_counts_bubble_by_host_state(_test_conn):
+    result = await get_board_states(_folder_board())
+    tree = result.folder_tree
+    # Per-folder host severity breakdown, problem states only; sums to problem_count.
+    for node in (tree, _find_node(tree, "datacenters"), _find_node(tree, "datacenters/muc")):
+        assert sum(node.severity_counts.values()) == node.problem_count
+        assert all(state_service._COMBINED_SEVERITY.get(s, 0) > 0 for s in node.severity_counts)
+    # OK/UP hosts are not counted; service leaves never feed the breakdown.
+    muc = _find_node(tree, "datacenters/muc")
+    assert "OK" not in muc.severity_counts and "UP" not in muc.severity_counts
+
+
+@pytest.mark.asyncio
 async def test_foldertree_hide_empty_folders(_test_conn):
     result = await get_board_states(_folder_board({"show_empty_folders": False}))
     assert _find_node(result.folder_tree, "staging") is None
