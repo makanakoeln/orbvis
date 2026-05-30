@@ -106,13 +106,10 @@ def _build_states_msg(
                 "generated_at": states.generated_at,
                 "connection_ok": states.connection_ok,
                 # Foldertree boards carry the full resolved tree on every
-                # state_update (it's small). NOTE: the broadcast only fires on a
-                # host-state delta, so a *structure-only* change (host moved
-                # between folders / folder renamed without a state change) lags
-                # until the next state delta. Concept v3 §6/§8 plans a dedicated
-                # ``folder_tree_update`` event with its own diff to fix this;
-                # acceptable for the MVP since structure is derived from the
-                # live host rows (host add/remove already produces a delta).
+                # state_update (it's small). The broadcast loop forces a send on
+                # a structure-only change too (host moved between folders /
+                # folder renamed / bubbled state shift with no leaf delta) via
+                # state_service.folder_tree_changed, so the tree never goes stale.
                 "folder_tree": (
                     states.folder_tree.model_dump() if states.folder_tree is not None else None
                 ),
@@ -179,7 +176,16 @@ async def _broadcast_loop(board_name: str) -> None:
                         to_send, removed_ids, is_full, timing = state_service.compute_states_delta(
                             board_name, auth_user, states.states
                         )
-                        if is_full or to_send or removed_ids or timing:
+                        # Evaluated unconditionally so the stored signature stays
+                        # current; folder structure can change with no host-state
+                        # delta (see folder_tree_changed).
+                        ft_changed = (
+                            cfg.view.type == "foldertree"
+                            and state_service.folder_tree_changed(
+                                board_name, auth_user, states.folder_tree
+                            )
+                        )
+                        if is_full or to_send or removed_ids or timing or ft_changed:
                             msg = _build_states_msg(
                                 board_name, states, to_send, removed_ids, is_full, timing
                             )
@@ -192,8 +198,12 @@ async def _broadcast_loop(board_name: str) -> None:
                     to_send, removed_ids, is_full, timing = state_service.compute_states_delta(
                         board_name, None, states.states
                     )
+                    ft_changed = (
+                        cfg.view.type == "foldertree"
+                        and state_service.folder_tree_changed(board_name, None, states.folder_tree)
+                    )
                     subs = list(manager.get_subscribers_grouped(board_name).get(None, []))
-                    if is_full or to_send or removed_ids or timing:
+                    if is_full or to_send or removed_ids or timing or ft_changed:
                         msg = _build_states_msg(
                             board_name, states, to_send, removed_ids, is_full, timing
                         )

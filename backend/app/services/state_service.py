@@ -1161,6 +1161,47 @@ def compute_states_delta(
     return to_send, removed, False, timing
 
 
+_folder_tree_sigs: dict[tuple[str, str | None], int] = {}
+
+
+def _folder_tree_sig(node: FolderTreeNode) -> tuple[object, ...]:
+    # Structural signature: everything that affects the rendered tree EXCEPT
+    # ``output`` (plugin text drifts every re-check — see _hash_object_state).
+    return (
+        node.path,
+        node.title,
+        node.kind,
+        node.state,
+        node.is_empty,
+        node.host_count,
+        node.problem_count,
+        node.acknowledged,
+        node.in_downtime,
+        node.site_id,
+        tuple(_folder_tree_sig(c) for c in node.children),
+    )
+
+
+def folder_tree_changed(
+    board_name: str, auth_user: str | None, tree: FolderTreeNode | None
+) -> bool:
+    """Detect a folder-tree structure/state change for (board, auth_user).
+
+    The host-state delta in :func:`compute_states_delta` is blind to folder
+    structure: a host moving between folders, a renamed/added/removed folder, or
+    a folder's bubbled worst-state changing without any leaf host flipping its
+    own state all leave that delta empty. This compares a cheap structural
+    signature so the broadcast loop can force a send on such changes.
+
+    Side effect: stores the new signature so the next call diffs against it.
+    """
+    key = (board_name, auth_user)
+    sig = hash(_folder_tree_sig(tree)) if tree is not None else 0
+    changed = _folder_tree_sigs.get(key) != sig
+    _folder_tree_sigs[key] = sig
+    return changed
+
+
 def drop_states_snapshot(board_name: str, auth_user: str | None = None) -> None:
     """Forget the snapshot for a board (call when broadcast loop ends or board is deleted).
 
@@ -1169,8 +1210,11 @@ def drop_states_snapshot(board_name: str, auth_user: str | None = None) -> None:
     if auth_user is not None:
         _state_snapshots.pop((board_name, auth_user), None)
         _timing_snapshots.pop((board_name, auth_user), None)
+        _folder_tree_sigs.pop((board_name, auth_user), None)
         return
     for key in [k for k in _state_snapshots if k[0] == board_name]:
         _state_snapshots.pop(key, None)
     for key in [k for k in _timing_snapshots if k[0] == board_name]:
         _timing_snapshots.pop(key, None)
+    for key in [k for k in _folder_tree_sigs if k[0] == board_name]:
+        _folder_tree_sigs.pop(key, None)

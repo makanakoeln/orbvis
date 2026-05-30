@@ -683,6 +683,32 @@ async def test_foldertree_no_services_by_default(_test_conn):
     assert host is not None and not host.children
 
 
+def test_folder_tree_changed_signature():
+    from app.schemas.state import FolderTreeNode
+
+    def _tree(state="OK", output="rta 0.1ms"):
+        return FolderTreeNode(
+            path="dc",
+            title="DC",
+            kind="folder",
+            state=state,
+            children=[
+                FolderTreeNode(path="dc/h1", title="h1", kind="host", state=state, output=output)
+            ],
+        )
+
+    key = ("ftsig", None)
+    state_service._folder_tree_sigs.pop(key, None)
+    assert state_service.folder_tree_changed("ftsig", None, _tree()) is True
+    # Same structure → no resend.
+    assert state_service.folder_tree_changed("ftsig", None, _tree()) is False
+    # Output drift alone must NOT force a resend.
+    assert state_service.folder_tree_changed("ftsig", None, _tree(output="rta 9.9ms")) is False
+    # A real state change does.
+    assert state_service.folder_tree_changed("ftsig", None, _tree(state="CRITICAL")) is True
+    state_service._folder_tree_sigs.pop(key, None)
+
+
 @pytest.mark.asyncio
 async def test_list_connection_folders(_test_conn):
     folders = await state_service.list_connection_folders("test")
