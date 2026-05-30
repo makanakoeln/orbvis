@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import asyncio
 import contextlib
 import json as _json
@@ -28,6 +29,7 @@ import httpx
 
 from app.connections.base import (
     ConnectionBase,
+    FolderInfo,
     FolderTreeData,
     FolderTreeHostRow,
     GeoHost,
@@ -351,6 +353,74 @@ def _folder_path_from_filename(filename: str) -> str:
     fn = filename.strip().removeprefix("/").removeprefix("wato/")
     fn = fn.removesuffix("hosts.mk")
     return fn.strip("/")
+
+
+# Folder-tree Phase 3: the real SETUP structure (incl. empty folders) and titles
+# come from the WATO ``.wato`` files, not Livestatus (which only knows folders
+# that contain hosts). Cached briefly — structure changes rarely, but the walk
+# would otherwise run on every state tick.
+_WATO_FOLDERS_TTL = 30.0
+_wato_folders_cache: dict[str, tuple[float, list[FolderInfo]]] = {}
+
+
+def _read_wato_info(wato_file: Path) -> dict[str, object] | None:
+    """Parse one SETUP folder's ``.wato`` file (a Python dict literal).
+
+    Uses ``ast.literal_eval`` (never ``exec``) — the file is config data, not
+    code. Mirrors ``cmk.gui.watolib`` ``WATOFolderInfo`` (top-level ``title`` and
+    ``__id``).
+    """
+    try:
+        data = ast.literal_eval(wato_file.read_text(encoding="utf-8"))
+    except (ValueError, SyntaxError, OSError, RecursionError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _walk_wato_folders(wato_root: Path) -> list[FolderInfo]:
+    """Every SETUP folder (incl. empty ones) with its real title + stable id.
+
+    The root folder ("") is skipped — it is never displayed and keeps the "Main"
+    breadcrumb. ``__id`` survives folder rename/move, so it feeds ``folder_id``
+    for stable ``root_folder`` scoping.
+    """
+    folders: list[FolderInfo] = []
+    for wato_file in wato_root.rglob(".wato"):
+        rel = wato_file.parent.relative_to(wato_root)
+        path = "" if rel == Path(".") else rel.as_posix()
+        if not path:
+            continue
+        info = _read_wato_info(wato_file)
+        title = info.get("title") if info else None
+        fid = info.get("__id") if info else None
+        entry: FolderInfo = {
+            "path": path,
+            "title": title if isinstance(title, str) and title else path.rsplit("/", 1)[-1],
+        }
+        if isinstance(fid, str) and fid:
+            entry["folder_id"] = fid
+        folders.append(entry)
+    return folders
+
+
+async def _load_wato_folders() -> list[FolderInfo]:
+    """Cached, off-event-loop read of the SETUP folder structure (CMK mode only)."""
+    root = settings.checkmk_omd_root
+    if not root:
+        return []
+    wato_root = Path(root) / "etc" / "check_mk" / "conf.d" / "wato"
+    key = str(wato_root)
+    now = time.monotonic()
+    cached = _wato_folders_cache.get(key)
+    if cached is not None and now - cached[0] < _WATO_FOLDERS_TTL:
+        return cached[1]
+    if not wato_root.is_dir():
+        logger.warning("Folder-tree: WATO dir not found at %s (omd_root=%r)", wato_root, root)
+        return []
+    folders = await asyncio.to_thread(_walk_wato_folders, wato_root)
+    logger.debug("Folder-tree: loaded %d WATO folders from %s", len(folders), wato_root)
+    _wato_folders_cache[key] = (now, folders)
+    return folders
 
 
 class _MetricInfo(TypedDict):
@@ -1858,10 +1928,9 @@ class LivestatusConnection(ConnectionBase):
     async def get_folder_tree(
         self, *, only_hard: bool = False, sites: list[str] | None = None
     ) -> FolderTreeData:
-        # MVP (concept v3 Phase 1): host rows tagged with their WATO folder
-        # (from ``filename``) + a service-count summary for worst-state bubbling.
-        # The folder structure + prettified titles are assembled in the state
-        # service; real titles / empty folders are Phase-3 enrichment.
+        # Host rows tagged with their WATO folder (from ``filename``) + a
+        # service-count summary for worst-state bubbling. Real folder titles and
+        # empty folders come from the ``.wato`` walk below (Phase 3).
         state_col = "last_hard_state" if only_hard else "state"
         tagged = await self._query_with_site(
             f"GET hosts\n"
@@ -1887,7 +1956,7 @@ class LivestatusConnection(ConnectionBase):
                     "services_summary": _services_summary_from_row(row, 6),
                 }
             )
-        return FolderTreeData(folders=[], hosts=hosts)
+        return FolderTreeData(folders=await _load_wato_folders(), hosts=hosts)
 
     async def get_all_services_states(
         self, only_hard: bool = False

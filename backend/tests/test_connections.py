@@ -4,7 +4,12 @@ import asyncio
 
 import pytest
 
-from app.connections.livestatus import LivestatusConnection, _apply_extra, _default_site_id
+from app.connections.livestatus import (
+    LivestatusConnection,
+    _apply_extra,
+    _default_site_id,
+    _walk_wato_folders,
+)
 from app.connections.test import TestConnection
 from app.schemas.state import ObjectState
 
@@ -335,3 +340,42 @@ async def test_group_member_states_unknown_type_returns_empty(monkeypatch):
     connection = _make_livestatus_connection()
     rows = await connection.get_group_member_states("contactgroup", "x")
     assert rows == []
+
+
+def test_walk_wato_folders_real_titles_and_empty(tmp_path):
+    """Phase-3 .wato walk: real titles, stable __id, and empty folders.
+
+    Mirrors the CMK on-disk layout — each folder dir carries a .wato dict
+    literal; a folder dir with a .wato but no hosts is a (visible) empty folder.
+    """
+    wato = tmp_path / "wato"
+    (wato).mkdir()
+    (wato / ".wato").write_text("{'title': 'Main directory'}")  # root → skipped
+
+    dc = wato / "orbvis_dc"
+    dc.mkdir()
+    (dc / ".wato").write_text("{'title': 'Datacenters', '__id': 'id-dc'}")
+    muc = dc / "munich"
+    muc.mkdir()
+    (muc / ".wato").write_text("{'title': u'München', '__id': 'id-muc'}")
+    empty = dc / "emptyrack"
+    empty.mkdir()
+    (empty / ".wato").write_text("{'title': 'Empty Rack', '__id': 'id-er'}")
+
+    folders = _walk_wato_folders(wato)
+    by_path = {f["path"]: f for f in folders}
+
+    assert "" not in by_path  # root skipped
+    assert by_path["orbvis_dc"]["title"] == "Datacenters"  # real title, not slug
+    assert by_path["orbvis_dc"]["folder_id"] == "id-dc"
+    assert by_path["orbvis_dc/munich"]["title"] == "München"  # unicode preserved
+    assert "orbvis_dc/emptyrack" in by_path  # empty folder still listed
+
+
+def test_walk_wato_folders_tolerates_bad_file(tmp_path):
+    wato = tmp_path / "wato"
+    (wato / "broken").mkdir(parents=True)
+    (wato / "broken" / ".wato").write_text("{not valid python")
+    folders = _walk_wato_folders(wato)
+    # Unparseable .wato → folder still listed, title falls back to the slug.
+    assert {f["path"]: f["title"] for f in folders} == {"broken": "broken"}
