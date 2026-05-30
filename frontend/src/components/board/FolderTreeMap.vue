@@ -129,9 +129,11 @@ function layout(): FNode | null {
         // host (container vs. leaf) without host-count dwarfing the map; empty
         // folders smallest. Open folders contribute 0 and grow to their children.
         .sum((d) => (d.kind === 'host' ? 1 : isOpen(d) ? 0 : d.is_empty ? 0.5 : 2))
-        // Worst severity first → problems cluster top-left; ties → bigger first.
+        // Mirror the list order: a folder's own hosts before its subfolders,
+        // then worst severity first (problems cluster top-left), then bigger.
         .sort(
             (a, b) =>
+                (a.data.kind === 'folder' ? 1 : 0) - (b.data.kind === 'folder' ? 1 : 0) ||
                 stateRank(b.data.state) - stateRank(a.data.state) ||
                 (b.value ?? 0) - (a.value ?? 0),
         );
