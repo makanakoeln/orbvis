@@ -836,23 +836,24 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
         ensure_folder(f["path"], f.get("title"), f.get("folder_id", ""))
 
     host_states: list[ObjectState] = []
+    host_nodes: dict[str, FolderTreeNode] = {}
     for h in data.hosts:
         fpath = _norm_folder_path(h["folder_path"])
         folder = ensure_folder(fpath)
         combined = _combined_state_from_summary(h["state"], h.get("services_summary"))
-        folder.children.append(
-            FolderTreeNode(
-                path=f"{fpath}/{h['host_name']}" if fpath else h["host_name"],
-                title=h["host_name"],
-                kind="host",
-                state=combined,
-                host_count=1,
-                output=h.get("output", ""),
-                acknowledged=h.get("acknowledged", False),
-                in_downtime=h.get("in_downtime", False),
-                site_id=h.get("site_id"),
-            )
+        host_node = FolderTreeNode(
+            path=f"{fpath}/{h['host_name']}" if fpath else h["host_name"],
+            title=h["host_name"],
+            kind="host",
+            state=combined,
+            host_count=1,
+            output=h.get("output", ""),
+            acknowledged=h.get("acknowledged", False),
+            in_downtime=h.get("in_downtime", False),
+            site_id=h.get("site_id"),
         )
+        folder.children.append(host_node)
+        host_nodes[h["host_name"]] = host_node
         host_states.append(
             ObjectState(
                 object_id=h["host_name"],
@@ -865,6 +866,36 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
                 services_summary=h.get("services_summary"),
             )
         )
+
+    # Optional service leaves under each host (concept v3 §4.3 show_services).
+    # One unfiltered query (Livestatus overrides it efficiently); attached to the
+    # host node so the operator can drill host → services. The host's own
+    # combined state already reflects worst-service severity, so badges/bubbling
+    # are unaffected.
+    if fv.show_services and host_nodes:
+        try:
+            svc_states = await connection.get_all_services_states(only_hard=fv.only_hard_states)
+        except Exception:
+            logger.exception("Service fetch failed for folder-tree board %s", cfg.name)
+            svc_states = {}
+        for (hname, svc), s in svc_states.items():
+            hn = host_nodes.get(hname)
+            if hn is None:
+                continue
+            hn.children.append(
+                FolderTreeNode(
+                    path=f"{hn.path}/{svc}",
+                    title=svc,
+                    kind="service",
+                    state=s.state,
+                    output=s.output,
+                    acknowledged=s.acknowledged,
+                    in_downtime=s.in_downtime,
+                    site_id=hn.site_id,
+                )
+            )
+        for hn in host_nodes.values():
+            hn.children.sort(key=lambda c: c.title.lower())
 
     def finalize(node: FolderTreeNode) -> None:
         if node.kind != "folder":

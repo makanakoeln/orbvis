@@ -665,6 +665,25 @@ async def test_foldertree_root_scoping(_test_conn):
 
 
 @pytest.mark.asyncio
+async def test_foldertree_show_services(_test_conn):
+    result = await get_board_states(_folder_board({"show_services": True}))
+    host = _find_node(result.folder_tree, "datacenters/muc/localhost")
+    assert host is not None and host.kind == "host"
+    assert host.children, "host should carry service leaves when show_services is on"
+    assert all(c.kind == "service" for c in host.children)
+    # Service paths are nested under the host and sorted by title.
+    titles = [c.title for c in host.children]
+    assert titles == sorted(titles, key=str.lower)
+
+
+@pytest.mark.asyncio
+async def test_foldertree_no_services_by_default(_test_conn):
+    result = await get_board_states(_folder_board())
+    host = _find_node(result.folder_tree, "datacenters/muc/localhost")
+    assert host is not None and not host.children
+
+
+@pytest.mark.asyncio
 async def test_list_connection_folders(_test_conn):
     folders = await state_service.list_connection_folders("test")
     paths = [f["path"] for f in folders]

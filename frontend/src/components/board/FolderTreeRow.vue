@@ -7,11 +7,12 @@
         }"
         :style="{ paddingLeft: `${depth * 18 + 6}px` }"
         role="treeitem"
-        :aria-expanded="node.kind === 'folder' ? isOpen : undefined"
+        :aria-expanded="isExpandable ? isOpen : undefined"
+        :title="node.output || undefined"
         @click="onRowClick"
     >
         <button
-            v-if="node.kind === 'folder'"
+            v-if="isExpandable"
             type="button"
             class="ft-chevron"
             :aria-label="isOpen ? 'Collapse' : 'Expand'"
@@ -49,7 +50,7 @@
         <span v-if="node.in_downtime" class="ft-mark" title="In downtime">⏸</span>
     </div>
 
-    <template v-if="node.kind === 'folder' && isOpen">
+    <template v-if="isExpandable && isOpen">
         <FolderTreeRow
             v-for="child in visibleChildren"
             :key="child.path + ':' + child.kind + ':' + child.title"
@@ -82,6 +83,7 @@ const emit = defineEmits<{ toggle: [string]; 'select-host': [FolderTreeNode] }>(
 
 const isEmpty = computed(() => props.node.kind === 'folder' && props.node.is_empty);
 const isOpen = computed(() => props.expanded.has(props.node.path));
+const isExpandable = computed(() => props.node.kind === 'folder' || props.node.children.length > 0);
 
 const PROBLEM = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN']);
 
@@ -94,7 +96,7 @@ const visibleChildren = computed(() => {
 
 function onRowClick() {
     if (props.node.kind === 'host') emit('select-host', props.node);
-    else emit('toggle', props.node.path);
+    else if (props.node.kind === 'folder') emit('toggle', props.node.path);
 }
 </script>
 
