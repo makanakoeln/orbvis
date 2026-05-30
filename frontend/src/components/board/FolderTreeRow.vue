@@ -5,12 +5,14 @@
             'ft-row--folder': node.kind === 'folder',
             'ft-row--clickable': node.kind === 'host',
         }"
-        :style="{ paddingLeft: `${depth * 18 + 6}px` }"
         role="treeitem"
         :aria-expanded="isExpandable ? isOpen : undefined"
         :title="node.output || undefined"
         @click="onRowClick"
     >
+        <!-- One vertical guide per ancestor level so the nesting depth (e.g.
+             a host directly under Main vs. inside a subfolder) is unambiguous. -->
+        <span v-for="i in depth" :key="i" class="ft-guide" />
         <button
             v-if="isExpandable"
             type="button"
@@ -111,10 +113,21 @@ function onRowClick() {
     align-items: center;
     gap: 7px;
     height: 28px;
+    padding-left: 6px;
     font-size: 13px;
     color: var(--text);
     border-radius: 4px;
     user-select: none;
+}
+
+/* One per ancestor level: an 18px column with a left guide line. The negative
+   margin cancels the row's 7px flex gap so columns stay tight (18px each). */
+.ft-guide {
+    width: 18px;
+    flex-shrink: 0;
+    align-self: stretch;
+    margin-right: -7px;
+    border-left: 1px solid var(--border);
 }
 
 .ft-row--clickable {

@@ -3,7 +3,6 @@
         <div v-if="!root" class="ftm-placeholder">Waiting for folder data…</div>
         <template v-else>
             <div class="ftm-bar">
-                <span class="ftm-root">{{ rootTitle }}</span>
                 <button type="button" class="ftm-btn" @click="expandAll">Expand all</button>
                 <button type="button" class="ftm-btn" @click="collapseAll">Collapse all</button>
             </div>
@@ -35,7 +34,6 @@ const emit = defineEmits<{ 'select-host': [FolderTreeNode] }>();
 
 const states = useStatesStore();
 const root = computed<FolderTreeNode | null>(() => states.folderTree);
-const rootTitle = computed(() => currentRoot().title || 'Main');
 
 const svgEl = ref<SVGSVGElement | null>(null);
 const hostEl = ref<HTMLDivElement | null>(null);
@@ -96,18 +94,23 @@ function strokeFor(d: FNode): string {
 }
 
 function folderLabel(n: FolderTreeNode): string {
-    if (n.is_empty) return `${n.title} · empty`;
+    const title = n.title || 'Main';
+    if (n.is_empty) return `${title} · empty`;
     const pills = severityPills(n.severity_counts);
-    if (pills.length) return `${n.title} · ${pills[0].count} ${pills[0].state}`;
-    return `${n.title} · ${n.host_count}`;
+    if (pills.length) return `${title} · ${pills[0].count} ${pills[0].state}`;
+    return `${title} · ${n.host_count}`;
 }
 
 // A non-empty folder reads as a container: chevron (expand affordance) + title
-// in a header band. Hosts and empty folders are plain leaf tiles.
+// in a header band. Hosts and empty folders are plain leaf tiles. The Main root
+// (depth 0) is always open → no chevron.
 const hasHeader = (d: FNode) => d.data.kind === 'folder' && !d.data.is_empty;
 
 function labelText(d: FNode): string {
-    if (hasHeader(d)) return `${isExpanded(d) ? '▾' : '▸'} ${folderLabel(d.data)}`;
+    if (hasHeader(d)) {
+        const chev = d.depth === 0 ? '' : isExpanded(d) ? '▾ ' : '▸ ';
+        return `${chev}${folderLabel(d.data)}`;
+    }
     return d.data.kind === 'folder' ? folderLabel(d.data) : d.data.title;
 }
 
@@ -125,10 +128,11 @@ function layout(): FNode | null {
     const isOpen = (d: FolderTreeNode) =>
         d.kind === 'folder' && d.children.length > 0 && (d === rootData || expanded.has(d.path));
     const h = hierarchy<FolderTreeNode>(rootData, (d) => (isOpen(d) ? d.children : undefined))
-        // A collapsed folder is a leaf sized by its host count, so it stays
-        // visible without expanding; hosts count 1; open folders sum their kids
-        // (contribute 0 themselves).
-        .sum((d) => (d.kind === 'host' ? 1 : isOpen(d) ? 0 : Math.max(d.host_count, 1)))
+        // Uniform tiles: every collapsed folder and host counts 1, so a 50-host
+        // folder doesn't dwarf a 2-host one — the map reads as equal status cards
+        // (host counts live in the label/tooltip). Open folders contribute 0 and
+        // grow to the sum of their children when expanded.
+        .sum((d) => (d.kind === 'host' ? 1 : isOpen(d) ? 0 : d.is_empty ? 0.5 : 1))
         // Worst severity first → problems cluster top-left; ties → bigger first.
         .sort(
             (a, b) =>
@@ -195,8 +199,10 @@ function draw(animate: boolean): void {
     const laid = layout();
     if (!laid) return;
     lastSig = visibleSig(laid);
-    const nodes = laid.descendants().slice(1); // skip the root (it is the canvas)
-    empty.value = nodes.length === 0;
+    // Render the Main root too — as an outer container with a "Main" header — so
+    // it is clear that the loose top-level host tiles are Main's direct hosts.
+    const nodes = laid.descendants();
+    empty.value = (laid.children?.length ?? 0) === 0;
 
     const svg = select(svgEl.value).attr('viewBox', `0 0 ${dims.w} ${dims.h}`);
     let g = svg.select<SVGGElement>('g.ftm-cells');
@@ -222,9 +228,10 @@ function draw(animate: boolean): void {
 
     const merged = enter.merge(cells);
     merged
-        .style('cursor', 'pointer')
+        .style('cursor', (d) => (d.depth === 0 ? 'default' : 'pointer'))
         .on('click', (event: MouseEvent, d) => {
             event.stopPropagation();
+            if (d.depth === 0) return; // Main container is not collapsible
             if (d.data.kind === 'host') emit('select-host', d.data);
             else toggleFolder(d.data.path);
         })
@@ -344,12 +351,6 @@ onUnmounted(() => {
     font-size: 12px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
-}
-
-.ftm-root {
-    font-weight: 600;
-    color: var(--text);
-    margin-right: 4px;
 }
 
 .ftm-btn {
