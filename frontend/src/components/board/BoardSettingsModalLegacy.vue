@@ -318,6 +318,64 @@
                                 </div>
                             </template>
 
+                            <template v-if="form.map_type === 'foldertree'">
+                                <div class="grid grid-cols-2 gap-[8px]">
+                                    <div class="space-y-[4px]">
+                                        <CmkLabel :help="t('board.ftRootFolderHint')">{{
+                                            t('board.ftRootFolder')
+                                        }}</CmkLabel>
+                                        <CmkInput
+                                            v-model="form.ft_root_folder"
+                                            :placeholder="t('board.ftRootFolderPlaceholder')"
+                                            field-size="FILL"
+                                        />
+                                    </div>
+                                    <div class="space-y-[4px]">
+                                        <CmkLabel :help="t('board.ftExpandDepthHint')">{{
+                                            t('board.ftExpandDepth')
+                                        }}</CmkLabel>
+                                        <NumberInput
+                                            v-model="form.ft_default_expand_depth"
+                                            min="0"
+                                            max="20"
+                                            class="w-[100px]"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="space-y-[4px]">
+                                    <CmkLabel :help="t('board.ftSitesHint')">{{
+                                        t('board.ftSites')
+                                    }}</CmkLabel>
+                                    <CmkInput
+                                        v-model="form.ft_sites"
+                                        :placeholder="t('board.ftSitesPlaceholder')"
+                                        field-size="FILL"
+                                    />
+                                </div>
+                                <div class="flex flex-col gap-[6px]">
+                                    <label class="flex items-center gap-[8px]">
+                                        <CmkSwitch v-model:data="form.ft_show_empty_folders" />
+                                        <span class="text-sm">{{
+                                            t('board.ftShowEmptyFolders')
+                                        }}</span>
+                                    </label>
+                                    <label class="flex items-center gap-[8px]">
+                                        <CmkSwitch v-model:data="form.ft_show_services" />
+                                        <span class="text-sm">{{ t('board.ftShowServices') }}</span>
+                                    </label>
+                                    <label class="flex items-center gap-[8px]">
+                                        <CmkSwitch v-model:data="form.ft_problems_only" />
+                                        <span class="text-sm">{{ t('board.ftProblemsOnly') }}</span>
+                                    </label>
+                                    <label class="flex items-center gap-[8px]">
+                                        <CmkSwitch v-model:data="form.ft_only_hard_states" />
+                                        <span class="text-sm">{{
+                                            t('board.ftOnlyHardStates')
+                                        }}</span>
+                                    </label>
+                                </div>
+                            </template>
+
                             <!-- Templates -->
                             <div class="board-settings__subsection space-y-[8px]">
                                 <p class="section-title">{{ t('boardSettings.templates') }}</p>
@@ -613,6 +671,7 @@ import type {
     BoardRead,
     ConnectionConfig,
     FlowView,
+    FolderTreeView,
     PermissionRead,
     RadarView,
     RoleRead,
@@ -730,6 +789,7 @@ const wm = initWorldmapCoords();
 const rv = props.board.view.type === 'radar' ? (props.board.view as RadarView) : null;
 const wmv = props.board.view.type === 'worldmap' ? (props.board.view as WorldmapView) : null;
 const fv = props.board.view.type === 'flow' ? (props.board.view as FlowView) : null;
+const ftv = props.board.view.type === 'foldertree' ? (props.board.view as FolderTreeView) : null;
 
 const form = ref({
     alias: props.board.alias,
@@ -758,6 +818,13 @@ const form = ref({
     flow_parent_layers: fv?.parent_layers ?? (null as number | null),
     flow_top_affected_hosts: fv?.top_affected_hosts ?? (null as number | null),
     flow_max_services_per_host: fv?.max_services_per_host ?? (null as number | null),
+    ft_root_folder: ftv?.root_folder ?? '',
+    ft_default_expand_depth: ftv?.default_expand_depth ?? 1,
+    ft_show_services: ftv?.show_services ?? false,
+    ft_show_empty_folders: ftv?.show_empty_folders ?? true,
+    ft_problems_only: ftv?.problems_only ?? false,
+    ft_only_hard_states: ftv?.only_hard_states ?? false,
+    ft_sites: (ftv?.sites ?? []).join(', '),
     hover_template: props.board.hover_template ?? '',
     context_template: props.board.context_template ?? '',
     background_image: props.board.background_image ?? '',
@@ -885,6 +952,20 @@ async function save() {
                 parent_layers: form.value.flow_parent_layers,
                 top_affected_hosts: form.value.flow_top_affected_hosts,
                 max_services_per_host: form.value.flow_max_services_per_host,
+            };
+        } else if (form.value.map_type === 'foldertree') {
+            view = {
+                type: 'foldertree',
+                root_folder: form.value.ft_root_folder.trim(),
+                default_expand_depth: form.value.ft_default_expand_depth,
+                show_services: form.value.ft_show_services,
+                show_empty_folders: form.value.ft_show_empty_folders,
+                problems_only: form.value.ft_problems_only,
+                only_hard_states: form.value.ft_only_hard_states,
+                sites: form.value.ft_sites
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean),
             };
         } else {
             view = { type: form.value.map_type };

@@ -261,6 +261,69 @@
                                 </div>
                             </div>
 
+                            <!-- Folder tree settings -->
+                            <div
+                                v-if="form.map_type === 'foldertree'"
+                                class="board-settings__type-section space-y-[8px]"
+                            >
+                                <p class="section-title">{{ t('boardSettings.folderTree') }}</p>
+                                <div class="grid grid-cols-2 gap-[8px]">
+                                    <div class="space-y-[4px]">
+                                        <CmkLabel :help="t('board.ftRootFolderHint')">{{
+                                            t('board.ftRootFolder')
+                                        }}</CmkLabel>
+                                        <CmkInput
+                                            v-model="form.ft_root_folder"
+                                            :placeholder="t('board.ftRootFolderPlaceholder')"
+                                            field-size="FILL"
+                                        />
+                                    </div>
+                                    <div class="space-y-[4px]">
+                                        <CmkLabel :help="t('board.ftExpandDepthHint')">{{
+                                            t('board.ftExpandDepth')
+                                        }}</CmkLabel>
+                                        <NumberInput
+                                            v-model="form.ft_default_expand_depth"
+                                            min="0"
+                                            max="20"
+                                            class="w-[100px]"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="space-y-[4px]">
+                                    <CmkLabel :help="t('board.ftSitesHint')">{{
+                                        t('board.ftSites')
+                                    }}</CmkLabel>
+                                    <CmkInput
+                                        v-model="form.ft_sites"
+                                        :placeholder="t('board.ftSitesPlaceholder')"
+                                        field-size="FILL"
+                                    />
+                                </div>
+                                <div class="flex flex-col gap-[6px]">
+                                    <label class="flex items-center gap-[8px]">
+                                        <CmkSwitch v-model:data="form.ft_show_empty_folders" />
+                                        <span class="text-sm">{{
+                                            t('board.ftShowEmptyFolders')
+                                        }}</span>
+                                    </label>
+                                    <label class="flex items-center gap-[8px]">
+                                        <CmkSwitch v-model:data="form.ft_show_services" />
+                                        <span class="text-sm">{{ t('board.ftShowServices') }}</span>
+                                    </label>
+                                    <label class="flex items-center gap-[8px]">
+                                        <CmkSwitch v-model:data="form.ft_problems_only" />
+                                        <span class="text-sm">{{ t('board.ftProblemsOnly') }}</span>
+                                    </label>
+                                    <label class="flex items-center gap-[8px]">
+                                        <CmkSwitch v-model:data="form.ft_only_hard_states" />
+                                        <span class="text-sm">{{
+                                            t('board.ftOnlyHardStates')
+                                        }}</span>
+                                    </label>
+                                </div>
+                            </div>
+
                             <ul
                                 v-if="errorMessages.length"
                                 class="text-xs text-[var(--color-light-red-40)] space-y-0.5"
@@ -507,6 +570,7 @@ import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown';
 import CmkLabel from '@/components/cmk/CmkLabel';
 import CmkLoading from '@/components/cmk/CmkLoading';
 import CmkSlideInDialog from '@/components/cmk/CmkSlideInDialog';
+import CmkSwitch from '@/components/cmk/CmkSwitch';
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
 import CmkInput from '@/components/cmk/user-input/CmkInput';
 import ColorInput from '@/components/ColorInput.vue';
@@ -523,6 +587,7 @@ import type {
     BoardRead,
     ConnectionConfig,
     FlowView,
+    FolderTreeView,
     ObjectState,
     PermissionRead,
     RadarView,
@@ -638,6 +703,7 @@ const wm = initWorldmapCoords();
 const rv = props.board.view.type === 'radar' ? (props.board.view as RadarView) : null;
 const wmv = props.board.view.type === 'worldmap' ? (props.board.view as WorldmapView) : null;
 const fv = props.board.view.type === 'flow' ? (props.board.view as FlowView) : null;
+const ftv = props.board.view.type === 'foldertree' ? (props.board.view as FolderTreeView) : null;
 
 const form = ref({
     alias: props.board.alias,
@@ -660,6 +726,13 @@ const form = ref({
     worldmap_tile_saturate: wmv?.tile_saturate ?? (null as number | null),
     radar_filter: rv?.filter ?? 'hostgroup',
     radar_filter_value: rv?.filter_value ?? '',
+    ft_root_folder: ftv?.root_folder ?? '',
+    ft_default_expand_depth: ftv?.default_expand_depth ?? 1,
+    ft_show_services: ftv?.show_services ?? false,
+    ft_show_empty_folders: ftv?.show_empty_folders ?? true,
+    ft_problems_only: ftv?.problems_only ?? false,
+    ft_only_hard_states: ftv?.only_hard_states ?? false,
+    ft_sites: (ftv?.sites ?? []).join(', '),
     hover_template: props.board.hover_template ?? '',
     context_template: props.board.context_template ?? '',
     background_image: props.board.background_image ?? '',
@@ -1085,6 +1158,21 @@ function buildViewFromForm(): Record<string, unknown> {
             parent_layers: (fvd.parent_layers as number | null | undefined) ?? null,
             top_affected_hosts: (fvd.top_affected_hosts as number | null | undefined) ?? null,
             max_services_per_host: (fvd.max_services_per_host as number | null | undefined) ?? null,
+        };
+    }
+    if (form.value.map_type === 'foldertree') {
+        return {
+            type: 'foldertree',
+            root_folder: form.value.ft_root_folder.trim(),
+            default_expand_depth: form.value.ft_default_expand_depth,
+            show_services: form.value.ft_show_services,
+            show_empty_folders: form.value.ft_show_empty_folders,
+            problems_only: form.value.ft_problems_only,
+            only_hard_states: form.value.ft_only_hard_states,
+            sites: form.value.ft_sites
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean),
         };
     }
     return { type: form.value.map_type };
