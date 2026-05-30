@@ -118,8 +118,11 @@ watch(
         if (sig === seededFor) return;
         seededFor = sig;
         expanded.clear();
+        // Main (root) is always open; its subfolders start collapsed and only
+        // pre-expand when default_expand_depth > 1 (so the default view is the
+        // top-level overview — drill on demand, like the map).
         expanded.add(r.path);
-        r.children.forEach((c) => seed(c, 0, Math.max(1, props.view.default_expand_depth ?? 1)));
+        r.children.forEach((c) => seed(c, 1, props.view.default_expand_depth ?? 1));
     },
     { immediate: true },
 );
