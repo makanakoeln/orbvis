@@ -50,7 +50,7 @@
             <!-- D3 chart -->
             <div
                 v-else
-                class="w-full h-full flex flex-col overflow-hidden rounded-lg border dark:bg-[var(--bg)]/90 dark:border-white/10 bg-white border-[var(--border)]"
+                class="w-full h-full flex flex-col overflow-hidden rounded-lg border bg-[var(--bg-surface)] border-[var(--border)]"
                 style="padding: 6px 8px 5px"
             >
                 <!-- Header: metric label + current value -->

@@ -1690,7 +1690,9 @@ const checkInfoRows = computed<MetaRow[]>(() => {
             rows.push({
                 label: t('board.detailDrawer.nextCheck'),
                 value: t('board.detailDrawer.timeIn', {
-                    duration: formatRelativeFuture(s.next_check, nowMs.value),
+                    // An imminent check (sub-second away) formats to '' — show
+                    // '<1s' so the row never reads a dangling "in ".
+                    duration: formatRelativeFuture(s.next_check, nowMs.value) || '<1s',
                 }),
             });
         }
