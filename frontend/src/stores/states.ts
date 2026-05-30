@@ -107,11 +107,18 @@ export const useStatesStore = defineStore('states', () => {
     }
 
     let sse: EventSource | null = null;
+    let reprobe: EventSource | null = null;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let reprobeTimer: ReturnType<typeof setInterval> | null = null;
     let currentMap: string | null = null;
     let currentToken: string | undefined = undefined;
-    // True after we determined SSE doesn't work and switched permanently to polling.
+    // True while we're on the HTTP polling fallback because SSE didn't connect.
+    // Not permanent: a re-probe timer keeps testing SSE so a transient failure
+    // (proxy hiccup) heals back to live streaming without a page reload.
     let pollingMode = false;
+    // Guards against overlapping re-probes when one is slow to open/fail.
+    let probing = false;
+    const SSE_REPROBE_INTERVAL_MS = 60_000;
 
     async function connectToMap(mapName: string, token?: string) {
         if (currentMap === mapName && (sse?.readyState === EventSource.OPEN || pollTimer)) return;
@@ -158,8 +165,60 @@ export const useStatesStore = defineStore('states', () => {
     }
 
     function _startPolling() {
-        if (pollTimer) return;
-        pollTimer = setInterval(_fetchStates, 15_000);
+        if (!pollTimer) pollTimer = setInterval(_fetchStates, 15_000);
+        // Keep probing for SSE so a transient first-connect failure heals back
+        // to live streaming instead of polling forever (until a page reload).
+        if (!reprobeTimer) reprobeTimer = setInterval(_attemptSseReprobe, SSE_REPROBE_INTERVAL_MS);
+    }
+
+    // SSE: GET endpoint, token in query string (EventSource cannot set
+    // Authorization). Access-token TTL is short (60 min default), so the
+    // exposure window is bounded.
+    function _sseUrl(): string {
+        return `${_base}/api/v1/sse/boards/${encodeURIComponent(
+            currentMap!,
+        )}?token=${encodeURIComponent(currentToken!)}`;
+    }
+
+    // While polling, periodically test whether SSE is reachable again. On
+    // success we discard the probe and re-establish the real stream via the
+    // normal _connect() path (which wires the message/error handlers).
+    function _attemptSseReprobe() {
+        if (probing || !pollingMode || !currentMap || !currentToken) return;
+        probing = true;
+        const probeMap = currentMap;
+        const probe = new EventSource(_sseUrl());
+        reprobe = probe;
+        let opened = false;
+        probe.onopen = () => {
+            opened = true;
+            probing = false;
+            probe.close();
+            if (reprobe === probe) reprobe = null;
+            // A board switch / disconnect happened while the probe was in
+            // flight — drop the stale result instead of promoting a stream for
+            // the wrong (or no) board.
+            if (!pollingMode || currentMap !== probeMap) return;
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+            if (reprobeTimer) {
+                clearInterval(reprobeTimer);
+                reprobeTimer = null;
+            }
+            pollingMode = false;
+            wsAvailable.value = true;
+            _connect();
+        };
+        probe.onerror = () => {
+            // Still unreachable — discard; the timer retries on the next tick.
+            if (!opened) {
+                probe.close();
+                if (reprobe === probe) reprobe = null;
+                probing = false;
+            }
+        };
     }
 
     function _applyTopologyDelta(delta: TopologyDelta) {
@@ -179,13 +238,7 @@ export const useStatesStore = defineStore('states', () => {
 
     function _connect() {
         if (!currentMap || !currentToken) return;
-        // SSE: GET endpoint, token in query string (EventSource cannot set
-        // Authorization). Access-token TTL is short (60 min default), so the
-        // exposure window is bounded.
-        const url = `${_base}/api/v1/sse/boards/${encodeURIComponent(
-            currentMap,
-        )}?token=${encodeURIComponent(currentToken)}`;
-        sse = new EventSource(url);
+        sse = new EventSource(_sseUrl());
         let opened = false;
 
         sse.onopen = () => {
@@ -259,6 +312,20 @@ export const useStatesStore = defineStore('states', () => {
             clearInterval(pollTimer);
             pollTimer = null;
         }
+        if (reprobeTimer) {
+            clearInterval(reprobeTimer);
+            reprobeTimer = null;
+        }
+        if (reprobe) {
+            reprobe.onopen = null;
+            reprobe.onerror = null;
+            reprobe.close();
+            reprobe = null;
+        }
+        probing = false;
+        // Reset so the next board re-attempts SSE fresh instead of inheriting a
+        // sticky polling fallback from a previously unreachable board.
+        pollingMode = false;
         if (sse) {
             sse.onerror = null;
             sse.close();
