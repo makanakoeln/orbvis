@@ -109,6 +109,7 @@ export interface FlowView {
 export interface FolderTreeView {
     type: 'foldertree';
     root_folder?: string;
+    default_view?: 'list' | 'map';
     default_expand_depth?: number;
     show_services?: boolean;
     show_empty_folders?: boolean;

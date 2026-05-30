@@ -88,7 +88,7 @@ const states = useStatesStore();
 const root = computed<FolderTreeNode | null>(() => states.folderTree);
 const summaryPills = computed(() => severityPills(root.value?.severity_counts));
 
-const mode = ref<'map' | 'list'>('list');
+const mode = ref<'map' | 'list'>(props.view.default_view ?? 'list');
 const expanded = reactive(new Set<string>());
 const problemsOnly = ref(props.view.problems_only ?? false);
 

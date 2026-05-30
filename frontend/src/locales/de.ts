@@ -156,6 +156,10 @@ export default {
         tileSaturatePlaceholder: '100 (Standard)',
         fitAll: 'Alle Objekte einpassen',
         ftRootFolderAll: '(alle Ordner)',
+        ftDefaultView: 'Standard-Ansicht',
+        ftDefaultViewHint: 'In welcher Darstellung das Board standardmäßig öffnet.',
+        ftViewList: 'Liste (Baum)',
+        ftViewMap: 'Map (Treemap)',
         ftRootFolder: 'Wurzelordner',
         ftRootFolderHint:
             'Nur diesen Ordner und darunter zeigen. Leer = ganzer Baum. Akzeptiert Ordnerpfad oder stabile ID.',

@@ -295,6 +295,21 @@
                                     </div>
                                 </div>
                                 <div class="space-y-[4px]">
+                                    <CmkLabel :help="t('board.ftDefaultViewHint')">{{
+                                        t('board.ftDefaultView')
+                                    }}</CmkLabel>
+                                    <CmkDropdown
+                                        :selected-option="form.ft_default_view"
+                                        :options="ftDefaultViewOptions"
+                                        :width="'fill'"
+                                        :label="t('board.ftDefaultView')"
+                                        @update:selected-option="
+                                            form.ft_default_view =
+                                                ($event as 'list' | 'map') ?? 'list'
+                                        "
+                                    />
+                                </div>
+                                <div class="space-y-[4px]">
                                     <CmkLabel :help="t('board.ftSitesHint')">{{
                                         t('board.ftSites')
                                     }}</CmkLabel>
@@ -731,6 +746,7 @@ const form = ref({
     radar_filter: rv?.filter ?? 'hostgroup',
     radar_filter_value: rv?.filter_value ?? '',
     ft_root_folder: ftv?.root_folder ?? '',
+    ft_default_view: (ftv?.default_view ?? 'list') as 'list' | 'map',
     ft_default_expand_depth: ftv?.default_expand_depth ?? 1,
     ft_show_services: ftv?.show_services ?? false,
     ft_show_empty_folders: ftv?.show_empty_folders ?? true,
@@ -852,6 +868,13 @@ const radarFilterOptions = computed(() => ({
 const saveError = ref('');
 
 const folderOptions = ref<{ path: string; title: string }[]>([]);
+const ftDefaultViewOptions = computed(() => ({
+    type: 'fixed' as const,
+    suggestions: [
+        { name: 'list', title: t('board.ftViewList') },
+        { name: 'map', title: t('board.ftViewMap') },
+    ],
+}));
 const ftRootFolderOptions = computed(() => ({
     type: 'fixed' as const,
     suggestions: [
@@ -1188,6 +1211,7 @@ function buildViewFromForm(): Record<string, unknown> {
         return {
             type: 'foldertree',
             root_folder: form.value.ft_root_folder.trim(),
+            default_view: form.value.ft_default_view,
             default_expand_depth: form.value.ft_default_expand_depth,
             show_services: form.value.ft_show_services,
             show_empty_folders: form.value.ft_show_empty_folders,

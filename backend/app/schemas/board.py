@@ -253,6 +253,8 @@ class FolderTreeView(BaseModel):
     # Stable WATO folder ``__id`` (preferred, survives rename/move) or path slug
     # ("" = root / all folders). See concept v3 §7.1.
     root_folder: str = ""
+    # Which presentation the board opens in (operator-chosen, saved per board).
+    default_view: Literal["list", "map"] = "list"
     default_expand_depth: int = Field(default=1, ge=0, le=20)
     show_services: bool = False
     show_empty_folders: bool = True

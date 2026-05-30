@@ -103,14 +103,11 @@ function folderLabel(n: FolderTreeNode): string {
 
 // A non-empty folder reads as a container: chevron (expand affordance) + title
 // in a header band. Hosts and empty folders are plain leaf tiles. The Main root
-// (depth 0) is always open → no chevron.
+// is a normal collapsible folder too (open by default).
 const hasHeader = (d: FNode) => d.data.kind === 'folder' && !d.data.is_empty;
 
 function labelText(d: FNode): string {
-    if (hasHeader(d)) {
-        const chev = d.depth === 0 ? '' : isExpanded(d) ? '▾ ' : '▸ ';
-        return `${chev}${folderLabel(d.data)}`;
-    }
+    if (hasHeader(d)) return `${isExpanded(d) ? '▾ ' : '▸ '}${folderLabel(d.data)}`;
     return d.data.kind === 'folder' ? folderLabel(d.data) : d.data.title;
 }
 
@@ -126,13 +123,12 @@ function layout(): FNode | null {
     if (!dims.w || !dims.h) return null;
     const rootData = currentRoot();
     const isOpen = (d: FolderTreeNode) =>
-        d.kind === 'folder' && d.children.length > 0 && (d === rootData || expanded.has(d.path));
+        d.kind === 'folder' && d.children.length > 0 && expanded.has(d.path);
     const h = hierarchy<FolderTreeNode>(rootData, (d) => (isOpen(d) ? d.children : undefined))
-        // Uniform tiles: every collapsed folder and host counts 1, so a 50-host
-        // folder doesn't dwarf a 2-host one — the map reads as equal status cards
-        // (host counts live in the label/tooltip). Open folders contribute 0 and
-        // grow to the sum of their children when expanded.
-        .sum((d) => (d.kind === 'host' ? 1 : isOpen(d) ? 0 : d.is_empty ? 0.5 : 1))
+        // Tile weights: a folder reads as a slightly larger card than a single
+        // host (container vs. leaf) without host-count dwarfing the map; empty
+        // folders smallest. Open folders contribute 0 and grow to their children.
+        .sum((d) => (d.kind === 'host' ? 1 : isOpen(d) ? 0 : d.is_empty ? 0.5 : 2))
         // Worst severity first → problems cluster top-left; ties → bigger first.
         .sort(
             (a, b) =>
@@ -162,12 +158,16 @@ function toggleFolder(path: string): void {
 }
 
 function expandAll(): void {
-    allFolderPaths(currentRoot()).forEach((p) => expanded.add(p));
+    const r = currentRoot();
+    expanded.add(r.path);
+    allFolderPaths(r).forEach((p) => expanded.add(p));
     draw(true);
 }
 
 function collapseAll(): void {
+    // Keep Main open so the result is the top-level overview, not a single tile.
     expanded.clear();
+    expanded.add(currentRoot().path);
     draw(true);
 }
 
@@ -228,10 +228,9 @@ function draw(animate: boolean): void {
 
     const merged = enter.merge(cells);
     merged
-        .style('cursor', (d) => (d.depth === 0 ? 'default' : 'pointer'))
+        .style('cursor', 'pointer')
         .on('click', (event: MouseEvent, d) => {
             event.stopPropagation();
-            if (d.depth === 0) return; // Main container is not collapsible
             if (d.data.kind === 'host') emit('select-host', d.data);
             else toggleFolder(d.data.path);
         })
@@ -306,6 +305,21 @@ function recolor(): void {
         .attr('fill-opacity', fillOpacityFor);
     g.selectAll<SVGTextElement, FNode>('g.ftm-cell text').text(labelText);
 }
+
+// Open the Main root by default (once per root identity), but leave it
+// collapsible — the operator can fold the whole tree into a single Main tile.
+let seededFor = '';
+watch(
+    root,
+    (r) => {
+        if (!r) return;
+        const sig = r.path + '|' + r.children.length;
+        if (sig === seededFor) return;
+        seededFor = sig;
+        expanded.add(currentRoot().path);
+    },
+    { immediate: true },
+);
 
 watch(
     [root, () => props.problemsOnly],

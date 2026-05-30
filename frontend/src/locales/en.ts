@@ -154,6 +154,10 @@ export default {
         tileSaturatePlaceholder: '100 (default)',
         fitAll: 'Fit all objects',
         ftRootFolderAll: '(all folders)',
+        ftDefaultView: 'Default view',
+        ftDefaultViewHint: 'Which presentation the board opens in by default.',
+        ftViewList: 'List (tree)',
+        ftViewMap: 'Map (treemap)',
         ftRootFolder: 'Root folder',
         ftRootFolderHint:
             'Show only this folder and below. Empty = whole tree. Accepts a folder path or its stable id.',
