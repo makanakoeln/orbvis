@@ -1454,23 +1454,32 @@ const metricSuggestions = computed((): string[] =>
     metricIdSuggestions.value.map((id) => metricIdToTitle.value[id] ?? id),
 );
 
+// Autocomplete loads degrade to an empty list when the API errors; log the
+// reason so an empty dropdown is diagnosable instead of looking like "no data".
+function logLoadError(what: string): (e: unknown) => never[] {
+    return (e) => {
+        console.warn(`[OrbVis] Failed to load ${what}:`, e);
+        return [];
+    };
+}
+
 async function fetchMetrics(host: string, service?: string) {
     if (!props.connectionId || !host) return;
     fetchedMetrics.value = await connectionsApi
         .perfMetrics(props.connectionId, host, auth.accessToken!, service || undefined)
-        .catch(() => []);
+        .catch(logLoadError('metrics'));
 }
 
 async function fetchGraphTemplates(host: string, service?: string) {
     if (!props.connectionId || !host || props.object.type !== 'graph') return;
     graphTemplates.value = await connectionsApi
         .graphTemplates(props.connectionId, host, service ?? null, auth.accessToken!)
-        .catch(() => []);
+        .catch(logLoadError('graph templates'));
 }
 
 async function fetchBoardNames() {
     if (props.object.type !== 'map' || !auth.accessToken) return;
-    const boards = await boardsApi.list(auth.accessToken).catch(() => []);
+    const boards = await boardsApi.list(auth.accessToken).catch(logLoadError('board names'));
     boardNames.value = boards.map((b) => b.name);
     boardLabels.value = boards.map((b) => b.alias || b.name);
 }
@@ -1696,30 +1705,34 @@ async function loadAutocomplete() {
     const type = props.object.type;
     if (type === 'host' || type === 'service' || type === 'line' || type === 'graph') {
         loadingHosts.value = true;
-        hosts.value = await connectionsApi.objects(cid, 'host', auth.accessToken!).catch(() => []);
+        hosts.value = await connectionsApi
+            .objects(cid, 'host', auth.accessToken!)
+            .catch(logLoadError('hosts'));
         loadingHosts.value = false;
         if ((type === 'service' || type === 'line' || type === 'graph') && form.host_name) {
             loadingServices.value = true;
             services.value = await connectionsApi
                 .objects(cid, 'service', auth.accessToken!, form.host_name)
-                .catch(() => []);
+                .catch(logLoadError('services'));
             loadingServices.value = false;
         }
     } else if (type === 'hostgroup') {
         loadingGroups.value = true;
         groups.value = await connectionsApi
             .objects(cid, 'hostgroup', auth.accessToken!)
-            .catch(() => []);
+            .catch(logLoadError('host groups'));
         loadingGroups.value = false;
     } else if (type === 'servicegroup') {
         loadingGroups.value = true;
         groups.value = await connectionsApi
             .objects(cid, 'servicegroup', auth.accessToken!)
-            .catch(() => []);
+            .catch(logLoadError('service groups'));
         loadingGroups.value = false;
     } else if (type === 'aggregation') {
         loadingAggregations.value = true;
-        const aggrs = await connectionsApi.aggregations(cid, auth.accessToken!).catch(() => []);
+        const aggrs = await connectionsApi
+            .aggregations(cid, auth.accessToken!)
+            .catch(logLoadError('aggregations'));
         aggregationIds.value = aggrs.map((a) => a.id);
         aggregationLabels.value = aggrs.map((a) => a.title || a.id);
         loadingAggregations.value = false;
@@ -1853,7 +1866,7 @@ watch(
             loadingServices.value = true;
             services.value = await connectionsApi
                 .objects(props.connectionId, 'service', auth.accessToken!, host)
-                .catch(() => []);
+                .catch(logLoadError('services'));
             loadingServices.value = false;
         }
     },
