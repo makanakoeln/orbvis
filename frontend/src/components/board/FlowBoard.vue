@@ -2135,15 +2135,18 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .attr('class', (d) => (d.isServiceLink ? 'link link-service' : 'link'))
         .attr('stroke', (d) => {
             const src = d.source as FNode;
-            if (src.nodeType === 'site') return 'rgba(160,160,170,0.25)';
+            // Site→host links carry no state, so they use the theme-aware muted
+            // text colour (via currentColor on g.links) to stay legible on both
+            // light and dark board backgrounds rather than a fixed faint grey.
+            if (src.nodeType === 'site') return 'currentColor';
             return stateColor(src.state);
         })
         .attr('stroke-opacity', (d) => {
-            if ((d.source as FNode).nodeType === 'site') return 0.3;
+            if ((d.source as FNode).nodeType === 'site') return 0.55;
             return d.isServiceLink ? 0.3 : 0.45;
         })
         .attr('stroke-width', (d) => {
-            if ((d.source as FNode).nodeType === 'site') return 0.6;
+            if ((d.source as FNode).nodeType === 'site') return 1;
             return d.isServiceLink ? 1 : 1.5;
         })
         .attr('stroke-dasharray', (d) => {
@@ -2437,7 +2440,13 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
             .attr('y1', (d) => _coord((d.source as FNode).y))
             .attr('x2', (d) => _coord((d.target as FNode).x))
             .attr('y2', (d) => _coord((d.target as FNode).y))
-            .attr('stroke', (d) => stateColor((d.source as FNode).state));
+            // Keep site→host links on the theme-aware muted colour (currentColor)
+            // here too — the tick handler otherwise reverts them to stateColor.
+            .attr('stroke', (d) =>
+                (d.source as FNode).nodeType === 'site'
+                    ? 'currentColor'
+                    : stateColor((d.source as FNode).state),
+            );
 
         nodeMerge
             .attr('transform', (d) => {
@@ -2591,6 +2600,12 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     pointer-events: none;
 }
 
+/* Site→host links are stroked with currentColor; bind it to the theme-aware
+   muted text colour so they stay visible in both light and dark themes. */
+:deep(g.links) {
+    color: var(--text-muted);
+}
+
 .flow-hint {
     /* Beside the zoom controls rather than over the topology center, where it
        collided with the root node at some zoom levels. */
@@ -2603,7 +2618,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     gap: 6px;
     padding: 4px 4px 4px 10px;
     border-radius: var(--border-radius);
-    background: rgb(24 24 27 / 85%);
+    background: var(--bg-glass);
     color: var(--text);
     font-size: 11px;
     backdrop-filter: blur(6px);

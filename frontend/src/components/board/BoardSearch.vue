@@ -178,10 +178,10 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
     gap: 6px;
     padding: 4px 8px;
     border-radius: var(--border-radius);
-    background: rgb(24 24 27 / 85%);
+    background: var(--bg-glass);
     border: 1px solid var(--border);
     backdrop-filter: blur(6px);
-    min-width: 240px;
+    min-width: 300px;
 }
 
 .board-search__input {

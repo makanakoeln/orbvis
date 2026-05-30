@@ -30,7 +30,7 @@ defineEmits<{ reset: [] }>();
     z-index: 6;
     padding: 6px 14px;
     border-radius: var(--border-radius);
-    background: rgb(24 24 27 / 85%);
+    background: var(--bg-glass);
     border: 1px solid var(--border);
     color: var(--text);
     font-size: 13px;
