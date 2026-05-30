@@ -229,6 +229,18 @@ def _cmk_metric_title(label: str) -> str:
     )
 
 
+def _default_site_id(sid: str | None = None) -> str:
+    """Resolve a row's site id, falling back to the configured default site.
+
+    ``sid`` is the per-row site tag from a multisite query (``None`` on
+    single-site connections, where :meth:`_query_with_site` yields no tag).
+    An empty/``None`` tag falls back to the configured ``checkmk_site``, then
+    to ``"local"`` for standalone setups. Centralised here so every state /
+    command path resolves the site the same way.
+    """
+    return sid or settings.checkmk_site or "local"
+
+
 def _ls_escape(value: str) -> str:
     """Strip newline/carriage-return characters to prevent Livestatus query injection.
 
@@ -729,7 +741,7 @@ class LivestatusConnection(ConnectionBase):
             _HOST_STATE_MAP,
             "host",
             include_address=True,
-            site_id=sid if sid is not None else (settings.checkmk_site or "local"),
+            site_id=_default_site_id(sid),
         )
 
     async def get_service_state(self, host: str, service: str) -> ObjectState:
@@ -747,7 +759,7 @@ class LivestatusConnection(ConnectionBase):
             row,
             _SERVICE_STATE_MAP,
             "service",
-            site_id=sid if sid is not None else (settings.checkmk_site or "local"),
+            site_id=_default_site_id(sid),
         )
 
     async def get_service_perf_and_cmd(self, host: str, service: str) -> tuple[str, str]:
@@ -828,7 +840,7 @@ class LivestatusConnection(ConnectionBase):
             _HOST_STATE_MAP,
             "host",
             include_address=True,
-            site_id=sid if sid is not None else (settings.checkmk_site or "local"),
+            site_id=_default_site_id(sid),
         )
 
     async def get_service_hard_state(self, host: str, service: str) -> ObjectState:
@@ -846,7 +858,7 @@ class LivestatusConnection(ConnectionBase):
             row,
             _SERVICE_STATE_MAP,
             "service",
-            site_id=sid if sid is not None else (settings.checkmk_site or "local"),
+            site_id=_default_site_id(sid),
         )
 
     async def get_hostgroup_states(self, group: str) -> ObjectState:
@@ -1075,7 +1087,7 @@ class LivestatusConnection(ConnectionBase):
             # Federated multisite tags rows with site_id; single-site connections
             # don't, but consumers (FlowBoard site umbrella, drawer aggregation)
             # still want a stable identifier to group hosts under.
-            row["site_id"] = site_id if site_id is not None else (settings.checkmk_site or "local")
+            row["site_id"] = _default_site_id(site_id)
             result.append(row)
         return result
 
@@ -1638,7 +1650,7 @@ class LivestatusConnection(ConnectionBase):
             rows = loop.run_until_complete(self._query_raw(lql))
         finally:
             loop.close()
-        site_id = settings.checkmk_site or "local"
+        site_id = _default_site_id()
         return LivestatusResponse([[site_id, *row] for row in rows])
 
     async def get_aggregations_states(self, aggregation_ids: list[str]) -> dict[str, ObjectState]:
@@ -1647,7 +1659,7 @@ class LivestatusConnection(ConnectionBase):
 
         # Site-mode: in-process cmk.bi (preferred — per-user permissions, no auth)
         if _cmk_integration.cmk_bi_available():
-            site_id = settings.checkmk_site or "local"
+            site_id = _default_site_id()
             site_data = await asyncio.to_thread(
                 _cmk_integration.cmk_bi_get_aggregations_states,
                 self._bi_query_sync,
@@ -1680,7 +1692,7 @@ class LivestatusConnection(ConnectionBase):
 
         # Site-mode: in-process cmk.bi
         if _cmk_integration.cmk_bi_available():
-            site_id = settings.checkmk_site or "local"
+            site_id = _default_site_id()
             entries = await asyncio.to_thread(
                 _cmk_integration.cmk_bi_list_aggregations,
                 self._bi_query_sync,
@@ -1728,7 +1740,7 @@ class LivestatusConnection(ConnectionBase):
         max_depth = max(0, min(max_depth, 10))
 
         if _cmk_integration.cmk_bi_available():
-            site_id = settings.checkmk_site or "local"
+            site_id = _default_site_id()
             tree = await asyncio.to_thread(
                 _cmk_integration.cmk_bi_get_aggregation_tree,
                 self._bi_query_sync,
@@ -1803,8 +1815,7 @@ class LivestatusConnection(ConnectionBase):
             f"scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
             f"{filters}"
         )
-        fallback = settings.checkmk_site or "local"
-        return dict(_parse_host_state_row(r, site_id=sid or fallback) for sid, r in tagged)
+        return dict(_parse_host_state_row(r, site_id=_default_site_id(sid)) for sid, r in tagged)
 
     async def get_all_hosts_states(self, only_hard: bool = False) -> dict[str, ObjectState]:
         state_col = "last_hard_state" if only_hard else "state"
@@ -1813,8 +1824,7 @@ class LivestatusConnection(ConnectionBase):
             f"Columns: name {state_col} plugin_output perf_data acknowledged "
             f"scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
         )
-        fallback = settings.checkmk_site or "local"
-        return dict(_parse_host_state_row(r, site_id=sid or fallback) for sid, r in tagged)
+        return dict(_parse_host_state_row(r, site_id=_default_site_id(sid)) for sid, r in tagged)
 
     async def get_all_services_states(
         self, only_hard: bool = False
@@ -1825,8 +1835,7 @@ class LivestatusConnection(ConnectionBase):
             f"Columns: host_name description {state_col} plugin_output perf_data "
             f"acknowledged scheduled_downtime_depth {_SVC_EXTRA_COLS}\n"
         )
-        fallback = settings.checkmk_site or "local"
-        return dict(_parse_service_state_row(r, site_id=sid or fallback) for sid, r in tagged)
+        return dict(_parse_service_state_row(r, site_id=_default_site_id(sid)) for sid, r in tagged)
 
     async def get_services_states(
         self, pairs: list[tuple[str, str]], only_hard: bool = False
@@ -1849,8 +1858,7 @@ class LivestatusConnection(ConnectionBase):
             f"acknowledged scheduled_downtime_depth {_SVC_EXTRA_COLS}\n"
             f"{filter_lines}"
         )
-        fallback = settings.checkmk_site or "local"
-        return dict(_parse_service_state_row(r, site_id=sid or fallback) for sid, r in tagged)
+        return dict(_parse_service_state_row(r, site_id=_default_site_id(sid)) for sid, r in tagged)
 
     # Above this host count we drop the per-host filter list and post-filter
     # in Python — mirrors cmk.gui.nodevis.topology._fetch_data: the core
@@ -2065,7 +2073,7 @@ class LivestatusConnection(ConnectionBase):
             # sitename — "local" only matches when the literal site is
             # named "local". In OMD the site name comes from $OMD_SITE
             # (RTEST25C etc.).
-            target = site_id or settings.checkmk_site or "local"
+            target = _default_site_id(site_id)
             self._mc.command(command_body, target)
 
     def _run_multisite_sync(

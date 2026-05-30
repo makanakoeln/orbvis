@@ -4,9 +4,30 @@ import asyncio
 
 import pytest
 
-from app.connections.livestatus import LivestatusConnection, _apply_extra
+from app.connections.livestatus import LivestatusConnection, _apply_extra, _default_site_id
 from app.connections.test import TestConnection
 from app.schemas.state import ObjectState
+
+
+def test_default_site_id_prefers_row_tag(monkeypatch):
+    """A per-row site tag wins over the configured default."""
+    monkeypatch.setattr("app.core.config.settings.checkmk_site", "CENTRAL")
+    assert _default_site_id("REMOTE_A") == "REMOTE_A"
+
+
+def test_default_site_id_falls_back_to_configured_site(monkeypatch):
+    """No row tag (single-site connection) → configured checkmk_site."""
+    monkeypatch.setattr("app.core.config.settings.checkmk_site", "CENTRAL")
+    assert _default_site_id(None) == "CENTRAL"
+    # Empty tag is treated like a missing one (federated fetch can yield "").
+    assert _default_site_id("") == "CENTRAL"
+
+
+def test_default_site_id_standalone_local(monkeypatch):
+    """Standalone (no checkmk_site) → 'local'."""
+    monkeypatch.setattr("app.core.config.settings.checkmk_site", "")
+    assert _default_site_id(None) == "local"
+    assert _default_site_id() == "local"
 
 
 @pytest.mark.asyncio
