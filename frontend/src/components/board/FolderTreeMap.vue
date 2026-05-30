@@ -9,9 +9,10 @@
                     type="button"
                     class="ftm-crumb"
                     :class="{ 'ftm-crumb--current': i === breadcrumb.length - 1 }"
-                    @click="focusPath(crumb.path)"
+                    @click="setFocus(crumb.path)"
                 >
-                    {{ crumb.title }}<span v-if="i < breadcrumb.length - 1" class="ftm-sep">/</span>
+                    {{ crumb.title || 'Main'
+                    }}<span v-if="i < breadcrumb.length - 1" class="ftm-sep">›</span>
                 </button>
             </nav>
             <div ref="hostEl" class="ftm-stage">
@@ -21,16 +22,18 @@
                     <strong>{{ tip.title }}</strong>
                     <span class="ftm-tip-meta">{{ tip.meta }}</span>
                 </div>
+                <div v-if="empty" class="ftm-placeholder ftm-placeholder--overlay">
+                    Nothing to show here.
+                </div>
             </div>
         </template>
     </div>
 </template>
 
 <script setup lang="ts">
-import { hierarchy, type HierarchyCircularNode, interpolateZoom, pack, select } from 'd3';
-import { computed, onMounted, ref, watch } from 'vue';
+import { hierarchy, type HierarchyRectangularNode, select, treemap, treemapSquarify } from 'd3';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
-import { useD3Cleanup } from '@/composables/useD3Cleanup';
 import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode } from '@/types/api';
 import { stateColor } from '@/utils/stateColors';
@@ -43,24 +46,23 @@ const root = computed<FolderTreeNode | null>(() => states.folderTree);
 
 const svgEl = ref<SVGSVGElement | null>(null);
 const hostEl = ref<HTMLDivElement | null>(null);
-useD3Cleanup(svgEl);
 
-type FNode = HierarchyCircularNode<FolderTreeNode>;
+type FNode = HierarchyRectangularNode<FolderTreeNode>;
 
-const WIDTH = 932;
+const HEADER = 19; // folder title bar height
 const PROBLEM = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN']);
 const isProblem = (n: FolderTreeNode) => PROBLEM.has(n.state);
 
 const tip = ref<{ x: number; y: number; title: string; meta: string; color: string } | null>(null);
 const breadcrumb = ref<{ path: string; title: string }[]>([]);
+const empty = ref(false);
 
-// Imperative d3 state kept outside Vue reactivity.
-let packed: FNode | null = null;
-let focusNode: FNode | null = null;
-let view: [number, number, number] = [0, 0, WIDTH];
+// Imperative state, kept outside Vue reactivity.
+let focusPath = '';
 let lastPathSig = '';
+let dims = { w: 0, h: 0 };
+let resizeObs: ResizeObserver | null = null;
 
-// Problems-only prunes the tree to branches that carry a problem.
 function prune(node: FolderTreeNode): FolderTreeNode | null {
     if (node.kind === 'host') return isProblem(node) ? node : null;
     const kids = node.children.map(prune).filter((c): c is FolderTreeNode => c !== null);
@@ -68,9 +70,28 @@ function prune(node: FolderTreeNode): FolderTreeNode | null {
     return { ...node, children: kids };
 }
 
+function currentRoot(): FolderTreeNode {
+    if (!root.value) return { path: '', title: '', kind: 'folder' } as FolderTreeNode;
+    if (!props.problemsOnly) return root.value;
+    return prune(root.value) ?? { ...root.value, children: [] };
+}
+
+function findNode(node: FolderTreeNode, path: string): FolderTreeNode | null {
+    if (node.path === path) return node;
+    const next = node.children?.find((c) => path === c.path || path.startsWith(c.path + '/'));
+    return next ? findNode(next, path) : null;
+}
+
+function chainTo(node: FolderTreeNode, target: string): { path: string; title: string }[] {
+    const acc = [{ path: node.path, title: node.title }];
+    if (node.path === target) return acc;
+    const next = node.children?.find((c) => target === c.path || target.startsWith(c.path + '/'));
+    return next ? acc.concat(chainTo(next, target)) : acc;
+}
+
 function leafValue(d: FolderTreeNode): number {
     if (d.kind === 'host') return 1;
-    if (d.kind === 'folder' && d.is_empty) return 0.6; // floor so empty folders render
+    if (d.kind === 'folder' && d.is_empty) return 1; // keep empty folders visible
     return 0;
 }
 
@@ -86,15 +107,32 @@ function fillOpacityFor(d: FNode): number {
     const n = d.data;
     if (n.kind === 'host') return 1;
     if (n.kind === 'folder' && n.is_empty) return 1;
-    return isProblem(n) ? 0.16 : 0.55;
+    return isProblem(n) ? 0.12 : 0.4;
 }
 
 function strokeFor(d: FNode): string {
     const n = d.data;
-    if (n.kind === 'folder' && n.is_empty) return 'var(--text-muted)';
     if (n.kind === 'folder' && isProblem(n)) return stateColor(n.state);
-    if (n.kind === 'host') return 'var(--border)';
+    if (n.kind === 'folder' && n.is_empty) return 'var(--text-muted)';
     return 'var(--border)';
+}
+
+function layoutFocus(): FNode | null {
+    if (!dims.w || !dims.h) return null;
+    const focusData = findNode(currentRoot(), focusPath) ?? currentRoot();
+    breadcrumb.value = chainTo(currentRoot(), focusData.path);
+    const h = hierarchy<FolderTreeNode>(focusData, (d) =>
+        d.kind === 'folder' ? d.children : undefined,
+    )
+        .sum(leafValue)
+        .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+    return treemap<FolderTreeNode>()
+        .tile(treemapSquarify.ratio(1))
+        .size([dims.w, dims.h])
+        .paddingOuter(3)
+        .paddingTop((d) => (d.children ? HEADER : 0))
+        .paddingInner(3)
+        .round(true)(h);
 }
 
 function pathSig(node: FNode): string {
@@ -104,71 +142,9 @@ function pathSig(node: FNode): string {
         .join('|');
 }
 
-function buildHierarchy(srcRoot: FolderTreeNode): FNode {
-    return pack<FolderTreeNode>().size([WIDTH, WIDTH]).padding(3)(
-        hierarchy<FolderTreeNode>(srcRoot, (d) => (d.kind === 'folder' ? d.children : undefined))
-            .sum(leafValue)
-            .sort((a, b) => (b.value ?? 0) - (a.value ?? 0)),
-    );
-}
-
-function zoomTo(v: [number, number, number]): void {
-    if (!svgEl.value) return;
-    const k = WIDTH / v[2];
-    view = v;
-    const g = select(svgEl.value).select('g');
-    g.selectAll<SVGCircleElement, FNode>('circle')
-        .attr('transform', (d) => `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`)
-        .attr('r', (d) => d.r * k);
-    g.selectAll<SVGTextElement, FNode>('text')
-        .attr('transform', (d) => `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`)
-        // Sit the label on the upper rim so it never overlaps the child dots.
-        .attr('y', (d) => -(d.r * k) + 16);
-}
-
-function updateBreadcrumb(): void {
-    breadcrumb.value = focusNode
-        ? focusNode
-              .ancestors()
-              .reverse()
-              .map((a) => ({ path: a.data.path, title: a.data.title }))
-        : [];
-}
-
-function labelVisible(d: FNode): number {
-    // Show a folder's label when it sits one level below the current focus.
-    return d.parent === focusNode && d.data.kind === 'folder' ? 1 : 0;
-}
-
-function zoomToNode(d: FNode): void {
-    if (!svgEl.value) return;
-    focusNode = d;
-    updateBreadcrumb();
-    const svg = select(svgEl.value);
-    const target: [number, number, number] = [d.x, d.y, d.r * 2];
-    svg.transition()
-        .duration(680)
-        .tween('zoom', () => {
-            const i = interpolateZoom(view, target);
-            return (t: number) => zoomTo(i(t) as [number, number, number]);
-        });
-    svg.select('g')
-        .selectAll<SVGTextElement, FNode>('text')
-        .transition()
-        .duration(680)
-        .style('fill-opacity', labelVisible)
-        .on('start', function (this: SVGTextElement, dd) {
-            if (labelVisible(dd)) this.style.display = 'inline';
-        })
-        .on('end', function (this: SVGTextElement, dd) {
-            if (!labelVisible(dd)) this.style.display = 'none';
-        });
-}
-
-function focusPath(path: string): void {
-    if (!packed) return;
-    const target = packed.descendants().find((d) => d.data.path === path);
-    if (target) zoomToNode(target);
+function setFocus(path: string): void {
+    focusPath = path;
+    draw(true);
 }
 
 function showTip(event: MouseEvent, d: FNode): void {
@@ -190,68 +166,103 @@ function showTip(event: MouseEvent, d: FNode): void {
     };
 }
 
-function render(): void {
-    if (!svgEl.value || !root.value) return;
-    const src = props.problemsOnly
-        ? (prune(root.value) ?? { ...root.value, children: [] })
-        : root.value;
-    packed = buildHierarchy(src);
-
-    // Preserve the operator's current focus across a rebuild when its folder
-    // still exists; otherwise reset to root.
-    const keepPath = focusNode?.data.path;
-    focusNode = (keepPath && packed.descendants().find((d) => d.data.path === keepPath)) || packed;
-    updateBreadcrumb();
+function draw(animate: boolean): void {
+    if (!svgEl.value) return;
+    const laid = layoutFocus();
+    if (!laid) return;
+    lastPathSig = pathSig(laid);
+    const nodes = laid.descendants().slice(1); // skip the focus node (it is the canvas)
+    empty.value = nodes.length === 0;
 
     const svg = select(svgEl.value)
-        .attr('viewBox', `${-WIDTH / 2} ${-WIDTH / 2} ${WIDTH} ${WIDTH}`)
-        .style('cursor', 'pointer')
-        .on('click', () => packed && zoomToNode(packed));
+        .attr('viewBox', `0 0 ${dims.w} ${dims.h}`)
+        .on('click', () => {
+            // Click on empty canvas zooms out one level.
+            const parent = breadcrumb.value[breadcrumb.value.length - 2];
+            if (parent) setFocus(parent.path);
+        });
+    let g = svg.select<SVGGElement>('g.ftm-cells');
+    if (g.empty()) g = svg.append('g').attr('class', 'ftm-cells');
 
-    svg.selectAll('g').remove();
-    const g = svg.append('g');
+    const dur = animate ? 500 : 0;
 
-    const nodes = packed.descendants().slice(1); // skip synthetic root circle
+    const cells = g
+        .selectAll<SVGGElement, FNode>('g.ftm-cell')
+        .data(nodes, (d) => d.data.path + ':' + d.data.kind);
 
-    g.selectAll<SVGCircleElement, FNode>('circle')
-        .data(nodes, (d) => d.data.path)
-        .join('circle')
-        .attr('fill', fillFor)
-        .attr('fill-opacity', fillOpacityFor)
-        .attr('stroke', strokeFor)
-        .attr('stroke-width', (d) => (d.data.kind === 'folder' && d.data.is_empty ? 1.5 : 1))
-        .attr('stroke-dasharray', (d) =>
-            d.data.kind === 'folder' && d.data.is_empty ? '4 3' : null,
-        )
+    cells.exit().transition().duration(dur).style('opacity', 0).remove();
+
+    const enter = cells
+        .enter()
+        .append('g')
+        .attr('class', 'ftm-cell')
+        .style('opacity', 0)
+        .attr('transform', (d) => `translate(${d.x0},${d.y0})`);
+    enter.append('rect');
+    enter.append('text').attr('class', 'ftm-label');
+
+    const merged = enter.merge(cells);
+    merged
         .style('cursor', 'pointer')
         .on('click', (event: MouseEvent, d) => {
             event.stopPropagation();
             if (d.data.kind === 'host') emit('select-host', d.data);
-            else zoomToNode(d);
+            else setFocus(d.data.path);
         })
         .on('mousemove', showTip)
         .on('mouseleave', () => (tip.value = null));
+    merged
+        .transition()
+        .duration(dur)
+        .style('opacity', 1)
+        .attr('transform', (d) => `translate(${d.x0},${d.y0})`);
 
-    g.selectAll<SVGTextElement, FNode>('text')
-        .data(
-            nodes.filter((d) => d.data.kind === 'folder'),
-            (d) => d.data.path,
+    merged
+        .select('rect')
+        .attr('rx', 3)
+        .attr('stroke-width', (d) => (d.data.kind === 'folder' && d.data.is_empty ? 1.4 : 1))
+        .attr('stroke-dasharray', (d) =>
+            d.data.kind === 'folder' && d.data.is_empty ? '4 3' : null,
         )
-        .join('text')
-        .attr('class', 'ftm-label')
-        .style('fill-opacity', labelVisible)
-        .style('display', (d) => (labelVisible(d) ? 'inline' : 'none'))
-        .text((d) => d.data.title);
+        .transition()
+        .duration(dur)
+        .attr('width', (d) => Math.max(0, d.x1 - d.x0))
+        .attr('height', (d) => Math.max(0, d.y1 - d.y0))
+        .attr('fill', fillFor)
+        .attr('fill-opacity', fillOpacityFor)
+        .attr('stroke', strokeFor);
 
-    zoomTo([focusNode.x, focusNode.y, focusNode.r * 2]);
-    lastPathSig = pathSig(packed);
+    merged.select<SVGTextElement>('text').each(function (d) {
+        const w = d.x1 - d.x0;
+        const h = d.y1 - d.y0;
+        const t = select(this);
+        if (d.data.kind === 'folder') {
+            // Title sits in the header bar.
+            t.attr('x', 6)
+                .attr('y', 13)
+                .attr('text-anchor', 'start')
+                .style('display', w > 26 ? 'inline' : 'none')
+                .text(
+                    d.data.is_empty
+                        ? `${d.data.title} · empty`
+                        : `${d.data.title} · ${d.data.host_count}`,
+                );
+        } else {
+            // Host label centered, only when the tile is big enough.
+            t.attr('x', w / 2)
+                .attr('y', h / 2 + 4)
+                .attr('text-anchor', 'middle')
+                .style('display', w > 46 && h > 18 ? 'inline' : 'none')
+                .text(d.data.title);
+        }
+    });
 }
 
-// Recolor only — no relayout — when structure is unchanged.
+// Recolor without relayout when only states changed.
 function recolor(): void {
     if (!svgEl.value) return;
-    const g = select(svgEl.value).select('g');
-    g.selectAll<SVGCircleElement, FNode>('circle')
+    select(svgEl.value)
+        .selectAll<SVGRectElement, FNode>('g.ftm-cell rect')
         .transition()
         .duration(400)
         .attr('fill', fillFor)
@@ -262,19 +273,28 @@ function recolor(): void {
 watch(
     [root, () => props.problemsOnly],
     () => {
-        if (!root.value || !svgEl.value) return;
-        const next = props.problemsOnly
-            ? (prune(root.value) ?? { ...root.value, children: [] })
-            : root.value;
-        const candidate = buildHierarchy(next);
-        if (packed && pathSig(candidate) === lastPathSig) recolor();
-        else render();
+        if (!root.value || !svgEl.value || !dims.w) return;
+        const laid = layoutFocus();
+        if (laid && pathSig(laid) === lastPathSig) recolor();
+        else draw(true);
     },
     { flush: 'post' },
 );
 
 onMounted(() => {
-    if (root.value) render();
+    if (!hostEl.value) return;
+    resizeObs = new ResizeObserver((entries) => {
+        const r = entries[0].contentRect;
+        const changed = Math.abs(r.width - dims.w) > 1 || Math.abs(r.height - dims.h) > 1;
+        dims = { w: r.width, h: r.height };
+        if (changed && root.value) draw(false);
+    });
+    resizeObs.observe(hostEl.value);
+});
+
+onUnmounted(() => {
+    resizeObs?.disconnect();
+    if (svgEl.value) select(svgEl.value).selectAll('*').interrupt();
 });
 </script>
 
@@ -333,14 +353,13 @@ onMounted(() => {
 }
 
 .ftm-svg :deep(.ftm-label) {
-    text-anchor: middle;
     pointer-events: none;
     fill: var(--text);
-    font-size: 15px;
+    font-size: 12px;
     font-weight: 600;
     paint-order: stroke;
     stroke: var(--bg-glass);
-    stroke-width: 3px;
+    stroke-width: 2.5px;
     stroke-linejoin: round;
 }
 
@@ -351,6 +370,13 @@ onMounted(() => {
     justify-content: center;
     color: var(--text-muted);
     font-size: 13px;
+    padding: 24px;
+    text-align: center;
+}
+
+.ftm-placeholder--overlay {
+    position: absolute;
+    inset: 0;
 }
 
 .ftm-tip {

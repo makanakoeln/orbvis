@@ -77,7 +77,7 @@ defineEmits<{ 'select-host': [FolderTreeNode] }>();
 const states = useStatesStore();
 const root = computed<FolderTreeNode | null>(() => states.folderTree);
 
-const mode = ref<'map' | 'list'>('map');
+const mode = ref<'map' | 'list'>('list');
 const expanded = reactive(new Set<string>());
 const problemsOnly = ref(props.view.problems_only ?? false);
 
