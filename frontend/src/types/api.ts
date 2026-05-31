@@ -138,6 +138,9 @@ export interface FolderTreeNode {
     // fetch (never emitted by the backend tree).
     last_state_change?: number | null;
     is_flapping?: boolean;
+    // Synthetic node (map only): groups a folder's healthy hosts into one
+    // "✓ N OK" container so problems dominate the treemap. Never from the backend.
+    ok_group?: boolean;
 }
 
 // One service of a foldertree host, fetched lazily when the host is expanded.

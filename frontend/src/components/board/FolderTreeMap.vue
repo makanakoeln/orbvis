@@ -172,11 +172,41 @@ function strokeWidthFor(d: FNode): number {
 }
 
 function folderLabel(n: FolderTreeNode): string {
+    if (n.ok_group) return n.title; // already "✓ N OK"
     const title = n.title || 'Main';
     if (n.is_empty) return `${title} · empty`;
     const pills = severityPills(n.severity_counts);
     if (pills.length) return `${title} · ${pills[0].count} ${pills[0].state}`;
     return `${title} · ${n.host_count}`;
+}
+
+// Bundle a folder's healthy leaf hosts into one collapsible "✓ N OK" container
+// so problems dominate the treemap (Datadog/Tactical-Overview style). Skipped
+// under problems-only (healthy already hidden) and for <2 healthy hosts.
+const OK_GROUP_SUFFIX = '::ok-group';
+function aggregatedChildren(folder: FolderTreeNode): FolderTreeNode[] {
+    if (folder.ok_group || props.problemsOnly) return folder.children;
+    const isHealthyHost = (c: FolderTreeNode) => c.kind === 'host' && !isProblem(c);
+    const healthy = folder.children.filter(isHealthyHost);
+    if (healthy.length < 2) return folder.children;
+    const group: FolderTreeNode = {
+        path: folder.path + OK_GROUP_SUFFIX,
+        title: `✓ ${healthy.length} OK`,
+        kind: 'folder',
+        state: 'OK',
+        is_empty: false,
+        folder_id: '',
+        host_count: healthy.length,
+        problem_count: 0,
+        severity_counts: {},
+        output: '',
+        acknowledged: false,
+        in_downtime: false,
+        site_id: null,
+        children: healthy,
+        ok_group: true,
+    };
+    return [...folder.children.filter((c) => !isHealthyHost(c)), group];
 }
 
 // A container cell shows a header band with a chevron + label. Folders are
@@ -240,16 +270,17 @@ function layout(): FNode | null {
             return props.showServices && expanded.has(d.path) && hostServices(d).length > 0;
         return false;
     };
-    const childrenOf = (d: FolderTreeNode) => (d.kind === 'host' ? hostServices(d) : d.children);
+    const childrenOf = (d: FolderTreeNode) =>
+        d.kind === 'host' ? hostServices(d) : aggregatedChildren(d);
     const h = hierarchy<FolderTreeNode>(rootData, (d) => (isOpen(d) ? childrenOf(d) : undefined))
         // Tile weights: a folder reads as a slightly larger card than a single
         // host (container vs. leaf) without host-count dwarfing the map; empty
-        // folders smallest; services size like hosts. Open nodes contribute 0 and
-        // grow to their children.
+        // folders smallest; services size like hosts; the "✓ N OK" group stays
+        // host-sized so it doesn't dominate. Open nodes contribute 0 and grow.
         .sum((d) =>
             d.kind === 'service'
                 ? 1
-                : d.kind === 'host'
+                : d.kind === 'host' || d.ok_group
                   ? isOpen(d)
                       ? 0
                       : 1
@@ -261,9 +292,11 @@ function layout(): FNode | null {
         )
         // Mirror the list order: a folder's own hosts before its subfolders,
         // then worst severity first (problems cluster top-left), then bigger.
+        // The OK group counts as a host (healthy → sinks below problem hosts).
         .sort(
             (a, b) =>
-                (a.data.kind === 'folder' ? 1 : 0) - (b.data.kind === 'folder' ? 1 : 0) ||
+                (a.data.kind === 'folder' && !a.data.ok_group ? 1 : 0) -
+                    (b.data.kind === 'folder' && !b.data.ok_group ? 1 : 0) ||
                 stateRank(b.data.state) - stateRank(a.data.state) ||
                 (b.value ?? 0) - (a.value ?? 0),
         );
