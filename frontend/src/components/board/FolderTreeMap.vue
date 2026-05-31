@@ -134,23 +134,25 @@ const isContainerCell = (d: FNode): boolean =>
 function fillFor(d: FNode): string {
     const n = d.data;
     if (n.kind === 'folder' && n.is_empty) return 'transparent';
-    if (isContainerCell(d)) return isProblem(n) ? stateColorVar(n.state) : 'var(--bg-surface)';
-    return stateColorVar(n.state); // host chip or service chip → solid status tile
+    // Both containers and leaf chips are tinted by their (worst) state — the
+    // folder's overall status colour must match the List's dot (green when OK,
+    // red when critical). Containers stay faint via opacity; chips are solid.
+    return stateColorVar(n.state);
 }
 
 function fillOpacityFor(d: FNode): number {
     const n = d.data;
     if (n.kind === 'folder' && n.is_empty) return 1;
-    if (isContainerCell(d)) return isProblem(n) ? 0.16 : 0.05; // faint framed backdrop
+    if (isContainerCell(d)) return isProblem(n) ? 0.16 : 0.09; // faint framed status backdrop
     return isProblem(n) ? 1 : 0.4; // healthy chips recede, problems dominate
 }
 
 function strokeFor(d: FNode): string {
     const n = d.data;
     if (n.kind === 'folder' && n.is_empty) return 'var(--text-muted)';
-    // Containers carry a status-colored frame so a problem still pops despite the
-    // faint body; healthy containers get a neutral border.
-    if (isContainerCell(d)) return isProblem(n) ? stateColorVar(n.state) : 'var(--border)';
+    // Container frame always reflects the (worst) state so the folder status
+    // colour reads correctly; problems additionally thicken the frame.
+    if (isContainerCell(d)) return stateColorVar(n.state);
     return 'var(--border)';
 }
 
