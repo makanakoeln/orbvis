@@ -167,6 +167,8 @@ export default {
         ftCollapseAll: 'Alle einklappen',
         ftMap: 'Map',
         ftList: 'Liste',
+        ftExpand: 'Aufklappen',
+        ftCollapse: 'Einklappen',
         ftWaiting: 'Warte auf Ordnerdaten…',
         ftNoFolders:
             'Keine Ordner anzuzeigen. Die gewählte Verbindung hat keine SETUP-Ordner, oder die Filter blenden sie aus.',

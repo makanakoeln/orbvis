@@ -17,18 +17,37 @@
             v-if="isExpandable"
             type="button"
             class="ft-chevron"
-            :aria-label="isOpen ? 'Collapse' : 'Expand'"
+            :aria-label="isOpen ? t('board.ftCollapse') : t('board.ftExpand')"
             @click.stop="onChevron"
         >
             {{ isOpen ? '▾' : '▸' }}
         </button>
         <span v-else class="ft-chevron ft-chevron--spacer" />
 
-        <span class="ft-icon" :class="{ 'ft-icon--empty': isEmpty }">
-            {{ node.kind === 'folder' ? (isOpen ? '📂' : '📁') : '' }}
-        </span>
+        <!-- Theme-aware folder glyph (Tabler-style) instead of an OS-dependent emoji. -->
+        <svg
+            v-if="node.kind === 'folder'"
+            class="ft-icon"
+            :class="{ 'ft-icon--empty': isEmpty }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+        >
+            <path
+                v-if="isOpen"
+                d="M5 19l2.757-7.351A1 1 0 0 1 8.694 11H21l-2.757 7.351A1 1 0 0 1 17.306 19zM3 19V6a1 1 0 0 1 1-1h5l3 3h6a1 1 0 0 1 1 1v2"
+            />
+            <path
+                v-else
+                d="M3 6a1 1 0 0 1 1-1h5l3 3h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"
+            />
+        </svg>
         <span
-            v-if="!isEmpty"
+            v-if="!isEmpty && !(node.kind === 'folder' && pills.length)"
             class="ft-dot"
             :style="{ background: stateColorVar(node.state) }"
             :title="node.state"
@@ -132,6 +151,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import type { FolderTreeNode } from '@/types/api';
 import {
@@ -167,6 +187,8 @@ const emit = defineEmits<{
     'select-host': [FolderTreeNode];
     'select-service': [string, FolderTreeNode];
 }>();
+
+const { t } = useI18n();
 
 const isEmpty = computed(() => props.node.kind === 'folder' && props.node.is_empty);
 const isOpen = computed(() => props.expanded.has(props.node.path));
@@ -268,8 +290,10 @@ function onRowClick() {
 }
 
 .ft-icon {
-    font-size: 13px;
+    width: 15px;
+    height: 15px;
     flex-shrink: 0;
+    color: var(--text-muted);
 }
 
 .ft-icon--empty {

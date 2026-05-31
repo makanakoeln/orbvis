@@ -165,6 +165,8 @@ export default {
         ftCollapseAll: 'Collapse all',
         ftMap: 'Map',
         ftList: 'List',
+        ftExpand: 'Expand',
+        ftCollapse: 'Collapse',
         ftWaiting: 'Waiting for folder data…',
         ftNoFolders:
             'No folders to show. The selected connection has no SETUP folders, or your filters hide them.',
