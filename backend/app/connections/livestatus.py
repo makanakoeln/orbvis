@@ -1958,7 +1958,8 @@ class LivestatusConnection(ConnectionBase):
             f"GET hosts\n"
             f"Columns: name filename {state_col} plugin_output acknowledged "
             f"scheduled_downtime_depth num_services_ok num_services_warn "
-            f"num_services_crit num_services_unknown num_services_pending\n"
+            f"num_services_crit num_services_unknown num_services_pending "
+            f"is_flapping last_state_change\n"
         )
         site_filter = set(sites) if sites else None
         hosts: list[FolderTreeHostRow] = []
@@ -1976,6 +1977,8 @@ class LivestatusConnection(ConnectionBase):
                     "acknowledged": _row_int(row, 4) > 0,
                     "in_downtime": _row_int(row, 5) > 0,
                     "services_summary": _services_summary_from_row(row, 6),
+                    "is_flapping": _row_int(row, 11) > 0,
+                    "last_state_change": _row_float_or_none(row, 12),
                 }
             )
         return FolderTreeData(folders=await _load_wato_folders(), hosts=hosts)

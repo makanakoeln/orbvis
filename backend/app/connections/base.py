@@ -142,6 +142,8 @@ class FolderTreeHostRow(TypedDict):
     site_id: NotRequired[str | None]
     acknowledged: NotRequired[bool]
     in_downtime: NotRequired[bool]
+    is_flapping: NotRequired[bool]
+    last_state_change: NotRequired[float | None]
     services_summary: NotRequired[ServicesSummary | None]
 
 

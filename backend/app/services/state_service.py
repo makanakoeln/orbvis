@@ -856,6 +856,8 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
             output=h.get("output", ""),
             acknowledged=h.get("acknowledged", False),
             in_downtime=h.get("in_downtime", False),
+            is_flapping=h.get("is_flapping", False),
+            last_state_change=h.get("last_state_change"),
             site_id=h.get("site_id"),
         )
         folder.children.append(host_node)

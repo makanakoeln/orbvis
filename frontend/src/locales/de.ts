@@ -169,6 +169,7 @@ export default {
         ftList: 'Liste',
         ftExpand: 'Aufklappen',
         ftCollapse: 'Einklappen',
+        ftConnectionLost: 'Verbindung verloren — zeige letzten bekannten Stand',
         ftWaiting: 'Warte auf Ordnerdaten…',
         ftNoFolders:
             'Keine Ordner anzuzeigen. Die gewählte Verbindung hat keine SETUP-Ordner, oder die Filter blenden sie aus.',

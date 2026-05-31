@@ -167,6 +167,7 @@ export default {
         ftList: 'List',
         ftExpand: 'Expand',
         ftCollapse: 'Collapse',
+        ftConnectionLost: 'Connection lost — showing last known state',
         ftWaiting: 'Waiting for folder data…',
         ftNoFolders:
             'No folders to show. The selected connection has no SETUP folders, or your filters hide them.',

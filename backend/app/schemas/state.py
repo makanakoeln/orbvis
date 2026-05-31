@@ -135,6 +135,8 @@ class FolderTreeNode(BaseModel):
     output: str = ""  # leaf plugin output
     acknowledged: bool = False
     in_downtime: bool = False
+    is_flapping: bool = False
+    last_state_change: float | None = None  # leaf age for triage ("since…")
     # Distributed monitoring: leaf hosts carry their originating site (v3 §5).
     site_id: str | None = None
     children: list[FolderTreeNode] = Field(default_factory=list)

@@ -226,8 +226,10 @@ const isExpandable = computed(
         props.node.children.length > 0,
 );
 const pills = computed(() => severityPills(props.node.severity_counts));
+// "Since last state change" for triage — on hosts and services alike (a DOWN
+// host without "since 3h" is harder to triage than a service).
 const age = computed(() =>
-    props.node.kind === 'service' ? formatRelativeDuration(props.node.last_state_change) : '',
+    props.node.kind === 'folder' ? '' : formatRelativeDuration(props.node.last_state_change),
 );
 const noteIndent = computed(() => ({ paddingLeft: `${(props.depth + 1) * 18 + 16}px` }));
 

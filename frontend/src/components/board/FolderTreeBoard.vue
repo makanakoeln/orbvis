@@ -1,5 +1,10 @@
 <template>
     <div class="ft-board">
+        <!-- Stale-data warning: the tree froze on its last known state because the
+             connection/SSE dropped (common with distributed sites). -->
+        <div v-if="!preview && root && !states.connected" class="ft-stale-banner" role="status">
+            {{ t('board.ftConnectionLost') }}
+        </div>
         <template v-if="!preview">
             <BoardSearch
                 v-model="filterText"
@@ -329,6 +334,23 @@ function collapseAll() {
 
 /* Floating glass control cluster over the canvas, matching the Flow board's
    controls instead of a full-width toolbar that pushes the view down. */
+.ft-stale-banner {
+    position: absolute;
+    top: calc(36px + var(--dimension-5));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 7;
+    padding: 5px 12px;
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-yellow-50, #fbbf24);
+    background: var(--bg-glass);
+    border: 1px solid var(--color-yellow-50, #fbbf24);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 2px 10px rgb(0 0 0 / 25%);
+}
+
 .ft-summary {
     display: inline-flex;
     align-items: center;
