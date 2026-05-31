@@ -4,7 +4,12 @@
         <template v-else>
             <div ref="hostEl" class="ftm-stage">
                 <svg ref="svgEl" class="ftm-svg" />
-                <div v-if="tip" class="ftm-tip" :style="{ left: tip.x + 'px', top: tip.y + 'px' }">
+                <div
+                    v-if="tip"
+                    ref="tipEl"
+                    class="ftm-tip"
+                    :style="{ left: tip.x + 'px', top: tip.y + 'px' }"
+                >
                     <span class="ftm-tip-dot" :style="{ background: tip.color }" />
                     <strong>{{ tip.title }}</strong>
                     <span class="ftm-tip-meta">{{ tip.meta }}</span>
@@ -60,6 +65,7 @@ const root = computed<FolderTreeNode | null>(() => states.folderTree);
 
 const svgEl = ref<SVGSVGElement | null>(null);
 const hostEl = ref<HTMLDivElement | null>(null);
+const tipEl = ref<HTMLDivElement | null>(null);
 
 type FNode = HierarchyRectangularNode<FolderTreeNode>;
 
@@ -385,13 +391,47 @@ function showTip(event: MouseEvent, d: FNode): void {
     };
 }
 
+// Keep the hover tooltip inside the stage: once rendered we know its real size
+// (it is white-space:nowrap, so it can be wide), so flip it to the other side of
+// the cursor when it would overflow the right/bottom edge. flush:'post' runs
+// after the DOM patch, so tipEl reflects the current content.
+watch(
+    tip,
+    () => {
+        const el = tipEl.value;
+        if (!tip.value || !el || !dims.w || !dims.h) return;
+        const w = el.offsetWidth;
+        const h = el.offsetHeight;
+        let x = tip.value.x;
+        let y = tip.value.y;
+        if (x + w + 4 > dims.w) x = Math.max(4, x - w - 24); // flip left of cursor
+        if (y + h + 4 > dims.h) y = Math.max(4, y - h - 24); // flip above cursor
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+    },
+    { flush: 'post' },
+);
+
 function activateCell(d: FNode): void {
     const n = d.data;
     if (canExpand(n)) {
-        // Drilling a host triggers its lazy service fetch; the relayout follows
-        // once servicesByHost updates (watched below).
-        if (n.kind === 'host') emit('expand-host', n);
-        toggleFolder(n.path);
+        if (n.kind === 'host') {
+            if (expanded.has(n.path)) {
+                expanded.delete(n.path);
+                draw(true);
+            } else {
+                expanded.add(n.path);
+                emit('expand-host', n);
+                // First expand: services arrive async — let the servicesByHost
+                // watch drive the single relayout, exactly like a reopen. Drawing
+                // a transient "no services" frame here adds a second draw whose
+                // service-tile entrance transition gets clobbered, leaving tiles
+                // frozen at width 0 until the host is reopened. Cached → draw now.
+                if (hostServices(n).length > 0) draw(true);
+            }
+        } else {
+            toggleFolder(n.path);
+        }
     } else if (n.kind === 'host') {
         emit('select-host', n);
     } else if (n.kind === 'service') {
@@ -436,7 +476,10 @@ function draw(animate: boolean): void {
         .selectAll<SVGGElement, FNode>('g.ftm-cell')
         .data(nodes, (d) => d.data.path + ':' + d.data.kind);
 
-    cells.exit().transition().duration(dur).style('opacity', 0).remove();
+    // Named transition so a concurrent recolor() (e.g. a live SSE tick landing
+    // mid-animation) can't interrupt this geometry/layout transition — an
+    // unnamed clash froze freshly-expanded service tiles at width 0 on first open.
+    cells.exit().transition('layout').duration(dur).style('opacity', 0).remove();
 
     const enter = cells
         .enter()
@@ -472,7 +515,7 @@ function draw(animate: boolean): void {
         .on('mousemove', showTip)
         .on('mouseleave', () => (tip.value = null));
     merged
-        .transition()
+        .transition('layout')
         .duration(dur)
         .style('opacity', 1)
         .attr('transform', (d) => `translate(${d.x0},${d.y0})`);
@@ -488,7 +531,7 @@ function draw(animate: boolean): void {
         // (SVG presentation attributes can't); geometry/opacity still animate.
         .style('fill', fillFor)
         .style('stroke', strokeFor)
-        .transition()
+        .transition('layout')
         .duration(dur)
         .attr('width', (d) => Math.max(0, d.x1 - d.x0))
         .attr('height', (d) => Math.max(0, d.y1 - d.y0))
@@ -501,7 +544,7 @@ function draw(animate: boolean): void {
         .attr('rx', 3)
         .style('fill', (d) => stateColorVar(d.data.state))
         .style('display', (d) => (hasHeader(d) ? null : 'none'))
-        .transition()
+        .transition('layout')
         .duration(dur)
         .attr('width', (d) => Math.max(0, d.x1 - d.x0))
         .attr('height', (d) => Math.min(HEADER, Math.max(0, d.y1 - d.y0)))
@@ -553,15 +596,18 @@ function paintLabels(sel: Selection<SVGGElement, FNode, BaseType, unknown>): voi
 function recolor(): void {
     if (!svgEl.value) return;
     const g = select(svgEl.value).select('g.ftm-cells');
+    // Distinct transition name from draw()'s 'layout' so a recolor (state change
+    // or live tick) only animates fill — never cancels an in-flight geometry
+    // transition (which would freeze tiles mid-resize).
     g.selectAll<SVGRectElement, FNode>('rect.ftm-body')
         .style('fill', fillFor)
         .style('stroke', strokeFor)
-        .transition()
+        .transition('recolor')
         .duration(400)
         .attr('fill-opacity', fillOpacityFor);
     g.selectAll<SVGRectElement, FNode>('rect.ftm-hdr')
         .style('fill', (d) => stateColorVar(d.data.state))
-        .transition()
+        .transition('recolor')
         .duration(400)
         .attr('fill-opacity', headerOpacityFor);
     paintLabels(g.selectAll<SVGGElement, FNode>('g.ftm-cell'));
