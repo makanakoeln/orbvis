@@ -2,10 +2,6 @@
     <div class="ftm">
         <div v-if="!root" class="ftm-placeholder">Waiting for folder data…</div>
         <template v-else>
-            <div v-if="!preview" class="ftm-bar">
-                <button type="button" class="ftm-btn" @click="expandAll">Expand all</button>
-                <button type="button" class="ftm-btn" @click="collapseAll">Collapse all</button>
-            </div>
             <div ref="hostEl" class="ftm-stage">
                 <svg ref="svgEl" class="ftm-svg" />
                 <div v-if="tip" class="ftm-tip" :style="{ left: tip.x + 'px', top: tip.y + 'px' }">
@@ -35,11 +31,17 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode } from '@/types/api';
+import {
+    isFilterActive,
+    type ParsedQuery,
+    selfMatches,
+    subtreeVisible,
+} from '@/utils/folderTreeFilter';
 import { severityPills, stateColorVar, stateRank } from '@/utils/stateColors';
 
 const props = defineProps<{
+    query: ParsedQuery;
     problemsOnly: boolean;
-    preview?: boolean;
     showServices: boolean;
     servicesByHost: Record<string, FolderTreeNode[]>;
     serviceLoading: Set<string>;
@@ -74,28 +76,48 @@ let lastSig = '';
 let dims = { w: 0, h: 0 };
 let resizeObs: ResizeObserver | null = null;
 
-function prune(node: FolderTreeNode): FolderTreeNode | null {
-    if (node.kind === 'host') return isProblem(node) ? node : null;
-    const kids = node.children.map(prune).filter((c): c is FolderTreeNode => c !== null);
-    if (!kids.length && !isProblem(node)) return null;
-    return { ...node, children: kids };
+// Prune the store tree to the active "Problems only" + search filter, building a
+// trimmed copy. Mirrors the List (shared folderTreeFilter helpers). A host also
+// survives when one of its already-loaded services matches, so a service search
+// still surfaces the host to drill into (lazy services aren't in the store tree).
+function pruneTree(node: FolderTreeNode, ancestorMatched: boolean): FolderTreeNode | null {
+    const selfMatch = ancestorMatched || selfMatches(node, props.query);
+    if (node.kind !== 'folder') {
+        if (subtreeVisible(node, props.query, props.problemsOnly, ancestorMatched)) return node;
+        if (node.kind === 'host') {
+            const svcMatch = (props.servicesByHost[node.title] ?? []).some((s) =>
+                subtreeVisible(s, props.query, props.problemsOnly, selfMatch),
+            );
+            if (svcMatch) return node;
+        }
+        return null;
+    }
+    const kids = node.children
+        .map((c) => pruneTree(c, selfMatch))
+        .filter((c): c is FolderTreeNode => c !== null);
+    if (kids.length) return { ...node, children: kids };
+    return subtreeVisible(node, props.query, props.problemsOnly, ancestorMatched)
+        ? { ...node, children: [] }
+        : null;
 }
 
 function currentRoot(): FolderTreeNode {
     if (!root.value) return { path: '', title: '', kind: 'folder' } as FolderTreeNode;
-    if (!props.problemsOnly) return root.value;
-    return prune(root.value) ?? { ...root.value, children: [] };
+    if (!isFilterActive(props.query, props.problemsOnly)) return root.value;
+    return pruneTree(root.value, false) ?? { ...root.value, children: [] };
 }
 
 // A node the operator can drill into: a non-empty folder, or — when
 // show_services is on — a host (drills to its lazily-loaded services).
 const canExpand = (n: FolderTreeNode): boolean =>
     n.kind === 'folder' ? !n.is_empty : n.kind === 'host' && props.showServices;
-// Mirror the List's problems-only filtering of service leaves so both views of
-// the same board show the same set (prune() only covers folders/hosts).
+// Mirror the List's filtering of service leaves so both views show the same set
+// (pruneTree only covers folders/hosts in the store tree).
 const hostServices = (n: FolderTreeNode): FolderTreeNode[] => {
     const svcs = props.servicesByHost[n.title] ?? [];
-    return props.problemsOnly ? svcs.filter((s) => isProblem(s)) : svcs;
+    if (!isFilterActive(props.query, props.problemsOnly)) return svcs;
+    const hostMatched = selfMatches(n, props.query);
+    return svcs.filter((s) => subtreeVisible(s, props.query, props.problemsOnly, hostMatched));
 };
 
 // Laid-out node that actually has children rendered inside it (folder or host
@@ -464,6 +486,7 @@ watch(
     [
         root,
         () => props.problemsOnly,
+        () => `${props.query.field}|${props.query.text}`,
         () =>
             Object.entries(props.servicesByHost)
                 .map(
@@ -498,6 +521,9 @@ onUnmounted(() => {
     resizeObs?.disconnect();
     if (svgEl.value) select(svgEl.value).selectAll('*').interrupt();
 });
+
+// Expand/Collapse all are driven from the board's floating control cluster.
+defineExpose({ expandAll, collapseAll });
 </script>
 
 <style scoped>
@@ -506,30 +532,6 @@ onUnmounted(() => {
     flex-direction: column;
     height: 100%;
     overflow: hidden;
-}
-
-.ftm-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    font-size: 12px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-}
-
-.ftm-btn {
-    font-size: 12px;
-    padding: 3px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--bg-surface);
-    color: var(--text);
-    cursor: pointer;
-}
-
-.ftm-btn:hover {
-    background: var(--bg-hover);
 }
 
 .ftm-stage {

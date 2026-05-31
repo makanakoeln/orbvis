@@ -1,61 +1,92 @@
 <template>
     <div class="ft-board">
-        <div v-if="!preview" class="ft-toolbar">
-            <div class="ft-segment" role="tablist">
-                <button
-                    type="button"
-                    class="ft-seg"
-                    :class="{ 'ft-seg--active': mode === 'map' }"
-                    role="tab"
-                    :aria-selected="mode === 'map'"
-                    @click="mode = 'map'"
-                >
-                    Map
-                </button>
-                <button
-                    type="button"
-                    class="ft-seg"
-                    :class="{ 'ft-seg--active': mode === 'list' }"
-                    role="tab"
-                    :aria-selected="mode === 'list'"
-                    @click="mode = 'list'"
-                >
-                    List
-                </button>
-            </div>
-            <template v-if="mode === 'list'">
-                <button type="button" class="ft-tool" @click="expandAll">Expand all</button>
-                <button type="button" class="ft-tool" @click="collapseAll">Collapse all</button>
-            </template>
-            <label class="ft-toggle-label">
-                <input v-model="problemsOnly" type="checkbox" />
-                Problems only
-            </label>
-            <span class="ft-spacer" />
-            <span v-if="root" class="ft-summary">
-                {{ root.host_count }} hosts
-                <template v-if="summaryPills.length">
-                    <span
-                        v-for="p in summaryPills"
-                        :key="p.state"
-                        class="ft-summary-pill"
-                        :style="{ background: p.bg, color: p.fg }"
-                        >{{ p.count }} {{ p.state }}</span
+        <template v-if="!preview">
+            <BoardSearch
+                v-model="filterText"
+                :placeholder="t('board.ftSearchPlaceholder')"
+                :exclude-prefixes="['hg', 'sg', 'id']"
+            >
+                <template #trailing>
+                    <button
+                        type="button"
+                        class="ft-po-toggle"
+                        :class="{ 'ft-po-toggle--active': problemsOnly }"
+                        :title="t('board.ftProblemsOnly')"
+                        :aria-pressed="problemsOnly"
+                        @click="problemsOnly = !problemsOnly"
                     >
+                        <svg
+                            style="width: 14px; height: 14px"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M12 9v4m0 4h.01M10.29 3.86l-8.48 14.7A1.5 1.5 0 003.1 21h17.8a1.5 1.5 0 001.29-2.44l-8.48-14.7a1.5 1.5 0 00-2.42 0z"
+                            />
+                        </svg>
+                    </button>
                 </template>
-                <span v-else class="ft-summary-ok">· all OK</span>
-            </span>
-        </div>
+            </BoardSearch>
 
-        <div v-if="!root" class="ft-placeholder">Waiting for folder data…</div>
+            <div class="ft-controls">
+                <span v-if="root" class="ft-summary">
+                    <span>{{ root.host_count }} {{ t('board.ftHosts') }}</span>
+                    <template v-if="summaryPills.length">
+                        <span
+                            v-for="p in summaryPills"
+                            :key="p.state"
+                            class="ft-summary-pill"
+                            :style="{ background: p.bg, color: p.fg }"
+                            >{{ p.count }} {{ p.state }}</span
+                        >
+                    </template>
+                    <span v-else class="ft-summary-ok">· {{ t('board.ftAllOk') }}</span>
+                    <span class="ft-summary-sep" />
+                </span>
+                <button type="button" class="ft-tool" @click="activeExpandAll">
+                    {{ t('board.ftExpandAll') }}
+                </button>
+                <button type="button" class="ft-tool" @click="activeCollapseAll">
+                    {{ t('board.ftCollapseAll') }}
+                </button>
+                <div class="ft-segment" role="tablist">
+                    <button
+                        type="button"
+                        class="ft-seg"
+                        :class="{ 'ft-seg--active': mode === 'map' }"
+                        role="tab"
+                        :aria-selected="mode === 'map'"
+                        @click="setMode('map')"
+                    >
+                        {{ t('board.ftMap') }}
+                    </button>
+                    <button
+                        type="button"
+                        class="ft-seg"
+                        :class="{ 'ft-seg--active': mode === 'list' }"
+                        role="tab"
+                        :aria-selected="mode === 'list'"
+                        @click="setMode('list')"
+                    >
+                        {{ t('board.ftList') }}
+                    </button>
+                </div>
+            </div>
+        </template>
+
+        <div v-if="!root" class="ft-placeholder">{{ t('board.ftWaiting') }}</div>
         <div v-else-if="!root.children.length" class="ft-placeholder">
-            No folders to show. The selected connection has no SETUP folders, or your filters hide
-            them.
+            {{ t('board.ftNoFolders') }}
         </div>
         <FolderTreeMap
             v-else-if="mode === 'map'"
+            ref="mapRef"
+            :query="parsedQuery"
             :problems-only="problemsOnly"
-            :preview="preview"
             :show-services="showServices"
             :services-by-host="servicesByHost"
             :service-loading="serviceLoading"
@@ -71,7 +102,9 @@
                 :depth="0"
                 :expanded="expanded"
                 :multi-site="multiSite"
+                :query="parsedQuery"
                 :problems-only="problemsOnly"
+                :ancestor-matched="false"
                 :show-services="showServices"
                 :services-by-host="servicesByHost"
                 :service-loading="serviceLoading"
@@ -86,19 +119,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, useTemplateRef, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import { boardsApi } from '@/api/client';
+import BoardSearch from '@/components/board/BoardSearch.vue';
 import FolderTreeMap from '@/components/board/FolderTreeMap.vue';
 import FolderTreeRow from '@/components/board/FolderTreeRow.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode, FolderTreeView } from '@/types/api';
+import { parseQuery } from '@/utils/folderTreeFilter';
 import { severityPills } from '@/utils/stateColors';
 
 const props = defineProps<{ view: FolderTreeView; preview?: boolean; boardName?: string }>();
 defineEmits<{ 'select-host': [FolderTreeNode]; 'select-service': [string, FolderTreeNode] }>();
 
+const { t } = useI18n();
 const auth = useAuthStore();
 const states = useStatesStore();
 const root = computed<FolderTreeNode | null>(() => states.folderTree);
@@ -108,6 +145,31 @@ const mode = ref<'map' | 'list'>(props.view.default_view ?? 'list');
 const expanded = reactive(new Set<string>());
 const problemsOnly = ref(props.view.problems_only ?? false);
 const showServices = computed(() => props.view.show_services ?? false);
+
+const filterText = ref('');
+const parsedQuery = computed(() => parseQuery(filterText.value));
+
+const mapRef = useTemplateRef<InstanceType<typeof FolderTreeMap>>('mapRef');
+
+// Persist the chosen view on the board so it reopens the same way (mirrors the
+// Flow board's services-layout control), best-effort and never in preview.
+function setMode(m: 'map' | 'list') {
+    if (mode.value === m) return;
+    mode.value = m;
+    if (props.preview || !props.boardName || !auth.accessToken) return;
+    void boardsApi
+        .update(props.boardName, { view: { ...props.view, default_view: m } }, auth.accessToken)
+        .catch(() => {});
+}
+
+function activeExpandAll() {
+    if (mode.value === 'map') mapRef.value?.expandAll();
+    else expandAll();
+}
+function activeCollapseAll() {
+    if (mode.value === 'map') mapRef.value?.collapseAll();
+    else collapseAll();
+}
 
 // Lazily-fetched services keyed by host name. The backend never pushes services
 // over SSE (would not scale to 4M-host sites); they're fetched per-host only
@@ -248,19 +310,44 @@ function collapseAll() {
 
 <style scoped>
 .ft-board {
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
     overflow: hidden;
 }
 
-.ft-toolbar {
-    display: flex;
+/* Floating glass control cluster over the canvas, matching the Flow board's
+   controls instead of a full-width toolbar that pushes the view down. */
+.ft-summary {
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.ft-summary-sep {
+    width: 1px;
+    height: 18px;
+    background: var(--border);
+    margin: 0 2px;
+}
+
+.ft-controls {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    z-index: 6;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--border-radius);
+    background: var(--bg-glass);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 6px 24px rgb(0 0 0 / 30%);
 }
 
 .ft-tool {
@@ -302,25 +389,29 @@ function collapseAll() {
     color: white;
 }
 
-.ft-toggle-label {
+/* Problems-only toggle living in the BoardSearch trailing slot (mirrors Flow). */
+.ft-po-toggle {
     display: flex;
     align-items: center;
-    gap: 5px;
-    font-size: 12px;
-    color: var(--text);
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid transparent;
     cursor: pointer;
 }
 
-.ft-spacer {
-    flex: 1;
+.ft-po-toggle:hover {
+    color: var(--text);
+    background: var(--bg-hover);
 }
 
-.ft-summary {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--text-muted);
+.ft-po-toggle--active {
+    color: var(--color-yellow-50, #fbbf24);
+    border-color: var(--color-yellow-50, #fbbf24);
+    background: rgb(251 191 36 / 12%);
 }
 
 .ft-summary-pill {

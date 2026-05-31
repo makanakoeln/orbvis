@@ -92,7 +92,9 @@
                 :depth="depth + 1"
                 :expanded="expanded"
                 :multi-site="multiSite"
+                :query="query"
                 :problems-only="problemsOnly"
+                :ancestor-matched="childAncestorMatched"
                 :show-services="showServices"
                 :services-by-host="servicesByHost"
                 :service-loading="serviceLoading"
@@ -112,7 +114,9 @@
                 :depth="depth + 1"
                 :expanded="expanded"
                 :multi-site="multiSite"
+                :query="query"
                 :problems-only="problemsOnly"
+                :ancestor-matched="childAncestorMatched"
                 :show-services="showServices"
                 :services-by-host="servicesByHost"
                 :service-loading="serviceLoading"
@@ -130,6 +134,12 @@
 import { computed } from 'vue';
 
 import type { FolderTreeNode } from '@/types/api';
+import {
+    isFilterActive,
+    type ParsedQuery,
+    selfMatches,
+    subtreeVisible,
+} from '@/utils/folderTreeFilter';
 import { severityPills, stateColorVar } from '@/utils/stateColors';
 import { formatRelativeDuration } from '@/utils/time';
 
@@ -138,7 +148,11 @@ const props = defineProps<{
     depth: number;
     expanded: Set<string>;
     multiSite: boolean;
+    query: ParsedQuery;
     problemsOnly: boolean;
+    // True once a containing folder/host already matched the query, so this
+    // whole subtree counts as matching.
+    ancestorMatched: boolean;
     showServices: boolean;
     servicesByHost: Record<string, FolderTreeNode[]>;
     serviceLoading: Set<string>;
@@ -169,7 +183,10 @@ const age = computed(() =>
 );
 const noteIndent = computed(() => ({ paddingLeft: `${(props.depth + 1) * 18 + 16}px` }));
 
-const PROBLEM = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN']);
+// Once this node matches the query, its whole subtree counts as matching.
+const childAncestorMatched = computed(
+    () => props.ancestorMatched || selfMatches(props.node, props.query),
+);
 
 // A host's children are its lazily-loaded services (keyed by host name);
 // everything else uses the tree children pushed by the store.
@@ -180,9 +197,9 @@ const childNodes = computed<FolderTreeNode[]>(() =>
 );
 
 const visibleChildren = computed(() => {
-    if (!props.problemsOnly) return childNodes.value;
+    if (!isFilterActive(props.query, props.problemsOnly)) return childNodes.value;
     return childNodes.value.filter((c) =>
-        c.kind === 'folder' ? c.problem_count > 0 : PROBLEM.has(c.state),
+        subtreeVisible(c, props.query, props.problemsOnly, childAncestorMatched.value),
     );
 });
 

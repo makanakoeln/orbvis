@@ -158,6 +158,16 @@ export default {
         ftDefaultViewHint: 'Which presentation the board opens in by default.',
         ftViewList: 'List (tree)',
         ftViewMap: 'Map (treemap)',
+        ftSearchPlaceholder: 'Search folders, hosts, services…',
+        ftHosts: 'hosts',
+        ftAllOk: 'all OK',
+        ftExpandAll: 'Expand all',
+        ftCollapseAll: 'Collapse all',
+        ftMap: 'Map',
+        ftList: 'List',
+        ftWaiting: 'Waiting for folder data…',
+        ftNoFolders:
+            'No folders to show. The selected connection has no SETUP folders, or your filters hide them.',
         ftRootFolder: 'Root folder',
         ftRootFolderHint:
             'Show only this folder and below. Empty = whole tree. Accepts a folder path or its stable id.',

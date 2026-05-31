@@ -160,6 +160,16 @@ export default {
         ftDefaultViewHint: 'In welcher Darstellung das Board standardmäßig öffnet.',
         ftViewList: 'Liste (Baum)',
         ftViewMap: 'Map (Treemap)',
+        ftSearchPlaceholder: 'Ordner, Hosts, Services suchen…',
+        ftHosts: 'Hosts',
+        ftAllOk: 'alles OK',
+        ftExpandAll: 'Alle aufklappen',
+        ftCollapseAll: 'Alle einklappen',
+        ftMap: 'Map',
+        ftList: 'Liste',
+        ftWaiting: 'Warte auf Ordnerdaten…',
+        ftNoFolders:
+            'Keine Ordner anzuzeigen. Die gewählte Verbindung hat keine SETUP-Ordner, oder die Filter blenden sie aus.',
         ftRootFolder: 'Wurzelordner',
         ftRootFolderHint:
             'Nur diesen Ordner und darunter zeigen. Leer = ganzer Baum. Akzeptiert Ordnerpfad oder stabile ID.',
