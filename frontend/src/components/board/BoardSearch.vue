@@ -1,5 +1,9 @@
 <template>
-    <div ref="rootRef" class="board-search" :class="{ 'board-search--open': dropdownOpen }">
+    <div
+        ref="rootRef"
+        class="board-search"
+        :class="{ 'board-search--open': dropdownOpen, 'board-search--inline': inline }"
+    >
         <svg
             style="width: 12px; height: 12px"
             fill="none"
@@ -91,6 +95,10 @@ const props = defineProps<{
     modelValue: string;
     placeholder?: string;
     excludePrefixes?: readonly string[];
+    // Embed in a normal toolbar flow instead of floating fixed top-right (used by
+    // boards whose canvas fills 100%, e.g. the folder treemap, where a floating
+    // overlay would cover data).
+    inline?: boolean;
 }>();
 const emit = defineEmits<{ 'update:modelValue': [string] }>();
 
@@ -182,6 +190,19 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
     border: 1px solid var(--border);
     backdrop-filter: blur(6px);
     min-width: 300px;
+}
+
+/* Embedded in a toolbar: sit in the normal flow, no float/glass, so it never
+   covers board content. */
+.board-search--inline {
+    position: relative;
+    top: auto;
+    right: auto;
+    z-index: auto;
+    min-width: 0;
+    width: 260px;
+    backdrop-filter: none;
+    background: var(--bg);
 }
 
 .board-search__input {

@@ -1,13 +1,29 @@
 <template>
     <div class="ft-board">
-        <!-- Stale-data warning: the tree froze on its last known state because the
-             connection/SSE dropped (common with distributed sites). -->
-        <div v-if="!preview && root && !states.connected" class="ft-stale-banner" role="status">
-            {{ t('board.ftConnectionLost') }}
-        </div>
-        <template v-if="!preview">
+        <!-- Reserved top toolbar (not a floating overlay): the treemap fills 100%
+             of the stage and the list is a full-width scroller, so floating
+             controls would always cover data. Summary left, tools right. -->
+        <div v-if="!preview" class="ft-toolbar">
+            <span v-if="root" class="ft-summary">
+                <span
+                    >{{ filterActive ? t('board.ftShowing') + ' ' : '' }}{{ summary.hosts }}
+                    {{ t('board.ftHosts') }}</span
+                >
+                <template v-if="summaryPills.length">
+                    <span
+                        v-for="p in summaryPills"
+                        :key="p.state"
+                        class="ft-summary-pill"
+                        :style="{ background: p.bg, color: p.fg }"
+                        >{{ p.count }} {{ p.state }}</span
+                    >
+                </template>
+                <span v-else class="ft-summary-ok">· {{ t('board.ftAllOk') }}</span>
+            </span>
+            <span class="ft-spacer" />
             <BoardSearch
                 v-model="filterText"
+                inline
                 :placeholder="t('board.ftSearchPlaceholder')"
                 :exclude-prefixes="['hg', 'sg', 'id']"
             >
@@ -36,55 +52,41 @@
                     </button>
                 </template>
             </BoardSearch>
-
-            <div class="ft-controls">
-                <span v-if="root" class="ft-summary">
-                    <span
-                        >{{ filterActive ? t('board.ftShowing') + ' ' : '' }}{{ summary.hosts }}
-                        {{ t('board.ftHosts') }}</span
-                    >
-                    <template v-if="summaryPills.length">
-                        <span
-                            v-for="p in summaryPills"
-                            :key="p.state"
-                            class="ft-summary-pill"
-                            :style="{ background: p.bg, color: p.fg }"
-                            >{{ p.count }} {{ p.state }}</span
-                        >
-                    </template>
-                    <span v-else class="ft-summary-ok">· {{ t('board.ftAllOk') }}</span>
-                    <span class="ft-summary-sep" />
-                </span>
-                <button type="button" class="ft-tool" @click="activeExpandAll">
-                    {{ t('board.ftExpandAll') }}
+            <button type="button" class="ft-tool" @click="activeExpandAll">
+                {{ t('board.ftExpandAll') }}
+            </button>
+            <button type="button" class="ft-tool" @click="activeCollapseAll">
+                {{ t('board.ftCollapseAll') }}
+            </button>
+            <div class="ft-segment" role="tablist">
+                <button
+                    type="button"
+                    class="ft-seg"
+                    :class="{ 'ft-seg--active': mode === 'map' }"
+                    role="tab"
+                    :aria-selected="mode === 'map'"
+                    @click="setMode('map')"
+                >
+                    {{ t('board.ftMap') }}
                 </button>
-                <button type="button" class="ft-tool" @click="activeCollapseAll">
-                    {{ t('board.ftCollapseAll') }}
+                <button
+                    type="button"
+                    class="ft-seg"
+                    :class="{ 'ft-seg--active': mode === 'list' }"
+                    role="tab"
+                    :aria-selected="mode === 'list'"
+                    @click="setMode('list')"
+                >
+                    {{ t('board.ftList') }}
                 </button>
-                <div class="ft-segment" role="tablist">
-                    <button
-                        type="button"
-                        class="ft-seg"
-                        :class="{ 'ft-seg--active': mode === 'map' }"
-                        role="tab"
-                        :aria-selected="mode === 'map'"
-                        @click="setMode('map')"
-                    >
-                        {{ t('board.ftMap') }}
-                    </button>
-                    <button
-                        type="button"
-                        class="ft-seg"
-                        :class="{ 'ft-seg--active': mode === 'list' }"
-                        role="tab"
-                        :aria-selected="mode === 'list'"
-                        @click="setMode('list')"
-                    >
-                        {{ t('board.ftList') }}
-                    </button>
-                </div>
             </div>
-        </template>
+        </div>
+
+        <!-- Stale-data warning as an in-flow row (was a floating banner that
+             covered tiles): the tree froze on its last known state. -->
+        <div v-if="!preview && root && !states.connected" class="ft-stale-row" role="status">
+            {{ t('board.ftConnectionLost') }}
+        </div>
 
         <div v-if="!root" class="ft-placeholder">{{ t('board.ftWaiting') }}</div>
         <div v-else-if="!root.children.length" class="ft-placeholder">
@@ -384,30 +386,28 @@ function collapseAll() {
 
 <style scoped>
 .ft-board {
-    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
     overflow: hidden;
 }
 
-/* Floating glass control cluster over the canvas, matching the Flow board's
-   controls instead of a full-width toolbar that pushes the view down. */
-.ft-stale-banner {
-    position: absolute;
-    top: calc(36px + var(--dimension-5));
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 7;
-    padding: 5px 12px;
-    border-radius: var(--border-radius);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--color-yellow-50, #fbbf24);
-    background: var(--bg-glass);
-    border: 1px solid var(--color-yellow-50, #fbbf24);
-    backdrop-filter: blur(6px);
-    box-shadow: 0 2px 10px rgb(0 0 0 / 25%);
+/* Reserved, non-overlapping toolbar — wraps to a second line on narrow boards
+   instead of clipping, never covers the view below. */
+.ft-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 44px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+    flex-shrink: 0;
+}
+
+.ft-spacer {
+    flex: 1;
 }
 
 .ft-summary {
@@ -418,27 +418,16 @@ function collapseAll() {
     color: var(--text-muted);
 }
 
-.ft-summary-sep {
-    width: 1px;
-    height: 18px;
-    background: var(--border);
-    margin: 0 2px;
-}
-
-.ft-controls {
-    position: absolute;
-    bottom: 24px;
-    right: 24px;
-    z-index: 6;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    border-radius: var(--border-radius);
-    background: var(--bg-glass);
-    border: 1px solid var(--border);
-    backdrop-filter: blur(6px);
-    box-shadow: 0 6px 24px rgb(0 0 0 / 30%);
+/* In-flow stale-data row (replaces the floating banner that covered tiles). */
+.ft-stale-row {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    color: var(--color-yellow-50, #fbbf24);
+    background: rgb(251 191 36 / 12%);
+    border-bottom: 1px solid var(--color-yellow-50, #fbbf24);
 }
 
 .ft-tool {
