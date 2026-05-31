@@ -131,6 +131,7 @@
                 @expand-host="ensureServices"
                 @select-host="$emit('select-host', $event)"
                 @select-service="(h, n) => $emit('select-service', h, n)"
+                @folder-action="$emit('folder-action', $event)"
             />
         </div>
     </div>
@@ -157,7 +158,11 @@ import {
 import { severityPills } from '@/utils/stateColors';
 
 const props = defineProps<{ view: FolderTreeView; preview?: boolean; boardName?: string }>();
-defineEmits<{ 'select-host': [FolderTreeNode]; 'select-service': [string, FolderTreeNode] }>();
+defineEmits<{
+    'select-host': [FolderTreeNode];
+    'select-service': [string, FolderTreeNode];
+    'folder-action': [FolderTreeNode];
+}>();
 
 const { t } = useI18n();
 const auth = useAuthStore();

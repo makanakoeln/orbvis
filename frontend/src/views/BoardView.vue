@@ -411,6 +411,7 @@
                     :board-name="boardConfig?.name"
                     @select-host="onFolderHostSelect"
                     @select-service="onFolderServiceSelect"
+                    @folder-action="onFolderAction"
                 />
             </div>
 
@@ -602,6 +603,16 @@
             :checkmk-url="checkmkUrl"
             @close="
                 bulkAckModal = null;
+                statesStore.refreshAfterCommand();
+            "
+        />
+
+        <FolderBulkActionModal
+            v-if="folderBulkModal && checkmkUrl"
+            :folder="folderBulkModal"
+            :checkmk-url="checkmkUrl"
+            @close="
+                folderBulkModal = null;
                 statesStore.refreshAfterCommand();
             "
         />
@@ -1128,6 +1139,7 @@ import DetailDrawer from '@/components/board/DetailDrawer.vue';
 import DowntimeModal from '@/components/board/DowntimeModal.vue';
 import EditPanel from '@/components/board/EditPanel.vue';
 import FlowBoard from '@/components/board/FlowBoard.vue';
+import FolderBulkActionModal from '@/components/board/FolderBulkActionModal.vue';
 import FolderTreeBoard from '@/components/board/FolderTreeBoard.vue';
 import HoverMenu from '@/components/board/HoverMenu.vue';
 import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue';
@@ -1861,6 +1873,11 @@ function onFolderServiceSelect(host: string, node: FolderTreeNode) {
         z: 0,
         url_target: '_blank',
     });
+}
+
+const folderBulkModal = ref<FolderTreeNode | null>(null);
+function onFolderAction(node: FolderTreeNode) {
+    folderBulkModal.value = node;
 }
 
 function onDetailAck() {

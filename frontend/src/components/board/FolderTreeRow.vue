@@ -104,6 +104,18 @@
                 >{{ p.count }}</span
             >
         </span>
+        <!-- Folder bulk actions (ack/downtime for all its hosts) — appears on the
+             folder row, only when it actually contains hosts. -->
+        <button
+            v-if="node.kind === 'folder' && !isEmpty && node.host_count > 0"
+            type="button"
+            class="ft-folder-action"
+            :title="t('board.ftBulkActions')"
+            :aria-label="t('board.ftBulkActions')"
+            @click.stop="$emit('folder-action', node)"
+        >
+            ⋮
+        </button>
 
         <span v-if="node.kind === 'host' && multiSite && node.site_id" class="ft-site">{{
             node.site_id
@@ -157,6 +169,7 @@
                 @expand-host="$emit('expand-host', $event)"
                 @select-host="$emit('select-host', $event)"
                 @select-service="(h, n) => $emit('select-service', h, n)"
+                @folder-action="$emit('folder-action', $event)"
             />
         </template>
         <template v-else>
@@ -178,6 +191,7 @@
                 @expand-host="$emit('expand-host', $event)"
                 @select-host="$emit('select-host', $event)"
                 @select-service="(h, n) => $emit('select-service', h, n)"
+                @folder-action="$emit('folder-action', $event)"
             />
         </template>
     </template>
@@ -220,6 +234,7 @@ const emit = defineEmits<{
     'expand-host': [FolderTreeNode];
     'select-host': [FolderTreeNode];
     'select-service': [string, FolderTreeNode];
+    'folder-action': [FolderTreeNode];
 }>();
 
 const { t } = useI18n();
@@ -400,6 +415,36 @@ function onRowClick() {
 .ft-meta {
     color: var(--text-muted);
     font-size: 11px;
+}
+
+/* Folder bulk-action affordance — subtle until the row is hovered/focused. */
+.ft-folder-action {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    opacity: 0;
+}
+
+.ft-folder-action:focus-visible {
+    opacity: 1;
+}
+
+.ft-folder-action:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+    border-color: var(--border);
+    opacity: 1;
+}
+
+.ft-row:hover .ft-folder-action {
+    opacity: 1;
 }
 
 .ft-badge {
