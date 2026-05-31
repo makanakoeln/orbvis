@@ -678,15 +678,14 @@ async def test_foldertree_root_scoping(_test_conn):
 
 
 @pytest.mark.asyncio
-async def test_foldertree_show_services(_test_conn):
+async def test_foldertree_show_services_is_not_eager(_test_conn):
+    # show_services must NOT materialise service leaves into the SSE tree — that
+    # would issue a global all-services query (ignores folder scope) and break on
+    # 4M-host sites. Services are fetched lazily per host via the endpoint instead.
     result = await get_board_states(_folder_board({"show_services": True}))
     host = _find_node(result.folder_tree, "datacenters/muc/localhost")
     assert host is not None and host.kind == "host"
-    assert host.children, "host should carry service leaves when show_services is on"
-    assert all(c.kind == "service" for c in host.children)
-    # Service paths are nested under the host and sorted by title.
-    titles = [c.title for c in host.children]
-    assert titles == sorted(titles, key=str.lower)
+    assert not host.children, "show_services must not eagerly attach service leaves"
 
 
 @pytest.mark.asyncio
@@ -720,6 +719,52 @@ def test_folder_tree_changed_signature():
     # A real state change does.
     assert state_service.folder_tree_changed("ftsig", None, _tree(state="CRITICAL")) is True
     state_service._folder_tree_sigs.pop(key, None)
+
+
+@pytest.mark.asyncio
+async def test_folder_host_services_endpoint_sorts_by_severity(client, admin_token, monkeypatch):
+    from app.connections.base import ServiceRow
+    from app.services import board_service
+
+    board = _folder_board({"show_services": True})
+    monkeypatch.setattr(board_service, "get_board", lambda name: board if name == "ft" else None)
+
+    conn = AsyncMock()
+    conn.get_host_services = AsyncMock(
+        return_value=[
+            ServiceRow(name="CPU", state="OK", output="all good"),
+            ServiceRow(name="Disk", state="CRITICAL", output="full", acknowledged=True),
+            ServiceRow(name="Mem", state="WARNING", output="high"),
+        ]
+    )
+    monkeypatch.setattr(state_service, "get_connection", lambda cid: conn)
+
+    resp = await client.get(
+        "/api/v1/boards/ft/folder-host-services?host=h1",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    # Worst-state first (CRITICAL, WARNING, OK) — endpoint sorts independent of input order.
+    assert [s["name"] for s in data] == ["Disk", "Mem", "CPU"]
+    assert data[0]["acknowledged"] is True
+    conn.get_host_services.assert_awaited_once_with("h1", only_hard=False)
+
+
+@pytest.mark.asyncio
+async def test_folder_host_services_endpoint_rejects_non_foldertree(
+    client, admin_token, monkeypatch
+):
+    from app.services import board_service
+
+    board = BoardConfig(name="st", alias="ST", connection_id="test", view=StaticView(), objects=[])
+    monkeypatch.setattr(board_service, "get_board", lambda name: board if name == "st" else None)
+
+    resp = await client.get(
+        "/api/v1/boards/st/folder-host-services?host=h1",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 400
 
 
 @pytest.mark.asyncio

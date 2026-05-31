@@ -102,6 +102,7 @@ class ServiceRow(TypedDict):
     output: str
     acknowledged: NotRequired[bool]
     in_downtime: NotRequired[bool]
+    is_flapping: NotRequired[bool]
     notifications_enabled: NotRequired[bool]
     last_state_change: NotRequired[float | None]
     last_check: NotRequired[float | None]
@@ -263,8 +264,12 @@ class ConnectionBase(ABC):
         ...
 
     @abstractmethod
-    async def get_host_services(self, hostname: str) -> list[ServiceRow]:
-        """Return services for a host as [{name, state, output}]."""
+    async def get_host_services(self, hostname: str, only_hard: bool = False) -> list[ServiceRow]:
+        """Return services for a host as [{name, state, output}].
+
+        ``only_hard`` reports last hard states instead of current (soft) states,
+        honouring a foldertree board's ``only_hard_states`` setting.
+        """
         ...
 
     async def get_host_details(self, hostname: str) -> ObjectDetails | None:

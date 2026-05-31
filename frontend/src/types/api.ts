@@ -134,6 +134,21 @@ export interface FolderTreeNode {
     in_downtime: boolean;
     site_id: string | null;
     children: FolderTreeNode[];
+    // Only set on service leaves built client-side from a lazy folder-host-services
+    // fetch (never emitted by the backend tree).
+    last_state_change?: number | null;
+    is_flapping?: boolean;
+}
+
+// One service of a foldertree host, fetched lazily when the host is expanded.
+export interface FolderHostService {
+    name: string;
+    state: string;
+    output: string;
+    acknowledged: boolean;
+    in_downtime: boolean;
+    is_flapping: boolean;
+    last_state_change: number | null;
 }
 
 // Bulk-ack target shape shared by DetailDrawer (emits) → BoardView

@@ -14,6 +14,7 @@ import type {
     ConnectionConfig,
     ConnectionContext,
     DowntimeEntry,
+    FolderHostService,
     GlobalSettings,
     GroupMember,
     ImageEntry,
@@ -254,6 +255,17 @@ export const boardsApi = {
             path += `?${qs.toString()}`;
         }
         return request(path, {}, token);
+    },
+
+    // Lazily fetch one foldertree host's services (only when the operator
+    // expands that host) — keeps the board scalable on huge sites.
+    folderHostServices: (
+        name: string,
+        host: string,
+        token: string,
+    ): Promise<FolderHostService[]> => {
+        const qs = new URLSearchParams({ host });
+        return request(`/boards/${name}/folder-host-services?${qs.toString()}`, {}, token);
     },
 
     addObject: (boardName: string, obj: BoardObject, token: string): Promise<BoardConfig> =>

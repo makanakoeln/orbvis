@@ -408,7 +408,9 @@
                             : { type: 'foldertree' }
                     "
                     :preview="isPreview"
+                    :board-name="boardConfig?.name"
                     @select-host="onFolderHostSelect"
+                    @select-service="onFolderServiceSelect"
                 />
             </div>
 
@@ -1150,6 +1152,8 @@ import type {
     BulkAckTarget,
     DowntimeEntry,
     FolderTreeNode,
+    MonitoringState,
+    ObjectState,
     ObjectType,
     ServiceLayout,
 } from '@/types/api';
@@ -1730,9 +1734,18 @@ const selectedObject = computed<BoardObject | null>(() => {
 // ---- Detail drawer (shared across static / worldmap / radar boards) ----
 
 const detailDrawerObject = ref<BoardObject | null>(null);
-const detailDrawerState = computed(() =>
-    detailDrawerObject.value ? statesStore.states[detailDrawerObject.value.id] : undefined,
-);
+// Foldertree service leaves are fetched lazily and never enter the SSE states
+// store, so the drawer has no live state to key off its synthesized id. Capture
+// the clicked node's state here so the drawer still shows status/output/age.
+const folderServiceState = ref<ObjectState | null>(null);
+const detailDrawerState = computed(() => {
+    const obj = detailDrawerObject.value;
+    if (!obj) return undefined;
+    const live = statesStore.states[obj.id];
+    if (live) return live;
+    if (folderServiceState.value?.object_id === obj.id) return folderServiceState.value;
+    return undefined;
+});
 const detailActions = useObjectActions(
     () => checkmkUrl.value,
     () => {},
@@ -1801,6 +1814,7 @@ function onSelectHost(hostName: string, serviceDescription?: string | null) {
 
 function closeDetail() {
     detailDrawerObject.value = null;
+    folderServiceState.value = null;
 }
 
 function onFolderHostSelect(node: FolderTreeNode) {
@@ -1812,6 +1826,36 @@ function onFolderHostSelect(node: FolderTreeNode) {
         id: node.title,
         type: 'host',
         host_name: node.title,
+        x: 0,
+        y: 0,
+        z: 0,
+        url_target: '_blank',
+    });
+}
+
+function onFolderServiceSelect(host: string, node: FolderTreeNode) {
+    // Lazily-loaded service leaf → synthesise both the object and its state (the
+    // node already carries state/output/ack/downtime/age) so the shared drawer
+    // shows the status pill + plugin output; the drawer self-fetches the richer
+    // detail (long output, comments, downtimes) by host + service on top.
+    const id = `${host};${node.title}`;
+    folderServiceState.value = {
+        object_id: id,
+        type: 'service',
+        state: node.state as MonitoringState,
+        output: node.output,
+        perf_data: '',
+        acknowledged: node.acknowledged,
+        in_downtime: node.in_downtime,
+        stale: false,
+        site_id: node.site_id,
+        last_state_change: node.last_state_change ?? null,
+    };
+    onObjectClick({
+        id,
+        type: 'service',
+        host_name: host,
+        service_description: node.title,
         x: 0,
         y: 0,
         z: 0,

@@ -344,7 +344,7 @@ class Icinga2Connection(ConnectionBase):
             )
         return nodes
 
-    async def get_host_services(self, hostname: str) -> list[ServiceRow]:
+    async def get_host_services(self, hostname: str, only_hard: bool = False) -> list[ServiceRow]:
         try:
             results = await self._get_results(
                 "objects/services",

@@ -17,13 +17,14 @@ from app.api.v1.deps import can_view_board as _can_view_board
 from app.api.v1.deps import can_view_board_by_name as _can_view_board_by_name
 from app.api.v1.deps import get_current_user, resolve_auth_user
 from app.api.v1.types import BoardName
+from app.connections.base import ServiceRow
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.ratelimit import ws_connect_limiter
 from app.core.sse import Subscriber, manager
 from app.models.user import User
-from app.schemas.board import BoardConfig, FlowView, RadarView
-from app.schemas.state import MapStates, ObjectState, ObjectTiming
+from app.schemas.board import BoardConfig, FlowView, FolderTreeView, RadarView
+from app.schemas.state import FolderHostService, MapStates, ObjectState, ObjectTiming
 from app.services import board_service, settings_service, state_service
 from app.services.auth_service import authenticate_bearer_token
 
@@ -269,6 +270,75 @@ async def get_board_states(
         auth_user=auth_user,
         can_view_board=lambda n: _can_view_board(current_user, n),
     )
+
+
+@router.get("/boards/{name}/folder-host-services", response_model=list[FolderHostService])
+async def get_folder_host_services(
+    name: BoardName,
+    host: str = Query(..., description="Host name to fetch services for"),
+    current_user: User = Depends(get_current_user),
+) -> list[FolderHostService]:
+    """Lazily fetch a single host's services for a foldertree board.
+
+    Only invoked when an operator expands a host in the tree/map — a single
+    host-scoped Livestatus query — so the board scales to environments with
+    millions of hosts (services are never pushed eagerly over SSE).
+    """
+    cfg = board_service.get_board(name)
+    if cfg is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
+    if not _can_view_board(current_user, name):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="No board view permission"
+        )
+    if not isinstance(cfg.view, FolderTreeView):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Not a foldertree board"
+        )
+    connection = state_service.get_connection(cfg.connection_id)
+    if connection is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+
+    auth_user = resolve_auth_user(current_user.name, current_user.is_admin)
+    only_hard = cfg.view.only_hard_states
+
+    async def _fetch() -> list[ServiceRow]:
+        return await connection.get_host_services(host, only_hard=only_hard)
+
+    try:
+        if (
+            auth_user is not None
+            and settings.checkmk_omd_root
+            and hasattr(connection, "with_auth_user")
+        ):
+            async with connection.with_auth_user(auth_user):
+                rows = await _fetch()
+        else:
+            rows = await _fetch()
+    except Exception:
+        logger.warning("folder host-services fetch failed for '%s'/%s", name, host, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail="Service fetch failed"
+        ) from None
+
+    services = [
+        FolderHostService(
+            name=r["name"],
+            state=r["state"],
+            output=r.get("output", ""),
+            acknowledged=r.get("acknowledged", False),
+            in_downtime=r.get("in_downtime", False),
+            is_flapping=r.get("is_flapping", False),
+            last_state_change=r.get("last_state_change"),
+        )
+        for r in rows
+    ]
+    # Worst-state first (CRITICAL on top), then alphabetical — matches the
+    # host/folder ordering elsewhere in the tree.
+    services.sort(key=lambda s: (-state_service.severity_rank(s.state), s.name.lower()))
+    return services
 
 
 @router.get("/sse/boards/{name}")

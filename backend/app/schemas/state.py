@@ -140,6 +140,23 @@ class FolderTreeNode(BaseModel):
     children: list[FolderTreeNode] = Field(default_factory=list)
 
 
+class FolderHostService(BaseModel):
+    """One service of a host, fetched lazily when a foldertree host is expanded.
+
+    Kept minimal: the frontend already knows the host (path/site) it drilled
+    into, so it composes the full FolderTreeNode from this. Ordered by the
+    endpoint worst-state first (CRITICAL on top).
+    """
+
+    name: str
+    state: str
+    output: str = ""
+    acknowledged: bool = False
+    in_downtime: bool = False
+    is_flapping: bool = False
+    last_state_change: float | None = None
+
+
 class MapStates(BaseModel):
     map_name: str
     states: list[ObjectState]

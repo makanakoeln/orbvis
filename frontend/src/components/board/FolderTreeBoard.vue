@@ -56,7 +56,13 @@
             v-else-if="mode === 'map'"
             :problems-only="problemsOnly"
             :preview="preview"
+            :show-services="showServices"
+            :services-by-host="servicesByHost"
+            :service-loading="serviceLoading"
+            :service-error="serviceError"
+            @expand-host="ensureServices"
             @select-host="$emit('select-host', $event)"
+            @select-service="(h, n) => $emit('select-service', h, n)"
         />
         <div v-else class="ft-tree" role="tree">
             <FolderTreeRow
@@ -66,8 +72,14 @@
                 :expanded="expanded"
                 :multi-site="multiSite"
                 :problems-only="problemsOnly"
+                :show-services="showServices"
+                :services-by-host="servicesByHost"
+                :service-loading="serviceLoading"
+                :service-error="serviceError"
                 @toggle="toggle"
+                @expand-host="ensureServices"
                 @select-host="$emit('select-host', $event)"
+                @select-service="(h, n) => $emit('select-service', h, n)"
             />
         </div>
     </div>
@@ -76,15 +88,18 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 
+import { boardsApi } from '@/api/client';
 import FolderTreeMap from '@/components/board/FolderTreeMap.vue';
 import FolderTreeRow from '@/components/board/FolderTreeRow.vue';
+import { useAuthStore } from '@/stores/auth';
 import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode, FolderTreeView } from '@/types/api';
 import { severityPills } from '@/utils/stateColors';
 
-const props = defineProps<{ view: FolderTreeView; preview?: boolean }>();
-defineEmits<{ 'select-host': [FolderTreeNode] }>();
+const props = defineProps<{ view: FolderTreeView; preview?: boolean; boardName?: string }>();
+defineEmits<{ 'select-host': [FolderTreeNode]; 'select-service': [string, FolderTreeNode] }>();
 
+const auth = useAuthStore();
 const states = useStatesStore();
 const root = computed<FolderTreeNode | null>(() => states.folderTree);
 const summaryPills = computed(() => severityPills(root.value?.severity_counts));
@@ -92,6 +107,47 @@ const summaryPills = computed(() => severityPills(root.value?.severity_counts));
 const mode = ref<'map' | 'list'>(props.view.default_view ?? 'list');
 const expanded = reactive(new Set<string>());
 const problemsOnly = ref(props.view.problems_only ?? false);
+const showServices = computed(() => props.view.show_services ?? false);
+
+// Lazily-fetched services keyed by host name. The backend never pushes services
+// over SSE (would not scale to 4M-host sites); they're fetched per-host only
+// when the operator expands that host, then cached here for both List and Map.
+const servicesByHost = reactive<Record<string, FolderTreeNode[]>>({});
+const serviceLoading = reactive(new Set<string>());
+const serviceError = reactive(new Set<string>());
+
+async function ensureServices(host: FolderTreeNode) {
+    const name = host.title;
+    if (!showServices.value || !props.boardName || !auth.accessToken) return;
+    if (servicesByHost[name] || serviceLoading.has(name)) return;
+    serviceLoading.add(name);
+    serviceError.delete(name);
+    try {
+        const svcs = await boardsApi.folderHostServices(props.boardName, name, auth.accessToken);
+        servicesByHost[name] = svcs.map((s) => ({
+            path: `${host.path}/${s.name}`,
+            title: s.name,
+            kind: 'service' as const,
+            state: s.state,
+            is_empty: false,
+            folder_id: '',
+            host_count: 0,
+            problem_count: 0,
+            severity_counts: {},
+            output: s.output,
+            acknowledged: s.acknowledged,
+            in_downtime: s.in_downtime,
+            is_flapping: s.is_flapping,
+            last_state_change: s.last_state_change,
+            site_id: host.site_id,
+            children: [],
+        }));
+    } catch {
+        serviceError.add(name);
+    } finally {
+        serviceLoading.delete(name);
+    }
+}
 
 function collectFolders(node: FolderTreeNode, acc: FolderTreeNode[] = []): FolderTreeNode[] {
     if (node.kind === 'folder') {

@@ -29,8 +29,19 @@ import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode } from '@/types/api';
 import { severityPills, stateColorVar, stateRank } from '@/utils/stateColors';
 
-const props = defineProps<{ problemsOnly: boolean; preview?: boolean }>();
-const emit = defineEmits<{ 'select-host': [FolderTreeNode] }>();
+const props = defineProps<{
+    problemsOnly: boolean;
+    preview?: boolean;
+    showServices: boolean;
+    servicesByHost: Record<string, FolderTreeNode[]>;
+    serviceLoading: Set<string>;
+    serviceError: Set<string>;
+}>();
+const emit = defineEmits<{
+    'select-host': [FolderTreeNode];
+    'select-service': [string, FolderTreeNode];
+    'expand-host': [FolderTreeNode];
+}>();
 
 const states = useStatesStore();
 const root = computed<FolderTreeNode | null>(() => states.folderTree);
@@ -68,29 +79,56 @@ function currentRoot(): FolderTreeNode {
     return prune(root.value) ?? { ...root.value, children: [] };
 }
 
-// Layout node carries children only for the (always-open) root and explicitly
-// expanded folders; everything else is a leaf tile.
-const isExpanded = (d: FNode) => d.data.kind === 'folder' && (d.children?.length ?? 0) > 0;
+// A node the operator can drill into: a non-empty folder, or — when
+// show_services is on — a host (drills to its lazily-loaded services).
+const canExpand = (n: FolderTreeNode): boolean =>
+    n.kind === 'folder' ? !n.is_empty : n.kind === 'host' && props.showServices;
+// Mirror the List's problems-only filtering of service leaves so both views of
+// the same board show the same set (prune() only covers folders/hosts).
+const hostServices = (n: FolderTreeNode): FolderTreeNode[] => {
+    const svcs = props.servicesByHost[n.title] ?? [];
+    return props.problemsOnly ? svcs.filter((s) => isProblem(s)) : svcs;
+};
+
+// Laid-out node that actually has children rendered inside it (folder or host
+// expanded to its services).
+const isExpanded = (d: FNode) => (d.children?.length ?? 0) > 0;
+
+// Visual language: containers (folders, expanded hosts) read as faint framed
+// cards with a header tab; leaves (collapsed hosts, services) read as solid
+// status chips. So a collapsed folder never looks like a host (the recurring
+// confusion) — folders are always framed, hosts/services are always solid.
+const isContainerCell = (d: FNode): boolean =>
+    (d.data.kind === 'folder' && !d.data.is_empty) || (d.data.kind === 'host' && isExpanded(d));
 
 function fillFor(d: FNode): string {
     const n = d.data;
     if (n.kind === 'folder' && n.is_empty) return 'transparent';
-    if (isExpanded(d)) return isProblem(n) ? stateColorVar(n.state) : 'var(--bg-surface)';
-    return stateColorVar(n.state); // host or collapsed folder → solid status tile
+    if (isContainerCell(d)) return isProblem(n) ? stateColorVar(n.state) : 'var(--bg-surface)';
+    return stateColorVar(n.state); // host chip or service chip → solid status tile
 }
 
 function fillOpacityFor(d: FNode): number {
     const n = d.data;
     if (n.kind === 'folder' && n.is_empty) return 1;
-    if (isExpanded(d)) return isProblem(n) ? 0.12 : 0.04; // faint backdrop for children
-    return isProblem(n) ? 1 : 0.4; // healthy tiles recede, problems dominate
+    if (isContainerCell(d)) return isProblem(n) ? 0.16 : 0.05; // faint framed backdrop
+    return isProblem(n) ? 1 : 0.4; // healthy chips recede, problems dominate
 }
 
 function strokeFor(d: FNode): string {
     const n = d.data;
     if (n.kind === 'folder' && n.is_empty) return 'var(--text-muted)';
-    if (isExpanded(d) && isProblem(n)) return stateColorVar(n.state);
+    // Containers carry a status-colored frame so a problem still pops despite the
+    // faint body; healthy containers get a neutral border.
+    if (isContainerCell(d)) return isProblem(n) ? stateColorVar(n.state) : 'var(--border)';
     return 'var(--border)';
+}
+
+function strokeWidthFor(d: FNode): number {
+    const n = d.data;
+    if (n.kind === 'folder' && n.is_empty) return 1.4;
+    if (isContainerCell(d) && isProblem(n)) return 2; // colored frame on a problem container
+    return 1;
 }
 
 function folderLabel(n: FolderTreeNode): string {
@@ -101,14 +139,21 @@ function folderLabel(n: FolderTreeNode): string {
     return `${title} · ${n.host_count}`;
 }
 
-// A non-empty folder reads as a container: chevron (expand affordance) + title
-// in a header band. Hosts and empty folders are plain leaf tiles. The Main root
-// is a normal collapsible folder too (open by default).
-const hasHeader = (d: FNode) => d.data.kind === 'folder' && !d.data.is_empty;
+// A container cell shows a header band with a chevron + label. Folders are
+// framed even when collapsed; a host only grows a header once expanded (its
+// collapsed form stays a chip, with a chevron prefix to signal it can expand).
+const hasHeader = (d: FNode) => isContainerCell(d);
 
 function labelText(d: FNode): string {
-    if (hasHeader(d)) return `${isExpanded(d) ? '▾ ' : '▸ '}${folderLabel(d.data)}`;
-    return d.data.kind === 'folder' ? folderLabel(d.data) : d.data.title;
+    const n = d.data;
+    if (hasHeader(d)) {
+        const chev = isExpanded(d) ? '▾ ' : '▸ ';
+        return n.kind === 'folder' ? `${chev}${folderLabel(n)}` : `${chev}${n.title}`;
+    }
+    if (n.kind === 'folder') return folderLabel(n); // empty folder
+    // Collapsed host that can drill into services → chevron hints expandability.
+    if (n.kind === 'host' && canExpand(n)) return `▸ ${n.title}`;
+    return n.title; // plain host or service chip
 }
 
 function allFolderPaths(node: FolderTreeNode, acc: string[] = []): string[] {
@@ -122,13 +167,33 @@ function allFolderPaths(node: FolderTreeNode, acc: string[] = []): string[] {
 function layout(): FNode | null {
     if (!dims.w || !dims.h) return null;
     const rootData = currentRoot();
-    const isOpen = (d: FolderTreeNode) =>
-        d.kind === 'folder' && d.children.length > 0 && expanded.has(d.path);
-    const h = hierarchy<FolderTreeNode>(rootData, (d) => (isOpen(d) ? d.children : undefined))
+    // A host is "open" only once its services have actually loaded — until then
+    // it stays a chip (and the click that opened it triggered the lazy fetch).
+    const isOpen = (d: FolderTreeNode) => {
+        if (d.kind === 'folder') return d.children.length > 0 && expanded.has(d.path);
+        if (d.kind === 'host')
+            return props.showServices && expanded.has(d.path) && hostServices(d).length > 0;
+        return false;
+    };
+    const childrenOf = (d: FolderTreeNode) => (d.kind === 'host' ? hostServices(d) : d.children);
+    const h = hierarchy<FolderTreeNode>(rootData, (d) => (isOpen(d) ? childrenOf(d) : undefined))
         // Tile weights: a folder reads as a slightly larger card than a single
         // host (container vs. leaf) without host-count dwarfing the map; empty
-        // folders smallest. Open folders contribute 0 and grow to their children.
-        .sum((d) => (d.kind === 'host' ? 1 : isOpen(d) ? 0 : d.is_empty ? 0.5 : 2))
+        // folders smallest; services size like hosts. Open nodes contribute 0 and
+        // grow to their children.
+        .sum((d) =>
+            d.kind === 'service'
+                ? 1
+                : d.kind === 'host'
+                  ? isOpen(d)
+                      ? 0
+                      : 1
+                  : isOpen(d)
+                    ? 0
+                    : d.is_empty
+                      ? 0.5
+                      : 2,
+        )
         // Mirror the list order: a folder's own hosts before its subfolders,
         // then worst severity first (problems cluster top-left), then bigger.
         .sort(
@@ -236,8 +301,17 @@ function draw(animate: boolean): void {
         .style('cursor', 'pointer')
         .on('click', (event: MouseEvent, d) => {
             event.stopPropagation();
-            if (d.data.kind === 'host') emit('select-host', d.data);
-            else toggleFolder(d.data.path);
+            const n = d.data;
+            if (canExpand(n)) {
+                // Drilling a host triggers its lazy service fetch; the relayout
+                // follows once servicesByHost updates (watched below).
+                if (n.kind === 'host') emit('expand-host', n);
+                toggleFolder(n.path);
+            } else if (n.kind === 'host') {
+                emit('select-host', n);
+            } else if (n.kind === 'service') {
+                emit('select-service', d.parent?.data.title ?? '', n);
+            }
         })
         .on('mousemove', showTip)
         .on('mouseleave', () => (tip.value = null));
@@ -250,7 +324,7 @@ function draw(animate: boolean): void {
     merged
         .select('rect.ftm-body')
         .attr('rx', 3)
-        .attr('stroke-width', (d) => (d.data.kind === 'folder' && d.data.is_empty ? 1.4 : 1))
+        .attr('stroke-width', strokeWidthFor)
         .attr('stroke-dasharray', (d) =>
             d.data.kind === 'folder' && d.data.is_empty ? '4 3' : null,
         )
@@ -326,14 +400,27 @@ watch(
     { immediate: true },
 );
 
+// Re-lay out (or just recolor when the visible set is unchanged) on any input
+// that affects the treemap: live tree, problems-only toggle, or lazily-loaded
+// host services arriving / changing state (a freshly expanded host grows into
+// its service tiles).
+function relayout(): void {
+    if (!root.value || !svgEl.value || !dims.w) return;
+    const laid = layout();
+    if (laid && visibleSig(laid) === lastSig) recolor();
+    else draw(true);
+}
+
 watch(
-    [root, () => props.problemsOnly],
-    () => {
-        if (!root.value || !svgEl.value || !dims.w) return;
-        const laid = layout();
-        if (laid && visibleSig(laid) === lastSig) recolor();
-        else draw(true);
-    },
+    [
+        root,
+        () => props.problemsOnly,
+        () =>
+            Object.entries(props.servicesByHost)
+                .map(([h, svcs]) => `${h}:${svcs.length}:${svcs.map((s) => s.state).join(',')}`)
+                .join('|'),
+    ],
+    relayout,
     { flush: 'post' },
 );
 

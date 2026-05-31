@@ -1190,17 +1190,23 @@ class LivestatusConnection(ConnectionBase):
             result.append(row)
         return result
 
-    async def get_host_services(self, hostname: str) -> list[ServiceRow]:
+    async def get_host_services(self, hostname: str, only_hard: bool = False) -> list[ServiceRow]:
+        state_col = "last_hard_state" if only_hard else "state"
         rows = await self._query(
             "GET services\n"
             f"Filter: host_name = {_ls_escape(hostname)}\n"
-            "Columns: description state plugin_output\n"
+            f"Columns: description {state_col} plugin_output acknowledged scheduled_downtime_depth "
+            "last_state_change is_flapping\n"
         )
         return [
             ServiceRow(
                 name=_row_str(r, 0),
                 state=_SERVICE_STATE_MAP.get(_row_int(r, 1), "UNKNOWN"),
                 output=_row_str(r, 2),
+                acknowledged=bool(_row_int(r, 3)),
+                in_downtime=_row_int(r, 4) > 0,
+                last_state_change=_row_float_or_none(r, 5),
+                is_flapping=bool(_row_int(r, 6)),
             )
             for r in rows
         ]

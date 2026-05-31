@@ -409,7 +409,7 @@ class TestConnection(ConnectionBase):
             rows.append(row)
         return rows
 
-    async def get_host_services(self, hostname: str) -> list[ServiceRow]:
+    async def get_host_services(self, hostname: str, only_hard: bool = False) -> list[ServiceRow]:
         result: list[ServiceRow] = []
         for svc in _DEMO_SERVICES:
             state = await self.get_service_state(hostname, svc)
