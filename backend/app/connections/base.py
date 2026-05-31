@@ -210,11 +210,16 @@ class ConnectionBase(ABC):
         return []
 
     @abstractmethod
-    async def get_objects(self, obj_type: str, host: str | None = None) -> list[str]:
+    async def get_objects(
+        self, obj_type: str, host: str | None = None, search: str | None = None
+    ) -> list[str]:
         """Return list of object names of given type (host/service/hostgroup/…).
 
         When *host* is given for ``obj_type == "service"`` the lookup is scoped
-        to that host so large environments don't fetch every service.
+        to that host so large environments don't fetch every service. *search*
+        is a case-insensitive substring applied server-side (CMK-style
+        autocompleter) so huge sites filter+limit at the source instead of
+        streaming every name to the client.
         """
         ...
 

@@ -1,18 +1,22 @@
 <!--
-OrbVis-only FormSpec component for ``orb_host_autocomplete`` (emitted
-by backend ``OrbHostString``). CMK's FormAutocompleter is stubbed in
-this build, so the field would otherwise fall back to a plain input.
-Pulls suggestions from the connection id the parent modal exposes via
-``inject('orbConnectionId')`` and renders them in a CmkDropdown.
+OrbVis-only FormSpec component for ``orb_host_autocomplete`` (emitted by backend
+``OrbHostString``). CMK's native FormAutocompleter is stubbed in this build, so
+this wires the vendored CmkDropdown's server-side ``callback-filtered`` mode to
+OrbVis' own ``/objects?search=`` endpoint — the typed substring is filtered +
+capped server-side (like cmk.gui's monitored_hostname_autocompleter), so it
+scales to multi-million-host sites instead of streaming every name to the client.
+The connection id comes from the parent modal via ``inject('orbConnectionId')``.
 -->
 <script setup lang="ts">
 import type { Ref } from 'vue';
-import { computed, inject, onMounted, ref, watch } from 'vue';
+import { computed, inject, ref } from 'vue';
 
 import { connectionsApi } from '@/api/client';
 import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown';
+import { ErrorResponse, Response, type Suggestion } from '@/components/CmkSuggestions';
 import FormValidation from '@/components/user-input/CmkInlineValidation.vue';
 import { useValidation, type ValidationMessages } from '@/form/private/validation';
+import { untranslated } from '@/lib/i18n';
 import { useAuthStore } from '@/stores/auth';
 
 interface OrbHostSpec {
@@ -37,37 +41,29 @@ const [validation, value] = useValidation<string>(
 
 const auth = useAuthStore();
 const connectionId = inject<Ref<string>>('orbConnectionId', ref(''));
-const hosts = ref<string[]>([]);
 
-async function loadHosts() {
+// Server-side autocompleter: the typed query is filtered + limited at the
+// source. CmkDropdown calls this on each keystroke and to resolve the label of
+// an already-selected value.
+async function querySuggestions(query: string): Promise<Response | ErrorResponse> {
     const cid = connectionId.value;
-    if (!cid) return;
+    if (!cid || !auth.accessToken) return new Response([]);
     try {
-        hosts.value = await connectionsApi.objects(cid, 'host', auth.accessToken!);
+        const hosts = await connectionsApi.objects(cid, 'host', auth.accessToken, undefined, query);
+        const choices: Suggestion[] = hosts.map((name) => ({ name, title: untranslated(name) }));
+        return new Response(choices);
     } catch {
-        hosts.value = [];
+        return new ErrorResponse('Could not load hosts');
     }
 }
 
-onMounted(loadHosts);
-watch(connectionId, () => {
-    hosts.value = [];
-    loadHosts();
-});
-
 const dropdownOptions = computed(() => ({
-    type: 'filtered' as const,
-    suggestions: hosts.value.map((name) => ({ name, title: name })),
+    type: 'callback-filtered' as const,
+    querySuggestions,
 }));
 
-const hostStaleWarning = computed(() =>
-    value.value && hosts.value.length && !hosts.value.includes(value.value)
-        ? `Host "${value.value}" not in current connection`
-        : '',
-);
-
-// CmkDropdown emits ``null`` when cleared; the FormSpec data is a
-// plain string, so map back and forth at the binding boundary.
+// CmkDropdown emits ``null`` when cleared; the FormSpec data is a plain string,
+// so map back and forth at the binding boundary.
 const dropdownValue = computed<string | null>({
     get: () => value.value || null,
     set: (v) => {
@@ -85,9 +81,6 @@ const dropdownValue = computed<string | null>({
             :input-hint="spec.input_hint ?? ''"
             width="fill"
         />
-        <p v-if="hostStaleWarning" class="form-orb-host-autocomplete__warning">
-            {{ hostStaleWarning }}
-        </p>
         <FormValidation :validation="validation" />
     </div>
 </template>
@@ -97,10 +90,5 @@ const dropdownValue = computed<string | null>({
     display: flex;
     flex-direction: column;
     gap: 4px;
-}
-
-.form-orb-host-autocomplete__warning {
-    font-size: 0.75rem;
-    color: var(--color-warning);
 }
 </style>

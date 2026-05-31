@@ -87,13 +87,13 @@ def list_connection_ids() -> list[str]:
 
 
 async def get_connection_objects(
-    connection_id: str, obj_type: str, host: str | None = None
+    connection_id: str, obj_type: str, host: str | None = None, search: str | None = None
 ) -> list[str]:
     """Return available object names from a connection (for autocomplete)."""
     connection = get_connection(connection_id)
     if connection is None:
         return []
-    raw = await connection.get_objects(obj_type, host)
+    raw = await connection.get_objects(obj_type, host, search)
     if obj_type == "service" and host:
         # raw items are "hostname;service_description"; defensive in case a
         # backend ignores the host scope.

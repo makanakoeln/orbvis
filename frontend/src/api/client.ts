@@ -474,9 +474,11 @@ export const connectionsApi = {
         type: string,
         token: string,
         host?: string,
+        search?: string,
     ): Promise<string[]> => {
         const params = new URLSearchParams({ type });
         if (host) params.set('host', host);
+        if (search) params.set('search', search);
         return request(`/connections/${connectionId}/objects?${params}`, {}, token);
     },
 

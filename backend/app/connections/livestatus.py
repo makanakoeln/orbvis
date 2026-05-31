@@ -1085,12 +1085,17 @@ class LivestatusConnection(ConnectionBase):
         )
         return ObjectState(object_id="", type="dyngroup", state=worst, services_summary=summary)
 
-    async def get_objects(self, obj_type: str, host: str | None = None) -> list[str]:
-        # Hard cap so a multi-million-host site can't stream every name into a
-        # board-editor autocomplete and freeze the UI. The editor filters the
-        # returned set client-side; if we hit the cap, log it so the truncation
-        # isn't silent (full server-side prefix search is the follow-up).
+    async def get_objects(
+        self, obj_type: str, host: str | None = None, search: str | None = None
+    ) -> list[str]:
+        # CMK-style server-side autocompleter: filter by the typed substring
+        # (`~~` = case-insensitive regex) AND hard-cap with `Limit`, so a
+        # multi-million-host site filters+bounds at the source instead of
+        # streaming every name into the editor. Mirrors cmk.gui
+        # monitored_hostname_autocompleter (which uses set_limit). The cap is
+        # logged when hit so truncation isn't silent.
         limit = settings.object_autocomplete_limit
+        q = (search or "").strip()
 
         def _capped(names: list[str], what: str) -> list[str]:
             if len(names) >= limit:
@@ -1099,21 +1104,31 @@ class LivestatusConnection(ConnectionBase):
                 )
             return names
 
+        def _name_filter(column: str) -> str:
+            return f"Filter: {column} ~~ {_ls_escape(q)}\n" if q else ""
+
         if obj_type == "host":
-            rows = await self._query(f"GET hosts\nColumns: name\nLimit: {limit}\n")
+            rows = await self._query(
+                f"GET hosts\nColumns: name\n{_name_filter('name')}Limit: {limit}\n"
+            )
             return _capped([_row_str(r, 0) for r in rows], "host")
         if obj_type == "service":
             # Scope to one host — fetching every service times out at scale.
             host_filter = f"Filter: host_name = {_ls_escape(host)}\n" if host else ""
             rows = await self._query(
-                f"GET services\nColumns: host_name description\n{host_filter}Limit: {limit}\n"
+                f"GET services\nColumns: host_name description\n"
+                f"{host_filter}{_name_filter('description')}Limit: {limit}\n"
             )
             return _capped([f"{_row_str(r, 0)};{_row_str(r, 1)}" for r in rows], "service")
         if obj_type == "hostgroup":
-            rows = await self._query(f"GET hostgroups\nColumns: name\nLimit: {limit}\n")
+            rows = await self._query(
+                f"GET hostgroups\nColumns: name\n{_name_filter('name')}Limit: {limit}\n"
+            )
             return _capped([_row_str(r, 0) for r in rows], "hostgroup")
         if obj_type == "servicegroup":
-            rows = await self._query(f"GET servicegroups\nColumns: name\nLimit: {limit}\n")
+            rows = await self._query(
+                f"GET servicegroups\nColumns: name\n{_name_filter('name')}Limit: {limit}\n"
+            )
             return _capped([_row_str(r, 0) for r in rows], "servicegroup")
         return []
 

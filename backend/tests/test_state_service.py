@@ -79,7 +79,7 @@ async def test_get_backend_objects_service_filter(mock_connection, monkeypatch):
     result = await get_connection_objects("mock", "service", host="srv1")
     assert result == ["CPU", "RAM"]
     # host must reach the backend, else large environments time out
-    mock_connection.get_objects.assert_awaited_once_with("service", "srv1")
+    mock_connection.get_objects.assert_awaited_once_with("service", "srv1", None)
 
 
 # ---------------------------------------------------------------------------

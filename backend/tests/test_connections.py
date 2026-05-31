@@ -60,6 +60,18 @@ async def test_test_backend_get_objects():
 
 
 @pytest.mark.asyncio
+async def test_test_backend_get_objects_search_filters():
+    # Server-side autocompleter substring (CMK-style): only matching names come back.
+    connection = TestConnection()
+    all_hosts = await connection.get_objects("host")
+    hit = next(h for h in all_hosts if "host" in h.lower())
+    filtered = await connection.get_objects("host", None, "HOST")
+    assert filtered == [h for h in all_hosts if "host" in h.lower()]
+    assert hit in filtered
+    assert await connection.get_objects("host", None, "zzz-no-match") == []
+
+
+@pytest.mark.asyncio
 async def test_test_backend_is_available():
     connection = TestConnection()
     assert await connection.is_available() is True

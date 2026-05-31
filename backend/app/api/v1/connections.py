@@ -682,10 +682,15 @@ async def list_backend_objects(
     connection_id: str,
     obj_type: str = Query(..., alias="type"),
     host: str | None = Query(None),
+    search: str | None = Query(None),
     _: User = Depends(require_admin),
 ) -> list[str]:
-    """Return available object names from a connection (for editor autocomplete)."""
-    return await get_connection_objects(connection_id, obj_type, host)
+    """Return available object names from a connection (for editor autocomplete).
+
+    ``search`` is a case-insensitive substring applied server-side so the editor
+    can fetch-on-type (CMK autocompleter style) instead of pulling every name.
+    """
+    return await get_connection_objects(connection_id, obj_type, host, search)
 
 
 class FolderOption(BaseModel):

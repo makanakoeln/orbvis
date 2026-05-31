@@ -317,16 +317,25 @@ class TestConnection(ConnectionBase):
             output=f"Servicegroup {group}: {state}",
         )
 
-    async def get_objects(self, obj_type: str, host: str | None = None) -> list[str]:
+    async def get_objects(
+        self, obj_type: str, host: str | None = None, search: str | None = None
+    ) -> list[str]:
+        q = (search or "").strip().lower()
+
+        def _match(items: list[str]) -> list[str]:
+            # Match the autocompleter substring against the trailing name part
+            # ("host;service" → service description).
+            return [i for i in items if not q or q in i.rsplit(";", 1)[-1].lower()]
+
         if obj_type == "host":
-            return list(_DEMO_HOSTS)
+            return _match(list(_DEMO_HOSTS))
         if obj_type == "service":
             hosts = [host] if host else list(_DEMO_HOSTS)
-            return [f"{h};{s}" for h in hosts for s in _DEMO_SERVICES]
+            return _match([f"{h};{s}" for h in hosts for s in _DEMO_SERVICES])
         if obj_type == "hostgroup":
-            return list(_DEMO_HOSTGROUPS)
+            return _match(list(_DEMO_HOSTGROUPS))
         if obj_type == "servicegroup":
-            return list(_DEMO_SERVICEGROUPS)
+            return _match(list(_DEMO_SERVICEGROUPS))
         return []
 
     async def get_group_members(self, group_type: str, group_name: str) -> list[str]:

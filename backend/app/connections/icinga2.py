@@ -253,21 +253,30 @@ class Icinga2Connection(ConnectionBase):
             output=f"{len(results)} services, worst: {worst}",
         )
 
-    async def get_objects(self, obj_type: str, host: str | None = None) -> list[str]:
+    async def get_objects(
+        self, obj_type: str, host: str | None = None, search: str | None = None
+    ) -> list[str]:
+        q = (search or "").strip().lower()
+
+        def _match(items: list[str]) -> list[str]:
+            return [i for i in items if not q or q in i.rsplit(";", 1)[-1].lower()]
+
         try:
             if obj_type == "host":
                 results = await self._get_results("objects/hosts", params={"attrs": "name"})
-                return [_icinga_str(_icinga_dict(r, "attrs"), "name") for r in results]
+                return _match([_icinga_str(_icinga_dict(r, "attrs"), "name") for r in results])
             if obj_type == "service":
                 params: IcingaParams = {"attrs": "host_name,name"}
                 if host:
                     params["filter"] = f'service.host_name=="{_iq(host)}"'
                 results = await self._get_results("objects/services", params=params)
-                return [
-                    f"{_icinga_str(_icinga_dict(r, 'attrs'), 'host_name')};"
-                    f"{_icinga_str(_icinga_dict(r, 'attrs'), 'name')}"
-                    for r in results
-                ]
+                return _match(
+                    [
+                        f"{_icinga_str(_icinga_dict(r, 'attrs'), 'host_name')};"
+                        f"{_icinga_str(_icinga_dict(r, 'attrs'), 'name')}"
+                        for r in results
+                    ]
+                )
         except Exception as exc:
             logger.warning("Icinga2 get_objects(%s) failed: %s", obj_type, exc)
         return []
