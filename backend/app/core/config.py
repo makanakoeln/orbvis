@@ -132,6 +132,14 @@ class Settings(BaseModel):
         default_factory=lambda: _env_int("CONNECTION_WARMUP_INTERVAL", 60)
     )
 
+    # Hard cap on object-name autocomplete results (host/group pickers in the
+    # board editor). Without it a multi-million-host site would stream every
+    # name into a config dropdown and freeze the UI. The editor filters the
+    # returned set client-side; a truncation hint is logged + surfaced.
+    object_autocomplete_limit: int = Field(
+        default_factory=lambda: _env_int("OBJECT_AUTOCOMPLETE_LIMIT", 5000), ge=1
+    )
+
     allowed_origins: list[str] = Field(
         default_factory=lambda: _env_list(
             "ALLOWED_ORIGINS", ["http://localhost:3000", "http://localhost:5173"]

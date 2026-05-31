@@ -1002,20 +1002,35 @@ class LivestatusConnection(ConnectionBase):
         return ObjectState(object_id="", type="dyngroup", state=worst, services_summary=summary)
 
     async def get_objects(self, obj_type: str, host: str | None = None) -> list[str]:
+        # Hard cap so a multi-million-host site can't stream every name into a
+        # board-editor autocomplete and freeze the UI. The editor filters the
+        # returned set client-side; if we hit the cap, log it so the truncation
+        # isn't silent (full server-side prefix search is the follow-up).
+        limit = settings.object_autocomplete_limit
+
+        def _capped(names: list[str], what: str) -> list[str]:
+            if len(names) >= limit:
+                logger.info(
+                    "%s autocomplete truncated to %d; site has more — type to narrow", what, limit
+                )
+            return names
+
         if obj_type == "host":
-            rows = await self._query("GET hosts\nColumns: name\n")
-            return [_row_str(r, 0) for r in rows]
+            rows = await self._query(f"GET hosts\nColumns: name\nLimit: {limit}\n")
+            return _capped([_row_str(r, 0) for r in rows], "host")
         if obj_type == "service":
             # Scope to one host — fetching every service times out at scale.
             host_filter = f"Filter: host_name = {_ls_escape(host)}\n" if host else ""
-            rows = await self._query(f"GET services\nColumns: host_name description\n{host_filter}")
-            return [f"{_row_str(r, 0)};{_row_str(r, 1)}" for r in rows]
+            rows = await self._query(
+                f"GET services\nColumns: host_name description\n{host_filter}Limit: {limit}\n"
+            )
+            return _capped([f"{_row_str(r, 0)};{_row_str(r, 1)}" for r in rows], "service")
         if obj_type == "hostgroup":
-            rows = await self._query("GET hostgroups\nColumns: name\n")
-            return [_row_str(r, 0) for r in rows]
+            rows = await self._query(f"GET hostgroups\nColumns: name\nLimit: {limit}\n")
+            return _capped([_row_str(r, 0) for r in rows], "hostgroup")
         if obj_type == "servicegroup":
-            rows = await self._query("GET servicegroups\nColumns: name\n")
-            return [_row_str(r, 0) for r in rows]
+            rows = await self._query(f"GET servicegroups\nColumns: name\nLimit: {limit}\n")
+            return _capped([_row_str(r, 0) for r in rows], "servicegroup")
         return []
 
     async def get_group_members(self, group_type: str, group_name: str) -> list[str]:
