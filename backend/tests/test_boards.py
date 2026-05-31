@@ -38,6 +38,25 @@ async def test_create_and_get_board(client, admin_token, tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_create_board_rejects_case_insensitive_duplicate(
+    client, admin_token, tmp_path, monkeypatch
+):
+    monkeypatch.setattr("app.core.config.settings.boards_dir", str(tmp_path))
+    monkeypatch.setattr("app.services.board_service.settings.boards_dir", str(tmp_path))
+    hdr = {"Authorization": f"Bearer {admin_token}"}
+
+    first = await client.post(
+        "/api/v1/boards", json={"name": "DupTest", "alias": "Dup"}, headers=hdr
+    )
+    assert first.status_code == 201
+
+    # A name differing only in case is the same board to the operator (and on
+    # case-insensitive filesystems) — must be rejected, not silently duplicated.
+    dup = await client.post("/api/v1/boards", json={"name": "duptest", "alias": "Dup"}, headers=hdr)
+    assert dup.status_code == 409
+
+
+@pytest.mark.asyncio
 async def test_get_nonexistent_board(client, admin_token):
     response = await client.get(
         "/api/v1/boards/does-not-exist",

@@ -158,6 +158,13 @@ def create_board(data: BoardCreate) -> BoardConfig:
         path = _board_path(data.name)
         if path.exists() or get_board(data.name) is not None:
             raise ValueError(f"Board '{data.name}' already exists")
+        # Names are file-backed, so "Folder" and "folder" collide on
+        # case-insensitive filesystems and read as duplicates to the operator
+        # everywhere else — reject a name that differs only in case from an
+        # existing board.
+        lowered = data.name.lower()
+        if any(existing.name.lower() == lowered for existing in list_boards()):
+            raise ValueError(f"Board '{data.name}' already exists")
         cfg = BoardConfig(
             name=data.name,
             alias=data.alias,
@@ -387,6 +394,9 @@ def clone_board(name: str, new_name: str, alias: str | None = None) -> BoardConf
             raise ValueError(f"Board '{name}' not found")
         dest_path = _board_path(new_name)
         if dest_path.exists() or get_board(new_name) is not None:
+            raise ValueError(f"Board '{new_name}' already exists")
+        lowered = new_name.lower()
+        if any(existing.name.lower() == lowered for existing in list_boards()):
             raise ValueError(f"Board '{new_name}' already exists")
         cfg = copy.deepcopy(src)
         cfg.name = new_name
