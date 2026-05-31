@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from app.form_specs import OrbDictGroup
 
-from cmk.rulesets.v1 import Help, Message, Title
+from cmk.rulesets.v1 import Help, Label, Message, Title
 from cmk.rulesets.v1.form_specs import (
+    BooleanChoice,
     DefaultValue,
     DictElement,
     Dictionary,
@@ -37,6 +38,11 @@ _CHECKMK = OrbDictGroup(
     title=Title("Checkmk integration"),
     help_text=Help("URL fallback used by connections without their own checkmk_url."),
     key="checkmk",
+)
+_FEATURES = OrbDictGroup(
+    title=Title("Features"),
+    help_text=Help("Opt-in board types and capabilities."),
+    key="features",
 )
 
 # Reject path-only strings like ``/SITE`` that look like a URL but break
@@ -122,6 +128,20 @@ def system_settings_spec() -> Dictionary:
                     unit_symbol="min",
                     prefill=DefaultValue(60),
                     custom_validate=(NumberInRange(min_value=5, max_value=1440),),
+                ),
+            ),
+            "enable_folder_boards": DictElement(
+                required=True,
+                group=_FEATURES,
+                parameter_form=BooleanChoice(
+                    title=Title("Folder boards"),
+                    label=Label("Offer the SETUP folder-tree board type"),
+                    help_text=Help(
+                        "Adds the Folder board type to the board-type picker when "
+                        "creating or editing a board. Existing folder boards keep "
+                        "rendering even while this is off."
+                    ),
+                    prefill=DefaultValue(False),
                 ),
             ),
         },

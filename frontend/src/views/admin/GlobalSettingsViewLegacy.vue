@@ -518,7 +518,12 @@ const connectionOptions = computed(() => ({
 }));
 const mapTypeOptions = computed(() => ({
     type: 'fixed' as const,
-    suggestions: boardTypeOptions(t),
+    // Offer folder-tree as a default board type only when the feature flag is on,
+    // or when it is already the configured default (so it isn't silently dropped).
+    suggestions: boardTypeOptions(
+        t,
+        store.system.enable_folder_boards || form.default_map_type === 'foldertree',
+    ),
 }));
 const lineStyleOpts = computed(() => ({
     type: 'fixed' as const,

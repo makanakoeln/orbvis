@@ -495,6 +495,7 @@ export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
 export interface SystemSettings {
     log_level?: LogLevel | null;
     checkmk_url?: string | null;
+    enable_folder_boards?: boolean;
 }
 
 // Slim timing patch for fields excluded from the state change-hash; see backend ObjectTiming.

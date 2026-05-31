@@ -870,6 +870,10 @@ export default {
         logging: 'Logging',
         logLevel: 'Log level',
         logLevelHint: 'Threshold for backend logs. Applied immediately, no restart required.',
+        features: 'Features',
+        enableFolderBoards: 'Enable Folder boards',
+        enableFolderBoardsHint:
+            'Offer the SETUP folder-tree board type in the board-type picker. Existing folder boards keep rendering even while this is off.',
     },
     userSettings: {
         title: 'User Settings',

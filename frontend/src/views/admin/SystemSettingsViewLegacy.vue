@@ -140,6 +140,53 @@
                         </div>
                     </CmkCollapsible>
                 </section>
+
+                <section
+                    class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
+                >
+                    <button
+                        class="w-full flex items-center justify-between text-left"
+                        style="padding: 14px 16px"
+                        @click="sectionOpen.features = !sectionOpen.features"
+                    >
+                        <h3 class="text-base font-semibold text-[var(--text-muted)]">
+                            {{ t('settings.features') }}
+                        </h3>
+                        <svg
+                            style="
+                                width: 14px;
+                                height: 14px;
+                                flex-shrink: 0;
+                                transition: transform 200ms;
+                            "
+                            :style="{ transform: sectionOpen.features ? 'rotate(180deg)' : '' }"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                            />
+                        </svg>
+                    </button>
+                    <CmkCollapsible :open="sectionOpen.features">
+                        <div style="padding: 0 16px 14px">
+                            <CmkCheckbox
+                                v-model="enableFolderBoards"
+                                :label="t('settings.enableFolderBoards')"
+                            />
+                            <p
+                                class="text-sm text-[var(--text-muted)]"
+                                style="margin-top: 4px; margin-left: 24px"
+                            >
+                                {{ t('settings.enableFolderBoardsHint') }}
+                            </p>
+                        </div>
+                    </CmkCollapsible>
+                </section>
             </div>
 
             <p v-if="saveError" class="text-sm text-[var(--color-light-red-40)]">{{ saveError }}</p>
@@ -193,6 +240,7 @@ import CmkHelpText from '@/components/cmk/CmkHelpText';
 import CmkLoading from '@/components/cmk/CmkLoading';
 import CmkHeading from '@/components/cmk/typography/CmkHeading';
 import CmkParagraph from '@/components/cmk/typography/CmkParagraph';
+import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
 import CmkInput from '@/components/cmk/user-input/CmkInput';
 import { useSettingsStore } from '@/stores/settings';
 import type { LogLevel, SystemSettings } from '@/types/api';
@@ -220,6 +268,14 @@ let saveErrorTimer: ReturnType<typeof setTimeout> | null = null;
 const sectionOpen = reactive({
     checkmkIntegration: true,
     logging: false,
+    features: false,
+});
+
+const enableFolderBoards = computed({
+    get: () => form.enable_folder_boards ?? false,
+    set: (v: boolean) => {
+        form.enable_folder_boards = v;
+    },
 });
 
 const logLevelOptions = computed(() => ({

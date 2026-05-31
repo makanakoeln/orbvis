@@ -30,6 +30,7 @@ export const SETTINGS_DEFAULTS: GlobalSettings = {
 export const SYSTEM_DEFAULTS: SystemSettings = {
     log_level: null,
     checkmk_url: null,
+    enable_folder_boards: false,
 };
 
 export const useSettingsStore = defineStore('settings', () => {

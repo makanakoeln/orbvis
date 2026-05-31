@@ -869,7 +869,9 @@ const connectionOptions = computed(() => ({
 }));
 const boardTypeLabel = computed(
     () =>
-        boardTypeOptions(t).find((o) => o.name === form.value.map_type)?.title ??
+        // Resolve the label for whatever type the board already is, so a folder
+        // board still shows its proper name even when the feature flag is off.
+        boardTypeOptions(t, true).find((o) => o.name === form.value.map_type)?.title ??
         form.value.map_type,
 );
 

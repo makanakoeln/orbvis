@@ -877,6 +877,10 @@ export default {
         logLevel: 'Log-Level',
         logLevelHint:
             'Schwellwert für die Backend-Logs. Wird sofort übernommen, kein Neustart nötig.',
+        features: 'Funktionen',
+        enableFolderBoards: 'Folder-Boards aktivieren',
+        enableFolderBoardsHint:
+            'Bietet den SETUP-Ordnerbaum-Boardtyp in der Board-Typ-Auswahl an. Bestehende Folder-Boards werden weiterhin angezeigt, auch wenn dies deaktiviert ist.',
     },
     userSettings: {
         title: 'Benutzereinstellungen',

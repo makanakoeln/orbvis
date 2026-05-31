@@ -102,3 +102,7 @@ class SystemSettings(BaseModel):
     # ``None`` falls back to the ``Settings`` env default at request time.
     state_refresh_interval: Annotated[int, Field(ge=1, le=300)] | None = None
     access_token_expire_minutes: Annotated[int, Field(ge=5, le=1440)] | None = None
+    # Feature flag: expose the (newer) SETUP folder-tree board type in the
+    # board-type picker. Off by default so operators opt in explicitly; existing
+    # folder boards keep rendering regardless.
+    enable_folder_boards: bool = False

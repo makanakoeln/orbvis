@@ -124,7 +124,7 @@ const connectionOptions = computed(() => ({
     suggestions: connectionsStore.connections.map((b) => ({ name: b.id, title: b.label || b.id })),
 }));
 const boardTypeCards = computed(() =>
-    boardTypeOptions(t).map((o) => ({
+    boardTypeOptions(t, settingsStore.system.enable_folder_boards).map((o) => ({
         ...o,
         desc:
             o.name === 'static'
