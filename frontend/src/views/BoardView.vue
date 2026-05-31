@@ -608,7 +608,7 @@
         />
 
         <FolderBulkActionModal
-            v-if="folderBulkModal && checkmkUrl"
+            v-if="folderBulkModal && checkmkUrl && auth.isAdmin"
             :folder="folderBulkModal"
             :checkmk-url="checkmkUrl"
             @close="
@@ -1877,6 +1877,8 @@ function onFolderServiceSelect(host: string, node: FolderTreeNode) {
 
 const folderBulkModal = ref<FolderTreeNode | null>(null);
 function onFolderAction(node: FolderTreeNode) {
+    // Commands are admin-only (Livestatus pipe bypasses CMK contact-group ACLs).
+    if (!auth.isAdmin) return;
     folderBulkModal.value = node;
 }
 

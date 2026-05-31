@@ -127,6 +127,7 @@
                 :services-by-host="servicesByHost"
                 :service-loading="serviceLoading"
                 :service-error="serviceError"
+                :can-command="canCommand"
                 @toggle="toggle"
                 @expand-host="ensureServices"
                 @select-host="$emit('select-host', $event)"
@@ -371,6 +372,12 @@ const multiSite = computed(() => {
     walk(root.value);
     return sites.size > 1;
 });
+
+// Folder bulk actions go through the same admin-only command gate as the detail
+// drawer (the Livestatus command pipe bypasses CMK contact-group ACLs, so the
+// backend hard-gates on is_admin). Hide the affordance for non-admins / preview
+// so we never offer an action that would 403.
+const canCommand = computed(() => auth.isAdmin && !props.preview);
 
 function toggle(path: string) {
     if (expanded.has(path)) expanded.delete(path);

@@ -107,7 +107,7 @@
         <!-- Folder bulk actions (ack/downtime for all its hosts) — appears on the
              folder row, only when it actually contains hosts. -->
         <button
-            v-if="node.kind === 'folder' && !isEmpty && node.host_count > 0"
+            v-if="canCommand && node.kind === 'folder' && !isEmpty && node.host_count > 0"
             type="button"
             class="ft-folder-action"
             :title="t('board.ftBulkActions')"
@@ -164,6 +164,7 @@
                 :services-by-host="servicesByHost"
                 :service-loading="serviceLoading"
                 :service-error="serviceError"
+                :can-command="canCommand"
                 :host-name="node.title"
                 @toggle="$emit('toggle', $event)"
                 @expand-host="$emit('expand-host', $event)"
@@ -187,6 +188,7 @@
                 :services-by-host="servicesByHost"
                 :service-loading="serviceLoading"
                 :service-error="serviceError"
+                :can-command="canCommand"
                 @toggle="$emit('toggle', $event)"
                 @expand-host="$emit('expand-host', $event)"
                 @select-host="$emit('select-host', $event)"
@@ -227,6 +229,8 @@ const props = defineProps<{
     serviceError: Set<string>;
     // Set on service rows so a click can resolve the owning host for the drawer.
     hostName?: string;
+    // Admin-only: gates the folder bulk-action affordance (commands 403 otherwise).
+    canCommand?: boolean;
 }>();
 
 const emit = defineEmits<{
