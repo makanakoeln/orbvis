@@ -126,6 +126,11 @@ class FolderTreeNode(BaseModel):
     kind: Literal["folder", "host", "service"] = "folder"
     state: str  # aggregated/own state; "EMPTY" for hostless folders
     is_empty: bool = False
+    # Whether the requesting user may see this folder (Checkmk folder permissions:
+    # see-all, or member of the folder's contact groups). Empty + non-permitted
+    # folders are pruned so a scoped user never sees SETUP folder names they have
+    # no access to. Internal-only — drives pruning, not sent to the client.
+    permitted: bool = Field(default=True, exclude=True)
     folder_id: str = ""  # stable WATO ``__id`` when known (v3 §7.1)
     host_count: int = 0  # hosts at/below this node
     problem_count: int = 0  # non-OK hosts at/below (for badges)

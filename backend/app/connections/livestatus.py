@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from datetime import UTC
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Literal, TypedDict, cast
 
 if TYPE_CHECKING:
     from cmk.livestatus_client import MultiSiteConnection
@@ -377,29 +377,92 @@ def _read_wato_info(wato_file: Path) -> dict[str, object] | None:
     return data if isinstance(data, dict) else None
 
 
+def _folder_cgconf(info: dict[str, object] | None) -> tuple[list[str], bool]:
+    """Read a folder's own contact-group config from its ``.wato`` ``attributes``.
+
+    Returns ``(groups, recurse_perms)``. Mirrors Checkmk's ``HostContactGroupSpec``
+    (``cmk.gui.watolib.host_attributes``): the modern form is a dict
+    ``{"groups": [...], "recurse_perms": bool, ...}``; older Checkmk stored a
+    ``(use, [groups])`` tuple (no separate recurse flag).
+    """
+    if not info:
+        return [], False
+    attrs = info.get("attributes")
+    if not isinstance(attrs, dict):
+        return [], False
+    cg = attrs.get("contactgroups")
+    if isinstance(cg, dict):
+        raw = cg.get("groups", [])
+        groups = [g for g in raw if isinstance(g, str)] if isinstance(raw, list) else []
+        return groups, bool(cg.get("recurse_perms", False))
+    if isinstance(cg, (list, tuple)) and len(cg) >= 2:
+        raw = cg[1]
+        groups = [g for g in raw if isinstance(g, str)] if isinstance(raw, (list, tuple)) else []
+        return groups, False
+    return [], False
+
+
+def _parent_folder_path(path: str) -> str | None:
+    """Parent folder path; "" for a top-level folder, None for the root ("")."""
+    if path == "":
+        return None
+    return path.rsplit("/", 1)[0] if "/" in path else ""
+
+
 def _walk_wato_folders(wato_root: Path) -> list[FolderInfo]:
     """Every SETUP folder (incl. the "Main" root and empty ones) with its real
-    title + stable id.
+    title, stable id, and the effective read-permitted contact groups.
 
     The root folder ("") is included so the tree carries Checkmk's real root
     title ("Main") — both the List root row and the Map breadcrumb show it.
     ``__id`` survives folder rename/move, so it feeds ``folder_id`` for stable
     ``root_folder`` scoping.
+
+    ``permitted_groups`` mirrors Checkmk's ``Folder.groups()``: a folder's own
+    contact groups plus those inherited from any ancestor whose ``recurse_perms``
+    is set. Used to scope the folder skeleton to what a non-see-all user may see,
+    so empty SETUP folders aren't disclosed to users outside their contact groups.
     """
-    folders: list[FolderInfo] = []
+    titles: dict[str, str] = {}
+    fids: dict[str, str] = {}
+    own_groups: dict[str, list[str]] = {}
+    recurse_perms: dict[str, bool] = {}
     for wato_file in wato_root.rglob(".wato"):
         rel = wato_file.parent.relative_to(wato_root)
         path = "" if rel == Path(".") else rel.as_posix()
         info = _read_wato_info(wato_file)
         title = info.get("title") if info else None
         fallback = path.rsplit("/", 1)[-1] if path else "Main"
+        titles[path] = title if isinstance(title, str) and title else fallback
+        fid = info.get("__id") if info else None
+        fids[path] = fid if isinstance(fid, str) and fid else ""
+        own_groups[path], recurse_perms[path] = _folder_cgconf(info)
+
+    # Resolve effective permitted groups top-down (parents before children) so a
+    # folder inherits an ancestor's groups exactly when that ancestor recurses.
+    effective: dict[str, set[str]] = {}
+    inherited: dict[str, set[str]] = {}
+    for path in sorted(titles, key=lambda p: (p.count("/") if p else -1, p)):
+        parent = _parent_folder_path(path)
+        if parent is None:
+            inh: set[str] = set()
+        else:
+            par_eff = effective.get(parent, set())
+            inh = inherited.get(parent, set()) | (
+                par_eff if recurse_perms.get(parent, False) else set()
+            )
+        inherited[path] = inh
+        effective[path] = set(own_groups[path]) | inh
+
+    folders: list[FolderInfo] = []
+    for path, title in titles.items():
         entry: FolderInfo = {
             "path": path,
-            "title": title if isinstance(title, str) and title else fallback,
+            "title": title,
+            "permitted_groups": sorted(effective[path]),
         }
-        fid = info.get("__id") if info else None
-        if isinstance(fid, str) and fid:
-            entry["folder_id"] = fid
+        if fids[path]:
+            entry["folder_id"] = fids[path]
         folders.append(entry)
     return folders
 
@@ -1981,7 +2044,32 @@ class LivestatusConnection(ConnectionBase):
                     "last_state_change": _row_float_or_none(row, 12),
                 }
             )
-        return FolderTreeData(folders=await _load_wato_folders(), hosts=hosts)
+        # Scope the (otherwise unscoped) folder skeleton to what the requesting
+        # user may read, mirroring Checkmk folder permissions. ``auth_user`` is
+        # None for admins and ``general.see_all`` users (see ``resolve_auth_user``)
+        # — they see every folder, consistent with seeing every host. A scoped
+        # user only sees folders sharing a contact group with them; empty folders
+        # outside their groups are then pruned by the state service.
+        folders = await _load_wato_folders()
+        auth_user = _auth_user_ctx.get()
+        if auth_user is None:
+            user_cgs: set[str] | None = None
+        else:
+            user_cgs = set(
+                await asyncio.to_thread(_cmk_integration.get_user_contact_groups, auth_user)
+            )
+        scoped: list[FolderInfo] = [
+            cast(
+                "FolderInfo",
+                {
+                    **f,
+                    "permitted": user_cgs is None
+                    or bool(user_cgs & set(f.get("permitted_groups", []))),
+                },
+            )
+            for f in folders
+        ]
+        return FolderTreeData(folders=scoped, hosts=hosts)
 
     async def get_all_services_states(
         self, only_hard: bool = False

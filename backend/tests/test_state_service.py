@@ -657,6 +657,47 @@ async def test_foldertree_hide_empty_folders(_test_conn):
 
 
 @pytest.mark.asyncio
+async def test_foldertree_prunes_unpermitted_empty_folders(_test_conn, monkeypatch):
+    """A scoped user must not see SETUP folder names they have no access to.
+
+    Empty folders the user can't read (``permitted=False``) are pruned even with
+    ``show_empty_folders`` on; an empty *permitted* folder is kept, and a folder
+    that contains a visible host is kept regardless of its own permission flag.
+    """
+    from app.connections.base import FolderTreeData
+
+    async def _fake_folder_tree(*, only_hard=False, sites=None):
+        return FolderTreeData(
+            folders=[
+                {"path": "", "title": "Main", "permitted": True},
+                {"path": "secret", "title": "Secret", "permitted": False},
+                {"path": "shared", "title": "Shared", "permitted": True},
+                {"path": "withhost", "title": "WithHost", "permitted": False},
+            ],
+            hosts=[
+                {
+                    "host_name": "h1",
+                    "folder_path": "withhost",
+                    "state": "UP",
+                    "output": "",
+                    "site_id": "central",
+                }
+            ],
+        )
+
+    monkeypatch.setattr(_test_conn, "get_folder_tree", _fake_folder_tree)
+    result = await get_board_states(_folder_board({"show_empty_folders": True}))
+    tree = result.folder_tree
+    # Empty + not permitted → hidden, even though show_empty_folders is on.
+    assert _find_node(tree, "secret") is None
+    # Empty + permitted → shown (respects show_empty_folders).
+    assert _find_node(tree, "shared") is not None
+    # Has a visible host → shown regardless of its own permission flag.
+    wh = _find_node(tree, "withhost")
+    assert wh is not None and wh.host_count == 1
+
+
+@pytest.mark.asyncio
 async def test_foldertree_sites_filter(_test_conn):
     result = await get_board_states(_folder_board({"sites": ["central"]}))
     tree = result.folder_tree

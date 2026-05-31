@@ -129,6 +129,13 @@ class FolderInfo(TypedDict):
     path: str
     title: str
     folder_id: NotRequired[str]
+    # Effective read-permitted contact groups (own + inherited via recurse_perms),
+    # mirroring Checkmk folder permissions. Empty = only see-all users may read it.
+    # User-independent, so it can be cached with the folder structure.
+    permitted_groups: NotRequired[list[str]]
+    # Resolved for the requesting user: True when they may see this folder
+    # (see-all, or a member of one of ``permitted_groups``). Set per request.
+    permitted: NotRequired[bool]
 
 
 class FolderTreeHostRow(TypedDict):

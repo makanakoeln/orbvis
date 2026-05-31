@@ -812,7 +812,15 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
 
     nodes: dict[str, FolderTreeNode] = {}
 
-    def ensure_folder(path: str, title: str | None = None, folder_id: str = "") -> FolderTreeNode:
+    def ensure_folder(
+        path: str,
+        title: str | None = None,
+        folder_id: str = "",
+        permitted: bool | None = None,
+    ) -> FolderTreeNode:
+        # ``permitted`` is None for implicit (ancestor) and host-folder creation,
+        # which default to permitted; only the explicit skeleton pass carries the
+        # real Checkmk folder permission and may downgrade an existing node.
         path = _norm_folder_path(path)
         node = nodes.get(path)
         if node is None:
@@ -824,6 +832,7 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
                 state="EMPTY",
                 is_empty=True,
                 folder_id=folder_id,
+                permitted=permitted if permitted is not None else True,
             )
             nodes[path] = node
             if path:
@@ -836,11 +845,13 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
                 node.title = title
             if folder_id and not node.folder_id:
                 node.folder_id = folder_id
+            if permitted is not None:
+                node.permitted = permitted
         return node
 
     ensure_folder("")
     for f in data.folders:
-        ensure_folder(f["path"], f.get("title"), f.get("folder_id", ""))
+        ensure_folder(f["path"], f.get("title"), f.get("folder_id", ""), f.get("permitted", True))
 
     host_states: list[ObjectState] = []
     for h in data.hosts:
@@ -936,6 +947,12 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
         node.children = [c for c in node.children if prune(c)]
         if fv.problems_only:
             return node.problem_count > 0
+        # An empty folder the user has no Checkmk read-permission to is never
+        # shown — otherwise the SETUP folder name would leak to a user outside
+        # its contact groups (even though all its hosts are already hidden).
+        # Folders that contain a visible host are not empty, so they survive.
+        if node.is_empty and not node.permitted:
+            return False
         if not fv.show_empty_folders and node.is_empty:
             return False
         return True
