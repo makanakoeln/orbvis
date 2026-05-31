@@ -191,8 +191,11 @@ function labelText(d: FNode): string {
         return n.kind === 'folder' ? `${chev}${folderLabel(n)}` : `${chev}${n.title}`;
     }
     if (n.kind === 'folder') return folderLabel(n); // empty folder
-    // Collapsed host that can drill into services → chevron hints expandability.
-    if (n.kind === 'host' && canExpand(n)) return `▸ ${n.title}`;
+    // Collapsed host that can drill into services → chevron hints expandability;
+    // show a loading ellipsis while its lazy services are being fetched.
+    if (n.kind === 'host' && canExpand(n)) {
+        return `▸ ${n.title}${props.serviceLoading.has(n.title) ? ' …' : ''}`;
+    }
     return n.title; // plain host or service chip
 }
 
@@ -206,10 +209,16 @@ function fitLabel(text: string, width: number): string {
     return text.slice(0, Math.max(1, max - 1)).trimEnd() + '…';
 }
 
-// Command-state glyphs shown in a tile corner (mirrors the List's ✔/⏸ markers)
-// so acknowledged / in-downtime hosts and services are recognisable in the map.
+// Command-state badges shown in a tile corner (text, not glyphs — a check mark
+// reads as "OK"; mirrors the List's ACK/DT/FLAP). A failed lazy service fetch
+// surfaces as "!" so the host doesn't just sit there silently.
 function markText(n: FolderTreeNode): string {
-    return (n.acknowledged ? '✔' : '') + (n.in_downtime ? '⏸' : '');
+    const t: string[] = [];
+    if (n.acknowledged) t.push('ACK');
+    if (n.in_downtime) t.push('DT');
+    if (n.is_flapping) t.push('FLAP');
+    if (n.kind === 'host' && props.serviceError.has(n.title)) t.push('!');
+    return t.join(' ');
 }
 
 function allFolderPaths(node: FolderTreeNode, acc: string[] = []): string[] {
@@ -302,16 +311,36 @@ function showTip(event: MouseEvent, d: FNode): void {
     const breakdown = pills.length
         ? pills.map((p) => `${p.count} ${p.state}`).join(' · ')
         : 'all OK';
-    const flags = [n.acknowledged ? 'ACK' : '', n.in_downtime ? 'DOWNTIME' : '']
+    const flags = [
+        n.acknowledged ? 'ACK' : '',
+        n.in_downtime ? 'DOWNTIME' : '',
+        n.is_flapping ? 'FLAPPING' : '',
+    ]
         .filter(Boolean)
         .join(' · ');
+    // Make the click outcome predictable (the same host tile expands when
+    // show_services is on, opens the drawer otherwise).
+    let hint = '';
+    if (n.kind === 'host') {
+        hint = canExpand(n)
+            ? props.serviceError.has(n.title)
+                ? 'services failed to load — click to retry'
+                : props.serviceLoading.has(n.title)
+                  ? 'loading services…'
+                  : 'click: show services'
+            : 'click: details';
+    } else if (n.kind === 'service') {
+        hint = 'click: details';
+    } else if (canExpand(n)) {
+        hint = isExpanded(d) ? 'click: collapse' : 'click: expand';
+    }
     const base =
         n.kind === 'host' || n.kind === 'service'
             ? n.state
             : n.is_empty
               ? 'empty · 0 hosts'
               : `${n.host_count} hosts · ${breakdown}`;
-    const meta = flags ? `${base} · ${flags}` : base;
+    const meta = [base, flags, hint].filter(Boolean).join(' · ');
     tip.value = {
         x: event.clientX - rect.left + 12,
         y: event.clientY - rect.top + 12,
@@ -516,6 +545,9 @@ watch(
                             .join(',')}`,
                 )
                 .join('|'),
+        // Loading/error of lazily-fetched services → refresh the host label
+        // ("…") and the "!" marker even though the visible set is unchanged.
+        () => `${[...props.serviceLoading].join(',')}|${[...props.serviceError].join(',')}`,
     ],
     relayout,
     { flush: 'post' },

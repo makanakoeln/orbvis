@@ -61,9 +61,9 @@
         <span v-if="node.kind === 'host' && multiSite && node.site_id" class="ft-site">{{
             node.site_id
         }}</span>
-        <span v-if="node.acknowledged" class="ft-mark" title="Acknowledged">✔</span>
-        <span v-if="node.in_downtime" class="ft-mark" title="In downtime">⏸</span>
-        <span v-if="node.is_flapping" class="ft-mark" title="Flapping">↯</span>
+        <span v-if="node.acknowledged" class="ft-cmd ft-cmd--ack" title="Acknowledged">ACK</span>
+        <span v-if="node.in_downtime" class="ft-cmd ft-cmd--dt" title="In downtime">DT</span>
+        <span v-if="node.is_flapping" class="ft-cmd ft-cmd--flap" title="Flapping">FLAP</span>
         <span v-if="age" class="ft-age" title="Since last state change">{{ age }}</span>
     </div>
 
@@ -358,10 +358,34 @@ function onRowClick() {
     flex-shrink: 0;
 }
 
-.ft-mark {
-    font-size: 11px;
-    color: var(--text-muted);
+/* Command-state badges — explicit text so they're unambiguous (a check mark for
+   "acknowledged" reads as "OK"). Muted, distinct accents per kind. */
+.ft-cmd {
     flex-shrink: 0;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    background: var(--bg-hover);
+}
+
+.ft-cmd--ack {
+    color: var(--color-state-up, #0f0);
+    border-color: color-mix(in srgb, var(--color-state-up, #0a0) 45%, var(--border));
+}
+
+.ft-cmd--dt {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.ft-cmd--flap {
+    color: var(--color-state-warning, #ffd000);
+    border-color: color-mix(in srgb, var(--color-state-warning, #ffd000) 45%, var(--border));
 }
 
 .ft-age {

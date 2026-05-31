@@ -162,6 +162,16 @@ function setMode(m: 'map' | 'list') {
         .catch(() => {});
 }
 
+// Persist the runtime "Problems only" toggle the same way as the view mode, so
+// the operator's filter choice survives a reload instead of silently resetting.
+watch(problemsOnly, (po) => {
+    if (props.preview || !props.boardName || !auth.accessToken) return;
+    if (po === (props.view.problems_only ?? false)) return;
+    void boardsApi
+        .update(props.boardName, { view: { ...props.view, problems_only: po } }, auth.accessToken)
+        .catch(() => {});
+});
+
 function activeExpandAll() {
     if (mode.value === 'map') mapRef.value?.expandAll();
     else expandAll();
