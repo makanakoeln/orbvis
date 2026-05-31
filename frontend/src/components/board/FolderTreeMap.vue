@@ -385,6 +385,34 @@ function showTip(event: MouseEvent, d: FNode): void {
     };
 }
 
+function activateCell(d: FNode): void {
+    const n = d.data;
+    if (canExpand(n)) {
+        // Drilling a host triggers its lazy service fetch; the relayout follows
+        // once servicesByHost updates (watched below).
+        if (n.kind === 'host') emit('expand-host', n);
+        toggleFolder(n.path);
+    } else if (n.kind === 'host') {
+        emit('select-host', n);
+    } else if (n.kind === 'service') {
+        emit('select-service', d.parent?.data.title ?? '', n);
+    }
+}
+
+// Spoken label for a tile (screen readers): name + state/host-count.
+function cellAria(d: FNode): string {
+    const n = d.data;
+    if (n.kind === 'folder' && n.is_empty) return `${n.title}, empty`;
+    if (n.kind === 'folder') {
+        const pills = severityPills(n.severity_counts);
+        const breakdown = pills.length
+            ? pills.map((p) => `${p.count} ${p.state}`).join(', ')
+            : 'OK';
+        return `${n.title}, ${n.host_count} hosts, ${breakdown}`;
+    }
+    return `${n.title}, ${n.state}`;
+}
+
 function draw(animate: boolean): void {
     if (!svgEl.value) return;
     const laid = layout();
@@ -424,18 +452,21 @@ function draw(animate: boolean): void {
     const merged = enter.merge(cells);
     merged
         .style('cursor', 'pointer')
+        // Keyboard-operable: each tile is a focusable button with a spoken label,
+        // Enter/Space activates it (the Map can be the default view, so it must
+        // not be mouse-only). The List already exposes ARIA tree roles.
+        .attr('tabindex', 0)
+        .attr('role', 'button')
+        .attr('aria-label', cellAria)
         .on('click', (event: MouseEvent, d) => {
             event.stopPropagation();
-            const n = d.data;
-            if (canExpand(n)) {
-                // Drilling a host triggers its lazy service fetch; the relayout
-                // follows once servicesByHost updates (watched below).
-                if (n.kind === 'host') emit('expand-host', n);
-                toggleFolder(n.path);
-            } else if (n.kind === 'host') {
-                emit('select-host', n);
-            } else if (n.kind === 'service') {
-                emit('select-service', d.parent?.data.title ?? '', n);
+            activateCell(d);
+        })
+        .on('keydown', (event: KeyboardEvent, d) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                event.stopPropagation();
+                activateCell(d);
             }
         })
         .on('mousemove', showTip)
@@ -482,6 +513,7 @@ function draw(animate: boolean): void {
 // Label + command-state marker rendering, shared by draw() and recolor() so a
 // recolor pass doesn't clobber the marker text or drop label truncation.
 function paintLabels(sel: Selection<SVGGElement, FNode, BaseType, unknown>): void {
+    sel.attr('aria-label', cellAria); // keep the spoken label in sync on recolor
     sel.select<SVGTextElement>('text.ftm-label').each(function (d) {
         const w = d.x1 - d.x0;
         const h = d.y1 - d.y0;
@@ -626,6 +658,11 @@ defineExpose({ expandAll, collapseAll });
     width: 100%;
     height: 100%;
     display: block;
+}
+
+.ftm-svg :deep(.ftm-cell:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
 }
 
 .ftm-svg :deep(.ftm-label) {
