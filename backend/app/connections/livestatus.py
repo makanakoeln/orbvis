@@ -42,6 +42,7 @@ from app.connections.base import (
 from app.core.config import settings
 from app.integrations import checkmk as _cmk_integration
 from app.integrations import checkmk_sites as _cmk_sites
+from app.integrations.checkmk import FolderScope
 from app.integrations.cmk_plugins import get_plugin_dirs, iter_graphing_modules
 from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.state import (
@@ -69,6 +70,12 @@ class LivestatusProtocolError(RuntimeError):
 # ``AuthUser: <username>`` so Livestatus only returns objects the user
 # is a contact for (contact-group filtering).
 _auth_user_ctx: ContextVar[str | None] = ContextVar("_auth_user_ctx", default=None)
+
+# The requesting user's SETUP-folder read visibility, used by ``get_folder_tree``
+# to mark which (otherwise unscoped) folders the user may see. Distinct from
+# ``_auth_user_ctx``: a see-all guest scopes folders by contact group yet has no
+# Livestatus AuthUser. ``None`` means unrestricted (standalone / not set).
+_folder_scope_ctx: ContextVar[FolderScope | None] = ContextVar("_folder_scope_ctx", default=None)
 
 
 _EXPRESSION_PLACEHOLDER_RE = re.compile(r"\s*_EXPRESSION:\{[^}]*\}\s*")
@@ -868,6 +875,17 @@ class LivestatusConnection(ConnectionBase):
             yield
         finally:
             _auth_user_ctx.reset(token)
+
+    @asynccontextmanager
+    async def with_folder_scope(self, scope: FolderScope | None) -> AsyncIterator[None]:
+        """Context manager: scope the SETUP folder skeleton (``get_folder_tree``)
+        to *scope*'s readable folders. Independent of ``with_auth_user`` because
+        folder-read permission and monitoring host visibility differ."""
+        token = _folder_scope_ctx.set(scope)
+        try:
+            yield
+        finally:
+            _folder_scope_ctx.reset(token)
 
     # ------------------------------------------------------------------
     # Public interface
@@ -2045,27 +2063,18 @@ class LivestatusConnection(ConnectionBase):
                 }
             )
         # Scope the (otherwise unscoped) folder skeleton to what the requesting
-        # user may read, mirroring Checkmk folder permissions. ``auth_user`` is
-        # None for admins and ``general.see_all`` users (see ``resolve_auth_user``)
-        # — they see every folder, consistent with seeing every host. A scoped
-        # user only sees folders sharing a contact group with them; empty folders
-        # outside their groups are then pruned by the state service.
+        # user may *read* in SETUP, mirroring Checkmk folder permissions
+        # (``wato.see_all_folders`` OR membership in a folder's contact groups).
+        # This is deliberately NOT the monitoring scope: a see-all guest sees
+        # every host yet must not see SETUP folder names outside their groups.
+        # ``None`` scope = unrestricted (standalone). Empty folders the user
+        # can't read are then pruned by the state service.
         folders = await _load_wato_folders()
-        auth_user = _auth_user_ctx.get()
-        if auth_user is None:
-            user_cgs: set[str] | None = None
-        else:
-            user_cgs = set(
-                await asyncio.to_thread(_cmk_integration.get_user_contact_groups, auth_user)
-            )
+        scope = _folder_scope_ctx.get()
         scoped: list[FolderInfo] = [
             cast(
                 "FolderInfo",
-                {
-                    **f,
-                    "permitted": user_cgs is None
-                    or bool(user_cgs & set(f.get("permitted_groups", []))),
-                },
+                {**f, "permitted": scope is None or scope.permits(f.get("permitted_groups", []))},
             )
             for f in folders
         ]

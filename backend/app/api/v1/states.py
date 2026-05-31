@@ -22,6 +22,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.ratelimit import ws_connect_limiter
 from app.core.sse import Subscriber, manager
+from app.integrations.checkmk import resolve_folder_scope
 from app.models.user import User
 from app.schemas.board import BoardConfig, FlowView, FolderTreeView, RadarView
 from app.schemas.state import FolderHostService, MapStates, ObjectState, ObjectTiming
@@ -165,17 +166,26 @@ async def _broadcast_loop(board_name: str) -> None:
                 if settings.checkmk_omd_root:
                     grouped = manager.get_subscribers_grouped(board_name)
                     user_count = len(grouped)
-                    for auth_user, subs in grouped.items():
+                    for group_key, subs in grouped.items():
+                        # All subs in a group render identically; the first carries
+                        # the monitoring (auth_user) + folder (folder_scope) scopes.
+                        # Snapshots/deltas are keyed by group_key so admin and a
+                        # see-all guest on a foldertree board don't share a tree.
+                        rep = subs[0]
+                        auth_user = rep.auth_user
                         can_view = (
                             (lambda n, u=auth_user: _can_view_board_by_name(u, n))
                             if auth_user is not None
                             else None
                         )
                         states = await state_service.get_board_states(
-                            cfg, auth_user=auth_user, can_view_board=can_view
+                            cfg,
+                            auth_user=auth_user,
+                            can_view_board=can_view,
+                            folder_scope=rep.folder_scope,
                         )
                         to_send, removed_ids, is_full, timing = state_service.compute_states_delta(
-                            board_name, auth_user, states.states
+                            board_name, group_key, states.states
                         )
                         # Evaluated unconditionally so the stored signature stays
                         # current; folder structure can change with no host-state
@@ -183,7 +193,7 @@ async def _broadcast_loop(board_name: str) -> None:
                         ft_changed = (
                             cfg.view.type == "foldertree"
                             and state_service.folder_tree_changed(
-                                board_name, auth_user, states.folder_tree
+                                board_name, group_key, states.folder_tree
                             )
                         )
                         if is_full or to_send or removed_ids or timing or ft_changed:
@@ -265,10 +275,18 @@ async def get_board_states(
             }
         )
     auth_user = resolve_auth_user(current_user.name, current_user.is_admin)
+    # Only foldertree boards consume folder_scope; skip the permission/contact-group
+    # lookups for every other board type.
+    folder_scope = (
+        resolve_folder_scope(current_user.name, current_user.is_admin)
+        if cfg.view.type == "foldertree"
+        else None
+    )
     return await state_service.get_board_states(
         cfg,
         auth_user=auth_user,
         can_view_board=lambda n: _can_view_board(current_user, n),
+        folder_scope=folder_scope,
     )
 
 
@@ -375,7 +393,17 @@ async def sse_board_states(
         )
 
     auth_user = resolve_auth_user(user.name, user.is_admin)
-    sub = manager.subscribe(name, auth_user)
+    # Foldertree boards render a SETUP folder skeleton scoped by folder-read
+    # permission, which differs from the monitoring scope (a see-all guest shares
+    # auth_user=None with an admin but sees fewer folders). Fold that into the
+    # subscriber group key so they get separate computations; other board types
+    # group by auth_user alone.
+    folder_scope = None
+    group_key: str | None = auth_user
+    if cfg.view.type == "foldertree":
+        folder_scope = resolve_folder_scope(user.name, user.is_admin)
+        group_key = f"{auth_user}#{folder_scope.key}"
+    sub = manager.subscribe(name, auth_user, folder_scope=folder_scope, group_key=group_key)
 
     if name not in _broadcast_tasks or _broadcast_tasks[name].done():
         _broadcast_tasks[name] = asyncio.create_task(_broadcast_loop(name))

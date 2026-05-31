@@ -10,12 +10,40 @@ import sys
 import threading
 import time as _time
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
 from app.core.config import settings
 
 log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class FolderScope:
+    """A user's SETUP-folder *read* visibility (distinct from monitoring host
+    visibility / Livestatus AuthUser).
+
+    Checkmk gates folder reads on ``wato.see_all_folders`` (admin-only) OR
+    membership in a folder's contact groups — NOT on ``general.see_all`` (which
+    a guest has). So a see-all guest sees every monitored host but must not see
+    SETUP folder names outside their contact groups.
+
+    ``see_all`` → may read every folder. Otherwise a folder is readable iff its
+    effective contact groups intersect ``groups``. ``key`` is a stable hashable
+    identity so subscribers/snapshots with the same folder visibility share work.
+    """
+
+    see_all: bool
+    groups: frozenset[str] = frozenset()
+
+    @property
+    def key(self) -> str:
+        return "*" if self.see_all else "cg:" + ",".join(sorted(self.groups))
+
+    def permits(self, permitted_groups: Iterable[str]) -> bool:
+        return self.see_all or bool(self.groups & set(permitted_groups))
+
 
 # True after setup() succeeded and cmk.* modules are importable
 available = False
@@ -144,6 +172,10 @@ _ORBVIS_EDIT_DEFAULTS: frozenset[str] = frozenset({"admin"})
 # Source: cmk/gui/default_permissions.py — keep in sync when adding new checks.
 _CMK_PERM_DEFAULTS: dict[str, frozenset[str]] = {
     "general.see_all": frozenset({"admin", "guest"}),
+    # Read access to all SETUP folders regardless of contact groups. Guests do
+    # NOT have it (unlike general.see_all) — they can monitor all hosts but must
+    # not see SETUP folder names outside their contact groups. (cmk/gui/wato)
+    "wato.see_all_folders": frozenset({"admin"}),
 }
 
 
@@ -225,6 +257,20 @@ def check_checkmk_permission(username: str, perm_name: str) -> bool:
         return False
     user_data = load_user(username) if available else _load_user_fallback(username)
     return _has_permission(user_data, _load_roles(), perm_name)
+
+
+def resolve_folder_scope(username: str, is_admin: bool) -> FolderScope:
+    """The SETUP-folder read visibility for a user (see :class:`FolderScope`).
+
+    Standalone (no CHECKMK_OMD_ROOT) has no folder ACLs → see all. Admins and
+    ``wato.see_all_folders`` holders see all; everyone else is limited to their
+    contact groups.
+    """
+    if not settings.checkmk_omd_root:
+        return FolderScope(see_all=True)
+    if is_admin or check_checkmk_permission(username, "wato.see_all_folders"):
+        return FolderScope(see_all=True)
+    return FolderScope(see_all=False, groups=frozenset(get_user_contact_groups(username)))
 
 
 def check_board_permission(username: str, board_name: str, action: str) -> bool:

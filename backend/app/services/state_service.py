@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from app.connections.base import FolderTreeData, ServiceRow
 from app.core.config import settings
+from app.integrations.checkmk import FolderScope
 from app.schemas.board import (
     AggregationNode,
     BoardConfig,
@@ -106,12 +107,15 @@ async def get_board_states(
     cfg: BoardConfig,
     auth_user: str | None = None,
     can_view_board: Callable[[str], bool] | None = None,
+    folder_scope: FolderScope | None = None,
 ) -> MapStates:
     """Fetch current states for all objects in a board.
 
     When *auth_user* is provided and CHECKMK_OMD_ROOT is configured, Livestatus
     queries are scoped to that user's contact groups so they only see objects
-    they are authorised for.
+    they are authorised for. *folder_scope* independently scopes a foldertree
+    board's SETUP folder skeleton to the folders the user may read (see-all
+    guests see all hosts but not all folder names) — distinct from *auth_user*.
     """
     connection_id = cfg.connection_id
     connection = get_connection(connection_id)
@@ -125,16 +129,27 @@ async def get_board_states(
             map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=False
         )
 
-    if (
-        auth_user is not None
-        and settings.checkmk_omd_root
-        and hasattr(connection, "with_auth_user")
-    ):
-        async with connection.with_auth_user(auth_user):
-            return await _execute_board_states(
-                cfg, connection, auth_user=auth_user, can_view_board=can_view_board
-            )
-    return await _execute_board_states(cfg, connection, can_view_board=can_view_board)
+    async def _run() -> MapStates:
+        # Folder scope is set for every CMK request (admins included) so the
+        # folder tree is filtered by SETUP read-permission; auth_user adds the
+        # Livestatus host filter only for non-see-all monitoring users.
+        if (
+            auth_user is not None
+            and settings.checkmk_omd_root
+            and hasattr(connection, "with_auth_user")
+        ):
+            async with connection.with_auth_user(auth_user):
+                return await _execute_board_states(
+                    cfg, connection, auth_user=auth_user, can_view_board=can_view_board
+                )
+        return await _execute_board_states(
+            cfg, connection, auth_user=auth_user, can_view_board=can_view_board
+        )
+
+    if settings.checkmk_omd_root and hasattr(connection, "with_folder_scope"):
+        async with connection.with_folder_scope(folder_scope):
+            return await _run()
+    return await _run()
 
 
 async def _execute_board_states(
