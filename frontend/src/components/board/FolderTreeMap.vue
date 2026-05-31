@@ -66,6 +66,12 @@ const root = computed<FolderTreeNode | null>(() => states.folderTree);
 const svgEl = ref<SVGSVGElement | null>(null);
 const hostEl = ref<HTMLDivElement | null>(null);
 const tipEl = ref<HTMLDivElement | null>(null);
+// Faint container tints are calibrated for the dark canvas; over a light canvas
+// the same low-opacity status colour washes out to a muddy pastel. Track the
+// theme so the tints can adapt (lighter, cleaner backdrop in light mode — the
+// coloured header + frame carry the status instead).
+const isLight = ref(document.documentElement.classList.contains('light'));
+let themeObs: MutationObserver | null = null;
 
 type FNode = HierarchyRectangularNode<FolderTreeNode>;
 
@@ -151,7 +157,13 @@ function fillFor(d: FNode): string {
 function fillOpacityFor(d: FNode): number {
     const n = d.data;
     if (n.kind === 'folder' && n.is_empty) return 1;
-    if (isContainerCell(d)) return isProblem(n) ? 0.16 : 0.09; // faint framed status backdrop
+    if (isContainerCell(d)) {
+        // Light canvas: keep the backdrop barely tinted (a clean near-white card)
+        // so it doesn't turn into a muddy pastel; the coloured header + frame
+        // carry the status. Dark canvas: a slightly stronger tint reads well.
+        if (isLight.value) return isProblem(n) ? 0.1 : 0.05;
+        return isProblem(n) ? 0.16 : 0.09;
+    }
     return isProblem(n) ? 1 : 0.4; // healthy chips recede, problems dominate
 }
 
@@ -675,10 +687,21 @@ onMounted(() => {
         if (changed && root.value) draw(false);
     });
     resizeObs.observe(hostEl.value);
+
+    // Re-tint when the user flips theme (the html `light`/`dark` class toggles).
+    themeObs = new MutationObserver(() => {
+        const light = document.documentElement.classList.contains('light');
+        if (light !== isLight.value) {
+            isLight.value = light;
+            if (root.value) draw(false);
+        }
+    });
+    themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 });
 
 onUnmounted(() => {
     resizeObs?.disconnect();
+    themeObs?.disconnect();
     if (svgEl.value) select(svgEl.value).selectAll('*').interrupt();
 });
 
