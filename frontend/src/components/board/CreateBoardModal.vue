@@ -294,6 +294,12 @@ async function submit() {
     );
 }
 
+/* With an odd number of board types (currently 5) the last card would sit alone
+   in a half-row; let it span the full width so the grid reads balanced. */
+.create-board__type-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+}
+
 .create-board__type-card-title {
     font-size: var(--font-size-normal);
     font-weight: 600;

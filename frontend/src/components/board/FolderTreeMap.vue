@@ -22,7 +22,15 @@
 </template>
 
 <script setup lang="ts">
-import { hierarchy, type HierarchyRectangularNode, select, treemap, treemapSquarify } from 'd3';
+import {
+    type BaseType,
+    hierarchy,
+    type HierarchyRectangularNode,
+    select,
+    type Selection,
+    treemap,
+    treemapSquarify,
+} from 'd3';
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 import { useStatesStore } from '@/stores/states';
@@ -156,6 +164,22 @@ function labelText(d: FNode): string {
     return n.title; // plain host or service chip
 }
 
+// Approx glyph advance at 12px/600 — used to clip labels to their tile so long
+// service names ellipsize instead of bleeding out of the box (full name on hover).
+const CHAR_W = 7;
+function fitLabel(text: string, width: number): string {
+    const max = Math.floor((width - 12) / CHAR_W);
+    if (max <= 1) return '';
+    if (text.length <= max) return text;
+    return text.slice(0, Math.max(1, max - 1)).trimEnd() + '…';
+}
+
+// Command-state glyphs shown in a tile corner (mirrors the List's ✔/⏸ markers)
+// so acknowledged / in-downtime hosts and services are recognisable in the map.
+function markText(n: FolderTreeNode): string {
+    return (n.acknowledged ? '✔' : '') + (n.in_downtime ? '⏸' : '');
+}
+
 function allFolderPaths(node: FolderTreeNode, acc: string[] = []): string[] {
     if (node.kind === 'folder') {
         if (node.path) acc.push(node.path);
@@ -246,12 +270,16 @@ function showTip(event: MouseEvent, d: FNode): void {
     const breakdown = pills.length
         ? pills.map((p) => `${p.count} ${p.state}`).join(' · ')
         : 'all OK';
-    const meta =
-        n.kind === 'host'
+    const flags = [n.acknowledged ? 'ACK' : '', n.in_downtime ? 'DOWNTIME' : '']
+        .filter(Boolean)
+        .join(' · ');
+    const base =
+        n.kind === 'host' || n.kind === 'service'
             ? n.state
             : n.is_empty
               ? 'empty · 0 hosts'
               : `${n.host_count} hosts · ${breakdown}`;
+    const meta = flags ? `${base} · ${flags}` : base;
     tip.value = {
         x: event.clientX - rect.left + 12,
         y: event.clientY - rect.top + 12,
@@ -295,6 +323,7 @@ function draw(animate: boolean): void {
     enter.append('rect').attr('class', 'ftm-body');
     enter.append('rect').attr('class', 'ftm-hdr');
     enter.append('text').attr('class', 'ftm-label');
+    enter.append('text').attr('class', 'ftm-mark');
 
     const merged = enter.merge(cells);
     merged
@@ -351,23 +380,43 @@ function draw(animate: boolean): void {
         .attr('height', (d) => Math.min(HEADER, Math.max(0, d.y1 - d.y0)))
         .attr('fill-opacity', 0.18);
 
-    merged.select<SVGTextElement>('text').each(function (d) {
+    paintLabels(merged);
+}
+
+// Label + command-state marker rendering, shared by draw() and recolor() so a
+// recolor pass doesn't clobber the marker text or drop label truncation.
+function paintLabels(sel: Selection<SVGGElement, FNode, BaseType, unknown>): void {
+    sel.select<SVGTextElement>('text.ftm-label').each(function (d) {
         const w = d.x1 - d.x0;
         const h = d.y1 - d.y0;
-        const t = select(this).text(labelText(d));
+        const t = select(this);
         if (hasHeader(d)) {
-            // Folder: label sits in the header band, left-aligned next to chevron.
-            t.attr('x', 6)
+            // Folder/expanded host: label sits in the header band next to the chevron.
+            t.text(fitLabel(labelText(d), w))
+                .attr('x', 6)
                 .attr('y', 13)
                 .attr('text-anchor', 'start')
                 .style('display', w > 30 ? 'inline' : 'none');
         } else {
-            // Host or empty folder: centered label.
-            t.attr('x', w / 2)
+            // Host or service chip: centered, clipped to the tile so it never
+            // overflows the box (full name available via the hover tooltip).
+            t.text(fitLabel(labelText(d), w))
+                .attr('x', w / 2)
                 .attr('y', h / 2 + 4)
                 .attr('text-anchor', 'middle')
-                .style('display', w > 46 && h > 18 ? 'inline' : 'none');
+                .style('display', w > 34 && h > 18 ? 'inline' : 'none');
         }
+    });
+    sel.select<SVGTextElement>('text.ftm-mark').each(function (d) {
+        const w = d.x1 - d.x0;
+        const h = d.y1 - d.y0;
+        const m = markText(d.data);
+        select(this)
+            .text(m)
+            .attr('x', w - 4)
+            .attr('y', 13)
+            .attr('text-anchor', 'end')
+            .style('display', m && w > 28 && h > 16 ? 'inline' : 'none');
     });
 }
 
@@ -382,7 +431,7 @@ function recolor(): void {
         .transition()
         .duration(400)
         .attr('fill-opacity', fillOpacityFor);
-    g.selectAll<SVGTextElement, FNode>('g.ftm-cell text').text(labelText);
+    paintLabels(g.selectAll<SVGGElement, FNode>('g.ftm-cell'));
 }
 
 // Open the Main root by default (once per root identity), but leave it
@@ -490,6 +539,16 @@ onUnmounted(() => {
     fill: var(--text);
     font-size: 12px;
     font-weight: 600;
+    paint-order: stroke;
+    stroke: var(--bg-glass);
+    stroke-width: 2.5px;
+    stroke-linejoin: round;
+}
+
+.ftm-svg :deep(.ftm-mark) {
+    pointer-events: none;
+    fill: var(--text);
+    font-size: 11px;
     paint-order: stroke;
     stroke: var(--bg-glass);
     stroke-width: 2.5px;
