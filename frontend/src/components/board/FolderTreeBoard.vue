@@ -39,7 +39,10 @@
 
             <div class="ft-controls">
                 <span v-if="root" class="ft-summary">
-                    <span>{{ root.host_count }} {{ t('board.ftHosts') }}</span>
+                    <span
+                        >{{ filterActive ? t('board.ftShowing') + ' ' : '' }}{{ summary.hosts }}
+                        {{ t('board.ftHosts') }}</span
+                    >
                     <template v-if="summaryPills.length">
                         <span
                             v-for="p in summaryPills"
@@ -86,6 +89,14 @@
         <div v-if="!root" class="ft-placeholder">{{ t('board.ftWaiting') }}</div>
         <div v-else-if="!root.children.length" class="ft-placeholder">
             {{ t('board.ftNoFolders') }}
+        </div>
+        <div v-else-if="filterEmpty" class="ft-placeholder ft-placeholder--filter">
+            <span>{{
+                problemsOnly && !parsedQuery.text ? t('board.ftNoProblems') : t('board.ftNoMatches')
+            }}</span>
+            <button type="button" class="ft-tool" @click="clearFilters">
+                {{ t('board.ftClearFilters') }}
+            </button>
         </div>
         <FolderTreeMap
             v-else-if="mode === 'map'"
@@ -134,7 +145,13 @@ import FolderTreeRow from '@/components/board/FolderTreeRow.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode, FolderTreeView } from '@/types/api';
-import { parseQuery } from '@/utils/folderTreeFilter';
+import {
+    isFilterActive,
+    isProblemState,
+    parseQuery,
+    selfMatches,
+    subtreeVisible,
+} from '@/utils/folderTreeFilter';
 import { severityPills } from '@/utils/stateColors';
 
 const props = defineProps<{ view: FolderTreeView; preview?: boolean; boardName?: string }>();
@@ -144,7 +161,6 @@ const { t } = useI18n();
 const auth = useAuthStore();
 const states = useStatesStore();
 const root = computed<FolderTreeNode | null>(() => states.folderTree);
-const summaryPills = computed(() => severityPills(root.value?.severity_counts));
 
 const mode = ref<'map' | 'list'>(props.view.default_view ?? 'list');
 const expanded = reactive(new Set<string>());
@@ -153,6 +169,49 @@ const showServices = computed(() => props.view.show_services ?? false);
 
 const filterText = ref('');
 const parsedQuery = computed(() => parseQuery(filterText.value));
+const filterActive = computed(() => isFilterActive(parsedQuery.value, problemsOnly.value));
+
+// Count hosts (and their problem-state breakdown) that survive the active
+// filter, so the summary reflects what's actually shown — not the whole tree.
+function visibleHostStats(
+    node: FolderTreeNode,
+    ancestorMatched: boolean,
+): { hosts: number; counts: Record<string, number> } {
+    const selfMatch = ancestorMatched || selfMatches(node, parsedQuery.value);
+    if (node.kind === 'service') return { hosts: 0, counts: {} };
+    if (node.kind === 'host') {
+        if (!subtreeVisible(node, parsedQuery.value, problemsOnly.value, ancestorMatched)) {
+            return { hosts: 0, counts: {} };
+        }
+        return {
+            hosts: 1,
+            counts: isProblemState(node.state) ? { [node.state]: 1 } : {},
+        };
+    }
+    const counts: Record<string, number> = {};
+    let hosts = 0;
+    for (const c of node.children) {
+        const s = visibleHostStats(c, selfMatch);
+        hosts += s.hosts;
+        for (const k of Object.keys(s.counts)) counts[k] = (counts[k] ?? 0) + s.counts[k];
+    }
+    return { hosts, counts };
+}
+
+const summary = computed(() => {
+    const r = root.value;
+    if (!r) return { hosts: 0, counts: {} as Record<string, number> };
+    if (!filterActive.value) return { hosts: r.host_count, counts: r.severity_counts };
+    return visibleHostStats(r, false);
+});
+const summaryPills = computed(() => severityPills(summary.value.counts));
+// A filter is active but nothing matches → distinct empty state with a reset.
+const filterEmpty = computed(() => !!root.value && filterActive.value && summary.value.hosts === 0);
+
+function clearFilters() {
+    filterText.value = '';
+    problemsOnly.value = false;
+}
 
 const mapRef = useTemplateRef<InstanceType<typeof FolderTreeMap>>('mapRef');
 
@@ -473,5 +532,10 @@ function collapseAll() {
     font-size: 13px;
     padding: 24px;
     text-align: center;
+}
+
+.ft-placeholder--filter {
+    flex-direction: column;
+    gap: 12px;
 }
 </style>

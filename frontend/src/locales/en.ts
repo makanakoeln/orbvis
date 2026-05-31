@@ -168,6 +168,10 @@ export default {
         ftExpand: 'Expand',
         ftCollapse: 'Collapse',
         ftConnectionLost: 'Connection lost — showing last known state',
+        ftShowing: 'showing',
+        ftNoMatches: 'No matches for the current filter.',
+        ftNoProblems: 'No problems — everything is OK.',
+        ftClearFilters: 'Clear filter',
         ftWaiting: 'Waiting for folder data…',
         ftNoFolders:
             'No folders to show. The selected connection has no SETUP folders, or your filters hide them.',
