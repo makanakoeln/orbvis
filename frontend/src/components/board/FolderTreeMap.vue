@@ -156,6 +156,14 @@ function strokeFor(d: FNode): string {
     return 'var(--border)';
 }
 
+// Header band is tinted by the container's worst state so the folder's overall
+// status reads at a glance (red header = critical folder, green = healthy);
+// problems get a stronger tint, healthy a soft one — the label's halo keeps it
+// legible on either.
+function headerOpacityFor(d: FNode): number {
+    return isProblem(d.data) ? 0.7 : 0.38;
+}
+
 function strokeWidthFor(d: FNode): number {
     const n = d.data;
     if (n.kind === 'folder' && n.is_empty) return 1.4;
@@ -391,18 +399,18 @@ function draw(animate: boolean): void {
         .attr('height', (d) => Math.max(0, d.y1 - d.y0))
         .attr('fill-opacity', fillOpacityFor);
 
-    // Folder header band (darkens the top strip into a "tab"); hidden for hosts
-    // and empty folders.
+    // Folder header band — a status-colored "tab" carrying the title; hidden for
+    // host/service chips and empty folders.
     merged
         .select('rect.ftm-hdr')
         .attr('rx', 3)
-        .attr('fill', 'black')
+        .style('fill', (d) => stateColorVar(d.data.state))
         .style('display', (d) => (hasHeader(d) ? null : 'none'))
         .transition()
         .duration(dur)
         .attr('width', (d) => Math.max(0, d.x1 - d.x0))
         .attr('height', (d) => Math.min(HEADER, Math.max(0, d.y1 - d.y0)))
-        .attr('fill-opacity', 0.18);
+        .attr('fill-opacity', headerOpacityFor);
 
     paintLabels(merged);
 }
@@ -455,6 +463,11 @@ function recolor(): void {
         .transition()
         .duration(400)
         .attr('fill-opacity', fillOpacityFor);
+    g.selectAll<SVGRectElement, FNode>('rect.ftm-hdr')
+        .style('fill', (d) => stateColorVar(d.data.state))
+        .transition()
+        .duration(400)
+        .attr('fill-opacity', headerOpacityFor);
     paintLabels(g.selectAll<SVGGElement, FNode>('g.ftm-cell'));
 }
 
