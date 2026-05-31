@@ -90,8 +90,10 @@
              so markers/age stay right-aligned. Full text on hover (row title). -->
         <span v-if="node.kind === 'service'" class="ft-output">{{ node.output }}</span>
 
-        <span v-if="isEmpty" class="ft-badge ft-badge--empty">empty · 0 hosts</span>
-        <span v-else-if="node.kind === 'folder'" class="ft-meta">{{ node.host_count }} hosts</span>
+        <span v-if="isEmpty" class="ft-badge ft-badge--empty">{{ t('board.ftEmptyHosts') }}</span>
+        <span v-else-if="node.kind === 'folder'" class="ft-meta"
+            >{{ node.host_count }} {{ t('board.ftHosts') }}</span
+        >
         <span v-if="node.kind === 'folder' && pills.length" class="ft-pills">
             <span
                 v-for="p in pills"
@@ -106,10 +108,16 @@
         <span v-if="node.kind === 'host' && multiSite && node.site_id" class="ft-site">{{
             node.site_id
         }}</span>
-        <span v-if="node.acknowledged" class="ft-cmd ft-cmd--ack" title="Acknowledged">ACK</span>
-        <span v-if="node.in_downtime" class="ft-cmd ft-cmd--dt" title="In downtime">DT</span>
-        <span v-if="node.is_flapping" class="ft-cmd ft-cmd--flap" title="Flapping">FLAP</span>
-        <span v-if="age" class="ft-age" title="Since last state change">{{ age }}</span>
+        <span v-if="node.acknowledged" class="ft-cmd ft-cmd--ack" :title="t('board.ftAck')"
+            >ACK</span
+        >
+        <span v-if="node.in_downtime" class="ft-cmd ft-cmd--dt" :title="t('board.ftDowntime')"
+            >DT</span
+        >
+        <span v-if="node.is_flapping" class="ft-cmd ft-cmd--flap" :title="t('board.ftFlapping')"
+            >FLAP</span
+        >
+        <span v-if="age" class="ft-age" :title="t('board.ftSince')">{{ age }}</span>
     </div>
 
     <template v-if="isExpandable && isOpen">
@@ -117,17 +125,17 @@
              board scales to huge sites); folders expand to their tree children. -->
         <template v-if="node.kind === 'host'">
             <div v-if="serviceLoading.has(node.title)" class="ft-note" :style="noteIndent">
-                Loading services…
+                {{ t('board.ftLoadingServices') }}
             </div>
             <div
                 v-else-if="serviceError.has(node.title)"
                 class="ft-note ft-note--err"
                 :style="noteIndent"
             >
-                Could not load services
+                {{ t('board.ftServicesLoadError') }}
             </div>
             <div v-else-if="!visibleChildren.length" class="ft-note" :style="noteIndent">
-                {{ problemsOnly ? 'No problem services' : 'No services' }}
+                {{ problemsOnly ? t('board.ftNoProblemServices') : t('board.ftNoServices') }}
             </div>
             <FolderTreeRow
                 v-for="child in visibleChildren"
