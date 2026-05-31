@@ -115,39 +115,65 @@ const showServices = computed(() => props.view.show_services ?? false);
 const servicesByHost = reactive<Record<string, FolderTreeNode[]>>({});
 const serviceLoading = reactive(new Set<string>());
 const serviceError = reactive(new Set<string>());
+// Path + site of every host whose services we've fetched, so we can re-fetch
+// them in place on each live refresh (the leaves live outside the SSE tree).
+const loadedHosts = reactive<Record<string, { path: string; siteId: string | null }>>({});
+
+async function fetchServices(name: string, hostPath: string, siteId: string | null) {
+    if (!props.boardName || !auth.accessToken) return;
+    const svcs = await boardsApi.folderHostServices(props.boardName, name, auth.accessToken);
+    servicesByHost[name] = svcs.map((s) => ({
+        path: `${hostPath}/${s.name}`,
+        title: s.name,
+        kind: 'service' as const,
+        state: s.state,
+        is_empty: false,
+        folder_id: '',
+        host_count: 0,
+        problem_count: 0,
+        severity_counts: {},
+        output: s.output,
+        acknowledged: s.acknowledged,
+        in_downtime: s.in_downtime,
+        is_flapping: s.is_flapping,
+        last_state_change: s.last_state_change,
+        site_id: siteId,
+        children: [],
+    }));
+}
 
 async function ensureServices(host: FolderTreeNode) {
     const name = host.title;
     if (!showServices.value || !props.boardName || !auth.accessToken) return;
     if (servicesByHost[name] || serviceLoading.has(name)) return;
+    loadedHosts[name] = { path: host.path, siteId: host.site_id };
     serviceLoading.add(name);
     serviceError.delete(name);
     try {
-        const svcs = await boardsApi.folderHostServices(props.boardName, name, auth.accessToken);
-        servicesByHost[name] = svcs.map((s) => ({
-            path: `${host.path}/${s.name}`,
-            title: s.name,
-            kind: 'service' as const,
-            state: s.state,
-            is_empty: false,
-            folder_id: '',
-            host_count: 0,
-            problem_count: 0,
-            severity_counts: {},
-            output: s.output,
-            acknowledged: s.acknowledged,
-            in_downtime: s.in_downtime,
-            is_flapping: s.is_flapping,
-            last_state_change: s.last_state_change,
-            site_id: host.site_id,
-            children: [],
-        }));
+        await fetchServices(name, host.path, host.site_id);
     } catch {
         serviceError.add(name);
     } finally {
         serviceLoading.delete(name);
     }
 }
+
+// Keep lazily-loaded service leaves live: re-fetch the services of every host
+// the operator has drilled into whenever the board's state refreshes, so leaf
+// state / acknowledged / downtime stay current (a downtime set after expansion
+// would otherwise never appear). Bounded by what the operator actually expanded.
+let lastSvcRefresh = 0;
+watch(
+    () => states.folderTree,
+    () => {
+        const now = Date.now();
+        if (now - lastSvcRefresh < 4000) return;
+        lastSvcRefresh = now;
+        for (const [name, meta] of Object.entries(loadedHosts)) {
+            void fetchServices(name, meta.path, meta.siteId).catch(() => {});
+        }
+    },
+);
 
 function collectFolders(node: FolderTreeNode, acc: FolderTreeNode[] = []): FolderTreeNode[] {
     if (node.kind === 'folder') {

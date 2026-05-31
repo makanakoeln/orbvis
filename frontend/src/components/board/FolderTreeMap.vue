@@ -466,7 +466,17 @@ watch(
         () => props.problemsOnly,
         () =>
             Object.entries(props.servicesByHost)
-                .map(([h, svcs]) => `${h}:${svcs.length}:${svcs.map((s) => s.state).join(',')}`)
+                .map(
+                    ([h, svcs]) =>
+                        `${h}:${svcs.length}:${svcs
+                            .map(
+                                (s) =>
+                                    s.state +
+                                    (s.acknowledged ? 'a' : '') +
+                                    (s.in_downtime ? 'd' : ''),
+                            )
+                            .join(',')}`,
+                )
                 .join('|'),
     ],
     relayout,
