@@ -13,8 +13,10 @@
         <!-- One vertical guide per ancestor level so the nesting depth (e.g.
              a host directly under Main vs. inside a subfolder) is unambiguous. -->
         <span v-for="i in depth" :key="i" class="ft-guide" />
+        <!-- Folders expand via a chevron; hosts expand via their own icon (below),
+             so a host needs no leading arrow. Services/leaves get a spacer. -->
         <button
-            v-if="isExpandable"
+            v-if="isExpandable && node.kind === 'folder'"
             type="button"
             class="ft-chevron"
             :aria-label="isOpen ? t('board.ftCollapse') : t('board.ftExpand')"
@@ -45,6 +47,30 @@
                 v-else
                 d="M3 6a1 1 0 0 1 1-1h5l3 3h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"
             />
+        </svg>
+        <!-- Host = a monitor/host glyph; when it can drill into services it is the
+             expand toggle (click), so no separate chevron. Plain icon otherwise. -->
+        <svg
+            v-else-if="node.kind === 'host'"
+            class="ft-icon ft-host-icon"
+            :class="{
+                'ft-host-icon--toggle': isExpandable,
+                'ft-host-icon--open': isExpandable && isOpen,
+            }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            :role="isExpandable ? 'button' : undefined"
+            :aria-label="
+                isExpandable ? (isOpen ? t('board.ftCollapse') : t('board.ftExpand')) : undefined
+            "
+            @click="onHostIconClick"
+        >
+            <rect x="3" y="4" width="18" height="13" rx="1" />
+            <path d="M7 21h10M9 17v4M15 17v4" />
         </svg>
         <span
             v-if="!isEmpty && !(node.kind === 'folder' && pills.length)"
@@ -230,6 +256,15 @@ function onChevron() {
     if (props.node.kind === 'host') emit('expand-host', props.node);
 }
 
+// The host icon is the expand toggle when the host can drill into services;
+// otherwise let the click bubble to the row so it opens the drawer.
+function onHostIconClick(e: MouseEvent) {
+    if (props.node.kind === 'host' && isExpandable.value) {
+        e.stopPropagation();
+        onChevron();
+    }
+}
+
 function onRowClick() {
     if (props.node.kind === 'host') emit('select-host', props.node);
     else if (props.node.kind === 'service')
@@ -298,6 +333,19 @@ function onRowClick() {
 
 .ft-icon--empty {
     opacity: 0.45;
+}
+
+/* Host icon doubles as the services expand-toggle when drillable. */
+.ft-host-icon--toggle {
+    cursor: pointer;
+}
+
+.ft-host-icon--toggle:hover {
+    color: var(--text);
+}
+
+.ft-host-icon--open {
+    color: var(--accent);
 }
 
 .ft-dot {
