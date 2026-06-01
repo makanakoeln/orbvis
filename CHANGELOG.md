@@ -4,6 +4,34 @@ All notable changes to OrbVis are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-06-01
+
+Point release on top of 0.4.0. Adds the (experimental) **Folder board** — a SETUP folder-tree visualization — behind a feature flag, a matching feature flag for graph objects, plus Flow Board fixes and Checkmk-palette alignment.
+
+### Features
+
+- **Folder board (SETUP folder tree)**: a board that builds itself from the Checkmk SETUP folder hierarchy with worst-state bubbling. Switchable Map (treemap, problems dominate) and List (tree) views with a persisted default; lazy per-host service loading that scales to very large sites; severity-sorted services, command-state badges (ACK/DT/FLAP) and "since" ages; search with quicksearch prefixes and a problems-only toggle; bulk acknowledge/schedule-downtime for all hosts in a folder (recursion toggle + live count); host/service detail drawer with force-check, ack, downtime, comments and "Open in Checkmk".
+- **Feature flag**: the Folder board type is gated behind a new *System Settings → Features → Enable Folder boards* toggle (off by default), and labelled *(experimental)* in the board-type picker. Existing folder boards keep rendering regardless.
+- **Graph objects feature flag**: the (experimental) graph object type is now gated behind *System Settings → Features → Enable Graph objects* (on by default); existing graph objects keep rendering when it's off.
+- **Checkmk status palette**: in a Checkmk deployment, boards adopt Checkmk's own monitoring status colors (facelift/modern-dark `$color-state-*`) instead of OrbVis' standalone primaries, in both light and dark themes.
+
+### Security
+
+- Folder board respects Checkmk permissions: host/service visibility follows contact groups (Livestatus AuthUser); the SETUP folder skeleton follows folder-read permission (`wato.see_all_folders` or folder contact groups) so a scoped user never sees folder names outside their access; commands stay admin-only. SSE subscribers/snapshots are keyed by a permission signature so an admin and a see-all guest get correctly different folder trees.
+
+### Fixed
+
+- Folder Map: first expand of a host rendered its service tiles mis-sized/uncolored until reopened (interrupted entrance transition).
+- Folder Map: hover tooltips could overflow the viewport edge — they now flip to stay in view.
+- Folder Map: faint container tints washed out to muddy pastels in light mode.
+- Folder boards: bulk/command affordances are hidden from users without command permission instead of failing on click.
+- Flow Board: host/service **next-check** (and "overdue") now updates live instead of freezing until a full page reload — check-timing travels on the topology channel.
+- Flow Board: nodes now show **command-state markers** (acknowledged / in downtime / notifications-disabled), matching the static board.
+- Flow Board: host/service commands (acknowledge, downtime, force-check, …) route to the host's actual monitoring site in distributed setups instead of defaulting.
+- Flow Board: the detail drawer and hover tooltip reflect live state/timing changes for the open node without reopening.
+- Case-insensitive duplicate board names are rejected on create/clone.
+- Packaging: fresh MKP/wheel builds no longer fail on a duplicate bundled seed-board path.
+
 ## [0.4.0] - 2026-05-26
 
 Iterative release on top of 0.3.0. Boards gain a dynamic-group object type and a NagVis-faithful render mode, board settings become an in-place live-preview editor, and the backend sheds its heavy dependencies for a lean standard-library core.
