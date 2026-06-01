@@ -12,7 +12,13 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
-from app.api.v1.deps import get_current_user, require_admin, resolve_auth_user
+from app.api.v1.deps import (
+    get_current_user,
+    require_admin,
+    require_configure,
+    require_connection_read,
+    resolve_auth_user,
+)
 from app.connections.base import ConnectionBase, ServiceRow, TopologyRow, topology_problem_rank
 from app.core.config import settings
 from app.form_specs import FORM_SPECS_AVAILABLE
@@ -53,7 +59,7 @@ class TestResult(BaseModel):
 
 
 @router.get("", response_model=list[ConnectionConfig])
-async def list_backends(_: User = Depends(require_admin)) -> list[ConnectionConfig]:
+async def list_backends(_: User = Depends(require_connection_read)) -> list[ConnectionConfig]:
     return [_redact(b) for b in connection_service.load_all()]
 
 
@@ -67,12 +73,12 @@ if FORM_SPECS_AVAILABLE:
         form: dict[str, object]
 
     @router.get("/schema")
-    async def get_connection_schema(_: User = Depends(require_admin)) -> AnyWireFormSpec:
+    async def get_connection_schema(_: User = Depends(require_configure)) -> AnyWireFormSpec:
         return serialize_form_spec(connection_spec(cmk_integration.get_monitoring_core()))
 
     @router.get("/{connection_id}/form")
     async def get_connection_form_data(
-        connection_id: str, _: User = Depends(require_admin)
+        connection_id: str, _: User = Depends(require_configure)
     ) -> dict[str, object]:
         existing = next((b for b in connection_service.load_all() if b.id == connection_id), None)
         if existing is None:
@@ -83,7 +89,7 @@ if FORM_SPECS_AVAILABLE:
 
     @router.post("/form", response_model=ConnectionConfig, status_code=status.HTTP_201_CREATED)
     async def create_connection_from_form(
-        body: FormCreateBody, _: User = Depends(require_admin)
+        body: FormCreateBody, _: User = Depends(require_configure)
     ) -> ConnectionConfig:
         try:
             created = form_data_to_config(body.form, existing=None, connection_id=body.id)
@@ -97,7 +103,7 @@ if FORM_SPECS_AVAILABLE:
 
     @router.post("/form/test-connection", response_model=TestResult)
     async def test_connection_from_form(
-        body: FormCreateBody, _: User = Depends(require_admin)
+        body: FormCreateBody, _: User = Depends(require_configure)
     ) -> TestResult:
         """Test FormSpec connection data without saving — used by the edit dialog."""
         try:
@@ -117,7 +123,7 @@ if FORM_SPECS_AVAILABLE:
     async def update_connection_from_form(
         connection_id: str,
         form_data: dict[str, object],
-        _: User = Depends(require_admin),
+        _: User = Depends(require_configure),
     ) -> ConnectionConfig:
         existing = next((b for b in connection_service.load_all() if b.id == connection_id), None)
         if existing is None:
@@ -139,7 +145,7 @@ if FORM_SPECS_AVAILABLE:
 
 @router.post("", response_model=ConnectionConfig, status_code=status.HTTP_201_CREATED)
 async def create_backend(
-    data: ConnectionCreate, _: User = Depends(require_admin)
+    data: ConnectionCreate, _: User = Depends(require_configure)
 ) -> ConnectionConfig:
     if REDACTED_SECRET in (data.automation_secret, data.icinga2_password):
         raise HTTPException(
@@ -156,7 +162,7 @@ async def create_backend(
 async def update_backend(
     connection_id: str,
     data: ConnectionUpdate,
-    _: User = Depends(require_admin),
+    _: User = Depends(require_configure),
 ) -> ConnectionConfig:
     existing = next((b for b in connection_service.load_all() if b.id == connection_id), None)
     if existing is None:
@@ -179,7 +185,7 @@ async def update_backend(
 
 
 @router.delete("/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_backend(connection_id: str, _: User = Depends(require_admin)) -> None:
+async def delete_backend(connection_id: str, _: User = Depends(require_configure)) -> None:
     if not connection_service.delete(connection_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
     _invalidate_topology_cache(connection_id)
@@ -192,7 +198,7 @@ class ConnectionContext(BaseModel):
 
 @router.get("/{connection_id}/context", response_model=ConnectionContext)
 async def get_backend_context(
-    connection_id: str, _: User = Depends(require_admin)
+    connection_id: str, _: User = Depends(require_configure)
 ) -> ConnectionContext:
     """Return OMD/CMC context for the connection settings UI.
 
@@ -207,7 +213,7 @@ async def get_backend_context(
 
 
 @router.get("/{connection_id}/test", response_model=TestResult)
-async def test_backend(connection_id: str, _: User = Depends(require_admin)) -> TestResult:
+async def test_backend(connection_id: str, _: User = Depends(require_configure)) -> TestResult:
     """Test connectivity of a saved connection."""
     connection = get_connection(connection_id)
     if connection is None:
@@ -225,7 +231,9 @@ async def test_backend(connection_id: str, _: User = Depends(require_admin)) -> 
 
 
 @router.post("/test-connection", response_model=TestResult)
-async def test_connection(data: ConnectionCreate, _: User = Depends(require_admin)) -> TestResult:
+async def test_connection(
+    data: ConnectionCreate, _: User = Depends(require_configure)
+) -> TestResult:
     """Test connection details without saving – used by the create/edit dialog."""
     try:
         connection = connection_service.build_instance(data)
@@ -708,14 +716,17 @@ async def list_backend_objects(
     obj_type: str = Query(..., alias="type"),
     host: str | None = Query(None),
     search: str | None = Query(None),
-    _: User = Depends(require_admin),
+    user: User = Depends(get_current_user),
 ) -> list[str]:
     """Return available object names from a connection (for editor autocomplete).
 
     ``search`` is a case-insensitive substring applied server-side so the editor
     can fetch-on-type (CMK autocompleter style) instead of pulling every name.
+    Non-admin editors are scoped to their Checkmk contact groups so they only see
+    hosts they monitor.
     """
-    return await get_connection_objects(connection_id, obj_type, host, search)
+    auth_user = resolve_auth_user(user.name, user.is_admin)
+    return await get_connection_objects(connection_id, obj_type, host, search, auth_user=auth_user)
 
 
 class FolderOption(BaseModel):
@@ -728,9 +739,14 @@ class FolderOption(BaseModel):
 @router.get("/{connection_id}/folders", response_model=list[FolderOption])
 async def list_backend_folders(
     connection_id: str,
-    _: User = Depends(require_admin),
+    _: User = Depends(require_configure),
 ) -> list[dict[str, str]]:
-    """Return the connection's SETUP folders (for the foldertree root picker)."""
+    """Return the connection's SETUP folders (for the foldertree root picker).
+
+    Stays configure-gated: the raw SETUP folder skeleton is not scoped by
+    ``with_auth_user`` (that filters host rows, not folder names), so exposing it
+    to non-configure users would disclose folder names outside their access.
+    """
     return await list_connection_folders(connection_id)
 
 

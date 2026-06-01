@@ -127,7 +127,7 @@
                     </div>
                 </div>
                 <button
-                    v-if="auth.isAdmin"
+                    v-if="auth.canCreateBoards"
                     data-tour="new-board"
                     class="flex items-center bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
                     style="gap: 5px; padding: 5px 10px; font-size: 12px"
@@ -214,9 +214,11 @@
                 </div>
                 <p class="text-[var(--text)] font-semibold">{{ t('home.noBoardsTitle') }}</p>
                 <p class="text-[var(--text-muted)] text-sm" style="margin-top: 6px">
-                    <span v-if="auth.isAdmin" class="text-[var(--color-corporate-green-50)]">{{
-                        t('home.noBoardsAdmin')
-                    }}</span>
+                    <span
+                        v-if="auth.canCreateBoards"
+                        class="text-[var(--color-corporate-green-50)]"
+                        >{{ t('home.noBoardsAdmin') }}</span
+                    >
                     <span v-else>{{ t('home.noBoardsUser') }}</span>
                 </p>
             </div>
@@ -1111,7 +1113,7 @@
                             </svg>
                         </button>
                         <button
-                            v-if="auth.isAdmin"
+                            v-if="auth.canCreateBoards"
                             class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-yellow-50)] hover:bg-[var(--color-warning)]/10 transition-all"
                             :title="t('admin.cloneBoard')"
                             @click.stop="cloneBoard(map)"
@@ -1131,7 +1133,7 @@
                             </svg>
                         </button>
                         <button
-                            v-if="auth.isAdmin"
+                            v-if="auth.canCreateBoards"
                             class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5 transition-all"
                             :title="t('admin.exportBoard')"
                             @click.stop="exportBoard(map.name)"
@@ -1151,7 +1153,7 @@
                             </svg>
                         </button>
                         <button
-                            v-if="auth.isAdmin"
+                            v-if="auth.canCreateBoards"
                             class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
                             :title="t('admin.deleteBoard', { name: map.alias || map.name })"
                             @click.stop="deleteBoard(map)"
@@ -1206,7 +1208,7 @@
         @cancel="confirmDelete = null"
     />
 
-    <template v-if="auth.isAdmin">
+    <template v-if="auth.canCreateBoards">
         <BoardBulkActionBar
             v-if="capabilities.formSpecs"
             :count="selectedCount"
@@ -1302,9 +1304,9 @@
         @updated="boardsStore.fetchBoards()"
     />
 
-    <!-- Import FAB (admin only) -->
+    <!-- Import FAB (board creators only) -->
     <label
-        v-if="auth.isAdmin"
+        v-if="auth.canCreateBoards"
         class="group fixed z-40 flex items-center rounded bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] shadow-lg text-[var(--text-muted)] hover:text-[var(--text)] transition-all cursor-pointer"
         style="bottom: 20px; right: 20px; gap: 6px; padding: 6px 12px"
         :title="t('admin.importBoard')"
@@ -1346,7 +1348,7 @@
         v-if="showOnboarding && auth.user"
         :steps="tourSteps"
         :storage-key="`orbvis_onboarded_${auth.user.user_id}`"
-        :show-create-board="auth.isAdmin"
+        :show-create-board="auth.canCreateBoards"
         @close="showOnboarding = false"
         @create-board="
             showOnboarding = false;

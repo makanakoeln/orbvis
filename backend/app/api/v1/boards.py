@@ -19,6 +19,7 @@ from app.api.v1.deps import (
     can_view_board,
     get_current_user,
     require_admin,
+    require_create_board,
 )
 from app.api.v1.types import BoardName
 from app.core.config import settings
@@ -105,7 +106,7 @@ async def list_boards(current_user: User = Depends(get_current_user)) -> list[Bo
 
 @router.post("/reorder", status_code=status.HTTP_204_NO_CONTENT)
 async def reorder_boards(
-    order: list[dict[str, int | str]], _: User = Depends(require_admin)
+    order: list[dict[str, int | str]], _: User = Depends(require_create_board)
 ) -> None:
     """Update sort_order for multiple boards at once. Body: [{"name": "...", "sort_order": 0}, ...]"""
     board_service.reorder_boards(
@@ -118,7 +119,7 @@ async def reorder_boards(
 
 
 @router.post("", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
-async def create_board(data: BoardCreate, _: User = Depends(require_admin)) -> BoardConfig:
+async def create_board(data: BoardCreate, _: User = Depends(require_create_board)) -> BoardConfig:
     try:
         return board_service.create_board(data)
     except ValueError as exc:
@@ -212,14 +213,14 @@ if FORM_SPECS_AVAILABLE:
 
     @router.get("/-/bulk-metadata-schema")
     async def get_board_bulk_metadata_schema(
-        _: User = Depends(require_admin),
+        _: User = Depends(require_create_board),
     ) -> AnyWireFormSpec:
         connection_choices = [(c.id, c.label) for c in connection_service.load_all()]
         return serialize_form_spec(board_bulk_metadata_spec(connection_choices=connection_choices))
 
     @router.post("/bulk-edit", response_model=BoardBulkEditResult)
     async def bulk_edit_boards(
-        payload: BoardBulkEdit, current_user: User = Depends(require_admin)
+        payload: BoardBulkEdit, current_user: User = Depends(require_create_board)
     ) -> BoardBulkEditResult:
         update_payload = _form_data_to_update_payload(payload.updates, BULK_METADATA_FIELDS)
         if not current_user.is_admin and (
@@ -334,7 +335,7 @@ def _parse_if_match(value: str | None) -> int | None:
 
 
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_board(name: BoardName, _: User = Depends(require_admin)) -> None:
+async def delete_board(name: BoardName, _: User = Depends(require_create_board)) -> None:
     if not board_service.delete_board(name):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
@@ -343,7 +344,7 @@ async def delete_board(name: BoardName, _: User = Depends(require_admin)) -> Non
 
 @router.post("/bulk-delete", response_model=BoardBulkDeleteResult)
 async def bulk_delete_boards(
-    payload: BoardBulkDelete, _: User = Depends(require_admin)
+    payload: BoardBulkDelete, _: User = Depends(require_create_board)
 ) -> BoardBulkDeleteResult:
     deleted: list[str] = []
     failed: list[BoardBulkDeleteFailure] = []
@@ -390,7 +391,7 @@ async def bulk_export_boards(
 
 @router.post("/{name}/clone", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
 async def clone_board(
-    name: BoardName, data: BoardClone, _: User = Depends(require_admin)
+    name: BoardName, data: BoardClone, _: User = Depends(require_create_board)
 ) -> BoardConfig:
     try:
         return board_service.clone_board(name, data.new_name, data.alias)
@@ -401,7 +402,7 @@ async def clone_board(
 
 @router.post("/import", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)
 async def import_board(
-    data: dict[str, object], overwrite: bool = False, _: User = Depends(require_admin)
+    data: dict[str, object], overwrite: bool = False, _: User = Depends(require_create_board)
 ) -> BoardConfig:
     try:
         return board_service.import_board(data, overwrite=overwrite)
@@ -413,7 +414,7 @@ async def import_board(
 async def import_cfg(
     file: UploadFile = File(...),
     overwrite: bool = False,
-    _: User = Depends(require_admin),
+    _: User = Depends(require_create_board),
 ) -> BoardConfig:
     """Import a legacy .cfg map file and convert it to an OrbVis board."""
     if not file.filename or not file.filename.lower().endswith(".cfg"):

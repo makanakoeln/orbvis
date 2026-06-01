@@ -10,7 +10,7 @@ from typing import TypedDict
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 
-from app.api.v1.deps import get_current_user, require_admin
+from app.api.v1.deps import get_current_user, require_configure
 from app.core.config import settings
 from app.core.image_security import ICON_MIME_TYPES, ICON_SUFFIXES, is_valid_image
 from app.models.user import User
@@ -109,7 +109,7 @@ async def image_usage(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def upload_image(
     file: UploadFile = File(...),
-    _: User = Depends(require_admin),
+    _: User = Depends(require_configure),
 ) -> JSONResponse:
     if file.content_type not in ICON_MIME_TYPES:
         raise HTTPException(
@@ -158,7 +158,7 @@ async def upload_image(
 async def delete_image(
     name: str,
     force: bool = False,
-    _: User = Depends(require_admin),
+    _: User = Depends(require_configure),
 ) -> None:
     d = _images_dir().resolve()
     # Reject obvious traversal attempts before hitting the filesystem.

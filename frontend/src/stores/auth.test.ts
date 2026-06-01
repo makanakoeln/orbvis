@@ -43,6 +43,8 @@ const sampleUser: UserRead = {
     cmk_theme: null,
     cmk_language: null,
     cmk_inline_help: false,
+    can_configure: false,
+    can_create_boards: false,
     roles: [],
     permissions: [],
 };
@@ -93,6 +95,29 @@ describe('useAuthStore', () => {
         expect(store.isAdmin).toBe(false);
         store.user = adminUser;
         expect(store.isAdmin).toBe(true);
+    });
+
+    it('canConfigure / canCreateBoards reflect the capability flags', async () => {
+        const { useAuthStore } = await import('./auth');
+        const store = useAuthStore();
+        store.user = sampleUser;
+        expect(store.canConfigure).toBe(false);
+        expect(store.canCreateBoards).toBe(false);
+        store.user = { ...sampleUser, can_configure: true, can_create_boards: true };
+        expect(store.canConfigure).toBe(true);
+        expect(store.canCreateBoards).toBe(true);
+    });
+
+    it('canConfigure / canCreateBoards fall back to is_admin for older backends', async () => {
+        const { useAuthStore } = await import('./auth');
+        const store = useAuthStore();
+        // Simulate a /me payload from a backend that predates the capability flags.
+        const legacyAdmin = { ...adminUser } as Partial<UserRead>;
+        delete legacyAdmin.can_configure;
+        delete legacyAdmin.can_create_boards;
+        store.user = legacyAdmin as UserRead;
+        expect(store.canConfigure).toBe(true);
+        expect(store.canCreateBoards).toBe(true);
     });
 
     it('login() sets tokens and navigates home on success', async () => {

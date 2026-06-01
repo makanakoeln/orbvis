@@ -54,6 +54,8 @@ class UserRead(UserBase):
     cmk_theme: str | None = None  # populated at runtime from ui_theme.mk, not stored in DB
     cmk_language: str | None = None  # populated at runtime from language.mk, not stored in DB
     cmk_inline_help: bool = False  # mirrors LoggedInUser.inline_help_as_text
+    can_configure: bool = False  # may manage connections, images and settings (runtime)
+    can_create_boards: bool = False  # may create/delete boards (runtime)
 
     model_config = {"from_attributes": True}
 

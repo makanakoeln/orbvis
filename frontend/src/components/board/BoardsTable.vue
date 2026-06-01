@@ -7,7 +7,7 @@
             <thead>
                 <tr class="border-b border-[var(--border)]">
                     <th
-                        v-if="auth.isAdmin"
+                        v-if="auth.canCreateBoards"
                         class="text-left"
                         style="padding: 6px 8px 6px 12px; width: 28px"
                     >
@@ -74,7 +74,7 @@
                     "
                 >
                     <td
-                        v-if="auth.isAdmin"
+                        v-if="auth.canCreateBoards"
                         class="align-middle"
                         style="padding: 6px 8px 6px 12px"
                         @click.stop
@@ -207,7 +207,7 @@
                                 </svg>
                             </button>
                             <button
-                                v-if="auth.isAdmin"
+                                v-if="auth.canCreateBoards"
                                 class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-yellow-50)] hover:bg-[var(--color-warning)]/10 transition-all"
                                 :title="t('admin.cloneBoard')"
                                 @click="$emit('clone', map)"
@@ -227,7 +227,7 @@
                                 </svg>
                             </button>
                             <button
-                                v-if="auth.isAdmin"
+                                v-if="auth.canCreateBoards"
                                 class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5 transition-all"
                                 :title="t('admin.exportBoard')"
                                 @click="$emit('export', map.name)"
@@ -247,7 +247,7 @@
                                 </svg>
                             </button>
                             <button
-                                v-if="auth.isAdmin"
+                                v-if="auth.canCreateBoards"
                                 class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
                                 :title="t('admin.deleteBoard', { name: map.alias || map.name })"
                                 @click="$emit('delete', map)"
@@ -271,7 +271,7 @@
                 </tr>
                 <tr v-if="boards.length === 0">
                     <td
-                        :colspan="visibleColumns.length + (auth.isAdmin ? 1 : 0)"
+                        :colspan="visibleColumns.length + (auth.canCreateBoards ? 1 : 0)"
                         class="text-center text-[var(--text-muted)] text-sm"
                         style="padding: 40px 0"
                     >

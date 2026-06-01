@@ -14,7 +14,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 
-from app.api.v1.deps import get_current_user, require_admin
+from app.api.v1.deps import get_current_user, require_configure
 from app.form_specs import FORM_SPECS_AVAILABLE
 from app.models.user import User
 from app.object_options import LINE_STYLES
@@ -47,7 +47,9 @@ async def get_settings(current_user: User = Depends(get_current_user)) -> Global
 
 
 @router.put("", response_model=GlobalSettings)
-async def update_settings(data: GlobalSettings, _: User = Depends(require_admin)) -> GlobalSettings:
+async def update_settings(
+    data: GlobalSettings, _: User = Depends(require_configure)
+) -> GlobalSettings:
     return settings_service.save_global_settings(data)
 
 
@@ -61,7 +63,7 @@ async def get_system_settings(_: User = Depends(get_current_user)) -> SystemSett
 
 @router.put("/system", response_model=SystemSettings)
 async def update_system_settings(
-    data: SystemSettings, _: User = Depends(require_admin)
+    data: SystemSettings, _: User = Depends(require_configure)
 ) -> SystemSettings:
     return settings_service.save_system_settings(data)
 
@@ -203,7 +205,7 @@ if FORM_SPECS_AVAILABLE:
     @router.put("/form")
     async def update_settings_form(
         data: dict[str, object],
-        _: User = Depends(require_admin),
+        _: User = Depends(require_configure),
     ) -> dict[str, object]:
         current = settings_service.get_global_settings()
         flat = _from_form(dict(data), current)
@@ -211,7 +213,7 @@ if FORM_SPECS_AVAILABLE:
 
     @router.get("/schema")
     async def get_settings_schema(
-        _: User = Depends(require_admin),
+        _: User = Depends(require_configure),
     ) -> AnyWireFormSpec:
         # Default-Connection is a SingleChoice over actual connection IDs — load
         # them here so the FormSpec validates the saved value against real targets
@@ -294,11 +296,11 @@ if FORM_SPECS_AVAILABLE:
     @router.put("/system/form")
     async def update_system_settings_form(
         data: dict[str, object],
-        _: User = Depends(require_admin),
+        _: User = Depends(require_configure),
     ) -> dict[str, object]:
         flat = _system_from_form(dict(data))
         return _system_to_form(settings_service.save_system_settings(flat))
 
     @router.get("/system/schema")
-    async def get_system_settings_schema(_: User = Depends(require_admin)) -> AnyWireFormSpec:
+    async def get_system_settings_schema(_: User = Depends(require_configure)) -> AnyWireFormSpec:
         return serialize_form_spec(system_settings_spec())

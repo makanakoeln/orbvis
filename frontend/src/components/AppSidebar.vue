@@ -108,7 +108,7 @@
             </NavItem>
 
             <!-- Admin section -->
-            <template v-if="auth.isAdmin">
+            <template v-if="auth.isAdmin || auth.canConfigure">
                 <div
                     class="border-t border-[var(--default-nav-border-color)]"
                     style="margin: 10px 6px 6px"
@@ -122,6 +122,7 @@
                 </p>
 
                 <NavItem
+                    v-if="auth.canConfigure"
                     to="/admin/connections"
                     :label="t('admin.connections')"
                     :collapsed="sidebarCollapsed"
@@ -135,7 +136,12 @@
                     </template>
                 </NavItem>
 
-                <NavItem to="/admin/icons" :label="t('admin.icons')" :collapsed="sidebarCollapsed">
+                <NavItem
+                    v-if="auth.canConfigure"
+                    to="/admin/icons"
+                    :label="t('admin.icons')"
+                    :collapsed="sidebarCollapsed"
+                >
                     <template #icon>
                         <path
                             stroke-linecap="round"
@@ -145,7 +151,12 @@
                     </template>
                 </NavItem>
 
-                <NavItem to="/admin/users" :label="t('admin.users')" :collapsed="sidebarCollapsed">
+                <NavItem
+                    v-if="auth.isAdmin"
+                    to="/admin/users"
+                    :label="t('admin.users')"
+                    :collapsed="sidebarCollapsed"
+                >
                     <template #icon>
                         <path
                             stroke-linecap="round"
@@ -156,6 +167,7 @@
                 </NavItem>
 
                 <NavItem
+                    v-if="auth.isAdmin"
                     to="/admin/roles"
                     :label="t('admin.rolesAndPermissions')"
                     :collapsed="sidebarCollapsed"
@@ -170,6 +182,7 @@
                 </NavItem>
 
                 <NavItem
+                    v-if="auth.canConfigure"
                     to="/admin/settings"
                     :label="t('admin.settings')"
                     :collapsed="sidebarCollapsed"

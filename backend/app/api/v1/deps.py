@@ -35,6 +35,60 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
+def can_configure(user: User) -> bool:
+    """True if the user may manage connections, images and global settings.
+
+    In Checkmk deployments this honours the ``orbvis.configure`` permission so
+    non-admin roles can be granted access. Standalone has no such permission, so
+    it stays admin-only.
+    """
+    if settings.checkmk_omd_root:
+        return user.is_admin or cmk_integration.check_configure_permission(user.name)
+    return user.is_admin
+
+
+def can_create_board(user: User) -> bool:
+    """True if the user may create or delete boards.
+
+    In Checkmk deployments this honours ``orbvis.edit_all`` (which grants board
+    creation per the WATO declaration). Standalone falls back to the native
+    ``map/edit`` RBAC permission.
+    """
+    if settings.checkmk_omd_root:
+        return user.is_admin or cmk_integration.check_create_permission(user.name)
+    return user_has_permission(user, "map", "edit", "*")
+
+
+async def require_configure(current_user: User = Depends(get_current_user)) -> User:
+    if not can_configure(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="OrbVis configuration access required"
+        )
+    return current_user
+
+
+async def require_create_board(current_user: User = Depends(get_current_user)) -> User:
+    if not can_create_board(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Board creation access required"
+        )
+    return current_user
+
+
+async def require_connection_read(current_user: User = Depends(get_current_user)) -> User:
+    """Read-only access to the connection list.
+
+    Board creators need it to pick a connection when creating a board, so this
+    admits ``can_create_board`` in addition to ``can_configure``. Mutating a
+    connection still requires ``require_configure``.
+    """
+    if not (can_configure(current_user) or can_create_board(current_user)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="OrbVis configuration access required"
+        )
+    return current_user
+
+
 def _check_board_permission(user: User, board_name: str, action: str) -> bool:
     if settings.checkmk_omd_root:
         return user.is_admin or cmk_integration.check_board_permission(

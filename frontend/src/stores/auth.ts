@@ -37,6 +37,13 @@ export const useAuthStore = defineStore('auth', () => {
 
     const isAuthenticated = computed(() => !!accessToken.value && !!user.value);
     const isAdmin = computed(() => user.value?.is_admin ?? false);
+    // Capability flags from /me. In Checkmk deployments these honour the
+    // orbvis.configure / orbvis.edit_all permissions so non-admin roles can be
+    // granted access; they fall back to is_admin for older backends.
+    const canConfigure = computed(() => user.value?.can_configure ?? user.value?.is_admin ?? false);
+    const canCreateBoards = computed(
+        () => user.value?.can_create_boards ?? user.value?.is_admin ?? false,
+    );
 
     // Ensures initialization runs exactly once per SPA session and is awaitable
     let _initPromise: Promise<void> | null = null;
@@ -214,6 +221,8 @@ export const useAuthStore = defineStore('auth', () => {
         error,
         isAuthenticated,
         isAdmin,
+        canConfigure,
+        canCreateBoards,
         ssoActive,
         isCheckmkDeployment,
         init,

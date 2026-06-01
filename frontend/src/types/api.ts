@@ -419,6 +419,8 @@ export interface UserRead {
     cmk_theme: string | null;
     cmk_language: string | null;
     cmk_inline_help: boolean;
+    can_configure: boolean;
+    can_create_boards: boolean;
     roles: RoleRef[];
     permissions: PermissionRef[];
 }

@@ -7,6 +7,7 @@ const { mockAuthState } = vi.hoisted(() => ({
         fetchCurrentUser: vi.fn(),
         isAuthenticated: false,
         isAdmin: false,
+        canConfigure: false,
         ssoActive: false,
         isCheckmkDeployment: false,
         user: null as { must_change_password: boolean } | null,
@@ -40,6 +41,7 @@ beforeEach(() => {
     vi.clearAllMocks();
     mockAuthState.isAuthenticated = false;
     mockAuthState.isAdmin = false;
+    mockAuthState.canConfigure = false;
     mockAuthState.ssoActive = false;
     mockAuthState.isCheckmkDeployment = false;
     mockAuthState.user = null;
@@ -86,6 +88,34 @@ describe('router guards', () => {
                 fullPath: '/admin/users',
                 path: '/admin/users',
                 meta: { requiresAuth: true, requiresAdmin: true },
+            }),
+        );
+        expect(result).toBeUndefined();
+    });
+
+    it('redirects users without configure permission away from configure routes', async () => {
+        mockAuthState.isAuthenticated = true;
+        mockAuthState.isAdmin = false;
+        mockAuthState.canConfigure = false;
+        const result = await authGuard(
+            makeRoute({
+                fullPath: '/admin/connections',
+                path: '/admin/connections',
+                meta: { requiresAuth: true, requiresConfigure: true },
+            }),
+        );
+        expect(result).toEqual({ name: 'home' });
+    });
+
+    it('allows non-admin configurers through configure routes', async () => {
+        mockAuthState.isAuthenticated = true;
+        mockAuthState.isAdmin = false;
+        mockAuthState.canConfigure = true;
+        const result = await authGuard(
+            makeRoute({
+                fullPath: '/admin/connections',
+                path: '/admin/connections',
+                meta: { requiresAuth: true, requiresConfigure: true },
             }),
         );
         expect(result).toBeUndefined();

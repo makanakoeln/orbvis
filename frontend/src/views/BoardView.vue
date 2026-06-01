@@ -2315,7 +2315,7 @@ function onPreviewMessage(ev: MessageEvent) {
 }
 
 onMounted(() => {
-    if (auth.isAdmin) connectionsStore.fetchConnections();
+    if (auth.canConfigure || auth.canCreateBoards) connectionsStore.fetchConnections();
     // The board list carries per-board can_edit; ensure it's loaded even on a
     // direct deep-link so non-admin editors get their edit affordances.
     if (boardsStore.boards.length === 0) void boardsStore.fetchBoards();

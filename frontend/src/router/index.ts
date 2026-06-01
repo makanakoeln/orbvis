@@ -38,41 +38,50 @@ const router = createRouter({
         {
             path: '/admin',
             component: () => import('@/views/AdminLayout.vue'),
-            meta: { requiresAuth: true, requiresAdmin: true },
+            meta: { requiresAuth: true },
             children: [
                 {
                     path: '',
-                    redirect: '/admin/users',
+                    redirect: () => {
+                        const auth = useAuthStore();
+                        return auth.isAdmin ? '/admin/users' : '/admin/connections';
+                    },
                 },
                 {
                     path: 'users',
                     name: 'admin-users',
                     component: () => import('@/views/admin/UsersView.vue'),
+                    meta: { requiresAdmin: true },
                 },
                 {
                     path: 'roles',
                     name: 'admin-roles',
                     component: () => import('@/views/admin/RolesView.vue'),
+                    meta: { requiresAdmin: true },
                 },
                 {
                     path: 'connections',
                     name: 'admin-connections',
                     component: () => import('@/views/admin/ConnectionsView.vue'),
+                    meta: { requiresConfigure: true },
                 },
                 {
                     path: 'settings',
                     name: 'admin-settings',
                     component: () => import('@/views/admin/GlobalSettingsView.vue'),
+                    meta: { requiresConfigure: true },
                 },
                 {
                     path: 'system',
                     name: 'admin-system',
                     component: () => import('@/views/admin/SystemSettingsView.vue'),
+                    meta: { requiresConfigure: true },
                 },
                 {
                     path: 'icons',
                     name: 'admin-icons',
                     component: () => import('@/views/admin/ImagesView.vue'),
+                    meta: { requiresConfigure: true },
                 },
             ],
         },
@@ -103,6 +112,9 @@ export async function authGuard(
         return { name: 'login', query: { redirect: to.fullPath } };
     }
     if (to.meta.requiresAdmin && !auth.isAdmin) {
+        return { name: 'home' };
+    }
+    if (to.meta.requiresConfigure && !auth.canConfigure) {
         return { name: 'home' };
     }
     if (auth.isAuthenticated && auth.user?.must_change_password && to.name !== 'change-password') {

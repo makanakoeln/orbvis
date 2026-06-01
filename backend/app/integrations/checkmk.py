@@ -164,6 +164,7 @@ _ORBVIS_PERM_DEFAULTS: dict[str, frozenset[str]] = {
     "orbvis.use": frozenset({"admin", "user"}),
     "orbvis.view_all": frozenset({"admin", "user"}),
     "orbvis.edit_all": frozenset({"admin"}),
+    "orbvis.configure": frozenset({"admin"}),
 }
 _ORBVIS_VIEW_DEFAULTS: frozenset[str] = frozenset({"admin", "user"})
 _ORBVIS_EDIT_DEFAULTS: frozenset[str] = frozenset({"admin"})
@@ -294,6 +295,38 @@ def check_board_permission(username: str, board_name: str, action: str) -> bool:
             user_data, role_config, f"orbvis.edit_{board_name}"
         )
     return False
+
+
+def check_configure_permission(username: str) -> bool:
+    """Return True if the Checkmk user may manage connections, images and settings.
+
+    Gated by ``orbvis.use`` plus the dedicated ``orbvis.configure`` permission.
+    Always returns False when CHECKMK_OMD_ROOT is not configured.
+    """
+    if not settings.checkmk_omd_root:
+        return False
+    user_data = load_user(username) if available else _load_user_fallback(username)
+    role_config = _load_roles()
+    return _has_permission(user_data, role_config, "orbvis.use") and _has_permission(
+        user_data, role_config, "orbvis.configure"
+    )
+
+
+def check_create_permission(username: str) -> bool:
+    """Return True if the Checkmk user may create or delete boards.
+
+    Mirrors the WATO declaration: ``orbvis.edit_all`` grants creating, modifying
+    and deleting boards. Per-board ``orbvis.edit_<board>`` does not apply here —
+    creating a board is not scoped to an existing board name.
+    Always returns False when CHECKMK_OMD_ROOT is not configured.
+    """
+    if not settings.checkmk_omd_root:
+        return False
+    user_data = load_user(username) if available else _load_user_fallback(username)
+    role_config = _load_roles()
+    return _has_permission(user_data, role_config, "orbvis.use") and _has_permission(
+        user_data, role_config, "orbvis.edit_all"
+    )
 
 
 def get_user_contact_groups(username: str) -> list[str]:

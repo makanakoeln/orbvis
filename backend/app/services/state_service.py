@@ -88,13 +88,30 @@ def list_connection_ids() -> list[str]:
 
 
 async def get_connection_objects(
-    connection_id: str, obj_type: str, host: str | None = None, search: str | None = None
+    connection_id: str,
+    obj_type: str,
+    host: str | None = None,
+    search: str | None = None,
+    auth_user: str | None = None,
 ) -> list[str]:
-    """Return available object names from a connection (for autocomplete)."""
+    """Return available object names from a connection (for autocomplete).
+
+    When *auth_user* is set and Checkmk is configured, the lookup runs under a
+    Livestatus AuthUser so a monitoring user only sees hosts in their contact
+    groups (mirrors :func:`get_board_states`).
+    """
     connection = get_connection(connection_id)
     if connection is None:
         return []
-    raw = await connection.get_objects(obj_type, host, search)
+    if (
+        auth_user is not None
+        and settings.checkmk_omd_root
+        and hasattr(connection, "with_auth_user")
+    ):
+        async with connection.with_auth_user(auth_user):
+            raw = await connection.get_objects(obj_type, host, search)
+    else:
+        raw = await connection.get_objects(obj_type, host, search)
     if obj_type == "service" and host:
         # raw items are "hostname;service_description"; defensive in case a
         # backend ignores the host scope.

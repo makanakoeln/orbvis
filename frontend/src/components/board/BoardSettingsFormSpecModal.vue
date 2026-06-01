@@ -538,7 +538,7 @@
                     {{ showPreview ? t('board.hidePreview') : t('board.showPreview') }}
                 </CmkButton>
                 <span class="board-settings__footer-spacer" />
-                <CmkButton v-if="auth.isAdmin" variant="danger" @click="deleteBoard">
+                <CmkButton v-if="auth.canCreateBoards" variant="danger" @click="deleteBoard">
                     {{ t('board.deleteBoardAction') }}
                 </CmkButton>
                 <CmkButton variant="secondary" @click="requestClose">
