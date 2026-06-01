@@ -177,6 +177,10 @@ export interface BoardObject {
     z: number;
     host_name?: string | null;
     service_description?: string | null;
+    // Runtime-only hint (not persisted): the host's monitoring site, so commands
+    // route to the right site on boards whose objects aren't in the state map
+    // (e.g. the Flow Board, which is topology-driven). Optional everywhere else.
+    site_id?: string | null;
     group_name?: string | null;
     map_name?: string | null;
     image_src?: string | null;

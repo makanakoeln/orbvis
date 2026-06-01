@@ -68,7 +68,10 @@ export function useObjectActions(
         { hostFn, serviceFn, errorKey, successKey }: DispatchOptions,
     ): Promise<void> {
         try {
-            const siteId = statesStore.getState(obj.id)?.site_id ?? null;
+            // Prefer the live state-map site_id; fall back to a site_id carried
+            // on the object itself (the Flow Board has no state-map entry but
+            // tags its objects with the topology node's site).
+            const siteId = statesStore.getState(obj.id)?.site_id ?? obj.site_id ?? null;
             if (obj.type === 'service' && obj.host_name && obj.service_description) {
                 await serviceFn(url, obj.host_name, obj.service_description, siteId);
             } else if (obj.host_name) {

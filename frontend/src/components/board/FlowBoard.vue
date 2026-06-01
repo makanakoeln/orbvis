@@ -126,7 +126,7 @@
         <HoverMenu
             v-if="hoverMenu.visible && hoverMenu.object"
             :object="hoverMenu.object"
-            :state="hoverMenu.state"
+            :state="hoverState"
             :x="hoverMenu.x"
             :y="hoverMenu.y"
             :connection-id="props.connectionId"
@@ -432,6 +432,57 @@ function hostHalo(d: FNode): { stroke: string; width: number } {
     return { stroke: stateColor(worst), width: isTopK ? 4 : 2.5 };
 }
 
+// Command-state markers shown on a node, mirroring the static board's badges:
+// acknowledged / in downtime / notifications-disabled. Source is the host
+// (d.topo) or the service (d.svc); both carry the same flags.
+interface CmdMarker {
+    key: string;
+    glyph: string;
+    fill: string;
+    fg: string;
+    title: string;
+    corner: 'tr' | 'tl' | 'br';
+}
+function commandMarkers(d: FNode): CmdMarker[] {
+    const src = d.nodeType === 'service' ? d.svc : d.topo;
+    if (!src) return [];
+    const out: CmdMarker[] = [];
+    if (src.acknowledged)
+        out.push({
+            key: 'ack',
+            glyph: '✓',
+            fill: 'var(--color-warning)',
+            fg: '#18181b',
+            title: 'Acknowledged',
+            corner: 'tr',
+        });
+    if (src.in_downtime)
+        out.push({
+            key: 'dt',
+            glyph: '‖',
+            fill: 'var(--color-light-blue-50)',
+            fg: '#ffffff',
+            title: 'In downtime',
+            corner: 'tl',
+        });
+    if (src.notifications_enabled === false)
+        out.push({
+            key: 'notif',
+            glyph: '∅',
+            fill: 'var(--text-muted)',
+            fg: '#ffffff',
+            title: 'Notifications disabled',
+            corner: 'br',
+        });
+    return out;
+}
+function badgeXY(corner: CmdMarker['corner'], r: number): [number, number] {
+    const o = r * 0.72;
+    if (corner === 'tr') return [o, -o];
+    if (corner === 'tl') return [-o, -o];
+    return [o, o];
+}
+
 function problemScoreFromTopo(n: TopologyNode): number {
     const hostPenalty = HEALTHY_HOST_STATES.has(n.state) ? 0 : 100;
     const s = n.services_summary;
@@ -530,6 +581,19 @@ const hoverMenu = reactive<{
     x: number;
     y: number;
 }>({ visible: false, object: null, state: undefined, x: 0, y: 0 });
+
+// The hovered node, kept so the tooltip's state can be re-derived live. Reading
+// topologyTimingVersion makes next-check/overdue tick in an open tooltip the
+// same way the detail drawer does, instead of freezing at the hover moment.
+const hoverFNode = ref<FNode | null>(null);
+const hoverState = computed<ObjectState | undefined>(() => {
+    const cur = hoverFNode.value;
+    if (!cur) return undefined;
+    void nodes.value;
+    void statesStore.topologyTimingVersion;
+    const fresh = lastFNodes.find((n) => n.id === cur.id) ?? cur;
+    return objectStateFromFNode(fresh);
+});
 
 const contextMenu = reactive<{
     visible: boolean;
@@ -694,13 +758,18 @@ const detailFNode = ref<FNode | null>(null);
 // drawer keeps showing the aggregate from the click moment, going stale on
 // active boards.
 const detailState = computed<ObjectState | undefined>(() => {
-    if (!detailFNode.value) return undefined;
+    const cur = detailFNode.value;
+    if (!cur) return undefined;
     // Touch nodes.value so the computed re-runs on every topology push, and the
     // timing version so a check-timing-only patch (which mutates nodes in place
     // without replacing the array) refreshes the drawer's last/next-check too.
     void nodes.value;
     void statesStore.topologyTimingVersion;
-    return objectStateFromFNode(detailFNode.value);
+    // Re-resolve the FNode by id from the latest render so a structural change
+    // (state flip, ack/downtime) to the open node is reflected, not just timing;
+    // a render replaces the node object the captured FNode pointed at.
+    const fresh = lastFNodes.find((n) => n.id === cur.id) ?? cur;
+    return objectStateFromFNode(fresh);
 });
 
 // The initial render schedules a refining fitView once the force-simulation
@@ -1159,6 +1228,11 @@ function boardObjectFromFNode(d: FNode): BoardObject {
         y: 0,
         host_name: hostNameForCheckmk,
         service_description: svcName,
+        // The flow board has no state-map entry to read site_id from, so carry
+        // it from the topology node — commands need it to hit the right site.
+        // Services and "+N more" nodes carry the host via parentTopo; host nodes
+        // via topo.
+        site_id: (isService || d.nodeType === 'more' ? d.parentTopo : d.topo)?.site_id ?? null,
     } as BoardObject;
 }
 
@@ -1671,6 +1745,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                     hostId: n.name,
                     svcTotalCount: N,
                     moreCount: truncated,
+                    parentTopo: n,
                 });
             }
         }
@@ -2213,8 +2288,8 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .on('mouseenter', (event: MouseEvent, d) => {
             if (props.preview || d.nodeType === 'site') return;
             const nodeRect = (event.currentTarget as SVGGElement).getBoundingClientRect();
+            hoverFNode.value = d;
             hoverMenu.object = boardObjectFromFNode(d);
-            hoverMenu.state = objectStateFromFNode(d);
             hoverMenu.x = nodeRect.right + 8;
             hoverMenu.y = nodeRect.top;
             hoverMenu.visible = true;
@@ -2222,6 +2297,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .on('mouseleave', () => {
             hoverMenu.visible = false;
             hoverMenu.object = null;
+            hoverFNode.value = null;
         });
 
     // Readonly boards keep drag interactive (persistence inside drag.end
@@ -2363,6 +2439,15 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         .text((d) => `+${d.moreCount ?? 0} more`)
         .style('display', (d) => (showSvcLabel(d.svcTotalCount ?? 1) ? null : 'none'));
 
+    // Command-state badge container (ack / downtime / notifications-off),
+    // rendered last so badges sit above the node circle. pointer-events none so
+    // they never steal drag/click; the hover menu carries the same info textually.
+    nodeEnter
+        .filter((d) => d.nodeType === 'host' || d.nodeType === 'service')
+        .append('g')
+        .attr('class', 'cmd-markers')
+        .attr('pointer-events', 'none');
+
     const nodeMerge = nodeEnter.merge(nodeSel);
     nodeMerge.select('circle').attr('fill', (d) => stateColor(d.state));
     nodeMerge
@@ -2416,6 +2501,41 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
                 .attr('stroke', 'rgba(0,0,0,0.35)')
                 .attr('stroke-width', 0.5);
         });
+    // Command-state markers — bind active flags as small corner badges. Runs on
+    // every render; ack/downtime/notif changes are in the topology change-hash
+    // so a real change triggers a re-render here (no extra timing dependency).
+    nodeMerge
+        .filter((d) => d.nodeType === 'host' || d.nodeType === 'service')
+        .each(function (d) {
+            const R = d.nodeType === 'service' ? svcR(d.svcTotalCount ?? 1) : NODE_R;
+            const rb = Math.max(4, R * 0.34);
+            const g = select(this).select<SVGGElement>('g.cmd-markers');
+            const sel = g
+                .selectAll<SVGGElement, CmdMarker>('g.cmd-badge')
+                .data(commandMarkers(d), (m) => m.key);
+            sel.exit().remove();
+            const en = sel.enter().append('g').attr('class', 'cmd-badge');
+            en.append('circle').attr('stroke', 'var(--bg-surface)').attr('stroke-width', 1.5);
+            en.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('dominant-baseline', 'central')
+                .attr('font-weight', '700');
+            en.append('title');
+            const m = en.merge(sel);
+            m.attr('transform', (mk) => {
+                const [x, y] = badgeXY(mk.corner, R);
+                return `translate(${x},${y})`;
+            });
+            m.select('circle')
+                .attr('r', rb)
+                .attr('fill', (mk) => mk.fill);
+            m.select('text')
+                .attr('font-size', rb * 1.3)
+                .attr('fill', (mk) => mk.fg)
+                .text((mk) => mk.glyph);
+            m.select('title').text((mk) => mk.title);
+        });
+
     nodeMerge.select('text.node-label').text((d) => {
         if (d.nodeType === 'more') return `+${d.moreCount ?? 0} more`;
         if (d.nodeType === 'service') {
