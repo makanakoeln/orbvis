@@ -8,6 +8,7 @@ import type {
     ObjectState,
     TopologyDelta,
     TopologyNode,
+    TopologyTiming,
     WebSocketStateUpdate,
     WebSocketTopologyUpdate,
 } from '@/types/api';
@@ -66,6 +67,11 @@ export const useStatesStore = defineStore('states', () => {
     const initialLoad = ref(false);
     const topology = ref<TopologyNode[]>([]);
     const topologyReady = ref(false);
+    // Bumped on every applied topology timing patch. Consumers that read a
+    // node's timing off a captured reference (the Flow Board's detail drawer)
+    // watch this to re-derive — the in-place field mutation alone doesn't always
+    // re-trigger their computed.
+    const topologyTimingVersion = ref(0);
     // Resolved + aggregated tree for foldertree boards (null for other types).
     const folderTree = ref<FolderTreeNode | null>(null);
     // Kept under the historical name for compatibility with views; false after
@@ -228,16 +234,50 @@ export const useStatesStore = defineStore('states', () => {
     function _applyTopologyDelta(delta: TopologyDelta) {
         if (delta.full) {
             topology.value = [...delta.added];
+            _applyTopologyTiming(delta.timing);
             return;
         }
-        const removed = new Set(delta.removed);
-        const updated = new Map<string, TopologyNode>(
-            delta.changed.map((n) => [n.name, n] as const),
-        );
-        topology.value = topology.value
-            .filter((n) => !removed.has(n.name))
-            .map((n) => updated.get(n.name) ?? n)
-            .concat(delta.added);
+        // Only rebuild the array (which makes the FlowBoard re-derive its d3
+        // nodes) when the structure actually changed. A timing-only tick skips
+        // this and patches in place below — no node rebuild, no force-sim
+        // restart, just the open drawer/hover re-reading the new next-check.
+        if (delta.removed.length || delta.changed.length || delta.added.length) {
+            const removed = new Set(delta.removed);
+            const updated = new Map<string, TopologyNode>(
+                delta.changed.map((n) => [n.name, n] as const),
+            );
+            topology.value = topology.value
+                .filter((n) => !removed.has(n.name))
+                .map((n) => updated.get(n.name) ?? n)
+                .concat(delta.added);
+        }
+        _applyTopologyTiming(delta.timing);
+    }
+
+    // Patch check-timing onto existing topology nodes in place. Mutating the
+    // reactive node/service objects keeps consumers that read `.next_check`
+    // (the detail drawer) live, without replacing the array.
+    function _applyTopologyTiming(timing?: TopologyTiming[]) {
+        if (!timing?.length) return;
+        topologyTimingVersion.value++;
+        const byName = new Map(topology.value.map((n) => [n.name, n] as const));
+        for (const tm of timing) {
+            const node = byName.get(tm.name);
+            if (!node) continue;
+            node.last_check = tm.last_check ?? null;
+            node.next_check = tm.next_check ?? null;
+            node.current_attempt = tm.current_attempt ?? 0;
+            if (tm.services?.length && node.services?.length) {
+                const svcByName = new Map(node.services.map((s) => [s.name, s] as const));
+                for (const st of tm.services) {
+                    const svc = svcByName.get(st.name);
+                    if (svc) {
+                        svc.last_check = st.last_check ?? null;
+                        svc.next_check = st.next_check ?? null;
+                    }
+                }
+            }
+        }
     }
 
     function _connect() {
@@ -408,6 +448,7 @@ export const useStatesStore = defineStore('states', () => {
         initialLoad,
         topology,
         topologyReady,
+        topologyTimingVersion,
         folderTree,
         wsAvailable,
         notificationsEnabled,

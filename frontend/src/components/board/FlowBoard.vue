@@ -695,8 +695,11 @@ const detailFNode = ref<FNode | null>(null);
 // active boards.
 const detailState = computed<ObjectState | undefined>(() => {
     if (!detailFNode.value) return undefined;
-    // Touch nodes.value so the computed re-runs on every topology push.
+    // Touch nodes.value so the computed re-runs on every topology push, and the
+    // timing version so a check-timing-only patch (which mutates nodes in place
+    // without replacing the array) refreshes the drawer's last/next-check too.
     void nodes.value;
+    void statesStore.topologyTimingVersion;
     return objectStateFromFNode(detailFNode.value);
 });
 

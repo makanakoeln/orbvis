@@ -136,7 +136,7 @@ async def _push_topology_to(
     if nodes is None:
         return
     delta = state_service.compute_topology_delta(cfg.name, auth_user, nodes, force_full=force_full)
-    if not (force_full or delta.added or delta.changed or delta.removed):
+    if not (force_full or delta.added or delta.changed or delta.removed or delta.timing):
         return
     msg = json.dumps({"type": "topology_update", "map": cfg.name, "delta": delta.model_dump()})
     manager.push(cfg.name, targets, msg)

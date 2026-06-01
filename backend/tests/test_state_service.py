@@ -393,8 +393,10 @@ def _topo_node(name: str, **kwargs):
 @pytest.fixture(autouse=True)
 def _clear_topology_snapshots():
     state_service._topology_snapshots.clear()
+    state_service._topology_timing_snapshots.clear()
     yield
     state_service._topology_snapshots.clear()
+    state_service._topology_timing_snapshots.clear()
 
 
 def test_topology_delta_first_call_is_full():
@@ -427,6 +429,52 @@ def test_topology_delta_detects_changed_volatile_field():
     )
     assert [n.name for n in delta.changed] == ["h1"]
     assert delta.added == [] and delta.removed == []
+
+
+def test_topology_delta_emits_timing_patch_on_recheck_only():
+    # A re-check bumps next_check/last_check/current_attempt but nothing else.
+    # That must NOT mark the host as `changed` (would defeat the delta) — it
+    # travels as a slim `timing` patch so the Flow Board's next-check stays live.
+    state_service.compute_topology_delta(
+        "b1", None, [_topo_node("h1", last_check=100.0, next_check=160.0, current_attempt=1)]
+    )
+    delta = state_service.compute_topology_delta(
+        "b1", None, [_topo_node("h1", last_check=160.0, next_check=220.0, current_attempt=1)]
+    )
+    assert delta.changed == [] and delta.added == [] and delta.removed == []
+    assert [t.name for t in delta.timing] == ["h1"]
+    assert delta.timing[0].next_check == 220.0
+    assert delta.timing[0].last_check == 160.0
+
+
+def test_topology_delta_changed_host_not_also_in_timing():
+    # A host that's re-sent in `changed` already carries fresh timing; it must
+    # not be duplicated in the timing patch.
+    state_service.compute_topology_delta(
+        "b1", None, [_topo_node("h1", state="UP", next_check=160.0)]
+    )
+    delta = state_service.compute_topology_delta(
+        "b1", None, [_topo_node("h1", state="DOWN", next_check=220.0)]
+    )
+    assert [n.name for n in delta.changed] == ["h1"]
+    assert delta.timing == []
+
+
+def test_topology_delta_timing_patch_tracks_service_recheck():
+    from app.api.v1.connections import ServiceNode
+
+    def node(svc_next: float):
+        return _topo_node(
+            "h1",
+            services=[ServiceNode(name="CPU", state="OK", output="ok", next_check=svc_next)],
+        )
+
+    state_service.compute_topology_delta("b1", None, [node(160.0)])
+    delta = state_service.compute_topology_delta("b1", None, [node(220.0)])
+    assert delta.changed == []
+    assert [t.name for t in delta.timing] == ["h1"]
+    assert delta.timing[0].services[0].name == "CPU"
+    assert delta.timing[0].services[0].next_check == 220.0
 
 
 def test_topology_delta_detects_removed_host():

@@ -991,6 +991,21 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
 
 # (board_name, auth_user) → (host_name → volatile-fields hash)
 _topology_snapshots: dict[tuple[str, str | None], dict[str, int]] = {}
+# Parallel to _topology_snapshots, hashing only the check-timing fields that
+# _hash_topology_node deliberately omits. Lets compute_topology_delta emit a
+# slim timing patch for hosts that re-checked but didn't otherwise change.
+_topology_timing_snapshots: dict[tuple[str, str | None], dict[str, int]] = {}
+
+
+def _hash_topology_node_timing(n: TopologyNode) -> int:
+    """Hash the check-timing fields excluded from _hash_topology_node.
+
+    Host last/next check + current_attempt, plus each service's last/next check
+    (bounded — the topology truncates services to the top-N), so a recheck on the
+    host or any of its listed services produces a timing patch.
+    """
+    services = tuple((sv.name, sv.last_check, sv.next_check) for sv in n.services)
+    return hash((n.last_check, n.next_check, n.current_attempt, services))
 
 
 def _hash_topology_node(n: TopologyNode) -> int:
@@ -1041,15 +1056,29 @@ def compute_topology_delta(
 
     Side effect: stores the new snapshot in `_topology_snapshots` so the next
     call returns deltas relative to this one.
+
+    ``timing`` carries check-timing-only patches for hosts that re-checked but
+    aren't in ``added``/``changed`` (those already ship fresh timing), so the
+    Flow Board's next-check / overdue readouts stay live without re-sending whole
+    nodes. Empty on a full send (timing rides inside the node payloads).
     """
-    from app.api.v1.connections import TopologyDelta as _TopologyDelta
+    from app.api.v1.connections import (
+        ServiceTiming,
+        TopologyTiming,
+    )
+    from app.api.v1.connections import (
+        TopologyDelta as _TopologyDelta,
+    )
 
     key = (board_name, auth_user)
     prev = _topology_snapshots.get(key)
+    prev_timing = _topology_timing_snapshots.get(key)
     new_hashes = {n.name: _hash_topology_node(n) for n in current}
+    new_timing = {n.name: _hash_topology_node_timing(n) for n in current}
 
     if force_full or prev is None:
         _topology_snapshots[key] = new_hashes
+        _topology_timing_snapshots[key] = new_timing
         return _TopologyDelta(full=True, generated_at=time.time(), added=current)
 
     by_name = {n.name: n for n in current}
@@ -1057,13 +1086,32 @@ def compute_topology_delta(
     changed = [n for n in current if n.name in prev and new_hashes[n.name] != prev[n.name]]
     removed = [name for name in prev if name not in by_name]
 
+    resent = {n.name for n in added} | {n.name for n in changed}
+    timing = [
+        TopologyTiming(
+            name=n.name,
+            last_check=n.last_check,
+            next_check=n.next_check,
+            current_attempt=n.current_attempt,
+            services=[
+                ServiceTiming(name=sv.name, last_check=sv.last_check, next_check=sv.next_check)
+                for sv in n.services
+            ],
+        )
+        for n in current
+        if n.name not in resent
+        and (prev_timing is None or new_timing[n.name] != prev_timing.get(n.name))
+    ]
+
     _topology_snapshots[key] = new_hashes
+    _topology_timing_snapshots[key] = new_timing
     return _TopologyDelta(
         full=False,
         generated_at=time.time(),
         added=added,
         changed=changed,
         removed=removed,
+        timing=timing,
     )
 
 
@@ -1074,9 +1122,12 @@ def drop_topology_snapshot(board_name: str, auth_user: str | None = None) -> Non
     """
     if auth_user is not None:
         _topology_snapshots.pop((board_name, auth_user), None)
+        _topology_timing_snapshots.pop((board_name, auth_user), None)
         return
     for key in [k for k in _topology_snapshots if k[0] == board_name]:
         _topology_snapshots.pop(key, None)
+    for key in [k for k in _topology_timing_snapshots if k[0] == board_name]:
+        _topology_timing_snapshots.pop(key, None)
 
 
 # ---------------------------------------------------------------------------

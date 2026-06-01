@@ -276,12 +276,36 @@ class TopologyNode(BaseModel):
     services_summary: ServicesSummary | None = None
 
 
+class ServiceTiming(BaseModel):
+    name: str
+    last_check: float | None = None
+    next_check: float | None = None
+
+
+class TopologyTiming(BaseModel):
+    """Slim check-timing patch for a topology host (and its services).
+
+    Mirrors ``ObjectTiming`` on the state channel: ``last_check``/``next_check``/
+    ``current_attempt`` tick on every Checkmk re-check and are deliberately
+    excluded from the topology change-hash (so a recheck doesn't flap every host
+    as ``changed``). They travel here instead, keeping the Flow Board's
+    next-check / overdue readouts live without re-sending whole nodes.
+    """
+
+    name: str
+    last_check: float | None = None
+    next_check: float | None = None
+    current_attempt: int = 0
+    services: list[ServiceTiming] = []
+
+
 class TopologyDelta(BaseModel):
     """Incremental update for a Flow Board's topology snapshot.
 
     `full=True` carries the complete topology (initial connect / reset).
     Otherwise `added`/`changed`/`removed` are diffs against the previous tick:
     only hosts whose volatile fields actually changed appear in `changed`.
+    `timing` carries check-timing-only patches for hosts not in `changed`.
     """
 
     full: bool
@@ -289,6 +313,7 @@ class TopologyDelta(BaseModel):
     added: list[TopologyNode] = []
     changed: list[TopologyNode] = []
     removed: list[str] = []
+    timing: list[TopologyTiming] = []
 
 
 # Higher number = more "interesting"; OK comes last, PENDING/unknown stable in

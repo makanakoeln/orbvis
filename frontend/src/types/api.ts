@@ -521,12 +521,30 @@ export interface WebSocketStateUpdate {
     timing?: ObjectTiming[];
 }
 
+// Slim check-timing patch for a flow topology host (+ its services), parallel
+// to ObjectTiming on the state channel. Carries the last/next-check fields the
+// topology change-hash omits, so the Flow Board's next-check stays live.
+export interface ServiceTiming {
+    name: string;
+    last_check?: number | null;
+    next_check?: number | null;
+}
+
+export interface TopologyTiming {
+    name: string;
+    last_check?: number | null;
+    next_check?: number | null;
+    current_attempt?: number;
+    services?: ServiceTiming[];
+}
+
 export interface TopologyDelta {
     full: boolean;
     generated_at: number;
     added: TopologyNode[];
     changed: TopologyNode[];
     removed: string[];
+    timing?: TopologyTiming[];
 }
 
 export interface WebSocketTopologyUpdate {
