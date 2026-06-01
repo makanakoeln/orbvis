@@ -122,7 +122,7 @@ export default {
         boardTypeGeoBoard: 'Geo Board',
         boardTypeFlowBoard: 'Flow Board',
         boardTypeRadar: 'Radar (dynamic filter)',
-        boardTypeFolderTree: 'Folder tree (SETUP folders)',
+        boardTypeFolderTree: 'Folder tree',
         boardTypeStaticDesc: 'Free placement of objects on a canvas or background image',
         boardTypeGeoBoardDesc:
             'Objects positioned on an interactive world map using geo-coordinates',
@@ -874,6 +874,9 @@ export default {
         enableFolderBoards: 'Enable Folder boards',
         enableFolderBoardsHint:
             'Offer the SETUP folder-tree board type in the board-type picker. Existing folder boards keep rendering even while this is off.',
+        enableGraphObjects: 'Enable Graph objects',
+        enableGraphObjectsHint:
+            'Offer the (experimental) graph object type in the add-object picker. Existing graph objects keep rendering even while this is off.',
     },
     userSettings: {
         title: 'User Settings',

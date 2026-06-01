@@ -106,3 +106,7 @@ class SystemSettings(BaseModel):
     # board-type picker. Off by default so operators opt in explicitly; existing
     # folder boards keep rendering regardless.
     enable_folder_boards: bool = False
+    # Feature flag: offer the (still experimental) graph object type in the
+    # add-object picker. On by default; existing graph objects keep rendering
+    # even when an operator turns it off.
+    enable_graph_objects: bool = True

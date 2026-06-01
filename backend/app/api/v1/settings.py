@@ -255,6 +255,7 @@ if FORM_SPECS_AVAILABLE:
         if s.access_token_expire_minutes is not None:
             out["access_token_expire_minutes"] = s.access_token_expire_minutes
         out["enable_folder_boards"] = s.enable_folder_boards
+        out["enable_graph_objects"] = s.enable_graph_objects
         return out
 
     def _system_from_form(form: dict[str, object]) -> SystemSettings:
@@ -271,6 +272,7 @@ if FORM_SPECS_AVAILABLE:
                 state_refresh_interval=_optional_int(form.get("state_refresh_interval")),
                 access_token_expire_minutes=_optional_int(form.get("access_token_expire_minutes")),
                 enable_folder_boards=bool(form.get("enable_folder_boards", False)),
+                enable_graph_objects=bool(form.get("enable_graph_objects", True)),
             )
         except ValidationError as e:
             details: list[dict[str, object]] = []

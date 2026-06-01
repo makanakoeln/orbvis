@@ -1384,7 +1384,9 @@ const selectedObjectAnchor = computed<AnchorRect | null>(() => {
     };
 });
 
-const placeableTypeOptions = computed(() => placeableObjectTypes(t));
+const placeableTypeOptions = computed(() =>
+    placeableObjectTypes(t, settingsStore.system.enable_graph_objects),
+);
 
 function chooseAddType(type: ObjectType) {
     editor.draft.type = type;

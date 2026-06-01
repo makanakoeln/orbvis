@@ -32,8 +32,14 @@ const LINE_STYLE_FALLBACK: { name: string; title: string }[] = [
     { name: 'arrow_inward', title: 'Arrows pointing inward' },
 ];
 
-export function placeableObjectTypes(t: T): { name: ObjectType; title: string }[] {
-    return [
+// The graph object type is still experimental and opt-out via the System
+// Settings feature flag (``includeGraph``, on by default). When off it's hidden
+// from the add-object picker; existing graph objects keep rendering.
+export function placeableObjectTypes(
+    t: T,
+    includeGraph = true,
+): { name: ObjectType; title: string }[] {
+    const types: { name: ObjectType; title: string }[] = [
         { name: 'host', title: t('boardSettings.typeHost') },
         { name: 'service', title: t('boardSettings.typeService') },
         { name: 'hostgroup', title: t('boardSettings.typeHostgroup') },
@@ -44,8 +50,11 @@ export function placeableObjectTypes(t: T): { name: ObjectType; title: string }[
         { name: 'line', title: t('boardSettings.typeLine') },
         { name: 'textbox', title: t('boardSettings.typeTextbox') },
         { name: 'image', title: t('boardSettings.typeImage') },
-        { name: 'graph', title: `${t('boardSettings.typeGraph')} (experimental)` },
     ];
+    if (includeGraph) {
+        types.push({ name: 'graph', title: `${t('boardSettings.typeGraph')} (experimental)` });
+    }
+    return types;
 }
 
 // The folder-tree board type is opt-in via the System Settings feature flag.
@@ -60,7 +69,10 @@ export function boardTypeOptions(t: T, includeFolderTree = false) {
         { name: 'radar', title: t('board.boardTypeRadar') },
     ];
     if (includeFolderTree) {
-        options.push({ name: 'foldertree', title: t('board.boardTypeFolderTree') });
+        options.push({
+            name: 'foldertree',
+            title: `${t('board.boardTypeFolderTree')} (experimental)`,
+        });
     }
     return options;
 }

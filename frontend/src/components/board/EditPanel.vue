@@ -352,6 +352,7 @@ import NumberInput from '@/components/NumberInput.vue';
 import type { NewObjectDraft } from '@/composables/useBoardEditor';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
+import { useSettingsStore } from '@/stores/settings';
 import type { AggregationNode, ObjectType } from '@/types/api';
 import {
     aggregationLeafId,
@@ -369,7 +370,7 @@ const { t } = useI18n();
 
 const objectTypeOptions = computed(() => ({
     type: 'fixed' as const,
-    suggestions: placeableObjectTypes(t),
+    suggestions: placeableObjectTypes(t, settingsStore.system.enable_graph_objects),
 }));
 const snapGridOptions = computed(() => ({
     type: 'fixed' as const,
@@ -396,6 +397,7 @@ defineEmits<{
 
 const auth = useAuthStore();
 const boardsStore = useBoardsStore();
+const settingsStore = useSettingsStore();
 const boardNames = computed(() => boardsStore.boards.map((b) => b.name));
 const boardLabels = computed(() => boardsStore.boards.map((b) => b.alias || b.name));
 

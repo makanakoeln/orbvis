@@ -144,5 +144,19 @@ def system_settings_spec() -> Dictionary:
                     prefill=DefaultValue(False),
                 ),
             ),
+            "enable_graph_objects": DictElement(
+                required=True,
+                group=_FEATURES,
+                parameter_form=BooleanChoice(
+                    title=Title("Graph objects"),
+                    label=Label("Offer the (experimental) graph object type"),
+                    help_text=Help(
+                        "Adds the Graph object to the add-object picker when editing "
+                        "a board. Existing graph objects keep rendering even while "
+                        "this is off."
+                    ),
+                    prefill=DefaultValue(True),
+                ),
+            ),
         },
     )

@@ -184,6 +184,17 @@
                             >
                                 {{ t('settings.enableFolderBoardsHint') }}
                             </p>
+                            <CmkCheckbox
+                                v-model="enableGraphObjects"
+                                :label="t('settings.enableGraphObjects')"
+                                style="margin-top: 12px"
+                            />
+                            <p
+                                class="text-sm text-[var(--text-muted)]"
+                                style="margin-top: 4px; margin-left: 24px"
+                            >
+                                {{ t('settings.enableGraphObjectsHint') }}
+                            </p>
                         </div>
                     </CmkCollapsible>
                 </section>
@@ -275,6 +286,13 @@ const enableFolderBoards = computed({
     get: () => form.enable_folder_boards ?? false,
     set: (v: boolean) => {
         form.enable_folder_boards = v;
+    },
+});
+
+const enableGraphObjects = computed({
+    get: () => form.enable_graph_objects ?? true,
+    set: (v: boolean) => {
+        form.enable_graph_objects = v;
     },
 });
 

@@ -123,7 +123,7 @@ export default {
         boardTypeGeoBoard: 'Geo Board',
         boardTypeFlowBoard: 'Flow Board',
         boardTypeRadar: 'Radar (dynamischer Filter)',
-        boardTypeFolderTree: 'Ordnerbaum (SETUP-Ordner)',
+        boardTypeFolderTree: 'Ordnerbaum',
         boardTypeStaticDesc:
             'Freie Positionierung von Objekten auf einer Fläche oder einem Hintergrundbild',
         boardTypeGeoBoardDesc: 'Objekte auf einer interaktiven Weltkarte mit Geo-Koordinaten',
@@ -881,6 +881,9 @@ export default {
         enableFolderBoards: 'Folder-Boards aktivieren',
         enableFolderBoardsHint:
             'Bietet den SETUP-Ordnerbaum-Boardtyp in der Board-Typ-Auswahl an. Bestehende Folder-Boards werden weiterhin angezeigt, auch wenn dies deaktiviert ist.',
+        enableGraphObjects: 'Graph-Objekte aktivieren',
+        enableGraphObjectsHint:
+            'Bietet den (experimentellen) Graph-Objekttyp in der Objekt-Auswahl an. Bestehende Graph-Objekte werden weiterhin angezeigt, auch wenn dies deaktiviert ist.',
     },
     userSettings: {
         title: 'Benutzereinstellungen',

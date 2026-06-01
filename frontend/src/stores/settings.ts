@@ -31,6 +31,7 @@ export const SYSTEM_DEFAULTS: SystemSettings = {
     log_level: null,
     checkmk_url: null,
     enable_folder_boards: false,
+    enable_graph_objects: true,
 };
 
 export const useSettingsStore = defineStore('settings', () => {
