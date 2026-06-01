@@ -60,13 +60,15 @@ filterwarnings = [
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 
-# Bundle runtime data files inside the package directory so they're available
-# from $VENV/lib/pythonX.Y/site-packages/app/ regardless of where the source
-# tree lives (relevant for non-editable installs from a user home).
+# Bundle runtime data files that live OUTSIDE the package directory so they're
+# available from $VENV/lib/pythonX.Y/site-packages/app/ regardless of where the
+# source tree lives (relevant for non-editable installs from a user home).
+# app/_seed_boards is NOT listed here: it sits inside `packages = ["app"]` and is
+# already shipped by it — force-including it again makes hatchling abort with a
+# duplicate-archive-path error.
 [tool.hatch.build.targets.wheel.force-include]
 "../VERSION" = "app/VERSION"
 "../CHANGELOG.md" = "app/CHANGELOG.md"
-"app/_seed_boards" = "app/_seed_boards"
 
 [tool.ruff]
 extend = "../pyproject.toml"
