@@ -205,9 +205,10 @@ import { useI18n } from 'vue-i18n';
 
 import type { FolderTreeNode } from '@/types/api';
 import {
+    type FilterTerm,
     isFilterActive,
-    type ParsedQuery,
     selfMatches,
+    serviceVisible,
     subtreeVisible,
 } from '@/utils/folderTreeFilter';
 import { severityPills, stateColorVar } from '@/utils/stateColors';
@@ -218,7 +219,7 @@ const props = defineProps<{
     depth: number;
     expanded: Set<string>;
     multiSite: boolean;
-    query: ParsedQuery;
+    query: FilterTerm[];
     problemsOnly: boolean;
     // True once a containing folder/host already matched the query, so this
     // whole subtree counts as matching.
@@ -275,6 +276,19 @@ const childNodes = computed<FolderTreeNode[]>(() =>
 
 const visibleChildren = computed(() => {
     if (!isFilterActive(props.query, props.problemsOnly)) return childNodes.value;
+    // A host's children are service leaves (matched with the host name in
+    // context); a folder's children are folders/hosts in the store tree.
+    if (props.node.kind === 'host') {
+        return childNodes.value.filter((c) =>
+            serviceVisible(
+                props.node.title,
+                c,
+                props.query,
+                props.problemsOnly,
+                childAncestorMatched.value,
+            ),
+        );
+    }
     return childNodes.value.filter((c) =>
         subtreeVisible(c, props.query, props.problemsOnly, childAncestorMatched.value),
     );

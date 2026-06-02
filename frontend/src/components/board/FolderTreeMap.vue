@@ -38,15 +38,16 @@ import { useI18n } from 'vue-i18n';
 import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode } from '@/types/api';
 import {
+    type FilterTerm,
     isFilterActive,
-    type ParsedQuery,
     selfMatches,
+    serviceVisible,
     subtreeVisible,
 } from '@/utils/folderTreeFilter';
 import { severityPills, stateColorVar, stateRank } from '@/utils/stateColors';
 
 const props = defineProps<{
-    query: ParsedQuery;
+    query: FilterTerm[];
     problemsOnly: boolean;
     showServices: boolean;
     servicesByHost: Record<string, FolderTreeNode[]>;
@@ -100,7 +101,7 @@ function pruneTree(node: FolderTreeNode, ancestorMatched: boolean): FolderTreeNo
         if (subtreeVisible(node, props.query, props.problemsOnly, ancestorMatched)) return node;
         if (node.kind === 'host') {
             const svcMatch = (props.servicesByHost[node.title] ?? []).some((s) =>
-                subtreeVisible(s, props.query, props.problemsOnly, selfMatch),
+                serviceVisible(node.title, s, props.query, props.problemsOnly, selfMatch),
             );
             if (svcMatch) return node;
         }
@@ -131,7 +132,9 @@ const hostServices = (n: FolderTreeNode): FolderTreeNode[] => {
     const svcs = props.servicesByHost[n.title] ?? [];
     if (!isFilterActive(props.query, props.problemsOnly)) return svcs;
     const hostMatched = selfMatches(n, props.query);
-    return svcs.filter((s) => subtreeVisible(s, props.query, props.problemsOnly, hostMatched));
+    return svcs.filter((s) =>
+        serviceVisible(n.title, s, props.query, props.problemsOnly, hostMatched),
+    );
 };
 
 // Laid-out node that actually has children rendered inside it (folder or host
@@ -655,7 +658,7 @@ watch(
     [
         root,
         () => props.problemsOnly,
-        () => `${props.query.field}|${props.query.text}`,
+        () => props.query.map((t) => `${t.field}:${t.needle}`).join('|'),
         () =>
             Object.entries(props.servicesByHost)
                 .map(

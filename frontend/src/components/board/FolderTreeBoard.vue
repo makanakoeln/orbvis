@@ -94,7 +94,9 @@
         </div>
         <div v-else-if="filterEmpty" class="ft-placeholder ft-placeholder--filter">
             <span>{{
-                problemsOnly && !parsedQuery.text ? t('board.ftNoProblems') : t('board.ftNoMatches')
+                problemsOnly && parsedQuery.length === 0
+                    ? t('board.ftNoProblems')
+                    : t('board.ftNoMatches')
             }}</span>
             <button type="button" class="ft-tool" @click="clearFilters">
                 {{ t('board.ftClearFilters') }}
@@ -152,7 +154,7 @@ import type { FolderTreeNode, FolderTreeView } from '@/types/api';
 import {
     isFilterActive,
     isProblemState,
-    parseQuery,
+    parseFolderQuery,
     selfMatches,
     subtreeVisible,
 } from '@/utils/folderTreeFilter';
@@ -176,7 +178,7 @@ const problemsOnly = ref(props.view.problems_only ?? false);
 const showServices = computed(() => props.view.show_services ?? false);
 
 const filterText = ref('');
-const parsedQuery = computed(() => parseQuery(filterText.value));
+const parsedQuery = computed(() => parseFolderQuery(filterText.value));
 const filterActive = computed(() => isFilterActive(parsedQuery.value, problemsOnly.value));
 
 // Count hosts (and their problem-state breakdown) that survive the active

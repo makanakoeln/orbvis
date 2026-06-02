@@ -1,4 +1,12 @@
 import type { FolderTreeNode } from '@/types/api';
+import {
+    type FilterField,
+    type FilterTerm,
+    matchesFilterTerms,
+    parseFilterTerms,
+} from '@/utils/objectFilter';
+
+export type { FilterTerm };
 
 const PROBLEM_STATES = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN']);
 
@@ -6,63 +14,104 @@ export function isProblemState(state: string): boolean {
     return PROBLEM_STATES.has(state);
 }
 
-export interface ParsedQuery {
-    field: 'any' | 'host' | 'service';
-    text: string;
-}
+// The foldertree only ever holds hosts and services, so only the `h:`/`s:`
+// operators (and bare text) are meaningful here — hg:/sg:/id: are dropped,
+// mirroring how FlowBoard filters out the fields its objects can't carry. The
+// BoardSearch UI already hides those operators via `:exclude-prefixes`.
+const FT_FIELDS = new Set<FilterField>(['host', 'service', 'any']);
 
-/** Parse the BoardSearch string, honouring the `h:` / `s:` scope operators. */
-export function parseQuery(raw: string): ParsedQuery {
-    const q = (raw ?? '').trim().toLowerCase();
-    if (q.startsWith('h:')) return { field: 'host', text: q.slice(2).trim() };
-    if (q.startsWith('s:')) return { field: 'service', text: q.slice(2).trim() };
-    return { field: 'any', text: q };
+/** Parse the BoardSearch string with the shared quicksearch grammar, keeping
+ *  only the host/service-scoped (and bare) terms. */
+export function parseFolderQuery(raw: string): FilterTerm[] {
+    return parseFilterTerms(raw).filter((t) => FT_FIELDS.has(t.field));
 }
 
 /** Whether the parsed query + problems-only toggle actually constrain anything. */
-export function isFilterActive(q: ParsedQuery, problemsOnly: boolean): boolean {
-    return problemsOnly || q.field !== 'any' || q.text !== '';
+export function isFilterActive(terms: FilterTerm[], problemsOnly: boolean): boolean {
+    return problemsOnly || terms.length > 0;
 }
 
-function leafMatches(node: FolderTreeNode, q: ParsedQuery): boolean {
-    if (q.field === 'host' && node.kind !== 'host') return false;
-    if (q.field === 'service' && node.kind !== 'service') return false;
-    return !q.text || node.title.toLowerCase().includes(q.text);
+const hasServiceTerm = (terms: FilterTerm[]): boolean => terms.some((t) => t.field === 'service');
+
+// Host/any terms must all match the host name; service-scoped terms don't decide
+// which hosts show — they constrain a host's service leaves (filtered separately).
+function hostNameMatches(hostName: string, terms: FilterTerm[]): boolean {
+    const n = hostName.toLowerCase();
+    return terms.every((t) => t.field === 'service' || n.includes(t.needle));
 }
 
-// A folder's own name only counts as a hit for unscoped (`h:`/`s:`-free) queries.
-function folderNameMatches(node: FolderTreeNode, q: ParsedQuery): boolean {
-    return q.field === 'any' && q.text !== '' && node.title.toLowerCase().includes(q.text);
+// A service leaf matches when every term is satisfied — host terms against its
+// host name, service terms against its description, bare terms against either.
+// Reuses the shared quicksearch matcher (one place for the AND/substring rules);
+// the host name is supplied by the caller because service leaves don't carry it.
+export function serviceMatches(
+    hostName: string,
+    serviceName: string,
+    terms: FilterTerm[],
+): boolean {
+    return matchesFilterTerms(terms, (field) =>
+        field === 'host'
+            ? [hostName]
+            : field === 'service'
+              ? [serviceName]
+              : [hostName, serviceName],
+    );
 }
 
-/** Whether a node (folder/host) is itself a query hit — used to propagate the
- *  "ancestor matched → show whole subtree" flag down the tree. */
-export function selfMatches(node: FolderTreeNode, q: ParsedQuery): boolean {
-    return node.kind === 'folder' ? folderNameMatches(node, q) : leafMatches(node, q);
+// A folder's own name only counts as a hit for unscoped queries (no h:/s:): then
+// every bare term must match the folder name (searching "Datacenters" reveals its
+// whole subtree). A scoped query never matches on a folder name.
+function folderNameMatches(folderName: string, terms: FilterTerm[]): boolean {
+    if (terms.length === 0) return false;
+    const n = folderName.toLowerCase();
+    return terms.every((t) => t.field === 'any' && n.includes(t.needle));
 }
 
-/**
- * Combined "Problems only" + text-search visibility for a foldertree subtree.
- *
- * Shared by List and Map so both show the same set. `ancestorMatched` is set
- * once a containing folder/host already matched the query, so its whole subtree
- * counts as matching (searching "Datacenters" reveals its hosts). Folders
- * survive only when a descendant is visible (or, for an unscoped name hit, when
- * empty and no problems filter is active). A host's lazily-loaded services live
- * outside `children`, so a matching host is kept and the caller filters the
- * service leaves separately with the same predicate.
- */
+/** Whether a node is itself a full query hit, so its whole subtree counts as
+ *  matching (propagated down via the `ancestorMatched` flag). A host is a full
+ *  hit only for host/bare queries — a service-scoped term must be checked against
+ *  the actual service leaves, so it does not blanket-reveal a host's services. */
+export function selfMatches(node: FolderTreeNode, terms: FilterTerm[]): boolean {
+    if (node.kind === 'folder') return folderNameMatches(node.title, terms);
+    if (node.kind === 'host') return !hasServiceTerm(terms) && hostNameMatches(node.title, terms);
+    return false;
+}
+
+/** Combined "Problems only" + search visibility for a foldertree subtree of
+ *  store-tree nodes (folders and hosts). Service leaves are lazily loaded and
+ *  live outside `children`, so the caller filters them with {@link serviceVisible}
+ *  using the owning host's name. `ancestorMatched` is set once a containing
+ *  folder/host already matched, so its whole subtree counts as matching. */
 export function subtreeVisible(
     node: FolderTreeNode,
-    q: ParsedQuery,
+    terms: FilterTerm[],
     problemsOnly: boolean,
     ancestorMatched = false,
 ): boolean {
-    if (node.kind !== 'folder') {
-        const matched = ancestorMatched || leafMatches(node, q);
+    if (node.kind === 'host') {
+        const matched = ancestorMatched || hostNameMatches(node.title, terms);
         return matched && (!problemsOnly || isProblemState(node.state));
     }
-    const selfMatch = ancestorMatched || folderNameMatches(node, q);
-    if (node.children.some((c) => subtreeVisible(c, q, problemsOnly, selfMatch))) return true;
+    if (node.kind === 'service') {
+        // Reached only when a service leaf has no host context; match its
+        // description against the non-host terms as a best effort.
+        const matched = ancestorMatched || serviceMatches('', node.title, terms);
+        return matched && (!problemsOnly || isProblemState(node.state));
+    }
+    const selfMatch = ancestorMatched || folderNameMatches(node.title, terms);
+    if (node.children.some((c) => subtreeVisible(c, terms, problemsOnly, selfMatch))) return true;
     return selfMatch && !problemsOnly && node.children.length === 0;
+}
+
+/** Visibility of a single lazily-loaded service leaf under `hostName`, combining
+ *  the search terms (with host context) and the problems-only toggle. */
+export function serviceVisible(
+    hostName: string,
+    node: FolderTreeNode,
+    terms: FilterTerm[],
+    problemsOnly: boolean,
+    ancestorMatched = false,
+): boolean {
+    const matched = ancestorMatched || serviceMatches(hostName, node.title, terms);
+    return matched && (!problemsOnly || isProblemState(node.state));
 }
