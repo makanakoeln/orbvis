@@ -17,7 +17,7 @@ from app.api.v1.deps import can_view_board as _can_view_board
 from app.api.v1.deps import can_view_board_by_name as _can_view_board_by_name
 from app.api.v1.deps import get_current_user, resolve_auth_user
 from app.api.v1.types import BoardName
-from app.connections.base import ServiceRow
+from app.connections.base import ServiceMatchRow, ServiceRow
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.ratelimit import ws_connect_limiter
@@ -25,7 +25,14 @@ from app.core.sse import Subscriber, manager
 from app.integrations.checkmk import resolve_folder_scope
 from app.models.user import User
 from app.schemas.board import BoardConfig, FlowView, FolderTreeView, RadarView
-from app.schemas.state import FolderHostService, MapStates, ObjectState, ObjectTiming
+from app.schemas.state import (
+    FolderHostService,
+    FolderServiceMatch,
+    FolderServiceSearchResult,
+    MapStates,
+    ObjectState,
+    ObjectTiming,
+)
 from app.services import board_service, settings_service, state_service
 from app.services.auth_service import authenticate_bearer_token
 
@@ -355,8 +362,110 @@ async def get_folder_host_services(
     ]
     # Worst-state first (CRITICAL on top), then alphabetical — matches the
     # host/folder ordering elsewhere in the tree.
-    services.sort(key=lambda s: (-state_service.severity_rank(s.state), s.name.lower()))
+    state_service.sort_folder_services(services)
     return services
+
+
+@router.get("/boards/{name}/folder-search", response_model=FolderServiceSearchResult)
+async def folder_service_search(
+    name: BoardName,
+    s: list[str] = Query(default_factory=list, description="Service-name substrings (AND)"),
+    h: list[str] = Query(default_factory=list, description="Host-name substrings (AND)"),
+    q: list[str] = Query(default_factory=list, description="Bare substrings (host OR service)"),
+    current_user: User = Depends(get_current_user),
+) -> FolderServiceSearchResult:
+    """Server-side service search for a foldertree board.
+
+    Services are never pushed over SSE (would not scale to millions), so a
+    ``s:``/bare search that should reach un-expanded hosts queries Livestatus
+    directly with a hard ``Limit``. The frontend places each hit into the host
+    it already has in the tree. Pure host/folder searches stay client-side and
+    never call this. Terms shorter than 2 chars are dropped (too broad).
+    """
+    limit = settings.object_autocomplete_limit
+
+    # Trim and drop sub-2-char terms (too broad); forward the trimmed value so a
+    # stray space never leaks into the match.
+    def _terms(raw: list[str]) -> list[str]:
+        return [s for s in (t.strip() for t in raw) if len(s) >= 2]
+
+    service_terms = _terms(s)
+    host_terms = _terms(h)
+    any_terms = _terms(q)
+    # Only a service-bearing query reaches the backend; a pure host search is
+    # answered from the already-loaded tree on the client.
+    if not service_terms and not any_terms:
+        return FolderServiceSearchResult(matches=[], truncated=False, limit=limit)
+
+    cfg = board_service.get_board(name)
+    if cfg is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Board '{name}' not found"
+        )
+    if not _can_view_board(current_user, name):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="No board view permission"
+        )
+    if not isinstance(cfg.view, FolderTreeView):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Not a foldertree board"
+        )
+    connection = state_service.get_connection(cfg.connection_id)
+    if connection is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+
+    auth_user = resolve_auth_user(current_user.name, current_user.is_admin)
+    only_hard = cfg.view.only_hard_states
+
+    async def _fetch() -> list[ServiceMatchRow]:
+        return await connection.search_services(
+            host_terms=host_terms,
+            service_terms=service_terms,
+            any_terms=any_terms,
+            limit=limit,
+            only_hard=only_hard,
+        )
+
+    try:
+        if (
+            auth_user is not None
+            and settings.checkmk_omd_root
+            and hasattr(connection, "with_auth_user")
+        ):
+            async with connection.with_auth_user(auth_user):
+                rows = await _fetch()
+        else:
+            rows = await _fetch()
+    except Exception:
+        logger.warning("folder service search failed for '%s'", name, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail="Service search failed"
+        ) from None
+
+    truncated = len(rows) > limit
+    rows = rows[:limit]
+
+    # Group hits by (host, site), preserving first-seen order; sort each host's
+    # services worst-state first, matching the lazy folder-host-services order.
+    grouped: dict[tuple[str, str | None], list[FolderHostService]] = {}
+    for r in rows:
+        key = (r["host_name"], r.get("site_id"))
+        grouped.setdefault(key, []).append(
+            FolderHostService(
+                name=r["name"],
+                state=r["state"],
+                output=r.get("output", ""),
+                acknowledged=r.get("acknowledged", False),
+                in_downtime=r.get("in_downtime", False),
+                is_flapping=r.get("is_flapping", False),
+                last_state_change=r.get("last_state_change"),
+            )
+        )
+    matches: list[FolderServiceMatch] = []
+    for (host, site), svcs in grouped.items():
+        state_service.sort_folder_services(svcs)
+        matches.append(FolderServiceMatch(host=host, site_id=site, services=svcs))
+    return FolderServiceSearchResult(matches=matches, truncated=truncated, limit=limit)
 
 
 @router.get("/sse/boards/{name}")

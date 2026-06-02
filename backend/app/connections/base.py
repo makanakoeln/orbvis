@@ -109,6 +109,24 @@ class ServiceRow(TypedDict):
     next_check: NotRequired[float | None]
 
 
+class ServiceMatchRow(TypedDict):
+    """One (host, service) hit from a folder-board service search.
+
+    Like ``ServiceRow`` but carries the owning host + site so the frontend can
+    place the match into the already-loaded folder tree without a second query.
+    """
+
+    host_name: str
+    name: str
+    state: str
+    output: str
+    site_id: NotRequired[str | None]
+    acknowledged: NotRequired[bool]
+    in_downtime: NotRequired[bool]
+    is_flapping: NotRequired[bool]
+    last_state_change: NotRequired[float | None]
+
+
 @dataclass
 class GraphGroup:
     """A named group of metrics that share a common Y-axis (derived from a CMK graph template)."""
@@ -271,6 +289,27 @@ class ConnectionBase(ABC):
         and worst-state bubbling happen in the state service.
         """
         return FolderTreeData()
+
+    async def search_services(
+        self,
+        *,
+        host_terms: list[str],
+        service_terms: list[str],
+        any_terms: list[str],
+        limit: int,
+        only_hard: bool = False,
+    ) -> list[ServiceMatchRow]:
+        """Return (host, service) hits for a folder-board service search.
+
+        All term lists are combined with AND (host/service scoped against the
+        respective column; bare ``any_terms`` against host name OR description),
+        filtered server-side and hard-capped at ``limit`` so a multi-million
+        service site bounds the result at the source instead of streaming
+        everything. Implementations should fetch ``limit + 1`` so the caller can
+        tell a full page from a truncated one. Default: nothing (connections
+        without a service search, e.g. Icinga2).
+        """
+        return []
 
     @abstractmethod
     async def get_topology(self) -> list[TopologyRow]:

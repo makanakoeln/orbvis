@@ -12,6 +12,7 @@ from app.connections.base import (
     FolderTreeData,
     FolderTreeHostRow,
     MetricHistoryResult,
+    ServiceMatchRow,
     ServiceRow,
     TopologyRow,
 )
@@ -23,6 +24,15 @@ _SERVICE_STATES = ["OK", "WARNING", "CRITICAL", "UNKNOWN"]
 _BI_STATE_CODE = {s: i for i, s in enumerate(_SERVICE_STATES)}
 
 _DEMO_HOSTS = ["localhost", "router01", "switch01", "fileserver", "mailserver"]
+# Deterministic folder + site placement, shared by get_folder_tree and the
+# service search so a match lands in the same folder/site as the host tree.
+_DEMO_HOST_PLACEMENT: dict[str, tuple[str, str]] = {
+    "localhost": ("datacenters/muc", "central"),
+    "fileserver": ("datacenters/muc", "central"),
+    "mailserver": ("datacenters/fra", "remote_fra"),
+    "router01": ("network", "central"),
+    "switch01": ("network", "remote_fra"),
+}
 _DEMO_SERVICES = [
     "HTTP",
     "PING",
@@ -357,13 +367,7 @@ class TestConnection(ConnectionBase):
             {"path": "staging", "title": "Staging"},
             {"path": "decommissioned", "title": "Decommissioned"},
         ]
-        placement = {
-            "localhost": ("datacenters/muc", "central"),
-            "fileserver": ("datacenters/muc", "central"),
-            "mailserver": ("datacenters/fra", "remote_fra"),
-            "router01": ("network", "central"),
-            "switch01": ("network", "remote_fra"),
-        }
+        placement = _DEMO_HOST_PLACEMENT
         summaries = await self.get_services_summary(list(placement))
         hosts: list[FolderTreeHostRow] = []
         for name, (folder, site) in placement.items():
@@ -424,6 +428,48 @@ class TestConnection(ConnectionBase):
             state = await self.get_service_state(hostname, svc)
             result.append(ServiceRow(name=svc, state=state.state, output=state.output))
         return result
+
+    async def search_services(
+        self,
+        *,
+        host_terms: list[str],
+        service_terms: list[str],
+        any_terms: list[str],
+        limit: int,
+        only_hard: bool = False,
+    ) -> list[ServiceMatchRow]:
+        svc_lc = [t.lower() for t in service_terms]
+        host_lc = [t.lower() for t in host_terms]
+        any_lc = [t.lower() for t in any_terms]
+        if not (svc_lc or host_lc or any_lc):
+            return []
+        out: list[ServiceMatchRow] = []
+        for host in _DEMO_HOSTS:
+            hl = host.lower()
+            if not all(t in hl for t in host_lc):
+                continue
+            for svc in _DEMO_SERVICES:
+                sl = svc.lower()
+                if not all(t in sl for t in svc_lc):
+                    continue
+                if not all(t in hl or t in sl for t in any_lc):
+                    continue
+                state = await self.get_service_state(host, svc)
+                out.append(
+                    ServiceMatchRow(
+                        host_name=host,
+                        name=svc,
+                        state=state.state,
+                        output=state.output,
+                        acknowledged=state.acknowledged,
+                        in_downtime=state.in_downtime,
+                        last_state_change=state.last_state_change,
+                        site_id=_DEMO_HOST_PLACEMENT.get(host, ("", "local"))[1],
+                    )
+                )
+                if len(out) > limit:
+                    return out
+        return out
 
     async def get_metric_history(
         self,

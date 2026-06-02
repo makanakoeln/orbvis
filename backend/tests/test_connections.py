@@ -72,6 +72,71 @@ async def test_test_backend_get_objects_search_filters():
 
 
 @pytest.mark.asyncio
+async def test_test_backend_search_services_by_description():
+    # A service term matches every host that runs a matching service, carrying
+    # the host + site so the frontend can place the hit in the folder tree.
+    connection = TestConnection()
+    rows = await connection.search_services(
+        host_terms=[], service_terms=["disk"], any_terms=[], limit=100
+    )
+    assert {r["host_name"] for r in rows} == {
+        "localhost",
+        "router01",
+        "switch01",
+        "fileserver",
+        "mailserver",
+    }
+    assert all(r["name"] == "Disk /" for r in rows)
+    assert all("site_id" in r for r in rows)
+
+
+@pytest.mark.asyncio
+async def test_test_backend_search_services_and_combines_host_and_service():
+    # host + service terms AND together: only the named host's matching service.
+    connection = TestConnection()
+    rows = await connection.search_services(
+        host_terms=["mail"], service_terms=["disk"], any_terms=[], limit=100
+    )
+    assert [(r["host_name"], r["name"]) for r in rows] == [("mailserver", "Disk /")]
+
+
+@pytest.mark.asyncio
+async def test_test_backend_search_services_bare_matches_host_or_service():
+    connection = TestConnection()
+    # Bare term hits the host name…
+    by_host = await connection.search_services(
+        host_terms=[], service_terms=[], any_terms=["switch01"], limit=100
+    )
+    assert {r["host_name"] for r in by_host} == {"switch01"}
+    # …and the service description.
+    by_svc = await connection.search_services(
+        host_terms=[], service_terms=[], any_terms=["memory"], limit=100
+    )
+    assert by_svc and all(r["name"] == "Memory" for r in by_svc)
+
+
+@pytest.mark.asyncio
+async def test_test_backend_search_services_respects_limit():
+    # limit + 1 is returned so the caller can detect truncation.
+    connection = TestConnection()
+    rows = await connection.search_services(
+        host_terms=[], service_terms=["disk"], any_terms=[], limit=2
+    )
+    assert len(rows) == 3
+
+
+@pytest.mark.asyncio
+async def test_test_backend_search_services_empty_without_terms():
+    # No terms at all → nothing (the endpoint additionally never calls this for a
+    # host-only query, which is answered from the already-loaded tree).
+    connection = TestConnection()
+    assert (
+        await connection.search_services(host_terms=[], service_terms=[], any_terms=[], limit=100)
+        == []
+    )
+
+
+@pytest.mark.asyncio
 async def test_test_backend_is_available():
     connection = TestConnection()
     assert await connection.is_available() is True

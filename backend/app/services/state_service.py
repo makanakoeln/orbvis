@@ -19,7 +19,14 @@ from app.schemas.board import (
     RadarView,
     WorldmapView,
 )
-from app.schemas.state import FolderTreeNode, MapStates, ObjectState, ObjectTiming, ServicesSummary
+from app.schemas.state import (
+    FolderHostService,
+    FolderTreeNode,
+    MapStates,
+    ObjectState,
+    ObjectTiming,
+    ServicesSummary,
+)
 
 # AggregationNode.state uses cmk.bi integer codes; map them to OrbVis'
 # monitoring-state strings for ObjectState.state when we have to derive
@@ -56,6 +63,13 @@ _COMBINED_SEVERITY: dict[str, int] = {
 def severity_rank(state: str) -> int:
     """Combined worst-state rank (CRITICAL highest); unknown/EMPTY sink to -1."""
     return _COMBINED_SEVERITY.get(state, -1)
+
+
+def sort_folder_services(services: list[FolderHostService]) -> None:
+    """Order a foldertree host's services worst-state first, then alphabetical —
+    the single ordering contract shared by the lazy expand and the search result
+    so the same host's services don't reshuffle depending on how they loaded."""
+    services.sort(key=lambda s: (-severity_rank(s.state), s.name.lower()))
 
 
 _MONITORING_TYPES: frozenset[str] = frozenset(

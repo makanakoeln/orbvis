@@ -154,6 +154,21 @@ export interface FolderHostService {
     last_state_change: number | null;
 }
 
+// One host + its services that matched a server-side folder-board service
+// search (grouped by host so the frontend injects them into the loaded tree).
+export interface FolderServiceMatch {
+    host: string;
+    site_id: string | null;
+    services: FolderHostService[];
+}
+
+// Result of a server-side (Livestatus) folder-board service search.
+export interface FolderServiceSearchResult {
+    matches: FolderServiceMatch[];
+    truncated: boolean;
+    limit: number;
+}
+
 // Bulk-ack target shape shared by DetailDrawer (emits) → BoardView
 // (handler) → BulkAckModal (props). One declaration so a future field
 // (e.g. site_id for federated targets) lands in one place.

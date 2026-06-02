@@ -15,6 +15,7 @@ import type {
     ConnectionContext,
     DowntimeEntry,
     FolderHostService,
+    FolderServiceSearchResult,
     GlobalSettings,
     GroupMember,
     ImageEntry,
@@ -266,6 +267,22 @@ export const boardsApi = {
     ): Promise<FolderHostService[]> => {
         const qs = new URLSearchParams({ host });
         return request(`/boards/${name}/folder-host-services?${qs.toString()}`, {}, token);
+    },
+
+    // Server-side service search for a foldertree board: finds services (and
+    // bare host-or-service terms) across the whole site via Livestatus, so a
+    // `s:` query reaches hosts whose services were never lazily loaded. Pure
+    // host/folder searches stay client-side and don't call this.
+    folderSearch: (
+        name: string,
+        terms: { s: string[]; h: string[]; q: string[] },
+        token: string,
+    ): Promise<FolderServiceSearchResult> => {
+        const qs = new URLSearchParams();
+        terms.s.forEach((t) => qs.append('s', t));
+        terms.h.forEach((t) => qs.append('h', t));
+        terms.q.forEach((t) => qs.append('q', t));
+        return request(`/boards/${name}/folder-search?${qs.toString()}`, {}, token);
     },
 
     addObject: (boardName: string, obj: BoardObject, token: string): Promise<BoardConfig> =>

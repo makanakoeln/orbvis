@@ -40,6 +40,17 @@ function hostNameMatches(hostName: string, terms: FilterTerm[]): boolean {
     return terms.every((t) => t.field === 'service' || n.includes(t.needle));
 }
 
+// Whether a host shows under the active query. With a service-scoped term the
+// answer is authoritative from the server's `matchedHosts` (host terms applied
+// there too): a host without a matching service drops out, so a `s:` query
+// narrows to hosts that actually run it instead of listing the whole site to
+// drill into one by one. Without a service term it's the instant client-side
+// host-name match, plus any server service-hit for bare terms.
+function hostVisible(hostName: string, terms: FilterTerm[], matchedHosts?: Set<string>): boolean {
+    if (hasServiceTerm(terms)) return matchedHosts?.has(hostName) ?? false;
+    return hostNameMatches(hostName, terms) || (matchedHosts?.has(hostName) ?? false);
+}
+
 // A service leaf matches when every term is satisfied — host terms against its
 // host name, service terms against its description, bare terms against either.
 // Reuses the shared quicksearch matcher (one place for the AND/substring rules);
@@ -87,9 +98,14 @@ export function subtreeVisible(
     terms: FilterTerm[],
     problemsOnly: boolean,
     ancestorMatched = false,
+    // Hosts that matched a server-side service search (see folderSearch). They
+    // count as visible even when their own name doesn't match, so a `s:` query
+    // surfaces the host to drill into — mirroring the Map's pruneTree svcMatch
+    // branch, which the List/summary path can't derive on its own.
+    matchedHosts?: Set<string>,
 ): boolean {
     if (node.kind === 'host') {
-        const matched = ancestorMatched || hostNameMatches(node.title, terms);
+        const matched = ancestorMatched || hostVisible(node.title, terms, matchedHosts);
         return matched && (!problemsOnly || isProblemState(node.state));
     }
     if (node.kind === 'service') {
@@ -99,7 +115,8 @@ export function subtreeVisible(
         return matched && (!problemsOnly || isProblemState(node.state));
     }
     const selfMatch = ancestorMatched || folderNameMatches(node.title, terms);
-    if (node.children.some((c) => subtreeVisible(c, terms, problemsOnly, selfMatch))) return true;
+    if (node.children.some((c) => subtreeVisible(c, terms, problemsOnly, selfMatch, matchedHosts)))
+        return true;
     return selfMatch && !problemsOnly && node.children.length === 0;
 }
 

@@ -100,14 +100,45 @@ describe('subtreeVisible', () => {
         expect(subtreeVisible(host('db-01'), parseFolderQuery('h:web'), false)).toBe(false);
     });
 
-    it('keeps every host drillable for a pure service query', () => {
-        expect(subtreeVisible(host('db-01'), parseFolderQuery('s:cpu'), false)).toBe(true);
+    it('narrows a pure service query to the server-matched hosts', () => {
+        // No server match (yet) → host hidden, instead of listing the whole site.
+        expect(subtreeVisible(host('db-01'), parseFolderQuery('s:cpu'), false)).toBe(false);
+        // Server reported a matching service on this host → it shows to drill into.
+        expect(
+            subtreeVisible(
+                host('db-01'),
+                parseFolderQuery('s:cpu'),
+                false,
+                false,
+                new Set(['db-01']),
+            ),
+        ).toBe(true);
     });
 
-    it('filters hosts by name even when a service term is present', () => {
+    it('gates hosts on the server match once a service term is present', () => {
         const q = parseFolderQuery('h:web s:cpu');
-        expect(subtreeVisible(host('web-01'), q, false)).toBe(true);
-        expect(subtreeVisible(host('db-01'), q, false)).toBe(false);
+        const matched = new Set(['web-01']);
+        expect(subtreeVisible(host('web-01'), q, false, false, matched)).toBe(true);
+        expect(subtreeVisible(host('db-01'), q, false, false, matched)).toBe(false);
+        // Server applies the host term too, so without a match the host is hidden.
+        expect(subtreeVisible(host('web-01'), q, false)).toBe(false);
+    });
+
+    it('keeps instant host-name matches for bare terms, plus server service hits', () => {
+        // Bare term matches the host name directly — no server round-trip needed.
+        expect(subtreeVisible(host('web-01'), parseFolderQuery('web'), false)).toBe(true);
+        // …and a host whose name doesn't match still shows if the server found a
+        // matching service on it.
+        expect(
+            subtreeVisible(
+                host('db-01'),
+                parseFolderQuery('web'),
+                false,
+                false,
+                new Set(['db-01']),
+            ),
+        ).toBe(true);
+        expect(subtreeVisible(host('db-01'), parseFolderQuery('web'), false)).toBe(false);
     });
 
     it('reveals a folder whose name matches an unscoped query', () => {

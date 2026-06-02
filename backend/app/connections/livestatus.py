@@ -36,6 +36,7 @@ from app.connections.base import (
     GraphGroup,
     GroupMemberRow,
     MetricHistoryResult,
+    ServiceMatchRow,
     ServiceRow,
     TopologyRow,
 )
@@ -1305,6 +1306,61 @@ class LivestatusConnection(ConnectionBase):
                 is_flapping=bool(_row_int(r, 6)),
             )
             for r in rows
+        ]
+
+    async def search_services(
+        self,
+        *,
+        host_terms: list[str],
+        service_terms: list[str],
+        any_terms: list[str],
+        limit: int,
+        only_hard: bool = False,
+    ) -> list[ServiceMatchRow]:
+        conds = len(service_terms) + len(host_terms) + len(any_terms)
+        if conds == 0:
+            return []
+        state_col = "last_hard_state" if only_hard else "state"
+
+        # ``~~`` is a case-insensitive *regex* match, so the needle is regex-escaped
+        # to behave as a literal substring — otherwise a service name with a regex
+        # metachar (``Filesystem /var (NFS)``, ``CPU (3)``, ``c++``) would mis-match
+        # or, with an unbalanced ``(``/``+``, make Livestatus reject the query.
+        # Livestatus combines bare Filter lines with AND by default; each bare term
+        # collapses its two columns with ``Or: 2`` first, then a trailing ``And:``
+        # ANDs all the resulting conditions together.
+        def _rx(needle: str) -> str:
+            return _ls_escape(re.escape(needle))
+
+        filters = ""
+        for t in service_terms:
+            filters += f"Filter: description ~~ {_rx(t)}\n"
+        for t in host_terms:
+            filters += f"Filter: host_name ~~ {_rx(t)}\n"
+        for t in any_terms:
+            filters += f"Filter: host_name ~~ {_rx(t)}\nFilter: description ~~ {_rx(t)}\nOr: 2\n"
+        if conds > 1:
+            filters += f"And: {conds}\n"
+        # limit + 1 so the caller can distinguish a full page from a truncated one.
+        tagged = await self._query_with_site(
+            f"GET services\n"
+            f"Columns: host_name description {state_col} plugin_output acknowledged "
+            f"scheduled_downtime_depth last_state_change is_flapping\n"
+            f"{filters}Limit: {limit + 1}\n"
+        )
+        return [
+            ServiceMatchRow(
+                host_name=_row_str(r, 0),
+                name=_row_str(r, 1),
+                state=_SERVICE_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
+                output=_row_str(r, 3),
+                acknowledged=bool(_row_int(r, 4)),
+                in_downtime=_row_int(r, 5) > 0,
+                last_state_change=_row_float_or_none(r, 6),
+                is_flapping=bool(_row_int(r, 7)),
+                site_id=_default_site_id(sid),
+            )
+            for sid, r in tagged
         ]
 
     async def get_host_geo(self, hostname: str) -> tuple[float, float] | None:

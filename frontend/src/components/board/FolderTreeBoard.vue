@@ -19,6 +19,9 @@
                     >
                 </template>
                 <span v-else class="ft-summary-ok">· {{ t('board.ftAllOk') }}</span>
+                <span v-if="searchTruncated" class="ft-summary-trunc">{{
+                    t('board.ftSearchTruncated')
+                }}</span>
             </span>
             <span class="ft-spacer" />
             <BoardSearch
@@ -108,7 +111,7 @@
             :query="parsedQuery"
             :problems-only="problemsOnly"
             :show-services="showServices"
-            :services-by-host="servicesByHost"
+            :services-by-host="effectiveServices"
             :service-loading="serviceLoading"
             :service-error="serviceError"
             @expand-host="ensureServices"
@@ -125,8 +128,9 @@
                 :query="parsedQuery"
                 :problems-only="problemsOnly"
                 :ancestor-matched="false"
+                :matched-hosts="matchedHosts"
                 :show-services="showServices"
-                :services-by-host="servicesByHost"
+                :services-by-host="effectiveServices"
                 :service-loading="serviceLoading"
                 :service-error="serviceError"
                 :can-command="canCommand"
@@ -151,7 +155,7 @@ import FolderTreeRow from '@/components/board/FolderTreeRow.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useBoardsStore } from '@/stores/boards';
 import { useStatesStore } from '@/stores/states';
-import type { FolderTreeNode, FolderTreeView } from '@/types/api';
+import type { FolderHostService, FolderTreeNode, FolderTreeView } from '@/types/api';
 import {
     isFilterActive,
     isProblemState,
@@ -160,6 +164,7 @@ import {
     subtreeVisible,
 } from '@/utils/folderTreeFilter';
 import { severityPills } from '@/utils/stateColors';
+import { useDebounceFn } from '@/vendor/cmk/lib/useDebounce';
 
 const props = defineProps<{ view: FolderTreeView; preview?: boolean; boardName?: string }>();
 defineEmits<{
@@ -183,6 +188,34 @@ const filterText = ref('');
 const parsedQuery = computed(() => parseFolderQuery(filterText.value));
 const filterActive = computed(() => isFilterActive(parsedQuery.value, problemsOnly.value));
 
+// Service leaves injected by the server-side service search (keyed by host).
+// Hosts surfaced purely by a service match (their own name may not match) drive
+// tree visibility so a `s:` query reveals the host to drill into. Populated by
+// runServiceSearch() below; the search snapshot is kept live on each SSE tick.
+const searchServices = reactive<Record<string, FolderTreeNode[]>>({});
+const searchTruncated = ref(false);
+const searchPending = ref(false);
+const matchedHosts = computed(() => new Set(Object.keys(searchServices)));
+// The query carries a service/bare term (so it's answered by the server search)
+// — used to suppress the "no matches" state while the term is still too short or
+// a request is in flight, so the tree doesn't flash empty mid-typing.
+const hasServiceOrBareTerm = computed(() =>
+    parsedQuery.value.some((t) => t.field === 'service' || t.field === 'any'),
+);
+// Terms ≥2 chars (shorter is too broad); the backend re-applies the same floor.
+const serviceSearchTerms = computed(() => {
+    const long = (t: string) => t.length >= 2;
+    const of = (field: string) =>
+        parsedQuery.value
+            .filter((t) => t.field === field)
+            .map((t) => t.needle)
+            .filter(long);
+    return { s: of('service'), h: of('host'), q: of('any') };
+});
+const hasServiceSearch = computed(
+    () => serviceSearchTerms.value.s.length > 0 || serviceSearchTerms.value.q.length > 0,
+);
+
 // Count hosts (and their problem-state breakdown) that survive the active
 // filter, so the summary reflects what's actually shown — not the whole tree.
 function visibleHostStats(
@@ -192,7 +225,15 @@ function visibleHostStats(
     const selfMatch = ancestorMatched || selfMatches(node, parsedQuery.value);
     if (node.kind === 'service') return { hosts: 0, counts: {} };
     if (node.kind === 'host') {
-        if (!subtreeVisible(node, parsedQuery.value, problemsOnly.value, ancestorMatched)) {
+        if (
+            !subtreeVisible(
+                node,
+                parsedQuery.value,
+                problemsOnly.value,
+                ancestorMatched,
+                matchedHosts.value,
+            )
+        ) {
             return { hosts: 0, counts: {} };
         }
         return {
@@ -217,8 +258,16 @@ const summary = computed(() => {
     return visibleHostStats(r, false);
 });
 const summaryPills = computed(() => severityPills(summary.value.counts));
+// The server service search hasn't settled: a request is in flight, or the term
+// is still too short to fire. While unsettled the previous matches stay and the
+// "no matches" state is held back, so the tree doesn't flash empty mid-typing.
+const searchUnsettled = computed(
+    () => hasServiceOrBareTerm.value && (searchPending.value || !hasServiceSearch.value),
+);
 // A filter is active but nothing matches → distinct empty state with a reset.
-const filterEmpty = computed(() => !!root.value && filterActive.value && summary.value.hosts === 0);
+const filterEmpty = computed(
+    () => !!root.value && filterActive.value && summary.value.hosts === 0 && !searchUnsettled.value,
+);
 
 function clearFilters() {
     filterText.value = '';
@@ -278,13 +327,17 @@ const serviceError = reactive(new Set<string>());
 // them in place on each live refresh (the leaves live outside the SSE tree).
 const loadedHosts = reactive<Record<string, { path: string; siteId: string | null }>>({});
 
-async function fetchServices(name: string, hostPath: string, siteId: string | null) {
-    if (!props.boardName || !auth.accessToken) return;
-    const svcs = await boardsApi.folderHostServices(props.boardName, name, auth.accessToken);
-    servicesByHost[name] = svcs.map((s) => ({
-        path: `${hostPath}/${s.name}`,
+// Build a service-leaf tree node from a fetched/searched service. Shared by the
+// lazy per-host fetch and the server search so both inject identical leaves.
+function toServiceNode(
+    s: FolderHostService,
+    pathPrefix: string,
+    siteId: string | null,
+): FolderTreeNode {
+    return {
+        path: `${pathPrefix}/${s.name}`,
         title: s.name,
-        kind: 'service' as const,
+        kind: 'service',
         state: s.state,
         is_empty: false,
         folder_id: '',
@@ -298,7 +351,13 @@ async function fetchServices(name: string, hostPath: string, siteId: string | nu
         last_state_change: s.last_state_change,
         site_id: siteId,
         children: [],
-    }));
+    };
+}
+
+async function fetchServices(name: string, hostPath: string, siteId: string | null) {
+    if (!props.boardName || !auth.accessToken) return;
+    const svcs = await boardsApi.folderHostServices(props.boardName, name, auth.accessToken);
+    servicesByHost[name] = svcs.map((s) => toServiceNode(s, hostPath, siteId));
 }
 
 async function ensureServices(host: FolderTreeNode) {
@@ -317,10 +376,68 @@ async function ensureServices(host: FolderTreeNode) {
     }
 }
 
+function clearSearchServices() {
+    for (const k of Object.keys(searchServices)) delete searchServices[k];
+    searchTruncated.value = false;
+}
+
+// Monotonic token to discard out-of-order responses: typing + the periodic SSE
+// re-run fire independent requests, so without this a slow earlier response
+// could overwrite a newer query's results (matchedHosts then disagrees with the
+// query box). Only the latest request is allowed to mutate state.
+let searchSeq = 0;
+
+async function runServiceSearch() {
+    if (props.preview || !props.boardName || !auth.accessToken || !hasServiceSearch.value) {
+        clearSearchServices();
+        searchPending.value = false;
+        return;
+    }
+    const seq = ++searchSeq;
+    searchPending.value = true;
+    try {
+        const res = await boardsApi.folderSearch(
+            props.boardName,
+            serviceSearchTerms.value,
+            auth.accessToken,
+        );
+        if (seq !== searchSeq) return; // a newer search superseded this one
+        const seen = new Set<string>();
+        for (const m of res.matches) {
+            seen.add(m.host);
+            searchServices[m.host] = m.services.map((s) => toServiceNode(s, m.host, m.site_id));
+        }
+        for (const k of Object.keys(searchServices)) if (!seen.has(k)) delete searchServices[k];
+        searchTruncated.value = res.truncated;
+    } catch {
+        if (seq === searchSeq) clearSearchServices();
+    } finally {
+        if (seq === searchSeq) searchPending.value = false;
+    }
+}
+
+const runServiceSearchDebounced = useDebounceFn(runServiceSearch, 250);
+// Mark pending the moment a service-bearing query changes (before the debounce
+// fires) so the empty-state stays suppressed during the wait, not just during
+// the request.
+watch(serviceSearchTerms, () => {
+    if (hasServiceSearch.value) searchPending.value = true;
+    void runServiceSearchDebounced();
+});
+
+// One service-leaf source for Map + List: a manually expanded host (full lazy
+// list) overrides the search snapshot for that host.
+const effectiveServices = computed<Record<string, FolderTreeNode[]>>(() => ({
+    ...searchServices,
+    ...servicesByHost,
+}));
+
 // Keep lazily-loaded service leaves live: re-fetch the services of every host
 // the operator has drilled into whenever the board's state refreshes, so leaf
 // state / acknowledged / downtime stay current (a downtime set after expansion
 // would otherwise never appear). Bounded by what the operator actually expanded.
+// An active service search is re-run on the same tick so its (un-expanded) hits
+// stay live too — one Livestatus query, independent of match count.
 let lastSvcRefresh = 0;
 watch(
     () => states.folderTree,
@@ -331,6 +448,7 @@ watch(
         for (const [name, meta] of Object.entries(loadedHosts)) {
             void fetchServices(name, meta.path, meta.siteId).catch(() => {});
         }
+        if (hasServiceSearch.value) void runServiceSearch();
     },
 );
 
@@ -531,6 +649,11 @@ function collapseAll() {
 
 .ft-summary-ok {
     color: var(--text-muted);
+}
+
+.ft-summary-trunc {
+    font-weight: 600;
+    color: var(--color-yellow-50, #fbbf24);
 }
 
 .ft-tree {

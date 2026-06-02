@@ -160,6 +160,7 @@
                 :query="query"
                 :problems-only="problemsOnly"
                 :ancestor-matched="childAncestorMatched"
+                :matched-hosts="matchedHosts"
                 :show-services="showServices"
                 :services-by-host="servicesByHost"
                 :service-loading="serviceLoading"
@@ -184,6 +185,7 @@
                 :query="query"
                 :problems-only="problemsOnly"
                 :ancestor-matched="childAncestorMatched"
+                :matched-hosts="matchedHosts"
                 :show-services="showServices"
                 :services-by-host="servicesByHost"
                 :service-loading="serviceLoading"
@@ -224,6 +226,9 @@ const props = defineProps<{
     // True once a containing folder/host already matched the query, so this
     // whole subtree counts as matching.
     ancestorMatched: boolean;
+    // Hosts surfaced by the server-side service search (their name may not
+    // match) — kept visible so a `s:` query reveals them to drill into.
+    matchedHosts: Set<string>;
     showServices: boolean;
     servicesByHost: Record<string, FolderTreeNode[]>;
     serviceLoading: Set<string>;
@@ -289,7 +294,13 @@ const visibleChildren = computed(() => {
         );
     }
     return childNodes.value.filter((c) =>
-        subtreeVisible(c, props.query, props.problemsOnly, childAncestorMatched.value),
+        subtreeVisible(
+            c,
+            props.query,
+            props.problemsOnly,
+            childAncestorMatched.value,
+            props.matchedHosts,
+        ),
     );
 });
 

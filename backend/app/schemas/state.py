@@ -164,6 +164,29 @@ class FolderHostService(BaseModel):
     last_state_change: float | None = None
 
 
+class FolderServiceMatch(BaseModel):
+    """A host together with the services that matched a folder-board service
+    search. Grouped by host so the frontend injects the matched services into
+    the already-loaded tree node (identified by host name + site)."""
+
+    host: str
+    site_id: str | None = None
+    services: list[FolderHostService] = Field(default_factory=list)
+
+
+class FolderServiceSearchResult(BaseModel):
+    """Result of a server-side (Livestatus) folder-board service search.
+
+    Service searches can't be answered from the SSE tree (services aren't
+    pushed, to scale to millions), so they hit Livestatus directly. ``truncated``
+    is True when the result hit ``limit`` and more matches exist — surfaced in
+    the UI so the cap is never silent."""
+
+    matches: list[FolderServiceMatch] = Field(default_factory=list)
+    truncated: bool = False
+    limit: int
+
+
 class MapStates(BaseModel):
     map_name: str
     states: list[ObjectState]

@@ -171,6 +171,7 @@ export default {
         ftCollapse: 'Einklappen',
         ftConnectionLost: 'Verbindung verloren — zeige letzten bekannten Stand',
         ftShowing: 'zeige',
+        ftSearchTruncated: 'weitere Treffer vorhanden — Suche verfeinern',
         ftNoMatches: 'Keine Treffer für den aktuellen Filter.',
         ftNoProblems: 'Keine Probleme — alles OK.',
         ftClearFilters: 'Filter zurücksetzen',

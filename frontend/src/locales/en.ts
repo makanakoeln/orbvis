@@ -169,6 +169,7 @@ export default {
         ftCollapse: 'Collapse',
         ftConnectionLost: 'Connection lost — showing last known state',
         ftShowing: 'showing',
+        ftSearchTruncated: 'more matches exist — refine your search',
         ftNoMatches: 'No matches for the current filter.',
         ftNoProblems: 'No problems — everything is OK.',
         ftClearFilters: 'Clear filter',
