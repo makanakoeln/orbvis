@@ -219,6 +219,11 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
     color: var(--text-muted);
 }
 
+/* We render our own clear button — hide the native one to avoid a duplicate "×". */
+.board-search__input::-webkit-search-cancel-button {
+    display: none;
+}
+
 .board-search__icon-btn {
     background: transparent;
     border: none;

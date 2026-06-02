@@ -13,10 +13,10 @@
         <!-- One vertical guide per ancestor level so the nesting depth (e.g.
              a host directly under Main vs. inside a subfolder) is unambiguous. -->
         <span v-for="i in depth" :key="i" class="ft-guide" />
-        <!-- Folders expand via a chevron; hosts expand via their own icon (below),
-             so a host needs no leading arrow. Services/leaves get a spacer. -->
+        <!-- Any expandable node (folder, or host when services are shown) gets a
+             chevron so the drill-down is discoverable; leaves get a spacer. -->
         <button
-            v-if="isExpandable && node.kind === 'folder'"
+            v-if="isExpandable"
             type="button"
             class="ft-chevron"
             :aria-label="isOpen ? t('board.ftCollapse') : t('board.ftExpand')"
@@ -48,8 +48,8 @@
                 d="M3 6a1 1 0 0 1 1-1h5l3 3h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"
             />
         </svg>
-        <!-- Host = a monitor/host glyph; when it can drill into services it is the
-             expand toggle (click), so no separate chevron. Plain icon otherwise. -->
+        <!-- Host glyph; also acts as an expand toggle when drillable (the chevron
+             is the primary affordance). -->
         <svg
             v-else-if="node.kind === 'host'"
             class="ft-icon ft-host-icon"
