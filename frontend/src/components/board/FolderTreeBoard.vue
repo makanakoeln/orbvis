@@ -149,6 +149,7 @@ import BoardSearch from '@/components/board/BoardSearch.vue';
 import FolderTreeMap from '@/components/board/FolderTreeMap.vue';
 import FolderTreeRow from '@/components/board/FolderTreeRow.vue';
 import { useAuthStore } from '@/stores/auth';
+import { useBoardsStore } from '@/stores/boards';
 import { useStatesStore } from '@/stores/states';
 import type { FolderTreeNode, FolderTreeView } from '@/types/api';
 import {
@@ -169,6 +170,7 @@ defineEmits<{
 
 const { t } = useI18n();
 const auth = useAuthStore();
+const boards = useBoardsStore();
 const states = useStatesStore();
 const root = computed<FolderTreeNode | null>(() => states.folderTree);
 
@@ -225,25 +227,36 @@ function clearFilters() {
 
 const mapRef = useTemplateRef<InstanceType<typeof FolderTreeMap>>('mapRef');
 
-// Persist the chosen view on the board so it reopens the same way (mirrors the
-// Flow board's services-layout control), best-effort and never in preview.
-function setMode(m: 'map' | 'list') {
-    if (mode.value === m) return;
-    mode.value = m;
+// Persist a view-preference patch (view mode / "Problems only") so the board
+// reopens the same way (mirrors the Flow board's services-layout control),
+// best-effort and never in preview. The server's response — new version and
+// merged view — is folded back into the shared board: otherwise each such write
+// silently bumps the board version on disk while the client keeps the stale one,
+// so the next Settings save 409s ("changed elsewhere"), and the next preference
+// write re-sends an outdated `view` that reverts the field we just changed.
+function persistView(patch: Partial<FolderTreeView>) {
     if (props.preview || !props.boardName || !auth.accessToken) return;
     void boardsApi
-        .update(props.boardName, { view: { ...props.view, default_view: m } }, auth.accessToken)
+        .update(props.boardName, { view: { ...props.view, ...patch } }, auth.accessToken)
+        .then((updated) => {
+            const cur = boards.currentBoard;
+            if (cur && cur.name === updated.name) {
+                cur.version = updated.version;
+                cur.view = updated.view;
+            }
+        })
         .catch(() => {});
 }
 
-// Persist the runtime "Problems only" toggle the same way as the view mode, so
-// the operator's filter choice survives a reload instead of silently resetting.
+function setMode(m: 'map' | 'list') {
+    if (mode.value === m) return;
+    mode.value = m;
+    persistView({ default_view: m });
+}
+
 watch(problemsOnly, (po) => {
-    if (props.preview || !props.boardName || !auth.accessToken) return;
     if (po === (props.view.problems_only ?? false)) return;
-    void boardsApi
-        .update(props.boardName, { view: { ...props.view, problems_only: po } }, auth.accessToken)
-        .catch(() => {});
+    persistView({ problems_only: po });
 });
 
 function activeExpandAll() {
