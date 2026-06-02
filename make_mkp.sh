@@ -392,6 +392,10 @@ setup)
   rm -rf "${SERVER_DIR:?}"
   mkdir -p "$SERVER_DIR"
   tar xzf "$MKP_LIB/server.tar.gz" -C "$SERVER_DIR"
+  # server.tar.gz (built from backend/) lacks these root-level files; the daemon
+  # runs from $SERVER_DIR/app, where main.py looks for them first.
+  cp "$MKP_LIB/CHANGELOG.md" "$SERVER_DIR/app/CHANGELOG.md"
+  cp "$MKP_LIB/VERSION"      "$SERVER_DIR/app/VERSION"
   ok "Backend source extracted"
 
   # 3. Boards directory — backend seeds bundled demos on first start
