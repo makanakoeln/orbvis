@@ -22,13 +22,7 @@ from app.core.middleware import (
     MethodOverrideMiddleware,
     SecurityHeadersMiddleware,
 )
-
-_version_candidates = [
-    Path(__file__).parent / "VERSION",
-    Path(__file__).parent.parent.parent / "VERSION",
-    Path(__file__).parent.parent / "VERSION",
-]
-APP_VERSION = next((p.read_text().strip() for p in _version_candidates if p.is_file()), "0.0.0")
+from app.core.version import APP_VERSION
 
 _changelog_candidates = [
     Path(__file__).parent / "CHANGELOG.md",

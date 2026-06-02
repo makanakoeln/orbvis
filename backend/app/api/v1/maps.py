@@ -11,7 +11,12 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import logging
+import re
+import time
+from dataclasses import dataclass
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 import httpx
@@ -19,15 +24,19 @@ from fastapi import APIRouter, Header, HTTPException, Response, status
 from fastapi import Path as PathParam
 
 from app.core.config import settings
+from app.core.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# {s} round-robins across a/b/c subdomains; pick deterministically per (x,y)
-# so retries hit the same edge cache.
-_UPSTREAM_TEMPLATE = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-_UPSTREAM_SUBDOMAINS = ("a", "b", "c")
+# OSM's tile policy requires the bare host (the a/b/c sharding subdomains are
+# deprecated under HTTP/2) and a clear, identifying User-Agent (not a library
+# default). https://operations.osmfoundation.org/policies/tiles/
+_UPSTREAM_TEMPLATE = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+_USER_AGENT = f"OrbVis/{APP_VERSION}"
 _FETCH_TIMEOUT = 30.0
+# OSM policy floor: cache at least 7 days when upstream freshness can't be read.
+_MIN_FRESH_SECONDS = 7 * 24 * 3600
 # Per-tile lock so two concurrent requests for the same tile don't both fetch.
 _inflight: dict[tuple[int, int, int], asyncio.Lock] = {}
 _client: httpx.AsyncClient | None = None
@@ -39,7 +48,7 @@ def _get_client() -> httpx.AsyncClient:
     if _client is None:
         _client = httpx.AsyncClient(
             timeout=_FETCH_TIMEOUT,
-            headers={"User-Agent": "OrbVis/1.0 tile-proxy"},
+            headers={"User-Agent": _USER_AGENT},
         )
     return _client
 
@@ -54,16 +63,45 @@ def _tile_path(z: int, x: int, y: int) -> Path:
     return _tiles_dir() / str(z) / str(x) / f"{y}.png"
 
 
-async def _fetch_upstream(z: int, x: int, y: int) -> bytes:
-    sub = _UPSTREAM_SUBDOMAINS[(x + y) % len(_UPSTREAM_SUBDOMAINS)]
-    url = _UPSTREAM_TEMPLATE.format(s=sub, z=z, x=x, y=y)
-    resp = await _get_client().get(url)
-    if resp.status_code != 200:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Upstream returned {resp.status_code} for tile {z}/{x}/{y}",
-        )
-    return resp.content
+@dataclass
+class _TileMeta:
+    etag: str | None
+    last_modified: str | None
+    expires_at: float
+
+
+def _freshness_deadline(headers: httpx.Headers, now: float) -> float:
+    cache_control = headers.get("Cache-Control", "")
+    match = re.search(r"max-age=(\d+)", cache_control)
+    if match:
+        return now + int(match.group(1))
+    expires = headers.get("Expires")
+    if expires:
+        try:
+            return float(parsedate_to_datetime(expires).timestamp())
+        except (TypeError, ValueError):
+            pass
+    return now + _MIN_FRESH_SECONDS
+
+
+def _meta_from_headers(headers: httpx.Headers, now: float, prev: _TileMeta | None) -> _TileMeta:
+    # A 304 carries no validators of its own — keep the ones we already stored.
+    return _TileMeta(
+        etag=headers.get("ETag") or (prev.etag if prev else None),
+        last_modified=headers.get("Last-Modified") or (prev.last_modified if prev else None),
+        expires_at=_freshness_deadline(headers, now),
+    )
+
+
+async def _fetch_upstream(z: int, x: int, y: int, validators: _TileMeta | None) -> httpx.Response:
+    url = _UPSTREAM_TEMPLATE.format(z=z, x=x, y=y)
+    headers: dict[str, str] = {}
+    if validators is not None:
+        if validators.etag:
+            headers["If-None-Match"] = validators.etag
+        if validators.last_modified:
+            headers["If-Modified-Since"] = validators.last_modified
+    return await _get_client().get(url, headers=headers)
 
 
 @router.get("/tiles/{z}/{x}/{y}.png")
@@ -81,7 +119,8 @@ async def get_tile(
 
     cache_path = _tile_path(z, x, y)
     cached = _read_cached(cache_path)
-    if cached is not None:
+    meta = _read_meta(cache_path)
+    if cached is not None and meta is not None and time.time() < meta.expires_at:
         return _png_response(cached, if_none_match)
 
     key = (z, x, y)
@@ -89,31 +128,48 @@ async def get_tile(
     try:
         async with lock:
             # Re-check after acquiring the lock — another coroutine may have
-            # already populated the cache while we were waiting.
+            # already refreshed the cache while we were waiting.
             cached = _read_cached(cache_path)
-            if cached is not None:
+            meta = _read_meta(cache_path)
+            now = time.time()
+            if cached is not None and meta is not None and now < meta.expires_at:
                 return _png_response(cached, if_none_match)
 
-            data: bytes
+            validators = meta if cached is not None else None
             try:
-                data = await _fetch_upstream(z, x, y)
-            except httpx.HTTPError as e:
-                logger.warning("Tile fetch failed for %s/%s/%s: %s", z, x, y, e)
-                raise HTTPException(
+                resp = await _fetch_upstream(z, x, y, validators)
+                now = time.time()
+                if resp.status_code == 304 and cached is not None:
+                    _write_meta(cache_path, _meta_from_headers(resp.headers, now, meta))
+                    return _png_response(cached, if_none_match)
+                if resp.status_code == 200:
+                    data = resp.content
+                    _write_cache(cache_path, data)
+                    _write_meta(cache_path, _meta_from_headers(resp.headers, now, None))
+                    return _png_response(data, if_none_match)
+                upstream_error: Exception = HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="Upstream tile fetch failed",
-                ) from e
+                    detail=f"Upstream returned {resp.status_code} for tile {z}/{x}/{y}",
+                )
+            except httpx.HTTPError as e:
+                upstream_error = e
 
-            cache_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = cache_path.with_suffix(".png.tmp")
-            try:
-                tmp.write_bytes(data)
-                tmp.replace(cache_path)
-            except OSError as e:
-                logger.warning("Tile cache write failed for %s/%s/%s: %s", z, x, y, e)
-                tmp.unlink(missing_ok=True)
-
-            return _png_response(data, if_none_match)
+            # Reached only on upstream failure: a stale tile beats a hard error
+            # (and spares OSM a retry storm); only propagate when nothing cached.
+            if cached is not None:
+                logger.warning(
+                    "Tile fetch/revalidation failed for %s/%s/%s, serving stale: %s",
+                    z,
+                    x,
+                    y,
+                    upstream_error,
+                )
+                return _png_response(cached, if_none_match)
+            logger.warning("Tile fetch failed for %s/%s/%s: %s", z, x, y, upstream_error)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Upstream tile fetch failed",
+            ) from upstream_error
     finally:
         _inflight.pop(key, None)
 
@@ -126,6 +182,56 @@ def _read_cached(path: Path) -> bytes | None:
     except OSError:
         return None
     return data or None
+
+
+def _write_cache(cache_path: Path, data: bytes) -> None:
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = cache_path.with_name(cache_path.name + ".tmp")
+    try:
+        tmp.write_bytes(data)
+        tmp.replace(cache_path)
+    except OSError as e:
+        logger.warning("Tile cache write failed for %s: %s", cache_path, e)
+        tmp.unlink(missing_ok=True)
+
+
+def _meta_path(cache_path: Path) -> Path:
+    return cache_path.with_name(cache_path.name + ".meta")
+
+
+def _read_meta(cache_path: Path) -> _TileMeta | None:
+    try:
+        raw = _meta_path(cache_path).read_text()
+    except OSError:
+        return None
+    try:
+        d = json.loads(raw)
+        return _TileMeta(
+            etag=d.get("etag"),
+            last_modified=d.get("last_modified"),
+            expires_at=float(d["expires_at"]),
+        )
+    except (ValueError, KeyError, TypeError):
+        return None
+
+
+def _write_meta(cache_path: Path, meta: _TileMeta) -> None:
+    path = _meta_path(cache_path)
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        tmp.write_text(
+            json.dumps(
+                {
+                    "etag": meta.etag,
+                    "last_modified": meta.last_modified,
+                    "expires_at": meta.expires_at,
+                }
+            )
+        )
+        tmp.replace(path)
+    except OSError as e:
+        logger.warning("Tile meta write failed for %s: %s", cache_path, e)
+        tmp.unlink(missing_ok=True)
 
 
 def _png_response(data: bytes, if_none_match: str | None = None) -> Response:
