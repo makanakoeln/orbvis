@@ -19,7 +19,17 @@
             <header class="detail-drawer__header">
                 <div class="detail-drawer__title">
                     <div class="detail-drawer__title-row">
-                        <span class="detail-drawer__name" :title="displayName">{{
+                        <a
+                            v-if="checkmkUrlFull"
+                            :href="checkmkUrlFull"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="detail-drawer__name detail-drawer__name--link"
+                            :title="displayName"
+                            :aria-label="t('board.detailDrawer.openInCheckmk')"
+                            >{{ displayName }}</a
+                        >
+                        <span v-else class="detail-drawer__name" :title="displayName">{{
                             displayName
                         }}</span>
                         <span class="detail-drawer__type-pill">{{ typeLabel }}</span>
@@ -192,7 +202,17 @@
                                 >
                                     <template v-for="row in metaRows" :key="row.label">
                                         <dt>{{ row.label }}</dt>
-                                        <dd>{{ row.value }}</dd>
+                                        <dd>
+                                            <a
+                                                v-if="row.href"
+                                                :href="row.href"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="detail-drawer__meta-link"
+                                                >{{ row.value }}</a
+                                            >
+                                            <template v-else>{{ row.value }}</template>
+                                        </dd>
                                     </template>
                                     <template v-for="row in checkInfoRows" :key="row.label">
                                         <dt>{{ row.label }}</dt>
@@ -1605,7 +1625,22 @@ interface MetaRow {
     label: string;
     value: string;
     tone?: 'warn';
+    href?: string | null;
 }
+
+// Service drawers list the parent host as a metadata row; link it to the
+// host's "Status of host" view (Nagios-familiar: both the title and the host
+// name are clickable). Reuses buildCheckmkUrl by switching the object to a
+// host so the same site/base-URL resolution applies.
+const hostStatusUrl = computed(() => {
+    const o = props.object;
+    if (o?.type !== 'service' || !o.host_name) return null;
+    return buildCheckmkUrl(
+        { ...o, type: 'host', service_description: null },
+        props.checkmkUrl ?? null,
+        props.state?.site_id,
+    );
+});
 
 const metaRows = computed<MetaRow[]>(() => {
     const s = props.state;
@@ -1617,7 +1652,11 @@ const metaRows = computed<MetaRow[]>(() => {
     }
     if (s.address) rows.push({ label: 'Address', value: s.address });
     if (o?.type === 'service' && o.host_name) {
-        rows.push({ label: t('board.detailDrawer.host'), value: o.host_name });
+        rows.push({
+            label: t('board.detailDrawer.host'),
+            value: o.host_name,
+            href: hostStatusUrl.value,
+        });
     }
     // For site drawers, the site name is already the title — no point repeating it.
     if (s.site_id && o?.type !== 'site') {
@@ -2098,6 +2137,28 @@ useMutationObserver(
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
+}
+
+.detail-drawer__name--link {
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.detail-drawer__name--link:hover,
+.detail-drawer__name--link:focus-visible {
+    color: var(--color-corporate-green-50, rgb(34 197 94));
+    text-decoration: underline;
+}
+
+.detail-drawer__meta-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.detail-drawer__meta-link:hover,
+.detail-drawer__meta-link:focus-visible {
+    color: var(--color-corporate-green-50, rgb(34 197 94));
+    text-decoration: underline;
 }
 
 .detail-drawer__type-pill {
