@@ -184,6 +184,8 @@ export default {
         ftNoProblemServices: 'No problem services',
         ftNothingHere: 'Nothing to show here.',
         ftBulkActions: 'Folder actions',
+        ftFolder: 'Folder',
+        ftOpenInSetup: 'Open in Checkmk Setup',
         ftBulkTitle: 'Folder actions — {folder}',
         ftBulkAck: 'Acknowledge',
         ftBulkDowntime: 'Schedule downtime',

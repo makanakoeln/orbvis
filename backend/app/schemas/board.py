@@ -258,7 +258,8 @@ class FolderTreeView(BaseModel):
     # ("" = root / all folders). See concept v3 §7.1.
     root_folder: str = ""
     # Which presentation the board opens in (operator-chosen, saved per board).
-    default_view: Literal["list", "map"] = "list"
+    # Defaults to the treemap — the glanceable status surface; list is secondary.
+    default_view: Literal["list", "map"] = "map"
     default_expand_depth: int = Field(default=1, ge=0, le=20)
     show_services: bool = False
     show_empty_folders: bool = True

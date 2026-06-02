@@ -3,7 +3,7 @@
         <!-- Reserved top toolbar (not a floating overlay): the treemap fills 100%
              of the stage and the list is a full-width scroller, so floating
              controls would always cover data. Summary left, tools right. -->
-        <div v-if="!preview" class="ft-toolbar">
+        <div v-if="!preview && !kiosk" class="ft-toolbar">
             <span v-if="root" class="ft-summary">
                 <span
                     >{{ filterActive ? t('board.ftShowing') + ' ' : '' }}{{ summary.hosts }}
@@ -96,6 +96,7 @@
             @expand-host="ensureServices"
             @select-host="$emit('select-host', $event)"
             @select-service="(h, n) => $emit('select-service', h, n)"
+            @ctx-folder="(n, x, y) => $emit('ctx-folder', n, x, y)"
         />
         <div v-else class="ft-tree" role="tree">
             <FolderTreeRow
@@ -112,12 +113,14 @@
                 :services-by-host="effectiveServices"
                 :service-loading="serviceLoading"
                 :service-error="serviceError"
-                :can-command="canCommand"
                 @toggle="toggle"
                 @expand-host="ensureServices"
                 @select-host="$emit('select-host', $event)"
                 @select-service="(h, n) => $emit('select-service', h, n)"
-                @folder-action="$emit('folder-action', $event)"
+                @hover-host="(n, x, y) => $emit('hover-host', n, x, y)"
+                @hover-service="(h, n, x, y) => $emit('hover-service', h, n, x, y)"
+                @hover-clear="$emit('hover-clear')"
+                @ctx-folder="(n, x, y) => $emit('ctx-folder', n, x, y)"
             />
         </div>
     </div>
@@ -146,11 +149,19 @@ import {
 import { severityPills } from '@/utils/stateColors';
 import { useDebounceFn } from '@/vendor/cmk/lib/useDebounce';
 
-const props = defineProps<{ view: FolderTreeView; preview?: boolean; boardName?: string }>();
+const props = defineProps<{
+    view: FolderTreeView;
+    preview?: boolean;
+    kiosk?: boolean;
+    boardName?: string;
+}>();
 defineEmits<{
     'select-host': [FolderTreeNode];
     'select-service': [string, FolderTreeNode];
-    'folder-action': [FolderTreeNode];
+    'hover-host': [FolderTreeNode, number, number];
+    'hover-service': [string, FolderTreeNode, number, number];
+    'hover-clear': [];
+    'ctx-folder': [FolderTreeNode, number, number];
 }>();
 
 const { t } = useI18n();
@@ -159,7 +170,9 @@ const boards = useBoardsStore();
 const states = useStatesStore();
 const root = computed<FolderTreeNode | null>(() => states.folderTree);
 
-const mode = ref<'map' | 'list'>(props.view.default_view ?? 'list');
+// A kiosk/wall display forces the map: the scrolling list can't be an ambient
+// "always shows status" surface.
+const mode = ref<'map' | 'list'>(props.kiosk ? 'map' : (props.view.default_view ?? 'map'));
 const expanded = reactive(new Set<string>());
 const problemsOnly = ref(props.view.problems_only ?? false);
 const showServices = computed(() => props.view.show_services ?? false);
@@ -485,12 +498,6 @@ const multiSite = computed(() => {
     walk(root.value);
     return sites.size > 1;
 });
-
-// Folder bulk actions go through the same admin-only command gate as the detail
-// drawer (the Livestatus command pipe bypasses CMK contact-group ACLs, so the
-// backend hard-gates on is_admin). Hide the affordance for non-admins / preview
-// so we never offer an action that would 403.
-const canCommand = computed(() => auth.isAdmin && !props.preview);
 
 function toggle(path: string) {
     if (expanded.has(path)) expanded.delete(path);

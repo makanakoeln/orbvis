@@ -418,10 +418,14 @@
                             : { type: 'foldertree' }
                     "
                     :preview="isPreview"
+                    :kiosk="isKiosk"
                     :board-name="boardConfig?.name"
                     @select-host="onFolderHostSelect"
                     @select-service="onFolderServiceSelect"
-                    @folder-action="onFolderAction"
+                    @hover-host="onFolderHoverHost"
+                    @hover-service="onFolderHoverService"
+                    @hover-clear="onFolderHoverClear"
+                    @ctx-folder="onFolderCtx"
                 />
             </div>
 
@@ -1040,6 +1044,86 @@
             @enable-notifications="onWorldmapCtxToggleNotifications(true)"
             @disable-notifications="onWorldmapCtxToggleNotifications(false)"
         />
+
+        <HoverMenu
+            v-if="isFolderTree && folderHover"
+            :object="folderHover.object"
+            :state="folderHover.state"
+            :x="folderHover.x"
+            :y="folderHover.y"
+        />
+
+        <template v-if="isFolderTree && folderCtx">
+            <div
+                class="fixed inset-0 z-40"
+                @click="closeFolderCtx"
+                @contextmenu.prevent="closeFolderCtx"
+            />
+            <div
+                class="fixed z-50 bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-xl py-1.5 min-w-56"
+                :style="{ left: `${folderCtx.x}px`, top: `${folderCtx.y}px` }"
+                @click.stop
+            >
+                <div class="px-3.5 py-2 border-b border-[var(--border)] mb-1">
+                    <p class="text-xs font-semibold text-[var(--text)] truncate max-w-52">
+                        {{ folderCtx.node.title || 'Main' }}
+                    </p>
+                    <p class="text-[10px] text-[var(--text-muted)] mt-0.5">
+                        {{ t('board.ftFolder') }}
+                    </p>
+                </div>
+                <button
+                    v-if="auth.isAdmin && folderCtx.node.host_count > 0"
+                    type="button"
+                    class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+                    @click="onFolderCtxBulk"
+                >
+                    <svg
+                        class="w-3.5 h-3.5 shrink-0"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                    </svg>
+                    <span>{{ t('board.ftBulkActions') }}</span>
+                </button>
+                <a
+                    v-if="folderSetupUrl"
+                    :href="folderSetupUrl"
+                    target="_blank"
+                    class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+                    @click="closeFolderCtx"
+                >
+                    <svg
+                        class="w-3.5 h-3.5 shrink-0"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                        />
+                    </svg>
+                    <span>{{ t('board.ftOpenInSetup') }}</span>
+                </a>
+                <div
+                    v-if="!(auth.isAdmin && folderCtx.node.host_count > 0) && !folderSetupUrl"
+                    class="px-3.5 py-2 text-xs text-[var(--text-muted)] italic"
+                >
+                    {{ t('contextMenu.noCheckmkUrl') }}
+                </div>
+            </div>
+        </template>
+
         <div
             v-if="isWorldmap && worldmapCanvasCtxMenu.visible"
             class="fixed z-50 bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-xl py-1.5 min-w-56"
@@ -1901,6 +1985,100 @@ function onFolderAction(node: FolderTreeNode) {
     if (!auth.isAdmin) return;
     folderBulkModal.value = node;
 }
+
+// Same synthesised object/state shapes as the folder click→drawer path; for
+// hosts the live state map is richer (services summary, address, next check).
+interface FolderHover {
+    object: BoardObject;
+    state: ObjectState | undefined;
+    x: number;
+    y: number;
+}
+const folderHover = ref<FolderHover | null>(null);
+
+function onFolderHoverHost(node: FolderTreeNode, x: number, y: number) {
+    folderHover.value = {
+        object: {
+            id: node.title,
+            type: 'host',
+            host_name: node.title,
+            x: 0,
+            y: 0,
+            z: 0,
+            url_target: '_blank',
+        },
+        state: statesStore.states[node.title],
+        x: x + 12,
+        y: y + 12,
+    };
+}
+
+function onFolderHoverService(host: string, node: FolderTreeNode, x: number, y: number) {
+    const id = `${host};${node.title}`;
+    folderHover.value = {
+        object: {
+            id,
+            type: 'service',
+            host_name: host,
+            service_description: node.title,
+            x: 0,
+            y: 0,
+            z: 0,
+            url_target: '_blank',
+        },
+        state: {
+            object_id: id,
+            type: 'service',
+            state: node.state as MonitoringState,
+            output: node.output,
+            perf_data: '',
+            acknowledged: node.acknowledged,
+            in_downtime: node.in_downtime,
+            stale: false,
+            site_id: node.site_id,
+            last_state_change: node.last_state_change ?? null,
+        },
+        x: x + 12,
+        y: y + 12,
+    };
+}
+
+function onFolderHoverClear() {
+    folderHover.value = null;
+}
+
+interface FolderCtx {
+    node: FolderTreeNode;
+    x: number;
+    y: number;
+}
+const folderCtx = ref<FolderCtx | null>(null);
+
+function onFolderCtx(node: FolderTreeNode, x: number, y: number) {
+    folderHover.value = null;
+    folderCtx.value = { node, x, y };
+}
+
+function closeFolderCtx() {
+    folderCtx.value = null;
+}
+
+function onFolderCtxBulk() {
+    if (folderCtx.value) onFolderAction(folderCtx.value.node);
+    closeFolderCtx();
+}
+
+// wato.py addresses folders by their relative path (Main = ""), which is the
+// tree node's path.
+const folderSetupUrl = computed(() => {
+    const node = folderCtx.value?.node;
+    if (!node) return null;
+    const raw = checkmkUrl.value;
+    if (!raw) return null;
+    const base = raw.replace(/\/check_mk\/?$/, '').replace(/\/$/, '');
+    const p = new URLSearchParams({ mode: 'folder', folder: node.path });
+    return `${base}/check_mk/wato.py?${p.toString()}`;
+});
 
 function onDetailAck() {
     detailActions.handlers.acknowledge(detailDrawerObject.value);

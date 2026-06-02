@@ -59,6 +59,7 @@ const emit = defineEmits<{
     'select-host': [FolderTreeNode];
     'select-service': [string, FolderTreeNode];
     'expand-host': [FolderTreeNode];
+    'ctx-folder': [FolderTreeNode, number, number];
 }>();
 
 const states = useStatesStore();
@@ -541,6 +542,13 @@ function draw(animate: boolean): void {
                 event.stopPropagation();
                 activateCell(d);
             }
+        })
+        .on('contextmenu', (event: MouseEvent, d) => {
+            // Real folders only — the synthetic "✓ N OK" group has no bulk target.
+            if (d.data.kind !== 'folder' || d.data.ok_group) return;
+            event.preventDefault();
+            event.stopPropagation();
+            emit('ctx-folder', d.data, event.clientX, event.clientY);
         })
         .on('mousemove', showTip)
         .on('mouseleave', () => (tip.value = null));

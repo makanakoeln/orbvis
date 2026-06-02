@@ -186,6 +186,8 @@ export default {
         ftNoProblemServices: 'Keine Problem-Services',
         ftNothingHere: 'Nichts anzuzeigen.',
         ftBulkActions: 'Ordner-Aktionen',
+        ftFolder: 'Ordner',
+        ftOpenInSetup: 'In Checkmk Setup öffnen',
         ftBulkTitle: 'Ordner-Aktionen — {folder}',
         ftBulkAck: 'Quittieren',
         ftBulkDowntime: 'Wartung planen',

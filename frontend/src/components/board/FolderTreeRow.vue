@@ -9,6 +9,9 @@
         :aria-expanded="isExpandable ? isOpen : undefined"
         :title="node.output || undefined"
         @click="onRowClick"
+        @contextmenu="onCtx"
+        @mousemove="onHover"
+        @mouseleave="$emit('hover-clear')"
     >
         <!-- One vertical guide per ancestor level so the nesting depth (e.g.
              a host directly under Main vs. inside a subfolder) is unambiguous. -->
@@ -85,11 +88,7 @@
             >{{ node.title }}</span
         >
 
-        <!-- Service plugin output fills the free row space — the operator's main
-             triage signal ("DISK CRITICAL - free space: / 2%"); flexes + ellipsis
-             so markers/age stay right-aligned. Full text on hover (row title). -->
-        <span v-if="node.kind === 'service'" class="ft-output">{{ node.output }}</span>
-
+        <!-- Stays next to the name; a right-aligned count drifts away on wide screens. -->
         <span v-if="isEmpty" class="ft-badge ft-badge--empty">{{ t('board.ftEmptyHosts') }}</span>
         <span v-else-if="node.kind === 'folder'" class="ft-meta"
             >{{ node.host_count }} {{ t('board.ftHosts') }}</span
@@ -104,32 +103,12 @@
                 >{{ p.count }}</span
             >
         </span>
-        <!-- Folder bulk actions (ack/downtime for all its hosts) — appears on the
-             folder row, only when it actually contains hosts. -->
-        <button
-            v-if="canCommand && node.kind === 'folder' && !isEmpty && node.host_count > 0"
-            type="button"
-            class="ft-folder-action"
-            :title="t('board.ftBulkActions')"
-            :aria-label="t('board.ftBulkActions')"
-            @click.stop="$emit('folder-action', node)"
-        >
-            ⋮
-        </button>
+
+        <span class="ft-rowfill" />
 
         <span v-if="node.kind === 'host' && multiSite && node.site_id" class="ft-site">{{
             node.site_id
         }}</span>
-        <span v-if="node.acknowledged" class="ft-cmd ft-cmd--ack" :title="t('board.ftAck')"
-            >ACK</span
-        >
-        <span v-if="node.in_downtime" class="ft-cmd ft-cmd--dt" :title="t('board.ftDowntime')"
-            >DT</span
-        >
-        <span v-if="node.is_flapping" class="ft-cmd ft-cmd--flap" :title="t('board.ftFlapping')"
-            >FLAP</span
-        >
-        <span v-if="age" class="ft-age" :title="t('board.ftSince')">{{ age }}</span>
     </div>
 
     <template v-if="isExpandable && isOpen">
@@ -165,13 +144,15 @@
                 :services-by-host="servicesByHost"
                 :service-loading="serviceLoading"
                 :service-error="serviceError"
-                :can-command="canCommand"
                 :host-name="node.title"
                 @toggle="$emit('toggle', $event)"
                 @expand-host="$emit('expand-host', $event)"
                 @select-host="$emit('select-host', $event)"
                 @select-service="(h, n) => $emit('select-service', h, n)"
-                @folder-action="$emit('folder-action', $event)"
+                @hover-host="(n, x, y) => $emit('hover-host', n, x, y)"
+                @hover-service="(h, n, x, y) => $emit('hover-service', h, n, x, y)"
+                @hover-clear="$emit('hover-clear')"
+                @ctx-folder="(n, x, y) => $emit('ctx-folder', n, x, y)"
             />
         </template>
         <template v-else>
@@ -190,12 +171,14 @@
                 :services-by-host="servicesByHost"
                 :service-loading="serviceLoading"
                 :service-error="serviceError"
-                :can-command="canCommand"
                 @toggle="$emit('toggle', $event)"
                 @expand-host="$emit('expand-host', $event)"
                 @select-host="$emit('select-host', $event)"
                 @select-service="(h, n) => $emit('select-service', h, n)"
-                @folder-action="$emit('folder-action', $event)"
+                @hover-host="(n, x, y) => $emit('hover-host', n, x, y)"
+                @hover-service="(h, n, x, y) => $emit('hover-service', h, n, x, y)"
+                @hover-clear="$emit('hover-clear')"
+                @ctx-folder="(n, x, y) => $emit('ctx-folder', n, x, y)"
             />
         </template>
     </template>
@@ -214,7 +197,6 @@ import {
     subtreeVisible,
 } from '@/utils/folderTreeFilter';
 import { severityPills, stateColorVar } from '@/utils/stateColors';
-import { formatRelativeDuration } from '@/utils/time';
 
 const props = defineProps<{
     node: FolderTreeNode;
@@ -235,8 +217,6 @@ const props = defineProps<{
     serviceError: Set<string>;
     // Set on service rows so a click can resolve the owning host for the drawer.
     hostName?: string;
-    // Admin-only: gates the folder bulk-action affordance (commands 403 otherwise).
-    canCommand?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -244,7 +224,10 @@ const emit = defineEmits<{
     'expand-host': [FolderTreeNode];
     'select-host': [FolderTreeNode];
     'select-service': [string, FolderTreeNode];
-    'folder-action': [FolderTreeNode];
+    'hover-host': [FolderTreeNode, number, number];
+    'hover-service': [string, FolderTreeNode, number, number];
+    'hover-clear': [];
+    'ctx-folder': [FolderTreeNode, number, number];
 }>();
 
 const { t } = useI18n();
@@ -258,11 +241,6 @@ const isExpandable = computed(
         props.node.children.length > 0,
 );
 const pills = computed(() => severityPills(props.node.severity_counts));
-// "Since last state change" for triage — on hosts and services alike (a DOWN
-// host without "since 3h" is harder to triage than a service).
-const age = computed(() =>
-    props.node.kind === 'folder' ? '' : formatRelativeDuration(props.node.last_state_change),
-);
 const noteIndent = computed(() => ({ paddingLeft: `${(props.depth + 1) * 18 + 16}px` }));
 
 // Once this node matches the query, its whole subtree counts as matching.
@@ -343,6 +321,21 @@ function onRowClick() {
     else if (props.node.kind === 'service')
         emit('select-service', props.hostName ?? '', props.node);
     else emit('toggle', props.node.path);
+}
+
+// Cursor-anchored (rows are full-width, so a row-rect anchor would overflow and
+// flip the menu over the navigation).
+function onHover(e: MouseEvent) {
+    if (props.node.kind === 'host') emit('hover-host', props.node, e.clientX, e.clientY);
+    else if (props.node.kind === 'service')
+        emit('hover-service', props.hostName ?? '', props.node, e.clientX, e.clientY);
+}
+
+// Folders only; host/service rows keep the native menu.
+function onCtx(e: MouseEvent) {
+    if (props.node.kind !== 'folder') return;
+    e.preventDefault();
+    emit('ctx-folder', props.node, e.clientX, e.clientY);
 }
 </script>
 
@@ -436,12 +429,11 @@ function onRowClick() {
     flex-shrink: 0;
 }
 
-/* Service name yields to the plugin-output column once it gets long, but keeps
-   priority up to a sensible cap. */
+/* Service name can now use the full row width (the plugin-output column moved
+   to the hover menu); still ellipsizes when very long. */
 .ft-title--svc {
     font-weight: 400;
     flex-shrink: 1;
-    max-width: 40%;
 }
 
 .ft-title--empty {
@@ -450,49 +442,15 @@ function onRowClick() {
     font-weight: 400;
 }
 
-.ft-output {
+/* Fills the row so the trailing host-only site badge right-aligns. */
+.ft-rowfill {
     flex: 1;
     min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 12px;
-    color: var(--text-muted);
 }
 
 .ft-meta {
     color: var(--text-muted);
     font-size: 11px;
-}
-
-/* Folder bulk-action affordance — subtle until the row is hovered/focused. */
-.ft-folder-action {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 15px;
-    line-height: 1;
-    opacity: 0;
-}
-
-.ft-folder-action:focus-visible {
-    opacity: 1;
-}
-
-.ft-folder-action:hover {
-    color: var(--text);
-    background: var(--bg-hover);
-    border-color: var(--border);
-    opacity: 1;
-}
-
-.ft-row:hover .ft-folder-action {
-    opacity: 1;
 }
 
 .ft-badge {
@@ -531,43 +489,6 @@ function onRowClick() {
     color: var(--text-muted);
     border: 1px solid var(--border);
     flex-shrink: 0;
-}
-
-/* Command-state badges — explicit text so they're unambiguous (a check mark for
-   "acknowledged" reads as "OK"). Muted, distinct accents per kind. */
-.ft-cmd {
-    flex-shrink: 0;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    line-height: 1;
-    padding: 2px 5px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    background: var(--bg-hover);
-}
-
-.ft-cmd--ack {
-    color: var(--color-state-up, #0f0);
-    border-color: color-mix(in srgb, var(--color-state-up, #0a0) 45%, var(--border));
-}
-
-.ft-cmd--dt {
-    color: var(--accent);
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-}
-
-.ft-cmd--flap {
-    color: var(--color-state-warning, #ffd000);
-    border-color: color-mix(in srgb, var(--color-state-warning, #ffd000) 45%, var(--border));
-}
-
-.ft-age {
-    font-size: 11px;
-    color: var(--text-muted);
-    flex-shrink: 0;
-    font-variant-numeric: tabular-nums;
 }
 
 .ft-note {
