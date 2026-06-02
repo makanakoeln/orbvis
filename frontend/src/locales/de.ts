@@ -211,6 +211,7 @@ export default {
         ftShowEmptyFolders: 'Leere Ordner anzeigen',
         ftShowServices: 'Hosts zu ihren Services aufklappen',
         ftProblemsOnly: 'Nur Ordner/Hosts mit Problemen zeigen',
+        problemsOnly: 'Nur Probleme anzeigen',
         ftOnlyHardStates: 'Nur Hard-States verwenden',
         flowRoot: 'Wurzel-Host',
         flowRootPlaceholder: 'Leer lassen, um die gesamte Topologie anzuzeigen',

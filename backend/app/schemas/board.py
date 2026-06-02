@@ -198,6 +198,7 @@ class DisplayConfig(BaseModel):
 
 class StaticView(BaseModel):
     type: Literal["static"] = "static"
+    problems_only: bool = False
 
 
 class WorldmapView(BaseModel):
@@ -217,12 +218,14 @@ class WorldmapView(BaseModel):
     # remain visible on top of the auto-discovered ones.
     auto_source: Literal["all_hosts", "hostgroup", "servicegroup"] | None = None
     auto_filter_value: str = ""
+    problems_only: bool = False
 
 
 class RadarView(BaseModel):
     type: Literal["radar"] = "radar"
     filter: Literal["hostgroup", "servicegroup", "all_hosts", "all_services"] = "hostgroup"
     filter_value: str = ""
+    problems_only: bool = False
 
 
 class FlowNodePosition(BaseModel):
@@ -246,6 +249,7 @@ class FlowView(BaseModel):
     positions: dict[str, FlowNodePosition] = Field(default_factory=dict)
     # Service-node layout chosen by the operator. None = use UI default.
     service_layout: Literal["off", "donut", "fan", "orbit", "row"] | None = None
+    problems_only: bool = False
 
 
 class FolderTreeView(BaseModel):

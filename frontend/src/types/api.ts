@@ -76,6 +76,7 @@ export type ServiceLayout = 'off' | 'fan' | 'row' | 'orbit' | 'donut';
 
 export interface StaticView {
     type: 'static';
+    problems_only?: boolean;
 }
 export interface WorldmapView {
     type: 'worldmap';
@@ -86,11 +87,13 @@ export interface WorldmapView {
     tile_saturate?: number | null;
     auto_source?: 'all_hosts' | 'hostgroup' | 'servicegroup' | null;
     auto_filter_value?: string;
+    problems_only?: boolean;
 }
 export interface RadarView {
     type: 'radar';
     filter: string;
     filter_value: string;
+    problems_only?: boolean;
 }
 export interface FlowNodePosition {
     x: number;
@@ -105,6 +108,7 @@ export interface FlowView {
     max_services_per_host?: number | null;
     positions?: Record<string, FlowNodePosition>;
     service_layout?: ServiceLayout | null;
+    problems_only?: boolean;
 }
 export interface FolderTreeView {
     type: 'foldertree';

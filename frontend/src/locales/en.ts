@@ -209,6 +209,7 @@ export default {
         ftShowEmptyFolders: 'Show empty folders',
         ftShowServices: 'Expand hosts to their services',
         ftProblemsOnly: 'Show only folders/hosts with problems',
+        problemsOnly: 'Show only problems',
         ftOnlyHardStates: 'Use hard states only',
         flowRoot: 'Root host',
         flowRootPlaceholder: 'Leave empty to render full topology',

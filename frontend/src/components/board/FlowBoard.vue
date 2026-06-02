@@ -77,27 +77,11 @@
             :exclude-prefixes="['hg', 'sg']"
         >
             <template #trailing>
-                <button
-                    type="button"
-                    class="flow-search__toggle"
-                    :class="{ 'flow-search__toggle--active': stateFilter === 'problems' }"
+                <ProblemsOnlyToggle
+                    :model-value="problemsOnly ?? false"
                     :title="t('board.flow.problemsOnlyToggle')"
-                    @click="stateFilter = stateFilter === 'problems' ? 'all' : 'problems'"
-                >
-                    <svg
-                        style="width: 12px; height: 12px"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                        />
-                    </svg>
-                </button>
+                    @update:model-value="emit('update:problemsOnly', $event)"
+                />
             </template>
         </BoardSearch>
 
@@ -292,6 +276,7 @@ import ContextMenu from '@/components/board/ContextMenu.vue';
 import DetailDrawer from '@/components/board/DetailDrawer.vue';
 import DowntimeModal from '@/components/board/DowntimeModal.vue';
 import HoverMenu from '@/components/board/HoverMenu.vue';
+import ProblemsOnlyToggle from '@/components/board/ProblemsOnlyToggle.vue';
 import RemoveDowntimeModal from '@/components/board/RemoveDowntimeModal.vue';
 import CmkLoading from '@/components/cmk/CmkLoading';
 import { useD3Cleanup } from '@/composables/useD3Cleanup';
@@ -321,6 +306,7 @@ const props = defineProps<{
     checkmkUrl?: string | null;
     flowView?: FlowView | null;
     preview?: boolean;
+    problemsOnly?: boolean;
     hoverTemplate?: string | null;
     contextTemplate?: string | null;
 }>();
@@ -332,6 +318,7 @@ const emit = defineEmits<{
     ): void;
     (e: 'drawer-object', value: BoardObject | null): void;
     (e: 'positions-changed', value: Record<string, { x: number; y: number }>): void;
+    (e: 'update:problemsOnly', value: boolean): void;
 }>();
 const { t } = useI18n();
 const auth = useAuthStore();
@@ -951,11 +938,8 @@ function dismissTopKHint() {
 
 // Free-text filter: dim (don't hide) nodes that don't match so the spatial
 // context is preserved. Hiding would re-trigger force-collide and rearrange
-// the whole board on every keystroke. State filter dims healthy hosts/services
-// so the operator sees only what needs attention.
-type StateFilter = 'all' | 'problems';
+// the whole board on every keystroke.
 const filterText = ref('');
-const stateFilter = ref<StateFilter>('all');
 // Flow nodes are only hosts/services, so group operators can never match —
 // drop them instead of letting an `hg:`/`sg:` term filter everything away.
 const UNSUPPORTED_FLOW_FIELDS: ReadonlySet<FilterField> = new Set(['hostgroup', 'servicegroup']);
@@ -991,13 +975,13 @@ function flowFieldValue(d: FNode, field: FilterField): string[] {
 }
 
 function nodeMatchesFilter(d: FNode): boolean {
-    if (stateFilter.value === 'problems' && !nodeHasProblem(d)) return false;
+    if (props.problemsOnly && !nodeHasProblem(d)) return false;
     return matchesFilterTerms(filterTerms.value, (field) => flowFieldValue(d, field));
 }
 
-const filterIsActive = computed(() => stateFilter.value !== 'all' || filterTerms.value.length > 0);
+const filterIsActive = computed(() => !!props.problemsOnly || filterTerms.value.length > 0);
 
-watch([filterText, stateFilter], () => {
+watch([filterText, () => props.problemsOnly], () => {
     if (svgEl.value) applyFilterOpacity();
 });
 
@@ -2772,31 +2756,6 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
 .flow-hint__dismiss:hover {
     color: var(--text);
     background: rgb(255 255 255 / 10%);
-}
-
-.flow-search__toggle {
-    width: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text-muted);
-    border: 1px solid transparent;
-    cursor: pointer;
-    padding: 0;
-}
-
-.flow-search__toggle:hover {
-    color: var(--text);
-    background: var(--bg-hover);
-}
-
-.flow-search__toggle--active {
-    color: var(--color-yellow-50, #fbbf24);
-    border-color: var(--color-yellow-50, #fbbf24);
-    background: rgb(251 191 36 / 12%);
 }
 
 .bulk-actions {

@@ -181,6 +181,7 @@ import { useI18n } from 'vue-i18n';
 import CmkLoading from '@/components/cmk/CmkLoading';
 import type { BoardObject, ObjectState } from '@/types/api';
 import { type FilterField, matchesFilterTerms, parseFilterTerms } from '@/utils/objectFilter';
+import { isProblemState } from '@/utils/problemState';
 
 const { t } = useI18n();
 
@@ -189,6 +190,7 @@ const props = defineProps<{
     checkmkUrl?: string | null;
     readonly?: boolean;
     filterNeedle?: string;
+    problemsOnly?: boolean;
     compact?: boolean;
     loading?: boolean;
 }>();
@@ -265,19 +267,21 @@ function stateMatchesFilter(s: ObjectState): boolean {
     return matchesFilterTerms(filterTerms.value, (field) => radarFieldValue(s, field));
 }
 
+function passesFilters(s: ObjectState): boolean {
+    if (filterTerms.value.length && !stateMatchesFilter(s)) return false;
+    if (props.problemsOnly && !isProblemState(s.state)) return false;
+    return true;
+}
+
 const sortedStates = computed(() => {
     const all = Object.values(props.states).sort(
         (a, b) => (severity[b.state] ?? 0) - (severity[a.state] ?? 0),
     );
-    const filtered = filterTerms.value.length ? all.filter(stateMatchesFilter) : all;
+    const filtered = all.filter(passesFilters);
     return props.compact ? filtered.slice(0, COMPACT_LIMIT) : filtered;
 });
 
-const totalCount = computed(() =>
-    filterTerms.value.length
-        ? Object.values(props.states).filter(stateMatchesFilter).length
-        : Object.values(props.states).length,
-);
+const totalCount = computed(() => Object.values(props.states).filter(passesFilters).length);
 
 const compactOverflow = computed(() => {
     if (!props.compact) return 0;

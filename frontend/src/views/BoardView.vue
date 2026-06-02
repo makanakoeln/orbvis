@@ -310,6 +310,7 @@
                     :placing="editor.placing.value"
                     :selected-object-id="editor.selectedObjectId.value"
                     :filter-needle="boardFilterNeedle"
+                    :problems-only="problemsOnly"
                     :preview="isPreview"
                     @object-click="onObjectClick"
                     @object-contextmenu="onObjectContextMenu"
@@ -330,7 +331,11 @@
                         !isPreview
                     "
                     v-model="boardFilterNeedle"
-                />
+                >
+                    <template #trailing>
+                        <ProblemsOnlyToggle v-model="problemsOnly" />
+                    </template>
+                </BoardSearch>
                 <!-- Fit all button -->
                 <button
                     v-if="
@@ -391,12 +396,17 @@
                     :compact="isPreview"
                     :loading="isRadarLoading"
                     :filter-needle="boardFilterNeedle"
+                    :problems-only="problemsOnly"
                     @object-click="onObjectClick"
                 />
                 <BoardSearch
                     v-if="boardConfig && !editor.editMode.value && !isPreview"
                     v-model="boardFilterNeedle"
-                />
+                >
+                    <template #trailing>
+                        <ProblemsOnlyToggle v-model="problemsOnly" />
+                    </template>
+                </BoardSearch>
             </div>
 
             <!-- Folder tree -->
@@ -427,8 +437,10 @@
                     :checkmk-url="checkmkUrl"
                     :flow-view="boardConfig.view.type === 'flow' ? boardConfig.view : null"
                     :preview="isPreview"
+                    :problems-only="problemsOnly"
                     :hover-template="boardConfig.hover_template"
                     :context-template="boardConfig.context_template"
+                    @update:problems-only="problemsOnly = $event"
                     @update:service-layout="onServiceLayoutChanged"
                     @update:problems="flowProblems = $event"
                     @drawer-object="flowDrawerObject = $event"
@@ -466,7 +478,11 @@
                             boardConfig.objects.length > 0 && !editor.editMode.value && !isPreview
                         "
                         v-model="boardFilterNeedle"
-                    />
+                    >
+                        <template #trailing>
+                            <ProblemsOnlyToggle v-model="problemsOnly" />
+                        </template>
+                    </BoardSearch>
                     <!-- Empty board hint -->
                     <div
                         v-if="boardConfig.objects.length === 0 && !editor.editMode.value"
@@ -504,6 +520,7 @@
                         :icon-size-override="undefined"
                         :snap-grid="editor.snapGrid.value"
                         :filter-needle="boardFilterNeedle"
+                        :problems-only="problemsOnly"
                         :preview="isPreview"
                         @object-drag-start="isDragging = true"
                         @object-drag-end="
@@ -1143,6 +1160,7 @@ import FolderBulkActionModal from '@/components/board/FolderBulkActionModal.vue'
 import FolderTreeBoard from '@/components/board/FolderTreeBoard.vue';
 import HoverMenu from '@/components/board/HoverMenu.vue';
 import ObjectPropertiesModal from '@/components/board/ObjectPropertiesModal.vue';
+import ProblemsOnlyToggle from '@/components/board/ProblemsOnlyToggle.vue';
 import RadarCanvas from '@/components/board/RadarCanvas.vue';
 import RemoveDowntimeModal from '@/components/board/RemoveDowntimeModal.vue';
 import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue';
@@ -2095,10 +2113,9 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
     return items;
 });
 
-async function persistFlowView(patch: Record<string, unknown>): Promise<void> {
+async function persistView(patch: Record<string, unknown>): Promise<void> {
     const cfg = boardConfig.value;
     if (!cfg || cfg.readonly) return;
-    if (cfg.view.type !== 'flow') return;
     const token = auth.accessToken;
     if (!token) return;
     const newView = { ...cfg.view, ...patch };
@@ -2111,18 +2128,29 @@ async function persistFlowView(patch: Record<string, unknown>): Promise<void> {
             cfg.version = updated.version;
         }
     } catch (err) {
-        // Layout edits are low-stakes — log and let the next change retry.
-        console.warn('Failed to persist flow view:', err);
+        // View prefs are low-stakes — log and let the next change retry.
+        console.warn('Failed to persist board view:', err);
     }
 }
 
 function onFlowPositionsChanged(positions: Record<string, { x: number; y: number }>): void {
-    void persistFlowView({ positions });
+    void persistView({ positions });
 }
+
+// FolderTree manages its own problems-only copy; this drives the other types.
+const problemsOnly = computed<boolean>({
+    get: () => {
+        const view = boardConfig.value?.view as { problems_only?: boolean } | undefined;
+        return view?.problems_only ?? false;
+    },
+    set: (value) => {
+        void persistView({ problems_only: value });
+    },
+});
 
 function onServiceLayoutChanged(layout: ServiceLayout): void {
     serviceLayout.value = layout;
-    void persistFlowView({ service_layout: layout });
+    void persistView({ service_layout: layout });
 }
 
 // Hydrate the local serviceLayout ref from the persisted view whenever the

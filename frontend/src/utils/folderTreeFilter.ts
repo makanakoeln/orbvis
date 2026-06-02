@@ -5,14 +5,10 @@ import {
     matchesFilterTerms,
     parseFilterTerms,
 } from '@/utils/objectFilter';
+import { isProblemState } from '@/utils/problemState';
 
 export type { FilterTerm };
-
-const PROBLEM_STATES = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN']);
-
-export function isProblemState(state: string): boolean {
-    return PROBLEM_STATES.has(state);
-}
+export { isProblemState };
 
 // The foldertree only ever holds hosts and services, so only the `h:`/`s:`
 // operators (and bare text) are meaningful here — hg:/sg:/id: are dropped,

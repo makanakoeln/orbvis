@@ -216,6 +216,7 @@ import { useStatesStore } from '@/stores/states';
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api';
 import { GADGET_DEFAULT_SIZE } from '@/utils/gadget';
 import { objectMatchesFilter } from '@/utils/objectFilter';
+import { isProblemState, STATEFUL_OBJECT_TYPES } from '@/utils/problemState';
 import { resolveTemplate } from '@/utils/template';
 
 import AckModal from './AckModal.vue';
@@ -248,6 +249,7 @@ const props = defineProps<{
      * spatial layout — same approach as FlowBoard's filter.
      */
     filterNeedle?: string;
+    problemsOnly?: boolean;
     preview?: boolean;
 }>();
 
@@ -620,8 +622,13 @@ function objectWrapperStyle(obj: BoardObjectType) {
     };
 }
 
+function passesProblemFilter(obj: BoardObjectType): boolean {
+    if (!props.problemsOnly || !STATEFUL_OBJECT_TYPES.has(obj.type)) return true;
+    return isProblemState(props.states[obj.id]?.state);
+}
+
 function matchesSearch(obj: BoardObjectType): boolean {
-    return objectMatchesFilter(obj, props.filterNeedle ?? '');
+    return objectMatchesFilter(obj, props.filterNeedle ?? '') && passesProblemFilter(obj);
 }
 
 // ---- Pointer-capture drag handlers ----

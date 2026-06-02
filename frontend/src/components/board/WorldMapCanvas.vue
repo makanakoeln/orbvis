@@ -18,6 +18,7 @@ import type {
 } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';
 import { objectMatchesFilter } from '@/utils/objectFilter';
+import { isProblemState, STATEFUL_OBJECT_TYPES } from '@/utils/problemState';
 import { stateColor as stateColorFromName } from '@/utils/stateColors';
 
 const props = defineProps<{
@@ -27,6 +28,7 @@ const props = defineProps<{
     placing: boolean;
     selectedObjectId: string | null;
     filterNeedle?: string;
+    problemsOnly?: boolean;
     preview?: boolean;
 }>();
 
@@ -608,19 +610,25 @@ watch(
     () => {
         syncMarkers();
         syncLines();
+        // syncMarkers recreates markers at full opacity, so re-apply dimming
+        // here too — this is also where live state polls land (states mutate
+        // in place, so a non-deep watch on props.states wouldn't fire).
+        applyFilterDimming();
     },
     { deep: true },
 );
 
-watch(
-    () => props.filterNeedle ?? '',
-    () => applyFilterDimming(),
-);
+watch([() => props.filterNeedle ?? '', () => props.problemsOnly], () => applyFilterDimming());
+
+function passesProblemFilter(obj: BoardObjectType): boolean {
+    if (!props.problemsOnly || !STATEFUL_OBJECT_TYPES.has(obj.type)) return true;
+    return isProblemState(props.states[obj.id]?.state);
+}
 
 function applyFilterDimming(): void {
     const needle = props.filterNeedle ?? '';
     for (const obj of props.config.objects) {
-        const opacity = objectMatchesFilter(obj, needle) ? 1 : 0.25;
+        const opacity = objectMatchesFilter(obj, needle) && passesProblemFilter(obj) ? 1 : 0.25;
         const m = markers.get(obj.id);
         if (m) m.setOpacity(opacity);
         const line = lines.get(obj.id);
