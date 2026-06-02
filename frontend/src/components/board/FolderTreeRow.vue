@@ -245,7 +245,6 @@ const emit = defineEmits<{
 const { t } = useI18n();
 
 const isEmpty = computed(() => props.node.kind === 'folder' && props.node.is_empty);
-const isOpen = computed(() => props.expanded.has(props.node.path));
 // Hosts are expandable only when show_services is on (drill host → services).
 const isExpandable = computed(
     () =>
@@ -292,6 +291,26 @@ const visibleChildren = computed(() => {
     return childNodes.value.filter((c) =>
         subtreeVisible(c, props.query, props.problemsOnly, childAncestorMatched.value),
     );
+});
+
+// While a text search is active, auto-reveal the path to each match: a folder
+// only appears here because it leads to a match, so open it; a host opens only
+// when it survived via a matching service (its own name didn't match), so the
+// service surfaces. The operator's manual expand state still wins, and once the
+// search is cleared this falls back to it. Problems-only alone keeps rows
+// collapsed (whole-tree filter, not a lookup).
+const isOpen = computed(() => {
+    if (props.expanded.has(props.node.path)) return true;
+    if (props.query.length === 0) return false;
+    if (props.node.kind === 'folder') return true;
+    if (props.node.kind === 'host') {
+        return (
+            props.showServices &&
+            !selfMatches(props.node, props.query) &&
+            visibleChildren.value.length > 0
+        );
+    }
+    return false;
 });
 
 function onChevron() {

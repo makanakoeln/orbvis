@@ -208,7 +208,9 @@ function folderLabel(n: FolderTreeNode): string {
 // under problems-only (healthy already hidden) and for <2 healthy hosts.
 const OK_GROUP_SUFFIX = '::ok-group';
 function aggregatedChildren(folder: FolderTreeNode): FolderTreeNode[] {
-    if (folder.ok_group || props.problemsOnly) return folder.children;
+    // During a text search, healthy matches must stay individually visible (with
+    // their names) instead of collapsing into a "✓ N OK" tile that hides them.
+    if (folder.ok_group || props.problemsOnly || props.query.length > 0) return folder.children;
     const isHealthyHost = (c: FolderTreeNode) => c.kind === 'host' && !isProblem(c);
     const healthy = folder.children.filter(isHealthyHost);
     if (healthy.length < 2) return folder.children;
@@ -285,12 +287,25 @@ function allFolderPaths(node: FolderTreeNode, acc: string[] = []): string[] {
 function layout(): FNode | null {
     if (!dims.w || !dims.h) return null;
     const rootData = currentRoot();
+    // While a text search is active, currentRoot() is already pruned to the paths
+    // leading to matches, so auto-open every folder on the way down — the matching
+    // host/service surfaces directly instead of hiding inside a collapsed tile
+    // (file-explorer search behavior). The operator's manual expand state is left
+    // untouched and takes back over once the search is cleared. Problems-only
+    // alone keeps the collapsed overview (it's a whole-tree filter, not a lookup).
+    const searchActive = props.query.length > 0;
     // A host is "open" only once its services have actually loaded — until then
     // it stays a chip (and the click that opened it triggered the lazy fetch).
     const isOpen = (d: FolderTreeNode) => {
-        if (d.kind === 'folder') return d.children.length > 0 && expanded.has(d.path);
-        if (d.kind === 'host')
-            return props.showServices && expanded.has(d.path) && hostServices(d).length > 0;
+        if (d.kind === 'folder')
+            return d.children.length > 0 && (searchActive || expanded.has(d.path));
+        if (d.kind === 'host') {
+            if (!props.showServices || hostServices(d).length === 0) return false;
+            // A host that only survived the search via a matching service auto-opens
+            // to reveal it; a host matched by its own name stays a chip.
+            if (searchActive && !selfMatches(d, props.query)) return true;
+            return expanded.has(d.path);
+        }
         return false;
     };
     const childrenOf = (d: FolderTreeNode) =>
