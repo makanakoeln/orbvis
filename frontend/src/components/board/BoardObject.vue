@@ -877,8 +877,12 @@ const customIconStyle = computed(() => {
                   display: 'block',
               }
             : { width: `${props.iconSize}px`, height: `${props.iconSize}px` };
-    const glow = props.selected ? ' drop-shadow(0 0 6px var(--color-corporate-green-50))' : '';
-    return { ...base, filter: `var(--icon-halo)${glow}` };
+    const sel = props.selected ? ' drop-shadow(0 0 6px var(--color-corporate-green-50))' : '';
+    // A custom icon on a host/service still conveys its state via a state-coloured
+    // glow (a raster <img> can't be recoloured); pure image objects carry no status.
+    const st =
+        props.object.type !== 'image' && stateGlow.value !== 'none' ? ` ${stateGlow.value}` : '';
+    return { ...base, filter: `var(--icon-halo)${st}${sel}` };
 });
 
 const shouldShowRing = computed(
