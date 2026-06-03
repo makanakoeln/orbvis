@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia';
-import { markRaw, ref, shallowRef } from 'vue';
+import { markRaw, ref, shallowRef, triggerRef } from 'vue';
 
 import { boardsApi, connectionsApi } from '@/api/client';
 import type {
+    FolderTreeDelta,
     FolderTreeNode,
     MetricGraphGroup,
     ObjectState,
@@ -65,6 +66,12 @@ function _collectFolderHostStates(node: FolderTreeNode, out: Map<string, string>
     for (const c of node.children) _collectFolderHostStates(c, out);
 }
 
+// Index every node by its (unique) path so folder-tree deltas can patch in place.
+function _indexFolderTree(node: FolderTreeNode, out: Map<string, FolderTreeNode>) {
+    out.set(node.path, node);
+    for (const c of node.children) _indexFolderTree(c, out);
+}
+
 // Foldertree boards ship no flat states list, so host-state notifications are
 // derived by diffing successive tree snapshots. Returns the new snapshot to
 // store; a null `prev` only primes (else every bad host would alert on load).
@@ -100,12 +107,56 @@ export const useStatesStore = defineStore('states', () => {
     // re-trigger their computed.
     const topologyTimingVersion = ref(0);
     // Resolved + aggregated tree for foldertree boards (null for other types).
-    // shallowRef + markRaw: the tree is replaced wholesale every update and never
-    // mutated in place, so deep-proxying its 100k+ nodes is pure overhead.
+    // shallowRef + markRaw: not deep-reactive (100k+ nodes). The REST load + SSE
+    // ``full`` replace it wholesale; SSE deltas patch nodes in place via the path
+    // index and triggerRef() to notify consumers.
     const folderTree = shallowRef<FolderTreeNode | null>(null);
+    let folderTreeIndex = new Map<string, FolderTreeNode>();
     // Previous foldertree host→state snapshot, for deriving notifications (see
     // _diffNotifyFolderTree). null until the first snapshot primes it.
     let prevFolderHostStates: Map<string, string> | null = null;
+
+    // Replace the whole tree (REST load / SSE full) and rebuild the path index.
+    function _setFolderTree(tree: FolderTreeNode | null) {
+        folderTree.value = tree ? markRaw(tree) : null;
+        folderTreeIndex = new Map();
+        if (tree) _indexFolderTree(tree, folderTreeIndex);
+    }
+
+    // Apply an SSE folder-tree delta: full → replace; else patch each changed node
+    // in place (and reorder its children when the server resorted them), then
+    // triggerRef so consumers of the shallowRef re-derive.
+    function _applyFolderTreeDelta(delta: FolderTreeDelta | null | undefined) {
+        if (!delta) return;
+        if (delta.full) {
+            _setFolderTree(delta.tree ?? null);
+            return;
+        }
+        for (const p of delta.changed) {
+            const node = folderTreeIndex.get(p.path);
+            if (!node) continue;
+            node.title = p.title;
+            node.site_id = p.site_id ?? null;
+            node.state = p.state;
+            node.is_empty = p.is_empty;
+            node.host_count = p.host_count;
+            node.problem_count = p.problem_count;
+            node.severity_counts = p.severity_counts;
+            node.output = p.output;
+            node.acknowledged = p.acknowledged;
+            node.in_downtime = p.in_downtime;
+            node.is_flapping = p.is_flapping;
+            node.last_state_change = p.last_state_change ?? null;
+            node.services_summary = p.services_summary ?? null;
+            if (p.children_order) {
+                const byPath = new Map(node.children.map((c) => [c.path, c]));
+                node.children = p.children_order
+                    .map((cp) => byPath.get(cp))
+                    .filter((c): c is FolderTreeNode => c !== undefined);
+            }
+        }
+        triggerRef(folderTree);
+    }
     // Kept under the historical name for compatibility with views; false after
     // we fall back to HTTP polling because SSE didn't work.
     const wsAvailable = ref(true);
@@ -200,7 +251,7 @@ export const useStatesStore = defineStore('states', () => {
             Object.assign(states.value, newStates);
             lastUpdate.value = ts;
             connected.value = data.connection_ok;
-            folderTree.value = data.folder_tree ? markRaw(data.folder_tree) : null;
+            _setFolderTree(data.folder_tree ?? null);
             if (notificationsEnabled.value)
                 prevFolderHostStates = _diffNotifyFolderTree(
                     folderTree.value,
@@ -359,9 +410,7 @@ export const useStatesStore = defineStore('states', () => {
                     }
                     lastUpdate.value = msg.states.generated_at;
                     connected.value = msg.states.connection_ok;
-                    folderTree.value = msg.states.folder_tree
-                        ? markRaw(msg.states.folder_tree)
-                        : null;
+                    _applyFolderTreeDelta(msg.states.folder_tree_delta);
                     if (notificationsEnabled.value)
                         prevFolderHostStates = _diffNotifyFolderTree(
                             folderTree.value,
@@ -430,6 +479,7 @@ export const useStatesStore = defineStore('states', () => {
         topology.value = [];
         topologyReady.value = false;
         folderTree.value = null;
+        folderTreeIndex = new Map();
         prevFolderHostStates = null;
         currentMap = null;
         currentToken = undefined;

@@ -148,6 +148,35 @@ export interface FolderTreeNode {
     ok_group?: boolean;
 }
 
+// Live-field update for one foldertree node, keyed by path. Sent over SSE instead
+// of the whole tree once a snapshot exists. `children_order` is set only when the
+// node's child order changed (severity-sorted siblings reorder on a state flip).
+export interface FolderTreeNodePatch {
+    path: string;
+    title: string;
+    site_id?: string | null;
+    state: string;
+    is_empty: boolean;
+    host_count: number;
+    problem_count: number;
+    severity_counts: Record<string, number>;
+    output: string;
+    acknowledged: boolean;
+    in_downtime: boolean;
+    is_flapping: boolean;
+    last_state_change?: number | null;
+    services_summary?: ServicesSummary | null;
+    children_order?: string[] | null;
+}
+
+// SSE folder-tree update: `full` carries the whole tree (first tick / structural
+// change), else `changed` carries only the nodes whose fields or child order moved.
+export interface FolderTreeDelta {
+    full: boolean;
+    tree?: FolderTreeNode | null;
+    changed: FolderTreeNodePatch[];
+}
+
 // One service of a foldertree host, fetched lazily when the host is expanded.
 export interface FolderHostService {
     name: string;
@@ -540,6 +569,16 @@ export interface ObjectTiming {
     current_attempt?: number;
 }
 
+// The `states` payload of an SSE state_update: like MapStates, but the foldertree
+// arrives as a delta (folder_tree_delta) rather than the full tree each tick.
+export interface StateUpdatePayload {
+    map_name: string;
+    states: ObjectState[];
+    generated_at: number;
+    connection_ok: boolean;
+    folder_tree_delta?: FolderTreeDelta | null;
+}
+
 export interface WebSocketStateUpdate {
     type: 'state_update';
     map: string;
@@ -547,7 +586,7 @@ export interface WebSocketStateUpdate {
     // every object on the board and replaces the local map. When false, it
     // contains only added/changed entries and `removed_ids` lists object_ids
     // that disappeared since the previous tick — frontend merges in place.
-    states: MapStates;
+    states: StateUpdatePayload;
     full?: boolean;
     removed_ids?: string[];
     // Timing-only patches for objects not in `states.states`.

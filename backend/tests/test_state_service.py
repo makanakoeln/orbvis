@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.schemas.board import BoardConfig, BoardObject, StaticView
-from app.schemas.state import ObjectState
+from app.schemas.state import FolderTreeNode, ObjectState
 from app.services import state_service
 from app.services.state_service import (
     _aggregate_host_with_services_from_data,
@@ -795,30 +795,28 @@ async def test_foldertree_no_services_by_default(_test_conn):
     assert host is not None and not host.children
 
 
-def test_folder_tree_changed_signature():
-    from app.schemas.state import FolderTreeNode
-
+def test_folder_tree_delta_ignores_output_drift():
     def _tree(state="OK", output="rta 0.1ms"):
-        return FolderTreeNode(
-            path="dc",
-            title="DC",
-            kind="folder",
-            state=state,
-            children=[
-                FolderTreeNode(path="dc/h1", title="h1", kind="host", state=state, output=output)
-            ],
+        return _ftn(
+            "dc",
+            "folder",
+            state,
+            [FolderTreeNode(path="dc/h1", title="h1", kind="host", state=state, output=output)],
         )
 
-    key = ("ftsig", None)
-    state_service._folder_tree_sigs.pop(key, None)
-    assert state_service.folder_tree_changed("ftsig", None, _tree()) is True
-    # Same structure → no resend.
-    assert state_service.folder_tree_changed("ftsig", None, _tree()) is False
-    # Output drift alone must NOT force a resend.
-    assert state_service.folder_tree_changed("ftsig", None, _tree(output="rta 9.9ms")) is False
+    state_service.drop_states_snapshot("ftsig")
+    assert state_service.compute_folder_tree_delta("ftsig", None, _tree()).full is True
+    # Same structure → no changes.
+    assert state_service.compute_folder_tree_delta("ftsig", None, _tree()).changed == []
+    # Output drift alone must NOT force a resend (output is excluded from the sig).
+    assert (
+        state_service.compute_folder_tree_delta("ftsig", None, _tree(output="rta 9.9ms")).changed
+        == []
+    )
     # A real state change does.
-    assert state_service.folder_tree_changed("ftsig", None, _tree(state="CRITICAL")) is True
-    state_service._folder_tree_sigs.pop(key, None)
+    d = state_service.compute_folder_tree_delta("ftsig", None, _tree(state="CRITICAL"))
+    assert any(p.path == "dc/h1" for p in d.changed)
+    state_service.drop_states_snapshot("ftsig")
 
 
 @pytest.mark.asyncio
@@ -877,3 +875,66 @@ async def test_list_connection_folders(_test_conn):
     assert "staging" in paths  # empty folder still offered as a root choice
     assert titles["datacenters/muc"] == "Munich"  # real title preserved
     assert titles["network"] == "Network"  # prettified from slug
+
+
+# --- folder-tree delta -----------------------------------------------------
+
+
+def _ftn(path: str, kind: str, state: str, children=None, **kw) -> FolderTreeNode:
+    return FolderTreeNode(
+        path=path, title=path or "Main", kind=kind, state=state, children=children or [], **kw
+    )
+
+
+def _ftree(*hosts: tuple[str, str]) -> FolderTreeNode:
+    # Root folder "f" with the given (host_name, state) leaves, in argument order.
+    kids = [_ftn(f"f/{h}", "host", st, host_count=1) for h, st in hosts]
+    problems = sum(1 for _, st in hosts if st in ("DOWN", "CRITICAL", "WARNING"))
+    return _ftn("f", "folder", "CRITICAL" if problems else "OK", kids, problem_count=problems)
+
+
+def test_folder_tree_delta_first_tick_is_full():
+    state_service.drop_states_snapshot("ftd")
+    tree = _ftree(("h1", "UP"), ("h2", "UP"))
+    d = state_service.compute_folder_tree_delta("ftd", None, tree)
+    assert d.full and d.tree is not None
+    # Identical second tick → not full, nothing changed.
+    d2 = state_service.compute_folder_tree_delta("ftd", None, _ftree(("h1", "UP"), ("h2", "UP")))
+    assert not d2.full and d2.changed == []
+
+
+def test_folder_tree_delta_field_change_patches_host_and_parent():
+    state_service.drop_states_snapshot("ftd2")
+    state_service.compute_folder_tree_delta("ftd2", None, _ftree(("h1", "UP"), ("h2", "UP")))
+    # h1 flips to DOWN → its node + the bubbled parent folder change.
+    d = state_service.compute_folder_tree_delta("ftd2", None, _ftree(("h1", "DOWN"), ("h2", "UP")))
+    assert not d.full
+    changed = {p.path: p for p in d.changed}
+    assert "f/h1" in changed and changed["f/h1"].state == "DOWN"
+    assert "f" in changed  # parent folder problem_count bubbled
+    assert "f/h2" not in changed  # untouched sibling not resent
+
+
+def test_folder_tree_delta_reorder_carries_children_order():
+    state_service.drop_states_snapshot("ftd3")
+    # Same nodes, but the server re-sorts children (problem floats up) → order patch.
+    state_service.compute_folder_tree_delta("ftd3", None, _ftree(("h1", "UP"), ("h2", "UP")))
+    reordered = _ftn(
+        "f",
+        "folder",
+        "CRITICAL",
+        [_ftn("f/h2", "host", "DOWN", host_count=1), _ftn("f/h1", "host", "UP", host_count=1)],
+        problem_count=1,
+    )
+    d = state_service.compute_folder_tree_delta("ftd3", None, reordered)
+    assert not d.full
+    root_patch = next(p for p in d.changed if p.path == "f")
+    assert root_patch.children_order == ["f/h2", "f/h1"]
+
+
+def test_folder_tree_delta_structural_change_is_full():
+    state_service.drop_states_snapshot("ftd4")
+    state_service.compute_folder_tree_delta("ftd4", None, _ftree(("h1", "UP")))
+    # A new host appears → path set changes → full resend.
+    d = state_service.compute_folder_tree_delta("ftd4", None, _ftree(("h1", "UP"), ("h2", "UP")))
+    assert d.full and d.tree is not None

@@ -151,6 +151,39 @@ class FolderTreeNode(BaseModel):
     children: list[FolderTreeNode] = Field(default_factory=list)
 
 
+class FolderTreeNodePatch(BaseModel):
+    """Live-field update for one foldertree node, keyed by ``path``. Sent over SSE
+    instead of the whole tree once a snapshot exists, so only changed nodes travel.
+    ``children_order`` is set only when this node's child order changed (the tree
+    sorts by severity, so a state flip can reorder siblings without any add/remove)."""
+
+    path: str
+    title: str
+    site_id: str | None = None
+    state: str
+    is_empty: bool
+    host_count: int
+    problem_count: int
+    severity_counts: dict[str, int]
+    output: str
+    acknowledged: bool
+    in_downtime: bool
+    is_flapping: bool
+    last_state_change: float | None = None
+    services_summary: ServicesSummary | None = None
+    children_order: list[str] | None = None
+
+
+class FolderTreeDelta(BaseModel):
+    """SSE folder-tree update. ``full`` carries the whole tree (first tick or a
+    structural add/remove/move); otherwise ``changed`` carries only the nodes whose
+    fields or child order changed since the last tick."""
+
+    full: bool
+    tree: FolderTreeNode | None = None
+    changed: list[FolderTreeNodePatch] = Field(default_factory=list)
+
+
 class FolderHostService(BaseModel):
     """One service of a host, fetched lazily when a foldertree host is expanded.
 

@@ -29,6 +29,7 @@ from app.schemas.state import (
     FolderHostService,
     FolderServiceMatch,
     FolderServiceSearchResult,
+    FolderTreeDelta,
     MapStates,
     ObjectState,
     ObjectTiming,
@@ -104,6 +105,7 @@ def _build_states_msg(
     removed_ids: list[str],
     full: bool,
     timing: list[ObjectTiming],
+    ft_delta: FolderTreeDelta | None,
 ) -> str:
     return json.dumps(
         {
@@ -114,14 +116,11 @@ def _build_states_msg(
                 "states": [s.model_dump() for s in to_send],
                 "generated_at": states.generated_at,
                 "connection_ok": states.connection_ok,
-                # Foldertree boards carry the full resolved tree on every
-                # state_update (it's small). The broadcast loop forces a send on
-                # a structure-only change too (host moved between folders /
-                # folder renamed / bubbled state shift with no leaf delta) via
-                # state_service.folder_tree_changed, so the tree never goes stale.
-                "folder_tree": (
-                    states.folder_tree.model_dump() if states.folder_tree is not None else None
-                ),
+                # Foldertree boards diff the tree per tick: ``full`` on the first
+                # tick / a structural change, else only changed nodes. At 100k+
+                # hosts the full tree is ~45MB raw, so streaming the whole thing
+                # every 5s froze the client — the delta cuts that to O(changes).
+                "folder_tree_delta": ft_delta.model_dump() if ft_delta is not None else None,
             },
             "removed_ids": removed_ids,
             "full": full,
@@ -194,18 +193,22 @@ async def _broadcast_loop(board_name: str) -> None:
                         to_send, removed_ids, is_full, timing = state_service.compute_states_delta(
                             board_name, group_key, states.states
                         )
-                        # Evaluated unconditionally so the stored signature stays
-                        # current; folder structure can change with no host-state
-                        # delta (see folder_tree_changed).
-                        ft_changed = (
-                            cfg.view.type == "foldertree"
-                            and state_service.folder_tree_changed(
+                        # Computed unconditionally so the snapshot stays current;
+                        # the tree carries its own delta (structure can shift with
+                        # no host-state delta — see compute_folder_tree_delta).
+                        ft_delta = (
+                            state_service.compute_folder_tree_delta(
                                 board_name, group_key, states.folder_tree
                             )
+                            if cfg.view.type == "foldertree"
+                            else None
+                        )
+                        ft_changed = ft_delta is not None and (
+                            ft_delta.full or bool(ft_delta.changed)
                         )
                         if is_full or to_send or removed_ids or timing or ft_changed:
                             msg = _build_states_msg(
-                                board_name, states, to_send, removed_ids, is_full, timing
+                                board_name, states, to_send, removed_ids, is_full, timing, ft_delta
                             )
                             manager.push(board_name, subs, msg)
                         if cfg.view.type == "flow":
@@ -216,14 +219,18 @@ async def _broadcast_loop(board_name: str) -> None:
                     to_send, removed_ids, is_full, timing = state_service.compute_states_delta(
                         board_name, None, states.states
                     )
-                    ft_changed = (
-                        cfg.view.type == "foldertree"
-                        and state_service.folder_tree_changed(board_name, None, states.folder_tree)
+                    ft_delta = (
+                        state_service.compute_folder_tree_delta(
+                            board_name, None, states.folder_tree
+                        )
+                        if cfg.view.type == "foldertree"
+                        else None
                     )
+                    ft_changed = ft_delta is not None and (ft_delta.full or bool(ft_delta.changed))
                     subs = list(manager.get_subscribers_grouped(board_name).get(None, []))
                     if is_full or to_send or removed_ids or timing or ft_changed:
                         msg = _build_states_msg(
-                            board_name, states, to_send, removed_ids, is_full, timing
+                            board_name, states, to_send, removed_ids, is_full, timing, ft_delta
                         )
                         manager.push(board_name, subs, msg)
                     if cfg.view.type == "flow":
@@ -517,6 +524,13 @@ async def sse_board_states(
         folder_scope = resolve_folder_scope(user.name, user.is_admin)
         group_key = f"{auth_user}#{folder_scope.key}"
     sub = manager.subscribe(name, auth_user, folder_scope=folder_scope, group_key=group_key)
+
+    # A new subscriber joins against a snapshot primed by the group's earlier
+    # members, so the next tick would send only a delta — leaving this client's
+    # REST-loaded states/tree to diverge on anything that changed before it
+    # joined. Drop the group's snapshot so the next tick is a full resend and the
+    # group reconverges (mirrors the Flow Board's force_full-on-join).
+    state_service.drop_states_snapshot(name, group_key)
 
     if name not in _broadcast_tasks or _broadcast_tasks[name].done():
         _broadcast_tasks[name] = asyncio.create_task(_broadcast_loop(name))

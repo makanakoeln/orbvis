@@ -106,3 +106,139 @@ describe('states store — SSE polling fallback + re-probe (T14)', () => {
         expect(FakeEventSource.instances).toHaveLength(2);
     });
 });
+
+describe('states store — folder-tree delta apply', () => {
+    beforeEach(() => {
+        setActivePinia(createPinia());
+        FakeEventSource.instances = [];
+        vi.stubGlobal('EventSource', FakeEventSource);
+    });
+    afterEach(() => {
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
+    });
+
+    const host = (path: string, state: string) => ({
+        path,
+        title: path.split('/').pop(),
+        kind: 'host',
+        state,
+        is_empty: false,
+        folder_id: '',
+        host_count: 1,
+        problem_count: state === 'UP' ? 0 : 1,
+        severity_counts: {},
+        output: '',
+        acknowledged: false,
+        in_downtime: false,
+        is_flapping: false,
+        last_state_change: null,
+        site_id: null,
+        children: [],
+    });
+    const folder = (children: ReturnType<typeof host>[], state = 'OK', problem = 0) => ({
+        path: 'f',
+        title: 'F',
+        kind: 'folder',
+        state,
+        is_empty: false,
+        folder_id: '',
+        host_count: children.length,
+        problem_count: problem,
+        severity_counts: {},
+        output: '',
+        acknowledged: false,
+        in_downtime: false,
+        site_id: null,
+        children,
+    });
+    const send = (es: FakeEventSource, folder_tree_delta: unknown) =>
+        es.onmessage?.({
+            data: JSON.stringify({
+                type: 'state_update',
+                map: 'b',
+                full: false,
+                states: {
+                    map_name: 'b',
+                    states: [],
+                    generated_at: 1,
+                    connection_ok: true,
+                    folder_tree_delta,
+                },
+            }),
+        } as MessageEvent);
+
+    it('applies a full delta then patches changed nodes in place', async () => {
+        const store = useStatesStore();
+        await store.connectToMap('b', 't');
+        const es = FakeEventSource.instances[0];
+        es.onopen?.();
+
+        send(es, {
+            full: true,
+            tree: folder([host('f/h1', 'UP'), host('f/h2', 'UP')]),
+            changed: [],
+        });
+        expect(store.folderTree?.host_count).toBe(2);
+        expect(store.folderTree?.state).toBe('OK');
+
+        send(es, {
+            full: false,
+            changed: [
+                { ...host('f/h1', 'DOWN'), problem_count: 1 },
+                {
+                    path: 'f',
+                    title: 'Renamed',
+                    state: 'CRITICAL',
+                    is_empty: false,
+                    host_count: 2,
+                    problem_count: 1,
+                    severity_counts: { DOWN: 1 },
+                    output: '',
+                    acknowledged: false,
+                    in_downtime: false,
+                    is_flapping: false,
+                },
+            ],
+        });
+        expect(store.folderTree?.children.find((c) => c.path === 'f/h1')?.state).toBe('DOWN');
+        expect(store.folderTree?.state).toBe('CRITICAL');
+        expect(store.folderTree?.title).toBe('Renamed'); // title patch applied (folder rename)
+        expect(store.folderTree?.severity_counts).toEqual({ DOWN: 1 });
+        expect(store.folderTree?.children.find((c) => c.path === 'f/h2')?.state).toBe('UP');
+    });
+
+    it('reorders children when a delta carries children_order', async () => {
+        const store = useStatesStore();
+        await store.connectToMap('b', 't');
+        const es = FakeEventSource.instances[0];
+        es.onopen?.();
+        send(es, {
+            full: true,
+            tree: folder([host('f/h1', 'UP'), host('f/h2', 'UP')]),
+            changed: [],
+        });
+        expect(store.folderTree?.children.map((c) => c.path)).toEqual(['f/h1', 'f/h2']);
+
+        send(es, {
+            full: false,
+            changed: [
+                {
+                    path: 'f',
+                    title: 'F',
+                    state: 'CRITICAL',
+                    is_empty: false,
+                    host_count: 2,
+                    problem_count: 1,
+                    severity_counts: {},
+                    output: '',
+                    acknowledged: false,
+                    in_downtime: false,
+                    is_flapping: false,
+                    children_order: ['f/h2', 'f/h1'],
+                },
+            ],
+        });
+        expect(store.folderTree?.children.map((c) => c.path)).toEqual(['f/h2', 'f/h1']);
+    });
+});

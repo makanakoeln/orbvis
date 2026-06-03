@@ -21,7 +21,9 @@ from app.schemas.board import (
 )
 from app.schemas.state import (
     FolderHostService,
+    FolderTreeDelta,
     FolderTreeNode,
+    FolderTreeNodePatch,
     MapStates,
     ObjectState,
     ObjectTiming,
@@ -1267,46 +1269,94 @@ def compute_states_delta(
     return to_send, removed, False, timing
 
 
-_folder_tree_sigs: dict[tuple[str, str | None], int] = {}
+# path -> (field_sig, child_paths) per (board, auth_user); the diff source for
+# folder-tree deltas (only changed nodes travel, not the whole tree each tick).
+_folder_tree_snapshots: dict[tuple[str, str | None], dict[str, tuple[int, tuple[str, ...]]]] = {}
 
 
-def _folder_tree_sig(node: FolderTreeNode) -> tuple[object, ...]:
-    # Structural signature: everything that affects the rendered tree EXCEPT
-    # ``output`` (plugin text drifts every re-check — see _hash_object_state).
-    return (
-        node.path,
-        node.title,
-        node.kind,
-        node.state,
-        node.is_empty,
-        node.host_count,
-        node.problem_count,
-        tuple(sorted(node.severity_counts.items())),
-        node.acknowledged,
-        node.in_downtime,
-        node.site_id,
-        tuple(_folder_tree_sig(c) for c in node.children),
+def _ft_field_sig(node: FolderTreeNode) -> int:
+    # Live fields that, when changed, must reach the client — EXCEPT ``output``
+    # (plugin text drifts every re-check; sent along when a node patches anyway).
+    ss = node.services_summary
+    return hash(
+        (
+            node.title,  # a WATO folder rename keeps the path but changes the title
+            node.site_id,
+            node.state,
+            node.is_empty,
+            node.host_count,
+            node.problem_count,
+            tuple(sorted(node.severity_counts.items())),
+            node.acknowledged,
+            node.in_downtime,
+            node.is_flapping,
+            node.last_state_change,
+            None if ss is None else (ss.ok, ss.warning, ss.critical, ss.unknown, ss.pending),
+        )
     )
 
 
-def folder_tree_changed(
+def _ft_patch(node: FolderTreeNode, include_order: bool) -> FolderTreeNodePatch:
+    return FolderTreeNodePatch(
+        path=node.path,
+        title=node.title,
+        site_id=node.site_id,
+        state=node.state,
+        is_empty=node.is_empty,
+        host_count=node.host_count,
+        problem_count=node.problem_count,
+        severity_counts=node.severity_counts,
+        output=node.output,
+        acknowledged=node.acknowledged,
+        in_downtime=node.in_downtime,
+        is_flapping=node.is_flapping,
+        last_state_change=node.last_state_change,
+        services_summary=node.services_summary,
+        children_order=[c.path for c in node.children] if include_order else None,
+    )
+
+
+def compute_folder_tree_delta(
     board_name: str, auth_user: str | None, tree: FolderTreeNode | None
-) -> bool:
-    """Detect a folder-tree structure/state change for (board, auth_user).
+) -> FolderTreeDelta:
+    """Diff a folder tree against the last snapshot for (board, auth_user).
 
-    The host-state delta in :func:`compute_states_delta` is blind to folder
-    structure: a host moving between folders, a renamed/added/removed folder, or
-    a folder's bubbled worst-state changing without any leaf host flipping its
-    own state all leave that delta empty. This compares a cheap structural
-    signature so the broadcast loop can force a send on such changes.
-
-    Side effect: stores the new signature so the next call diffs against it.
+    Returns ``full`` (whole tree) on the first tick or any structural change
+    (a node added/removed/moved — all change the set of paths); otherwise only
+    the nodes whose live fields or child order changed. The host-state delta in
+    :func:`compute_states_delta` is blind to the bubbled folder structure, so the
+    tree carries its own delta. Side effect: stores the new snapshot.
     """
     key = (board_name, auth_user)
-    sig = hash(_folder_tree_sig(tree)) if tree is not None else 0
-    changed = _folder_tree_sigs.get(key) != sig
-    _folder_tree_sigs[key] = sig
-    return changed
+    prev = _folder_tree_snapshots.get(key)
+    if tree is None:
+        _folder_tree_snapshots.pop(key, None)
+        return FolderTreeDelta(full=True, tree=None)
+
+    flat: dict[str, tuple[int, tuple[str, ...]]] = {}
+    by_path: dict[str, FolderTreeNode] = {}
+    stack = [tree]
+    while stack:
+        n = stack.pop()
+        flat[n.path] = (_ft_field_sig(n), tuple(c.path for c in n.children))
+        by_path[n.path] = n
+        stack.extend(n.children)
+
+    # Path set changing = a node added/removed/moved (paths are hierarchical, so a
+    # move changes the moved node's path too) → can't express as field patches.
+    full = prev is None or prev.keys() != flat.keys()
+    _folder_tree_snapshots[key] = flat
+    if full:
+        return FolderTreeDelta(full=True, tree=tree)
+    assert prev is not None  # full would be True otherwise
+
+    changed: list[FolderTreeNodePatch] = []
+    for path, (fsig, child_paths) in flat.items():
+        old_fsig, old_children = prev[path]
+        order_changed = old_children != child_paths
+        if old_fsig != fsig or order_changed:
+            changed.append(_ft_patch(by_path[path], order_changed))
+    return FolderTreeDelta(full=False, changed=changed)
 
 
 def drop_states_snapshot(board_name: str, auth_user: str | None = None) -> None:
@@ -1317,11 +1367,11 @@ def drop_states_snapshot(board_name: str, auth_user: str | None = None) -> None:
     if auth_user is not None:
         _state_snapshots.pop((board_name, auth_user), None)
         _timing_snapshots.pop((board_name, auth_user), None)
-        _folder_tree_sigs.pop((board_name, auth_user), None)
+        _folder_tree_snapshots.pop((board_name, auth_user), None)
         return
     for key in [k for k in _state_snapshots if k[0] == board_name]:
         _state_snapshots.pop(key, None)
     for key in [k for k in _timing_snapshots if k[0] == board_name]:
         _timing_snapshots.pop(key, None)
-    for key in [k for k in _folder_tree_sigs if k[0] == board_name]:
-        _folder_tree_sigs.pop(key, None)
+    for key in [k for k in _folder_tree_snapshots if k[0] == board_name]:
+        _folder_tree_snapshots.pop(key, None)
