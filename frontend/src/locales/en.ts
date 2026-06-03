@@ -590,6 +590,7 @@ export default {
         aggregationOverview: 'All aggregations in Checkmk',
         noCheckmkUrl: 'No Checkmk URL configured',
         editProperties: 'Edit properties',
+        straightenLine: 'Remove bend',
         duplicate: 'Duplicate',
         delete: 'Delete',
         close: 'Close',

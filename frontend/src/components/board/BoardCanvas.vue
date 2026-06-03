@@ -160,6 +160,7 @@
             @edit="onContextMenuEdit"
             @duplicate="onContextMenuDuplicate"
             @delete="onContextMenuDelete"
+            @straighten="onContextMenuStraighten"
             @acknowledge="onContextMenuAck"
             @remove-ack="onContextMenuRemoveAck"
             @schedule-downtime="onContextMenuDowntime"
@@ -282,6 +283,7 @@ const emit = defineEmits<{
     'object-dblclick': [obj: BoardObjectType];
     'object-delete': [obj: BoardObjectType];
     'object-duplicate': [obj: BoardObjectType];
+    'object-straighten': [obj: BoardObjectType];
     'line-drag-start': [
         event: MouseEvent,
         obj: BoardObjectType,
@@ -936,6 +938,12 @@ function onContextMenuDuplicate() {
     const obj = contextMenu.object;
     closeMenus();
     if (obj) emit('object-duplicate', obj);
+}
+
+function onContextMenuStraighten() {
+    const obj = contextMenu.object;
+    closeMenus();
+    if (obj) emit('object-straighten', obj);
 }
 
 // ---- CMK actions from context menu ----

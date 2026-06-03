@@ -538,6 +538,7 @@
                         @object-dblclick="onObjectDblclick"
                         @object-delete="onObjectDelete"
                         @object-duplicate="onObjectDuplicate"
+                        @object-straighten="onObjectStraighten"
                         @line-drag-start="onLineDragStart"
                         @canvas-click="onCanvasClick"
                         @graph-resize-end="onGraphResizeEnd"
@@ -1560,6 +1561,10 @@ function onObjectDblclick(obj: BoardObject) {
 function onObjectDuplicate(obj: BoardObject) {
     editor.selectObject(obj.id);
     editor.duplicateSelected();
+}
+
+function onObjectStraighten(obj: BoardObject) {
+    void editor.updateObjectProperties(obj.id, { mid_x: null, mid_y: null });
 }
 
 // ---- Worldmap hover & context menu ----
