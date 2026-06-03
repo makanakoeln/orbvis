@@ -620,18 +620,45 @@
                                     :label="t('boardSettings.lineWeatherColor')"
                                 />
                             </div>
-                            <!-- Weathermap inbound metric (used by labels and gradient) -->
+                            <!-- Weathermap inbound metric (rendered left of the midpoint) -->
                             <div
                                 v-if="
                                     form.line_perfdata_label !== 'none' || form.line_weather_color
                                 "
                                 class="field-row"
                             >
-                                <label class="field-label">{{ t('boardSettings.metric') }}</label>
+                                <label class="field-label">{{ t('boardSettings.metricIn') }}</label>
                                 <AutocompleteInput
                                     v-model="form.weathermap_metric"
                                     :suggestions="metricSuggestions"
                                     :placeholder="t('boardSettings.firstMetric')"
+                                    :empty-text="
+                                        metricSuggestions.length === 0
+                                            ? t('boardSettings.noMetrics')
+                                            : undefined
+                                    "
+                                    class="flex-1"
+                                />
+                            </div>
+                            <!-- Weathermap outbound metric (optional; right of the midpoint,
+                                 drives the second gradient colour + label). Only offered once an
+                                 inbound metric is set — out-only would colour the in-half from an
+                                 arbitrary first perfdata metric. -->
+                            <div
+                                v-if="
+                                    (form.line_perfdata_label !== 'none' ||
+                                        form.line_weather_color) &&
+                                    !!form.weathermap_metric
+                                "
+                                class="field-row"
+                            >
+                                <label class="field-label">{{
+                                    t('boardSettings.metricOut')
+                                }}</label>
+                                <AutocompleteInput
+                                    v-model="form.weathermap_metric_out"
+                                    :suggestions="metricSuggestions"
+                                    :placeholder="t('boardSettings.secondMetric')"
                                     :empty-text="
                                         metricSuggestions.length === 0
                                             ? t('boardSettings.noMetrics')
@@ -1566,6 +1593,7 @@ const form = reactive({
         gadget_metric: '',
     },
     weathermap_metric: '',
+    weathermap_metric_out: '',
     only_hard_states: false,
     recognize_services: false,
     exclude_members: '',
@@ -1641,6 +1669,7 @@ watch(
         form.display.gadget_type = obj.display?.gadget_type ?? 'gauge';
         form.display.gadget_metric = obj.display?.gadget_metric ?? '';
         form.weathermap_metric = obj.weathermap_metric ?? '';
+        form.weathermap_metric_out = obj.weathermap_metric_out ?? '';
         form.only_hard_states = obj.only_hard_states ?? false;
         form.recognize_services = obj.recognize_services ?? false;
         form.exclude_members = obj.exclude_members ?? '';
@@ -1974,6 +2003,10 @@ async function save() {
             // uses weather-coloring — both modes need it to look up perfdata.
             if (form.line_perfdata_label !== 'none' || form.line_weather_color) {
                 updates.weathermap_metric = form.weathermap_metric || null;
+                // Outbound only makes sense alongside an inbound metric (it's the
+                // second direction); never persist it on its own.
+                updates.weathermap_metric_out =
+                    (form.weathermap_metric && form.weathermap_metric_out) || null;
             }
             if (props.mapType !== 'worldmap') {
                 updates.x = form.x;
