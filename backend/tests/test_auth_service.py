@@ -12,6 +12,7 @@ import pytest
 from app.services.auth_service import (
     _verify_htpasswd,
     authenticate_user,
+    checkmk_cookie_needs_two_factor,
     get_cmk_language,
     get_or_create_sso_user,
     user_has_two_factor_enabled,
@@ -228,6 +229,69 @@ def test_validate_cookie_rejects_pending_2fa_24(tmp_path, monkeypatch):
     msg = b"alicesess1230"
     cookie_hash = _hmac.new(key=secret, msg=msg, digestmod=hashlib.sha256).digest().hex()
     assert validate_checkmk_cookie(f"alice:sess123:{cookie_hash}") is None
+
+
+# ---------------------------------------------------------------------------
+# checkmk_cookie_needs_two_factor
+# ---------------------------------------------------------------------------
+
+
+def test_needs_two_factor_pending_25(tmp_path, monkeypatch):
+    """CMK 2.5+: a HMAC-valid cookie in second_factor_auth_needed signals 2FA pending."""
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    cookie = _make_cookie(
+        tmp_path, "alice", "sess123", serial=5, session_state="second_factor_auth_needed"
+    )
+    assert checkmk_cookie_needs_two_factor(cookie) is True
+
+
+def test_needs_two_factor_false_when_logged_in(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    cookie = _make_cookie(tmp_path, "alice", "sess123", serial=5)
+    assert checkmk_cookie_needs_two_factor(cookie) is False
+
+
+def test_needs_two_factor_false_for_credentials_needed(tmp_path, monkeypatch):
+    """Only the second-factor step bounces to the 2FA page — not a bare password gap."""
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    cookie = _make_cookie(
+        tmp_path, "alice", "sess123", serial=5, session_state="credentials_needed"
+    )
+    assert checkmk_cookie_needs_two_factor(cookie) is False
+
+
+def test_needs_two_factor_false_on_bad_hmac(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    (tmp_path / "etc").mkdir(exist_ok=True)
+    (tmp_path / "etc" / "auth.secret").write_bytes(b"mysecret")
+    assert checkmk_cookie_needs_two_factor("alice:sess:wronghash") is False
+
+
+def test_needs_two_factor_pending_24(tmp_path, monkeypatch):
+    """CMK 2.3/2.4: 2FA-enabled user with two_factor_completed=False is 2FA pending."""
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    secret = b"mysecret"
+    (tmp_path / "etc").mkdir(exist_ok=True)
+    (tmp_path / "etc" / "auth.secret").write_bytes(secret)
+    user_dir = tmp_path / "var" / "check_mk" / "web" / "alice"
+    user_dir.mkdir(parents=True, exist_ok=True)
+    (user_dir / "serial.mk").write_text("0", encoding="utf-8")
+    (user_dir / "session_info.mk").write_text(
+        repr({"sess123": {"logged_out": False, "two_factor_completed": False}}),
+        encoding="utf-8",
+    )
+    (user_dir / "two_factor_credentials.mk").write_text(
+        repr({"webauthn_credentials": {"cred1": {"id": "x"}}, "totp_credentials": {}}),
+        encoding="utf-8",
+    )
+    msg = b"alicesess1230"
+    cookie_hash = _hmac.new(key=secret, msg=msg, digestmod=hashlib.sha256).digest().hex()
+    assert checkmk_cookie_needs_two_factor(f"alice:sess123:{cookie_hash}") is True
 
 
 def test_validate_cookie_accepts_24_without_2fa_configured(tmp_path, monkeypatch):

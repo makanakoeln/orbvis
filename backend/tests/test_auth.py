@@ -1,8 +1,27 @@
 """Auth endpoint tests."""
 
+import hashlib
+import hmac
+
 import pytest
 
 from app.core.ratelimit import login_limiter
+
+
+def _make_sso_cookie(tmp_path, username: str, session_id: str, *, session_state: str) -> str:
+    """Build a HMAC-valid Checkmk auth cookie in the given session state."""
+    secret = b"mysecret"
+    (tmp_path / "etc").mkdir(exist_ok=True)
+    (tmp_path / "etc" / "auth.secret").write_bytes(secret)
+    user_dir = tmp_path / "var" / "check_mk" / "web" / username
+    user_dir.mkdir(parents=True, exist_ok=True)
+    (user_dir / "serial.mk").write_text("0", encoding="utf-8")
+    (user_dir / "session_info.mk").write_text(
+        repr({session_id: {"session_state": session_state}}), encoding="utf-8"
+    )
+    msg = f"{username}{session_id}0".encode()
+    cookie_hash = hmac.new(key=secret, msg=msg, digestmod=hashlib.sha256).digest().hex()
+    return f"{username}:{session_id}:{cookie_hash}"
 
 
 @pytest.fixture(autouse=True)
@@ -63,6 +82,33 @@ async def test_login_allowed_without_two_factor(client, admin_user, tmp_path, mo
         "/api/v1/auth/login", json={"username": "admin", "password": "secret"}
     )
     assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_sso_signals_two_factor_required(client, tmp_path, monkeypatch):
+    """A HMAC-valid cookie still awaiting 2FA returns the sentinel that tells the
+    frontend to bounce the browser to Checkmk's two-factor challenge."""
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.core.config.settings.checkmk_site", "heute")
+    cookie = _make_sso_cookie(
+        tmp_path, "alice", "sess123", session_state="second_factor_auth_needed"
+    )
+    response = await client.get("/api/v1/auth/sso", cookies={"auth_heute": cookie})
+    assert response.status_code == 401
+    assert response.json()["detail"] == "two_factor_required"
+
+
+@pytest.mark.asyncio
+async def test_sso_no_session_is_not_two_factor(client, tmp_path, monkeypatch):
+    """Without any Checkmk cookie the SSO probe stays a plain 'no session' 401 —
+    no 2FA redirect, so the OrbVis login form is shown."""
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.services.auth_service.settings.checkmk_omd_root", str(tmp_path))
+    monkeypatch.setattr("app.core.config.settings.checkmk_site", "heute")
+    response = await client.get("/api/v1/auth/sso")
+    assert response.status_code == 401
+    assert response.json()["detail"] == "No valid Checkmk session"
 
 
 @pytest.mark.asyncio

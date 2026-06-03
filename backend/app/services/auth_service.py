@@ -160,15 +160,15 @@ def get_cmk_theme(username: str) -> str | None:
     return "light" if raw == "facelift" else "dark"
 
 
-def validate_checkmk_cookie(cookie_value: str) -> str | None:
-    """Validate a Checkmk auth cookie and return the username, or None if invalid.
+def _verify_checkmk_cookie_hmac(cookie_value: str) -> tuple[pathlib.Path, str, str] | None:
+    """Validate the HMAC of a Checkmk auth cookie.
 
     Cookie format: username:session_id:hmac_hex
     HMAC = HMAC-SHA256(auth_secret, b"username" + b"session_id" + b"serial").hex()
 
-    The HMAC alone is *not* enough: Checkmk sets the cookie immediately after
-    the password step, before WebAuthn/TOTP, so we additionally require that
-    the persisted session has reached the fully-logged-in state.
+    Returns ``(omd_root, username, session_id)`` if the signature checks out,
+    otherwise ``None``. The HMAC alone does *not* prove the session has finished
+    every login step — callers must additionally inspect the session state.
     """
     omd_root = settings.checkmk_omd_root
     if not omd_root:
@@ -211,17 +211,46 @@ def validate_checkmk_cookie(cookie_value: str) -> str | None:
             logger.warning("SSO: HMAC mismatch for user %r (serial=%d)", username, serial)
             return None
 
-        if not _is_session_fully_authenticated(root, username, session_id):
-            logger.warning(
-                "SSO: rejecting cookie for %r — session %s has not completed 2FA / login",
-                username,
-                session_id[:8] + "…",
-            )
-            return None
-        return username
+        return root, username, session_id
     except Exception as e:
         logger.warning("SSO: cookie validation failed: %s", e)
         return None
+
+
+def validate_checkmk_cookie(cookie_value: str) -> str | None:
+    """Validate a Checkmk auth cookie and return the username, or None if invalid.
+
+    The HMAC alone is *not* enough: Checkmk sets the cookie immediately after
+    the password step, before WebAuthn/TOTP, so we additionally require that
+    the persisted session has reached the fully-logged-in state.
+    """
+    verified = _verify_checkmk_cookie_hmac(cookie_value)
+    if verified is None:
+        return None
+    root, username, session_id = verified
+    if not _is_session_fully_authenticated(root, username, session_id):
+        logger.warning(
+            "SSO: rejecting cookie for %r — session %s has not completed 2FA / login",
+            username,
+            session_id[:8] + "…",
+        )
+        return None
+    return username
+
+
+def checkmk_cookie_needs_two_factor(cookie_value: str) -> bool:
+    """Whether a HMAC-valid cookie belongs to a session still awaiting its 2FA step.
+
+    Lets the SSO endpoint tell "logged into Checkmk but second factor pending"
+    apart from "no Checkmk session at all" — only the former should bounce the
+    browser to Checkmk's ``user_login_two_factor.py`` challenge. Conservative:
+    any parse/HMAC failure yields False.
+    """
+    verified = _verify_checkmk_cookie_hmac(cookie_value)
+    if verified is None:
+        return False
+    root, username, session_id = verified
+    return _session_needs_two_factor(root, username, session_id)
 
 
 def _is_session_fully_authenticated(omd_root: pathlib.Path, username: str, session_id: str) -> bool:
@@ -252,6 +281,29 @@ def _is_session_fully_authenticated(omd_root: pathlib.Path, username: str, sessi
     if _user_has_two_factor_configured(omd_root, username):
         return info.get("two_factor_completed") is True
     return True
+
+
+def _session_needs_two_factor(omd_root: pathlib.Path, username: str, session_id: str) -> bool:
+    """Return True iff the session passed the password step but still owes 2FA.
+
+    Mirrors CMK's ``second_factor_auth_needed`` gate that triggers the redirect
+    to ``user_login_two_factor.py`` (cmk.gui.login). Same on-disk version split
+    as :func:`_is_session_fully_authenticated`: 2.5+ exposes an explicit state
+    machine, 2.3/2.4 use boolean flags.
+    """
+    info = _load_session_info(omd_root, username, session_id)
+    if info is None:
+        return False
+
+    state = info.get("session_state")
+    if isinstance(state, str):
+        return state == "second_factor_auth_needed"
+
+    if info.get("logged_out") is True:
+        return False
+    if not _user_has_two_factor_configured(omd_root, username):
+        return False
+    return info.get("two_factor_completed") is not True
 
 
 def _load_session_info(

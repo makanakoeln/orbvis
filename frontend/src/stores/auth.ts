@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 
-import { authApi } from '@/api/client';
+import { ApiError, authApi } from '@/api/client';
 import { i18n } from '@/i18n';
 import router from '@/router';
 import { useSettingsStore } from '@/stores/settings';
@@ -11,6 +11,8 @@ import type { UserRead } from '@/types/api';
 const ACCESS_TOKEN_KEY = 'orbvis_access_token';
 const REFRESH_TOKEN_KEY = 'orbvis_refresh_token';
 const SSO_ACTIVE_KEY = 'orbvis_sso';
+// Guards against a redirect loop if we return from Checkmk still 2FA-pending.
+const TWO_FACTOR_REDIRECT_KEY = 'orbvis_2fa_redirect';
 
 // Derive Checkmk logout URL from current path: /heute/orbvis/... → /heute/check_mk/logout.py
 function applyInlineHelp(enabled: boolean): void {
@@ -20,6 +22,40 @@ function applyInlineHelp(enabled: boolean): void {
 function _checkmkLogoutUrl(): string | null {
     const m = window.location.pathname.match(/^(\/[^/]+)\/orbvis/);
     return m ? `${m[1]}/check_mk/logout.py` : null;
+}
+
+// Checkmk 2FA challenge page, returning to the current OrbVis URL once 2FA is done.
+function _checkmkTwoFactorUrl(): string | null {
+    const m = window.location.pathname.match(/^(\/[^/]+)\/orbvis/);
+    if (!m) return null;
+    const origtarget = window.location.pathname + window.location.search + window.location.hash;
+    return `${m[1]}/check_mk/user_login_two_factor.py?_origtarget=${encodeURIComponent(origtarget)}`;
+}
+
+// SSO probe failed because the Checkmk session passed the password step but still
+// owes its second factor — the backend signals this with a sentinel detail.
+function _isTwoFactorRequired(e: unknown): boolean {
+    return (
+        e instanceof ApiError &&
+        e.status === 401 &&
+        (e.detail as { detail?: unknown } | undefined)?.detail === 'two_factor_required'
+    );
+}
+
+// Bounce to Checkmk's 2FA challenge, exactly once: if we land here again after
+// returning still-pending, fall back to the login form instead of looping.
+// Returns true when navigation was triggered (caller must stop init).
+function _redirectToTwoFactor(): boolean {
+    if (sessionStorage.getItem(TWO_FACTOR_REDIRECT_KEY) === '1') {
+        sessionStorage.removeItem(TWO_FACTOR_REDIRECT_KEY);
+        console.warn('[OrbVis] Still 2FA-pending after redirect — showing login form');
+        return false;
+    }
+    const url = _checkmkTwoFactorUrl();
+    if (!url) return false;
+    sessionStorage.setItem(TWO_FACTOR_REDIRECT_KEY, '1');
+    window.location.assign(url);
+    return true;
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -71,6 +107,8 @@ export const useAuthStore = defineStore('auth', () => {
                     if (e instanceof TypeError && attempt === 0) {
                         // Network-level failure (server not ready yet) — wait briefly and retry
                         await new Promise((r) => setTimeout(r, 600));
+                    } else if (_isTwoFactorRequired(e) && _redirectToTwoFactor()) {
+                        return; // leaving the SPA for Checkmk's 2FA challenge
                     } else {
                         console.warn('[OrbVis] SSO failed:', e);
                         break; // HTTP 401 or second failure: SSO not available
@@ -79,6 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
             }
         }
         if (ssoTokens) {
+            sessionStorage.removeItem(TWO_FACTOR_REDIRECT_KEY);
             accessToken.value = ssoTokens.access_token;
             refreshToken.value = ssoTokens.refresh_token;
             sessionStorage.setItem(ACCESS_TOKEN_KEY, ssoTokens.access_token);

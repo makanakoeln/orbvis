@@ -26,6 +26,7 @@ from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse
 from app.schemas.user import UserRead
 from app.services.auth_service import (
     authenticate_user,
+    checkmk_cookie_needs_two_factor,
     create_tokens,
     get_cmk_language,
     get_cmk_theme,
@@ -138,6 +139,7 @@ async def sso_login(request: Request, db: sqlite3.Connection = Depends(get_db)) 
     site = settings.checkmk_site
     cookie_name = f"auth_{site}" if site else None
     username: str | None = None
+    cookie_value: str | None = None
 
     if not cookie_name:
         logger.warning("SSO: CHECKMK_SITE not configured (checkmk_site=%r)", settings.checkmk_site)
@@ -153,6 +155,13 @@ async def sso_login(request: Request, db: sqlite3.Connection = Depends(get_db)) 
             username = validate_checkmk_cookie(cookie_value)
 
     if not username:
+        # Distinguish "logged into Checkmk but 2FA pending" from "no session":
+        # only the former lets the frontend bounce to user_login_two_factor.py.
+        # "two_factor_required" is an internal sentinel, never shown to the user.
+        if cookie_value and checkmk_cookie_needs_two_factor(cookie_value):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="two_factor_required"
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="No valid Checkmk session"
         )

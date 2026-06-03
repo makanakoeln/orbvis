@@ -1,20 +1,34 @@
 import { createPinia, setActivePinia } from 'pinia';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TokenResponse, UserRead } from '@/types/api';
 
-const { mockPush, mockAuthApi } = vi.hoisted(() => ({
-    mockPush: vi.fn(),
-    mockAuthApi: {
-        login: vi.fn(),
-        logout: vi.fn(),
-        refresh: vi.fn(),
-        me: vi.fn(),
-        sso: vi.fn().mockRejectedValue(new Error('no sso')),
-    },
-}));
+const { mockPush, mockAuthApi, ApiError } = vi.hoisted(() => {
+    class ApiError extends Error {
+        constructor(
+            public status: number,
+            message: string,
+            public detail?: unknown,
+        ) {
+            super(message);
+            this.name = 'ApiError';
+        }
+    }
+    return {
+        mockPush: vi.fn(),
+        mockAuthApi: {
+            login: vi.fn(),
+            logout: vi.fn(),
+            refresh: vi.fn(),
+            me: vi.fn(),
+            sso: vi.fn().mockRejectedValue(new Error('no sso')),
+        },
+        ApiError,
+    };
+});
 
 vi.mock('@/api/client', () => ({
+    ApiError,
     authApi: mockAuthApi,
     settingsApi: { get: vi.fn().mockResolvedValue({}), update: vi.fn() },
     boardsApi: { list: vi.fn(), get: vi.fn(), create: vi.fn(), delete: vi.fn() },
@@ -195,5 +209,75 @@ describe('useAuthStore', () => {
         expect(ok).toBe(false);
         expect(store.accessToken).toBeNull();
         expect(store.user).toBeNull();
+    });
+
+    describe('init() with pending Checkmk 2FA', () => {
+        const originalLocation = window.location;
+
+        function stubLocation(assignMock: ReturnType<typeof vi.fn>) {
+            Object.defineProperty(window, 'location', {
+                configurable: true,
+                value: {
+                    pathname: '/heute/orbvis/',
+                    search: '',
+                    hash: '#/home',
+                    assign: assignMock,
+                },
+            });
+        }
+
+        afterEach(() => {
+            Object.defineProperty(window, 'location', {
+                configurable: true,
+                value: originalLocation,
+            });
+        });
+
+        it('redirects to the Checkmk 2FA page when SSO reports it pending', async () => {
+            const assignMock = vi.fn();
+            stubLocation(assignMock);
+            mockAuthApi.sso.mockRejectedValue(
+                new ApiError(401, 'HTTP 401', { detail: 'two_factor_required' }),
+            );
+
+            const { useAuthStore } = await import('./auth');
+            await useAuthStore().init();
+
+            expect(assignMock).toHaveBeenCalledWith(
+                '/heute/check_mk/user_login_two_factor.py?_origtarget=' +
+                    encodeURIComponent('/heute/orbvis/#/home'),
+            );
+            expect(sessionStorage.getItem('orbvis_2fa_redirect')).toBe('1');
+        });
+
+        it('does not redirect twice — falls back to the form when still pending', async () => {
+            const assignMock = vi.fn();
+            stubLocation(assignMock);
+            sessionStorage.setItem('orbvis_2fa_redirect', '1');
+            mockAuthApi.sso.mockRejectedValue(
+                new ApiError(401, 'HTTP 401', { detail: 'two_factor_required' }),
+            );
+
+            const { useAuthStore } = await import('./auth');
+            await useAuthStore().init();
+
+            expect(assignMock).not.toHaveBeenCalled();
+            expect(sessionStorage.getItem('orbvis_2fa_redirect')).toBeNull();
+        });
+
+        it('does not redirect on a plain SSO 401 (no Checkmk session)', async () => {
+            const assignMock = vi.fn();
+            stubLocation(assignMock);
+            mockAuthApi.sso.mockRejectedValue(
+                new ApiError(401, 'No valid Checkmk session', {
+                    detail: 'No valid Checkmk session',
+                }),
+            );
+
+            const { useAuthStore } = await import('./auth');
+            await useAuthStore().init();
+
+            expect(assignMock).not.toHaveBeenCalled();
+        });
     });
 });
