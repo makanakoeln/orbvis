@@ -451,4 +451,5 @@ def _to_read(cfg: BoardConfig) -> BoardRead:
         context_template=cfg.context_template,
         show_in_lists=cfg.show_in_lists,
         render_mode=cfg.render_mode,
+        default_z=cfg.default_z,
     )

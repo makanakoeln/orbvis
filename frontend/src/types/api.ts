@@ -193,7 +193,8 @@ export interface BoardObject {
     y: number;
     lat?: number | null;
     lng?: number | null;
-    z: number;
+    // null/undefined ⇒ inherit the board's default_z (NagVis-style global default).
+    z?: number | null;
     host_name?: string | null;
     service_description?: string | null;
     // Runtime-only hint (not persisted): the host's monitoring site, so commands
@@ -207,6 +208,9 @@ export interface BoardObject {
     y2?: number | null;
     lat2?: number | null;
     lng2?: number | null;
+    // Optional line bend; null ⇒ geometric midpoint of the two endpoints.
+    mid_x?: number | null;
+    mid_y?: number | null;
     line_style?: LineStyle | null;
     line_width?: number | null;
     line_perfdata_label?: LinePerfdataLabel | null;
@@ -267,6 +271,8 @@ export interface BoardConfig {
     background_image?: string | null;
     background_color?: string | null;
     render_mode?: RenderMode;
+    // Board-wide fallback z for objects without an explicit z. Default 1.
+    default_z?: number;
     show_in_lists?: boolean;
     version?: number;
     view: BoardView;
@@ -292,6 +298,7 @@ export interface BoardRead {
     hover_template?: string | null;
     context_template?: string | null;
     render_mode?: RenderMode;
+    default_z?: number;
     can_edit?: boolean;
 }
 

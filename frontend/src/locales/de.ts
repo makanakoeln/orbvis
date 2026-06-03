@@ -285,6 +285,8 @@ export default {
             'NagVis-klassisch verankert Objekte oben links mit flachen Textboxen auf hellem Hintergrund (automatisch bei importierten NagVis-Karten). OrbVis ist der moderne, zentrierte Glas-Stil.',
         renderModeDefault: 'OrbVis (Standard)',
         renderModeNagvisClassic: 'NagVis-klassisch',
+        defaultZ: 'Standard-Ebene (z)',
+        defaultZHint: 'Ebene für Objekte ohne expliziten z-Wert. Höhere Werte liegen oben.',
         showInLists: 'Im Board-Verzeichnis anzeigen',
         showInListsHint: 'Wenn deaktiviert, wird dieses Board für reguläre Benutzer ausgeblendet',
         noPermission: 'Keine Berechtigung',

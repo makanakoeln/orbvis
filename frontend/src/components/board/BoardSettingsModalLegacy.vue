@@ -98,6 +98,17 @@
                                         >
                                     </div>
                                 </div>
+                                <div class="space-y-[4px]">
+                                    <CmkLabel :help="t('board.defaultZHint')">{{
+                                        t('board.defaultZ')
+                                    }}</CmkLabel>
+                                    <NumberInput
+                                        v-model="form.default_z"
+                                        min="0"
+                                        max="999"
+                                        class="w-[100px]"
+                                    />
+                                </div>
                             </div>
 
                             <!-- Worldmap settings -->
@@ -817,6 +828,7 @@ const form = ref({
     rotation_interval: props.board.rotation_interval,
     click_action: (props.board.click_action ?? 'link') as 'link' | 'none',
     render_mode: (props.board.render_mode ?? 'default') as 'default' | 'nagvis_classic',
+    default_z: props.board.default_z ?? 1,
     show_in_lists: props.board.show_in_lists !== false,
     map_type: props.board.view.type,
     worldmap_auto_source: (wmv?.auto_source ?? '') as
@@ -1028,6 +1040,7 @@ async function save() {
                 rotation_interval: form.value.rotation_interval,
                 click_action: form.value.click_action,
                 render_mode: form.value.render_mode,
+                default_z: form.value.default_z,
                 show_in_lists: form.value.show_in_lists,
                 background_image: form.value.background_image || null,
                 background_color: form.value.background_color || null,

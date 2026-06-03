@@ -77,4 +77,39 @@ describe('BoardCanvas', () => {
         const objects = wrapper.findAllComponents({ name: 'BoardObject' });
         expect(objects).toHaveLength(1);
     });
+
+    it('buckets lines into one z-indexed SVG layer per distinct z', () => {
+        const line = (id: string, z: number | null) => ({
+            id,
+            type: 'line' as const,
+            x: 0,
+            y: 0,
+            x2: 50,
+            y2: 50,
+            label: { show: false, x: 0, y: 0, size: 10, color: '#fff', background: 'transparent' },
+            url_target: '_blank',
+            ...(z === null ? {} : { z }),
+        });
+        const wrapper = mount(BoardCanvas, {
+            props: {
+                ...baseProps,
+                // default_z=10 so the z-less line shares a layer with the z=10 line.
+                config: {
+                    ...sampleConfig,
+                    default_z: 10,
+                    objects: [line('a', 2), line('b', 20), line('c', null), line('d', 10)],
+                },
+            },
+            global: {
+                stubs: { HoverMenu: true, ContextMenu: true, BoardLine: true, BoardObject: true },
+            },
+        });
+        const zLayers = wrapper
+            .findAll('svg')
+            .map((s) => s.attributes('style') ?? '')
+            .filter((style) => style.includes('z-index'))
+            .map((style) => parseInt(style.match(/z-index:\s*(\d+)/)![1], 10));
+        // Three distinct buckets (2, 10, 20) sorted ascending; z-less + z=10 merge.
+        expect(zLayers).toEqual([2, 10, 20]);
+    });
 });

@@ -1,11 +1,9 @@
 <template>
     <g :data-object-id="object.id">
         <!-- Invisible fat hit-area: always for right-click, move-cursor only in edit mode -->
-        <line
-            :x1="x1"
-            :y1="y1"
-            :x2="x2"
-            :y2="y2"
+        <polyline
+            :points="hitPolyline"
+            fill="none"
             stroke="transparent"
             stroke-width="12"
             :style="editMode ? 'cursor: move' : 'cursor: pointer'"
@@ -86,42 +84,37 @@
             />
         </template>
         <template v-else>
-            <!-- Border/outline line rendered behind the colored fill. -->
-            <line
+            <polyline
                 v-if="lineColorBorder && !useWeatherColor"
-                :x1="x1"
-                :y1="y1"
-                :x2="trimmedEnd.x2"
-                :y2="trimmedEnd.y2"
+                :points="borderPolyline"
+                fill="none"
                 :stroke="lineColorBorder"
                 :stroke-width="strokeWidthBorder"
                 stroke-linecap="round"
+                stroke-linejoin="round"
                 :stroke-dasharray="dashArray"
                 pointer-events="none"
             />
-            <line
-                :x1="trimmedStart.x1"
-                :y1="trimmedStart.y1"
-                :x2="trimmedEnd.x2"
-                :y2="trimmedEnd.y2"
+            <polyline
+                :points="fillPolyline"
+                fill="none"
                 :stroke="fillStroke"
                 :stroke-width="strokeWidth"
                 stroke-linecap="round"
+                stroke-linejoin="round"
                 :stroke-dasharray="dashArray"
                 pointer-events="none"
             />
         </template>
-        <!-- Arrow at endpoint -->
         <polygon
             v-if="hasEndArrow"
-            :points="arrowPoints(x2, y2, x1, y1)"
+            :points="arrowPoints(x2, y2, endArrowFrom.x, endArrowFrom.y)"
             :fill="effectiveLineColor"
             pointer-events="none"
         />
-        <!-- Arrow at startpoint -->
         <polygon
             v-if="hasStartArrow"
-            :points="arrowPoints(x1, y1, x2, y2)"
+            :points="arrowPoints(x1, y1, startArrowFrom.x, startArrowFrom.y)"
             :fill="effectiveLineColor"
             pointer-events="none"
         />
@@ -179,8 +172,8 @@
         <!-- Single-direction fallback when only one perfdata label fits. -->
         <text
             v-if="wmLabelSingle"
-            :x="(x1 + x2) / 2"
-            :y="(y1 + y2) / 2 + 16"
+            :x="midX"
+            :y="midY + 16"
             text-anchor="middle"
             font-size="13"
             font-weight="700"
@@ -198,8 +191,8 @@
         <!-- label text at midpoint -->
         <text
             v-if="props.object.label?.show && props.object.label?.text"
-            :x="(x1 + x2) / 2"
-            :y="(y1 + y2) / 2 - 10"
+            :x="midX"
+            :y="midY - 10"
             text-anchor="middle"
             :font-size="props.object.label?.size ?? 11"
             font-weight="500"
@@ -238,6 +231,18 @@
                 style="cursor: grab"
                 @mousedown.prevent.stop="$emit('line-drag-start', $event, 'end')"
             />
+            <!-- Bend handle: hollow when no explicit bend yet (dragging adds one). -->
+            <circle
+                :cx="midX"
+                :cy="midY"
+                r="6"
+                :fill="hasMid ? '#3b82f6' : 'white'"
+                fill-opacity="0.85"
+                stroke="#3b82f6"
+                stroke-width="1.5"
+                style="cursor: grab"
+                @mousedown.prevent.stop="$emit('line-drag-start', $event, 'mid')"
+            />
         </template>
     </g>
 </template>
@@ -257,12 +262,19 @@ const props = defineProps<{
     object: BoardObject;
     state: ObjectState | undefined;
     editMode: boolean;
-    dragCoords?: { x: number; y: number; x2: number; y2: number };
+    dragCoords?: {
+        x: number;
+        y: number;
+        x2: number;
+        y2: number;
+        mid_x?: number | null;
+        mid_y?: number | null;
+    };
     connectionId?: string | null;
 }>();
 
 defineEmits<{
-    'line-drag-start': [event: MouseEvent, mode: 'move' | 'start' | 'end'];
+    'line-drag-start': [event: MouseEvent, mode: 'move' | 'start' | 'end' | 'mid'];
     'context-menu': [event: MouseEvent];
     'line-click': [];
     hover: [event: MouseEvent];
@@ -286,6 +298,27 @@ const x2 = computed(
 const y2 = computed(
     () => (props.dragCoords?.y2 ?? props.object.y2 ?? props.object.y + 50) * canvasScale.value.sy,
 );
+
+// No explicit bend ⇒ geometric center, so straight lines render unchanged.
+const rawMidX = computed(() => props.dragCoords?.mid_x ?? props.object.mid_x ?? null);
+const rawMidY = computed(() => props.dragCoords?.mid_y ?? props.object.mid_y ?? null);
+const hasMid = computed(() => rawMidX.value != null && rawMidY.value != null);
+const midX = computed(() =>
+    hasMid.value ? rawMidX.value! * canvasScale.value.sx : (x1.value + x2.value) / 2,
+);
+const midY = computed(() =>
+    hasMid.value ? rawMidY.value! * canvasScale.value.sy : (y1.value + y2.value) / 2,
+);
+
+function _halfTowardMid(fromX: number, fromY: number): { ux: number; uy: number; len: number } {
+    const dx = midX.value - fromX;
+    const dy = midY.value - fromY;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1) return { ux: 0, uy: 0, len: 0 };
+    return { ux: dx / len, uy: dy / len, len };
+}
+const half1 = computed(() => _halfTowardMid(x1.value, y1.value));
+const half2 = computed(() => _halfTowardMid(x2.value, y2.value));
 
 const lineColor = computed(() => props.object.line_color ?? stateColor(props.state?.state));
 const lineColorBorder = computed(() => props.object.line_color_border ?? null);
@@ -331,12 +364,14 @@ function arrowPoints(tx: number, ty: number, fx: number, fy: number): string {
     return `${tx},${ty} ${p1x},${p1y} ${p2x},${p2y}`;
 }
 
-// Trim the line back from each endpoint that carries an arrow so the round
-// stroke cap sits underneath the triangle base instead of past the tip.
+// Trim back from an arrowed endpoint so the round cap hides under the triangle
+// base. Trims along that endpoint's own segment (toward the bend when set).
 const trimmedStart = computed(() => {
     if (!hasStartArrow.value) return { x1: x1.value, y1: y1.value };
-    const dx = x2.value - x1.value;
-    const dy = y2.value - y1.value;
+    const tx = hasMid.value ? midX.value : x2.value;
+    const ty = hasMid.value ? midY.value : y2.value;
+    const dx = tx - x1.value;
+    const dy = ty - y1.value;
     const len = Math.sqrt(dx * dx + dy * dy);
     if (len < 1) return { x1: x1.value, y1: y1.value };
     const trim = arrowLen.value * 0.6;
@@ -347,8 +382,10 @@ const trimmedStart = computed(() => {
 });
 const trimmedEnd = computed(() => {
     if (!hasEndArrow.value) return { x2: x2.value, y2: y2.value };
-    const dx = x2.value - x1.value;
-    const dy = y2.value - y1.value;
+    const fx = hasMid.value ? midX.value : x1.value;
+    const fy = hasMid.value ? midY.value : y1.value;
+    const dx = x2.value - fx;
+    const dy = y2.value - fy;
     const len = Math.sqrt(dx * dx + dy * dy);
     if (len < 1) return { x2: x2.value, y2: y2.value };
     const trim = arrowLen.value * 0.6;
@@ -357,6 +394,34 @@ const trimmedEnd = computed(() => {
         y2: y2.value - (dy / len) * trim,
     };
 });
+
+const fillPolyline = computed(() => {
+    const s = trimmedStart.value;
+    const e = trimmedEnd.value;
+    const ends = `${s.x1},${s.y1} ${e.x2},${e.y2}`;
+    return hasMid.value ? `${s.x1},${s.y1} ${midX.value},${midY.value} ${e.x2},${e.y2}` : ends;
+});
+const borderPolyline = computed(() => {
+    const e = trimmedEnd.value;
+    const ends = `${x1.value},${y1.value} ${e.x2},${e.y2}`;
+    return hasMid.value
+        ? `${x1.value},${y1.value} ${midX.value},${midY.value} ${e.x2},${e.y2}`
+        : ends;
+});
+const hitPolyline = computed(() =>
+    hasMid.value
+        ? `${x1.value},${y1.value} ${midX.value},${midY.value} ${x2.value},${y2.value}`
+        : `${x1.value},${y1.value} ${x2.value},${y2.value}`,
+);
+
+// A head arrow aligns with its own segment: it points away from the bend when
+// one is set, otherwise away from the opposite endpoint.
+const endArrowFrom = computed(() =>
+    hasMid.value ? { x: midX.value, y: midY.value } : { x: x1.value, y: y1.value },
+);
+const startArrowFrom = computed(() =>
+    hasMid.value ? { x: midX.value, y: midY.value } : { x: x2.value, y: y2.value },
+);
 
 // Dash pattern scales with stroke width — a fixed "6 4" pattern collapses to
 // solid blocks once the line gets thicker than the dash length.
@@ -371,34 +436,29 @@ const dashArray = computed(() => {
 const INWARD_GAP = 1;
 const inwardArrowLen = computed(() => Math.max(8, strokeWidth.value * 2.0));
 
-// Midpoint inward-facing arrow pair: two triangles nearly touching at the
-// line midpoint, each tip pointing toward an endpoint.
-function midpointArrows(): { left: string; right: string } | null {
-    const dx = x2.value - x1.value;
-    const dy = y2.value - y1.value;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const w = strokeWidth.value;
-    const arrowLen = inwardArrowLen.value;
-    const arrowW = Math.max(5, w);
-    if (len < arrowLen * 2 + 6) return null; // line too short to fit two arrows + gap
-    const ux = dx / len;
-    const uy = dy / len;
-    const midX = (x1.value + x2.value) / 2;
-    const midY = (y1.value + y2.value) / 2;
+// Two inward-pointing triangles meeting near the midpoint, each riding its own
+// half-segment. Collinear halves (no bend) reduce to the prior straight pair.
+function _inwardTriangle(u: { ux: number; uy: number }, arrowLen: number, arrowW: number): string {
     const gap = INWARD_GAP;
-    const rTipX = midX + ux * gap;
-    const rTipY = midY + uy * gap;
-    const rBaseX = midX + ux * (gap + arrowLen);
-    const rBaseY = midY + uy * (gap + arrowLen);
-    const lTipX = midX - ux * gap;
-    const lTipY = midY - uy * gap;
-    const lBaseX = midX - ux * (gap + arrowLen);
-    const lBaseY = midY - uy * (gap + arrowLen);
-    const perpX = -uy * arrowW;
-    const perpY = ux * arrowW;
+    const tipX = midX.value - u.ux * gap;
+    const tipY = midY.value - u.uy * gap;
+    const baseX = midX.value - u.ux * (gap + arrowLen);
+    const baseY = midY.value - u.uy * (gap + arrowLen);
+    const perpX = -u.uy * arrowW;
+    const perpY = u.ux * arrowW;
+    return `${tipX},${tipY} ${baseX + perpX},${baseY + perpY} ${baseX - perpX},${baseY - perpY}`;
+}
+
+function midpointArrows(): { left: string; right: string } | null {
+    const a1 = half1.value;
+    const a2 = half2.value;
+    const arrowLen = inwardArrowLen.value;
+    const arrowW = Math.max(5, strokeWidth.value);
+    // Per half this equals the prior straight-line ``len >= 2*arrowLen + 6``.
+    if (a1.len < arrowLen + 3 || a2.len < arrowLen + 3) return null;
     return {
-        right: `${rTipX},${rTipY} ${rBaseX + perpX},${rBaseY + perpY} ${rBaseX - perpX},${rBaseY - perpY}`,
-        left: `${lTipX},${lTipY} ${lBaseX + perpX},${lBaseY + perpY} ${lBaseX - perpX},${lBaseY - perpY}`,
+        left: _inwardTriangle(a1, arrowLen, arrowW),
+        right: _inwardTriangle(a2, arrowLen, arrowW),
     };
 }
 
@@ -407,22 +467,15 @@ const midArrows = computed(() => midpointArrows());
 // Endpoints for the two half-lines: each stops at its arrowhead base so the
 // stroke doesn't run through the meeting arrows.
 const inwardSegments = computed(() => {
-    const dx = x2.value - x1.value;
-    const dy = y2.value - y1.value;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    // Same threshold as midpointArrows: below it the half-lines would overshoot
-    // past the opposite endpoint, so fall back to the single full-line render.
-    if (len < inwardArrowLen.value * 2 + 6) return null;
-    const ux = dx / len;
-    const uy = dy / len;
-    const midX = (x1.value + x2.value) / 2;
-    const midY = (y1.value + y2.value) / 2;
+    const a1 = half1.value;
+    const a2 = half2.value;
+    if (a1.len < inwardArrowLen.value + 3 || a2.len < inwardArrowLen.value + 3) return null;
     const back = INWARD_GAP + inwardArrowLen.value;
     return {
-        leftX: midX - ux * back,
-        leftY: midY - uy * back,
-        rightX: midX + ux * back,
-        rightY: midY + uy * back,
+        leftX: midX.value - a1.ux * back,
+        leftY: midY.value - a1.uy * back,
+        rightX: midX.value - a2.ux * back,
+        rightY: midY.value - a2.uy * back,
     };
 });
 
@@ -435,19 +488,20 @@ const wmLabelAnchors = computed(() => {
     const dy = y2.value - y1.value;
     const len = Math.sqrt(dx * dx + dy * dy);
     if (len < 80) return null;
-    const ux = dx / len;
-    const uy = dy / len;
-    const midX = (x1.value + x2.value) / 2;
-    const midY = (y1.value + y2.value) / 2;
+    const a1 = half1.value;
+    const a2 = half2.value;
     // 25% of total length from midpoint, clamped so labels stay readable on
-    // medium lines and don't run off the endpoints on short ones.
+    // medium lines and don't run off the endpoints on short ones. The per-half
+    // cap never bites on a straight line (each half is len/2), keeping placement
+    // unchanged there.
     const offset = Math.max(40, Math.min(len * 0.25, len / 2 - 30));
+    const o1 = Math.min(offset, Math.max(0, a1.len - 10));
+    const o2 = Math.min(offset, Math.max(0, a2.len - 10));
     return {
-        // "in" anchor is on the start side (left of midpoint), "out" is past the midpoint.
-        inX: midX - ux * offset,
-        inY: midY - uy * offset,
-        outX: midX + ux * offset,
-        outY: midY + uy * offset,
+        inX: midX.value - a1.ux * o1,
+        inY: midY.value - a1.uy * o1,
+        outX: midX.value - a2.ux * o2,
+        outY: midY.value - a2.uy * o2,
     };
 });
 

@@ -1191,6 +1191,7 @@
                 :connection-id="boardConfig?.connection_id ?? ''"
                 :map-type="boardConfig?.view.type"
                 :board-icon-size="boardConfig?.icon_size ?? settingsStore.settings.icon_size"
+                :board-default-z="boardConfig?.default_z ?? 1"
                 :checkmk-url="checkmkUrl"
                 :anchor-rect="propsModalAnchor"
                 @close="_closePropsModal()"
@@ -1279,7 +1280,7 @@ import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge';
 import { resolveTemplate } from '@/utils/template';
 import CmkLoading from '@/vendor/cmk/components/CmkLoading.vue';
 
-type LineDragMode = 'move' | 'start' | 'end';
+type LineDragMode = 'move' | 'start' | 'end' | 'mid';
 
 const { t } = useI18n();
 const toast = useToast();
@@ -1395,6 +1396,7 @@ const boardConfigAsRead = computed<import('@/types/api').BoardRead | null>(() =>
         hover_template: cfg.hover_template,
         context_template: cfg.context_template,
         render_mode: cfg.render_mode,
+        default_z: cfg.default_z,
         version: cfg.version,
     };
 });

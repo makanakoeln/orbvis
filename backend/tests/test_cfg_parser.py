@@ -74,18 +74,28 @@ def test_coord_invalid_returns_zero():
 
 
 def test_line_coords_comma_separated():
-    p = {"x": "10,20", "y": "30,40"}
-    assert tuple(c.value for c in _line_coords(p)) == (10, 30, 20, 40)
+    x, y, x2, y2, mid_x, mid_y = _line_coords({"x": "10,20", "y": "30,40"})
+    assert (x.value, y.value, x2.value, y2.value) == (10, 30, 20, 40)
+    assert mid_x is None and mid_y is None
 
 
 def test_line_coords_separate_keys():
-    p = {"x": "10", "y": "30", "x2": "20", "y2": "40"}
-    assert tuple(c.value for c in _line_coords(p)) == (10, 30, 20, 40)
+    x, y, x2, y2, mid_x, mid_y = _line_coords({"x": "10", "y": "30", "x2": "20", "y2": "40"})
+    assert (x.value, y.value, x2.value, y2.value) == (10, 30, 20, 40)
+    assert mid_x is None and mid_y is None
 
 
 def test_line_coords_defaults_to_zero():
-    p: dict = {}
-    assert tuple(c.value for c in _line_coords(p)) == (0, 0, 0, 0)
+    x, y, x2, y2, mid_x, mid_y = _line_coords({})
+    assert (x.value, y.value, x2.value, y2.value) == (0, 0, 0, 0)
+    assert mid_x is None and mid_y is None
+
+
+def test_line_coords_three_points_keeps_endpoints_and_bend():
+    # NagVis two-segment line: first/last are endpoints, middle is the bend.
+    x, y, x2, y2, mid_x, mid_y = _line_coords({"x": "100,300,500", "y": "50,200,90"})
+    assert (x.value, y.value, x2.value, y2.value) == (100, 50, 500, 90)
+    assert (mid_x.value, mid_y.value) == (300, 200)
 
 
 # ---------------------------------------------------------------------------
@@ -221,6 +231,34 @@ def test_cfg_to_board_line_default_type_is_arrow_end():
     content = "define line {\n    x = 0,10\n    y = 0,10\n}\n"
     board = cfg_to_board(content, "test")
     assert board["objects"][0]["line_style"] == "arrow_end"
+
+
+def test_cfg_to_board_line_bend_kept_as_mid():
+    # A three-coordinate line keeps its endpoints and stores the bend as mid_*.
+    content = "define line {\n    x = 100,300,500\n    y = 50,200,90\n    line_type = 13\n}\n"
+    obj = cfg_to_board(content, "test")["objects"][0]
+    assert (obj["x"], obj["y"], obj["x2"], obj["y2"]) == (100, 50, 500, 90)
+    assert (obj["mid_x"], obj["mid_y"]) == (300, 200)
+
+
+def test_cfg_to_board_line_two_points_has_no_mid():
+    content = "define line {\n    x = 0,10\n    y = 0,10\n}\n"
+    obj = cfg_to_board(content, "test")["objects"][0]
+    assert "mid_x" not in obj and "mid_y" not in obj
+
+
+def test_cfg_to_board_default_z_is_ten_and_objects_inherit():
+    # NagVis' global default is z=10; objects without explicit z stay unset
+    # so the renderer resolves them against the board's default_z.
+    content = "define host {\n    object_id = 1\n    host_name = h\n    x = 5\n    y = 6\n}\n"
+    board = cfg_to_board(content, "test")
+    assert board["default_z"] == 10
+    assert "z" not in board["objects"][0]
+
+
+def test_cfg_to_board_explicit_z_is_kept():
+    content = "define host {\n    object_id=1\n    host_name=h\n    x=5\n    y=6\n    z=42\n}\n"
+    assert cfg_to_board(content, "test")["objects"][0]["z"] == 42
 
 
 # ---------------------------------------------------------------------------

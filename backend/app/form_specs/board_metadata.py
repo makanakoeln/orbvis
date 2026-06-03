@@ -127,6 +127,20 @@ def board_metadata_spec(
                     prefill=DefaultValue(30),
                 ),
             ),
+            "default_z": DictElement(
+                required=True,
+                group=_DISPLAY,
+                parameter_form=Integer(
+                    title=Title("Default layer (z)"),
+                    help_text=Help(
+                        "Layer for objects that have no explicit z value. Higher "
+                        "numbers render on top. Lets unset objects share a sensible "
+                        "layer instead of all collapsing into the background."
+                    ),
+                    prefill=DefaultValue(1),
+                    custom_validate=(NumberInRange(min_value=0),),
+                ),
+            ),
             "render_mode": DictElement(
                 required=True,
                 group=_DISPLAY,
@@ -253,6 +267,7 @@ METADATA_FIELDS = (
     "alias",
     "connection_id",
     "icon_size",
+    "default_z",
     "render_mode",
     "rotation_interval",
     "click_action",

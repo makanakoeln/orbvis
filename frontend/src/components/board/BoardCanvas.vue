@@ -40,18 +40,26 @@
             <rect width="100%" height="100%" :fill="`url(#grid-${snapGrid})`" />
         </svg>
 
-        <!-- SVG overlay for lines. Renders at display-pixel coords (no
-             viewBox) so strokes, polygon arrowheads, and text labels keep
-             their natural proportions when the canvas asymmetric-stretches.
-             BoardLine multiplies its native obj.x/y by the injected
-             `canvasScale` so endpoints still align with HTML object icons. -->
-        <svg class="absolute inset-0 w-full h-full">
+        <!-- One SVG layer per distinct line-z so lines interleave with the HTML
+             object divs by z-index. pointer-events:none lets empty areas of a
+             higher layer pass clicks through to objects below; the inner <g>
+             re-enables events for the painted line + its handles. SVG renders at
+             display-pixel coords (no viewBox) so strokes/arrowheads/labels keep
+             natural proportions when the canvas asymmetric-stretches; BoardLine
+             scales obj.x/y by `canvasScale` to stay aligned with object icons. -->
+        <svg
+            v-for="layer in lineLayers"
+            :key="`linelayer-${layer.z}`"
+            class="absolute inset-0 w-full h-full"
+            :style="{ zIndex: layer.z, pointerEvents: 'none' }"
+        >
             <g
-                v-for="line in lineObjects"
+                v-for="line in layer.lines"
                 :key="line.id"
                 :style="{
                     opacity: matchesSearch(line) ? 1 : 0.25,
                     transition: 'opacity 120ms ease',
+                    pointerEvents: 'auto',
                 }"
             >
                 <BoardLine
@@ -237,7 +245,17 @@ const props = defineProps<{
     states: Record<string, ObjectState>;
     editMode: boolean;
     placing: boolean;
-    lineDragPositions: Record<string, { x: number; y: number; x2: number; y2: number }>;
+    lineDragPositions: Record<
+        string,
+        {
+            x: number;
+            y: number;
+            x2: number;
+            y2: number;
+            mid_x?: number | null;
+            mid_y?: number | null;
+        }
+    >;
     selectedObjectId: string | null;
     checkmkUrl?: string | null;
     iconSizeOverride?: number;
@@ -264,7 +282,11 @@ const emit = defineEmits<{
     'object-dblclick': [obj: BoardObjectType];
     'object-delete': [obj: BoardObjectType];
     'object-duplicate': [obj: BoardObjectType];
-    'line-drag-start': [event: MouseEvent, obj: BoardObjectType, mode: 'move' | 'start' | 'end'];
+    'line-drag-start': [
+        event: MouseEvent,
+        obj: BoardObjectType,
+        mode: 'move' | 'start' | 'end' | 'mid',
+    ];
     'canvas-click': [event: MouseEvent];
     'graph-resize-end': [id: string, width: number, height: number];
 }>();
@@ -590,7 +612,26 @@ watch(
 );
 
 const nonLineObjects = computed(() => props.config.objects.filter((o) => o.type !== 'line'));
-const lineObjects = computed(() => props.config.objects.filter((o) => o.type === 'line'));
+
+// An object without an explicit z inherits the board's default_z (NagVis-style
+// global default), falling back to 1 for boards saved before that field existed.
+function resolveZ(obj: BoardObjectType): number {
+    return obj.z ?? props.config.default_z ?? 1;
+}
+
+// Lines grouped into one SVG layer per distinct z so they interleave with the
+// HTML object divs by z-index instead of always sitting in a single backdrop.
+const lineLayers = computed(() => {
+    const groups = new Map<number, BoardObjectType[]>();
+    for (const obj of props.config.objects) {
+        if (obj.type !== 'line') continue;
+        const z = resolveZ(obj);
+        const bucket = groups.get(z);
+        if (bucket) bucket.push(obj);
+        else groups.set(z, [obj]);
+    }
+    return [...groups.entries()].sort((a, b) => a[0] - b[0]).map(([z, lines]) => ({ z, lines }));
+});
 
 function objectWrapperStyle(obj: BoardObjectType) {
     const pos = localDragPositions[obj.id] ?? { x: obj.x, y: obj.y };
@@ -603,7 +644,7 @@ function objectWrapperStyle(obj: BoardObjectType) {
         : clickable
           ? 'pointer'
           : 'default';
-    const zIndex = _dragId.value === obj.id ? 100 : (obj.z ?? 1);
+    const zIndex = _dragId.value === obj.id ? 100 : resolveZ(obj);
     // % positioning anchors the object to a fraction of the native coord
     // space; combined with bg-image at 100% 100%, the object stays on the
     // same bg-pixel regardless of how the canvas is scaled to fit the pane.

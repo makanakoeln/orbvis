@@ -161,8 +161,8 @@ describe('BoardLine – styling regressions', () => {
                 editMode: false,
             },
         });
-        const thinDash = thin.findAll('line').at(-1)!.attributes('stroke-dasharray');
-        const thickDash = thick.findAll('line').at(-1)!.attributes('stroke-dasharray');
+        const thinDash = thin.findAll('polyline').at(-1)!.attributes('stroke-dasharray');
+        const thickDash = thick.findAll('polyline').at(-1)!.attributes('stroke-dasharray');
         expect(thinDash).toBeDefined();
         expect(thickDash).toBeDefined();
         // First number of "<gap> <dash>"
@@ -186,8 +186,10 @@ describe('BoardLine – styling regressions', () => {
                 editMode: false,
             },
         });
-        const visibleLine = wrapper.findAll('line').at(-1)!;
-        const x2 = parseFloat(visibleLine.attributes('x2')!);
+        // The visible stroke is now a <polyline>; its last point is the end.
+        const visibleLine = wrapper.findAll('polyline').at(-1)!;
+        const pts = visibleLine.attributes('points')!.trim().split(/\s+/);
+        const x2 = parseFloat(pts[pts.length - 1].split(',')[0]);
         // Stroke must end before the arrow tip (x=200).
         expect(x2).toBeLessThan(200);
         // Arrow polygon's first vertex is the tip — should still anchor at x=200.
@@ -223,5 +225,41 @@ describe('BoardLine – styling regressions', () => {
         const xs = (s: string) => s.split(' ').map((p) => parseFloat(p.split(',')[0]));
         const span = (s: string) => Math.max(...xs(s)) - Math.min(...xs(s));
         expect(span(thickPoly)).toBeGreaterThan(span(thinPoly));
+    });
+});
+
+describe('BoardLine – bend (explicit midpoint)', () => {
+    it('routes the stroke through the bend point when mid_x/mid_y are set', () => {
+        const wrapper = mount(BoardLine, {
+            props: {
+                object: makeLineObject({ x: 0, y: 0, x2: 200, y2: 0, mid_x: 100, mid_y: 80 }),
+                state: noState,
+                editMode: false,
+            },
+        });
+        const fill = wrapper.findAll('polyline').at(-1)!;
+        const pts = fill.attributes('points')!.trim().split(/\s+/);
+        // start, bend, end — the bend is the middle vertex.
+        expect(pts.length).toBe(3);
+        expect(pts[1]).toBe('100,80');
+    });
+
+    it('keeps a straight two-point stroke when no bend is set', () => {
+        const wrapper = mount(BoardLine, {
+            props: {
+                object: makeLineObject({ x: 0, y: 0, x2: 200, y2: 0 }),
+                state: noState,
+                editMode: false,
+            },
+        });
+        const fill = wrapper.findAll('polyline').at(-1)!;
+        expect(fill.attributes('points')!.trim().split(/\s+/).length).toBe(2);
+    });
+
+    it('shows three drag handles in edit mode (start, end, bend)', () => {
+        const wrapper = mount(BoardLine, {
+            props: { object: makeLineObject(), state: noState, editMode: true },
+        });
+        expect(wrapper.findAll('circle').length).toBe(3);
     });
 });

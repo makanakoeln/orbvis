@@ -576,6 +576,10 @@
                         <p class="section-title">{{ t('boardSettings.lineSection') }}</p>
                         <div class="space-y-[8px]">
                             <div class="field-row">
+                                <label class="field-label">{{ t('boardSettings.z') }}</label>
+                                <NumberInput v-model="form.z" min="0" max="999" class="flex-1" />
+                            </div>
+                            <div class="field-row">
                                 <label class="field-label">{{
                                     t('boardSettings.lineStyle')
                                 }}</label>
@@ -1264,6 +1268,7 @@ const props = defineProps<{
     connectionId: string;
     mapType?: string;
     boardIconSize?: number | null;
+    boardDefaultZ?: number;
     checkmkUrl?: string | null;
     anchorRect?: { left: number; top: number; right: number; bottom: number } | null;
 }>();
@@ -1649,7 +1654,7 @@ watch(
         form.y = obj.y ?? 0;
         form.lat = obj.lat ?? 0;
         form.lng = obj.lng ?? 0;
-        form.z = obj.z ?? 1;
+        form.z = obj.z ?? props.boardDefaultZ ?? 1;
         form.x2 = obj.x2 ?? obj.x + 150;
         form.y2 = obj.y2 ?? obj.y;
         showLabelAdvanced.value = false;

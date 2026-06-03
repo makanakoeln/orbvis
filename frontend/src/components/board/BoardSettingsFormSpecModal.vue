@@ -780,6 +780,7 @@ const formSpecDataInitial: Record<string, unknown> = {
     rotation_interval: rotationInterval > 0 ? ['every', rotationInterval] : ['off', null],
     click_action: props.board.click_action !== 'none',
     render_mode: props.board.render_mode ?? 'default',
+    default_z: props.board.default_z ?? 1,
     show_in_lists: props.board.show_in_lists !== false,
 };
 if (props.board.icon_size != null) formSpecDataInitial.icon_size = props.board.icon_size;
@@ -996,6 +997,7 @@ async function save() {
                 click_action: (fs.click_action as boolean | undefined) === false ? 'none' : 'link',
                 render_mode:
                     (fs.render_mode as 'default' | 'nagvis_classic' | undefined) ?? 'default',
+                default_z: (fs.default_z as number | undefined) ?? props.board.default_z ?? 1,
                 show_in_lists: (fs.show_in_lists as boolean | undefined) ?? true,
                 background_image: form.value.background_image || null,
                 background_color: form.value.background_color || null,

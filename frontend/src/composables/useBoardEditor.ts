@@ -29,12 +29,14 @@ interface LineCoords {
     y: number;
     x2: number;
     y2: number;
+    mid_x?: number | null;
+    mid_y?: number | null;
 }
 
 type DragTarget = {
     kind: 'line';
     id: string;
-    mode: 'move' | 'start' | 'end';
+    mode: 'move' | 'start' | 'end' | 'mid';
     init: LineCoords;
     mouseStartX: number;
     mouseStartY: number;
@@ -105,12 +107,19 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         const dx = pos.x - t.mouseStartX;
         const dy = pos.y - t.mouseStartY;
         const { init, mode } = t;
+        // A bend only exists once the user starts dragging the mid handle; until
+        // then mid stays null so the renderer keeps using the geometric center.
+        const hasMid = init.mid_x != null && init.mid_y != null;
+        const baseMidX = init.mid_x ?? (init.x + init.x2) / 2;
+        const baseMidY = init.mid_y ?? (init.y + init.y2) / 2;
         if (mode === 'move') {
             lineDragPositions[t.id] = {
                 x: _snap(Math.round(init.x + dx)),
                 y: _snap(Math.round(init.y + dy)),
                 x2: _snap(Math.round(init.x2 + dx)),
                 y2: _snap(Math.round(init.y2 + dy)),
+                mid_x: hasMid ? _snap(Math.round(baseMidX + dx)) : null,
+                mid_y: hasMid ? _snap(Math.round(baseMidY + dy)) : null,
             };
         } else if (mode === 'start') {
             lineDragPositions[t.id] = {
@@ -118,13 +127,26 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
                 y: _snap(Math.round(init.y + dy)),
                 x2: init.x2,
                 y2: init.y2,
+                mid_x: init.mid_x,
+                mid_y: init.mid_y,
             };
-        } else {
+        } else if (mode === 'end') {
             lineDragPositions[t.id] = {
                 x: init.x,
                 y: init.y,
                 x2: _snap(Math.round(init.x2 + dx)),
                 y2: _snap(Math.round(init.y2 + dy)),
+                mid_x: init.mid_x,
+                mid_y: init.mid_y,
+            };
+        } else {
+            lineDragPositions[t.id] = {
+                x: init.x,
+                y: init.y,
+                x2: init.x2,
+                y2: init.y2,
+                mid_x: _snap(Math.round(baseMidX + dx)),
+                mid_y: _snap(Math.round(baseMidY + dy)),
             };
         }
     }
@@ -212,13 +234,20 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     function startLineDrag(
         event: MouseEvent,
         obj: BoardObject,
-        mode: 'move' | 'start' | 'end',
+        mode: 'move' | 'start' | 'end' | 'mid',
         canvasEl: HTMLElement,
     ) {
         const mouse = _mouseToCanvas(event, canvasEl);
         const x2 = obj.x2 ?? obj.x + 100;
         const y2 = obj.y2 ?? obj.y + 100;
-        const init: LineCoords = { x: obj.x, y: obj.y, x2, y2 };
+        const init: LineCoords = {
+            x: obj.x,
+            y: obj.y,
+            x2,
+            y2,
+            mid_x: obj.mid_x ?? null,
+            mid_y: obj.mid_y ?? null,
+        };
         lineDragPositions[obj.id] = { ...init };
         dragTarget.value = {
             kind: 'line',
@@ -248,6 +277,8 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
                     y: lp.y,
                     x2: lp.x2,
                     y2: lp.y2,
+                    mid_x: lp.mid_x ?? null,
+                    mid_y: lp.mid_y ?? null,
                 },
                 auth.accessToken!,
             );
@@ -257,6 +288,8 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
                 obj.y = lp.y;
                 obj.x2 = lp.x2;
                 obj.y2 = lp.y2;
+                obj.mid_x = lp.mid_x ?? null;
+                obj.mid_y = lp.mid_y ?? null;
             }
             delete lineDragPositions[t.id];
             if (_onDragSaved) _onDragSaved(t.id);

@@ -162,34 +162,34 @@ def _parse_coord(value: str) -> Coord:
     return Coord(0)
 
 
-def _parse_line_coords(p: dict[str, str]) -> tuple[Coord, Coord, Coord, Coord]:
-    """Parse legacy line coords.
+def _parse_axis_coords(raw: str, fallback_second: str) -> tuple[Coord, Coord, Coord | None]:
+    """Parse one axis of a legacy line into (start, end, optional bend).
 
-    Legacy format encodes both endpoints in x and y as comma-separated values:
-        x=x1,x2   y=y1,y2
+    Legacy encodes a line's coords as a comma-separated list per axis:
+        x=x1,x2        two endpoints
+        x=x1,x2,x3     NagVis two-segment line: x2 is the bend/meeting point
 
-    Falls back to separate x2/y2 keys (non-standard but tolerated).
+    First and last values are the endpoints; the middle value (when ≥3 are
+    present) is the bend. NagVis itself only reads index 1 as the mid and the
+    last as the end, so anything between collapses to a single bend. Falls back
+    to a separate ``x2``/``y2`` key when no comma is present.
     """
-    raw_x = p.get("x", "0")
-    raw_y = p.get("y", "0")
+    if "," in raw:
+        parts = [s.strip() for s in raw.split(",")]
+        start = _parse_coord(parts[0])
+        end = _parse_coord(parts[-1])
+        mid = _parse_coord(parts[1]) if len(parts) >= 3 else None
+        return start, end, mid
+    return _parse_coord(raw), _parse_coord(fallback_second), None
 
-    if "," in raw_x:
-        x1_s, x2_s = raw_x.split(",", 1)
-        x = _parse_coord(x1_s.strip())
-        x2 = _parse_coord(x2_s.strip())
-    else:
-        x = _parse_coord(raw_x)
-        x2 = _parse_coord(p.get("x2", "0"))
 
-    if "," in raw_y:
-        y1_s, y2_s = raw_y.split(",", 1)
-        y = _parse_coord(y1_s.strip())
-        y2 = _parse_coord(y2_s.strip())
-    else:
-        y = _parse_coord(raw_y)
-        y2 = _parse_coord(p.get("y2", "0"))
-
-    return x, y, x2, y2
+def _parse_line_coords(
+    p: dict[str, str],
+) -> tuple[Coord, Coord, Coord, Coord, Coord | None, Coord | None]:
+    """Parse legacy line coords into (x, y, x2, y2, mid_x, mid_y)."""
+    x, x2, mid_x = _parse_axis_coords(p.get("x", "0"), p.get("x2", "0"))
+    y, y2, mid_y = _parse_axis_coords(p.get("y", "0"), p.get("y2", "0"))
+    return x, y, x2, y2, mid_x, mid_y
 
 
 def _auto_size(value: str | None) -> int | None:
@@ -401,6 +401,17 @@ def _bg_is_opaque_dark(value: str | None) -> bool:
     return b is not None and b < 100
 
 
+def _set_explicit_z(obj: dict[str, Any], p: dict[str, str]) -> None:
+    """Write ``z`` only when the cfg block set it explicitly.
+
+    NagVis stores no z on objects that use its global default (10); leaving z
+    unset here lets such objects inherit the board's ``default_z`` instead of
+    each type inventing its own layer — reproducing NagVis layering 1:1.
+    """
+    if "z" in p:
+        obj["z"] = _int(p["z"])
+
+
 def _attach_pending_refs(obj: dict[str, Any], **coords: Coord) -> None:
     """Stash relative-coord references on the object for the resolution pass."""
     refs = {key: c for key, c in coords.items() if c.ref is not None}
@@ -499,7 +510,7 @@ def _apply_global(board: dict[str, Any], p: dict[str, str]) -> None:
 
 
 def _line_obj_common(p: dict[str, str], raw_id: str) -> dict[str, Any]:
-    x, y, x2, y2 = _parse_line_coords(p)
+    x, y, x2, y2, mid_x, mid_y = _parse_line_coords(p)
     line_type = _int(p.get("line_type", "11"))
     type_attrs = LINE_TYPE_MAP.get(line_type, _DEFAULT_LINE_TYPE)
     # NagVis lines may carry a label (``label_show=1`` + ``label_text``); fall
@@ -511,9 +522,6 @@ def _line_obj_common(p: dict[str, str], raw_id: str) -> dict[str, Any]:
         "type": "line",
         "x": x.value,
         "y": y.value,
-        # Lines have no NagVis default; sit below stateful objects (z=10) and
-        # textboxes (z=5) by default so they don't cover hosts.
-        "z": _int(p.get("z"), 0),
         "x2": x2.value,
         "y2": y2.value,
         "label": label,
@@ -522,7 +530,15 @@ def _line_obj_common(p: dict[str, str], raw_id: str) -> dict[str, Any]:
         "line_color_border": _color_or_default(p.get("line_color_border"), "#000000"),
         **type_attrs,
     }
-    _attach_pending_refs(obj, x=x, y=y, x2=x2, y2=y2)
+    _set_explicit_z(obj, p)
+    refs = {"x": x, "y": y, "x2": x2, "y2": y2}
+    # Explicit bend/meeting point (NagVis stored the middle of a 3-coord line).
+    if mid_x is not None and mid_y is not None:
+        obj["mid_x"] = mid_x.value
+        obj["mid_y"] = mid_y.value
+        refs["mid_x"] = mid_x
+        refs["mid_y"] = mid_y
+    _attach_pending_refs(obj, **refs)
     # NagVis line_width is the polygon half-width (-w to +w); OrbVis renders
     # it as full stroke width. Double on import.
     obj["line_width"] = _int(p.get("line_width"), 3) * 2
@@ -564,11 +580,10 @@ def _handle_shape(p: dict[str, str], raw_id: str) -> dict[str, Any]:
         "type": "image",
         "x": x.value,
         "y": y.value,
-        # NagVis shape default z=1.
-        "z": _int(p.get("z"), 1),
         "image_src": p.get("icon") or None,
         "label": {"show": False},
     }
+    _set_explicit_z(obj, p)
     _attach_pending_refs(obj, x=x, y=y)
     return obj
 
@@ -607,10 +622,9 @@ def _handle_textbox(p: dict[str, str], raw_id: str) -> dict[str, Any]:
         "type": "textbox",
         "x": x.value,
         "y": y.value,
-        # NagVis textbox default z=5.
-        "z": _int(p.get("z"), 5),
         "label": label,
     }
+    _set_explicit_z(obj, p)
     if width is not None:
         obj["textbox_width"] = width
     if height is not None:
@@ -681,13 +695,12 @@ def _handle_monitor_block(legacy_type: str, p: dict[str, str], raw_id: str) -> d
         "type": orbvis_type,
         "x": x.value,
         "y": y.value,
-        # NagVis default for stateful objects is z=10.
-        "z": _int(p.get("z"), 10),
         "label": _label(p),
         "display": display,
         # NagVis .box CSS draws every label with a 1px solid border (#e5e5e5).
         "label_border": (p.get("label_border") or "#e5e5e5").strip(),
     }
+    _set_explicit_z(obj, p)
     _apply_type_specific(obj, legacy_type, p)
     _apply_object_backend(obj, p)
     if "url" in p:
@@ -741,9 +754,9 @@ def _resolve_pending_refs(objects: list[dict[str, Any]]) -> None:
                 target = by_raw.get(ref["ref"])
                 if target is None:
                     continue
-                # x2/y2 reuse the target's x/y — NagVis only stores one
+                # x2/y2/mid_x reuse the target's x/y — NagVis only stores one
                 # endpoint per object, lines reuse it by axis-name match.
-                base_axis = "x" if axis in ("x", "x2") else "y"
+                base_axis = "x" if axis in ("x", "x2", "mid_x") else "y"
                 target_pending = target.get("_pending_refs") or {}
                 if base_axis in target_pending:
                     continue
@@ -774,6 +787,9 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
         "background_image": None,
         # cfg-imports render with NagVis-classic top-left anchoring + flat look.
         "render_mode": "nagvis_classic",
+        # NagVis' global default z is 10 for every object type and is never
+        # written per-object; objects without an explicit z inherit this.
+        "default_z": 10,
         # NagVis falls back to a white canvas when map_image is missing.
         "background_color": "#ffffff",
         "view": {"type": "static"},

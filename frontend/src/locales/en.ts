@@ -283,6 +283,9 @@ export default {
             'NagVis-classic anchors objects top-left with flat textboxes on a light canvas (auto-selected for imported NagVis maps). OrbVis is the modern centered glass style.',
         renderModeDefault: 'OrbVis (default)',
         renderModeNagvisClassic: 'NagVis-classic',
+        defaultZ: 'Default layer (z)',
+        defaultZHint:
+            'Layer for objects that have no explicit z value. Higher numbers render on top.',
         showInLists: 'Show in board list',
         showInListsHint: 'When disabled, this board is hidden from regular users',
         noPermission: 'No permission',

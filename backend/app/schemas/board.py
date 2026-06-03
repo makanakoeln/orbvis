@@ -290,7 +290,10 @@ class BoardObject(BaseModel):
     y: int | float = 0
     lat: float | None = None
     lng: float | None = None
-    z: int = 1
+    # ``None`` means "inherit the board's ``default_z``" — NagVis stores no z on
+    # objects that use the global default, so imported objects stay unset and
+    # the renderer resolves ``z ?? board.default_z``.
+    z: int | None = None
     host_name: str | None = None
     service_description: str | None = None
     group_name: str | None = None
@@ -300,6 +303,11 @@ class BoardObject(BaseModel):
     y2: int | float | None = None
     lat2: float | None = None
     lng2: float | None = None
+    # Optional line bend/meeting point. ``None`` → renderer uses the geometric
+    # midpoint of the two endpoints (the previous fixed behavior). A set value
+    # mirrors NagVis' explicit middle coordinate on two-segment lines.
+    mid_x: int | float | None = None
+    mid_y: int | float | None = None
     line_style: LineStyle | None = None
     # Stroke width in pixels. None → renderer's per-style default.
     line_width: int | None = Field(default=None, ge=1, le=20)
@@ -403,6 +411,10 @@ class BoardConfig(BaseModel):
     # Default keeps existing boards on the OrbVis renderer; "nagvis_classic"
     # opts an imported board into top-left anchoring + flat styling.
     render_mode: RenderMode = "default"
+    # Board-wide fallback z for objects that carry no explicit ``z`` (mirrors
+    # NagVis' global default). Default 1 preserves the historic per-object
+    # default; the cfg importer writes 10 to match NagVis exactly.
+    default_z: int = 1
     # Monotonically incremented per persisted change. Compared against the
     # client's ``If-Match`` header on update; mismatch returns 409 Conflict so
     # two operators editing the same board don't silently lose changes.
@@ -422,6 +434,7 @@ class BoardCreate(BaseModel):
     connection_id: str = "live_1"
     view: BoardView = Field(default_factory=StaticView)
     render_mode: RenderMode = "default"
+    default_z: int = 1
 
 
 class BoardUpdate(BaseModel):
@@ -440,6 +453,7 @@ class BoardUpdate(BaseModel):
     rotation_interval: int | None = None
     show_in_lists: bool | None = None
     render_mode: RenderMode | None = None
+    default_z: int | None = None
 
 
 class BoardRead(BaseModel):
@@ -463,6 +477,7 @@ class BoardRead(BaseModel):
     hover_template: str | None = None
     context_template: str | None = None
     render_mode: RenderMode = "default"
+    default_z: int = 1
     # Per-user capability stamped by the list endpoint: whether the requesting
     # user may edit this board (admins, or non-admins with edit permission).
     can_edit: bool = False
@@ -486,6 +501,8 @@ class BoardObjectUpdate(BaseModel):
     y2: int | float | None = None
     lat2: float | None = None
     lng2: float | None = None
+    mid_x: int | float | None = None
+    mid_y: int | float | None = None
     line_style: LineStyle | None = None
     line_width: int | None = Field(default=None, ge=1, le=20)
     line_perfdata_label: LinePerfdataLabel | None = None
