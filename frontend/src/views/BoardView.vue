@@ -1857,16 +1857,17 @@ const selectedObject = computed<BoardObject | null>(() => {
 // ---- Detail drawer (shared across static / worldmap / radar boards) ----
 
 const detailDrawerObject = ref<BoardObject | null>(null);
-// Foldertree service leaves are fetched lazily and never enter the SSE states
-// store, so the drawer has no live state to key off its synthesized id. Capture
-// the clicked node's state here so the drawer still shows status/output/age.
-const folderServiceState = ref<ObjectState | null>(null);
+// Foldertree host/service leaves never enter the SSE states store (services are
+// lazy; the flat host states list is empty by design), so the drawer has no live
+// state to key off its synthesized id. Capture the clicked node's state here so
+// the drawer still shows status/output/age.
+const folderLeafState = ref<ObjectState | null>(null);
 const detailDrawerState = computed(() => {
     const obj = detailDrawerObject.value;
     if (!obj) return undefined;
     const live = statesStore.states[obj.id];
     if (live) return live;
-    if (folderServiceState.value?.object_id === obj.id) return folderServiceState.value;
+    if (folderLeafState.value?.object_id === obj.id) return folderLeafState.value;
     return undefined;
 });
 const detailActions = useObjectActions(
@@ -1937,14 +1938,32 @@ function onSelectHost(hostName: string, serviceDescription?: string | null) {
 
 function closeDetail() {
     detailDrawerObject.value = null;
-    folderServiceState.value = null;
+    folderLeafState.value = null;
+}
+
+// Foldertree leaves never enter the SSE states map (services are lazy; the flat
+// host states list is empty by design), so synthesise an ObjectState from the
+// tree node for the hover/drawer. Pass `host` for a service leaf, omit for a host.
+function folderNodeToState(node: FolderTreeNode, host?: string): ObjectState {
+    const isService = host !== undefined;
+    return {
+        object_id: isService ? `${host};${node.title}` : node.title,
+        type: isService ? 'service' : 'host',
+        state: node.state as MonitoringState,
+        output: node.output,
+        perf_data: '',
+        acknowledged: node.acknowledged,
+        in_downtime: node.in_downtime,
+        stale: false,
+        site_id: node.site_id,
+        last_state_change: node.last_state_change ?? null,
+        services_summary: node.services_summary ?? null,
+    };
 }
 
 function onFolderHostSelect(node: FolderTreeNode) {
-    // Folder-tree host leaves aren't persisted board objects; synthesise a host
-    // object keyed by the hostname so the drawer resolves its live state from
-    // the states map (foldertree emits host states keyed by host_name).
     if (node.kind !== 'host') return;
+    folderLeafState.value = folderNodeToState(node);
     onObjectClick({
         id: node.title,
         type: 'host',
@@ -1957,23 +1976,10 @@ function onFolderHostSelect(node: FolderTreeNode) {
 }
 
 function onFolderServiceSelect(host: string, node: FolderTreeNode) {
-    // Lazily-loaded service leaf → synthesise both the object and its state (the
-    // node already carries state/output/ack/downtime/age) so the shared drawer
-    // shows the status pill + plugin output; the drawer self-fetches the richer
-    // detail (long output, comments, downtimes) by host + service on top.
+    // The drawer self-fetches the richer detail (long output, comments,
+    // downtimes) by host + service on top of this node-derived state.
     const id = `${host};${node.title}`;
-    folderServiceState.value = {
-        object_id: id,
-        type: 'service',
-        state: node.state as MonitoringState,
-        output: node.output,
-        perf_data: '',
-        acknowledged: node.acknowledged,
-        in_downtime: node.in_downtime,
-        stale: false,
-        site_id: node.site_id,
-        last_state_change: node.last_state_change ?? null,
-    };
+    folderLeafState.value = folderNodeToState(node, host);
     onObjectClick({
         id,
         type: 'service',
@@ -1993,8 +1999,7 @@ function onFolderAction(node: FolderTreeNode) {
     folderBulkModal.value = node;
 }
 
-// Same synthesised object/state shapes as the folder click→drawer path; for
-// hosts the live state map is richer (services summary, address, next check).
+// Same node-derived state as the folder click→drawer path (see folderNodeToState).
 interface FolderHover {
     object: BoardObject;
     state: ObjectState | undefined;
@@ -2014,7 +2019,7 @@ function onFolderHoverHost(node: FolderTreeNode, x: number, y: number) {
             z: 0,
             url_target: '_blank',
         },
-        state: statesStore.states[node.title],
+        state: folderNodeToState(node),
         x: x + 12,
         y: y + 12,
     };
@@ -2033,18 +2038,7 @@ function onFolderHoverService(host: string, node: FolderTreeNode, x: number, y: 
             z: 0,
             url_target: '_blank',
         },
-        state: {
-            object_id: id,
-            type: 'service',
-            state: node.state as MonitoringState,
-            output: node.output,
-            perf_data: '',
-            acknowledged: node.acknowledged,
-            in_downtime: node.in_downtime,
-            stale: false,
-            site_id: node.site_id,
-            last_state_change: node.last_state_change ?? null,
-        },
+        state: folderNodeToState(node, host),
         x: x + 12,
         y: y + 12,
     };

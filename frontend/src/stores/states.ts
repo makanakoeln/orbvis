@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { markRaw, ref, shallowRef } from 'vue';
 
 import { boardsApi, connectionsApi } from '@/api/client';
 import type {
@@ -43,17 +43,44 @@ const _SEVERITY: Record<string, number> = {
     DOWN: 3,
 };
 
-function _notifyStateChange(obj: ObjectState, prev: ObjectState | undefined) {
+// Fire a browser notification when `name` worsens into a bad state. Shared by
+// the flat-states path and the foldertree snapshot diff so the policy lives once.
+function _maybeNotify(name: string, state: string, prevState: string | undefined) {
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-    const prevSev = _SEVERITY[prev?.state ?? 'OK'] ?? 0;
-    const newSev = _SEVERITY[obj.state] ?? 0;
-    if (newSev <= prevSev) return;
-    if (!_BAD_STATES.has(obj.state)) return;
-    const name = obj.object_id;
-    new Notification(`OrbVis: ${obj.state}`, {
-        body: name,
-        tag: name,
-    });
+    const prevSev = _SEVERITY[prevState ?? 'OK'] ?? 0;
+    const newSev = _SEVERITY[state] ?? 0;
+    if (newSev <= prevSev || !_BAD_STATES.has(state)) return;
+    new Notification(`OrbVis: ${state}`, { body: name, tag: name });
+}
+
+function _notifyStateChange(obj: ObjectState, prev: ObjectState | undefined) {
+    _maybeNotify(obj.object_id, obj.state, prev?.state);
+}
+
+function _collectFolderHostStates(node: FolderTreeNode, out: Map<string, string>) {
+    if (node.kind === 'host') {
+        out.set(node.title, node.state);
+        return;
+    }
+    for (const c of node.children) _collectFolderHostStates(c, out);
+}
+
+// Foldertree boards ship no flat states list, so host-state notifications are
+// derived by diffing successive tree snapshots. Returns the new snapshot to
+// store; a null `prev` only primes (else every bad host would alert on load).
+function _diffNotifyFolderTree(
+    tree: FolderTreeNode | null,
+    prev: Map<string, string> | null,
+): Map<string, string> | null {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted' || !tree) {
+        return null;
+    }
+    const current = new Map<string, string>();
+    _collectFolderHostStates(tree, current);
+    if (prev !== null) {
+        for (const [host, state] of current) _maybeNotify(host, state, prev.get(host));
+    }
+    return current;
 }
 
 export const useStatesStore = defineStore('states', () => {
@@ -73,7 +100,12 @@ export const useStatesStore = defineStore('states', () => {
     // re-trigger their computed.
     const topologyTimingVersion = ref(0);
     // Resolved + aggregated tree for foldertree boards (null for other types).
-    const folderTree = ref<FolderTreeNode | null>(null);
+    // shallowRef + markRaw: the tree is replaced wholesale every update and never
+    // mutated in place, so deep-proxying its 100k+ nodes is pure overhead.
+    const folderTree = shallowRef<FolderTreeNode | null>(null);
+    // Previous foldertree host→state snapshot, for deriving notifications (see
+    // _diffNotifyFolderTree). null until the first snapshot primes it.
+    let prevFolderHostStates: Map<string, string> | null = null;
     // Kept under the historical name for compatibility with views; false after
     // we fall back to HTTP polling because SSE didn't work.
     const wsAvailable = ref(true);
@@ -168,7 +200,12 @@ export const useStatesStore = defineStore('states', () => {
             Object.assign(states.value, newStates);
             lastUpdate.value = ts;
             connected.value = data.connection_ok;
-            folderTree.value = data.folder_tree ?? null;
+            folderTree.value = data.folder_tree ? markRaw(data.folder_tree) : null;
+            if (notificationsEnabled.value)
+                prevFolderHostStates = _diffNotifyFolderTree(
+                    folderTree.value,
+                    prevFolderHostStates,
+                );
         } catch {
             connected.value = false;
         }
@@ -322,7 +359,14 @@ export const useStatesStore = defineStore('states', () => {
                     }
                     lastUpdate.value = msg.states.generated_at;
                     connected.value = msg.states.connection_ok;
-                    folderTree.value = msg.states.folder_tree ?? null;
+                    folderTree.value = msg.states.folder_tree
+                        ? markRaw(msg.states.folder_tree)
+                        : null;
+                    if (notificationsEnabled.value)
+                        prevFolderHostStates = _diffNotifyFolderTree(
+                            folderTree.value,
+                            prevFolderHostStates,
+                        );
                 } else if (msg.type === 'topology_update') {
                     _applyTopologyDelta(msg.delta);
                     topologyReady.value = true;
@@ -386,6 +430,7 @@ export const useStatesStore = defineStore('states', () => {
         topology.value = [];
         topologyReady.value = false;
         folderTree.value = null;
+        prevFolderHostStates = null;
         currentMap = null;
         currentToken = undefined;
     }

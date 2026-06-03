@@ -754,7 +754,18 @@ async def test_foldertree_sites_filter(_test_conn):
     assert fra is None or fra.is_empty
     # central hosts still placed.
     assert _find_node(tree, "datacenters/muc").host_count == 2
-    assert all(s.site_id == "central" for s in result.states)
+    # Foldertree boards carry hosts only as tree nodes (states list is empty), so
+    # assert the site filter on the leaf nodes themselves.
+    hosts = []
+
+    def _collect_hosts(n):
+        if n.kind == "host":
+            hosts.append(n)
+        for c in n.children:
+            _collect_hosts(c)
+
+    _collect_hosts(tree)
+    assert hosts and all(h.site_id == "central" for h in hosts)
 
 
 @pytest.mark.asyncio

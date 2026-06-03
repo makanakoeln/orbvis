@@ -137,6 +137,7 @@ export interface FolderTreeNode {
     acknowledged: boolean;
     in_downtime: boolean;
     site_id: string | null;
+    services_summary?: ServicesSummary | null;
     children: FolderTreeNode[];
     // Only set on service leaves built client-side from a lazy folder-host-services
     // fetch (never emitted by the backend tree).

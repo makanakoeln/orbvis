@@ -899,7 +899,9 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
     for f in data.folders:
         ensure_folder(f["path"], f.get("title"), f.get("folder_id", ""), f.get("permitted", True))
 
-    host_states: list[ObjectState] = []
+    # Hosts live only as tree nodes; the flat ``states`` list is left empty (see
+    # the MapStates return). At 100k+ hosts duplicating every host into ``states``
+    # doubled the payload for data the tree node already carries.
     for h in data.hosts:
         fpath = _norm_folder_path(h["folder_path"])
         folder = ensure_folder(fpath)
@@ -916,20 +918,9 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
             is_flapping=h.get("is_flapping", False),
             last_state_change=h.get("last_state_change"),
             site_id=h.get("site_id"),
+            services_summary=h.get("services_summary"),
         )
         folder.children.append(host_node)
-        host_states.append(
-            ObjectState(
-                object_id=h["host_name"],
-                type="host",
-                state=combined,
-                output=h.get("output", ""),
-                acknowledged=h.get("acknowledged", False),
-                in_downtime=h.get("in_downtime", False),
-                site_id=h.get("site_id"),
-                services_summary=h.get("services_summary"),
-            )
-        )
 
     # Service leaves are NOT materialised here. ``show_services`` instead makes
     # hosts expandable on demand: the frontend fetches a single host's services
@@ -1008,7 +999,7 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
     connection_ok = fetch_ok
     return MapStates(
         map_name=cfg.name,
-        states=host_states,
+        states=[],
         generated_at=time.time(),
         connection_ok=connection_ok,
         folder_tree=root,

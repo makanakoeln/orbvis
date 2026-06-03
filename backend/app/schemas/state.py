@@ -144,6 +144,10 @@ class FolderTreeNode(BaseModel):
     last_state_change: float | None = None  # leaf age for triage ("since…")
     # Distributed monitoring: leaf hosts carry their originating site (v3 §5).
     site_id: str | None = None
+    # Per-host service-state counts, host leaves only — feeds the hover/drawer
+    # service pills. Replaces what the flat states list used to carry now that
+    # foldertree boards ship hosts only as tree nodes.
+    services_summary: ServicesSummary | None = None
     children: list[FolderTreeNode] = Field(default_factory=list)
 
 

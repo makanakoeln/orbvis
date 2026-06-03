@@ -9,7 +9,7 @@ import sqlite3
 from collections.abc import AsyncIterator
 from typing import Literal, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
 
 from app.api.v1.connections import TopologyNode, build_topology_response
@@ -250,13 +250,16 @@ async def _broadcast_loop(board_name: str) -> None:
 _RADAR_FILTERS: set[str] = {"hostgroup", "servicegroup", "all_hosts", "all_services"}
 
 
+# Returns a pre-dumped Response (passed through untouched) instead of a model:
+# skips FastAPI's second full re-validation, which dominated initial load on
+# 100k+-host boards. response_model stays for the OpenAPI schema (api.ts codegen).
 @router.get("/boards/{name}/states", response_model=MapStates)
 async def get_board_states(
     name: BoardName,
     current_user: User = Depends(get_current_user),
     radar_filter: str | None = None,
     radar_filter_value: str | None = None,
-) -> MapStates:
+) -> Response:
     cfg = board_service.get_board(name)
     if cfg is None:
         raise HTTPException(
@@ -289,12 +292,13 @@ async def get_board_states(
         if cfg.view.type == "foldertree"
         else None
     )
-    return await state_service.get_board_states(
+    states = await state_service.get_board_states(
         cfg,
         auth_user=auth_user,
         can_view_board=lambda n: _can_view_board(current_user, n),
         folder_scope=folder_scope,
     )
+    return Response(content=states.model_dump_json(), media_type="application/json")
 
 
 @router.get("/boards/{name}/folder-host-services", response_model=list[FolderHostService])
