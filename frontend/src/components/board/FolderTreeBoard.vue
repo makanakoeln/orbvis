@@ -98,36 +98,49 @@
             @select-service="(h, n) => $emit('select-service', h, n)"
             @ctx-folder="(n, x, y) => $emit('ctx-folder', n, x, y)"
         />
-        <div v-else class="ft-tree" role="tree">
-            <FolderTreeRow
-                v-if="rootDisplay"
-                :node="rootDisplay"
-                :depth="0"
-                :expanded="expanded"
-                :multi-site="multiSite"
-                :query="parsedQuery"
-                :problems-only="problemsOnly"
-                :ancestor-matched="false"
-                :matched-hosts="matchedHosts"
-                :show-services="showServices"
-                :services-by-host="effectiveServices"
-                :service-loading="serviceLoading"
-                :service-error="serviceError"
-                @toggle="toggle"
-                @expand-host="ensureServices"
-                @select-host="$emit('select-host', $event)"
-                @select-service="(h, n) => $emit('select-service', h, n)"
-                @hover-host="(n, x, y) => $emit('hover-host', n, x, y)"
-                @hover-service="(h, n, x, y) => $emit('hover-service', h, n, x, y)"
-                @hover-clear="$emit('hover-clear')"
-                @ctx-folder="(n, x, y) => $emit('ctx-folder', n, x, y)"
-            />
+        <!-- Virtualized list: the tree is flattened to ``flatRows`` and only the
+             rows intersecting the viewport (+ overscan) are in the DOM, so the
+             list scales to 100k+ hosts. Fixed 28px row height → trivial windowing
+             (no dependency). A spacer of the full height drives the scrollbar; the
+             rendered window is offset into place. -->
+        <div v-else ref="scrollEl" class="ft-tree" role="tree" @scroll="onListScroll">
+            <div class="ft-vlist" :style="{ height: totalHeight + 'px' }">
+                <div class="ft-vwindow" :style="{ transform: `translateY(${offsetY}px)` }">
+                    <template v-for="row in windowRows" :key="row.key">
+                        <div
+                            v-if="row.note"
+                            class="ft-note"
+                            :class="{ 'ft-note--err': row.note === 'error' }"
+                            :style="{ paddingLeft: row.depth * 18 + 16 + 'px' }"
+                        >
+                            {{ noteLabel(row) }}
+                        </div>
+                        <FolderTreeRow
+                            v-else
+                            :node="row.node"
+                            :depth="row.depth"
+                            :is-open="row.isOpen"
+                            :is-expandable="row.isExpandable"
+                            :multi-site="multiSite"
+                            :host-name="row.hostName"
+                            @toggle="toggle"
+                            @expand-host="ensureServices"
+                            @select-host="$emit('select-host', $event)"
+                            @select-service="(h, n) => $emit('select-service', h, n)"
+                            @hover-host="(n, x, y) => $emit('hover-host', n, x, y)"
+                            @hover-service="(h, n, x, y) => $emit('hover-service', h, n, x, y)"
+                            @hover-clear="$emit('hover-clear')"
+                            @ctx-folder="(n, x, y) => $emit('ctx-folder', n, x, y)"
+                        />
+                    </template>
+                </div>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, useTemplateRef, watch } from 'vue';
+import { computed, onUnmounted, reactive, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { boardsApi } from '@/api/client';
@@ -144,6 +157,7 @@ import {
     isProblemState,
     parseFolderQuery,
     selfMatches,
+    serviceVisible,
     subtreeVisible,
 } from '@/utils/folderTreeFilter';
 import { severityPills } from '@/utils/stateColors';
@@ -514,6 +528,158 @@ function collapseAll() {
     expanded.clear();
     expanded.add(root.value.path);
 }
+
+// One flattened, virtualized row. ``note`` rows are the host's loading/error/
+// no-services placeholders (the host stays the parent for depth/key).
+interface FlatRow {
+    key: string;
+    node: FolderTreeNode;
+    depth: number;
+    isOpen: boolean;
+    isExpandable: boolean;
+    hostName?: string;
+    note?: 'loading' | 'error' | 'empty';
+}
+
+// A folder's visible children under the active filter (the matched-hosts set is
+// passed so the list matches the summary count for s:-searches).
+function rowChildren(node: FolderTreeNode, childAncestorMatched: boolean): FolderTreeNode[] {
+    if (!filterActive.value) return node.children;
+    return node.children.filter((c) =>
+        subtreeVisible(
+            c,
+            parsedQuery.value,
+            problemsOnly.value,
+            childAncestorMatched,
+            matchedHosts.value,
+        ),
+    );
+}
+
+// A host's visible (lazily-loaded) service leaves under the active filter.
+function rowServices(host: FolderTreeNode, hostMatched: boolean): FolderTreeNode[] {
+    const svcs = effectiveServices.value[host.title] ?? [];
+    if (!filterActive.value) return svcs;
+    return svcs.filter((s) =>
+        serviceVisible(host.title, s, parsedQuery.value, problemsOnly.value, hostMatched),
+    );
+}
+
+// Project the visible (expanded + filtered) tree into a flat row list. Open and
+// expandable state is resolved here so the row component stays presentational;
+// the order mirrors the old recursive render exactly (folder's own rows, then
+// subfolders). A text search auto-opens every folder on the path to a match.
+const flatRows = computed<FlatRow[]>(() => {
+    const out: FlatRow[] = [];
+    const rd = rootDisplay.value;
+    if (!rd) return out;
+    const q = parsedQuery.value;
+    const searchActive = q.length > 0;
+    const expandableOf = (n: FolderTreeNode) =>
+        n.kind === 'folder' || (n.kind === 'host' && showServices.value) || n.children.length > 0;
+
+    const walk = (
+        node: FolderTreeNode,
+        depth: number,
+        ancestorMatched: boolean,
+        hostName?: string,
+    ) => {
+        const selfMatch = ancestorMatched || selfMatches(node, q);
+        let isOpen = false;
+        if (expanded.has(node.path)) isOpen = true;
+        else if (!searchActive) isOpen = false;
+        else if (node.kind === 'folder') isOpen = true;
+        else if (node.kind === 'host')
+            isOpen =
+                showServices.value &&
+                !selfMatches(node, q) &&
+                rowServices(node, selfMatch).length > 0;
+
+        out.push({
+            key: node.path + ':' + node.kind + ':' + node.title,
+            node,
+            depth,
+            isOpen,
+            isExpandable: expandableOf(node),
+            hostName,
+        });
+        if (!isOpen) return;
+
+        if (node.kind === 'host') {
+            const note = (n: 'loading' | 'error' | 'empty') =>
+                out.push({
+                    key: `${node.path}:${n}`,
+                    node,
+                    depth: depth + 1,
+                    isOpen: false,
+                    isExpandable: false,
+                    note: n,
+                });
+            if (serviceLoading.has(node.title)) return note('loading');
+            if (serviceError.has(node.title)) return note('error');
+            const svcs = rowServices(node, selfMatch);
+            if (!svcs.length) return note('empty');
+            for (const s of svcs) walk(s, depth + 1, selfMatch, node.title);
+        } else {
+            for (const c of rowChildren(node, selfMatch)) walk(c, depth + 1, selfMatch);
+        }
+    };
+
+    walk(rd, 0, false);
+    return out;
+});
+
+function noteLabel(row: FlatRow): string {
+    if (row.note === 'loading') return t('board.ftLoadingServices');
+    if (row.note === 'error') return t('board.ftServicesLoadError');
+    return problemsOnly.value ? t('board.ftNoProblemServices') : t('board.ftNoServices');
+}
+
+// Fixed-height windowing: render only the rows intersecting the viewport plus a
+// small overscan, offset into place by a full-height spacer.
+const ROW_H = 28;
+const OVERSCAN = 10;
+const scrollEl = useTemplateRef<HTMLDivElement>('scrollEl');
+const scrollTop = ref(0);
+const viewportH = ref(0);
+const totalHeight = computed(() => flatRows.value.length * ROW_H);
+// Clamp to the list length so a shrink (collapse-all / filter) while scrolled
+// down can't leave firstIndex past the end → blank window until the browser's
+// scroll clamp fires.
+const firstIndex = computed(() =>
+    Math.max(
+        0,
+        Math.min(Math.floor(scrollTop.value / ROW_H) - OVERSCAN, flatRows.value.length - 1),
+    ),
+);
+const lastIndex = computed(() =>
+    Math.min(
+        flatRows.value.length,
+        Math.ceil((scrollTop.value + viewportH.value) / ROW_H) + OVERSCAN,
+    ),
+);
+const windowRows = computed(() => flatRows.value.slice(firstIndex.value, lastIndex.value));
+const offsetY = computed(() => firstIndex.value * ROW_H);
+
+function onListScroll() {
+    scrollTop.value = scrollEl.value?.scrollTop ?? 0;
+}
+
+// Track the viewport height (and reset scroll position) whenever the list
+// element appears (mode switch) or resizes.
+let listResizeObs: ResizeObserver | null = null;
+watch(scrollEl, (el) => {
+    listResizeObs?.disconnect();
+    listResizeObs = null;
+    if (!el) return;
+    viewportH.value = el.clientHeight;
+    scrollTop.value = el.scrollTop;
+    listResizeObs = new ResizeObserver(() => {
+        viewportH.value = el.clientHeight;
+    });
+    listResizeObs.observe(el);
+});
+onUnmounted(() => listResizeObs?.disconnect());
 </script>
 
 <style scoped>
@@ -620,8 +786,35 @@ function collapseAll() {
 
 .ft-tree {
     flex: 1;
-    overflow: auto;
-    padding: 6px 8px;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 8px;
+}
+
+/* Full-height spacer drives the scrollbar; the rendered window is absolutely
+   positioned and translated into view (no vertical padding on .ft-tree so
+   scrollTop maps cleanly to row index). */
+.ft-vlist {
+    position: relative;
+}
+
+.ft-vwindow {
+    position: absolute;
+    inset: 0 0 auto;
+}
+
+.ft-note {
+    display: flex;
+    align-items: center;
+    height: 28px;
+    font-size: 12px;
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.ft-note--err {
+    color: var(--color-state-critical);
+    font-style: normal;
 }
 
 .ft-placeholder {

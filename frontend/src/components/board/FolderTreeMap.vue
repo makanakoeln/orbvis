@@ -140,7 +140,7 @@ const hostServices = (n: FolderTreeNode): FolderTreeNode[] => {
 
 // Laid-out node that actually has children rendered inside it (folder or host
 // expanded to its services).
-const isExpanded = (d: FNode) => (d.children?.length ?? 0) > 0;
+const isExpanded = (d: FNode) => (d.children?.length ?? 0) > 0 && !culledOpen.has(d.data.path);
 
 // Visual language: containers (folders, expanded hosts) read as faint framed
 // cards with a header tab; leaves (collapsed hosts, services) read as solid
@@ -348,11 +348,35 @@ function layout(): FNode | null {
         .round(true)(h);
 }
 
-function visibleSig(node: FNode): string {
-    return node
-        .descendants()
-        .map((d) => d.data.path)
-        .join('|');
+// Cells smaller than this (px, either side) aren't legible/clickable, so neither
+// they nor their subtree are bound into the DOM — caps SVG nodes at the visible
+// area, not the host count (a 100k-host folder is one tile, not 100k rects).
+const MIN_RESOLVE = 24;
+// Open containers whose children were all too small → folded back to one tile (▸).
+const culledOpen = new Set<string>();
+
+// Drop child tiles too small to resolve; a container whose children all fail
+// folds to an aggregate tile (the rest blend into its body).
+function visibleNodes(laid: FNode): FNode[] {
+    culledOpen.clear();
+    const out: FNode[] = [];
+    const walk = (d: FNode) => {
+        out.push(d);
+        const kids = d.children;
+        if (!kids?.length) return;
+        const fit = kids.filter((c) => c.x1 - c.x0 >= MIN_RESOLVE && c.y1 - c.y0 >= MIN_RESOLVE);
+        if (fit.length === 0) {
+            culledOpen.add(d.data.path);
+            return;
+        }
+        fit.forEach(walk);
+    };
+    walk(laid);
+    return out;
+}
+
+function sigOf(nodes: FNode[]): string {
+    return nodes.map((d) => d.data.path).join('|');
 }
 
 function toggleFolder(path: string): void {
@@ -488,10 +512,10 @@ function draw(animate: boolean): void {
     if (!svgEl.value) return;
     const laid = layout();
     if (!laid) return;
-    lastSig = visibleSig(laid);
     // Render the Main root too — as an outer container with a "Main" header — so
     // it is clear that the loose top-level host tiles are Main's direct hosts.
-    const nodes = laid.descendants();
+    const nodes = visibleNodes(laid);
+    lastSig = sigOf(nodes);
     // "Empty" = the data root truly has no folders/hosts — NOT merely a collapsed
     // Main (whose layout node then has no children). Otherwise the overlay would
     // cover the single Main tile and swallow the click that re-expands it.
@@ -673,7 +697,7 @@ watch(
 function relayout(): void {
     if (!root.value || !svgEl.value || !dims.w) return;
     const laid = layout();
-    if (laid && visibleSig(laid) === lastSig) recolor();
+    if (laid && sigOf(visibleNodes(laid)) === lastSig) recolor();
     else draw(true);
 }
 

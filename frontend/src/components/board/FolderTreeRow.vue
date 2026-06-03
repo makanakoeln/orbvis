@@ -6,6 +6,7 @@
             'ft-row--clickable': node.kind !== 'folder',
         }"
         role="treeitem"
+        :aria-level="depth + 1"
         :aria-expanded="isExpandable ? isOpen : undefined"
         :title="node.output || undefined"
         @click="onRowClick"
@@ -110,78 +111,6 @@
             node.site_id
         }}</span>
     </div>
-
-    <template v-if="isExpandable && isOpen">
-        <!-- A host expands to its lazily-loaded services (fetched on demand so the
-             board scales to huge sites); folders expand to their tree children. -->
-        <template v-if="node.kind === 'host'">
-            <div v-if="serviceLoading.has(node.title)" class="ft-note" :style="noteIndent">
-                {{ t('board.ftLoadingServices') }}
-            </div>
-            <div
-                v-else-if="serviceError.has(node.title)"
-                class="ft-note ft-note--err"
-                :style="noteIndent"
-            >
-                {{ t('board.ftServicesLoadError') }}
-            </div>
-            <div v-else-if="!visibleChildren.length" class="ft-note" :style="noteIndent">
-                {{ problemsOnly ? t('board.ftNoProblemServices') : t('board.ftNoServices') }}
-            </div>
-            <FolderTreeRow
-                v-for="child in visibleChildren"
-                v-else
-                :key="child.path + ':' + child.kind + ':' + child.title"
-                :node="child"
-                :depth="depth + 1"
-                :expanded="expanded"
-                :multi-site="multiSite"
-                :query="query"
-                :problems-only="problemsOnly"
-                :ancestor-matched="childAncestorMatched"
-                :matched-hosts="matchedHosts"
-                :show-services="showServices"
-                :services-by-host="servicesByHost"
-                :service-loading="serviceLoading"
-                :service-error="serviceError"
-                :host-name="node.title"
-                @toggle="$emit('toggle', $event)"
-                @expand-host="$emit('expand-host', $event)"
-                @select-host="$emit('select-host', $event)"
-                @select-service="(h, n) => $emit('select-service', h, n)"
-                @hover-host="(n, x, y) => $emit('hover-host', n, x, y)"
-                @hover-service="(h, n, x, y) => $emit('hover-service', h, n, x, y)"
-                @hover-clear="$emit('hover-clear')"
-                @ctx-folder="(n, x, y) => $emit('ctx-folder', n, x, y)"
-            />
-        </template>
-        <template v-else>
-            <FolderTreeRow
-                v-for="child in visibleChildren"
-                :key="child.path + ':' + child.kind + ':' + child.title"
-                :node="child"
-                :depth="depth + 1"
-                :expanded="expanded"
-                :multi-site="multiSite"
-                :query="query"
-                :problems-only="problemsOnly"
-                :ancestor-matched="childAncestorMatched"
-                :matched-hosts="matchedHosts"
-                :show-services="showServices"
-                :services-by-host="servicesByHost"
-                :service-loading="serviceLoading"
-                :service-error="serviceError"
-                @toggle="$emit('toggle', $event)"
-                @expand-host="$emit('expand-host', $event)"
-                @select-host="$emit('select-host', $event)"
-                @select-service="(h, n) => $emit('select-service', h, n)"
-                @hover-host="(n, x, y) => $emit('hover-host', n, x, y)"
-                @hover-service="(h, n, x, y) => $emit('hover-service', h, n, x, y)"
-                @hover-clear="$emit('hover-clear')"
-                @ctx-folder="(n, x, y) => $emit('ctx-folder', n, x, y)"
-            />
-        </template>
-    </template>
 </template>
 
 <script setup lang="ts">
@@ -189,33 +118,18 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import type { FolderTreeNode } from '@/types/api';
-import {
-    type FilterTerm,
-    isFilterActive,
-    selfMatches,
-    serviceVisible,
-    subtreeVisible,
-} from '@/utils/folderTreeFilter';
 import { severityPills, stateColorVar } from '@/utils/stateColors';
 
+// Presentational single row: the tree is flattened to a virtualized list in
+// FolderTreeBoard, so this component no longer recurses — open/expandable state
+// and depth are precomputed by the projection and passed in.
 const props = defineProps<{
     node: FolderTreeNode;
     depth: number;
-    expanded: Set<string>;
+    isOpen: boolean;
+    isExpandable: boolean;
     multiSite: boolean;
-    query: FilterTerm[];
-    problemsOnly: boolean;
-    // True once a containing folder/host already matched the query, so this
-    // whole subtree counts as matching.
-    ancestorMatched: boolean;
-    // Hosts surfaced by the server-side service search (their name may not
-    // match) — kept visible so a `s:` query reveals them to drill into.
-    matchedHosts: Set<string>;
-    showServices: boolean;
-    servicesByHost: Record<string, FolderTreeNode[]>;
-    serviceLoading: Set<string>;
-    serviceError: Set<string>;
-    // Set on service rows so a click can resolve the owning host for the drawer.
+    // Owning host for a service row, so a click can resolve it for the drawer.
     hostName?: string;
 }>();
 
@@ -233,74 +147,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 
 const isEmpty = computed(() => props.node.kind === 'folder' && props.node.is_empty);
-// Hosts are expandable only when show_services is on (drill host → services).
-const isExpandable = computed(
-    () =>
-        props.node.kind === 'folder' ||
-        (props.node.kind === 'host' && props.showServices) ||
-        props.node.children.length > 0,
-);
 const pills = computed(() => severityPills(props.node.severity_counts));
-const noteIndent = computed(() => ({ paddingLeft: `${(props.depth + 1) * 18 + 16}px` }));
-
-// Once this node matches the query, its whole subtree counts as matching.
-const childAncestorMatched = computed(
-    () => props.ancestorMatched || selfMatches(props.node, props.query),
-);
-
-// A host's children are its lazily-loaded services (keyed by host name);
-// everything else uses the tree children pushed by the store.
-const childNodes = computed<FolderTreeNode[]>(() =>
-    props.node.kind === 'host'
-        ? (props.servicesByHost[props.node.title] ?? [])
-        : props.node.children,
-);
-
-const visibleChildren = computed(() => {
-    if (!isFilterActive(props.query, props.problemsOnly)) return childNodes.value;
-    // A host's children are service leaves (matched with the host name in
-    // context); a folder's children are folders/hosts in the store tree.
-    if (props.node.kind === 'host') {
-        return childNodes.value.filter((c) =>
-            serviceVisible(
-                props.node.title,
-                c,
-                props.query,
-                props.problemsOnly,
-                childAncestorMatched.value,
-            ),
-        );
-    }
-    return childNodes.value.filter((c) =>
-        subtreeVisible(
-            c,
-            props.query,
-            props.problemsOnly,
-            childAncestorMatched.value,
-            props.matchedHosts,
-        ),
-    );
-});
-
-// While a text search is active, auto-reveal the path to each match: a folder
-// only appears here because it leads to a match, so open it; a host opens only
-// when it survived via a matching service (its own name didn't match), so the
-// service surfaces. The operator's manual expand state still wins, and once the
-// search is cleared this falls back to it. Problems-only alone keeps rows
-// collapsed (whole-tree filter, not a lookup).
-const isOpen = computed(() => {
-    if (props.expanded.has(props.node.path)) return true;
-    if (props.query.length === 0) return false;
-    if (props.node.kind === 'folder') return true;
-    if (props.node.kind === 'host') {
-        return (
-            props.showServices &&
-            !selfMatches(props.node, props.query) &&
-            visibleChildren.value.length > 0
-        );
-    }
-    return false;
-});
 
 function onChevron() {
     emit('toggle', props.node.path);
@@ -310,7 +157,7 @@ function onChevron() {
 // The host icon is the expand toggle when the host can drill into services;
 // otherwise let the click bubble to the row so it opens the drawer.
 function onHostIconClick(e: MouseEvent) {
-    if (props.node.kind === 'host' && isExpandable.value) {
+    if (props.node.kind === 'host' && props.isExpandable) {
         e.stopPropagation();
         onChevron();
     }
@@ -489,19 +336,5 @@ function onCtx(e: MouseEvent) {
     color: var(--text-muted);
     border: 1px solid var(--border);
     flex-shrink: 0;
-}
-
-.ft-note {
-    display: flex;
-    align-items: center;
-    height: 24px;
-    font-size: 12px;
-    font-style: italic;
-    color: var(--text-muted);
-}
-
-.ft-note--err {
-    color: var(--color-state-critical);
-    font-style: normal;
 }
 </style>
