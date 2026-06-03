@@ -194,7 +194,9 @@ function onCtx(e: MouseEvent) {
     display: flex;
     align-items: center;
     gap: 7px;
-    height: 28px;
+
+    /* Must match the windowing ROW_H in FolderTreeBoard; driven by its --ft-row-h. */
+    height: var(--ft-row-h, 28px);
     padding-left: 6px;
     font-size: 13px;
     color: var(--text);

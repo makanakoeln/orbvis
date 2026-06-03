@@ -128,3 +128,16 @@ export function serviceVisible(
     const matched = ancestorMatched || serviceMatches(hostName, node.title, terms);
     return matched && (!problemsOnly || isProblemState(node.state));
 }
+
+/** A host's lazily-loaded service leaves filtered to the active query — shared by
+ *  the List and Map so both show the same set under a host. */
+export function visibleServices(
+    hostName: string,
+    services: FolderTreeNode[],
+    terms: FilterTerm[],
+    problemsOnly: boolean,
+    hostMatched: boolean,
+): FolderTreeNode[] {
+    if (!isFilterActive(terms, problemsOnly)) return services;
+    return services.filter((s) => serviceVisible(hostName, s, terms, problemsOnly, hostMatched));
+}

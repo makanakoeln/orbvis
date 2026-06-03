@@ -43,6 +43,7 @@ import {
     selfMatches,
     serviceVisible,
     subtreeVisible,
+    visibleServices,
 } from '@/utils/folderTreeFilter';
 import { severityPills, stateColorVar, stateRank } from '@/utils/stateColors';
 
@@ -75,7 +76,8 @@ const tipEl = ref<HTMLDivElement | null>(null);
 const isLight = ref(document.documentElement.classList.contains('light'));
 let themeObs: MutationObserver | null = null;
 
-type FNode = HierarchyRectangularNode<FolderTreeNode>;
+// ``culled``: open container whose children were all too small to resolve.
+type FNode = HierarchyRectangularNode<FolderTreeNode> & { culled?: boolean };
 
 const HEADER = 19; // expanded-folder title bar height
 const PROBLEM = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN']);
@@ -130,17 +132,18 @@ const canExpand = (n: FolderTreeNode): boolean =>
 // Mirror the List's filtering of service leaves so both views show the same set
 // (pruneTree only covers folders/hosts in the store tree).
 const hostServices = (n: FolderTreeNode): FolderTreeNode[] => {
-    const svcs = props.servicesByHost[n.title] ?? [];
-    if (!isFilterActive(props.query, props.problemsOnly)) return svcs;
-    const hostMatched = selfMatches(n, props.query);
-    return svcs.filter((s) =>
-        serviceVisible(n.title, s, props.query, props.problemsOnly, hostMatched),
+    return visibleServices(
+        n.title,
+        props.servicesByHost[n.title] ?? [],
+        props.query,
+        props.problemsOnly,
+        selfMatches(n, props.query),
     );
 };
 
 // Laid-out node that actually has children rendered inside it (folder or host
 // expanded to its services).
-const isExpanded = (d: FNode) => (d.children?.length ?? 0) > 0 && !culledOpen.has(d.data.path);
+const isExpanded = (d: FNode) => (d.children?.length ?? 0) > 0 && !d.culled;
 
 // Visual language: containers (folders, expanded hosts) read as faint framed
 // cards with a header tab; leaves (collapsed hosts, services) read as solid
@@ -352,23 +355,17 @@ function layout(): FNode | null {
 // they nor their subtree are bound into the DOM — caps SVG nodes at the visible
 // area, not the host count (a 100k-host folder is one tile, not 100k rects).
 const MIN_RESOLVE = 24;
-// Open containers whose children were all too small → folded back to one tile (▸).
-const culledOpen = new Set<string>();
-
 // Drop child tiles too small to resolve; a container whose children all fail
-// folds to an aggregate tile (the rest blend into its body).
+// folds to an aggregate tile (``culled``), the rest blend into its body.
 function visibleNodes(laid: FNode): FNode[] {
-    culledOpen.clear();
     const out: FNode[] = [];
     const walk = (d: FNode) => {
         out.push(d);
         const kids = d.children;
         if (!kids?.length) return;
         const fit = kids.filter((c) => c.x1 - c.x0 >= MIN_RESOLVE && c.y1 - c.y0 >= MIN_RESOLVE);
-        if (fit.length === 0) {
-            culledOpen.add(d.data.path);
-            return;
-        }
+        d.culled = fit.length === 0;
+        if (d.culled) return;
         fit.forEach(walk);
     };
     walk(laid);
@@ -508,13 +505,13 @@ function cellAria(d: FNode): string {
     return `${n.title}, ${n.state}`;
 }
 
-function draw(animate: boolean): void {
+function draw(animate: boolean, pre?: { laid: FNode; nodes: FNode[] }): void {
     if (!svgEl.value) return;
-    const laid = layout();
-    if (!laid) return;
     // Render the Main root too — as an outer container with a "Main" header — so
     // it is clear that the loose top-level host tiles are Main's direct hosts.
-    const nodes = visibleNodes(laid);
+    const laid = pre?.laid ?? layout();
+    if (!laid) return;
+    const nodes = pre?.nodes ?? visibleNodes(laid);
     lastSig = sigOf(nodes);
     // "Empty" = the data root truly has no folders/hosts — NOT merely a collapsed
     // Main (whose layout node then has no children). Otherwise the overlay would
@@ -697,8 +694,10 @@ watch(
 function relayout(): void {
     if (!root.value || !svgEl.value || !dims.w) return;
     const laid = layout();
-    if (laid && sigOf(visibleNodes(laid)) === lastSig) recolor();
-    else draw(true);
+    if (!laid) return;
+    const nodes = visibleNodes(laid);
+    if (sigOf(nodes) === lastSig) recolor();
+    else draw(true, { laid, nodes });
 }
 
 watch(

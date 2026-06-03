@@ -106,7 +106,14 @@
              list scales to 100k+ hosts. Fixed 28px row height → trivial windowing
              (no dependency). A spacer of the full height drives the scrollbar; the
              rendered window is offset into place. -->
-        <div v-else ref="scrollEl" class="ft-tree" role="tree" @scroll="onListScroll">
+        <div
+            v-else
+            ref="scrollEl"
+            class="ft-tree"
+            role="tree"
+            :style="{ '--ft-row-h': ROW_H + 'px' }"
+            @scroll="onListScroll"
+        >
             <div class="ft-vlist" :style="{ height: totalHeight + 'px' }">
                 <div class="ft-vwindow" :style="{ transform: `translateY(${offsetY}px)` }">
                     <template v-for="row in windowRows" :key="row.key">
@@ -160,8 +167,8 @@ import {
     isProblemState,
     parseFolderQuery,
     selfMatches,
-    serviceVisible,
     subtreeVisible,
+    visibleServices,
 } from '@/utils/folderTreeFilter';
 import { severityPills } from '@/utils/stateColors';
 import { useDebounceFn } from '@/vendor/cmk/lib/useDebounce';
@@ -568,10 +575,12 @@ function rowChildren(node: FolderTreeNode, childAncestorMatched: boolean): Folde
 
 // A host's visible (lazily-loaded) service leaves under the active filter.
 function rowServices(host: FolderTreeNode, hostMatched: boolean): FolderTreeNode[] {
-    const svcs = effectiveServices.value[host.title] ?? [];
-    if (!filterActive.value) return svcs;
-    return svcs.filter((s) =>
-        serviceVisible(host.title, s, parsedQuery.value, problemsOnly.value, hostMatched),
+    return visibleServices(
+        host.title,
+        effectiveServices.value[host.title] ?? [],
+        parsedQuery.value,
+        problemsOnly.value,
+        hostMatched,
     );
 }
 
@@ -816,7 +825,10 @@ onUnmounted(() => listResizeObs?.disconnect());
 .ft-note {
     display: flex;
     align-items: center;
-    height: 28px;
+
+    /* Driven by ROW_H (the windowing source of truth); fallback keeps it sane
+       if the var is ever missing. */
+    height: var(--ft-row-h, 28px);
     font-size: 12px;
     font-style: italic;
     color: var(--text-muted);
