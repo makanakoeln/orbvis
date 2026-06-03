@@ -869,7 +869,7 @@ const customIconStyle = computed(() => {
     // the image render at its natural aspect and just cap the largest side.
     // Otherwise (host/service with custom icon) keep the square slot the
     // state ring expects.
-    const base =
+    const base: Record<string, string> =
         props.object.type === 'image'
             ? {
                   maxWidth: `${props.iconSize}px`,
@@ -878,11 +878,18 @@ const customIconStyle = computed(() => {
               }
             : { width: `${props.iconSize}px`, height: `${props.iconSize}px` };
     const sel = props.selected ? ' drop-shadow(0 0 6px var(--color-corporate-green-50))' : '';
-    // A custom icon on a host/service still conveys its state via a state-coloured
-    // glow (a raster <img> can't be recoloured); pure image objects carry no status.
-    const st =
-        props.object.type !== 'image' && stateGlow.value !== 'none' ? ` ${stateGlow.value}` : '';
-    return { ...base, filter: `var(--icon-halo)${st}${sel}` };
+    const style: Record<string, string> = { ...base, filter: `var(--icon-halo)${sel}` };
+    // A custom icon on a host/service conveys its state with a solid coloured ring
+    // + soft glow + faint tint, so the status reads clearly on any board background
+    // (a bare drop-shadow glow was too easy to miss). A raster <img> can't itself be
+    // recoloured, and pure image objects carry no status.
+    if (props.object.type !== 'image' && stateGlow.value !== 'none') {
+        const c = stateColorRgb.value;
+        style.boxShadow = `0 0 0 2.5px ${c}, 0 0 7px 1px ${c}`;
+        style.background = c.replace('rgb(', 'rgba(').replace(')', ', 0.18)');
+        style.borderRadius = '5px';
+    }
+    return style;
 });
 
 const shouldShowRing = computed(
