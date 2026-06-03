@@ -9,6 +9,9 @@
                     >{{ filterActive ? t('board.ftShowing') + ' ' : '' }}{{ summary.hosts }}
                     {{ t('board.ftHosts') }}</span
                 >
+                <span v-if="summaryPills.length && summaryOk > 0" class="ft-summary-ok"
+                    >· {{ summaryOk }} OK</span
+                >
                 <template v-if="summaryPills.length">
                     <span
                         v-for="p in summaryPills"
@@ -265,6 +268,13 @@ const summary = computed(() => {
     return visibleHostStats(r, false);
 });
 const summaryPills = computed(() => severityPills(summary.value.counts));
+// Healthy remainder so the pill breakdown sums to the host count.
+const summaryOk = computed(() =>
+    Math.max(
+        0,
+        summary.value.hosts - Object.values(summary.value.counts).reduce((a, b) => a + b, 0),
+    ),
+);
 // The server service search hasn't settled: a request is in flight, or the term
 // is still too short to fire. While unsettled the previous matches stay and the
 // "no matches" state is held back, so the tree doesn't flash empty mid-typing.

@@ -92,7 +92,8 @@
         <!-- Stays next to the name; a right-aligned count drifts away on wide screens. -->
         <span v-if="isEmpty" class="ft-badge ft-badge--empty">{{ t('board.ftEmptyHosts') }}</span>
         <span v-else-if="node.kind === 'folder'" class="ft-meta"
-            >{{ node.host_count }} {{ t('board.ftHosts') }}</span
+            >{{ node.host_count }} {{ t('board.ftHosts')
+            }}<template v-if="pills.length && folderOk > 0"> · {{ folderOk }} OK</template></span
         >
         <span v-if="node.kind === 'folder' && pills.length" class="ft-pills">
             <span
@@ -148,6 +149,8 @@ const { t } = useI18n();
 
 const isEmpty = computed(() => props.node.kind === 'folder' && props.node.is_empty);
 const pills = computed(() => severityPills(props.node.severity_counts));
+// Healthy remainder so the pill breakdown sums to the host count.
+const folderOk = computed(() => Math.max(0, props.node.host_count - props.node.problem_count));
 
 function onChevron() {
     emit('toggle', props.node.path);
