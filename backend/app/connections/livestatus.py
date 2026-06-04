@@ -2084,6 +2084,20 @@ class LivestatusConnection(ConnectionBase):
         )
         return dict(_parse_host_state_row(r, site_id=_default_site_id(sid)) for sid, r in tagged)
 
+    async def get_sites(self) -> list[dict[str, str]]:
+        # Title format mirrors cmk.gui.user_sites.site_choices ("<id> - <alias>"
+        # when an alias is set). A non-federated connection still offers its one
+        # local site so the picker is never empty.
+        if not self._sites:
+            sid = _default_site_id()
+            return [{"id": sid, "alias": sid}]
+        out: list[dict[str, str]] = []
+        for sid in self._sites:
+            alias = self._sites[sid].get("alias")
+            title = f"{sid} - {alias}" if alias else str(sid)
+            out.append({"id": str(sid), "alias": title})
+        return sorted(out, key=lambda s: s["alias"].lower())
+
     async def get_folder_tree(
         self, *, only_hard: bool = False, sites: list[str] | None = None
     ) -> FolderTreeData:

@@ -206,8 +206,9 @@ export default {
         ftExpandDepthHint: 'How many folder levels are expanded when the board opens.',
         ftSites: 'Sites',
         ftSitesHint:
-            'Distributed monitoring: limit to these site ids (comma-separated). Empty = all sites.',
-        ftSitesPlaceholder: 'all sites',
+            'Distributed monitoring: limit the tree to these sites. None selected = all sites.',
+        ftSitesPlaceholder: 'Add site…',
+        ftSitesRemove: 'Remove {site}',
         ftShowEmptyFolders: 'Show empty folders',
         ftShowServices: 'Expand hosts to their services',
         ftProblemsOnly: 'Show only folders/hosts with problems',

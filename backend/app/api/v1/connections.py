@@ -750,6 +750,28 @@ async def list_backend_folders(
     return await list_connection_folders(connection_id)
 
 
+class SiteOption(BaseModel):
+    """One monitoring site for the foldertree site-scope picker."""
+
+    id: str
+    alias: str
+
+
+@router.get("/{connection_id}/sites", response_model=list[SiteOption])
+async def list_backend_sites(
+    connection_id: str,
+    _: User = Depends(require_configure),
+) -> list[dict[str, str]]:
+    """Return the connection's monitoring sites (for the foldertree site picker).
+
+    Empty for single-socket connections, which have no meaningful site choice.
+    """
+    connection = get_connection(connection_id)
+    if connection is None:
+        return []
+    return await connection.get_sites()
+
+
 class GroupMember(BaseModel):
     """One row of the host- or service-group triage list shown in the drawer."""
 

@@ -278,6 +278,14 @@ class ConnectionBase(ABC):
         """
         return []
 
+    async def get_sites(self) -> list[dict[str, str]]:
+        """Return the connection's monitoring sites as ``[{id, alias}]``.
+
+        Default empty (single-socket connections without federation have no
+        meaningful site choice). Livestatus overrides with its federation list.
+        """
+        return []
+
     async def get_folder_tree(
         self, *, only_hard: bool = False, sites: list[str] | None = None
     ) -> FolderTreeData:

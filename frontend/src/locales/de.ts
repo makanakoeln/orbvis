@@ -208,8 +208,9 @@ export default {
         ftExpandDepthHint: 'Wie viele Ordnerebenen beim Öffnen aufgeklappt sind.',
         ftSites: 'Sites',
         ftSitesHint:
-            'Verteiltes Monitoring: auf diese Site-IDs begrenzen (kommagetrennt). Leer = alle Sites.',
-        ftSitesPlaceholder: 'alle Sites',
+            'Verteiltes Monitoring: den Baum auf diese Sites begrenzen. Nichts gewählt = alle Sites.',
+        ftSitesPlaceholder: 'Site hinzufügen…',
+        ftSitesRemove: '{site} entfernen',
         ftShowEmptyFolders: 'Leere Ordner anzeigen',
         ftShowServices: 'Hosts zu ihren Services aufklappen',
         ftProblemsOnly: 'Nur Ordner/Hosts mit Problemen zeigen',

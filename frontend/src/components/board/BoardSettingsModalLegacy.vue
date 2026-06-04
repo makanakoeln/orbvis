@@ -80,8 +80,13 @@
                                 </div>
                             </div>
 
-                            <!-- Object defaults (per-board overrides of global icon defaults) -->
-                            <div class="board-settings__subsection">
+                            <!-- Object defaults (per-board overrides of global icon defaults).
+                                 The foldertree has no coordinate-positioned icons, so icon
+                                 size / layer don't apply. -->
+                            <div
+                                v-if="form.map_type !== 'foldertree'"
+                                class="board-settings__subsection"
+                            >
                                 <p class="section-title">{{ t('board.objectDefaults') }}</p>
                                 <div class="space-y-[4px]">
                                     <CmkLabel>{{ t('board.iconSize') }}</CmkLabel>
@@ -376,11 +381,7 @@
                                     <CmkLabel :help="t('board.ftSitesHint')">{{
                                         t('board.ftSites')
                                     }}</CmkLabel>
-                                    <CmkInput
-                                        v-model="form.ft_sites"
-                                        :placeholder="t('board.ftSitesPlaceholder')"
-                                        field-size="FILL"
-                                    />
+                                    <FtSitesSelect v-model="ftSites" :options="siteOptions" />
                                 </div>
                                 <div class="flex flex-col gap-[6px]">
                                     <label class="flex items-center gap-[8px]">
@@ -406,8 +407,12 @@
                                 </div>
                             </template>
 
-                            <!-- Templates -->
-                            <div class="board-settings__subsection space-y-[8px]">
+                            <!-- Templates: radar cards and the foldertree tree have no
+                                 per-object hover / context popups, so the templates never apply. -->
+                            <div
+                                v-if="form.map_type !== 'radar' && form.map_type !== 'foldertree'"
+                                class="board-settings__subsection space-y-[8px]"
+                            >
                                 <p class="section-title">{{ t('boardSettings.templates') }}</p>
                                 <div class="space-y-[4px]">
                                     <CmkLabel :help="t('board.templateHint')">{{
@@ -712,6 +717,7 @@ import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge';
 
 import AutocompleteInput from './AutocompleteInput.vue';
 import BackgroundImageUpload from './BackgroundImageUpload.vue';
+import FtSitesSelect from './FtSitesSelect.vue';
 
 // Mirror of backend `Settings.flow_board_*` defaults — shown as placeholder so
 // the user knows which value applies when the field is left empty.
@@ -938,6 +944,28 @@ async function loadFolderOptions() {
         folderOptions.value = [];
     }
 }
+
+const siteOptions = ref<{ id: string; alias: string }[]>([]);
+async function loadSiteOptions() {
+    if (form.value.map_type !== 'foldertree' || !form.value.connection_id) return;
+    try {
+        siteOptions.value = await connectionsApi.sites(form.value.connection_id, auth.accessToken!);
+    } catch {
+        siteOptions.value = [];
+    }
+}
+
+// form.ft_sites is the comma-joined wire shape; FtSitesSelect works on an id array.
+const ftSites = computed<string[]>({
+    get: () =>
+        form.value.ft_sites
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean),
+    set: (v) => {
+        form.value.ft_sites = v.join(', ');
+    },
+});
 const clickActionOptions = computed(() => ({
     type: 'fixed' as const,
     suggestions: [
@@ -1103,6 +1131,22 @@ function buildPreviewView(): Record<string, unknown> {
             max_services_per_host: form.value.flow_max_services_per_host,
         };
     }
+    if (form.value.map_type === 'foldertree') {
+        return {
+            type: 'foldertree',
+            root_folder: form.value.ft_root_folder.trim(),
+            default_view: form.value.ft_default_view,
+            default_expand_depth: form.value.ft_default_expand_depth,
+            show_services: form.value.ft_show_services,
+            show_empty_folders: form.value.ft_show_empty_folders,
+            problems_only: form.value.ft_problems_only,
+            only_hard_states: form.value.ft_only_hard_states,
+            sites: form.value.ft_sites
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean),
+        };
+    }
     return { type: form.value.map_type };
 }
 
@@ -1243,12 +1287,16 @@ onMounted(async () => {
     const [bs] = await Promise.all([connectionsApi.list(auth.accessToken!), loadPermissions()]);
     connections.value = bs;
     void loadFolderOptions();
+    void loadSiteOptions();
     window.addEventListener('message', onPreviewReady);
 });
 
 watch(
     () => form.value.connection_id,
-    () => void loadFolderOptions(),
+    () => {
+        void loadFolderOptions();
+        void loadSiteOptions();
+    },
 );
 
 onBeforeUnmount(() => {

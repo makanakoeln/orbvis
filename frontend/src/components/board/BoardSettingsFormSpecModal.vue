@@ -313,11 +313,7 @@
                                     <CmkLabel :help="t('board.ftSitesHint')">{{
                                         t('board.ftSites')
                                     }}</CmkLabel>
-                                    <CmkInput
-                                        v-model="form.ft_sites"
-                                        :placeholder="t('board.ftSitesPlaceholder')"
-                                        field-size="FILL"
-                                    />
+                                    <FtSitesSelect v-model="ftSites" :options="siteOptions" />
                                 </div>
                                 <div class="flex flex-col gap-[6px]">
                                     <label class="flex items-center gap-[8px]">
@@ -620,6 +616,7 @@ import { interpolateTemplate } from '@/utils/template';
 import { useDebounceFn } from '@/vendor/cmk/lib/useDebounce';
 
 import BackgroundImageUpload from './BackgroundImageUpload.vue';
+import FtSitesSelect from './FtSitesSelect.vue';
 
 const props = defineProps<{
     board: BoardRead;
@@ -894,6 +891,28 @@ async function loadFolderOptions() {
         folderOptions.value = [];
     }
 }
+
+const siteOptions = ref<{ id: string; alias: string }[]>([]);
+async function loadSiteOptions() {
+    if (form.value.map_type !== 'foldertree' || !form.value.connection_id) return;
+    try {
+        siteOptions.value = await connectionsApi.sites(form.value.connection_id, auth.accessToken!);
+    } catch {
+        siteOptions.value = [];
+    }
+}
+
+// form.ft_sites is the comma-joined wire shape; FtSitesSelect works on an id array.
+const ftSites = computed<string[]>({
+    get: () =>
+        form.value.ft_sites
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean),
+    set: (v) => {
+        form.value.ft_sites = v.join(', ');
+    },
+});
 
 const { names: radarGroupNames } = useRadarGroups(form, () => auth.accessToken);
 
@@ -1436,17 +1455,26 @@ onMounted(async () => {
     ]);
     connections.value = bs;
     void loadFolderOptions();
+    void loadSiteOptions();
     schemaLoading.value = false;
     if (spec) {
-        // Radar renders cards in a grid without hover / context popups,
-        // so the template fields would never apply — drop them from
-        // the schema for these boards to avoid operator confusion.
+        // Drop metadata fields that have no effect for the board type: radar and
+        // foldertree have no hover/context popups, and the foldertree has no
+        // coordinate-positioned icons that icon-size / layer / rendering touch.
+        const drop = new Set<string>();
         if (form.value.map_type === 'radar') {
+            drop.add('hover_template').add('context_template');
+        } else if (form.value.map_type === 'foldertree') {
+            drop.add('icon_size')
+                .add('default_z')
+                .add('render_mode')
+                .add('hover_template')
+                .add('context_template');
+        }
+        if (drop.size) {
             const dict = spec as { elements?: { name: string }[] };
             if (Array.isArray(dict.elements)) {
-                dict.elements = dict.elements.filter(
-                    (el) => el.name !== 'hover_template' && el.name !== 'context_template',
-                );
+                dict.elements = dict.elements.filter((el) => !drop.has(el.name));
             }
         }
         formSchema.value = spec as unknown as Schema;
