@@ -5,6 +5,7 @@ import { boardsApi, connectionsApi } from '@/api/client';
 import type {
     FolderTreeDelta,
     FolderTreeNode,
+    FolderTreeOverride,
     MetricGraphGroup,
     ObjectState,
     TopologyDelta,
@@ -237,12 +238,20 @@ export const useStatesStore = defineStore('states', () => {
     // Settings modal, the preview iframe sets this so the next fetch carries
     // the unsaved filter as query params instead of using the disk-cfg filter.
     const radarOverride = ref<{ filter: string; filterValue: string } | null>(null);
+    // Same idea for foldertree's server-side view fields. While set, SSE deltas
+    // (built from disk-cfg) are ignored so this override snapshot isn't clobbered.
+    const folderOverride = ref<FolderTreeOverride | null>(null);
 
     async function _fetchStates() {
         if (!currentMap || !currentToken) return;
         const mapAtStart = currentMap;
         try {
-            const data = await boardsApi.getStates(mapAtStart, currentToken, radarOverride.value);
+            const data = await boardsApi.getStates(
+                mapAtStart,
+                currentToken,
+                radarOverride.value,
+                folderOverride.value,
+            );
             if (currentMap !== mapAtStart) return;
             const newStates: Record<string, ObjectState> = {};
             const ts = Date.now() / 1000;
@@ -416,7 +425,8 @@ export const useStatesStore = defineStore('states', () => {
                     }
                     lastUpdate.value = msg.states.generated_at;
                     connected.value = msg.states.connection_ok;
-                    _applyFolderTreeDelta(msg.states.folder_tree_delta);
+                    // A disk-cfg delta would overwrite the preview override snapshot.
+                    if (!folderOverride.value) _applyFolderTreeDelta(msg.states.folder_tree_delta);
                     if (notificationsEnabled.value)
                         prevFolderHostStates = _diffNotifyFolderTree(
                             folderTree.value,
@@ -487,6 +497,7 @@ export const useStatesStore = defineStore('states', () => {
         folderTree.value = null;
         folderTreeIndex = new Map();
         prevFolderHostStates = null;
+        folderOverride.value = null;
         currentMap = null;
         currentToken = undefined;
     }
@@ -576,6 +587,14 @@ export const useStatesStore = defineStore('states', () => {
         setRadarOverride(filter: string | null, filterValue?: string): void {
             radarOverride.value =
                 filter && typeof filterValue === 'string' ? { filter, filterValue } : null;
+            void _fetchStates();
+        },
+        // Refetch only when a server-side field actually changed: client-side
+        // toggles re-post the whole patch, but must not trigger a full tree
+        // rebuild (≈seconds on 100k+-host sites).
+        setFolderTreeOverride(override: FolderTreeOverride | null): void {
+            if (JSON.stringify(override) === JSON.stringify(folderOverride.value)) return;
+            folderOverride.value = override;
             void _fetchStates();
         },
     };

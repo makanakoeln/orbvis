@@ -16,6 +16,7 @@ import type {
     DowntimeEntry,
     FolderHostService,
     FolderServiceSearchResult,
+    FolderTreeOverride,
     GlobalSettings,
     GroupMember,
     ImageEntry,
@@ -246,15 +247,23 @@ export const boardsApi = {
         name: string,
         token: string,
         radarOverride?: { filter: string; filterValue: string } | null,
+        folderOverride?: FolderTreeOverride | null,
     ): Promise<MapStates> => {
         let path = `/boards/${name}/states`;
+        const qs = new URLSearchParams();
         if (radarOverride) {
-            const qs = new URLSearchParams({
-                radar_filter: radarOverride.filter,
-                radar_filter_value: radarOverride.filterValue,
-            });
-            path += `?${qs.toString()}`;
+            qs.set('radar_filter', radarOverride.filter);
+            qs.set('radar_filter_value', radarOverride.filterValue);
         }
+        if (folderOverride) {
+            qs.set('ft_override', 'true');
+            qs.set('ft_root_folder', folderOverride.rootFolder);
+            qs.set('ft_show_empty_folders', String(folderOverride.showEmptyFolders));
+            qs.set('ft_only_hard_states', String(folderOverride.onlyHardStates));
+            for (const s of folderOverride.sites) qs.append('ft_sites', s);
+        }
+        const query = qs.toString();
+        if (query) path += `?${query}`;
         return request(path, {}, token);
     },
 
@@ -501,6 +510,9 @@ export const connectionsApi = {
 
     folders: (connectionId: string, token: string): Promise<{ path: string; title: string }[]> =>
         request(`/connections/${connectionId}/folders`, {}, token),
+
+    sites: (connectionId: string, token: string): Promise<{ id: string; alias: string }[]> =>
+        request(`/connections/${connectionId}/sites`, {}, token),
 
     aggregations: (connectionId: string, token: string): Promise<AggregationInfo[]> =>
         request(`/connections/${connectionId}/aggregations`, {}, token),

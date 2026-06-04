@@ -123,6 +123,16 @@ export interface FolderTreeView {
 }
 export type BoardView = StaticView | WorldmapView | RadarView | FlowView | FolderTreeView;
 
+// Unsaved server-side foldertree view fields the Settings preview sends so the
+// server rebuilds the tree without persisting. Client-side fields (problems_only,
+// default_view, expand depth) are mirrored in the board and stay out of this.
+export interface FolderTreeOverride {
+    rootFolder: string;
+    showEmptyFolders: boolean;
+    onlyHardStates: boolean;
+    sites: string[];
+}
+
 export interface FolderTreeNode {
     path: string;
     title: string;

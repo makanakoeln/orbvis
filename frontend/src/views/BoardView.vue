@@ -1965,6 +1965,7 @@ function folderNodeToState(node: FolderTreeNode, host?: string): ObjectState {
 }
 
 function onFolderHostSelect(node: FolderTreeNode) {
+    if (isPreview.value) return;
     if (node.kind !== 'host') return;
     folderLeafState.value = folderNodeToState(node);
     onObjectClick({
@@ -1979,6 +1980,7 @@ function onFolderHostSelect(node: FolderTreeNode) {
 }
 
 function onFolderServiceSelect(host: string, node: FolderTreeNode) {
+    if (isPreview.value) return;
     // The drawer self-fetches the richer detail (long output, comments,
     // downtimes) by host + service on top of this node-derived state.
     const id = `${host};${node.title}`;
@@ -2058,6 +2060,9 @@ interface FolderCtx {
 const folderCtx = ref<FolderCtx | null>(null);
 
 function onFolderCtx(node: FolderTreeNode, x: number, y: number) {
+    // The settings preview is non-interactive; read-only displays (click_action
+    // 'none') get no context menu, mirroring onObjectClick's click gating.
+    if (isPreview.value || boardConfig.value?.click_action === 'none') return;
     folderHover.value = null;
     folderCtx.value = { node, x, y };
 }
@@ -2510,16 +2515,36 @@ function onPreviewMessage(ev: MessageEvent) {
     const cur = boardsStore.currentBoard;
     if (!cur) return;
     Object.assign(cur, data.patch);
-    // Radar boards filter server-side, so the disk-cfg state stream can't
-    // reflect a live-edited filter. Push the unsaved filter into the next
-    // states fetch as an override.
+    // Radar and foldertree resolve their view server-side, so the disk-cfg
+    // state stream can't reflect live-edited fields. Push the unsaved values
+    // into the next states fetch as an override.
     const view = (
-        data.patch as { view?: { type?: string; filter?: string; filter_value?: string } }
+        data.patch as {
+            view?: {
+                type?: string;
+                filter?: string;
+                filter_value?: string;
+                root_folder?: string;
+                show_empty_folders?: boolean;
+                only_hard_states?: boolean;
+                sites?: string[];
+            };
+        }
     ).view;
-    if (view && view.type === 'radar') {
+    if (view?.type === 'radar') {
         statesStore.setRadarOverride(view.filter ?? null, view.filter_value ?? '');
+        statesStore.setFolderTreeOverride(null);
+    } else if (view?.type === 'foldertree') {
+        statesStore.setRadarOverride(null);
+        statesStore.setFolderTreeOverride({
+            rootFolder: view.root_folder ?? '',
+            showEmptyFolders: view.show_empty_folders ?? true,
+            onlyHardStates: view.only_hard_states ?? false,
+            sites: view.sites ?? [],
+        });
     } else if (view) {
         statesStore.setRadarOverride(null);
+        statesStore.setFolderTreeOverride(null);
     }
 }
 

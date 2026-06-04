@@ -266,6 +266,11 @@ async def get_board_states(
     current_user: User = Depends(get_current_user),
     radar_filter: str | None = None,
     radar_filter_value: str | None = None,
+    ft_override: bool = False,
+    ft_root_folder: str = "",
+    ft_show_empty_folders: bool = True,
+    ft_only_hard_states: bool = False,
+    ft_sites: list[str] = Query(default_factory=list),
 ) -> Response:
     cfg = board_service.get_board(name)
     if cfg is None:
@@ -288,6 +293,26 @@ async def get_board_states(
                         radar_filter,
                     ),
                     filter_value=radar_filter_value,
+                )
+            }
+        )
+    # Settings-preview override for foldertree boards: only the server-side view
+    # fields (the others are mirrored client-side and need no requery). Gated on
+    # an explicit flag so an empty root_folder reads as "(all)" not "unset".
+    # problems_only is forced off so the server never prunes healthy nodes — the
+    # client filters it reactively, so toggling it in the preview works both ways
+    # without a per-toggle tree rebuild.
+    if ft_override and isinstance(cfg.view, FolderTreeView):
+        cfg = cfg.model_copy(
+            update={
+                "view": cfg.view.model_copy(
+                    update={
+                        "root_folder": ft_root_folder,
+                        "show_empty_folders": ft_show_empty_folders,
+                        "only_hard_states": ft_only_hard_states,
+                        "sites": ft_sites,
+                        "problems_only": False,
+                    }
                 )
             }
         )

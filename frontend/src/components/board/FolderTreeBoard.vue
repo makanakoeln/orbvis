@@ -492,6 +492,15 @@ function seed(node: FolderTreeNode, depth: number, maxDepth: number) {
     node.children.forEach((c) => seed(c, depth + 1, maxDepth));
 }
 
+// Main (root) is always open; its subfolders start collapsed and only
+// pre-expand when default_expand_depth > 1 (so the default view is the
+// top-level overview — drill on demand, like the map).
+function reseedExpansion(r: FolderTreeNode) {
+    expanded.clear();
+    expanded.add(r.path);
+    r.children.forEach((c) => seed(c, 1, props.view.default_expand_depth ?? 1));
+}
+
 // (Re)seed the expand state whenever the tree identity changes — but keep the
 // operator's manual expand/collapse across live state refreshes (same root).
 let seededFor = '';
@@ -502,14 +511,31 @@ watch(
         const sig = r.path + '|' + r.children.length;
         if (sig === seededFor) return;
         seededFor = sig;
-        expanded.clear();
-        // Main (root) is always open; its subfolders start collapsed and only
-        // pre-expand when default_expand_depth > 1 (so the default view is the
-        // top-level overview — drill on demand, like the map).
-        expanded.add(r.path);
-        r.children.forEach((c) => seed(c, 1, props.view.default_expand_depth ?? 1));
+        reseedExpansion(r);
     },
     { immediate: true },
+);
+
+// The Settings preview patches props.view in place; mirror it into local state.
+// No-op-guarded so syncing in never re-triggers the persistView watchers above.
+watch(
+    () => props.view.problems_only,
+    (v) => {
+        const next = v ?? false;
+        if (problemsOnly.value !== next) problemsOnly.value = next;
+    },
+);
+watch(
+    () => props.view.default_view,
+    (v) => {
+        if (!props.kiosk && v && mode.value !== v) mode.value = v;
+    },
+);
+watch(
+    () => props.view.default_expand_depth,
+    () => {
+        if (root.value) reseedExpansion(root.value);
+    },
 );
 
 // List renders the real root node ("Main") as the top row so the hierarchy
