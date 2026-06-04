@@ -9,7 +9,13 @@ from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials
 
-from app.api.v1.deps import bearer, can_configure, can_create_board, get_current_user
+from app.api.v1.deps import (
+    allowed_command_actions,
+    bearer,
+    can_configure,
+    can_create_board,
+    get_current_user,
+)
 from app.core import _jwt
 from app.core.config import settings
 from app.core.database import get_db
@@ -123,6 +129,7 @@ async def me(current_user: User = Depends(get_current_user)) -> UserRead:
     result.cmk_language = get_cmk_language(current_user.name)
     result.can_configure = can_configure(current_user)
     result.can_create_boards = can_create_board(current_user)
+    result.command_permissions = allowed_command_actions(current_user)
     from app.integrations.checkmk import load_user_inline_help
 
     result.cmk_inline_help = load_user_inline_help(current_user.name)

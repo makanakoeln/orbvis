@@ -59,6 +59,7 @@ const sampleUser: UserRead = {
     cmk_inline_help: false,
     can_configure: false,
     can_create_boards: false,
+    command_permissions: [],
     roles: [],
     permissions: [],
 };

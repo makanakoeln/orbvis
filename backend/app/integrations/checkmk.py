@@ -170,13 +170,22 @@ _ORBVIS_VIEW_DEFAULTS: frozenset[str] = frozenset({"admin", "user"})
 _ORBVIS_EDIT_DEFAULTS: frozenset[str] = frozenset({"admin"})
 
 # Built-in CMK permission defaults not stored in roles.mk (only deviations are stored there).
-# Source: cmk/gui/default_permissions.py — keep in sync when adding new checks.
+# Source: cmk/gui/default_permissions.py and cmk/gui/views/command/commands.py — keep in
+# sync when adding new checks.
 _CMK_PERM_DEFAULTS: dict[str, frozenset[str]] = {
     "general.see_all": frozenset({"admin", "guest"}),
     # Read access to all SETUP folders regardless of contact groups. Guests do
     # NOT have it (unlike general.see_all) — they can monitor all hosts but must
     # not see SETUP folder names outside their contact groups. (cmk/gui/wato)
     "wato.see_all_folders": frozenset({"admin"}),
+    # Defaults per cmk/gui/views/command/commands.py; notifications/enablechecks
+    # ship with no default role (admin-only unless explicitly granted).
+    "action.acknowledge": frozenset({"user", "admin"}),
+    "action.downtimes": frozenset({"user", "admin"}),
+    "action.addcomment": frozenset({"user", "admin"}),
+    "action.reschedule": frozenset({"user", "admin"}),
+    "action.notifications": frozenset(),
+    "action.enablechecks": frozenset(),
 }
 
 

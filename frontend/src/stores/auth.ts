@@ -81,6 +81,10 @@ export const useAuthStore = defineStore('auth', () => {
         () => user.value?.can_create_boards ?? user.value?.is_admin ?? false,
     );
 
+    function mayCommand(verb: string): boolean {
+        return user.value?.command_permissions?.includes(verb) ?? false;
+    }
+
     // Ensures initialization runs exactly once per SPA session and is awaitable
     let _initPromise: Promise<void> | null = null;
 
@@ -262,6 +266,7 @@ export const useAuthStore = defineStore('auth', () => {
         isAdmin,
         canConfigure,
         canCreateBoards,
+        mayCommand,
         ssoActive,
         isCheckmkDeployment,
         init,

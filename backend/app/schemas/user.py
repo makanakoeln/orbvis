@@ -56,6 +56,7 @@ class UserRead(UserBase):
     cmk_inline_help: bool = False  # mirrors LoggedInUser.inline_help_as_text
     can_configure: bool = False  # may manage connections, images and settings (runtime)
     can_create_boards: bool = False  # may create/delete boards (runtime)
+    command_permissions: list[str] = []  # host/service action verbs the user may run (runtime)
 
     model_config = {"from_attributes": True}
 

@@ -14,6 +14,7 @@ mis-fires.
     >
         <div class="fbulk__seg" role="tablist">
             <button
+                v-if="canAck"
                 type="button"
                 class="fbulk__seg-btn"
                 :class="{ 'fbulk__seg-btn--active': mode === 'ack' }"
@@ -24,6 +25,7 @@ mis-fires.
                 {{ t('board.ftBulkAck') }}
             </button>
             <button
+                v-if="canDowntime"
                 type="button"
                 class="fbulk__seg-btn"
                 :class="{ 'fbulk__seg-btn--active': mode === 'downtime' }"
@@ -101,14 +103,19 @@ import CmkButton from '@/components/cmk/CmkButton';
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox';
 import CmkInput from '@/components/cmk/user-input/CmkInput';
 import OrbModal from '@/components/OrbModal.vue';
+import { useAuthStore } from '@/stores/auth';
 import type { FolderTreeNode } from '@/types/api';
 
 const props = defineProps<{ folder: FolderTreeNode; checkmkUrl: string }>();
 const emit = defineEmits<{ close: [] }>();
 
 const { t } = useI18n();
+const auth = useAuthStore();
 
-const mode = ref<'ack' | 'downtime'>('downtime');
+const canAck = computed(() => auth.mayCommand('acknowledge'));
+const canDowntime = computed(() => auth.mayCommand('schedule_downtime'));
+
+const mode = ref<'ack' | 'downtime'>(canDowntime.value ? 'downtime' : 'ack');
 const recursive = ref(true);
 const comment = ref('');
 const sticky = ref(true);

@@ -319,7 +319,10 @@
                                     <!-- Bulk-ack always targets real bi_leaf hosts/services —
                                          that's what Checkmk's command pipeline accepts. -->
                                     <button
-                                        v-if="aggregationProblemLeaves.length && canCommand"
+                                        v-if="
+                                            aggregationProblemLeaves.length &&
+                                            canCommand('acknowledge')
+                                        "
                                         type="button"
                                         class="detail-drawer__action-btn"
                                         @click="onBulkAcknowledgeClick"
@@ -773,7 +776,11 @@
                 </h4>
                 <div class="detail-drawer__actions-grid">
                     <CmkButton
-                        v-if="!state?.acknowledged && (isProblematic || isGroup) && canCommand"
+                        v-if="
+                            !state?.acknowledged &&
+                            (isProblematic || isGroup) &&
+                            canCommand('acknowledge')
+                        "
                         variant="success"
                         class="detail-drawer__action detail-drawer__action--primary"
                         :title="
@@ -792,7 +799,7 @@
                         }}
                     </CmkButton>
                     <CmkButton
-                        v-if="state?.acknowledged && canCommand"
+                        v-if="state?.acknowledged && canCommand('remove_acknowledgement')"
                         variant="warning"
                         class="detail-drawer__action"
                         @click="emit('remove-ack')"
@@ -800,7 +807,7 @@
                         {{ t('board.detailDrawer.removeAckLabel') }}
                     </CmkButton>
                     <CmkButton
-                        v-if="canCommand"
+                        v-if="canCommand('force_check')"
                         variant="optional"
                         class="detail-drawer__action"
                         @click="emit('force-check')"
@@ -808,7 +815,7 @@
                         {{ t('board.detailDrawer.forceCheckLabel') }}
                     </CmkButton>
                     <CmkButton
-                        v-if="!state?.in_downtime && canCommand"
+                        v-if="!state?.in_downtime && canCommand('schedule_downtime')"
                         variant="optional"
                         class="detail-drawer__action"
                         :title="
@@ -827,7 +834,7 @@
                         }}
                     </CmkButton>
                     <CmkButton
-                        v-if="state?.in_downtime && canCommand"
+                        v-if="state?.in_downtime && canCommand('remove_downtime')"
                         variant="warning"
                         class="detail-drawer__action"
                         @click="emit('remove-downtime')"
@@ -835,7 +842,7 @@
                         {{ t('board.detailDrawer.removeDowntimeLabel') }}
                     </CmkButton>
                     <CmkButton
-                        v-if="!isAggregation && canCommand"
+                        v-if="!isAggregation && canCommand('add_comment')"
                         variant="optional"
                         class="detail-drawer__action"
                         @click="emit('add-comment')"
@@ -843,7 +850,10 @@
                         {{ t('board.detailDrawer.addCommentLabel') }}
                     </CmkButton>
                     <CmkButton
-                        v-if="canCommand && state?.notifications_enabled !== false"
+                        v-if="
+                            canCommand('disable_notifications') &&
+                            state?.notifications_enabled !== false
+                        "
                         variant="optional"
                         class="detail-drawer__action"
                         @click="emit('disable-notifications')"
@@ -851,7 +861,7 @@
                         {{ t('board.detailDrawer.disableNotificationsLabel') }}
                     </CmkButton>
                     <CmkButton
-                        v-else-if="canCommand"
+                        v-else-if="canCommand('enable_notifications')"
                         variant="optional"
                         class="detail-drawer__action"
                         @click="emit('enable-notifications')"
@@ -983,7 +993,7 @@ onUnmounted(() => {
 
 const auth = useAuthStore();
 
-const canCommand = computed(() => auth.isAdmin && !props.readonly);
+const canCommand = (verb: string): boolean => !props.readonly && auth.mayCommand(verb);
 
 // On-demand details kept separate from the streamed ObjectState — long_output,
 // comments, downtimes and topology rarely change but can be many KB each, so

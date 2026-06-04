@@ -630,7 +630,7 @@
         />
 
         <FolderBulkActionModal
-            v-if="folderBulkModal && checkmkUrl && auth.isAdmin"
+            v-if="folderBulkModal && checkmkUrl && canBulkCommand"
             :folder="folderBulkModal"
             :checkmk-url="checkmkUrl"
             @close="
@@ -1074,7 +1074,7 @@
                     </p>
                 </div>
                 <button
-                    v-if="auth.isAdmin && folderCtx.node.host_count > 0"
+                    v-if="canBulkCommand && folderCtx.node.host_count > 0"
                     type="button"
                     class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
                     @click="onFolderCtxBulk"
@@ -1117,7 +1117,7 @@
                     <span>{{ t('board.ftOpenInSetup') }}</span>
                 </a>
                 <div
-                    v-if="!(auth.isAdmin && folderCtx.node.host_count > 0) && !folderSetupUrl"
+                    v-if="!(canBulkCommand && folderCtx.node.host_count > 0) && !folderSetupUrl"
                     class="px-3.5 py-2 text-xs text-[var(--text-muted)] italic"
                 >
                     {{ t('contextMenu.noCheckmkUrl') }}
@@ -1288,6 +1288,9 @@ const toast = useToast();
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
+const canBulkCommand = computed(
+    () => auth.mayCommand('acknowledge') || auth.mayCommand('schedule_downtime'),
+);
 const boardsStore = useBoardsStore();
 const statesStore = useStatesStore();
 const connectionsStore = useConnectionsStore();
@@ -1994,8 +1997,7 @@ function onFolderServiceSelect(host: string, node: FolderTreeNode) {
 
 const folderBulkModal = ref<FolderTreeNode | null>(null);
 function onFolderAction(node: FolderTreeNode) {
-    // Commands are admin-only (Livestatus pipe bypasses CMK contact-group ACLs).
-    if (!auth.isAdmin) return;
+    if (!canBulkCommand.value) return;
     folderBulkModal.value = node;
 }
 

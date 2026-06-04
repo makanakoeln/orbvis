@@ -59,6 +59,43 @@ def can_create_board(user: User) -> bool:
     return user_has_permission(user, "map", "edit", "*")
 
 
+# Keep in sync with the verbs in connections.py and the CmkAction union in
+# frontend/src/api/client.ts. "remove_downtime" is gate-only: the frontend
+# routes it through the CMK REST downtime-delete endpoint, never host/service
+# -action, so it is here purely so mayCommand() can show/hide the button.
+COMMAND_ACTION_PERMISSIONS: dict[str, str] = {
+    "acknowledge": "action.acknowledge",
+    "remove_acknowledgement": "action.acknowledge",
+    "force_check": "action.reschedule",
+    "schedule_downtime": "action.downtimes",
+    "remove_downtime": "action.downtimes",
+    "add_comment": "action.addcomment",
+    "enable_notifications": "action.notifications",
+    "disable_notifications": "action.notifications",
+    "enable_checks": "action.enablechecks",
+    "disable_checks": "action.enablechecks",
+}
+
+
+def can_run_command(user: User, action: str) -> bool:
+    """True if the user may run the given host/service command verb.
+
+    Checkmk deployments honour the granular command permissions so any role with
+    the right — not just admins — can issue commands. Standalone has no such
+    permissions, so it stays admin-only.
+    """
+    perm = COMMAND_ACTION_PERMISSIONS.get(action)
+    if perm is None:
+        return False
+    if settings.checkmk_omd_root:
+        return user.is_admin or cmk_integration.check_checkmk_permission(user.name, perm)
+    return user.is_admin
+
+
+def allowed_command_actions(user: User) -> list[str]:
+    return [verb for verb in COMMAND_ACTION_PERMISSIONS if can_run_command(user, verb)]
+
+
 async def require_configure(current_user: User = Depends(get_current_user)) -> User:
     if not can_configure(current_user):
         raise HTTPException(

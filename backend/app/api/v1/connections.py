@@ -13,8 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
 from app.api.v1.deps import (
+    can_run_command,
     get_current_user,
-    require_admin,
     require_configure,
     require_connection_read,
     resolve_auth_user,
@@ -914,7 +914,8 @@ async def get_backend_aggregation_tree(
 # ---------------------------------------------------------------------------
 # All command verbs route through the livestatus pipe — bypasses CMK REST
 # (no automation credentials needed) and works on Nagios + CMC. Note: the pipe
-# also bypasses CMK contact-group ACLs; require_admin is the only gate.
+# also bypasses CMK contact-group ACLs; the per-verb command permission
+# (can_run_command) is the only gate on the action itself.
 _SIMPLE_HOST_COMMANDS: dict[str, str] = {
     "force_check": "SCHEDULE_FORCED_HOST_CHECK;{host};{ts}",
     "enable_notifications": "ENABLE_HOST_NOTIFICATIONS;{host}",
@@ -1042,12 +1043,21 @@ def _build_service_command(body: ServiceActionRequest, user: User) -> str:
     raise HTTPException(status_code=400, detail=f"Unhandled service action {body.action!r}")
 
 
+def _require_command_permission(user: User, action: str) -> None:
+    if not can_run_command(user, action):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Missing Checkmk permission for action {action!r}",
+        )
+
+
 @router.post("/{connection_id}/host-action", status_code=status.HTTP_204_NO_CONTENT)
 async def host_action(
     connection_id: str,
     body: HostActionRequest,
-    user: User = Depends(require_admin),
+    user: User = Depends(get_current_user),
 ) -> None:
+    _require_command_permission(user, body.action)
     cmd = _build_host_command(body, user)
     connection = get_connection(connection_id)
     if connection is None or not hasattr(connection, "send_command"):
@@ -1063,8 +1073,9 @@ async def host_action(
 async def service_action(
     connection_id: str,
     body: ServiceActionRequest,
-    user: User = Depends(require_admin),
+    user: User = Depends(get_current_user),
 ) -> None:
+    _require_command_permission(user, body.action)
     cmd = _build_service_command(body, user)
     connection = get_connection(connection_id)
     if connection is None or not hasattr(connection, "send_command"):

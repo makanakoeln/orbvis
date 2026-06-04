@@ -477,6 +477,7 @@ export interface UserRead {
     cmk_inline_help: boolean;
     can_configure: boolean;
     can_create_boards: boolean;
+    command_permissions: string[];
     roles: RoleRef[];
     permissions: PermissionRef[];
 }

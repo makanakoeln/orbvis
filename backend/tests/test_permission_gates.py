@@ -14,7 +14,13 @@ from __future__ import annotations
 
 import pytest
 
-from app.api.v1.deps import can_configure, can_create_board
+from app.api.v1.deps import (
+    allowed_command_actions,
+    can_configure,
+    can_create_board,
+    can_run_command,
+)
+from app.integrations.checkmk import _has_permission
 from app.models.user import User
 
 
@@ -106,6 +112,26 @@ class TestStandaloneGates:
         )
         assert resp.status_code == 201
 
+    @pytest.mark.asyncio
+    async def test_regular_cannot_run_host_action(self, client, regular_token, regular_user):
+        resp = await client.post(
+            "/api/v1/connections/some_conn/host-action",
+            json={"action": "acknowledge", "host_name": "h", "comment": "x"},
+            headers=_auth(regular_token),
+        )
+        assert resp.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_admin_host_action_passes_permission_gate(self, client, admin_token):
+        # Permission gate is checked before the connection lookup, so an admin
+        # gets past it and only trips on the missing connection (404, not 403).
+        resp = await client.post(
+            "/api/v1/connections/missing/host-action",
+            json={"action": "acknowledge", "host_name": "h", "comment": "x"},
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 404
+
 
 # ---------------------------------------------------------------------------
 # Phase B — capability-helper spec (unit level)
@@ -154,6 +180,43 @@ class TestCapabilityHelpers:
         admin = User(user_id=7, name="cmkadmin", is_admin=True)
         assert can_configure(admin) is True
         assert can_create_board(admin) is True
+
+
+class TestCommandPermissions:
+    def test_standalone_only_admin_runs_commands(self, monkeypatch):
+        monkeypatch.setattr("app.api.v1.deps.settings.checkmk_omd_root", "")
+        admin = User(user_id=1, name="admin", is_admin=True)
+        regular = User(user_id=2, name="regular", is_admin=False)
+        assert can_run_command(admin, "acknowledge") is True
+        assert can_run_command(regular, "acknowledge") is False
+        assert allowed_command_actions(regular) == []
+
+    def test_cmk_command_delegates_per_verb(self, monkeypatch):
+        monkeypatch.setattr("app.api.v1.deps.settings.checkmk_omd_root", "/omd/sites/test")
+        # User holds action.downtimes but not action.acknowledge.
+        monkeypatch.setattr(
+            "app.integrations.checkmk.check_checkmk_permission",
+            lambda username, perm: perm == "action.downtimes",
+        )
+        user = User(user_id=3, name="noc", is_admin=False)
+        assert can_run_command(user, "schedule_downtime") is True
+        assert can_run_command(user, "remove_downtime") is True
+        assert can_run_command(user, "acknowledge") is False
+        assert allowed_command_actions(user) == ["schedule_downtime", "remove_downtime"]
+
+    def test_unknown_verb_denied(self, monkeypatch):
+        monkeypatch.setattr("app.api.v1.deps.settings.checkmk_omd_root", "")
+        admin = User(user_id=4, name="admin", is_admin=True)
+        assert can_run_command(admin, "self_destruct") is False
+
+    def test_normal_monitoring_user_holds_command_defaults(self):
+        # The reported bug: base role "user" must get action.downtimes/acknowledge
+        # by default, while action.notifications is admin-only unless granted.
+        user_data = {"roles": ["user"]}
+        roles: dict[str, object] = {"user": {}}
+        assert _has_permission(user_data, roles, "action.downtimes") is True
+        assert _has_permission(user_data, roles, "action.acknowledge") is True
+        assert _has_permission(user_data, roles, "action.notifications") is False
 
 
 # ---------------------------------------------------------------------------
@@ -235,6 +298,8 @@ class TestMeCapabilities:
         data = resp.json()
         assert data["can_configure"] is True
         assert data["can_create_boards"] is True
+        assert "acknowledge" in data["command_permissions"]
+        assert "schedule_downtime" in data["command_permissions"]
 
     @pytest.mark.asyncio
     async def test_me_regular_standalone_has_no_capabilities(
@@ -245,3 +310,4 @@ class TestMeCapabilities:
         data = resp.json()
         assert data["can_configure"] is False
         assert data["can_create_boards"] is False
+        assert data["command_permissions"] == []
