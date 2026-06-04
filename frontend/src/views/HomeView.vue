@@ -995,7 +995,9 @@
                                                 ? 'bg-emerald-500/15 text-emerald-800 ring-1 ring-emerald-700/40 dark:bg-emerald-500/20 dark:text-emerald-300 dark:ring-emerald-500/30'
                                                 : map.view.type === 'static'
                                                   ? 'bg-slate-500/15 text-slate-700 ring-1 ring-slate-500/40 dark:bg-slate-400/15 dark:text-slate-300 dark:ring-slate-400/30'
-                                                  : 'bg-[var(--bg-surface)]/85 text-[var(--text)] ring-1 ring-[var(--default-border-color)]'
+                                                  : map.view.type === 'foldertree'
+                                                    ? 'bg-amber-500/15 text-amber-800 ring-1 ring-amber-600/40 dark:bg-amber-500/20 dark:text-amber-300 dark:ring-amber-500/30'
+                                                    : 'bg-[var(--bg-surface)]/85 text-[var(--text)] ring-1 ring-[var(--default-border-color)]'
                                     "
                                 >
                                     {{ boardTypeLabel(map.view.type) }}
@@ -1776,6 +1778,7 @@ const TYPE_LABELS: Record<string, string> = {
     worldmap: 'Geo Board',
     flow: 'Flow Board',
     radar: 'Radar',
+    foldertree: 'Folder Tree',
 };
 function boardTypeLabel(type: string) {
     return TYPE_LABELS[type] ?? type;
