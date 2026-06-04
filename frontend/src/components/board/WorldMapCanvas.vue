@@ -17,7 +17,7 @@ import type {
     WorldmapView,
 } from '@/types/api';
 import { getBoardObjectName } from '@/utils/naming';
-import { objectMatchesFilter } from '@/utils/objectFilter';
+import { DIMMED_FILTER, DIMMED_OPACITY, objectMatchesFilter } from '@/utils/objectFilter';
 import { isProblemState, STATEFUL_OBJECT_TYPES } from '@/utils/problemState';
 import { stateColor as stateColorFromName } from '@/utils/stateColors';
 
@@ -627,10 +627,17 @@ function passesProblemFilter(obj: BoardObjectType): boolean {
 
 function applyFilterDimming(): void {
     const needle = props.filterNeedle ?? '';
+    const filterActive = needle.trim() !== '' || !!props.problemsOnly;
     for (const obj of props.config.objects) {
-        const opacity = objectMatchesFilter(obj, needle) && passesProblemFilter(obj) ? 1 : 0.25;
+        const matches = objectMatchesFilter(obj, needle) && passesProblemFilter(obj);
+        const opacity = matches ? 1 : DIMMED_OPACITY;
         const m = markers.get(obj.id);
-        if (m) m.setOpacity(opacity);
+        if (m) {
+            m.setOpacity(opacity);
+            const el = m.getElement();
+            if (el) el.style.filter = matches ? '' : DIMMED_FILTER;
+            m.setZIndexOffset(filterActive && matches ? 10000 : 0);
+        }
         const line = lines.get(obj.id);
         if (line) {
             line.polyline.setStyle({ opacity });

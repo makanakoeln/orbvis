@@ -100,3 +100,8 @@ export function objectMatchesFilter(obj: BoardObject, query: string): boolean {
     const terms = parseFilterTerms(query);
     return matchesFilterTerms(terms, (field) => boardObjectFieldValue(obj, field));
 }
+
+// Non-matches are desaturated too, not just faded, so matches read by colour on
+// a busy map; renderers also raise matches above dimmed neighbours.
+export const DIMMED_OPACITY = 0.15;
+export const DIMMED_FILTER = 'grayscale(1)';

@@ -53,15 +53,7 @@
             class="absolute inset-0 w-full h-full"
             :style="{ zIndex: layer.z, pointerEvents: 'none' }"
         >
-            <g
-                v-for="line in layer.lines"
-                :key="line.id"
-                :style="{
-                    opacity: matchesSearch(line) ? 1 : 0.25,
-                    transition: 'opacity 120ms ease',
-                    pointerEvents: 'auto',
-                }"
-            >
+            <g v-for="line in layer.lines" :key="line.id" :style="lineDimStyle(line)">
                 <BoardLine
                     :object="line"
                     :state="states[line.id]"
@@ -224,7 +216,7 @@ import { useSettingsStore } from '@/stores/settings';
 import { useStatesStore } from '@/stores/states';
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api';
 import { GADGET_DEFAULT_SIZE } from '@/utils/gadget';
-import { objectMatchesFilter } from '@/utils/objectFilter';
+import { DIMMED_FILTER, DIMMED_OPACITY, objectMatchesFilter } from '@/utils/objectFilter';
 import { isProblemState, STATEFUL_OBJECT_TYPES } from '@/utils/problemState';
 import { resolveTemplate } from '@/utils/template';
 
@@ -646,7 +638,11 @@ function objectWrapperStyle(obj: BoardObjectType) {
         : clickable
           ? 'pointer'
           : 'default';
-    const zIndex = _dragId.value === obj.id ? 100 : resolveZ(obj);
+    const matches = matchesSearch(obj);
+    // Raise matches above other objects but stay below the z-50 hover/context
+    // menu so it keeps receiving clicks while a filter is active.
+    const zIndex =
+        _dragId.value === obj.id ? 100 : filterActive.value && matches ? 49 : resolveZ(obj);
     // % positioning anchors the object to a fraction of the native coord
     // space; combined with bg-image at 100% 100%, the object stays on the
     // same bg-pixel regardless of how the canvas is scaled to fit the pane.
@@ -660,8 +656,9 @@ function objectWrapperStyle(obj: BoardObjectType) {
         transform,
         cursor,
         zIndex,
-        opacity: matchesSearch(obj) ? 1 : 0.25,
-        transition: 'opacity 120ms ease',
+        opacity: matches ? 1 : DIMMED_OPACITY,
+        filter: matches ? undefined : DIMMED_FILTER,
+        transition: 'opacity 120ms ease, filter 120ms ease',
     };
 }
 
@@ -672,6 +669,20 @@ function passesProblemFilter(obj: BoardObjectType): boolean {
 
 function matchesSearch(obj: BoardObjectType): boolean {
     return objectMatchesFilter(obj, props.filterNeedle ?? '') && passesProblemFilter(obj);
+}
+
+const filterActive = computed(
+    () => (props.filterNeedle ?? '').trim() !== '' || !!props.problemsOnly,
+);
+
+function lineDimStyle(line: BoardObjectType) {
+    const matches = matchesSearch(line);
+    return {
+        opacity: matches ? 1 : DIMMED_OPACITY,
+        filter: matches ? undefined : DIMMED_FILTER,
+        transition: 'opacity 120ms ease, filter 120ms ease',
+        pointerEvents: 'auto' as const,
+    };
 }
 
 // ---- Pointer-capture drag handlers ----

@@ -294,7 +294,13 @@ import type {
     TopologyNode,
 } from '@/types/api';
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation';
-import { type FilterField, matchesFilterTerms, parseFilterTerms } from '@/utils/objectFilter';
+import {
+    DIMMED_FILTER,
+    DIMMED_OPACITY,
+    type FilterField,
+    matchesFilterTerms,
+    parseFilterTerms,
+} from '@/utils/objectFilter';
 import { stateColor } from '@/utils/stateColors';
 import { resolveTemplate } from '@/utils/template';
 
@@ -994,16 +1000,19 @@ function applyFilterOpacity(): void {
         if (!filterOpacityActive) return;
         filterOpacityActive = false;
         sel.selectAll('g.node, g.links line').attr('opacity', 1);
+        sel.selectAll('g.node').style('filter', null);
         return;
     }
     filterOpacityActive = true;
-    sel.selectAll<SVGGElement, FNode>('g.node').attr('opacity', (d) =>
-        nodeMatchesFilter(d) ? 1 : 0.15,
-    );
+    sel.selectAll<SVGGElement, FNode>('g.node')
+        .attr('opacity', (d) => (nodeMatchesFilter(d) ? 1 : DIMMED_OPACITY))
+        .style('filter', (d) => (nodeMatchesFilter(d) ? null : DIMMED_FILTER))
+        .filter((d) => nodeMatchesFilter(d))
+        .raise();
     sel.selectAll<SVGLineElement, FLink>('g.links line').attr('opacity', (d) => {
         const src = d.source as FNode;
         const tgt = d.target as FNode;
-        return nodeMatchesFilter(src) && nodeMatchesFilter(tgt) ? 1 : 0.1;
+        return nodeMatchesFilter(src) && nodeMatchesFilter(tgt) ? 1 : DIMMED_OPACITY;
     });
 }
 
