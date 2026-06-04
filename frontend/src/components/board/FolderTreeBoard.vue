@@ -128,6 +128,7 @@
                         <FolderTreeRow
                             v-else
                             :node="row.node"
+                            :rev="states.folderTreeVersion"
                             :depth="row.depth"
                             :is-open="row.isOpen"
                             :is-expandable="row.isExpandable"
@@ -269,6 +270,7 @@ function visibleHostStats(
 }
 
 const summary = computed(() => {
+    void states.folderTreeVersion; // re-derive on in-place tree patches
     const r = root.value;
     if (!r) return { hosts: 0, counts: {} as Record<string, number> };
     if (!filterActive.value) return { hosts: r.host_count, counts: r.severity_counts };
@@ -464,7 +466,7 @@ const effectiveServices = computed<Record<string, FolderTreeNode[]>>(() => ({
 // stay live too — one Livestatus query, independent of match count.
 let lastSvcRefresh = 0;
 watch(
-    () => states.folderTree,
+    () => states.folderTreeVersion,
     () => {
         const now = Date.now();
         if (now - lastSvcRefresh < 4000) return;

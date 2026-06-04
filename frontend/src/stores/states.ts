@@ -111,6 +111,10 @@ export const useStatesStore = defineStore('states', () => {
     // ``full`` replace it wholesale; SSE deltas patch nodes in place via the path
     // index and triggerRef() to notify consumers.
     const folderTree = shallowRef<FolderTreeNode | null>(null);
+    // markRaw nodes patched in place are invisible to Vue, and ``triggerRef`` is
+    // swallowed by every ``computed(() => states.folderTree)`` (stable reference).
+    // Consumers read this counter to re-derive live (cf. topologyTimingVersion).
+    const folderTreeVersion = ref(0);
     let folderTreeIndex = new Map<string, FolderTreeNode>();
     // Previous foldertree host→state snapshot, for deriving notifications (see
     // _diffNotifyFolderTree). null until the first snapshot primes it.
@@ -121,6 +125,7 @@ export const useStatesStore = defineStore('states', () => {
         folderTree.value = tree ? markRaw(tree) : null;
         folderTreeIndex = new Map();
         if (tree) _indexFolderTree(tree, folderTreeIndex);
+        folderTreeVersion.value++;
     }
 
     // Apply an SSE folder-tree delta: full → replace; else patch each changed node
@@ -156,6 +161,7 @@ export const useStatesStore = defineStore('states', () => {
             }
         }
         triggerRef(folderTree);
+        folderTreeVersion.value++;
     }
     // Kept under the historical name for compatibility with views; false after
     // we fall back to HTTP polling because SSE didn't work.
@@ -545,6 +551,7 @@ export const useStatesStore = defineStore('states', () => {
         topologyReady,
         topologyTimingVersion,
         folderTree,
+        folderTreeVersion,
         wsAvailable,
         notificationsEnabled,
         connectToMap,

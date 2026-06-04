@@ -651,25 +651,32 @@ function paintLabels(sel: Selection<SVGGElement, FNode, BaseType, unknown>): voi
 }
 
 // Recolor without relayout when only states changed (same visible set). Labels
-// carry live severity counts, so refresh their text too.
-function recolor(): void {
+// carry live severity counts, so refresh their text too. The freshly-laid nodes
+// are rebound (same keys → pure update) so a filtered tree — whose currentRoot()
+// hands out pruneTree *copies* — recolors off the current data, not last draw's.
+function recolor(nodes: FNode[]): void {
     if (!svgEl.value) return;
-    const g = select(svgEl.value).select('g.ftm-cells');
+    const cells = select(svgEl.value)
+        .select('g.ftm-cells')
+        .selectAll<SVGGElement, FNode>('g.ftm-cell')
+        .data(nodes, (d) => d.data.path + ':' + d.data.kind);
     // Distinct transition name from draw()'s 'layout' so a recolor (state change
     // or live tick) only animates fill — never cancels an in-flight geometry
     // transition (which would freeze tiles mid-resize).
-    g.selectAll<SVGRectElement, FNode>('rect.ftm-body')
+    cells
+        .select<SVGRectElement>('rect.ftm-body')
         .style('fill', fillFor)
         .style('stroke', strokeFor)
         .transition('recolor')
         .duration(400)
         .attr('fill-opacity', fillOpacityFor);
-    g.selectAll<SVGRectElement, FNode>('rect.ftm-hdr')
+    cells
+        .select<SVGRectElement>('rect.ftm-hdr')
         .style('fill', (d) => stateColorVar(d.data.state))
         .transition('recolor')
         .duration(400)
         .attr('fill-opacity', headerOpacityFor);
-    paintLabels(g.selectAll<SVGGElement, FNode>('g.ftm-cell'));
+    paintLabels(cells);
 }
 
 // Open the Main root by default (once per root identity), but leave it
@@ -696,13 +703,14 @@ function relayout(): void {
     const laid = layout();
     if (!laid) return;
     const nodes = visibleNodes(laid);
-    if (sigOf(nodes) === lastSig) recolor();
+    if (sigOf(nodes) === lastSig) recolor(nodes);
     else draw(true, { laid, nodes });
 }
 
 watch(
     [
         root,
+        () => states.folderTreeVersion,
         () => props.problemsOnly,
         () => props.query.map((t) => `${t.field}:${t.needle}`).join('|'),
         () =>

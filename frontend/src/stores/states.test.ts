@@ -182,6 +182,10 @@ describe('states store — folder-tree delta apply', () => {
         expect(store.folderTree?.host_count).toBe(2);
         expect(store.folderTree?.state).toBe('OK');
 
+        // markRaw nodes patched in place are invisible to Vue; the version bump is
+        // the only signal consumers (rows, treemap) re-derive from. Assert it ticks
+        // so a state change shows without an expand/collapse forcing a re-render.
+        const revBefore = store.folderTreeVersion;
         send(es, {
             full: false,
             changed: [
@@ -201,6 +205,7 @@ describe('states store — folder-tree delta apply', () => {
                 },
             ],
         });
+        expect(store.folderTreeVersion).toBeGreaterThan(revBefore);
         expect(store.folderTree?.children.find((c) => c.path === 'f/h1')?.state).toBe('DOWN');
         expect(store.folderTree?.state).toBe('CRITICAL');
         expect(store.folderTree?.title).toBe('Renamed'); // title patch applied (folder rename)

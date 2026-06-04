@@ -126,6 +126,9 @@ import { severityPills, stateColorVar } from '@/utils/stateColors';
 // and depth are precomputed by the projection and passed in.
 const props = defineProps<{
     node: FolderTreeNode;
+    // markRaw node fields are patched in place; a changed rev re-renders the row
+    // (and re-derives the computeds below) so live status shows without navigation.
+    rev: number;
     depth: number;
     isOpen: boolean;
     isExpandable: boolean;
@@ -147,10 +150,19 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 
-const isEmpty = computed(() => props.node.kind === 'folder' && props.node.is_empty);
-const pills = computed(() => severityPills(props.node.severity_counts));
+const isEmpty = computed(() => {
+    void props.rev;
+    return props.node.kind === 'folder' && props.node.is_empty;
+});
+const pills = computed(() => {
+    void props.rev;
+    return severityPills(props.node.severity_counts);
+});
 // Healthy remainder so the pill breakdown sums to the host count.
-const folderOk = computed(() => Math.max(0, props.node.host_count - props.node.problem_count));
+const folderOk = computed(() => {
+    void props.rev;
+    return Math.max(0, props.node.host_count - props.node.problem_count);
+});
 
 function onChevron() {
     emit('toggle', props.node.path);
