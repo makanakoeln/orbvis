@@ -68,7 +68,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-security": "^4.0.0",
     "eslint-plugin-simple-import-sort": "^13.0.0",
-    "eslint-plugin-vue": "^10.8.0",
+    "eslint-plugin-vue": "^10.9.2",
     "globals": "^17.5.0",
     "jsdom": "^29.0.2",
     "openapi-typescript": "^7.13.0",
