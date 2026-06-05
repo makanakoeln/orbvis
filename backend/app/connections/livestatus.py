@@ -7,6 +7,7 @@ import asyncio
 import contextlib
 import json as _json
 import logging
+import math
 import random
 import re
 import re as _re
@@ -23,7 +24,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TypedDict, cast
 
 if TYPE_CHECKING:
-    from cmk.livestatus_client import MultiSiteConnection
+    from cmk.livestatus_client import MultiSiteConnection, SingleSiteConnection
 
 import httpx
 
@@ -655,6 +656,22 @@ def _is_central_local_socket(host: str | None, socket_path: str) -> bool:
     return socket_path == str(Path(settings.checkmk_omd_root) / "tmp" / "run" / "live")
 
 
+@lru_cache(maxsize=1)
+def _cmk_livestatus_client_available() -> bool:
+    """True when Checkmks ``cmk.livestatus_client`` is importable.
+
+    Cached: the import either succeeds for the process lifetime (OMD
+    site-packages were injected by ``checkmk.setup()``) or never does
+    (standalone). Symbols are imported top-level only — the ``_connection``
+    submodule exists from 2.5 onwards, the top-level names are stable 2.3+.
+    """
+    try:
+        from cmk.livestatus_client import SingleSiteConnection  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
 def _build_state_from_row(
     row: LivestatusRow,
     state_map: dict[int, str],
@@ -862,6 +879,24 @@ class LivestatusConnection(ConnectionBase):
                 len(self._sites),
                 ", ".join(sorted(self._sites)),
             )
+
+        # Standalone deliberately keeps the native asyncio path (_query_raw);
+        # in OMD context the maintained cmk client replaces it.
+        self._use_cmk_client: bool = (
+            self._sites is None
+            and _cmk_integration.available
+            and _cmk_livestatus_client_available()
+        )
+        self._ss_socketurl = f"tcp:{host}:{port}" if host else f"unix:{socket_path}"
+        # Explicit because the client's verify=True fallback reads $OMD_ROOT
+        # from the environment, which OrbVis does not rely on.
+        self._ss_ca_file: str | None = (
+            str(Path(settings.checkmk_omd_root) / "var" / "ssl" / "ca-certificates.crt")
+            if settings.checkmk_omd_root
+            else None
+        )
+        if self._use_cmk_client:
+            logger.info("Livestatus single-site via cmk.livestatus_client (%s)", self._ss_socketurl)
 
     @asynccontextmanager
     async def with_auth_user(self, username: str) -> AsyncIterator[None]:
@@ -1877,9 +1912,10 @@ class LivestatusConnection(ConnectionBase):
     ) -> object:
         """Sync Livestatus query for cmk.bi's SitesCallback.
 
-        Runs inside an ``asyncio.to_thread`` worker; spins up a fresh event loop
-        to drive our async ``_query_raw``. ``AuthUser:`` is injected automatically
-        via the ``_auth_user_ctx`` ContextVar set by ``with_auth_user(...)``.
+        Runs inside an ``asyncio.to_thread`` worker; uses the sync cmk client
+        directly or spins up a fresh event loop to drive our async
+        ``_query_raw``. ``AuthUser:`` is injected automatically via the
+        ``_auth_user_ctx`` ContextVar set by ``with_auth_user(...)``.
 
         Two pieces of compatibility shimming:
         - cmk.bi hardcodes ``Cache: reload`` in compiler.py + data_fetcher.py.
@@ -1903,11 +1939,16 @@ class LivestatusConnection(ConnectionBase):
             return LivestatusResponse(self._run_multisite_sync(lql, only_sites=sites_filter))
 
         del only_sites
-        loop = asyncio.new_event_loop()
-        try:
-            rows = loop.run_until_complete(self._query_raw(lql))
-        finally:
-            loop.close()
+        if self._use_cmk_client:
+            # Already inside a worker thread — call the sync client directly,
+            # no event-loop detour needed.
+            rows = self._run_singlesite_sync(lql)
+        else:
+            loop = asyncio.new_event_loop()
+            try:
+                rows = loop.run_until_complete(self._query_raw(lql))
+            finally:
+                loop.close()
         site_id = _default_site_id()
         return LivestatusResponse([[site_id, *row] for row in rows])
 
@@ -2327,6 +2368,13 @@ class LivestatusConnection(ConnectionBase):
             return [
                 (str(row[0]) if row and isinstance(row[0], str) else None, row[1:]) for row in rows
             ]
+        if self._use_cmk_client:
+            async with self._semaphore:
+                rows = await asyncio.wait_for(
+                    asyncio.to_thread(self._run_singlesite_sync, query),
+                    timeout=settings.connection_query_timeout,
+                )
+            return [(None, r) for r in rows]
         async with self._semaphore:
             rows = await asyncio.wait_for(
                 self._query_raw(query),
@@ -2357,6 +2405,9 @@ class LivestatusConnection(ConnectionBase):
         if self._sites:
             await asyncio.to_thread(self._run_multisite_command, command, site_id)
             return
+        if self._use_cmk_client:
+            await asyncio.to_thread(self._run_singlesite_command, command)
+            return
         # Single-socket path: livestatus expects ``COMMAND [<ts>] <body>``.
         ts = int(time.time())
         full = f"COMMAND [{ts}] {command}"
@@ -2368,6 +2419,53 @@ class LivestatusConnection(ConnectionBase):
             writer.close()
             with contextlib.suppress(Exception):
                 await writer.wait_closed()
+
+    def _make_singlesite_connection(self) -> SingleSiteConnection:
+        """Fresh connection per call — mirrors ``_query_raw``'s model so no
+        socket is ever shared across worker threads."""
+        from cmk.livestatus_client import SingleSiteConnection
+
+        conn = SingleSiteConnection(
+            self._ss_socketurl,
+            tls=self._ssl_ctx is not None,
+            verify=self._tls_verify,
+            ca_file_path=self._ss_ca_file,
+        )
+        # ceil, not int(): set_timeout takes whole seconds and
+        # socket.settimeout(0) would mean non-blocking, not "0.5s".
+        conn.set_timeout(max(1, math.ceil(self._timeout)))
+        return conn
+
+    def _run_singlesite_sync(self, lql: str) -> list[LivestatusRow]:
+        """Sync single-site query via Checkmks ``SingleSiteConnection``.
+
+        Must run in a worker thread (``asyncio.to_thread``); the client is
+        sync. The client adds OutputFormat/ResponseHeader framing itself, so
+        *lql* is the bare query — same contract as ``_run_multisite_sync``.
+        """
+        headers = ""
+        auth_user = _auth_user_ctx.get()
+        if auth_user:
+            headers += f"AuthUser: {auth_user}\n"
+        conn = self._make_singlesite_connection()
+        try:
+            return list(conn.query(lql, add_headers=headers))
+        finally:
+            # The client sends ``KeepAlive: on`` and only disconnects on
+            # query errors — close explicitly instead of relying on GC.
+            conn.disconnect()
+
+    def _run_singlesite_command(self, command_body: str) -> None:
+        """Send an external command via ``SingleSiteConnection.command``.
+
+        The client adds the ``COMMAND [<timestamp>]`` framing itself — bare
+        body in, same contract as the multisite path.
+        """
+        conn = self._make_singlesite_connection()
+        try:
+            conn.command(command_body)
+        finally:
+            conn.disconnect()
 
     def _run_multisite_command(self, command_body: str, site_id: str | None) -> None:
         """Send a Livestatus external command via MultiSiteConnection.
