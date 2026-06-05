@@ -1,10 +1,10 @@
 <template>
-    <div v-if="canvasStyle" class="fixed pointer-events-none overflow-hidden" :style="canvasStyle">
+    <div v-if="canvasStyle" class="scene" :style="canvasStyle">
         <!-- Background image fades in/out -->
-        <div class="absolute inset-0 rounded-[10px] bg-layer" />
+        <div class="bg-layer" />
 
         <!-- Connection lines (rendered below objects) -->
-        <svg class="absolute inset-0 h-full w-full">
+        <svg class="lines-layer">
             <!-- web-server-01 → HTTP -->
             <line
                 class="flow-line"
@@ -52,14 +52,11 @@
         </svg>
 
         <!-- Performance graph: CPU Load (76% = WARNING, with warn/crit threshold lines) -->
-        <div class="absolute graph-gadget" :style="graphStyle">
+        <div class="graph-gadget" :style="graphStyle">
             <!-- Header -->
-            <div class="mb-1 flex items-center justify-between">
-                <span
-                    class="text-[9px] font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-                    >CPU Utilization</span
-                >
-                <span class="text-[10px] font-bold text-[var(--color-yellow-50)]">76%</span>
+            <div class="graph-header">
+                <span class="graph-title">CPU Utilization</span>
+                <span class="graph-value">76%</span>
             </div>
             <!-- Chart: Y-axis 0–100, warn@75%, crit@90% -->
             <svg width="175" height="92" viewBox="0 0 175 92">
@@ -193,9 +190,9 @@
                 <circle cx="169" cy="24" r="3" fill="rgb(245,158,11)" class="pulse-dot" />
             </svg>
             <!-- Footer time labels -->
-            <div class="mt-0.5 flex items-center justify-between">
-                <span class="text-[7px] text-[var(--text-muted)]">1h ago</span>
-                <span class="text-[7px] text-[var(--text-muted)]">now</span>
+            <div class="graph-footer">
+                <span class="graph-time">1h ago</span>
+                <span class="graph-time">now</span>
             </div>
         </div>
 
@@ -203,7 +200,7 @@
         <div
             v-for="(obj, i) in demoObjects"
             :key="obj.id"
-            class="absolute flex flex-col items-center"
+            class="demo-object"
             :style="entryStyle(i, obj)"
         >
             <svg :width="SZ" :height="SZ" :class="glowClass(obj)">
@@ -222,19 +219,15 @@
                     {{ TYPE_CHAR[obj.type] ?? '?' }}
                 </text>
             </svg>
-            <div
-                class="mt-1 whitespace-nowrap rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium text-white"
-            >
+            <div class="object-label">
                 {{ obj.name }}
             </div>
         </div>
 
         <!-- Floating "background.png" label -->
-        <div class="absolute bg-label">
-            <div
-                class="flex items-center gap-1.5 rounded-lg bg-black/70 px-2.5 py-1.5 text-xs font-mono font-medium text-[var(--color-corporate-green-40)] ring-1 ring-[var(--color-corporate-green-50)]/40"
-            >
-                <svg class="h-3 w-3 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+        <div class="bg-label">
+            <div class="bg-label-chip">
+                <svg class="bg-label-icon" viewBox="0 0 20 20" fill="currentColor">
                     <path
                         fill-rule="evenodd"
                         d="M1 5.25A2.25 2.25 0 013.25 3h13.5A2.25 2.25 0 0119 5.25v9.5A2.25 2.25 0 0116.75 17H3.25A2.25 2.25 0 011 14.75v-9.5zm16.5 0a.75.75 0 00-.75-.75H3.25a.75.75 0 00-.75.75v6.268l3.162-3.162a.75.75 0 011.06 0l3.913 3.913 1.612-1.612a.75.75 0 011.06 0l3.693 3.693V5.25zm-2.47 9.25H3.25a.75.75 0 01-.75-.75v-.432l3.693-3.692 3.912 3.912a.75.75 0 001.06 0l1.612-1.612 3.223 3.224a.75.75 0 01-.72.34z"
@@ -361,6 +354,37 @@ const graphStyle = computed(() => ({
 </script>
 
 <style scoped>
+.scene {
+    position: fixed;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.lines-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.demo-object {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.object-label {
+    margin-top: var(--dimension-3);
+    padding: var(--dimension-2) 6px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-white-100);
+    white-space: nowrap;
+    background: rgb(0 0 0 / 65%);
+    border-radius: 4px;
+}
+
 /* ─── Entry animation ─────────────────────────────────────────────────────── */
 @keyframes demo-fade-in {
     from {
@@ -376,20 +400,47 @@ const graphStyle = computed(() => ({
 
 /* ─── Background image ───────────────────────────────────────────────────── */
 .bg-layer {
+    position: absolute;
+    inset: 0;
     background-image: url('/demo-bg.png');
     background-size: cover;
     background-position: top center;
+    border-radius: 10px;
     opacity: 0;
     animation: bg-reveal 4s ease-in-out 0.5s infinite;
 }
 
 /* ─── Floating filename label ─────────────────────────────────────────────── */
 .bg-label {
+    position: absolute;
     bottom: 28px;
     left: 50%;
     transform: translateX(-50%);
     opacity: 0;
     animation: bg-reveal 4s ease-in-out 0.5s infinite;
+}
+
+.bg-label-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-weight: 500;
+    color: var(--color-corporate-green-40);
+    background: rgb(0 0 0 / 70%);
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-corporate-green-50) 40%, transparent);
+}
+
+.bg-label-icon {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
 }
 
 @keyframes bg-reveal {
@@ -412,12 +463,46 @@ const graphStyle = computed(() => ({
 
 /* ─── Graph object (mimics real graph object container) ──────────────────── */
 .graph-gadget {
+    position: absolute;
     background: rgb(9 9 11 / 90%);
     border: 1px solid rgb(255 255 255 / 10%);
     border-radius: 8px;
     overflow: hidden;
     padding: 6px 8px 5px;
     width: 195px;
+}
+
+.graph-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--dimension-3);
+}
+
+.graph-title {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.graph-value {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-yellow-50);
+}
+
+.graph-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--dimension-2);
+}
+
+.graph-time {
+    font-size: 7px;
+    color: var(--text-muted);
 }
 
 .pulse-dot {

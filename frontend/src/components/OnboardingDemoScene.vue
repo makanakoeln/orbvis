@@ -1,10 +1,10 @@
 <template>
-    <div class="fixed pointer-events-none overflow-hidden" :style="overlayStyle">
+    <div class="scene" :style="overlayStyle">
         <!-- Backdrop so demo objects are readable over any existing board content -->
-        <div class="absolute inset-0 bg-black/55 rounded-[10px]" />
+        <div class="backdrop" />
 
         <!-- Connection lines -->
-        <svg class="absolute inset-0 w-full h-full">
+        <svg class="lines-layer">
             <line
                 class="flow-line"
                 :x1="px(25)"
@@ -31,7 +31,7 @@
         <div
             v-for="(obj, i) in demoObjects"
             :key="obj.id"
-            class="absolute flex flex-col items-center"
+            class="demo-object"
             :style="entryStyle(i, obj)"
         >
             <svg :width="SZ" :height="SZ" :class="glowClass(obj)">
@@ -50,9 +50,7 @@
                     {{ TYPE_CHAR[obj.type] ?? '?' }}
                 </text>
             </svg>
-            <div
-                class="mt-1 whitespace-nowrap rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium text-white"
-            >
+            <div class="object-label">
                 {{ obj.name }}
             </div>
         </div>
@@ -151,6 +149,44 @@ function entryStyle(index: number, obj: DemoObj) {
 </script>
 
 <style scoped>
+.scene {
+    position: fixed;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 55%);
+    border-radius: 10px;
+}
+
+.lines-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.demo-object {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.object-label {
+    margin-top: var(--dimension-3);
+    padding: var(--dimension-2) 6px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-white-100);
+    white-space: nowrap;
+    background: rgb(0 0 0 / 65%);
+    border-radius: 4px;
+}
+
 /* ─── Entry animation ────────────────────────────────────────────────────── */
 @keyframes demo-fade-in {
     from {

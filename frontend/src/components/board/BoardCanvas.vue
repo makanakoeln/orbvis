@@ -1,7 +1,7 @@
 <template>
     <div
         ref="canvasEl"
-        class="relative select-none bg-[var(--bg)]"
+        class="orb-canvas"
         :class="canvasCursorClass"
         :style="canvasStyle"
         :data-native-width="canvasWidth"
@@ -18,7 +18,7 @@
              the canvas asymmetric-stretches into the pane. -->
         <svg
             v-if="editMode && (snapGrid ?? 0) > 0"
-            class="absolute inset-0 w-full h-full pointer-events-none"
+            class="orb-canvas__grid"
             :viewBox="`0 0 ${canvasWidth} ${canvasHeight}`"
             preserveAspectRatio="none"
         >
@@ -50,7 +50,7 @@
         <svg
             v-for="layer in lineLayers"
             :key="`linelayer-${layer.z}`"
-            class="absolute inset-0 w-full h-full"
+            class="orb-canvas__line-layer"
             :style="{ zIndex: layer.z, pointerEvents: 'none' }"
         >
             <g v-for="line in layer.lines" :key="line.id" :style="lineDimStyle(line)">
@@ -73,7 +73,7 @@
         <div
             v-for="obj in nonLineObjects"
             :key="obj.id"
-            class="absolute"
+            class="orb-canvas__object"
             :data-object-id="obj.id"
             :style="objectWrapperStyle(obj)"
             @pointerdown="onObjectPointerDown($event, obj)"
@@ -511,9 +511,10 @@ function resetZoom(): void {
 }
 
 const canvasCursorClass = computed(() => {
-    if (props.placing) return 'cursor-crosshair';
-    if (_panActive.value) return 'cursor-grabbing';
-    if (!props.editMode && (userZoom.value > 1 || isNagvisClassic.value)) return 'cursor-grab';
+    if (props.placing) return 'orb-canvas--placing';
+    if (_panActive.value) return 'orb-canvas--panning';
+    if (!props.editMode && (userZoom.value > 1 || isNagvisClassic.value))
+        return 'orb-canvas--pannable';
     return '';
 });
 
@@ -985,3 +986,42 @@ function getMapPosition(event: MouseEvent): { x: number; y: number } {
 
 defineExpose({ getCanvasEl: () => canvasEl.value, getMapPosition, resetZoom });
 </script>
+
+<style scoped>
+.orb-canvas {
+    position: relative;
+    background: var(--bg);
+    user-select: none;
+}
+
+.orb-canvas--placing {
+    cursor: crosshair;
+}
+
+.orb-canvas--panning {
+    cursor: grabbing;
+}
+
+.orb-canvas--pannable {
+    cursor: grab;
+}
+
+.orb-canvas__grid {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.orb-canvas__line-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.orb-canvas__object {
+    position: absolute;
+}
+</style>

@@ -6,7 +6,7 @@
                 <CmkParagraph v-if="subtitle" class="admin-subtitle">{{ subtitle }}</CmkParagraph>
             </header>
 
-            <div v-if="loading" class="flex items-center justify-center py-16">
+            <div v-if="loading" class="settings-page__loading">
                 <CmkLoading />
             </div>
 
@@ -424,6 +424,13 @@ onUnmounted(() => {
 
 .settings-page__header {
     padding: var(--dimension-7) var(--dimension-8) var(--dimension-6);
+}
+
+.settings-page__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 0;
 }
 
 /* `.settings-page__savebar` is added directly onto the CmkAlertBox root

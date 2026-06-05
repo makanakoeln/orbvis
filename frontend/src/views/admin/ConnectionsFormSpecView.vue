@@ -1,6 +1,6 @@
 <template>
-    <div class="max-w-5xl">
-        <div class="flex justify-between items-center" style="margin-bottom: var(--dimension-6)">
+    <div class="orb-connfs">
+        <div class="orb-connfs__header">
             <div>
                 <CmkHeading type="h2">
                     {{ t('admin.connectionsTitle') }}
@@ -15,103 +15,66 @@
             </CmkButton>
         </div>
 
-        <div v-if="store.loading" class="flex items-center justify-center py-8">
+        <div v-if="store.loading" class="orb-connfs__loading">
             <CmkLoading />
         </div>
 
         <CmkAlertBox v-else-if="store.error" variant="error">{{ store.error }}</CmkAlertBox>
 
-        <div
-            v-else-if="store.connections.length === 0"
-            class="text-center py-16 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
-        >
-            <p class="text-[var(--text-muted)] text-sm">{{ t('admin.noConnections') }}</p>
-            <p class="text-[var(--text-muted)] text-sm mt-1">{{ t('admin.noConnectionsHint') }}</p>
+        <div v-else-if="store.connections.length === 0" class="orb-connfs__empty">
+            <p class="orb-connfs__empty-text">{{ t('admin.noConnections') }}</p>
+            <p class="orb-connfs__empty-text orb-connfs__empty-text--hint">
+                {{ t('admin.noConnectionsHint') }}
+            </p>
         </div>
 
-        <div
-            v-else
-            class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
-        >
-            <table class="w-full text-sm">
+        <div v-else class="orb-connfs__card">
+            <table class="orb-connfs__table">
                 <thead>
-                    <tr class="border-b border-[var(--border)]">
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                    <tr class="orb-connfs__head-row">
+                        <th class="orb-connfs__th">
                             {{ t('admin.status') }}
                         </th>
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
-                            ID
-                        </th>
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                        <th class="orb-connfs__th">ID</th>
+                        <th class="orb-connfs__th">
                             {{ t('admin.displayLabel') }}
                         </th>
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                        <th class="orb-connfs__th">
                             {{ t('admin.type') }}
                         </th>
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                        <th class="orb-connfs__th">
                             {{ t('admin.connection') }}
                         </th>
-                        <th
-                            class="text-right text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                        <th class="orb-connfs__th orb-connfs__th--right">
                             {{ t('admin.actions') }}
                         </th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-[var(--border)]">
-                    <tr
-                        v-for="b in store.connections"
-                        :key="b.id"
-                        class="hover:bg-[var(--bg-hover)] transition-colors"
-                    >
-                        <td style="padding: 6px 12px">
+                <tbody class="orb-connfs__body">
+                    <tr v-for="b in store.connections" :key="b.id" class="orb-connfs__row">
+                        <td class="orb-connfs__td">
                             <button
                                 :disabled="statusLoading[b.id]"
-                                class="flex items-center gap-[6px] group cursor-pointer"
+                                class="orb-connfs__status-btn"
                                 :title="t('common.test')"
                                 @click="testExisting(b.id)"
                             >
-                                <span class="relative flex shrink-0">
+                                <span class="orb-connfs__dot-wrap">
                                     <span
                                         v-if="statusLoading[b.id]"
-                                        class="rounded-full bg-[var(--color-pending)] animate-pulse"
-                                        style="width: 8px; height: 8px"
+                                        class="orb-connfs__dot orb-connfs__dot--loading"
                                     />
                                     <span
                                         v-else-if="statuses[b.id] === undefined"
-                                        class="rounded-full bg-[var(--color-pending)]"
-                                        style="width: 8px; height: 8px"
+                                        class="orb-connfs__dot orb-connfs__dot--pending"
                                     />
                                     <span
                                         v-else-if="statuses[b.id]"
-                                        class="rounded-full bg-[var(--color-corporate-green-50)] shadow-[0_0_6px_rgba(74,222,128,0.6)]"
-                                        style="width: 8px; height: 8px"
+                                        class="orb-connfs__dot orb-connfs__dot--ok"
                                     />
-                                    <span
-                                        v-else
-                                        class="rounded-full bg-[var(--color-light-red-40)]"
-                                        style="width: 8px; height: 8px"
-                                    />
+                                    <span v-else class="orb-connfs__dot orb-connfs__dot--error" />
                                 </span>
-                                <span
-                                    class="text-sm text-[var(--text-muted)] group-hover:text-[var(--text)] transition-colors"
-                                >
+                                <span class="orb-connfs__status-label">
                                     {{
                                         statusLoading[b.id]
                                             ? t('common.testing')
@@ -119,8 +82,7 @@
                                     }}
                                 </span>
                                 <svg
-                                    class="text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-                                    style="width: 11px; height: 11px"
+                                    class="orb-connfs__refresh"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -134,16 +96,13 @@
                                 </svg>
                             </button>
                         </td>
-                        <td
-                            class="font-mono text-sm text-[var(--text-muted)]"
-                            style="padding: 6px 12px"
-                        >
+                        <td class="orb-connfs__td orb-connfs__td--mono">
                             {{ b.id }}
                         </td>
-                        <td class="text-[var(--text)]" style="padding: 6px 12px">
+                        <td class="orb-connfs__td orb-connfs__td--text">
                             {{ b.label || '—' }}
                         </td>
-                        <td style="padding: 6px 12px">
+                        <td class="orb-connfs__td">
                             <CmkBadge
                                 size="small"
                                 type="outline"
@@ -157,10 +116,7 @@
                                 >{{ b.type }}</CmkBadge
                             >
                         </td>
-                        <td
-                            class="text-[var(--text-muted)] font-mono text-sm"
-                            style="padding: 6px 12px"
-                        >
+                        <td class="orb-connfs__td orb-connfs__td--mono">
                             <template v-if="b.type === 'livestatus'">
                                 {{
                                     b.socket_path ||
@@ -170,21 +126,19 @@
                             <template v-else-if="b.type === 'icinga2'">
                                 {{ b.icinga2_url || '—' }}
                             </template>
-                            <span v-else class="text-[var(--text-muted)]">{{
-                                t('admin.builtIn')
-                            }}</span>
+                            <span v-else>{{ t('admin.builtIn') }}</span>
                         </td>
-                        <td class="text-right" style="padding: 6px 12px">
-                            <div class="flex items-center justify-end gap-[4px]">
+                        <td class="orb-connfs__td orb-connfs__td--right">
+                            <div class="orb-connfs__actions">
                                 <button
-                                    class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                                    class="orb-connfs__action-btn orb-connfs__action-btn--edit"
                                     :title="t('common.edit')"
                                     @click="openEdit(b)"
                                 >
                                     <CmkIcon name="edit" size="small" />
                                 </button>
                                 <button
-                                    class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
+                                    class="orb-connfs__action-btn orb-connfs__action-btn--delete"
                                     :title="t('common.delete')"
                                     @click="deleteTarget = b.id"
                                 >
@@ -229,22 +183,15 @@
                         field-size="FILL"
                     />
                     <p v-else class="connection-edit__id-readonly">{{ dialogId }}</p>
-                    <p
-                        v-if="dialog.mode === 'create'"
-                        class="text-sm text-[var(--text-muted)]"
-                        style="margin-top: var(--dimension-2)"
-                    >
+                    <p v-if="dialog.mode === 'create'" class="connection-edit__hint">
                         {{ t('admin.connectionIdHint') }}
                     </p>
                 </div>
 
-                <div v-if="schemaError" class="text-sm text-[var(--color-light-red-40)]">
+                <div v-if="schemaError" class="connection-edit__schema-error">
                     {{ schemaError }}
                 </div>
-                <div
-                    v-else-if="!formSchema"
-                    class="flex items-center justify-center py-6 text-[var(--text-muted)]"
-                >
+                <div v-else-if="!formSchema" class="connection-edit__loading">
                     <CmkLoading />
                 </div>
                 <FormEdit
@@ -258,7 +205,7 @@
                     {{ dialogTest.message }}
                 </CmkAlertBox>
 
-                <p v-if="formError" class="text-[var(--color-light-red-40)] text-sm">
+                <p v-if="formError" class="connection-edit__error">
                     {{ formError }}
                 </p>
 
@@ -497,6 +444,202 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.orb-connfs {
+    max-width: 1024px;
+}
+
+.orb-connfs__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--dimension-6);
+}
+
+.orb-connfs__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 0;
+}
+
+.orb-connfs__empty {
+    padding: 64px 0;
+    text-align: center;
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.orb-connfs__empty-text {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-connfs__empty-text--hint {
+    margin-top: var(--dimension-3);
+}
+
+.orb-connfs__card {
+    overflow: hidden;
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.orb-connfs__table {
+    width: 100%;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+}
+
+.orb-connfs__head-row {
+    border-bottom: 1px solid var(--border);
+}
+
+.orb-connfs__th {
+    padding: 6px 12px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-align: left;
+    color: var(--text-muted);
+}
+
+.orb-connfs__th--right {
+    text-align: right;
+}
+
+.orb-connfs__body > tr + tr {
+    border-top: 1px solid var(--border);
+}
+
+.orb-connfs__row {
+    transition: background-color 0.15s;
+}
+
+.orb-connfs__row:hover {
+    background: var(--bg-hover);
+}
+
+.orb-connfs__td {
+    padding: 6px 12px;
+}
+
+.orb-connfs__td--mono {
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-connfs__td--text {
+    color: var(--text);
+}
+
+.orb-connfs__td--right {
+    text-align: right;
+}
+
+.orb-connfs__status-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.orb-connfs__dot-wrap {
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+}
+
+.orb-connfs__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+}
+
+.orb-connfs__dot--loading {
+    background: var(--color-pending);
+    animation: orb-connfs-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.orb-connfs__dot--pending {
+    background: var(--color-pending);
+}
+
+.orb-connfs__dot--ok {
+    background: var(--color-corporate-green-50);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--color-corporate-green-50) 60%, transparent);
+}
+
+.orb-connfs__dot--error {
+    background: var(--color-light-red-40);
+}
+
+.orb-connfs__status-label {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+    transition: color 0.15s;
+}
+
+.orb-connfs__status-btn:hover .orb-connfs__status-label {
+    color: var(--text);
+}
+
+.orb-connfs__refresh {
+    flex-shrink: 0;
+    width: 11px;
+    height: 11px;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.orb-connfs__status-btn:hover .orb-connfs__refresh {
+    opacity: 1;
+}
+
+.orb-connfs__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--dimension-3);
+}
+
+.orb-connfs__action-btn {
+    padding: var(--dimension-3);
+    color: var(--text-muted);
+    border-radius: 6px;
+    transition: all 0.15s;
+}
+
+.orb-connfs__action-btn--edit:hover {
+    color: var(--color-corporate-green-50);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 10%, transparent);
+}
+
+.orb-connfs__action-btn--delete:hover {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 10%, transparent);
+}
+
+@keyframes orb-connfs-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
 .connection-edit__body {
     display: flex;
     flex-direction: column;
@@ -519,6 +662,33 @@ onMounted(async () => {
     border-radius: 6px;
     border: 1px solid var(--border);
     width: max-content;
+}
+
+.connection-edit__hint {
+    margin-top: var(--dimension-2);
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.connection-edit__schema-error {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--color-light-red-40);
+}
+
+.connection-edit__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--dimension-8) 0;
+    color: var(--text-muted);
+}
+
+.connection-edit__error {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--color-light-red-40);
 }
 
 .connection-edit__footer {

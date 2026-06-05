@@ -1,42 +1,37 @@
 <template>
-    <div class="space-y-2">
+    <div class="orb-bgupload">
         <!-- Preview when a background is set or staged -->
-        <div
-            v-if="hasImage"
-            class="flex items-center gap-3 px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--color-corporate-green-50)]/50 rounded-lg"
-        >
+        <div v-if="hasImage" class="orb-bgupload__preview">
             <img
                 v-if="!previewFailed && displayUrl"
                 :src="displayUrl"
-                class="w-12 h-12 object-cover rounded shrink-0"
+                class="orb-bgupload__thumb"
                 @error="previewFailed = true"
             />
-            <div
-                v-else-if="previewFailed"
-                class="w-12 h-12 rounded shrink-0 bg-[var(--bg-hover)] flex items-center justify-center text-[10px] text-[var(--text-muted)]"
-            >
-                ?
-            </div>
-            <span class="flex-1 min-w-0 text-xs font-mono text-[var(--text)] truncate">
+            <div v-else-if="previewFailed" class="orb-bgupload__thumb-fallback">?</div>
+            <span class="orb-bgupload__name">
                 {{ displayName }}
-                <span v-if="pendingFile" class="text-[var(--text-muted)]">
+                <span v-if="pendingFile" class="orb-bgupload__unsaved">
                     · {{ t('board.backgroundUnsaved') }}
                 </span>
             </span>
-            <label
-                class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
-            >
+            <label class="orb-bgupload__replace">
                 {{ t('board.replaceBackground') }}
-                <input type="file" :accept="ACCEPT_TYPES" class="hidden" @change="onFileChange" />
+                <input
+                    type="file"
+                    :accept="ACCEPT_TYPES"
+                    class="orb-bgupload__file-input"
+                    @change="onFileChange"
+                />
             </label>
             <button
                 type="button"
-                class="text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] transition-colors"
+                class="orb-bgupload__remove"
                 :title="pendingFile ? t('common.cancel') : t('board.deleteBackground')"
                 @click="removeOrCancel"
             >
                 <svg
-                    class="w-3.5 h-3.5"
+                    class="orb-bgupload__remove-icon"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -48,12 +43,9 @@
         </div>
 
         <!-- Upload button when empty (or pending removal) -->
-        <label
-            v-else
-            class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text-muted)] hover:ring-[var(--color-corporate-green-50)] hover:text-[var(--text)] transition-all cursor-pointer focus-within:ring-[var(--color-corporate-green-50)]"
-        >
+        <label v-else class="orb-bgupload__upload">
             <svg
-                class="w-4 h-4 shrink-0"
+                class="orb-bgupload__upload-icon"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -66,7 +58,12 @@
                 />
             </svg>
             {{ t('board.uploadBackground') }}
-            <input type="file" :accept="ACCEPT_TYPES" class="hidden" @change="onFileChange" />
+            <input
+                type="file"
+                :accept="ACCEPT_TYPES"
+                class="orb-bgupload__file-input"
+                @change="onFileChange"
+            />
         </label>
     </div>
 </template>
@@ -141,3 +138,127 @@ function removeOrCancel() {
     emit('update:pendingRemove', true);
 }
 </script>
+
+<style scoped>
+.orb-bgupload > * + * {
+    margin-top: var(--dimension-4);
+}
+
+.orb-bgupload__preview {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-5);
+    padding: var(--dimension-4) var(--dimension-5);
+    background: var(--default-form-element-bg-color);
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-corporate-green-50) 50%, transparent);
+}
+
+.orb-bgupload__thumb {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.orb-bgupload__thumb-fallback {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    font-size: 10px;
+    color: var(--text-muted);
+    background: var(--bg-hover);
+    border-radius: 4px;
+}
+
+.orb-bgupload__name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-bgupload__unsaved {
+    color: var(--text-muted);
+}
+
+.orb-bgupload__replace {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--dimension-3);
+    padding: var(--dimension-3) var(--dimension-4);
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 6px;
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.orb-bgupload__replace:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+}
+
+.orb-bgupload__file-input {
+    display: none;
+}
+
+.orb-bgupload__remove {
+    color: var(--text-muted);
+    transition: color 0.15s;
+}
+
+.orb-bgupload__remove:hover {
+    color: var(--color-light-red-40);
+}
+
+.orb-bgupload__remove-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.orb-bgupload__upload {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--dimension-4);
+    width: 100%;
+    padding: var(--dimension-4) var(--dimension-5);
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+    cursor: pointer;
+    background: var(--default-form-element-bg-color);
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
+    transition: all 0.15s;
+}
+
+.orb-bgupload__upload:hover {
+    color: var(--text);
+    box-shadow: 0 0 0 1px var(--color-corporate-green-50);
+}
+
+.orb-bgupload__upload:focus-within {
+    box-shadow: 0 0 0 1px var(--color-corporate-green-50);
+}
+
+.orb-bgupload__upload-icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+}
+</style>

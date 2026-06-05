@@ -1,16 +1,9 @@
 <template>
-    <div
-        class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
-        style="max-width: 1100px; margin: 0 auto"
-    >
-        <table class="w-full text-sm" style="border-collapse: separate; border-spacing: 0">
+    <div class="orb-btable">
+        <table class="orb-btable__table">
             <thead>
-                <tr class="border-b border-[var(--border)]">
-                    <th
-                        v-if="auth.canCreateBoards"
-                        class="text-left"
-                        style="padding: 6px 8px 6px 12px; width: 28px"
-                    >
+                <tr class="orb-btable__head-row">
+                    <th v-if="auth.canCreateBoards" class="orb-btable__check-col">
                         <CmkCheckbox
                             v-if="capabilities.formSpecs"
                             :model-value="allSelected"
@@ -31,25 +24,20 @@
                     <th
                         v-for="col in visibleColumns"
                         :key="col.id"
-                        class="text-sm font-semibold text-[var(--text-muted)] tracking-wider select-none"
+                        class="orb-btable__th"
                         :class="[
-                            col.align === 'right' ? 'text-right' : 'text-left',
-                            col.sortable ? 'cursor-pointer hover:text-[var(--text)]' : '',
+                            col.align === 'right' ? 'orb-btable__th--right' : '',
+                            col.sortable ? 'orb-btable__th--sortable' : '',
                         ]"
-                        style="padding: 6px 12px"
                         :aria-sort="ariaSortFor(col.id)"
                         @click="col.sortable && setSort(col.id)"
                     >
-                        <span class="inline-flex items-center" style="gap: 4px">
+                        <span class="orb-btable__th-label">
                             {{ t(col.label) }}
                             <span
                                 v-if="col.sortable"
-                                class="text-[10px]"
-                                :class="
-                                    sortState.col === col.id
-                                        ? 'text-[var(--color-corporate-green-50)]'
-                                        : 'text-[var(--text-muted)]/40'
-                                "
+                                class="orb-btable__sort"
+                                :class="sortState.col === col.id ? 'orb-btable__sort--active' : ''"
                                 aria-hidden="true"
                             >
                                 {{
@@ -64,21 +52,14 @@
                     </th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-[var(--border)]">
+            <tbody class="orb-btable__body">
                 <tr
                     v-for="map in sortedBoards"
                     :key="map.name"
-                    class="hover:bg-[var(--bg-hover)] transition-colors"
-                    :class="
-                        selectedBoards.has(map.name) ? 'bg-[var(--color-corporate-green-50)]/8' : ''
-                    "
+                    class="orb-btable__row"
+                    :class="selectedBoards.has(map.name) ? 'orb-btable__row--selected' : ''"
                 >
-                    <td
-                        v-if="auth.canCreateBoards"
-                        class="align-middle"
-                        style="padding: 6px 8px 6px 12px"
-                        @click.stop
-                    >
+                    <td v-if="auth.canCreateBoards" class="orb-btable__check-cell" @click.stop>
                         <CmkCheckbox
                             v-if="capabilities.formSpecs"
                             :model-value="selectedBoards.has(map.name)"
@@ -91,11 +72,11 @@
                             @change="$emit('toggle-select', map.name)"
                         />
                     </td>
-                    <td class="align-middle" style="padding: 6px 12px">
-                        <div class="flex flex-wrap items-center" style="gap: 6px">
+                    <td class="orb-btable__cell">
+                        <div class="orb-btable__name-wrap">
                             <router-link
                                 :to="`/boards/${map.name}`"
-                                class="font-semibold text-[var(--text)] hover:text-[var(--color-corporate-green-50)] transition-colors"
+                                class="orb-btable__link"
                                 :title="map.alias || map.name"
                             >
                                 {{ map.alias || map.name }}
@@ -105,24 +86,21 @@
                             <template v-if="auth.isAdmin">
                                 <span
                                     v-if="map.show_in_lists === false"
-                                    class="text-[10px] rounded-md font-medium bg-[var(--bg-surface)] text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60"
-                                    style="padding: var(--dimension-2) 5px"
+                                    class="orb-btable__flag-badge"
                                     :title="t('home.hiddenBoard')"
                                 >
                                     {{ t('home.hidden') }}
                                 </span>
                                 <span
                                     v-if="map.readonly"
-                                    class="text-[10px] rounded-md font-medium bg-[var(--bg-surface)] text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60"
-                                    style="padding: var(--dimension-2) 5px"
+                                    class="orb-btable__flag-badge"
                                     :title="t('home.readonlyBoardTitle')"
                                 >
                                     {{ t('home.readonly') }}
                                 </span>
                                 <span
                                     v-if="map.rotation_interval > 0"
-                                    class="rounded-full font-medium bg-[var(--color-warning)]/20 text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/30"
-                                    style="font-size: 11px; padding: var(--dimension-2) 6px"
+                                    class="orb-btable__rotation-badge"
                                     :title="
                                         t('home.rotationBadgeTitle', { n: map.rotation_interval })
                                     "
@@ -132,20 +110,15 @@
                             </template>
                         </div>
                     </td>
-                    <td class="align-middle" style="padding: 6px 12px">
-                        <span
-                            class="rounded-md font-medium"
-                            style="font-size: 11px; padding: var(--dimension-2) 6px"
-                            :class="typeBadgeClass(map.view.type)"
-                        >
+                    <td class="orb-btable__cell">
+                        <span class="orb-btable__type-badge" :class="typeBadgeClass(map.view.type)">
                             {{ boardTypeLabel(map.view.type) }}
                         </span>
                     </td>
-                    <td v-if="auth.isAdmin" class="align-middle" style="padding: 6px 12px">
-                        <div class="flex items-center min-w-0" style="gap: 6px">
+                    <td v-if="auth.isAdmin" class="orb-btable__cell">
+                        <div class="orb-btable__conn">
                             <svg
-                                class="shrink-0 text-[var(--text-muted)]"
-                                style="width: 12px; height: 12px"
+                                class="orb-btable__conn-icon"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -157,38 +130,31 @@
                                     d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3"
                                 />
                             </svg>
-                            <span
-                                class="text-[var(--text-muted)] font-mono truncate"
-                                :title="map.connection_id"
-                            >
+                            <span class="orb-btable__conn-id" :title="map.connection_id">
                                 {{ map.connection_id }}
                             </span>
                         </div>
                     </td>
-                    <td
-                        class="align-middle text-right text-[var(--text-muted)] tabular-nums"
-                        style="padding: 6px 12px"
-                    >
-                        <span v-if="isDynamic(map)" class="italic">
+                    <td class="orb-btable__objects-cell">
+                        <span v-if="isDynamic(map)" class="orb-btable__dynamic">
                             {{ t('home.dynamicObjects') }}
                         </span>
                         <span v-else>{{ map.object_count }}</span>
                     </td>
                     <td
                         v-if="auth.isAdmin || anyEditable"
-                        class="align-middle text-right"
-                        style="padding: 6px 12px"
+                        class="orb-btable__actions-cell"
                         @click.stop
                     >
-                        <div class="inline-flex items-center" style="gap: var(--dimension-2)">
+                        <div class="orb-btable__actions">
                             <button
                                 v-if="(auth.isAdmin || map.can_edit) && !map.readonly"
-                                class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                                class="orb-btable__action orb-btable__action--settings"
                                 :title="t('board.settingsTitle')"
                                 @click="$emit('open-settings', map)"
                             >
                                 <svg
-                                    style="width: 14px; height: 14px"
+                                    class="orb-btable__action-icon"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -208,12 +174,12 @@
                             </button>
                             <button
                                 v-if="auth.canCreateBoards"
-                                class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-yellow-50)] hover:bg-[var(--color-warning)]/10 transition-all"
+                                class="orb-btable__action orb-btable__action--clone"
                                 :title="t('admin.cloneBoard')"
                                 @click="$emit('clone', map)"
                             >
                                 <svg
-                                    style="width: 14px; height: 14px"
+                                    class="orb-btable__action-icon"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -228,12 +194,12 @@
                             </button>
                             <button
                                 v-if="auth.canCreateBoards"
-                                class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5 transition-all"
+                                class="orb-btable__action orb-btable__action--export"
                                 :title="t('admin.exportBoard')"
                                 @click="$emit('export', map.name)"
                             >
                                 <svg
-                                    style="width: 14px; height: 14px"
+                                    class="orb-btable__action-icon"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -248,12 +214,12 @@
                             </button>
                             <button
                                 v-if="auth.canCreateBoards"
-                                class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
+                                class="orb-btable__action orb-btable__action--delete"
                                 :title="t('admin.deleteBoard', { name: map.alias || map.name })"
                                 @click="$emit('delete', map)"
                             >
                                 <svg
-                                    style="width: 14px; height: 14px"
+                                    class="orb-btable__action-icon"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -272,8 +238,7 @@
                 <tr v-if="boards.length === 0">
                     <td
                         :colspan="visibleColumns.length + (auth.canCreateBoards ? 1 : 0)"
-                        class="text-center text-[var(--text-muted)] text-sm"
-                        style="padding: 40px 0"
+                        class="orb-btable__empty"
                     >
                         {{ t('home.noSearchResults', { q: searchQuery }) }}
                     </td>
@@ -404,17 +369,306 @@ function boardTypeLabel(type: string) {
 function typeBadgeClass(type: string): string {
     switch (type) {
         case 'worldmap':
-            return 'bg-cyan-500/15 text-cyan-800 ring-1 ring-cyan-600/40 dark:bg-cyan-500/20 dark:text-cyan-300 dark:ring-cyan-500/30';
+            return 'orb-btable__type-badge--worldmap';
         case 'radar':
-            return 'bg-violet-500/15 text-violet-800 ring-1 ring-violet-600/40 dark:bg-violet-500/20 dark:text-violet-300 dark:ring-violet-500/30';
+            return 'orb-btable__type-badge--radar';
         case 'flow':
-            return 'bg-emerald-500/15 text-emerald-800 ring-1 ring-emerald-700/40 dark:bg-emerald-500/20 dark:text-emerald-300 dark:ring-emerald-500/30';
+            return 'orb-btable__type-badge--flow';
         case 'static':
-            return 'bg-slate-500/15 text-slate-700 ring-1 ring-slate-500/40 dark:bg-slate-400/15 dark:text-slate-300 dark:ring-slate-400/30';
+            return 'orb-btable__type-badge--static';
         case 'foldertree':
-            return 'bg-amber-500/15 text-amber-800 ring-1 ring-amber-600/40 dark:bg-amber-500/20 dark:text-amber-300 dark:ring-amber-500/30';
+            return 'orb-btable__type-badge--foldertree';
         default:
-            return 'bg-[var(--bg-surface)] text-[var(--text)] ring-1 ring-[var(--default-border-color)]';
+            return 'orb-btable__type-badge--generic';
     }
 }
 </script>
+
+<style scoped>
+.orb-btable {
+    overflow: hidden;
+    max-width: 1100px;
+    margin: 0 auto;
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.orb-btable__table {
+    width: 100%;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.orb-btable__head-row {
+    border-bottom: 1px solid var(--border);
+}
+
+.orb-btable__check-col {
+    width: 28px;
+    padding: 6px 8px 6px 12px;
+    text-align: left;
+}
+
+.orb-btable__th {
+    padding: 6px 12px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    text-align: left;
+    user-select: none;
+}
+
+.orb-btable__th--right {
+    text-align: right;
+}
+
+.orb-btable__th--sortable {
+    cursor: pointer;
+}
+
+.orb-btable__th--sortable:hover {
+    color: var(--text);
+}
+
+.orb-btable__th-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--dimension-3);
+}
+
+.orb-btable__sort {
+    font-size: 10px;
+    color: color-mix(in srgb, var(--text-muted) 40%, transparent);
+}
+
+.orb-btable__sort--active {
+    color: var(--color-corporate-green-50);
+}
+
+.orb-btable__body tr + tr {
+    border-top: 1px solid var(--border);
+}
+
+.orb-btable__row {
+    transition: background-color 0.15s;
+}
+
+.orb-btable__row--selected {
+    background: color-mix(in srgb, var(--color-corporate-green-50) 8%, transparent);
+}
+
+.orb-btable__row:hover {
+    background: var(--bg-hover);
+}
+
+.orb-btable__check-cell {
+    padding: 6px 8px 6px 12px;
+    vertical-align: middle;
+}
+
+.orb-btable__cell {
+    padding: 6px 12px;
+    vertical-align: middle;
+}
+
+.orb-btable__name-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.orb-btable__link {
+    font-weight: 600;
+    color: var(--text);
+    transition: color 0.15s;
+}
+
+.orb-btable__link:hover {
+    color: var(--color-corporate-green-50);
+}
+
+.orb-btable__flag-badge {
+    padding: var(--dimension-2) 5px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--bg-surface);
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--default-border-color) 60%, transparent);
+}
+
+.orb-btable__rotation-badge {
+    padding: var(--dimension-2) 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-yellow-50);
+    background: color-mix(in srgb, var(--color-warning) 20%, transparent);
+    border-radius: 9999px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 30%, transparent);
+}
+
+.orb-btable__type-badge {
+    padding: var(--dimension-2) 6px;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 6px;
+}
+
+.orb-btable__type-badge--worldmap {
+    color: var(--color-cyan-80);
+    background: color-mix(in srgb, var(--color-cyan-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-cyan-60) 40%, transparent);
+}
+
+.dark .orb-btable__type-badge--worldmap {
+    color: var(--color-cyan-30);
+    background: color-mix(in srgb, var(--color-cyan-50) 20%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-cyan-50) 30%, transparent);
+}
+
+.orb-btable__type-badge--radar {
+    color: var(--color-purple-80);
+    background: color-mix(in srgb, var(--color-purple-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-purple-60) 40%, transparent);
+}
+
+.dark .orb-btable__type-badge--radar {
+    color: var(--color-purple-30);
+    background: color-mix(in srgb, var(--color-purple-50) 20%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-purple-50) 30%, transparent);
+}
+
+.orb-btable__type-badge--flow {
+    color: var(--color-corporate-green-80);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-corporate-green-70) 40%, transparent);
+}
+
+.dark .orb-btable__type-badge--flow {
+    color: var(--color-corporate-green-30);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 20%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-corporate-green-50) 30%, transparent);
+}
+
+.orb-btable__type-badge--static {
+    color: var(--color-mid-grey-70);
+    background: color-mix(in srgb, var(--color-mid-grey-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-mid-grey-50) 40%, transparent);
+}
+
+.dark .orb-btable__type-badge--static {
+    color: var(--color-mid-grey-30);
+    background: color-mix(in srgb, var(--color-mid-grey-40) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-mid-grey-40) 30%, transparent);
+}
+
+.orb-btable__type-badge--foldertree {
+    color: var(--color-yellow-80);
+    background: color-mix(in srgb, var(--color-yellow-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-yellow-60) 40%, transparent);
+}
+
+.dark .orb-btable__type-badge--foldertree {
+    color: var(--color-yellow-30);
+    background: color-mix(in srgb, var(--color-yellow-50) 20%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-yellow-50) 30%, transparent);
+}
+
+.orb-btable__type-badge--generic {
+    color: var(--text);
+    background: var(--bg-surface);
+    box-shadow: 0 0 0 1px var(--default-border-color);
+}
+
+.orb-btable__conn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.orb-btable__conn-icon {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    color: var(--text-muted);
+}
+
+.orb-btable__conn-id {
+    overflow: hidden;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    color: var(--text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-btable__objects-cell {
+    padding: 6px 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    text-align: right;
+    vertical-align: middle;
+}
+
+.orb-btable__dynamic {
+    font-style: italic;
+}
+
+.orb-btable__actions-cell {
+    padding: 6px 12px;
+    text-align: right;
+    vertical-align: middle;
+}
+
+.orb-btable__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--dimension-2);
+}
+
+.orb-btable__action {
+    padding: var(--dimension-3);
+    color: var(--text-muted);
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+
+.orb-btable__action--settings:hover {
+    color: var(--color-corporate-green-50);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 10%, transparent);
+}
+
+.orb-btable__action--clone:hover {
+    color: var(--color-yellow-50);
+    background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+}
+
+.orb-btable__action--export:hover {
+    color: var(--text);
+    background: var(--color-white-0);
+}
+
+.orb-btable__action--delete:hover {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 10%, transparent);
+}
+
+.orb-btable__action-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.orb-btable__empty {
+    padding: 40px 0;
+    color: var(--text-muted);
+    text-align: center;
+}
+</style>

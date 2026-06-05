@@ -1,45 +1,17 @@
 <template>
-    <div
-        class="min-h-screen flex items-center justify-center bg-[var(--bg)] relative overflow-hidden"
-    >
+    <div class="orb-login">
         <!-- Background -->
-        <div class="absolute inset-0 pointer-events-none">
-            <div
-                class="absolute -top-48 -left-48 w-[550px] h-[550px] rounded-full blur-3xl"
-                style="
-                    background: radial-gradient(circle, rgb(21 209 160 / 9%) 0%, transparent 70%);
-                "
-            />
-            <div
-                class="absolute -bottom-48 -right-48 w-[550px] h-[550px] rounded-full blur-3xl"
-                style="
-                    background: radial-gradient(circle, rgb(21 209 160 / 9%) 0%, transparent 70%);
-                "
-            />
-            <div
-                class="absolute inset-0"
-                style="
-                    background-image:
-                        linear-gradient(rgb(21 209 160 / 3%) 1px, transparent 1px),
-                        linear-gradient(90deg, rgb(21 209 160 / 3%) 1px, transparent 1px);
-                    background-size: 48px 48px;
-                "
-            />
+        <div class="orb-login__bg">
+            <div class="orb-login__glow orb-login__glow--tl" />
+            <div class="orb-login__glow orb-login__glow--br" />
+            <div class="orb-login__grid" />
         </div>
 
-        <div class="relative w-full max-w-[440px] mx-[24px]">
+        <div class="orb-login__panel">
             <!-- Logo -->
-            <div class="flex flex-col items-center mb-[32px]">
-                <div
-                    class="inline-flex items-center justify-center w-[64px] h-[64px] bg-[rgb(21_209_160/10%)] ring-1 ring-[var(--color-corporate-green-50)]/40 rounded-2xl mb-[16px]"
-                >
-                    <svg
-                        class="w-[32px] h-[32px] text-[var(--color-corporate-green-50)]"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="1.5"
-                    >
+            <div class="orb-login__header">
+                <div class="orb-login__logo">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -50,23 +22,19 @@
                         <circle cx="13.8" cy="10.2" r="0.6" fill="currentColor" stroke="none" />
                     </svg>
                 </div>
-                <h1 class="font-bold text-[22px] text-[var(--text)] mb-[4px]">OrbVis</h1>
-                <p class="text-[13px] text-[var(--text-muted)]">
+                <h1 class="orb-login__title">OrbVis</h1>
+                <p class="orb-login__subtitle">
                     {{ t('auth.monitoringVisualization') }}
                 </p>
             </div>
 
             <!-- Card -->
-            <div
-                class="bg-[var(--bg-surface)] ring-1 ring-white/8 shadow-2xl shadow-black/60 rounded-xl p-[32px]"
-            >
-                <form class="flex flex-col gap-[20px]" @submit.prevent="handleLogin">
-                    <div class="flex flex-col gap-[6px]">
-                        <label
-                            for="login-username"
-                            class="font-medium text-[13px] text-[var(--text)]"
-                            >{{ t('auth.username') }}</label
-                        >
+            <div class="orb-login__card">
+                <form class="orb-login__form" @submit.prevent="handleLogin">
+                    <div class="orb-login__field">
+                        <label for="login-username" class="orb-login__label">{{
+                            t('auth.username')
+                        }}</label>
                         <CmkInput
                             id="login-username"
                             v-model="username"
@@ -77,27 +45,23 @@
                         />
                     </div>
 
-                    <div class="flex flex-col gap-[6px]">
-                        <label
-                            for="login-password"
-                            class="font-medium text-[13px] text-[var(--text)]"
-                            >{{ t('auth.password') }}</label
-                        >
-                        <div
-                            class="flex items-center w-full rounded-[4px] border border-[var(--border)] bg-[var(--bg-input,var(--bg-surface))] focus-within:border-[var(--color-corporate-green-50)] transition-colors"
-                        >
+                    <div class="orb-login__field">
+                        <label for="login-password" class="orb-login__label">{{
+                            t('auth.password')
+                        }}</label>
+                        <div class="orb-login__pw-wrap">
                             <input
                                 id="login-password"
                                 v-model="password"
                                 :type="showPassword ? 'text' : 'password'"
                                 autocomplete="current-password"
                                 placeholder="••••••••"
-                                class="flex-1 min-w-0 bg-transparent px-[8px] py-[4px] text-[13px] text-[var(--text)] placeholder-[var(--text-muted)] outline-none"
+                                class="orb-login__pw-input"
                                 @keydown.enter="handleLogin"
                             />
                             <button
                                 type="button"
-                                class="shrink-0 flex items-center px-2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                                class="orb-login__pw-toggle"
                                 :title="
                                     showPassword ? t('auth.hidePassword') : t('auth.showPassword')
                                 "
@@ -105,7 +69,6 @@
                             >
                                 <svg
                                     v-if="!showPassword"
-                                    class="w-4 h-4"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -124,7 +87,6 @@
                                 </svg>
                                 <svg
                                     v-else
-                                    class="w-4 h-4"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -146,7 +108,7 @@
 
                     <CmkButton
                         variant="primary"
-                        class="w-full"
+                        class="orb-login__submit"
                         :disabled="authStore.loading"
                         @click="handleLogin"
                     >
@@ -156,11 +118,8 @@
             </div>
 
             <!-- Version footer -->
-            <div class="text-center mt-[16px]">
-                <button
-                    class="text-[12px] text-[var(--text-muted)] hover:text-[var(--text-muted)] transition-colors"
-                    @click="showChangelog = true"
-                >
+            <div class="orb-login__footer">
+                <button class="orb-login__version" @click="showChangelog = true">
                     v{{ appVersion }}
                 </button>
             </div>
@@ -193,3 +152,191 @@ async function handleLogin() {
     await authStore.login(username.value, password.value);
 }
 </script>
+
+<style scoped>
+.orb-login {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
+}
+
+.orb-login__bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.orb-login__glow {
+    position: absolute;
+    width: 550px;
+    height: 550px;
+    background: radial-gradient(
+        circle,
+        color-mix(in srgb, var(--color-corporate-green-50) 9%, transparent) 0%,
+        transparent 70%
+    );
+    border-radius: 9999px;
+    filter: blur(64px);
+}
+
+.orb-login__glow--tl {
+    top: -192px;
+    left: -192px;
+}
+
+.orb-login__glow--br {
+    right: -192px;
+    bottom: -192px;
+}
+
+.orb-login__grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(
+            color-mix(in srgb, var(--color-corporate-green-50) 3%, transparent) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--color-corporate-green-50) 3%, transparent) 1px,
+            transparent 1px
+        );
+    background-size: 48px 48px;
+}
+
+.orb-login__panel {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+    margin: 0 24px;
+}
+
+.orb-login__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.orb-login__logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: var(--dimension-6);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 10%, transparent);
+    border-radius: 16px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-corporate-green-50) 40%, transparent);
+}
+
+.orb-login__logo svg {
+    width: 32px;
+    height: 32px;
+    color: var(--color-corporate-green-50);
+}
+
+.orb-login__title {
+    margin-bottom: var(--dimension-3);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.orb-login__subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.orb-login__card {
+    padding: 32px;
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow:
+        0 0 0 1px rgb(255 255 255 / 8%),
+        0 25px 50px -12px rgb(0 0 0 / 60%);
+}
+
+.orb-login__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-7);
+}
+
+.orb-login__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.orb-login__label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.orb-login__pw-wrap {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    background: var(--bg-input, var(--bg-surface));
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: border-color 0.15s;
+}
+
+.orb-login__pw-wrap:focus-within {
+    border-color: var(--color-corporate-green-50);
+}
+
+.orb-login__pw-input {
+    flex: 1;
+    min-width: 0;
+    padding: var(--dimension-3) var(--dimension-4);
+    font-size: 13px;
+    color: var(--text);
+    background: transparent;
+    outline: none;
+}
+
+.orb-login__pw-input::placeholder {
+    color: var(--text-muted);
+}
+
+.orb-login__pw-toggle {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    padding: 0 var(--dimension-4);
+    color: var(--text-muted);
+    transition: color 0.15s;
+}
+
+.orb-login__pw-toggle:hover {
+    color: var(--text);
+}
+
+.orb-login__pw-toggle svg {
+    width: 16px;
+    height: 16px;
+}
+
+.orb-login__submit {
+    width: 100%;
+}
+
+.orb-login__footer {
+    margin-top: var(--dimension-6);
+    text-align: center;
+}
+
+.orb-login__version {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+</style>

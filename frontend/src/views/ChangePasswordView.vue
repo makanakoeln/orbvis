@@ -1,17 +1,9 @@
 <template>
-    <div class="min-h-screen bg-[var(--bg)] flex items-center justify-center p-4">
-        <div class="w-full max-w-sm">
-            <div class="text-center mb-8">
-                <div
-                    class="w-12 h-12 rounded-2xl bg-[var(--color-warning)]/15 ring-1 ring-[var(--color-warning)]/25 flex items-center justify-center mx-auto mb-4"
-                >
-                    <svg
-                        class="w-6 h-6 text-[var(--color-yellow-50)]"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="1.5"
-                    >
+    <div class="orb-pwchange">
+        <div class="orb-pwchange__panel">
+            <div class="orb-pwchange__header">
+                <div class="orb-pwchange__icon">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -19,20 +11,18 @@
                         />
                     </svg>
                 </div>
-                <h1 class="text-xl font-bold text-[var(--text)]">
+                <h1 class="orb-pwchange__title">
                     {{ t('changePassword.title') }}
                 </h1>
-                <p class="text-sm text-[var(--text-muted)] mt-1.5">
+                <p class="orb-pwchange__subtitle">
                     {{ t('changePassword.subtitle') }}
                 </p>
             </div>
 
-            <div
-                class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-2xl p-6 shadow-2xl shadow-black/50"
-            >
-                <form class="space-y-4" @submit.prevent="save">
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-medium text-[var(--text-muted)]">{{
+            <div class="orb-pwchange__card">
+                <form class="orb-pwchange__form" @submit.prevent="save">
+                    <div class="orb-pwchange__field">
+                        <label class="orb-pwchange__label">{{
                             t('changePassword.newPassword')
                         }}</label>
                         <input
@@ -42,11 +32,11 @@
                             required
                             minlength="6"
                             autofocus
-                            class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                            class="orb-field orb-pwchange__input"
                         />
                     </div>
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-medium text-[var(--text-muted)]">{{
+                    <div class="orb-pwchange__field">
+                        <label class="orb-pwchange__label">{{
                             t('changePassword.confirmPassword')
                         }}</label>
                         <input
@@ -54,29 +44,22 @@
                             type="password"
                             placeholder="••••••••"
                             required
-                            class="w-full px-3.5 py-2.5 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
+                            class="orb-field orb-pwchange__input"
                         />
                     </div>
 
-                    <p v-if="error" class="text-[var(--color-light-red-40)] text-xs">{{ error }}</p>
+                    <p v-if="error" class="orb-pwchange__error">{{ error }}</p>
 
-                    <button
-                        type="submit"
-                        :disabled="saving"
-                        class="w-full py-2.5 bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] disabled:opacity-50 rounded-lg text-sm font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-                    >
+                    <button type="submit" :disabled="saving" class="orb-pwchange__submit">
                         {{ saving ? t('common.saving') : t('changePassword.setNewPassword') }}
                     </button>
                 </form>
             </div>
 
-            <p class="text-center text-xs text-[var(--text-muted)] mt-4">
+            <p class="orb-pwchange__footer">
                 {{ t('changePassword.loggedInAs') }}
-                <span class="text-[var(--text-muted)]">{{ auth.user?.name }}</span> ·
-                <button
-                    class="hover:text-[var(--text-muted)] transition-colors"
-                    @click="auth.logout"
-                >
+                <span class="orb-pwchange__user">{{ auth.user?.name }}</span> ·
+                <button class="orb-pwchange__logout" @click="auth.logout">
                     {{ t('auth.logout') }}
                 </button>
             </p>
@@ -118,3 +101,130 @@ async function save() {
     }
 }
 </script>
+
+<style scoped>
+.orb-pwchange {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: var(--dimension-6);
+    background: var(--bg);
+}
+
+.orb-pwchange__panel {
+    width: 100%;
+    max-width: 384px;
+}
+
+.orb-pwchange__header {
+    margin-bottom: 32px;
+    text-align: center;
+}
+
+.orb-pwchange__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto var(--dimension-6);
+    background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+    border-radius: 16px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 25%, transparent);
+}
+
+.orb-pwchange__icon svg {
+    width: 24px;
+    height: 24px;
+    color: var(--color-yellow-50);
+}
+
+.orb-pwchange__title {
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.orb-pwchange__subtitle {
+    margin-top: 6px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-pwchange__card {
+    padding: var(--dimension-8);
+    background: var(--bg-surface);
+    border-radius: 16px;
+    box-shadow:
+        0 0 0 1px var(--border),
+        0 25px 50px -12px rgb(0 0 0 / 50%);
+}
+
+.orb-pwchange__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-6);
+}
+
+.orb-pwchange__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.orb-pwchange__label {
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.orb-pwchange__input {
+    padding: 10px 14px;
+}
+
+.orb-pwchange__error {
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--color-light-red-40);
+}
+
+.orb-pwchange__submit {
+    width: 100%;
+    padding: 10px 0;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 600;
+    color: var(--button-primary-text-color, #000);
+    background: var(--color-corporate-green-50);
+    border-radius: 8px;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-pwchange__submit:hover {
+    background: var(--color-corporate-green-60);
+}
+
+.orb-pwchange__submit:disabled {
+    opacity: 0.5;
+}
+
+.orb-pwchange__footer {
+    margin-top: var(--dimension-6);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.orb-pwchange__user {
+    color: var(--text-muted);
+}
+
+.orb-pwchange__logout {
+    color: var(--text-muted);
+}
+</style>

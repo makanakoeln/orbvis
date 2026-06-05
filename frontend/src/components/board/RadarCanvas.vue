@@ -1,18 +1,13 @@
 <template>
-    <div class="flex-1 overflow-auto bg-[var(--bg)] p-6">
-        <div v-if="loading" class="flex items-center justify-center h-full">
+    <div class="orb-radar">
+        <div v-if="loading" class="orb-radar__loading">
             <CmkLoading />
         </div>
         <!-- Empty state -->
-        <div
-            v-else-if="!sortedStates.length"
-            class="flex flex-col items-center justify-center h-full text-center"
-        >
-            <div
-                class="w-14 h-14 rounded-2xl bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--border)] flex items-center justify-center mb-4"
-            >
+        <div v-else-if="!sortedStates.length" class="orb-radar__empty">
+            <div class="orb-radar__empty-icon">
                 <svg
-                    class="w-7 h-7 text-[var(--text-muted)]"
+                    class="orb-radar__empty-glyph"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -25,13 +20,13 @@
                     />
                 </svg>
             </div>
-            <p class="text-[var(--text-muted)] text-sm font-medium">
+            <p class="orb-radar__empty-title">
                 {{ t('boardSettings.radarEmptyTitle') }}
             </p>
-            <p class="text-[var(--text-muted)] text-xs mt-1 inline-flex items-center gap-1.5">
+            <p class="orb-radar__empty-hint">
                 <span>{{ t('boardSettings.radarEmptyHintLead') }}</span>
                 <svg
-                    class="w-3.5 h-3.5 inline-block"
+                    class="orb-radar__hint-gear"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -54,20 +49,22 @@
 
         <!-- Summary bar -->
         <template v-else>
-            <div class="mb-5 flex items-center gap-4 flex-wrap">
-                <span class="text-xs text-[var(--text-muted)]"
+            <div class="orb-radar__summary">
+                <span class="orb-radar__count"
                     >{{ totalCount }} objects<template v-if="compactOverflow > 0"
-                        ><span class="italic"> (showing {{ sortedStates.length }})</span></template
+                        ><span class="orb-radar__count-note">
+                            (showing {{ sortedStates.length }})</span
+                        ></template
                     ></span
                 >
-                <div class="flex items-center gap-3 flex-wrap">
+                <div class="orb-radar__legend">
                     <span
                         v-for="s in summary"
                         :key="s.state"
-                        class="flex items-center gap-1.5 text-xs font-medium"
+                        class="orb-radar__sum"
                         :class="stateTextClass(s.state)"
                     >
-                        <span class="w-1.5 h-1.5 rounded-full" :class="stateDotClass(s.state)" />
+                        <span class="orb-radar__dot" :class="stateDotClass(s.state)" />
                         {{ s.count }} {{ s.state }}
                     </span>
                 </div>
@@ -75,8 +72,8 @@
 
             <!-- Grid -->
             <div
-                class="grid"
-                :class="compact ? 'gap-1' : 'gap-2.5'"
+                class="orb-radar__grid"
+                :class="compact ? 'orb-radar__grid--compact' : ''"
                 :style="
                     compact
                         ? 'grid-template-columns: repeat(auto-fill, minmax(110px, 1fr))'
@@ -86,30 +83,30 @@
                 <div
                     v-for="state in sortedStates"
                     :key="state.object_id"
-                    class="rounded-xl ring-1 transition-all duration-200 cursor-pointer"
-                    :class="[
-                        cardClass(state.state),
-                        compact ? 'p-2' : 'p-3.5 hover:-translate-y-0.5 hover:shadow-lg',
-                    ]"
+                    class="orb-radar__card"
+                    :class="[cardClass(state.state), compact ? 'orb-radar__card--compact' : '']"
                     @click="onCardClick(state, $event)"
                 >
                     <!-- Name -->
-                    <div class="flex items-start justify-between gap-2 mb-2">
+                    <div class="orb-radar__card-head">
                         <span
-                            class="font-mono font-semibold leading-tight break-all"
-                            :class="[nameClass(state.state), compact ? 'text-[10px]' : 'text-xs']"
+                            class="orb-radar__name"
+                            :class="[
+                                nameClass(state.state),
+                                compact ? 'orb-radar__name--compact' : '',
+                            ]"
                         >
                             {{ displayName(state) }}
                         </span>
                         <!-- Ack / Downtime icons -->
-                        <div v-if="!compact" class="flex gap-1 shrink-0 mt-0.5">
+                        <div v-if="!compact" class="orb-radar__flags">
                             <span
                                 v-if="state.acknowledged"
                                 title="Acknowledged"
-                                class="text-[var(--text-muted)] opacity-70"
+                                class="orb-radar__flag"
                             >
                                 <svg
-                                    class="w-3 h-3"
+                                    class="orb-radar__flag-icon"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -125,10 +122,10 @@
                             <span
                                 v-if="state.in_downtime"
                                 title="In downtime"
-                                class="text-[var(--text-muted)] opacity-70"
+                                class="orb-radar__flag"
                             >
                                 <svg
-                                    class="w-3 h-3"
+                                    class="orb-radar__flag-icon"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -146,17 +143,23 @@
 
                     <!-- State badge -->
                     <span
-                        class="inline-flex items-center gap-1 font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
-                        :class="[badgeClass(state.state), compact ? 'text-[9px]' : 'text-[10px]']"
+                        class="orb-radar__badge"
+                        :class="[
+                            badgeClass(state.state),
+                            compact ? 'orb-radar__badge--compact' : '',
+                        ]"
                     >
-                        <span class="w-1 h-1 rounded-full" :class="stateDotClass(state.state)" />
+                        <span
+                            class="orb-radar__dot orb-radar__dot--sm"
+                            :class="stateDotClass(state.state)"
+                        />
                         {{ state.state }}
                     </span>
 
                     <!-- Output -->
                     <p
                         v-if="state.output && !compact"
-                        class="text-[11px] mt-2 leading-snug opacity-60 line-clamp-2"
+                        class="orb-radar__output"
                         :class="nameClass(state.state)"
                     >
                         {{ state.output }}
@@ -164,7 +167,7 @@
                 </div>
                 <div
                     v-if="compactOverflow > 0"
-                    class="text-xs text-[var(--text-muted)] italic flex items-center justify-center p-2"
+                    class="orb-radar__overflow"
                     :title="t('boardSettings.radarPreviewLimitTitle', { hidden: compactOverflow })"
                 >
                     {{ t('boardSettings.radarPreviewLimit', { hidden: compactOverflow }) }}
@@ -310,17 +313,17 @@ function cardClass(state: string): string {
     switch (state) {
         case 'DOWN':
         case 'CRITICAL':
-            return 'bg-[var(--color-light-red-50)]/8 ring-[var(--color-light-red-50)]/20 hover:shadow-red-900/20';
+            return 'orb-radar__card--crit';
         case 'UNREACHABLE':
-            return 'bg-orange-500/8 ring-orange-500/20 hover:shadow-orange-900/20';
+            return 'orb-radar__card--unreach';
         case 'WARNING':
         case 'UNKNOWN':
-            return 'bg-[#ffd000]/8 ring-[#ffd000]/20 hover:shadow-yellow-900/20';
+            return 'orb-radar__card--warn';
         case 'UP':
         case 'OK':
-            return 'bg-[var(--color-corporate-green-50)]/8 ring-[var(--color-corporate-green-50)]/20 hover:shadow-green-900/20';
+            return 'orb-radar__card--ok';
         default:
-            return 'bg-[var(--default-form-element-bg-color)] ring-[var(--border)]';
+            return 'orb-radar__card--neutral';
     }
 }
 
@@ -328,17 +331,17 @@ function nameClass(state: string): string {
     switch (state) {
         case 'DOWN':
         case 'CRITICAL':
-            return 'text-[var(--color-light-red-40)]';
+            return 'orb-radar__ink--crit';
         case 'UNREACHABLE':
-            return 'text-orange-300';
+            return 'orb-radar__ink--unreach';
         case 'WARNING':
         case 'UNKNOWN':
-            return 'text-[#ffd000]';
+            return 'orb-radar__ink--warn';
         case 'UP':
         case 'OK':
-            return 'text-[var(--color-corporate-green-50)]';
+            return 'orb-radar__ink--ok';
         default:
-            return 'text-[var(--text-muted)]';
+            return 'orb-radar__ink--muted';
     }
 }
 
@@ -346,17 +349,17 @@ function badgeClass(state: string): string {
     switch (state) {
         case 'DOWN':
         case 'CRITICAL':
-            return 'bg-[var(--color-light-red-50)]/15 text-[var(--color-light-red-40)]';
+            return 'orb-radar__badge--crit';
         case 'UNREACHABLE':
-            return 'bg-orange-500/15 text-orange-400';
+            return 'orb-radar__badge--unreach';
         case 'WARNING':
         case 'UNKNOWN':
-            return 'bg-[#ffd000]/15 text-[#ffd000]';
+            return 'orb-radar__badge--warn';
         case 'UP':
         case 'OK':
-            return 'bg-[var(--color-corporate-green-50)]/15 text-[var(--color-corporate-green-50)]';
+            return 'orb-radar__badge--ok';
         default:
-            return 'bg-[var(--bg-hover)] text-[var(--text-muted)]';
+            return 'orb-radar__badge--neutral';
     }
 }
 
@@ -364,17 +367,17 @@ function stateDotClass(state: string): string {
     switch (state) {
         case 'DOWN':
         case 'CRITICAL':
-            return 'bg-[var(--color-light-red-40)]';
+            return 'orb-radar__dot--crit';
         case 'UNREACHABLE':
-            return 'bg-orange-400';
+            return 'orb-radar__dot--unreach';
         case 'WARNING':
         case 'UNKNOWN':
-            return 'bg-[#ffd000]';
+            return 'orb-radar__dot--warn';
         case 'UP':
         case 'OK':
-            return 'bg-[var(--color-corporate-green-50)]';
+            return 'orb-radar__dot--ok';
         default:
-            return 'bg-[var(--color-pending)]';
+            return 'orb-radar__dot--pending';
     }
 }
 
@@ -382,17 +385,354 @@ function stateTextClass(state: string): string {
     switch (state) {
         case 'DOWN':
         case 'CRITICAL':
-            return 'text-[var(--color-light-red-40)]';
+            return 'orb-radar__sum--crit';
         case 'UNREACHABLE':
-            return 'text-orange-400';
+            return 'orb-radar__sum--unreach';
         case 'WARNING':
         case 'UNKNOWN':
-            return 'text-[#ffd000]';
+            return 'orb-radar__sum--warn';
         case 'UP':
         case 'OK':
-            return 'text-[var(--color-corporate-green-50)]';
+            return 'orb-radar__sum--ok';
         default:
-            return 'text-[var(--text-muted)]';
+            return 'orb-radar__sum--muted';
     }
 }
 </script>
+
+<style scoped>
+.orb-radar {
+    overflow: auto;
+    flex: 1;
+    padding: var(--dimension-8);
+    background: var(--bg);
+}
+
+.orb-radar__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.orb-radar__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+}
+
+.orb-radar__empty-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    margin-bottom: var(--dimension-6);
+    background: var(--default-form-element-bg-color);
+    border-radius: 16px;
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.orb-radar__empty-glyph {
+    width: 28px;
+    height: 28px;
+    color: var(--text-muted);
+}
+
+.orb-radar__empty-title {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.orb-radar__empty-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: var(--dimension-3);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+}
+
+.orb-radar__hint-gear {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+}
+
+.orb-radar__summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--dimension-6);
+    margin-bottom: var(--dimension-7);
+}
+
+.orb-radar__count {
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+}
+
+.orb-radar__count-note {
+    font-style: italic;
+}
+
+.orb-radar__legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--dimension-5);
+}
+
+.orb-radar__sum {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-weight: 500;
+}
+
+.orb-radar__sum--crit {
+    color: var(--color-light-red-40);
+}
+
+.orb-radar__sum--unreach {
+    color: var(--color-orange-40);
+}
+
+.orb-radar__sum--warn {
+    color: var(--color-warning);
+}
+
+.orb-radar__sum--ok {
+    color: var(--color-corporate-green-50);
+}
+
+.orb-radar__sum--muted {
+    color: var(--text-muted);
+}
+
+.orb-radar__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+}
+
+.orb-radar__dot--sm {
+    width: var(--dimension-3);
+    height: var(--dimension-3);
+}
+
+.orb-radar__dot--crit {
+    background: var(--color-light-red-40);
+}
+
+.orb-radar__dot--unreach {
+    background: var(--color-orange-40);
+}
+
+.orb-radar__dot--warn {
+    background: var(--color-warning);
+}
+
+.orb-radar__dot--ok {
+    background: var(--color-corporate-green-50);
+}
+
+.orb-radar__dot--pending {
+    background: var(--color-pending);
+}
+
+.orb-radar__grid {
+    display: grid;
+    gap: 10px;
+}
+
+.orb-radar__grid--compact {
+    gap: var(--dimension-3);
+}
+
+.orb-radar__card {
+    --radar-card-ring: var(--border);
+    --radar-card-shadow: rgb(0 0 0 / 10%);
+
+    padding: 14px;
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--radar-card-ring);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-radar__card:not(.orb-radar__card--compact):hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 0 0 1px var(--radar-card-ring),
+        0 10px 15px -3px var(--radar-card-shadow),
+        0 4px 6px -4px var(--radar-card-shadow);
+}
+
+.orb-radar__card--compact {
+    padding: var(--dimension-4);
+}
+
+.orb-radar__card--crit {
+    --radar-card-ring: color-mix(in srgb, var(--color-light-red-50) 20%, transparent);
+    --radar-card-shadow: color-mix(in srgb, var(--color-light-red-90) 20%, transparent);
+
+    background: color-mix(in srgb, var(--color-light-red-50) 8%, transparent);
+}
+
+.orb-radar__card--unreach {
+    --radar-card-ring: color-mix(in srgb, var(--color-orange-50) 20%, transparent);
+    --radar-card-shadow: color-mix(in srgb, var(--color-orange-90) 20%, transparent);
+
+    background: color-mix(in srgb, var(--color-orange-50) 8%, transparent);
+}
+
+.orb-radar__card--warn {
+    --radar-card-ring: color-mix(in srgb, var(--color-warning) 20%, transparent);
+    --radar-card-shadow: color-mix(in srgb, var(--color-yellow-90) 20%, transparent);
+
+    background: color-mix(in srgb, var(--color-warning) 8%, transparent);
+}
+
+.orb-radar__card--ok {
+    --radar-card-ring: color-mix(in srgb, var(--color-corporate-green-50) 20%, transparent);
+    --radar-card-shadow: color-mix(in srgb, var(--color-corporate-green-90) 20%, transparent);
+
+    background: color-mix(in srgb, var(--color-corporate-green-50) 8%, transparent);
+}
+
+.orb-radar__card--neutral {
+    background: var(--default-form-element-bg-color);
+}
+
+.orb-radar__card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--dimension-4);
+    margin-bottom: var(--dimension-4);
+}
+
+.orb-radar__name {
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    font-size: var(--font-size-normal);
+    line-height: 1.25;
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.orb-radar__name--compact {
+    font-size: 10px;
+}
+
+.orb-radar__ink--crit {
+    color: var(--color-light-red-40);
+}
+
+.orb-radar__ink--unreach {
+    color: var(--color-orange-30);
+}
+
+.orb-radar__ink--warn {
+    color: var(--color-warning);
+}
+
+.orb-radar__ink--ok {
+    color: var(--color-corporate-green-50);
+}
+
+.orb-radar__ink--muted {
+    color: var(--text-muted);
+}
+
+.orb-radar__flags {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--dimension-3);
+    margin-top: var(--dimension-2);
+}
+
+.orb-radar__flag {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.orb-radar__flag-icon {
+    width: var(--dimension-5);
+    height: var(--dimension-5);
+}
+
+.orb-radar__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--dimension-3);
+    padding: var(--dimension-2) 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-radius: 6px;
+}
+
+.orb-radar__badge--compact {
+    font-size: 9px;
+}
+
+.orb-radar__badge--crit {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 15%, transparent);
+}
+
+.orb-radar__badge--unreach {
+    color: var(--color-orange-40);
+    background: color-mix(in srgb, var(--color-orange-50) 15%, transparent);
+}
+
+.orb-radar__badge--warn {
+    color: var(--color-warning);
+    background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+}
+
+.orb-radar__badge--ok {
+    color: var(--color-corporate-green-50);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 15%, transparent);
+}
+
+.orb-radar__badge--neutral {
+    color: var(--text-muted);
+    background: var(--bg-hover);
+}
+
+.orb-radar__output {
+    overflow: hidden;
+    display: -webkit-box;
+    margin-top: var(--dimension-4);
+    font-size: 11px;
+    line-height: 1.375;
+    opacity: 0.6;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.orb-radar__overflow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--dimension-4);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-style: italic;
+    color: var(--text-muted);
+}
+</style>

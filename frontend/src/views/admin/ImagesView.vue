@@ -1,6 +1,6 @@
 <template>
-    <div>
-        <div class="flex justify-between items-center" style="margin-bottom: var(--dimension-6)">
+    <div class="orb-images">
+        <div class="orb-images__header">
             <div>
                 <CmkHeading type="h2">
                     {{ t('admin.icons') }}
@@ -30,7 +30,7 @@
                 type="file"
                 accept="image/png,image/jpeg,image/svg+xml,image/webp"
                 multiple
-                class="hidden"
+                class="orb-images__file-input"
                 @change="uploadIcons"
             />
         </div>
@@ -94,7 +94,7 @@
             </div>
         </CmkSlideInDialog>
 
-        <div v-if="loading" class="flex items-center justify-center py-8">
+        <div v-if="loading" class="orb-images__loading">
             <CmkLoading />
         </div>
 
@@ -129,41 +129,25 @@
                 <CmkHeading type="h3" class="section-title">
                     {{ t('admin.uploadedImages') }} ({{ filteredCustom.length }})
                 </CmkHeading>
-                <div
-                    v-if="!customIcons.length"
-                    class="text-center py-[28px] text-[var(--text-muted)] text-sm"
-                >
+                <div v-if="!customIcons.length" class="orb-images__empty">
                     {{ t('admin.noUploadsYet') }}
                 </div>
-                <div
-                    v-else-if="!filteredCustom.length"
-                    class="text-[var(--text-muted)] text-sm py-[12px]"
-                >
+                <div v-else-if="!filteredCustom.length" class="orb-images__no-matches">
                     {{ t('admin.noMatches', { q: query }) }}
                 </div>
-                <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-[8px]">
-                    <div
-                        v-for="icon in filteredCustom"
-                        :key="icon.name"
-                        class="group relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl flex flex-col items-center gap-[6px] hover:ring-[var(--default-form-element-border-color)] transition-all"
-                        style="padding: var(--dimension-4)"
-                    >
+                <div v-else class="orb-images__grid">
+                    <div v-for="icon in filteredCustom" :key="icon.name" class="orb-images__tile">
                         <img
                             :src="`${BASE_URL}${icon.url}`"
                             :alt="icon.name"
-                            class="object-contain"
-                            style="width: 40px; height: 40px"
+                            class="orb-images__img"
                             :class="icon.name.endsWith('.svg') ? 'svg-icon' : ''"
                         />
-                        <p
-                            class="text-[10px] text-[var(--text-muted)] font-mono text-center truncate w-full"
-                            :title="icon.name"
-                        >
+                        <p class="orb-images__name" :title="icon.name">
                             {{ icon.name }}
                         </p>
                         <button
-                            class="absolute rounded bg-[var(--color-light-red-50)]/0 hover:bg-[var(--color-light-red-50)]/20 text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
-                            style="top: 4px; right: 4px; width: 18px; height: 18px"
+                            class="orb-images__delete"
                             :title="t('common.delete')"
                             @click="onDeleteClick(icon.name)"
                         >
@@ -191,30 +175,18 @@
                 <CmkHeading type="h3" class="section-title">
                     {{ t('admin.builtinIcons') }} ({{ filteredBuiltin.length }})
                 </CmkHeading>
-                <div
-                    v-if="!filteredBuiltin.length"
-                    class="text-[var(--text-muted)] text-sm py-[12px]"
-                >
+                <div v-if="!filteredBuiltin.length" class="orb-images__no-matches">
                     {{ t('admin.noMatches', { q: query }) }}
                 </div>
-                <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-[8px]">
-                    <div
-                        v-for="icon in filteredBuiltin"
-                        :key="icon.name"
-                        class="group relative bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl flex flex-col items-center gap-[6px] hover:ring-[var(--default-form-element-border-color)] transition-all"
-                        style="padding: var(--dimension-4)"
-                    >
+                <div v-else class="orb-images__grid">
+                    <div v-for="icon in filteredBuiltin" :key="icon.name" class="orb-images__tile">
                         <img
                             :src="`${BASE_URL}${icon.url}`"
                             :alt="icon.name"
-                            class="object-contain"
-                            style="width: 40px; height: 40px"
+                            class="orb-images__img"
                             :class="icon.name.endsWith('.svg') ? 'svg-icon' : ''"
                         />
-                        <p
-                            class="text-[10px] text-[var(--text-muted)] font-mono text-center truncate w-full"
-                            :title="icon.name"
-                        >
+                        <p class="orb-images__name" :title="icon.name">
                             {{ icon.name }}
                         </p>
                     </div>
@@ -361,6 +333,106 @@ onMounted(fetchIcons);
 </script>
 
 <style scoped>
+.orb-images__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--dimension-6);
+}
+
+.orb-images__file-input {
+    display: none;
+}
+
+.orb-images__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 0;
+}
+
+.orb-images__empty {
+    padding: 28px 0;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.orb-images__no-matches {
+    padding: var(--dimension-5) 0;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-images__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--dimension-4);
+}
+
+.orb-images__tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: var(--dimension-4);
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--border);
+    transition: all 0.15s;
+}
+
+.orb-images__tile:hover {
+    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
+}
+
+.orb-images__img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.orb-images__name {
+    width: 100%;
+    overflow: hidden;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    font-size: 10px;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-muted);
+}
+
+.orb-images__delete {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+    background: transparent;
+    border-radius: 4px;
+    opacity: 0;
+    transition: all 0.15s;
+}
+
+.orb-images__delete:hover {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 20%, transparent);
+}
+
+.orb-images__tile:hover .orb-images__delete {
+    opacity: 1;
+}
+
 .image-usage-pane {
     display: flex;
     flex-direction: column;

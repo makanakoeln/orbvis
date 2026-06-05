@@ -5,12 +5,11 @@
         :class="{ 'board-search--open': dropdownOpen, 'board-search--inline': inline }"
     >
         <svg
-            style="width: 12px; height: 12px"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
             stroke-width="2"
-            class="text-[var(--text-muted)] shrink-0"
+            class="board-search__search-icon"
         >
             <path
                 stroke-linecap="round"
@@ -70,12 +69,11 @@
             </ul>
             <div class="board-search__info">
                 <svg
-                    style="width: 14px; height: 14px"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
                     stroke-width="2"
-                    class="board-search__info-icon shrink-0"
+                    class="board-search__info-icon"
                 >
                     <circle cx="12" cy="12" r="9" />
                     <line x1="12" y1="11" x2="12" y2="16" />
@@ -205,6 +203,13 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
     background: var(--bg);
 }
 
+.board-search__search-icon {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    color: var(--text-muted);
+}
+
 .board-search__input {
     flex: 1;
     min-width: 0;
@@ -324,6 +329,9 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
 }
 
 .board-search__info-icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
     color: var(--color-accent, #6ea8fe);
     margin-top: 1px;
 }

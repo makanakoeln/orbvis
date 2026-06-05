@@ -1,26 +1,16 @@
 <template>
-    <div class="absolute inset-0 bg-[var(--bg)]">
-        <div v-if="loading" class="flex items-center justify-center h-full">
+    <div class="orb-flow">
+        <div v-if="loading" class="orb-flow__center">
             <CmkLoading />
         </div>
-        <div
-            v-else-if="error"
-            class="flex items-center justify-center h-full text-[var(--color-light-red-40)] text-sm"
-        >
+        <div v-else-if="error" class="orb-flow__center orb-flow__center--error">
             {{ error }}
         </div>
-        <svg v-else ref="svgEl" class="w-full h-full block" />
+        <svg v-else ref="svgEl" class="orb-flow__svg" />
 
         <!-- Zoom controls -->
-        <div
-            v-if="!loading && !error && !preview"
-            class="absolute bottom-4 left-4 z-10 flex flex-col overflow-hidden rounded-xl ring-1 ring-[var(--border)] shadow-xl shadow-black/40"
-        >
-            <button
-                title="Zoom in"
-                class="p-[5px] bg-[var(--bg-surface)]/90 backdrop-blur-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors border-b border-[var(--border)]"
-                @click="zoomIn"
-            >
+        <div v-if="!loading && !error && !preview" class="orb-flow__zoom">
+            <button title="Zoom in" class="orb-flow__zoom-btn" @click="zoomIn">
                 <svg
                     style="width: 14px; height: 14px"
                     fill="none"
@@ -35,11 +25,7 @@
                     />
                 </svg>
             </button>
-            <button
-                title="Fit all"
-                class="p-[5px] bg-[var(--bg-surface)]/90 backdrop-blur-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors border-b border-[var(--border)]"
-                @click="fitView()"
-            >
+            <button title="Fit all" class="orb-flow__zoom-btn" @click="fitView()">
                 <svg
                     style="width: 14px; height: 14px"
                     fill="none"
@@ -56,7 +42,7 @@
             </button>
             <button
                 title="Zoom out"
-                class="p-[5px] bg-[var(--bg-surface)]/90 backdrop-blur-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+                class="orb-flow__zoom-btn orb-flow__zoom-btn--last"
                 @click="zoomOut"
             >
                 <svg
@@ -2720,6 +2706,66 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
    muted text colour so they stay visible in both light and dark themes. */
 :deep(g.links) {
     color: var(--text-muted);
+}
+
+.orb-flow {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+}
+
+.orb-flow__center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.orb-flow__center--error {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--color-light-red-40);
+}
+
+.orb-flow__svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.orb-flow__zoom {
+    position: absolute;
+    bottom: var(--dimension-6);
+    left: var(--dimension-6);
+    z-index: 10;
+    display: flex;
+    overflow: hidden;
+    flex-direction: column;
+    border-radius: 12px;
+    box-shadow:
+        0 0 0 1px var(--border),
+        0 20px 25px -5px rgb(0 0 0 / 40%),
+        0 8px 10px -6px rgb(0 0 0 / 40%);
+}
+
+.orb-flow__zoom-btn {
+    padding: 5px;
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--bg-surface) 90%, transparent);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    transition:
+        color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+        background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-flow__zoom-btn:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+}
+
+.orb-flow__zoom-btn--last {
+    border-bottom: none;
 }
 
 .flow-hint {

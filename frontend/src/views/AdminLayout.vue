@@ -1,17 +1,11 @@
 <template>
-    <div class="flex-1 flex flex-col overflow-hidden">
+    <div class="orb-admin">
         <!-- Top header — only visible when sidebar is hidden (Checkmk deployment / SSO) -->
         <template v-if="isCmk">
-            <div
-                class="shrink-0 bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center"
-                style="padding: 0 var(--dimension-6); height: 32px"
-            >
+            <div class="orb-admin__header">
                 <CmkBreadcrumb :items="breadcrumbItems" />
             </div>
-            <nav
-                class="cmk-tab-bar shrink-0 border-b border-[var(--border)] flex items-center"
-                style="padding: 0 var(--dimension-6); height: 32px"
-            >
+            <nav class="cmk-tab-bar">
                 <router-link
                     v-for="item in adminNavItems"
                     :key="item.to"
@@ -23,7 +17,7 @@
                 </router-link>
             </nav>
         </template>
-        <main class="flex-1 overflow-auto" style="padding: var(--dimension-7) var(--dimension-8)">
+        <main class="orb-admin__main">
             <router-view />
         </main>
     </div>
@@ -73,8 +67,37 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
 </script>
 
 <style scoped>
+.orb-admin {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.orb-admin__header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    height: 32px;
+    padding: 0 var(--dimension-6);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.orb-admin__main {
+    flex: 1;
+    padding: var(--dimension-7) var(--dimension-8);
+    overflow: auto;
+}
+
 .cmk-tab-bar {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    height: 32px;
+    padding: 0 var(--dimension-6);
     background-color: var(--ux-theme-4);
+    border-bottom: 1px solid var(--border);
 }
 
 .cmk-tab {

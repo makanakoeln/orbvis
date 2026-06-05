@@ -1,6 +1,6 @@
 <template>
-    <div class="max-w-3xl">
-        <div class="flex justify-between items-center" style="margin-bottom: var(--dimension-6)">
+    <div class="orb-roles">
+        <div class="orb-roles__header">
             <div>
                 <CmkHeading type="h2">
                     {{ t('admin.rolesAndPermissions') }}
@@ -27,48 +27,35 @@
             </CmkButton>
         </div>
 
-        <div v-if="loading" class="flex items-center justify-center py-8">
+        <div v-if="loading" class="orb-roles__loading">
             <CmkLoading />
         </div>
 
-        <div v-else class="space-y-[8px]">
-            <div
-                v-for="role in roles"
-                :key="role.role_id"
-                class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl hover:ring-[var(--border)] transition-all"
-                style="padding: var(--dimension-5)"
-            >
-                <div class="flex justify-between items-start gap-[12px]">
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-[6px]" style="margin-bottom: 3px">
-                            <span class="font-semibold text-[var(--text)]">{{ role.name }}</span>
-                            <span
-                                class="text-xs rounded bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-[var(--text-muted)]"
-                                style="padding: 1px 5px"
-                            >
+        <div v-else class="orb-roles__list">
+            <div v-for="role in roles" :key="role.role_id" class="orb-roles__card">
+                <div class="orb-roles__card-row">
+                    <div class="orb-roles__card-main">
+                        <div class="orb-roles__title-row">
+                            <span class="orb-roles__name">{{ role.name }}</span>
+                            <span class="orb-roles__count">
                                 {{ role.permissions.length }} {{ t('admin.permissions') }}
                             </span>
                         </div>
-                        <div
-                            v-if="role.permissions.length"
-                            class="flex flex-wrap gap-[4px]"
-                            style="margin-top: var(--dimension-4)"
-                        >
+                        <div v-if="role.permissions.length" class="orb-roles__perms">
                             <span
                                 v-for="perm in role.permissions"
                                 :key="perm.perm_id"
-                                class="text-xs bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-md text-[var(--text-muted)] font-mono"
-                                style="padding: 1px 5px"
+                                class="orb-roles__perm-chip"
                                 >{{ perm.mod }}/{{ perm.act }}/{{ perm.obj }}</span
                             >
                         </div>
-                        <p v-else class="text-sm text-[var(--text-muted)]" style="margin-top: 6px">
+                        <p v-else class="orb-roles__no-perms">
                             {{ t('admin.noPermissions') }}
                         </p>
                     </div>
-                    <div class="flex items-center gap-[3px] shrink-0">
+                    <div class="orb-roles__actions">
                         <button
-                            class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                            class="orb-roles__action-btn orb-roles__action-btn--edit"
                             :title="t('common.edit')"
                             @click="openEdit(role)"
                         >
@@ -87,7 +74,7 @@
                             </svg>
                         </button>
                         <button
-                            class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
+                            class="orb-roles__action-btn orb-roles__action-btn--delete"
                             :title="t('common.delete')"
                             @click="deleteTargetId = role.role_id"
                         >
@@ -109,10 +96,7 @@
                 </div>
             </div>
 
-            <div
-                v-if="!roles.length"
-                class="text-center py-[32px] text-[var(--text-muted)] text-sm"
-            >
+            <div v-if="!roles.length" class="orb-roles__empty">
                 {{ t('admin.noRoles') }}
             </div>
         </div>
@@ -153,35 +137,22 @@
             <div v-if="editRole" class="roles-edit__body">
                 <!-- Current permissions -->
                 <div>
-                    <p
-                        class="text-sm font-medium text-[var(--text-muted)]"
-                        style="margin-bottom: 6px"
-                    >
+                    <p class="roles-edit__group-label">
                         {{ t('admin.assigned') }}
                     </p>
-                    <div
-                        v-if="draftPerms.length"
-                        class="divide-y divide-[var(--border)] rounded-lg ring-1 ring-[var(--border)] overflow-hidden"
-                    >
+                    <div v-if="draftPerms.length" class="roles-edit__perm-list">
                         <div
                             v-for="perm in draftPerms"
                             :key="perm.perm_id"
-                            class="flex items-center justify-between gap-[8px] hover:bg-[var(--bg-hover)] transition-colors"
-                            style="padding: 5px 10px"
-                            :class="
-                                perm.perm_id < 0 ? 'bg-[var(--color-corporate-green-50)]/5' : ''
-                            "
+                            class="roles-edit__perm-row"
+                            :class="perm.perm_id < 0 ? 'roles-edit__perm-row--new' : ''"
                         >
-                            <span class="text-xs font-mono text-[var(--text)]"
+                            <span class="roles-edit__perm-text"
                                 >{{ perm.mod }}/{{ perm.act }}/{{ perm.obj }}</span
                             >
-                            <span
-                                v-if="perm.perm_id < 0"
-                                class="text-xs font-medium text-[var(--color-corporate-green-50)] shrink-0"
-                                >new</span
-                            >
+                            <span v-if="perm.perm_id < 0" class="roles-edit__perm-new">new</span>
                             <button
-                                class="text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] transition-colors shrink-0 p-0.5 rounded"
+                                class="roles-edit__perm-remove"
                                 :title="t('common.delete')"
                                 @click="removeDraftPerm(perm.perm_id)"
                             >
@@ -201,24 +172,19 @@
                             </button>
                         </div>
                     </div>
-                    <p v-else class="text-sm text-[var(--text-muted)]">
+                    <p v-else class="roles-edit__hint">
                         {{ t('admin.noPermissionsYet') }}
                     </p>
                 </div>
 
                 <!-- Add permission form -->
-                <div class="border-t border-[var(--border)] pt-[12px]">
-                    <p
-                        class="text-sm font-medium text-[var(--text-muted)]"
-                        style="margin-bottom: 6px"
-                    >
+                <div class="roles-edit__add-section">
+                    <p class="roles-edit__group-label">
                         {{ t('admin.addPermission') }}
                     </p>
-                    <form class="space-y-[10px]" @submit.prevent="addDraftPerm">
-                        <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                t('admin.preset')
-                            }}</label>
+                    <form class="roles-edit__add-form" @submit.prevent="addDraftPerm">
+                        <div class="roles-edit__field">
+                            <label class="roles-edit__label">{{ t('admin.preset') }}</label>
                             <CmkDropdown
                                 :selected-option="permPreset"
                                 :options="permPresetOptions"
@@ -232,25 +198,22 @@
                                 "
                             />
                         </div>
-                        <div v-if="needsMapName" class="space-y-[4px]">
-                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                t('admin.boardNameLabel')
-                            }}</label>
+                        <div v-if="needsMapName" class="roles-edit__field">
+                            <label class="roles-edit__label">{{ t('admin.boardNameLabel') }}</label>
                             <CmkInput
                                 v-model="newPerm.obj"
                                 placeholder="my-board"
                                 field-size="FILL"
                             />
                         </div>
-                        <p v-if="permError" class="text-[var(--color-light-red-40)] text-sm">
+                        <p v-if="permError" class="roles-edit__form-error">
                             {{ permError }}
                         </p>
-                        <div class="flex justify-end">
+                        <div class="roles-edit__add-actions">
                             <button
                                 type="submit"
                                 :disabled="!permPreset"
-                                class="bg-[var(--default-form-element-bg-color)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--default-border-color)] hover:ring-[var(--default-form-element-border-color)] disabled:opacity-50 rounded-lg text-sm font-medium text-[var(--text)] transition-all"
-                                style="padding: 5px 10px"
+                                class="roles-edit__add-btn"
                             >
                                 {{ t('admin.add') }}
                             </button>
@@ -470,6 +433,128 @@ onMounted(fetchRoles);
 </script>
 
 <style scoped>
+.orb-roles {
+    max-width: 768px;
+}
+
+.orb-roles__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--dimension-6);
+}
+
+.orb-roles__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 0;
+}
+
+.orb-roles__list > * + * {
+    margin-top: var(--dimension-4);
+}
+
+.orb-roles__card {
+    padding: var(--dimension-5);
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.orb-roles__card-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--dimension-5);
+}
+
+.orb-roles__card-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.orb-roles__title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+}
+
+.orb-roles__name {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.orb-roles__count {
+    padding: 1px 5px;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+    background: var(--default-form-element-bg-color);
+    border-radius: 4px;
+    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
+}
+
+.orb-roles__perms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--dimension-3);
+    margin-top: var(--dimension-4);
+}
+
+.orb-roles__perm-chip {
+    padding: 1px 5px;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+    background: var(--default-form-element-bg-color);
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
+}
+
+.orb-roles__no-perms {
+    margin-top: 6px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-roles__actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 3px;
+}
+
+.orb-roles__action-btn {
+    padding: var(--dimension-3);
+    color: var(--text-muted);
+    border-radius: 6px;
+    transition: all 0.15s;
+}
+
+.orb-roles__action-btn--edit:hover {
+    color: var(--color-corporate-green-50);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 10%, transparent);
+}
+
+.orb-roles__action-btn--delete:hover {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 10%, transparent);
+}
+
+.orb-roles__empty {
+    padding: 32px 0;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
 .roles-create__form {
     display: flex;
     flex-direction: column;
@@ -510,5 +595,127 @@ onMounted(fetchRoles);
     font-size: var(--font-size-normal);
     color: var(--color-light-red-40);
     flex: 1;
+}
+
+.roles-edit__group-label {
+    margin-bottom: 6px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.roles-edit__perm-list {
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.roles-edit__perm-list > * + * {
+    border-top: 1px solid var(--border);
+}
+
+.roles-edit__perm-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--dimension-4);
+    padding: 5px 10px;
+    transition: background-color 0.15s;
+}
+
+.roles-edit__perm-row--new {
+    background: color-mix(in srgb, var(--color-corporate-green-50) 5%, transparent);
+}
+
+.roles-edit__perm-row:hover {
+    background: var(--bg-hover);
+}
+
+.roles-edit__perm-text {
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text);
+}
+
+.roles-edit__perm-new {
+    flex-shrink: 0;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-weight: 500;
+    color: var(--color-corporate-green-50);
+}
+
+.roles-edit__perm-remove {
+    flex-shrink: 0;
+    padding: var(--dimension-2);
+    color: var(--text-muted);
+    border-radius: 4px;
+    transition: color 0.15s;
+}
+
+.roles-edit__perm-remove:hover {
+    color: var(--color-light-red-40);
+}
+
+.roles-edit__hint {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.roles-edit__add-section {
+    padding-top: var(--dimension-5);
+    border-top: 1px solid var(--border);
+}
+
+.roles-edit__add-form > * + * {
+    margin-top: 10px;
+}
+
+.roles-edit__field > * + * {
+    margin-top: var(--dimension-3);
+}
+
+.roles-edit__label {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.roles-edit__form-error {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--color-light-red-40);
+}
+
+.roles-edit__add-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.roles-edit__add-btn {
+    padding: 5px 10px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--default-form-element-bg-color);
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--default-border-color);
+    transition: all 0.15s;
+}
+
+.roles-edit__add-btn:hover {
+    background: var(--bg-hover);
+    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
+}
+
+.roles-edit__add-btn:disabled {
+    opacity: 0.5;
 }
 </style>

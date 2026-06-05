@@ -1,12 +1,12 @@
 <template>
-    <div v-if="showShell" class="flex h-screen bg-[var(--bg)] overflow-hidden">
+    <div v-if="showShell" class="orb-app">
         <AppSidebar v-if="!auth.ssoActive && !auth.isCheckmkDeployment" />
-        <div class="flex-1 min-w-0 flex flex-col">
+        <div class="orb-app__content">
             <router-view />
         </div>
         <ChangelogModal v-if="showChangelog" @close="dismissChangelog" />
     </div>
-    <div v-else class="flex flex-col h-screen w-screen overflow-hidden">
+    <div v-else class="orb-app-bare">
         <router-view />
     </div>
     <ToastContainer />
@@ -50,3 +50,27 @@ watch(
     { immediate: true },
 );
 </script>
+
+<style scoped>
+.orb-app {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
+}
+
+.orb-app__content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.orb-app-bare {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+</style>

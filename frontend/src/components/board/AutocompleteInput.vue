@@ -1,10 +1,10 @@
 <template>
-    <div class="relative">
+    <div class="orb-autocomplete">
         <input
             :value="displayValue"
             :placeholder="placeholder"
             :disabled="disabled"
-            class="w-full px-[10px] py-[5px] bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="orb-field orb-autocomplete__input"
             @input="onInput"
             @focus="!disabled && (open = true)"
             @click="!disabled && (open = true)"
@@ -14,41 +14,24 @@
             @keydown.enter.prevent="confirmSelection"
             @keydown.escape="open = false"
         />
-        <span
-            v-if="loading"
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-xs select-none"
-            >…</span
-        >
+        <span v-if="loading" class="orb-autocomplete__loading">…</span>
 
-        <div
-            v-if="open && filtered.length > 0"
-            class="absolute z-50 top-full left-0 right-0 mt-1 bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg shadow-2xl shadow-black/50 overflow-auto max-h-48"
-        >
+        <div v-if="open && filtered.length > 0" class="orb-autocomplete__dropdown">
             <button
                 v-for="(item, i) in filtered"
                 :key="item.value"
                 type="button"
-                class="w-full text-left px-3 py-2 text-sm truncate transition-colors"
-                :class="
-                    i === activeIndex
-                        ? 'bg-[var(--color-corporate-green-50)] text-[var(--button-primary-text-color,#000)]'
-                        : 'text-[var(--text)] hover:bg-[var(--bg-hover)] hover:text-[var(--text)]'
-                "
+                class="orb-autocomplete__option"
+                :class="i === activeIndex ? 'orb-autocomplete__option--active' : ''"
                 @mousedown.prevent="select(item.value)"
             >
                 {{ item.label }}
             </button>
-            <div
-                v-if="truncated > 0"
-                class="px-3 py-2 text-xs text-[var(--text-muted)] italic border-t border-[var(--border)]"
-            >
+            <div v-if="truncated > 0" class="orb-autocomplete__more">
                 +{{ truncated }} more — keep typing to narrow results
             </div>
         </div>
-        <p
-            v-if="emptyText && !loading && suggestions.length === 0"
-            class="text-xs text-[var(--color-yellow-50)]/70 leading-snug mt-1"
-        >
+        <p v-if="emptyText && !loading && suggestions.length === 0" class="orb-autocomplete__empty">
             {{ emptyText }}
         </p>
     </div>
@@ -150,3 +133,82 @@ function confirmSelection() {
     }
 }
 </script>
+
+<style scoped>
+.orb-autocomplete {
+    position: relative;
+}
+
+.orb-autocomplete__input:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.orb-autocomplete__loading {
+    position: absolute;
+    top: 50%;
+    right: var(--dimension-4);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+    user-select: none;
+    transform: translateY(-50%);
+}
+
+.orb-autocomplete__dropdown {
+    position: absolute;
+    z-index: 50;
+    top: 100%;
+    right: 0;
+    left: 0;
+    max-height: 192px;
+    margin-top: var(--dimension-3);
+    overflow: auto;
+    background: var(--default-form-element-bg-color);
+    border-radius: 8px;
+    box-shadow:
+        0 0 0 1px var(--default-form-element-border-color),
+        0 25px 50px -12px rgb(0 0 0 / 50%);
+}
+
+.orb-autocomplete__option {
+    overflow: hidden;
+    width: 100%;
+    padding: var(--dimension-4) var(--dimension-5);
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text);
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.orb-autocomplete__option:hover {
+    background: var(--bg-hover);
+}
+
+.orb-autocomplete__option--active,
+.orb-autocomplete__option--active:hover {
+    color: var(--button-primary-text-color, #000);
+    background: var(--color-corporate-green-50);
+}
+
+.orb-autocomplete__more {
+    padding: var(--dimension-4) var(--dimension-5);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-style: italic;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+}
+
+.orb-autocomplete__empty {
+    margin-top: var(--dimension-3);
+    font-size: var(--font-size-normal);
+    line-height: 1.375;
+    color: color-mix(in srgb, var(--color-yellow-50) 70%, transparent);
+}
+</style>

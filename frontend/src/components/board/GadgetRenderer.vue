@@ -2,12 +2,12 @@
     <!-- Traffic light -->
     <div
         v-if="type === 'trafficlight'"
-        class="flex flex-col items-center rounded-xl ring-1"
+        class="orb-gadget__traffic"
         style="background: var(--gadget-bg); border-color: var(--gadget-ring)"
         :style="{ gap: `${Math.max(2, size * 0.08)}px`, padding: `${Math.max(4, size * 0.12)}px` }"
     >
         <div
-            class="rounded-full transition-all duration-300"
+            class="orb-gadget__bulb"
             :style="{
                 ...bulbStyle(isRed, '239,68,68'),
                 width: `${size * 0.55}px`,
@@ -15,7 +15,7 @@
             }"
         />
         <div
-            class="rounded-full transition-all duration-300"
+            class="orb-gadget__bulb"
             :style="{
                 ...bulbStyle(isAmber, '255,208,0'),
                 width: `${size * 0.55}px`,
@@ -23,7 +23,7 @@
             }"
         />
         <div
-            class="rounded-full transition-all duration-300"
+            class="orb-gadget__bulb"
             :style="{
                 ...bulbStyle(isGreen, '34,197,94'),
                 width: `${size * 0.55}px`,
@@ -35,23 +35,20 @@
     <!-- Progress bar -->
     <div
         v-else-if="type === 'bar'"
-        class="flex flex-col items-center"
+        class="orb-gadget__stack"
         :style="{ width: size + 'px', gap: Math.max(2, size * 0.05) + 'px' }"
     >
         <div
-            class="relative w-full rounded-full overflow-hidden ring-1"
+            class="orb-gadget__track"
             style="background: var(--gadget-bar-bg)"
             :style="{
                 height: Math.max(10, Math.round(size * 0.22)) + 'px',
                 boxShadow: 'inset 0 0 0 1px var(--gadget-ring)',
             }"
         >
-            <div
-                class="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
-                :style="{ width: pct + '%', background: color }"
-            />
+            <div class="orb-gadget__fill" :style="{ width: pct + '%', background: color }" />
             <span
-                class="absolute inset-0 flex items-center justify-center font-bold"
+                class="orb-gadget__pct"
                 style="color: var(--gadget-text); text-shadow: var(--shadow-text)"
                 :style="{ fontSize: Math.max(8, Math.round(size * 0.13)) + 'px' }"
                 >{{ pct.toFixed(0) }}%</span
@@ -59,14 +56,14 @@
         </div>
         <span
             style="color: var(--gadget-text-dim); text-shadow: var(--shadow-text)"
-            class="truncate w-full text-center"
+            class="orb-gadget__value orb-gadget__value--bar"
             :style="{ fontSize: Math.max(8, Math.round(size * 0.13)) + 'px' }"
             >{{ valueLabel }}</span
         >
     </div>
 
     <!-- Gauge (SVG semicircle arc) -->
-    <div v-else class="flex flex-col items-center">
+    <div v-else class="orb-gadget__stack">
         <svg :width="size" :height="size * 0.65" :viewBox="`0 0 ${size} ${size * 0.65}`">
             <path
                 :d="bgArc"
@@ -81,7 +78,7 @@
                 :stroke="color"
                 stroke-width="8"
                 stroke-linecap="round"
-                class="transition-all duration-500"
+                class="orb-gadget__arc"
             />
             <text
                 :x="size / 2"
@@ -100,7 +97,7 @@
         </svg>
         <span
             style="color: var(--gadget-text-dim); text-shadow: var(--shadow-text)"
-            class="truncate"
+            class="orb-gadget__value"
             :style="{ fontSize: '9px', maxWidth: size + 'px' }"
             >{{ valueLabel }}</span
         >
@@ -182,3 +179,64 @@ const valArc = computed(() => {
     return `M ${polarX(START)} ${polarY(START)} A ${R.value} ${R.value} 0 0 1 ${ex} ${ey}`;
 });
 </script>
+
+<style scoped>
+.orb-gadget__traffic {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px currentcolor;
+}
+
+.orb-gadget__bulb {
+    border-radius: 9999px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-gadget__stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.orb-gadget__track {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    border-radius: 9999px;
+}
+
+.orb-gadget__fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 9999px;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-gadget__pct {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.orb-gadget__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-gadget__value--bar {
+    width: 100%;
+    text-align: center;
+}
+
+.orb-gadget__arc {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+</style>

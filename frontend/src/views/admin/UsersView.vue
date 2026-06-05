@@ -1,6 +1,6 @@
 <template>
-    <div class="max-w-4xl">
-        <div class="flex justify-between items-center" style="margin-bottom: var(--dimension-6)">
+    <div class="orb-users">
+        <div class="orb-users__header">
             <div>
                 <CmkHeading type="h2">
                     {{ t('admin.users') }}
@@ -27,59 +27,37 @@
             </CmkButton>
         </div>
 
-        <div v-if="loading" class="flex items-center justify-center py-8">
+        <div v-if="loading" class="orb-users__loading">
             <CmkLoading />
         </div>
 
-        <div
-            v-else
-            class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
-        >
-            <table class="w-full text-sm">
+        <div v-else class="orb-users__card">
+            <table class="orb-users__table">
                 <thead>
-                    <tr class="border-b border-[var(--border)]">
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                    <tr class="orb-users__head-row">
+                        <th class="orb-users__th">
                             {{ t('admin.name') }}
                         </th>
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                        <th class="orb-users__th">
                             {{ t('admin.type') }}
                         </th>
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                        <th class="orb-users__th">
                             {{ t('admin.status') }}
                         </th>
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                        <th class="orb-users__th">
                             {{ t('admin.roles') }}
                         </th>
-                        <th
-                            class="text-right text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                        <th class="orb-users__th orb-users__th--right">
                             {{ t('admin.actions') }}
                         </th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-[var(--border)]">
-                    <tr
-                        v-for="user in users"
-                        :key="user.user_id"
-                        class="hover:bg-[var(--bg-hover)] transition-colors"
-                    >
-                        <td class="font-medium text-[var(--text)]" style="padding: 6px 12px">
+                <tbody class="orb-users__body">
+                    <tr v-for="user in users" :key="user.user_id" class="orb-users__row">
+                        <td class="orb-users__td orb-users__td--name">
                             {{ user.name }}
                         </td>
-                        <td style="padding: 6px 12px">
+                        <td class="orb-users__td">
                             <CmkBadge
                                 v-if="user.is_admin"
                                 size="small"
@@ -87,50 +65,39 @@
                                 color="warning"
                                 >{{ t('admin.admin') }}</CmkBadge
                             >
-                            <span v-else class="text-sm text-[var(--text-muted)]">{{
-                                t('admin.user')
-                            }}</span>
+                            <span v-else class="orb-users__user-type">{{ t('admin.user') }}</span>
                         </td>
-                        <td style="padding: 6px 12px">
+                        <td class="orb-users__td">
                             <span
-                                class="inline-flex items-center gap-[6px] text-sm font-medium"
+                                class="orb-users__status"
                                 :class="
                                     user.is_active
-                                        ? 'text-[var(--color-corporate-green-50)]'
-                                        : 'text-[var(--color-light-red-40)]'
+                                        ? 'orb-users__status--active'
+                                        : 'orb-users__status--inactive'
                                 "
                             >
-                                <span
-                                    class="rounded-full"
-                                    style="width: 8px; height: 8px"
-                                    :class="
-                                        user.is_active
-                                            ? 'bg-[var(--color-corporate-green-50)]'
-                                            : 'bg-[var(--color-light-red-40)]'
-                                    "
-                                />
+                                <span class="orb-users__status-dot" />
                                 {{ user.is_active ? t('admin.active') : t('admin.inactive') }}
                             </span>
                         </td>
-                        <td class="text-[var(--text-muted)] text-sm" style="padding: 6px 12px">
+                        <td class="orb-users__td orb-users__td--roles">
                             <template v-if="user.roles.length">
                                 <span
                                     v-for="r in user.roles"
                                     :key="r.role_id"
-                                    class="inline-block rounded bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-[var(--text-muted)] mr-1 mb-0.5"
-                                    style="padding: 1px 5px"
+                                    class="orb-users__role-chip"
                                 >
                                     {{ r.name }}
                                 </span>
                             </template>
-                            <span v-else class="text-[var(--text-muted)]">—</span>
+                            <span v-else>—</span>
                         </td>
-                        <td class="text-right" style="padding: 6px 12px">
-                            <div class="flex items-center justify-end gap-[3px]">
+                        <td class="orb-users__td orb-users__td--right">
+                            <div class="orb-users__actions">
                                 <template v-if="user.user_id !== auth.user?.user_id">
                                     <button
                                         v-if="canEditUsers"
-                                        class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                                        class="orb-users__action-btn orb-users__action-btn--edit"
                                         :title="t('common.edit')"
                                         @click="editUser = user"
                                     >
@@ -149,7 +116,7 @@
                                         </svg>
                                     </button>
                                     <button
-                                        class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
+                                        class="orb-users__action-btn orb-users__action-btn--delete"
                                         :title="t('common.delete')"
                                         @click="deleteTargetId = user.user_id"
                                     >
@@ -168,7 +135,7 @@
                                         </svg>
                                     </button>
                                 </template>
-                                <span v-else class="text-sm text-[var(--text-muted)] pr-1">—</span>
+                                <span v-else class="orb-users__self-dash">—</span>
                             </div>
                         </td>
                     </tr>
@@ -183,7 +150,7 @@
             @close="showCreate = false"
         >
             <form class="users-create__form" @submit.prevent="createUser">
-                <div class="space-y-[4px]">
+                <div class="users-create__field">
                     <CmkLabel>{{ t('auth.username') }}</CmkLabel>
                     <CmkInput
                         v-model="newUser.name"
@@ -193,7 +160,7 @@
                     />
                 </div>
 
-                <div class="space-y-[4px]">
+                <div class="users-create__field">
                     <CmkLabel>{{ t('auth.password') }}</CmkLabel>
                     <CmkInput
                         v-model="newUser.password"
@@ -201,12 +168,12 @@
                         autocomplete="new-password"
                         field-size="FILL"
                     />
-                    <p class="text-sm text-[var(--text-muted)]">
+                    <p class="users-create__hint">
                         {{ t('userSettings.passwordMinLength') }}
                     </p>
                 </div>
 
-                <div class="space-y-[4px]">
+                <div class="users-create__field">
                     <CmkLabel>{{ t('userSettings.confirmPassword') }}</CmkLabel>
                     <CmkInput
                         v-model="newUserConfirmPassword"
@@ -216,16 +183,16 @@
                     />
                     <p
                         v-if="newUserConfirmPassword && newUser.password !== newUserConfirmPassword"
-                        class="text-sm text-[var(--color-light-red-40)]"
+                        class="users-create__mismatch"
                     >
                         {{ t('userSettings.passwordMismatch') }}
                     </p>
                 </div>
 
-                <div class="border-t border-[var(--border)] pt-[10px] space-y-[10px]">
-                    <div class="flex items-start gap-[8px]">
+                <div class="users-create__section">
+                    <div class="users-create__checkbox-row">
                         <CmkCheckbox v-model="newUser.is_admin" :label="t('admin.administrator')" />
-                        <p class="text-sm text-[var(--text-muted)] mt-0.5">
+                        <p class="users-create__checkbox-hint">
                             {{ t('admin.administratorHint') }}
                         </p>
                     </div>
@@ -238,9 +205,9 @@
 
                 <div
                     v-if="availableRoles.length"
-                    class="border-t border-[var(--border)] pt-[10px] space-y-[8px]"
+                    class="users-create__section users-create__section--roles"
                 >
-                    <p class="text-sm font-medium text-[var(--text-muted)]">
+                    <p class="users-create__group-label">
                         {{ t('admin.roles') }}
                     </p>
                     <div v-for="role in availableRoles" :key="role.role_id">
@@ -405,11 +372,219 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.orb-users {
+    max-width: 896px;
+}
+
+.orb-users__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--dimension-6);
+}
+
+.orb-users__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 0;
+}
+
+.orb-users__card {
+    overflow: hidden;
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.orb-users__table {
+    width: 100%;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+}
+
+.orb-users__head-row {
+    border-bottom: 1px solid var(--border);
+}
+
+.orb-users__th {
+    padding: 6px 12px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-align: left;
+    color: var(--text-muted);
+}
+
+.orb-users__th--right {
+    text-align: right;
+}
+
+.orb-users__body > tr + tr {
+    border-top: 1px solid var(--border);
+}
+
+.orb-users__row {
+    transition: background-color 0.15s;
+}
+
+.orb-users__row:hover {
+    background: var(--bg-hover);
+}
+
+.orb-users__td {
+    padding: 6px 12px;
+}
+
+.orb-users__td--name {
+    font-weight: 500;
+    color: var(--text);
+}
+
+.orb-users__td--roles {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-users__td--right {
+    text-align: right;
+}
+
+.orb-users__user-type {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-users__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 500;
+}
+
+.orb-users__status--active {
+    color: var(--color-corporate-green-50);
+}
+
+.orb-users__status--inactive {
+    color: var(--color-light-red-40);
+}
+
+.orb-users__status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+}
+
+.orb-users__status--active .orb-users__status-dot {
+    background: var(--color-corporate-green-50);
+}
+
+.orb-users__status--inactive .orb-users__status-dot {
+    background: var(--color-light-red-40);
+}
+
+.orb-users__role-chip {
+    display: inline-block;
+    padding: 1px 5px;
+    margin-right: var(--dimension-3);
+    margin-bottom: var(--dimension-2);
+    color: var(--text-muted);
+    background: var(--default-form-element-bg-color);
+    border-radius: 4px;
+    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
+}
+
+.orb-users__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 3px;
+}
+
+.orb-users__action-btn {
+    padding: var(--dimension-3);
+    color: var(--text-muted);
+    border-radius: 6px;
+    transition: all 0.15s;
+}
+
+.orb-users__action-btn--edit:hover {
+    color: var(--color-corporate-green-50);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 10%, transparent);
+}
+
+.orb-users__action-btn--delete:hover {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 10%, transparent);
+}
+
+.orb-users__self-dash {
+    padding-right: var(--dimension-3);
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
 .users-create__form {
     display: flex;
     flex-direction: column;
     gap: var(--dimension-5);
     min-width: 380px;
+}
+
+.users-create__field > * + * {
+    margin-top: var(--dimension-3);
+}
+
+.users-create__hint {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.users-create__mismatch {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--color-light-red-40);
+}
+
+.users-create__section {
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.users-create__section > * + * {
+    margin-top: 10px;
+}
+
+.users-create__section--roles > * + * {
+    margin-top: var(--dimension-4);
+}
+
+.users-create__checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--dimension-4);
+}
+
+.users-create__checkbox-hint {
+    margin-top: var(--dimension-2);
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.users-create__group-label {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 500;
+    color: var(--text-muted);
 }
 
 .users-create__error {
