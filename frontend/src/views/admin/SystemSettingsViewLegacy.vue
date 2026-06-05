@@ -353,15 +353,3 @@ onMounted(async () => {
     Object.assign(form, store.system);
 });
 </script>
-
-<style scoped>
-.group-heading {
-    margin-bottom: 8px;
-    font-size: var(--font-size-large);
-    line-height: 20px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-}
-</style>

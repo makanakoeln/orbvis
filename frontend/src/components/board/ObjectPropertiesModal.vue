@@ -1,48 +1,38 @@
 <template>
-    <div class="fixed inset-0 z-50" :class="isPopover ? '' : 'flex items-center justify-center'">
+    <div class="orb-props" :class="isPopover ? '' : 'orb-props--centered'">
         <!-- Backdrop: dark in modal mode, transparent dismiss layer in popover mode -->
         <div
-            class="absolute inset-0 transition-all"
-            :class="isPopover ? '' : 'bg-black/60 backdrop-blur-sm'"
+            class="orb-props__backdrop"
+            :class="isPopover ? '' : 'orb-props__backdrop--dim'"
             @click="$emit('close')"
         />
         <!-- Card: centered in modal mode, positioned at click in popover mode -->
         <Transition
             appear
-            enter-from-class="opacity-0 scale-95 -translate-y-1"
-            enter-active-class="transition-all duration-150 ease-out"
+            enter-from-class="orb-props__card-enter-from"
+            enter-active-class="orb-props__card-enter-active"
         >
             <div
-                class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-2xl flex flex-col overflow-hidden"
-                :class="
-                    isPopover
-                        ? 'absolute w-[25rem] max-h-[75vh]'
-                        : 'relative w-[36rem] max-h-[90vh]'
-                "
+                class="orb-props__card"
+                :class="isPopover ? 'orb-props__card--popover' : 'orb-props__card--modal'"
                 :style="cardStyle"
             >
                 <!-- Header -->
                 <div
-                    class="flex items-center justify-between shrink-0 border-b border-[var(--border)] select-none touch-none"
-                    :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
-                    style="padding: 10px 16px"
+                    class="orb-props__header"
+                    :class="dragging ? 'orb-props__header--dragging' : ''"
                     @pointerdown="onHeaderPointerDown"
                     @pointermove="onHeaderPointerMove"
                     @pointerup="onHeaderPointerUp"
                     @pointercancel="onHeaderPointerUp"
                 >
-                    <div class="flex items-center gap-[8px]">
-                        <span
-                            class="text-xs font-semibold px-[6px] py-[2px] rounded-md bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] text-[var(--text-muted)] capitalize"
-                        >
+                    <div class="orb-props__inline">
+                        <span class="orb-props__type-badge">
                             {{ object.type }}
                         </span>
-                        <span class="text-sm font-bold text-[var(--text)]">{{ displayName }}</span>
+                        <span class="orb-props__name">{{ displayName }}</span>
                     </div>
-                    <button
-                        class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
-                        @click="$emit('close')"
-                    >
+                    <button class="orb-props__close" @click="$emit('close')">
                         <svg
                             style="width: 14px; height: 14px"
                             fill="none"
@@ -60,10 +50,7 @@
                 </div>
 
                 <!-- Scrollable body -->
-                <CmkScrollContainer
-                    class="flex-1 min-h-0 space-y-[14px]"
-                    style="padding: 10px 16px"
-                >
+                <CmkScrollContainer class="orb-props__body">
                     <!-- === MONITORING OBJECT === -->
                     <section
                         v-if="
@@ -73,14 +60,14 @@
                             object.type !== 'image'
                         "
                     >
-                        <p class="section-title">{{ t('boardSettings.monitoringObject') }}</p>
-                        <div class="space-y-[8px]">
+                        <p class="orb-section-title">{{ t('boardSettings.monitoringObject') }}</p>
+                        <div class="orb-props__fields">
                             <div class="field-row">
                                 <label class="field-label">{{
                                     t('boardSettings.connection')
                                 }}</label>
                                 <CmkDropdown
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                     :selected-option="form.connection_id || ''"
                                     :options="connectionDropdownOptions"
                                     :width="'fill'"
@@ -99,7 +86,7 @@
                                         :loading="loadingHosts"
                                         placeholder="hostname"
                                         :empty-text="t('boardSettings.noHosts')"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                             </template>
@@ -114,12 +101,12 @@
                                         :loading="loadingServices"
                                         placeholder="service description"
                                         :empty-text="t('boardSettings.noServices')"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                             </template>
                             <template v-if="object.type === 'host' || object.type === 'service'">
-                                <div class="flex flex-col gap-[6px]">
+                                <div class="orb-props__checks">
                                     <CmkCheckbox
                                         v-model="form.only_hard_states"
                                         :label="t('boardSettings.onlyHardStates')"
@@ -144,14 +131,17 @@
                                         :loading="loadingGroups"
                                         placeholder="group name"
                                         :empty-text="t('boardSettings.noGroups')"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                             </template>
                             <template v-if="object.type === 'dyngroup'">
                                 <div class="field-row">
                                     <label class="field-label">Object type</label>
-                                    <select v-model="form.object_types" class="form-input flex-1">
+                                    <select
+                                        v-model="form.object_types"
+                                        class="orb-field orb-props__grow"
+                                    >
                                         <option value="host">host</option>
                                         <option value="service">service</option>
                                     </select>
@@ -160,13 +150,13 @@
                                     <label class="field-label">Livestatus filter</label>
                                     <textarea
                                         v-model="form.object_filter"
-                                        class="form-input flex-1 font-mono text-xs"
+                                        class="orb-field orb-props__grow orb-props__code-input"
                                         rows="4"
                                         spellcheck="false"
                                         placeholder="Filter: host_name ~ ^web\n"
                                     />
                                 </div>
-                                <p class="text-xs text-[var(--text-muted)] mt-1">
+                                <p class="orb-props__note">
                                     One or more <code>Filter:</code> lines, each terminated by a
                                     literal <code>\n</code>. Forwarded verbatim to Livestatus
                                     against <code>GET hosts/services</code>.
@@ -183,7 +173,7 @@
                                         :display-labels="boardLabels"
                                         placeholder="map-name"
                                         :empty-text="t('boardSettings.noBoards')"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                             </template>
@@ -199,7 +189,7 @@
                                         :loading="loadingAggregations"
                                         placeholder="aggregation id"
                                         :empty-text="t('boardSettings.noAggregations')"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                                 <div class="field-row">
@@ -210,7 +200,7 @@
                                         v-model="form.expand_depth"
                                         min="0"
                                         max="10"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                         :title="t('boardSettings.expandDepthHelp')"
                                     />
                                 </div>
@@ -233,7 +223,7 @@
                                         :min="1"
                                         :max="20"
                                         :placeholder="t('boardSettings.lineWidthDefault')"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                             </template>
@@ -242,16 +232,15 @@
 
                     <!-- === TEXTBOX CONTENT + STYLING === -->
                     <section v-if="object.type === 'textbox'">
-                        <p class="section-title">{{ t('boardSettings.content') }}</p>
+                        <p class="orb-section-title">{{ t('boardSettings.content') }}</p>
                         <textarea
                             v-model="form.label.text"
                             rows="3"
-                            class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all resize-none mb-[8px]"
-                            style="padding: 5px 10px"
+                            class="orb-field orb-props__textarea"
                             :placeholder="t('boardSettings.textContent') + '…'"
                         />
-                        <div class="space-y-[8px]">
-                            <div class="grid grid-cols-2 gap-[8px]">
+                        <div class="orb-props__fields">
+                            <div class="orb-props__grid-2">
                                 <div class="field-row">
                                     <label class="field-label">{{
                                         t('boardSettings.width')
@@ -259,7 +248,7 @@
                                     <NumberInput
                                         v-model="form.textbox_width"
                                         :placeholder="t('boardSettings.auto')"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                                 <div class="field-row">
@@ -269,7 +258,7 @@
                                     <NumberInput
                                         v-model="form.textbox_height"
                                         :placeholder="t('boardSettings.auto')"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                             </div>
@@ -298,16 +287,13 @@
 
                     <!-- === GRAPH: Metric Source === -->
                     <section v-if="object.type === 'graph'">
-                        <div class="flex items-center gap-[8px] mb-[8px]">
-                            <p class="section-title !mb-0">
+                        <div class="orb-props__section-head">
+                            <p class="orb-section-title orb-section-title--flush">
                                 {{ t('boardSettings.graphMetricSource') }}
                             </p>
-                            <span
-                                class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[var(--color-warning)]/15 text-[var(--color-yellow-50)] border border-[var(--color-warning)]/25 shrink-0"
-                                >experimental</span
-                            >
+                            <span class="orb-props__badge-experimental">experimental</span>
                         </div>
-                        <div class="space-y-[8px]">
+                        <div class="orb-props__fields">
                             <div class="field-row">
                                 <label class="field-label">{{ t('boardSettings.hostname') }}</label>
                                 <AutocompleteInput
@@ -316,7 +302,7 @@
                                     :loading="loadingHosts"
                                     placeholder="hostname"
                                     :empty-text="t('boardSettings.noHosts')"
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
                             <div class="field-row">
@@ -329,22 +315,20 @@
                                     :loading="loadingServices"
                                     placeholder="service description"
                                     :empty-text="t('boardSettings.noServices')"
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
                             <div class="field-row">
                                 <label class="field-label">{{
                                     t('boardSettings.graphSource')
                                 }}</label>
-                                <div class="flex gap-1 flex-1">
+                                <div class="orb-props__btn-group">
                                     <button
                                         v-for="mode in ['auto', 'metrics', 'template'] as const"
                                         :key="mode"
-                                        class="px-2 py-1 rounded text-xs transition-all"
+                                        class="orb-props__seg-btn"
                                         :class="
-                                            graphSource === mode
-                                                ? 'bg-[var(--color-corporate-green-50)] text-[var(--button-primary-text-color,#000)]'
-                                                : 'bg-[var(--default-form-element-bg-color)] text-[var(--text-muted)] hover:text-[var(--text)]'
+                                            graphSource === mode ? 'orb-props__seg-btn--active' : ''
                                         "
                                         @click="setGraphSource(mode)"
                                     >
@@ -352,23 +336,23 @@
                                     </button>
                                 </div>
                             </div>
-                            <div v-if="graphSource === 'metrics'" class="field-row items-start">
-                                <label class="field-label mt-1.5">{{
+                            <div
+                                v-if="graphSource === 'metrics'"
+                                class="field-row field-row--start"
+                            >
+                                <label class="field-label field-label--offset-6">{{
                                     t('boardSettings.graphMetric')
                                 }}</label>
-                                <div class="flex-1 space-y-[6px]">
-                                    <div
-                                        v-if="form.graph_metric.length"
-                                        class="flex flex-wrap gap-1"
-                                    >
+                                <div class="orb-props__metric-col">
+                                    <div v-if="form.graph_metric.length" class="orb-props__chips">
                                         <span
                                             v-for="m in form.graph_metric"
                                             :key="m"
-                                            class="flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--default-form-element-bg-color)] text-xs text-[var(--text)] ring-1 ring-[var(--default-border-color)]"
+                                            class="orb-props__chip"
                                         >
                                             {{ metricIdToTitle[m] ?? m }}
                                             <button
-                                                class="text-[var(--text-muted)] hover:text-[var(--color-light-red-40)]"
+                                                class="orb-props__chip-remove"
                                                 @click="
                                                     form.graph_metric = form.graph_metric.filter(
                                                         (x) => x !== m,
@@ -396,7 +380,7 @@
                                                     ? t('boardSettings.noMetrics')
                                                     : undefined
                                             "
-                                            class="w-full"
+                                            class="orb-props__full"
                                             @change="addMetric"
                                         />
                                     </div>
@@ -410,7 +394,7 @@
                                     t('boardSettings.graphTemplate')
                                 }}</label>
                                 <CmkDropdown
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                     :selected-option="form.graph_id ?? null"
                                     :options="{
                                         type: 'fixed',
@@ -435,7 +419,7 @@
                                     t('boardSettings.graphTimeWindow')
                                 }}</label>
                                 <CmkDropdown
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                     :selected-option="String(form.graph_time_window)"
                                     :options="{
                                         type: 'fixed',
@@ -460,15 +444,15 @@
 
                     <!-- === GRAPH: URL Embed === -->
                     <section v-if="object.type === 'graph'">
-                        <p class="section-title">{{ t('boardSettings.graphUrlEmbed') }}</p>
-                        <div class="space-y-[8px]">
+                        <p class="orb-section-title">{{ t('boardSettings.graphUrlEmbed') }}</p>
+                        <div class="orb-props__fields">
                             <div class="field-row">
                                 <label class="field-label">{{ t('boardSettings.graphUrl') }}</label>
                                 <CmkInput
                                     v-model="form.graph_url"
                                     placeholder="https://… (optional)"
                                     field-size="FILL"
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
                             <div class="field-row">
@@ -476,7 +460,7 @@
                                     t('boardSettings.graphEmbedType')
                                 }}</label>
                                 <CmkDropdown
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                     :selected-option="form.graph_embed_type || null"
                                     :options="{
                                         type: 'fixed',
@@ -498,7 +482,7 @@
                                     "
                                 />
                             </div>
-                            <div class="grid grid-cols-2 gap-[8px]">
+                            <div class="orb-props__grid-2">
                                 <div class="field-row">
                                     <label class="field-label">{{
                                         t('boardSettings.width')
@@ -506,7 +490,7 @@
                                     <NumberInput
                                         v-model="form.graph_width"
                                         min="50"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                                 <div class="field-row">
@@ -516,7 +500,7 @@
                                     <NumberInput
                                         v-model="form.graph_height"
                                         min="30"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                             </div>
@@ -524,13 +508,13 @@
                                 <label class="field-label">{{
                                     t('boardSettings.graphRefresh')
                                 }}</label>
-                                <div class="flex items-center gap-[8px] flex-1">
+                                <div class="orb-props__inline orb-props__grow">
                                     <NumberInput
                                         v-model="form.graph_refresh_interval"
                                         min="0"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
-                                    <span class="text-sm text-[var(--text-muted)] shrink-0">{{
+                                    <span class="orb-props__inline-label">{{
                                         t('boardSettings.graphRefreshOff')
                                     }}</span>
                                 </div>
@@ -540,8 +524,8 @@
 
                     <!-- === LINE CONFIG === -->
                     <section v-if="object.type === 'line'">
-                        <p class="section-title">{{ t('boardSettings.monitoringObject') }}</p>
-                        <div class="space-y-[8px]">
+                        <p class="orb-section-title">{{ t('boardSettings.monitoringObject') }}</p>
+                        <div class="orb-props__fields">
                             <div class="field-row">
                                 <label class="field-label">{{ t('boardSettings.hostname') }}</label>
                                 <AutocompleteInput
@@ -550,7 +534,7 @@
                                     :loading="loadingHosts"
                                     placeholder="hostname"
                                     :empty-text="t('boardSettings.noHosts')"
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
                             <div class="field-row">
@@ -567,24 +551,29 @@
                                             ? t('boardSettings.noServices')
                                             : undefined
                                     "
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
                         </div>
                     </section>
                     <section v-if="object.type === 'line'">
-                        <p class="section-title">{{ t('boardSettings.lineSection') }}</p>
-                        <div class="space-y-[8px]">
+                        <p class="orb-section-title">{{ t('boardSettings.lineSection') }}</p>
+                        <div class="orb-props__fields">
                             <div class="field-row">
                                 <label class="field-label">{{ t('boardSettings.z') }}</label>
-                                <NumberInput v-model="form.z" min="0" max="999" class="flex-1" />
+                                <NumberInput
+                                    v-model="form.z"
+                                    min="0"
+                                    max="999"
+                                    class="orb-props__grow"
+                                />
                             </div>
                             <div class="field-row">
                                 <label class="field-label">{{
                                     t('boardSettings.lineStyle')
                                 }}</label>
                                 <CmkDropdown
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                     :selected-option="form.line_style ?? null"
                                     :options="lineStyleOpts"
                                     label=""
@@ -601,7 +590,7 @@
                                     t('boardSettings.linePerfdataLabel')
                                 }}</label>
                                 <CmkDropdown
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                     :selected-option="form.line_perfdata_label ?? 'none'"
                                     :options="linePerfdataLabelOpts"
                                     label=""
@@ -637,7 +626,7 @@
                                             ? t('boardSettings.noMetrics')
                                             : undefined
                                     "
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
                             <!-- Weathermap outbound metric (optional; right of the midpoint,
@@ -664,15 +653,18 @@
                                             ? t('boardSettings.noMetrics')
                                             : undefined
                                     "
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
-                            <div class="grid grid-cols-2 gap-[8px]">
+                            <div class="orb-props__grid-2">
                                 <!-- Line/Border color are ignored once weather coloring
                                      drives the stroke (the renderer pulls wmColor and
                                      skips the border altogether), so hide them to keep
                                      the dialog honest about what actually takes effect. -->
-                                <div v-if="!form.line_weather_color" class="field-row col-span-2">
+                                <div
+                                    v-if="!form.line_weather_color"
+                                    class="field-row orb-props__span-2"
+                                >
                                     <label class="field-label">{{
                                         t('boardSettings.lineColor')
                                     }}</label>
@@ -682,7 +674,10 @@
                                         default-color="#ffffff"
                                     />
                                 </div>
-                                <div v-if="!form.line_weather_color" class="field-row col-span-2">
+                                <div
+                                    v-if="!form.line_weather_color"
+                                    class="field-row orb-props__span-2"
+                                >
                                     <label class="field-label">{{
                                         t('boardSettings.lineColorBorder')
                                     }}</label>
@@ -692,7 +687,7 @@
                                         default-color="#000000"
                                     />
                                 </div>
-                                <div class="field-row col-span-2">
+                                <div class="field-row orb-props__span-2">
                                     <label class="field-label">{{
                                         t('boardSettings.lineWidth')
                                     }}</label>
@@ -701,7 +696,7 @@
                                         :min="1"
                                         :max="20"
                                         :placeholder="t('boardSettings.lineWidthDefault')"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                                 <template v-if="mapType !== 'worldmap'">
@@ -713,7 +708,7 @@
                                             v-model="form.x"
                                             min="0"
                                             max="10000"
-                                            class="flex-1"
+                                            class="orb-props__grow"
                                         />
                                     </div>
                                     <div class="field-row">
@@ -724,7 +719,7 @@
                                             v-model="form.y"
                                             min="0"
                                             max="10000"
-                                            class="flex-1"
+                                            class="orb-props__grow"
                                         />
                                     </div>
                                     <div class="field-row">
@@ -735,7 +730,7 @@
                                             v-model="form.x2"
                                             min="0"
                                             max="10000"
-                                            class="flex-1"
+                                            class="orb-props__grow"
                                         />
                                     </div>
                                     <div class="field-row">
@@ -746,7 +741,7 @@
                                             v-model="form.y2"
                                             min="0"
                                             max="10000"
-                                            class="flex-1"
+                                            class="orb-props__grow"
                                         />
                                     </div>
                                 </template>
@@ -765,7 +760,7 @@
                                 <CmkInput
                                     v-model="form.label.text"
                                     field-size="FILL"
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
                         </div>
@@ -773,67 +768,80 @@
 
                     <!-- === POSITION === -->
                     <section v-if="object.type !== 'line'">
-                        <p class="section-title">{{ t('boardSettings.position') }}</p>
-                        <div class="grid grid-cols-3 gap-[8px]">
+                        <p class="orb-section-title">{{ t('boardSettings.position') }}</p>
+                        <div class="orb-props__grid-3">
                             <template v-if="mapType === 'worldmap'">
-                                <div class="flex items-center gap-[8px]">
-                                    <label class="text-sm text-[var(--text-muted)] shrink-0">{{
+                                <div class="orb-props__inline">
+                                    <label class="orb-props__inline-label">{{
                                         t('boardSettings.lat')
                                     }}</label>
-                                    <NumberInput v-model="form.lat" step="any" class="flex-1" />
+                                    <NumberInput
+                                        v-model="form.lat"
+                                        step="any"
+                                        class="orb-props__grow"
+                                    />
                                 </div>
-                                <div class="flex items-center gap-[8px]">
-                                    <label class="text-sm text-[var(--text-muted)] shrink-0">{{
+                                <div class="orb-props__inline">
+                                    <label class="orb-props__inline-label">{{
                                         t('boardSettings.lng')
                                     }}</label>
-                                    <NumberInput v-model="form.lng" step="any" class="flex-1" />
+                                    <NumberInput
+                                        v-model="form.lng"
+                                        step="any"
+                                        class="orb-props__grow"
+                                    />
                                 </div>
                             </template>
                             <template v-else>
-                                <div class="flex items-center gap-[8px]">
-                                    <label class="text-sm text-[var(--text-muted)] shrink-0">{{
+                                <div class="orb-props__inline">
+                                    <label class="orb-props__inline-label">{{
                                         t('boardSettings.x')
                                     }}</label>
                                     <NumberInput
                                         v-model="form.x"
                                         min="0"
                                         max="10000"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
-                                <div class="flex items-center gap-[8px]">
-                                    <label class="text-sm text-[var(--text-muted)] shrink-0">{{
+                                <div class="orb-props__inline">
+                                    <label class="orb-props__inline-label">{{
                                         t('boardSettings.y')
                                     }}</label>
                                     <NumberInput
                                         v-model="form.y"
                                         min="0"
                                         max="10000"
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                             </template>
-                            <div class="flex items-center gap-[8px]">
-                                <label class="text-sm text-[var(--text-muted)] shrink-0">{{
+                            <div class="orb-props__inline">
+                                <label class="orb-props__inline-label">{{
                                     t('boardSettings.z')
                                 }}</label>
-                                <NumberInput v-model="form.z" min="1" max="999" class="flex-1" />
+                                <NumberInput
+                                    v-model="form.z"
+                                    min="1"
+                                    max="999"
+                                    class="orb-props__grow"
+                                />
                             </div>
                         </div>
                     </section>
 
                     <!-- === LABEL === -->
                     <section v-if="object.type !== 'line'">
-                        <p class="section-title">{{ t('boardSettings.label') }}</p>
-                        <div class="space-y-[8px]">
+                        <p class="orb-section-title">{{ t('boardSettings.label') }}</p>
+                        <div class="orb-props__fields">
                             <div class="field-row">
                                 <label class="field-label">{{
                                     t('boardSettings.showLabel')
                                 }}</label>
                                 <CmkCheckbox v-model="form.label.show" />
                             </div>
-                            <div :class="!form.label.show ? 'opacity-40 pointer-events-none' : ''">
-                                <div class="space-y-[8px]">
+                            <div :class="!form.label.show ? 'orb-props__disabled' : ''">
+                                <div class="orb-props__fields">
                                     <div v-if="object.type !== 'textbox'" class="field-row">
                                         <label class="field-label">{{
                                             t('boardSettings.labelText')
@@ -842,10 +850,10 @@
                                             v-model="form.label.text"
                                             placeholder="(auto from object)"
                                             field-size="FILL"
-                                            class="flex-1"
+                                            class="orb-props__grow"
                                         />
                                     </div>
-                                    <div class="grid grid-cols-2 gap-[8px]">
+                                    <div class="orb-props__grid-2">
                                         <div class="field-row">
                                             <label class="field-label">{{
                                                 t('boardSettings.size')
@@ -854,10 +862,10 @@
                                                 v-model="form.label.size"
                                                 min="8"
                                                 max="72"
-                                                class="flex-1"
+                                                class="orb-props__grow"
                                             />
                                         </div>
-                                        <div class="field-row col-span-2">
+                                        <div class="field-row orb-props__span-2">
                                             <label class="field-label">{{
                                                 t('boardSettings.color')
                                             }}</label>
@@ -870,26 +878,38 @@
                                             <label class="field-label">{{
                                                 t('boardSettings.offsetX')
                                             }}</label>
-                                            <NumberInput v-model="form.label.x" class="flex-1" />
+                                            <NumberInput
+                                                v-model="form.label.x"
+                                                class="orb-props__grow"
+                                            />
                                         </div>
                                         <div class="field-row">
                                             <label class="field-label">{{
                                                 t('boardSettings.offsetY')
                                             }}</label>
-                                            <NumberInput v-model="form.label.y" class="flex-1" />
+                                            <NumberInput
+                                                v-model="form.label.y"
+                                                class="orb-props__grow"
+                                            />
                                         </div>
-                                        <div class="col-span-2">
+                                        <div class="orb-props__span-2">
                                             <button
                                                 type="button"
-                                                class="flex items-center gap-[8px] w-full group"
+                                                class="orb-props__toggle"
                                                 @click="showLabelAdvanced = !showLabelAdvanced"
                                             >
-                                                <p class="section-title !mb-0">
+                                                <p
+                                                    class="orb-section-title orb-section-title--flush"
+                                                >
                                                     {{ t('boardSettings.labelAdvanced') }}
                                                 </p>
                                                 <svg
-                                                    class="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-all ml-auto shrink-0"
-                                                    :class="showLabelAdvanced ? '' : '-rotate-90'"
+                                                    class="orb-props__chevron"
+                                                    :class="
+                                                        showLabelAdvanced
+                                                            ? ''
+                                                            : 'orb-props__chevron--collapsed'
+                                                    "
                                                     fill="none"
                                                     viewBox="0 0 24 24"
                                                     stroke="currentColor"
@@ -904,7 +924,7 @@
                                             </button>
                                         </div>
                                         <template v-if="showLabelAdvanced">
-                                            <div class="field-row col-span-2">
+                                            <div class="field-row orb-props__span-2">
                                                 <label class="field-label">{{
                                                     t('boardSettings.background')
                                                 }}</label>
@@ -915,7 +935,7 @@
                                                     default-color="#000000"
                                                 />
                                             </div>
-                                            <div class="field-row col-span-2">
+                                            <div class="field-row orb-props__span-2">
                                                 <label class="field-label">{{
                                                     t('boardSettings.borderColor')
                                                 }}</label>
@@ -925,7 +945,7 @@
                                                     default-color="#e5e5e5"
                                                 />
                                             </div>
-                                            <div class="field-row col-span-2">
+                                            <div class="field-row orb-props__span-2">
                                                 <label class="field-label">{{
                                                     t('boardSettings.maxLength')
                                                 }}</label>
@@ -933,7 +953,7 @@
                                                     v-model="form.label_maxlen"
                                                     min="0"
                                                     :placeholder="t('boardSettings.noLimit')"
-                                                    class="flex-1"
+                                                    class="orb-props__grow"
                                                 />
                                             </div>
                                         </template>
@@ -951,12 +971,12 @@
                             object.type !== 'graph'
                         "
                     >
-                        <p class="section-title">{{ t('boardSettings.appearance') }}</p>
-                        <div class="space-y-[8px]">
+                        <p class="orb-section-title">{{ t('boardSettings.appearance') }}</p>
+                        <div class="orb-props__fields">
                             <div class="field-row">
                                 <label class="field-label">{{ t('boardSettings.viewType') }}</label>
                                 <CmkDropdown
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                     :selected-option="form.display.mode || null"
                                     :options="displayModeOptions"
                                     label=""
@@ -979,7 +999,7 @@
                                               ? String(boardIconSize)
                                               : t('boardSettings.mapDefault')
                                     "
-                                    class="w-24"
+                                    class="orb-props__size-input"
                                 />
                             </div>
                             <template v-if="form.display.mode === 'gadget'">
@@ -988,7 +1008,7 @@
                                         t('boardSettings.gadgetType')
                                     }}</label>
                                     <CmkDropdown
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                         :selected-option="form.display.gadget_type || null"
                                         :options="gadgetTypeOptions"
                                         label=""
@@ -1010,18 +1030,18 @@
                                                 ? t('boardSettings.noMetrics')
                                                 : undefined
                                         "
-                                        class="flex-1"
+                                        class="orb-props__grow"
                                     />
                                 </div>
                             </template>
                             <div
                                 v-if="form.display.mode !== 'gadget'"
-                                class="field-row items-start"
+                                class="field-row field-row--start"
                             >
                                 <label class="field-label" style="margin-top: 6px">{{
                                     t('boardSettings.customIcon')
                                 }}</label>
-                                <ImagePicker v-model="form.display.image" class="flex-1" />
+                                <ImagePicker v-model="form.display.image" class="orb-props__grow" />
                             </div>
                         </div>
                     </section>
@@ -1030,18 +1050,18 @@
                     <section>
                         <button
                             type="button"
-                            class="flex items-center gap-[8px] w-full group mb-[8px]"
+                            class="orb-props__toggle orb-props__toggle--spaced"
                             @click="showLink = !showLink"
                         >
-                            <p class="section-title mb-0">{{ t('boardSettings.link') }}</p>
-                            <span
-                                v-if="form.url"
-                                class="text-[10px] text-[var(--color-corporate-green-50)] font-mono truncate max-w-[12rem]"
-                                >{{ form.url }}</span
-                            >
+                            <p class="orb-section-title orb-section-title--flush">
+                                {{ t('boardSettings.link') }}
+                            </p>
+                            <span v-if="form.url" class="orb-props__url-preview">{{
+                                form.url
+                            }}</span>
                             <svg
-                                class="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-all ml-auto shrink-0"
-                                :class="showLink ? '' : '-rotate-90'"
+                                class="orb-props__chevron"
+                                :class="showLink ? '' : 'orb-props__chevron--collapsed'"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -1054,10 +1074,12 @@
                                 />
                             </svg>
                         </button>
-                        <div v-if="showLink" class="space-y-[8px]">
-                            <div class="field-row items-start">
-                                <label class="field-label mt-2">{{ t('boardSettings.url') }}</label>
-                                <div class="flex-1 space-y-[4px]">
+                        <div v-if="showLink" class="orb-props__fields">
+                            <div class="field-row field-row--start">
+                                <label class="field-label field-label--offset-8">{{
+                                    t('boardSettings.url')
+                                }}</label>
+                                <div class="orb-props__url-col">
                                     <CmkInput
                                         v-model="form.url"
                                         :placeholder="autoUrl ?? 'https://…'"
@@ -1066,7 +1088,7 @@
                                     <button
                                         v-if="autoUrl && !form.url"
                                         type="button"
-                                        class="text-[10px] text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:underline text-left transition-colors"
+                                        class="orb-props__url-auto"
                                         @click="form.url = autoUrl!"
                                     >
                                         {{ t('boardSettings.urlAutoHint') }} →
@@ -1076,7 +1098,7 @@
                             <div class="field-row">
                                 <label class="field-label">{{ t('boardSettings.target') }}</label>
                                 <CmkDropdown
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                     :selected-option="form.url_target || null"
                                     :options="urlTargetOptions"
                                     label=""
@@ -1092,13 +1114,15 @@
                     >
                         <button
                             type="button"
-                            class="flex items-center gap-[8px] w-full group mb-[8px]"
+                            class="orb-props__toggle orb-props__toggle--spaced"
                             @click="showFilter = !showFilter"
                         >
-                            <p class="section-title mb-0">{{ t('boardSettings.filterSection') }}</p>
+                            <p class="orb-section-title orb-section-title--flush">
+                                {{ t('boardSettings.filterSection') }}
+                            </p>
                             <svg
-                                class="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-all ml-auto shrink-0"
-                                :class="showFilter ? '' : '-rotate-90'"
+                                class="orb-props__chevron"
+                                :class="showFilter ? '' : 'orb-props__chevron--collapsed'"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -1111,7 +1135,7 @@
                                 />
                             </svg>
                         </button>
-                        <div v-if="showFilter" class="space-y-[8px]">
+                        <div v-if="showFilter" class="orb-props__fields">
                             <div class="field-row">
                                 <label class="field-label">{{
                                     t('boardSettings.excludeMembers')
@@ -1120,7 +1144,7 @@
                                     v-model="form.exclude_members"
                                     :placeholder="t('boardSettings.regexPlaceholder')"
                                     field-size="FILL"
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
                             <div class="field-row">
@@ -1131,7 +1155,7 @@
                                     v-model="form.exclude_member_states"
                                     placeholder="DOWN,CRITICAL"
                                     field-size="FILL"
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
                             <!--
@@ -1143,12 +1167,12 @@
                             -->
                             <p
                                 v-if="excludeMembersFeedback"
-                                class="text-xs pl-[6.75rem]"
+                                class="orb-props__feedback"
                                 :class="excludeMembersFeedback.tone"
                             >
                                 {{ excludeMembersFeedback.text }}
                             </p>
-                            <p class="text-sm text-[var(--text-muted)] pl-[6.75rem]">
+                            <p class="orb-props__field-hint">
                                 {{ t('boardSettings.excludeHint') }}
                             </p>
                         </div>
@@ -1158,13 +1182,15 @@
                     <section>
                         <button
                             type="button"
-                            class="flex items-center gap-[8px] w-full group mb-[8px]"
+                            class="orb-props__toggle orb-props__toggle--spaced"
                             @click="showTemplates = !showTemplates"
                         >
-                            <p class="section-title mb-0">{{ t('boardSettings.templates') }}</p>
+                            <p class="orb-section-title orb-section-title--flush">
+                                {{ t('boardSettings.templates') }}
+                            </p>
                             <svg
-                                class="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-all ml-auto shrink-0"
-                                :class="showTemplates ? '' : '-rotate-90'"
+                                class="orb-props__chevron"
+                                :class="showTemplates ? '' : 'orb-props__chevron--collapsed'"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -1177,14 +1203,14 @@
                                 />
                             </svg>
                         </button>
-                        <div v-if="showTemplates" class="space-y-[8px]">
+                        <div v-if="showTemplates" class="orb-props__fields">
                             <div class="field-row">
                                 <label class="field-label">{{ t('board.hoverTemplate') }}</label>
                                 <CmkInput
                                     v-model="form.hover_template"
                                     :placeholder="t('board.templatePlaceholder')"
                                     field-size="FILL"
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
                             <div class="field-row">
@@ -1193,7 +1219,7 @@
                                     v-model="form.hover_url"
                                     placeholder="https://…"
                                     field-size="FILL"
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
                             <div class="field-row">
@@ -1202,10 +1228,10 @@
                                     v-model="form.context_template"
                                     :placeholder="t('board.templatePlaceholder')"
                                     field-size="FILL"
-                                    class="flex-1"
+                                    class="orb-props__grow"
                                 />
                             </div>
-                            <p class="text-sm text-[var(--text-muted)] pl-[6.75rem]">
+                            <p class="orb-props__field-hint">
                                 {{ t('board.templateHint') }}
                             </p>
                         </div>
@@ -1213,10 +1239,7 @@
                 </CmkScrollContainer>
 
                 <!-- Footer -->
-                <div
-                    class="flex items-center justify-between shrink-0 border-t border-[var(--border)]"
-                    style="gap: var(--dimension-4); padding: 10px 16px"
-                >
+                <div class="orb-props__footer">
                     <div>
                         <CmkButton variant="danger" @click="confirmDelete = true">{{
                             t('common.delete')
@@ -1233,8 +1256,8 @@
                             @cancel="confirmDelete = false"
                         />
                     </div>
-                    <div class="flex items-center" style="gap: var(--dimension-4)">
-                        <p v-if="saveError" class="text-[var(--color-light-red-40)] text-sm">
+                    <div class="orb-props__footer-actions">
+                        <p v-if="saveError" class="orb-props__error">
                             {{ saveError }}
                         </p>
                         <CmkButton variant="secondary" @click="$emit('close')">{{
@@ -1823,7 +1846,7 @@ const excludeMembersFeedback = computed<{ text: string; tone: string } | null>((
         } catch {
             return {
                 text: t('boardSettings.excludeRegexInvalid'),
-                tone: 'text-rose-400',
+                tone: 'orb-props__feedback--invalid',
             };
         }
     }
@@ -1852,18 +1875,18 @@ const excludeMembersFeedback = computed<{ text: string; tone: string } | null>((
     if (suppressed === 0) {
         return {
             text: t('boardSettings.excludeNoMatches', { total }),
-            tone: 'text-[var(--text-muted)]',
+            tone: 'orb-props__feedback--muted',
         };
     }
     if (suppressed >= total) {
         return {
             text: t('boardSettings.excludeAllMatched', { count: suppressed, total }),
-            tone: 'text-[var(--color-yellow-50)]',
+            tone: 'orb-props__feedback--warn',
         };
     }
     return {
         text: t('boardSettings.excludeMatched', { count: suppressed, total }),
-        tone: 'text-[var(--text)]',
+        tone: 'orb-props__feedback--matched',
     };
 });
 
@@ -2031,16 +2054,6 @@ async function save() {
 </script>
 
 <style scoped>
-.section-title {
-    margin-bottom: 6px;
-    font-size: var(--font-size-normal);
-    line-height: 1;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-}
-
 .field-row {
     display: flex;
     align-items: center;
@@ -2055,30 +2068,401 @@ async function save() {
     color: var(--text-muted);
 }
 
-.field {
-    width: 100%;
-    padding: 5px 10px;
+/* Number inputs here hide the native spinner (custom +/- handling). */
+.orb-field {
     appearance: textfield;
+}
+
+.orb-field::-webkit-outer-spin-button,
+.orb-field::-webkit-inner-spin-button {
+    appearance: none;
+}
+
+.orb-props {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+}
+
+.orb-props--centered {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.orb-props__backdrop {
+    position: absolute;
+    inset: 0;
+    transition: all 0.15s;
+}
+
+.orb-props__backdrop--dim {
+    background: rgb(0 0 0 / 60%);
+    backdrop-filter: blur(4px);
+}
+
+.orb-props__card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-surface);
+    border-radius: 16px;
+    box-shadow:
+        0 0 0 1px var(--border),
+        0 25px 50px -12px rgb(0 0 0 / 60%);
+}
+
+.orb-props__card--popover {
+    position: absolute;
+    width: 25rem;
+    max-height: 75vh;
+}
+
+.orb-props__card--modal {
+    position: relative;
+    width: 36rem;
+    max-height: 90vh;
+}
+
+.orb-props__card-enter-from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+}
+
+.orb-props__card-enter-active {
+    transition: all 0.15s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.orb-props__header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px var(--dimension-6);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    border-bottom: 1px solid var(--border);
+}
+
+.orb-props__header--dragging {
+    cursor: grabbing;
+}
+
+.orb-props__inline {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+}
+
+.orb-props__type-badge {
+    padding: var(--dimension-2) 6px;
+    font-size: var(--font-size-normal);
+    font-weight: 600;
+    line-height: 16px;
+    color: var(--text-muted);
+    text-transform: capitalize;
+    background: var(--default-form-element-bg-color);
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
+}
+
+.orb-props__name {
     font-size: var(--font-size-large);
+    font-weight: 700;
     line-height: 20px;
     color: var(--text);
-    background: var(--default-form-element-bg-color);
+}
+
+.orb-props__close {
+    padding: 5px;
+    color: var(--text-muted);
     border-radius: 8px;
-    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s;
 }
 
-.field::placeholder {
-    color: var(--default-form-element-placeholder-color);
+.orb-props__close:hover {
+    color: var(--text);
+    background: var(--bg-hover);
 }
 
-.field:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--color-corporate-green-50);
+.orb-props__body {
+    flex: 1 1 0%;
+    min-height: 0;
+    padding: 10px var(--dimension-6);
 }
 
-.field::-webkit-outer-spin-button,
-.field::-webkit-inner-spin-button {
-    appearance: none;
+.orb-props__body > * + * {
+    margin-top: 14px;
+}
+
+.orb-props__fields > * + * {
+    margin-top: var(--dimension-4);
+}
+
+.orb-props__grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--dimension-4);
+}
+
+.orb-props__grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--dimension-4);
+}
+
+.orb-props__span-2 {
+    grid-column: span 2 / span 2;
+}
+
+.orb-props__grow {
+    flex: 1 1 0%;
+}
+
+.orb-props__full {
+    width: 100%;
+}
+
+.orb-props__checks {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.orb-props__code-input {
+    font-family:
+        ui-monospace, sfmono-regular, menlo, monaco, consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+}
+
+.orb-props__note {
+    margin-top: var(--dimension-3);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+}
+
+.orb-props__textarea {
+    margin-bottom: var(--dimension-4);
+    resize: none;
+}
+
+.orb-props__section-head {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+    margin-bottom: var(--dimension-4);
+}
+
+.orb-props__badge-experimental {
+    flex-shrink: 0;
+    padding: var(--dimension-2) 6px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-yellow-50);
+    background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-warning) 25%, transparent);
+    border-radius: 4px;
+}
+
+.orb-props__btn-group {
+    display: flex;
+    flex: 1 1 0%;
+    gap: var(--dimension-3);
+}
+
+.orb-props__seg-btn {
+    padding: var(--dimension-3) var(--dimension-4);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+    background: var(--default-form-element-bg-color);
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+
+.orb-props__seg-btn:hover {
+    color: var(--text);
+}
+
+.orb-props__seg-btn--active,
+.orb-props__seg-btn--active:hover {
+    color: var(--button-primary-text-color, #000);
+    background: var(--color-corporate-green-50);
+}
+
+.field-row--start {
+    align-items: flex-start;
+}
+
+.field-label--offset-6 {
+    margin-top: 6px;
+}
+
+.field-label--offset-8 {
+    margin-top: var(--dimension-4);
+}
+
+.orb-props__metric-col {
+    flex: 1 1 0%;
+}
+
+.orb-props__metric-col > * + * {
+    margin-top: 6px;
+}
+
+.orb-props__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--dimension-3);
+}
+
+.orb-props__chip {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-3);
+    padding: var(--dimension-2) var(--dimension-4);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text);
+    background: var(--default-form-element-bg-color);
+    border-radius: 4px;
+    box-shadow: 0 0 0 1px var(--default-border-color);
+}
+
+.orb-props__chip-remove {
+    color: var(--text-muted);
+}
+
+.orb-props__chip-remove:hover {
+    color: var(--color-light-red-40);
+}
+
+.orb-props__inline-label {
+    flex-shrink: 0;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-props__size-input {
+    width: 6rem;
+}
+
+.orb-props__disabled {
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+.orb-props__toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+    width: 100%;
+}
+
+.orb-props__toggle--spaced {
+    margin-bottom: var(--dimension-4);
+}
+
+.orb-props__chevron {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    margin-left: auto;
+    color: var(--text-muted);
+    transition: all 0.15s;
+}
+
+.orb-props__chevron--collapsed {
+    transform: rotate(-90deg);
+}
+
+.orb-props__url-preview {
+    max-width: 12rem;
+    overflow: hidden;
+    font-family:
+        ui-monospace, sfmono-regular, menlo, monaco, consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    font-size: 10px;
+    color: var(--color-corporate-green-50);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-props__url-col {
+    flex: 1 1 0%;
+}
+
+.orb-props__url-col > * + * {
+    margin-top: var(--dimension-3);
+}
+
+.orb-props__url-auto {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: left;
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.orb-props__url-auto:hover {
+    color: var(--color-corporate-green-50);
+    text-decoration: underline;
+}
+
+.orb-props__feedback {
+    padding-left: 6.75rem;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+}
+
+.orb-props__feedback--invalid {
+    color: var(--color-light-red-30);
+}
+
+.orb-props__feedback--muted {
+    color: var(--text-muted);
+}
+
+.orb-props__feedback--warn {
+    color: var(--color-yellow-50);
+}
+
+.orb-props__feedback--matched {
+    color: var(--text);
+}
+
+.orb-props__field-hint {
+    padding-left: 6.75rem;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-props__footer {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--dimension-4);
+    padding: 10px var(--dimension-6);
+    border-top: 1px solid var(--border);
+}
+
+.orb-props__footer-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+}
+
+.orb-props__error {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--color-light-red-40);
 }
 </style>

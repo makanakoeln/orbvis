@@ -87,7 +87,7 @@
                                 v-if="form.map_type !== 'foldertree'"
                                 class="board-settings__subsection"
                             >
-                                <p class="section-title">{{ t('board.objectDefaults') }}</p>
+                                <p class="orb-section-title">{{ t('board.objectDefaults') }}</p>
                                 <div class="space-y-[4px]">
                                     <CmkLabel>{{ t('board.iconSize') }}</CmkLabel>
                                     <div class="flex items-center gap-[5px]">
@@ -413,7 +413,7 @@
                                 v-if="form.map_type !== 'radar' && form.map_type !== 'foldertree'"
                                 class="board-settings__subsection space-y-[8px]"
                             >
-                                <p class="section-title">{{ t('boardSettings.templates') }}</p>
+                                <p class="orb-section-title">{{ t('boardSettings.templates') }}</p>
                                 <div class="space-y-[4px]">
                                     <CmkLabel :help="t('board.templateHint')">{{
                                         t('board.hoverTemplate')
@@ -490,7 +490,7 @@
                                 v-if="form.map_type === 'static'"
                                 class="board-settings__subsection space-y-[8px]"
                             >
-                                <p class="section-title">{{ t('boardSettings.background') }}</p>
+                                <p class="orb-section-title">{{ t('boardSettings.background') }}</p>
                                 <div class="space-y-[4px]">
                                     <CmkLabel>{{ t('board.backgroundImage') }}</CmkLabel>
                                     <BackgroundImageUpload
@@ -1306,16 +1306,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.section-title {
-    margin-bottom: 6px;
-    font-size: var(--font-size-normal);
-    line-height: 1;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-}
-
 .board-settings__shell {
     display: flex;
     flex-direction: column;

@@ -15,7 +15,7 @@
 
         <div v-else>
             <!-- Group: Defaults applied when creating a new board -->
-            <h3 class="group-heading">{{ t('settings.groupBoardCreation') }}</h3>
+            <h3 class="orb-group-heading">{{ t('settings.groupBoardCreation') }}</h3>
             <div class="space-y-[16px]" style="margin-bottom: var(--dimension-6)">
                 <!-- New board defaults -->
                 <section
@@ -91,7 +91,7 @@
             </div>
 
             <!-- Group: Defaults applied to objects rendered on a board -->
-            <h3 class="group-heading">{{ t('settings.groupObjectDefaults') }}</h3>
+            <h3 class="orb-group-heading">{{ t('settings.groupObjectDefaults') }}</h3>
             <div class="space-y-[16px]" style="margin-bottom: var(--dimension-6)">
                 <!-- Icon defaults -->
                 <section
@@ -315,7 +315,9 @@
                                 ]"
                             >
                                 <div class="label-subsection">
-                                    <p class="section-title">{{ t('settings.labelAppearance') }}</p>
+                                    <p class="orb-section-title">
+                                        {{ t('settings.labelAppearance') }}
+                                    </p>
                                     <div
                                         class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start"
                                     >
@@ -348,7 +350,9 @@
                                 </div>
 
                                 <div class="label-subsection">
-                                    <p class="section-title">{{ t('boardSettings.background') }}</p>
+                                    <p class="orb-section-title">
+                                        {{ t('boardSettings.background') }}
+                                    </p>
                                     <ColorInput
                                         v-model="form.label_background"
                                         :enable-label="t('settings.useLabelBackground')"
@@ -578,16 +582,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.section-title {
-    margin-bottom: 6px;
-    font-size: var(--font-size-normal);
-    line-height: 1;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-}
-
 .label-subsection {
     padding-top: var(--dimension-4);
     border-top: 1px solid var(--border);
@@ -596,15 +590,5 @@ onMounted(async () => {
 .label-subsection:first-child {
     padding-top: 0;
     border-top: 0;
-}
-
-.group-heading {
-    margin-bottom: 8px;
-    font-size: var(--font-size-large);
-    line-height: 20px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--text-muted);
 }
 </style>

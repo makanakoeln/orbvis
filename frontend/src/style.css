@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './assets/cmk/variables.css';
+@import './assets/orb-forms.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 

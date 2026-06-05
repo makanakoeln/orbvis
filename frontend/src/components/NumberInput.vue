@@ -4,7 +4,7 @@
             type="number"
             :value="displayValue"
             v-bind="inputAttrs"
-            class="orb-number__input"
+            class="orb-field orb-number__input"
             @input="onInput"
             @change="onCommit"
             @blur="onCommit"
@@ -135,26 +135,11 @@ function step(dir: 1 | -1) {
     position: relative;
 }
 
+/* Base look comes from the global .orb-field — only the spinner gutter
+   and native-spinner suppression are component-specific. */
 .orb-number__input {
-    width: 100%;
     padding: 5px 24px 5px 8px;
     appearance: textfield;
-    font-size: var(--font-size-large);
-    line-height: 20px;
-    color: var(--text);
-    background: var(--default-form-element-bg-color);
-    border-radius: 8px;
-    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.orb-number__input::placeholder {
-    color: var(--default-form-element-placeholder-color);
-}
-
-.orb-number__input:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--color-corporate-green-50);
 }
 
 .orb-number__input::-webkit-outer-spin-button,

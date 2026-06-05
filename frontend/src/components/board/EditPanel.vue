@@ -1,13 +1,9 @@
 <template>
-    <div class="flex flex-col min-h-0 text-sm">
+    <div class="orb-edit">
         <!-- Header -->
-        <div
-            class="border-b border-white/8 flex items-center gap-[8px] shrink-0"
-            style="padding: 10px 16px"
-        >
+        <div class="orb-edit__header">
             <svg
-                class="text-[var(--color-corporate-green-50)] shrink-0"
-                style="width: 14px; height: 14px"
+                class="orb-edit__header-icon"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -15,39 +11,28 @@
             >
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            <div class="flex-1 min-w-0">
-                <div class="font-semibold text-[var(--text)] text-sm">
+            <div class="orb-edit__header-text">
+                <div class="orb-edit__title">
                     {{ t('boardSettings.addObject') }}
                 </div>
-                <div
-                    class="text-[10px] mt-[2px]"
-                    :class="
-                        placing ? 'text-[var(--color-yellow-50)]/70' : 'text-[var(--text-muted)]'
-                    "
-                >
+                <div class="orb-edit__hint" :class="{ 'orb-edit__hint--placing': placing }">
                     {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.dragObjects') }}
                 </div>
             </div>
             <button
-                class="shrink-0 rounded-md p-[4px] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+                class="orb-edit__close"
                 :title="t('common.close')"
                 :aria-label="t('common.close')"
                 @click="$emit('cancel-add')"
             >
-                <svg
-                    style="width: 14px; height: 14px"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
         </div>
 
         <!-- Add Object form -->
-        <div class="space-y-[8px]" style="padding: 10px 16px">
+        <div class="orb-edit__form">
             <CmkDropdown
                 :selected-option="draft.type"
                 :options="objectTypeOptions"
@@ -117,7 +102,7 @@
                 <input
                     v-model="draft.label_text"
                     :placeholder="t('boardSettings.labelOptional')"
-                    class="field"
+                    class="orb-field"
                 />
             </template>
 
@@ -140,21 +125,21 @@
                 -->
                 <div
                     v-if="aggregationFunctionLabel"
-                    class="text-[10px] inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[var(--bg-subtle,rgba(0,0,0,0.05))] border border-[var(--border)] self-start"
+                    class="orb-edit__aggr-chip"
                     :title="t('boardSettings.aggregationFunctionHint')"
                 >
-                    <span class="text-[var(--text-muted)]">
+                    <span class="orb-edit__aggr-chip-label">
                         {{ t('boardSettings.aggregationFunction') }}
                     </span>
-                    <span class="font-mono text-[var(--text)]">{{ aggregationFunctionLabel }}</span>
+                    <span class="orb-edit__aggr-chip-value">{{ aggregationFunctionLabel }}</span>
                 </div>
-                <label class="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                <label class="orb-edit__depth-label">
                     {{ t('boardSettings.expandDepth') }}
                     <NumberInput
                         v-model="draft.expand_depth"
                         min="0"
                         max="10"
-                        class="w-16"
+                        class="orb-edit__depth-input"
                         :title="t('boardSettings.expandDepthHelp')"
                     />
                 </label>
@@ -176,43 +161,34 @@
                 -->
                 <div
                     v-if="!aggregationConnectionOk && draft.aggregation_id && !aggregationPreview"
-                    class="text-xs rounded p-2 border border-rose-500/40 bg-rose-500/10 text-rose-200"
+                    class="orb-edit__aggr-error"
                 >
                     {{ t('boardSettings.aggregationPreviewConnectionDown') }}
                 </div>
-                <div
-                    v-else-if="aggregationPreview"
-                    class="text-xs rounded p-2 bg-[var(--bg-subtle,rgba(0,0,0,0.05))] border border-[var(--border)]"
-                >
-                    <div class="text-[var(--text-muted)] mb-1">
+                <div v-else-if="aggregationPreview" class="orb-edit__aggr-preview">
+                    <div class="orb-edit__aggr-preview-title">
                         {{ t('boardSettings.aggregationPreview') }}
                     </div>
-                    <div class="flex gap-3 mb-1">
+                    <div class="orb-edit__aggr-counts">
                         <span
                             v-for="c in aggregationPreviewCounts"
                             :key="c.key"
-                            class="font-mono"
+                            class="orb-edit__aggr-count"
                             :style="{ color: c.count > 0 ? c.color : 'var(--text-muted)' }"
                         >
                             {{ c.label }}={{ c.count }}
                         </span>
                     </div>
-                    <ul class="m-0 p-0 list-none flex flex-col gap-0.5">
+                    <ul class="orb-edit__aggr-leaves">
                         <li
                             v-for="leaf in aggregationPreviewLeaves"
                             :key="leaf.id"
-                            class="flex items-center gap-2 text-[var(--text)]"
+                            class="orb-edit__aggr-leaf"
                         >
-                            <span
-                                class="inline-block w-1.5 h-1.5 rounded-full"
-                                :style="{ background: leaf.color }"
-                            />
-                            <span class="truncate">{{ leaf.label }}</span>
+                            <span class="orb-edit__aggr-dot" :style="{ background: leaf.color }" />
+                            <span class="orb-edit__aggr-leaf-label">{{ leaf.label }}</span>
                         </li>
-                        <li
-                            v-if="aggregationPreviewMore > 0"
-                            class="text-[var(--text-muted)] italic"
-                        >
+                        <li v-if="aggregationPreviewMore > 0" class="orb-edit__aggr-more">
                             …{{
                                 t('boardSettings.aggregationPreviewMore', {
                                     count: aggregationPreviewMore,
@@ -229,23 +205,20 @@
                         is empirical — most multi-host aggregations fan to
                         20-40, so 50 is the comfortable cutoff.
                     -->
-                    <div
-                        v-if="aggregationPreviewDensityWarning"
-                        class="mt-2 rounded p-1.5 text-[10px] border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 text-[var(--color-yellow-50)]"
-                    >
+                    <div v-if="aggregationPreviewDensityWarning" class="orb-edit__aggr-warning">
                         ⚠ {{ aggregationPreviewDensityWarning }}
                     </div>
                 </div>
             </template>
 
             <template v-else-if="draft.type === 'dyngroup'">
-                <select v-model="draft.object_types" class="field">
+                <select v-model="draft.object_types" class="orb-field">
                     <option value="host">host</option>
                     <option value="service">service</option>
                 </select>
                 <textarea
                     v-model="draft.object_filter"
-                    class="field font-mono text-xs"
+                    class="orb-field orb-edit__code"
                     rows="3"
                     spellcheck="false"
                     placeholder="Filter: host_name ~ ^web\n"
@@ -273,7 +246,7 @@
                 <input
                     v-model="draft.label_text"
                     :placeholder="t('boardSettings.textContent')"
-                    class="field"
+                    class="orb-field"
                 />
             </template>
 
@@ -282,7 +255,7 @@
                 <input
                     v-model="draft.label_text"
                     :placeholder="t('boardSettings.labelOptional')"
-                    class="field"
+                    class="orb-field"
                 />
             </template>
 
@@ -304,17 +277,15 @@
                 <input
                     v-model="draft.graph_url"
                     :placeholder="t('boardSettings.graphUrl') + ' (optional)'"
-                    class="field font-mono text-xs"
+                    class="orb-field orb-edit__code"
                 />
             </template>
 
             <!-- Grid snap -->
-            <div class="flex items-center justify-between gap-[8px]">
-                <label class="text-xs text-[var(--text-muted)] select-none">{{
-                    t('boardSettings.grid')
-                }}</label>
+            <div class="orb-edit__grid-row">
+                <label class="orb-edit__grid-label">{{ t('boardSettings.grid') }}</label>
                 <CmkDropdown
-                    class="w-[96px]"
+                    class="orb-edit__grid-select"
                     :selected-option="String(snapGrid)"
                     :options="snapGridOptions"
                     label=""
@@ -326,15 +297,12 @@
                 v-if="draft.type"
                 :variant="placing ? 'warning' : 'primary'"
                 :disabled="!canPlace"
-                :class="['w-full', placing ? 'animate-pulse' : '']"
+                :class="['orb-edit__place', placing ? 'orb-edit__place--pulsing' : '']"
                 @click="canPlace && $emit('start-placing')"
             >
                 {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.placeOnBoard') }}
             </CmkButton>
-            <p
-                v-if="draft.type && !canPlace && !placing"
-                class="text-xs text-[var(--text-muted)] text-center"
-            >
+            <p v-if="draft.type && !canPlace && !placing" class="orb-edit__missing-hint">
                 {{ missingFieldHint }}
             </p>
         </div>
@@ -657,25 +625,241 @@ watch(
 </script>
 
 <style scoped>
-.field {
-    width: 100%;
-    padding: 5px 10px;
+.orb-edit {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
     font-size: var(--font-size-large);
     line-height: 20px;
+}
+
+.orb-edit__header {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+    flex-shrink: 0;
+    padding: 10px var(--dimension-6);
+    border-bottom: 1px solid color-mix(in srgb, white 8%, transparent);
+}
+
+.orb-edit__header-icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    color: var(--color-corporate-green-50);
+}
+
+.orb-edit__header-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.orb-edit__title {
+    font-size: var(--font-size-large);
+    font-weight: 600;
+    line-height: 20px;
     color: var(--text);
-    background: var(--default-form-element-bg-color);
-    border-radius: 8px;
-    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.field::placeholder {
-    color: var(--default-form-element-placeholder-color);
+.orb-edit__hint {
+    margin-top: var(--dimension-2);
+    font-size: 10px;
+    color: var(--text-muted);
 }
 
-.field:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--color-corporate-green-50);
+.orb-edit__hint--placing {
+    color: color-mix(in srgb, var(--color-yellow-50) 70%, transparent);
+}
+
+.orb-edit__close {
+    flex-shrink: 0;
+    padding: var(--dimension-3);
+    color: var(--text-muted);
+    border-radius: 6px;
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.orb-edit__close:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+}
+
+.orb-edit__close svg {
+    width: 14px;
+    height: 14px;
+}
+
+.orb-edit__form {
+    padding: 10px var(--dimension-6);
+}
+
+.orb-edit__form > :deep(* + *) {
+    margin-top: var(--dimension-4);
+}
+
+.orb-edit__aggr-chip {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 6px;
+    padding: var(--dimension-2) var(--dimension-4);
+    font-size: 10px;
+    background: var(--bg-subtle, rgb(0 0 0 / 5%));
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+}
+
+.orb-edit__aggr-chip-label {
+    color: var(--text-muted);
+}
+
+.orb-edit__aggr-chip-value {
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    color: var(--text);
+}
+
+.orb-edit__depth-label {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+}
+
+.orb-edit :deep(.orb-edit__depth-input) {
+    width: 64px;
+}
+
+.orb-edit__aggr-error {
+    padding: var(--dimension-4);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--color-light-red-10);
+    background: color-mix(in srgb, var(--color-light-red-50) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-light-red-50) 40%, transparent);
+    border-radius: 4px;
+}
+
+.orb-edit__aggr-preview {
+    padding: var(--dimension-4);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    background: var(--bg-subtle, rgb(0 0 0 / 5%));
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.orb-edit__aggr-preview-title {
+    margin-bottom: var(--dimension-3);
+    color: var(--text-muted);
+}
+
+.orb-edit__aggr-counts {
+    display: flex;
+    gap: var(--dimension-5);
+    margin-bottom: var(--dimension-3);
+}
+
+.orb-edit__aggr-count {
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+}
+
+.orb-edit__aggr-leaves {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.orb-edit__aggr-leaf {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+    color: var(--text);
+}
+
+.orb-edit__aggr-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+}
+
+.orb-edit__aggr-leaf-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-edit__aggr-more {
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.orb-edit__aggr-warning {
+    margin-top: var(--dimension-4);
+    padding: 6px;
+    font-size: 10px;
+    color: var(--color-yellow-50);
+    background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-warning) 40%, transparent);
+    border-radius: 4px;
+}
+
+.orb-edit__code {
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+}
+
+.orb-edit__grid-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--dimension-4);
+}
+
+.orb-edit__grid-label {
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+    user-select: none;
+}
+
+.orb-edit :deep(.orb-edit__grid-select) {
+    width: 96px;
+}
+
+.orb-edit :deep(.orb-edit__place) {
+    width: 100%;
+}
+
+.orb-edit :deep(.orb-edit__place--pulsing) {
+    animation: orb-edit-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes orb-edit-pulse {
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.orb-edit__missing-hint {
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+    text-align: center;
 }
 
 /* Panel sits at the bottom of the viewport — force dropdowns to open upward */

@@ -1,16 +1,14 @@
 <template>
-    <div ref="rootEl" class="fixed z-50 pointer-events-none" :style="positionStyle">
-        <div
-            class="bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-xl p-3.5 min-w-52 max-w-72"
-        >
+    <div ref="rootEl" class="orb-hover" :style="positionStyle">
+        <div class="orb-hover__card">
             <!-- No permission: skip all templates and show only this -->
-            <div v-if="isNoPermission" class="text-sm text-[var(--text-muted)] italic">
+            <div v-if="isNoPermission" class="orb-hover__empty">
                 {{ t('board.noPermission') }}
             </div>
 
             <!-- NOT_FOUND: object referenced on the board doesn't exist in monitoring data. -->
-            <div v-else-if="isNotFound" class="text-sm text-[var(--text-muted)] italic">
-                <div class="font-semibold text-[var(--text)] not-italic mb-1">
+            <div v-else-if="isNotFound" class="orb-hover__empty">
+                <div class="orb-hover__empty-name">
                     {{ displayName }}
                 </div>
                 {{ t('board.notFound') }}
@@ -20,7 +18,7 @@
             <!-- eslint-disable-next-line vue/no-v-html -->
             <div
                 v-else-if="renderedTemplate"
-                class="text-sm text-[var(--text)]"
+                class="orb-hover__template"
                 v-html="renderedTemplate"
             />
 
@@ -28,33 +26,24 @@
             <template v-else>
                 <!-- Header: hostname + state on one line — operator reads
                      "localhost — UP since 2d 11h" as a single headline. -->
-                <div class="flex items-baseline gap-2 flex-wrap">
-                    <span
-                        v-if="hasMonitoring"
-                        class="w-2 h-2 rounded-full shrink-0 self-center"
-                        :class="stateColor"
-                    />
-                    <div
-                        class="font-semibold text-[var(--text)] text-sm leading-tight truncate min-w-0 flex-1"
-                    >
+                <div class="orb-hover__headline">
+                    <span v-if="hasMonitoring" class="orb-hover__dot" :class="stateColor" />
+                    <div class="orb-hover__name">
                         {{ displayName }}
                     </div>
                     <span
                         v-if="hasMonitoring && state"
-                        class="shrink-0 text-sm font-bold leading-tight"
+                        class="orb-hover__state"
                         :class="stateTextColor"
                     >
                         {{ state.state }}
                     </span>
-                    <span
-                        v-if="hasMonitoring && state && stateDuration"
-                        class="shrink-0 text-[10px] text-[var(--text-muted)]"
-                    >
+                    <span v-if="hasMonitoring && state && stateDuration" class="orb-hover__since">
                         {{ t('board.hover.since', { duration: stateDuration }) }}
                     </span>
                 </div>
                 <!-- Subtitle: type · alias · address · @site (full width, second row) -->
-                <div class="text-xs text-[var(--text-muted)] mt-0.5 truncate">
+                <div class="orb-hover__subtitle">
                     {{ subtitleText }}
                 </div>
 
@@ -62,7 +51,7 @@
                     <!-- Status modifiers (ACK / DOWNTIME / STALE / MUTED / Attempts) -->
                     <div v-if="state">
                         <!-- Attempts: only when interesting (SOFT escalation, attempt > 1) -->
-                        <div v-if="attemptsBadge" class="text-[10px] mt-1.5" :class="attemptsCls">
+                        <div v-if="attemptsBadge" class="orb-hover__attempts" :class="attemptsCls">
                             {{ attemptsBadge }}
                         </div>
                         <!-- Modifier badges (ACK / DOWNTIME / STALE / MUTED) — directly
@@ -75,14 +64,14 @@
                                 state.stale ||
                                 state.notifications_enabled === false
                             "
-                            class="flex gap-1.5 mt-1.5 flex-wrap"
+                            class="orb-hover__badges"
                         >
                             <span
                                 v-if="state.acknowledged"
-                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--color-warning)]/20 dark:bg-[var(--color-warning)]/15 text-[var(--color-yellow-60)] dark:text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/40 dark:ring-[var(--color-warning)]/25"
+                                class="orb-hover__badge orb-hover__badge--warn"
                             >
                                 <svg
-                                    class="w-2.5 h-2.5"
+                                    class="orb-hover__badge-icon"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -98,19 +87,23 @@
                             </span>
                             <span
                                 v-if="state.in_downtime"
-                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--color-light-blue-50)]/20 dark:bg-[var(--color-light-blue-50)]/15 text-[var(--color-light-blue-70)] dark:text-[var(--color-light-blue-50)] ring-1 ring-[var(--color-light-blue-50)]/40 dark:ring-[var(--color-light-blue-50)]/25"
+                                class="orb-hover__badge orb-hover__badge--downtime"
                             >
-                                <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
+                                <svg
+                                    class="orb-hover__badge-icon"
+                                    fill="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
                                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                                 </svg>
                                 DOWNTIME
                             </span>
                             <span
                                 v-if="state.stale"
-                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--color-pending)]/20 text-[var(--text-muted)] dark:text-[var(--text-muted)] ring-1 ring-[var(--border)] dark:ring-[var(--border)]"
+                                class="orb-hover__badge orb-hover__badge--stale"
                             >
                                 <svg
-                                    class="w-2.5 h-2.5"
+                                    class="orb-hover__badge-icon"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -129,11 +122,11 @@
                                  operator assume otherwise. -->
                             <span
                                 v-if="state.notifications_enabled === false"
-                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--color-warning)]/20 dark:bg-[var(--color-warning)]/15 text-[var(--color-yellow-60)] dark:text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/40 dark:ring-[var(--color-warning)]/25"
+                                class="orb-hover__badge orb-hover__badge--warn"
                                 :title="t('board.hover.notificationsDisabled')"
                             >
                                 <svg
-                                    class="w-2.5 h-2.5"
+                                    class="orb-hover__badge-icon"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -151,40 +144,37 @@
                     </div>
 
                     <!-- Output -->
-                    <div
-                        v-if="state?.output"
-                        class="text-xs text-[var(--text-muted)] mt-2.5 leading-snug line-clamp-3 break-words"
-                    >
+                    <div v-if="state?.output" class="orb-hover__output">
                         {{ state.output }}
                     </div>
 
                     <!-- Services summary pills (host objects only) -->
-                    <div v-if="servicePills.length" class="flex flex-wrap gap-1 mt-2.5">
+                    <div v-if="servicePills.length" class="orb-hover__pills">
                         <span
                             v-for="pill in servicePills"
                             :key="pill.label"
-                            class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                            class="orb-hover__pill"
                             :class="pill.cls"
                         >
-                            <span class="w-1.5 h-1.5 rounded-full" :class="pill.dot" />
+                            <span class="orb-hover__pill-dot" :class="pill.dot" />
                             {{ pill.count }} {{ pill.label }}
                         </span>
                     </div>
 
                     <!-- CMK Perfometer (loaded async from backend) -->
-                    <div v-if="cmkPerfometer" class="mt-2.5 space-y-1">
-                        <div class="text-[10px] font-medium text-[var(--text)] mb-1">
+                    <div v-if="cmkPerfometer" class="orb-hover__perfometer">
+                        <div class="orb-hover__perfometer-label">
                             {{ cmkPerfometer.label }}
                         </div>
                         <div
                             v-for="(row, ri) in cmkPerfometer.rows"
                             :key="ri"
-                            class="h-3 flex rounded overflow-hidden ring-1 ring-white/10"
+                            class="orb-hover__perfometer-row"
                         >
                             <div
                                 v-for="(seg, si) in row"
                                 :key="si"
-                                class="h-full transition-all"
+                                class="orb-hover__perfometer-seg"
                                 :style="{ width: `${seg.pct}%`, backgroundColor: seg.color }"
                             />
                         </div>
@@ -193,21 +183,16 @@
                     <!-- Fallback: simple perf_data bars — only when no CMK perfometer is on the way -->
                     <div
                         v-else-if="cmkPerfometerStatus !== 'loading' && perfMetrics.length"
-                        class="mt-2.5 space-y-1.5"
+                        class="orb-hover__metrics"
                     >
                         <template v-for="m in perfMetrics" :key="m.label">
-                            <div class="flex justify-between items-baseline gap-1 text-[10px]">
-                                <span class="text-[var(--text-muted)] truncate">{{ m.label }}</span>
-                                <span class="text-[var(--text)] font-medium shrink-0">{{
-                                    fmtMetricValue(m)
-                                }}</span>
+                            <div class="orb-hover__metric-head">
+                                <span class="orb-hover__metric-label">{{ m.label }}</span>
+                                <span class="orb-hover__metric-value">{{ fmtMetricValue(m) }}</span>
                             </div>
-                            <div
-                                v-if="utilPercent(m) > 0"
-                                class="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden -mt-0.5"
-                            >
+                            <div v-if="utilPercent(m) > 0" class="orb-hover__metric-bar">
                                 <div
-                                    class="h-full rounded-full"
+                                    class="orb-hover__metric-fill"
                                     :style="{
                                         width: `${utilPercent(m)}%`,
                                         backgroundColor: utilColor(utilPercent(m)),
@@ -218,7 +203,11 @@
                     </div>
 
                     <!-- Next check (relative; warns when overdue) -->
-                    <div v-if="nextCheckText" class="text-[10px] mt-2.5" :class="nextCheckText.cls">
+                    <div
+                        v-if="nextCheckText"
+                        class="orb-hover__next-check"
+                        :class="nextCheckText.cls"
+                    >
                         {{ nextCheckText.text }}
                     </div>
                 </template>
@@ -399,31 +388,31 @@ const isNoPermission = computed(() => props.state?.state === 'NO_PERMISSION');
 const isNotFound = computed(() => props.state?.state === 'NOT_FOUND');
 
 const STATE_BG: Record<string, string> = {
-    UP: 'bg-[var(--color-corporate-green-50)]',
-    OK: 'bg-[var(--color-corporate-green-50)]',
-    DOWN: 'bg-[var(--color-light-red-50)]',
-    CRITICAL: 'bg-[var(--color-light-red-50)]',
-    UNREACHABLE: 'bg-orange-400',
-    UNKNOWN: 'bg-orange-400',
-    WARNING: 'bg-warning',
-    PENDING: 'bg-[var(--color-pending)]',
+    UP: 'orb-hover__dot--ok',
+    OK: 'orb-hover__dot--ok',
+    DOWN: 'orb-hover__dot--down',
+    CRITICAL: 'orb-hover__dot--down',
+    UNREACHABLE: 'orb-hover__dot--unknown',
+    UNKNOWN: 'orb-hover__dot--unknown',
+    WARNING: 'orb-hover__dot--warn',
+    PENDING: 'orb-hover__dot--pending',
 };
 const STATE_TEXT: Record<string, string> = {
-    UP: 'text-[var(--color-corporate-green-60)] dark:text-[var(--color-corporate-green-50)]',
-    OK: 'text-[var(--color-corporate-green-60)] dark:text-[var(--color-corporate-green-50)]',
-    DOWN: 'text-[var(--color-light-red-60)] dark:text-[var(--color-light-red-40)]',
-    CRITICAL: 'text-[var(--color-light-red-60)] dark:text-[var(--color-light-red-40)]',
-    UNREACHABLE: 'text-orange-600 dark:text-orange-400',
-    UNKNOWN: 'text-orange-600 dark:text-orange-400',
-    WARNING: 'text-[var(--color-yellow-60)] dark:text-warning',
-    PENDING: 'text-[var(--text-muted)]',
+    UP: 'orb-hover__state--ok',
+    OK: 'orb-hover__state--ok',
+    DOWN: 'orb-hover__state--down',
+    CRITICAL: 'orb-hover__state--down',
+    UNREACHABLE: 'orb-hover__state--unknown',
+    UNKNOWN: 'orb-hover__state--unknown',
+    WARNING: 'orb-hover__state--warn',
+    PENDING: 'orb-hover__state--pending',
 };
 
 const stateColor = computed(
-    () => STATE_BG[props.state?.state ?? 'PENDING'] ?? 'bg-[var(--color-pending)]',
+    () => STATE_BG[props.state?.state ?? 'PENDING'] ?? 'orb-hover__dot--pending',
 );
 const stateTextColor = computed(
-    () => STATE_TEXT[props.state?.state ?? 'PENDING'] ?? 'text-[var(--text-muted)]',
+    () => STATE_TEXT[props.state?.state ?? 'PENDING'] ?? 'orb-hover__state--pending',
 );
 
 const subtitleText = computed(() => {
@@ -478,9 +467,7 @@ const stateDuration = computed(() =>
 // SOFT-state escalation deserves an amber attention cue; HARD steady-state is
 // rendered muted (or hidden entirely by attemptsBadge's own gate).
 const attemptsCls = computed(() =>
-    props.state?.state_type === 'SOFT'
-        ? 'text-[var(--color-yellow-60)] dark:text-[var(--color-yellow-50)] font-semibold'
-        : 'text-[var(--text-muted)]',
+    props.state?.state_type === 'SOFT' ? 'orb-hover__attempts--soft' : '',
 );
 
 interface NextCheckText {
@@ -498,7 +485,7 @@ const nextCheckText = computed((): NextCheckText | null => {
     if (future) {
         return {
             text: t('board.hover.nextCheckIn', { duration: future }),
-            cls: 'text-[var(--text-muted)]',
+            cls: '',
         };
     }
     // next_check is in the past. CMC schedules checks sub-second and
@@ -517,7 +504,7 @@ const nextCheckText = computed((): NextCheckText | null => {
     if (!overdue) return null;
     return {
         text: t('board.hover.checkOverdue', { duration: overdue }),
-        cls: 'text-[var(--color-yellow-60)] dark:text-[var(--color-yellow-50)]',
+        cls: 'orb-hover__next-check--overdue',
     };
 });
 
@@ -549,40 +536,40 @@ const servicePills = computed((): ServicePill[] => {
         pills.push({
             label: 'CRIT',
             count: summary.critical,
-            cls: 'bg-[var(--color-light-red-50)]/15 text-[var(--color-light-red-70)] dark:text-[var(--color-light-red-40)] ring-1 ring-[var(--color-light-red-50)]/30',
-            dot: 'bg-[var(--color-light-red-50)]',
+            cls: 'orb-hover__pill--crit',
+            dot: 'orb-hover__pill-dot--crit',
         });
     }
     if (summary.unknown) {
         pills.push({
             label: 'UNKN',
             count: summary.unknown,
-            cls: 'bg-orange-500/15 text-orange-700 dark:text-orange-400 ring-1 ring-orange-500/30',
-            dot: 'bg-orange-400',
+            cls: 'orb-hover__pill--unknown',
+            dot: 'orb-hover__pill-dot--unknown',
         });
     }
     if (summary.warning) {
         pills.push({
             label: 'WARN',
             count: summary.warning,
-            cls: 'bg-[var(--color-warning)]/15 text-[var(--color-yellow-60)] dark:text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/30',
-            dot: 'bg-warning',
+            cls: 'orb-hover__pill--warn',
+            dot: 'orb-hover__pill-dot--warn',
         });
     }
     if (summary.pending) {
         pills.push({
             label: 'PEND',
             count: summary.pending,
-            cls: 'bg-[var(--color-pending)]/15 text-[var(--text-muted)] dark:text-[var(--text-muted)] ring-1 ring-[var(--border)]',
-            dot: 'bg-[var(--color-pending)]',
+            cls: 'orb-hover__pill--pending',
+            dot: 'orb-hover__pill-dot--pending',
         });
     }
     if (summary.ok) {
         pills.push({
             label: 'OK',
             count: summary.ok,
-            cls: 'bg-[var(--color-corporate-green-50)]/15 text-[var(--color-corporate-green-70)] dark:text-[var(--color-corporate-green-50)] ring-1 ring-[var(--color-corporate-green-50)]/30',
-            dot: 'bg-[var(--color-corporate-green-50)]',
+            cls: 'orb-hover__pill--ok',
+            dot: 'orb-hover__pill-dot--ok',
         });
     }
     return pills;
@@ -605,3 +592,403 @@ function fmtMetricValue(m: PerfMetric): string {
     return `${v}${m.unit}`;
 }
 </script>
+
+<style scoped>
+.orb-hover {
+    position: fixed;
+    z-index: 50;
+    pointer-events: none;
+}
+
+.orb-hover__card {
+    min-width: 208px;
+    max-width: 288px;
+    padding: 14px;
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    box-shadow:
+        0 0 0 1px var(--border),
+        0 25px 50px -12px rgb(0 0 0 / 60%);
+}
+
+.orb-hover__empty {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.orb-hover__empty-name {
+    margin-bottom: var(--dimension-3);
+    font-style: normal;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.orb-hover__template {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text);
+}
+
+.orb-hover__headline {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--dimension-4);
+}
+
+.orb-hover__dot {
+    align-self: center;
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+}
+
+.orb-hover__dot--ok {
+    background: var(--color-corporate-green-50);
+}
+
+.orb-hover__dot--down {
+    background: var(--color-light-red-50);
+}
+
+.orb-hover__dot--unknown {
+    background: var(--color-orange-40);
+}
+
+.orb-hover__dot--warn {
+    background: var(--color-warning);
+}
+
+.orb-hover__dot--pending {
+    background: var(--color-pending);
+}
+
+.orb-hover__name {
+    overflow: hidden;
+    flex: 1;
+    min-width: 0;
+    font-size: var(--font-size-large);
+    line-height: 1.25;
+    font-weight: 600;
+    color: var(--text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-hover__state {
+    flex-shrink: 0;
+    font-size: var(--font-size-large);
+    line-height: 1.25;
+    font-weight: 700;
+}
+
+.orb-hover__state--ok {
+    color: var(--color-corporate-green-60);
+}
+
+.dark .orb-hover__state--ok {
+    color: var(--color-corporate-green-50);
+}
+
+.orb-hover__state--down {
+    color: var(--color-light-red-60);
+}
+
+.dark .orb-hover__state--down {
+    color: var(--color-light-red-40);
+}
+
+.orb-hover__state--unknown {
+    color: var(--color-orange-60);
+}
+
+.dark .orb-hover__state--unknown {
+    color: var(--color-orange-40);
+}
+
+.orb-hover__state--warn {
+    color: var(--color-yellow-60);
+}
+
+.dark .orb-hover__state--warn {
+    color: var(--color-warning);
+}
+
+.orb-hover__state--pending {
+    color: var(--text-muted);
+}
+
+.orb-hover__since {
+    flex-shrink: 0;
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.orb-hover__subtitle {
+    overflow: hidden;
+    margin-top: var(--dimension-2);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-hover__attempts {
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.orb-hover__attempts--soft {
+    font-weight: 600;
+    color: var(--color-yellow-60);
+}
+
+.dark .orb-hover__attempts--soft {
+    color: var(--color-yellow-50);
+}
+
+.orb-hover__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.orb-hover__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--dimension-3);
+    padding: var(--dimension-2) 6px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 9999px;
+}
+
+.orb-hover__badge--warn {
+    color: var(--color-yellow-60);
+    background: color-mix(in srgb, var(--color-warning) 20%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 40%, transparent);
+}
+
+.dark .orb-hover__badge--warn {
+    color: var(--color-yellow-50);
+    background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 25%, transparent);
+}
+
+.orb-hover__badge--downtime {
+    color: var(--color-light-blue-70);
+    background: color-mix(in srgb, var(--color-light-blue-50) 20%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-light-blue-50) 40%, transparent);
+}
+
+.dark .orb-hover__badge--downtime {
+    color: var(--color-light-blue-50);
+    background: color-mix(in srgb, var(--color-light-blue-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-light-blue-50) 25%, transparent);
+}
+
+.orb-hover__badge--stale {
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--color-pending) 20%, transparent);
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.orb-hover__badge-icon {
+    width: 10px;
+    height: 10px;
+}
+
+.orb-hover__output {
+    /* stylelint-disable-next-line value-no-vendor-prefix */
+    display: -webkit-box;
+    overflow: hidden;
+    margin-top: 10px;
+    font-size: var(--font-size-normal);
+    line-height: 1.375;
+    color: var(--text-muted);
+    overflow-wrap: break-word;
+    -webkit-line-clamp: 3;
+    /* stylelint-disable-next-line property-no-vendor-prefix */
+    -webkit-box-orient: vertical;
+}
+
+.orb-hover__pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--dimension-3);
+    margin-top: 10px;
+}
+
+.orb-hover__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--dimension-3);
+    padding: var(--dimension-2) 6px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 9999px;
+}
+
+.orb-hover__pill--crit {
+    color: var(--color-light-red-70);
+    background: color-mix(in srgb, var(--color-light-red-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-light-red-50) 30%, transparent);
+}
+
+.dark .orb-hover__pill--crit {
+    color: var(--color-light-red-40);
+}
+
+.orb-hover__pill--unknown {
+    color: var(--color-orange-70);
+    background: color-mix(in srgb, var(--color-orange-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-orange-50) 30%, transparent);
+}
+
+.dark .orb-hover__pill--unknown {
+    color: var(--color-orange-40);
+}
+
+.orb-hover__pill--warn {
+    color: var(--color-yellow-60);
+    background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 30%, transparent);
+}
+
+.dark .orb-hover__pill--warn {
+    color: var(--color-yellow-50);
+}
+
+.orb-hover__pill--pending {
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--color-pending) 15%, transparent);
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.orb-hover__pill--ok {
+    color: var(--color-corporate-green-70);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-corporate-green-50) 30%, transparent);
+}
+
+.dark .orb-hover__pill--ok {
+    color: var(--color-corporate-green-50);
+}
+
+.orb-hover__pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+}
+
+.orb-hover__pill-dot--crit {
+    background: var(--color-light-red-50);
+}
+
+.orb-hover__pill-dot--unknown {
+    background: var(--color-orange-40);
+}
+
+.orb-hover__pill-dot--warn {
+    background: var(--color-warning);
+}
+
+.orb-hover__pill-dot--pending {
+    background: var(--color-pending);
+}
+
+.orb-hover__pill-dot--ok {
+    background: var(--color-corporate-green-50);
+}
+
+.orb-hover__perfometer {
+    margin-top: 10px;
+}
+
+.orb-hover__perfometer > * + * {
+    margin-top: var(--dimension-3);
+}
+
+.orb-hover__perfometer-label {
+    margin-bottom: var(--dimension-3);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.orb-hover__perfometer-row {
+    display: flex;
+    overflow: hidden;
+    height: 12px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 10%);
+}
+
+.orb-hover__perfometer-seg {
+    height: 100%;
+    transition: all 0.15s;
+}
+
+.orb-hover__metrics {
+    margin-top: 10px;
+}
+
+.orb-hover__metrics > * + * {
+    margin-top: 6px;
+}
+
+.orb-hover__metric-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--dimension-3);
+    font-size: 10px;
+}
+
+.orb-hover__metric-label {
+    overflow: hidden;
+    color: var(--text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-hover__metric-value {
+    flex-shrink: 0;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.orb-hover__metric-bar {
+    overflow: hidden;
+    height: 6px;
+    margin-top: -2px;
+    background: var(--bg-hover);
+    border-radius: 9999px;
+}
+
+.orb-hover__metric-fill {
+    height: 100%;
+    border-radius: 9999px;
+}
+
+.orb-hover__next-check {
+    margin-top: 10px;
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.orb-hover__next-check--overdue {
+    color: var(--color-yellow-60);
+}
+
+.dark .orb-hover__next-check--overdue {
+    color: var(--color-yellow-50);
+}
+</style>

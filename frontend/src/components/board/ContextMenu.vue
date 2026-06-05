@@ -1,34 +1,22 @@
 <template>
-    <div
-        class="fixed z-50 bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-xl py-1.5 min-w-48"
-        :style="{ left: `${x}px`, top: `${y}px` }"
-    >
+    <div class="orb-ctx" :style="{ left: `${x}px`, top: `${y}px` }">
         <!-- Header -->
-        <div class="px-3.5 py-2 border-b border-[var(--border)] mb-1">
-            <p class="text-xs font-semibold text-[var(--text)] truncate max-w-52">
+        <div class="orb-ctx__header">
+            <p class="orb-ctx__name">
                 {{ displayName }}
             </p>
-            <p class="text-[10px] text-[var(--text-muted)] mt-0.5">
+            <p class="orb-ctx__type">
                 {{ getObjectTypeLabel(object) }}
             </p>
         </div>
 
         <!-- Custom template block -->
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <div
-            v-if="renderedTemplate"
-            class="px-3.5 py-2 text-xs text-[var(--text)] border-b border-[var(--border)] mb-1"
-            v-html="renderedTemplate"
-        />
+        <div v-if="renderedTemplate" class="orb-ctx__template" v-html="renderedTemplate" />
 
-        <a
-            v-if="hostUrl"
-            :href="hostUrl"
-            target="_blank"
-            class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
-        >
+        <a v-if="hostUrl" :href="hostUrl" target="_blank" class="orb-ctx__item">
             <svg
-                class="w-3.5 h-3.5 shrink-0"
+                class="orb-ctx__icon"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -42,14 +30,9 @@
             </svg>
             <span>{{ t('contextMenu.hostInCheckmk') }}</span>
         </a>
-        <a
-            v-if="hostServicesUrl"
-            :href="hostServicesUrl"
-            target="_blank"
-            class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
-        >
+        <a v-if="hostServicesUrl" :href="hostServicesUrl" target="_blank" class="orb-ctx__item">
             <svg
-                class="w-3.5 h-3.5 shrink-0"
+                class="orb-ctx__icon"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -63,14 +46,9 @@
             </svg>
             <span>{{ t('contextMenu.hostProblemServices') }}</span>
         </a>
-        <a
-            v-if="serviceUrl"
-            :href="serviceUrl"
-            target="_blank"
-            class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
-        >
+        <a v-if="serviceUrl" :href="serviceUrl" target="_blank" class="orb-ctx__item">
             <svg
-                class="w-3.5 h-3.5 shrink-0"
+                class="orb-ctx__icon"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -84,14 +62,9 @@
             </svg>
             <span>{{ t('contextMenu.serviceInCheckmk') }}</span>
         </a>
-        <a
-            v-if="groupUrl"
-            :href="groupUrl"
-            target="_blank"
-            class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
-        >
+        <a v-if="groupUrl" :href="groupUrl" target="_blank" class="orb-ctx__item">
             <svg
-                class="w-3.5 h-3.5 shrink-0"
+                class="orb-ctx__icon"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -105,14 +78,9 @@
             </svg>
             <span>{{ t('contextMenu.groupInCheckmk') }}</span>
         </a>
-        <a
-            v-if="aggregationUrl"
-            :href="aggregationUrl"
-            target="_blank"
-            class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
-        >
+        <a v-if="aggregationUrl" :href="aggregationUrl" target="_blank" class="orb-ctx__item">
             <svg
-                class="w-3.5 h-3.5 shrink-0"
+                class="orb-ctx__icon"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -130,10 +98,10 @@
             v-if="aggregationOverviewUrl"
             :href="aggregationOverviewUrl"
             target="_blank"
-            class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+            class="orb-ctx__item"
         >
             <svg
-                class="w-3.5 h-3.5 shrink-0"
+                class="orb-ctx__icon"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -157,7 +125,7 @@
                 !aggregationUrl &&
                 !checkmkUrl
             "
-            class="px-3.5 py-2 text-xs text-[var(--text-muted)] italic"
+            class="orb-ctx__empty"
         >
             {{ t('contextMenu.noCheckmkUrl') }}
         </div>
@@ -167,14 +135,14 @@
              for the same operation. Right-click stays as a navigation/edit
              quickpath. -->
 
-        <div class="border-t border-[var(--border)] mt-1 pt-1">
+        <div class="orb-ctx__footer">
             <button
                 v-if="showEdit && lineHasBend"
-                class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+                class="orb-ctx__item"
                 @click="$emit('straighten')"
             >
                 <svg
-                    class="w-3.5 h-3.5 shrink-0"
+                    class="orb-ctx__icon"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -184,13 +152,9 @@
                 </svg>
                 {{ t('contextMenu.straightenLine') }}
             </button>
-            <button
-                v-if="showEdit"
-                class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
-                @click="$emit('edit')"
-            >
+            <button v-if="showEdit" class="orb-ctx__item" @click="$emit('edit')">
                 <svg
-                    class="w-3.5 h-3.5 shrink-0"
+                    class="orb-ctx__icon"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -204,13 +168,9 @@
                 </svg>
                 {{ t('contextMenu.editProperties') }}
             </button>
-            <button
-                v-if="showEdit"
-                class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
-                @click="$emit('duplicate')"
-            >
+            <button v-if="showEdit" class="orb-ctx__item" @click="$emit('duplicate')">
                 <svg
-                    class="w-3.5 h-3.5 shrink-0"
+                    class="orb-ctx__icon"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -226,11 +186,11 @@
             </button>
             <button
                 v-if="showEdit"
-                class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--color-light-red-40)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/8 transition-colors"
+                class="orb-ctx__item orb-ctx__item--danger"
                 @click="$emit('delete')"
             >
                 <svg
-                    class="w-3.5 h-3.5 shrink-0"
+                    class="orb-ctx__icon"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -367,3 +327,98 @@ const hostServicesUrl = computed(() => {
     return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`;
 });
 </script>
+<style scoped>
+.orb-ctx {
+    position: fixed;
+    z-index: 50;
+    min-width: 192px;
+    padding: 6px 0;
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    box-shadow:
+        0 0 0 1px var(--border),
+        0 25px 50px -12px rgb(0 0 0 / 60%);
+}
+
+.orb-ctx__header {
+    margin-bottom: var(--dimension-3);
+    padding: var(--dimension-4) 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.orb-ctx__name {
+    overflow: hidden;
+    max-width: 208px;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-weight: 600;
+    color: var(--text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-ctx__type {
+    margin-top: var(--dimension-2);
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.orb-ctx__template {
+    margin-bottom: var(--dimension-3);
+    padding: var(--dimension-4) 14px;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+}
+
+.orb-ctx__item {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+    width: 100%;
+    padding: var(--dimension-4) 14px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+    text-align: left;
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.orb-ctx__item:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+}
+
+.orb-ctx__item--danger {
+    color: var(--color-light-red-40);
+}
+
+.orb-ctx__item--danger:hover {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 8%, transparent);
+}
+
+.orb-ctx__icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+}
+
+.orb-ctx__empty {
+    padding: var(--dimension-4) 14px;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.orb-ctx__footer {
+    margin-top: var(--dimension-3);
+    padding-top: var(--dimension-3);
+    border-top: 1px solid var(--border);
+}
+</style>
