@@ -1,20 +1,16 @@
 <template>
     <Teleport to="body">
-        <div class="fixed bottom-5 right-5 z-[200] flex flex-col gap-2 pointer-events-none">
+        <div class="orb-toasts">
             <TransitionGroup name="toast">
                 <div
                     v-for="toast in toasts"
                     :key="toast.id"
-                    class="flex items-start gap-2.5 px-4 py-3 rounded-xl shadow-xl shadow-black/40 ring-1 text-sm font-medium max-w-sm pointer-events-auto"
-                    :class="
-                        toast.type === 'success'
-                            ? 'bg-[var(--bg-surface)] ring-[var(--color-corporate-green-50)]/30 text-[var(--color-corporate-green-50)]'
-                            : 'bg-[var(--bg-surface)] ring-[var(--color-light-red-50)]/30 text-[var(--color-light-red-40)]'
-                    "
+                    class="orb-toast"
+                    :class="toast.type === 'success' ? 'orb-toast--success' : 'orb-toast--error'"
                 >
                     <svg
                         v-if="toast.type === 'success'"
-                        class="w-4 h-4 shrink-0 mt-0.5 text-[var(--color-corporate-green-50)]"
+                        class="orb-toast__icon"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -24,7 +20,7 @@
                     </svg>
                     <svg
                         v-else
-                        class="w-4 h-4 shrink-0 mt-0.5 text-[var(--color-light-red-40)]"
+                        class="orb-toast__icon"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -40,7 +36,7 @@
                     <button
                         v-if="toast.action"
                         type="button"
-                        class="ml-1 underline underline-offset-2 hover:no-underline cursor-pointer"
+                        class="orb-toast__action"
                         @click="toast.action.onClick()"
                     >
                         {{ toast.action.label }}
@@ -58,6 +54,65 @@ const { toasts } = useToast();
 </script>
 
 <style scoped>
+.orb-toasts {
+    position: fixed;
+    right: var(--dimension-7);
+    bottom: var(--dimension-7);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: var(--dimension-4);
+    pointer-events: none;
+}
+
+.orb-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    max-width: 384px;
+    padding: 12px 16px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 500;
+    background: var(--bg-surface);
+    border-radius: 12px;
+    pointer-events: auto;
+}
+
+.orb-toast--success {
+    color: var(--color-corporate-green-50);
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--color-corporate-green-50) 30%, transparent),
+        0 20px 25px -5px rgb(0 0 0 / 40%),
+        0 8px 10px -6px rgb(0 0 0 / 40%);
+}
+
+.orb-toast--error {
+    color: var(--color-light-red-40);
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--color-light-red-50) 30%, transparent),
+        0 20px 25px -5px rgb(0 0 0 / 40%),
+        0 8px 10px -6px rgb(0 0 0 / 40%);
+}
+
+.orb-toast__icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+}
+
+.orb-toast__action {
+    margin-left: var(--dimension-3);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.orb-toast__action:hover {
+    text-decoration: none;
+}
+
 .toast-enter-active {
     transition:
         opacity 0.2s ease,

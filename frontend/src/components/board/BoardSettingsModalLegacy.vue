@@ -1306,10 +1306,14 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-@reference "tailwindcss";
-
 .section-title {
-    @apply text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase mb-[6px] leading-none;
+    margin-bottom: 6px;
+    font-size: var(--font-size-normal);
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
 }
 
 .board-settings__shell {

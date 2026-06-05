@@ -657,12 +657,25 @@ watch(
 </script>
 
 <style scoped>
-@reference "tailwindcss";
-
 .field {
-    @apply w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150;
-
+    width: 100%;
     padding: 5px 10px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text);
+    background: var(--default-form-element-bg-color);
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.field::placeholder {
+    color: var(--default-form-element-placeholder-color);
+}
+
+.field:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-corporate-green-50);
 }
 
 /* Panel sits at the bottom of the viewport — force dropdowns to open upward */

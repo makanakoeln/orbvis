@@ -2031,27 +2031,50 @@ async function save() {
 </script>
 
 <style scoped>
-@reference "tailwindcss";
-
 .section-title {
-    @apply text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase mb-[6px] leading-none;
+    margin-bottom: 6px;
+    font-size: var(--font-size-normal);
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
 }
 
 .field-row {
-    @apply flex items-center gap-[8px];
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .field-label {
-    @apply text-sm text-[var(--text-muted)] shrink-0;
-
+    flex-shrink: 0;
     width: 88px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
 }
 
 .field {
-    @apply w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150;
-
+    width: 100%;
     padding: 5px 10px;
     appearance: textfield;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text);
+    background: var(--default-form-element-bg-color);
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.field::placeholder {
+    color: var(--default-form-element-placeholder-color);
+}
+
+.field:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-corporate-green-50);
 }
 
 .field::-webkit-outer-spin-button,

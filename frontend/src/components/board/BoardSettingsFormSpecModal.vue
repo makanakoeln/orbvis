@@ -1499,8 +1499,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-@reference "tailwindcss";
-
 /* Matches the FormDictionary group-title style (bold, normal case) so the
    custom type-specific sections (Background, Topology, Map view, Filter)
    read as siblings of the FormSpec-rendered "Identification", "Behavior",

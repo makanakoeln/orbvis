@@ -355,9 +355,13 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-@reference "tailwindcss";
-
 .group-heading {
-    @apply text-sm font-semibold text-[var(--text-muted)] tracking-wider uppercase mb-[8px];
+    margin-bottom: 8px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
 }
 </style>

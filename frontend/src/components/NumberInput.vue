@@ -1,29 +1,25 @@
 <template>
-    <div class="relative" :class="wrapperClass">
+    <div class="orb-number" :class="wrapperClass">
         <input
             type="number"
             :value="displayValue"
             v-bind="inputAttrs"
-            class="w-full bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:hidden [&::-webkit-inner-spin-button]:hidden"
-            style="padding: 5px 24px 5px 8px"
+            class="orb-number__input"
             @input="onInput"
             @change="onCommit"
             @blur="onCommit"
             @keydown.up.prevent="step(1)"
             @keydown.down.prevent="step(-1)"
         />
-        <div
-            class="absolute right-0 inset-y-0 flex flex-col border-l border-[var(--border)] rounded-r-lg overflow-hidden"
-            style="width: 20px"
-        >
+        <div class="orb-number__spinner">
             <button
                 type="button"
                 tabindex="-1"
-                class="flex-1 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+                class="orb-number__btn"
                 @mousedown.prevent="step(1)"
             >
                 <svg
-                    style="width: 8px; height: 8px"
+                    class="orb-number__chevron"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -39,11 +35,11 @@
             <button
                 type="button"
                 tabindex="-1"
-                class="flex-1 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors border-t border-[var(--border)]"
+                class="orb-number__btn orb-number__btn--down"
                 @mousedown.prevent="step(-1)"
             >
                 <svg
-                    style="width: 8px; height: 8px"
+                    class="orb-number__chevron"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -133,3 +129,72 @@ function step(dir: 1 | -1) {
     emit('update:modelValue', Number(next.toFixed(decimals)));
 }
 </script>
+
+<style scoped>
+.orb-number {
+    position: relative;
+}
+
+.orb-number__input {
+    width: 100%;
+    padding: 5px 24px 5px 8px;
+    appearance: textfield;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text);
+    background: var(--default-form-element-bg-color);
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-number__input::placeholder {
+    color: var(--default-form-element-placeholder-color);
+}
+
+.orb-number__input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-corporate-green-50);
+}
+
+.orb-number__input::-webkit-outer-spin-button,
+.orb-number__input::-webkit-inner-spin-button {
+    display: none;
+}
+
+.orb-number__spinner {
+    position: absolute;
+    inset: 0 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    width: 20px;
+    overflow: hidden;
+    border-left: 1px solid var(--border);
+    border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.orb-number__btn {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.orb-number__btn:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+}
+
+.orb-number__btn--down {
+    border-top: 1px solid var(--border);
+}
+
+.orb-number__chevron {
+    width: 8px;
+    height: 8px;
+}
+</style>
