@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import gc
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 from app.connections.base import FolderTreeData, ServiceRow
@@ -784,6 +786,25 @@ async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> Map
     )
 
 
+@contextmanager
+def _gc_paused() -> Iterator[None]:
+    """Pause cyclic GC for an allocation-heavy synchronous block.
+
+    Building (or sig-walking) a 100k+-node folder tree allocates in one burst,
+    which repeatedly triggers full GC passes over the ever-growing, garbage-free
+    object graph and roughly doubles the wall time. The wrapped block never
+    awaits, so the pause is invisible to the rest of the event loop.
+    """
+    if not gc.isenabled():
+        yield
+        return
+    gc.disable()
+    try:
+        yield
+    finally:
+        gc.enable()
+
+
 def _norm_folder_path(path: str) -> str:
     return path.strip("/")
 
@@ -798,14 +819,16 @@ def _combined_state_from_summary(host_state: str, summary: ServicesSummary | Non
     """Worst of the host state and its service-summary counts."""
     if summary is None:
         return host_state
-    candidates = [host_state]
-    if summary.critical:
-        candidates.append("CRITICAL")
-    if summary.warning:
-        candidates.append("WARNING")
-    if summary.unknown:
-        candidates.append("UNKNOWN")
-    return max(candidates, key=lambda s: _COMBINED_SEVERITY.get(s, 0))
+    # Branch ladder instead of max()-over-candidates: this runs once per host
+    # per tick (100k+ on large sites), where the list + lambda dominated.
+    rank = _COMBINED_SEVERITY.get(host_state, 0)
+    if summary.critical and rank < _COMBINED_SEVERITY["CRITICAL"]:
+        return "CRITICAL"
+    if summary.warning and rank < _COMBINED_SEVERITY["WARNING"]:
+        return "WARNING"
+    if summary.unknown and rank < _COMBINED_SEVERITY["UNKNOWN"]:
+        return "UNKNOWN"
+    return host_state
 
 
 async def list_connection_folders(connection_id: str) -> list[dict[str, str]]:
@@ -858,6 +881,25 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
         data = FolderTreeData()
         fetch_ok = False
 
+    with _gc_paused():
+        root = _build_folder_tree(data, fv)
+
+    return MapStates(
+        map_name=cfg.name,
+        states=[],
+        generated_at=time.time(),
+        connection_ok=fetch_ok,
+        folder_tree=root,
+    )
+
+
+def _build_folder_tree(data: FolderTreeData, fv: FolderTreeView) -> FolderTreeNode:
+    """Assemble + aggregate the folder tree from raw connection data.
+
+    Hot path: runs per SSE tick per subscriber group over every host of the
+    connection, so the host loop and ``finalize`` are written allocation- and
+    attribute-access-lean (locals bound, one pass per node).
+    """
     nodes: dict[str, FolderTreeNode] = {}
 
     def ensure_folder(
@@ -904,25 +946,40 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
     # Hosts live only as tree nodes; the flat ``states`` list is left empty (see
     # the MapStates return). At 100k+ hosts duplicating every host into ``states``
     # doubled the payload for data the tree node already carries.
+    # ``folder_cache`` collapses the per-host normalise + ensure_folder lookup —
+    # hosts cluster heavily into few folders. Leaf problem/severity counts are
+    # set at construction so ``finalize`` never has to revisit the 100k+ leaves.
+    sev_get = _COMBINED_SEVERITY.get
+    folder_cache: dict[str, tuple[str, list[FolderTreeNode]]] = {}
     for h in data.hosts:
-        fpath = _norm_folder_path(h["folder_path"])
-        folder = ensure_folder(fpath)
-        combined = _combined_state_from_summary(h["state"], h.get("services_summary"))
-        host_node = FolderTreeNode(
-            path=f"{fpath}/{h['host_name']}" if fpath else h["host_name"],
-            title=h["host_name"],
-            kind="host",
-            state=combined,
-            host_count=1,
-            output=h.get("output", ""),
-            acknowledged=h.get("acknowledged", False),
-            in_downtime=h.get("in_downtime", False),
-            is_flapping=h.get("is_flapping", False),
-            last_state_change=h.get("last_state_change"),
-            site_id=h.get("site_id"),
-            services_summary=h.get("services_summary"),
+        cached = folder_cache.get(h["folder_path"])
+        if cached is None:
+            fpath = _norm_folder_path(h["folder_path"])
+            cached = folder_cache[h["folder_path"]] = (fpath, ensure_folder(fpath).children)
+        fpath, siblings = cached
+        host_name = h["host_name"]
+        summary = h.get("services_summary")
+        combined = _combined_state_from_summary(h["state"], summary)
+        is_problem = sev_get(combined, 0) > 0
+        siblings.append(
+            FolderTreeNode(
+                path=f"{fpath}/{host_name}" if fpath else host_name,
+                title=host_name,
+                kind="host",
+                state=combined,
+                host_count=1,
+                problem_count=1 if is_problem else 0,
+                # Only hosts feed the severity breakdown; service leaves never do.
+                severity_counts={combined: 1} if is_problem else {},
+                output=h.get("output", ""),
+                acknowledged=h.get("acknowledged", False),
+                in_downtime=h.get("in_downtime", False),
+                is_flapping=h.get("is_flapping", False),
+                last_state_change=h.get("last_state_change"),
+                site_id=h.get("site_id"),
+                services_summary=summary,
+            )
         )
-        folder.children.append(host_node)
 
     # Service leaves are NOT materialised here. ``show_services`` instead makes
     # hosts expandable on demand: the frontend fetches a single host's services
@@ -931,27 +988,34 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
     # the folder scope) would push tens of millions of rows on large sites — the
     # board must scale to 4M-host environments.
     def finalize(node: FolderTreeNode) -> None:
-        if node.kind != "folder":
-            is_problem = _COMBINED_SEVERITY.get(node.state, 0) > 0
-            node.problem_count = 1 if is_problem else 0
-            # Only hosts feed the severity breakdown; service leaves never do.
-            node.severity_counts = {node.state: 1} if is_problem and node.kind == "host" else {}
-            return
-        for child in node.children:
-            finalize(child)
-        node.host_count = sum(c.host_count for c in node.children)
-        node.problem_count = sum(c.problem_count for c in node.children)
+        # Leaves carry their counts from construction; folders aggregate all
+        # children in a single pass (count sums, severity merge, worst-state).
+        host_count = 0
+        problem_count = 0
         counts: dict[str, int] = {}
+        worst: str | None = None
+        worst_rank = 0
         for child in node.children:
-            for st, n in child.severity_counts.items():
-                counts[st] = counts.get(st, 0) + n
+            if child.kind == "folder":
+                finalize(child)
+                if child.is_empty:
+                    # Recursively hostless: nothing to add, and the synthetic
+                    # EMPTY state must not feed the parent's worst-state.
+                    continue
+            host_count += child.host_count
+            problem_count += child.problem_count
+            if child.severity_counts:
+                for st, n in child.severity_counts.items():
+                    counts[st] = counts.get(st, 0) + n
+            rank = sev_get(child.state, 0)
+            if worst is None or rank > worst_rank:
+                worst, worst_rank = child.state, rank
+        node.host_count = host_count
+        node.problem_count = problem_count
         node.severity_counts = counts
-        non_empty = [c for c in node.children if not (c.kind == "folder" and c.is_empty)]
-        if non_empty:
+        if worst is not None:
             node.is_empty = False
-            node.state = max(
-                (c.state for c in non_empty), key=lambda s: _COMBINED_SEVERITY.get(s, 0)
-            )
+            node.state = worst
         else:
             node.is_empty = True
             node.state = "EMPTY"
@@ -963,7 +1027,7 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
         node.children.sort(
             key=lambda c: (
                 c.kind == "folder",
-                -_COMBINED_SEVERITY.get(c.state, -1),
+                -sev_get(c.state, -1),
                 c.title.lower(),
             )
         )
@@ -997,15 +1061,7 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
         return True
 
     prune(root)
-
-    connection_ok = fetch_ok
-    return MapStates(
-        map_name=cfg.name,
-        states=[],
-        generated_at=time.time(),
-        connection_ok=connection_ok,
-        folder_tree=root,
-    )
+    return root
 
 
 # ---------------------------------------------------------------------------
@@ -1335,28 +1391,36 @@ def compute_folder_tree_delta(
 
     flat: dict[str, tuple[int, tuple[str, ...]]] = {}
     by_path: dict[str, FolderTreeNode] = {}
-    stack = [tree]
-    while stack:
-        n = stack.pop()
-        flat[n.path] = (_ft_field_sig(n), tuple(c.path for c in n.children))
-        by_path[n.path] = n
-        stack.extend(n.children)
+    with _gc_paused():
+        field_sig = _ft_field_sig
+        stack = [tree]
+        while stack:
+            n = stack.pop()
+            children = n.children
+            flat[n.path] = (
+                field_sig(n),
+                tuple([c.path for c in children]) if children else (),
+            )
+            by_path[n.path] = n
+            if children:
+                stack.extend(children)
 
-    # Path set changing = a node added/removed/moved (paths are hierarchical, so a
-    # move changes the moved node's path too) → can't express as field patches.
-    full = prev is None or prev.keys() != flat.keys()
-    _folder_tree_snapshots[key] = flat
-    if full:
-        return FolderTreeDelta(full=True, tree=tree)
-    assert prev is not None  # full would be True otherwise
+        # Path set changing = a node added/removed/moved (paths are hierarchical,
+        # so a move changes the moved node's path too) → can't express as field
+        # patches.
+        full = prev is None or prev.keys() != flat.keys()
+        _folder_tree_snapshots[key] = flat
+        if full:
+            return FolderTreeDelta(full=True, tree=tree)
+        assert prev is not None  # full would be True otherwise
 
-    changed: list[FolderTreeNodePatch] = []
-    for path, (fsig, child_paths) in flat.items():
-        old_fsig, old_children = prev[path]
-        order_changed = old_children != child_paths
-        if old_fsig != fsig or order_changed:
-            changed.append(_ft_patch(by_path[path], order_changed))
-    return FolderTreeDelta(full=False, changed=changed)
+        changed: list[FolderTreeNodePatch] = []
+        for path, (fsig, child_paths) in flat.items():
+            old_fsig, old_children = prev[path]
+            order_changed = old_children != child_paths
+            if old_fsig != fsig or order_changed:
+                changed.append(_ft_patch(by_path[path], order_changed))
+        return FolderTreeDelta(full=False, changed=changed)
 
 
 def drop_states_snapshot(board_name: str, auth_user: str | None = None) -> None:
