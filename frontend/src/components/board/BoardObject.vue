@@ -2,32 +2,25 @@
     <!-- Graph embed / native chart -->
     <div
         v-if="object.type === 'graph'"
-        class="relative select-none"
+        class="orb-obj__graph"
         :style="graphWrapperStyle"
         @mouseenter="$emit('hover', $event)"
         @mouseleave="$emit('hover-leave')"
         @contextmenu.prevent="$emit('context-menu', $event)"
     >
         <!-- No permission: render silent empty box -->
-        <div
-            v-if="state?.state === 'NO_PERMISSION'"
-            class="w-full h-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/20"
-        />
+        <div v-if="state?.state === 'NO_PERMISSION'" class="orb-obj__graph-empty" />
 
         <!-- Native chart mode (host linked) -->
         <template v-else-if="isNativeChart">
             <!-- Waiting for first data point / not found -->
             <div
                 v-if="!hasChartData"
-                class="w-full h-full flex flex-col items-center justify-center gap-1.5 rounded-lg text-[var(--text-muted)]"
-                :class="
-                    editMode
-                        ? 'border-2 border-dashed border-[var(--border)]'
-                        : 'border border-[var(--border)]'
-                "
+                class="orb-obj__graph-waiting"
+                :class="editMode ? 'orb-obj__graph-waiting--edit' : ''"
             >
                 <svg
-                    class="w-6 h-6"
+                    class="orb-obj__graph-glyph"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -39,25 +32,21 @@
                         d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
                     />
                 </svg>
-                <span v-if="dataTimedOut" class="text-xs text-center px-3">{{
+                <span v-if="dataTimedOut" class="orb-obj__graph-hint orb-obj__graph-hint--padded">{{
                     t('boardSettings.graphNotFound', {
                         service: object.service_description || object.host_name,
                         host: object.host_name,
                     })
                 }}</span>
-                <span v-else class="text-xs">{{ t('boardSettings.graphWaitingData') }}</span>
+                <span v-else class="orb-obj__graph-hint">{{
+                    t('boardSettings.graphWaitingData')
+                }}</span>
             </div>
             <!-- D3 chart -->
-            <div
-                v-else
-                class="w-full h-full flex flex-col overflow-hidden rounded-lg border bg-[var(--bg-surface)] border-[var(--border)]"
-                style="padding: 6px 8px 5px"
-            >
+            <div v-else class="orb-obj__chart" style="padding: 6px 8px 5px">
                 <!-- Header: metric label + current value -->
-                <div class="mb-1 flex items-center justify-between shrink-0">
-                    <span
-                        class="text-[9px] font-semibold tracking-wide text-[var(--text-muted)] truncate"
-                    >
+                <div class="orb-obj__chart-head">
+                    <span class="orb-obj__chart-title">
                         {{
                             isSingleMetric
                                 ? chartMetricLabels[0] || object.graph_metric?.[0]
@@ -66,37 +55,27 @@
                     </span>
                     <span
                         v-if="isSingleMetric"
-                        class="text-[10px] font-bold shrink-0 ml-1"
+                        class="orb-obj__chart-value"
                         :style="{ color: singleMetricColor }"
                         >{{ singleMetricValueStr }}</span
                     >
-                    <span
-                        v-else
-                        class="text-[9px] text-[var(--text-muted)] shrink-0 ml-1 uppercase tracking-wide"
-                        >live</span
-                    >
+                    <span v-else class="orb-obj__chart-live">live</span>
                 </div>
                 <!-- Multi-metric legend -->
-                <div
-                    v-if="!isSingleMetric"
-                    class="flex flex-wrap gap-x-2.5 gap-y-0.5 mb-1 shrink-0"
-                >
+                <div v-if="!isSingleMetric" class="orb-obj__chart-legend">
                     <div
                         v-for="(label, idx) in chartMetricLabels.slice(0, MAX_VISIBLE_SERIES)"
                         :key="label"
-                        class="flex items-center gap-1 min-w-0"
+                        class="orb-obj__legend-item"
                         style="max-width: 50%"
                     >
                         <span
-                            class="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                            class="orb-obj__legend-swatch"
                             :style="{ background: CHART_PALETTE[idx % CHART_PALETTE.length] }"
                         />
+                        <span class="orb-obj__legend-label">{{ label }}</span>
                         <span
-                            class="text-[9px] dark:text-[var(--text-muted)] text-[var(--text-muted)] truncate"
-                            >{{ label }}</span
-                        >
-                        <span
-                            class="text-[9px] font-semibold tabular-nums shrink-0 whitespace-nowrap"
+                            class="orb-obj__legend-value"
                             :style="{ color: CHART_PALETTE[idx % CHART_PALETTE.length] }"
                             >{{
                                 fmtValueWithUnit(
@@ -111,15 +90,15 @@
                     </div>
                     <span
                         v-if="chartMetricLabels.length > MAX_VISIBLE_SERIES"
-                        class="text-[9px] text-[var(--text-muted)] self-center cursor-default"
+                        class="orb-obj__legend-more"
                         :title="hiddenMetricLabels"
                         >+{{ chartMetricLabels.length - MAX_VISIBLE_SERIES }}</span
                     >
                 </div>
-                <div class="flex flex-col w-full flex-1 min-h-0">
+                <div class="orb-obj__chart-body">
                     <template v-for="group in chartGroups" :key="group.id">
                         <MetricChart
-                            class="w-full flex-1 min-h-0"
+                            class="orb-obj__chart-canvas"
                             :data="group.data"
                             :metric-keys="Object.keys(group.data)"
                             :window-secs="(object.graph_time_window ?? 60) * 60"
@@ -134,12 +113,9 @@
         <!-- URL embed mode -->
         <template v-else>
             <!-- Placeholder: no URL or load error -->
-            <div
-                v-if="!object.graph_url || graphLoadFailed"
-                class="w-full h-full flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-[var(--border)] rounded-lg text-[var(--text-muted)]"
-            >
+            <div v-if="!object.graph_url || graphLoadFailed" class="orb-obj__graph-placeholder">
                 <svg
-                    class="w-6 h-6"
+                    class="orb-obj__graph-glyph"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -151,7 +127,7 @@
                         d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
                     />
                 </svg>
-                <span class="text-xs">{{
+                <span class="orb-obj__graph-hint">{{
                     object.graph_url
                         ? t('boardSettings.graphLoadFailed')
                         : t('boardSettings.graphNoUrl')
@@ -161,7 +137,7 @@
             <img
                 v-else-if="object.graph_embed_type !== 'iframe'"
                 :src="graphSrc"
-                class="block w-full h-full object-fill rounded-lg"
+                class="orb-obj__graph-img"
                 draggable="false"
                 @error="graphLoadFailed = true"
                 @load="graphLoadFailed = false"
@@ -170,14 +146,14 @@
             <iframe
                 v-else
                 :src="object.graph_url"
-                class="block w-full h-full border-0 rounded-lg"
+                class="orb-obj__graph-iframe"
                 sandbox="allow-scripts allow-same-origin"
             />
         </template>
         <!-- Optional caption label -->
         <div
             v-if="object.label?.show && object.label?.text && state?.state !== 'NO_PERMISSION'"
-            class="absolute -bottom-5 left-0 right-0 text-center text-xs pointer-events-none px-1.5 py-0.5 rounded"
+            class="orb-obj__graph-caption"
             :style="labelStyle"
         >
             {{ object.label.text }}
@@ -185,12 +161,12 @@
         <!-- Resize handle (edit mode only) -->
         <div
             v-if="editMode && resizableTypes.has(object.type)"
-            class="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize bg-[var(--color-corporate-green-50)]/70 hover:bg-[var(--color-corporate-green-50)] rounded-tl flex items-center justify-center transition-colors"
+            class="orb-obj__resize-handle"
             title="Resize"
             @pointerdown.stop="$emit('graph-resize-start', $event)"
         >
             <svg
-                class="w-3 h-3 text-white"
+                class="orb-obj__resize-icon"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -204,24 +180,20 @@
             </svg>
         </div>
         <!-- Selection ring -->
-        <div
-            v-if="selected"
-            class="absolute inset-0 rounded-lg ring-2 ring-[var(--color-corporate-green-50)] ring-offset-1 ring-offset-[var(--bg)] pointer-events-none"
-        />
+        <div v-if="selected" class="orb-obj__graph-selection" />
     </div>
 
     <!-- Textbox -->
     <div
         v-else-if="object.type === 'textbox'"
-        class="text-sm font-medium whitespace-pre-wrap pointer-events-none transition-all"
+        class="orb-obj__textbox"
         :class="[
-            isNagvisClassic ? 'overflow-visible' : 'px-2.5 py-1.5 rounded-lg overflow-auto',
-            !isNagvisClassic && !object.textbox_border ? 'ring-1' : '',
-            selected && !isNagvisClassic
-                ? 'ring-[var(--color-corporate-green-50)]'
-                : !isNagvisClassic
-                  ? 'ring-[var(--border)]'
-                  : '',
+            isNagvisClassic ? 'orb-obj__textbox--classic' : 'orb-obj__textbox--boxed',
+            !isNagvisClassic && !object.textbox_border
+                ? selected
+                    ? 'orb-obj__textbox--ring-selected'
+                    : 'orb-obj__textbox--ring'
+                : '',
         ]"
         :style="textboxStyle"
         @mouseenter="$emit('hover', $event)"
@@ -234,18 +206,12 @@
     <!-- Gadget -->
     <div
         v-else-if="object.display?.mode === 'gadget'"
-        class="flex flex-col items-center"
+        class="orb-obj__stack"
         @mouseenter="$emit('hover', $event)"
         @mouseleave="$emit('hover-leave')"
         @contextmenu.prevent="$emit('context-menu', $event)"
     >
-        <div
-            :class="
-                selected
-                    ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-[var(--bg)] rounded-xl'
-                    : ''
-            "
-        >
+        <div :class="selected ? 'orb-obj__gadget-frame--selected' : ''">
             <GadgetRenderer
                 :type="object.display?.gadget_type || 'gauge'"
                 :metric="object.display?.gadget_metric"
@@ -255,7 +221,7 @@
         </div>
         <div
             v-if="object.label?.show && state?.state !== 'NO_PERMISSION'"
-            class="mt-1 font-medium whitespace-nowrap pointer-events-none px-1.5 py-0.5 rounded"
+            class="orb-obj__gadget-label"
             :style="labelStyle"
         >
             {{ displayName }}
@@ -265,18 +231,14 @@
     <!-- Text-only: object name rendered as state-coloured text, no icon. -->
     <div
         v-else-if="object.display?.mode === 'text'"
-        class="flex flex-col items-center"
+        class="orb-obj__stack"
         @mouseenter="$emit('hover', $event)"
         @mouseleave="$emit('hover-leave')"
         @contextmenu.prevent="$emit('context-menu', $event)"
     >
         <div
-            class="font-semibold whitespace-nowrap pointer-events-none px-1.5 py-0.5 rounded"
-            :class="
-                selected
-                    ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-[var(--bg)]'
-                    : ''
-            "
+            class="orb-obj__text-pill"
+            :class="selected ? 'orb-obj__text-pill--selected' : ''"
             :style="textOnlyStyle"
         >
             {{ displayName }}
@@ -286,15 +248,15 @@
     <!-- All other types: icon circle (or custom image) + label -->
     <div
         v-else
-        class="flex flex-col items-center"
-        :class="isNagvisClassic ? 'relative' : ''"
+        class="orb-obj__stack"
+        :class="isNagvisClassic ? 'orb-obj__stack--classic' : ''"
         :style="iconWrapperStyle"
         @mouseenter="$emit('hover', $event)"
         @mouseleave="$emit('hover-leave')"
         @contextmenu.prevent="$emit('context-menu', $event)"
     >
         <!-- Icon with arc ring overlay + badges -->
-        <div class="relative">
+        <div class="orb-obj__icon-box">
             <!-- Custom icon image — draggable="false" prevents the browser from starting
            an HTML5 drag operation which would swallow all subsequent mousemove events -->
             <img
@@ -302,7 +264,7 @@
                 :src="`${BASE_URL}images/${object.display?.image ?? object.image_src}`"
                 :style="customIconStyle"
                 draggable="false"
-                class="object-contain transition-all duration-300 select-none"
+                class="orb-obj__icon-img"
                 @error="imgLoadFailed = true"
             />
             <!-- Asset-missing placeholder: broken-image glyph so importer
@@ -310,7 +272,7 @@
                  filename string. -->
             <div
                 v-else-if="object.type === 'image' && imgLoadFailed && isNagvisClassic"
-                class="flex items-center justify-center pointer-events-none"
+                class="orb-obj__broken"
                 :style="{
                     width: `${object.display?.image_size ?? iconSize ?? 60}px`,
                     height: `${object.display?.image_size ?? iconSize ?? 60}px`,
@@ -346,12 +308,8 @@
                 :height="iconSize"
                 :viewBox="`0 0 ${iconSize} ${iconSize}`"
                 overflow="visible"
-                class="block select-none transition-all duration-300 rounded-full"
-                :class="
-                    selected
-                        ? 'ring-2 ring-[var(--color-corporate-green-50)] ring-offset-2 ring-offset-[var(--bg)]'
-                        : ''
-                "
+                class="orb-obj__state-svg"
+                :class="selected ? 'orb-obj__state-svg--selected' : ''"
                 :style="{ filter: stateGlow }"
             >
                 <!-- NOT_FOUND: dimmed dashed outline + transparent fill so the
@@ -423,7 +381,7 @@
                 :width="svgSize"
                 :height="svgSize"
                 pointer-events="none"
-                class="absolute pointer-events-none"
+                class="orb-obj__arc"
                 :style="{ top: `-${RING_PAD}px`, left: `-${RING_PAD}px`, pointerEvents: 'none' }"
                 :title="t('board.utilizationRing')"
             />
@@ -431,11 +389,11 @@
             <!-- Stale data badge -->
             <span
                 v-if="state?.stale && !isNagvisClassic"
-                class="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--color-pending)] text-[var(--text)] flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
+                class="orb-obj__badge orb-obj__badge--stale"
                 title="Stale data"
             >
                 <svg
-                    class="w-3 h-3"
+                    class="orb-obj__badge-icon"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -451,11 +409,11 @@
             <!-- Acknowledged badge -->
             <span
                 v-if="state?.acknowledged && !isNagvisClassic"
-                class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--color-warning)] text-zinc-900 flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
+                class="orb-obj__badge orb-obj__badge--ack"
                 title="Acknowledged"
             >
                 <svg
-                    class="w-3 h-3"
+                    class="orb-obj__badge-icon"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -471,10 +429,10 @@
             <!-- Downtime badge -->
             <span
                 v-if="state?.in_downtime && !isNagvisClassic"
-                class="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-[var(--color-light-blue-50)] text-white flex items-center justify-center shadow-md ring-2 ring-[var(--bg)]"
+                class="orb-obj__badge orb-obj__badge--downtime"
                 title="In downtime"
             >
-                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                <svg class="orb-obj__badge-icon" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                 </svg>
             </span>
@@ -495,8 +453,8 @@
         <!-- Label -->
         <div
             v-if="object.label?.show && state?.state !== 'NO_PERMISSION'"
-            class="font-medium whitespace-nowrap pointer-events-none"
-            :class="isNagvisClassic ? '' : 'mt-1.5 px-1.5 py-0.5 rounded'"
+            class="orb-obj__label"
+            :class="isNagvisClassic ? '' : 'orb-obj__label--boxed'"
             :style="labelStyle"
         >
             {{ displayName }}
@@ -1083,6 +1041,387 @@ const displayName = computed(() => {
 </script>
 
 <style scoped>
+.orb-obj__graph {
+    position: relative;
+    user-select: none;
+}
+
+.orb-obj__graph-empty {
+    width: 100%;
+    height: 100%;
+    background: color-mix(in srgb, var(--bg) 20%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.orb-obj__graph-waiting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    height: 100%;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.orb-obj__graph-waiting--edit {
+    border: 2px dashed var(--border);
+}
+
+.orb-obj__graph-glyph {
+    width: var(--dimension-8);
+    height: var(--dimension-8);
+}
+
+.orb-obj__graph-hint {
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+}
+
+.orb-obj__graph-hint--padded {
+    padding: 0 var(--dimension-5);
+    text-align: center;
+}
+
+.orb-obj__chart {
+    display: flex;
+    overflow: hidden;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.orb-obj__chart-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    margin-bottom: var(--dimension-3);
+}
+
+.orb-obj__chart-title {
+    overflow: hidden;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    color: var(--text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-obj__chart-value {
+    flex-shrink: 0;
+    margin-left: var(--dimension-3);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.orb-obj__chart-live {
+    flex-shrink: 0;
+    margin-left: var(--dimension-3);
+    font-size: 9px;
+    letter-spacing: 0.025em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.orb-obj__chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    gap: var(--dimension-2) 10px;
+    margin-bottom: var(--dimension-3);
+}
+
+.orb-obj__legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-3);
+    min-width: 0;
+}
+
+.orb-obj__legend-swatch {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+}
+
+.orb-obj__legend-label {
+    overflow: hidden;
+    font-size: 9px;
+    color: var(--text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-obj__legend-value {
+    flex-shrink: 0;
+    font-size: 9px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.orb-obj__legend-more {
+    align-self: center;
+    font-size: 9px;
+    color: var(--text-muted);
+    cursor: default;
+}
+
+.orb-obj__chart-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+}
+
+.orb-obj__chart-canvas {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+}
+
+.orb-obj__graph-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    height: 100%;
+    color: var(--text-muted);
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+}
+
+.orb-obj__graph-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    border-radius: 8px;
+}
+
+.orb-obj__graph-iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 8px;
+}
+
+.orb-obj__graph-caption {
+    position: absolute;
+    right: 0;
+    bottom: -20px;
+    left: 0;
+    padding: var(--dimension-2) 6px;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    text-align: center;
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.orb-obj__resize-handle {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--dimension-7);
+    height: var(--dimension-7);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 70%, transparent);
+    border-top-left-radius: 4px;
+    cursor: se-resize;
+    transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-obj__resize-handle:hover {
+    background: var(--color-corporate-green-50);
+}
+
+.orb-obj__resize-icon {
+    width: var(--dimension-5);
+    height: var(--dimension-5);
+    color: white;
+}
+
+.orb-obj__graph-selection {
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    box-shadow:
+        0 0 0 1px var(--bg),
+        0 0 0 3px var(--color-corporate-green-50);
+    pointer-events: none;
+}
+
+.orb-obj__textbox {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 500;
+    white-space: pre-wrap;
+    pointer-events: none;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-obj__textbox--classic {
+    overflow: visible;
+}
+
+.orb-obj__textbox--boxed {
+    overflow: auto;
+    padding: 6px 10px;
+    border-radius: 8px;
+}
+
+.orb-obj__textbox--ring {
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.orb-obj__textbox--ring-selected {
+    box-shadow: 0 0 0 1px var(--color-corporate-green-50);
+}
+
+.orb-obj__stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.orb-obj__stack--classic {
+    position: relative;
+}
+
+.orb-obj__gadget-frame--selected {
+    border-radius: 12px;
+    box-shadow:
+        0 0 0 2px var(--bg),
+        0 0 0 4px var(--color-corporate-green-50);
+}
+
+.orb-obj__gadget-label {
+    margin-top: var(--dimension-3);
+    padding: var(--dimension-2) 6px;
+    font-weight: 500;
+    white-space: nowrap;
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.orb-obj__text-pill {
+    padding: var(--dimension-2) 6px;
+    font-weight: 600;
+    white-space: nowrap;
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.orb-obj__text-pill--selected {
+    box-shadow:
+        0 0 0 2px var(--bg),
+        0 0 0 4px var(--color-corporate-green-50);
+}
+
+.orb-obj__icon-box {
+    position: relative;
+}
+
+.orb-obj__icon-img {
+    object-fit: contain;
+    user-select: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-obj__broken {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.orb-obj__state-svg {
+    display: block;
+    border-radius: 9999px;
+    user-select: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-obj__state-svg--selected {
+    box-shadow:
+        0 0 0 2px var(--bg),
+        0 0 0 4px var(--color-corporate-green-50);
+}
+
+.orb-obj__arc {
+    position: absolute;
+    pointer-events: none;
+}
+
+.orb-obj__badge {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--dimension-7);
+    height: var(--dimension-7);
+    border-radius: 9999px;
+    box-shadow:
+        0 0 0 2px var(--bg),
+        0 4px 6px -1px rgb(0 0 0 / 10%),
+        0 2px 4px -2px rgb(0 0 0 / 10%);
+}
+
+.orb-obj__badge--stale {
+    right: -6px;
+    bottom: -6px;
+    color: var(--text);
+    background: var(--color-pending);
+}
+
+.orb-obj__badge--ack {
+    top: -6px;
+    right: -6px;
+    color: var(--color-midnight-grey-100);
+    background: var(--color-warning);
+}
+
+.orb-obj__badge--downtime {
+    top: -6px;
+    left: -6px;
+    color: white;
+    background: var(--color-light-blue-50);
+}
+
+.orb-obj__badge-icon {
+    width: var(--dimension-5);
+    height: var(--dimension-5);
+}
+
+.orb-obj__label {
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.orb-obj__label--boxed {
+    margin-top: 6px;
+    padding: var(--dimension-2) 6px;
+    border-radius: 4px;
+}
+
 @keyframes state-pulse {
     0%,
     100% {
