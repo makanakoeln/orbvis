@@ -202,8 +202,8 @@ function folderLabel(n: FolderTreeNode): string {
     if (n.ok_group) return n.title; // already "✓ N OK"
     const title = n.title || 'Main';
     if (n.is_empty) return `${title} · empty`;
-    const pills = severityPills(n.severity_counts);
-    if (pills.length) return `${title} · ${pills[0].count} ${pills[0].state}`;
+    const pill = severityPills(n.severity_counts)[0];
+    if (pill) return `${title} · ${pill.count} ${pill.state}`;
     return `${title} · ${n.host_count}`;
 }
 
@@ -738,7 +738,9 @@ watch(
 onMounted(() => {
     if (!hostEl.value) return;
     resizeObs = new ResizeObserver((entries) => {
-        const r = entries[0].contentRect;
+        const entry = entries[0];
+        if (!entry) return;
+        const r = entry.contentRect;
         const changed = Math.abs(r.width - dims.w) > 1 || Math.abs(r.height - dims.h) > 1;
         dims = { w: r.width, h: r.height };
         if (changed && root.value) draw(false);

@@ -24,11 +24,13 @@ export function parsePerfData(raw: string): PerfMetric[] {
         // truncated to just "B" (which would lose the per-second qualifier).
         const valMatch = valStr.match(/^(-?[\d.]+)([a-zA-Z%/]*)/);
         if (!valMatch) continue;
+        const [, num, unit] = valMatch;
+        if (num === undefined) continue;
         const toNum = (s?: string) => (s !== undefined && s !== '' ? parseFloat(s) : null);
         metrics.push({
             label,
-            value: parseFloat(valMatch[1]),
-            unit: valMatch[2] || '',
+            value: parseFloat(num),
+            unit: unit || '',
             warn: toNum(warnStr),
             crit: toNum(critStr),
             min: toNum(minStr),
@@ -40,9 +42,10 @@ export function parsePerfData(raw: string): PerfMetric[] {
 
 /** Get the first matching metric by label, or the first metric if label is empty. */
 export function getMetric(metrics: PerfMetric[], label?: string | null): PerfMetric | null {
-    if (!metrics.length) return null;
-    if (!label) return metrics[0];
-    return metrics.find((m) => m.label === label) ?? metrics[0];
+    const first = metrics[0];
+    if (first === undefined) return null;
+    if (!label) return first;
+    return metrics.find((m) => m.label === label) ?? first;
 }
 
 /** Calculate utilization percentage (0–100) for a metric. */

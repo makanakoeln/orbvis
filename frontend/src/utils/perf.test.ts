@@ -21,27 +21,27 @@ describe('parsePerfData', () => {
 
     it('parses a quoted label with spaces', () => {
         const result = parsePerfData("'load average'=0.5;1.5;2.0");
-        expect(result[0].label).toBe('load average');
-        expect(result[0].value).toBe(0.5);
+        expect(result[0]!.label).toBe('load average');
+        expect(result[0]!.value).toBe(0.5);
     });
 
     it('parses multiple metrics', () => {
         const result = parsePerfData('load1=0.5;1;2 load5=0.3;1;2');
         expect(result).toHaveLength(2);
-        expect(result[0].label).toBe('load1');
-        expect(result[1].label).toBe('load5');
+        expect(result[0]!.label).toBe('load1');
+        expect(result[1]!.label).toBe('load5');
     });
 
     it('handles missing warn/crit as null', () => {
         const result = parsePerfData('mem=500MB');
-        expect(result[0].warn).toBeNull();
-        expect(result[0].crit).toBeNull();
+        expect(result[0]!.warn).toBeNull();
+        expect(result[0]!.crit).toBeNull();
     });
 
     it('parses percent unit', () => {
         const result = parsePerfData('usage=75%');
-        expect(result[0].value).toBe(75);
-        expect(result[0].unit).toBe('%');
+        expect(result[0]!.value).toBe(75);
+        expect(result[0]!.unit).toBe('%');
     });
 });
 

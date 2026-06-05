@@ -108,7 +108,7 @@ describe('BoardCanvas', () => {
             .findAll('svg')
             .map((s) => s.attributes('style') ?? '')
             .filter((style) => style.includes('z-index'))
-            .map((style) => parseInt(style.match(/z-index:\s*(\d+)/)![1], 10));
+            .map((style) => parseInt(style.match(/z-index:\s*(\d+)/)?.[1] ?? '', 10));
         // Three distinct buckets (2, 10, 20) sorted ascending; z-less + z=10 merge.
         expect(zLayers).toEqual([2, 10, 20]);
     });

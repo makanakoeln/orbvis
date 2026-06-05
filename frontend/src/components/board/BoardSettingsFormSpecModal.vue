@@ -1108,7 +1108,7 @@ const isDirty = computed(
 );
 
 const saveButtonTooltip = computed(() => {
-    if (saving.value) return undefined;
+    if (saving.value) return '';
     if (!isDirty.value) return t('board.saveDisabledClean');
     if (saveAttempted.value && !customSectionValid.value) return t('board.saveDisabledInvalid');
     return t('board.saveShortcutTooltip', { shortcut: saveShortcutHint });
@@ -1232,7 +1232,7 @@ function buildPreviewPatch(): Record<string, unknown> {
 
 const worldmapViewEdited = ref(false);
 watch(
-    () => [form.value.worldmap_lat, form.value.worldmap_lng, form.value.worldmap_zoom],
+    () => [form.value.worldmap_lat, form.value.worldmap_lng, form.value.worldmap_zoom] as const,
     ([lat, lng, zoom]) => {
         worldmapViewEdited.value = true;
         if (form.value.map_type === 'worldmap') {

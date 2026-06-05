@@ -204,7 +204,7 @@ const emit = defineEmits<{
 
 function stateToBoardObject(state: ObjectState): BoardObject {
     if (state.type === 'service' && state.object_id.includes(';')) {
-        const [host, svc] = state.object_id.split(';', 2);
+        const [host = '', svc = ''] = state.object_id.split(';', 2);
         return {
             id: state.object_id,
             type: 'service',
@@ -250,7 +250,7 @@ const filterTerms = computed(() => parseFilterTerms(props.filterNeedle ?? ''));
 
 function radarFieldValue(s: ObjectState, field: FilterField): string[] {
     const isService = s.type === 'service' && s.object_id.includes(';');
-    const [host, svc] = isService ? s.object_id.split(';', 2) : [s.object_id, ''];
+    const [host = '', svc = ''] = isService ? s.object_id.split(';', 2) : [s.object_id, ''];
     switch (field) {
         case 'host':
             return s.type === 'host' || isService ? [host, s.alias ?? ''] : [];

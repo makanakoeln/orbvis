@@ -2,7 +2,7 @@ import { watch } from 'vue';
 
 import { useAuthStore } from '@/stores/auth';
 
-export function applyTheme(theme: string, ssoActive: boolean, cmkTheme?: string | null) {
+export function applyTheme(theme: string, _ssoActive: boolean, cmkTheme?: string | null) {
     let dark: boolean;
     if (theme === 'dark') {
         dark = true;

@@ -258,12 +258,12 @@ const worstPath = computed<Set<HierarchyNode<AggregationNode>>>(() => {
     layout.value.each((n: HN) => {
         if (n.data.node_type === 'bi_leaf' && n.data.state > 0) problemLeaves.push(n);
     });
-    if (problemLeaves.length === 0) return new Set();
     problemLeaves.sort((a, b) => {
         if (a.data.state !== b.data.state) return b.data.state - a.data.state;
         return b.depth - a.depth; // deeper wins as a tie-break
     });
-    const worst: HN = problemLeaves[0];
+    const worst = problemLeaves[0];
+    if (worst === undefined) return new Set();
     const set = new Set<HN>();
     let cur: HN | null = worst;
     while (cur !== null) {

@@ -3,6 +3,8 @@
  * SVG-Attribute können kein var() nutzen, daher bleiben die Hex-Werte hier als JS-Map.
  * Die CSS-Vars in style.css (--color-warning etc.) müssen mit diesen Werten übereinstimmen.
  */
+const PENDING_COLOR = '#9ca3af';
+
 export const STATE_COLORS: Record<string, string> = {
     UP: '#4ade80',
     OK: '#4ade80',
@@ -11,7 +13,7 @@ export const STATE_COLORS: Record<string, string> = {
     UNREACHABLE: '#fb923c',
     UNKNOWN: '#fb923c',
     WARNING: '#ffd000',
-    PENDING: '#9ca3af',
+    PENDING: PENDING_COLOR,
     // Object referenced on the board doesn't exist in monitoring data — neutral
     // dim grey, paired with a dashed outline + "?" badge for clear differentiation.
     NOT_FOUND: '#71717a',
@@ -23,7 +25,7 @@ export const DOWNTIME_COLOR = '#3b82f6';
 export const ACKNOWLEDGED_COLOR = '#fbbf24';
 
 export function stateColor(state: string | undefined): string {
-    return STATE_COLORS[state ?? 'PENDING'] ?? STATE_COLORS['PENDING'];
+    return STATE_COLORS[state ?? 'PENDING'] ?? PENDING_COLOR;
 }
 
 // Checkmk state colours as CSS custom properties (defined in style.css @theme,

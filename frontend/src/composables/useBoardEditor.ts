@@ -29,8 +29,8 @@ interface LineCoords {
     y: number;
     x2: number;
     y2: number;
-    mid_x?: number | null;
-    mid_y?: number | null;
+    mid_x: number | null;
+    mid_y: number | null;
 }
 
 type DragTarget = {
@@ -267,8 +267,9 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         const t = dragTarget.value;
         if (!t || t.kind !== 'line') return;
         dragTarget.value = null;
+        const lp = lineDragPositions[t.id];
+        if (!lp) return;
         try {
-            const lp = lineDragPositions[t.id];
             await boardsApi.updateObject(
                 mapName.value,
                 t.id,
@@ -361,14 +362,14 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
             type: draft.type,
             x: placePos.x,
             y: placePos.y,
-            host_name: draft.host_name || undefined,
-            service_description: draft.service_description || undefined,
-            group_name: draft.group_name || undefined,
-            map_name: draft.board_name || undefined,
-            aggregation_id: draft.aggregation_id || undefined,
-            object_types: draft.type === 'dyngroup' ? draft.object_types : undefined,
-            object_filter: draft.type === 'dyngroup' ? draft.object_filter || undefined : undefined,
-            expand_depth: draft.expand_depth || undefined,
+            host_name: draft.host_name || null,
+            service_description: draft.service_description || null,
+            group_name: draft.group_name || null,
+            map_name: draft.board_name || null,
+            aggregation_id: draft.aggregation_id || null,
+            object_types: draft.type === 'dyngroup' ? draft.object_types : null,
+            object_filter: draft.type === 'dyngroup' ? draft.object_filter || null : null,
+            ...(draft.expand_depth ? { expand_depth: draft.expand_depth } : {}),
             label: {
                 show: s.label_show,
                 text:
@@ -393,7 +394,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
                           image: draft.image_src || null,
                           image_size: null,
                       },
-            image_src: draft.type === 'image' ? draft.image_src || null : undefined,
+            image_src: draft.type === 'image' ? draft.image_src || null : null,
             url_target: s.url_target,
             z: s.z,
             ...(draft.type === 'line'
@@ -435,14 +436,14 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
             y: 0,
             lat,
             lng,
-            host_name: draft.host_name || undefined,
-            service_description: draft.service_description || undefined,
-            group_name: draft.group_name || undefined,
-            map_name: draft.board_name || undefined,
-            aggregation_id: draft.aggregation_id || undefined,
-            object_types: draft.type === 'dyngroup' ? draft.object_types : undefined,
-            object_filter: draft.type === 'dyngroup' ? draft.object_filter || undefined : undefined,
-            expand_depth: draft.expand_depth || undefined,
+            host_name: draft.host_name || null,
+            service_description: draft.service_description || null,
+            group_name: draft.group_name || null,
+            map_name: draft.board_name || null,
+            aggregation_id: draft.aggregation_id || null,
+            object_types: draft.type === 'dyngroup' ? draft.object_types : null,
+            object_filter: draft.type === 'dyngroup' ? draft.object_filter || null : null,
+            ...(draft.expand_depth ? { expand_depth: draft.expand_depth } : {}),
             label: {
                 show: s.label_show,
                 text: draft.label_text || null,

@@ -408,7 +408,8 @@ const missingFieldHint = computed(() => {
     const d = props.draft;
     if (d.type === 'service')
         return `↑ ${t(d.host_name ? 'boardSettings.serviceDescription' : 'boardSettings.hostname')}`;
-    return MISSING_FIELD_KEY[d.type] ? `↑ ${t(MISSING_FIELD_KEY[d.type])}` : '';
+    const missingKey = MISSING_FIELD_KEY[d.type];
+    return missingKey ? `↑ ${t(missingKey)}` : '';
 });
 
 const addObjects = ref<string[]>([]);

@@ -1644,7 +1644,10 @@ async function doClone() {
     try {
         await boardsApi.clone(
             confirmClone.value,
-            { new_name: cloneNewName.value, alias: cloneAlias.value || undefined },
+            {
+                new_name: cloneNewName.value,
+                ...(cloneAlias.value ? { alias: cloneAlias.value } : {}),
+            },
             auth.accessToken!,
         );
         await boardsStore.fetchBoards();

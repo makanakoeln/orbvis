@@ -77,8 +77,12 @@ export function fmtValueWithUnit(v: number, unit: string | null | undefined): st
 // Converts a raw perf_data value to its base unit for use as ECharts series data.
 // ECharts handles scaling internally, so all series values must be in a consistent base unit.
 export function normalizeMetricValue(v: number, unit?: string): number {
-    if (unit && _NON_SI_PREFIXED_UNITS.has(unit)) return v;
-    if (isSingleCharSIPrefix(unit)) return v * _SI_MULT[unit!];
-    if (!unit || !/^[kKmMgGtT]/.test(unit)) return v;
-    return v * (_SI_MULT[unit[0]] ?? 1);
+    if (!unit) return v;
+    if (_NON_SI_PREFIXED_UNITS.has(unit)) return v;
+    if (unit.length === 1) {
+        const mult = _SI_MULT[unit];
+        if (mult !== undefined) return v * mult;
+    }
+    if (!/^[kKmMgGtT]/.test(unit)) return v;
+    return v * (_SI_MULT[unit.charAt(0)] ?? 1);
 }

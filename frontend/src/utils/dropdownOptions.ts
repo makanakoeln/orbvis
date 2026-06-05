@@ -82,10 +82,10 @@ export function lineStyleOptions(t: T): { name: string | null; title: string }[]
     const source = store.lineStyles.length > 0 ? store.lineStyles : LINE_STYLE_FALLBACK;
     return [
         { name: null, title: t('boardSettings.lineDefault') },
-        ...source.map((s) => ({
-            name: s.name,
-            title: LINE_STYLE_I18N[s.name] ? t(LINE_STYLE_I18N[s.name]) : s.title,
-        })),
+        ...source.map((s) => {
+            const i18nKey = LINE_STYLE_I18N[s.name];
+            return { name: s.name, title: i18nKey ? t(i18nKey) : s.title };
+        }),
     ];
 }
 

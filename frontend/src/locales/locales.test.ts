@@ -22,8 +22,8 @@ function collectLeafPaths(obj: LocaleNode, prefix = ''): Map<string, string> {
 
 function extractInterpolationVars(value: string): Set<string> {
     const vars = new Set<string>();
-    for (const match of value.matchAll(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g)) {
-        vars.add(match[1]);
+    for (const [, name] of value.matchAll(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g)) {
+        if (name !== undefined) vars.add(name);
     }
     return vars;
 }

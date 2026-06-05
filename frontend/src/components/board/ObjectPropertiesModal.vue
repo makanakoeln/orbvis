@@ -378,7 +378,7 @@
                                             :empty-text="
                                                 metricSuggestions.length === 0
                                                     ? t('boardSettings.noMetrics')
-                                                    : undefined
+                                                    : ''
                                             "
                                             class="orb-props__full"
                                             @change="addMetric"
@@ -549,7 +549,7 @@
                                     :empty-text="
                                         form.host_name && !loadingServices
                                             ? t('boardSettings.noServices')
-                                            : undefined
+                                            : ''
                                     "
                                     class="orb-props__grow"
                                 />
@@ -624,7 +624,7 @@
                                     :empty-text="
                                         metricSuggestions.length === 0
                                             ? t('boardSettings.noMetrics')
-                                            : undefined
+                                            : ''
                                     "
                                     class="orb-props__grow"
                                 />
@@ -651,7 +651,7 @@
                                     :empty-text="
                                         metricSuggestions.length === 0
                                             ? t('boardSettings.noMetrics')
-                                            : undefined
+                                            : ''
                                     "
                                     class="orb-props__grow"
                                 />
@@ -1028,7 +1028,7 @@
                                         :empty-text="
                                             metricSuggestions.length === 0
                                                 ? t('boardSettings.noMetrics')
-                                                : undefined
+                                                : ''
                                         "
                                         class="orb-props__grow"
                                     />
@@ -1314,9 +1314,9 @@ const { t } = useI18n();
 
 const props = defineProps<{
     object: BoardObject;
-    state?: ObjectState;
+    state?: ObjectState | undefined;
     connectionId: string;
-    mapType?: string;
+    mapType?: string | undefined;
     boardIconSize?: number | null;
     boardDefaultZ?: number;
     checkmkUrl?: string | null;

@@ -107,7 +107,7 @@
 
         <DetailDrawer
             :object="detailObject"
-            :state="detailState"
+            v-bind="detailStateProps"
             :checkmk-url="props.checkmkUrl ?? null"
             :connection-id="props.connectionId ?? null"
             :selectable-hosts="flowSelectableHosts"
@@ -163,7 +163,7 @@
         <ContextMenu
             v-if="contextMenu.visible && contextMenu.object"
             :object="contextMenu.object"
-            :state="contextMenu.state"
+            v-bind="contextMenuStateProps"
             :x="contextMenu.x"
             :y="contextMenu.y"
             :checkmk-url="props.checkmkUrl ?? null"
@@ -582,6 +582,12 @@ const contextMenu = reactive<{
     y: number;
 }>({ visible: false, object: null, state: undefined, x: 0, y: 0 });
 
+// ContextMenu's `state?:` prop rejects an explicit `undefined` under
+// exactOptionalPropertyTypes — spread the prop in only when a value exists.
+const contextMenuStateProps = computed<{ state?: ObjectState }>(() =>
+    contextMenu.state !== undefined ? { state: contextMenu.state } : {},
+);
+
 function closeContextMenu(): void {
     contextMenu.visible = false;
     contextMenu.object = null;
@@ -750,6 +756,11 @@ const detailState = computed<ObjectState | undefined>(() => {
     const fresh = lastFNodes.find((n) => n.id === cur.id) ?? cur;
     return objectStateFromFNode(fresh);
 });
+
+// Same exactOptionalPropertyTypes dance as for the context menu above.
+const detailStateProps = computed<{ state?: ObjectState }>(() =>
+    detailState.value !== undefined ? { state: detailState.value } : {},
+);
 
 // The initial render schedules a refining fitView once the force-simulation
 // settles. If the operator clicks a node before that fires, we'd animate the
@@ -1296,8 +1307,8 @@ function objectStateFromFNode(d: FNode): ObjectState {
             stale: false,
             notifications_enabled: svc?.notifications_enabled ?? true,
             active_checks_enabled: parent?.active_checks_enabled ?? true,
-            alias: parent?.alias,
-            address: parent?.address,
+            ...(parent?.alias !== undefined && { alias: parent.alias }),
+            ...(parent?.address !== undefined && { address: parent.address }),
             site_id: parent?.site_id ?? null,
             last_check: svc?.last_check ?? null,
             next_check: svc?.next_check ?? null,
@@ -1317,15 +1328,15 @@ function objectStateFromFNode(d: FNode): ObjectState {
         stale: false,
         notifications_enabled: topo?.notifications_enabled ?? true,
         active_checks_enabled: topo?.active_checks_enabled ?? true,
-        alias: topo?.alias,
-        address: topo?.address,
+        ...(topo?.alias !== undefined && { alias: topo.alias }),
+        ...(topo?.address !== undefined && { address: topo.address }),
         site_id: topo?.site_id ?? null,
         last_check: topo?.last_check ?? null,
         next_check: topo?.next_check ?? null,
         last_state_change: topo?.last_state_change ?? null,
-        state_type: topo?.state_type,
-        current_attempt: topo?.current_attempt,
-        max_attempts: topo?.max_attempts,
+        ...(topo?.state_type !== undefined && { state_type: topo.state_type }),
+        ...(topo?.current_attempt !== undefined && { current_attempt: topo.current_attempt }),
+        ...(topo?.max_attempts !== undefined && { max_attempts: topo.max_attempts }),
         services_summary: topo?.services_summary ?? null,
     };
 }
@@ -2518,8 +2529,8 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     nodeMerge.select('text.node-label').text((d) => {
         if (d.nodeType === 'more') return `+${d.moreCount ?? 0} more`;
         if (d.nodeType === 'service') {
-            const parts = d.id.split('::');
-            return parts[parts.length - 1];
+            // split() always yields ≥ 1 element
+            return d.id.split('::').at(-1)!;
         }
         if (d.nodeType === 'site') return d.siteId ?? '';
         return d.id;

@@ -414,7 +414,16 @@ const { t } = useI18n();
 const store = useSettingsStore();
 const connectionsStore = useConnectionsStore();
 
-const form = reactive<GlobalSettings>({ ...store.settings });
+// Template fields are required (nullable) in the form so the v-model bindings
+// never carry ``undefined`` into the CMK inputs.
+type SettingsForm = GlobalSettings &
+    Required<Pick<GlobalSettings, 'hover_template' | 'context_template'>>;
+
+const form = reactive<SettingsForm>({
+    ...store.settings,
+    hover_template: store.settings.hover_template ?? null,
+    context_template: store.settings.context_template ?? null,
+});
 const saving = ref(false);
 const saveError = ref('');
 const savedOk = ref(false);

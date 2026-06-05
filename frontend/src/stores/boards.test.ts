@@ -122,7 +122,7 @@ describe('useBoardsStore', () => {
         // In-place append: no extra list() round-trip.
         expect(mockBoardsApi.list).not.toHaveBeenCalled();
         expect(store.boards).toHaveLength(1);
-        expect(store.boards[0].name).toBe('board1');
+        expect(store.boards[0]!.name).toBe('board1');
         expect(result).toEqual(sampleConfig);
     });
 

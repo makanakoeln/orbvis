@@ -20,7 +20,7 @@ let _nextId = 0;
 export function useToast() {
     function show(type: ToastType, message: string, duration = 3500, action?: ToastAction): void {
         const id = _nextId++;
-        toasts.value.push({ id, type, message, action });
+        toasts.value.push({ id, type, message, ...(action !== undefined ? { action } : {}) });
         setTimeout(() => {
             const idx = toasts.value.findIndex((t) => t.id === id);
             if (idx !== -1) toasts.value.splice(idx, 1);

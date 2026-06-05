@@ -325,7 +325,11 @@ interface PydanticError {
 function toFormValidation(detail: unknown): { messages: Validation; summary: string } | null {
     if (!Array.isArray(detail)) return null;
     const errs = detail as PydanticError[];
-    if (!errs.length || !errs.every((e) => Array.isArray(e?.loc) && typeof e?.msg === 'string')) {
+    const first = errs[0];
+    if (
+        first === undefined ||
+        !errs.every((e) => Array.isArray(e?.loc) && typeof e?.msg === 'string')
+    ) {
         return null;
     }
     // Pydantic's BeforeValidator wraps the raised ValueError as
@@ -337,7 +341,6 @@ function toFormValidation(detail: unknown): { messages: Validation; summary: str
         message: clean(e.msg),
         replacement_value: e.input ?? null,
     }));
-    const first = errs[0];
     const field = first.loc.filter((s) => s !== 'body').join('.') || 'value';
     return { messages, summary: t('settings.validationFailed', { field, msg: clean(first.msg) }) };
 }

@@ -166,8 +166,8 @@ describe('BoardLine – styling regressions', () => {
         expect(thinDash).toBeDefined();
         expect(thickDash).toBeDefined();
         // First number of "<gap> <dash>"
-        const thinFirst = parseFloat(thinDash!.split(' ')[0]);
-        const thickFirst = parseFloat(thickDash!.split(' ')[0]);
+        const thinFirst = parseFloat(thinDash!.split(' ')[0] ?? '');
+        const thickFirst = parseFloat(thickDash!.split(' ')[0] ?? '');
         expect(thickFirst).toBeGreaterThan(thinFirst);
     });
 
@@ -189,14 +189,14 @@ describe('BoardLine – styling regressions', () => {
         // The visible stroke is now a <polyline>; its last point is the end.
         const visibleLine = wrapper.findAll('polyline').at(-1)!;
         const pts = visibleLine.attributes('points')!.trim().split(/\s+/);
-        const x2 = parseFloat(pts[pts.length - 1].split(',')[0]);
+        const x2 = parseFloat(pts.at(-1)?.split(',')[0] ?? '');
         // Stroke must end before the arrow tip (x=200).
         expect(x2).toBeLessThan(200);
         // Arrow polygon's first vertex is the tip — should still anchor at x=200.
         const polygon = wrapper.find('polygon');
         expect(polygon.exists()).toBe(true);
-        const tip = polygon.attributes('points')!.split(' ')[0];
-        expect(parseFloat(tip.split(',')[0])).toBe(200);
+        const tip = polygon.attributes('points')!.split(' ')[0] ?? '';
+        expect(parseFloat(tip.split(',')[0] ?? '')).toBe(200);
     });
 
     it('arrow_inward (middle) arrows scale with line_width', () => {
@@ -219,10 +219,11 @@ describe('BoardLine – styling regressions', () => {
         expect(thick.findAll('polygon').length).toBeGreaterThanOrEqual(2);
         // The right triangle's points string encodes a base offset perpendicular
         // to the line — at width=15 the triangle is geometrically larger.
-        const thinPoly = thin.findAll('polygon')[0].attributes('points')!;
-        const thickPoly = thick.findAll('polygon')[0].attributes('points')!;
+        // length ≥ 2 asserted above
+        const thinPoly = thin.findAll('polygon')[0]!.attributes('points')!;
+        const thickPoly = thick.findAll('polygon')[0]!.attributes('points')!;
         // Compare the spread between the three vertices' x coordinates.
-        const xs = (s: string) => s.split(' ').map((p) => parseFloat(p.split(',')[0]));
+        const xs = (s: string) => s.split(' ').map((p) => parseFloat(p.split(',')[0] ?? ''));
         const span = (s: string) => Math.max(...xs(s)) - Math.min(...xs(s));
         expect(span(thickPoly)).toBeGreaterThan(span(thinPoly));
     });

@@ -21,7 +21,6 @@ import { computed } from 'vue';
 import VChart from 'vue-echarts';
 
 import {
-    baseUnit,
     CHART_PALETTE,
     fmtValueWithUnit,
     normalizeMetricValue,
@@ -75,8 +74,9 @@ function _fmtVal(normalized: number): string {
 
 function _buildTooltip(rawParams: TooltipParam | TooltipParam[]): string {
     const items = Array.isArray(rawParams) ? rawParams : [rawParams];
-    if (!items.length) return '';
-    const ts = items[0].value[0];
+    const head = items[0];
+    if (head === undefined) return '';
+    const ts = head.value[0];
     const rows = items
         .map(
             (p) =>
@@ -108,7 +108,6 @@ const option = computed((): EOption => {
     const tooltipBg = dark ? 'rgba(24,24,27,0.96)' : 'rgba(255,255,255,0.96)';
     const tooltipBorder = dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
     const multiSeries = props.metricKeys.length > 1;
-    const unit = props.unit;
 
     const now = Date.now();
     const xMin = props.windowSecs > 0 ? now - props.windowSecs * 1000 : undefined;
@@ -116,7 +115,8 @@ const option = computed((): EOption => {
 
     const series: LineSeriesOption[] = props.metricKeys.map((key, i) => {
         const pts = props.data[key] ?? [];
-        const color = CHART_PALETTE[i % CHART_PALETTE.length];
+        // CHART_PALETTE is a non-empty constant, so `i % length` is always in bounds.
+        const color = CHART_PALETTE[i % CHART_PALETTE.length]!;
 
         // Build threshold markLines for single-series charts only
         const markLineItems: NonNullable<NonNullable<LineSeriesOption['markLine']>['data']> = [];

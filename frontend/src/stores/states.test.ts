@@ -49,14 +49,14 @@ describe('states store — SSE polling fallback + re-probe (T14)', () => {
         expect(store.wsAvailable).toBe(true);
 
         // The connection errors before it ever opened → permanent-polling path.
-        FakeEventSource.instances[0].onerror?.();
+        FakeEventSource.instances[0]!.onerror?.();
         expect(store.wsAvailable).toBe(false);
-        expect(FakeEventSource.instances[0].closed).toBe(true);
+        expect(FakeEventSource.instances[0]!.closed).toBe(true);
 
         // After the re-probe interval, a probe EventSource is opened to test SSE.
         vi.advanceTimersByTime(60_000);
         expect(FakeEventSource.instances).toHaveLength(2);
-        const probe = FakeEventSource.instances[1];
+        const probe = FakeEventSource.instances[1]!;
 
         // Probe opens → SSE is back: probe discarded, live stream re-established.
         probe.onopen?.();
@@ -68,14 +68,14 @@ describe('states store — SSE polling fallback + re-probe (T14)', () => {
     it('keeps polling (and does not leak probes) while SSE stays unreachable', async () => {
         const store = useStatesStore();
         await store.connectToMap('board1', 'token');
-        FakeEventSource.instances[0].onerror?.();
+        FakeEventSource.instances[0]!.onerror?.();
         expect(store.wsAvailable).toBe(false);
 
         // First re-probe fails before opening → discarded, still polling.
         vi.advanceTimersByTime(60_000);
         expect(FakeEventSource.instances).toHaveLength(2);
-        FakeEventSource.instances[1].onerror?.();
-        expect(FakeEventSource.instances[1].closed).toBe(true);
+        FakeEventSource.instances[1]!.onerror?.();
+        expect(FakeEventSource.instances[1]!.closed).toBe(true);
         expect(store.wsAvailable).toBe(false);
 
         // Next interval re-probes again (one probe per tick, no overlap leak).
@@ -91,9 +91,9 @@ describe('states store — SSE polling fallback + re-probe (T14)', () => {
     it('drops an in-flight probe on disconnect — no stream promoted for the wrong board', async () => {
         const store = useStatesStore();
         await store.connectToMap('board1', 'token');
-        FakeEventSource.instances[0].onerror?.(); // → polling
+        FakeEventSource.instances[0]!.onerror?.(); // → polling
         vi.advanceTimersByTime(60_000); // → probe (instance[1])
-        const probe = FakeEventSource.instances[1];
+        const probe = FakeEventSource.instances[1]!;
         expect(probe.onopen).toBeTypeOf('function');
 
         // Board switch / unmount while the probe is still connecting.
@@ -171,7 +171,7 @@ describe('states store — folder-tree delta apply', () => {
     it('applies a full delta then patches changed nodes in place', async () => {
         const store = useStatesStore();
         await store.connectToMap('b', 't');
-        const es = FakeEventSource.instances[0];
+        const es = FakeEventSource.instances[0]!;
         es.onopen?.();
 
         send(es, {
@@ -216,7 +216,7 @@ describe('states store — folder-tree delta apply', () => {
     it('reorders children when a delta carries children_order', async () => {
         const store = useStatesStore();
         await store.connectToMap('b', 't');
-        const es = FakeEventSource.instances[0];
+        const es = FakeEventSource.instances[0]!;
         es.onopen?.();
         send(es, {
             full: true,

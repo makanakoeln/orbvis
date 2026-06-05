@@ -938,7 +938,7 @@ function stateBgColor(state: string): string {
 
 const props = defineProps<{
     object: BoardObject | null;
-    state?: ObjectState;
+    state?: ObjectState | undefined;
     checkmkUrl?: string | null;
     /** Board's connection_id — used to fetch on-demand object details. */
     connectionId?: string | null;
@@ -950,7 +950,7 @@ const props = defineProps<{
     readonly?: boolean;
 }>();
 
-const portalTarget = computed(() => props.portalTarget);
+const portalTarget = computed(() => props.portalTarget ?? 'body');
 
 const emit = defineEmits<{
     close: [];
@@ -1383,9 +1383,9 @@ function _nodesAtDepth(
 
 function _chipsFromCounts(counts: Record<number, number>): SummaryChip[] {
     return BI_CHIP_ORDER.map((s) => ({
-        state: BI_STATE_LABEL_MAP[s],
+        state: BI_STATE_LABEL_MAP[s] ?? String(s),
         count: counts[s] ?? 0,
-        label: BI_STATE_LABEL_MAP[s],
+        label: BI_STATE_LABEL_MAP[s] ?? String(s),
         tone: BI_STATE_TONE[s] ?? 'unknown',
         url: null,
     }));
@@ -1587,7 +1587,7 @@ const hostsSummary = computed<{ up: number; down: number; unreachable: number } 
     const out = props.state?.output;
     if (!out) return null;
     const m = out.match(/(\d+)\s+up,\s*(\d+)\s+down,\s*(\d+)\s+unreachable/);
-    if (!m) return null;
+    if (!m?.[1] || !m[2] || !m[3]) return null;
     return { up: parseInt(m[1], 10), down: parseInt(m[2], 10), unreachable: parseInt(m[3], 10) };
 });
 
@@ -1634,7 +1634,7 @@ const longOutputText = computed(() => details.value?.long_output ?? '');
 interface MetaRow {
     label: string;
     value: string;
-    tone?: 'warn';
+    tone?: 'warn' | undefined;
     href?: string | null;
 }
 
@@ -1880,7 +1880,7 @@ watch([() => props.object?.host_name, () => props.object?.service_description], 
 interface MetaRow2 {
     label: string;
     value: string;
-    tone?: 'warn';
+    tone?: 'warn' | undefined;
 }
 
 const contextMetaRows = computed<MetaRow2[]>(() => {
@@ -1981,16 +1981,17 @@ interface MainHeadline {
 }
 const mainHeadline = computed<MainHeadline | null>(() => {
     const pf = perfometer.value;
-    if (pf && pf.pcts.length > 0) {
-        const pct = Math.min(100, pf.pcts[0]);
+    const firstPct = pf?.pcts[0];
+    if (pf && firstPct !== undefined) {
+        const pct = Math.min(100, firstPct);
         // pf.label already encodes both name and value ("RAM 53.88%"), so we
         // don't repeat it as a separate detail line under the bar.
         return { label: pf.label, valueLabel: '', pct, color: utilColor(pct) };
     }
     const longRow = [...longOutputRows.value]
         .map((r) => {
-            const pctMatch = r.value.match(/(\d+(?:\.\d+)?)\s*%/);
-            return pctMatch && r.label ? { ...r, pct: parseFloat(pctMatch[1]) } : null;
+            const pctStr = r.value.match(/(\d+(?:\.\d+)?)\s*%/)?.[1];
+            return pctStr && r.label ? { ...r, pct: parseFloat(pctStr) } : null;
         })
         .filter((r): r is NonNullable<typeof r> => r !== null)
         .sort((a, b) => b.pct - a.pct)[0];

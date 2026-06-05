@@ -31,7 +31,11 @@ export function toFormValidation(
 ): FormValidationResult | null {
     if (!Array.isArray(detail)) return null;
     const errs = detail as PydanticError[];
-    if (!errs.length || !errs.every((e) => Array.isArray(e?.loc) && typeof e?.msg === 'string')) {
+    const first = errs[0];
+    if (
+        first === undefined ||
+        !errs.every((e) => Array.isArray(e?.loc) && typeof e?.msg === 'string')
+    ) {
         return null;
     }
     const messages: ValidationMessage[] = [];
@@ -50,7 +54,6 @@ export function toFormValidation(
             messages.push(item);
         }
     }
-    const first = errs[0];
     const field = first.loc.filter((s) => s !== 'body').join('.') || 'value';
     const summary = `${field}: ${cleanMsg(first.msg)}`;
     return { messages, stray, summary };

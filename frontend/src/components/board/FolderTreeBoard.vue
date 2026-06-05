@@ -133,7 +133,7 @@
                             :is-open="row.isOpen"
                             :is-expandable="row.isExpandable"
                             :multi-site="multiSite"
-                            :host-name="row.hostName"
+                            v-bind="rowHostNameProps(row)"
                             @toggle="toggle"
                             @expand-host="ensureServices"
                             @select-host="$emit('select-host', $event)"
@@ -264,7 +264,7 @@ function visibleHostStats(
     for (const c of node.children) {
         const s = visibleHostStats(c, selfMatch);
         hosts += s.hosts;
-        for (const k of Object.keys(s.counts)) counts[k] = (counts[k] ?? 0) + s.counts[k];
+        for (const [k, v] of Object.entries(s.counts)) counts[k] = (counts[k] ?? 0) + v;
     }
     return { hosts, counts };
 }
@@ -316,7 +316,7 @@ function persistView(patch: Partial<FolderTreeView>) {
         .then((updated) => {
             const cur = boards.currentBoard;
             if (cur && cur.name === updated.name) {
-                cur.version = updated.version;
+                if (updated.version !== undefined) cur.version = updated.version;
                 cur.view = updated.view;
             }
         })
@@ -582,8 +582,14 @@ interface FlatRow {
     depth: number;
     isOpen: boolean;
     isExpandable: boolean;
-    hostName?: string;
+    hostName?: string | undefined;
     note?: 'loading' | 'error' | 'empty';
+}
+
+// FolderTreeRow's `hostName?:` prop rejects an explicit `undefined` under
+// exactOptionalPropertyTypes — spread the prop in only when a value exists.
+function rowHostNameProps(row: FlatRow): { hostName?: string } {
+    return row.hostName !== undefined ? { hostName: row.hostName } : {};
 }
 
 // A folder's visible children under the active filter (the matched-hosts set is
@@ -630,7 +636,7 @@ const flatRows = computed<FlatRow[]>(() => {
         depth: number,
         ancestorMatched: boolean,
         hostName?: string,
-    ) => {
+    ): void => {
         const selfMatch = ancestorMatched || selfMatches(node, q);
         let isOpen = false;
         if (expanded.has(node.path)) isOpen = true;
@@ -653,7 +659,7 @@ const flatRows = computed<FlatRow[]>(() => {
         if (!isOpen) return;
 
         if (node.kind === 'host') {
-            const note = (n: 'loading' | 'error' | 'empty') =>
+            const note = (n: 'loading' | 'error' | 'empty'): void => {
                 out.push({
                     key: `${node.path}:${n}`,
                     node,
@@ -662,6 +668,7 @@ const flatRows = computed<FlatRow[]>(() => {
                     isExpandable: false,
                     note: n,
                 });
+            };
             if (serviceLoading.has(node.title)) return note('loading');
             if (serviceError.has(node.title)) return note('error');
             const svcs = rowServices(node, selfMatch);

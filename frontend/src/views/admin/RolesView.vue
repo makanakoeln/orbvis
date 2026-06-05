@@ -296,11 +296,11 @@ const permPresetOptions = computed(() => ({
 function applyPreset() {
     if (!permPreset.value) return;
     if (permPreset.value.endsWith(':custom')) {
-        const [mod, act] = permPreset.value.split(':');
+        const [mod = '', act = ''] = permPreset.value.split(':');
         newPerm.value = { mod, act, obj: '' };
         return;
     }
-    const [mod, act, obj] = permPreset.value.split(':');
+    const [mod = '', act = '', obj = ''] = permPreset.value.split(':');
     newPerm.value = { mod, act, obj };
 }
 
@@ -362,9 +362,9 @@ function addDraftPerm() {
     let obj = newPerm.value.obj || '*';
     if (!permPreset.value.endsWith(':custom')) {
         const parts = permPreset.value.split(':');
-        mod = parts[0];
-        act = parts[1];
-        obj = parts[2];
+        mod = parts[0] ?? '';
+        act = parts[1] ?? '';
+        obj = parts[2] ?? '';
     }
     if (!mod || !act || !obj) {
         permError.value = t('admin.boardNameLabel');

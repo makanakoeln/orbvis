@@ -176,7 +176,8 @@ const emit = defineEmits<{
 
 const step = ref(1);
 const TOTAL = computed(() => props.steps.length);
-const currentStep = computed(() => props.steps[step.value - 1]);
+// step always stays within 1..steps.length, so the lookup never misses.
+const currentStep = computed(() => props.steps[step.value - 1]!);
 
 // ─── Target rect ─────────────────────────────────────────────────────────────
 

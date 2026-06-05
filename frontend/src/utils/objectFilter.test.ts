@@ -35,7 +35,6 @@ describe('objectMatchesFilter', () => {
     it('falls through to label.text when other fields are empty', () => {
         const o = obj({
             type: 'textbox',
-            host_name: undefined,
             label: {
                 show: true,
                 text: 'Datacenter A',

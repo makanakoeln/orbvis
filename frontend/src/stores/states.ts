@@ -192,9 +192,10 @@ export const useStatesStore = defineStore('states', () => {
 
     function _recordHistory(objectId: string, perf_data: string, ts: number) {
         const metrics = parsePerfData(perf_data);
-        if (!metrics.length) return;
+        const first = metrics[0];
+        if (first === undefined) return;
         const arr = history.value[objectId] ?? [];
-        arr.push({ ts, pct: utilPercent(metrics[0]) });
+        arr.push({ ts, pct: utilPercent(first) });
         history.value[objectId] = arr.length > HISTORY_MAX ? arr.slice(-HISTORY_MAX) : arr;
         const mv = metricValues.value[objectId] ?? {};
         for (const m of metrics) {

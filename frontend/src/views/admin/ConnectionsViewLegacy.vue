@@ -603,7 +603,26 @@ const saveBlockedTitle = computed(() => {
     return t('admin.saveBlocked') + ' ' + fields.map((f) => `${f}: ${errs[f]}`).join('; ');
 });
 
-const emptyForm = (): ConnectionConfig => ({
+// Optional ``ConnectionConfig`` fields are required (nullable) in the dialog
+// form so v-model bindings never carry ``undefined`` into the CMK inputs.
+type ConnectionForm = ConnectionConfig &
+    Required<
+        Pick<
+            ConnectionConfig,
+            | 'socket_path'
+            | 'host'
+            | 'port'
+            | 'checkmk_url'
+            | 'automation_user'
+            | 'automation_secret'
+            | 'icinga2_url'
+            | 'icinga2_username'
+            | 'icinga2_password'
+            | 'icinga2_verify_ssl'
+        >
+    >;
+
+const emptyForm = (): ConnectionForm => ({
     id: '',
     type: 'livestatus',
     label: '',
@@ -619,7 +638,7 @@ const emptyForm = (): ConnectionConfig => ({
     icinga2_password: null,
     icinga2_verify_ssl: true,
 });
-const form = reactive<ConnectionConfig>(emptyForm());
+const form = reactive<ConnectionForm>(emptyForm());
 
 const connectionTypeOptions = computed(() => ({
     type: 'fixed' as const,
@@ -643,7 +662,8 @@ function openCreate() {
     livestatusMode.value = 'socket';
     dialog.mode = 'create';
     dialog.open = true;
-    if (store.connections.length > 0) fetchContext(store.connections[0].id);
+    const firstConnection = store.connections[0];
+    if (firstConnection) fetchContext(firstConnection.id);
 }
 
 function openEdit(b: ConnectionConfig) {

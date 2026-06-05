@@ -747,7 +747,7 @@ async function cmkRequest(baseUrl: string, path: string, body?: unknown): Promis
             Accept: 'application/json',
             'If-Match': '*',
         },
-        body: body !== undefined ? JSON.stringify(body) : undefined,
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
     if (!response.ok) {
         const detail = await response.json().catch(() => null);
@@ -792,7 +792,9 @@ async function cmkGetDowntimes(
         id: item.id,
         site_id: item.extensions.site_id,
         host_name: item.extensions.host_name,
-        service_description: item.extensions.service_description,
+        ...(item.extensions.service_description !== undefined
+            ? { service_description: item.extensions.service_description }
+            : {}),
         author: item.extensions.author,
         comment: item.extensions.comment,
         start_time: item.extensions.start_time,

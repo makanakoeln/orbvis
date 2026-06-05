@@ -214,7 +214,7 @@
         <div :class="selected ? 'orb-obj__gadget-frame--selected' : ''">
             <GadgetRenderer
                 :type="object.display?.gadget_type || 'gauge'"
-                :metric="object.display?.gadget_metric"
+                :metric="object.display?.gadget_metric ?? null"
                 :state="state"
                 :size="iconSize"
             />
@@ -444,8 +444,8 @@
                 :tree="state.tree"
                 :max-depth="object.expand_depth ?? 0"
                 :icon-size="iconSize"
-                :line-color="object.line_color"
-                :line-width="object.line_width"
+                :line-color="object.line_color ?? null"
+                :line-width="object.line_width ?? null"
                 @node-enter="(o, s, e) => $emit('subtree-enter', o, s, e)"
                 @node-leave="$emit('subtree-leave')"
             />
@@ -496,7 +496,7 @@ const props = defineProps<{
     iconSize: number;
     selected?: boolean;
     editMode?: boolean;
-    resizeOverride?: { width: number; height: number };
+    resizeOverride?: { width: number; height: number } | undefined;
     connectionId?: string;
     renderMode?: 'default' | 'nagvis_classic';
 }>();
@@ -586,16 +586,25 @@ const chartData = computed((): Record<string, MetricPoint[]> => {
     const now = Date.now() / 1000;
     const cutoff = now - windowSecs;
 
-    const applyWindow = (pts: MetricPoint[]) => {
+    const applyWindow = (pts: MetricPoint[]): MetricPoint[] => {
         const filtered = pts.filter((p) => p.ts >= cutoff);
+        if (filtered.length) return [...filtered];
         // If nothing falls in the window yet, show last point as baseline
-        return filtered.length ? [...filtered] : pts.length ? [pts[pts.length - 1]] : [];
+        const last = pts.at(-1);
+        return last ? [last] : [];
+    };
+
+    const pick = (keys: string[]): Record<string, MetricPoint[]> => {
+        const out: Record<string, MetricPoint[]> = {};
+        for (const k of keys) {
+            const pts = mv[k];
+            if (pts) out[k] = applyWindow(pts);
+        }
+        return out;
     };
 
     if (props.object.graph_metric?.length) {
-        return Object.fromEntries(
-            props.object.graph_metric.filter((m) => mv[m]).map((m) => [m, applyWindow(mv[m])]),
-        );
+        return pick(props.object.graph_metric);
     }
     const graphId = props.object.graph_id;
     if (graphId) {
@@ -603,9 +612,7 @@ const chartData = computed((): Record<string, MetricPoint[]> => {
             (g) => g.id === graphId,
         );
         if (group) {
-            return Object.fromEntries(
-                group.metrics.filter((m) => mv[m]).map((m) => [m, applyWindow(mv[m])]),
-            );
+            return pick(group.metrics);
         }
     }
     return Object.fromEntries(Object.entries(mv).map(([k, v]) => [k, applyWindow(v)]));
@@ -622,23 +629,22 @@ const chartHeaderName = computed(() => {
     // Prefer the graph template group title (e.g. "RAM (Total, cached, buffers)") over host/service
     // when exactly one group is shown — mirrors how CMK labels its graphs.
     const g = chartGroups.value;
-    if (g.length === 1 && g[0].title) return g[0].title;
+    const only = g.length === 1 ? g[0] : undefined;
+    if (only?.title) return only.title;
     if (o.host_name && o.service_description) return `${o.host_name} / ${o.service_description}`;
     return o.service_description ?? o.host_name ?? '';
 });
 const hiddenMetricLabels = computed(() =>
     chartMetricLabels.value.slice(MAX_VISIBLE_SERIES).join(', '),
 );
-const hasChartData = computed(() =>
-    chartMetricKeys.value.some((k) => chartData.value[k].length > 0),
-);
+const hasChartData = computed(() => Object.values(chartData.value).some((pts) => pts.length > 0));
 
 // Keyed by display label (title) so the template can use v-for labels as keys
 const chartLatestValues = computed(() =>
     Object.fromEntries(
         chartMetricKeys.value.map((k, i) => [
             chartMetricLabels.value[i],
-            chartData.value[k].at(-1) ?? null,
+            chartData.value[k]?.at(-1) ?? null,
         ]),
     ),
 );
@@ -658,6 +664,7 @@ const isSingleMetric = computed(() => chartMetricLabels.value.length === 1);
 const singleMetricValueStr = computed(() => {
     if (!isSingleMetric.value) return '';
     const label = chartMetricLabels.value[0];
+    if (label === undefined) return '';
     const pt = chartLatestValues.value[label];
     if (!pt) return '';
     return fmtValueWithUnit(normalizeMetricValue(pt.value, pt.unit), pt.unit);
@@ -682,9 +689,11 @@ const chartGroups = computed(() => {
     // graph_id, show only the first group that has data. Showing all groups at once
     // squishes them into unreadably small sub-charts. Users can pin a group via graph_id.
     for (const g of groups) {
-        const data = Object.fromEntries(
-            g.metrics.filter((m) => chartData.value[m]).map((m) => [m, chartData.value[m]]),
-        );
+        const data: Record<string, MetricPoint[]> = {};
+        for (const m of g.metrics) {
+            const pts = chartData.value[m];
+            if (pts) data[m] = pts;
+        }
         if (Object.keys(data).length > 0) {
             return [{ id: g.id, title: g.title, data }];
         }
@@ -738,6 +747,7 @@ const graphWrapperStyle = computed(() => ({
 
 const svgSize = computed(() => props.iconSize + RING_PAD * 2);
 
+const PENDING_RGB = 'rgb(113,113,122)';
 const STATE_RGB: Record<string, string> = {
     UP: 'rgb(34,197,94)',
     OK: 'rgb(34,197,94)',
@@ -746,19 +756,17 @@ const STATE_RGB: Record<string, string> = {
     UNREACHABLE: 'rgb(249,115,22)',
     UNKNOWN: 'rgb(249,115,22)',
     WARNING: 'rgb(255,208,0)',
-    PENDING: 'rgb(113,113,122)',
-    NOT_FOUND: 'rgb(113,113,122)',
+    PENDING: PENDING_RGB,
+    NOT_FOUND: PENDING_RGB,
 };
-const stateColorRgb = computed(
-    () => STATE_RGB[props.state?.state ?? 'PENDING'] ?? STATE_RGB['PENDING'],
-);
+const stateColorRgb = computed(() => STATE_RGB[props.state?.state ?? 'PENDING'] ?? PENDING_RGB);
 
 // Pct from blindly-picked metrics[0]. Used only as a last-resort fallback when
 // the perfometer endpoint isn't available — picking the first perfdata field
 // is unreliable (e.g. Memory's `mem_lnx_total_used` skews red even at 50% RAM).
 const firstMetricPct = computed(() => {
-    const metrics = parsePerfData(props.state?.perf_data ?? '');
-    return metrics.length ? utilPercent(metrics[0]) : null;
+    const first = parsePerfData(props.state?.perf_data ?? '')[0];
+    return first ? utilPercent(first) : null;
 });
 
 // Perfometer-derived ring data: the backend's perfometer logic already picks
@@ -787,7 +795,8 @@ async function _fetchPerfometerForRing(): Promise<void> {
             props.object.service_description,
             authStore.accessToken,
         );
-        if (!r || !r.rows.length) {
+        const row = r?.rows[0];
+        if (!row) {
             cmkPerfPct.value = null;
             cmkPerfColor.value = null;
             return;
@@ -796,7 +805,7 @@ async function _fetchPerfometerForRing(): Promise<void> {
         // ring should show the *non-remainder* total fill and pick its colour
         // from the dominant non-remainder segment.
         const REMAINDER = '#52525b';
-        const segs = r.rows[0].filter((s) => s.color !== REMAINDER);
+        const segs = row.filter((s) => s.color !== REMAINDER);
         const fillPct = segs.reduce((acc, s) => acc + s.pct, 0);
         const dominant = segs.reduce((best, s) => (s.pct > (best?.pct ?? -1) ? s : best), segs[0]);
         cmkPerfPct.value = Math.min(100, Math.max(0, fillPct));

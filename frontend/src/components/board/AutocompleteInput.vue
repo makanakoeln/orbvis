@@ -49,8 +49,9 @@ const props = defineProps<{
     placeholder?: string;
     loading?: boolean;
     disabled?: boolean;
-    /** Warning text shown below the input when suggestions is empty and not loading. */
-    emptyText?: string;
+    /** Warning text shown below the input when suggestions is empty and not loading.
+     *  Explicit ``undefined`` is allowed so callsites can pass conditional hints. */
+    emptyText?: string | undefined;
 }>();
 
 const emit = defineEmits<{

@@ -16,7 +16,7 @@ import { DialogContent, DialogPortal, DialogRoot } from 'reka-ui';
 
 interface Props {
     open: boolean;
-    ariaLabel?: string;
+    ariaLabel?: string | undefined;
     portalTo?: string;
 }
 

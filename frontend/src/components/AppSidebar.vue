@@ -218,7 +218,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineComponent, h, ref, watch } from 'vue';
+import { defineComponent, h, ref, type SlotsType, type VNode, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink, useLink } from 'vue-router';
 
@@ -247,11 +247,9 @@ const NavItem = defineComponent({
         exact: { type: Boolean, default: false },
         collapsed: { type: Boolean, default: false },
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    slots: Object as any,
+    slots: Object as SlotsType<{ icon?: () => VNode[] }>,
     setup(props, { slots }) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { isActive, isExactActive } = useLink({ to: props.to } as any);
+        const { isActive, isExactActive } = useLink({ to: props.to });
         return () => {
             const active = props.exact ? isExactActive.value : isActive.value;
             // NavItem renders without the SFC scope id — its classes are

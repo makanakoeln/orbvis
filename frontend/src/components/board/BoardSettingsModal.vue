@@ -11,8 +11,8 @@
     <BoardSettingsFormSpecModal
         v-if="capabilities.formSpecs"
         :board="board"
-        :worldmap-view="worldmapView"
-        :parent-map-size="parentMapSize"
+        :worldmap-view="worldmapView ?? null"
+        :parent-map-size="parentMapSize ?? null"
         @close="emit('close')"
         @updated="emit('updated')"
         @pick-worldmap-view="emit('pickWorldmapView', $event)"
@@ -21,7 +21,7 @@
     <BoardSettingsModalLegacy
         v-else
         :board="board"
-        :worldmap-view="worldmapView"
+        :worldmap-view="worldmapView ?? null"
         @close="emit('close')"
         @updated="emit('updated')"
         @pick-worldmap-view="emit('pickWorldmapView', $event)"

@@ -131,9 +131,10 @@ export function useObjectActions(
             toast.error(t('contextMenu.noDowntimesFound'));
             return;
         }
-        if (downtimes.length === 1) {
+        const single = downtimes.length === 1 ? downtimes[0] : undefined;
+        if (single !== undefined) {
             try {
-                await cmkApi.removeDowntimeById(url, downtimes[0].id, downtimes[0].site_id);
+                await cmkApi.removeDowntimeById(url, single.id, single.site_id);
                 toast.success(t('contextMenu.removeDowntimeSuccess'));
                 statesStore.refreshAfterCommand();
             } catch {

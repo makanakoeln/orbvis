@@ -351,7 +351,7 @@
                 <RadarCanvas
                     :states="statesStore.states"
                     :checkmk-url="checkmkUrl"
-                    :readonly="isKiosk || isPreview || boardConfig?.readonly"
+                    :readonly="isKiosk || isPreview || (boardConfig?.readonly ?? false)"
                     :compact="isPreview"
                     :loading="isRadarLoading"
                     :filter-needle="boardFilterNeedle"
@@ -378,7 +378,7 @@
                     "
                     :preview="isPreview"
                     :kiosk="isKiosk"
-                    :board-name="boardConfig?.name"
+                    v-bind="boardConfig ? { boardName: boardConfig.name } : {}"
                     @select-host="onFolderHostSelect"
                     @select-service="onFolderServiceSelect"
                     @hover-host="onFolderHoverHost"
@@ -395,14 +395,14 @@
                     ref="flowBoardRef"
                     :connection-id="boardConfig.connection_id"
                     :service-layout="serviceLayout"
-                    :readonly="isKiosk || isPreview || boardConfig?.readonly"
+                    :readonly="isKiosk || isPreview || (boardConfig?.readonly ?? false)"
                     :click-action="boardConfig.click_action"
                     :checkmk-url="checkmkUrl"
                     :flow-view="boardConfig.view.type === 'flow' ? boardConfig.view : null"
                     :preview="isPreview"
                     :problems-only="problemsOnly"
-                    :hover-template="boardConfig.hover_template"
-                    :context-template="boardConfig.context_template"
+                    :hover-template="boardConfig.hover_template ?? null"
+                    :context-template="boardConfig.context_template ?? null"
                     @update:problems-only="problemsOnly = $event"
                     @update:service-layout="onServiceLayoutChanged"
                     @update:problems="flowProblems = $event"
@@ -473,7 +473,6 @@
                         :selected-object-id="editor.selectedObjectId.value"
                         :checkmk-url="checkmkUrl"
                         :is-admin="canEdit && !isKiosk && !isPreview"
-                        :icon-size-override="undefined"
                         :snap-grid="editor.snapGrid.value"
                         :filter-needle="boardFilterNeedle"
                         :problems-only="problemsOnly"
@@ -925,7 +924,7 @@
             :state="statesStore.states[worldmapHover.object.id]"
             :x="worldmapHover.x"
             :y="worldmapHover.y"
-            :connection-id="boardConfig?.connection_id"
+            :connection-id="boardConfig?.connection_id ?? null"
             :template="
                 resolveTemplate(
                     worldmapHover.object.hover_template,
@@ -939,7 +938,7 @@
         <ContextMenu
             v-if="isWorldmap && worldmapCtxMenu.visible && worldmapCtxMenu.object"
             :object="worldmapCtxMenu.object"
-            :state="statesStore.states[worldmapCtxMenu.object.id]"
+            v-bind="worldmapCtxState ? { state: worldmapCtxState } : {}"
             :x="worldmapCtxMenu.x"
             :y="worldmapCtxMenu.y"
             :checkmk-url="checkmkUrl"
@@ -1301,26 +1300,11 @@ const canEdit = computed(
 const boardConfigAsRead = computed<import('@/types/api').BoardRead | null>(() => {
     const cfg = boardsStore.currentBoard;
     if (!cfg) return null;
+    const { objects, ...rest } = cfg;
     return {
-        name: cfg.name,
-        alias: cfg.alias,
-        background_image: cfg.background_image,
-        background_color: cfg.background_color,
-        icon_size: cfg.icon_size,
-        connection_id: cfg.connection_id,
+        ...rest,
         view_type: cfg.view.type,
-        view: cfg.view,
-        object_count: cfg.objects.length,
-        rotation_interval: cfg.rotation_interval,
-        sort_order: cfg.sort_order,
-        click_action: cfg.click_action,
-        readonly: cfg.readonly,
-        show_in_lists: cfg.show_in_lists,
-        hover_template: cfg.hover_template,
-        context_template: cfg.context_template,
-        render_mode: cfg.render_mode,
-        default_z: cfg.default_z,
-        version: cfg.version,
+        object_count: objects.length,
     };
 });
 const canvasRef = ref<InstanceType<typeof BoardCanvas> | null>(null);
@@ -1498,6 +1482,9 @@ const worldmapCtxMenu = reactive({
     x: 0,
     y: 0,
 });
+const worldmapCtxState = computed(() =>
+    worldmapCtxMenu.object ? statesStore.states[worldmapCtxMenu.object.id] : undefined,
+);
 const worldmapCanvasCtxMenu = reactive({
     visible: false,
     x: 0,
@@ -1595,7 +1582,7 @@ async function onWorldmapCtxRemoveDowntime() {
         toast.error(t('contextMenu.noDowntimesFound'));
         return;
     }
-    if (downtimes.length === 1) {
+    if (downtimes.length === 1 && downtimes[0]) {
         await doWorldmapRemoveDowntime(downtimes[0]);
         return;
     }
@@ -1850,7 +1837,7 @@ function onSelectHost(hostName: string, serviceDescription?: string | null) {
             : `transient:${hostName}`,
         type: serviceDescription ? 'service' : 'host',
         host_name: hostName,
-        service_description: serviceDescription ?? undefined,
+        ...(serviceDescription ? { service_description: serviceDescription } : {}),
         x: 0,
         y: 0,
         z: 0,
@@ -2357,6 +2344,7 @@ async function goToNextBoard() {
     if (pool.length < 2) return;
     const idx = pool.findIndex((b) => b.name === boardName.value);
     const next = pool[(idx + 1) % pool.length];
+    if (!next) return;
     router.push({ name: 'board', params: { name: next.name } });
 }
 

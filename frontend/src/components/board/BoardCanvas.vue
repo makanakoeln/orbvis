@@ -58,7 +58,7 @@
                     :object="line"
                     :state="states[line.id]"
                     :edit-mode="editMode"
-                    :drag-coords="lineDragPositions[line.id]"
+                    v-bind="lineDragProps(line.id)"
                     :connection-id="config.connection_id"
                     @line-drag-start="(evt, mode) => $emit('line-drag-start', evt, line, mode)"
                     @context-menu="(evt) => onObjectContextMenu(evt, line)"
@@ -136,10 +136,10 @@
         <ContextMenu
             v-if="contextMenu.visible && contextMenu.object"
             :object="contextMenu.object"
-            :state="states[contextMenu.object.id]"
+            v-bind="contextMenuStateProps"
             :x="contextMenu.x"
             :y="contextMenu.y"
-            :checkmk-url="checkmkUrl"
+            :checkmk-url="checkmkUrl ?? null"
             :show-edit="isAdmin && !editMode"
             :template="
                 resolveTemplate(
@@ -880,6 +880,18 @@ const contextMenu = reactive({
     x: 0,
     y: 0,
 });
+
+// `state?:`-style optional props reject an explicit `undefined` under
+// exactOptionalPropertyTypes — spread the prop in only when a value exists.
+const contextMenuStateProps = computed<{ state?: ObjectState }>(() => {
+    const state = contextMenu.object ? props.states[contextMenu.object.id] : undefined;
+    return state !== undefined ? { state } : {};
+});
+
+function lineDragProps(id: string): { dragCoords?: (typeof props.lineDragPositions)[string] } {
+    const dragCoords = props.lineDragPositions[id];
+    return dragCoords !== undefined ? { dragCoords } : {};
+}
 
 function openHoverMenu(event: MouseEvent, obj: BoardObjectType) {
     if (props.preview) return;

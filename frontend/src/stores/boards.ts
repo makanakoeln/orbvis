@@ -78,7 +78,7 @@ export const useBoardsStore = defineStore('boards', () => {
                 name,
                 alias,
                 connection_id: connectionId,
-                icon_size: iconSize,
+                ...(iconSize !== undefined ? { icon_size: iconSize } : {}),
                 view: { type: boardType },
                 render_mode: renderMode,
             },

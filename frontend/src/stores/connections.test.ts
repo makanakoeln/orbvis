@@ -89,7 +89,7 @@ describe('useConnectionsStore', () => {
             timeout: 10,
             icinga2_verify_ssl: true,
         });
-        expect(store.connections[0].label).toBe('Updated');
+        expect(store.connections[0]!.label).toBe('Updated');
     });
 
     it('deleteConnection() removes the entry', async () => {
