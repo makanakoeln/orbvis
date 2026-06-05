@@ -1,5 +1,5 @@
 <template>
-    <div ref="mapEl" class="absolute inset-0 z-0" />
+    <div ref="mapEl" class="orb-worldmap" />
 </template>
 
 <script setup lang="ts">
@@ -694,3 +694,11 @@ function setView(lat: number, lng: number, zoom: number) {
 
 defineExpose({ getView, getContainerSize, setView, fitAll });
 </script>
+
+<style scoped>
+.orb-worldmap {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+</style>

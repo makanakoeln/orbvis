@@ -230,5 +230,12 @@ const option = computed((): EOption => {
 </script>
 
 <template>
-    <v-chart class="w-full h-full" :option="option" :autoresize="true" />
+    <v-chart class="orb-metric-chart" :option="option" :autoresize="true" />
 </template>
+
+<style scoped>
+.orb-metric-chart {
+    width: 100%;
+    height: 100%;
+}
+</style>

@@ -1,5 +1,5 @@
 <template>
-    <div ref="el" class="w-full h-full" />
+    <div ref="el" class="orb-worldmap-thumb" />
 </template>
 
 <script setup lang="ts">
@@ -46,3 +46,10 @@ onUnmounted(() => {
     map = null;
 });
 </script>
+
+<style scoped>
+.orb-worldmap-thumb {
+    width: 100%;
+    height: 100%;
+}
+</style>

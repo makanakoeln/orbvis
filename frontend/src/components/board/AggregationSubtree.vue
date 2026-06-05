@@ -3,7 +3,7 @@
         :width="size.w"
         :height="size.h"
         :viewBox="`${-size.w / 2} 0 ${size.w} ${size.h}`"
-        class="absolute pointer-events-none"
+        class="orb-aggr-subtree"
         :style="{ left: `${-size.w / 2 + iconSize / 2}px`, top: `${iconSize}px` }"
     >
         <line
@@ -21,7 +21,7 @@
             v-for="node in renderedNodes"
             :key="node.id"
             :transform="`translate(${node.x}, ${node.y})`"
-            class="pointer-events-auto cursor-pointer"
+            class="orb-aggr-subtree__node"
             @click.stop="onNodeClick(node.data)"
             @mouseenter="onNodeEnter(node.data, $event)"
             @mouseleave="$emit('node-leave')"
@@ -328,3 +328,15 @@ const size = computed(() => {
     };
 });
 </script>
+
+<style scoped>
+.orb-aggr-subtree {
+    position: absolute;
+    pointer-events: none;
+}
+
+.orb-aggr-subtree__node {
+    pointer-events: auto;
+    cursor: pointer;
+}
+</style>
