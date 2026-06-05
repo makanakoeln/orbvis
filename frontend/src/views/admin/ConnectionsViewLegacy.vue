@@ -1,6 +1,6 @@
 <template>
-    <div class="max-w-5xl">
-        <div class="flex justify-between items-center" style="margin-bottom: var(--dimension-6)">
+    <div class="orb-connlist">
+        <div class="orb-connlist__header">
             <div>
                 <CmkHeading type="h2">
                     {{ t('admin.connectionsTitle') }}
@@ -27,104 +27,70 @@
             </CmkButton>
         </div>
 
-        <div v-if="store.loading" class="flex items-center justify-center py-8">
+        <div v-if="store.loading" class="orb-connlist__loading">
             <CmkLoading />
         </div>
 
         <CmkAlertBox v-else-if="store.error" variant="error">{{ store.error }}</CmkAlertBox>
 
-        <div
-            v-else-if="store.connections.length === 0"
-            class="text-center py-16 bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl"
-        >
-            <p class="text-[var(--text-muted)] text-sm">{{ t('admin.noConnections') }}</p>
-            <p class="text-[var(--text-muted)] text-sm mt-1">{{ t('admin.noConnectionsHint') }}</p>
+        <div v-else-if="store.connections.length === 0" class="orb-connlist__empty">
+            <p class="orb-connlist__empty-text">{{ t('admin.noConnections') }}</p>
+            <p class="orb-connlist__empty-text orb-connlist__empty-text--hint">
+                {{ t('admin.noConnectionsHint') }}
+            </p>
         </div>
 
-        <div
-            v-else
-            class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
-        >
-            <table class="w-full text-sm">
+        <div v-else class="orb-connlist__card">
+            <table class="orb-connlist__table">
                 <thead>
-                    <tr class="border-b border-[var(--border)]">
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                    <tr class="orb-connlist__head-row">
+                        <th class="orb-connlist__th">
                             {{ t('admin.status') }}
                         </th>
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
-                            ID
-                        </th>
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                        <th class="orb-connlist__th">ID</th>
+                        <th class="orb-connlist__th">
                             {{ t('admin.displayLabel') }}
                         </th>
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                        <th class="orb-connlist__th">
                             {{ t('admin.type') }}
                         </th>
-                        <th
-                            class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                        <th class="orb-connlist__th">
                             {{ t('admin.connection') }}
                         </th>
-                        <th
-                            class="text-right text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                            style="padding: 6px 12px"
-                        >
+                        <th class="orb-connlist__th orb-connlist__th--right">
                             {{ t('admin.actions') }}
                         </th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-[var(--border)]">
-                    <tr
-                        v-for="b in store.connections"
-                        :key="b.id"
-                        class="hover:bg-[var(--bg-hover)] transition-colors"
-                    >
+                <tbody class="orb-connlist__body">
+                    <tr v-for="b in store.connections" :key="b.id" class="orb-connlist__row">
                         <!-- Status -->
-                        <td style="padding: 6px 12px">
+                        <td class="orb-connlist__td">
                             <button
                                 :disabled="statusLoading[b.id]"
-                                class="flex items-center gap-[6px] group cursor-pointer"
+                                class="orb-connlist__status-btn"
                                 :title="t('common.test')"
                                 @click="testExisting(b.id)"
                             >
-                                <span class="relative flex shrink-0">
+                                <span class="orb-connlist__dot-wrap">
                                     <span
                                         v-if="statusLoading[b.id]"
-                                        class="rounded-full bg-[var(--color-pending)] animate-pulse"
-                                        style="width: 8px; height: 8px"
+                                        class="orb-connlist__dot orb-connlist__dot--loading"
                                     />
                                     <span
                                         v-else-if="statuses[b.id] === undefined"
-                                        class="rounded-full bg-[var(--color-pending)]"
-                                        style="width: 8px; height: 8px"
+                                        class="orb-connlist__dot orb-connlist__dot--pending"
                                     />
                                     <span
                                         v-else-if="statuses[b.id]"
-                                        class="rounded-full bg-[var(--color-corporate-green-50)] shadow-[0_0_6px_rgba(74,222,128,0.6)]"
-                                        style="width: 8px; height: 8px"
+                                        class="orb-connlist__dot orb-connlist__dot--ok"
                                     />
                                     <span
                                         v-else
-                                        class="rounded-full bg-[var(--color-light-red-40)]"
-                                        style="width: 8px; height: 8px"
+                                        class="orb-connlist__dot orb-connlist__dot--error"
                                     />
                                 </span>
-                                <span
-                                    class="text-sm text-[var(--text-muted)] group-hover:text-[var(--text)] transition-colors"
-                                >
+                                <span class="orb-connlist__status-label">
                                     {{
                                         statusLoading[b.id]
                                             ? t('common.testing')
@@ -133,8 +99,7 @@
                                 </span>
                                 <!-- Refresh icon — visible on hover to signal clickability -->
                                 <svg
-                                    class="text-[var(--text-muted)] group-hover:text-[var(--text-muted)] transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-                                    style="width: 11px; height: 11px"
+                                    class="orb-connlist__refresh"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -148,16 +113,13 @@
                                 </svg>
                             </button>
                         </td>
-                        <td
-                            class="font-mono text-sm text-[var(--text-muted)]"
-                            style="padding: 6px 12px"
-                        >
+                        <td class="orb-connlist__td orb-connlist__td--mono">
                             {{ b.id }}
                         </td>
-                        <td class="text-[var(--text)]" style="padding: 6px 12px">
+                        <td class="orb-connlist__td orb-connlist__td--text">
                             {{ b.label || '—' }}
                         </td>
-                        <td style="padding: 6px 12px">
+                        <td class="orb-connlist__td">
                             <CmkBadge
                                 size="small"
                                 type="outline"
@@ -171,10 +133,7 @@
                                 >{{ b.type }}</CmkBadge
                             >
                         </td>
-                        <td
-                            class="text-[var(--text-muted)] font-mono text-sm"
-                            style="padding: 6px 12px"
-                        >
+                        <td class="orb-connlist__td orb-connlist__td--mono">
                             <template v-if="b.type === 'livestatus'">
                                 {{
                                     b.socket_path ||
@@ -184,14 +143,12 @@
                             <template v-else-if="b.type === 'icinga2'">
                                 {{ b.icinga2_url || '—' }}
                             </template>
-                            <span v-else class="text-[var(--text-muted)]">{{
-                                t('admin.builtIn')
-                            }}</span>
+                            <span v-else>{{ t('admin.builtIn') }}</span>
                         </td>
-                        <td class="text-right" style="padding: 6px 12px">
-                            <div class="flex items-center justify-end gap-[4px]">
+                        <td class="orb-connlist__td orb-connlist__td--right">
+                            <div class="orb-connlist__actions">
                                 <button
-                                    class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                                    class="orb-connlist__action-btn orb-connlist__action-btn--edit"
                                     :title="t('common.edit')"
                                     @click="openEdit(b)"
                                 >
@@ -210,7 +167,7 @@
                                     </svg>
                                 </button>
                                 <button
-                                    class="p-[4px] rounded-md text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
+                                    class="orb-connlist__action-btn orb-connlist__action-btn--delete"
                                     :title="t('common.delete')"
                                     @click="deleteTarget = b.id"
                                 >
@@ -253,25 +210,21 @@
             @close="dialog.open = false"
         >
             <form class="connections-dialog__form" @submit.prevent="save">
-                <div v-if="dialog.mode === 'create'" class="space-y-[4px]">
-                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                        t('admin.connectionId')
-                    }}</label>
+                <div v-if="dialog.mode === 'create'" class="connections-dialog__field">
+                    <label class="connections-dialog__label">{{ t('admin.connectionId') }}</label>
                     <CmkInput
                         v-model="form.id"
                         :placeholder="idPlaceholder"
                         field-size="FILL"
                         :external-errors="fieldErrors.id"
                     />
-                    <p class="text-sm text-[var(--text-muted)]">
+                    <p class="connections-dialog__hint">
                         {{ t('admin.connectionIdHint') }}
                     </p>
                 </div>
 
-                <div class="space-y-[4px]">
-                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                        t('admin.displayLabel')
-                    }}</label>
+                <div class="connections-dialog__field">
+                    <label class="connections-dialog__label">{{ t('admin.displayLabel') }}</label>
                     <CmkInput
                         v-model="form.label"
                         :placeholder="labelPlaceholder"
@@ -279,10 +232,8 @@
                     />
                 </div>
 
-                <div class="space-y-[4px]">
-                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                        t('admin.type')
-                    }}</label>
+                <div class="connections-dialog__field">
+                    <label class="connections-dialog__label">{{ t('admin.type') }}</label>
                     <CmkDropdown
                         :selected-option="form.type || null"
                         :options="connectionTypeOptions"
@@ -294,8 +245,8 @@
 
                 <template v-if="form.type === 'livestatus'">
                     <!-- Transport: socket vs TCP -->
-                    <div class="space-y-[4px]">
-                        <label class="text-sm font-medium text-[var(--text-muted)]">{{
+                    <div class="connections-dialog__field">
+                        <label class="connections-dialog__label">{{
                             t('admin.livestatusTransport')
                         }}</label>
                         <CmkDropdown
@@ -308,10 +259,8 @@
                     </div>
 
                     <!-- Unix socket -->
-                    <div v-if="livestatusMode === 'socket'" class="space-y-[4px]">
-                        <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                            t('admin.unixSocket')
-                        }}</label>
+                    <div v-if="livestatusMode === 'socket'" class="connections-dialog__field">
+                        <label class="connections-dialog__label">{{ t('admin.unixSocket') }}</label>
                         <CmkInput
                             v-model="form.socket_path"
                             placeholder="/var/run/check_mk/live"
@@ -321,9 +270,9 @@
                     </div>
 
                     <!-- TCP Host + Port -->
-                    <div v-else class="grid grid-cols-[1fr_7rem] gap-[8px]">
-                        <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
+                    <div v-else class="connections-dialog__row connections-dialog__row--host-port">
+                        <div class="connections-dialog__field">
+                            <label class="connections-dialog__label">{{
                                 t('admin.tcpHost')
                             }}</label>
                             <CmkInput
@@ -333,18 +282,21 @@
                                 :external-errors="fieldErrors.host"
                             />
                         </div>
-                        <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                                t('admin.port')
-                            }}</label>
-                            <NumberInput v-model="form.port" min="1" max="65535" class="w-full" />
+                        <div class="connections-dialog__field">
+                            <label class="connections-dialog__label">{{ t('admin.port') }}</label>
+                            <NumberInput
+                                v-model="form.port"
+                                min="1"
+                                max="65535"
+                                class="connections-dialog__num-fill"
+                            />
                         </div>
                     </div>
 
                     <!-- Checkmk URL + Automation + Timeout -->
-                    <div class="border-t border-[var(--border)] pt-[12px] space-y-[12px]">
-                        <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
+                    <div class="connections-dialog__section">
+                        <div class="connections-dialog__field">
+                            <label class="connections-dialog__label">{{
                                 t('admin.checkmkUrl')
                             }}</label>
                             <CmkInput
@@ -352,14 +304,14 @@
                                 placeholder="http://monitoring.example.com/mysite"
                                 field-size="FILL"
                             />
-                            <p class="text-sm text-[var(--text-muted)]">
+                            <p class="connections-dialog__hint">
                                 {{ t('admin.contextLinks') }}
                             </p>
                         </div>
                         <template v-if="!isCmc">
-                            <div class="grid grid-cols-2 gap-[8px]">
-                                <div class="space-y-[4px]">
-                                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
+                            <div class="connections-dialog__row">
+                                <div class="connections-dialog__field">
+                                    <label class="connections-dialog__label">{{
                                         t('admin.automationUser')
                                     }}</label>
                                     <CmkInput
@@ -368,8 +320,8 @@
                                         field-size="FILL"
                                     />
                                 </div>
-                                <div class="space-y-[4px]">
-                                    <label class="text-sm font-medium text-[var(--text-muted)]">{{
+                                <div class="connections-dialog__field">
+                                    <label class="connections-dialog__label">{{
                                         t('admin.automationSecret')
                                     }}</label>
                                     <CmkInput
@@ -380,15 +332,15 @@
                                     />
                                 </div>
                             </div>
-                            <p class="text-sm text-[var(--text-muted)]">
+                            <p class="connections-dialog__hint">
                                 {{ t('admin.automationHint') }}
                             </p>
                         </template>
-                        <p v-else class="text-sm text-[var(--text-muted)]">
+                        <p v-else class="connections-dialog__hint">
                             {{ t('admin.automationHintCmc') }}
                         </p>
-                        <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
+                        <div class="connections-dialog__field">
+                            <label class="connections-dialog__label">{{
                                 t('admin.timeout')
                             }}</label>
                             <NumberInput
@@ -396,18 +348,16 @@
                                 min="1"
                                 max="120"
                                 step="0.5"
-                                class="w-[112px]"
+                                class="connections-dialog__num"
                             />
-                            <p class="text-sm text-[var(--text-muted)]">seconds</p>
+                            <p class="connections-dialog__hint">seconds</p>
                         </div>
                     </div>
                 </template>
 
                 <template v-if="form.type === 'icinga2'">
-                    <div class="space-y-[4px]">
-                        <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                            t('admin.icinga2Url')
-                        }}</label>
+                    <div class="connections-dialog__field">
+                        <label class="connections-dialog__label">{{ t('admin.icinga2Url') }}</label>
                         <CmkInput
                             v-model="form.icinga2_url"
                             placeholder="https://icinga.example.com:5665"
@@ -416,9 +366,9 @@
                         />
                     </div>
 
-                    <div class="grid grid-cols-2 gap-[8px]">
-                        <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
+                    <div class="connections-dialog__row">
+                        <div class="connections-dialog__field">
+                            <label class="connections-dialog__label">{{
                                 t('admin.icinga2Username')
                             }}</label>
                             <CmkInput
@@ -427,8 +377,8 @@
                                 field-size="FILL"
                             />
                         </div>
-                        <div class="space-y-[4px]">
-                            <label class="text-sm font-medium text-[var(--text-muted)]">{{
+                        <div class="connections-dialog__field">
+                            <label class="connections-dialog__label">{{
                                 t('admin.icinga2Password')
                             }}</label>
                             <CmkInput
@@ -439,58 +389,50 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-[8px]">
+                    <div class="connections-dialog__checkbox-row">
                         <CmkCheckbox
                             v-model="form.icinga2_verify_ssl"
                             :label="t('admin.icinga2VerifySsl')"
                         />
                     </div>
 
-                    <div class="space-y-[4px]">
-                        <label class="text-sm font-medium text-[var(--text-muted)]">{{
-                            t('admin.timeout')
-                        }}</label>
+                    <div class="connections-dialog__field">
+                        <label class="connections-dialog__label">{{ t('admin.timeout') }}</label>
                         <NumberInput
                             v-model="form.timeout"
                             min="1"
                             max="120"
                             step="0.5"
-                            class="w-[112px]"
+                            class="connections-dialog__num"
                         />
-                        <p class="text-sm text-[var(--text-muted)]">seconds</p>
+                        <p class="connections-dialog__hint">seconds</p>
                     </div>
                 </template>
 
                 <!-- Test result -->
                 <div
                     v-if="dialogTest.ran"
-                    class="flex items-center gap-[8px] rounded-lg ring-1 text-sm"
-                    style="padding: var(--dimension-4) 12px"
+                    class="connections-dialog__test"
                     :class="
                         dialogTest.ok
-                            ? 'bg-[var(--color-corporate-green-50)]/8 ring-[var(--color-corporate-green-50)]/20 text-[var(--color-corporate-green-50)]'
-                            : 'bg-[var(--color-light-red-50)]/8 ring-[var(--color-light-red-50)]/20 text-[var(--color-light-red-40)]'
+                            ? 'connections-dialog__test--ok'
+                            : 'connections-dialog__test--fail'
                     "
                 >
                     <span
-                        class="rounded-full shrink-0"
-                        style="width: 8px; height: 8px"
+                        class="connections-dialog__test-dot"
                         :class="
                             dialogTest.ok
-                                ? 'bg-[var(--color-corporate-green-50)]'
-                                : 'bg-[var(--color-light-red-40)]'
+                                ? 'connections-dialog__test-dot--ok'
+                                : 'connections-dialog__test-dot--fail'
                         "
                     />
                     {{ dialogTest.message }}
                 </div>
 
-                <p
-                    v-if="formError"
-                    class="text-[var(--color-light-red-40)] text-sm flex items-center gap-[6px]"
-                >
+                <p v-if="formError" class="connections-dialog__error">
                     <svg
-                        class="shrink-0"
-                        style="width: 12px; height: 12px"
+                        class="connections-dialog__error-icon"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -813,11 +755,309 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.orb-connlist {
+    max-width: 1024px;
+}
+
+.orb-connlist__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--dimension-6);
+}
+
+.orb-connlist__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 0;
+}
+
+.orb-connlist__empty {
+    padding: 64px 0;
+    text-align: center;
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.orb-connlist__empty-text {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-connlist__empty-text--hint {
+    margin-top: var(--dimension-3);
+}
+
+.orb-connlist__card {
+    overflow: hidden;
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.orb-connlist__table {
+    width: 100%;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+}
+
+.orb-connlist__head-row {
+    border-bottom: 1px solid var(--border);
+}
+
+.orb-connlist__th {
+    padding: 6px 12px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-align: left;
+    color: var(--text-muted);
+}
+
+.orb-connlist__th--right {
+    text-align: right;
+}
+
+.orb-connlist__body > tr + tr {
+    border-top: 1px solid var(--border);
+}
+
+.orb-connlist__row {
+    transition: background-color 0.15s;
+}
+
+.orb-connlist__row:hover {
+    background: var(--bg-hover);
+}
+
+.orb-connlist__td {
+    padding: 6px 12px;
+}
+
+.orb-connlist__td--mono {
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-connlist__td--text {
+    color: var(--text);
+}
+
+.orb-connlist__td--right {
+    text-align: right;
+}
+
+.orb-connlist__status-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.orb-connlist__dot-wrap {
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+}
+
+.orb-connlist__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+}
+
+.orb-connlist__dot--loading {
+    background: var(--color-pending);
+    animation: orb-connlist-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.orb-connlist__dot--pending {
+    background: var(--color-pending);
+}
+
+.orb-connlist__dot--ok {
+    background: var(--color-corporate-green-50);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--color-corporate-green-50) 60%, transparent);
+}
+
+.orb-connlist__dot--error {
+    background: var(--color-light-red-40);
+}
+
+.orb-connlist__status-label {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+    transition: color 0.15s;
+}
+
+.orb-connlist__status-btn:hover .orb-connlist__status-label {
+    color: var(--text);
+}
+
+.orb-connlist__refresh {
+    flex-shrink: 0;
+    width: 11px;
+    height: 11px;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.orb-connlist__status-btn:hover .orb-connlist__refresh {
+    opacity: 1;
+}
+
+.orb-connlist__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--dimension-3);
+}
+
+.orb-connlist__action-btn {
+    padding: var(--dimension-3);
+    color: var(--text-muted);
+    border-radius: 6px;
+    transition: all 0.15s;
+}
+
+.orb-connlist__action-btn--edit:hover {
+    color: var(--color-corporate-green-50);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 10%, transparent);
+}
+
+.orb-connlist__action-btn--delete:hover {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 10%, transparent);
+}
+
+@keyframes orb-connlist-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
 .connections-dialog__form {
     display: flex;
     flex-direction: column;
     gap: var(--dimension-5);
     width: 30rem;
     max-width: 90vw;
+}
+
+.connections-dialog__field > * + * {
+    margin-top: var(--dimension-3);
+}
+
+.connections-dialog__label {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.connections-dialog__hint {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.connections-dialog__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--dimension-4);
+}
+
+.connections-dialog__row--host-port {
+    grid-template-columns: 1fr 7rem;
+}
+
+.connections-dialog__num {
+    width: 112px;
+}
+
+.connections-dialog__num-fill {
+    width: 100%;
+}
+
+.connections-dialog__section {
+    padding-top: var(--dimension-5);
+    border-top: 1px solid var(--border);
+}
+
+.connections-dialog__section > * + * {
+    margin-top: var(--dimension-5);
+}
+
+.connections-dialog__checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+}
+
+.connections-dialog__test {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+    padding: var(--dimension-4) 12px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    border-radius: 8px;
+}
+
+.connections-dialog__test--ok {
+    color: var(--color-corporate-green-50);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 8%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-corporate-green-50) 20%, transparent);
+}
+
+.connections-dialog__test--fail {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 8%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-light-red-50) 20%, transparent);
+}
+
+.connections-dialog__test-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+}
+
+.connections-dialog__test-dot--ok {
+    background: var(--color-corporate-green-50);
+}
+
+.connections-dialog__test-dot--fail {
+    background: var(--color-light-red-40);
+}
+
+.connections-dialog__error {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--color-light-red-40);
+}
+
+.connections-dialog__error-icon {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
 }
 </style>

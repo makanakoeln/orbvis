@@ -1,5 +1,5 @@
 <template>
-    <div class="max-w-2xl">
+    <div class="orb-gset">
         <div style="margin-bottom: var(--dimension-6)">
             <CmkHeading type="h2">
                 {{ t('settings.title') }}
@@ -9,36 +9,26 @@
             </CmkParagraph>
         </div>
 
-        <div v-if="store.loading" class="flex items-center justify-center py-8">
+        <div v-if="store.loading" class="orb-gset__loading">
             <CmkLoading />
         </div>
 
         <div v-else>
             <!-- Group: Defaults applied when creating a new board -->
             <h3 class="orb-group-heading">{{ t('settings.groupBoardCreation') }}</h3>
-            <div class="space-y-[16px]" style="margin-bottom: var(--dimension-6)">
+            <div class="orb-gset__cards">
                 <!-- New board defaults -->
-                <section
-                    class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
-                >
+                <section class="orb-gset__card">
                     <button
-                        class="w-full flex items-center justify-between text-left"
-                        style="padding: 14px 16px"
+                        class="orb-gset__card-toggle"
                         @click="sectionOpen.newBoardDefaults = !sectionOpen.newBoardDefaults"
                     >
-                        <h3 class="text-base font-semibold text-[var(--text-muted)]">
+                        <h3 class="orb-gset__card-title">
                             {{ t('settings.newBoardDefaults') }}
                         </h3>
                         <svg
-                            style="
-                                width: 14px;
-                                height: 14px;
-                                flex-shrink: 0;
-                                transition: transform 200ms;
-                            "
-                            :style="{
-                                transform: sectionOpen.newBoardDefaults ? 'rotate(180deg)' : '',
-                            }"
+                            class="orb-gset__chevron"
+                            :class="{ 'orb-gset__chevron--open': sectionOpen.newBoardDefaults }"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -52,18 +42,13 @@
                         </svg>
                     </button>
                     <CmkCollapsible :open="sectionOpen.newBoardDefaults">
-                        <div
-                            class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start"
-                            style="padding: 0 16px 14px"
-                        >
-                            <label class="block">
-                                <span
-                                    class="text-sm text-[var(--text-muted)] block"
-                                    style="margin-bottom: 3px"
-                                    >{{ t('board.connection') }}</span
-                                >
+                        <div class="orb-gset__card-body orb-gset__field-row">
+                            <label class="orb-gset__label">
+                                <span class="orb-gset__field-label">{{
+                                    t('board.connection')
+                                }}</span>
                                 <CmkDropdown
-                                    class="w-[192px]"
+                                    class="orb-gset__select orb-gset__select--wide"
                                     :selected-option="form.default_backend_id || null"
                                     :options="connectionOptions"
                                     label=""
@@ -71,14 +56,12 @@
                                 />
                             </label>
 
-                            <label class="block">
-                                <span
-                                    class="text-sm text-[var(--text-muted)] block"
-                                    style="margin-bottom: 3px"
-                                    >{{ t('board.boardType') }}</span
-                                >
+                            <label class="orb-gset__label">
+                                <span class="orb-gset__field-label">{{
+                                    t('board.boardType')
+                                }}</span>
                                 <CmkDropdown
-                                    class="w-[176px]"
+                                    class="orb-gset__select"
                                     :selected-option="form.default_map_type || null"
                                     :options="mapTypeOptions"
                                     label=""
@@ -92,27 +75,19 @@
 
             <!-- Group: Defaults applied to objects rendered on a board -->
             <h3 class="orb-group-heading">{{ t('settings.groupObjectDefaults') }}</h3>
-            <div class="space-y-[16px]" style="margin-bottom: var(--dimension-6)">
+            <div class="orb-gset__cards">
                 <!-- Icon defaults -->
-                <section
-                    class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
-                >
+                <section class="orb-gset__card">
                     <button
-                        class="w-full flex items-center justify-between text-left"
-                        style="padding: 14px 16px"
+                        class="orb-gset__card-toggle"
                         @click="sectionOpen.iconDefaults = !sectionOpen.iconDefaults"
                     >
-                        <h3 class="text-base font-semibold text-[var(--text-muted)]">
+                        <h3 class="orb-gset__card-title">
                             {{ t('settings.iconDefaults') }}
                         </h3>
                         <svg
-                            style="
-                                width: 14px;
-                                height: 14px;
-                                flex-shrink: 0;
-                                transition: transform 200ms;
-                            "
-                            :style="{ transform: sectionOpen.iconDefaults ? 'rotate(180deg)' : '' }"
+                            class="orb-gset__chevron"
+                            :class="{ 'orb-gset__chevron--open': sectionOpen.iconDefaults }"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -126,30 +101,21 @@
                         </svg>
                     </button>
                     <CmkCollapsible :open="sectionOpen.iconDefaults">
-                        <div
-                            class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start"
-                            style="padding: 0 16px 14px"
-                        >
-                            <label class="block">
-                                <span
-                                    class="text-sm text-[var(--text-muted)] block"
-                                    style="margin-bottom: 3px"
-                                    >{{ t('board.iconSize') }}</span
-                                >
+                        <div class="orb-gset__card-body orb-gset__field-row">
+                            <label class="orb-gset__label">
+                                <span class="orb-gset__field-label">{{ t('board.iconSize') }}</span>
                                 <NumberInput
                                     v-model="form.icon_size"
                                     min="8"
                                     max="256"
-                                    class="w-[80px]"
+                                    class="orb-gset__num"
                                 />
                             </label>
 
-                            <label class="block">
-                                <span
-                                    class="text-sm text-[var(--text-muted)] block"
-                                    style="margin-bottom: 3px"
-                                    >{{ t('boardSettings.viewType') }}</span
-                                >
+                            <label class="orb-gset__label">
+                                <span class="orb-gset__field-label">{{
+                                    t('boardSettings.viewType')
+                                }}</span>
                                 <CmkToggleButtonGroup
                                     v-model="form.view_type"
                                     :options="[
@@ -163,40 +129,34 @@
                                 />
                             </label>
 
-                            <label class="block">
-                                <span
-                                    class="text-sm text-[var(--text-muted)] inline-flex items-center gap-[2px]"
-                                    style="margin-bottom: 3px"
-                                >
+                            <label class="orb-gset__label">
+                                <span class="orb-gset__field-label orb-gset__field-label--help">
                                     {{ t('boardSettings.z') }}
                                     <CmkHelpText :help="t('settings.zHint')" />
                                 </span>
-                                <NumberInput v-model="form.z" min="1" max="999" class="w-[80px]" />
+                                <NumberInput
+                                    v-model="form.z"
+                                    min="1"
+                                    max="999"
+                                    class="orb-gset__num"
+                                />
                             </label>
                         </div>
                     </CmkCollapsible>
                 </section>
 
                 <!-- Line defaults -->
-                <section
-                    class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
-                >
+                <section class="orb-gset__card">
                     <button
-                        class="w-full flex items-center justify-between text-left"
-                        style="padding: 14px 16px"
+                        class="orb-gset__card-toggle"
                         @click="sectionOpen.lineDefaults = !sectionOpen.lineDefaults"
                     >
-                        <h3 class="text-base font-semibold text-[var(--text-muted)]">
+                        <h3 class="orb-gset__card-title">
                             {{ t('settings.lineDefaults') }}
                         </h3>
                         <svg
-                            style="
-                                width: 14px;
-                                height: 14px;
-                                flex-shrink: 0;
-                                transition: transform 200ms;
-                            "
-                            :style="{ transform: sectionOpen.lineDefaults ? 'rotate(180deg)' : '' }"
+                            class="orb-gset__chevron"
+                            :class="{ 'orb-gset__chevron--open': sectionOpen.lineDefaults }"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -210,18 +170,13 @@
                         </svg>
                     </button>
                     <CmkCollapsible :open="sectionOpen.lineDefaults">
-                        <div
-                            class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start"
-                            style="padding: 0 16px 14px"
-                        >
-                            <label class="block">
-                                <span
-                                    class="text-sm text-[var(--text-muted)] block"
-                                    style="margin-bottom: 3px"
-                                    >{{ t('boardSettings.lineStyle') }}</span
-                                >
+                        <div class="orb-gset__card-body orb-gset__field-row">
+                            <label class="orb-gset__label">
+                                <span class="orb-gset__field-label">{{
+                                    t('boardSettings.lineStyle')
+                                }}</span>
                                 <CmkDropdown
-                                    class="w-[176px]"
+                                    class="orb-gset__select"
                                     :selected-option="form.line_style ?? null"
                                     :options="lineStyleOpts"
                                     label=""
@@ -233,12 +188,10 @@
                                 />
                             </label>
 
-                            <label class="block">
-                                <span
-                                    class="text-sm text-[var(--text-muted)] block"
-                                    style="margin-bottom: 3px"
-                                    >{{ t('boardSettings.target') }}</span
-                                >
+                            <label class="orb-gset__label">
+                                <span class="orb-gset__field-label">{{
+                                    t('boardSettings.target')
+                                }}</span>
                                 <CmkToggleButtonGroup
                                     v-model="form.url_target"
                                     :options="[
@@ -255,12 +208,9 @@
                 <!-- Label defaults — Show-label is a master toggle in the card header.
                  Header uses a div+role=button instead of a native <button> so we can
                  nest the CmkSwitch <label> (invalid HTML inside <button>). -->
-                <section
-                    class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
-                >
+                <section class="orb-gset__card">
                     <div
-                        class="w-full flex items-center justify-between text-left cursor-pointer"
-                        style="padding: 14px 16px"
+                        class="orb-gset__card-toggle orb-gset__card-toggle--clickable"
                         role="button"
                         tabindex="0"
                         @click="sectionOpen.labelDefaults = !sectionOpen.labelDefaults"
@@ -271,27 +221,17 @@
                             sectionOpen.labelDefaults = !sectionOpen.labelDefaults
                         "
                     >
-                        <h3 class="text-base font-semibold text-[var(--text-muted)]">
+                        <h3 class="orb-gset__card-title">
                             {{ t('settings.labelDefaults') }}
                         </h3>
-                        <div class="flex items-center gap-[12px]" @click.stop>
-                            <label
-                                class="flex items-center gap-[6px] text-sm text-[var(--text-muted)] cursor-pointer"
-                            >
+                        <div class="orb-gset__card-actions" @click.stop>
+                            <label class="orb-gset__switch-label">
                                 <CmkSwitch v-model:data="form.label_show" />
                                 <span>{{ t('boardSettings.showLabel') }}</span>
                             </label>
                             <svg
-                                style="
-                                    width: 14px;
-                                    height: 14px;
-                                    flex-shrink: 0;
-                                    transition: transform 200ms;
-                                    cursor: pointer;
-                                "
-                                :style="{
-                                    transform: sectionOpen.labelDefaults ? 'rotate(180deg)' : '',
-                                }"
+                                class="orb-gset__chevron orb-gset__chevron--pointer"
+                                :class="{ 'orb-gset__chevron--open': sectionOpen.labelDefaults }"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -307,40 +247,32 @@
                         </div>
                     </div>
                     <CmkCollapsible :open="sectionOpen.labelDefaults">
-                        <div class="space-y-[16px]" style="padding: 0 16px 14px">
+                        <div class="orb-gset__card-body">
                             <div
-                                :class="[
-                                    'space-y-[16px] transition-opacity',
-                                    form.label_show ? '' : 'opacity-40 pointer-events-none',
-                                ]"
+                                class="orb-gset__label-fields"
+                                :class="{ 'orb-gset__label-fields--off': !form.label_show }"
                             >
                                 <div class="label-subsection">
                                     <p class="orb-section-title">
                                         {{ t('settings.labelAppearance') }}
                                     </p>
-                                    <div
-                                        class="flex flex-wrap gap-x-[12px] gap-y-[8px] items-start"
-                                    >
-                                        <label class="block">
-                                            <span
-                                                class="text-sm text-[var(--text-muted)] block"
-                                                style="margin-bottom: 3px"
+                                    <div class="orb-gset__field-row">
+                                        <label class="orb-gset__label">
+                                            <span class="orb-gset__field-label"
                                                 >{{ t('boardSettings.size') }} (px)</span
                                             >
                                             <NumberInput
                                                 v-model="form.label_size"
                                                 min="6"
                                                 max="72"
-                                                class="w-[80px]"
+                                                class="orb-gset__num"
                                             />
                                         </label>
 
-                                        <label class="block">
-                                            <span
-                                                class="text-sm text-[var(--text-muted)] block"
-                                                style="margin-bottom: 3px"
-                                                >{{ t('boardSettings.color') }}</span
-                                            >
+                                        <label class="orb-gset__label">
+                                            <span class="orb-gset__field-label">{{
+                                                t('boardSettings.color')
+                                            }}</span>
                                             <ColorInput
                                                 v-model="form.label_color"
                                                 default-color="#ffffff"
@@ -366,25 +298,17 @@
                 </section>
 
                 <!-- Templates -->
-                <section
-                    class="bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl overflow-hidden"
-                >
+                <section class="orb-gset__card">
                     <button
-                        class="w-full flex items-center justify-between text-left"
-                        style="padding: 14px 16px"
+                        class="orb-gset__card-toggle"
                         @click="sectionOpen.templates = !sectionOpen.templates"
                     >
-                        <h3 class="text-base font-semibold text-[var(--text-muted)]">
+                        <h3 class="orb-gset__card-title">
                             {{ t('settings.templates') }}
                         </h3>
                         <svg
-                            style="
-                                width: 14px;
-                                height: 14px;
-                                flex-shrink: 0;
-                                transition: transform 200ms;
-                            "
-                            :style="{ transform: sectionOpen.templates ? 'rotate(180deg)' : '' }"
+                            class="orb-gset__chevron"
+                            :class="{ 'orb-gset__chevron--open': sectionOpen.templates }"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -398,16 +322,14 @@
                         </svg>
                     </button>
                     <CmkCollapsible :open="sectionOpen.templates">
-                        <div class="space-y-[10px]" style="padding: 0 16px 14px">
-                            <p class="text-sm text-[var(--text-muted)]">
+                        <div class="orb-gset__card-body orb-gset__template-stack">
+                            <p class="orb-gset__hint">
                                 {{ t('settings.templatesSubtitle') }}
                             </p>
-                            <label class="block">
-                                <span
-                                    class="text-sm text-[var(--text-muted)] block"
-                                    style="margin-bottom: 3px"
-                                    >{{ t('settings.hoverTemplate') }}</span
-                                >
+                            <label class="orb-gset__label">
+                                <span class="orb-gset__field-label">{{
+                                    t('settings.hoverTemplate')
+                                }}</span>
                                 <CmkInput
                                     v-model="form.hover_template"
                                     :placeholder="t('board.templatePlaceholder')"
@@ -415,12 +337,10 @@
                                 />
                             </label>
 
-                            <label class="block">
-                                <span
-                                    class="text-sm text-[var(--text-muted)] block"
-                                    style="margin-bottom: 3px"
-                                    >{{ t('settings.contextTemplate') }}</span
-                                >
+                            <label class="orb-gset__label">
+                                <span class="orb-gset__field-label">{{
+                                    t('settings.contextTemplate')
+                                }}</span>
                                 <CmkInput
                                     v-model="form.context_template"
                                     :placeholder="t('board.templatePlaceholder')"
@@ -432,21 +352,18 @@
                 </section>
             </div>
 
-            <p v-if="saveError" class="text-sm text-[var(--color-light-red-40)]">{{ saveError }}</p>
+            <p v-if="saveError" class="orb-gset__error">{{ saveError }}</p>
 
-            <div class="flex items-center justify-end gap-[8px]">
+            <div class="orb-gset__footer">
                 <Transition
-                    enter-from-class="opacity-0 translate-x-2"
-                    enter-active-class="transition-all duration-200"
-                    leave-to-class="opacity-0"
-                    leave-active-class="transition-opacity duration-300"
+                    enter-from-class="orb-gset__saved-enter-from"
+                    enter-active-class="orb-gset__saved-enter-active"
+                    leave-to-class="orb-gset__saved-leave-to"
+                    leave-active-class="orb-gset__saved-leave-active"
                 >
-                    <span
-                        v-if="savedOk"
-                        class="flex items-center gap-[5px] text-sm text-[var(--color-corporate-green-50)]"
-                    >
+                    <span v-if="savedOk" class="orb-gset__saved">
                         <svg
-                            style="width: 14px; height: 14px"
+                            class="orb-gset__saved-icon"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -582,6 +499,191 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.orb-gset {
+    max-width: 672px;
+}
+
+.orb-gset__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 0;
+}
+
+.orb-gset__cards {
+    margin-bottom: var(--dimension-6);
+}
+
+.orb-gset__cards > * + * {
+    margin-top: var(--dimension-6);
+}
+
+.orb-gset__card {
+    overflow: hidden;
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.orb-gset__card-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 14px 16px;
+    text-align: left;
+}
+
+.orb-gset__card-toggle--clickable {
+    cursor: pointer;
+}
+
+.orb-gset__card-title {
+    font-size: var(--font-size-xlarge);
+    line-height: 24px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.orb-gset__card-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-5);
+}
+
+.orb-gset__chevron {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    transition: transform 200ms;
+}
+
+.orb-gset__chevron--pointer {
+    cursor: pointer;
+}
+
+.orb-gset__chevron--open {
+    transform: rotate(180deg);
+}
+
+.orb-gset__card-body {
+    padding: 0 16px 14px;
+}
+
+.orb-gset__field-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--dimension-4) var(--dimension-5);
+}
+
+.orb-gset__label {
+    display: block;
+}
+
+.orb-gset__field-label {
+    display: block;
+    margin-bottom: 3px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-gset__field-label--help {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--dimension-2);
+}
+
+.orb-gset__switch-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.orb-gset :deep(.orb-gset__select) {
+    width: 176px;
+}
+
+.orb-gset :deep(.orb-gset__select--wide) {
+    width: 192px;
+}
+
+.orb-gset :deep(.orb-gset__num) {
+    width: 80px;
+}
+
+.orb-gset__label-fields {
+    transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-gset__label-fields > * + * {
+    margin-top: var(--dimension-6);
+}
+
+.orb-gset__label-fields--off {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.orb-gset__template-stack > * + * {
+    margin-top: 10px;
+}
+
+.orb-gset__hint {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-gset__error {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--color-light-red-40);
+}
+
+.orb-gset__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--dimension-4);
+}
+
+.orb-gset__saved {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--color-corporate-green-50);
+}
+
+.orb-gset__saved-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.orb-gset__saved-enter-from {
+    opacity: 0;
+    transform: translateX(8px);
+}
+
+.orb-gset__saved-enter-active {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-gset__saved-leave-to {
+    opacity: 0;
+}
+
+.orb-gset__saved-leave-active {
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .label-subsection {
     padding-top: var(--dimension-4);
     border-top: 1px solid var(--border);
