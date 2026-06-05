@@ -1,30 +1,25 @@
 <template>
-    <div class="flex flex-col flex-1 overflow-hidden bg-[var(--bg)]">
+    <div class="orb-board">
         <!-- Slim map-specific topbar -->
-        <div
-            v-if="!isKiosk && !isPreview"
-            class="bg-[var(--bg-surface)] border-b border-[var(--border)] flex items-center justify-between shrink-0 z-30"
-            style="padding: 0 var(--dimension-6); height: 36px"
-        >
+        <div v-if="!isKiosk && !isPreview" class="orb-board__topbar">
             <!-- Left: Checkmk-style breadcrumb -->
-            <div class="min-w-0">
+            <div class="orb-board__crumb">
                 <CmkBreadcrumb :items="breadcrumbItems" />
             </div>
 
             <div
-                class="flex items-center gap-[5px] shrink-0 transition-opacity"
-                :class="drawerObject ? 'opacity-40 hover:opacity-100' : ''"
+                class="orb-board__topbar-actions"
+                :class="drawerObject ? 'orb-board__topbar-actions--dimmed' : ''"
             >
                 <!-- Flow problems pill (informational; layout switch lives in
                      the dedicated bottom-right toggle, no need for a CTA here) -->
                 <span
                     v-if="isFlowmap && flowProblems.total > 0"
-                    class="flex items-center rounded-full text-xs font-medium ring-1"
-                    style="gap: 4px; padding: 2px 7px"
+                    class="orb-board__pill"
                     :class="
                         flowProblems.critical > 0
-                            ? 'bg-[var(--color-light-red-50)]/10 ring-[var(--color-light-red-50)]/30 text-[var(--color-light-red-40)]'
-                            : 'bg-[var(--color-warning)]/10 ring-[var(--color-warning)]/30 text-[var(--color-yellow-50)]'
+                            ? 'orb-board__pill--critical'
+                            : 'orb-board__pill--warning'
                     "
                     :title="t('board.flow.issuesBanner', flowProblems)"
                 >
@@ -46,21 +41,15 @@
 
                 <!-- Connection status -->
                 <div
-                    class="flex items-center rounded-full text-xs font-medium ring-1 transition-all"
-                    style="gap: 4px; padding: 2px 7px"
+                    class="orb-board__pill"
                     :class="
-                        statesStore.connected
-                            ? 'bg-[var(--color-corporate-green-50)]/8 ring-[var(--color-corporate-green-50)]/20 text-[var(--color-corporate-green-50)]'
-                            : 'bg-[var(--color-light-red-50)]/8 ring-[var(--color-light-red-50)]/20 text-[var(--color-light-red-40)]'
+                        statesStore.connected ? 'orb-board__pill--ok' : 'orb-board__pill--offline'
                     "
                 >
                     <span
-                        class="rounded-full inline-block"
-                        style="width: 5px; height: 5px"
+                        class="orb-board__dot"
                         :class="
-                            statesStore.connected
-                                ? 'bg-[var(--color-corporate-green-50)] animate-pulse'
-                                : 'bg-[var(--color-light-red-40)]'
+                            statesStore.connected ? 'orb-board__dot--ok' : 'orb-board__dot--offline'
                         "
                     />
                     {{ statesStore.connected ? t('board.live') : t('board.offline') }}
@@ -69,12 +58,8 @@
                 <!-- Notification bell -->
                 <button
                     v-if="!auth.ssoActive && !auth.isCheckmkDeployment"
-                    class="p-[5px] rounded-lg transition-all duration-150"
-                    :class="
-                        statesStore.notificationsEnabled
-                            ? 'text-[var(--color-yellow-50)] hover:bg-[var(--color-warning)]/10'
-                            : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
-                    "
+                    class="orb-board__topbtn"
+                    :class="statesStore.notificationsEnabled ? 'orb-board__topbtn--alert' : ''"
                     :title="
                         statesStore.notificationsEnabled
                             ? t('board.notificationsOn')
@@ -100,8 +85,7 @@
                 <!-- Read-only badge -->
                 <span
                     v-if="boardConfig?.readonly"
-                    class="flex items-center rounded-lg text-xs font-semibold bg-[var(--bg-hover)] text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]"
-                    style="gap: 3px; padding: 2px 6px"
+                    class="orb-board__badge orb-board__badge--readonly"
                 >
                     <svg
                         style="width: 10px; height: 10px"
@@ -122,8 +106,7 @@
                 <!-- Editing badge -->
                 <span
                     v-if="editor.editMode.value"
-                    class="flex items-center rounded-lg text-xs font-semibold bg-[var(--color-warning)]/10 text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/20"
-                    style="gap: 3px; padding: 2px 6px"
+                    class="orb-board__badge orb-board__badge--editing"
                 >
                     <svg
                         style="width: 10px; height: 10px"
@@ -145,18 +128,13 @@
                 <button
                     v-if="boardConfig && boardConfig.rotation_interval > 0 && rotationCountdown > 0"
                     :title="rotationPaused ? t('board.rotationResume') : t('board.rotationPause')"
-                    class="flex items-center rounded-full text-xs font-medium ring-1 transition-all"
-                    style="gap: 3px; padding: 2px 7px"
-                    :class="
-                        rotationPaused
-                            ? 'bg-[var(--bg-hover)] ring-[var(--default-border-color)] text-[var(--text-muted)]'
-                            : 'bg-[var(--color-corporate-green-50)]/8 ring-[var(--color-corporate-green-50)]/20 text-[var(--color-corporate-green-50)]'
-                    "
+                    class="orb-board__pill orb-board__pill--rotation"
+                    :class="rotationPaused ? 'orb-board__pill--paused' : 'orb-board__pill--ok'"
                     @click="toggleRotationPause"
                 >
                     <svg
-                        style="width: 10px; height: 10px; animation-duration: 3s"
-                        :class="rotationPaused ? '' : 'animate-spin'"
+                        style="width: 10px; height: 10px"
+                        :class="rotationPaused ? '' : 'orb-board__spin'"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -174,7 +152,7 @@
                 <!-- Fullscreen: browser fullscreen in standalone, new-tab kiosk in Checkmk -->
                 <button
                     v-if="auth.ssoActive || auth.isCheckmkDeployment"
-                    class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+                    class="orb-board__topbtn"
                     :title="t('board.openInNewTab')"
                     @click="openKioskInNewTab"
                 >
@@ -194,7 +172,7 @@
                 </button>
                 <button
                     v-else
-                    class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+                    class="orb-board__topbtn"
                     :title="t('board.fullscreen')"
                     @click="enterFullscreen"
                 >
@@ -217,7 +195,7 @@
                 <button
                     v-if="canEdit && !boardConfig?.readonly"
                     data-tour="board-settings"
-                    class="p-[5px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all duration-150"
+                    class="orb-board__topbtn"
                     :title="t('board.boardSettings')"
                     @click="openSettings"
                 >
@@ -246,8 +224,7 @@
         <!-- Kiosk exit button (top-right, visible on hover) -->
         <button
             v-if="isKiosk"
-            class="fixed z-50 p-[5px] rounded-lg bg-black/40 text-white/60 hover:text-white hover:bg-black/60 transition-colors duration-150"
-            style="top: 12px; right: 12px"
+            class="orb-board__kiosk-exit"
             :title="t('board.exitFullscreen')"
             @click="exitFullscreen"
         >
@@ -269,35 +246,25 @@
         <!-- Map area + optional edit panel. Acts as the portal target for the
              shared CmkSlideIn-based detail drawer so the slide-in stays under
              the topbar. -->
-        <div
-            id="orbvis-board-shell"
-            class="flex flex-1 overflow-hidden relative"
-            data-tour="board-canvas"
-        >
+        <div id="orbvis-board-shell" class="orb-board__shell" data-tour="board-canvas">
             <!-- Loading overlay (covers all board types) -->
-            <div
-                v-if="isLoading"
-                class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-[var(--text-muted)] z-30 text-sm bg-[var(--bg)]"
-            >
+            <div v-if="isLoading" class="orb-board__loading">
                 <CmkLoading />
                 <span>{{ t('board.loadingBoard') }}</span>
             </div>
             <!-- Worldmap -->
             <div
                 v-if="isWorldmap"
-                class="flex-1 overflow-hidden bg-[var(--bg)] relative"
+                class="orb-board__area orb-board__area--canvas"
                 :class="{ 'worldmap-pick-active': worldmapPickActive }"
                 @click="closeWorldmapMenus"
             >
                 <div
                     v-if="boardsStore.error"
-                    class="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 text-sm"
+                    class="orb-board__msg orb-board__msg--overlay orb-board__msg--sm"
                 >
-                    <span class="text-[var(--color-light-red-40)]">{{ boardsStore.error }}</span>
-                    <router-link
-                        to="/"
-                        class="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors text-xs"
-                    >
+                    <span class="orb-board__error-text">{{ boardsStore.error }}</span>
+                    <router-link to="/" class="orb-board__backlink">
                         {{ t('board.backToOverview') }}
                     </router-link>
                 </div>
@@ -342,8 +309,7 @@
                         boardConfig && !isPreview && boardConfig.objects.some((o) => o.lat != null)
                     "
                     :title="t('board.fitAll')"
-                    class="absolute z-[1000] leaflet-control-fit-all bg-white hover:bg-zinc-100 text-zinc-700 border border-[var(--border)] rounded text-xs font-medium shadow transition-colors"
-                    style="padding: 2px 4px; top: 80px; left: 10px"
+                    class="leaflet-control-fit-all orb-board__fit-all"
                     @click.stop="worldmapCanvasRef?.fitAll()"
                 >
                     <svg
@@ -362,22 +328,15 @@
                 </button>
                 <div
                     v-else-if="!boardConfig"
-                    class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-[var(--text-muted)]"
+                    class="orb-board__msg orb-board__msg--overlay orb-board__msg--muted"
                 >
                     <span>{{ t('board.boardNotFound') }}</span>
-                    <router-link
-                        to="/"
-                        class="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors text-xs"
-                    >
+                    <router-link to="/" class="orb-board__backlink">
                         {{ t('board.backToOverview') }}
                     </router-link>
                 </div>
-                <div
-                    v-if="worldmapPickActive"
-                    class="absolute z-[2000] top-4 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-2 rounded-lg shadow-2xl bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)]"
-                    @click.stop
-                >
-                    <span class="text-sm text-[var(--text)]">{{ t('board.pickViewBanner') }}</span>
+                <div v-if="worldmapPickActive" class="orb-board__pick-banner" @click.stop>
+                    <span class="orb-board__pick-text">{{ t('board.pickViewBanner') }}</span>
                     <CmkButton variant="primary" @click="applyWorldmapPick">
                         {{ t('board.pickViewApply') }}
                     </CmkButton>
@@ -388,7 +347,7 @@
             </div>
 
             <!-- Radar -->
-            <div v-else-if="isRadar" class="flex-1 relative overflow-hidden">
+            <div v-else-if="isRadar" class="orb-board__area">
                 <RadarCanvas
                     :states="statesStore.states"
                     :checkmk-url="checkmkUrl"
@@ -410,7 +369,7 @@
             </div>
 
             <!-- Folder tree -->
-            <div v-else-if="isFolderTree" class="flex-1 relative overflow-hidden">
+            <div v-else-if="isFolderTree" class="orb-board__area">
                 <FolderTreeBoard
                     :view="
                         boardConfig && boardConfig.view.type === 'foldertree'
@@ -430,7 +389,7 @@
             </div>
 
             <!-- Flowmap -->
-            <div v-else-if="isFlowmap" class="flex-1 relative overflow-hidden">
+            <div v-else-if="isFlowmap" class="orb-board__area">
                 <FlowBoard
                     v-if="boardConfig?.connection_id"
                     ref="flowBoardRef"
@@ -450,10 +409,7 @@
                     @drawer-object="flowDrawerObject = $event"
                     @positions-changed="onFlowPositionsChanged"
                 />
-                <div
-                    v-else
-                    class="flex items-center justify-center h-full text-[var(--text-muted)] text-sm"
-                >
+                <div v-else class="orb-board__noconn">
                     {{ t('board.noConnectionConfigured') }}
                 </div>
             </div>
@@ -461,18 +417,15 @@
             <!-- Static map -->
             <div
                 v-else
-                class="flex-1 bg-[var(--bg)] relative overflow-auto"
+                class="orb-board__area orb-board__area--canvas orb-board__area--scroll"
                 @click="onContainerClick"
             >
                 <div
                     v-if="boardsStore.error"
-                    class="flex flex-col items-center justify-center h-full gap-3 text-sm"
+                    class="orb-board__msg orb-board__msg--fill orb-board__msg--sm"
                 >
-                    <span class="text-[var(--color-light-red-40)]">{{ boardsStore.error }}</span>
-                    <router-link
-                        to="/"
-                        class="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors text-xs"
-                    >
+                    <span class="orb-board__error-text">{{ boardsStore.error }}</span>
+                    <router-link to="/" class="orb-board__backlink">
                         {{ t('board.backToOverview') }}
                     </router-link>
                 </div>
@@ -490,11 +443,10 @@
                     <!-- Empty board hint -->
                     <div
                         v-if="boardConfig.objects.length === 0 && !editor.editMode.value"
-                        class="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none select-none z-10"
+                        class="orb-board__empty"
                     >
                         <svg
-                            style="width: 32px; height: 32px"
-                            class="text-[var(--text-muted)]"
+                            class="orb-board__empty-icon"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -506,7 +458,7 @@
                                 d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0H3"
                             />
                         </svg>
-                        <p class="text-sm text-[var(--text-muted)]">
+                        <p class="orb-board__empty-text">
                             <template v-if="canEdit">{{ t('board.emptyBoardAdmin') }}</template>
                             <template v-else>{{ t('board.emptyBoard') }}</template>
                         </p>
@@ -544,15 +496,9 @@
                         @graph-resize-end="onGraphResizeEnd"
                     />
                 </template>
-                <div
-                    v-else
-                    class="flex flex-col items-center justify-center h-full gap-3 text-[var(--text-muted)]"
-                >
+                <div v-else class="orb-board__msg orb-board__msg--fill orb-board__msg--muted">
                     <span>{{ t('board.boardNotFound') }}</span>
-                    <router-link
-                        to="/"
-                        class="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors text-xs"
-                    >
+                    <router-link to="/" class="orb-board__backlink">
                         {{ t('board.backToOverview') }}
                     </router-link>
                 </div>
@@ -654,20 +600,19 @@
                     !isFolderTree &&
                     !drawerObject
                 "
-                class="fixed z-40 flex flex-col items-end gap-[10px]"
-                style="bottom: 24px; right: 24px"
+                class="orb-board__fab-stack"
             >
                 <!-- Add Object panel — expands upward from FAB -->
                 <Transition
-                    enter-from-class="opacity-0 scale-y-75 scale-x-95 translate-y-4"
-                    enter-active-class="transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-bottom-right"
-                    leave-to-class="opacity-0 scale-y-75 scale-x-95 translate-y-4"
-                    leave-active-class="transition-all duration-200 ease-[cubic-bezier(0.4,0,1,1)] origin-bottom-right"
+                    enter-from-class="orb-board__pop-enter-from"
+                    enter-active-class="orb-board__pop-enter-active"
+                    leave-to-class="orb-board__pop-leave-to"
+                    leave-active-class="orb-board__pop-leave-active"
                     @after-leave="editor.resetDraft()"
                 >
                     <div
                         v-if="editor.editMode.value && !!editor.draft.type"
-                        class="w-64 max-h-[calc(100vh-10rem)] flex flex-col bg-[var(--bg-surface)] backdrop-blur-xl ring-1 ring-white/8 shadow-2xl shadow-black/60 rounded-2xl"
+                        class="orb-board__edit-panel"
                         data-tour="edit-panel"
                     >
                         <EditPanel
@@ -686,26 +631,25 @@
 
                 <!-- FAB: Add object (with type picker popover) -->
                 <Transition
-                    enter-from-class="opacity-0 scale-y-75 scale-x-95 translate-y-4"
-                    enter-active-class="transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-bottom-right"
-                    leave-to-class="opacity-0 scale-y-75 scale-x-95 translate-y-4"
-                    leave-active-class="transition-all duration-200 ease-[cubic-bezier(0.4,0,1,1)] origin-bottom-right"
+                    enter-from-class="orb-board__pop-enter-from"
+                    enter-active-class="orb-board__pop-enter-active"
+                    leave-to-class="orb-board__pop-leave-to"
+                    leave-active-class="orb-board__pop-leave-active"
                 >
                     <div
                         v-if="editor.editMode.value && !editor.placing.value"
                         ref="addPickerWrapperRef"
-                        class="relative"
+                        class="orb-board__fab-wrap"
                     >
                         <Transition
-                            enter-from-class="opacity-0 translate-y-1 scale-95"
-                            enter-active-class="transition-all duration-150 ease-out origin-bottom-right"
-                            leave-to-class="opacity-0 translate-y-1 scale-95"
-                            leave-active-class="transition-all duration-100 ease-in origin-bottom-right"
+                            enter-from-class="orb-board__menu-enter-from"
+                            enter-active-class="orb-board__menu-enter-active"
+                            leave-to-class="orb-board__menu-leave-to"
+                            leave-active-class="orb-board__menu-leave-active"
                         >
                             <div
                                 v-if="addPickerOpen"
-                                class="absolute right-0 mb-[8px] w-56 bg-[var(--bg-surface)] backdrop-blur-xl ring-1 ring-white/8 shadow-2xl shadow-black/60 rounded-xl overflow-hidden"
-                                style="bottom: 100%"
+                                class="orb-board__addmenu"
                                 role="menu"
                                 :aria-label="t('boardSettings.selectType')"
                             >
@@ -713,13 +657,11 @@
                                     v-for="opt in placeableTypeOptions"
                                     :key="opt.name"
                                     role="menuitem"
-                                    class="w-full flex items-center gap-[10px] text-[13px] text-left text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
-                                    style="padding: 8px 12px"
+                                    class="orb-board__addmenu-item"
                                     @click="chooseAddType(opt.name)"
                                 >
                                     <svg
-                                        class="text-[var(--text-muted)] shrink-0"
-                                        style="width: 12px; height: 12px"
+                                        class="orb-board__addmenu-icon"
                                         fill="none"
                                         viewBox="0 0 24 24"
                                         stroke="currentColor"
@@ -737,8 +679,7 @@
                         </Transition>
                         <button
                             data-tour="add-object-fab"
-                            class="rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1 bg-[var(--color-corporate-green-50)]/90 hover:bg-[var(--color-corporate-green-50)] ring-[var(--color-corporate-green-50)]/60 text-white"
-                            style="width: 40px; height: 40px"
+                            class="orb-board__fab orb-board__fab--primary"
                             :title="t('boardSettings.addObject')"
                             :aria-expanded="addPickerOpen"
                             aria-haspopup="menu"
@@ -764,12 +705,9 @@
                 <!-- FAB: Edit toggle -->
                 <button
                     data-tour="edit-fab"
-                    class="rounded-xl shadow-lg shadow-black/30 flex items-center justify-center transition-all duration-200 active:scale-95 ring-1"
-                    style="width: 40px; height: 40px"
+                    class="orb-board__fab"
                     :class="
-                        editor.editMode.value
-                            ? 'bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] ring-[var(--default-border-color)] text-[var(--text)]'
-                            : 'bg-[var(--bg-surface)]/80 hover:bg-[var(--bg-surface)] ring-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]'
+                        editor.editMode.value ? 'orb-board__fab--active' : 'orb-board__fab--idle'
                     "
                     :title="editor.editMode.value ? t('board.editing') : t('board.edit')"
                     @click="onToggleEditMode"
@@ -809,10 +747,10 @@
         <!-- Action bar anchored to selected object (edit mode) -->
         <Teleport to="body">
             <Transition
-                enter-from-class="opacity-0 translate-y-1 scale-95"
-                enter-active-class="transition-all duration-150 ease-out"
-                leave-to-class="opacity-0 translate-y-1 scale-95"
-                leave-active-class="transition-all duration-100 ease-in"
+                enter-from-class="orb-board__bar-enter-from"
+                enter-active-class="orb-board__bar-enter-active"
+                leave-to-class="orb-board__bar-leave-to"
+                leave-active-class="orb-board__bar-leave-active"
             >
                 <div
                     v-if="
@@ -824,21 +762,14 @@
                         !editor.draft.type &&
                         actionBarStyle
                     "
-                    class="fixed z-40 flex items-center bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/40 backdrop-blur-md"
-                    style="gap: 3px; padding: 4px 6px"
+                    class="orb-board__actionbar"
                     :style="actionBarStyle"
                 >
-                    <span
-                        class="text-[10px] font-bold text-[var(--text-muted)] capitalize px-[4px]"
-                        >{{ selectedObject!.type }}</span
-                    >
-                    <div
-                        class="bg-[var(--border)]"
-                        style="width: 1px; height: 14px; margin: 0 1px"
-                    />
+                    <span class="orb-board__actionbar-type">{{ selectedObject!.type }}</span>
+                    <div class="orb-board__actionbar-divider" />
                     <button
                         title="Edit properties"
-                        class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--color-corporate-green-40)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                        class="orb-board__actionbar-btn orb-board__actionbar-btn--edit"
                         @click="openPropsModal(selectedObject!, selectedObjectAnchor)"
                     >
                         <svg
@@ -857,7 +788,7 @@
                     </button>
                     <button
                         title="Duplicate"
-                        class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-all"
+                        class="orb-board__actionbar-btn"
                         @click="editor.duplicateSelected()"
                     >
                         <svg
@@ -876,7 +807,7 @@
                     </button>
                     <button
                         title="Delete"
-                        class="p-[7px] rounded-lg text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
+                        class="orb-board__actionbar-btn orb-board__actionbar-btn--danger"
                         @click="deleteTargetObject = selectedObject"
                     >
                         <svg
@@ -899,34 +830,29 @@
 
         <!-- Services-layout toggle (Flow Board only). Hidden during triage. -->
         <Teleport to="body">
-            <div
-                v-if="isFlowmap && !drawerObject"
-                class="fixed z-40"
-                style="bottom: 24px; right: 24px"
-            >
-                <div class="relative">
+            <div v-if="isFlowmap && !drawerObject" class="orb-board__svc">
+                <div class="orb-board__svc-wrap">
                     <!-- Backdrop to close dropdown on outside click -->
                     <div
                         v-if="serviceLayoutOpen"
-                        class="fixed inset-0 z-0"
+                        class="orb-board__svc-backdrop"
                         @click="serviceLayoutOpen = false"
                     />
 
                     <button
-                        class="relative z-10 flex items-center rounded-xl text-xs font-medium ring-1 shadow-lg shadow-black/30 transition-all duration-200"
-                        style="gap: 5px; padding: 5px 10px"
+                        class="orb-board__svc-btn"
                         :class="
                             serviceLayout !== 'off'
-                                ? 'bg-[var(--color-corporate-green-50)]/15 text-[var(--color-corporate-green-40)] ring-[var(--color-corporate-green-50)]/40'
-                                : 'bg-[var(--bg-surface)]/80 text-[var(--text-muted)] ring-[var(--border)] hover:text-[var(--text)] hover:bg-[var(--bg-surface)]'
+                                ? 'orb-board__svc-btn--on'
+                                : 'orb-board__svc-btn--off'
                         "
                         @click="serviceLayoutOpen = !serviceLayoutOpen"
                     >
                         {{ t('board.services') }}
                         <svg
                             style="width: 10px; height: 10px"
-                            class="transition-transform duration-150"
-                            :class="serviceLayoutOpen ? 'rotate-180' : ''"
+                            class="orb-board__svc-caret"
+                            :class="serviceLayoutOpen ? 'orb-board__svc-caret--open' : ''"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -942,25 +868,18 @@
 
                     <!-- Dropdown -->
                     <Transition
-                        enter-from-class="opacity-0 scale-95 translate-y-1"
-                        enter-active-class="transition-all duration-150 ease-out origin-bottom-right"
-                        leave-to-class="opacity-0 scale-95 translate-y-1"
-                        leave-active-class="transition-all duration-100 ease-in origin-bottom-right"
+                        enter-from-class="orb-board__menu-enter-from"
+                        enter-active-class="orb-board__menu-enter-active"
+                        leave-to-class="orb-board__menu-leave-to"
+                        leave-active-class="orb-board__menu-leave-active"
                     >
-                        <div
-                            v-if="serviceLayoutOpen"
-                            class="absolute bottom-full right-0 z-10 w-[120px] bg-[var(--bg-surface)] ring-1 ring-[var(--border)] rounded-xl shadow-2xl shadow-black/50 overflow-hidden"
-                            style="margin-bottom: 6px"
-                        >
+                        <div v-if="serviceLayoutOpen" class="orb-board__svc-menu">
                             <button
                                 v-for="opt in serviceLayoutOptions"
                                 :key="opt.value"
-                                class="w-full flex items-center justify-between text-xs transition-colors"
-                                style="padding: 5px 10px"
+                                class="orb-board__svc-item"
                                 :class="
-                                    serviceLayout === opt.value
-                                        ? 'text-[var(--color-corporate-green-40)] bg-[var(--color-corporate-green-50)]/10'
-                                        : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
+                                    serviceLayout === opt.value ? 'orb-board__svc-item--active' : ''
                                 "
                                 @click="
                                     onServiceLayoutChanged(opt.value);
@@ -1056,31 +975,31 @@
 
         <template v-if="isFolderTree && folderCtx">
             <div
-                class="fixed inset-0 z-40"
+                class="orb-board__ctx-backdrop"
                 @click="closeFolderCtx"
                 @contextmenu.prevent="closeFolderCtx"
             />
             <div
-                class="fixed z-50 bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-xl py-1.5 min-w-56"
+                class="orb-board__ctx"
                 :style="{ left: `${folderCtx.x}px`, top: `${folderCtx.y}px` }"
                 @click.stop
             >
-                <div class="px-3.5 py-2 border-b border-[var(--border)] mb-1">
-                    <p class="text-xs font-semibold text-[var(--text)] truncate max-w-52">
+                <div class="orb-board__ctx-header">
+                    <p class="orb-board__ctx-name">
                         {{ folderCtx.node.title || 'Main' }}
                     </p>
-                    <p class="text-[10px] text-[var(--text-muted)] mt-0.5">
+                    <p class="orb-board__ctx-type">
                         {{ t('board.ftFolder') }}
                     </p>
                 </div>
                 <button
                     v-if="canBulkCommand && folderCtx.node.host_count > 0"
                     type="button"
-                    class="w-full text-left flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+                    class="orb-board__ctx-item"
                     @click="onFolderCtxBulk"
                 >
                     <svg
-                        class="w-3.5 h-3.5 shrink-0"
+                        class="orb-board__ctx-icon"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -1098,11 +1017,11 @@
                     v-if="folderSetupUrl"
                     :href="folderSetupUrl"
                     target="_blank"
-                    class="flex items-center gap-2 px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors"
+                    class="orb-board__ctx-item"
                     @click="closeFolderCtx"
                 >
                     <svg
-                        class="w-3.5 h-3.5 shrink-0"
+                        class="orb-board__ctx-icon"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -1118,7 +1037,7 @@
                 </a>
                 <div
                     v-if="!(canBulkCommand && folderCtx.node.host_count > 0) && !folderSetupUrl"
-                    class="px-3.5 py-2 text-xs text-[var(--text-muted)] italic"
+                    class="orb-board__ctx-empty"
                 >
                     {{ t('contextMenu.noCheckmkUrl') }}
                 </div>
@@ -1127,17 +1046,17 @@
 
         <div
             v-if="isWorldmap && worldmapCanvasCtxMenu.visible"
-            class="fixed z-50 bg-[var(--bg-glass)] backdrop-blur-md ring-1 ring-[var(--border)] shadow-2xl shadow-black/60 rounded-xl py-1.5 min-w-56"
+            class="orb-board__ctx"
             :style="{ left: `${worldmapCanvasCtxMenu.x}px`, top: `${worldmapCanvasCtxMenu.y}px` }"
             @click.stop
         >
             <button
                 type="button"
-                class="flex items-center gap-2 w-full px-3.5 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] transition-colors text-left"
+                class="orb-board__ctx-item"
                 @click="onWorldmapCanvasCtxSaveAsDefault"
             >
                 <svg
-                    class="w-3.5 h-3.5 shrink-0"
+                    class="orb-board__ctx-icon"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -2584,5 +2503,748 @@ onUnmounted(() => {
 .worldmap-pick-active .leaflet-dragging .leaflet-grab,
 .worldmap-pick-active .leaflet-container {
     cursor: crosshair !important;
+}
+</style>
+
+<style scoped>
+.orb-board {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+}
+
+.orb-board__topbar {
+    z-index: 30;
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    height: 36px;
+    padding: 0 var(--dimension-6);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.orb-board__crumb {
+    min-width: 0;
+}
+
+.orb-board__topbar-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 5px;
+    transition: opacity 0.15s;
+}
+
+.orb-board__topbar-actions--dimmed {
+    opacity: 0.4;
+}
+
+.orb-board__topbar-actions--dimmed:hover {
+    opacity: 1;
+}
+
+.orb-board__pill {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-3);
+    padding: var(--dimension-2) 7px;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-weight: 500;
+    border-radius: 9999px;
+    transition: all 0.15s;
+}
+
+.orb-board__pill--critical {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 10%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-light-red-50) 30%, transparent);
+}
+
+.orb-board__pill--warning {
+    color: var(--color-yellow-50);
+    background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 30%, transparent);
+}
+
+.orb-board__pill--ok {
+    color: var(--color-corporate-green-50);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 8%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-corporate-green-50) 20%, transparent);
+}
+
+.orb-board__pill--offline {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 8%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-light-red-50) 20%, transparent);
+}
+
+.orb-board__pill--paused {
+    color: var(--text-muted);
+    background: var(--bg-hover);
+    box-shadow: 0 0 0 1px var(--default-border-color);
+}
+
+.orb-board__pill--rotation {
+    gap: 3px;
+}
+
+.orb-board__dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 9999px;
+}
+
+.orb-board__dot--ok {
+    background: var(--color-corporate-green-50);
+    animation: orb-board-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.orb-board__dot--offline {
+    background: var(--color-light-red-40);
+}
+
+@keyframes orb-board-pulse {
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.orb-board__spin {
+    animation: orb-board-spin 3s linear infinite;
+}
+
+@keyframes orb-board-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.orb-board__topbtn {
+    padding: 5px;
+    color: var(--text-muted);
+    border-radius: 8px;
+    transition: all 0.15s;
+}
+
+.orb-board__topbtn:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+}
+
+.orb-board__topbtn--alert,
+.orb-board__topbtn--alert:hover {
+    color: var(--color-yellow-50);
+}
+
+.orb-board__topbtn--alert:hover {
+    background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+}
+
+.orb-board__badge {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: var(--dimension-2) 6px;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+.orb-board__badge--readonly {
+    color: var(--text-muted);
+    background: var(--bg-hover);
+    box-shadow: 0 0 0 1px var(--default-border-color);
+}
+
+.orb-board__badge--editing {
+    color: var(--color-yellow-50);
+    background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 20%, transparent);
+}
+
+.orb-board__kiosk-exit {
+    position: fixed;
+    top: var(--dimension-5);
+    right: var(--dimension-5);
+    z-index: 50;
+    padding: 5px;
+    color: var(--color-white-60);
+    background: rgb(0 0 0 / 40%);
+    border-radius: 8px;
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.orb-board__kiosk-exit:hover {
+    color: var(--color-white-100);
+    background: rgb(0 0 0 / 60%);
+}
+
+.orb-board__shell {
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    overflow: hidden;
+}
+
+.orb-board__loading {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--dimension-5);
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+    background: var(--bg);
+}
+
+.orb-board__area {
+    position: relative;
+    flex: 1 1 0%;
+    overflow: hidden;
+}
+
+.orb-board__area--canvas {
+    background: var(--bg);
+}
+
+.orb-board__area--scroll {
+    overflow: auto;
+}
+
+.orb-board__msg {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--dimension-5);
+}
+
+.orb-board__msg--overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+}
+
+.orb-board__msg--fill {
+    height: 100%;
+}
+
+.orb-board__msg--sm {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+}
+
+.orb-board__msg--muted {
+    color: var(--text-muted);
+}
+
+.orb-board__error-text {
+    color: var(--color-light-red-40);
+}
+
+.orb-board__backlink {
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+    transition: color 0.15s;
+}
+
+.orb-board__backlink:hover {
+    color: var(--text);
+}
+
+.orb-board__fit-all {
+    position: absolute;
+    top: 80px;
+    left: 10px;
+    z-index: 1000;
+    padding: var(--dimension-2) var(--dimension-3);
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-weight: 500;
+    color: var(--color-mist-grey-90);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 10%),
+        0 1px 2px -1px rgb(0 0 0 / 10%);
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.orb-board__fit-all:hover {
+    background: var(--color-mist-grey-0);
+}
+
+.orb-board__pick-banner {
+    position: absolute;
+    top: var(--dimension-6);
+    left: 50%;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-5);
+    padding: var(--dimension-4) var(--dimension-6);
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    border-radius: 8px;
+    box-shadow:
+        0 0 0 1px var(--border),
+        0 25px 50px -12px rgb(0 0 0 / 25%);
+    transform: translateX(-50%);
+}
+
+.orb-board__pick-text {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text);
+}
+
+.orb-board__noconn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-board__empty {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--dimension-4);
+    pointer-events: none;
+    user-select: none;
+}
+
+.orb-board__empty-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--text-muted);
+}
+
+.orb-board__empty-text {
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-board__fab-stack {
+    position: fixed;
+    right: var(--dimension-8);
+    bottom: var(--dimension-8);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.orb-board__pop-enter-from,
+.orb-board__pop-leave-to {
+    opacity: 0;
+    transform: translateY(16px) scaleX(0.95) scaleY(0.75);
+}
+
+.orb-board__pop-enter-active {
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: bottom right;
+}
+
+.orb-board__pop-leave-active {
+    transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
+    transform-origin: bottom right;
+}
+
+.orb-board__menu-enter-from,
+.orb-board__menu-leave-to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.95);
+}
+
+.orb-board__menu-enter-active {
+    transition: all 0.15s cubic-bezier(0, 0, 0.2, 1);
+    transform-origin: bottom right;
+}
+
+.orb-board__menu-leave-active {
+    transition: all 0.1s cubic-bezier(0.4, 0, 1, 1);
+    transform-origin: bottom right;
+}
+
+.orb-board__bar-enter-from,
+.orb-board__bar-leave-to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.95);
+}
+
+.orb-board__bar-enter-active {
+    transition: all 0.15s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.orb-board__bar-leave-active {
+    transition: all 0.1s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.orb-board__edit-panel {
+    display: flex;
+    flex-direction: column;
+    width: 256px;
+    max-height: calc(100vh - 160px);
+    background: var(--bg-surface);
+    backdrop-filter: blur(24px);
+    border-radius: 16px;
+    box-shadow:
+        0 0 0 1px rgb(255 255 255 / 8%),
+        0 25px 50px -12px rgb(0 0 0 / 60%);
+}
+
+.orb-board__fab-wrap {
+    position: relative;
+}
+
+.orb-board__addmenu {
+    position: absolute;
+    right: 0;
+    bottom: 100%;
+    width: 224px;
+    margin-bottom: var(--dimension-4);
+    overflow: hidden;
+    background: var(--bg-surface);
+    backdrop-filter: blur(24px);
+    border-radius: 12px;
+    box-shadow:
+        0 0 0 1px rgb(255 255 255 / 8%),
+        0 25px 50px -12px rgb(0 0 0 / 60%);
+}
+
+.orb-board__addmenu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: var(--dimension-4) var(--dimension-5);
+    font-size: 13px;
+    color: var(--text);
+    text-align: left;
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.orb-board__addmenu-item:hover {
+    background: var(--bg-hover);
+}
+
+.orb-board__addmenu-icon {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    color: var(--text-muted);
+}
+
+.orb-board__fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.orb-board__fab:active {
+    transform: scale(0.95);
+}
+
+.orb-board__fab--primary {
+    color: var(--color-white-100);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 90%, transparent);
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--color-corporate-green-50) 60%, transparent),
+        0 10px 15px -3px rgb(0 0 0 / 30%),
+        0 4px 6px -4px rgb(0 0 0 / 30%);
+}
+
+.orb-board__fab--primary:hover {
+    background: var(--color-corporate-green-50);
+}
+
+.orb-board__fab--active {
+    color: var(--text);
+    background: var(--bg-input);
+    box-shadow:
+        0 0 0 1px var(--default-border-color),
+        0 10px 15px -3px rgb(0 0 0 / 30%),
+        0 4px 6px -4px rgb(0 0 0 / 30%);
+}
+
+.orb-board__fab--active:hover {
+    background: var(--bg-hover);
+}
+
+.orb-board__fab--idle {
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
+    box-shadow:
+        0 0 0 1px var(--border),
+        0 10px 15px -3px rgb(0 0 0 / 30%),
+        0 4px 6px -4px rgb(0 0 0 / 30%);
+}
+
+.orb-board__fab--idle:hover {
+    color: var(--text);
+    background: var(--bg-surface);
+}
+
+.orb-board__actionbar {
+    position: fixed;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: var(--dimension-3) 6px;
+    background: var(--bg-surface);
+    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    box-shadow:
+        0 0 0 1px var(--border),
+        0 25px 50px -12px rgb(0 0 0 / 40%);
+}
+
+.orb-board__actionbar-type {
+    padding: 0 var(--dimension-3);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: capitalize;
+}
+
+.orb-board__actionbar-divider {
+    width: 1px;
+    height: 14px;
+    margin: 0 1px;
+    background: var(--border);
+}
+
+.orb-board__actionbar-btn {
+    padding: 7px;
+    color: var(--text-muted);
+    border-radius: 8px;
+    transition: all 0.15s;
+}
+
+.orb-board__actionbar-btn:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+}
+
+.orb-board__actionbar-btn--edit:hover {
+    color: var(--color-corporate-green-40);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 10%, transparent);
+}
+
+.orb-board__actionbar-btn--danger:hover {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 10%, transparent);
+}
+
+.orb-board__svc {
+    position: fixed;
+    right: var(--dimension-8);
+    bottom: var(--dimension-8);
+    z-index: 40;
+}
+
+.orb-board__svc-wrap {
+    position: relative;
+}
+
+.orb-board__svc-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+}
+
+.orb-board__svc-btn {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-weight: 500;
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.orb-board__svc-btn--on {
+    color: var(--color-corporate-green-40);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 15%, transparent);
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--color-corporate-green-50) 40%, transparent),
+        0 10px 15px -3px rgb(0 0 0 / 30%),
+        0 4px 6px -4px rgb(0 0 0 / 30%);
+}
+
+.orb-board__svc-btn--off {
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
+    box-shadow:
+        0 0 0 1px var(--border),
+        0 10px 15px -3px rgb(0 0 0 / 30%),
+        0 4px 6px -4px rgb(0 0 0 / 30%);
+}
+
+.orb-board__svc-btn--off:hover {
+    color: var(--text);
+    background: var(--bg-surface);
+}
+
+.orb-board__svc-caret {
+    transition: transform 0.15s;
+}
+
+.orb-board__svc-caret--open {
+    transform: rotate(180deg);
+}
+
+.orb-board__svc-menu {
+    position: absolute;
+    right: 0;
+    bottom: 100%;
+    z-index: 10;
+    width: 120px;
+    margin-bottom: 6px;
+    overflow: hidden;
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow:
+        0 0 0 1px var(--border),
+        0 25px 50px -12px rgb(0 0 0 / 50%);
+}
+
+.orb-board__svc-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 5px 10px;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    color: var(--text-muted);
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.orb-board__svc-item:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+}
+
+.orb-board__svc-item--active,
+.orb-board__svc-item--active:hover {
+    color: var(--color-corporate-green-40);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 10%, transparent);
+}
+
+.orb-board__ctx-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+}
+
+.orb-board__ctx {
+    position: fixed;
+    z-index: 50;
+    min-width: 224px;
+    padding: 6px 0;
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    box-shadow:
+        0 0 0 1px var(--border),
+        0 25px 50px -12px rgb(0 0 0 / 60%);
+}
+
+.orb-board__ctx-header {
+    margin-bottom: var(--dimension-3);
+    padding: var(--dimension-4) 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.orb-board__ctx-name {
+    overflow: hidden;
+    max-width: 208px;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-weight: 600;
+    color: var(--text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-board__ctx-type {
+    margin-top: var(--dimension-2);
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.orb-board__ctx-item {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+    width: 100%;
+    padding: var(--dimension-4) 14px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+    text-align: left;
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.orb-board__ctx-item:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+}
+
+.orb-board__ctx-icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+}
+
+.orb-board__ctx-empty {
+    padding: var(--dimension-4) 14px;
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-style: italic;
+    color: var(--text-muted);
 }
 </style>

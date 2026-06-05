@@ -1,20 +1,13 @@
 <template>
-    <div class="flex-1 min-h-0 overflow-y-auto bg-[var(--bg)]">
-        <main style="padding: var(--dimension-7) 24px 40px">
-            <div
-                class="flex items-center"
-                style="max-width: 960px; margin: 0 auto 20px; gap: var(--dimension-4)"
-            >
-                <h2
-                    class="text-base font-semibold text-[var(--text)] tracking-tight"
-                    style="margin-right: var(--dimension-4)"
-                >
+    <div class="orb-home">
+        <main class="orb-home__main">
+            <div class="orb-home__toolbar">
+                <h2 class="orb-home__title">
                     {{ t('home.title') }}
                 </h2>
-                <div class="relative" style="width: 200px">
+                <div class="orb-home__search">
                     <svg
-                        class="absolute top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"
-                        style="left: 8px; width: 13px; height: 13px"
+                        class="orb-home__search-icon"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -29,14 +22,12 @@
                     <input
                         v-model="searchQuery"
                         :placeholder="t('home.search')"
-                        class="w-full bg-[var(--bg-input)] ring-1 ring-[var(--default-form-element-border-color)]/50 rounded text-[var(--text)] placeholder-[var(--default-form-element-placeholder-color)] focus:outline-none focus:ring-2 focus:ring-[var(--color-corporate-green-50)] transition-all"
-                        style="font-size: 12px; padding: 5px 8px 5px 26px"
+                        class="orb-home__search-input"
                         :style="searchQuery ? 'padding-right: var(--dimension-8)' : ''"
                     />
                     <button
                         v-if="searchQuery"
-                        class="absolute top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-                        style="right: 6px"
+                        class="orb-home__search-clear"
                         :title="t('home.clearSearch')"
                         @click="searchQuery = ''"
                     >
@@ -64,19 +55,14 @@
                     />
                     <div
                         v-else
-                        class="inline-flex items-center bg-[var(--bg-input)] ring-1 ring-[var(--default-form-element-border-color)]/60 rounded overflow-hidden"
+                        class="orb-home__toggle-group"
                         role="group"
                         :aria-label="t('home.viewCardsTitle')"
                     >
                         <button
                             type="button"
-                            class="flex items-center justify-center transition-colors"
-                            :class="
-                                viewMode === 'cards'
-                                    ? 'bg-[var(--color-corporate-green-50)] text-[var(--button-primary-text-color,#000)]'
-                                    : 'text-[var(--text-muted)] hover:text-[var(--text)]'
-                            "
-                            style="padding: 4px 8px; font-size: 12px; gap: 4px"
+                            class="orb-home__toggle-btn"
+                            :class="viewMode === 'cards' ? 'orb-home__toggle-btn--active' : ''"
                             :title="t('home.viewCardsTitle')"
                             :aria-pressed="viewMode === 'cards'"
                             @click="setViewMode('cards')"
@@ -98,13 +84,8 @@
                         </button>
                         <button
                             type="button"
-                            class="flex items-center justify-center transition-colors border-l border-[var(--default-form-element-border-color)]/60"
-                            :class="
-                                viewMode === 'table'
-                                    ? 'bg-[var(--color-corporate-green-50)] text-[var(--button-primary-text-color,#000)]'
-                                    : 'text-[var(--text-muted)] hover:text-[var(--text)]'
-                            "
-                            style="padding: 4px 8px; font-size: 12px; gap: 4px"
+                            class="orb-home__toggle-btn orb-home__toggle-btn--bordered"
+                            :class="viewMode === 'table' ? 'orb-home__toggle-btn--active' : ''"
                             :title="t('home.viewTableTitle')"
                             :aria-pressed="viewMode === 'table'"
                             @click="setViewMode('table')"
@@ -129,8 +110,7 @@
                 <button
                     v-if="auth.canCreateBoards"
                     data-tour="new-board"
-                    class="flex items-center bg-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-60)] rounded font-semibold text-[var(--button-primary-text-color,#000)] transition-all"
-                    style="gap: 5px; padding: 5px 10px; font-size: 12px"
+                    class="orb-home__new-btn"
                     @click="showCreate = true"
                 >
                     <svg
@@ -151,18 +131,10 @@
             </div>
 
             <!-- Loading -->
-            <div
-                v-if="boardsStore.loading"
-                class="flex items-center text-[var(--text-muted)] text-sm justify-center"
-                style="gap: var(--dimension-4); padding: 48px 0"
-            >
-                <svg
-                    class="animate-spin w-4 h-4 text-[var(--color-corporate-green-50)]"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                >
+            <div v-if="boardsStore.loading" class="orb-home__loading">
+                <svg class="orb-home__spinner" fill="none" viewBox="0 0 24 24">
                     <circle
-                        class="opacity-25"
+                        class="orb-home__spinner-track"
                         cx="12"
                         cy="12"
                         r="10"
@@ -170,7 +142,7 @@
                         stroke-width="4"
                     />
                     <path
-                        class="opacity-75"
+                        class="orb-home__spinner-head"
                         fill="currentColor"
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                     />
@@ -179,32 +151,14 @@
             </div>
 
             <!-- Error -->
-            <div
-                v-else-if="boardsStore.error"
-                class="flex items-center bg-[var(--color-light-red-50)]/8 ring-1 ring-[var(--color-light-red-50)]/20 rounded-xl text-[var(--color-light-red-40)] text-sm"
-                style="gap: 6px; padding: var(--dimension-4) 12px"
-            >
+            <div v-else-if="boardsStore.error" class="orb-home__error">
                 {{ boardsStore.error }}
             </div>
 
             <!-- Empty state -->
-            <div
-                v-else-if="boardsStore.boards.length === 0"
-                class="flex flex-col items-center justify-center text-center"
-                style="padding: 80px 0"
-            >
-                <div
-                    class="rounded-xl bg-[var(--default-form-element-bg-color)] ring-1 ring-[var(--default-form-element-border-color)] flex items-center justify-center"
-                    style="width: 40px; height: 40px; margin-bottom: var(--dimension-6)"
-                >
-                    <svg
-                        class="text-[var(--text-muted)]"
-                        style="width: 22px; height: 22px"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="1.5"
-                    >
+            <div v-else-if="boardsStore.boards.length === 0" class="orb-home__empty">
+                <div class="orb-home__empty-icon">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -212,13 +166,11 @@
                         />
                     </svg>
                 </div>
-                <p class="text-[var(--text)] font-semibold">{{ t('home.noBoardsTitle') }}</p>
-                <p class="text-[var(--text-muted)] text-sm" style="margin-top: 6px">
-                    <span
-                        v-if="auth.canCreateBoards"
-                        class="text-[var(--color-corporate-green-50)]"
-                        >{{ t('home.noBoardsAdmin') }}</span
-                    >
+                <p class="orb-home__empty-title">{{ t('home.noBoardsTitle') }}</p>
+                <p class="orb-home__empty-hint">
+                    <span v-if="auth.canCreateBoards" class="orb-home__empty-cta">{{
+                        t('home.noBoardsAdmin')
+                    }}</span>
                     <span v-else>{{ t('home.noBoardsUser') }}</span>
                 </p>
             </div>
@@ -229,29 +181,21 @@
                 v-model="draggableBoards"
                 :disabled="!isDragEnabled"
                 data-tour="boards-grid"
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-                style="max-width: 960px; margin: 0 auto; gap: var(--dimension-6)"
+                class="orb-home__grid"
                 @end="onDragEnd"
             >
-                <p
-                    v-if="searchQuery && !filteredBoards.length"
-                    class="col-span-full text-center text-[var(--text-muted)] text-sm"
-                    style="padding: 40px 0"
-                >
+                <p v-if="searchQuery && !filteredBoards.length" class="orb-home__no-results">
                     {{ t('home.noSearchResults', { q: searchQuery }) }}
                 </p>
                 <div
                     v-for="map in draggableBoards"
                     :key="map.name"
-                    :class="[isDragEnabled ? 'cursor-grab active:cursor-grabbing' : '']"
-                    class="group relative bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] hover:ring-[var(--color-corporate-green-50)]/40 rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-[2px] hover:shadow-lg hover:shadow-[var(--color-corporate-green-100)]/10"
+                    :class="[isDragEnabled ? 'orb-home__card--draggable' : '']"
+                    class="orb-home__card"
                 >
-                    <router-link :to="`/boards/${map.name}`" class="block">
+                    <router-link :to="`/boards/${map.name}`" class="orb-home__card-link">
                         <!-- Thumbnail -->
-                        <div
-                            class="relative w-full overflow-hidden bg-[var(--default-form-element-bg-color)]"
-                            style="height: 144px"
-                        >
+                        <div class="orb-home__thumb">
                             <img
                                 v-if="
                                     map.background_image &&
@@ -260,7 +204,7 @@
                                 "
                                 :src="`${baseUrl}boards/backgrounds/${map.background_image}`"
                                 :alt="map.alias || map.name"
-                                class="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity duration-200"
+                                class="orb-home__thumb-img"
                                 @error="bgImageFailed[map.name] = true"
                             />
                             <!-- Worldmap thumbnail -->
@@ -269,13 +213,13 @@
                                 :lat="worldmapLat(map)"
                                 :lng="worldmapLng(map)"
                                 :zoom="worldmapZoom(map)"
-                                class="opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none"
+                                class="orb-home__thumb-media"
                             />
                             <!-- Flow Board thumbnail -->
                             <svg
                                 v-else-if="map.view.type === 'flow'"
                                 viewBox="0 0 256 128"
-                                class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none"
+                                class="orb-home__thumb-media orb-home__thumb-media--fill"
                             >
                                 <rect width="256" height="128" fill="#18181b" />
                                 <line
@@ -371,7 +315,7 @@
                             <svg
                                 v-else-if="map.view.type === 'radar'"
                                 viewBox="0 0 256 128"
-                                class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none"
+                                class="orb-home__thumb-media orb-home__thumb-media--fill"
                             >
                                 <rect width="256" height="128" fill="#18181b" />
                                 <!-- OK cards -->
@@ -718,7 +662,7 @@
                             <svg
                                 v-else
                                 viewBox="0 0 256 128"
-                                class="w-full h-full opacity-70 group-hover:opacity-90 transition-opacity duration-200 pointer-events-none"
+                                class="orb-home__thumb-media orb-home__thumb-media--fill"
                                 font-family="system-ui,-apple-system,sans-serif"
                             >
                                 <rect width="256" height="128" fill="#18181b" />
@@ -979,25 +923,21 @@
                                 </defs>
                             </svg>
                             <!-- Type + rotation badges overlaid on thumbnail -->
-                            <div
-                                class="absolute flex items-center"
-                                style="bottom: 8px; left: 8px; gap: 5px"
-                            >
+                            <div class="orb-home__badges orb-home__badges--type">
                                 <span
-                                    class="rounded-md font-medium backdrop-blur-sm"
-                                    style="font-size: 11px; padding: var(--dimension-2) 6px"
+                                    class="orb-home__type-badge"
                                     :class="
                                         map.view.type === 'worldmap'
-                                            ? 'bg-cyan-500/15 text-cyan-800 ring-1 ring-cyan-600/40 dark:bg-cyan-500/20 dark:text-cyan-300 dark:ring-cyan-500/30'
+                                            ? 'orb-home__type-badge--worldmap'
                                             : map.view.type === 'radar'
-                                              ? 'bg-violet-500/15 text-violet-800 ring-1 ring-violet-600/40 dark:bg-violet-500/20 dark:text-violet-300 dark:ring-violet-500/30'
+                                              ? 'orb-home__type-badge--radar'
                                               : map.view.type === 'flow'
-                                                ? 'bg-emerald-500/15 text-emerald-800 ring-1 ring-emerald-700/40 dark:bg-emerald-500/20 dark:text-emerald-300 dark:ring-emerald-500/30'
+                                                ? 'orb-home__type-badge--flow'
                                                 : map.view.type === 'static'
-                                                  ? 'bg-slate-500/15 text-slate-700 ring-1 ring-slate-500/40 dark:bg-slate-400/15 dark:text-slate-300 dark:ring-slate-400/30'
+                                                  ? 'orb-home__type-badge--static'
                                                   : map.view.type === 'foldertree'
-                                                    ? 'bg-amber-500/15 text-amber-800 ring-1 ring-amber-600/40 dark:bg-amber-500/20 dark:text-amber-300 dark:ring-amber-500/30'
-                                                    : 'bg-[var(--bg-surface)]/85 text-[var(--text)] ring-1 ring-[var(--default-border-color)]'
+                                                    ? 'orb-home__type-badge--foldertree'
+                                                    : 'orb-home__type-badge--generic'
                                     "
                                 >
                                     {{ boardTypeLabel(map.view.type) }}
@@ -1005,29 +945,25 @@
                             </div>
                             <div
                                 v-if="auth.isAdmin"
-                                class="absolute flex items-center"
-                                style="top: 8px; right: 8px; gap: 5px"
+                                class="orb-home__badges orb-home__badges--admin"
                             >
                                 <span
                                     v-if="map.show_in_lists === false"
-                                    class="text-[10px] rounded-md font-medium bg-[var(--bg-surface)]/80 text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60 backdrop-blur-sm"
-                                    style="padding: var(--dimension-2) 5px"
+                                    class="orb-home__flag-badge"
                                     :title="t('home.hiddenBoard')"
                                 >
                                     {{ t('home.hidden') }}
                                 </span>
                                 <span
                                     v-if="map.readonly"
-                                    class="text-[10px] rounded-md font-medium bg-[var(--bg-surface)]/80 text-[var(--text-muted)] ring-1 ring-[var(--default-border-color)]/60 backdrop-blur-sm"
-                                    style="padding: var(--dimension-2) 5px"
+                                    class="orb-home__flag-badge"
                                     :title="t('home.readonlyBoardTitle')"
                                 >
                                     {{ t('home.readonly') }}
                                 </span>
                                 <span
                                     v-if="map.rotation_interval > 0"
-                                    class="rounded-full font-medium bg-[var(--color-warning)]/20 text-[var(--color-yellow-50)] ring-1 ring-[var(--color-warning)]/30 backdrop-blur-sm"
-                                    style="font-size: 11px; padding: var(--dimension-2) 6px"
+                                    class="orb-home__rotation-badge"
                                     :title="
                                         t('home.rotationBadgeTitle', { n: map.rotation_interval })
                                     "
@@ -1038,19 +974,14 @@
                         </div>
 
                         <!-- Card body -->
-                        <div style="padding: 10px 12px">
-                            <div
-                                class="font-semibold text-[var(--text)] transition-colors truncate"
-                                style="font-size: 13px; margin-bottom: 5px"
-                                :title="map.alias || map.name"
-                            >
+                        <div class="orb-home__card-body">
+                            <div class="orb-home__card-name" :title="map.alias || map.name">
                                 {{ map.alias || map.name }}
                             </div>
-                            <div class="flex items-center min-w-0" style="gap: 6px">
+                            <div class="orb-home__card-meta">
                                 <template v-if="auth.isAdmin">
                                     <svg
-                                        class="shrink-0 text-[var(--text-muted)]"
-                                        style="width: 12px; height: 12px"
+                                        class="orb-home__meta-icon"
                                         fill="none"
                                         viewBox="0 0 24 24"
                                         stroke="currentColor"
@@ -1062,36 +993,30 @@
                                             d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z"
                                         />
                                     </svg>
-                                    <span
-                                        class="text-sm text-[var(--text-muted)] font-mono truncate"
-                                        :title="map.connection_id"
-                                        >{{ map.connection_id }}</span
-                                    >
-                                    <span class="text-[var(--text-muted)] shrink-0">·</span>
+                                    <span class="orb-home__card-conn" :title="map.connection_id">{{
+                                        map.connection_id
+                                    }}</span>
+                                    <span class="orb-home__card-dot">·</span>
                                 </template>
                                 <span
                                     v-if="
                                         map.readonly ||
                                         ['flow', 'radar', 'worldmap'].includes(map.view.type)
                                     "
-                                    class="text-sm text-[var(--text-muted)] shrink-0 italic"
+                                    class="orb-home__card-count orb-home__card-count--dynamic"
                                     >{{ t('home.dynamicObjects') }}</span
                                 >
-                                <span v-else class="text-sm text-[var(--text-muted)] shrink-0">{{
+                                <span v-else class="orb-home__card-count">{{
                                     t('common.objects', map.object_count)
                                 }}</span>
                             </div>
                         </div>
                     </router-link>
 
-                    <div
-                        v-if="auth.isAdmin || map.can_edit"
-                        class="flex items-center justify-end border-t border-[var(--border)] max-h-0 overflow-hidden group-hover:max-h-[36px] group-focus-within:max-h-[36px] transition-[max-height] duration-150"
-                        style="gap: var(--dimension-2); padding: 0 6px"
-                    >
+                    <div v-if="auth.isAdmin || map.can_edit" class="orb-home__card-actions">
                         <button
                             v-if="(auth.isAdmin || map.can_edit) && !map.readonly"
-                            class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-corporate-green-50)] hover:bg-[var(--color-corporate-green-50)]/10 transition-all"
+                            class="orb-home__action orb-home__action--settings"
                             :title="t('board.settingsTitle')"
                             @click.stop="openSettings(map)"
                         >
@@ -1116,7 +1041,7 @@
                         </button>
                         <button
                             v-if="auth.canCreateBoards"
-                            class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-yellow-50)] hover:bg-[var(--color-warning)]/10 transition-all"
+                            class="orb-home__action orb-home__action--clone"
                             :title="t('admin.cloneBoard')"
                             @click.stop="cloneBoard(map)"
                         >
@@ -1136,7 +1061,7 @@
                         </button>
                         <button
                             v-if="auth.canCreateBoards"
-                            class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5 transition-all"
+                            class="orb-home__action orb-home__action--export"
                             :title="t('admin.exportBoard')"
                             @click.stop="exportBoard(map.name)"
                         >
@@ -1156,7 +1081,7 @@
                         </button>
                         <button
                             v-if="auth.canCreateBoards"
-                            class="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-light-red-40)] hover:bg-[var(--color-light-red-50)]/10 transition-all"
+                            class="orb-home__action orb-home__action--delete"
                             :title="t('admin.deleteBoard', { name: map.alias || map.name })"
                             @click.stop="deleteBoard(map)"
                         >
@@ -1307,15 +1232,9 @@
     />
 
     <!-- Import FAB (board creators only) -->
-    <label
-        v-if="auth.canCreateBoards"
-        class="group fixed z-40 flex items-center rounded bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] ring-1 ring-[var(--border)] shadow-lg text-[var(--text-muted)] hover:text-[var(--text)] transition-all cursor-pointer"
-        style="bottom: 20px; right: 20px; gap: 6px; padding: 6px 12px"
-        :title="t('admin.importBoard')"
-    >
+    <label v-if="auth.canCreateBoards" class="orb-home__import-fab" :title="t('admin.importBoard')">
         <svg
-            class="shrink-0"
-            style="width: 14px; height: 14px"
+            class="orb-home__import-icon"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -1327,11 +1246,11 @@
                 d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
             />
         </svg>
-        <span class="text-xs font-medium">{{ t('admin.importBoard') }}</span>
+        <span class="orb-home__import-label">{{ t('admin.importBoard') }}</span>
         <input
             type="file"
             accept=".json,.cfg,application/json"
-            class="hidden"
+            class="orb-home__import-input"
             @change="importBoard"
         />
     </label>
@@ -1820,6 +1739,570 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.orb-home {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--bg);
+}
+
+.orb-home__main {
+    padding: var(--dimension-7) 24px 40px;
+}
+
+.orb-home__toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+    max-width: 960px;
+    margin: 0 auto 20px;
+}
+
+.orb-home__title {
+    margin-right: var(--dimension-4);
+    font-size: var(--font-size-xlarge);
+    line-height: 24px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.025em;
+}
+
+.orb-home__search {
+    position: relative;
+    width: 200px;
+}
+
+.orb-home__search-icon {
+    position: absolute;
+    top: 50%;
+    left: 8px;
+    width: 13px;
+    height: 13px;
+    color: var(--text-muted);
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+.orb-home__search-input {
+    width: 100%;
+    padding: 5px 8px 5px 26px;
+    font-size: 12px;
+    color: var(--text);
+    background: var(--bg-input);
+    border-radius: 4px;
+    box-shadow: 0 0 0 1px
+        color-mix(in srgb, var(--default-form-element-border-color) 50%, transparent);
+    transition: all 0.15s;
+}
+
+.orb-home__search-input::placeholder {
+    color: var(--default-form-element-placeholder-color);
+}
+
+.orb-home__search-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-corporate-green-50);
+}
+
+.orb-home__search-clear {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    color: var(--text-muted);
+    transform: translateY(-50%);
+    transition: color 0.15s;
+}
+
+.orb-home__search-clear:hover {
+    color: var(--text);
+}
+
+.orb-home__toggle-group {
+    display: inline-flex;
+    align-items: center;
+    overflow: hidden;
+    background: var(--bg-input);
+    border-radius: 4px;
+    box-shadow: 0 0 0 1px
+        color-mix(in srgb, var(--default-form-element-border-color) 60%, transparent);
+}
+
+.orb-home__toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--dimension-3);
+    padding: var(--dimension-3) var(--dimension-4);
+    font-size: 12px;
+    color: var(--text-muted);
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.orb-home__toggle-btn:hover {
+    color: var(--text);
+}
+
+.orb-home__toggle-btn--bordered {
+    border-left: 1px solid
+        color-mix(in srgb, var(--default-form-element-border-color) 60%, transparent);
+}
+
+.orb-home__toggle-btn--active,
+.orb-home__toggle-btn--active:hover {
+    color: var(--button-primary-text-color, #000);
+    background: var(--color-corporate-green-50);
+}
+
+.orb-home__new-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--button-primary-text-color, #000);
+    background: var(--color-corporate-green-50);
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+
+.orb-home__new-btn:hover {
+    background: var(--color-corporate-green-60);
+}
+
+.orb-home__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--dimension-4);
+    padding: 48px 0;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-home__spinner {
+    width: 16px;
+    height: 16px;
+    color: var(--color-corporate-green-50);
+    animation: orb-home-spin 1s linear infinite;
+}
+
+@keyframes orb-home-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.orb-home__spinner-track {
+    opacity: 0.25;
+}
+
+.orb-home__spinner-head {
+    opacity: 0.75;
+}
+
+.orb-home__error {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: var(--dimension-4) 12px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 8%, transparent);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-light-red-50) 20%, transparent);
+}
+
+.orb-home__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 0;
+    text-align: center;
+}
+
+.orb-home__empty-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-bottom: var(--dimension-6);
+    background: var(--default-form-element-bg-color);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--default-form-element-border-color);
+}
+
+.orb-home__empty-icon svg {
+    width: 22px;
+    height: 22px;
+    color: var(--text-muted);
+}
+
+.orb-home__empty-title {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.orb-home__empty-hint {
+    margin-top: 6px;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-home__empty-cta {
+    color: var(--color-corporate-green-50);
+}
+
+.orb-home__grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: var(--dimension-6);
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+@media (width >= 640px) {
+    .orb-home__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (width >= 1024px) {
+    .orb-home__grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.orb-home__no-results {
+    grid-column: 1 / -1;
+    padding: 40px 0;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.orb-home__card {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-surface);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--border);
+    transition: all 0.2s;
+}
+
+.orb-home__card:hover {
+    background: var(--bg-hover);
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--color-corporate-green-50) 40%, transparent),
+        0 10px 15px -3px color-mix(in srgb, var(--color-corporate-green-100) 10%, transparent),
+        0 4px 6px -4px color-mix(in srgb, var(--color-corporate-green-100) 10%, transparent);
+    transform: translateY(-2px);
+}
+
+.orb-home__card--draggable {
+    cursor: grab;
+}
+
+.orb-home__card--draggable:active {
+    cursor: grabbing;
+}
+
+.orb-home__card-link {
+    display: block;
+}
+
+.orb-home__thumb {
+    position: relative;
+    width: 100%;
+    height: 144px;
+    overflow: hidden;
+    background: var(--default-form-element-bg-color);
+}
+
+.orb-home__thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.orb-home__thumb-media {
+    pointer-events: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.orb-home__thumb-media--fill {
+    width: 100%;
+    height: 100%;
+}
+
+.orb-home__card:hover .orb-home__thumb-img,
+.orb-home__card:hover .orb-home__thumb-media {
+    opacity: 0.9;
+}
+
+.orb-home__badges {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.orb-home__badges--type {
+    bottom: 8px;
+    left: 8px;
+}
+
+.orb-home__badges--admin {
+    top: 8px;
+    right: 8px;
+}
+
+.orb-home__type-badge {
+    padding: var(--dimension-2) 6px;
+    font-size: 11px;
+    font-weight: 500;
+    backdrop-filter: blur(4px);
+    border-radius: 6px;
+}
+
+.orb-home__type-badge--worldmap {
+    color: var(--color-cyan-80);
+    background: color-mix(in srgb, var(--color-cyan-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-cyan-60) 40%, transparent);
+}
+
+.dark .orb-home__type-badge--worldmap {
+    color: var(--color-cyan-30);
+    background: color-mix(in srgb, var(--color-cyan-50) 20%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-cyan-50) 30%, transparent);
+}
+
+.orb-home__type-badge--radar {
+    color: var(--color-purple-80);
+    background: color-mix(in srgb, var(--color-purple-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-purple-60) 40%, transparent);
+}
+
+.dark .orb-home__type-badge--radar {
+    color: var(--color-purple-30);
+    background: color-mix(in srgb, var(--color-purple-50) 20%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-purple-50) 30%, transparent);
+}
+
+.orb-home__type-badge--flow {
+    color: var(--color-corporate-green-80);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-corporate-green-70) 40%, transparent);
+}
+
+.dark .orb-home__type-badge--flow {
+    color: var(--color-corporate-green-30);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 20%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-corporate-green-50) 30%, transparent);
+}
+
+.orb-home__type-badge--static {
+    color: var(--color-mid-grey-70);
+    background: color-mix(in srgb, var(--color-mid-grey-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-mid-grey-50) 40%, transparent);
+}
+
+.dark .orb-home__type-badge--static {
+    color: var(--color-mid-grey-30);
+    background: color-mix(in srgb, var(--color-mid-grey-40) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-mid-grey-40) 30%, transparent);
+}
+
+.orb-home__type-badge--foldertree {
+    color: var(--color-yellow-80);
+    background: color-mix(in srgb, var(--color-yellow-50) 15%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-yellow-60) 40%, transparent);
+}
+
+.dark .orb-home__type-badge--foldertree {
+    color: var(--color-yellow-30);
+    background: color-mix(in srgb, var(--color-yellow-50) 20%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-yellow-50) 30%, transparent);
+}
+
+.orb-home__type-badge--generic {
+    color: var(--text);
+    background: color-mix(in srgb, var(--bg-surface) 85%, transparent);
+    box-shadow: 0 0 0 1px var(--default-border-color);
+}
+
+.orb-home__flag-badge {
+    padding: var(--dimension-2) 5px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
+    backdrop-filter: blur(4px);
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--default-border-color) 60%, transparent);
+}
+
+.orb-home__rotation-badge {
+    padding: var(--dimension-2) 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-yellow-50);
+    background: color-mix(in srgb, var(--color-warning) 20%, transparent);
+    backdrop-filter: blur(4px);
+    border-radius: 9999px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 30%, transparent);
+}
+
+.orb-home__card-body {
+    padding: 10px 12px;
+}
+
+.orb-home__card-name {
+    overflow: hidden;
+    margin-bottom: 5px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-home__card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.orb-home__meta-icon {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    color: var(--text-muted);
+}
+
+.orb-home__card-conn {
+    overflow: hidden;
+    font-family: monospace;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orb-home__card-dot {
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.orb-home__card-count {
+    flex-shrink: 0;
+    font-size: var(--font-size-large);
+    line-height: 20px;
+    color: var(--text-muted);
+}
+
+.orb-home__card-count--dynamic {
+    font-style: italic;
+}
+
+.orb-home__card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--dimension-2);
+    max-height: 0;
+    padding: 0 6px;
+    overflow: hidden;
+    border-top: 1px solid var(--border);
+    transition: max-height 0.15s;
+}
+
+.orb-home__card:hover .orb-home__card-actions,
+.orb-home__card:focus-within .orb-home__card-actions {
+    max-height: 36px;
+}
+
+.orb-home__action {
+    padding: var(--dimension-3);
+    color: var(--text-muted);
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+
+.orb-home__action--settings:hover {
+    color: var(--color-corporate-green-50);
+    background: color-mix(in srgb, var(--color-corporate-green-50) 10%, transparent);
+}
+
+.orb-home__action--clone:hover {
+    color: var(--color-yellow-50);
+    background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+}
+
+.orb-home__action--export:hover {
+    color: var(--text);
+    background: var(--color-white-0);
+}
+
+.orb-home__action--delete:hover {
+    color: var(--color-light-red-40);
+    background: color-mix(in srgb, var(--color-light-red-50) 10%, transparent);
+}
+
+.orb-home__import-fab {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    background: var(--bg-surface);
+    border-radius: 4px;
+    box-shadow:
+        0 0 0 1px var(--border),
+        0 10px 15px -3px rgb(0 0 0 / 10%),
+        0 4px 6px -4px rgb(0 0 0 / 10%);
+    transition: all 0.15s;
+}
+
+.orb-home__import-fab:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+}
+
+.orb-home__import-icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+}
+
+.orb-home__import-label {
+    font-size: var(--font-size-normal);
+    line-height: 16px;
+    font-weight: 500;
+}
+
+.orb-home__import-input {
+    display: none;
+}
+
 .home-clone-modal__field {
     display: flex;
     flex-direction: column;
