@@ -1,10 +1,8 @@
-@import 'tailwindcss';
+@import './assets/orb-base.css';
 @import './assets/cmk/variables.css';
 @import './assets/orb-forms.css';
 
-@custom-variant dark (&:where(.dark, .dark *));
-
-@theme {
+:root {
     --color-warning: #ffd000;
     --color-state-up: #00ff00;
     --color-state-down: #ff0000;
@@ -20,40 +18,6 @@
     --color-mod-acknowledged: #f59e0b;
     --color-mod-downtime: #3b82f6;
     --color-mod-muted: #a1a1aa;
-}
-
-/* In a Checkmk-embedded deployment, adopt Checkmk's own monitoring status palette
-   (its facelift/modern-dark $color-state-* values) instead of OrbVis' standalone
-   pure primaries, so boards match the surrounding Checkmk UI. Checkmk ships these
-   only as compiled SCSS (no CSS vars), so the values are mirrored here; they are
-   identical across the facelift/modern-dark themes. Standalone keeps the @theme
-   primaries above (OrbVis-native, no Checkmk dependency). */
-:root.cmk-deployment {
-    --color-state-up: rgb(21 209 160);
-    --color-state-ok: rgb(21 209 160);
-    --color-state-warning: rgb(255 215 3);
-    --color-state-critical: rgb(200 50 50);
-    --color-state-down: rgb(200 50 50);
-    --color-state-unknown: rgb(255 132 0);
-    --color-state-unreachable: rgb(255 132 0);
-    --color-state-pending: rgb(140 140 140);
-}
-
-/* Tailwind v4 nutzt --spacing als Basiseinheit; CMK-Komponenten erwarten 10px. */
-.cmk-dialog,
-.cmk-space,
-.cmk-tab,
-.cmk-tab-content,
-.cmk-label,
-.cmk-code,
-.cmk-icon {
-    --spacing: 10px;
-    --spacing-half: 5px;
-}
-
-:root {
-    /* Restore Tailwind v4's --spacing after CMK variables.css overrides it with 10px */
-    --spacing: 0.25rem;
 
     /* CMK layout variables */
     --form-field-height: 24px;
@@ -110,7 +74,6 @@
     --color-down: #f00;
     --color-unreachable: #f80;
     --color-ok: #0f0;
-    --color-warning: #ffd000;
     --color-critical: #f00;
     --color-unknown: #f80;
     --color-pending: #aaa;
@@ -128,6 +91,23 @@
     --shadow-text:
         1px 1px 0 rgb(0 0 0 / 90%), -1px 1px 0 rgb(0 0 0 / 90%), 1px -1px 0 rgb(0 0 0 / 90%),
         -1px -1px 0 rgb(0 0 0 / 90%), 0 0 3px rgb(0 0 0 / 70%);
+}
+
+/* In a Checkmk-embedded deployment, adopt Checkmk's own monitoring status palette
+   (its facelift/modern-dark $color-state-* values) instead of OrbVis' standalone
+   pure primaries, so boards match the surrounding Checkmk UI. Checkmk ships these
+   only as compiled SCSS (no CSS vars), so the values are mirrored here; they are
+   identical across the facelift/modern-dark themes. Standalone keeps the @theme
+   primaries above (OrbVis-native, no Checkmk dependency). */
+:root.cmk-deployment {
+    --color-state-up: rgb(21 209 160);
+    --color-state-ok: rgb(21 209 160);
+    --color-state-warning: rgb(255 215 3);
+    --color-state-critical: rgb(200 50 50);
+    --color-state-down: rgb(200 50 50);
+    --color-state-unknown: rgb(255 132 0);
+    --color-state-unreachable: rgb(255 132 0);
+    --color-state-pending: rgb(140 140 140);
 }
 
 /* Override browser autofill yellow highlight */
@@ -163,8 +143,8 @@ input:-webkit-autofill:focus {
     pointer-events: auto;
 }
 
-/* Tailwind's preflight applies `* { box-sizing: border-box }`, which on the
-   CmkDropdown arrow shrinks the SVG content area to 1.8px once its 0.7em
+/* The base reset (orb-base.css) applies `* { box-sizing: border-box }`, which on
+   the CmkDropdown arrow shrinks the SVG content area to 1.8px once its 0.7em
    padding is subtracted. Override locally so the arrow keeps its intended
    size without touching the vendored CmkDropdown.vue. */
 .cmk-dropdown--arrow {
@@ -182,9 +162,6 @@ input:-webkit-autofill:focus {
     background: var(--input-nested-background-color, rgb(63 75 93));
     outline: none;
 }
-
-/* Tailwind-zinc Klassen sind durch CMK-Token (--text, --text-muted, --border, --bg-*)
-   ersetzt; theme-spezifische Anpassungen passieren über die Token. */
 
 html {
     font-size: 14px;
