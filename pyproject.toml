@@ -11,6 +11,10 @@
 target-version = "py313"
 line-length = 100
 extend-exclude = [
+  # upstream-checkmk folgt checkmks eigener Ruff/Mypy-Toolchain (geprüft gegen
+  # ~/git/checkmk master), nicht OrbVis' strengerem Superset (z.B. ARG bei
+  # API-Override-Signaturen).
+  "upstream-checkmk",
   "frontend",
   "data",
   "boards",

@@ -14,18 +14,30 @@ Stage 7).
 | `packages/cmk-orbvis-frontend/`            | `packages/cmk-orbvis-frontend/`           |
 | `tests/unit/cmk/gui/orbvis/`               | `tests/unit/cmk/gui/orbvis/`              |
 
-## Current status — skeleton only
+## Current status
 
-Stage 6 of the rollout plan ports the real code from the external OrbVis
-tree into these directories. Until then the Python modules are empty stubs
-(so mypy strict / ruff still pass) and the frontend package is a placeholder.
+Stage 6a is done: `cmk/gui/orbvis/` and `tests/unit/cmk/gui/orbvis/` carry
+the real GUI integration (permissions, dynamic per-board permissions,
+sidebar snap-in) ported from `cmk_plugins_23/` — without the 2.3/2.4/2.5
+compatibility bridges, modelled 1:1 on `cmk/gui/nagvis/`. Checkmk GPLv2
+headers and `BUILD` files (shapes verified against the nagvis targets) are
+in place. The frontend package is still a placeholder.
 
 Explicitly **not** set yet:
 
-- Copyright headers (Checkmk GmbH, GPLv2). Applied only in Stage 7 via
-  `scripts/apply-checkmk-headers.sh` shortly before the first merge.
-- `BUILD.bazel` content — written when Bazel is introduced (Stage 2/6).
 - `LICENSE` — the upstream file is pulled in at merge time.
+- The main menu entry: upstream needs a `NavItemIdEnum` member in
+  `cmk/shared_typing` plus a `main_menu_registry` entry — both outside this
+  additive sub-tree, to be done as a small upstream patch at merge time
+  (the MKP's `orbvis_menu.py` monkeypatching is not upstream material).
+
+Required merge-time changes outside this sub-tree:
+
+- `cmk/gui/community_registration.py`: call
+  `orbvis.register(permission_section_registry, permission_registry, snapin_registry)`
+  next to the existing `nagvis.register(...)` call.
+- `tests/unit/cmk/gui/plugins/sidebar/test_snapins.py`: add
+  `"orbvis_boards"` to the expected snap-in list.
 
 ## How the built-in delivery relates to the external MKP
 
