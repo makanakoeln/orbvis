@@ -13,6 +13,27 @@ from app.connections.livestatus import (
 )
 
 
+class _FakeQuerySpecification:
+    def __init__(self, table: str, columns: list[str], headers: str) -> None:
+        self.table = table
+        self.columns = columns
+        self.headers = headers
+
+    def __str__(self) -> str:
+        query = f"GET {self.table}\n"
+        if self.columns:
+            query += f"Columns: {' '.join(self.columns)}\n"
+        return query + self.headers
+
+
+class _FakeQuery:
+    def __init__(self, query: "str | _FakeQuerySpecification") -> None:
+        self.wrapped = query
+
+    def __str__(self) -> str:
+        return str(self.wrapped)
+
+
 class _FakeSingleSiteConnection:
     """Records constructor args, queries and commands instead of opening sockets."""
 
@@ -39,8 +60,8 @@ class _FakeSingleSiteConnection:
     def set_timeout(self, timeout: int) -> None:
         self.timeout = timeout
 
-    def query(self, lql: str, add_headers: str = "") -> list[list[object]]:
-        self.queries.append((lql, add_headers))
+    def query(self, lql: object, add_headers: str = "") -> list[list[object]]:
+        self.queries.append((str(lql), add_headers))
         return self.rows
 
     def command(self, body: str) -> None:
@@ -57,6 +78,8 @@ def fake_cmk_client(monkeypatch):
     cmk_pkg = types.ModuleType("cmk")
     client_mod = types.ModuleType("cmk.livestatus_client")
     client_mod.SingleSiteConnection = _FakeSingleSiteConnection  # type: ignore[attr-defined]
+    client_mod.Query = _FakeQuery  # type: ignore[attr-defined]
+    client_mod.QuerySpecification = _FakeQuerySpecification  # type: ignore[attr-defined]
     cmk_pkg.livestatus_client = client_mod  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "cmk", cmk_pkg)
     monkeypatch.setitem(sys.modules, "cmk.livestatus_client", client_mod)
@@ -145,6 +168,30 @@ async def test_send_command_routes_through_cmk_client(fake_cmk_client):
     # Bare body — the client adds the COMMAND [<ts>] framing itself.
     assert fake.commands == ["SCHEDULE_FORCED_SVC_CHECK;h1;CPU;1700000000"]
     assert fake.disconnected is True
+
+
+def test_lql_to_query_builds_query_specification(fake_cmk_client):
+    """Structured queries make the client use OutputFormat json (fast path)."""
+    q = ls_mod._lql_to_query(
+        "GET services\nColumns: host_name description state\nFilter: state > 0\nLimit: 5\n"
+    )
+    spec = q.wrapped
+    assert isinstance(spec, _FakeQuerySpecification)
+    assert spec.table == "services"
+    assert spec.columns == ["host_name", "description", "state"]
+    assert spec.headers == "Filter: state > 0\nLimit: 5\n"
+
+
+def test_lql_to_query_roundtrips_lql(fake_cmk_client):
+    lql = "GET hosts\nColumns: name state\nFilter: name != \n"
+    assert str(ls_mod._lql_to_query(lql)) == lql
+
+
+def test_lql_to_query_falls_back_to_string(fake_cmk_client):
+    """No GET line or repeated Columns → keep the raw string (slow but correct)."""
+    assert ls_mod._lql_to_query("COMMAND foo").wrapped == "COMMAND foo"
+    doubled = "GET hosts\nColumns: name\nColumns: state\n"
+    assert ls_mod._lql_to_query(doubled).wrapped == doubled
 
 
 @pytest.mark.asyncio

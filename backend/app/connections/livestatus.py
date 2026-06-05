@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TypedDict, cast
 
 if TYPE_CHECKING:
-    from cmk.livestatus_client import MultiSiteConnection, SingleSiteConnection
+    from cmk.livestatus_client import MultiSiteConnection, Query, SingleSiteConnection
 
 import httpx
 
@@ -670,6 +670,36 @@ def _cmk_livestatus_client_available() -> bool:
     except ImportError:
         return False
     return True
+
+
+def _lql_to_query(lql: str) -> Query:
+    """Parse bare LQL into a structured ``Query`` for the cmk client.
+
+    Only structured queries (``QuerySpecification``) get ``OutputFormat: json``
+    from the client; plain strings are parsed with ``ast.literal_eval``, which
+    is ~25x slower on large responses (5k rows: 144ms vs 6ms). Queries with
+    blob columns automatically fall back to the python3 format inside the
+    client. On anything unexpected (no GET line, repeated Columns) return the
+    string query unchanged — correct, just slower.
+    """
+    from cmk.livestatus_client import Query, QuerySpecification
+
+    # strip("\n"), not strip(): an empty filter value ("Filter: name != \n")
+    # carries a meaningful trailing space on the last line.
+    lines = lql.strip("\n").splitlines()
+    if not lines or not lines[0].startswith("GET "):
+        return Query(lql)
+    columns: list[str] = []
+    headers: list[str] = []
+    for line in lines[1:]:
+        if line.startswith("Columns:"):
+            if columns:
+                return Query(lql)
+            columns = line.split(":", 1)[1].split()
+        else:
+            headers.append(line)
+    header_str = "\n".join(headers) + "\n" if headers else ""
+    return Query(QuerySpecification(lines[0][4:].strip(), columns, header_str))
 
 
 def _build_state_from_row(
@@ -2449,7 +2479,7 @@ class LivestatusConnection(ConnectionBase):
             headers += f"AuthUser: {auth_user}\n"
         conn = self._make_singlesite_connection()
         try:
-            return list(conn.query(lql, add_headers=headers))
+            return list(conn.query(_lql_to_query(lql), add_headers=headers))
         finally:
             # The client sends ``KeepAlive: on`` and only disconnects on
             # query errors — close explicitly instead of relying on GC.
