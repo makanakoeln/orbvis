@@ -14,15 +14,15 @@ vendored file at ``vendor/cmk/form/FormReadonly.vue`` no longer needs
 a patch on disk.
 -->
 <script setup lang="ts">
-import type { FormSpec } from 'cmk-shared-typing/typescript/vue_formspec_components';
+import type { FormSpec } from 'cmk-shared-typing/typescript/vue_formspec_components'
 
 defineProps<{
-    spec: FormSpec;
-    data: unknown;
-    backendValidation: unknown;
-}>();
+  spec: FormSpec
+  data: unknown
+  backendValidation: unknown
+}>()
 </script>
 
 <template>
-    <pre>{{ JSON.stringify(data, null, 2) }}</pre>
+  <pre>{{ JSON.stringify(data, null, 2) }}</pre>
 </template>

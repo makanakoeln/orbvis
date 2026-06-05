@@ -1,1 +1,1 @@
-export type UserFrontendConfig = Record<string, unknown>;
+export type UserFrontendConfig = Record<string, unknown>

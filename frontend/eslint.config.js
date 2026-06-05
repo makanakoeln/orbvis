@@ -1,7 +1,6 @@
 import js from '@eslint/js'
 import prettier from 'eslint-config-prettier'
 import security from 'eslint-plugin-security'
-import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import pluginVue from 'eslint-plugin-vue'
 import globals from 'globals'
 import ts from 'typescript-eslint'
@@ -61,10 +60,7 @@ export default [
   },
 
   {
-    plugins: { 'simple-import-sort': simpleImportSort },
     rules: {
-      'simple-import-sort/imports': 'warn',
-      'simple-import-sort/exports': 'warn',
       'vue/multi-word-component-names': 'off',
       'vue/no-unused-vars': 'warn',
       'vue/no-mutating-props': 'off', // EditPanel nutzt intentionale Prop-Mutation — Refactor ausstehend

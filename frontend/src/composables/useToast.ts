@@ -1,35 +1,35 @@
-import { ref } from 'vue';
+import { ref } from 'vue'
 
-export type ToastType = 'success' | 'error';
+export type ToastType = 'success' | 'error'
 
 export interface ToastAction {
-    label: string;
-    onClick: () => void;
+  label: string
+  onClick: () => void
 }
 
 interface Toast {
-    id: number;
-    type: ToastType;
-    message: string;
-    action?: ToastAction;
+  id: number
+  type: ToastType
+  message: string
+  action?: ToastAction
 }
 
-const toasts = ref<Toast[]>([]);
-let _nextId = 0;
+const toasts = ref<Toast[]>([])
+let _nextId = 0
 
 export function useToast() {
-    function show(type: ToastType, message: string, duration = 3500, action?: ToastAction): void {
-        const id = _nextId++;
-        toasts.value.push({ id, type, message, ...(action !== undefined ? { action } : {}) });
-        setTimeout(() => {
-            const idx = toasts.value.findIndex((t) => t.id === id);
-            if (idx !== -1) toasts.value.splice(idx, 1);
-        }, duration);
-    }
+  function show(type: ToastType, message: string, duration = 3500, action?: ToastAction): void {
+    const id = _nextId++
+    toasts.value.push({ id, type, message, ...(action !== undefined ? { action } : {}) })
+    setTimeout(() => {
+      const idx = toasts.value.findIndex((t) => t.id === id)
+      if (idx !== -1) toasts.value.splice(idx, 1)
+    }, duration)
+  }
 
-    return {
-        toasts,
-        success: (msg: string, action?: ToastAction) => show('success', msg, 3500, action),
-        error: (msg: string) => show('error', msg, 5000),
-    };
+  return {
+    toasts,
+    success: (msg: string, action?: ToastAction) => show('success', msg, 3500, action),
+    error: (msg: string) => show('error', msg, 5000)
+  }
 }

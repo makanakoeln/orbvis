@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/CmkScrollContainer.vue';
+export { default } from '@cmk/components/CmkScrollContainer.vue'

@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/CmkSlideInDialog.vue';
+export { default } from '@cmk/components/CmkSlideInDialog.vue'

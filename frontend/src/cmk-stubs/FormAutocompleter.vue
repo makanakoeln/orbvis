@@ -9,5 +9,5 @@ FormString.vue's static import — it never renders.
 Wired up via ``CMK_STUBS`` in ``frontend/vite.config.ts``.
 -->
 <template>
-    <span />
+  <span />
 </template>

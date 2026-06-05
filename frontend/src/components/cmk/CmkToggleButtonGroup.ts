@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/CmkToggleButtonGroup.vue';
+export { default } from '@cmk/components/CmkToggleButtonGroup.vue'

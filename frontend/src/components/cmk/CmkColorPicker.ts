@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/CmkColorPicker.vue';
+export { default } from '@cmk/components/CmkColorPicker.vue'

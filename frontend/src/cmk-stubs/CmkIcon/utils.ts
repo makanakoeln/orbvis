@@ -7,15 +7,15 @@
  * asset deps. Wired in via ``CMK_STUBS`` in ``frontend/vite.config.ts``
  * — vendored CmkIcon.vue picks this up instead of editing the file.
  */
-import type { IconNames } from 'cmk-shared-typing/typescript/icon';
+import type { IconNames } from 'cmk-shared-typing/typescript/icon'
 
-import { iconSizes, themedIcons, unthemedIcons } from './icons.constants';
+import { iconSizes, themedIcons, unthemedIcons } from './icons.constants'
 
-type IconSizeNames = keyof typeof iconSizes;
-type SimpleIcons = IconNames;
+type IconSizeNames = keyof typeof iconSizes
+type SimpleIcons = IconNames
 
 export function iconSizeNametoNumber(sizeName: IconSizeNames | undefined) {
-    return sizeName === undefined ? iconSizes['medium'] : iconSizes[sizeName];
+  return sizeName === undefined ? iconSizes['medium'] : iconSizes[sizeName]
 }
 
 // Builds an absolute "/<site>/check_mk/" prefix at runtime. Example:
@@ -30,24 +30,24 @@ export function iconSizeNametoNumber(sizeName: IconSizeNames | undefined) {
 // path resolves wherever OrbVis is co-deployed with a Checkmk site under the
 // document root, which matches the current rollout.
 function checkmkBase(): string {
-    if (typeof window === 'undefined') return '/check_mk/';
-    const pathname = window.location.pathname;
-    const orbvisIdx = pathname.indexOf('/orbvis/');
-    if (orbvisIdx >= 0) return `${pathname.slice(0, orbvisIdx)}/check_mk/`;
-    return '/check_mk/';
+  if (typeof window === 'undefined') return '/check_mk/'
+  const pathname = window.location.pathname
+  const orbvisIdx = pathname.indexOf('/orbvis/')
+  if (orbvisIdx >= 0) return `${pathname.slice(0, orbvisIdx)}/check_mk/`
+  return '/check_mk/'
 }
 
 export function getIconPath(name: SimpleIcons, theme: string): string {
-    const internalTheme = theme === 'facelift' ? 'light' : 'dark';
+  const internalTheme = theme === 'facelift' ? 'light' : 'dark'
 
-    const themedPath = themedIcons[internalTheme]?.[name];
-    if (themedPath) {
-        return `${checkmkBase()}${themedPath}`;
-    }
+  const themedPath = themedIcons[internalTheme]?.[name]
+  if (themedPath) {
+    return `${checkmkBase()}${themedPath}`
+  }
 
-    const unthemedPath = unthemedIcons[name];
-    if (!unthemedPath) {
-        return '';
-    }
-    return `${checkmkBase()}${unthemedPath}`;
+  const unthemedPath = unthemedIcons[name]
+  if (!unthemedPath) {
+    return ''
+  }
+  return `${checkmkBase()}${unthemedPath}`
 }

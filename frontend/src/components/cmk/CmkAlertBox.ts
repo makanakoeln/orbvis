@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/CmkAlertBox.vue';
+export { default } from '@cmk/components/CmkAlertBox.vue'

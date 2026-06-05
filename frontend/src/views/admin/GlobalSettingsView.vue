@@ -9,19 +9,19 @@
     ``GET/PUT /api/v1/settings`` endpoints instead.
 -->
 <template>
-    <GlobalSettingsFormSpecView v-if="capabilities.formSpecs" />
-    <GlobalSettingsViewLegacy v-else />
+  <GlobalSettingsFormSpecView v-if="capabilities.formSpecs" />
+  <GlobalSettingsViewLegacy v-else />
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue';
+import { defineAsyncComponent } from 'vue'
 
-import { useCapabilitiesStore } from '@/stores/capabilities';
-import GlobalSettingsViewLegacy from '@/views/admin/GlobalSettingsViewLegacy.vue';
+import { useCapabilitiesStore } from '@/stores/capabilities'
+import GlobalSettingsViewLegacy from '@/views/admin/GlobalSettingsViewLegacy.vue'
 
 const GlobalSettingsFormSpecView = defineAsyncComponent(
-    () => import('@/views/admin/GlobalSettingsFormSpecView.vue'),
-);
+  () => import('@/views/admin/GlobalSettingsFormSpecView.vue')
+)
 
-const capabilities = useCapabilitiesStore();
+const capabilities = useCapabilitiesStore()
 </script>

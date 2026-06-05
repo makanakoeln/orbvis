@@ -1,8 +1,7 @@
+import vue from '@vitejs/plugin-vue'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath, URL } from 'node:url'
-
-import vue from '@vitejs/plugin-vue'
+import { URL, fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 
 const appVersion = readFileSync(new URL('../VERSION', import.meta.url), 'utf-8').trim()
@@ -37,7 +36,7 @@ const STANDALONE_COMPONENT_MAP: Record<string, string> = {
   'CmkDialog.vue': 'CmkDialog.vue',
   'CmkDropdown/CmkDropdown.vue': 'CmkDropdown/CmkDropdown.vue',
   'CmkHelpText.vue': 'CmkHelpText.vue',
-  'CmkIcon': 'CmkIcon/index.ts',
+  CmkIcon: 'CmkIcon/index.ts',
   'CmkLabel.vue': 'CmkLabel.vue',
   'CmkLinkCard/CmkLinkCard.vue': 'CmkLinkCard/CmkLinkCard.vue',
   'CmkLinkCard/CmkLinkCardContainer.vue': 'CmkLinkCard/CmkLinkCardContainer.vue',
@@ -51,13 +50,13 @@ const STANDALONE_COMPONENT_MAP: Record<string, string> = {
   'typography/CmkHeading.vue': 'typography/CmkHeading.vue',
   'typography/CmkParagraph.vue': 'typography/CmkParagraph.vue',
   'user-input/CmkCheckbox.vue': 'user-input/CmkCheckbox.vue',
-  'user-input/CmkInput.vue': 'user-input/CmkInput.vue',
+  'user-input/CmkInput.vue': 'user-input/CmkInput.vue'
 }
 
 const STANDALONE_OVERRIDES: { find: RegExp; replacement: string }[] = STANDALONE
   ? Object.entries(STANDALONE_COMPONENT_MAP).map(([vendor, standalone]) => ({
       find: new RegExp(`^@cmk/components/${vendor.replace(/\./g, '\\.')}$`),
-      replacement: `${ORBVIS_SRC}/components/cmk-standalone/${standalone}`,
+      replacement: `${ORBVIS_SRC}/components/cmk-standalone/${standalone}`
     }))
   : []
 
@@ -80,7 +79,7 @@ const CMK_STUBS: Record<string, string> = {
   // from the sibling OMD-site `/<site>/check_mk/themes/...` path at
   // runtime; both the constants table and the URL builder are stubbed.
   [`${CMK_SRC}/components/CmkIcon/icons.constants.ts`]: `${ORBVIS_SRC}/cmk-stubs/CmkIcon/icons.constants.ts`,
-  [`${CMK_SRC}/components/CmkIcon/utils.ts`]: `${ORBVIS_SRC}/cmk-stubs/CmkIcon/utils.ts`,
+  [`${CMK_SRC}/components/CmkIcon/utils.ts`]: `${ORBVIS_SRC}/cmk-stubs/CmkIcon/utils.ts`
 }
 
 const isCmkFile = (id: string) =>
@@ -124,12 +123,12 @@ export default defineConfig({
             if (existsSync(base + ext)) return { id: base + ext }
           }
         }
-      },
-    },
+      }
+    }
   ],
   base: process.env.VITE_BASE_PATH ?? '/',
   define: {
-    __APP_VERSION__: JSON.stringify(appVersion),
+    __APP_VERSION__: JSON.stringify(appVersion)
   },
   resolve: {
     // Order matters: STANDALONE_OVERRIDES must come before the generic
@@ -140,11 +139,11 @@ export default defineConfig({
       { find: '@cmk', replacement: CMK_SRC },
       {
         find: 'cmk-shared-typing',
-        replacement: fileURLToPath(new URL('./src/cmk-stubs/cmk-shared-typing', import.meta.url)),
+        replacement: fileURLToPath(new URL('./src/cmk-stubs/cmk-shared-typing', import.meta.url))
       },
       {
         find: 'pofile',
-        replacement: fileURLToPath(new URL('./src/vendor/empty-module.ts', import.meta.url)),
+        replacement: fileURLToPath(new URL('./src/vendor/empty-module.ts', import.meta.url))
       },
       // Upstream FormString.vue imports an X icon from lucide-vue-next
       // that only renders inside the autocompleter clear-button — a
@@ -153,9 +152,9 @@ export default defineConfig({
       // without pulling in the lucide-vue-next dependency.
       {
         find: 'lucide-vue-next',
-        replacement: fileURLToPath(new URL('./src/cmk-stubs/lucide-vue-next.ts', import.meta.url)),
-      },
-    ],
+        replacement: fileURLToPath(new URL('./src/cmk-stubs/lucide-vue-next.ts', import.meta.url))
+      }
+    ]
   },
   server: {
     port: 5173,
@@ -171,17 +170,17 @@ export default defineConfig({
               res.end('Backend restarting')
             }
           })
-        },
+        }
       },
       '/boards/backgrounds': {
         target: 'http://localhost:8080',
-        changeOrigin: true,
+        changeOrigin: true
       },
       '/images': {
         target: 'http://localhost:8080',
-        changeOrigin: true,
-      },
-    },
+        changeOrigin: true
+      }
+    }
   },
   build: {
     target: ['chrome88', 'edge88', 'firefox78', 'safari14'],
@@ -195,9 +194,9 @@ export default defineConfig({
         manualChunks(id) {
           if (/node_modules\/d3[/-]/.test(id)) return 'd3'
           if (/node_modules\/(echarts|vue-echarts)\//.test(id)) return 'echarts'
-        },
-      },
-    },
+        }
+      }
+    }
   },
   test: {
     environment: 'jsdom',
@@ -216,7 +215,7 @@ export default defineConfig({
         'src/test-setup.ts',
         'src/main.ts',
         'src/vendor/**', // third-party CMK stubs
-        'src/cmk-stubs/**',
+        'src/cmk-stubs/**'
       ],
       // Baseline aus current state (~7% wenn Vue-Views mitgezaehlt werden —
       // viele views/* und components/* sind komplett untested). Folge-PRs heben
@@ -226,8 +225,8 @@ export default defineConfig({
         lines: 6,
         functions: 4,
         branches: 3,
-        statements: 6,
-      },
-    },
-  },
+        statements: 6
+      }
+    }
+  }
 })

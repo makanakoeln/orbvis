@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/CmkPopup.vue';
+export { default } from '@cmk/components/CmkPopup.vue'

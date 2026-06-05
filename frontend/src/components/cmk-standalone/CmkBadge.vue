@@ -3,124 +3,124 @@ OrbVis-native CmkBadge, swapped in for the vendored variant when
 VITE_BUILD_TARGET=standalone (see vite.config.ts STANDALONE_OVERRIDES).
 -->
 <script setup lang="ts">
-export type Sizes = 'small' | 'medium' | 'large';
-export type Colors = 'default' | 'success' | 'warning' | 'danger';
-export type Types = 'fill' | 'outline';
-export type Shapes = 'default' | 'circle';
+export type Sizes = 'small' | 'medium' | 'large'
+export type Colors = 'default' | 'success' | 'warning' | 'danger'
+export type Types = 'fill' | 'outline'
+export type Shapes = 'default' | 'circle'
 
 export interface CmkBadgeProps {
-    size?: Sizes;
-    color?: Colors;
-    type?: Types;
-    shape?: Shapes;
+  size?: Sizes
+  color?: Colors
+  type?: Types
+  shape?: Shapes
 }
 
 withDefaults(defineProps<CmkBadgeProps>(), {
-    size: 'medium',
-    color: 'default',
-    type: 'fill',
-    shape: 'default',
-});
+  size: 'medium',
+  color: 'default',
+  type: 'fill',
+  shape: 'default'
+})
 </script>
 
 <template>
-    <div
-        class="orb-badge"
-        :class="[
-            `orb-badge--size-${size}`,
-            `orb-badge--color-${color}`,
-            `orb-badge--type-${type}`,
-            `orb-badge--shape-${shape}`,
-        ]"
-    >
-        <slot />
-    </div>
+  <div
+    class="orb-badge"
+    :class="[
+      `orb-badge--size-${size}`,
+      `orb-badge--color-${color}`,
+      `orb-badge--type-${type}`,
+      `orb-badge--shape-${shape}`
+    ]"
+  >
+    <slot />
+  </div>
 </template>
 
 <style scoped>
 .orb-badge {
-    border-radius: 99999px;
-    border: 2px solid transparent;
-    text-align: center;
-    margin: 4px;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2px;
+  border-radius: 99999px;
+  border: 2px solid transparent;
+  text-align: center;
+  margin: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
 }
 
 .orb-badge--size-small {
-    font-size: 10px;
-    min-width: 12px;
-    height: 12px;
+  font-size: 10px;
+  min-width: 12px;
+  height: 12px;
 }
 
 .orb-badge--size-medium {
-    font-size: 12px;
-    min-width: 18px;
-    height: 18px;
+  font-size: 12px;
+  min-width: 18px;
+  height: 18px;
 }
 
 .orb-badge--size-large {
-    font-size: 14px;
-    min-width: 24px;
-    height: 24px;
+  font-size: 14px;
+  min-width: 24px;
+  height: 24px;
 }
 
 .orb-badge--color-default {
-    background: var(--ux-theme-4, #48566a);
-    color: white;
+  background: var(--ux-theme-4, #48566a);
+  color: white;
 }
 
 .orb-badge--color-danger {
-    background: var(--default-button-danger-color, #ef4444);
-    color: white;
+  background: var(--default-button-danger-color, #ef4444);
+  color: white;
 }
 
 .orb-badge--color-warning {
-    background: var(--color-warning, #ffd000);
-    color: black;
+  background: var(--color-warning, #ffd000);
+  color: black;
 }
 
 .orb-badge--color-success {
-    background: var(--color-corporate-green-50, #15d1a0);
-    color: black;
+  background: var(--color-corporate-green-50, #15d1a0);
+  color: black;
 }
 
 .orb-badge--type-outline {
-    background: transparent;
+  background: transparent;
 }
 
 .orb-badge--type-outline.orb-badge--color-default {
-    color: var(--ux-theme-4, #48566a);
-    border-color: var(--ux-theme-4, #48566a);
+  color: var(--ux-theme-4, #48566a);
+  border-color: var(--ux-theme-4, #48566a);
 }
 
 .orb-badge--type-outline.orb-badge--color-warning {
-    color: var(--color-warning, #ffd000);
-    border-color: var(--color-warning, #ffd000);
+  color: var(--color-warning, #ffd000);
+  border-color: var(--color-warning, #ffd000);
 }
 
 .orb-badge--type-outline.orb-badge--color-danger {
-    color: var(--default-button-danger-color, #ef4444);
-    border-color: var(--default-button-danger-color, #ef4444);
+  color: var(--default-button-danger-color, #ef4444);
+  border-color: var(--default-button-danger-color, #ef4444);
 }
 
 .orb-badge--type-outline.orb-badge--color-success {
-    color: var(--color-corporate-green-50, #15d1a0);
-    border-color: var(--color-corporate-green-50, #15d1a0);
+  color: var(--color-corporate-green-50, #15d1a0);
+  border-color: var(--color-corporate-green-50, #15d1a0);
 }
 
 .orb-badge--shape-circle.orb-badge--size-small {
-    max-width: 12px;
+  max-width: 12px;
 }
 
 .orb-badge--shape-circle.orb-badge--size-medium {
-    max-width: 18px;
+  max-width: 18px;
 }
 
 .orb-badge--shape-circle.orb-badge--size-large {
-    max-width: 24px;
+  max-width: 24px;
 }
 </style>

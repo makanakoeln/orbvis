@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/CmkSwitch.vue';
+export { default } from '@cmk/components/CmkSwitch.vue'

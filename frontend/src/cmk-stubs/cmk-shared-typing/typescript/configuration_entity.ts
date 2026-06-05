@@ -1,1 +1,1 @@
-export type ConfigurationEntity = Record<string, unknown>;
+export type ConfigurationEntity = Record<string, unknown>

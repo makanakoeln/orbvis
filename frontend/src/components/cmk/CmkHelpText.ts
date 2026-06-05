@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/CmkHelpText.vue';
+export { default } from '@cmk/components/CmkHelpText.vue'

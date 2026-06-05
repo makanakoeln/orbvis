@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/CmkLinkCard/CmkLinkCardContainer.vue';
+export { default } from '@cmk/components/CmkLinkCard/CmkLinkCardContainer.vue'

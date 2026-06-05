@@ -12,5 +12,5 @@
  * to catch and render a "regex invalid" UI hint.
  */
 export function compileRegex(pattern: string, flags?: string): RegExp {
-    return new RegExp(pattern, flags);
+  return new RegExp(pattern, flags)
 }

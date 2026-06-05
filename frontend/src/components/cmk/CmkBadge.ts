@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/CmkBadge.vue';
+export { default } from '@cmk/components/CmkBadge.vue'

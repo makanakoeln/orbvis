@@ -5,9 +5,9 @@
  * (see ``frontend/vite.config.ts``) instead of shipping the full
  * dependency.
  */
-import { defineComponent, h } from 'vue';
+import { defineComponent, h } from 'vue'
 
-const EmptyIcon = defineComponent({ name: 'LucideStub', render: () => h('span') });
+const EmptyIcon = defineComponent({ name: 'LucideStub', render: () => h('span') })
 
-export const X = EmptyIcon;
-export default EmptyIcon;
+export const X = EmptyIcon
+export default EmptyIcon

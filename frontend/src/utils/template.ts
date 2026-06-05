@@ -1,7 +1,7 @@
-import type { BoardObject as MapObject, ObjectState } from '@/types/api';
-import { getBoardObjectName } from '@/utils/naming';
-import { parsePerfData } from '@/utils/perf';
-import { formatRelativeDuration, formatRelativeFuture, formatTimestamp } from '@/utils/time';
+import type { BoardObject as MapObject, ObjectState } from '@/types/api'
+import { getBoardObjectName } from '@/utils/naming'
+import { parsePerfData } from '@/utils/perf'
+import { formatRelativeDuration, formatRelativeFuture, formatTimestamp } from '@/utils/time'
 
 /**
  * Interpolate a template string with object and state data.
@@ -34,64 +34,64 @@ import { formatRelativeDuration, formatRelativeFuture, formatTimestamp } from '@
  *   {{metric:LABEL}}     – value of the perf metric named LABEL
  */
 export function interpolateTemplate(
-    template: string,
-    object: MapObject,
-    state: ObjectState | undefined,
+  template: string,
+  object: MapObject,
+  state: ObjectState | undefined
 ): string {
-    const displayName = getBoardObjectName(object);
+  const displayName = getBoardObjectName(object)
 
-    const perfRaw = state?.perf_data ?? '';
-    const metrics = parsePerfData(perfRaw);
-    const firstMetric = metrics[0];
+  const perfRaw = state?.perf_data ?? ''
+  const metrics = parsePerfData(perfRaw)
+  const firstMetric = metrics[0]
 
-    const vars: Record<string, string> = {
-        name: displayName,
-        type: object.type,
-        state: state?.state ?? '',
-        output: state?.output?.split('\n')[0] ?? '',
-        long_output: state?.output ?? '',
-        host: object.host_name ?? '',
-        service: object.service_description ?? '',
-        group: object.group_name ?? '',
-        address: state?.address ?? '',
-        alias: state?.alias ?? '',
-        acknowledged: state?.acknowledged ? 'true' : 'false',
-        in_downtime: state?.in_downtime ? 'true' : 'false',
-        stale: state?.stale ? 'true' : 'false',
-        state_type: state?.state_type ?? '',
-        attempts:
-            state?.current_attempt && state?.max_attempts
-                ? `${state.current_attempt}/${state.max_attempts}`
-                : '',
-        last_check: formatTimestamp(state?.last_check),
-        next_check: formatTimestamp(state?.next_check),
-        next_check_in: formatRelativeFuture(state?.next_check),
-        last_state_change: formatTimestamp(state?.last_state_change),
-        state_duration: formatRelativeDuration(state?.last_state_change),
-        services_summary: formatServicesSummary(state?.services_summary),
-        perf_data: perfRaw,
-        metric: firstMetric ? String(firstMetric.value) + firstMetric.unit : '',
-        metric_unit: firstMetric?.unit ?? '',
-    };
+  const vars: Record<string, string> = {
+    name: displayName,
+    type: object.type,
+    state: state?.state ?? '',
+    output: state?.output?.split('\n')[0] ?? '',
+    long_output: state?.output ?? '',
+    host: object.host_name ?? '',
+    service: object.service_description ?? '',
+    group: object.group_name ?? '',
+    address: state?.address ?? '',
+    alias: state?.alias ?? '',
+    acknowledged: state?.acknowledged ? 'true' : 'false',
+    in_downtime: state?.in_downtime ? 'true' : 'false',
+    stale: state?.stale ? 'true' : 'false',
+    state_type: state?.state_type ?? '',
+    attempts:
+      state?.current_attempt && state?.max_attempts
+        ? `${state.current_attempt}/${state.max_attempts}`
+        : '',
+    last_check: formatTimestamp(state?.last_check),
+    next_check: formatTimestamp(state?.next_check),
+    next_check_in: formatRelativeFuture(state?.next_check),
+    last_state_change: formatTimestamp(state?.last_state_change),
+    state_duration: formatRelativeDuration(state?.last_state_change),
+    services_summary: formatServicesSummary(state?.services_summary),
+    perf_data: perfRaw,
+    metric: firstMetric ? String(firstMetric.value) + firstMetric.unit : '',
+    metric_unit: firstMetric?.unit ?? ''
+  }
 
-    return template.replace(/\{\{(\w+(?::\w+)?)\}\}/g, (_, key: string) => {
-        // {{metric:LABEL}} – look up a named perf metric
-        if (key.startsWith('metric:')) {
-            const label = key.slice(7);
-            const m = metrics.find((x) => x.label === label);
-            return m ? String(m.value) + m.unit : '';
-        }
-        return vars[key] ?? '';
-    });
+  return template.replace(/\{\{(\w+(?::\w+)?)\}\}/g, (_, key: string) => {
+    // {{metric:LABEL}} – look up a named perf metric
+    if (key.startsWith('metric:')) {
+      const label = key.slice(7)
+      const m = metrics.find((x) => x.label === label)
+      return m ? String(m.value) + m.unit : ''
+    }
+    return vars[key] ?? ''
+  })
 }
 
 /** Resolve template priority: object → map globals → global settings */
 export function resolveTemplate(
-    objectTpl: string | null | undefined,
-    mapTpl: string | null | undefined,
-    globalTpl: string | null | undefined,
+  objectTpl: string | null | undefined,
+  mapTpl: string | null | undefined,
+  globalTpl: string | null | undefined
 ): string | null {
-    return objectTpl || mapTpl || globalTpl || null;
+  return objectTpl || mapTpl || globalTpl || null
 }
 
 /**
@@ -99,14 +99,14 @@ export function resolveTemplate(
  * Sorted severity-descending so the worst state is read first.
  */
 export function formatServicesSummary(
-    summary: ObjectState['services_summary'] | undefined,
+  summary: ObjectState['services_summary'] | undefined
 ): string {
-    if (!summary) return '';
-    const parts: string[] = [];
-    if (summary.critical) parts.push(`${summary.critical} CRIT`);
-    if (summary.unknown) parts.push(`${summary.unknown} UNKN`);
-    if (summary.warning) parts.push(`${summary.warning} WARN`);
-    if (summary.pending) parts.push(`${summary.pending} PEND`);
-    if (summary.ok) parts.push(`${summary.ok} OK`);
-    return parts.join(' · ');
+  if (!summary) return ''
+  const parts: string[] = []
+  if (summary.critical) parts.push(`${summary.critical} CRIT`)
+  if (summary.unknown) parts.push(`${summary.unknown} UNKN`)
+  if (summary.warning) parts.push(`${summary.warning} WARN`)
+  if (summary.pending) parts.push(`${summary.pending} PEND`)
+  if (summary.ok) parts.push(`${summary.ok} OK`)
+  return parts.join(' · ')
 }

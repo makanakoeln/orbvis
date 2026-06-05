@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/CmkCollapsible/CmkCollapsible.vue';
+export { default } from '@cmk/components/CmkCollapsible/CmkCollapsible.vue'

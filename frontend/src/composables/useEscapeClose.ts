@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted } from 'vue'
 
 /**
  * Bind Escape on the window to a close callback for the lifetime of the
@@ -8,9 +8,9 @@ import { onMounted, onUnmounted } from 'vue';
  * the behaviour so every modal closes the same way.
  */
 export function useEscapeClose(close: () => void): void {
-    function onKey(e: KeyboardEvent): void {
-        if (e.key === 'Escape') close();
-    }
-    onMounted(() => window.addEventListener('keydown', onKey));
-    onUnmounted(() => window.removeEventListener('keydown', onKey));
+  function onKey(e: KeyboardEvent): void {
+    if (e.key === 'Escape') close()
+  }
+  onMounted(() => window.addEventListener('keydown', onKey))
+  onUnmounted(() => window.removeEventListener('keydown', onKey))
 }

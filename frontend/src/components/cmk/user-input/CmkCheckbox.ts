@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/user-input/CmkCheckbox.vue';
+export { default } from '@cmk/components/user-input/CmkCheckbox.vue'

@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/typography/CmkHeading.vue';
+export { default } from '@cmk/components/typography/CmkHeading.vue'

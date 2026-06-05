@@ -1,1 +1,1 @@
-export { default } from '@cmk/components/user-input/CmkInput.vue';
+export { default } from '@cmk/components/user-input/CmkInput.vue'

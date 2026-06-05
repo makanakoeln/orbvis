@@ -1,3 +1,3 @@
-import CmkIcon from './CmkIcon.vue';
+import CmkIcon from './CmkIcon.vue'
 
-export default CmkIcon;
+export default CmkIcon

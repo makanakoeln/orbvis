@@ -15,35 +15,35 @@
  * includes the historical defaults — anything the backend adds later
  * is invisible until the registry loads.
  */
-import { defineStore } from 'pinia';
+import { defineStore } from 'pinia'
 
-import { type ObjectOption, objectOptionsApi } from '@/api/client';
-import { useAuthStore } from '@/stores/auth';
+import { type ObjectOption, objectOptionsApi } from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
 
 interface State {
-    lineStyles: ObjectOption[];
-    loaded: boolean;
+  lineStyles: ObjectOption[]
+  loaded: boolean
 }
 
 export const useObjectOptionsStore = defineStore('objectOptions', {
-    state: (): State => ({
-        lineStyles: [],
-        loaded: false,
-    }),
-    actions: {
-        async ensureLoaded(): Promise<void> {
-            if (this.loaded) return;
-            const auth = useAuthStore();
-            if (!auth.accessToken) return;
-            try {
-                const data = await objectOptionsApi.get(auth.accessToken);
-                this.lineStyles = data.line_styles;
-                this.loaded = true;
-            } catch {
-                // Swallow — synchronous dropdown helpers will use the
-                // hard-coded fallback. The error already surfaces in
-                // the network panel and devtools if anyone needs it.
-            }
-        },
-    },
-});
+  state: (): State => ({
+    lineStyles: [],
+    loaded: false
+  }),
+  actions: {
+    async ensureLoaded(): Promise<void> {
+      if (this.loaded) return
+      const auth = useAuthStore()
+      if (!auth.accessToken) return
+      try {
+        const data = await objectOptionsApi.get(auth.accessToken)
+        this.lineStyles = data.line_styles
+        this.loaded = true
+      } catch {
+        // Swallow — synchronous dropdown helpers will use the
+        // hard-coded fallback. The error already surfaces in
+        // the network panel and devtools if anyone needs it.
+      }
+    }
+  }
+})
