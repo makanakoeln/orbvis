@@ -24,7 +24,7 @@
 
                     <div class="board-settings__scroll">
                         <!-- General -->
-                        <div v-if="activeTab === 'general'" class="space-y-[10px]">
+                        <div v-if="activeTab === 'general'" class="board-settings__form">
                             <!-- Generic metadata (Identification, Display, Behavior,
                          Templates) renders first so the operator can name and
                          wire up the board before tuning type-specific
@@ -47,10 +47,10 @@
                             <!-- Background (static only) -->
                             <div
                                 v-if="form.map_type === 'static'"
-                                class="board-settings__type-section space-y-[8px]"
+                                class="board-settings__type-section board-settings__stack"
                             >
                                 <p class="section-title">{{ t('boardSettings.background') }}</p>
-                                <div class="space-y-[4px]">
+                                <div class="board-settings__field">
                                     <CmkLabel>{{ t('board.backgroundImage') }}</CmkLabel>
                                     <BackgroundImageUpload
                                         v-model:pending-file="pendingBgFile"
@@ -59,7 +59,7 @@
                                         :pending-preview-url="pendingBgPreviewUrl"
                                     />
                                 </div>
-                                <div class="space-y-[4px]">
+                                <div class="board-settings__field">
                                     <CmkLabel>{{ t('board.backgroundColor') }}</CmkLabel>
                                     <ColorInput
                                         v-model="form.background_color"
@@ -72,30 +72,30 @@
                             <!-- Worldmap settings -->
                             <div
                                 v-if="form.map_type === 'worldmap'"
-                                class="board-settings__type-section space-y-[8px]"
+                                class="board-settings__type-section board-settings__stack"
                             >
                                 <p class="section-title">{{ t('boardSettings.mapView') }}</p>
                                 <div class="board-settings__coord-row">
-                                    <div class="grid grid-cols-3 gap-[8px] flex-1">
-                                        <div class="space-y-[4px]">
+                                    <div class="board-settings__coord-grid">
+                                        <div class="board-settings__field">
                                             <CmkLabel>{{ t('board.latitude') }}</CmkLabel>
                                             <NumberInput
                                                 v-model="form.worldmap_lat"
                                                 step="any"
                                                 :precision="10"
-                                                class="w-full"
+                                                class="board-settings__num board-settings__num--full"
                                             />
                                         </div>
-                                        <div class="space-y-[4px]">
+                                        <div class="board-settings__field">
                                             <CmkLabel>{{ t('board.longitude') }}</CmkLabel>
                                             <NumberInput
                                                 v-model="form.worldmap_lng"
                                                 step="any"
                                                 :precision="10"
-                                                class="w-full"
+                                                class="board-settings__num board-settings__num--full"
                                             />
                                         </div>
-                                        <div class="space-y-[4px]">
+                                        <div class="board-settings__field">
                                             <CmkLabel :help="t('board.worldmapHint')">{{
                                                 t('board.zoom')
                                             }}</CmkLabel>
@@ -103,7 +103,7 @@
                                                 v-model="form.worldmap_zoom"
                                                 min="1"
                                                 max="18"
-                                                class="w-full"
+                                                class="board-settings__num board-settings__num--full"
                                             />
                                         </div>
                                     </div>
@@ -134,7 +134,7 @@
                                         <span>{{ t('board.pickFromMap') }}</span>
                                     </CmkButton>
                                 </div>
-                                <div class="space-y-[4px]">
+                                <div class="board-settings__field">
                                     <CmkLabel>{{ t('board.tileUrl') }}</CmkLabel>
                                     <CmkInput
                                         v-model="form.worldmap_tile_url"
@@ -142,7 +142,7 @@
                                         field-size="FILL"
                                     />
                                 </div>
-                                <div class="space-y-[4px]">
+                                <div class="board-settings__field">
                                     <CmkLabel>{{ t('board.tileSaturate') }}</CmkLabel>
                                     <NumberInput
                                         v-model="form.worldmap_tile_saturate"
@@ -150,7 +150,7 @@
                                         :max="100"
                                         :step="5"
                                         :placeholder="t('board.tileSaturatePlaceholder')"
-                                        class="w-full"
+                                        class="board-settings__num board-settings__num--full"
                                     />
                                 </div>
 
@@ -158,7 +158,7 @@
                                  host geo-coords (orbvis_lat/orbvis_lng labels
                                  or LAT/LONG custom variables). Mirrors NagVis
                                  automap with lat/lng. -->
-                                <div class="board-settings__subsection space-y-[4px]">
+                                <div class="board-settings__subsection board-settings__field">
                                     <CmkLabel :help="t('board.autoSourceHint')">{{
                                         t('board.autoSource')
                                     }}</CmkLabel>
@@ -177,7 +177,7 @@
                                             form.worldmap_auto_source === 'hostgroup' ||
                                             form.worldmap_auto_source === 'servicegroup'
                                         "
-                                        class="space-y-[4px]"
+                                        class="board-settings__field"
                                     >
                                         <CmkLabel>
                                             {{ t('board.groupName')
@@ -210,11 +210,11 @@
                             <!-- Radar settings -->
                             <div
                                 v-if="form.map_type === 'radar'"
-                                class="board-settings__type-section space-y-[8px]"
+                                class="board-settings__type-section board-settings__stack"
                             >
                                 <p class="section-title">{{ t('boardSettings.radarFilter') }}</p>
-                                <div class="grid grid-cols-2 gap-[8px]">
-                                    <div class="space-y-[4px]">
+                                <div class="board-settings__grid-2">
+                                    <div class="board-settings__field">
                                         <CmkLabel>{{ t('board.filterType') }}</CmkLabel>
                                         <CmkDropdown
                                             :selected-option="form.radar_filter || null"
@@ -231,7 +231,7 @@
                                             form.radar_filter === 'hostgroup' ||
                                             form.radar_filter === 'servicegroup'
                                         "
-                                        class="space-y-[4px]"
+                                        class="board-settings__field"
                                     >
                                         <CmkLabel :help="t('board.radarGroupNameHint')">{{
                                             t('board.groupName')
@@ -264,11 +264,11 @@
                             <!-- Folder tree settings -->
                             <div
                                 v-if="form.map_type === 'foldertree'"
-                                class="board-settings__type-section space-y-[8px]"
+                                class="board-settings__type-section board-settings__stack"
                             >
                                 <p class="section-title">{{ t('boardSettings.folderTree') }}</p>
-                                <div class="grid grid-cols-2 gap-[8px]">
-                                    <div class="space-y-[4px]">
+                                <div class="board-settings__grid-2">
+                                    <div class="board-settings__field">
                                         <CmkLabel :help="t('board.ftRootFolderHint')">{{
                                             t('board.ftRootFolder')
                                         }}</CmkLabel>
@@ -282,7 +282,7 @@
                                             "
                                         />
                                     </div>
-                                    <div class="space-y-[4px]">
+                                    <div class="board-settings__field">
                                         <CmkLabel :help="t('board.ftExpandDepthHint')">{{
                                             t('board.ftExpandDepth')
                                         }}</CmkLabel>
@@ -290,11 +290,11 @@
                                             v-model="form.ft_default_expand_depth"
                                             min="0"
                                             max="20"
-                                            class="w-[100px]"
+                                            class="board-settings__num"
                                         />
                                     </div>
                                 </div>
-                                <div class="space-y-[4px]">
+                                <div class="board-settings__field">
                                     <CmkLabel :help="t('board.ftDefaultViewHint')">{{
                                         t('board.ftDefaultView')
                                     }}</CmkLabel>
@@ -309,40 +309,41 @@
                                         "
                                     />
                                 </div>
-                                <div class="space-y-[4px]">
+                                <div class="board-settings__field">
                                     <CmkLabel :help="t('board.ftSitesHint')">{{
                                         t('board.ftSites')
                                     }}</CmkLabel>
                                     <FtSitesSelect v-model="ftSites" :options="siteOptions" />
                                 </div>
-                                <div class="flex flex-col gap-[6px]">
-                                    <label class="flex items-center gap-[8px]">
+                                <div class="board-settings__toggle-list">
+                                    <label class="board-settings__toggle">
                                         <CmkSwitch v-model:data="form.ft_show_empty_folders" />
-                                        <span class="text-sm">{{
+                                        <span class="board-settings__toggle-label">{{
                                             t('board.ftShowEmptyFolders')
                                         }}</span>
                                     </label>
-                                    <label class="flex items-center gap-[8px]">
+                                    <label class="board-settings__toggle">
                                         <CmkSwitch v-model:data="form.ft_show_services" />
-                                        <span class="text-sm">{{ t('board.ftShowServices') }}</span>
+                                        <span class="board-settings__toggle-label">{{
+                                            t('board.ftShowServices')
+                                        }}</span>
                                     </label>
-                                    <label class="flex items-center gap-[8px]">
+                                    <label class="board-settings__toggle">
                                         <CmkSwitch v-model:data="form.ft_problems_only" />
-                                        <span class="text-sm">{{ t('board.ftProblemsOnly') }}</span>
+                                        <span class="board-settings__toggle-label">{{
+                                            t('board.ftProblemsOnly')
+                                        }}</span>
                                     </label>
-                                    <label class="flex items-center gap-[8px]">
+                                    <label class="board-settings__toggle">
                                         <CmkSwitch v-model:data="form.ft_only_hard_states" />
-                                        <span class="text-sm">{{
+                                        <span class="board-settings__toggle-label">{{
                                             t('board.ftOnlyHardStates')
                                         }}</span>
                                     </label>
                                 </div>
                             </div>
 
-                            <ul
-                                v-if="errorMessages.length"
-                                class="text-xs text-[var(--color-light-red-40)] space-y-0.5"
-                            >
+                            <ul v-if="errorMessages.length" class="board-settings__errors">
                                 <li v-for="(msg, i) in errorMessages" :key="i">{{ msg }}</li>
                             </ul>
                         </div>
@@ -353,73 +354,51 @@
                          (orbvis.see/edit) are the source of truth, not the
                          OrbVis role table. Show a read-only summary plus a
                          deep-link to WATO instead. -->
-                            <div v-if="isCmkDeployment" class="space-y-4">
-                                <p class="text-sm text-[var(--text)]">
+                            <div v-if="isCmkDeployment" class="board-settings__perm-cmk">
+                                <p class="board-settings__perm-cmk-intro">
                                     {{ t('board.permissionsCmkIntro') }}
                                 </p>
                                 <CmkButton variant="secondary" @click="openCmkRoles">
                                     {{ t('board.permissionsCmkOpen') }}
                                 </CmkButton>
                             </div>
-                            <div
-                                v-else-if="permLoading"
-                                class="flex items-center justify-center py-8"
-                            >
+                            <div v-else-if="permLoading" class="board-settings__perm-loading">
                                 <CmkLoading />
                             </div>
                             <div v-else>
-                                <table class="w-full text-sm">
+                                <table class="board-settings__perm-table">
                                     <thead>
-                                        <tr class="border-b border-[var(--border)]">
-                                            <th
-                                                class="text-left text-sm font-semibold text-[var(--text-muted)] tracking-wider"
-                                                style="
-                                                    padding: var(--dimension-3) var(--dimension-4);
-                                                "
-                                            >
+                                        <tr class="board-settings__perm-head-row">
+                                            <th class="board-settings__perm-th">
                                                 {{ t('admin.role') }}
                                             </th>
                                             <th
-                                                class="text-center text-sm font-semibold text-[var(--text-muted)] tracking-wider w-20"
-                                                style="
-                                                    padding: var(--dimension-3) var(--dimension-4);
-                                                "
+                                                class="board-settings__perm-th board-settings__perm-th--center"
                                             >
                                                 {{ t('common.view') }}
                                             </th>
                                             <th
-                                                class="text-center text-sm font-semibold text-[var(--text-muted)] tracking-wider w-20"
-                                                style="
-                                                    padding: var(--dimension-3) var(--dimension-4);
-                                                "
+                                                class="board-settings__perm-th board-settings__perm-th--center"
                                             >
                                                 {{ t('common.edit') }}
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-[var(--border)]">
+                                    <tbody class="board-settings__perm-body">
                                         <tr
                                             v-for="role in permRoles"
                                             :key="role.role_id"
-                                            class="hover:bg-[var(--bg-hover)]"
+                                            class="board-settings__perm-row"
                                         >
                                             <td
-                                                class="font-medium text-[var(--text)]"
-                                                style="
-                                                    padding: var(--dimension-3) var(--dimension-4);
-                                                "
+                                                class="board-settings__perm-td board-settings__perm-td--name"
                                             >
                                                 {{ role.name }}
                                             </td>
                                             <td
-                                                class="text-center"
-                                                style="
-                                                    padding: var(--dimension-3) var(--dimension-4);
-                                                "
+                                                class="board-settings__perm-td board-settings__perm-td--center"
                                             >
-                                                <div
-                                                    class="flex items-center justify-center gap-[3px]"
-                                                >
+                                                <div class="board-settings__perm-cell">
                                                     <CmkCheckbox
                                                         :model-value="hasDraftPerm(role, 'view')"
                                                         :disabled="hasWildcard(role, 'view')"
@@ -429,21 +408,16 @@
                                                     />
                                                     <span
                                                         v-if="hasWildcard(role, 'view')"
-                                                        class="text-[10px] text-[var(--text-muted)]"
+                                                        class="board-settings__perm-wildcard"
                                                         :title="t('admin.viaWildcardRule')"
                                                         >*</span
                                                     >
                                                 </div>
                                             </td>
                                             <td
-                                                class="text-center"
-                                                style="
-                                                    padding: var(--dimension-3) var(--dimension-4);
-                                                "
+                                                class="board-settings__perm-td board-settings__perm-td--center"
                                             >
-                                                <div
-                                                    class="flex items-center justify-center gap-[3px]"
-                                                >
+                                                <div class="board-settings__perm-cell">
                                                     <CmkCheckbox
                                                         :model-value="hasDraftPerm(role, 'edit')"
                                                         :disabled="hasWildcard(role, 'edit')"
@@ -453,7 +427,7 @@
                                                     />
                                                     <span
                                                         v-if="hasWildcard(role, 'edit')"
-                                                        class="text-[10px] text-[var(--text-muted)]"
+                                                        class="board-settings__perm-wildcard"
                                                         :title="t('admin.viaWildcardRule')"
                                                         >*</span
                                                     >
@@ -462,13 +436,10 @@
                                         </tr>
                                     </tbody>
                                 </table>
-                                <p
-                                    v-if="!permRoles.length"
-                                    class="text-center py-6 text-[var(--text-muted)] text-sm"
-                                >
+                                <p v-if="!permRoles.length" class="board-settings__perm-empty">
                                     {{ t('admin.noRoles') }}
                                 </p>
-                                <p class="text-sm text-[var(--text-muted)] mt-3 px-1">
+                                <p class="board-settings__perm-note">
                                     * {{ t('admin.wildcardNote') }}
                                 </p>
                             </div>
@@ -1725,5 +1696,152 @@ onBeforeUnmount(() => {
     padding: var(--dimension-4) 0;
     background: var(--bg-surface);
     border-top: 1px solid var(--border);
+}
+
+/* Vertical stacks (former space-y utilities). Defined after __subsection /
+   __type-section so the stack gap wins on elements carrying both classes,
+   matching the old utility specificity. */
+.board-settings__form > * + * {
+    margin-top: 10px;
+}
+
+.board-settings__stack > * + * {
+    margin-top: var(--dimension-4);
+}
+
+.board-settings__field > * + * {
+    margin-top: var(--dimension-3);
+}
+
+.board-settings__coord-grid {
+    display: grid;
+    flex: 1 1 0%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--dimension-4);
+}
+
+.board-settings__grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--dimension-4);
+}
+
+.board-settings__num {
+    width: 100px;
+}
+
+.board-settings__num--full {
+    width: 100%;
+}
+
+.board-settings__toggle-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.board-settings__toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--dimension-4);
+}
+
+.board-settings__toggle-label {
+    font-size: var(--font-size-large);
+}
+
+.board-settings__errors {
+    font-size: var(--font-size-normal);
+    color: var(--color-light-red-40);
+}
+
+.board-settings__errors > * + * {
+    margin-top: var(--dimension-2);
+}
+
+.board-settings__perm-cmk > * + * {
+    margin-top: var(--dimension-6);
+}
+
+.board-settings__perm-cmk-intro {
+    font-size: var(--font-size-large);
+    color: var(--text);
+}
+
+.board-settings__perm-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 0;
+}
+
+.board-settings__perm-table {
+    width: 100%;
+    font-size: var(--font-size-large);
+}
+
+.board-settings__perm-head-row {
+    border-bottom: 1px solid var(--border);
+}
+
+.board-settings__perm-th {
+    padding: var(--dimension-3) var(--dimension-4);
+    font-size: var(--font-size-large);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    text-align: left;
+}
+
+.board-settings__perm-th--center {
+    width: 80px;
+    text-align: center;
+}
+
+.board-settings__perm-body tr + tr {
+    border-top: 1px solid var(--border);
+}
+
+.board-settings__perm-row:hover {
+    background: var(--bg-hover);
+}
+
+.board-settings__perm-td {
+    padding: var(--dimension-3) var(--dimension-4);
+}
+
+.board-settings__perm-td--name {
+    font-weight: 500;
+    color: var(--text);
+}
+
+.board-settings__perm-td--center {
+    text-align: center;
+}
+
+.board-settings__perm-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+}
+
+.board-settings__perm-wildcard {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.board-settings__perm-empty {
+    padding: var(--dimension-8) 0;
+    font-size: var(--font-size-large);
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.board-settings__perm-note {
+    margin-top: var(--dimension-5);
+    padding: 0 var(--dimension-3);
+    font-size: var(--font-size-large);
+    color: var(--text-muted);
 }
 </style>
