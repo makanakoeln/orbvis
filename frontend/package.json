@@ -16,6 +16,7 @@
     "build:cmk-source": "CMK_FRONTEND_VUE_SRC=${CMK_FRONTEND_VUE_SRC:-$HOME/git/checkmk/packages/cmk-frontend-vue/src} vue-tsc && CMK_FRONTEND_VUE_SRC=${CMK_FRONTEND_VUE_SRC:-$HOME/git/checkmk/packages/cmk-frontend-vue/src} vite build",
     "preview": "vite preview",
     "drift-check": "../scripts/sync-cmk-vendor.sh",
+    "drift-check:upstream": "../scripts/sync-upstream-frontend.sh --check",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",

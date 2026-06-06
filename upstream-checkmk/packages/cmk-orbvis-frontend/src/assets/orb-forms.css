@@ -1,0 +1,48 @@
+/* Shared form styling on CMK tokens. Replaces the per-component duplicates
+   that accumulated during the tailwind removal — single source of truth for
+   the standard input look and the uppercase section headings. */
+
+.orb-field {
+  width: 100%;
+  padding: 5px 10px;
+  font-size: var(--font-size-large);
+  line-height: 20px;
+  color: var(--text);
+  background: var(--default-form-element-bg-color);
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px var(--default-form-element-border-color);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-field::placeholder {
+  color: var(--default-form-element-placeholder-color);
+}
+
+.orb-field:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-corporate-green-50);
+}
+
+.orb-section-title {
+  margin-bottom: 6px;
+  font-size: var(--font-size-normal);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.orb-section-title--flush {
+  margin-bottom: 0;
+}
+
+.orb-group-heading {
+  margin-bottom: var(--dimension-4);
+  font-size: var(--font-size-large);
+  line-height: 20px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}

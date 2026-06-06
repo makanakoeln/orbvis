@@ -1,0 +1,48 @@
+{
+  "name": "cmk-orbvis-frontend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "npm": ">=10.9.0 <11.0.0",
+    "node": ">=22.0.0 <=23.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -p tsconfig.json && npm run i18n:compile && vite build",
+    "type-check": "vue-tsc -p tsconfig.json --noEmit",
+    "test": "vitest",
+    "i18n:extract": "vue-gettext-extract",
+    "i18n:compile": "vue-gettext-compile"
+  },
+  "dependencies": {
+    "@vue-leaflet/vue-leaflet": "^0.10.1",
+    "class-variance-authority": "^0.7.1",
+    "cmk-shared-typing": "workspace:*",
+    "d3": "^7.9.0",
+    "echarts": "^6.0.0",
+    "leaflet": "^1.9.4",
+    "pinia": "^3.0.4",
+    "reka-ui": "^2.9.6",
+    "sanitize-html": "^2.17.2",
+    "vue": "^3.5.31",
+    "vue-echarts": "^8.0.1",
+    "vue-router": "^5.0.4",
+    "vue3-gettext": "4.0.0-beta.1"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.5",
+    "@types/d3": "^7.4.3",
+    "@types/leaflet": "^1.9.21",
+    "@types/node": "^22.19.17",
+    "@types/sanitize-html": "^2.16.1",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^29.0.2",
+    "lucide-vue-next": "^1.0.0",
+    "sass-embedded": "^1.99.0",
+    "typescript": "^6.0.2",
+    "vite": "^7.3.2",
+    "vue-tsc": "^3.3.2"
+  }
+}

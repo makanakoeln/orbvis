@@ -23,7 +23,9 @@ export interface CmkDialogProps {
     message: TranslatedString;
     buttons?: {
         title: TranslatedString;
-        variant: ButtonVariants['variant'];
+        // NonNullable: cva's VariantProps include null, but CmkButton's
+        // variant prop (master layout) only accepts the union or undefined.
+        variant: NonNullable<ButtonVariants['variant']>;
         onclick: () => void;
     }[];
     dismissalButton?: { title: TranslatedString; key: DismissalButtonKey };

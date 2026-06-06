@@ -1,0 +1,336 @@
+@import './assets/orb-base.css';
+@import './assets/cmk/variables.css';
+@import './assets/orb-forms.css';
+
+:root {
+  --color-warning: #ffd000;
+  --color-state-up: #00ff00;
+  --color-state-down: #ff0000;
+  --color-state-unreachable: #ff8800;
+  --color-state-ok: #00ff00;
+  --color-state-warning: #ffd000;
+  --color-state-critical: #ff0000;
+  --color-state-unknown: #ff8800;
+  --color-state-pending: #aaaaaa;
+
+  /* Modifier badges shown alongside states in the slidein. CMK's vendored
+       palette has no semantic ack/downtime tokens so we define them here. */
+  --color-mod-acknowledged: #f59e0b;
+  --color-mod-downtime: #3b82f6;
+  --color-mod-muted: #a1a1aa;
+
+  /* CMK layout variables */
+  --form-field-height: 24px;
+  --font-weight-default: 400;
+  --font-weight-bold: 700;
+  --font-size-normal: 13px;
+  --font-size-xlarge: 15px;
+  --border-radius: 4px;
+
+  /* Keeps board icons legible on any backdrop regardless of theme — replaces
+       the theme-coupled .dark .svg-icon invert, which left dark boards shown in
+       the light theme with invisible icons and wrongly inverted coloured logos. */
+  --icon-halo: drop-shadow(0 0 1.5px rgb(0 0 0 / 60%)) drop-shadow(0 0 1.5px rgb(255 255 255 / 90%));
+
+  /* CMK ux-theme scale (dark/midnight-grey) */
+  --ux-theme-0: rgb(15 18 21);
+  --ux-theme-1: rgb(28 34 40);
+  --ux-theme-2: rgb(32 39 46);
+  --ux-theme-3: rgb(38 46 54);
+  --ux-theme-4: rgb(62 74 91);
+  --ux-theme-5: rgb(48 57 70);
+  --ux-theme-6: rgb(37 44 54);
+  --ux-theme-7: rgb(72 86 106);
+  --ux-theme-8: rgb(83 98 121);
+  --ux-theme-9: rgb(94 112 136);
+  --ux-theme-10: rgb(106 124 149);
+
+  /* CMK toggle button group */
+  --toggle-button-group-active-bg-color: var(--ux-theme-10);
+  --toggle-button-group-inactive-bg-color: var(--ux-theme-6);
+  --toggle-button-group-border-color: var(--ux-theme-7);
+  --toggle-button-group-active-text-color: #fff;
+  --toggle-button-group-inactive-text-color: rgb(160 168 176);
+  --toggle-button-group-disabled-text-color: rgb(80 88 96);
+  --toggle-button-group-hover-bg-color: var(--ux-theme-7);
+
+  /* CMK button token defaults (active before Vue sets body[data-theme]) */
+  --default-button-primary-color: rgb(21 209 160);
+  --button-primary-border-color: rgb(21 209 160);
+  --button-primary-text-color: rgb(0 0 0);
+  --default-button-danger-color: rgb(229 63 63);
+  --button-danger-border-color: rgb(229 63 63);
+  --button-danger-text-color: rgb(255 255 255);
+  --default-form-element-bg-color: #27272a;
+  --default-form-element-border-color: #71717a;
+  --font-color: #f4f4f5;
+  --font-color-dimmed: #71717a;
+  --default-bg-color: var(--ux-theme-2, #20272e);
+  --default-nav-bg-color: #111827;
+  --default-nav-border-color: #27272a;
+  --default-border-color: rgb(255 255 255 / 6%);
+  --color-up: #0f0;
+  --color-down: #f00;
+  --color-unreachable: #f80;
+  --color-ok: #0f0;
+  --color-critical: #f00;
+  --color-unknown: #f80;
+  --color-pending: #aaa;
+
+  /* Gadgets keep a dark "hardware" look in both themes (no .light override).
+       The value/label text is always light, so it must stay legible even when
+       it sits directly on a light board backdrop — hence the dark text outline
+       below and a neutral-grey track that shows on light and dark alike. */
+  --gadget-bg: rgb(0 0 0 / 55%);
+  --gadget-ring: rgb(255 255 255 / 15%);
+  --gadget-bar-bg: rgb(0 0 0 / 50%);
+  --gadget-track: rgb(120 120 130 / 50%);
+  --gadget-text: #f4f4f5;
+  --gadget-text-dim: rgb(255 255 255 / 80%);
+  --shadow-text:
+    1px 1px 0 rgb(0 0 0 / 90%), -1px 1px 0 rgb(0 0 0 / 90%), 1px -1px 0 rgb(0 0 0 / 90%),
+    -1px -1px 0 rgb(0 0 0 / 90%), 0 0 3px rgb(0 0 0 / 70%);
+}
+
+/* In a Checkmk-embedded deployment, adopt Checkmk's own monitoring status palette
+   (its facelift/modern-dark $color-state-* values) instead of OrbVis' standalone
+   pure primaries, so boards match the surrounding Checkmk UI. Checkmk ships these
+   only as compiled SCSS (no CSS vars), so the values are mirrored here; they are
+   identical across the facelift/modern-dark themes. Standalone keeps the @theme
+   primaries above (OrbVis-native, no Checkmk dependency). */
+:root.cmk-deployment {
+  --color-state-up: rgb(21 209 160);
+  --color-state-ok: rgb(21 209 160);
+  --color-state-warning: rgb(255 215 3);
+  --color-state-critical: rgb(200 50 50);
+  --color-state-down: rgb(200 50 50);
+  --color-state-unknown: rgb(255 132 0);
+  --color-state-unreachable: rgb(255 132 0);
+  --color-state-pending: rgb(140 140 140);
+}
+
+/* Override browser autofill yellow highlight */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.light {
+  --bg: #fafafa;
+  --bg-surface: #fff;
+  --bg-input: #e4e4e7;
+  --bg-glass: rgb(255 255 255 / 92%);
+  --bg-hover: rgb(0 0 0 / 7%);
+  --border: rgb(0 0 0 / 15%);
+  --text: #18181b;
+  --text-muted: #52525b;
+  --accent: var(--color-corporate-green-50, rgb(21 209 160));
+  --gauge-track: #d4d4d8;
+}
+
+.admin-subtitle {
+  color: var(--text-muted);
+  margin-top: var(--dimension-3);
+}
+
+/* reka-ui sperrt body { pointer-events: none } während ein Modal offen ist; das
+   per Teleport in body gerenderte CmkDropdown-Menü erbt das und wird unklickbar. */
+.cmk-dropdown__menu {
+  pointer-events: auto;
+}
+
+/* The base reset (orb-base.css) applies `* { box-sizing: border-box }`, which on
+   the CmkDropdown arrow shrinks the SVG content area to 1.8px once its 0.7em
+   padding is subtracted. Override locally so the arrow keeps its intended
+   size without touching the vendored CmkDropdown.vue. */
+.cmk-dropdown--arrow {
+  box-sizing: content-box;
+}
+
+/* CMK's legacy theme caps every input at ``height: 15px``, paints
+   search filters with ``--input-nested-background-color`` (the lighter
+   shade select2 uses), and zeros ``outline-style``. Without those rules
+   the Suggestions filter grows to ~41px via ``field-sizing: content``,
+   stays at the darker ``--ux-theme-3``, and gains Chrome's default
+   focus ring. */
+.cmk-suggestions span.input input {
+  height: 15px;
+  background: var(--input-nested-background-color, rgb(63 75 93));
+  outline: none;
+}
+
+html {
+  font-size: 14px;
+}
+
+/* OrbVis-Aliase auf body, nicht :root: CMK setzt --default-bg-color erst auf body[data-theme=…].
+   Elevation-Hierarchie (CMK-Konvention dunkles Theme):
+     --bg (page)            = --ux-theme-1   (dunkelster Surface-Ton, nicht pitch-black)
+     --default-bg-color     = --ux-theme-2   (Slideouts, Popups — elevation gegen page)
+     --bg-surface (cards)   = --ux-theme-3   (Board-Cards, Tabellen)
+   --default-bg-color MUSS unterscheidbar von --bg sein, damit CmkSlideIn sich abhebt. */
+body {
+  /* Bridge OrbVis token names onto CMK's theme-aware vars. CMK's
+       ``assets/cmk/variables.css`` keeps ``--font-color`` and
+       ``--font-color-dimmed`` correct in *both* light and dark modes, so
+       using them here means OrbVis automatically picks the right tone
+       per theme — no separate ``.light body`` override required.
+       The fallbacks are dark-theme values for OrbVis-only builds that
+       don't ship the CMK vars at all. */
+  --bg: var(--ux-theme-1, #1c2228);
+  --bg-surface: var(--ux-theme-3, #18181b);
+  --bg-input: var(--default-form-element-bg-color, #27272a);
+  --bg-glass: rgb(24 24 27 / 92%);
+  --bg-hover: var(--input-hover-bg-color, rgb(39 39 42 / 60%));
+  --border: var(--default-border-color, rgb(255 255 255 / 6%));
+  --text: var(--font-color, #f4f4f5);
+  --text-muted: var(--font-color-dimmed, rgb(255 255 255 / 70%));
+  --accent: var(--color-corporate-green-50, rgb(21 209 160));
+  --gauge-track: #3f3f46;
+
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  margin: 0;
+}
+
+/* --bg-glass and --gauge-track have no CMK theme-aware equivalent, so unlike
+   the bridged tokens above they can't flip per theme. Their light values live
+   in the `.light` block on <html>, but the body declaration shadows them for
+   every descendant — leaving glass popups (HoverMenu) and gauge tracks dark in
+   light mode. Re-assert the light values at body scope so they actually win. */
+.light body {
+  --bg-glass: rgb(255 255 255 / 92%);
+  --gauge-track: #d4d4d8;
+}
+
+/* SVG icons loaded as <img> lose currentColor — invert makes black strokes white in dark mode.
+   Only apply to monochrome SVGs (Tabler Icons style), not to coloured bitmaps. */
+.dark .svg-icon {
+  filter: invert(1);
+}
+
+/* Custom scrollbars — dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #52525b;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #71717a;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #52525b transparent;
+}
+
+/* Custom scrollbars — light theme */
+.light ::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+.light * {
+  scrollbar-color: #d4d4d8 transparent;
+}
+
+/* ── CMK component shims ────────────────────────────────────────────────────
+   In production, Checkmk's own stylesheet provides these styles.
+   These rules make CMK components visible in standalone dev mode.
+   ──────────────────────────────────────────────────────────────────────── */
+
+input.cmk-input {
+  background: var(--default-form-element-bg-color);
+  border: 1px solid var(--default-form-element-border-color);
+  border-radius: 6px;
+  color: var(--font-color);
+  padding: 5px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  outline: none;
+  transition: box-shadow 0.15s;
+}
+
+input.cmk-input:focus {
+  box-shadow: 0 0 0 2px var(--color-corporate-green-50);
+  border-color: var(--color-corporate-green-50);
+}
+
+input.cmk-input::placeholder {
+  color: var(--font-color-dimmed);
+}
+
+input.cmk-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cmk-checkbox__button {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--default-form-element-border-color);
+  border-radius: 3px;
+  background: var(--default-form-element-bg-color);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  accent-color: var(--color-corporate-green-50);
+}
+
+/* Match CMK GUI: the indicator carries the checked signal, not the
+   background. Upstream relies on Radix to toggle the indicator only. */
+.cmk-checkbox__button[data-state='checked'] {
+  border-color: var(--default-form-element-border-color);
+}
+
+/* The X is drawn with ``fill="currentcolor"``, so this is what determines
+   whether the tick shows. CMK upstream pinned it to ``#fff`` which is
+   invisible on the light-theme checkbox background. Bridge it to the
+   regular font color (CMK's theme-aware ``--font-color``: white on dark,
+   dark on light) so the check is legible in both themes. */
+.cmk-checkbox__indicator {
+  color: var(--font-color, #fff);
+}
+
+.cmk-checkbox__label {
+  color: var(--font-color);
+  font-size: 13px;
+}
+
+/* CmkHelpText overrides — vendor uses ``style scoped`` (specificity 0,2,0)
+   so app-level rules need !important to win without patching the vendor. */
+.cmk-help-text__trigger {
+  /* Vendor sets vertical-align: text-top which floats the (i) icon to the
+       top of the line box; ``middle`` centres it on the label baseline. */
+  vertical-align: middle !important;
+  margin-bottom: 0 !important;
+}
+
+.cmk-help-text__content {
+  /* Vendor ships with 16px padding on all sides, which turns a single line
+       of help text into a chunky three-line-tall box. Shrink the vertical
+       padding so the popup hugs the text. */
+  padding: 6px 12px !important;
+}

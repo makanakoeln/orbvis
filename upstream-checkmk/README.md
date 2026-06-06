@@ -21,7 +21,20 @@ the real GUI integration (permissions, dynamic per-board permissions,
 sidebar snap-in) ported from `cmk_plugins_23/` — without the 2.3/2.4/2.5
 compatibility bridges, modelled 1:1 on `cmk/gui/nagvis/`. Checkmk GPLv2
 headers and `BUILD` files (shapes verified against the nagvis targets) are
-in place. The frontend package is still a placeholder.
+in place.
+
+Stage 6b/6c is done: `packages/cmk-orbvis-frontend/` carries the real
+package — configs modelled on cmk-frontend-vue, `src/` generated from
+`frontend/src/` by `scripts/sync-upstream-frontend.sh` (drift check:
+`npm run drift-check:upstream` in `frontend/`), deployment via `pkg_tar`
+to `share/check_mk/web/htdocs/cmk-orbvis-frontend/` (NOT a wheel — see
+the package README). Verified in real merge topology (temp copy into
+`~/git/checkmk/` + pnpm workspace entry): `vite build`, `vue-tsc` and
+all 150 vitest tests green against current cmk-frontend-vue master.
+Verification caveat: `cmk-shared-typing/typescript/` was generated with
+`json2ts` directly (icon, vue_formspec_components, user_frontend_config,
+configuration_entity); `openapi_internal` needs the Bazel pipeline and
+was covered by a minimal hand-written subset.
 
 Explicitly **not** set yet:
 
@@ -52,11 +65,13 @@ OrbVis ships on two tracks after Stage 6 is complete:
 The two tracks coexist; they are not alternatives. Bug fixes are cherry-picked
 between them where applicable.
 
-## Open questions (to clarify before Stage 6 starts)
+## Resolved questions
 
-1. Tailwind in the built-in bundle? cmk-frontend-vue uses CMK SCSS tokens —
-   does legal/design accept Tailwind alongside?
-2. Backend URL of the external OrbVis backend: how does the built-in frontend
-   discover it? OMD site-setting, env var, configuration UI in `cmk/gui/orbvis/`?
-3. Node version for the external `frontend/` tree when the built-in goes to
-   Node 22+ — upgrade both or keep the external tree at 18+?
+1. ~~Tailwind in the built-in bundle?~~ — Tailwind was removed from the
+   frontend entirely (CMK design tokens).
+2. ~~Backend URL discovery?~~ — site-local like NagVis (user decision
+   2026-06-05): the per-site Apache config proxies `/api` to the
+   site-local backend; no URL configuration surface needed.
+3. ~~Node version for the external tree?~~ — the external `frontend/`
+   stays on its current floor for 2.3–2.5 MKP compat; only
+   `packages/cmk-orbvis-frontend/` targets Node 22+/Vite 7/TS 6.

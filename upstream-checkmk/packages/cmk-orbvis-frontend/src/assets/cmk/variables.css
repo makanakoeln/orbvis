@@ -1,0 +1,321 @@
+/**
+ * Copyright (C) 2024 Checkmk GmbH - License: GNU General Public License v2
+ * This file is part of Checkmk (https://checkmk.com). It is subject to the terms and
+ * conditions defined in the file COPYING, which is part of this source code package.
+ */
+@import './colors.css';
+@import './dimensions.css';
+@import './zindices.css';
+
+:root {
+  /* Colors */
+  --success: var(--color-corporate-green-50);
+  --success-dimmed: rgb(17 188 122);
+  --success-dimmed-2: rgb(13 141 91);
+  --white: rgb(255 255 255);
+  --white-dimmed: rgb(255 255 255 / 50%);
+  --black: rgb(0 0 0);
+  --grey-4-dimmed: rgb(51 51 51 / 80%);
+  --error-msg-bg-color: rgb(200 50 50 / 15%);
+  --form-readonly-error-bg-color: rgb(252 85 85);
+  --default-help-icon-bg-color: rgb(6 103 193);
+  --default-help-icon-bg-color-hover: rgb(56 133 205);
+  --default-nav-popup-border-color: rgb(19 211 137);
+  --scrollbar-color: var(--color-mid-grey-60);
+  --popup-dialog-success: var(--color-corporate-green-50);
+  --popup-dialog-warning: var(--color-yellow-50);
+  --popup-dialog-danger: var(--color-light-red-50);
+  --popup-dialog-info: var(--color-light-blue-50);
+  --border-color-purple: rgb(105 102 229);
+
+  /* Fonts */
+  --font-size-xxlarge: 18px;
+  --font-size-xlarge: 16px;
+  --font-size-large: 14px;
+  --font-size-normal: 12px;
+  --font-size-small: 10px;
+  --font-weight-default: 400;
+  --font-weight-bold: 700;
+
+  /* Spacings */
+  --spacing-double: 20px;
+  --spacing: 10px;
+  --spacing-half: 5px;
+
+  /* Borders */
+  --border-radius: 4px;
+  --border-radius-half: 2px;
+  --border-width-1: 1px;
+
+  /* Dimensions */
+  --form-field-height: 21px;
+}
+
+@layer theme {
+  body[data-theme='facelift'] {
+    /* Base colors */
+    --ux-theme-0: var(--color-daylight-grey-0);
+    --ux-theme-1: var(--color-daylight-grey-10);
+    --ux-theme-2: var(--color-daylight-grey-20);
+    --ux-theme-3: var(--color-daylight-grey-30);
+    --ux-theme-4: var(--color-daylight-grey-40);
+    --ux-theme-5: var(--color-daylight-grey-50);
+    --ux-theme-6: var(--color-daylight-grey-60);
+    --ux-theme-7: var(--color-daylight-grey-70);
+    --ux-theme-8: var(--color-daylight-grey-80);
+    --ux-theme-9: var(--color-daylight-grey-90);
+    --ux-theme-10: var(--color-daylight-grey-100);
+    --color-popup-backdrop: rgb(0 0 0 /50%);
+    --color-skeleton: var(--color-conference-grey-10);
+    --color-skeleton-shimmer-0: rgb(30 38 46 / 0%);
+    --color-skeleton-shimmer-1: rgb(30 38 46 / 2%);
+    --color-skeleton-shimmer-2: rgb(30 38 46 / 6%);
+    --color-warning: rgb(255 208 0);
+    --color-danger: rgb(229 63 63);
+    --popup-dialog-bg-color: var(--color-daylight-grey-10);
+    --popup-dialog-title-color: var(--color-conference-grey-100);
+    --popup-dialog-message-color: var(--color-mid-grey-100);
+    --menu-entry-disabled: var(--color-midnight-grey-100);
+
+    /* ATTENTION: No explicit rgb color definitions beyond this point. Reuse variables above */
+
+    /* Fonts */
+    --font-color: var(--color-conference-grey-100);
+    --font-color-dimmed: var(--grey-4-dimmed);
+    --font-color-light-bg: var(--font-color);
+    --font-perfometer-color: var(--color-conference-grey-100);
+
+    /* Colors */
+    --default-nav-bg-color: var(--ux-theme-3);
+    --default-nav-border-color: var(--ux-theme-6);
+    --default-submit-button-border-color: var(--success-dimmed);
+    --default-border-color: rgb(234 234 234);
+    --default-bg-color: var(--ux-theme-2);
+    --default-form-element-bg-color: var(--ux-theme-5);
+    --default-form-element-bg-color-disabled: var(--ux-theme-6);
+    --default-form-element-border-color: var(--color-mid-grey-60);
+    --default-form-element-placeholder-color: var(--color-conference-grey-50);
+    --default-select-hover-color: var(--success);
+    --default-select-focus-color: var(--success-dimmed);
+    --default-border-color-green: rgb(21 209 160);
+    --default-tooltip-background-color: rgb(233 233 233);
+    --default-tooltip-text-color: rgb(17 24 29);
+    --custom-scroll-bar-thumb-border-color: rgb(234 234 234);
+    --custom-scroll-bar-thumb-color: rgb(88 88 88);
+    --custom-scroll-bar-backgroud-color: var(--ux-theme-0);
+    --default-component-bg-color: rgb(240 240 240);
+    --help-text-bg-color: var(--ux-theme-5);
+    --help-text-font-color: var(--color-conference-grey-100);
+    --dropdown-chevron-indicator-color: var(--color-conference-grey-100);
+    --default-dialog-bg-color: var(--ux-theme-3);
+    --default-dialog-font-color: var(--font-color);
+    --form-element-required-color: var(--success-dimmed-2);
+    --input-hover-bg-color: var(--ux-theme-4);
+    --code-background-color: var(--color-daylight-grey-50);
+    --wizard-progress-bar-background-color: var(--color-daylight-grey-60);
+    --wizard-progress-bar-background-badge-color: var(--color-midnight-grey-100);
+    --db-content-bg-color: var(--ux-theme-3);
+    --even-tr-bg-color: var(--ux-theme-3);
+    --odd-tr-bg-color: var(--ux-theme-4);
+    --inline-help-text-bg: rgb(223 239 251);
+    --inline-help-icon-bg: rgb(12 129 238);
+    --slide-in-left-part: var(--color-daylight-grey-30);
+    --dropdown-arrow-color: var(--color-conference-grey-100);
+    --dashed-border-color: var(--color-mid-grey-20);
+    --shared-dashboard-indicator-background: var(--color-daylight-grey-30);
+
+    /* Form Labels Colors */
+    --tag-color: var(--color-cyan-80);
+    --tag-explicit-color: var(--color-purple-70);
+    --tag-discovered-color: var(--color-orange-30);
+    --tag-ruleset-color: var(--color-pink-70);
+    --tag-font-color-light: var(--color-white-100);
+    --tag-font-color-dark: var(--color-conference-grey-100);
+
+    /* Cmk Toggle Button Group */
+    --toggle-button-group-active-bg-color: var(--ux-theme-10);
+    --toggle-button-group-inactive-bg-color: var(--ux-theme-6);
+    --toggle-button-group-border-color: var(--color-mid-grey-50);
+    --toggle-button-group-active-text-color: var(--color-white-100);
+    --toggle-button-group-inactive-text-color: var(--color-conference-grey-100);
+    --toggle-button-group-disabled-text-color: var(--color-conference-grey-70);
+    --toggle-button-group-hover-bg-color: var(--color-daylight-grey-80);
+
+    /* Cmk Inline Validation */
+    --inline-error-border-color: var(--color-dark-red-50);
+    --inline-error-text-color: var(--color-dark-red-50);
+
+    /* Cmk Button Variants */
+    --default-button-primary-color: var(--color-corporate-green-50);
+    --button-primary-border-color: var(--color-corporate-green-70);
+    --button-primary-text-color: var(--black);
+    --default-button-secondary-color: var(--ux-theme-6);
+    --button-secondary-border-color: var(--color-corporate-green-70);
+    --button-secondary-text-color: var(--black);
+    --default-button-optional-color: var(--ux-theme-6);
+    --button-optional-border-color: var(--color-mid-grey-50);
+    --button-optional-text-color: var(--black);
+    --default-button-warning-color: var(--color-yellow-50);
+    --button-warning-border-color: var(--color-yellow-70);
+    --button-warning-text-color: var(--black);
+    --default-button-danger-color: var(--color-dark-red-50);
+    --button-danger-border-color: var(--color-dark-red-50);
+    --button-danger-text-color: var(--color-white-100);
+    --default-button-info-color: var(--color-dark-blue-50);
+    --button-info-border-color: var(--color-dark-blue-50);
+    --button-info-text-color: var(--color-white-100);
+    --default-button-form-color: var(--ux-theme-6);
+    --button-form-border-color: var(--color-mid-grey-50);
+    --button-form-text-color: var(--black);
+
+    /* breadcrumb colors */
+    --font-color-breadcrumb-inactive: var(--color-conference-grey-70);
+    --font-color-breadcrumb-interactive: var(--color-conference-grey-100);
+    --font-color-breadcrumb-hover: var(--color-corporate-green-70);
+  }
+
+  body[data-theme='modern-dark'] {
+    /* Base colors */
+    --ux-theme-0: var(--color-midnight-grey-100);
+    --ux-theme-1: var(--color-midnight-grey-90);
+    --ux-theme-2: var(--color-midnight-grey-80);
+    --ux-theme-3: var(--color-midnight-grey-70);
+    --ux-theme-4: var(--color-midnight-grey-60);
+    --ux-theme-5: var(--color-midnight-grey-50);
+    --ux-theme-6: var(--color-midnight-grey-40);
+    --ux-theme-7: var(--color-midnight-grey-30);
+    --ux-theme-8: var(--color-midnight-grey-20);
+    --ux-theme-9: var(--color-midnight-grey-10);
+    --ux-theme-10: var(--color-midnight-grey-0);
+    --color-popup-backdrop: rgb(0 0 0 /50%);
+    --color-skeleton: var(--color-white-0);
+    --color-skeleton-shimmer-0: rgb(255 255 255 / 0%);
+    --color-skeleton-shimmer-1: rgb(255 255 255 / 2%);
+    --color-skeleton-shimmer-2: rgb(255 255 255 / 6%);
+    --color-warning: rgb(255 215 3);
+    --color-danger: rgb(180 45 45);
+    --ux-nav-bg-color: rgb(17 24 29);
+    --popup-dialog-bg-color: var(--color-midnight-grey-50);
+    --popup-dialog-title-color: var(--color-white-100);
+    --popup-dialog-message-color: var(--color-mid-grey-0);
+    --menu-entry-disabled: var(--color-white-70);
+
+    /* ATTENTION: No explicit rgb color definitions beyond this point. Reuse variables above */
+
+    /* Fonts */
+    --font-color: var(--color-white-100);
+    --font-color-dimmed: var(--white-dimmed);
+    --font-color-light-bg: var(--color-mist-grey-100);
+    --font-perfometer-color: var(--color-mid-grey-60);
+
+    /* Colors */
+    --default-nav-bg-color: rgb(17 24 29);
+    --default-nav-border-color: var(--ux-theme-4);
+    --default-border-color: rgb(38 45 52);
+    --default-bg-color: var(--ux-theme-1);
+    --default-form-element-bg-color: var(--ux-theme-5);
+    --default-form-element-bg-color-disabled: var(--ux-theme-3);
+    --default-form-element-border-color: var(--color-mid-grey-60);
+    --default-form-element-placeholder-color: var(--color-white-50);
+    --default-select-hover-color: var(--success);
+    --default-select-focus-color: var(--success-dimmed);
+    --default-border-color-green: rgb(21 209 160);
+    --default-tooltip-background-color: rgb(17 24 29);
+    --default-tooltip-text-color: var(--white);
+    --custom-scroll-bar-thumb-border-color: var(--ux-theme-5);
+    --custom-scroll-bar-thumb-color: rgb(224 224 228);
+    --custom-scroll-bar-backgroud-color: var(--ux-theme-5);
+    --default-component-bg-color: rgb(46 44 44);
+    --help-text-font-color: var(--color-conference-grey-100);
+    --dropdown-chevron-indicator-color: var(--color-white-100);
+    --default-dialog-bg-color: var(--ux-theme-5);
+    --default-dialog-font-color: var(--font-color);
+    --form-element-required-color: var(--success);
+    --input-hover-bg-color: var(--ux-theme-4);
+    --code-background-color: var(--ux-theme-0);
+    --wizard-progress-bar-background-color: var(--white);
+    --wizard-progress-bar-background-badge-color: var(--color-white-100);
+    --db-content-bg-color: var(--ux-theme-3);
+    --even-tr-bg-color: var(--ux-theme-3);
+    --odd-tr-bg-color: var(--ux-theme-2);
+    --inline-help-text-bg: rgb(17 24 29);
+    --inline-help-icon-bg: rgb(6 103 193);
+    --slide-in-left-part: var(--ux-theme-2);
+    --dropdown-arrow-color: var(--color-white-100);
+    --dashed-border-color: var(--color-mid-grey-80);
+    --shared-dashboard-indicator-background: var(--color-midnight-grey-100);
+
+    /* Form Labels Colors */
+    --tag-color: var(--color-cyan-80);
+    --tag-explicit-color: var(--color-purple-70);
+    --tag-discovered-color: var(--color-orange-30);
+    --tag-ruleset-color: var(--color-pink-70);
+    --tag-font-color-light: var(--color-white-100);
+    --tag-font-color-dark: var(--color-conference-grey-100);
+
+    /* Cmk Toggle Button Group */
+    --toggle-button-group-active-bg-color: var(--ux-theme-8);
+    --toggle-button-group-inactive-bg-color: var(--ux-theme-0);
+    --toggle-button-group-border-color: var(--color-mid-grey-60);
+    --toggle-button-group-active-text-color: var(--color-white-100);
+    --toggle-button-group-inactive-text-color: var(--color-white-100);
+    --toggle-button-group-disabled-text-color: var(--color-white-50);
+    --toggle-button-group-hover-bg-color: var(--color-midnight-grey-50);
+
+    /* Cmk Inline Validation */
+    --inline-error-border-color: var(--color-dark-red-40);
+    --inline-error-text-color: var(--color-dark-red-30);
+
+    /* Cmk Button Variants */
+    --default-button-primary-color: var(--color-corporate-green-50);
+    --button-primary-border-color: var(--color-corporate-green-50);
+    --button-primary-text-color: var(--black);
+    --default-button-secondary-color: var(--ux-theme-0);
+    --button-secondary-border-color: var(--color-corporate-green-50);
+    --button-secondary-text-color: var(--color-white-100);
+    --default-button-optional-color: var(--ux-theme-0);
+    --button-optional-border-color: var(--color-mid-grey-60);
+    --button-optional-text-color: var(--color-white-100);
+    --default-button-warning-color: var(--color-yellow-50);
+    --button-warning-border-color: var(--color-yellow-50);
+    --button-warning-text-color: var(--black);
+    --default-button-danger-color: var(--color-dark-red-50);
+    --button-danger-border-color: var(--color-dark-red-40);
+    --button-danger-text-color: var(--color-white-100);
+    --default-button-info-color: var(--color-dark-blue-50);
+    --button-info-border-color: var(--color-dark-blue-40);
+    --button-info-text-color: var(--color-white-100);
+    --default-button-form-color: var(--ux-theme-0);
+    --button-form-border-color: var(--color-mid-grey-60);
+    --button-form-text-color: var(--color-white-100);
+
+    /* breadcrumb colors */
+    --font-color-breadcrumb-inactive: var(--color-white-70);
+    --font-color-breadcrumb-interactive: var(--color-white-100);
+    --font-color-breadcrumb-hover: var(--color-corporate-green-50);
+  }
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.cmk-vue-app ::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.cmk-vue-app ::-webkit-scrollbar-track {
+  background: var(--ux-theme-6);
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.cmk-vue-app ::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-color);
+  border-radius: 16px;
+  border: 3px solid var(--ux-theme-6);
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.cmk-vue-app ::-webkit-scrollbar-corner {
+  background-color: var(--ux-theme-6);
+}
