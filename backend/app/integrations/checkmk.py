@@ -615,7 +615,7 @@ def _scoped_visible_hosts(query_callback: QueryCallback) -> set[str]:
 
 
 def _branch_required_hosts(branch: object) -> set[str]:
-    elements = getattr(branch, "required_elements", lambda: [])() or []
+    elements: list[Any] = list(getattr(branch, "required_elements", lambda: [])() or [])
     return {str(el[1]) for el in elements}
 
 
