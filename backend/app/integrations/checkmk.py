@@ -422,55 +422,65 @@ def cmk_bi_available() -> bool:
     return True
 
 
-# BICompiler+BIComputer build is expensive (loads + compiles all aggregations
-# from bi_config.bi). They hold no per-request state, so we cache the bundle
-# for ~10s. CMK config edits propagate after at most one TTL cycle.
-_BI_COMPUTER_CACHE: tuple[float, object] | None = None
+# Loading + compiling all aggregations from bi_config.bi is the expensive part,
+# so the compiled dict is cached for ~10s (CMK config edits propagate after at
+# most one TTL cycle). BIComputer/BIStatusFetcher are built FRESH per call:
+# ``compute_result_for_filter`` REPLACES the shared fetcher's ``states`` dict,
+# so a cached computer races with itself — concurrent computes (SSE tick vs
+# REST states vs parallel tree fetches in asyncio.gather) wipe each other's
+# status data mid-compute and branches flip to state -1 / PENDING. cmk.gui
+# avoids this by building a request-scoped BIManager; we mirror that.
+_BI_COMPILED_CACHE: tuple[float, dict[str, object]] | None = None
 _BI_COMPUTER_LOCK = threading.Lock()
 _BI_COMPUTER_TTL = 10.0
 
 
-def _build_computer(query_callback: QueryCallback, site_id: str) -> object:
-    """Build a fresh BIComputer wired up to OrbVis' Livestatus client."""
-    from cmk.bi.compiler import BICompiler
-    from cmk.bi.computer import BIComputer
-    from cmk.bi.data_fetcher import BIStatusFetcher
-    from cmk.bi.filesystem import get_default_site_filesystem
+def _make_sites_callback(query_callback: QueryCallback, site_id: str) -> object:
     from cmk.bi.lib import SitesCallback
     from cmk.ccc.site import SiteId
 
-    bi_fs = get_default_site_filesystem()
-    sites_cb = SitesCallback(
+    return SitesCallback(
         all_sites_with_id_and_online=lambda: [(SiteId(site_id), True)],
         query=query_callback,
         translate=lambda x: x,
     )
-    compiler = BICompiler(bi_fs.etc.config, sites_cb)
-    compiler.load_compiled_aggregations()
-    log.debug(
-        "OrbVis BI: compiled %d aggregations from %s (site=%s)",
-        len(compiler.compiled_aggregations),
-        bi_fs.etc.config,
-        site_id,
-    )
-    status_fetcher = BIStatusFetcher(sites_cb)
-    return BIComputer(compiler.compiled_aggregations, status_fetcher)
+
+
+def _cached_compiled_aggregations(query_callback: QueryCallback, site_id: str) -> dict[str, object]:
+    global _BI_COMPILED_CACHE
+    with _BI_COMPUTER_LOCK:
+        now = _time.time()
+        if _BI_COMPILED_CACHE is not None and now - _BI_COMPILED_CACHE[0] < _BI_COMPUTER_TTL:
+            return _BI_COMPILED_CACHE[1]
+        from cmk.bi.compiler import BICompiler
+        from cmk.bi.filesystem import get_default_site_filesystem
+
+        bi_fs = get_default_site_filesystem()
+        compiler = BICompiler(bi_fs.etc.config, _make_sites_callback(query_callback, site_id))
+        compiler.load_compiled_aggregations()
+        log.debug(
+            "OrbVis BI: compiled %d aggregations from %s (site=%s)",
+            len(compiler.compiled_aggregations),
+            bi_fs.etc.config,
+            site_id,
+        )
+        compiled: dict[str, object] = compiler.compiled_aggregations
+        _BI_COMPILED_CACHE = (now, compiled)
+        return compiled
 
 
 def _cached_computer(query_callback: QueryCallback, site_id: str) -> object:
-    """Return a cached BIComputer; rebuild every BI_COMPUTER_TTL seconds.
+    """Return a per-call BIComputer over the cached compiled aggregations.
 
-    OrbVis configures one Livestatus connection per OMD site, so a process-global
-    cache is fine — callbacks always point at the same site.
+    OrbVis configures one Livestatus connection per OMD site, so a
+    process-global compile cache is fine — callbacks always point at the
+    same site. The computer itself must NOT be shared (see cache comment).
     """
-    global _BI_COMPUTER_CACHE
-    with _BI_COMPUTER_LOCK:
-        now = _time.time()
-        if _BI_COMPUTER_CACHE is not None and now - _BI_COMPUTER_CACHE[0] < _BI_COMPUTER_TTL:
-            return _BI_COMPUTER_CACHE[1]
-        computer = _build_computer(query_callback, site_id)
-        _BI_COMPUTER_CACHE = (now, computer)
-        return computer
+    from cmk.bi.computer import BIComputer
+    from cmk.bi.data_fetcher import BIStatusFetcher
+
+    compiled = _cached_compiled_aggregations(query_callback, site_id)
+    return BIComputer(compiled, BIStatusFetcher(_make_sites_callback(query_callback, site_id)))
 
 
 def cmk_bi_get_aggregations_states(
@@ -593,8 +603,8 @@ def cmk_bi_list_aggregations(query_callback: QueryCallback, site_id: str) -> lis
     if not cmk_bi_available():
         return []
     try:
-        computer = _cached_computer(query_callback, site_id)
-        compiled = getattr(computer, "_compiled_aggregations", {}) or {}
+        # No computer needed — listing only walks the compiled branches.
+        compiled = _cached_compiled_aggregations(query_callback, site_id)
         out: list[dict[str, str]] = []
         seen: set[str] = set()
         branch_counts: list[tuple[str, int]] = []

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.connections.livestatus import _hierarchy_to_node
+from app.connections.livestatus import _aggregations_to_object_states, _hierarchy_to_node
 from app.schemas.board import AggregationNode, BoardConfig, BoardObject, StaticView
 from app.services import state_service
 
@@ -100,6 +100,25 @@ def test_hierarchy_extracts_leaf_host_and_service():
     assert leaf.host_name == "srv01"
     assert leaf.service_description == "CPU load"
     assert leaf.state == 2
+
+
+# ---------------------------------------------------------------------------
+# _aggregations_to_object_states — BI state mapping
+# ---------------------------------------------------------------------------
+
+
+def test_aggregation_state_zero_maps_to_ok():
+    """Regression: ``entry.get("state", -1) or -1`` collapsed the falsy OK
+    state (0) to -1 — every healthy aggregation rendered as PENDING."""
+    raw = {
+        "ok": {"state": 0, "output": "", "acknowledged": False, "in_downtime": False},
+        "crit": {"state": 2, "output": "", "acknowledged": False, "in_downtime": False},
+    }
+    out = _aggregations_to_object_states(raw, ["ok", "crit", "missing"])
+    assert out["ok"].state == "OK"
+    assert out["crit"].state == "CRITICAL"
+    assert out["missing"].state == "PENDING"
+    assert out["missing"].stale is True
 
 
 # ---------------------------------------------------------------------------

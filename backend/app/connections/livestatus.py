@@ -529,6 +529,23 @@ _BI_STATE_MAP = {
 }
 
 
+def _parse_bi_state(state_raw: object) -> int:
+    """Parse a BI state value (-1..3) from in-process or REST/ajax payloads.
+
+    NOT ``state_raw or -1``: state 0 (OK) is falsy and the ``or`` collapsed
+    every healthy aggregation to -1 → "PENDING". Strings appear in ajax
+    payloads; non-numeric values degrade to -1 instead of raising.
+    """
+    if isinstance(state_raw, int | float):
+        return int(state_raw)
+    if isinstance(state_raw, str):
+        try:
+            return int(state_raw)
+        except ValueError:
+            return -1
+    return -1
+
+
 def _aggregations_to_object_states(
     raw: Mapping[str, object] | object, requested_ids: list[str]
 ) -> dict[str, ObjectState]:
@@ -548,7 +565,7 @@ def _aggregations_to_object_states(
         out[aid] = ObjectState(
             object_id="",
             type="aggregation",
-            state=_BI_STATE_MAP.get(int(entry.get("state", -1) or -1), "UNKNOWN"),
+            state=_BI_STATE_MAP.get(_parse_bi_state(entry.get("state", -1)), "UNKNOWN"),
             output=str(entry.get("output", "") or ""),
             acknowledged=bool(entry.get("acknowledged", False)),
             in_downtime=bool(entry.get("in_downtime", False)),
@@ -583,12 +600,10 @@ def _hierarchy_to_node(node: Mapping[str, object], depth: int, max_depth: int) -
             if isinstance(child, Mapping):
                 children.append(_hierarchy_to_node(child, depth + 1, max_depth))
 
-    state_raw = core.get("state", -1)
-    state_val = int(state_raw) if isinstance(state_raw, int | float | str) else -1
     return AggregationNode(
         name=str(node.get("name") or ""),
         node_type=node_type,
-        state=state_val,
+        state=_parse_bi_state(core.get("state", -1)),
         in_downtime=bool(core.get("in_downtime", False)),
         acknowledged=bool(core.get("acknowledged", False)),
         host_name=host_name,
