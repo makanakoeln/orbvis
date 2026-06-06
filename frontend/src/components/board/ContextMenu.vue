@@ -201,6 +201,7 @@ import { useI18n } from 'vue-i18n'
 
 import type { BoardObject, ObjectState } from '@/types/api'
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
+import { sanitizeTemplateHtml } from '@/utils/sanitize'
 import { interpolateTemplate } from '@/utils/template'
 
 const { t } = useI18n()
@@ -229,7 +230,9 @@ const lineHasBend = computed(
 )
 
 const renderedTemplate = computed(() =>
-  props.template ? interpolateTemplate(props.template, props.object, props.state) : null
+  props.template
+    ? sanitizeTemplateHtml(interpolateTemplate(props.template, props.object, props.state))
+    : null
 )
 
 // "Show problem services" is only useful when the host actually has problem

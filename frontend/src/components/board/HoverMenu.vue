@@ -14,7 +14,7 @@
         {{ t('board.notFound') }}
       </div>
 
-      <!-- Custom template — sanitized via DOMPurify before rendering -->
+      <!-- Custom template — sanitized via sanitizeTemplateHtml before rendering -->
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div v-else-if="renderedTemplate" class="orb-hover__template" v-html="renderedTemplate" />
 
@@ -188,7 +188,6 @@
 </template>
 
 <script setup lang="ts">
-import DOMPurify, { type Config as DOMPurifyConfig } from 'dompurify'
 import { type CSSProperties, computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -197,13 +196,9 @@ import { useAuthStore } from '@/stores/auth'
 import type { BoardObject, ObjectState, PerfometerResult } from '@/types/api'
 import { VISUAL_ONLY_TYPES, getBoardObjectIdentifier, getObjectTypeLabel } from '@/utils/naming'
 import { type PerfMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
+import { sanitizeTemplateHtml } from '@/utils/sanitize'
 import { interpolateTemplate } from '@/utils/template'
 import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time'
-
-const _PURIFY_CONFIG = {
-  ALLOWED_TAGS: ['b', 'i', 'u', 'em', 'strong', 'span', 'div', 'p', 'br', 'a', 'ul', 'ol', 'li'],
-  ALLOWED_ATTR: ['href', 'class', 'style', 'target', 'rel']
-} as const satisfies DOMPurifyConfig
 
 const props = defineProps<{
   object: BoardObject
@@ -340,7 +335,7 @@ onMounted(() => {
 const renderedTemplate = computed(() => {
   if (!props.template) return null
   const html = interpolateTemplate(props.template, props.object, props.state)
-  return DOMPurify.sanitize(html, _PURIFY_CONFIG)
+  return sanitizeTemplateHtml(html)
 })
 
 const displayName = computed(() => getBoardObjectIdentifier(props.object))

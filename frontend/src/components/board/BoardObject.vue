@@ -451,7 +451,6 @@
 </template>
 
 <script setup lang="ts">
-import { useMutationObserver } from '@vueuse/core'
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -463,6 +462,7 @@ import {
   fmtValueWithUnit,
   normalizeMetricValue
 } from '@/composables/useMetricChart'
+import { useIsDark } from '@/composables/useTheme'
 import { useAuthStore } from '@/stores/auth'
 import type { MetricPoint } from '@/stores/states'
 import { useStatesStore } from '@/stores/states'
@@ -546,14 +546,7 @@ watch(
   }
 )
 
-const isDark = ref(document.documentElement.classList.contains('dark'))
-useMutationObserver(
-  document.documentElement,
-  () => {
-    isDark.value = document.documentElement.classList.contains('dark')
-  },
-  { attributes: true, attributeFilter: ['class'] }
-)
+const isDark = useIsDark()
 
 // Single arc ring SVG — always a separate overlay SVG that D3 owns exclusively.
 // pointer-events="none" on the SVG element (SVG attribute, not CSS) ensures it

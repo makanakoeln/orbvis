@@ -1,4 +1,4 @@
-import { watch } from 'vue'
+import { type Ref, ref, watch } from 'vue'
 
 import { useAuthStore } from '@/stores/auth'
 
@@ -23,6 +23,23 @@ export function applyTheme(theme: string, _ssoActive: boolean, cmkTheme?: string
     root.classList.add('light')
     document.body.dataset.theme = 'facelift'
   }
+}
+
+// Reactive dark-mode flag tracking the `dark` class applyTheme() toggles on
+// <html> — for components that re-render canvas/chart colors on theme switch.
+// Module-level singleton: boards render one BoardObject per object, so a
+// per-instance observer would multiply by the object count for a global flag.
+let _isDark: Ref<boolean> | null = null
+
+export function useIsDark(): Readonly<Ref<boolean>> {
+  if (_isDark === null) {
+    const isDark = ref(document.documentElement.classList.contains('dark'))
+    new MutationObserver(() => {
+      isDark.value = document.documentElement.classList.contains('dark')
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    _isDark = isDark
+  }
+  return _isDark
 }
 
 export function useTheme() {

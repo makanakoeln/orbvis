@@ -168,22 +168,23 @@
       </div>
 
       <!-- Board grid -->
-      <VueDraggable
-        v-else-if="viewMode === 'cards'"
-        v-model="draggableBoards"
-        :disabled="!isDragEnabled"
-        data-tour="boards-grid"
-        class="orb-home__grid"
-        @end="onDragEnd"
-      >
+      <div v-else-if="viewMode === 'cards'" data-tour="boards-grid" class="orb-home__grid">
         <p v-if="searchQuery && !filteredBoards.length" class="orb-home__no-results">
           {{ t('home.noSearchResults', { q: searchQuery }) }}
         </p>
         <div
-          v-for="map in draggableBoards"
+          v-for="(map, index) in draggableBoards"
           :key="map.name"
-          :class="[isDragEnabled ? 'orb-home__card--draggable' : '']"
+          :class="[
+            isDragEnabled ? 'orb-home__card--draggable' : '',
+            dragIndex === index ? 'orb-home__card--dragging' : ''
+          ]"
           class="orb-home__card"
+          :draggable="isDragEnabled"
+          @dragstart="onDragStart($event, index)"
+          @dragover="onDragOver($event, index)"
+          @drop="onDrop"
+          @dragend="onDragEnd"
         >
           <router-link :to="`/boards/${map.name}`" class="orb-home__card-link">
             <!-- Thumbnail -->
@@ -195,6 +196,7 @@
                 :src="`${baseUrl}boards/backgrounds/${map.background_image}`"
                 :alt="map.alias || map.name"
                 class="orb-home__thumb-img"
+                draggable="false"
                 @error="bgImageFailed[map.name] = true"
               />
               <!-- Worldmap thumbnail -->
@@ -880,7 +882,7 @@
             </button>
           </div>
         </div>
-      </VueDraggable>
+      </div>
 
       <!-- Table view -->
       <BoardsTable
@@ -1056,7 +1058,6 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
-import { VueDraggable } from 'vue-draggable-plus'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
@@ -1077,6 +1078,7 @@ import CmkToggleButtonGroup from '@/components/cmk/CmkToggleButtonGroup'
 
 import { boardsApi } from '@/api/client'
 import { useChangelog } from '@/composables/useChangelog'
+import { useDragReorder } from '@/composables/useDragReorder'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
@@ -1455,20 +1457,24 @@ const filteredBoards = computed(() => {
 
 const isDragEnabled = computed(() => auth.isAdmin && !searchQuery.value.trim())
 
-const draggableBoards = computed({
-  get: () => (isDragEnabled.value ? boardsStore.boards : filteredBoards.value),
-  set: (val) => {
-    boardsStore.boards.splice(0, boardsStore.boards.length, ...val)
-  }
-})
+const draggableBoards = computed(() =>
+  isDragEnabled.value ? boardsStore.boards : filteredBoards.value
+)
 
-async function onDragEnd() {
+// Reorder operates on the FULL store list — never on the filtered subset.
+// The isEnabled guard ensures drags only start when both lists are identical.
+const { dragIndex, onDragStart, onDragOver, onDrop, onDragEnd } = useDragReorder(
+  () => boardsStore.boards,
+  (list) => {
+    boardsStore.boards.splice(0, boardsStore.boards.length, ...list)
+  },
+  persistBoardOrder,
+  () => isDragEnabled.value
+)
+
+function persistBoardOrder() {
   const order = boardsStore.boards.map((b, i) => ({ name: b.name, sort_order: i }))
-  try {
-    await boardsApi.reorder(order, auth.accessToken!)
-  } catch {
-    await boardsStore.fetchBoards()
-  }
+  boardsApi.reorder(order, auth.accessToken!).catch(() => boardsStore.fetchBoards())
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -1797,6 +1803,10 @@ function onTourCreateBoard(): void {
 
 .orb-home__card--draggable:active {
   cursor: grabbing;
+}
+
+.orb-home__card--dragging {
+  opacity: 0.5;
 }
 
 .orb-home__card-link {

@@ -606,7 +606,7 @@
         >
           <div
             v-if="editor.editMode.value && !editor.placing.value"
-            ref="addPickerWrapperRef"
+            v-click-outside="closeAddPicker"
             class="orb-board__fab-wrap"
           >
             <Transition
@@ -1080,7 +1080,6 @@
 </template>
 
 <script setup lang="ts">
-import { onClickOutside, useElementBounding, useEventListener } from '@vueuse/core'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -1112,6 +1111,7 @@ import CmkButton from '@/components/cmk/CmkButton'
 
 import { boardsApi, cmkApi, connectionsApi } from '@/api/client'
 import { useBoardEditor } from '@/composables/useBoardEditor'
+import { useElementRect } from '@/composables/useElementRect'
 import { useObjectActions } from '@/composables/useObjectActions'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
@@ -1136,6 +1136,7 @@ import { getBoardObjectIdentifier, getBoardObjectName, getObjectTypeLabel } from
 import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge'
 import { resolveTemplate } from '@/utils/template'
 import CmkLoading from '@/vendor/cmk/components/CmkLoading.vue'
+import useClickOutside from '@/vendor/cmk/lib/useClickOutside'
 
 type LineDragMode = 'move' | 'start' | 'end' | 'mid'
 
@@ -1284,13 +1285,13 @@ const editor = useBoardEditor(boardName, reloadBoard)
 
 // ---- Add-object type picker (anchored above the "+" FAB) ----
 
+const vClickOutside = useClickOutside()
 const addPickerOpen = ref(false)
-const addPickerWrapperRef = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
 
 // ---- Action bar position anchored to selected object ----
 const selectedObjectEl = ref<HTMLElement | null>(null)
-const selectedRect = useElementBounding(selectedObjectEl)
+const selectedRect = useElementRect(selectedObjectEl)
 
 watch(
   () => editor.selectedObjectId.value,
@@ -1303,13 +1304,8 @@ watch(
   { immediate: true }
 )
 
-useEventListener(window, 'resize', () => selectedRect.update())
-
 const actionBarStyle = computed(() => {
-  const top = selectedRect.top.value
-  const left = selectedRect.left.value
-  const width = selectedRect.width.value
-  const bottom = selectedRect.bottom.value
+  const { top, left, width, bottom } = selectedRect
   if (!selectedObjectEl.value || width === 0) return null
   const barHeightApprox = 36
   const gap = 8
@@ -1323,12 +1319,12 @@ const actionBarStyle = computed(() => {
 })
 
 const selectedObjectAnchor = computed<AnchorRect | null>(() => {
-  if (!selectedObjectEl.value || selectedRect.width.value === 0) return null
+  if (!selectedObjectEl.value || selectedRect.width === 0) return null
   return {
-    left: selectedRect.left.value,
-    top: selectedRect.top.value,
-    right: selectedRect.right.value,
-    bottom: selectedRect.bottom.value
+    left: selectedRect.left,
+    top: selectedRect.top,
+    right: selectedRect.right,
+    bottom: selectedRect.bottom
   }
 })
 
@@ -1350,9 +1346,9 @@ function onAddFabClick() {
   }
 }
 
-onClickOutside(addPickerWrapperRef, () => {
+function closeAddPicker() {
   addPickerOpen.value = false
-})
+}
 
 watch(
   () => editor.editMode.value,

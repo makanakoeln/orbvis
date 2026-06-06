@@ -768,7 +768,6 @@
 </template>
 
 <script setup lang="ts">
-import { useMutationObserver } from '@vueuse/core'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -776,6 +775,7 @@ import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 
 import { connectionsApi, metricsApi } from '@/api/client'
 import { fmtValueWithUnit } from '@/composables/useMetricChart'
+import { useIsDark } from '@/composables/useTheme'
 import { useAuthStore } from '@/stores/auth'
 import type {
   AggregationNode,
@@ -1964,14 +1964,7 @@ const mainThresholds = computed(() => {
   return { warn: m.warn, crit: m.crit }
 })
 
-const isDark = ref(document.documentElement.classList.contains('dark'))
-useMutationObserver(
-  document.documentElement,
-  () => {
-    isDark.value = document.documentElement.classList.contains('dark')
-  },
-  { attributes: true, attributeFilter: ['class'] }
-)
+const isDark = useIsDark()
 </script>
 
 <style scoped>
