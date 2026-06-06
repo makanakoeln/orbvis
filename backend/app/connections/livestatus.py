@@ -903,7 +903,9 @@ class LivestatusConnection(ConnectionBase):
         self._bulk_chunk_semaphore = asyncio.Semaphore(
             settings.flow_board_bulk_max_concurrent_chunks
         )
-        self._aggregations_cache: tuple[float, list[AggregationInfo]] | None = None
+        # Keyed by AuthUser scope (None = unscoped): contact-scoped users get
+        # a filtered aggregation list, so entries must not leak across scopes.
+        self._aggregations_cache: dict[str | None, tuple[float, list[AggregationInfo]]] = {}
         # Per-host-set cache for get_services_summary (TTL=_SERVICES_SUMMARY_CACHE_TTL)
         self._services_summary_cache: dict[
             frozenset[str], tuple[float, dict[str, ServicesSummary]]
@@ -2041,9 +2043,19 @@ class LivestatusConnection(ConnectionBase):
     async def list_aggregations(self) -> list[AggregationInfo]:
         import time as _time
 
+        # Contact-scoped callers get a per-user filtered list (branch titles
+        # can be as sensitive as SETUP folder names), so the cache must be
+        # keyed by the auth scope — one unscoped entry would leak across users.
+        auth_user = _auth_user_ctx.get()
         now = _time.time()
-        if self._aggregations_cache is not None and now - self._aggregations_cache[0] < 60.0:
-            return self._aggregations_cache[1]
+        cached = self._aggregations_cache.get(auth_user)
+        if cached is not None and now - cached[0] < 60.0:
+            return cached[1]
+        # Drop expired entries so the per-user keying can't grow unbounded
+        # over a long-running daemon's lifetime.
+        self._aggregations_cache = {
+            k: v for k, v in self._aggregations_cache.items() if now - v[0] < 60.0
+        }
 
         # Site-mode: in-process cmk.bi
         if _cmk_integration.cmk_bi_available():
@@ -2052,19 +2064,20 @@ class LivestatusConnection(ConnectionBase):
                 _cmk_integration.cmk_bi_list_aggregations,
                 self._bi_query_sync,
                 site_id,
+                auth_user is not None,
             )
             if entries:
                 result = [
                     AggregationInfo(id=e["id"], title=e["title"], pack_id=e["pack_id"])
                     for e in entries
                 ]
-                self._aggregations_cache = (now, result)
+                self._aggregations_cache[auth_user] = (now, result)
                 return result
 
         # Standalone-mode fallback: REST API
         data = await self._cmk_rest("GET", "/domain-types/bi_pack/collections/all")
         if data is None:
-            return self._aggregations_cache[1] if self._aggregations_cache else []
+            return cached[1] if cached is not None else []
 
         result_rest: list[AggregationInfo] = []
         packs = data.get("value")
@@ -2084,7 +2097,7 @@ class LivestatusConnection(ConnectionBase):
                 title = str(aggr.get("title", "") or aid)
                 result_rest.append(AggregationInfo(id=aid, title=title, pack_id=pack_id))
 
-        self._aggregations_cache = (now, result_rest)
+        self._aggregations_cache[auth_user] = (now, result_rest)
         return result_rest
 
     async def get_aggregation_tree(
@@ -2102,6 +2115,7 @@ class LivestatusConnection(ConnectionBase):
                 site_id,
                 aggregation_id,
                 max_depth,
+                _auth_user_ctx.get() is not None,
             )
             if tree is not None:
                 return AggregationNode.model_validate(tree)

@@ -528,18 +528,25 @@ def cmk_bi_get_aggregation_tree(
     site_id: str,
     aggregation_name: str,
     max_depth: int,
+    scoped: bool = False,
 ) -> dict[str, Any] | None:
     """Compute the BI aggregation hierarchy as a plain dict tree.
 
     Mirrors ``cmk.gui.nodevis.aggregation.NodeVisualizationBIDataMapper.consume``
     but truncates at *max_depth* levels (root is depth 0). Returns ``None`` when
     no matching branch exists. Synchronous — wrap with ``asyncio.to_thread``.
+
+    ``scoped=True`` applies the same branch-visibility gate as
+    :func:`cmk_bi_list_aggregations` — a contact-scoped user must not pull
+    title/structure of an aggregation whose hosts they can't see, even with
+    a known/guessed name (the list endpoint alone would only stop enumeration).
     """
     if not cmk_bi_available() or not aggregation_name:
         return None
     try:
         from cmk.bi.computer import BIAggregationFilter
 
+        visible_hosts = _scoped_visible_hosts(query_callback) if scoped else None
         computer = _cached_computer(query_callback, site_id)
         bi_filter = BIAggregationFilter([], [], [], [aggregation_name], [], [])
         results = computer.compute_result_for_filter(bi_filter)  # type: ignore[attr-defined]
@@ -555,6 +562,10 @@ def cmk_bi_get_aggregation_tree(
                 title = str(getattr(getattr(instance, "properties", None), "title", "") or "")
                 if title != aggregation_name:
                     continue
+                if visible_hosts is not None and not (
+                    _branch_required_hosts(instance) & visible_hosts
+                ):
+                    return None
                 return _bundle_to_node(bundle, depth=0, max_depth=max_depth)
         return None
     except Exception:
@@ -593,19 +604,42 @@ def _bundle_to_node(bundle: Any, depth: int, max_depth: int) -> dict[str, Any]:
     return node
 
 
-def cmk_bi_list_aggregations(query_callback: QueryCallback, site_id: str) -> list[dict[str, str]]:
+def _scoped_visible_hosts(query_callback: QueryCallback) -> set[str]:
+    """Host names the current livestatus auth scope may see.
+
+    The callback runs inside the caller's auth context, so a contact-scoped
+    user gets only their hosts. Rows arrive site-prefixed (``[site, name]``).
+    """
+    rows = query_callback("GET hosts\nColumns: name\n")
+    return {str(row[1]) for row in rows}
+
+
+def _branch_required_hosts(branch: object) -> set[str]:
+    elements = getattr(branch, "required_elements", lambda: [])() or []
+    return {str(el[1]) for el in elements}
+
+
+def cmk_bi_list_aggregations(
+    query_callback: QueryCallback, site_id: str, scoped: bool = False
+) -> list[dict[str, str]]:
     """List all resolved BI aggregations (one entry per branch).
 
     Instead of returning the abstract bi_config aggregation templates (which
     contain placeholders like ``Host $HOSTNAME$``), iterate the compiled
     branches and return their resolved titles. The resolved title is what
     Checkmk's ``aggr_single`` view filters by and what users see in the BI UI.
+
+    With ``scoped=True`` (caller runs in a contact-scoped auth context) only
+    branches containing at least one host the user may see are listed —
+    aggregation titles can be as sensitive as SETUP folder names, and the
+    compiled structure itself is site-global (see _bi_query_sync).
     """
     if not cmk_bi_available():
         return []
     try:
         # No computer needed — listing only walks the compiled branches.
         compiled = _cached_compiled_aggregations(query_callback, site_id)
+        visible_hosts = _scoped_visible_hosts(query_callback) if scoped else None
         out: list[dict[str, str]] = []
         seen: set[str] = set()
         branch_counts: list[tuple[str, int]] = []
@@ -637,6 +671,10 @@ def cmk_bi_list_aggregations(query_callback: QueryCallback, site_id: str) -> lis
             for branch in branches:
                 title = str(getattr(getattr(branch, "properties", None), "title", "") or "")
                 if not title or title in seen:
+                    continue
+                if visible_hosts is not None and not (
+                    _branch_required_hosts(branch) & visible_hosts
+                ):
                     continue
                 seen.add(title)
                 entry: dict[str, str] = {
