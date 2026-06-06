@@ -4,313 +4,339 @@ This file is part of Checkmk (https://checkmk.com). It is subject to the terms a
 conditions defined in the file COPYING, which is part of this source code package.
 -->
 <script setup lang="ts">
-import { computed, nextTick, ref, useSlots, useTemplateRef } from 'vue';
+import { computed, nextTick, ref, useSlots, useTemplateRef } from 'vue'
 
-import CmkLoading from '@/components/CmkLoading.vue';
+import { untranslated } from '@/lib/i18n'
+import type { TranslatedString } from '@/lib/i18nString'
+import useClickOutside from '@/lib/useClickOutside'
+import { immediateWatch } from '@/lib/watch'
+
+import CmkLoading from '@/components/CmkLoading.vue'
 import CmkSuggestions, {
-    ErrorResponse,
-    NoSelection,
-    Selection,
-    SelectionWithTitle,
-    type Suggestion,
-    type Suggestions,
-    type SuggestionValue,
-} from '@/components/CmkSuggestions';
-import ArrowDown from '@/components/graphics/ArrowDown.vue';
-import CmkLabelRequired from '@/components/user-input/CmkLabelRequired.vue';
-import { untranslated } from '@/lib/i18n';
-import type { TranslatedString } from '@/lib/i18nString';
-import useClickOutside from '@/lib/useClickOutside';
-import { immediateWatch } from '@/lib/watch';
+  ErrorResponse,
+  NoSelection,
+  Selection,
+  SelectionWithTitle,
+  type Suggestion,
+  type SuggestionValue,
+  type Suggestions,
+  flattenSuggestions
+} from '@/components/CmkSuggestions'
+import ArrowDown from '@/components/graphics/ArrowDown.vue'
+import CmkLabelRequired from '@/components/user-input/CmkLabelRequired.vue'
 
-import CmkInlineValidation from '../user-input/CmkInlineValidation.vue';
-import CmkDropdownButton, { type ButtonVariants } from './CmkDropdownButton.vue';
-import TruncateText from './TruncateText.vue';
+import CmkInlineValidation from '../user-input/CmkInlineValidation.vue'
+import CmkDropdownButton, { type ButtonVariants } from './CmkDropdownButton.vue'
+import TruncateText from './TruncateText.vue'
 
 export interface DropdownOption {
-    name: string;
-    title: string;
+  name: string
+  title: string
 }
 
 const {
-    selectedOption: selectedOptionPublic,
-    inputHint = untranslated(''),
-    noResultsHint = '',
-    disabled = false,
-    componentId = null,
-    noElementsText = untranslated(''),
-    required = false,
-    width,
-    options,
-    label,
-    formValidation = false,
+  selectedOption: selectedOptionPublic,
+  inputHint = untranslated(''),
+  noResultsHint = '',
+  disabled = false,
+  componentId = null,
+  noElementsText = untranslated(''),
+  required = false,
+  width,
+  options,
+  label,
+  formValidation = false
 } = defineProps<{
-    selectedOption: string | null;
-    options: Suggestions;
-    inputHint?: TranslatedString;
-    noResultsHint?: TranslatedString;
-    disabled?: boolean;
-    componentId?: string | null;
-    noElementsText?: TranslatedString;
-    required?: boolean;
-    label: TranslatedString;
-    width?: ButtonVariants['width'];
-    formValidation?: boolean;
-}>();
+  selectedOption: string | null
+  options: Suggestions
+  inputHint?: TranslatedString
+  noResultsHint?: TranslatedString
+  disabled?: boolean
+  componentId?: string | null
+  noElementsText?: TranslatedString
+  required?: boolean
+  label: TranslatedString
+  width?: ButtonVariants['width']
+  formValidation?: boolean
+}>()
 
-const vClickOutside = useClickOutside();
+const vClickOutside = useClickOutside()
 
-const buttonLabel = ref<TranslatedString>(inputHint);
-const callbackFilteredErrorMessage = ref<string | null>(null);
-const callbackFilteredLoading = ref<boolean>(false);
-const internallyDisabled = ref<boolean>(false);
+const buttonLabel = ref<TranslatedString>(inputHint)
+const callbackFilteredErrorMessage = ref<string | null>(null)
+const callbackFilteredLoading = ref<boolean>(false)
+const internallyDisabled = ref<boolean>(false)
 
-const selectedOption = ref<SuggestionValue>(new NoSelection());
+const selectedOption = ref<SuggestionValue>(new NoSelection())
 
 const emit = defineEmits<{
-    (e: 'update:selectedOption', value: string | null): void;
-}>();
+  (e: 'update:selectedOption', value: string | null): void
+}>()
 
 immediateWatch(
-    () => ({
-        newValue: selectedOptionPublic,
-        newOptions: options,
-    }),
-    async ({ newValue, newOptions }) => {
-        callbackFilteredLoading.value = false;
-        if (newOptions.type === 'callback-filtered' && newValue !== null) {
-            internallyDisabled.value = true;
-            callbackFilteredLoading.value = true;
-        }
-        const currentSelectionState = await getCurrentSelectionState(newOptions, newValue);
-        callbackFilteredLoading.value = false;
-        internallyDisabled.value = false;
-        // Only update if the selected option hasn't changed again while awaiting
-        if (newValue === selectedOptionPublic) {
-            buttonLabel.value = currentSelectionState.buttonLabel;
-            selectedOption.value = currentSelectionState.value;
-        }
-    },
-);
+  () => ({
+    newValue: selectedOptionPublic,
+    newOptions: options
+  }),
+  async ({ newValue, newOptions }) => {
+    callbackFilteredLoading.value = false
+    if (newOptions.type === 'callback-filtered' && newValue !== null) {
+      internallyDisabled.value = true
+      callbackFilteredLoading.value = true
+    }
+    const currentSelectionState = await getCurrentSelectionState(newOptions, newValue)
+    callbackFilteredLoading.value = false
+    internallyDisabled.value = false
+    // Only update if the selected option hasn't changed again while awaiting
+    if (newValue === selectedOptionPublic) {
+      buttonLabel.value = currentSelectionState.buttonLabel
+      selectedOption.value = currentSelectionState.value
+    }
+  }
+)
 
 /**
  * This function might have a performance impact as it might trigger a callback to fetch
  * suggestions. It should only be called when necessary.
  */
 async function getCurrentSelectionState(
-    options: Suggestions,
-    selected: string | null,
+  options: Suggestions,
+  selected: string | null
 ): Promise<{ value: SuggestionValue; buttonLabel: TranslatedString }> {
-    let currentOptions: Suggestion[];
-    switch (options.type) {
-        case 'filtered':
-        case 'fixed': {
-            if (options.suggestions.length === 0) {
-                return { value: new NoSelection(), buttonLabel: noElementsText || inputHint };
-            } else if (selected === null) {
-                return { value: new NoSelection(), buttonLabel: inputHint };
-            }
-            currentOptions = options.suggestions;
-            break;
-        }
-        case 'callback-filtered': {
-            if (selected === null) {
-                return { value: new NoSelection(), buttonLabel: inputHint };
-            }
-            const result = await options.querySuggestions(selected);
+  let currentOptions: Suggestion[]
+  switch (options.type) {
+    case 'filtered':
+    case 'fixed': {
+      if (options.suggestions.length === 0) {
+        return { value: new NoSelection(), buttonLabel: noElementsText || inputHint }
+      } else if (selected === null) {
+        return { value: new NoSelection(), buttonLabel: inputHint }
+      }
+      currentOptions = flattenSuggestions(options.suggestions)
+      break
+    }
+    case 'callback-filtered': {
+      if (selected === null) {
+        return { value: new NoSelection(), buttonLabel: inputHint }
+      }
+      const result = await options.querySuggestions(selected)
 
-            if (result instanceof ErrorResponse) {
-                callbackFilteredErrorMessage.value = result.error;
-                return { value: new Selection(selected), buttonLabel: untranslated(selected) };
-            } else {
-                callbackFilteredErrorMessage.value = null;
-                currentOptions = result.choices;
-            }
-            break;
-        }
+      if (result instanceof ErrorResponse) {
+        callbackFilteredErrorMessage.value = result.error
+        return { value: new Selection(selected), buttonLabel: untranslated(selected) }
+      } else {
+        callbackFilteredErrorMessage.value = null
+        currentOptions = flattenSuggestions(result.choices)
+      }
+      break
     }
-    if (currentOptions.length === 0) {
-        return { value: new NoSelection(), buttonLabel: noElementsText };
+  }
+  if (currentOptions.length === 0) {
+    return { value: new NoSelection(), buttonLabel: noElementsText }
+  } else {
+    const selectedSuggestion = currentOptions.find((s: Suggestion) => s.name === selected)
+    if (selectedSuggestion) {
+      if (selectedSuggestion.name === null) {
+        return {
+          value: new NoSelection(),
+          buttonLabel: inputHint
+        }
+      }
+      return {
+        value: new SelectionWithTitle(selectedSuggestion.name, selectedSuggestion.title),
+        buttonLabel: selectedSuggestion.title
+      }
     } else {
-        const selectedSuggestion = currentOptions.find((s: Suggestion) => s.name === selected);
-        if (selectedSuggestion) {
-            if (selectedSuggestion.name === null) {
-                return {
-                    value: new NoSelection(),
-                    buttonLabel: inputHint,
-                };
-            }
-            return {
-                value: new SelectionWithTitle(selectedSuggestion.name, selectedSuggestion.title),
-                buttonLabel: selectedSuggestion.title,
-            };
-        } else {
-            return { value: new Selection(selected), buttonLabel: untranslated(selected) };
-        }
+      return { value: new Selection(selected), buttonLabel: untranslated(selected) }
     }
+  }
 }
 
 const canOpenDropdown = computed(() => {
-    if (internallyDisabled.value === true) {
-        return false;
+  if (internallyDisabled.value === true) {
+    return false
+  }
+  if (options.type === 'filtered' || options.type === 'fixed') {
+    if (!noResultsHint && options.suggestions.length === 0) {
+      return false
     }
-    if (options.type === 'filtered' || options.type === 'fixed') {
-        if (!noResultsHint && options.suggestions.length === 0) {
-            return false;
-        }
-        return true;
-    }
-    return true; // assume something is available via callback/backend
-    // we don't know the number of available suggestions, as this is handled by CmkSuggestions,
-    // so we just assume we have something to display, although maybe, we don't have.
-});
+    return true
+  }
+  return true // assume something is available via callback/backend
+  // we don't know the number of available suggestions, as this is handled by CmkSuggestions,
+  // so we just assume we have something to display, although maybe, we don't have.
+})
 
-const suggestionsShown = ref(false);
-const suggestionsRef = ref<InstanceType<typeof CmkSuggestions> | null>(null);
+const suggestionsShown = ref(false)
+const suggestionsRef = ref<InstanceType<typeof CmkSuggestions> | null>(null)
 const comboboxButtonRef =
-    useTemplateRef<InstanceType<typeof CmkDropdownButton>>('comboboxButtonRef');
+  useTemplateRef<InstanceType<typeof CmkDropdownButton>>('comboboxButtonRef')
+
+// Swallow the click-outside fired by the in-flight bubble when open() is
+// called from a sibling's click handler.
+const suppressNextClickOutside = ref(false)
+
+defineExpose({
+  open: () => {
+    if (suggestionsShown.value) {
+      return
+    }
+    suppressNextClickOutside.value = true
+    showSuggestions()
+    // We use setTimeout here instead of nextTick because
+    // the reset must outlive the entire click dispatch.
+    setTimeout(() => {
+      suppressNextClickOutside.value = false
+    }, 0)
+  }
+})
 
 function showSuggestions(): void {
-    if (!disabled && canOpenDropdown.value) {
-        suggestionsShown.value = !suggestionsShown.value;
-        if (!suggestionsShown.value) {
-            return;
-        }
-
-        nextTick(async () => {
-            if (suggestionsRef.value) {
-                const suggestionsRect = suggestionsRef.value.$el.getBoundingClientRect();
-                if (window.innerHeight - suggestionsRect.bottom < suggestionsRect.height) {
-                    suggestionsRef.value.$el.style.bottom = `calc(2 * var(--spacing))`;
-                } else {
-                    suggestionsRef.value.$el.style.removeProperty('bottom');
-                }
-                await suggestionsRef.value.focus();
-            }
-        });
+  if (!disabled && canOpenDropdown.value) {
+    suggestionsShown.value = !suggestionsShown.value
+    if (!suggestionsShown.value) {
+      return
     }
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    nextTick(async () => {
+      if (suggestionsRef.value) {
+        const suggestionsRect = suggestionsRef.value.$el.getBoundingClientRect()
+        if (window.innerHeight - suggestionsRect.bottom < suggestionsRect.height) {
+          suggestionsRef.value.$el.style.bottom = `calc(2 * var(--spacing))`
+        } else {
+          suggestionsRef.value.$el.style.removeProperty('bottom')
+        }
+        await suggestionsRef.value.focus()
+      }
+    })
+  }
 }
 
 function hideSuggestions(): void {
-    suggestionsShown.value = false;
-    comboboxButtonRef.value?.focus();
+  suggestionsShown.value = false
+  comboboxButtonRef.value?.focus()
+}
+
+function onClickOutside(): void {
+  if (suppressNextClickOutside.value) {
+    return
+  }
+  if (suggestionsShown.value) {
+    suggestionsShown.value = false
+  }
 }
 
 function handleUpdate(selected: Suggestion | null): void {
-    // CmkSuggestion tells us to change our value
-    const newValue =
-        selected === null || selected.name === null
-            ? new NoSelection()
-            : new SelectionWithTitle(selected.name, selected.title);
-    selectedOption.value = newValue;
-    emit('update:selectedOption', newValue.getName());
-    callbackFilteredErrorMessage.value = null;
-    hideSuggestions();
+  // CmkSuggestion tells us to change our value
+  const newValue =
+    selected === null || selected.name === null
+      ? new NoSelection()
+      : new SelectionWithTitle(selected.name, selected.title)
+  selectedOption.value = newValue
+  emit('update:selectedOption', newValue.getName())
+  callbackFilteredErrorMessage.value = null
+  hideSuggestions()
 }
 
-const slots = useSlots();
+const slots = useSlots()
 const group = computed<ButtonVariants['group']>(() => {
-    const hasButtonsStart = !!slots['buttons-start'];
-    const hasButtonsEnd = !!slots['buttons-end'];
-    if (hasButtonsStart && hasButtonsEnd) {
-        return 'center';
-    } else if (hasButtonsStart) {
-        return 'end';
-    } else if (hasButtonsEnd) {
-        return 'start';
-    } else {
-        return 'no';
-    }
-});
+  const hasButtonsStart = !!slots['buttons-start']
+  const hasButtonsEnd = !!slots['buttons-end']
+  if (hasButtonsStart && hasButtonsEnd) {
+    return 'center'
+  } else if (hasButtonsStart) {
+    return 'end'
+  } else if (hasButtonsEnd) {
+    return 'start'
+  } else {
+    return 'no'
+  }
+})
 </script>
 
 <template>
-    <div
-        v-click-outside="
-            () => {
-                if (suggestionsShown) suggestionsShown = false;
-            }
-        "
-        class="cmk-dropdown"
-        :class="{ 'cmk-dropdown__fill': width === 'fill' }"
+  <div
+    v-click-outside="onClickOutside"
+    class="cmk-dropdown"
+    :class="{ 'cmk-dropdown__fill': width === 'fill' }"
+  >
+    <CmkInlineValidation
+      v-if="callbackFilteredErrorMessage !== null"
+      :validation="[callbackFilteredErrorMessage]"
+    ></CmkInlineValidation>
+    <slot name="buttons-start"></slot>
+    <CmkDropdownButton
+      v-bind="componentId!! ? { id: componentId } : {}"
+      ref="comboboxButtonRef"
+      :aria-label="label"
+      :aria-expanded="suggestionsShown"
+      :disabled="disabled"
+      :multiple-choices-available="canOpenDropdown"
+      :value-is-selected="!(selectedOption instanceof NoSelection)"
+      :group="group"
+      :width="width"
+      :class="{ 'cmk-dropdown__validation-error': formValidation }"
+      @click="showSuggestions"
     >
-        <CmkInlineValidation
-            v-if="callbackFilteredErrorMessage !== null"
-            :validation="[callbackFilteredErrorMessage]"
-        ></CmkInlineValidation>
-        <slot name="buttons-start"></slot>
-        <CmkDropdownButton
-            v-bind="componentId!! ? { id: componentId } : {}"
-            ref="comboboxButtonRef"
-            :aria-label="label"
-            :aria-expanded="suggestionsShown"
-            :disabled="disabled"
-            :multiple-choices-available="canOpenDropdown"
-            :value-is-selected="!(selectedOption instanceof NoSelection)"
-            :group="group"
-            :width="width"
-            :class="{ 'cmk-dropdown__validation-error': formValidation }"
-            @click="showSuggestions"
-        >
-            <template v-if="callbackFilteredLoading">
-                <CmkLoading />
-            </template>
-            <span v-if="!callbackFilteredLoading && buttonLabel" style="display: contents"
-                ><TruncateText :text="buttonLabel" /></span
-            ><CmkLabelRequired
-                :show="required && selectedOption instanceof NoSelection"
-                :space="'before'" />
-            <template v-if="!callbackFilteredLoading && !buttonLabel">&nbsp;</template>
-            <ArrowDown
-                class="cmk-dropdown--arrow"
-                :class="{ rotated: suggestionsShown, disabled: disabled || !canOpenDropdown }"
-        /></CmkDropdownButton>
-        <slot name="buttons-end"></slot>
-        <CmkSuggestions
-            v-if="!!suggestionsShown"
-            ref="suggestionsRef"
-            role="option"
-            :suggestions="options"
-            :selected-suggestion="selectedOption"
-            :no-results-hint="noResultsHint"
-            @request-close-suggestions="hideSuggestions"
-            @select-suggestion="handleUpdate"
-        />
-    </div>
+      <template v-if="callbackFilteredLoading">
+        <CmkLoading />
+      </template>
+      <span v-if="!callbackFilteredLoading && buttonLabel" style="display: contents"
+        ><TruncateText :text="buttonLabel" /></span
+      ><CmkLabelRequired
+        :show="required && selectedOption instanceof NoSelection"
+        :space="'before'" />
+      <template v-if="!callbackFilteredLoading && !buttonLabel">&nbsp;</template>
+      <ArrowDown
+        class="cmk-dropdown--arrow"
+        :class="{ rotated: suggestionsShown, disabled: disabled || !canOpenDropdown }"
+    /></CmkDropdownButton>
+    <slot name="buttons-end"></slot>
+    <CmkSuggestions
+      v-if="!!suggestionsShown"
+      ref="suggestionsRef"
+      role="option"
+      :suggestions="options"
+      :selected-suggestion="selectedOption"
+      :no-results-hint="noResultsHint"
+      @request-close-suggestions="hideSuggestions"
+      @select-suggestion="handleUpdate"
+    />
+  </div>
 </template>
 
 <style scoped>
 .cmk-dropdown {
-    display: inline-block;
-    position: relative;
-    white-space: nowrap;
-    align-self: flex-start;
+  display: inline-block;
+  position: relative;
+  white-space: nowrap;
+  align-self: flex-start;
 
-    .cmk-dropdown--arrow {
-        flex-shrink: 0;
-        width: 0.7em;
-        color: var(--dropdown-arrow-color);
-        margin-left: auto;
-        padding: 0 4px;
-        margin-top: -1px;
+  .cmk-dropdown--arrow {
+    flex-shrink: 0;
+    width: 0.7em;
+    color: var(--dropdown-arrow-color);
+    margin-left: auto;
+    padding: 0 4px;
+    margin-top: -1px;
 
-        /* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
-        &.rotated {
-            transform: rotate(180deg);
-        }
-
-        /* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
-        &.disabled {
-            opacity: 0.4;
-        }
+    /* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
+    &.rotated {
+      transform: rotate(180deg);
     }
+
+    /* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
+    &.disabled {
+      opacity: 0.4;
+    }
+  }
 }
 
 .cmk-dropdown__fill {
-    width: 100%;
+  width: 100%;
 }
 
 .cmk-dropdown__validation-error {
-    border: 1px solid var(--inline-error-border-color);
+  border: 1px solid var(--inline-error-border-color);
 }
 </style>

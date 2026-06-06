@@ -440,7 +440,7 @@
                   <div class="detail-drawer__pane-heading">
                     {{ checkCommandRow.label }}
                   </div>
-                  <CmkCode :code-txt="checkCommandRow.value" width="fill" />
+                  <CmkCode :code-text="checkCommandRow.value" width="fill" />
                 </div>
 
                 <dl
@@ -788,9 +788,9 @@ import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
 import { type PerfMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
 import { stateColor } from '@/utils/stateColors'
 import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time'
-import CmkButton from '@/vendor/cmk/components/CmkButton.vue'
-import CmkChip from '@/vendor/cmk/components/CmkChip/CmkChip.vue'
-import CmkCode from '@/vendor/cmk/components/CmkCode/CmkCode.vue'
+import CmkButton from '@/vendor/cmk/components/CmkButton'
+import CmkChip from '@/vendor/cmk/components/CmkChip.vue'
+import CmkCode from '@/vendor/cmk/components/CmkCode.vue'
 import CmkIcon from '@/vendor/cmk/components/CmkIcon'
 import CmkTabs, { CmkTab, CmkTabContent } from '@/vendor/cmk/components/CmkTabs'
 import CmkToggleButtonGroup from '@/vendor/cmk/components/CmkToggleButtonGroup.vue'

@@ -3,7 +3,7 @@
  * This file is part of Checkmk (https://checkmk.com). It is subject to the terms and
  * conditions defined in the file COPYING, which is part of this source code package.
  */
-import usei18n, { createi18n, type SupportedLanguage, untranslated } from './i18n.ts';
+import usei18n, { type SupportedLanguage, createi18n, untranslated } from './i18n.ts'
 
-export { createi18n, type SupportedLanguage, untranslated };
-export default usei18n;
+export { type SupportedLanguage, untranslated, createi18n }
+export default usei18n

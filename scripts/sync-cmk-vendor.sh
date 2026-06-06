@@ -24,11 +24,18 @@ PATCH_LIST="$REPO_ROOT/scripts/cmk-vendor-patches.txt"
 SHOW_DIFF=""
 
 # Prettier normalises both files to OrbVis style before diffing — kills the
-# noise from upstream's semicolon-free / 2-space style vs our config.
+# noise from old vendored 4-space/semicolon style vs the cmk-style config.
 PRETTIER_BIN="$REPO_ROOT/frontend/node_modules/.bin/prettier"
-PRETTIER_CONFIG="$REPO_ROOT/frontend/.prettierrc"
+PRETTIER_CONFIG="$REPO_ROOT/frontend/prettier.config.cjs"
 if [[ ! -x "$PRETTIER_BIN" ]]; then
   echo "prettier binary missing at $PRETTIER_BIN — run npm install in frontend/" >&2
+  exit 2
+fi
+if [[ ! -f "$PRETTIER_CONFIG" ]]; then
+  # normalize() falls back to raw content on prettier failure; a missing
+  # config would silently disable normalisation for EVERY file and flood
+  # the report with pure format drift. Fail loudly instead.
+  echo "prettier config missing at $PRETTIER_CONFIG" >&2
   exit 2
 fi
 

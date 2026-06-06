@@ -8,6 +8,8 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import type { components } from 'cmk-shared-typing/typescript/openapi_internal';
 import { computed, onMounted, ref } from 'vue';
 
+// /types directly: vue-language-tools resolves bare directory imports
+// from .vue importers to the same-named SFC, hiding named type exports.
 import type { ButtonVariants } from '@cmk/components/CmkButton/types';
 import CmkButton from '@cmk/components/CmkButton';
 import CmkIcon from '@cmk/components/CmkIcon';

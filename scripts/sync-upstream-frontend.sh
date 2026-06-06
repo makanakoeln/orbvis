@@ -61,11 +61,6 @@ OWNED_FILES=(
 # form. Renames exist because upstream master reorganized flat files
 # into directories (or vice versa) after we vendored them.
 declare -A IMPORT_RENAMES=(
-    # upstream turned the flat file into a directory with index.ts
-    ["@cmk/components/CmkButton.vue"]="@cmk/components/CmkButton"
-    # upstream flattened the directory back into a single .vue file
-    ["@cmk/components/CmkCode/CmkCode.vue"]="@cmk/components/CmkCode.vue"
-    ["@cmk/components/CmkChip/CmkChip.vue"]="@cmk/components/CmkChip.vue"
     # OrbVis-owned files re-homed under cmk-additions
     ["@cmk/components/CmkDialog.vue"]="@/cmk-additions/components/CmkDialog.vue"
     ["@cmk/lib/rest-api-client/userConfig"]="@/cmk-additions/lib/rest-api-client/userConfig"
@@ -180,20 +175,8 @@ apply_fixup() {
         || { err "fixup did not apply in $rel (expected: $expect)"; exit 1; }
 }
 
-# Upstream renamed CmkCode's prop codeTxt -> codeText after we vendored
-# it. The vendored copy keeps the old name (external world), master
-# expects the new one (monorepo world).
-apply_fixup "src/components/board/DetailDrawer.vue" \
-    's|:code-txt=|:code-text=|g' \
-    ':code-text='
-
-# vue-language-tools resolves directory imports from .vue importers to a
-# same-named SFC inside the directory (CmkButton/CmkButton.vue) — fine
-# for the default export, but named TYPE re-exports through index.ts
-# become invisible. Import the type straight from its defining module.
-apply_fixup "src/cmk-additions/components/CmkDialog.vue" \
-    "s|import type { ButtonVariants } from '@cmk/components/CmkButton'|import type { ButtonVariants } from '@cmk/components/CmkButton/types'|" \
-    "@cmk/components/CmkButton/types"
+# (none right now — the 2026-06-06 vendor refresh aligned the vendored
+# tree with master, dropping the codeTxt/ButtonVariants fixups)
 
 # --- 4. verify every @cmk import resolves ----------------------------------
 fail=0

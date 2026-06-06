@@ -75,11 +75,15 @@ repos:
         args: [backend/app]
 
       # ----- Frontend: eslint on changed TS/Vue files --------------------
+      # src/vendor is excluded from all three fixers: vendored files must
+      # stay byte-identical to upstream cmk-frontend-vue (drift-check),
+      # and auto-fixes (e.g. stripping eslint-disable comments) break that.
       - id: eslint
         name: eslint (auto-fix)
         entry: bash -c 'cd frontend && npx eslint --fix "${@#frontend/}"' --
         language: system
         files: ^frontend/src/.*\.(ts|vue)$
+        exclude: ^frontend/src/vendor/
         pass_filenames: true
 
       # ----- Frontend: prettier on changed TS/Vue/CSS files --------------
@@ -88,6 +92,7 @@ repos:
         entry: bash -c 'cd frontend && npx prettier --write "${@#frontend/}"' --
         language: system
         files: ^frontend/src/.*\.(ts|vue|css)$
+        exclude: ^frontend/src/vendor/
         pass_filenames: true
 
       # ----- Frontend: stylelint on changed Vue/CSS files ----------------
@@ -96,6 +101,7 @@ repos:
         entry: bash -c 'cd frontend && npx stylelint --fix "${@#frontend/}"' --
         language: system
         files: ^frontend/src/.*\.(vue|css)$
+        exclude: ^frontend/src/vendor/
         pass_filenames: true
 
       # ----- Pre-push: full test suites + deps audit ---------------------

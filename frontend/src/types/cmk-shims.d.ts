@@ -1,4 +1,4 @@
-declare module '@cmk/components/CmkButton.vue' {
+declare module '@cmk/components/CmkButton' {
   import type { DefineComponent } from 'vue'
   type ButtonVariant =
     | 'primary'

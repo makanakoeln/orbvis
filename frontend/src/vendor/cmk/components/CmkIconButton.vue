@@ -4,35 +4,49 @@ This file is part of Checkmk (https://checkmk.com). It is subject to the terms a
 conditions defined in the file COPYING, which is part of this source code package.
 -->
 <script setup lang="ts">
-import CmkIcon from '@/components/CmkIcon';
-import { type CmkIconProps } from '@/components/CmkIcon';
+import CmkIcon, { type CmkIconProps } from '@/components/CmkIcon'
 
-defineProps<CmkIconProps>();
+defineProps<CmkIconProps>()
 
-defineEmits(['click']);
+defineEmits(['click'])
 </script>
 
 <template>
-    <button
-        type="button"
-        class="cmk-icon-button"
-        :title="title"
-        @click.prevent="
-            (e) => {
-                $emit('click', e);
-            }
-        "
-    >
-        <CmkIcon :name="name" :variant="variant" :size="size" :rotate="rotate" :title="title" />
-    </button>
+  <button
+    type="button"
+    class="cmk-icon-button"
+    :title="title"
+    @click.prevent="
+      (e) => {
+        $emit('click', e)
+      }
+    "
+  >
+    <CmkIcon
+      :name="name"
+      :variant="variant"
+      :size="size"
+      :colored="colored"
+      :rotate="rotate"
+      :title="title"
+    />
+  </button>
 </template>
 
 <style scoped>
 .cmk-icon-button {
-    margin: 0;
-    padding: 0;
-    background: none;
-    border: none;
-    cursor: pointer;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  /* Collapse the inline-image baseline descender gap so the focus outline
+     hugs the icon instead of leaving a strip below it. */
+  display: inline-flex;
+}
+
+.cmk-icon-button:focus-visible {
+  outline: revert;
 }
 </style>
