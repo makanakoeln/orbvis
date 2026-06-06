@@ -1716,17 +1716,17 @@ const selectedObject = computed<BoardObject | null>(() => {
 // ---- Detail drawer (shared across static / worldmap / radar boards) ----
 
 const detailDrawerObject = ref<BoardObject | null>(null)
-// Foldertree host/service leaves never enter the SSE states store (services are
-// lazy; the flat host states list is empty by design), so the drawer has no live
-// state to key off its synthesized id. Capture the clicked node's state here so
-// the drawer still shows status/output/age.
-const folderLeafState = ref<ObjectState | null>(null)
+// Drilldown targets (foldertree host/service leaves, BI aggregation leaves)
+// never enter the SSE states store, so the drawer has no live state to key
+// off their synthesized ids. Capture the clicked node's state here so the
+// drawer still shows status/output/age.
+const drawerSeedState = ref<ObjectState | null>(null)
 const detailDrawerState = computed(() => {
   const obj = detailDrawerObject.value
   if (!obj) return undefined
   const live = statesStore.states[obj.id]
   if (live) return live
-  if (folderLeafState.value?.object_id === obj.id) return folderLeafState.value
+  if (drawerSeedState.value?.object_id === obj.id) return drawerSeedState.value
   return undefined
 })
 const detailActions = useObjectActions(
@@ -1761,7 +1761,11 @@ const selectableHostNames = computed(() =>
     .map((o) => o.host_name as string)
 )
 
-function onSelectHost(hostName: string, serviceDescription?: string | null) {
+function onSelectHost(
+  hostName: string,
+  serviceDescription?: string | null,
+  seed?: Omit<ObjectState, 'object_id'> | null
+) {
   // Prefer a real board-object so toolbar actions (ack/downtime) bind to the
   // operator's curated entry. Fall back to a synthesised object so members
   // discovered via the hostgroup drawer (often not placed on the board)
@@ -1781,10 +1785,17 @@ function onSelectHost(hostName: string, serviceDescription?: string | null) {
     detailDrawerObject.value = real
     return
   }
+  const transientId = serviceDescription
+    ? `transient:${hostName};${serviceDescription}`
+    : `transient:${hostName}`
+  // Transient objects have no SSE state entry; a caller-provided seed (e.g.
+  // a BI leaf's node state) keeps the drawer's status pane populated — same
+  // mechanism the foldertree drilldown uses via folderNodeToState.
+  if (seed) {
+    drawerSeedState.value = { ...seed, object_id: transientId }
+  }
   detailDrawerObject.value = {
-    id: serviceDescription
-      ? `transient:${hostName};${serviceDescription}`
-      : `transient:${hostName}`,
+    id: transientId,
     type: serviceDescription ? 'service' : 'host',
     host_name: hostName,
     ...(serviceDescription ? { service_description: serviceDescription } : {}),
@@ -1797,7 +1808,7 @@ function onSelectHost(hostName: string, serviceDescription?: string | null) {
 
 function closeDetail() {
   detailDrawerObject.value = null
-  folderLeafState.value = null
+  drawerSeedState.value = null
 }
 
 // Foldertree leaves never enter the SSE states map (services are lazy; the flat
@@ -1823,7 +1834,7 @@ function folderNodeToState(node: FolderTreeNode, host?: string): ObjectState {
 function onFolderHostSelect(node: FolderTreeNode) {
   if (isPreview.value) return
   if (node.kind !== 'host') return
-  folderLeafState.value = folderNodeToState(node)
+  drawerSeedState.value = folderNodeToState(node)
   onObjectClick({
     id: node.title,
     type: 'host',
@@ -1840,7 +1851,7 @@ function onFolderServiceSelect(host: string, node: FolderTreeNode) {
   // The drawer self-fetches the richer detail (long output, comments,
   // downtimes) by host + service on top of this node-derived state.
   const id = `${host};${node.title}`
-  folderLeafState.value = folderNodeToState(node, host)
+  drawerSeedState.value = folderNodeToState(node, host)
   onObjectClick({
     id,
     type: 'service',

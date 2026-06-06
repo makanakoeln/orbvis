@@ -37,6 +37,8 @@ export interface AggregationNode {
   acknowledged?: boolean
   host_name?: string | null
   service_description?: string | null
+  /** Plugin output of the node's compute result (leaf check output). */
+  output?: string
   children: AggregationNode[]
 }
 

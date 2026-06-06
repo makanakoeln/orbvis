@@ -583,6 +583,7 @@ def _bundle_to_node(bundle: Any, depth: int, max_depth: int) -> dict[str, Any]:
     node["state"] = int(getattr(actual, "state", -1))
     node["in_downtime"] = bool(getattr(actual, "in_downtime", False))
     node["acknowledged"] = bool(getattr(actual, "acknowledged", False))
+    node["output"] = str(getattr(actual, "output", "") or "")
 
     if depth >= max_depth:
         node["children"] = []

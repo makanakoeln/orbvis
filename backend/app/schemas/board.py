@@ -143,6 +143,10 @@ class AggregationNode(BaseModel):
     acknowledged: bool = False
     host_name: str | None = None
     service_description: str | None = None
+    # Plugin output of the node's compute result (leaf check output for
+    # bi_leaf nodes). Lets the drawer surface the worst leaf's output
+    # without a second per-leaf fetch.
+    output: str = ""
     children: list[AggregationNode] = Field(default_factory=list)
 
 

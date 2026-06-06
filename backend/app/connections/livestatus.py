@@ -608,6 +608,7 @@ def _hierarchy_to_node(node: Mapping[str, object], depth: int, max_depth: int) -
         acknowledged=bool(core.get("acknowledged", False)),
         host_name=host_name,
         service_description=service,
+        output=str(core.get("output", "") or ""),
         children=children,
     )
 

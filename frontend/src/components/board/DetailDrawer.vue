@@ -254,6 +254,9 @@
                     <span class="detail-drawer__list-strong">{{
                       aggregationSummary.worstPath
                     }}</span>
+                    <div v-if="aggregationSummary.worstOutput" class="detail-drawer__worst-output">
+                      {{ aggregationSummary.worstOutput }}
+                    </div>
                   </div>
                   <div
                     v-if="aggregationView === 'summary'"
@@ -307,6 +310,7 @@
                       :class="{
                         'detail-drawer__list-row--clickable': !!row.hostName
                       }"
+                      :title="row.output || undefined"
                       @click="onAggregationLeafClick(row)"
                     >
                       <span
@@ -314,6 +318,11 @@
                         :class="`detail-drawer__list-dot--${row.tone}`"
                       />
                       <span class="detail-drawer__list-text">
+                        <span
+                          v-if="aggregationListMultiHost && row.hostName && row.serviceDescription"
+                          class="detail-drawer__list-host"
+                          >{{ row.hostName }} ·
+                        </span>
                         {{ row.label }}
                       </span>
                       <span class="detail-drawer__list-state">{{ row.stateLabel }}</span>
@@ -656,7 +665,12 @@
         </CmkTabs>
       </div>
 
-      <footer v-if="!isSite" class="detail-drawer__actions">
+      <!-- Aggregations get no host/service command footer: the commands
+           dispatch via host_name/service_description, which BI aggregation
+           objects don't carry — every button would be a silent no-op. The
+           aggregation pane's "Acknowledge N contributing leaves" bulk action
+           targets the real bi_leaf hosts/services instead. -->
+      <footer v-if="!isSite && !isAggregation" class="detail-drawer__actions">
         <h4 class="detail-drawer__actions-title">
           {{ _t('Actions') }}
         </h4>
@@ -744,7 +758,7 @@
         </div>
       </footer>
 
-      <footer v-else class="detail-drawer__actions detail-drawer__actions--site">
+      <footer v-else-if="isSite" class="detail-drawer__actions detail-drawer__actions--site">
         <CmkButton
           v-if="problemsUrlFull"
           variant="success"
@@ -779,6 +793,7 @@ import type {
   PerfometerResult
 } from '@/types/api'
 import {
+  BI_STATE_FULL_LABEL,
   BI_STATE_LABEL as BI_STATE_LABEL_MAP,
   BI_STATE_TONE,
   walkAggregationLeavesWithPath
@@ -836,8 +851,14 @@ const emit = defineEmits<{
   'add-comment': []
   'enable-notifications': []
   'disable-notifications': []
-  /** Host name picked from the topology section — board may highlight + select it. */
-  'select-host': [hostName: string, serviceDescription?: string | null]
+  /** Host name picked from the topology section — board may highlight + select it.
+   *  ``seed`` carries a node-derived ObjectState (sans object_id) so drilldowns
+   *  into objects without a board state entry still render a status pane. */
+  'select-host': [
+    hostName: string,
+    serviceDescription?: string | null,
+    seed?: Omit<ObjectState, 'object_id'> | null
+  ]
   /** Bulk-acknowledge contributing leaves of a BI aggregation. */
   'bulk-acknowledge': [targets: BulkAckTarget[]]
 }>()
@@ -1199,11 +1220,13 @@ interface AggregationLeafRow {
   hostName: string | null
   serviceDescription: string | null
   state: number
+  output: string
 }
 
 interface AggregationSummary {
   chips: SummaryChip[]
   worstPath: string | null
+  worstOutput: string | null
   leaves: AggregationLeafRow[]
   /** Nodes at depth=`expand_depth` (or shallower terminal bi_leaves). */
   treeRows: AggregationLeafRow[]
@@ -1227,7 +1250,8 @@ function _aggregationRow(node: AggregationNode, path: string[]): AggregationLeaf
     path: fullPath,
     hostName: node.host_name ?? null,
     serviceDescription: node.service_description ?? null,
-    state: node.state
+    state: node.state,
+    output: node.output ?? ''
   }
 }
 
@@ -1341,12 +1365,14 @@ const aggregationSummary = computed<AggregationSummary | null>(() => {
   )
   const worst = sorted.find((l) => l.state > 0) ?? null
   const worstPath = worst ? worst.path.join(' › ') : null
+  const worstOutput = worst?.output || null
 
   const expandDepth = obj.expand_depth ?? 0
   if (expandDepth === 0) {
     return {
       chips,
       worstPath,
+      worstOutput,
       leaves: sorted,
       treeRows: [],
       treeChips: [],
@@ -1360,6 +1386,7 @@ const aggregationSummary = computed<AggregationSummary | null>(() => {
   return {
     chips,
     worstPath,
+    worstOutput,
     leaves: sorted,
     treeRows,
     treeChips,
@@ -1400,6 +1427,16 @@ const aggregationListRows = computed<AggregationLeafRow[]>(() => {
   return aggregationView.value === 'summary' ? s.treeRows : s.leaves
 })
 
+// Service leaves repeat generic names ("PING") across hosts in multi-host
+// aggregations — prefix the host so rows stay unambiguous. Single-host
+// trees skip the prefix (pure noise there).
+const aggregationListMultiHost = computed(() => {
+  const hosts = new Set(
+    aggregationListRows.value.map((r) => r.hostName).filter((h): h is string => !!h)
+  )
+  return hosts.size > 1
+})
+
 const activeChips = computed<SummaryChip[]>(() => {
   const s = aggregationSummary.value
   if (!s) return []
@@ -1408,7 +1445,25 @@ const activeChips = computed<SummaryChip[]>(() => {
 
 function onAggregationLeafClick(leaf: AggregationLeafRow): void {
   if (!leaf.hostName) return
-  emit('select-host', leaf.hostName, leaf.serviceDescription ?? null)
+  // Seed a node-derived state: BI leaves usually have no board-state entry,
+  // so without it the drilled-into drawer would render statusless (actions
+  // only). BI encodes host leaves in service codes too — map 0 to UP and
+  // anything worse to DOWN for the host pill.
+  const isService = !!leaf.serviceDescription
+  const seed: Omit<ObjectState, 'object_id'> = {
+    type: isService ? 'service' : 'host',
+    state: isService
+      ? (BI_STATE_FULL_LABEL[leaf.state] ?? 'PENDING')
+      : leaf.state === 0
+        ? 'UP'
+        : 'DOWN',
+    output: leaf.output,
+    perf_data: '',
+    acknowledged: false,
+    in_downtime: false,
+    stale: false
+  }
+  emit('select-host', leaf.hostName, leaf.serviceDescription ?? null, seed)
 }
 
 const aggregationProblemLeaves = computed<AggregationLeafRow[]>(() => {
@@ -2694,6 +2749,20 @@ const isDark = useIsDark()
 .detail-drawer__list-strong {
   font-weight: var(--font-weight-semibold);
   color: var(--text);
+}
+
+/* Worst-leaf plugin output — secondary line under the path so the operator
+ * sees the failure reason without drilling into the leaf. */
+.detail-drawer__worst-output {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}
+
+/* Host prefix on service-leaf rows of multi-host aggregations. */
+.detail-drawer__list-host {
+  color: var(--text-muted);
 }
 
 /* Stale-data hint inside the aggregation pane — same visual language as
