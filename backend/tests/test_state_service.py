@@ -938,3 +938,39 @@ def test_folder_tree_delta_structural_change_is_full():
     # A new host appears → path set changes → full resend.
     d = state_service.compute_folder_tree_delta("ftd4", None, _ftree(("h1", "UP"), ("h2", "UP")))
     assert d.full and d.tree is not None
+
+
+@pytest.mark.asyncio
+async def test_foldertree_problems_severity_critical_prunes_warnings(_test_conn):
+    def host_states(tree):
+        out = {}
+
+        def walk(n):
+            if n.kind == "host":
+                out[n.title] = n.state
+            for c in n.children:
+                walk(c)
+
+        walk(tree)
+        return out
+
+    any_hosts = host_states(
+        (await get_board_states(_folder_board({"problems_only": True}))).folder_tree
+    )
+    crit_hosts = host_states(
+        (
+            await get_board_states(
+                _folder_board({"problems_only": True, "problems_severity": "critical"})
+            )
+        ).folder_tree
+    )
+    # "critical" keeps a subset of "any": only CRITICAL/DOWN/UNREACHABLE survive,
+    # everything dropped relative to "any" was a softer problem state. (The demo
+    # backend hash-randomises most service states, so assert invariants instead
+    # of concrete host names; localhost is pinned CRITICAL via its HTTP service.)
+    critical = {"CRITICAL", "DOWN", "UNREACHABLE"}
+    assert "localhost" in crit_hosts
+    assert all(s in critical for s in crit_hosts.values())
+    assert set(crit_hosts) <= set(any_hosts)
+    dropped = set(any_hosts) - set(crit_hosts)
+    assert all(any_hosts[h] not in critical for h in dropped)

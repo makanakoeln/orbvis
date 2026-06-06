@@ -64,6 +64,11 @@ _COMBINED_SEVERITY: dict[str, int] = {
 }
 
 
+# "critical" tier of problems_severity — mirror of CRITICAL_STATES in
+# frontend/src/utils/problemState.ts; keep the two in sync.
+_CRITICAL_PROBLEM_STATES: frozenset[str] = frozenset({"CRITICAL", "DOWN", "UNREACHABLE"})
+
+
 def severity_rank(state: str) -> int:
     """Combined worst-state rank (CRITICAL highest); unknown/EMPTY sink to -1."""
     return _COMBINED_SEVERITY.get(state, -1)
@@ -1043,13 +1048,27 @@ def _build_folder_tree(data: FolderTreeData, fv: FolderTreeView) -> FolderTreeNo
     root = nodes.get(root_path) or nodes[""]
     finalize(root)
 
+    # problems_severity narrows what problems_only keeps: "critical" only
+    # retains CRITICAL/DOWN/UNREACHABLE — on typical sites nearly every host
+    # carries some WARNING service, making the "any" filter almost a no-op.
+    critical_only = fv.problems_severity == "critical"
+
+    def _node_is_problem(node: FolderTreeNode) -> bool:
+        if node.kind == "folder":
+            if critical_only:
+                return any(node.severity_counts.get(s, 0) > 0 for s in _CRITICAL_PROBLEM_STATES)
+            return node.problem_count > 0
+        if critical_only:
+            return node.state in _CRITICAL_PROBLEM_STATES
+        return node.problem_count > 0
+
     def prune(node: FolderTreeNode) -> bool:
         """Return True to keep; applies problems_only + show_empty_folders."""
         if node.kind != "folder":
-            return (not fv.problems_only) or node.problem_count > 0
+            return (not fv.problems_only) or _node_is_problem(node)
         node.children = [c for c in node.children if prune(c)]
         if fv.problems_only:
-            return node.problem_count > 0
+            return _node_is_problem(node)
         # An empty folder the user has no Checkmk read-permission to is never
         # shown — otherwise the SETUP folder name would leak to a user outside
         # its contact groups (even though all its hosts are already hidden).

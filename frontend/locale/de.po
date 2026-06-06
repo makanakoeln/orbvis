@@ -2151,3 +2151,15 @@ msgstr "keine aktiven Downtimes"
 
 msgid "no changes"
 msgstr "keine Änderungen"
+
+msgid "Problem severity"
+msgstr "Problem-Schweregrad"
+
+msgid "Any problem (incl. WARNING)"
+msgstr "Jedes Problem (inkl. WARNING)"
+
+msgid "Only critical & down"
+msgstr "Nur kritisch & down"
+
+msgid "On typical sites almost every host carries some WARNING service — narrowing to critical keeps the problem filter meaningful."
+msgstr "Auf typischen Sites hat fast jeder Host irgendeinen WARNING-Service — die Eingrenzung auf kritisch hält den Problemfilter aussagekräftig."

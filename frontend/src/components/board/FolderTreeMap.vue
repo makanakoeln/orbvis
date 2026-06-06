@@ -38,6 +38,7 @@ import { useStatesStore } from '@/stores/states'
 import type { FolderTreeNode } from '@/types/api'
 import {
   type FilterTerm,
+  type ProblemSeverity,
   isFilterActive,
   selfMatches,
   serviceVisible,
@@ -50,6 +51,7 @@ import usei18n from '@/vendor/cmk/lib/i18n'
 const props = defineProps<{
   query: FilterTerm[]
   problemsOnly: boolean
+  problemsSeverity: ProblemSeverity
   showServices: boolean
   servicesByHost: Record<string, FolderTreeNode[]>
   serviceLoading: Set<string>
@@ -101,10 +103,27 @@ let resizeObs: ResizeObserver | null = null
 function pruneTree(node: FolderTreeNode, ancestorMatched: boolean): FolderTreeNode | null {
   const selfMatch = ancestorMatched || selfMatches(node, props.query)
   if (node.kind !== 'folder') {
-    if (subtreeVisible(node, props.query, props.problemsOnly, ancestorMatched)) return node
+    if (
+      subtreeVisible(
+        node,
+        props.query,
+        props.problemsOnly,
+        ancestorMatched,
+        undefined,
+        props.problemsSeverity
+      )
+    )
+      return node
     if (node.kind === 'host') {
       const svcMatch = (props.servicesByHost[node.title] ?? []).some((s) =>
-        serviceVisible(node.title, s, props.query, props.problemsOnly, selfMatch)
+        serviceVisible(
+          node.title,
+          s,
+          props.query,
+          props.problemsOnly,
+          selfMatch,
+          props.problemsSeverity
+        )
       )
       if (svcMatch) return node
     }
@@ -114,7 +133,14 @@ function pruneTree(node: FolderTreeNode, ancestorMatched: boolean): FolderTreeNo
     .map((c) => pruneTree(c, selfMatch))
     .filter((c): c is FolderTreeNode => c !== null)
   if (kids.length) return { ...node, children: kids }
-  return subtreeVisible(node, props.query, props.problemsOnly, ancestorMatched)
+  return subtreeVisible(
+    node,
+    props.query,
+    props.problemsOnly,
+    ancestorMatched,
+    undefined,
+    props.problemsSeverity
+  )
     ? { ...node, children: [] }
     : null
 }
@@ -137,7 +163,8 @@ const hostServices = (n: FolderTreeNode): FolderTreeNode[] => {
     props.servicesByHost[n.title] ?? [],
     props.query,
     props.problemsOnly,
-    selfMatches(n, props.query)
+    selfMatches(n, props.query),
+    props.problemsSeverity
   )
 }
 

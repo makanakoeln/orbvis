@@ -120,6 +120,8 @@ export interface FolderTreeView {
   show_services?: boolean
   show_empty_folders?: boolean
   problems_only?: boolean
+  /** What counts as a "problem" for problems_only ('any' default). */
+  problems_severity?: 'any' | 'critical'
   only_hard_states?: boolean
   sites?: string[]
 }

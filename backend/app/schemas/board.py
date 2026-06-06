@@ -268,6 +268,10 @@ class FolderTreeView(BaseModel):
     show_services: bool = False
     show_empty_folders: bool = True
     problems_only: bool = False
+    # What counts as a "problem" for the problems_only filter. On typical
+    # sites almost every host carries some WARNING service, so "any" barely
+    # filters; "critical" narrows to CRITICAL/DOWN/UNREACHABLE.
+    problems_severity: Literal["any", "critical"] = "any"
     only_hard_states: bool = False
     # Distributed monitoring: scope to these site ids; empty = all sites (v3 §5).
     sites: list[str] = Field(default_factory=list)

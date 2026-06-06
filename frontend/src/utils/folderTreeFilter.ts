@@ -5,9 +5,9 @@ import {
   matchesFilterTerms,
   parseFilterTerms
 } from '@/utils/objectFilter'
-import { isProblemState } from '@/utils/problemState'
+import { type ProblemSeverity, isProblemState } from '@/utils/problemState'
 
-export type { FilterTerm }
+export type { FilterTerm, ProblemSeverity }
 export { isProblemState }
 
 // The foldertree only ever holds hosts and services, so only the `h:`/`s:`
@@ -94,20 +94,25 @@ export function subtreeVisible(
   // count as visible even when their own name doesn't match, so a `s:` query
   // surfaces the host to drill into — mirroring the Map's pruneTree svcMatch
   // branch, which the List/summary path can't derive on its own.
-  matchedHosts?: Set<string>
+  matchedHosts?: Set<string>,
+  severity: ProblemSeverity = 'any'
 ): boolean {
   if (node.kind === 'host') {
     const matched = ancestorMatched || hostVisible(node.title, terms, matchedHosts)
-    return matched && (!problemsOnly || isProblemState(node.state))
+    return matched && (!problemsOnly || isProblemState(node.state, severity))
   }
   if (node.kind === 'service') {
     // Reached only when a service leaf has no host context; match its
     // description against the non-host terms as a best effort.
     const matched = ancestorMatched || serviceMatches('', node.title, terms)
-    return matched && (!problemsOnly || isProblemState(node.state))
+    return matched && (!problemsOnly || isProblemState(node.state, severity))
   }
   const selfMatch = ancestorMatched || folderNameMatches(node.title, terms)
-  if (node.children.some((c) => subtreeVisible(c, terms, problemsOnly, selfMatch, matchedHosts)))
+  if (
+    node.children.some((c) =>
+      subtreeVisible(c, terms, problemsOnly, selfMatch, matchedHosts, severity)
+    )
+  )
     return true
   return selfMatch && !problemsOnly && node.children.length === 0
 }
@@ -119,10 +124,11 @@ export function serviceVisible(
   node: FolderTreeNode,
   terms: FilterTerm[],
   problemsOnly: boolean,
-  ancestorMatched = false
+  ancestorMatched = false,
+  severity: ProblemSeverity = 'any'
 ): boolean {
   const matched = ancestorMatched || serviceMatches(hostName, node.title, terms)
-  return matched && (!problemsOnly || isProblemState(node.state))
+  return matched && (!problemsOnly || isProblemState(node.state, severity))
 }
 
 /** A host's lazily-loaded service leaves filtered to the active query — shared by
@@ -132,8 +138,11 @@ export function visibleServices(
   services: FolderTreeNode[],
   terms: FilterTerm[],
   problemsOnly: boolean,
-  hostMatched: boolean
+  hostMatched: boolean,
+  severity: ProblemSeverity = 'any'
 ): FolderTreeNode[] {
   if (!isFilterActive(terms, problemsOnly)) return services
-  return services.filter((s) => serviceVisible(hostName, s, terms, problemsOnly, hostMatched))
+  return services.filter((s) =>
+    serviceVisible(hostName, s, terms, problemsOnly, hostMatched, severity)
+  )
 }

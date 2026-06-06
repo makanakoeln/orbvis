@@ -425,6 +425,25 @@
                       _t('Show only folders/hosts with problems')
                     }}</span>
                   </label>
+                  <div v-if="form.ft_problems_only" class="board-settings__field">
+                    <CmkLabel
+                      :help="
+                        _t(
+                          'On typical sites almost every host carries some WARNING service — narrowing to critical keeps the problem filter meaningful.'
+                        )
+                      "
+                      >{{ _t('Problem severity') }}</CmkLabel
+                    >
+                    <CmkDropdown
+                      :selected-option="form.ft_problems_severity"
+                      :options="ftProblemsSeverityOptions"
+                      :width="'fill'"
+                      :label="_t('Problem severity')"
+                      @update:selected-option="
+                        form.ft_problems_severity = ($event as 'any' | 'critical') ?? 'any'
+                      "
+                    />
+                  </div>
                   <label class="board-settings__toggle">
                     <CmkSwitch v-model:data="form.ft_only_hard_states" />
                     <span class="board-settings__toggle-label">{{
@@ -860,6 +879,7 @@ const form = ref({
   ft_show_services: ftv?.show_services ?? false,
   ft_show_empty_folders: ftv?.show_empty_folders ?? true,
   ft_problems_only: ftv?.problems_only ?? false,
+  ft_problems_severity: (ftv?.problems_severity ?? 'any') as 'any' | 'critical',
   ft_only_hard_states: ftv?.only_hard_states ?? false,
   ft_sites: (ftv?.sites ?? []).join(', '),
   hover_template: props.board.hover_template ?? '',
@@ -923,6 +943,14 @@ const ftDefaultViewOptions = computed(() => ({
   suggestions: [
     { name: 'list', title: _t('List (tree)') },
     { name: 'map', title: _t('Map (treemap)') }
+  ]
+}))
+
+const ftProblemsSeverityOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'any', title: _t('Any problem (incl. WARNING)') },
+    { name: 'critical', title: _t('Only critical & down') }
   ]
 }))
 const ftRootFolderOptions = computed(() => ({
@@ -1043,6 +1071,7 @@ async function save() {
         show_services: form.value.ft_show_services,
         show_empty_folders: form.value.ft_show_empty_folders,
         problems_only: form.value.ft_problems_only,
+        problems_severity: form.value.ft_problems_severity,
         only_hard_states: form.value.ft_only_hard_states,
         sites: form.value.ft_sites
           .split(',')
@@ -1135,6 +1164,7 @@ function buildPreviewView(): Record<string, unknown> {
       show_services: form.value.ft_show_services,
       show_empty_folders: form.value.ft_show_empty_folders,
       problems_only: form.value.ft_problems_only,
+      problems_severity: form.value.ft_problems_severity,
       only_hard_states: form.value.ft_only_hard_states,
       sites: form.value.ft_sites
         .split(',')

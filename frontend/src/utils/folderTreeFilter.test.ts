@@ -158,3 +158,26 @@ describe('serviceVisible', () => {
     expect(serviceVisible('web-01', service('CPU', 'CRITICAL'), [], true)).toBe(true)
   })
 })
+
+describe('problems severity threshold', () => {
+  it('keeps WARNING hosts with severity "any" but drops them with "critical"', () => {
+    const warnHost = host('w1', 'WARNING')
+    const critHost = host('c1', 'CRITICAL')
+    expect(subtreeVisible(warnHost, [], true, false, undefined, 'any')).toBe(true)
+    expect(subtreeVisible(warnHost, [], true, false, undefined, 'critical')).toBe(false)
+    expect(subtreeVisible(critHost, [], true, false, undefined, 'critical')).toBe(true)
+  })
+
+  it('treats DOWN/UNREACHABLE as critical, UNKNOWN as soft', () => {
+    expect(subtreeVisible(host('d', 'DOWN'), [], true, false, undefined, 'critical')).toBe(true)
+    expect(subtreeVisible(host('u', 'UNREACHABLE'), [], true, false, undefined, 'critical')).toBe(
+      true
+    )
+    expect(subtreeVisible(host('k', 'UNKNOWN'), [], true, false, undefined, 'critical')).toBe(false)
+  })
+
+  it('applies the threshold to lazily-loaded service leaves', () => {
+    expect(serviceVisible('h', service('s', 'WARNING'), [], true, true, 'critical')).toBe(false)
+    expect(serviceVisible('h', service('s', 'CRITICAL'), [], true, true, 'critical')).toBe(true)
+  })
+})

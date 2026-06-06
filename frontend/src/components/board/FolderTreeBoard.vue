@@ -98,6 +98,7 @@
       ref="mapRef"
       :query="parsedQuery"
       :problems-only="problemsOnly"
+      :problems-severity="problemsSeverity"
       :show-services="showServices"
       :services-by-host="effectiveServices"
       :service-loading="serviceLoading"
@@ -170,6 +171,7 @@ import { useBoardsStore } from '@/stores/boards'
 import { useStatesStore } from '@/stores/states'
 import type { FolderHostService, FolderTreeNode, FolderTreeView } from '@/types/api'
 import {
+  type ProblemSeverity,
   isFilterActive,
   isProblemState,
   parseFolderQuery,
@@ -207,6 +209,7 @@ const root = computed<FolderTreeNode | null>(() => states.folderTree)
 const mode = ref<'map' | 'list'>(props.kiosk ? 'map' : (props.view.default_view ?? 'map'))
 const expanded = reactive(new Set<string>())
 const problemsOnly = ref(props.view.problems_only ?? false)
+const problemsSeverity = computed<ProblemSeverity>(() => props.view.problems_severity ?? 'any')
 const showServices = computed(() => props.view.show_services ?? false)
 
 const filterText = ref('')
@@ -256,7 +259,8 @@ function visibleHostStats(
         parsedQuery.value,
         problemsOnly.value,
         ancestorMatched,
-        matchedHosts.value
+        matchedHosts.value,
+        problemsSeverity.value
       )
     ) {
       return { hosts: 0, counts: {} }
@@ -606,7 +610,8 @@ function rowChildren(node: FolderTreeNode, childAncestorMatched: boolean): Folde
       parsedQuery.value,
       problemsOnly.value,
       childAncestorMatched,
-      matchedHosts.value
+      matchedHosts.value,
+      problemsSeverity.value
     )
   )
 }
@@ -618,7 +623,8 @@ function rowServices(host: FolderTreeNode, hostMatched: boolean): FolderTreeNode
     effectiveServices.value[host.title] ?? [],
     parsedQuery.value,
     problemsOnly.value,
-    hostMatched
+    hostMatched,
+    problemsSeverity.value
   )
 }
 
