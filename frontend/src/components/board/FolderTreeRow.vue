@@ -23,7 +23,7 @@
       v-if="isExpandable"
       type="button"
       class="ft-chevron"
-      :aria-label="isOpen ? t('board.ftCollapse') : t('board.ftExpand')"
+      :aria-label="isOpen ? _t('Collapse') : _t('Expand')"
       @click.stop="onChevron"
     >
       {{ isOpen ? '▾' : '▸' }}
@@ -65,9 +65,7 @@
       stroke-linecap="round"
       stroke-linejoin="round"
       :role="isExpandable ? 'button' : undefined"
-      :aria-label="
-        isExpandable ? (isOpen ? t('board.ftCollapse') : t('board.ftExpand')) : undefined
-      "
+      :aria-label="isExpandable ? (isOpen ? _t('Collapse') : _t('Expand')) : undefined"
       @click="onHostIconClick"
     >
       <rect x="3" y="4" width="18" height="13" rx="1" />
@@ -87,9 +85,9 @@
     >
 
     <!-- Stays next to the name; a right-aligned count drifts away on wide screens. -->
-    <span v-if="isEmpty" class="ft-badge ft-badge--empty">{{ t('board.ftEmptyHosts') }}</span>
+    <span v-if="isEmpty" class="ft-badge ft-badge--empty">{{ _t('empty · 0 hosts') }}</span>
     <span v-else-if="node.kind === 'folder'" class="ft-meta"
-      >{{ node.host_count }} {{ t('board.ftHosts')
+      >{{ node.host_count }} {{ _t('hosts')
       }}<template v-if="pills.length && folderOk > 0"> · {{ folderOk }} OK</template></span
     >
     <span v-if="node.kind === 'folder' && pills.length" class="ft-pills">
@@ -113,10 +111,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import type { FolderTreeNode } from '@/types/api'
 import { severityPills, stateColorVar } from '@/utils/stateColors'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 // Presentational single row: the tree is flattened to a virtualized list in
 // FolderTreeBoard, so this component no longer recurses — open/expandable state
@@ -145,7 +143,7 @@ const emit = defineEmits<{
   'ctx-folder': [FolderTreeNode, number, number]
 }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const isEmpty = computed(() => {
   void props.rev

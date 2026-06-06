@@ -1,13 +1,18 @@
 <template>
   <CmkSlideInDialog
     :open="open"
-    :header="{ title: t('admin.bulkEditTitle', { n: names.length }), closeButton: true }"
+    :header="{ title: _t('Edit %{n} boards', { n: names.length }), closeButton: true }"
     size="small"
     @close="emit('cancel')"
   >
     <div class="bulk-edit__shell">
       <p class="bulk-edit__intro">
-        {{ t('admin.bulkEditIntro', { n: names.length }) }}
+        {{
+          _t(
+            'Tick the fields you want to overwrite on every selected board. Unchecked fields stay untouched.',
+            { n: names.length }
+          )
+        }}
       </p>
       <p v-if="previewAliases" class="bulk-edit__preview">
         {{ previewAliases }}
@@ -21,15 +26,15 @@
         />
         <CmkLoading v-else-if="schemaLoading" />
         <p v-else class="bulk-edit__error">
-          {{ t('admin.bulkEditSchemaError') }}
+          {{ _t('Could not load the bulk-edit form.') }}
         </p>
       </div>
       <div class="bulk-edit__footer">
         <CmkButton variant="secondary" :disabled="saving" @click="emit('cancel')">
-          {{ t('common.cancel') }}
+          {{ _t('Cancel') }}
         </CmkButton>
         <CmkButton variant="primary" :disabled="saving || !hasActiveFields" @click="apply">
-          {{ t('admin.bulkEditApply', { n: names.length }) }}
+          {{ _t('Apply to %{n} boards', { n: names.length }) }}
         </CmkButton>
       </div>
     </div>
@@ -44,7 +49,6 @@ import type {
   VueFormspecComponents
 } from 'cmk-shared-typing/typescript/vue_formspec_components'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import CmkButton from '@/components/cmk/CmkButton'
 import CmkLoading from '@/components/cmk/CmkLoading'
@@ -53,6 +57,7 @@ import CmkSlideInDialog from '@/components/cmk/CmkSlideInDialog'
 import { boardsApiFormSpec } from '@/api/client'
 import { orbFormComponents } from '@/composables/orbFormComponents'
 import { useAuthStore } from '@/stores/auth'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   open: boolean
@@ -66,7 +71,7 @@ const emit = defineEmits<{
   apply: [updates: Record<string, unknown>]
 }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const auth = useAuthStore()
 
 type Schema = NonNullable<VueFormspecComponents['components']>
@@ -81,7 +86,7 @@ const previewAliases = computed(() => {
   if (props.aliases.length === 0) return ''
   const head = props.aliases.slice(0, 4).join(', ')
   const rest = props.aliases.length - 4
-  return rest > 0 ? t('admin.bulkEditPreviewMore', { head, n: rest }) : head
+  return rest > 0 ? _t('%{head}, … and %{n} more', { head, n: rest }) : head
 })
 
 const hasActiveFields = computed(() => Object.keys(formSpecData.value).length > 0)

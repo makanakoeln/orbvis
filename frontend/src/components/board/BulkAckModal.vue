@@ -1,8 +1,13 @@
 <template>
-  <OrbModal :open="true" :title="t('ack.bulkTitle')" closable @close="$emit('close')">
+  <OrbModal
+    :open="true"
+    :title="_t('Acknowledge contributing leaves')"
+    closable
+    @close="$emit('close')"
+  >
     <p class="bulk-ack__subtitle">
       {{
-        t('ack.bulkSubtitle', {
+        _t('%{count} leaves from aggregation "%{aggregation}"', {
           aggregation: aggregationId,
           count: targets.length
         })
@@ -22,38 +27,38 @@
 
     <div class="bulk-ack__fields">
       <div>
-        <label class="bulk-ack__label">{{ t('ack.comment') }}</label>
+        <label class="bulk-ack__label">{{ _t('Comment') }}</label>
         <CmkInput
           ref="commentEl"
           v-model="comment"
           field-size="FILL"
-          :placeholder="t('ack.comment') + '…'"
+          :placeholder="_t('Comment') + '…'"
         />
       </div>
-      <CmkCheckbox v-model="sticky" :label="t('ack.sticky')" />
-      <CmkCheckbox v-model="notify" :label="t('ack.notify')" />
-      <CmkCheckbox v-model="persistent" :label="t('ack.persistent')" />
+      <CmkCheckbox v-model="sticky" :label="_t('Sticky (stays until OK)')" />
+      <CmkCheckbox v-model="notify" :label="_t('Send notification')" />
+      <CmkCheckbox v-model="persistent" :label="_t('Persistent')" />
     </div>
 
     <CmkAlertBox v-if="error" variant="error" size="small">
       <span style="white-space: pre-line">{{ error }}</span>
     </CmkAlertBox>
     <p v-if="successCount" class="bulk-ack__success">
-      {{ t('ack.bulkSuccess', { count: successCount }) }}
+      {{ _t('%{count} leaves acknowledged', { count: successCount }) }}
     </p>
 
     <template #footer>
       <CmkButton variant="secondary" @click="$emit('close')">
-        {{ t('common.cancel') }}
+        {{ _t('Cancel') }}
       </CmkButton>
       <CmkButton variant="primary" :disabled="submitting || !comment.trim()" @click="submit">
         {{
           submitting
-            ? t('ack.bulkSubmitting', {
+            ? _t('Acknowledging %{current}/%{total}…', {
                 current: progress,
                 total: targets.length
               })
-            : t('ack.bulkSubmit', { count: targets.length })
+            : _t('Acknowledge %{count} leaves', { count: targets.length })
         }}
       </CmkButton>
     </template>
@@ -62,7 +67,6 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbModal from '@/components/OrbModal.vue'
 import CmkAlertBox from '@/components/cmk/CmkAlertBox'
@@ -72,6 +76,7 @@ import CmkInput from '@/components/cmk/user-input/CmkInput'
 
 import { cmkApi } from '@/api/client'
 import type { BulkAckTarget } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   /** Aggregation that originated the bulk-ack — embedded in the comment
@@ -83,7 +88,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const comment = ref(`Bulk-ack: ${props.aggregationId}`)
 const sticky = ref(true)
 const notify = ref(true)
@@ -154,7 +159,7 @@ async function submit() {
   await Promise.all(workers)
   submitting.value = false
   if (failures.length) {
-    error.value = t('ack.bulkPartial', {
+    error.value = _t('%{failed} of %{total} failed: %{sample}', {
       failed: failures.length,
       total: props.targets.length,
       sample: failures.slice(0, 3).join(', ')

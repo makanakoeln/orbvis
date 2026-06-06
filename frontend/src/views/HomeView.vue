@@ -3,7 +3,7 @@
     <main class="orb-home__main">
       <div class="orb-home__toolbar">
         <h2 class="orb-home__title">
-          {{ t('home.title') }}
+          {{ _t('Boards') }}
         </h2>
         <div class="orb-home__search">
           <svg
@@ -21,14 +21,14 @@
           </svg>
           <input
             v-model="searchQuery"
-            :placeholder="t('home.search')"
+            :placeholder="_t('Search boards…')"
             class="orb-home__search-input"
             :style="searchQuery ? 'padding-right: var(--dimension-8)' : ''"
           />
           <button
             v-if="searchQuery"
             class="orb-home__search-clear"
-            :title="t('home.clearSearch')"
+            :title="_t('Clear search')"
             @click="searchQuery = ''"
           >
             <svg
@@ -53,13 +53,13 @@
             v-else
             class="orb-home__toggle-group"
             role="group"
-            :aria-label="t('home.viewCardsTitle')"
+            :aria-label="_t('Show as card grid')"
           >
             <button
               type="button"
               class="orb-home__toggle-btn"
               :class="viewMode === 'cards' ? 'orb-home__toggle-btn--active' : ''"
-              :title="t('home.viewCardsTitle')"
+              :title="_t('Show as card grid')"
               :aria-pressed="viewMode === 'cards'"
               @click="setViewMode('cards')"
             >
@@ -76,13 +76,13 @@
                   d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
                 />
               </svg>
-              {{ t('home.viewCards') }}
+              {{ _t('Cards') }}
             </button>
             <button
               type="button"
               class="orb-home__toggle-btn orb-home__toggle-btn--bordered"
               :class="viewMode === 'table' ? 'orb-home__toggle-btn--active' : ''"
-              :title="t('home.viewTableTitle')"
+              :title="_t('Show as table')"
               :aria-pressed="viewMode === 'table'"
               @click="setViewMode('table')"
             >
@@ -99,7 +99,7 @@
                   d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5"
                 />
               </svg>
-              {{ t('home.viewTable') }}
+              {{ _t('Table') }}
             </button>
           </div>
         </div>
@@ -118,7 +118,7 @@
           >
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          {{ t('admin.newBoard') }}
+          {{ _t('New Board') }}
         </button>
       </div>
 
@@ -139,7 +139,7 @@
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
           />
         </svg>
-        {{ t('common.loading') }}
+        {{ _t('Loading…') }}
       </div>
 
       <!-- Error -->
@@ -158,19 +158,19 @@
             />
           </svg>
         </div>
-        <p class="orb-home__empty-title">{{ t('home.noBoardsTitle') }}</p>
+        <p class="orb-home__empty-title">{{ _t('No boards configured') }}</p>
         <p class="orb-home__empty-hint">
           <span v-if="auth.canCreateBoards" class="orb-home__empty-cta">{{
-            t('home.noBoardsAdmin')
+            _t('Create your first board')
           }}</span>
-          <span v-else>{{ t('home.noBoardsUser') }}</span>
+          <span v-else>{{ _t('Contact your administrator') }}</span>
         </p>
       </div>
 
       <!-- Board grid -->
       <div v-else-if="viewMode === 'cards'" data-tour="boards-grid" class="orb-home__grid">
         <p v-if="searchQuery && !filteredBoards.length" class="orb-home__no-results">
-          {{ t('home.noSearchResults', { q: searchQuery }) }}
+          {{ _t('No boards match "%{q}"', { q: searchQuery }) }}
         </p>
         <div
           v-for="(map, index) in draggableBoards"
@@ -736,21 +736,21 @@
                 <span
                   v-if="map.show_in_lists === false"
                   class="orb-home__flag-badge"
-                  :title="t('home.hiddenBoard')"
+                  :title="_t('Hidden from regular users')"
                 >
-                  {{ t('home.hidden') }}
+                  {{ _t('hidden') }}
                 </span>
                 <span
                   v-if="map.readonly"
                   class="orb-home__flag-badge"
-                  :title="t('home.readonlyBoardTitle')"
+                  :title="_t('Demo board — cannot be edited')"
                 >
-                  {{ t('home.readonly') }}
+                  {{ _t('read-only') }}
                 </span>
                 <span
                   v-if="map.rotation_interval > 0"
                   class="orb-home__rotation-badge"
-                  :title="t('home.rotationBadgeTitle', { n: map.rotation_interval })"
+                  :title="_t('Rotates every %{n} seconds', { n: map.rotation_interval })"
                 >
                   ↻ {{ map.rotation_interval }}s
                 </span>
@@ -785,10 +785,10 @@
                 <span
                   v-if="map.readonly || ['flow', 'radar', 'worldmap'].includes(map.view.type)"
                   class="orb-home__card-count orb-home__card-count--dynamic"
-                  >{{ t('home.dynamicObjects') }}</span
+                  >{{ _t('dynamic') }}</span
                 >
                 <span v-else class="orb-home__card-count">{{
-                  t('common.objects', map.object_count)
+                  _tn('%{n} object', '%{n} objects', map.object_count, { n: map.object_count })
                 }}</span>
               </div>
             </div>
@@ -798,7 +798,7 @@
             <button
               v-if="(auth.isAdmin || map.can_edit) && !map.readonly"
               class="orb-home__action orb-home__action--settings"
-              :title="t('board.settingsTitle')"
+              :title="_t('Board Settings')"
               @click.stop="openSettings(map)"
             >
               <svg
@@ -823,7 +823,7 @@
             <button
               v-if="auth.canCreateBoards"
               class="orb-home__action orb-home__action--clone"
-              :title="t('admin.cloneBoard')"
+              :title="_t('Clone board')"
               @click.stop="cloneBoard(map)"
             >
               <svg
@@ -843,7 +843,7 @@
             <button
               v-if="auth.canCreateBoards"
               class="orb-home__action orb-home__action--export"
-              :title="t('admin.exportBoard')"
+              :title="_t('Export board as JSON')"
               @click.stop="exportBoard(map.name)"
             >
               <svg
@@ -863,7 +863,7 @@
             <button
               v-if="auth.canCreateBoards"
               class="orb-home__action orb-home__action--delete"
-              :title="t('admin.deleteBoard', { name: map.alias || map.name })"
+              :title="_t('Delete board &quot;%{name}&quot;?', { name: map.alias || map.name })"
               @click.stop="deleteBoard(map)"
             >
               <svg
@@ -903,15 +903,15 @@
   </div>
   <OrbConfirmDialog
     :open="!!confirmDelete"
-    :title="t('admin.deleteBoardTitle')"
+    :title="_t('Delete board')"
     :message="
       confirmDelete
-        ? t('admin.deleteBoardConfirm', {
+        ? _t('Are you sure you want to delete &quot;%{name}&quot;? This action cannot be undone.', {
             name: confirmDelete.alias || confirmDelete.name
           })
         : ''
     "
-    :confirm-label="t('common.delete')"
+    :confirm-label="_t('Delete')"
     @confirm="doDelete"
     @cancel="confirmDelete = null"
   />
@@ -922,7 +922,7 @@
       :count="selectedCount"
       :busy="bulkBusy"
       :select-all-checked="allFilteredSelected"
-      :select-all-label="t('admin.selectAllVisible', { n: filteredBoards.length })"
+      :select-all-label="_t('Select all (%{n} visible)', { n: filteredBoards.length })"
       :can-edit="true"
       @cancel="clearSelection"
       @edit="openBulkEdit"
@@ -935,7 +935,7 @@
       :count="selectedCount"
       :busy="bulkBusy"
       :select-all-checked="allFilteredSelected"
-      :select-all-label="t('admin.selectAllVisible', { n: filteredBoards.length })"
+      :select-all-label="_t('Select all (%{n} visible)', { n: filteredBoards.length })"
       @cancel="clearSelection"
       @export="doBulkExport"
       @delete="openBulkDelete"
@@ -970,14 +970,9 @@
     @cancel="confirmBulkDelete = false"
   />
 
-  <OrbModal
-    :open="!!confirmClone"
-    :title="t('admin.cloneBoard')"
-    closable
-    @close="confirmClone = null"
-  >
+  <OrbModal :open="!!confirmClone" :title="_t('Clone board')" closable @close="confirmClone = null">
     <div class="home-clone-modal__field">
-      <label class="home-clone-modal__label">{{ t('admin.boardId') }}</label>
+      <label class="home-clone-modal__label">{{ _t('Board ID') }}</label>
       <input
         ref="cloneInputEl"
         :value="cloneNewName"
@@ -990,17 +985,17 @@
       />
     </div>
     <div class="home-clone-modal__field">
-      <label class="home-clone-modal__label">{{ t('admin.alias') }}</label>
+      <label class="home-clone-modal__label">{{ _t('Display name') }}</label>
       <input v-model="cloneAlias" class="home-clone-modal__input" spellcheck="false" />
     </div>
     <p v-if="cloneError" class="home-clone-modal__error">{{ cloneError }}</p>
 
     <template #footer>
       <CmkButton variant="secondary" @click="confirmClone = null">
-        {{ t('common.cancel') }}
+        {{ _t('Cancel') }}
       </CmkButton>
       <CmkButton variant="primary" :disabled="!cloneNewName" @click="doClone">
-        {{ t('admin.cloneBoardAction') }}
+        {{ _t('Clone') }}
       </CmkButton>
     </template>
   </OrbModal>
@@ -1013,7 +1008,7 @@
   />
 
   <!-- Import FAB (board creators only) -->
-  <label v-if="auth.canCreateBoards" class="orb-home__import-fab" :title="t('admin.importBoard')">
+  <label v-if="auth.canCreateBoards" class="orb-home__import-fab" :title="_t('Import')">
     <svg
       class="orb-home__import-icon"
       fill="none"
@@ -1027,7 +1022,7 @@
         d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
       />
     </svg>
-    <span class="orb-home__import-label">{{ t('admin.importBoard') }}</span>
+    <span class="orb-home__import-label">{{ _t('Import') }}</span>
     <input
       type="file"
       accept=".json,.cfg,application/json"
@@ -1037,9 +1032,13 @@
   </label>
   <OrbConfirmDialog
     :open="!!importConflict"
-    :title="t('admin.importBoard')"
-    :message="importConflict ? t('admin.importOverwrite', { name: importConflict.name }) : ''"
-    :confirm-label="t('common.overwrite')"
+    :title="_t('Import')"
+    :message="
+      importConflict
+        ? _t('Board &quot;%{name}&quot; already exists. Overwrite?', { name: importConflict.name })
+        : ''
+    "
+    :confirm-label="_t('Overwrite')"
     confirm-variant="warning"
     @confirm="confirmImportOverwrite"
     @cancel="importConflict = null"
@@ -1058,7 +1057,6 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 import OnboardingTour from '@/components/OnboardingTour.vue'
@@ -1093,8 +1091,9 @@ import type {
 } from '@/types/api'
 import type { TourStep } from '@/types/tour'
 import { sanitizeBoardName } from '@/utils/naming'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t, _tn } = usei18n()
 const baseUrl = import.meta.env.BASE_URL
 // Boards whose background image 404s (e.g. an imported map_image that was never
 // uploaded) fall back to the board-type thumbnail.
@@ -1108,21 +1107,39 @@ const showOnboarding = ref(false)
 
 const tourSteps = computed<TourStep[]>(() => {
   const all: TourStep[] = [
-    { selector: null, title: t('onboarding.step1.title'), body: t('onboarding.step1.body') },
+    {
+      selector: null,
+      title: _t('Welcome to OrbVis'),
+      body: _t(
+        'OrbVis visualizes the status of your monitored infrastructure — hosts, services, groups and more — on customizable boards.'
+      )
+    },
     {
       selector: '[data-tour="sidebar-nav"]',
-      title: t('onboarding.step2.title'),
-      body: auth.isAdmin ? t('onboarding.step2.bodyAdmin') : t('onboarding.step2.bodyUser')
+      title: _t('Navigation'),
+      body: auth.isAdmin
+        ? _t(
+            '"Overview" in the sidebar brings you back to the board list. The admin section below gives access to connections, images, users and settings.'
+          )
+        : _t('"Overview" in the sidebar brings you back to the board list.')
     },
     {
       selector: '[data-tour="boards-grid"]',
-      title: t('onboarding.step3.title'),
-      body: t('onboarding.step3.body')
+      title: _t('Your boards'),
+      body: _t(
+        'Each card is a board — a visual map of your monitoring landscape. OrbVis supports static boards, Geo Boards, Radar views and Flow Boards.'
+      )
     },
     {
       selector: auth.isAdmin ? '[data-tour="new-board"]' : null,
-      title: t('onboarding.step4.title'),
-      body: auth.isAdmin ? t('onboarding.step4.bodyAdmin') : t('onboarding.step4.bodyUser')
+      title: _t('Ready to go!'),
+      body: auth.isAdmin
+        ? _t(
+            'Create your first board here. Inside a board, click the pencil button (bottom-right) to enter edit mode and start placing monitoring objects.'
+          )
+        : _t(
+            'Your administrator can create boards and grant you access. Once a board is available it will appear here.'
+          )
     }
   ]
   return auth.ssoActive || auth.isCheckmkDeployment
@@ -1150,8 +1167,8 @@ const viewMode = computed<BoardListView>(
     localViewMode.value ?? (settingsStore.settings.board_list_view === 'table' ? 'table' : 'cards')
 )
 const viewModeOptions = computed(() => [
-  { label: t('home.viewCards'), value: 'cards' },
-  { label: t('home.viewTable'), value: 'table' }
+  { label: _t('Cards'), value: 'cards' },
+  { label: _t('Table'), value: 'table' }
 ])
 
 function setViewMode(value: string) {
@@ -1251,9 +1268,9 @@ async function doBulkDelete() {
     bulkFailures.value = failed
     confirmBulkDelete.value = false
     if (failed.length === 0) {
-      toast.success(t('admin.bulkDeleteSuccess', { n: okCount }))
+      toast.success(_t('%{n} boards deleted', { n: okCount }))
     } else {
-      toast.error(t('admin.bulkDeletePartial', { ok: okCount, fail: failed.length }))
+      toast.error(_t('%{ok} deleted, %{fail} failed', { ok: okCount, fail: failed.length }))
     }
   } catch (e: unknown) {
     toast.error(e instanceof Error ? e.message : 'Bulk delete failed')
@@ -1277,7 +1294,7 @@ const editableSelectedAliases = computed(() => {
 
 function openBulkEdit() {
   if (editableSelectedNames.value.length === 0) {
-    toast.error(t('admin.bulkEditNoneEditable'))
+    toast.error(_t('None of the selected boards is editable (all are read-only).'))
     return
   }
   if (editableSelectedNames.value.length === 1) {
@@ -1306,10 +1323,10 @@ async function doBulkEdit(updates: Record<string, unknown>) {
     const result = await boardsStore.bulkEditBoards(targets, updates)
     showBulkEdit.value = false
     if (result.failed.length === 0) {
-      toast.success(t('admin.bulkEditSuccess', { n: result.updated.length }))
+      toast.success(_t('Updated %{n} boards', { n: result.updated.length }))
     } else {
       toast.error(
-        t('admin.bulkEditPartial', {
+        _t('Updated %{ok}, %{fail} failed', {
           ok: result.updated.length,
           fail: result.failed.length
         })
@@ -1327,7 +1344,7 @@ async function doBulkExport() {
   bulkBusy.value = true
   try {
     await boardsStore.bulkExportBoards(selectedNames.value)
-    toast.success(t('admin.bulkExportSuccess', { n: selectedNames.value.length }))
+    toast.success(_t('Exported %{n} boards', { n: selectedNames.value.length }))
   } catch (e: unknown) {
     toast.error(e instanceof Error ? e.message : 'Bulk export failed')
   } finally {
@@ -1375,7 +1392,7 @@ async function importBoard(event: Event) {
     }
     await boardsStore.fetchBoards()
   } catch (e: unknown) {
-    alert(e instanceof Error ? e.message : t('admin.importFailed'))
+    alert(e instanceof Error ? e.message : _t('Import failed'))
   } finally {
     ;(event.target as HTMLInputElement).value = ''
   }
@@ -1389,7 +1406,7 @@ async function confirmImportOverwrite() {
     await action()
     await boardsStore.fetchBoards()
   } catch (e: unknown) {
-    alert(e instanceof Error ? e.message : t('admin.importFailed'))
+    alert(e instanceof Error ? e.message : _t('Import failed'))
   }
 }
 
@@ -1431,7 +1448,7 @@ async function doClone() {
     await boardsStore.fetchBoards()
     confirmClone.value = null
   } catch (e: unknown) {
-    cloneError.value = e instanceof Error ? e.message : t('admin.cloneFailed')
+    cloneError.value = e instanceof Error ? e.message : _t('Clone failed')
   }
 }
 

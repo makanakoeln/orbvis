@@ -20,10 +20,10 @@
     <input
       ref="inputRef"
       v-model="local"
-      :placeholder="placeholder ?? t('board.search.placeholder')"
+      :placeholder="placeholder ?? _t('Search — type \'/\' for operators')"
       type="search"
       class="board-search__input"
-      :aria-label="placeholder ?? t('board.search.placeholder')"
+      :aria-label="placeholder ?? _t('Search — type \'/\' for operators')"
       @focus="syncDropdownFromInput"
       @input="syncDropdownFromInput"
       @keydown.escape.stop="closeDropdown"
@@ -32,8 +32,8 @@
       v-if="local"
       type="button"
       class="board-search__icon-btn"
-      :title="t('board.search.clear')"
-      :aria-label="t('board.search.clear')"
+      :title="_t('Clear search')"
+      :aria-label="_t('Clear search')"
       @click="clearAll"
     >
       ×
@@ -42,8 +42,8 @@
       type="button"
       class="board-search__icon-btn board-search__help"
       :class="{ 'board-search__help--active': dropdownOpen }"
-      :title="t('board.search.operatorHelpTitle')"
-      :aria-label="t('board.search.operatorHelpTitle')"
+      :title="_t('Show search operators')"
+      :aria-label="_t('Show search operators')"
       :aria-expanded="dropdownOpen"
       @click="toggleDropdown"
     >
@@ -53,7 +53,7 @@
 
     <div v-if="dropdownOpen" class="board-search__dropdown" role="listbox" @mousedown.prevent>
       <div class="board-search__dropdown-title">
-        {{ t('board.search.operatorDropdownTitle') }}
+        {{ _t("Type '/' to use a search operator") }}
       </div>
       <ul class="board-search__operator-list">
         <li
@@ -64,7 +64,7 @@
           @click="applyOperator(op.prefix)"
         >
           <span class="board-search__operator-tag">{{ op.prefix }}:</span>
-          <span class="board-search__operator-label">{{ t(op.labelKey) }}</span>
+          <span class="board-search__operator-label">{{ op.label }}</span>
         </li>
       </ul>
       <div class="board-search__info">
@@ -79,7 +79,9 @@
           <line x1="12" y1="11" x2="12" y2="16" />
           <circle cx="12" cy="8" r="0.5" fill="currentColor" />
         </svg>
-        <span>{{ t('board.search.operatorInfo') }}</span>
+        <span>{{
+          _t('Without a prefix all fields are searched. Multiple terms are AND-combined.')
+        }}</span>
       </div>
     </div>
   </div>
@@ -87,7 +89,8 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
-import { useI18n } from 'vue-i18n'
+
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   modelValue: string
@@ -100,19 +103,18 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ 'update:modelValue': [string] }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
-const OPERATORS = [
-  { prefix: 'h', labelKey: 'board.search.operator.host' },
-  { prefix: 's', labelKey: 'board.search.operator.service' },
-  { prefix: 'hg', labelKey: 'board.search.operator.hostgroup' },
-  { prefix: 'sg', labelKey: 'board.search.operator.servicegroup' },
-  { prefix: 'id', labelKey: 'board.search.operator.id' }
-] as const
-
-const operators = computed(() =>
-  OPERATORS.filter((op) => !props.excludePrefixes?.includes(op.prefix))
-)
+const operators = computed(() => {
+  const all = [
+    { prefix: 'h', label: _t('Host') },
+    { prefix: 's', label: _t('Service') },
+    { prefix: 'hg', label: _t('Host group') },
+    { prefix: 'sg', label: _t('Service group') },
+    { prefix: 'id', label: _t('Object ID') }
+  ]
+  return all.filter((op) => !props.excludePrefixes?.includes(op.prefix))
+})
 
 const local = computed({
   get: () => props.modelValue,

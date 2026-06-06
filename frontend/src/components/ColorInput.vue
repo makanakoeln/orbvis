@@ -25,11 +25,12 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import CmkColorPicker from '@/components/cmk/CmkColorPicker'
 import CmkSwitch from '@/components/cmk/CmkSwitch'
 import CmkInput from '@/components/cmk/user-input/CmkInput'
+
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   modelValue: string | null | undefined
@@ -44,7 +45,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [string | null] }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 // Blur on teardown: the native color popup lingers if its input unmounts open.
 const rootEl = ref<HTMLElement | null>(null)
@@ -74,7 +75,9 @@ const hexValidators = computed(() =>
           const v = (value ?? '').trim()
           if (!v) return []
           if (v === (props.noneValue ?? '')) return []
-          return HEX_RE.test(v) ? [] : [t('common.invalidHex')]
+          return HEX_RE.test(v)
+            ? []
+            : [_t("Use a 6-digit hex code like '#ffffff' or 'transparent'")]
         }
       ]
     : []

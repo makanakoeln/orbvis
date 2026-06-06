@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   modelValue: boolean
@@ -10,7 +10,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
 }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 </script>
 
 <template>
@@ -18,7 +18,7 @@ const { t } = useI18n()
     type="button"
     class="problems-only-toggle"
     :class="{ 'problems-only-toggle--active': modelValue }"
-    :title="props.title ?? t('board.problemsOnly')"
+    :title="props.title ?? _t('Show only problems')"
     :aria-pressed="modelValue"
     @click="emit('update:modelValue', !modelValue)"
   >

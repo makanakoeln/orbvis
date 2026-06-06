@@ -11,7 +11,7 @@
           v-if="closable"
           type="button"
           class="orb-modal__close"
-          :aria-label="t('common.close')"
+          :aria-label="_t('Close')"
           @click="$emit('close')"
         >
           <svg
@@ -38,10 +38,11 @@
 
 <script setup lang="ts">
 import { DialogTitle } from 'reka-ui'
-import { useI18n } from 'vue-i18n'
 
 import CmkPopup from '@/components/cmk/CmkPopup'
 import CmkHeading from '@/components/cmk/typography/CmkHeading'
+
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 withDefaults(
   defineProps<{
@@ -54,7 +55,7 @@ withDefaults(
 
 defineEmits<{ close: [] }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 </script>
 
 <style scoped>

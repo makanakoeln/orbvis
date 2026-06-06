@@ -76,3 +76,4 @@ reports/
 audit/
 orbvis-cmk-*.mkp
 orbvis-cmk-*.zip
+frontend/locale/messages.pot

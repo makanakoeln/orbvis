@@ -43,7 +43,7 @@ vi.mock('@/router', () => ({
 }))
 
 vi.mock('@/i18n', () => ({
-  i18n: { global: { locale: { value: 'en' } } }
+  setLanguage: vi.fn().mockResolvedValue(undefined)
 }))
 
 const sampleUser: UserRead = {

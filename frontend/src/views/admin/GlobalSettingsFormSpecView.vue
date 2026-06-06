@@ -26,7 +26,16 @@
             <span
               v-if="g.modified > 0"
               class="settings-page__topic-badge"
-              :title="t('settings.modifiedHint', { n: g.modified })"
+              :title="
+                g.modified === 0
+                  ? _t('no changes')
+                  : _tn(
+                      '1 field changed since last save',
+                      '%{n} fields changed since last save',
+                      g.modified,
+                      { n: g.modified }
+                    )
+              "
             >
               {{ g.modified }}
             </span>
@@ -54,10 +63,10 @@
       >
         <div v-if="saveBarHasActions" class="settings-page__savebar-actions">
           <CmkButton variant="optional" :disabled="saving" @click="resetForm">
-            {{ t('common.discardChanges') }}
+            {{ _t('Discard changes') }}
           </CmkButton>
           <CmkButton variant="primary" :disabled="saving" @click="handleSave">
-            {{ saving ? t('common.saving') : t('common.save') }}
+            {{ saving ? _t('Saving…') : _t('Save') }}
           </CmkButton>
         </div>
       </CmkAlertBox>
@@ -75,7 +84,6 @@
 import FormEdit from '@cmk/form/FormEdit.vue'
 import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbUnsavedChangesDialog from '@/components/OrbUnsavedChangesDialog.vue'
 import CmkAlertBox from '@/components/cmk/CmkAlertBox'
@@ -89,6 +97,7 @@ import { useFormSpecSchema } from '@/composables/useFormSpecSchema'
 import { useSaveBarState } from '@/composables/useSaveBarState'
 import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
 import { useAuthStore } from '@/stores/auth'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 type Validation = NonNullable<VueFormspecComponents['validation_message']>[]
 
@@ -119,7 +128,7 @@ function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-const { t } = useI18n()
+const { _t, _tn } = usei18n()
 const auth = useAuthStore()
 
 const {
@@ -144,10 +153,12 @@ let saveErrorTimer: ReturnType<typeof setTimeout> | null = null
 const dirty = computed(() => JSON.stringify(data.value) !== JSON.stringify(initialData.value))
 
 const heading = computed(
-  () => (schema.value as DictionarySchema | null)?.title ?? t('settings.title')
+  () => (schema.value as DictionarySchema | null)?.title ?? _t('Global Settings')
 )
 const subtitle = computed(
-  () => (schema.value as DictionarySchema | null)?.help || t('settings.subtitle')
+  () =>
+    (schema.value as DictionarySchema | null)?.help ||
+    _t('Default values applied when creating new boards and objects')
 )
 
 function sidebarKey(rawKey: string): string {
@@ -163,8 +174,7 @@ const sidebarGroups = computed<{ key: string; title: string; modified: number }[
   for (const el of dict.elements) {
     const rawKey = el.group?.key ?? '-ungrouped-'
     const key = sidebarKey(rawKey)
-    const title =
-      key === OBJECT_VIRTUAL_KEY ? t('settings.objectDefaults') : el.group?.title || rawKey
+    const title = key === OBJECT_VIRTUAL_KEY ? _t('Object defaults') : el.group?.title || rawKey
     const entry = acc.get(key) ?? { title, modified: 0 }
     const here = el.name in cur
     const before = el.name in orig
@@ -288,7 +298,7 @@ async function syncFactoryDecorations() {
         btn.type = 'button'
         btn.className = 'orb-factory-reset'
         btn.dataset.name = fieldName
-        btn.title = t('settings.resetToFactory')
+        btn.title = _t('Reset this field to the factory default')
         btn.textContent = '↺'
         btn.addEventListener('click', (e) => {
           e.preventDefault()
@@ -343,7 +353,10 @@ function toFormValidation(detail: unknown): { messages: Validation; summary: str
     replacement_value: e.input ?? null
   }))
   const field = first.loc.filter((s) => s !== 'body').join('.') || 'value'
-  return { messages, summary: t('settings.validationFailed', { field, msg: clean(first.msg) }) }
+  return {
+    messages,
+    summary: _t('Cannot save: %{field} — %{msg}', { field, msg: clean(first.msg) })
+  }
 }
 
 async function handleSave() {
@@ -382,7 +395,7 @@ async function handleSave() {
         saveError.value = e.message
       }
     } else {
-      saveError.value = e instanceof Error ? e.message : t('admin.saveFailed')
+      saveError.value = e instanceof Error ? e.message : _t('Save failed')
     }
     if (saveErrorTimer) clearTimeout(saveErrorTimer)
     saveErrorTimer = setTimeout(() => {

@@ -3,7 +3,7 @@
     <div class="orb-hover__card">
       <!-- No permission: skip all templates and show only this -->
       <div v-if="isNoPermission" class="orb-hover__empty">
-        {{ t('board.noPermission') }}
+        {{ _t('No permission') }}
       </div>
 
       <!-- NOT_FOUND: object referenced on the board doesn't exist in monitoring data. -->
@@ -11,7 +11,7 @@
         <div class="orb-hover__empty-name">
           {{ displayName }}
         </div>
-        {{ t('board.notFound') }}
+        {{ _t('Not found in monitoring data') }}
       </div>
 
       <!-- Custom template — sanitized via sanitizeTemplateHtml before rendering -->
@@ -31,7 +31,7 @@
             {{ state.state }}
           </span>
           <span v-if="hasMonitoring && state && stateDuration" class="orb-hover__since">
-            {{ t('board.hover.since', { duration: stateDuration }) }}
+            {{ _t('since %{duration}', { duration: stateDuration }) }}
           </span>
         </div>
         <!-- Subtitle: type · alias · address · @site (full width, second row) -->
@@ -98,7 +98,7 @@
               <span
                 v-if="state.notifications_enabled === false"
                 class="orb-hover__badge orb-hover__badge--warn"
-                :title="t('board.hover.notificationsDisabled')"
+                :title="_t('Notifications disabled — alerts will not be sent for this host')"
               >
                 <svg
                   class="orb-hover__badge-icon"
@@ -189,7 +189,6 @@
 
 <script setup lang="ts">
 import { type CSSProperties, computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import { metricsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
@@ -199,6 +198,7 @@ import { type PerfMetric, parsePerfData, utilColor, utilPercent } from '@/utils/
 import { sanitizeTemplateHtml } from '@/utils/sanitize'
 import { interpolateTemplate } from '@/utils/template'
 import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   object: BoardObject
@@ -213,7 +213,7 @@ const props = defineProps<{
   anchorRect?: { left: number; top: number; right: number; bottom: number } | null
 }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const authStore = useAuthStore()
 
 const cmkPerfometer = ref<PerfometerResult | null>(null)
@@ -450,7 +450,7 @@ const nextCheckText = computed((): NextCheckText | null => {
   const future = formatRelativeFuture(ts, nowMs.value)
   if (future) {
     return {
-      text: t('board.hover.nextCheckIn', { duration: future }),
+      text: _t('next check in %{duration}', { duration: future }),
       cls: ''
     }
   }
@@ -469,7 +469,7 @@ const nextCheckText = computed((): NextCheckText | null => {
   const overdue = formatRelativeDuration(ts, nowMs.value)
   if (!overdue) return null
   return {
-    text: t('board.hover.checkOverdue', { duration: overdue }),
+    text: _t('check overdue by %{duration}', { duration: overdue }),
     cls: 'orb-hover__next-check--overdue'
   }
 })

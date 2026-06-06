@@ -2,10 +2,10 @@
   <div class="orb-gset">
     <div style="margin-bottom: var(--dimension-6)">
       <CmkHeading type="h2">
-        {{ t('settings.title') }}
+        {{ _t('Global Settings') }}
       </CmkHeading>
       <CmkParagraph class="admin-subtitle">
-        {{ t('settings.subtitle') }}
+        {{ _t('Default values applied when creating new boards and objects') }}
       </CmkParagraph>
     </div>
 
@@ -15,7 +15,7 @@
 
     <div v-else>
       <!-- Group: Defaults applied when creating a new board -->
-      <h3 class="orb-group-heading">{{ t('settings.groupBoardCreation') }}</h3>
+      <h3 class="orb-group-heading">{{ _t('When creating a new board') }}</h3>
       <div class="orb-gset__cards">
         <!-- New board defaults -->
         <section class="orb-gset__card">
@@ -24,7 +24,7 @@
             @click="sectionOpen.newBoardDefaults = !sectionOpen.newBoardDefaults"
           >
             <h3 class="orb-gset__card-title">
-              {{ t('settings.newBoardDefaults') }}
+              {{ _t('New board defaults') }}
             </h3>
             <svg
               class="orb-gset__chevron"
@@ -44,7 +44,7 @@
           <CmkCollapsible :open="sectionOpen.newBoardDefaults">
             <div class="orb-gset__card-body orb-gset__field-row">
               <label class="orb-gset__label">
-                <span class="orb-gset__field-label">{{ t('board.connection') }}</span>
+                <span class="orb-gset__field-label">{{ _t('Connection') }}</span>
                 <CmkDropdown
                   class="orb-gset__select orb-gset__select--wide"
                   :selected-option="form.default_backend_id || null"
@@ -55,7 +55,7 @@
               </label>
 
               <label class="orb-gset__label">
-                <span class="orb-gset__field-label">{{ t('board.boardType') }}</span>
+                <span class="orb-gset__field-label">{{ _t('Board type') }}</span>
                 <CmkDropdown
                   class="orb-gset__select"
                   :selected-option="form.default_map_type || null"
@@ -70,7 +70,7 @@
       </div>
 
       <!-- Group: Defaults applied to objects rendered on a board -->
-      <h3 class="orb-group-heading">{{ t('settings.groupObjectDefaults') }}</h3>
+      <h3 class="orb-group-heading">{{ _t('When rendering objects on a board') }}</h3>
       <div class="orb-gset__cards">
         <!-- Icon defaults -->
         <section class="orb-gset__card">
@@ -79,7 +79,7 @@
             @click="sectionOpen.iconDefaults = !sectionOpen.iconDefaults"
           >
             <h3 class="orb-gset__card-title">
-              {{ t('settings.iconDefaults') }}
+              {{ _t('Icon defaults') }}
             </h3>
             <svg
               class="orb-gset__chevron"
@@ -99,20 +99,20 @@
           <CmkCollapsible :open="sectionOpen.iconDefaults">
             <div class="orb-gset__card-body orb-gset__field-row">
               <label class="orb-gset__label">
-                <span class="orb-gset__field-label">{{ t('board.iconSize') }}</span>
+                <span class="orb-gset__field-label">{{ _t('Icon size') }}</span>
                 <NumberInput v-model="form.icon_size" min="8" max="256" class="orb-gset__num" />
               </label>
 
               <label class="orb-gset__label">
-                <span class="orb-gset__field-label">{{ t('boardSettings.viewType') }}</span>
+                <span class="orb-gset__field-label">{{ _t('View type') }}</span>
                 <CmkToggleButtonGroup
                   v-model="form.view_type"
                   :options="[
-                    { value: 'icon', label: t('boardSettings.viewTypeIcon') },
-                    { value: 'text', label: t('boardSettings.viewTypeText') },
+                    { value: 'icon', label: _t('Icon') },
+                    { value: 'text', label: _t('Text only') },
                     {
                       value: 'gadget',
-                      label: t('boardSettings.viewTypeGadget')
+                      label: _t('Gadget')
                     }
                   ]"
                 />
@@ -120,8 +120,8 @@
 
               <label class="orb-gset__label">
                 <span class="orb-gset__field-label orb-gset__field-label--help">
-                  {{ t('boardSettings.z') }}
-                  <CmkHelpText :help="t('settings.zHint')" />
+                  {{ _t('Z') }}
+                  <CmkHelpText :help="_t('Stacking order – higher = in front')" />
                 </span>
                 <NumberInput v-model="form.z" min="1" max="999" class="orb-gset__num" />
               </label>
@@ -136,7 +136,7 @@
             @click="sectionOpen.lineDefaults = !sectionOpen.lineDefaults"
           >
             <h3 class="orb-gset__card-title">
-              {{ t('settings.lineDefaults') }}
+              {{ _t('Line defaults') }}
             </h3>
             <svg
               class="orb-gset__chevron"
@@ -156,7 +156,7 @@
           <CmkCollapsible :open="sectionOpen.lineDefaults">
             <div class="orb-gset__card-body orb-gset__field-row">
               <label class="orb-gset__label">
-                <span class="orb-gset__field-label">{{ t('boardSettings.lineStyle') }}</span>
+                <span class="orb-gset__field-label">{{ _t('Style') }}</span>
                 <CmkDropdown
                   class="orb-gset__select"
                   :selected-option="form.line_style ?? null"
@@ -171,13 +171,13 @@
               </label>
 
               <label class="orb-gset__label">
-                <span class="orb-gset__field-label">{{ t('boardSettings.target') }}</span>
+                <span class="orb-gset__field-label">{{ _t('Target') }}</span>
                 <CmkToggleButtonGroup
                   v-model="form.url_target"
                   :options="[
-                    { value: '_blank', label: t('boardSettings.targetNewTab') },
-                    { value: '_self', label: t('boardSettings.targetSameTab') },
-                    { value: '_top', label: t('boardSettings.targetTopFrame') }
+                    { value: '_blank', label: _t('New tab') },
+                    { value: '_self', label: _t('Same tab') },
+                    { value: '_top', label: _t('Top frame') }
                   ]"
                 />
               </label>
@@ -198,12 +198,12 @@
             @keydown.space.prevent="sectionOpen.labelDefaults = !sectionOpen.labelDefaults"
           >
             <h3 class="orb-gset__card-title">
-              {{ t('settings.labelDefaults') }}
+              {{ _t('Label defaults') }}
             </h3>
             <div class="orb-gset__card-actions" @click.stop>
               <label class="orb-gset__switch-label">
                 <CmkSwitch v-model:data="form.label_show" />
-                <span>{{ t('boardSettings.showLabel') }}</span>
+                <span>{{ _t('Show label') }}</span>
               </label>
               <svg
                 class="orb-gset__chevron orb-gset__chevron--pointer"
@@ -230,11 +230,11 @@
               >
                 <div class="label-subsection">
                   <p class="orb-section-title">
-                    {{ t('settings.labelAppearance') }}
+                    {{ _t('Appearance') }}
                   </p>
                   <div class="orb-gset__field-row">
                     <label class="orb-gset__label">
-                      <span class="orb-gset__field-label">{{ t('boardSettings.size') }} (px)</span>
+                      <span class="orb-gset__field-label">{{ _t('Size') }} (px)</span>
                       <NumberInput
                         v-model="form.label_size"
                         min="6"
@@ -244,7 +244,7 @@
                     </label>
 
                     <label class="orb-gset__label">
-                      <span class="orb-gset__field-label">{{ t('boardSettings.color') }}</span>
+                      <span class="orb-gset__field-label">{{ _t('Color') }}</span>
                       <ColorInput v-model="form.label_color" default-color="#ffffff" />
                     </label>
                   </div>
@@ -252,11 +252,11 @@
 
                 <div class="label-subsection">
                   <p class="orb-section-title">
-                    {{ t('boardSettings.background') }}
+                    {{ _t('Background') }}
                   </p>
                   <ColorInput
                     v-model="form.label_background"
-                    :enable-label="t('settings.useLabelBackground')"
+                    :enable-label="_t('Use background color')"
                     none-value="transparent"
                     default-color="#000000"
                   />
@@ -273,7 +273,7 @@
             @click="sectionOpen.templates = !sectionOpen.templates"
           >
             <h3 class="orb-gset__card-title">
-              {{ t('settings.templates') }}
+              {{ _t('Templates') }}
             </h3>
             <svg
               class="orb-gset__chevron"
@@ -293,22 +293,26 @@
           <CmkCollapsible :open="sectionOpen.templates">
             <div class="orb-gset__card-body orb-gset__template-stack">
               <p class="orb-gset__hint">
-                {{ t('settings.templatesSubtitle') }}
+                {{
+                  _t(
+                    'Global fallback — applies to any board or object without its own template set'
+                  )
+                }}
               </p>
               <label class="orb-gset__label">
-                <span class="orb-gset__field-label">{{ t('settings.hoverTemplate') }}</span>
+                <span class="orb-gset__field-label">{{ _t('Hover template') }}</span>
                 <CmkInput
                   v-model="form.hover_template"
-                  :placeholder="t('board.templatePlaceholder')"
+                  :placeholder="_t('e.g. {{name}} is {{state}}')"
                   field-size="FILL"
                 />
               </label>
 
               <label class="orb-gset__label">
-                <span class="orb-gset__field-label">{{ t('settings.contextTemplate') }}</span>
+                <span class="orb-gset__field-label">{{ _t('Context template') }}</span>
                 <CmkInput
                   v-model="form.context_template"
-                  :placeholder="t('board.templatePlaceholder')"
+                  :placeholder="_t('e.g. {{name}} is {{state}}')"
                   field-size="FILL"
                 />
               </label>
@@ -336,14 +340,14 @@
             >
               <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
-            {{ t('common.saved') }}
+            {{ _t('Saved') }}
           </span>
         </Transition>
         <CmkButton variant="secondary" :disabled="!dirty" @click="resetForm">{{
-          t('common.cancel')
+          _t('Cancel')
         }}</CmkButton>
         <CmkButton variant="primary" :disabled="saving || !dirty" @click="handleSave">
-          {{ saving ? t('common.saving') : t('common.save') }}
+          {{ saving ? _t('Saving…') : _t('Save') }}
         </CmkButton>
       </div>
     </div>
@@ -352,7 +356,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import ColorInput from '@/components/ColorInput.vue'
 import NumberInput from '@/components/NumberInput.vue'
@@ -371,8 +374,9 @@ import { useConnectionsStore } from '@/stores/connections'
 import { useSettingsStore } from '@/stores/settings'
 import type { GlobalSettings, LineStyle } from '@/types/api'
 import { boardTypeOptions, lineStyleOptions } from '@/utils/dropdownOptions'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const store = useSettingsStore()
 const connectionsStore = useConnectionsStore()
 
@@ -413,13 +417,13 @@ const mapTypeOptions = computed(() => ({
   // Offer folder-tree as a default board type only when the feature flag is on,
   // or when it is already the configured default (so it isn't silently dropped).
   suggestions: boardTypeOptions(
-    t,
+    _t,
     store.system.enable_folder_boards || form.default_map_type === 'foldertree'
   )
 }))
 const lineStyleOpts = computed(() => ({
   type: 'fixed' as const,
-  suggestions: lineStyleOptions(t)
+  suggestions: lineStyleOptions(_t)
 }))
 const dirty = computed(() => JSON.stringify(form) !== JSON.stringify(store.settings))
 
@@ -448,7 +452,7 @@ async function handleSave() {
       savedOk.value = false
     }, 3000)
   } catch {
-    saveError.value = t('admin.saveFailed')
+    saveError.value = _t('Save failed')
     if (saveErrorTimer) clearTimeout(saveErrorTimer)
     saveErrorTimer = setTimeout(() => {
       saveError.value = ''

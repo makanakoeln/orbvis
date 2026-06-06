@@ -3,10 +3,10 @@
     <div class="orb-users__header">
       <div>
         <CmkHeading type="h2">
-          {{ t('admin.users') }}
+          {{ _t('Users') }}
         </CmkHeading>
         <CmkParagraph class="admin-subtitle">
-          {{ t('admin.usersSubtitle') }}
+          {{ _t('Manage user accounts and permissions') }}
         </CmkParagraph>
       </div>
       <CmkButton variant="primary" @click="showCreate = true">
@@ -19,7 +19,7 @@
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        {{ t('admin.newUser') }}
+        {{ _t('New User') }}
       </CmkButton>
     </div>
 
@@ -32,19 +32,19 @@
         <thead>
           <tr class="orb-users__head-row">
             <th class="orb-users__th">
-              {{ t('admin.name') }}
+              {{ _t('Name') }}
             </th>
             <th class="orb-users__th">
-              {{ t('admin.type') }}
+              {{ _t('Type') }}
             </th>
             <th class="orb-users__th">
-              {{ t('admin.status') }}
+              {{ _t('Status') }}
             </th>
             <th class="orb-users__th">
-              {{ t('admin.roles') }}
+              {{ _t('Roles') }}
             </th>
             <th class="orb-users__th orb-users__th--right">
-              {{ t('admin.actions') }}
+              {{ _t('Actions') }}
             </th>
           </tr>
         </thead>
@@ -55,9 +55,9 @@
             </td>
             <td class="orb-users__td">
               <CmkBadge v-if="user.is_admin" size="small" type="outline" color="warning">{{
-                t('admin.admin')
+                _t('Admin')
               }}</CmkBadge>
-              <span v-else class="orb-users__user-type">{{ t('admin.user') }}</span>
+              <span v-else class="orb-users__user-type">{{ _t('User') }}</span>
             </td>
             <td class="orb-users__td">
               <span
@@ -67,7 +67,7 @@
                 "
               >
                 <span class="orb-users__status-dot" />
-                {{ user.is_active ? t('admin.active') : t('admin.inactive') }}
+                {{ user.is_active ? _t('Active') : _t('Inactive') }}
               </span>
             </td>
             <td class="orb-users__td orb-users__td--roles">
@@ -84,7 +84,7 @@
                   <button
                     v-if="canEditUsers"
                     class="orb-users__action-btn orb-users__action-btn--edit"
-                    :title="t('common.edit')"
+                    :title="_t('Edit')"
                     @click="editUser = user"
                   >
                     <svg
@@ -103,7 +103,7 @@
                   </button>
                   <button
                     class="orb-users__action-btn orb-users__action-btn--delete"
-                    :title="t('common.delete')"
+                    :title="_t('Delete')"
                     @click="deleteTargetId = user.user_id"
                   >
                     <svg
@@ -129,15 +129,10 @@
       </table>
     </div>
 
-    <OrbModal
-      :open="showCreate"
-      :title="t('admin.createUser')"
-      closable
-      @close="showCreate = false"
-    >
+    <OrbModal :open="showCreate" :title="_t('Create User')" closable @close="showCreate = false">
       <form class="users-create__form" @submit.prevent="createUser">
         <div class="users-create__field">
-          <CmkLabel>{{ t('auth.username') }}</CmkLabel>
+          <CmkLabel>{{ _t('Username') }}</CmkLabel>
           <CmkInput
             v-model="newUser.name"
             placeholder="john"
@@ -147,7 +142,7 @@
         </div>
 
         <div class="users-create__field">
-          <CmkLabel>{{ t('auth.password') }}</CmkLabel>
+          <CmkLabel>{{ _t('Password') }}</CmkLabel>
           <CmkInput
             v-model="newUser.password"
             type="password"
@@ -155,12 +150,12 @@
             field-size="FILL"
           />
           <p class="users-create__hint">
-            {{ t('userSettings.passwordMinLength') }}
+            {{ _t('At least 6 characters') }}
           </p>
         </div>
 
         <div class="users-create__field">
-          <CmkLabel>{{ t('userSettings.confirmPassword') }}</CmkLabel>
+          <CmkLabel>{{ _t('Confirm password') }}</CmkLabel>
           <CmkInput
             v-model="newUserConfirmPassword"
             type="password"
@@ -171,21 +166,21 @@
             v-if="newUserConfirmPassword && newUser.password !== newUserConfirmPassword"
             class="users-create__mismatch"
           >
-            {{ t('userSettings.passwordMismatch') }}
+            {{ _t('Passwords do not match.') }}
           </p>
         </div>
 
         <div class="users-create__section">
           <div class="users-create__checkbox-row">
-            <CmkCheckbox v-model="newUser.is_admin" :label="t('admin.administrator')" />
+            <CmkCheckbox v-model="newUser.is_admin" :label="_t('Administrator')" />
             <p class="users-create__checkbox-hint">
-              {{ t('admin.administratorHint') }}
+              {{ _t('Full access to all admin functions') }}
             </p>
           </div>
 
           <CmkCheckbox
             v-model="newUser.must_change_password"
-            :label="t('admin.mustChangePassword')"
+            :label="_t('Must change password on next login')"
           />
         </div>
 
@@ -194,7 +189,7 @@
           class="users-create__section users-create__section--roles"
         >
           <p class="users-create__group-label">
-            {{ t('admin.roles') }}
+            {{ _t('Roles') }}
           </p>
           <div v-for="role in availableRoles" :key="role.role_id">
             <CmkCheckbox
@@ -214,23 +209,23 @@
       </form>
       <template #footer>
         <CmkButton variant="secondary" @click="showCreate = false">
-          {{ t('common.cancel') }}
+          {{ _t('Cancel') }}
         </CmkButton>
         <CmkButton
           variant="primary"
           :disabled="creating || newUser.password !== newUserConfirmPassword"
           @click="createUser"
         >
-          {{ creating ? t('common.saving') : t('common.create') }}
+          {{ creating ? _t('Saving…') : _t('Create') }}
         </CmkButton>
       </template>
     </OrbModal>
 
     <OrbConfirmDialog
       :open="deleteTargetId !== null"
-      :title="t('admin.deleteUser')"
-      :message="t('board.cannotBeUndone')"
-      :confirm-label="t('common.delete')"
+      :title="_t('Delete this user?')"
+      :message="_t('This cannot be undone.')"
+      :confirm-label="_t('Delete')"
       @confirm="confirmDeleteUser"
       @cancel="deleteTargetId = null"
     />
@@ -249,7 +244,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue'
 import OrbModal from '@/components/OrbModal.vue'
@@ -267,8 +261,9 @@ import { rolesApi, usersApi } from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import type { RoleRead, UserRead } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const auth = useAuthStore()
 const toast = useToast()
 const users = ref<UserRead[]>([])
@@ -316,10 +311,10 @@ async function createUser() {
     )
     showCreate.value = false
     newUser.value = { name: '', password: '', is_admin: false, must_change_password: false }
-    toast.success(t('admin.userCreated', { name: created.name }))
+    toast.success(_t('User "%{name}" created', { name: created.name }))
     await fetchUsers()
   } catch (e: unknown) {
-    createError.value = e instanceof Error ? e.message : t('admin.saveFailed')
+    createError.value = e instanceof Error ? e.message : _t('Save failed')
   } finally {
     creating.value = false
   }
@@ -333,10 +328,10 @@ async function confirmDeleteUser() {
   deleteTargetId.value = null
   try {
     await usersApi.delete(id, auth.accessToken!)
-    toast.success(t('admin.userDeleted'))
+    toast.success(_t('User deleted'))
     await fetchUsers()
   } catch (e: unknown) {
-    toast.error(e instanceof Error ? e.message : t('admin.deleteFailed'))
+    toast.error(e instanceof Error ? e.message : _t('Delete failed'))
   }
 }
 

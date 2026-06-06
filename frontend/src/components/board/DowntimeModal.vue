@@ -1,36 +1,44 @@
 <template>
-  <OrbModal :open="true" :title="t('downtime.title')" closable @close="$emit('close')">
+  <OrbModal :open="true" :title="_t('Schedule downtime')" closable @close="$emit('close')">
     <p class="downtime-modal__subtitle">{{ displayName }}</p>
-    <p v-if="isGroup" class="downtime-modal__group-hint" :title="t('ack.groupHint')">
-      {{ t('ack.groupScope', { type: groupTypeLabel }) }}
+    <p
+      v-if="isGroup"
+      class="downtime-modal__group-hint"
+      :title="
+        _t(
+          'Checkmk fans this command out across all members; partial failures abort the operation.'
+        )
+      "
+    >
+      {{ _t('Applies to every member of the %{type}', { type: groupTypeLabel }) }}
     </p>
 
     <div class="downtime-modal__fields">
       <div>
-        <label class="downtime-modal__label">{{ t('downtime.startTime') }}</label>
+        <label class="downtime-modal__label">{{ _t('Start') }}</label>
         <input v-model="startTime" type="datetime-local" class="downtime-modal__input" />
       </div>
       <div>
-        <label class="downtime-modal__label">{{ t('downtime.endTime') }}</label>
+        <label class="downtime-modal__label">{{ _t('End') }}</label>
         <input v-model="endTime" type="datetime-local" class="downtime-modal__input" />
       </div>
       <div class="downtime-modal__cmk-field">
-        <CmkLabel>{{ t('downtime.comment') }}</CmkLabel>
-        <CmkInput v-model="comment" field-size="FILL" :placeholder="t('downtime.comment') + '…'" />
+        <CmkLabel>{{ _t('Comment') }}</CmkLabel>
+        <CmkInput v-model="comment" field-size="FILL" :placeholder="_t('Comment') + '…'" />
       </div>
     </div>
 
     <CmkAlertBox v-if="error" variant="error" size="small">
       <span style="white-space: pre-line">{{ error }}</span>
     </CmkAlertBox>
-    <p v-if="success" class="downtime-modal__success">{{ t('downtime.success') }}</p>
+    <p v-if="success" class="downtime-modal__success">{{ _t('Downtime scheduled') }}</p>
 
     <template #footer>
       <CmkButton variant="secondary" @click="$emit('close')">
-        {{ t('common.cancel') }}
+        {{ _t('Cancel') }}
       </CmkButton>
       <CmkButton variant="primary" :disabled="submitting || !comment.trim()" @click="submit">
-        {{ submitting ? t('downtime.submitting') : t('downtime.submit') }}
+        {{ submitting ? _t('Scheduling…') : _t('Schedule downtime') }}
       </CmkButton>
     </template>
   </OrbModal>
@@ -38,7 +46,6 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbModal from '@/components/OrbModal.vue'
 import CmkAlertBox from '@/components/cmk/CmkAlertBox'
@@ -51,8 +58,9 @@ import { useStatesStore } from '@/stores/states'
 import type { BoardObject } from '@/types/api'
 import { flattenAggregationLeaves } from '@/utils/aggregationTree'
 import { getBoardObjectName } from '@/utils/naming'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const props = defineProps<{
   object: BoardObject
@@ -83,7 +91,7 @@ const isGroup = computed(
 )
 const isAggregation = computed(() => props.object.type === 'aggregation')
 const groupTypeLabel = computed(() =>
-  props.object.type === 'hostgroup' ? t('ack.groupHostgroup') : t('ack.groupServicegroup')
+  props.object.type === 'hostgroup' ? _t('host group') : _t('service group')
 )
 
 const statesStore = useStatesStore()
@@ -113,7 +121,7 @@ async function submit() {
     if (isAggregation.value) {
       const targets = aggregationDowntimeTargets()
       if (!targets.length) {
-        error.value = t('downtime.error')
+        error.value = _t('Failed to schedule downtime')
         return
       }
       const CONCURRENCY = 5
@@ -151,7 +159,7 @@ async function submit() {
       }
       await Promise.all(workers)
       if (failures.length) {
-        error.value = `${failures.length}/${targets.length} ${t('downtime.error')}`
+        error.value = `${failures.length}/${targets.length} ${_t('Failed to schedule downtime')}`
         return
       }
     } else if (props.object.type === 'hostgroup' && props.object.group_name) {
@@ -197,7 +205,7 @@ async function submit() {
     success.value = true
     setTimeout(() => emit('close'), 1200)
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : t('downtime.error')
+    const msg = e instanceof Error ? e.message : _t('Failed to schedule downtime')
     error.value = enrichGroupError(msg)
   } finally {
     submitting.value = false
@@ -209,7 +217,7 @@ async function submit() {
 function enrichGroupError(msg: string): string {
   if (!isGroup.value) return msg
   if (/hostgroup_name|servicegroup_name|Group missing|not monitored/i.test(msg)) {
-    return `${msg}\n\n${t('ack.groupNotConfigured', { type: groupTypeLabel.value })}`
+    return `${msg}\n\n${_t('Tip: Checkmk only accepts bulk actions on %{type}s that are configured in Setup → Host groups (or Service groups). Implicit / livestatus-only groups are rejected by the REST API.', { type: groupTypeLabel.value })}`
   }
   return msg
 }

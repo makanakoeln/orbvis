@@ -56,67 +56,64 @@
               object.type !== 'image'
             "
           >
-            <p class="orb-section-title">{{ t('boardSettings.monitoringObject') }}</p>
+            <p class="orb-section-title">{{ _t('Monitoring object') }}</p>
             <div class="orb-props__fields">
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.connection') }}</label>
+                <label class="field-label">{{ _t('Connection') }}</label>
                 <CmkDropdown
                   class="orb-props__grow"
                   :selected-option="form.connection_id || ''"
                   :options="connectionDropdownOptions"
                   :width="'fill'"
-                  :label="t('boardSettings.connection')"
+                  :label="_t('Connection')"
                   @update:selected-option="form.connection_id = $event ?? ''"
                 />
               </div>
               <template v-if="object.type === 'host' || object.type === 'service'">
                 <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.hostname') }}</label>
+                  <label class="field-label">{{ _t('Hostname') }}</label>
                   <AutocompleteInput
                     v-model="form.host_name"
                     :suggestions="hosts"
                     :loading="loadingHosts"
                     placeholder="hostname"
-                    :empty-text="t('boardSettings.noHosts')"
+                    :empty-text="_t('No hosts available')"
                     class="orb-props__grow"
                   />
                 </div>
               </template>
               <template v-if="object.type === 'service'">
                 <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.typeService') }}</label>
+                  <label class="field-label">{{ _t('Service') }}</label>
                   <AutocompleteInput
                     v-model="form.service_description"
                     :suggestions="services"
                     :loading="loadingServices"
                     placeholder="service description"
-                    :empty-text="t('boardSettings.noServices')"
+                    :empty-text="_t('No services for this host')"
                     class="orb-props__grow"
                   />
                 </div>
               </template>
               <template v-if="object.type === 'host' || object.type === 'service'">
                 <div class="orb-props__checks">
-                  <CmkCheckbox
-                    v-model="form.only_hard_states"
-                    :label="t('boardSettings.onlyHardStates')"
-                  />
+                  <CmkCheckbox v-model="form.only_hard_states" :label="_t('Only hard states')" />
                   <CmkCheckbox
                     v-if="object.type === 'host'"
                     v-model="form.recognize_services"
-                    :label="t('boardSettings.recognizeServices')"
+                    :label="_t('Consider services')"
                   />
                 </div>
               </template>
               <template v-if="object.type === 'hostgroup' || object.type === 'servicegroup'">
                 <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.groupName') }}</label>
+                  <label class="field-label">{{ _t('Group name') }}</label>
                   <AutocompleteInput
                     v-model="form.group_name"
                     :suggestions="groups"
                     :loading="loadingGroups"
                     placeholder="group name"
-                    :empty-text="t('boardSettings.noGroups')"
+                    :empty-text="_t('No groups available')"
                     class="orb-props__grow"
                   />
                 </div>
@@ -147,57 +144,59 @@
               </template>
               <template v-if="object.type === 'map'">
                 <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.boardName') }}</label>
+                  <label class="field-label">{{ _t('Board name') }}</label>
                   <AutocompleteInput
                     v-model="form.map_name"
                     :suggestions="boardNames"
                     :display-labels="boardLabels"
                     placeholder="map-name"
-                    :empty-text="t('boardSettings.noBoards')"
+                    :empty-text="_t('No other boards available')"
                     class="orb-props__grow"
                   />
                 </div>
               </template>
               <template v-if="object.type === 'aggregation'">
                 <div class="field-row">
-                  <label class="field-label">{{
-                    t('boardSettings.aggregationId') || 'BI aggregation'
-                  }}</label>
+                  <label class="field-label">{{ _t('BI aggregation') || 'BI aggregation' }}</label>
                   <AutocompleteInput
                     v-model="form.aggregation_id"
                     :suggestions="aggregationIds"
                     :display-labels="aggregationLabels"
                     :loading="loadingAggregations"
                     placeholder="aggregation id"
-                    :empty-text="t('boardSettings.noAggregations')"
+                    :empty-text="
+                      _t(
+                        'No BI aggregations available — none are configured in Checkmk, or your user has no permission to view them.'
+                      )
+                    "
                     class="orb-props__grow"
                   />
                 </div>
                 <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.expandDepth') }}</label>
+                  <label class="field-label">{{ _t('Expand depth') }}</label>
                   <NumberInput
                     v-model="form.expand_depth"
                     min="0"
                     max="10"
                     class="orb-props__grow"
-                    :title="t('boardSettings.expandDepthHelp')"
+                    :title="_t('Show child nodes up to N levels (0 = root only).')"
                   />
                 </div>
                 <div v-if="(form.expand_depth ?? 0) > 0" class="field-row">
-                  <label class="field-label">{{ t('boardSettings.biLineColor') }}</label>
+                  <label class="field-label">{{ _t('Subtree line') }}</label>
                   <ColorInput
                     v-model="form.line_color"
-                    :enable-label="t('common.useColor')"
+                    :enable-label="_t('Use color')"
                     default-color="#a1a1aa"
                   />
                 </div>
                 <div v-if="(form.expand_depth ?? 0) > 0" class="field-row">
-                  <label class="field-label">{{ t('boardSettings.biLineWidth') }}</label>
+                  <label class="field-label">{{ _t('Subtree width') }}</label>
                   <NumberInput
                     v-model="form.line_width"
                     :min="1"
                     :max="20"
-                    :placeholder="t('boardSettings.lineWidthDefault')"
+                    :placeholder="_t('auto')"
                     class="orb-props__grow"
                   />
                 </div>
@@ -207,45 +206,45 @@
 
           <!-- === TEXTBOX CONTENT + STYLING === -->
           <section v-if="object.type === 'textbox'">
-            <p class="orb-section-title">{{ t('boardSettings.content') }}</p>
+            <p class="orb-section-title">{{ _t('Content') }}</p>
             <textarea
               v-model="form.label.text"
               rows="3"
               class="orb-field orb-props__textarea"
-              :placeholder="t('boardSettings.textContent') + '…'"
+              :placeholder="_t('Text content') + '…'"
             />
             <div class="orb-props__fields">
               <div class="orb-props__grid-2">
                 <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.width') }}</label>
+                  <label class="field-label">{{ _t('Width') }}</label>
                   <NumberInput
                     v-model="form.textbox_width"
-                    :placeholder="t('boardSettings.auto')"
+                    :placeholder="_t('auto')"
                     class="orb-props__grow"
                   />
                 </div>
                 <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.height') }}</label>
+                  <label class="field-label">{{ _t('Height') }}</label>
                   <NumberInput
                     v-model="form.textbox_height"
-                    :placeholder="t('boardSettings.auto')"
+                    :placeholder="_t('auto')"
                     class="orb-props__grow"
                   />
                 </div>
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.background') }}</label>
+                <label class="field-label">{{ _t('Background') }}</label>
                 <ColorInput
                   v-model="form.textbox_background"
-                  :enable-label="t('common.useColor')"
+                  :enable-label="_t('Use color')"
                   default-color="#1a1a2e"
                 />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.borderColor') }}</label>
+                <label class="field-label">{{ _t('Border color') }}</label>
                 <ColorInput
                   v-model="form.textbox_border"
-                  :enable-label="t('common.useColor')"
+                  :enable-label="_t('Use color')"
                   default-color="#e5e5e5"
                 />
               </div>
@@ -256,35 +255,35 @@
           <section v-if="object.type === 'graph'">
             <div class="orb-props__section-head">
               <p class="orb-section-title orb-section-title--flush">
-                {{ t('boardSettings.graphMetricSource') }}
+                {{ _t('Metric Source') }}
               </p>
               <span class="orb-props__badge-experimental">experimental</span>
             </div>
             <div class="orb-props__fields">
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.hostname') }}</label>
+                <label class="field-label">{{ _t('Hostname') }}</label>
                 <AutocompleteInput
                   v-model="form.host_name"
                   :suggestions="hosts"
                   :loading="loadingHosts"
                   placeholder="hostname"
-                  :empty-text="t('boardSettings.noHosts')"
+                  :empty-text="_t('No hosts available')"
                   class="orb-props__grow"
                 />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.typeService') }}</label>
+                <label class="field-label">{{ _t('Service') }}</label>
                 <AutocompleteInput
                   v-model="form.service_description"
                   :suggestions="services"
                   :loading="loadingServices"
                   placeholder="service description"
-                  :empty-text="t('boardSettings.noServices')"
+                  :empty-text="_t('No services for this host')"
                   class="orb-props__grow"
                 />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.graphSource') }}</label>
+                <label class="field-label">{{ _t('Source') }}</label>
                 <div class="orb-props__btn-group">
                   <button
                     v-for="mode in ['auto', 'metrics', 'template'] as const"
@@ -293,14 +292,12 @@
                     :class="graphSource === mode ? 'orb-props__seg-btn--active' : ''"
                     @click="setGraphSource(mode)"
                   >
-                    {{ t(`boardSettings.graphSource_${mode}`) }}
+                    {{ graphSourceLabel[mode] ?? mode }}
                   </button>
                 </div>
               </div>
               <div v-if="graphSource === 'metrics'" class="field-row field-row--start">
-                <label class="field-label field-label--offset-6">{{
-                  t('boardSettings.graphMetric')
-                }}</label>
+                <label class="field-label field-label--offset-6">{{ _t('Metrics') }}</label>
                 <div class="orb-props__metric-col">
                   <div v-if="form.graph_metric.length" class="orb-props__chips">
                     <span v-for="m in form.graph_metric" :key="m" class="orb-props__chip">
@@ -322,10 +319,8 @@
                             !form.graph_metric.includes(metricTitleToId.get(title) ?? title)
                         )
                       "
-                      :placeholder="t('boardSettings.graphMetricAdd')"
-                      :empty-text="
-                        metricSuggestions.length === 0 ? t('boardSettings.noMetrics') : ''
-                      "
+                      :placeholder="_t('Add metric…')"
+                      :empty-text="metricSuggestions.length === 0 ? _t('No metrics available') : ''"
                       class="orb-props__full"
                       @change="addMetric"
                     />
@@ -333,7 +328,7 @@
                 </div>
               </div>
               <div v-if="graphSource === 'template' && graphTemplates.length" class="field-row">
-                <label class="field-label">{{ t('boardSettings.graphTemplate') }}</label>
+                <label class="field-label">{{ _t('Graph template') }}</label>
                 <CmkDropdown
                   class="orb-props__grow"
                   :selected-option="form.graph_id ?? null"
@@ -356,7 +351,7 @@
                 />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.graphTimeWindow') }}</label>
+                <label class="field-label">{{ _t('Time window') }}</label>
                 <CmkDropdown
                   class="orb-props__grow"
                   :selected-option="String(form.graph_time_window)"
@@ -383,10 +378,10 @@
 
           <!-- === GRAPH: URL Embed === -->
           <section v-if="object.type === 'graph'">
-            <p class="orb-section-title">{{ t('boardSettings.graphUrlEmbed') }}</p>
+            <p class="orb-section-title">{{ _t('URL Embed') }}</p>
             <div class="orb-props__fields">
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.graphUrl') }}</label>
+                <label class="field-label">{{ _t('URL') }}</label>
                 <CmkInput
                   v-model="form.graph_url"
                   placeholder="https://… (optional)"
@@ -395,7 +390,7 @@
                 />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.graphEmbedType') }}</label>
+                <label class="field-label">{{ _t('Embed as') }}</label>
                 <CmkDropdown
                   class="orb-props__grow"
                   :selected-option="form.graph_embed_type || null"
@@ -404,11 +399,11 @@
                     suggestions: [
                       {
                         name: 'img',
-                        title: t('boardSettings.graphEmbedImg')
+                        title: _t('Image (img)')
                       },
                       {
                         name: 'iframe',
-                        title: t('boardSettings.graphEmbedIframe')
+                        title: _t('Interactive (iframe)')
                       }
                     ]
                   }"
@@ -420,25 +415,23 @@
               </div>
               <div class="orb-props__grid-2">
                 <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.width') }}</label>
+                  <label class="field-label">{{ _t('Width') }}</label>
                   <NumberInput v-model="form.graph_width" min="50" class="orb-props__grow" />
                 </div>
                 <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.height') }}</label>
+                  <label class="field-label">{{ _t('Height') }}</label>
                   <NumberInput v-model="form.graph_height" min="30" class="orb-props__grow" />
                 </div>
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.graphRefresh') }}</label>
+                <label class="field-label">{{ _t('Auto-refresh (s)') }}</label>
                 <div class="orb-props__inline orb-props__grow">
                   <NumberInput
                     v-model="form.graph_refresh_interval"
                     min="0"
                     class="orb-props__grow"
                   />
-                  <span class="orb-props__inline-label">{{
-                    t('boardSettings.graphRefreshOff')
-                  }}</span>
+                  <span class="orb-props__inline-label">{{ _t('0 = off') }}</span>
                 </div>
               </div>
             </div>
@@ -446,28 +439,28 @@
 
           <!-- === LINE CONFIG === -->
           <section v-if="object.type === 'line'">
-            <p class="orb-section-title">{{ t('boardSettings.monitoringObject') }}</p>
+            <p class="orb-section-title">{{ _t('Monitoring object') }}</p>
             <div class="orb-props__fields">
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.hostname') }}</label>
+                <label class="field-label">{{ _t('Hostname') }}</label>
                 <AutocompleteInput
                   v-model="form.host_name"
                   :suggestions="hosts"
                   :loading="loadingHosts"
                   placeholder="hostname"
-                  :empty-text="t('boardSettings.noHosts')"
+                  :empty-text="_t('No hosts available')"
                   class="orb-props__grow"
                 />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.typeService') }}</label>
+                <label class="field-label">{{ _t('Service') }}</label>
                 <AutocompleteInput
                   v-model="form.service_description"
                   :suggestions="services"
                   :loading="loadingServices"
                   placeholder="service description (optional)"
                   :empty-text="
-                    form.host_name && !loadingServices ? t('boardSettings.noServices') : ''
+                    form.host_name && !loadingServices ? _t('No services for this host') : ''
                   "
                   class="orb-props__grow"
                 />
@@ -475,14 +468,14 @@
             </div>
           </section>
           <section v-if="object.type === 'line'">
-            <p class="orb-section-title">{{ t('boardSettings.lineSection') }}</p>
+            <p class="orb-section-title">{{ _t('Line') }}</p>
             <div class="orb-props__fields">
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.z') }}</label>
+                <label class="field-label">{{ _t('Z') }}</label>
                 <NumberInput v-model="form.z" min="0" max="999" class="orb-props__grow" />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.lineStyle') }}</label>
+                <label class="field-label">{{ _t('Style') }}</label>
                 <CmkDropdown
                   class="orb-props__grow"
                   :selected-option="form.line_style ?? null"
@@ -497,7 +490,7 @@
               </div>
               <!-- Perfdata label mode (none / percent / bandwidth / both) -->
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.linePerfdataLabel') }}</label>
+                <label class="field-label">{{ _t('Perfdata label') }}</label>
                 <CmkDropdown
                   class="orb-props__grow"
                   :selected-option="form.line_perfdata_label ?? 'none'"
@@ -514,7 +507,7 @@
               <div class="field-row">
                 <CmkCheckbox
                   v-model="form.line_weather_color"
-                  :label="t('boardSettings.lineWeatherColor')"
+                  :label="_t('Color by utilization (weathermap)')"
                 />
               </div>
               <!-- Weathermap inbound metric (rendered left of the midpoint) -->
@@ -522,12 +515,12 @@
                 v-if="form.line_perfdata_label !== 'none' || form.line_weather_color"
                 class="field-row"
               >
-                <label class="field-label">{{ t('boardSettings.metricIn') }}</label>
+                <label class="field-label">{{ _t('Metric (in)') }}</label>
                 <AutocompleteInput
                   v-model="form.weathermap_metric"
                   :suggestions="metricSuggestions"
-                  :placeholder="t('boardSettings.firstMetric')"
-                  :empty-text="metricSuggestions.length === 0 ? t('boardSettings.noMetrics') : ''"
+                  :placeholder="_t('first metric')"
+                  :empty-text="metricSuggestions.length === 0 ? _t('No metrics available') : ''"
                   class="orb-props__grow"
                 />
               </div>
@@ -542,12 +535,12 @@
                 "
                 class="field-row"
               >
-                <label class="field-label">{{ t('boardSettings.metricOut') }}</label>
+                <label class="field-label">{{ _t('Metric (out)') }}</label>
                 <AutocompleteInput
                   v-model="form.weathermap_metric_out"
                   :suggestions="metricSuggestions"
-                  :placeholder="t('boardSettings.secondMetric')"
-                  :empty-text="metricSuggestions.length === 0 ? t('boardSettings.noMetrics') : ''"
+                  :placeholder="_t('second metric (optional)')"
+                  :empty-text="metricSuggestions.length === 0 ? _t('No metrics available') : ''"
                   class="orb-props__grow"
                 />
               </div>
@@ -557,57 +550,57 @@
                                      skips the border altogether), so hide them to keep
                                      the dialog honest about what actually takes effect. -->
                 <div v-if="!form.line_weather_color" class="field-row orb-props__span-2">
-                  <label class="field-label">{{ t('boardSettings.lineColor') }}</label>
+                  <label class="field-label">{{ _t('Line color') }}</label>
                   <ColorInput
                     v-model="form.line_color"
-                    :enable-label="t('common.useColor')"
+                    :enable-label="_t('Use color')"
                     default-color="#ffffff"
                   />
                 </div>
                 <div v-if="!form.line_weather_color" class="field-row orb-props__span-2">
-                  <label class="field-label">{{ t('boardSettings.lineColorBorder') }}</label>
+                  <label class="field-label">{{ _t('Border color') }}</label>
                   <ColorInput
                     v-model="form.line_color_border"
-                    :enable-label="t('common.useColor')"
+                    :enable-label="_t('Use color')"
                     default-color="#000000"
                   />
                 </div>
                 <div class="field-row orb-props__span-2">
-                  <label class="field-label">{{ t('boardSettings.lineWidth') }}</label>
+                  <label class="field-label">{{ _t('Line width') }}</label>
                   <NumberInput
                     v-model="form.line_width"
                     :min="1"
                     :max="20"
-                    :placeholder="t('boardSettings.lineWidthDefault')"
+                    :placeholder="_t('auto')"
                     class="orb-props__grow"
                   />
                 </div>
                 <template v-if="mapType !== 'worldmap'">
                   <div class="field-row">
-                    <label class="field-label">{{ t('boardSettings.startX') }}</label>
+                    <label class="field-label">{{ _t('Start X') }}</label>
                     <NumberInput v-model="form.x" min="0" max="10000" class="orb-props__grow" />
                   </div>
                   <div class="field-row">
-                    <label class="field-label">{{ t('boardSettings.y') }}</label>
+                    <label class="field-label">{{ _t('Y') }}</label>
                     <NumberInput v-model="form.y" min="0" max="10000" class="orb-props__grow" />
                   </div>
                   <div class="field-row">
-                    <label class="field-label">{{ t('boardSettings.endX') }}</label>
+                    <label class="field-label">{{ _t('End X') }}</label>
                     <NumberInput v-model="form.x2" min="0" max="10000" class="orb-props__grow" />
                   </div>
                   <div class="field-row">
-                    <label class="field-label">{{ t('boardSettings.y') }}</label>
+                    <label class="field-label">{{ _t('Y') }}</label>
                     <NumberInput v-model="form.y2" min="0" max="10000" class="orb-props__grow" />
                   </div>
                 </template>
               </div>
               <!-- Label -->
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.showLabel') }}</label>
+                <label class="field-label">{{ _t('Show label') }}</label>
                 <CmkCheckbox v-model="form.label.show" />
               </div>
               <div v-if="form.label.show" class="field-row">
-                <label class="field-label">{{ t('boardSettings.lineLabel') }}</label>
+                <label class="field-label">{{ _t('Line label') }}</label>
                 <CmkInput v-model="form.label.text" field-size="FILL" class="orb-props__grow" />
               </div>
             </div>
@@ -615,30 +608,30 @@
 
           <!-- === POSITION === -->
           <section v-if="object.type !== 'line'">
-            <p class="orb-section-title">{{ t('boardSettings.position') }}</p>
+            <p class="orb-section-title">{{ _t('Position') }}</p>
             <div class="orb-props__grid-3">
               <template v-if="mapType === 'worldmap'">
                 <div class="orb-props__inline">
-                  <label class="orb-props__inline-label">{{ t('boardSettings.lat') }}</label>
+                  <label class="orb-props__inline-label">{{ _t('Lat') }}</label>
                   <NumberInput v-model="form.lat" step="any" class="orb-props__grow" />
                 </div>
                 <div class="orb-props__inline">
-                  <label class="orb-props__inline-label">{{ t('boardSettings.lng') }}</label>
+                  <label class="orb-props__inline-label">{{ _t('Lng') }}</label>
                   <NumberInput v-model="form.lng" step="any" class="orb-props__grow" />
                 </div>
               </template>
               <template v-else>
                 <div class="orb-props__inline">
-                  <label class="orb-props__inline-label">{{ t('boardSettings.x') }}</label>
+                  <label class="orb-props__inline-label">{{ _t('X') }}</label>
                   <NumberInput v-model="form.x" min="0" max="10000" class="orb-props__grow" />
                 </div>
                 <div class="orb-props__inline">
-                  <label class="orb-props__inline-label">{{ t('boardSettings.y') }}</label>
+                  <label class="orb-props__inline-label">{{ _t('Y') }}</label>
                   <NumberInput v-model="form.y" min="0" max="10000" class="orb-props__grow" />
                 </div>
               </template>
               <div class="orb-props__inline">
-                <label class="orb-props__inline-label">{{ t('boardSettings.z') }}</label>
+                <label class="orb-props__inline-label">{{ _t('Z') }}</label>
                 <NumberInput v-model="form.z" min="1" max="999" class="orb-props__grow" />
               </div>
             </div>
@@ -646,16 +639,16 @@
 
           <!-- === LABEL === -->
           <section v-if="object.type !== 'line'">
-            <p class="orb-section-title">{{ t('boardSettings.label') }}</p>
+            <p class="orb-section-title">{{ _t('Label') }}</p>
             <div class="orb-props__fields">
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.showLabel') }}</label>
+                <label class="field-label">{{ _t('Show label') }}</label>
                 <CmkCheckbox v-model="form.label.show" />
               </div>
               <div :class="!form.label.show ? 'orb-props__disabled' : ''">
                 <div class="orb-props__fields">
                   <div v-if="object.type !== 'textbox'" class="field-row">
-                    <label class="field-label">{{ t('boardSettings.labelText') }}</label>
+                    <label class="field-label">{{ _t('Label text') }}</label>
                     <CmkInput
                       v-model="form.label.text"
                       placeholder="(auto from object)"
@@ -665,7 +658,7 @@
                   </div>
                   <div class="orb-props__grid-2">
                     <div class="field-row">
-                      <label class="field-label">{{ t('boardSettings.size') }}</label>
+                      <label class="field-label">{{ _t('Size') }}</label>
                       <NumberInput
                         v-model="form.label.size"
                         min="8"
@@ -674,15 +667,15 @@
                       />
                     </div>
                     <div class="field-row orb-props__span-2">
-                      <label class="field-label">{{ t('boardSettings.color') }}</label>
+                      <label class="field-label">{{ _t('Color') }}</label>
                       <ColorInput v-model="form.label.color" default-color="#ffffff" />
                     </div>
                     <div class="field-row">
-                      <label class="field-label">{{ t('boardSettings.offsetX') }}</label>
+                      <label class="field-label">{{ _t('Offset X') }}</label>
                       <NumberInput v-model="form.label.x" class="orb-props__grow" />
                     </div>
                     <div class="field-row">
-                      <label class="field-label">{{ t('boardSettings.offsetY') }}</label>
+                      <label class="field-label">{{ _t('Offset Y') }}</label>
                       <NumberInput v-model="form.label.y" class="orb-props__grow" />
                     </div>
                     <div class="orb-props__span-2">
@@ -692,7 +685,7 @@
                         @click="showLabelAdvanced = !showLabelAdvanced"
                       >
                         <p class="orb-section-title orb-section-title--flush">
-                          {{ t('boardSettings.labelAdvanced') }}
+                          {{ _t('Background & border') }}
                         </p>
                         <svg
                           class="orb-props__chevron"
@@ -712,28 +705,28 @@
                     </div>
                     <template v-if="showLabelAdvanced">
                       <div class="field-row orb-props__span-2">
-                        <label class="field-label">{{ t('boardSettings.background') }}</label>
+                        <label class="field-label">{{ _t('Background') }}</label>
                         <ColorInput
                           v-model="form.label.background"
-                          :enable-label="t('common.useColor')"
+                          :enable-label="_t('Use color')"
                           none-value="transparent"
                           default-color="#000000"
                         />
                       </div>
                       <div class="field-row orb-props__span-2">
-                        <label class="field-label">{{ t('boardSettings.borderColor') }}</label>
+                        <label class="field-label">{{ _t('Border color') }}</label>
                         <ColorInput
                           v-model="form.label_border"
-                          :enable-label="t('common.useColor')"
+                          :enable-label="_t('Use color')"
                           default-color="#e5e5e5"
                         />
                       </div>
                       <div class="field-row orb-props__span-2">
-                        <label class="field-label">{{ t('boardSettings.maxLength') }}</label>
+                        <label class="field-label">{{ _t('Max length') }}</label>
                         <NumberInput
                           v-model="form.label_maxlen"
                           min="0"
-                          :placeholder="t('boardSettings.noLimit')"
+                          :placeholder="_t('no limit')"
                           class="orb-props__grow"
                         />
                       </div>
@@ -748,10 +741,10 @@
           <section
             v-if="object.type !== 'line' && object.type !== 'textbox' && object.type !== 'graph'"
           >
-            <p class="orb-section-title">{{ t('boardSettings.appearance') }}</p>
+            <p class="orb-section-title">{{ _t('Appearance') }}</p>
             <div class="orb-props__fields">
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.viewType') }}</label>
+                <label class="field-label">{{ _t('View type') }}</label>
                 <CmkDropdown
                   class="orb-props__grow"
                   :selected-option="form.display.mode || null"
@@ -763,7 +756,7 @@
                 />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.size') }}</label>
+                <label class="field-label">{{ _t('Size') }}</label>
                 <NumberInput
                   v-model="form.display.image_size"
                   min="1"
@@ -773,14 +766,14 @@
                       ? String(GADGET_DEFAULT_SIZE)
                       : boardIconSize != null
                         ? String(boardIconSize)
-                        : t('boardSettings.mapDefault')
+                        : _t('map default')
                   "
                   class="orb-props__size-input"
                 />
               </div>
               <template v-if="form.display.mode === 'gadget'">
                 <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.gadgetType') }}</label>
+                  <label class="field-label">{{ _t('Gadget type') }}</label>
                   <CmkDropdown
                     class="orb-props__grow"
                     :selected-option="form.display.gadget_type || null"
@@ -790,20 +783,18 @@
                   />
                 </div>
                 <div class="field-row">
-                  <label class="field-label">{{ t('boardSettings.metric') }}</label>
+                  <label class="field-label">{{ _t('Metric') }}</label>
                   <AutocompleteInput
                     v-model="form.display.gadget_metric"
                     :suggestions="metricSuggestions"
-                    :placeholder="t('boardSettings.firstMetric')"
-                    :empty-text="metricSuggestions.length === 0 ? t('boardSettings.noMetrics') : ''"
+                    :placeholder="_t('first metric')"
+                    :empty-text="metricSuggestions.length === 0 ? _t('No metrics available') : ''"
                     class="orb-props__grow"
                   />
                 </div>
               </template>
               <div v-if="form.display.mode !== 'gadget'" class="field-row field-row--start">
-                <label class="field-label" style="margin-top: 6px">{{
-                  t('boardSettings.customIcon')
-                }}</label>
+                <label class="field-label" style="margin-top: 6px">{{ _t('Custom icon') }}</label>
                 <ImagePicker v-model="form.display.image" class="orb-props__grow" />
               </div>
             </div>
@@ -817,7 +808,7 @@
               @click="showLink = !showLink"
             >
               <p class="orb-section-title orb-section-title--flush">
-                {{ t('boardSettings.link') }}
+                {{ _t('Link') }}
               </p>
               <span v-if="form.url" class="orb-props__url-preview">{{ form.url }}</span>
               <svg
@@ -837,9 +828,7 @@
             </button>
             <div v-if="showLink" class="orb-props__fields">
               <div class="field-row field-row--start">
-                <label class="field-label field-label--offset-8">{{
-                  t('boardSettings.url')
-                }}</label>
+                <label class="field-label field-label--offset-8">{{ _t('URL') }}</label>
                 <div class="orb-props__url-col">
                   <CmkInput
                     v-model="form.url"
@@ -852,12 +841,12 @@
                     class="orb-props__url-auto"
                     @click="form.url = autoUrl!"
                   >
-                    {{ t('boardSettings.urlAutoHint') }} →
+                    {{ _t('Automatically derived from Checkmk URL when left empty') }} →
                   </button>
                 </div>
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.target') }}</label>
+                <label class="field-label">{{ _t('Target') }}</label>
                 <CmkDropdown
                   class="orb-props__grow"
                   :selected-option="form.url_target || null"
@@ -877,7 +866,7 @@
               @click="showFilter = !showFilter"
             >
               <p class="orb-section-title orb-section-title--flush">
-                {{ t('boardSettings.filterSection') }}
+                {{ _t('Filter') }}
               </p>
               <svg
                 class="orb-props__chevron"
@@ -896,16 +885,16 @@
             </button>
             <div v-if="showFilter" class="orb-props__fields">
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.excludeMembers') }}</label>
+                <label class="field-label">{{ _t('Exclude members') }}</label>
                 <CmkInput
                   v-model="form.exclude_members"
-                  :placeholder="t('boardSettings.regexPlaceholder')"
+                  :placeholder="_t('regex pattern…')"
                   field-size="FILL"
                   class="orb-props__grow"
                 />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.excludeStates') }}</label>
+                <label class="field-label">{{ _t('Exclude states') }}</label>
                 <CmkInput
                   v-model="form.exclude_member_states"
                   placeholder="DOWN,CRITICAL"
@@ -928,7 +917,7 @@
                 {{ excludeMembersFeedback.text }}
               </p>
               <p class="orb-props__field-hint">
-                {{ t('boardSettings.excludeHint') }}
+                {{ _t('Regex to exclude members / comma-separated states to ignore') }}
               </p>
             </div>
           </section>
@@ -941,7 +930,7 @@
               @click="showTemplates = !showTemplates"
             >
               <p class="orb-section-title orb-section-title--flush">
-                {{ t('boardSettings.templates') }}
+                {{ _t('Templates') }}
               </p>
               <svg
                 class="orb-props__chevron"
@@ -960,16 +949,16 @@
             </button>
             <div v-if="showTemplates" class="orb-props__fields">
               <div class="field-row">
-                <label class="field-label">{{ t('board.hoverTemplate') }}</label>
+                <label class="field-label">{{ _t('Hover template') }}</label>
                 <CmkInput
                   v-model="form.hover_template"
-                  :placeholder="t('board.templatePlaceholder')"
+                  :placeholder="_t('e.g. {{name}} is {{state}}')"
                   field-size="FILL"
                   class="orb-props__grow"
                 />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('boardSettings.hoverUrl') }}</label>
+                <label class="field-label">{{ _t('Hover URL') }}</label>
                 <CmkInput
                   v-model="form.hover_url"
                   placeholder="https://…"
@@ -978,17 +967,17 @@
                 />
               </div>
               <div class="field-row">
-                <label class="field-label">{{ t('board.contextTemplate') }}</label>
+                <label class="field-label">{{ _t('Context template') }}</label>
                 <CmkInput
                   v-model="form.context_template"
-                  :placeholder="t('board.templatePlaceholder')"
+                  :placeholder="_t('e.g. {{name}} is {{state}}')"
                   field-size="FILL"
                   class="orb-props__grow"
                 />
               </div>
-              <p class="orb-props__field-hint">
-                {{ t('board.templateHint') }}
-              </p>
+              <!-- Literal {{…}} placeholders would terminate a mustache, so the
+                   hint is built in script and only interpolated here. -->
+              <p class="orb-props__field-hint">{{ templateHelpHint }}</p>
             </div>
           </section>
         </CmkScrollContainer>
@@ -996,14 +985,12 @@
         <!-- Footer -->
         <div class="orb-props__footer">
           <div>
-            <CmkButton variant="danger" @click="confirmDelete = true">{{
-              t('common.delete')
-            }}</CmkButton>
+            <CmkButton variant="danger" @click="confirmDelete = true">{{ _t('Delete') }}</CmkButton>
             <OrbConfirmDialog
               :open="confirmDelete"
-              :title="t('board.deleteObject')"
-              :message="t('board.cannotBeUndone')"
-              :confirm-label="t('common.delete')"
+              :title="_t('Delete object')"
+              :message="_t('This cannot be undone.')"
+              :confirm-label="_t('Delete')"
               @confirm="onConfirmDelete"
               @cancel="confirmDelete = false"
             />
@@ -1012,11 +999,9 @@
             <p v-if="saveError" class="orb-props__error">
               {{ saveError }}
             </p>
-            <CmkButton variant="secondary" @click="$emit('close')">{{
-              t('common.cancel')
-            }}</CmkButton>
+            <CmkButton variant="secondary" @click="$emit('close')">{{ _t('Cancel') }}</CmkButton>
             <CmkButton variant="primary" :disabled="saving" @click="save">
-              {{ saving ? t('common.saving') : t('common.save') }}
+              {{ saving ? _t('Saving…') : _t('Save') }}
             </CmkButton>
           </div>
         </div>
@@ -1027,7 +1012,6 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import ColorInput from '@/components/ColorInput.vue'
 import NumberInput from '@/components/NumberInput.vue'
@@ -1059,11 +1043,18 @@ import { GADGET_DEFAULT_SIZE } from '@/utils/gadget'
 import { getBoardObjectIdentifier } from '@/utils/naming'
 import { parsePerfData } from '@/utils/perf'
 import { compileRegex } from '@/utils/regex'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 import AutocompleteInput from './AutocompleteInput.vue'
 import ImagePicker from './ImagePicker.vue'
 
-const { t } = useI18n()
+const { _t } = usei18n()
+
+const graphSourceLabel = computed<Record<string, string>>(() => ({
+  auto: _t('auto'),
+  metrics: _t('Metrics'),
+  template: _t('Template')
+}))
 
 const props = defineProps<{
   object: BoardObject
@@ -1206,34 +1197,34 @@ const boardLabels = ref<string[]>([])
 
 const lineStyleOpts = computed(() => ({
   type: 'fixed' as const,
-  suggestions: lineStyleOptions(t)
+  suggestions: lineStyleOptions(_t)
 }))
 const linePerfdataLabelOpts = computed(() => ({
   type: 'fixed' as const,
-  suggestions: linePerfdataLabelOptions(t)
+  suggestions: linePerfdataLabelOptions(_t)
 }))
 const displayModeOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: 'icon', title: t('boardSettings.viewTypeIcon') },
-    { name: 'text', title: t('boardSettings.viewTypeText') },
-    { name: 'gadget', title: t('boardSettings.viewTypeGadget') }
+    { name: 'icon', title: _t('Icon') },
+    { name: 'text', title: _t('Text only') },
+    { name: 'gadget', title: _t('Gadget') }
   ]
 }))
 const gadgetTypeOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: 'gauge', title: t('boardSettings.gadgetGauge') },
-    { name: 'bar', title: t('boardSettings.gadgetBar') },
-    { name: 'trafficlight', title: t('boardSettings.gadgetTrafficlight') }
+    { name: 'gauge', title: _t('Gauge') },
+    { name: 'bar', title: _t('Bar') },
+    { name: 'trafficlight', title: _t('Traffic light') }
   ]
 }))
 const urlTargetOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: '_blank', title: t('boardSettings.targetNewTab') + ' (_blank)' },
-    { name: '_self', title: t('boardSettings.targetSameTab') + ' (_self)' },
-    { name: '_top', title: t('boardSettings.targetTopFrame') + ' (_top)' }
+    { name: '_blank', title: _t('New tab') + ' (_blank)' },
+    { name: '_self', title: _t('Same tab') + ' (_self)' },
+    { name: '_top', title: _t('Top frame') + ' (_top)' }
   ]
 }))
 
@@ -1398,6 +1389,12 @@ const showTemplates = ref(
 )
 const showFilter = ref(!!(props.object.exclude_members || props.object.exclude_member_states))
 
+const templateHelpHint = computed(() =>
+  _t(
+    'Available: {{name}}, {{state}}, {{output}}, {{host}}, {{service}}, {{address}}, {{state_type}}, {{attempts}}, {{last_check}}, {{state_duration}}, {{acknowledged}}, {{in_downtime}}, {{stale}}'
+  )
+)
+
 // Initialize form from object
 watch(
   () => props.object,
@@ -1475,7 +1472,7 @@ const availableConnections = ref<{ id: string; label: string }[]>([])
 const connectionDropdownOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: '', title: t('boardSettings.connectionInherit') },
+    { name: '', title: _t('Inherit from board') },
     ...availableConnections.value.map((c) => ({ name: c.id, title: c.label }))
   ]
 }))
@@ -1598,7 +1595,7 @@ const excludeMembersFeedback = computed<{ text: string; tone: string } | null>((
       regex = compileRegex(memberRe)
     } catch {
       return {
-        text: t('boardSettings.excludeRegexInvalid'),
+        text: _t('Invalid regular expression.'),
         tone: 'orb-props__feedback--invalid'
       }
     }
@@ -1625,18 +1622,21 @@ const excludeMembersFeedback = computed<{ text: string; tone: string } | null>((
 
   if (suppressed === 0) {
     return {
-      text: t('boardSettings.excludeNoMatches', { total }),
+      text: _t('0 of %{total} leaves hidden — filter matches nothing.', { total }),
       tone: 'orb-props__feedback--muted'
     }
   }
   if (suppressed >= total) {
     return {
-      text: t('boardSettings.excludeAllMatched', { count: suppressed, total }),
+      text: _t('All %{count} leaves would be hidden — the filter is too broad.', {
+        count: suppressed,
+        total
+      }),
       tone: 'orb-props__feedback--warn'
     }
   }
   return {
-    text: t('boardSettings.excludeMatched', { count: suppressed, total }),
+    text: _t('%{count} of %{total} leaves will be hidden.', { count: suppressed, total }),
     tone: 'orb-props__feedback--matched'
   }
 })
@@ -1687,7 +1687,7 @@ const displayName = computed(() => getBoardObjectIdentifier(props.object))
 async function save() {
   saveError.value = ''
   if (props.object.type === 'line' && form.line_weather_color && !form.weathermap_metric.trim()) {
-    saveError.value = t('boardSettings.metricRequiredWeathermap')
+    saveError.value = _t('Pick a metric — weather coloring needs one to colorize the line.')
     return
   }
   saving.value = true
@@ -1795,7 +1795,7 @@ async function save() {
 
     emit('save', updates)
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : t('boardSettings.saveFailed')
+    saveError.value = e instanceof Error ? e.message : _t('Save failed')
     saving.value = false
   }
 }

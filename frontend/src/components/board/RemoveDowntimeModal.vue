@@ -1,7 +1,14 @@
 <template>
-  <OrbModal :open="true" :title="t('removeDowntimeModal.title')" closable @close="$emit('close')">
+  <OrbModal :open="true" :title="_t('Remove downtime')" closable @close="$emit('close')">
     <p class="remove-downtime__subtitle">
-      {{ objectName }} &mdash; {{ t('removeDowntimeModal.active', downtimes.length) }}
+      {{ objectName }} &mdash;
+      {{
+        downtimes.length === 0
+          ? _t('no active downtimes')
+          : _tn('%{n} downtime active', '%{n} downtimes active', downtimes.length, {
+              n: downtimes.length
+            })
+      }}
     </p>
 
     <CmkScrollContainer max-height="16rem" height="auto">
@@ -16,11 +23,7 @@
             </p>
           </div>
           <CmkButton variant="danger" :disabled="removingId !== null" @click="remove(dt)">
-            {{
-              removingId === dt.id
-                ? t('removeDowntimeModal.removing')
-                : t('removeDowntimeModal.remove')
-            }}
+            {{ removingId === dt.id ? _t('Removing…') : _t('Remove') }}
           </CmkButton>
         </div>
       </div>
@@ -30,7 +33,7 @@
 
     <template #footer>
       <CmkButton variant="secondary" @click="$emit('close')">
-        {{ t('common.cancel') }}
+        {{ _t('Cancel') }}
       </CmkButton>
     </template>
   </OrbModal>
@@ -38,7 +41,6 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbModal from '@/components/OrbModal.vue'
 import CmkAlertBox from '@/components/cmk/CmkAlertBox'
@@ -47,6 +49,7 @@ import CmkScrollContainer from '@/components/cmk/CmkScrollContainer'
 
 import { cmkApi } from '@/api/client'
 import type { DowntimeEntry } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   downtimes: DowntimeEntry[]
@@ -56,7 +59,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
-const { t } = useI18n()
+const { _t, _tn } = usei18n()
 const removingId = ref<string | null>(null)
 const error = ref('')
 
@@ -78,7 +81,7 @@ async function remove(dt: DowntimeEntry) {
     await cmkApi.removeDowntimeById(props.checkmkUrl, dt.id, dt.site_id)
     emit('close')
   } catch (e) {
-    error.value = e instanceof Error ? e.message : t('removeDowntimeModal.error')
+    error.value = e instanceof Error ? e.message : _t('Failed to remove downtime')
     removingId.value = null
   }
 }

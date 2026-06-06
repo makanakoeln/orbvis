@@ -12,17 +12,17 @@
           </svg>
         </div>
         <h1 class="orb-pwchange__title">
-          {{ t('changePassword.title') }}
+          {{ _t('Change your password') }}
         </h1>
         <p class="orb-pwchange__subtitle">
-          {{ t('changePassword.subtitle') }}
+          {{ _t('You must set a new password before continuing.') }}
         </p>
       </div>
 
       <div class="orb-pwchange__card">
         <form class="orb-pwchange__form" @submit.prevent="save">
           <div class="orb-pwchange__field">
-            <label class="orb-pwchange__label">{{ t('changePassword.newPassword') }}</label>
+            <label class="orb-pwchange__label">{{ _t('New password') }}</label>
             <input
               v-model="password"
               type="password"
@@ -34,7 +34,7 @@
             />
           </div>
           <div class="orb-pwchange__field">
-            <label class="orb-pwchange__label">{{ t('changePassword.confirmPassword') }}</label>
+            <label class="orb-pwchange__label">{{ _t('Confirm password') }}</label>
             <input
               v-model="confirm"
               type="password"
@@ -47,16 +47,16 @@
           <p v-if="error" class="orb-pwchange__error">{{ error }}</p>
 
           <button type="submit" :disabled="saving" class="orb-pwchange__submit">
-            {{ saving ? t('common.saving') : t('changePassword.setNewPassword') }}
+            {{ saving ? _t('Saving…') : _t('Set new password') }}
           </button>
         </form>
       </div>
 
       <p class="orb-pwchange__footer">
-        {{ t('changePassword.loggedInAs') }}
+        {{ _t('Logged in as') }}
         <span class="orb-pwchange__user">{{ auth.user?.name }}</span> ·
         <button class="orb-pwchange__logout" @click="auth.logout">
-          {{ t('auth.logout') }}
+          {{ _t('Logout') }}
         </button>
       </p>
     </div>
@@ -65,13 +65,13 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 import { usersApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const auth = useAuthStore()
 const router = useRouter()
 const password = ref('')
@@ -82,7 +82,7 @@ const error = ref('')
 async function save() {
   error.value = ''
   if (password.value !== confirm.value) {
-    error.value = t('changePassword.passwordMismatch')
+    error.value = _t('Passwords do not match.')
     return
   }
   saving.value = true
@@ -91,7 +91,7 @@ async function save() {
     await auth.fetchCurrentUser()
     router.push({ name: 'home' })
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : t('changePassword.failedToChange')
+    error.value = e instanceof Error ? e.message : _t('Failed to change password.')
   } finally {
     saving.value = false
   }

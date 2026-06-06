@@ -26,7 +26,7 @@
               rel="noopener noreferrer"
               class="detail-drawer__name detail-drawer__name--link"
               :title="displayName"
-              :aria-label="t('board.detailDrawer.openInCheckmk')"
+              :aria-label="_t('Open in Checkmk')"
               >{{ displayName }}</a
             >
             <span v-else class="detail-drawer__name" :title="displayName">{{ displayName }}</span>
@@ -52,8 +52,8 @@
           target="_blank"
           rel="noopener noreferrer"
           class="detail-drawer__icon-btn"
-          :title="t('board.detailDrawer.openInCheckmk')"
-          :aria-label="t('board.detailDrawer.openInCheckmk')"
+          :title="_t('Open in Checkmk')"
+          :aria-label="_t('Open in Checkmk')"
         >
           <CmkIcon name="export-link" size="small" />
         </a>
@@ -67,15 +67,15 @@
           target="_blank"
           rel="noopener noreferrer"
           class="detail-drawer__icon-btn"
-          :title="t('board.detailDrawer.openInCheckmkSetup')"
-          :aria-label="t('board.detailDrawer.openInCheckmkSetup')"
+          :title="_t('Edit in Checkmk Setup')"
+          :aria-label="_t('Edit in Checkmk Setup')"
         >
           <CmkIcon name="main-setup" size="small" />
         </a>
         <button
           type="button"
           class="detail-drawer__close"
-          :title="t('board.detailDrawer.close')"
+          :title="_t('Close')"
           @click="emit('close')"
         >
           ×
@@ -85,22 +85,18 @@
       <div v-if="state" class="detail-drawer__body">
         <CmkTabs v-model="activeTab" class="detail-drawer__tabs">
           <template #tabs>
-            <CmkTab id="status">{{ t('board.detailDrawer.tabStatus') }}</CmkTab>
-            <CmkTab v-if="showPerformanceTab" id="performance">{{
-              t('board.detailDrawer.tabPerformance')
-            }}</CmkTab>
-            <CmkTab v-if="showContextTab" id="context">{{
-              t('board.detailDrawer.tabContext')
-            }}</CmkTab>
+            <CmkTab id="status">{{ _t('Status') }}</CmkTab>
+            <CmkTab v-if="showPerformanceTab" id="performance">{{ _t('Performance') }}</CmkTab>
+            <CmkTab v-if="showContextTab" id="context">{{ _t('Context') }}</CmkTab>
             <CmkTab v-if="showMembersTab" id="members">
               <span class="detail-drawer__tab-with-count">
-                {{ t('board.detailDrawer.tabMembers') }}
+                {{ _t('Members') }}
                 <span class="detail-drawer__tab-count">{{ groupMembers.length }}</span>
               </span>
             </CmkTab>
             <CmkTab v-if="showActivityTab" id="activity">
               <span class="detail-drawer__tab-with-count">
-                {{ t('board.detailDrawer.tabActivity') }}
+                {{ _t('Activity') }}
                 <span class="detail-drawer__tab-count">{{
                   commentList.length + downtimeList.length
                 }}</span>
@@ -215,7 +211,7 @@
                 >
                   <div class="detail-drawer__section-head">
                     <h3 class="detail-drawer__section-heading">
-                      {{ t('board.detailDrawer.aggregationSummary') }}
+                      {{ _t('Aggregation') }}
                     </h3>
                     <CmkToggleButtonGroup
                       v-if="(object.expand_depth ?? 0) > 0"
@@ -254,7 +250,7 @@
                     v-if="aggregationView === 'details' && aggregationSummary.worstPath"
                     class="detail-drawer__list-text"
                   >
-                    {{ t('board.detailDrawer.worstLeaf') }}:
+                    {{ _t('Worst leaf') }}:
                     <span class="detail-drawer__list-strong">{{
                       aggregationSummary.worstPath
                     }}</span>
@@ -264,7 +260,7 @@
                     class="detail-drawer__list-text detail-drawer__tree-intro"
                   >
                     {{
-                      t('board.detailDrawer.aggregationTreeIntro', {
+                      _t('%{count} nodes at depth %{depth} below the root.', {
                         count: aggregationSummary.treeRows.length,
                         depth: aggregationSummary.treeDepth
                       })
@@ -282,7 +278,12 @@
                     v-if="state.stale"
                     class="detail-drawer__list-text detail-drawer__stale-hint"
                   >
-                    ⚠ {{ t('board.detailDrawer.aggregationStale') }}
+                    ⚠
+                    {{
+                      _t(
+                        'Connection to at least one federation site is unhealthy — leaf states shown may be out of date.'
+                      )
+                    }}
                   </div>
                   <!-- Bulk-ack always targets real bi_leaf hosts/services —
                                          that's what Checkmk's command pipeline accepts. -->
@@ -293,7 +294,7 @@
                     @click="onBulkAcknowledgeClick"
                   >
                     {{
-                      t('board.detailDrawer.bulkAcknowledge', {
+                      _t('Acknowledge %{count} contributing leaves', {
                         count: aggregationProblemLeaves.length
                       })
                     }}
@@ -367,7 +368,7 @@
 
                 <div v-if="longOutputRows.length" class="detail-drawer__pane-section">
                   <div class="detail-drawer__pane-heading">
-                    {{ t('board.detailDrawer.details') }}
+                    {{ _t('Details') }}
                   </div>
                   <dl class="detail-drawer__output-rows">
                     <template v-for="(row, i) in longOutputRows" :key="i">
@@ -380,7 +381,7 @@
                 <details v-if="otherPerfRows.length" class="detail-drawer__raw-metrics">
                   <summary>
                     {{
-                      t('board.detailDrawer.rawMetrics', {
+                      _t('Raw metrics (%{n})', {
                         n: otherPerfRows.length
                       })
                     }}
@@ -468,7 +469,7 @@
 
                 <div v-if="labelEntries.length">
                   <div class="detail-drawer__pane-heading">
-                    {{ t('board.detailDrawer.labels') }}
+                    {{ _t('Labels') }}
                   </div>
                   <div class="detail-drawer__chip-row">
                     <CmkChip
@@ -519,20 +520,17 @@
                   <input
                     v-model="memberSearch"
                     type="search"
-                    :placeholder="t('board.detailDrawer.memberSearch')"
+                    :placeholder="_t('Search members…')"
                     class="detail-drawer__member-search"
                   />
-                  <CmkCheckbox
-                    v-model="onlyProblems"
-                    :label="t('board.detailDrawer.onlyProblems')"
-                  />
+                  <CmkCheckbox v-model="onlyProblems" :label="_t('Only problems')" />
                 </div>
 
                 <p v-if="loadingMembers" class="detail-drawer__pane-empty">
-                  {{ t('common.loading') }}
+                  {{ _t('Loading…') }}
                 </p>
                 <p v-else-if="filteredMembers.length === 0" class="detail-drawer__pane-empty">
-                  {{ t('board.detailDrawer.noMembers') }}
+                  {{ _t('No members match the current filter') }}
                 </p>
                 <ul v-else class="detail-drawer__member-list">
                   <li
@@ -544,7 +542,7 @@
                       type="button"
                       class="detail-drawer__member-row"
                       :title="
-                        t('board.detailDrawer.openMember', {
+                        _t('Open %{name} in the drawer', {
                           name: m.service ? m.host + ' / ' + m.service : m.host
                         })
                       "
@@ -595,7 +593,7 @@
                 </ul>
                 <p v-if="truncatedMemberCount > 0" class="detail-drawer__member-truncated">
                   {{
-                    t('board.detailDrawer.moreMembers', {
+                    _t('+%{n} more — refine the filter to see them', {
                       n: truncatedMemberCount
                     })
                   }}
@@ -610,7 +608,7 @@
                   class="detail-drawer__pane-section detail-drawer__section--downtimes"
                 >
                   <div class="detail-drawer__pane-heading">
-                    {{ t('board.detailDrawer.activeDowntimes') }}
+                    {{ _t('Active downtimes') }}
                   </div>
                   <ul class="detail-drawer__list">
                     <li v-for="dt in downtimeList" :key="dt.id" class="detail-drawer__list-row">
@@ -619,7 +617,7 @@
                         <span
                           v-if="!dt.fixed"
                           class="detail-drawer__list-tag"
-                          :title="t('board.detailDrawer.flexibleDowntime')"
+                          :title="_t('Flexible (triggered) downtime')"
                           >FLEX</span
                         >
                         <span class="detail-drawer__list-time">{{ dt.timeRange }}</span>
@@ -633,7 +631,7 @@
 
                 <div v-if="commentList.length" class="detail-drawer__pane-section">
                   <div class="detail-drawer__pane-heading">
-                    {{ t('board.detailDrawer.comments') }}
+                    {{ _t('Comments') }}
                   </div>
                   <ul class="detail-drawer__list">
                     <li v-for="c in commentList" :key="c.id" class="detail-drawer__list-row">
@@ -642,7 +640,7 @@
                         <span class="detail-drawer__list-time">{{ c.age }}</span>
                         <span v-if="c.expires" class="detail-drawer__list-time">
                           ·
-                          {{ t('board.detailDrawer.expires') }}
+                          {{ _t('expires') }}
                           {{ c.expires }}
                         </span>
                       </div>
@@ -660,7 +658,7 @@
 
       <footer v-if="!isSite" class="detail-drawer__actions">
         <h4 class="detail-drawer__actions-title">
-          {{ t('board.detailDrawer.sectionActions') }}
+          {{ _t('Actions') }}
         </h4>
         <div class="detail-drawer__actions-grid">
           <CmkButton
@@ -669,18 +667,14 @@
             class="detail-drawer__action detail-drawer__action--primary"
             :title="
               isGroup
-                ? t('board.detailDrawer.ackGroupTooltip', {
+                ? _t('Acknowledge problems on all %{n} members of this group', {
                     n: groupMembers.length
                   })
                 : ''
             "
             @click="emit('acknowledge')"
           >
-            {{
-              isGroup
-                ? t('board.detailDrawer.ackGroupLabel', { n: groupMembers.length })
-                : t('board.detailDrawer.ackLabel')
-            }}
+            {{ isGroup ? _t('Acknowledge (%{n})', { n: groupMembers.length }) : _t('Acknowledge') }}
           </CmkButton>
           <CmkButton
             v-if="state?.acknowledged && canCommand('remove_acknowledgement')"
@@ -688,7 +682,7 @@
             class="detail-drawer__action"
             @click="emit('remove-ack')"
           >
-            {{ t('board.detailDrawer.removeAckLabel') }}
+            {{ _t('Remove ACK') }}
           </CmkButton>
           <CmkButton
             v-if="canCommand('force_check')"
@@ -696,7 +690,7 @@
             class="detail-drawer__action"
             @click="emit('force-check')"
           >
-            {{ t('board.detailDrawer.forceCheckLabel') }}
+            {{ _t('Force check') }}
           </CmkButton>
           <CmkButton
             v-if="!state?.in_downtime && canCommand('schedule_downtime')"
@@ -704,7 +698,7 @@
             class="detail-drawer__action"
             :title="
               isGroup
-                ? t('board.detailDrawer.dtGroupTooltip', {
+                ? _t('Schedule downtime on all %{n} members of this group', {
                     n: groupMembers.length
                   })
                 : ''
@@ -712,9 +706,7 @@
             @click="emit('schedule-downtime')"
           >
             {{
-              isGroup
-                ? t('board.detailDrawer.dtGroupLabel', { n: groupMembers.length })
-                : t('board.detailDrawer.scheduleDowntimeLabel')
+              isGroup ? _t('Downtime (%{n})', { n: groupMembers.length }) : _t('Schedule downtime')
             }}
           </CmkButton>
           <CmkButton
@@ -723,7 +715,7 @@
             class="detail-drawer__action"
             @click="emit('remove-downtime')"
           >
-            {{ t('board.detailDrawer.removeDowntimeLabel') }}
+            {{ _t('Remove downtime') }}
           </CmkButton>
           <CmkButton
             v-if="!isAggregation && canCommand('add_comment')"
@@ -731,7 +723,7 @@
             class="detail-drawer__action"
             @click="emit('add-comment')"
           >
-            {{ t('board.detailDrawer.addCommentLabel') }}
+            {{ _t('Add comment') }}
           </CmkButton>
           <CmkButton
             v-if="canCommand('disable_notifications') && state?.notifications_enabled !== false"
@@ -739,7 +731,7 @@
             class="detail-drawer__action"
             @click="emit('disable-notifications')"
           >
-            {{ t('board.detailDrawer.disableNotificationsLabel') }}
+            {{ _t('Disable notifications') }}
           </CmkButton>
           <CmkButton
             v-else-if="canCommand('enable_notifications')"
@@ -747,7 +739,7 @@
             class="detail-drawer__action"
             @click="emit('enable-notifications')"
           >
-            {{ t('board.detailDrawer.enableNotificationsLabel') }}
+            {{ _t('Enable notifications') }}
           </CmkButton>
         </div>
       </footer>
@@ -760,7 +752,7 @@
           target="_blank"
           class="detail-drawer__action detail-drawer__action--primary"
         >
-          {{ t('board.detailDrawer.openProblems') }} ↗
+          {{ _t('Show problems') }} ↗
         </CmkButton>
       </footer>
     </div>
@@ -769,7 +761,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 
@@ -803,6 +794,7 @@ import { CmkCode } from '@/vendor/cmk/components/CmkCode'
 import CmkIcon from '@/vendor/cmk/components/CmkIcon'
 import CmkTabs, { CmkTab, CmkTabContent } from '@/vendor/cmk/components/CmkTabs'
 import CmkToggleButtonGroup from '@/vendor/cmk/components/CmkToggleButtonGroup.vue'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 import MetricChart from './MetricChart.vue'
 import StatusSlideIn from './StatusSlideIn.vue'
@@ -1117,7 +1109,7 @@ const severityKind = computed(() => {
   return 'pending'
 })
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const displayName = computed(() => (props.object ? getBoardObjectName(props.object) : ''))
 const typeLabel = computed(() => (props.object ? getObjectTypeLabel(props.object) : ''))
@@ -1186,7 +1178,7 @@ const problemsUrlFull = computed(() => {
 
 const sinceText = computed(() => {
   const duration = formatRelativeDuration(props.state?.last_state_change, nowMs.value)
-  return duration ? t('board.detailDrawer.since', { duration }) : null
+  return duration ? _t('since %{duration}', { duration }) : null
 })
 
 interface SummaryChip {
@@ -1391,10 +1383,10 @@ const aggregationViewOptions = computed(() => {
   const d = aggregationSummary.value?.treeDepth ?? 1
   return [
     {
-      label: t('board.detailDrawer.aggregationViewSummary', { depth: d }),
+      label: _t('Summary (depth %{depth})', { depth: d }),
       value: 'summary'
     },
-    { label: t('board.detailDrawer.aggregationViewDetails'), value: 'details' }
+    { label: _t('Details'), value: 'details' }
   ]
 })
 
@@ -1545,14 +1537,14 @@ const metaRows = computed<MetaRow[]>(() => {
   if (s.address) rows.push({ label: 'Address', value: s.address })
   if (o?.type === 'service' && o.host_name) {
     rows.push({
-      label: t('board.detailDrawer.host'),
+      label: _t('Host'),
       value: o.host_name,
       href: hostStatusUrl.value
     })
   }
   // For site drawers, the site name is already the title — no point repeating it.
   if (s.site_id && o?.type !== 'site') {
-    rows.push({ label: t('board.detailDrawer.site'), value: s.site_id })
+    rows.push({ label: _t('Site'), value: s.site_id })
   }
   return rows
 })
@@ -1577,11 +1569,11 @@ const checkInfoRows = computed<MetaRow[]>(() => {
   ) {
     const isSoft = s.state_type === 'SOFT' || s.state_type === 'soft'
     rows.push({
-      label: t('board.detailDrawer.attemptLabel'),
-      value: t('board.detailDrawer.attemptValue', {
+      label: _t('Attempt'),
+      value: _t('%{current}/%{max} (%{type})', {
         current: s.current_attempt,
         max: s.max_attempts,
-        type: isSoft ? t('board.detailDrawer.stateTypeSoft') : t('board.detailDrawer.stateTypeHard')
+        type: isSoft ? _t('soft') : _t('hard')
       }),
       tone: isSoft ? 'warn' : undefined
     })
@@ -1589,15 +1581,15 @@ const checkInfoRows = computed<MetaRow[]>(() => {
 
   if (s.last_check && s.last_check > 0) {
     rows.push({
-      label: t('board.detailDrawer.lastCheck'),
-      value: t('board.detailDrawer.timeAgo', {
+      label: _t('Last check'),
+      value: _t('%{duration} ago', {
         duration: formatRelativeDuration(s.last_check, nowMs.value)
       })
     })
   } else if (s.last_check === 0) {
     rows.push({
-      label: t('board.detailDrawer.lastCheck'),
-      value: t('board.detailDrawer.never')
+      label: _t('Last check'),
+      value: _t('never')
     })
   }
 
@@ -1610,15 +1602,15 @@ const checkInfoRows = computed<MetaRow[]>(() => {
       const sinceLastCheck = s.last_check && s.last_check > 0 ? now - s.last_check : Infinity
       if (sinceLastCheck >= OVERDUE_GRACE_SECONDS) {
         rows.push({
-          label: t('board.detailDrawer.nextCheck'),
-          value: `${t('board.detailDrawer.overdue')} (${formatRelativeDuration(s.next_check, nowMs.value)})`,
+          label: _t('Next check'),
+          value: `${_t('overdue')} (${formatRelativeDuration(s.next_check, nowMs.value)})`,
           tone: 'warn'
         })
       }
     } else {
       rows.push({
-        label: t('board.detailDrawer.nextCheck'),
-        value: t('board.detailDrawer.timeIn', {
+        label: _t('Next check'),
+        value: _t('in %{duration}', {
           // An imminent check (sub-second away) formats to '' — show
           // '<1s' so the row never reads a dangling "in ".
           duration: formatRelativeFuture(s.next_check, nowMs.value) || '<1s'
@@ -1632,8 +1624,8 @@ const checkInfoRows = computed<MetaRow[]>(() => {
   // "broken for 2 days" vs. "just flipped" without leaving the drawer.
   if (d?.last_time_ok && d.last_time_ok > 0 && s.state !== 'OK') {
     rows.push({
-      label: t('board.detailDrawer.lastOk'),
-      value: t('board.detailDrawer.timeAgo', {
+      label: _t('Last OK'),
+      value: _t('%{duration} ago', {
         duration: formatRelativeDuration(d.last_time_ok, nowMs.value)
       })
     })
@@ -1654,16 +1646,11 @@ const topologyGroups = computed<TopologyGroup[]>(() => {
   const d = details.value
   if (!d) return []
   const out: TopologyGroup[] = []
-  if (d.parents.length)
-    out.push({ label: t('board.detailDrawer.parents'), items: d.parents, isHostList: true })
-  if (d.children.length)
-    out.push({ label: t('board.detailDrawer.children'), items: d.children, isHostList: true })
-  if (d.host_groups.length)
-    out.push({ label: t('board.detailDrawer.hostGroups'), items: d.host_groups })
-  if (d.service_groups.length)
-    out.push({ label: t('board.detailDrawer.serviceGroups'), items: d.service_groups })
-  if (d.contact_groups.length)
-    out.push({ label: t('board.detailDrawer.contactGroups'), items: d.contact_groups })
+  if (d.parents.length) out.push({ label: _t('Parents'), items: d.parents, isHostList: true })
+  if (d.children.length) out.push({ label: _t('Children'), items: d.children, isHostList: true })
+  if (d.host_groups.length) out.push({ label: _t('Host groups'), items: d.host_groups })
+  if (d.service_groups.length) out.push({ label: _t('Service groups'), items: d.service_groups })
+  if (d.contact_groups.length) out.push({ label: _t('Contact groups'), items: d.contact_groups })
   return out
 })
 
@@ -1682,12 +1669,12 @@ const commentList = computed<Comment[]>(() => {
     id: c.id,
     author: c.author || '?',
     text: c.comment,
-    age: t('board.detailDrawer.timeAgo', {
+    age: _t('%{duration} ago', {
       duration: formatRelativeDuration(c.entry_time, nowMs.value)
     }),
     expires:
       c.expire_time && c.expire_time > 0
-        ? t('board.detailDrawer.timeIn', {
+        ? _t('in %{duration}', {
             duration: formatRelativeFuture(c.expire_time, nowMs.value)
           })
         : null
@@ -1767,17 +1754,16 @@ const contextMetaRows = computed<MetaRow2[]>(() => {
   const d = details.value
   const rows: MetaRow2[] = []
   if (!d) return rows
-  if (d.check_command)
-    rows.push({ label: t('board.detailDrawer.checkCommand'), value: d.check_command })
+  if (d.check_command) rows.push({ label: _t('Check command'), value: d.check_command })
   if (typeof d.latency === 'number' && d.latency >= 0) {
     rows.push({
-      label: t('board.detailDrawer.latency'),
+      label: _t('Latency'),
       value: `${(d.latency * 1000).toFixed(0)} ms`
     })
   }
   if (d.notification_period && d.notification_period !== '24X7') {
     rows.push({
-      label: t('board.detailDrawer.notificationPeriod'),
+      label: _t('Notif. period'),
       value: d.notification_period,
       tone: d.in_notification_period ? undefined : 'warn'
     })
@@ -1789,10 +1775,10 @@ const contextMetaRows = computed<MetaRow2[]>(() => {
 // from monospace + horizontal scroll, while latency / notif. period stay in
 // the regular dt/dd grid.
 const checkCommandRow = computed<MetaRow2 | null>(
-  () => contextMetaRows.value.find((r) => r.label === t('board.detailDrawer.checkCommand')) ?? null
+  () => contextMetaRows.value.find((r) => r.label === _t('Check command')) ?? null
 )
 const contextMetaRowsWithoutCheckCmd = computed<MetaRow2[]>(() =>
-  contextMetaRows.value.filter((r) => r.label !== t('board.detailDrawer.checkCommand'))
+  contextMetaRows.value.filter((r) => r.label !== _t('Check command'))
 )
 
 const parsedMetrics = computed<PerfMetric[]>(() => {

@@ -1,36 +1,44 @@
 <template>
-  <OrbModal :open="true" :title="t('ack.title')" closable @close="$emit('close')">
+  <OrbModal :open="true" :title="_t('Acknowledge problem')" closable @close="$emit('close')">
     <p class="ack-modal__subtitle">{{ displayName }}</p>
-    <p v-if="isGroup" class="ack-modal__group-hint" :title="t('ack.groupHint')">
-      {{ t('ack.groupScope', { type: groupTypeLabel }) }}
+    <p
+      v-if="isGroup"
+      class="ack-modal__group-hint"
+      :title="
+        _t(
+          'Checkmk fans this command out across all members; partial failures abort the operation.'
+        )
+      "
+    >
+      {{ _t('Applies to every member of the %{type}', { type: groupTypeLabel }) }}
     </p>
 
     <div class="ack-modal__fields">
       <div>
-        <label class="ack-modal__label">{{ t('ack.comment') }}</label>
+        <label class="ack-modal__label">{{ _t('Comment') }}</label>
         <CmkInput
           ref="commentEl"
           v-model="comment"
           field-size="FILL"
-          :placeholder="t('ack.comment') + '…'"
+          :placeholder="_t('Comment') + '…'"
         />
       </div>
-      <CmkCheckbox v-model="sticky" :label="t('ack.sticky')" />
-      <CmkCheckbox v-model="notify" :label="t('ack.notify')" />
-      <CmkCheckbox v-model="persistent" :label="t('ack.persistent')" />
+      <CmkCheckbox v-model="sticky" :label="_t('Sticky (stays until OK)')" />
+      <CmkCheckbox v-model="notify" :label="_t('Send notification')" />
+      <CmkCheckbox v-model="persistent" :label="_t('Persistent')" />
     </div>
 
     <CmkAlertBox v-if="error" variant="error" size="small">
       <span style="white-space: pre-line">{{ error }}</span>
     </CmkAlertBox>
-    <p v-if="success" class="ack-modal__success">{{ t('ack.success') }}</p>
+    <p v-if="success" class="ack-modal__success">{{ _t('Acknowledgement set') }}</p>
 
     <template #footer>
       <CmkButton variant="secondary" @click="$emit('close')">
-        {{ t('common.cancel') }}
+        {{ _t('Cancel') }}
       </CmkButton>
       <CmkButton variant="primary" :disabled="submitting || !comment.trim()" @click="submit">
-        {{ submitting ? t('ack.submitting') : t('ack.submit') }}
+        {{ submitting ? _t('Acknowledging…') : _t('Acknowledge') }}
       </CmkButton>
     </template>
   </OrbModal>
@@ -38,7 +46,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbModal from '@/components/OrbModal.vue'
 import CmkAlertBox from '@/components/cmk/CmkAlertBox'
@@ -50,6 +57,7 @@ import { cmkApi } from '@/api/client'
 import { useStatesStore } from '@/stores/states'
 import type { BoardObject } from '@/types/api'
 import { getBoardObjectName } from '@/utils/naming'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   object: BoardObject
@@ -58,7 +66,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const comment = ref('')
 const sticky = ref(true)
 const notify = ref(true)
@@ -74,7 +82,7 @@ const isGroup = computed(
   () => props.object.type === 'hostgroup' || props.object.type === 'servicegroup'
 )
 const groupTypeLabel = computed(() =>
-  props.object.type === 'hostgroup' ? t('ack.groupHostgroup') : t('ack.groupServicegroup')
+  props.object.type === 'hostgroup' ? _t('host group') : _t('service group')
 )
 
 const statesStore = useStatesStore()
@@ -150,7 +158,7 @@ function enrichGroupError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e)
   if (!isGroup.value) return msg
   if (/hostgroup_name|servicegroup_name|Group missing|not monitored/i.test(msg)) {
-    return `${msg}\n\n${t('ack.groupNotConfigured', { type: groupTypeLabel.value })}`
+    return `${msg}\n\n${_t('Tip: Checkmk only accepts bulk actions on %{type}s that are configured in Setup → Host groups (or Service groups). Implicit / livestatus-only groups are rejected by the REST API.', { type: groupTypeLabel.value })}`
   }
   return msg
 }

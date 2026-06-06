@@ -57,7 +57,7 @@
       <template #trailing>
         <ProblemsOnlyToggle
           :model-value="problemsOnly ?? false"
-          :title="t('board.flow.problemsOnlyToggle')"
+          :title="_t('Show only hosts with problems')"
           @update:model-value="emit('update:problemsOnly', $event)"
         />
       </template>
@@ -68,14 +68,19 @@
       class="flow-hint flow-hint--topk"
     >
       <span>{{
-        t(preview ? 'board.flow.topKHintShort' : 'board.flow.topKHint', topKBreakdown)
+        preview
+          ? _t('Services shown for %{shown} of %{total} hosts', topKBreakdown)
+          : _t(
+              'Showing service detail for the top %{shown} of %{total} most affected hosts — others are aggregated as donuts',
+              topKBreakdown
+            )
       }}</span>
       <button
         v-if="!preview"
         type="button"
         class="flow-hint__dismiss"
-        :title="t('board.flow.topKHintDismiss')"
-        :aria-label="t('board.flow.topKHintDismiss')"
+        :title="_t('Dismiss this hint')"
+        :aria-label="_t('Dismiss this hint')"
         @click="dismissTopKHint"
       >
         ×
@@ -115,28 +120,28 @@
 
     <div v-if="selectedIds.size > 0" class="bulk-actions">
       <span class="bulk-actions__count">
-        {{ t('board.flow.bulkSelected', { count: selectedIds.size }) }}
+        {{ _t('%{count} selected', { count: selectedIds.size }) }}
       </span>
       <button
         type="button"
         class="bulk-actions__btn"
         @click="bulkAction(objectActions.handlers.acknowledge)"
       >
-        {{ t('contextMenu.acknowledge') }}
+        {{ _t('Acknowledge…') }}
       </button>
       <button
         type="button"
         class="bulk-actions__btn"
         @click="bulkAction(objectActions.handlers.scheduleDowntime)"
       >
-        {{ t('contextMenu.scheduleDowntime') }}
+        {{ _t('Schedule downtime…') }}
       </button>
       <button
         type="button"
         class="bulk-actions__btn"
         @click="bulkAction(objectActions.handlers.forceCheck)"
       >
-        {{ t('contextMenu.forceCheck') }}
+        {{ _t('Force check') }}
       </button>
       <button
         type="button"
@@ -226,7 +231,6 @@ import {
   zoomIdentity
 } from 'd3'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import AckModal from '@/components/board/AckModal.vue'
 import BoardSearch from '@/components/board/BoardSearch.vue'
@@ -265,6 +269,7 @@ import {
 } from '@/utils/objectFilter'
 import { stateColor } from '@/utils/stateColors'
 import { resolveTemplate } from '@/utils/template'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   connectionId: string
@@ -288,7 +293,7 @@ const emit = defineEmits<{
   (e: 'positions-changed', value: Record<string, { x: number; y: number }>): void
   (e: 'update:problemsOnly', value: boolean): void
 }>()
-const { t } = useI18n()
+const { _t } = usei18n()
 const auth = useAuthStore()
 const statesStore = useStatesStore()
 const settingsStore = useSettingsStore()

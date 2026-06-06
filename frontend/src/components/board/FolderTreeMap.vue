@@ -1,6 +1,6 @@
 <template>
   <div class="ftm">
-    <div v-if="!root" class="ftm-placeholder">{{ t('board.ftWaiting') }}</div>
+    <div v-if="!root" class="ftm-placeholder">{{ _t('Waiting for folder data…') }}</div>
     <template v-else>
       <div ref="hostEl" class="ftm-stage">
         <svg ref="svgEl" class="ftm-svg" />
@@ -15,7 +15,7 @@
           <span class="ftm-tip-meta">{{ tip.meta }}</span>
         </div>
         <div v-if="empty" class="ftm-placeholder ftm-placeholder--overlay">
-          {{ t('board.ftNothingHere') }}
+          {{ _t('Nothing to show here.') }}
         </div>
       </div>
     </template>
@@ -33,7 +33,6 @@ import {
   treemapSquarify
 } from 'd3'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import { useStatesStore } from '@/stores/states'
 import type { FolderTreeNode } from '@/types/api'
@@ -46,6 +45,7 @@ import {
   visibleServices
 } from '@/utils/folderTreeFilter'
 import { severityPills, stateColorVar, stateRank } from '@/utils/stateColors'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   query: FilterTerm[]
@@ -55,7 +55,7 @@ const props = defineProps<{
   serviceLoading: Set<string>
   serviceError: Set<string>
 }>()
-const { t } = useI18n()
+const { _t } = usei18n()
 const emit = defineEmits<{
   'select-host': [FolderTreeNode]
   'select-service': [string, FolderTreeNode]

@@ -6,8 +6,7 @@
     <div v-if="!preview && !kiosk" class="ft-toolbar">
       <span v-if="root" class="ft-summary">
         <span
-          >{{ filterActive ? t('board.ftShowing') + ' ' : '' }}{{ summary.hosts }}
-          {{ t('board.ftHosts') }}</span
+          >{{ filterActive ? _t('showing') + ' ' : '' }}{{ summary.hosts }} {{ _t('hosts') }}</span
         >
         <span v-if="summaryPills.length && summaryOk > 0" class="ft-summary-ok"
           >· {{ summaryOk }} OK</span
@@ -21,27 +20,30 @@
             >{{ p.count }} {{ p.state }}</span
           >
         </template>
-        <span v-else class="ft-summary-ok">· {{ t('board.ftAllOk') }}</span>
+        <span v-else class="ft-summary-ok">· {{ _t('all OK') }}</span>
         <span v-if="searchTruncated" class="ft-summary-trunc">{{
-          t('board.ftSearchTruncated')
+          _t('more matches exist — refine your search')
         }}</span>
       </span>
       <span class="ft-spacer" />
       <BoardSearch
         v-model="filterText"
         inline
-        :placeholder="t('board.ftSearchPlaceholder')"
+        :placeholder="_t('Search folders, hosts, services…')"
         :exclude-prefixes="['hg', 'sg', 'id']"
       >
         <template #trailing>
-          <ProblemsOnlyToggle v-model="problemsOnly" :title="t('board.ftProblemsOnly')" />
+          <ProblemsOnlyToggle
+            v-model="problemsOnly"
+            :title="_t('Show only folders/hosts with problems')"
+          />
         </template>
       </BoardSearch>
       <button type="button" class="ft-tool" @click="activeExpandAll">
-        {{ t('board.ftExpandAll') }}
+        {{ _t('Expand all') }}
       </button>
       <button type="button" class="ft-tool" @click="activeCollapseAll">
-        {{ t('board.ftCollapseAll') }}
+        {{ _t('Collapse all') }}
       </button>
       <div class="ft-segment" role="tablist">
         <button
@@ -52,7 +54,7 @@
           :aria-selected="mode === 'map'"
           @click="setMode('map')"
         >
-          {{ t('board.ftMap') }}
+          {{ _t('Map') }}
         </button>
         <button
           type="button"
@@ -62,7 +64,7 @@
           :aria-selected="mode === 'list'"
           @click="setMode('list')"
         >
-          {{ t('board.ftList') }}
+          {{ _t('List') }}
         </button>
       </div>
     </div>
@@ -70,19 +72,25 @@
     <!-- Stale-data warning as an in-flow row (was a floating banner that
              covered tiles): the tree froze on its last known state. -->
     <div v-if="!preview && root && !states.connected" class="ft-stale-row" role="status">
-      {{ t('board.ftConnectionLost') }}
+      {{ _t('Connection lost — showing last known state') }}
     </div>
 
-    <div v-if="!root" class="ft-placeholder">{{ t('board.ftWaiting') }}</div>
+    <div v-if="!root" class="ft-placeholder">{{ _t('Waiting for folder data…') }}</div>
     <div v-else-if="!root.children.length" class="ft-placeholder">
-      {{ t('board.ftNoFolders') }}
+      {{
+        _t(
+          'No folders to show. The selected connection has no SETUP folders, or your filters hide them.'
+        )
+      }}
     </div>
     <div v-else-if="filterEmpty" class="ft-placeholder ft-placeholder--filter">
       <span>{{
-        problemsOnly && parsedQuery.length === 0 ? t('board.ftNoProblems') : t('board.ftNoMatches')
+        problemsOnly && parsedQuery.length === 0
+          ? _t('No problems — everything is OK.')
+          : _t('No matches for the current filter.')
       }}</span>
       <button type="button" class="ft-tool" @click="clearFilters">
-        {{ t('board.ftClearFilters') }}
+        {{ _t('Clear filter') }}
       </button>
     </div>
     <FolderTreeMap
@@ -150,7 +158,6 @@
 
 <script setup lang="ts">
 import { computed, onUnmounted, reactive, ref, useTemplateRef, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import BoardSearch from '@/components/board/BoardSearch.vue'
 import FolderTreeMap from '@/components/board/FolderTreeMap.vue'
@@ -171,6 +178,7 @@ import {
   visibleServices
 } from '@/utils/folderTreeFilter'
 import { severityPills } from '@/utils/stateColors'
+import usei18n from '@/vendor/cmk/lib/i18n'
 import { useDebounceFn } from '@/vendor/cmk/lib/useDebounce'
 
 const props = defineProps<{
@@ -188,7 +196,7 @@ defineEmits<{
   'ctx-folder': [FolderTreeNode, number, number]
 }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const auth = useAuthStore()
 const boards = useBoardsStore()
 const states = useStatesStore()
@@ -678,9 +686,9 @@ const flatRows = computed<FlatRow[]>(() => {
 })
 
 function noteLabel(row: FlatRow): string {
-  if (row.note === 'loading') return t('board.ftLoadingServices')
-  if (row.note === 'error') return t('board.ftServicesLoadError')
-  return problemsOnly.value ? t('board.ftNoProblemServices') : t('board.ftNoServices')
+  if (row.note === 'loading') return _t('Loading services…')
+  if (row.note === 'error') return _t('Could not load services')
+  return problemsOnly.value ? _t('No problem services') : _t('No services')
 }
 
 // Fixed-height windowing: render only the rows intersecting the viewport plus a

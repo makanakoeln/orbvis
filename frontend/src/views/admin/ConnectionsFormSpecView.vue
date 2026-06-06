@@ -3,15 +3,15 @@
     <div class="orb-connfs__header">
       <div>
         <CmkHeading type="h2">
-          {{ t('admin.connectionsTitle') }}
+          {{ _t('Monitoring Connections') }}
         </CmkHeading>
         <CmkParagraph class="admin-subtitle">
-          {{ t('admin.connectionsSubtitle') }}
+          {{ _t('Configure connections to monitoring systems') }}
         </CmkParagraph>
       </div>
       <CmkButton variant="primary" @click="openCreate">
         <CmkIcon name="add" size="small" style="margin-right: var(--dimension-3)" />
-        {{ t('admin.addConnection') }}
+        {{ _t('Add Connection') }}
       </CmkButton>
     </div>
 
@@ -22,9 +22,9 @@
     <CmkAlertBox v-else-if="store.error" variant="error">{{ store.error }}</CmkAlertBox>
 
     <div v-else-if="store.connections.length === 0" class="orb-connfs__empty">
-      <p class="orb-connfs__empty-text">{{ t('admin.noConnections') }}</p>
+      <p class="orb-connfs__empty-text">{{ _t('No connections configured') }}</p>
       <p class="orb-connfs__empty-text orb-connfs__empty-text--hint">
-        {{ t('admin.noConnectionsHint') }}
+        {{ _t('Add a connection to receive monitoring states') }}
       </p>
     </div>
 
@@ -33,20 +33,20 @@
         <thead>
           <tr class="orb-connfs__head-row">
             <th class="orb-connfs__th">
-              {{ t('admin.status') }}
+              {{ _t('Status') }}
             </th>
             <th class="orb-connfs__th">ID</th>
             <th class="orb-connfs__th">
-              {{ t('admin.displayLabel') }}
+              {{ _t('Display label') }}
             </th>
             <th class="orb-connfs__th">
-              {{ t('admin.type') }}
+              {{ _t('Type') }}
             </th>
             <th class="orb-connfs__th">
-              {{ t('admin.connection') }}
+              {{ _t('Connection') }}
             </th>
             <th class="orb-connfs__th orb-connfs__th--right">
-              {{ t('admin.actions') }}
+              {{ _t('Actions') }}
             </th>
           </tr>
         </thead>
@@ -56,7 +56,7 @@
               <button
                 :disabled="statusLoading[b.id]"
                 class="orb-connfs__status-btn"
-                :title="t('common.test')"
+                :title="_t('Test')"
                 @click="testExisting(b.id)"
               >
                 <span class="orb-connfs__dot-wrap">
@@ -72,11 +72,7 @@
                   <span v-else class="orb-connfs__dot orb-connfs__dot--error" />
                 </span>
                 <span class="orb-connfs__status-label">
-                  {{
-                    statusLoading[b.id]
-                      ? t('common.testing')
-                      : (statusMessages[b.id] ?? t('common.test'))
-                  }}
+                  {{ statusLoading[b.id] ? _t('Testing…') : (statusMessages[b.id] ?? _t('Test')) }}
                 </span>
                 <svg
                   class="orb-connfs__refresh"
@@ -116,20 +112,20 @@
               <template v-else-if="b.type === 'icinga2'">
                 {{ b.icinga2_url || '—' }}
               </template>
-              <span v-else>{{ t('admin.builtIn') }}</span>
+              <span v-else>{{ _t('built-in') }}</span>
             </td>
             <td class="orb-connfs__td orb-connfs__td--right">
               <div class="orb-connfs__actions">
                 <button
                   class="orb-connfs__action-btn orb-connfs__action-btn--edit"
-                  :title="t('common.edit')"
+                  :title="_t('Edit')"
                   @click="openEdit(b)"
                 >
                   <CmkIcon name="edit" size="small" />
                 </button>
                 <button
                   class="orb-connfs__action-btn orb-connfs__action-btn--delete"
-                  :title="t('common.delete')"
+                  :title="_t('Delete')"
                   @click="deleteTarget = b.id"
                 >
                   <CmkIcon name="delete" size="small" />
@@ -143,9 +139,9 @@
 
     <OrbConfirmDialog
       :open="!!deleteTarget"
-      :title="deleteTarget ? t('admin.deleteConnection', { id: deleteTarget }) : ''"
-      :message="t('board.cannotBeUndone')"
-      :confirm-label="t('common.delete')"
+      :title="deleteTarget ? _t('Delete connection &quot;%{id}&quot;?', { id: deleteTarget }) : ''"
+      :message="_t('This cannot be undone.')"
+      :confirm-label="_t('Delete')"
       @confirm="confirmRemove"
       @cancel="deleteTarget = null"
     />
@@ -155,14 +151,14 @@
       :open="dialog.open"
       size="small"
       :header="{
-        title: dialog.mode === 'create' ? t('admin.addConnectionTitle') : t('admin.editConnection'),
+        title: dialog.mode === 'create' ? _t('Add Connection') : _t('Edit Connection'),
         closeButton: true
       }"
       @close="closeDialog"
     >
       <div class="connection-edit__body">
         <div class="connection-edit__id">
-          <CmkLabel>{{ t('admin.connectionId') }}</CmkLabel>
+          <CmkLabel>{{ _t('Connection ID') }}</CmkLabel>
           <CmkInput
             v-if="dialog.mode === 'create'"
             v-model="dialogId"
@@ -171,7 +167,7 @@
           />
           <p v-else class="connection-edit__id-readonly">{{ dialogId }}</p>
           <p v-if="dialog.mode === 'create'" class="connection-edit__hint">
-            {{ t('admin.connectionIdHint') }}
+            {{ _t('Letters, digits, hyphens and underscores only — used in URLs and configs') }}
           </p>
         </div>
 
@@ -193,17 +189,17 @@
 
         <div class="connection-edit__footer">
           <CmkButton variant="secondary" @click="closeDialog">
-            {{ t('common.cancel') }}
+            {{ _t('Cancel') }}
           </CmkButton>
           <CmkButton
             variant="optional"
             :disabled="dialogTest.loading || !formSchema"
             @click="testDialog"
           >
-            {{ dialogTest.loading ? t('common.testing') : t('common.test') }}
+            {{ dialogTest.loading ? _t('Testing…') : _t('Test') }}
           </CmkButton>
           <CmkButton variant="primary" :disabled="saving || !formSchema || !isDirty" @click="save">
-            {{ saving ? t('common.saving') : t('common.save') }}
+            {{ saving ? _t('Saving…') : _t('Save') }}
           </CmkButton>
         </div>
       </div>
@@ -216,7 +212,6 @@ import FormEdit from '@cmk/form/FormEdit.vue'
 import { initializeComponentRegistry } from '@cmk/form/private/FormEditDispatcher/dispatch'
 import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue'
 import CmkAlertBox from '@/components/cmk/CmkAlertBox'
@@ -236,12 +231,13 @@ import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import { useConnectionsStore } from '@/stores/connections'
 import type { ConnectionConfig } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 type Schema = NonNullable<VueFormspecComponents['components']>
 
 initializeComponentRegistry(orbFormComponents)
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const store = useConnectionsStore()
 const auth = useAuthStore()
 const toast = useToast()
@@ -334,16 +330,18 @@ async function openEdit(b: ConnectionConfig) {
 }
 
 function closeDialog() {
-  if (isDirty.value && !window.confirm(t('board.discardChangesConfirm'))) return
+  if (isDirty.value && !window.confirm(_t('Discard your unsaved changes?'))) return
   dialog.open = false
 }
 
 function validateNewId(): string | null {
   if (dialog.mode !== 'create') return null
   const id = dialogId.value.trim()
-  if (!id) return t('admin.connectionIdRequired')
-  if (!/^[A-Za-z0-9_-]+$/.test(id)) return t('admin.connectionIdInvalid')
-  if (store.connections.some((c) => c.id === id)) return t('admin.connectionIdTaken')
+  if (!id) return _t('Connection ID is required')
+  if (!/^[A-Za-z0-9_-]+$/.test(id))
+    return _t('Only letters, digits, hyphens (-) and underscores (_) allowed')
+  if (store.connections.some((c) => c.id === id))
+    return _t('A connection with this ID already exists')
   return null
 }
 
@@ -386,16 +384,16 @@ async function save() {
     const id = dialogId.value.trim()
     if (dialog.mode === 'create') {
       await connectionsApiFormSpec.createFromForm(id, formSpecData.value, auth.accessToken!)
-      toast.success(t('admin.connectionCreated'))
+      toast.success(_t('Connection created'))
     } else {
       await connectionsApiFormSpec.updateFromForm(id, formSpecData.value, auth.accessToken!)
-      toast.success(t('admin.connectionUpdated'))
+      toast.success(_t('Connection updated'))
     }
     await store.fetchConnections()
     dialog.open = false
     testAll()
   } catch (e: unknown) {
-    formError.value = e instanceof Error ? e.message : t('admin.saveFailed')
+    formError.value = e instanceof Error ? e.message : _t('Save failed')
   } finally {
     saving.value = false
   }
@@ -409,9 +407,9 @@ async function confirmRemove() {
     await store.deleteConnection(id)
     delete statuses[id]
     delete statusMessages[id]
-    toast.success(t('admin.connectionDeleted'))
+    toast.success(_t('Connection deleted'))
   } catch (e: unknown) {
-    toast.error(e instanceof Error ? e.message : t('admin.deleteFailed'))
+    toast.error(e instanceof Error ? e.message : _t('Delete failed'))
   }
 }
 

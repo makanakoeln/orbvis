@@ -14,21 +14,24 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import CmkButton from '@/components/cmk/CmkButton'
 import CmkPopupDialog from '@/components/cmk/CmkPopupDialog'
 import CmkParagraph from '@/components/cmk/typography/CmkParagraph'
 
-const { t } = useI18n()
+import usei18n from '@/vendor/cmk/lib/i18n'
+
+const { _t } = usei18n()
 
 const props = defineProps<{ open: boolean }>()
 defineEmits<{ confirm: []; cancel: [] }>()
 
-const title = computed(() => t('common.unsavedConfirmTitle'))
-const message = computed(() => t('common.unsavedConfirmMessage'))
-const discardLabel = computed(() => t('common.discardChanges'))
-const stayLabel = computed(() => t('common.stayOnPage'))
+const title = computed(() => _t('Discard unsaved changes?'))
+const message = computed(() =>
+  _t('You have unsaved changes on this page. Leaving now will discard them.')
+)
+const discardLabel = computed(() => _t('Discard changes'))
+const stayLabel = computed(() => _t('Stay on page'))
 
 // Pre-select the safe action so Enter dismisses the dialog instead of
 // destroying work. CmkPopup disables reka-ui's auto-focus, so the focus

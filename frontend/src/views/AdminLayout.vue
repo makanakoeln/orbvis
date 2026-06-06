@@ -25,31 +25,31 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 
 import type { BreadcrumbItem } from '@/components/cmk/CmkBreadcrumb.vue'
 import CmkBreadcrumb from '@/components/cmk/CmkBreadcrumb.vue'
 
 import { useAuthStore } from '@/stores/auth'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const auth = useAuthStore()
 const route = useRoute()
 
 const isCmk = computed(() => auth.ssoActive || auth.isCheckmkDeployment)
 
 const adminNavItems = computed(() => [
-  { to: '/admin/connections', label: t('admin.connections') },
-  { to: '/admin/icons', label: t('admin.icons') },
+  { to: '/admin/connections', label: _t('Connections') },
+  { to: '/admin/icons', label: _t('Images') },
   ...(!isCmk.value
     ? [
-        { to: '/admin/users', label: t('admin.users') },
-        { to: '/admin/roles', label: t('admin.rolesAndPermissions') }
+        { to: '/admin/users', label: _t('Users') },
+        { to: '/admin/roles', label: _t('Roles & Permissions') }
       ]
     : []),
-  { to: '/admin/settings', label: t('admin.settings') },
-  { to: '/admin/system', label: t('admin.system') }
+  { to: '/admin/settings', label: _t('Settings') },
+  { to: '/admin/system', label: _t('System') }
 ])
 
 function isActive(path: string): boolean {
@@ -59,8 +59,8 @@ function isActive(path: string): boolean {
 const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
   const current = adminNavItems.value.find((item) => isActive(item.to))
   const items: BreadcrumbItem[] = [
-    { title: t('home.title'), to: '/' },
-    { title: t('nav.administration') }
+    { title: _t('Boards'), to: '/' },
+    { title: _t('Administration') }
   ]
   if (current) items.push({ title: current.label })
   return items

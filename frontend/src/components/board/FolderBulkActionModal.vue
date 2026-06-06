@@ -8,7 +8,7 @@ mis-fires.
 <template>
   <OrbModal
     :open="true"
-    :title="t('board.ftBulkTitle', { folder: folder.title })"
+    :title="_t('Folder actions — %{folder}', { folder: folder.title })"
     closable
     @close="$emit('close')"
   >
@@ -22,7 +22,7 @@ mis-fires.
         :aria-selected="mode === 'ack'"
         @click="mode = 'ack'"
       >
-        {{ t('board.ftBulkAck') }}
+        {{ _t('Acknowledge') }}
       </button>
       <button
         v-if="canDowntime"
@@ -33,32 +33,37 @@ mis-fires.
         :aria-selected="mode === 'downtime'"
         @click="mode = 'downtime'"
       >
-        {{ t('board.ftBulkDowntime') }}
+        {{ _t('Schedule downtime') }}
       </button>
     </div>
 
     <p class="fbulk__count">
-      {{ t('board.ftBulkAffects', { count: hosts.length, folder: folder.title }) }}
+      {{
+        _t('Applies to %{count} hosts in “%{folder}”.', {
+          count: hosts.length,
+          folder: folder.title
+        })
+      }}
     </p>
-    <CmkCheckbox v-model="recursive" :label="t('board.ftBulkRecursive')" />
+    <CmkCheckbox v-model="recursive" :label="_t('Include sub-folders')" />
 
     <div class="fbulk__fields">
       <div>
-        <label class="fbulk__label">{{ t('ack.comment') }}</label>
+        <label class="fbulk__label">{{ _t('Comment') }}</label>
         <CmkInput
           ref="commentEl"
           v-model="comment"
           field-size="FILL"
-          :placeholder="t('ack.comment') + '…'"
+          :placeholder="_t('Comment') + '…'"
         />
       </div>
       <template v-if="mode === 'ack'">
-        <CmkCheckbox v-model="sticky" :label="t('ack.sticky')" />
-        <CmkCheckbox v-model="notify" :label="t('ack.notify')" />
-        <CmkCheckbox v-model="persistent" :label="t('ack.persistent')" />
+        <CmkCheckbox v-model="sticky" :label="_t('Sticky (stays until OK)')" />
+        <CmkCheckbox v-model="notify" :label="_t('Send notification')" />
+        <CmkCheckbox v-model="persistent" :label="_t('Persistent')" />
       </template>
       <div v-else>
-        <label class="fbulk__label">{{ t('board.ftBulkDuration') }}</label>
+        <label class="fbulk__label">{{ _t('Duration') }}</label>
         <select v-model.number="durationH" class="fbulk__select">
           <option v-for="d in durations" :key="d" :value="d">{{ d }} h</option>
         </select>
@@ -69,12 +74,12 @@ mis-fires.
       <span style="white-space: pre-line">{{ error }}</span>
     </CmkAlertBox>
     <p v-if="successCount" class="fbulk__success">
-      {{ t('board.ftBulkDone', { count: successCount }) }}
+      {{ _t('%{count} hosts done.', { count: successCount }) }}
     </p>
 
     <template #footer>
       <CmkButton variant="secondary" @click="$emit('close')">
-        {{ t('common.cancel') }}
+        {{ _t('Cancel') }}
       </CmkButton>
       <CmkButton
         variant="primary"
@@ -83,10 +88,10 @@ mis-fires.
       >
         {{
           submitting
-            ? t('ack.bulkSubmitting', { current: progress, total: hosts.length })
+            ? _t('Acknowledging %{current}/%{total}…', { current: progress, total: hosts.length })
             : mode === 'ack'
-              ? t('board.ftBulkAckSubmit', { count: hosts.length })
-              : t('board.ftBulkDowntimeSubmit', { count: hosts.length })
+              ? _t('Acknowledge %{count} hosts', { count: hosts.length })
+              : _t('Downtime %{count} hosts', { count: hosts.length })
         }}
       </CmkButton>
     </template>
@@ -95,7 +100,6 @@ mis-fires.
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbModal from '@/components/OrbModal.vue'
 import CmkAlertBox from '@/components/cmk/CmkAlertBox'
@@ -106,11 +110,12 @@ import CmkInput from '@/components/cmk/user-input/CmkInput'
 import { cmkApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { FolderTreeNode } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{ folder: FolderTreeNode; checkmkUrl: string }>()
 const emit = defineEmits<{ close: [] }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const auth = useAuthStore()
 
 const canAck = computed(() => auth.mayCommand('acknowledge'))
@@ -208,7 +213,7 @@ async function submit() {
   await Promise.all(workers)
   submitting.value = false
   if (failures.length) {
-    error.value = t('ack.bulkPartial', {
+    error.value = _t('%{failed} of %{total} failed: %{sample}', {
       failed: failures.length,
       total: hosts.value.length,
       sample: failures.slice(0, 3).join(', ')

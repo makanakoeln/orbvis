@@ -1,10 +1,10 @@
 import { type MaybeRefOrGetter, reactive, ref, toValue } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import { cmkApi } from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import { useStatesStore } from '@/stores/states'
 import type { BoardObject, DowntimeEntry } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 interface DispatchOptions {
   hostFn: (baseUrl: string, hostname: string, siteId?: string | null) => Promise<void>
@@ -14,8 +14,8 @@ interface DispatchOptions {
     service: string,
     siteId?: string | null
   ) => Promise<void>
-  errorKey: string
-  successKey?: string
+  errorText: string
+  successText?: string
 }
 
 export interface UseObjectActions {
@@ -43,7 +43,7 @@ export function useObjectActions(
   checkmkUrl: MaybeRefOrGetter<string | null | undefined>,
   onActionStart?: () => void
 ): UseObjectActions {
-  const { t } = useI18n()
+  const { _t } = usei18n()
   const toast = useToast()
   const statesStore = useStatesStore()
 
@@ -65,7 +65,7 @@ export function useObjectActions(
   async function dispatchHostOrService(
     url: string,
     obj: BoardObject,
-    { hostFn, serviceFn, errorKey, successKey }: DispatchOptions
+    { hostFn, serviceFn, errorText, successText }: DispatchOptions
   ): Promise<void> {
     try {
       // Prefer the live state-map site_id; fall back to a site_id carried
@@ -79,11 +79,11 @@ export function useObjectActions(
       } else {
         return
       }
-      if (successKey) toast.success(t(successKey))
+      if (successText) toast.success(successText)
       statesStore.refreshAfterCommand()
     } catch (err) {
       const detail = err instanceof Error ? err.message : ''
-      toast.error(detail ? `${t(errorKey)}: ${detail}` : t(errorKey))
+      toast.error(detail ? `${errorText}: ${detail}` : errorText)
     }
   }
 
@@ -98,7 +98,7 @@ export function useObjectActions(
     await dispatchHostOrService(url, obj, {
       hostFn: cmkApi.removeAcknowledgementHost,
       serviceFn: cmkApi.removeAcknowledgementService,
-      errorKey: 'contextMenu.removeAckFailed'
+      errorText: _t('Failed to remove acknowledgement')
     })
   }
 
@@ -120,21 +120,21 @@ export function useObjectActions(
         return
       }
     } catch {
-      toast.error(t('contextMenu.removeDowntimeFailed'))
+      toast.error(_t('Failed to remove downtime'))
       return
     }
     if (downtimes.length === 0) {
-      toast.error(t('contextMenu.noDowntimesFound'))
+      toast.error(_t('No active downtimes found'))
       return
     }
     const single = downtimes.length === 1 ? downtimes[0] : undefined
     if (single !== undefined) {
       try {
         await cmkApi.removeDowntimeById(url, single.id, single.site_id)
-        toast.success(t('contextMenu.removeDowntimeSuccess'))
+        toast.success(_t('Downtime removed'))
         statesStore.refreshAfterCommand()
       } catch {
-        toast.error(t('contextMenu.removeDowntimeFailed'))
+        toast.error(_t('Failed to remove downtime'))
       }
       return
     }
@@ -154,8 +154,8 @@ export function useObjectActions(
     await dispatchHostOrService(url, obj, {
       hostFn: cmkApi.forceCheckHost,
       serviceFn: cmkApi.forceCheckService,
-      errorKey: 'contextMenu.forceCheckFailed',
-      successKey: 'contextMenu.forceCheckSuccess'
+      errorText: _t('Force check failed'),
+      successText: _t('Force check scheduled')
     })
   }
 
@@ -165,8 +165,8 @@ export function useObjectActions(
     await dispatchHostOrService(url, obj, {
       hostFn: enable ? cmkApi.enableNotificationsHost : cmkApi.disableNotificationsHost,
       serviceFn: enable ? cmkApi.enableNotificationsService : cmkApi.disableNotificationsService,
-      errorKey: 'contextMenu.toggleNotificationsFailed',
-      successKey: 'contextMenu.toggleNotificationsSuccess'
+      errorText: _t('Failed to toggle notifications'),
+      successText: _t('Notifications updated')
     })
   }
 

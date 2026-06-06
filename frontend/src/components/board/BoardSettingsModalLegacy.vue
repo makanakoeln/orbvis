@@ -27,18 +27,18 @@
             <div v-if="activeTab === 'general'" class="board-settings__form">
               <!-- Alias -->
               <div class="board-settings__field">
-                <CmkLabel>{{ t('board.displayName') }}</CmkLabel>
+                <CmkLabel>{{ _t('Display name') }}</CmkLabel>
                 <CmkInput v-model="form.alias" field-size="FILL" />
               </div>
 
               <!-- Connection -->
               <div class="board-settings__field">
-                <CmkLabel>{{ t('board.connection') }}</CmkLabel>
+                <CmkLabel>{{ _t('Connection') }}</CmkLabel>
                 <CmkDropdown
                   :selected-option="form.connection_id || null"
                   :options="connectionOptions"
                   :width="'fill'"
-                  :label="t('board.connection')"
+                  :label="_t('Connection')"
                   @update:selected-option="form.connection_id = $event ?? ''"
                 />
               </div>
@@ -47,16 +47,23 @@
                          settings and the board geometry; cloning is the supported path).
                          Rendered as plain text (not Badge) so it doesn't suggest interaction. -->
               <div class="board-settings__field">
-                <CmkLabel :help="t('board.boardTypeImmutable')">{{
-                  t('board.boardType')
-                }}</CmkLabel>
+                <CmkLabel
+                  :help="
+                    _t(
+                      'Board type cannot be changed after creation. Clone the board to switch type.'
+                    )
+                  "
+                  >{{ _t('Board type') }}</CmkLabel
+                >
                 <p class="board-settings__readonly-value">{{ boardTypeLabel }}</p>
               </div>
 
               <!-- Rotation (positive toggle replaces the 0=disabled magic value) -->
               <div class="board-settings__field">
                 <div class="board-settings__row-between">
-                  <CmkLabel :help="t('board.autoRotateHint')">{{ t('board.autoRotate') }}</CmkLabel>
+                  <CmkLabel :help="_t('Cycle through visible boards on a fixed interval')">{{
+                    _t('Auto-rotate boards')
+                  }}</CmkLabel>
                   <CmkSwitch :data="rotationEnabled" @update:data="onToggleRotation" />
                 </div>
                 <div v-if="rotationEnabled" class="board-settings__detail">
@@ -66,7 +73,7 @@
                     max="3600"
                     class="board-settings__num"
                   />
-                  <span class="board-settings__unit">{{ t('board.rotationSuffix') }}</span>
+                  <span class="board-settings__unit">{{ _t('s') }}</span>
                 </div>
               </div>
 
@@ -74,9 +81,9 @@
                                  The foldertree has no coordinate-positioned icons, so icon
                                  size / layer don't apply. -->
               <div v-if="form.map_type !== 'foldertree'" class="board-settings__subsection">
-                <p class="orb-section-title">{{ t('board.objectDefaults') }}</p>
+                <p class="orb-section-title">{{ _t('Object defaults') }}</p>
                 <div class="board-settings__field">
-                  <CmkLabel>{{ t('board.iconSize') }}</CmkLabel>
+                  <CmkLabel>{{ _t('Icon size') }}</CmkLabel>
                   <div class="board-settings__input-row">
                     <NumberInput
                       v-model="form.icon_size"
@@ -89,7 +96,14 @@
                   </div>
                 </div>
                 <div class="board-settings__field">
-                  <CmkLabel :help="t('board.defaultZHint')">{{ t('board.defaultZ') }}</CmkLabel>
+                  <CmkLabel
+                    :help="
+                      _t(
+                        'Layer for objects that have no explicit z value. Higher numbers render on top.'
+                      )
+                    "
+                    >{{ _t('Default layer (z)') }}</CmkLabel
+                  >
                   <NumberInput
                     v-model="form.default_z"
                     min="0"
@@ -104,7 +118,7 @@
                 <div class="board-settings__coord-row">
                   <div class="board-settings__coord-grid">
                     <div class="board-settings__field">
-                      <CmkLabel>{{ t('board.latitude') }}</CmkLabel>
+                      <CmkLabel>{{ _t('Latitude') }}</CmkLabel>
                       <NumberInput
                         v-model="form.worldmap_lat"
                         step="any"
@@ -113,7 +127,7 @@
                       />
                     </div>
                     <div class="board-settings__field">
-                      <CmkLabel>{{ t('board.longitude') }}</CmkLabel>
+                      <CmkLabel>{{ _t('Longitude') }}</CmkLabel>
                       <NumberInput
                         v-model="form.worldmap_lng"
                         step="any"
@@ -122,7 +136,14 @@
                       />
                     </div>
                     <div class="board-settings__field">
-                      <CmkLabel :help="t('board.worldmapHint')">{{ t('board.zoom') }}</CmkLabel>
+                      <CmkLabel
+                        :help="
+                          _t(
+                            'Pan/zoom the map first, then reopen settings to capture the current view.'
+                          )
+                        "
+                        >{{ _t('Zoom') }}</CmkLabel
+                      >
                       <NumberInput
                         v-model="form.worldmap_zoom"
                         min="1"
@@ -134,7 +155,7 @@
                   <CmkButton
                     variant="secondary"
                     class="board-settings__pick-btn"
-                    :title="t('board.pickFromMapHint')"
+                    :title="_t('Closes settings and switches the map to picker mode.')"
                     @click="startWorldmapViewPick"
                   >
                     <svg
@@ -155,25 +176,25 @@
                       <line x1="18" y1="12" x2="22" y2="12" />
                       <circle cx="12" cy="12" r="1.5" fill="currentColor" />
                     </svg>
-                    <span>{{ t('board.pickFromMap') }}</span>
+                    <span>{{ _t('Pick from map') }}</span>
                   </CmkButton>
                 </div>
                 <div class="board-settings__field">
-                  <CmkLabel>{{ t('board.tileUrl') }}</CmkLabel>
+                  <CmkLabel>{{ _t('Tile server URL') }}</CmkLabel>
                   <CmkInput
                     v-model="form.worldmap_tile_url"
-                    :placeholder="t('board.tileUrlPlaceholder')"
+                    :placeholder="_t('https://%{s}.tile.openstreetmap.org/%{z}/%{x}/%{y}.png')"
                     field-size="FILL"
                   />
                 </div>
                 <div class="board-settings__field">
-                  <CmkLabel>{{ t('board.tileSaturate') }}</CmkLabel>
+                  <CmkLabel>{{ _t('Map saturation (%)') }}</CmkLabel>
                   <NumberInput
                     v-model="form.worldmap_tile_saturate"
                     :min="0"
                     :max="100"
                     :step="5"
-                    :placeholder="t('board.tileSaturatePlaceholder')"
+                    :placeholder="_t('100 (default)')"
                     class="board-settings__num board-settings__num--full"
                   />
                 </div>
@@ -183,12 +204,19 @@
                                  or LAT/LONG custom variables). Mirrors NagVis
                                  automap with lat/lng. -->
                 <div class="board-settings__subsection board-settings__field">
-                  <CmkLabel :help="t('board.autoSourceHint')">{{ t('board.autoSource') }}</CmkLabel>
+                  <CmkLabel
+                    :help="
+                      _t(
+                        'Hosts are auto-discovered from monitoring data via orbvis_lat/orbvis_lng labels or LAT/LONG custom variables. They show up alongside any objects you place manually.'
+                      )
+                    "
+                    >{{ _t('Automap source') }}</CmkLabel
+                  >
                   <CmkDropdown
                     :selected-option="form.worldmap_auto_source || ''"
                     :options="worldmapAutoSourceOptions"
                     :width="'fill'"
-                    :label="t('board.autoSource')"
+                    :label="_t('Automap source')"
                     @update:selected-option="
                       form.worldmap_auto_source = ($event ?? '') as typeof form.worldmap_auto_source
                     "
@@ -199,7 +227,7 @@
                       form.worldmap_auto_source === 'servicegroup'
                     "
                     v-model="form.worldmap_auto_filter_value"
-                    :placeholder="t('board.autoFilterValuePlaceholder')"
+                    :placeholder="_t('group name (e.g. &quot;muc&quot;)')"
                     field-size="FILL"
                   />
                 </div>
@@ -208,35 +236,45 @@
               <!-- Flow settings -->
               <template v-if="form.map_type === 'flow'">
                 <div class="board-settings__field">
-                  <CmkLabel>{{ t('board.flowRoot') }}</CmkLabel>
+                  <CmkLabel>{{ _t('Root host') }}</CmkLabel>
                   <CmkInput
                     v-model="form.flow_root"
-                    :placeholder="t('board.flowRootPlaceholder')"
+                    :placeholder="_t('Leave empty to render full topology')"
                     field-size="FILL"
                   />
                 </div>
                 <div class="board-settings__grid-2">
                   <div class="board-settings__field">
-                    <CmkLabel :help="t('board.flowHint')">{{
-                      t('board.flowChildLayers')
-                    }}</CmkLabel>
+                    <CmkLabel
+                      :help="
+                        _t(
+                          'Restrict the topology to a cutout around a single root host. -1 = unlimited hops, 0 = none.'
+                        )
+                      "
+                      >{{ _t('Child layers') }}</CmkLabel
+                    >
                     <NumberInput
                       v-model="form.flow_child_layers"
                       :min="-1"
                       :max="20"
-                      :placeholder="t('board.flowLayersPlaceholder')"
+                      :placeholder="_t('unlimited')"
                       class="board-settings__num board-settings__num--full"
                     />
                   </div>
                   <div class="board-settings__field">
-                    <CmkLabel :help="t('board.flowHint')">{{
-                      t('board.flowParentLayers')
-                    }}</CmkLabel>
+                    <CmkLabel
+                      :help="
+                        _t(
+                          'Restrict the topology to a cutout around a single root host. -1 = unlimited hops, 0 = none.'
+                        )
+                      "
+                      >{{ _t('Parent layers') }}</CmkLabel
+                    >
                     <NumberInput
                       v-model="form.flow_parent_layers"
                       :min="-1"
                       :max="20"
-                      :placeholder="t('board.flowLayersPlaceholder')"
+                      :placeholder="_t('unlimited')"
                       class="board-settings__num board-settings__num--full"
                     />
                   </div>
@@ -244,9 +282,14 @@
 
                 <div class="board-settings__grid-2">
                   <div class="board-settings__field">
-                    <CmkLabel :help="t('board.flowLimitsHint')">{{
-                      t('board.flowTopAffectedHosts')
-                    }}</CmkLabel>
+                    <CmkLabel
+                      :help="
+                        _t(
+                          'Only the top-K hosts ranked by problem count render full service detail; the rest show donut-only. Leave empty to use the global default.'
+                        )
+                      "
+                      >{{ _t('Hosts with service detail') }}</CmkLabel
+                    >
                     <NumberInput
                       v-model="form.flow_top_affected_hosts"
                       :min="0"
@@ -256,9 +299,14 @@
                     />
                   </div>
                   <div class="board-settings__field">
-                    <CmkLabel :help="t('board.flowLimitsHint')">{{
-                      t('board.flowMaxServicesPerHost')
-                    }}</CmkLabel>
+                    <CmkLabel
+                      :help="
+                        _t(
+                          'Only the top-K hosts ranked by problem count render full service detail; the rest show donut-only. Leave empty to use the global default.'
+                        )
+                      "
+                      >{{ _t('Services per host') }}</CmkLabel
+                    >
                     <NumberInput
                       v-model="form.flow_max_services_per_host"
                       :min="0"
@@ -274,12 +322,12 @@
               <template v-if="form.map_type === 'radar'">
                 <div class="board-settings__grid-2">
                   <div class="board-settings__field">
-                    <CmkLabel>{{ t('board.filterType') }}</CmkLabel>
+                    <CmkLabel>{{ _t('Filter type') }}</CmkLabel>
                     <CmkDropdown
                       :selected-option="form.radar_filter || null"
                       :options="radarFilterOptions"
                       :width="'fill'"
-                      :label="t('board.filterType')"
+                      :label="_t('Filter type')"
                       @update:selected-option="form.radar_filter = $event ?? ''"
                     />
                   </div>
@@ -287,18 +335,16 @@
                     v-if="form.radar_filter === 'hostgroup' || form.radar_filter === 'servicegroup'"
                     class="board-settings__field"
                   >
-                    <CmkLabel>{{ t('board.groupName') }}</CmkLabel>
+                    <CmkLabel>{{ _t('Group name') }}</CmkLabel>
                     <AutocompleteInput
                       v-model="form.radar_filter_value"
                       :suggestions="radarGroupNames"
                       :loading="loadingRadarGroups"
-                      :placeholder="t('boardSettings.groupName')"
+                      :placeholder="_t('Group name')"
                       :empty-text="
-                        t(
-                          form.radar_filter === 'hostgroup'
-                            ? 'boardSettings.noHostgroups'
-                            : 'boardSettings.noServicegroups'
-                        )
+                        form.radar_filter === 'hostgroup'
+                          ? _t('No host groups configured in this site')
+                          : _t('No service groups configured in this site')
                       "
                     />
                   </div>
@@ -308,21 +354,27 @@
               <template v-if="form.map_type === 'foldertree'">
                 <div class="board-settings__grid-2">
                   <div class="board-settings__field">
-                    <CmkLabel :help="t('board.ftRootFolderHint')">{{
-                      t('board.ftRootFolder')
-                    }}</CmkLabel>
+                    <CmkLabel
+                      :help="
+                        _t(
+                          'Show only this folder and below. Empty = whole tree. Accepts a folder path or its stable id.'
+                        )
+                      "
+                      >{{ _t('Root folder') }}</CmkLabel
+                    >
                     <CmkDropdown
                       :selected-option="form.ft_root_folder"
                       :options="ftRootFolderOptions"
                       :width="'fill'"
-                      :label="t('board.ftRootFolder')"
+                      :label="_t('Root folder')"
                       @update:selected-option="form.ft_root_folder = $event ?? ''"
                     />
                   </div>
                   <div class="board-settings__field">
-                    <CmkLabel :help="t('board.ftExpandDepthHint')">{{
-                      t('board.ftExpandDepth')
-                    }}</CmkLabel>
+                    <CmkLabel
+                      :help="_t('How many folder levels are expanded when the board opens.')"
+                      >{{ _t('Auto-expand depth') }}</CmkLabel
+                    >
                     <NumberInput
                       v-model="form.ft_default_expand_depth"
                       min="0"
@@ -332,46 +384,51 @@
                   </div>
                 </div>
                 <div class="board-settings__field">
-                  <CmkLabel :help="t('board.ftDefaultViewHint')">{{
-                    t('board.ftDefaultView')
+                  <CmkLabel :help="_t('Which presentation the board opens in by default.')">{{
+                    _t('Default view')
                   }}</CmkLabel>
                   <CmkDropdown
                     :selected-option="form.ft_default_view"
                     :options="ftDefaultViewOptions"
                     :width="'fill'"
-                    :label="t('board.ftDefaultView')"
+                    :label="_t('Default view')"
                     @update:selected-option="
                       form.ft_default_view = ($event as 'list' | 'map') ?? 'list'
                     "
                   />
                 </div>
                 <div class="board-settings__field">
-                  <CmkLabel :help="t('board.ftSitesHint')">{{ t('board.ftSites') }}</CmkLabel>
+                  <CmkLabel
+                    :help="
+                      _t(
+                        'Distributed monitoring: limit the tree to these sites. None selected = all sites.'
+                      )
+                    "
+                    >{{ _t('Sites') }}</CmkLabel
+                  >
                   <FtSitesSelect v-model="ftSites" :options="siteOptions" />
                 </div>
                 <div class="board-settings__toggle-list">
                   <label class="board-settings__toggle">
                     <CmkSwitch v-model:data="form.ft_show_empty_folders" />
-                    <span class="board-settings__toggle-label">{{
-                      t('board.ftShowEmptyFolders')
-                    }}</span>
+                    <span class="board-settings__toggle-label">{{ _t('Show empty folders') }}</span>
                   </label>
                   <label class="board-settings__toggle">
                     <CmkSwitch v-model:data="form.ft_show_services" />
                     <span class="board-settings__toggle-label">{{
-                      t('board.ftShowServices')
+                      _t('Expand hosts to their services')
                     }}</span>
                   </label>
                   <label class="board-settings__toggle">
                     <CmkSwitch v-model:data="form.ft_problems_only" />
                     <span class="board-settings__toggle-label">{{
-                      t('board.ftProblemsOnly')
+                      _t('Show only folders/hosts with problems')
                     }}</span>
                   </label>
                   <label class="board-settings__toggle">
                     <CmkSwitch v-model:data="form.ft_only_hard_states" />
                     <span class="board-settings__toggle-label">{{
-                      t('board.ftOnlyHardStates')
+                      _t('Use hard states only')
                     }}</span>
                   </label>
                 </div>
@@ -383,24 +440,34 @@
                 v-if="form.map_type !== 'radar' && form.map_type !== 'foldertree'"
                 class="board-settings__subsection board-settings__stack"
               >
-                <p class="orb-section-title">{{ t('boardSettings.templates') }}</p>
+                <p class="orb-section-title">{{ _t('Templates') }}</p>
                 <div class="board-settings__field">
-                  <CmkLabel :help="t('board.templateHint')">{{
-                    t('board.hoverTemplate')
-                  }}</CmkLabel>
+                  <CmkLabel
+                    :help="
+                      _t(
+                        'Available: {{name}}, {{state}}, {{output}}, {{host}}, {{service}}, {{address}}, {{state_type}}, {{attempts}}, {{last_check}}, {{state_duration}}, {{acknowledged}}, {{in_downtime}}, {{stale}}'
+                      )
+                    "
+                    >{{ _t('Hover template') }}</CmkLabel
+                  >
                   <CmkInput
                     v-model="form.hover_template"
-                    :placeholder="t('board.templatePlaceholder')"
+                    :placeholder="_t('e.g. {{name}} is {{state}}')"
                     field-size="FILL"
                   />
                 </div>
                 <div class="board-settings__field">
-                  <CmkLabel :help="t('board.templateHint')">{{
-                    t('board.contextTemplate')
-                  }}</CmkLabel>
+                  <CmkLabel
+                    :help="
+                      _t(
+                        'Available: {{name}}, {{state}}, {{output}}, {{host}}, {{service}}, {{address}}, {{state_type}}, {{attempts}}, {{last_check}}, {{state_duration}}, {{acknowledged}}, {{in_downtime}}, {{stale}}'
+                      )
+                    "
+                    >{{ _t('Context template') }}</CmkLabel
+                  >
                   <CmkInput
                     v-model="form.context_template"
-                    :placeholder="t('board.templatePlaceholder')"
+                    :placeholder="_t('e.g. {{name}} is {{state}}')"
                     field-size="FILL"
                   />
                 </div>
@@ -409,7 +476,7 @@
               <!-- Click action -->
               <div class="board-settings__subsection board-settings__field">
                 <div>
-                  <CmkLabel>{{ t('board.clickAction') }}</CmkLabel>
+                  <CmkLabel>{{ _t('Click action') }}</CmkLabel>
                 </div>
                 <CmkDropdown
                   :selected-option="form.click_action"
@@ -428,7 +495,14 @@
                 class="board-settings__subsection board-settings__field"
               >
                 <div>
-                  <CmkLabel :help="t('board.renderModeHint')">{{ t('board.renderMode') }}</CmkLabel>
+                  <CmkLabel
+                    :help="
+                      _t(
+                        'NagVis-classic anchors objects top-left with flat textboxes on a light canvas (auto-selected for imported NagVis maps). OrbVis is the modern centered glass style.'
+                      )
+                    "
+                    >{{ _t('Rendering style') }}</CmkLabel
+                  >
                 </div>
                 <CmkDropdown
                   :selected-option="form.render_mode"
@@ -443,7 +517,9 @@
 
               <!-- Show in lists toggle -->
               <div class="board-settings__subsection board-settings__row-between">
-                <CmkLabel :help="t('board.showInListsHint')">{{ t('board.showInLists') }}</CmkLabel>
+                <CmkLabel :help="_t('When disabled, this board is hidden from regular users')">{{
+                  _t('Show in board list')
+                }}</CmkLabel>
                 <CmkSwitch v-model:data="form.show_in_lists" />
               </div>
 
@@ -452,9 +528,9 @@
                 v-if="form.map_type === 'static'"
                 class="board-settings__subsection board-settings__stack"
               >
-                <p class="orb-section-title">{{ t('boardSettings.background') }}</p>
+                <p class="orb-section-title">{{ _t('Background') }}</p>
                 <div class="board-settings__field">
-                  <CmkLabel>{{ t('board.backgroundImage') }}</CmkLabel>
+                  <CmkLabel>{{ _t('Background image') }}</CmkLabel>
                   <BackgroundImageUpload
                     v-model:pending-file="pendingBgFile"
                     v-model:pending-remove="pendingBgRemove"
@@ -463,10 +539,10 @@
                   />
                 </div>
                 <div class="board-settings__field">
-                  <CmkLabel>{{ t('board.backgroundColor') }}</CmkLabel>
+                  <CmkLabel>{{ _t('Background color') }}</CmkLabel>
                   <ColorInput
                     v-model="form.background_color"
-                    :enable-label="t('common.useColor')"
+                    :enable-label="_t('Use color')"
                     default-color="#1f2937"
                   />
                 </div>
@@ -487,13 +563,13 @@
                   <thead>
                     <tr class="board-settings__perm-head-row">
                       <th class="board-settings__perm-th">
-                        {{ t('admin.role') }}
+                        {{ _t('Role') }}
                       </th>
                       <th class="board-settings__perm-th board-settings__perm-th--center">
-                        {{ t('common.view') }}
+                        {{ _t('View') }}
                       </th>
                       <th class="board-settings__perm-th board-settings__perm-th--center">
-                        {{ t('common.edit') }}
+                        {{ _t('Edit') }}
                       </th>
                     </tr>
                   </thead>
@@ -516,7 +592,7 @@
                           <span
                             v-if="hasWildcard(role, 'view')"
                             class="board-settings__perm-wildcard"
-                            :title="t('admin.viaWildcardRule')"
+                            :title="_t('Granted via wildcard rule')"
                             >*</span
                           >
                         </div>
@@ -531,7 +607,7 @@
                           <span
                             v-if="hasWildcard(role, 'edit')"
                             class="board-settings__perm-wildcard"
-                            :title="t('admin.viaWildcardRule')"
+                            :title="_t('Granted via wildcard rule')"
                             >*</span
                           >
                         </div>
@@ -540,22 +616,29 @@
                   </tbody>
                 </table>
                 <p v-if="!permRoles.length" class="board-settings__perm-empty">
-                  {{ t('admin.noRoles') }}
+                  {{ _t('No roles defined yet') }}
                 </p>
-                <p class="board-settings__perm-note">* {{ t('admin.wildcardNote') }}</p>
+                <p class="board-settings__perm-note">
+                  *
+                  {{
+                    _t(
+                      'Permissions marked with * apply via a wildcard rule and cannot be changed here.'
+                    )
+                  }}
+                </p>
               </div>
             </div>
           </div>
         </div>
 
         <aside v-if="showPreview" class="board-settings__preview">
-          <span class="board-settings__preview-label">{{ t('board.previewLabel') }}</span>
+          <span class="board-settings__preview-label">{{ _t('Live preview') }}</span>
           <div class="board-settings__preview-stage">
             <iframe
               ref="previewIframe"
               :src="previewUrl"
               class="board-settings__preview-frame"
-              :title="t('board.previewLabel')"
+              :title="_t('Live preview')"
               @load="onPreviewLoaded"
             />
           </div>
@@ -589,14 +672,14 @@
               <circle cx="12" cy="12" r="3" />
             </template>
           </svg>
-          <span>{{ showPreview ? t('board.hidePreview') : t('board.showPreview') }}</span>
+          <span>{{ showPreview ? _t('Hide preview') : _t('Show preview') }}</span>
         </button>
         <span class="board-settings__footer-spacer" />
         <CmkButton variant="secondary" @click="$emit('close')">
-          {{ t('common.cancel') }}
+          {{ _t('Cancel') }}
         </CmkButton>
         <CmkButton variant="primary" :disabled="saving" @click="save">
-          {{ saving ? t('common.saving') : t('common.save') }}
+          {{ saving ? _t('Saving…') : _t('Save') }}
         </CmkButton>
       </div>
     </div>
@@ -605,7 +688,6 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import ColorInput from '@/components/ColorInput.vue'
 import NumberInput from '@/components/NumberInput.vue'
@@ -634,6 +716,7 @@ import type {
 } from '@/types/api'
 import { boardTypeOptions } from '@/utils/dropdownOptions'
 import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 import AutocompleteInput from './AutocompleteInput.vue'
 import BackgroundImageUpload from './BackgroundImageUpload.vue'
@@ -686,15 +769,15 @@ function onSlideInClose() {
   emit('close')
 }
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const auth = useAuthStore()
 const settingsStore = useSettingsStore()
 
 const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => {
   const isCmk = auth.ssoActive || auth.isCheckmkDeployment
   return [
-    { id: 'general', label: t('admin.settings') },
-    ...(!isCmk ? [{ id: 'permissions' as const, label: t('admin.boardPermissions') }] : [])
+    { id: 'general', label: _t('Settings') },
+    ...(!isCmk ? [{ id: 'permissions' as const, label: _t('Board Permissions') }] : [])
   ]
 })
 const activeTab = ref<'general' | 'permissions'>('general')
@@ -805,11 +888,11 @@ const boardTypeLabel = computed(
   () =>
     // Resolve the label for whatever type the board already is, so a folder
     // board still shows its proper name even when the feature flag is off.
-    boardTypeOptions(t, true).find((o) => o.name === form.value.map_type)?.title ??
+    boardTypeOptions(_t, true).find((o) => o.name === form.value.map_type)?.title ??
     form.value.map_type
 )
 
-const boardTitle = computed(() => t('board.settingsTitle') + ' — ' + props.board.name)
+const boardTitle = computed(() => _t('Board Settings') + ' — ' + props.board.name)
 
 const rotationEnabled = computed(() => (form.value.rotation_interval ?? 0) > 0)
 
@@ -819,33 +902,33 @@ function onToggleRotation(checked: boolean) {
 const worldmapAutoSourceOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: '', title: t('board.autoSourceNone') },
-    { name: 'all_hosts', title: t('board.autoSourceAllHosts') },
-    { name: 'hostgroup', title: t('board.autoSourceHostgroup') },
-    { name: 'servicegroup', title: t('board.autoSourceServicegroup') }
+    { name: '', title: _t('None — manual placement only') },
+    { name: 'all_hosts', title: _t('All hosts with geo coordinates') },
+    { name: 'hostgroup', title: _t('Hosts in host group…') },
+    { name: 'servicegroup', title: _t('Hosts hosting a service in service group…') }
   ]
 }))
 const radarFilterOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: 'hostgroup', title: t('board.filterTypeHostgroup') },
-    { name: 'servicegroup', title: t('board.filterTypeServicegroup') },
-    { name: 'all_hosts', title: t('board.filterTypeAllHosts') },
-    { name: 'all_services', title: t('board.filterTypeAllServices') }
+    { name: 'hostgroup', title: _t('Host group') },
+    { name: 'servicegroup', title: _t('Service group') },
+    { name: 'all_hosts', title: _t('All hosts') },
+    { name: 'all_services', title: _t('All services') }
   ]
 }))
 const folderOptions = ref<{ path: string; title: string }[]>([])
 const ftDefaultViewOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: 'list', title: t('board.ftViewList') },
-    { name: 'map', title: t('board.ftViewMap') }
+    { name: 'list', title: _t('List (tree)') },
+    { name: 'map', title: _t('Map (treemap)') }
   ]
 }))
 const ftRootFolderOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: '', title: t('board.ftRootFolderAll') },
+    { name: '', title: _t('(all folders)') },
     ...folderOptions.value.map((f) => ({ name: f.path, title: f.title }))
   ]
 }))
@@ -882,15 +965,15 @@ const ftSites = computed<string[]>({
 const clickActionOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: 'link', title: t('board.clickActionLink') },
-    { name: 'none', title: t('board.clickActionNone') }
+    { name: 'link', title: _t('Open link') },
+    { name: 'none', title: _t('No action') }
   ]
 }))
 const renderModeOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: 'default', title: t('board.renderModeDefault') },
-    { name: 'nagvis_classic', title: t('board.renderModeNagvisClassic') }
+    { name: 'default', title: _t('OrbVis (default)') },
+    { name: 'nagvis_classic', title: _t('NagVis-classic') }
   ]
 }))
 const saveError = ref('')
@@ -996,7 +1079,9 @@ async function save() {
     // Surface a clear message instead of the generic "An error occurred"
     // so the operator can reload and reconcile.
     if (e instanceof ApiError && e.status === 409) {
-      saveError.value = t('board.staleConflict')
+      saveError.value = _t(
+        'Board changed elsewhere — close and reopen to apply your edit on top of the latest version.'
+      )
     } else {
       saveError.value = e instanceof Error ? e.message : 'An error occurred'
     }

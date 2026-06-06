@@ -15,10 +15,10 @@
   <div class="orb-sset">
     <div style="margin-bottom: var(--dimension-6)">
       <CmkHeading type="h2">
-        {{ t('system.title') }}
+        {{ _t('System') }}
       </CmkHeading>
       <CmkParagraph class="admin-subtitle">
-        {{ t('system.subtitle') }}
+        {{ _t('Runtime and integration options. Applies across all boards.') }}
       </CmkParagraph>
     </div>
 
@@ -34,7 +34,7 @@
             @click="sectionOpen.checkmkIntegration = !sectionOpen.checkmkIntegration"
           >
             <h3 class="orb-sset__card-title">
-              {{ t('settings.checkmkIntegration') }}
+              {{ _t('Checkmk Integration') }}
             </h3>
             <svg
               class="orb-sset__chevron"
@@ -54,12 +54,18 @@
           <CmkCollapsible :open="sectionOpen.checkmkIntegration">
             <div class="orb-sset__card-body">
               <p class="orb-sset__intro">
-                {{ t('settings.checkmkIntegrationSubtitle') }}
+                {{
+                  _t('Global Checkmk URL used as fallback for connections without their own URL')
+                }}
               </p>
               <label class="orb-sset__label">
                 <span class="orb-sset__field-label">
-                  {{ t('admin.checkmkUrl') }}
-                  <CmkHelpText :help="t('settings.checkmkUrlHint')" />
+                  {{ _t('Checkmk URL') }}
+                  <CmkHelpText
+                    :help="
+                      _t('Set automatically when OrbVis runs inside a Checkmk/OMD installation')
+                    "
+                  />
                 </span>
                 <CmkInput
                   v-model="checkmkUrl"
@@ -74,7 +80,7 @@
         <section class="orb-sset__card">
           <button class="orb-sset__card-toggle" @click="sectionOpen.logging = !sectionOpen.logging">
             <h3 class="orb-sset__card-title">
-              {{ t('settings.logging') }}
+              {{ _t('Logging') }}
             </h3>
             <svg
               class="orb-sset__chevron"
@@ -95,8 +101,12 @@
             <div class="orb-sset__card-body">
               <label class="orb-sset__label">
                 <span class="orb-sset__field-label">
-                  {{ t('settings.logLevel') }}
-                  <CmkHelpText :help="t('settings.logLevelHint')" />
+                  {{ _t('Log level') }}
+                  <CmkHelpText
+                    :help="
+                      _t('Threshold for backend logs. Applied immediately, no restart required.')
+                    "
+                  />
                 </span>
                 <CmkDropdown
                   class="orb-sset__select"
@@ -120,7 +130,7 @@
             @click="sectionOpen.features = !sectionOpen.features"
           >
             <h3 class="orb-sset__card-title">
-              {{ t('settings.features') }}
+              {{ _t('Features') }}
             </h3>
             <svg
               class="orb-sset__chevron"
@@ -139,17 +149,25 @@
           </button>
           <CmkCollapsible :open="sectionOpen.features">
             <div class="orb-sset__card-body">
-              <CmkCheckbox v-model="enableFolderBoards" :label="t('settings.enableFolderBoards')" />
+              <CmkCheckbox v-model="enableFolderBoards" :label="_t('Enable Folder boards')" />
               <p class="orb-sset__feature-hint">
-                {{ t('settings.enableFolderBoardsHint') }}
+                {{
+                  _t(
+                    'Offer the SETUP folder-tree board type in the board-type picker. Existing folder boards keep rendering even while this is off.'
+                  )
+                }}
               </p>
               <CmkCheckbox
                 v-model="enableGraphObjects"
-                :label="t('settings.enableGraphObjects')"
+                :label="_t('Enable Graph objects')"
                 style="margin-top: 12px"
               />
               <p class="orb-sset__feature-hint">
-                {{ t('settings.enableGraphObjectsHint') }}
+                {{
+                  _t(
+                    'Offer the (experimental) graph object type in the add-object picker. Existing graph objects keep rendering even while this is off.'
+                  )
+                }}
               </p>
             </div>
           </CmkCollapsible>
@@ -175,14 +193,14 @@
             >
               <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
-            {{ t('common.saved') }}
+            {{ _t('Saved') }}
           </span>
         </Transition>
         <CmkButton variant="secondary" :disabled="!dirty" @click="resetForm">{{
-          t('common.cancel')
+          _t('Cancel')
         }}</CmkButton>
         <CmkButton variant="primary" :disabled="saving || !dirty" @click="handleSave">
-          {{ saving ? t('common.saving') : t('common.save') }}
+          {{ saving ? _t('Saving…') : _t('Save') }}
         </CmkButton>
       </div>
     </div>
@@ -191,7 +209,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import CmkButton from '@/components/cmk/CmkButton'
 import CmkCollapsible from '@/components/cmk/CmkCollapsible/CmkCollapsible'
@@ -205,8 +222,9 @@ import CmkInput from '@/components/cmk/user-input/CmkInput'
 
 import { useSettingsStore } from '@/stores/settings'
 import type { LogLevel, SystemSettings } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const store = useSettingsStore()
 
 // CmkInput's v-model is non-null string; SystemSettings.checkmk_url is
@@ -283,7 +301,7 @@ async function handleSave() {
       savedOk.value = false
     }, 3000)
   } catch {
-    saveError.value = t('admin.saveFailed')
+    saveError.value = _t('Save failed')
     if (saveErrorTimer) clearTimeout(saveErrorTimer)
     saveErrorTimer = setTimeout(() => {
       saveError.value = ''

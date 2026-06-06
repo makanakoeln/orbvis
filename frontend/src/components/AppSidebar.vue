@@ -26,7 +26,7 @@
       <button
         v-if="sidebarCollapsed"
         class="orb-sidebar__logo orb-sidebar__expand"
-        :title="t('nav.expandSidebar')"
+        :title="_t('Expand sidebar')"
         @click="sidebarCollapsed = false"
       >
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -37,7 +37,7 @@
       <button
         v-if="!sidebarCollapsed"
         class="orb-sidebar__collapse"
-        :title="t('nav.collapseSidebar')"
+        :title="_t('Collapse sidebar')"
         @click="sidebarCollapsed = !sidebarCollapsed"
       >
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -49,7 +49,7 @@
     <!-- Navigation -->
     <nav data-tour="sidebar-nav" class="orb-sidebar__nav">
       <!-- Overview -->
-      <NavItem to="/" :exact="true" :label="t('nav.overview')" :collapsed="sidebarCollapsed">
+      <NavItem to="/" :exact="true" :label="_t('Overview')" :collapsed="sidebarCollapsed">
         <template #icon>
           <path
             stroke-linecap="round"
@@ -63,13 +63,13 @@
       <template v-if="auth.isAdmin || auth.canConfigure">
         <div class="orb-sidebar__divider" />
         <p v-if="!sidebarCollapsed" class="orb-sidebar__section-label">
-          {{ t('nav.administration') }}
+          {{ _t('Administration') }}
         </p>
 
         <NavItem
           v-if="auth.canConfigure"
           to="/admin/connections"
-          :label="t('admin.connections')"
+          :label="_t('Connections')"
           :collapsed="sidebarCollapsed"
         >
           <template #icon>
@@ -84,7 +84,7 @@
         <NavItem
           v-if="auth.canConfigure"
           to="/admin/icons"
-          :label="t('admin.icons')"
+          :label="_t('Images')"
           :collapsed="sidebarCollapsed"
         >
           <template #icon>
@@ -99,7 +99,7 @@
         <NavItem
           v-if="auth.isAdmin"
           to="/admin/users"
-          :label="t('admin.users')"
+          :label="_t('Users')"
           :collapsed="sidebarCollapsed"
         >
           <template #icon>
@@ -114,7 +114,7 @@
         <NavItem
           v-if="auth.isAdmin"
           to="/admin/roles"
-          :label="t('admin.rolesAndPermissions')"
+          :label="_t('Roles & Permissions')"
           :collapsed="sidebarCollapsed"
         >
           <template #icon>
@@ -129,7 +129,7 @@
         <NavItem
           v-if="auth.canConfigure"
           to="/admin/settings"
-          :label="t('admin.settings')"
+          :label="_t('Settings')"
           :collapsed="sidebarCollapsed"
         >
           <template #icon>
@@ -153,7 +153,7 @@
       <!-- User info + settings (combined clickable row) -->
       <button
         class="orb-sidebar__user"
-        :title="sidebarCollapsed ? auth.user?.name : t('nav.userSettings')"
+        :title="sidebarCollapsed ? auth.user?.name : _t('User settings')"
         @click="showSettings = true"
       >
         <div class="orb-sidebar__avatar">
@@ -164,7 +164,7 @@
             {{ auth.user?.name }}
           </p>
           <p class="orb-sidebar__user-hint">
-            {{ t('nav.userSettings') }}
+            {{ _t('User settings') }}
           </p>
         </div>
       </button>
@@ -173,7 +173,7 @@
       <button
         v-if="!auth.ssoActive"
         class="orb-sidebar__logout"
-        :title="sidebarCollapsed ? t('auth.logout') : undefined"
+        :title="sidebarCollapsed ? _t('Logout') : undefined"
         @click="auth.logout()"
       >
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -183,7 +183,7 @@
             d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"
           />
         </svg>
-        <span v-if="!sidebarCollapsed">{{ t('auth.logout') }}</span>
+        <span v-if="!sidebarCollapsed">{{ _t('Logout') }}</span>
       </button>
 
       <!-- Version -->
@@ -207,15 +207,15 @@
 
 <script setup lang="ts">
 import { type SlotsType, type VNode, defineComponent, h, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { RouterLink, useLink } from 'vue-router'
 
 import ChangelogModal from '@/components/ChangelogModal.vue'
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
 
 import { useAuthStore } from '@/stores/auth'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const auth = useAuthStore()
 const showSettings = ref(false)
 const showChangelog = ref(false)

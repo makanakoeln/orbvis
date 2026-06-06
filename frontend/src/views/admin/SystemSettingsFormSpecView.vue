@@ -26,7 +26,16 @@
             <span
               v-if="g.modified > 0"
               class="settings-page__topic-badge"
-              :title="t('settings.modifiedHint', { n: g.modified })"
+              :title="
+                g.modified === 0
+                  ? _t('no changes')
+                  : _tn(
+                      '1 field changed since last save',
+                      '%{n} fields changed since last save',
+                      g.modified,
+                      { n: g.modified }
+                    )
+              "
             >
               {{ g.modified }}
             </span>
@@ -54,10 +63,10 @@
       >
         <div v-if="saveBarHasActions" class="settings-page__savebar-actions">
           <CmkButton variant="optional" :disabled="saving" @click="resetForm">
-            {{ t('common.discardChanges') }}
+            {{ _t('Discard changes') }}
           </CmkButton>
           <CmkButton variant="primary" :disabled="saving" @click="handleSave">
-            {{ saving ? t('common.saving') : t('common.save') }}
+            {{ saving ? _t('Saving…') : _t('Save') }}
           </CmkButton>
         </div>
       </CmkAlertBox>
@@ -75,7 +84,6 @@
 import FormEdit from '@cmk/form/FormEdit.vue'
 import type { VueFormspecComponents } from 'cmk-shared-typing/typescript/vue_formspec_components'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbUnsavedChangesDialog from '@/components/OrbUnsavedChangesDialog.vue'
 import CmkAlertBox from '@/components/cmk/CmkAlertBox'
@@ -89,6 +97,7 @@ import { useFormSpecSchema } from '@/composables/useFormSpecSchema'
 import { useSaveBarState } from '@/composables/useSaveBarState'
 import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
 import { useAuthStore } from '@/stores/auth'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 type Validation = NonNullable<VueFormspecComponents['validation_message']>[]
 
@@ -108,7 +117,7 @@ function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-const { t } = useI18n()
+const { _t, _tn } = usei18n()
 const auth = useAuthStore()
 
 const {
@@ -132,11 +141,11 @@ let saveErrorTimer: ReturnType<typeof setTimeout> | null = null
 
 const dirty = computed(() => JSON.stringify(data.value) !== JSON.stringify(initialData.value))
 
-const heading = computed(
-  () => (schema.value as DictionarySchema | null)?.title ?? t('system.title')
-)
+const heading = computed(() => (schema.value as DictionarySchema | null)?.title ?? _t('System'))
 const subtitle = computed(
-  () => (schema.value as DictionarySchema | null)?.help || t('system.subtitle')
+  () =>
+    (schema.value as DictionarySchema | null)?.help ||
+    _t('Runtime and integration options. Applies across all boards.')
 )
 
 const sidebarGroups = computed<{ key: string; title: string; modified: number }[]>(() => {
@@ -211,7 +220,7 @@ async function handleSave() {
       savedOk.value = false
     }, 3000)
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : t('admin.saveFailed')
+    saveError.value = e instanceof Error ? e.message : _t('Save failed')
     if (saveErrorTimer) clearTimeout(saveErrorTimer)
     saveErrorTimer = setTimeout(() => {
       saveError.value = ''

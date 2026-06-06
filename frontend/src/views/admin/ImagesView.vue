@@ -3,10 +3,10 @@
     <div class="orb-images__header">
       <div>
         <CmkHeading type="h2">
-          {{ t('admin.icons') }}
+          {{ _t('Images') }}
         </CmkHeading>
         <CmkParagraph class="admin-subtitle">
-          {{ t('admin.iconsSubtitle') }}
+          {{ _t('Upload and manage images for board objects') }}
         </CmkParagraph>
       </div>
       <CmkButton variant="primary" @click="fileInputEl?.click()">
@@ -23,7 +23,7 @@
             d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
           />
         </svg>
-        {{ t('admin.uploadIcon') }}
+        {{ _t('Upload Image') }}
       </CmkButton>
       <input
         ref="fileInputEl"
@@ -41,9 +41,11 @@
     <!-- Image is not in use → simple confirm dialog. -->
     <OrbConfirmDialog
       :open="dialogReady && !!deleteTargetName && !pendingUsage.length"
-      :title="deleteTargetName ? t('admin.deleteIcon', { name: deleteTargetName }) : ''"
-      :message="t('board.cannotBeUndone')"
-      :confirm-label="t('common.delete')"
+      :title="
+        deleteTargetName ? _t('Delete image &quot;%{name}&quot;?', { name: deleteTargetName }) : ''
+      "
+      :message="_t('This cannot be undone.')"
+      :confirm-label="_t('Delete')"
       @confirm="confirmDeleteIcon"
       @cancel="cancelDelete"
     />
@@ -55,7 +57,7 @@
     <CmkSlideInDialog
       :open="dialogReady && !!deleteTargetName && pendingUsage.length > 0"
       :header="{
-        title: t('admin.imageInUseTitle'),
+        title: _t('Image is still in use'),
         icon: { name: 'warning', size: 'large' },
         closeButton: true
       }"
@@ -66,10 +68,13 @@
       <div class="image-usage-pane">
         <CmkParagraph class="image-usage-pane__intro">
           {{
-            t('admin.imageInUseBody', {
-              name: deleteTargetName,
-              count: pendingUsage.length
-            })
+            _t(
+              'The image "%{name}" is referenced by %{count} board(s). Deleting it will leave those boards without an image. Continue?',
+              {
+                name: deleteTargetName ?? '',
+                count: pendingUsage.length
+              }
+            )
           }}
         </CmkParagraph>
         <CmkLinkCardContainer>
@@ -85,10 +90,10 @@
         </CmkLinkCardContainer>
         <div class="image-usage-pane__actions">
           <CmkButton variant="secondary" @click="cancelDelete">
-            {{ t('common.cancel') }}
+            {{ _t('Cancel') }}
           </CmkButton>
           <CmkButton variant="warning" @click="confirmDeleteIcon">
-            {{ t('common.delete') }}
+            {{ _t('Delete') }}
           </CmkButton>
         </div>
       </div>
@@ -118,7 +123,7 @@
         <input
           v-model="query"
           type="text"
-          :placeholder="t('admin.searchIcons')"
+          :placeholder="_t('Search images…')"
           class="image-search__input"
         />
       </div>
@@ -127,13 +132,13 @@
                  actionable bucket on this page. -->
       <section style="margin-bottom: var(--dimension-7)">
         <CmkHeading type="h3" class="section-title">
-          {{ t('admin.uploadedImages') }} ({{ filteredCustom.length }})
+          {{ _t('Uploaded images') }} ({{ filteredCustom.length }})
         </CmkHeading>
         <div v-if="!customIcons.length" class="orb-images__empty">
-          {{ t('admin.noUploadsYet') }}
+          {{ _t('No images uploaded yet — upload to add custom icons') }}
         </div>
         <div v-else-if="!filteredCustom.length" class="orb-images__no-matches">
-          {{ t('admin.noMatches', { q: query }) }}
+          {{ _t('No matches for "%{q}"', { q: query }) }}
         </div>
         <div v-else class="orb-images__grid">
           <div v-for="icon in filteredCustom" :key="icon.name" class="orb-images__tile">
@@ -148,7 +153,7 @@
             </p>
             <button
               class="orb-images__delete"
-              :title="t('common.delete')"
+              :title="_t('Delete')"
               @click="onDeleteClick(icon.name)"
             >
               <svg
@@ -169,10 +174,10 @@
                  section header already conveys the category. -->
       <section>
         <CmkHeading type="h3" class="section-title">
-          {{ t('admin.builtinIcons') }} ({{ filteredBuiltin.length }})
+          {{ _t('Built-in icons') }} ({{ filteredBuiltin.length }})
         </CmkHeading>
         <div v-if="!filteredBuiltin.length" class="orb-images__no-matches">
-          {{ t('admin.noMatches', { q: query }) }}
+          {{ _t('No matches for "%{q}"', { q: query }) }}
         </div>
         <div v-else class="orb-images__grid">
           <div v-for="icon in filteredBuiltin" :key="icon.name" class="orb-images__tile">
@@ -194,7 +199,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue'
 import CmkAlertBox from '@/components/cmk/CmkAlertBox'
@@ -209,9 +213,10 @@ import CmkParagraph from '@/components/cmk/typography/CmkParagraph'
 import { ApiError, imagesApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { ImageEntry, ImageUsageEntry } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const BASE_URL = import.meta.env.BASE_URL
-const { t } = useI18n()
+const { _t, _tn } = usei18n()
 const auth = useAuthStore()
 
 const fileInputEl = ref<HTMLInputElement | null>(null)
@@ -283,8 +288,11 @@ async function onDeleteClick(name: string) {
 
 function usageSubtitle(entry: ImageUsageEntry): string {
   const parts: string[] = []
-  if (entry.is_background) parts.push(t('admin.usedAsBackground'))
-  if (entry.object_ids.length) parts.push(t('admin.usedByObjects', entry.object_ids.length))
+  if (entry.is_background) parts.push(_t('as background'))
+  if (entry.object_ids.length)
+    parts.push(
+      _tn('%{n} object', '%{n} objects', entry.object_ids.length, { n: entry.object_ids.length })
+    )
   return parts.join(', ')
 }
 

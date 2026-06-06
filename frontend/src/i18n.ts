@@ -1,11 +1,12 @@
-import { createI18n } from 'vue-i18n'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-import de from './locales/de'
-import en from './locales/en'
+// Signature of the `_t` translate function in setup context — used by helper
+// modules that receive the translator as a parameter (gettext extraction only
+// sees literal `_t('…')` callsites, so helpers must be called with `_t` from
+// a component rather than translating dynamic keys themselves).
+export type TranslateFn = (msg: string, interpolation?: Record<string, string | number>) => string
 
-export const i18n = createI18n({
-  legacy: false,
-  locale: 'en',
-  fallbackLocale: 'en',
-  messages: { en, de }
-})
+export async function setLanguage(lang: string): Promise<void> {
+  const { switchLanguage } = usei18n()
+  await switchLanguage(lang)
+}

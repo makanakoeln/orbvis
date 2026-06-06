@@ -13,16 +13,16 @@
       </svg>
       <div class="orb-edit__header-text">
         <div class="orb-edit__title">
-          {{ t('boardSettings.addObject') }}
+          {{ _t('Add Object') }}
         </div>
         <div class="orb-edit__hint" :class="{ 'orb-edit__hint--placing': placing }">
-          {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.dragObjects') }}
+          {{ placing ? _t('Click on board to place…') : _t('Drag objects · click to select') }}
         </div>
       </div>
       <button
         class="orb-edit__close"
-        :title="t('common.close')"
-        :aria-label="t('common.close')"
+        :title="_t('Close')"
+        :aria-label="_t('Close')"
         @click="$emit('cancel-add')"
       >
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -37,7 +37,7 @@
         :selected-option="draft.type"
         :options="objectTypeOptions"
         :width="'fill'"
-        :label="t('boardSettings.selectType')"
+        :label="_t('Select type…')"
         @update:selected-option="(v) => (draft.type = v as ObjectType | '')"
       />
 
@@ -46,8 +46,8 @@
           v-model="draft.host_name"
           :suggestions="addObjects"
           :loading="loadingAddObjects"
-          :placeholder="t('boardSettings.hostname')"
-          :empty-text="t('boardSettings.noHosts')"
+          :placeholder="_t('Hostname')"
+          :empty-text="_t('No hosts available')"
         />
       </template>
 
@@ -56,17 +56,17 @@
           v-model="draft.host_name"
           :suggestions="addObjects"
           :loading="loadingAddObjects"
-          :placeholder="t('boardSettings.hostname')"
-          :empty-text="t('boardSettings.noHosts')"
+          :placeholder="_t('Hostname')"
+          :empty-text="_t('No hosts available')"
           @change="onHostChange"
         />
         <AutocompleteInput
           v-model="draft.service_description"
           :suggestions="addServices"
           :loading="loadingAddServices"
-          :placeholder="t('boardSettings.serviceDescription')"
+          :placeholder="_t('Service description')"
           :empty-text="
-            draft.host_name && !loadingAddServices ? t('boardSettings.noServices') : undefined
+            draft.host_name && !loadingAddServices ? _t('No services for this host') : undefined
           "
         />
       </template>
@@ -77,13 +77,11 @@
           :suggestions="addObjects"
           :loading="loadingAddObjects"
           :disabled="!loadingAddObjects && addObjects.length === 0"
-          :placeholder="t('boardSettings.groupName')"
+          :placeholder="_t('Group name')"
           :empty-text="
-            t(
-              draft.type === 'hostgroup'
-                ? 'boardSettings.noHostgroups'
-                : 'boardSettings.noServicegroups'
-            )
+            draft.type === 'hostgroup'
+              ? _t('No host groups configured in this site')
+              : _t('No service groups configured in this site')
           "
         />
       </template>
@@ -94,14 +92,10 @@
           :suggestions="boardNames"
           :display-labels="boardLabels"
           :loading="boardsStore.loading"
-          :placeholder="t('boardSettings.boardName')"
-          :empty-text="t('boardSettings.noBoards')"
+          :placeholder="_t('Board name')"
+          :empty-text="_t('No other boards available')"
         />
-        <input
-          v-model="draft.label_text"
-          :placeholder="t('boardSettings.labelOptional')"
-          class="orb-field"
-        />
+        <input v-model="draft.label_text" :placeholder="_t('Label (optional)')" class="orb-field" />
       </template>
 
       <template v-else-if="draft.type === 'aggregation'">
@@ -110,8 +104,12 @@
           :suggestions="addAggregationIds"
           :display-labels="addAggregationLabels"
           :loading="loadingAddAggregations"
-          :placeholder="t('boardSettings.aggregationId')"
-          :empty-text="t('boardSettings.noAggregations')"
+          :placeholder="_t('BI aggregation')"
+          :empty-text="
+            _t(
+              'No BI aggregations available — none are configured in Checkmk, or your user has no permission to view them.'
+            )
+          "
         />
         <!--
                     Read-only aggregation-function chip. Tells the designer
@@ -124,21 +122,25 @@
         <div
           v-if="aggregationFunctionLabel"
           class="orb-edit__aggr-chip"
-          :title="t('boardSettings.aggregationFunctionHint')"
+          :title="
+            _t(
+              'Top-level aggregation function from Checkmk (e.g. worst, best, count_ok). Configured in WATO.'
+            )
+          "
         >
           <span class="orb-edit__aggr-chip-label">
-            {{ t('boardSettings.aggregationFunction') }}
+            {{ _t('Function') }}
           </span>
           <span class="orb-edit__aggr-chip-value">{{ aggregationFunctionLabel }}</span>
         </div>
         <label class="orb-edit__depth-label">
-          {{ t('boardSettings.expandDepth') }}
+          {{ _t('Expand depth') }}
           <NumberInput
             v-model="draft.expand_depth"
             min="0"
             max="10"
             class="orb-edit__depth-input"
-            :title="t('boardSettings.expandDepthHelp')"
+            :title="_t('Show child nodes up to N levels (0 = root only).')"
           />
         </label>
         <!--
@@ -161,11 +163,15 @@
           v-if="!aggregationConnectionOk && draft.aggregation_id && !aggregationPreview"
           class="orb-edit__aggr-error"
         >
-          {{ t('boardSettings.aggregationPreviewConnectionDown') }}
+          {{
+            _t(
+              'Preview unavailable — the Checkmk connection is unhealthy. Check the connection status and reload.'
+            )
+          }}
         </div>
         <div v-else-if="aggregationPreview" class="orb-edit__aggr-preview">
           <div class="orb-edit__aggr-preview-title">
-            {{ t('boardSettings.aggregationPreview') }}
+            {{ _t('Preview (live state)') }}
           </div>
           <div class="orb-edit__aggr-counts">
             <span
@@ -184,7 +190,7 @@
             </li>
             <li v-if="aggregationPreviewMore > 0" class="orb-edit__aggr-more">
               …{{
-                t('boardSettings.aggregationPreviewMore', {
+                _t('%{count} more', {
                   count: aggregationPreviewMore
                 })
               }}
@@ -224,33 +230,25 @@
           v-model="draft.host_name"
           :suggestions="addObjects"
           :loading="loadingAddObjects"
-          :placeholder="t('boardSettings.hostname') + ' (optional)'"
-          :empty-text="t('boardSettings.noHosts')"
+          :placeholder="_t('Hostname') + ' (optional)'"
+          :empty-text="_t('No hosts available')"
           @change="onHostChange"
         />
         <AutocompleteInput
           v-model="draft.service_description"
           :suggestions="addServices"
           :loading="loadingAddServices"
-          :placeholder="t('boardSettings.serviceOptional')"
+          :placeholder="_t('Service (optional)')"
         />
       </template>
 
       <template v-else-if="draft.type === 'textbox'">
-        <input
-          v-model="draft.label_text"
-          :placeholder="t('boardSettings.textContent')"
-          class="orb-field"
-        />
+        <input v-model="draft.label_text" :placeholder="_t('Text content')" class="orb-field" />
       </template>
 
       <template v-else-if="draft.type === 'image'">
         <ImagePicker v-model="draft.image_src" />
-        <input
-          v-model="draft.label_text"
-          :placeholder="t('boardSettings.labelOptional')"
-          class="orb-field"
-        />
+        <input v-model="draft.label_text" :placeholder="_t('Label (optional)')" class="orb-field" />
       </template>
 
       <template v-else-if="draft.type === 'graph'">
@@ -258,26 +256,26 @@
           v-model="draft.host_name"
           :suggestions="addObjects"
           :loading="loadingAddObjects"
-          :placeholder="t('boardSettings.hostname')"
-          :empty-text="t('boardSettings.noHosts')"
+          :placeholder="_t('Hostname')"
+          :empty-text="_t('No hosts available')"
           @change="onHostChange"
         />
         <AutocompleteInput
           v-model="draft.service_description"
           :suggestions="addServices"
           :loading="loadingAddServices"
-          :placeholder="t('boardSettings.serviceOptional')"
+          :placeholder="_t('Service (optional)')"
         />
         <input
           v-model="draft.graph_url"
-          :placeholder="t('boardSettings.graphUrl') + ' (optional)'"
+          :placeholder="_t('URL') + ' (optional)'"
           class="orb-field orb-edit__code"
         />
       </template>
 
       <!-- Grid snap -->
       <div class="orb-edit__grid-row">
-        <label class="orb-edit__grid-label">{{ t('boardSettings.grid') }}</label>
+        <label class="orb-edit__grid-label">{{ _t('Show grid') }}</label>
         <CmkDropdown
           class="orb-edit__grid-select"
           :selected-option="String(snapGrid)"
@@ -294,7 +292,7 @@
         :class="['orb-edit__place', placing ? 'orb-edit__place--pulsing' : '']"
         @click="canPlace && $emit('start-placing')"
       >
-        {{ placing ? t('boardSettings.clickToPlace') : t('boardSettings.placeOnBoard') }}
+        {{ placing ? _t('Click on board to place…') : _t('Place on board') }}
       </CmkButton>
       <p v-if="draft.type && !canPlace && !placing" class="orb-edit__missing-hint">
         {{ missingFieldHint }}
@@ -305,7 +303,6 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import NumberInput from '@/components/NumberInput.vue'
 import CmkButton from '@/components/cmk/CmkButton'
@@ -325,20 +322,21 @@ import {
   flattenAggregationLeaves
 } from '@/utils/aggregationTree'
 import { placeableObjectTypes } from '@/utils/dropdownOptions'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 import AutocompleteInput from './AutocompleteInput.vue'
 import ImagePicker from './ImagePicker.vue'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const objectTypeOptions = computed(() => ({
   type: 'fixed' as const,
-  suggestions: placeableObjectTypes(t, settingsStore.system.enable_graph_objects)
+  suggestions: placeableObjectTypes(_t, settingsStore.system.enable_graph_objects)
 }))
 const snapGridOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: '0', title: t('boardSettings.gridOff') },
+    { name: '0', title: _t('off') },
     { name: '10', title: '10 px' },
     { name: '20', title: '20 px' },
     { name: '50', title: '50 px' }
@@ -364,13 +362,13 @@ const settingsStore = useSettingsStore()
 const boardNames = computed(() => boardsStore.boards.map((b) => b.name))
 const boardLabels = computed(() => boardsStore.boards.map((b) => b.alias || b.name))
 
-const MISSING_FIELD_KEY: Record<string, string> = {
-  host: 'boardSettings.hostname',
-  hostgroup: 'boardSettings.groupName',
-  servicegroup: 'boardSettings.groupName',
-  map: 'boardSettings.boardName',
-  aggregation: 'boardSettings.aggregationId'
-}
+const missingFieldLabel = computed<Record<string, string>>(() => ({
+  host: _t('Hostname'),
+  hostgroup: _t('Group name'),
+  servicegroup: _t('Group name'),
+  map: _t('Board name'),
+  aggregation: _t('BI aggregation')
+}))
 
 const canPlace = computed(() => {
   const d = props.draft
@@ -401,10 +399,9 @@ const canPlace = computed(() => {
 const missingFieldHint = computed(() => {
   if (canPlace.value) return ''
   const d = props.draft
-  if (d.type === 'service')
-    return `↑ ${t(d.host_name ? 'boardSettings.serviceDescription' : 'boardSettings.hostname')}`
-  const missingKey = MISSING_FIELD_KEY[d.type]
-  return missingKey ? `↑ ${t(missingKey)}` : ''
+  if (d.type === 'service') return `↑ ${d.host_name ? _t('Service description') : _t('Hostname')}`
+  const missing = missingFieldLabel.value[d.type]
+  return missing ? `↑ ${missing}` : ''
 })
 
 const addObjects = ref<string[]>([])
@@ -528,7 +525,10 @@ const aggregationPreviewDensityWarning = computed<string | null>(() => {
   const total = aggregationPreviewLeavesAll.value.length
   const depth = props.draft.expand_depth ?? 0
   if (depth > 0 && total > _DENSITY_WARN_THRESHOLD) {
-    return t('boardSettings.aggregationDensityWarning', { count: total })
+    return _t(
+      '%{count} nodes — the subtree will be very crowded on the board. Set expand depth to 0 to keep only the root glyph and drill into details via the drawer.',
+      { count: total }
+    )
   }
   return null
 })

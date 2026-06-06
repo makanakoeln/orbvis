@@ -11,7 +11,7 @@
     "dev": "vite",
     "dev:standalone": "VITE_BUILD_TARGET=standalone vite",
     "dev:cmk-source": "CMK_FRONTEND_VUE_SRC=${CMK_FRONTEND_VUE_SRC:-$HOME/git/checkmk/packages/cmk-frontend-vue/src} vite",
-    "build": "vue-tsc && vite build",
+    "build": "vue-tsc && npm run i18n:compile && vite build",
     "build:standalone": "VITE_BUILD_TARGET=standalone vue-tsc && VITE_BUILD_TARGET=standalone vite build",
     "build:cmk-source": "CMK_FRONTEND_VUE_SRC=${CMK_FRONTEND_VUE_SRC:-$HOME/git/checkmk/packages/cmk-frontend-vue/src} vue-tsc && CMK_FRONTEND_VUE_SRC=${CMK_FRONTEND_VUE_SRC:-$HOME/git/checkmk/packages/cmk-frontend-vue/src} vite build",
     "preview": "vite preview",
@@ -27,7 +27,9 @@
     "copy-builtin-icons": "node scripts/copy-builtin-icons.js",
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps chromium",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "i18n:extract": "vue-gettext-extract",
+    "i18n:compile": "vue-gettext-compile"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.21",
@@ -42,7 +44,6 @@
     "sanitize-html": "^2.17.4",
     "vue": "^3.5.31",
     "vue-echarts": "^8.0.1",
-    "vue-i18n": "^11.4.4",
     "vue-router": "^5.0.4",
     "vue3-gettext": "^4.0.0-beta.1"
   },

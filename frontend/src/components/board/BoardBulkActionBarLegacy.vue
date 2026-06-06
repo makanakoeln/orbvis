@@ -5,8 +5,8 @@
         <button
           type="button"
           class="orb-bulk-bar__dismiss"
-          :title="t('common.cancel')"
-          :aria-label="t('common.cancel')"
+          :title="_t('Cancel')"
+          :aria-label="_t('Cancel')"
           @click="emit('cancel')"
         >
           <svg
@@ -19,7 +19,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <span class="orb-bulk-bar__count">{{ t('admin.nSelected', { n: count }) }}</span>
+        <span class="orb-bulk-bar__count">{{ _t('%{n} selected', { n: count }) }}</span>
         <label class="orb-bulk-bar__selectall">
           <input
             type="checkbox"
@@ -37,7 +37,7 @@
           :disabled="busy"
           @click="emit('edit')"
         >
-          {{ t('common.edit') }}
+          {{ _t('Edit') }}
         </button>
         <button
           type="button"
@@ -45,7 +45,7 @@
           :disabled="busy"
           @click="emit('export')"
         >
-          {{ t('common.export') }}
+          {{ _t('Export') }}
         </button>
         <button
           type="button"
@@ -53,7 +53,7 @@
           :disabled="busy"
           @click="emit('delete')"
         >
-          {{ t('common.delete') }}
+          {{ _t('Delete') }}
         </button>
       </div>
     </div>
@@ -62,7 +62,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   count: number
@@ -79,8 +80,8 @@ const emit = defineEmits<{
   'toggle-select-all': [checked: boolean]
 }>()
 
-const { t } = useI18n()
-const ariaLabel = computed(() => t('admin.nSelected', { n: props.count }))
+const { _t } = usei18n()
+const ariaLabel = computed(() => _t('%{n} selected', { n: props.count }))
 </script>
 
 <style scoped>

@@ -24,7 +24,7 @@
         </div>
         <h1 class="orb-login__title">OrbVis</h1>
         <p class="orb-login__subtitle">
-          {{ t('auth.monitoringVisualization') }}
+          {{ _t('Monitoring Visualization') }}
         </p>
       </div>
 
@@ -32,19 +32,19 @@
       <div class="orb-login__card">
         <form class="orb-login__form" @submit.prevent="handleLogin">
           <div class="orb-login__field">
-            <label for="login-username" class="orb-login__label">{{ t('auth.username') }}</label>
+            <label for="login-username" class="orb-login__label">{{ _t('Username') }}</label>
             <CmkInput
               id="login-username"
               v-model="username"
               type="text"
               autocomplete="username"
-              :placeholder="t('auth.username')"
+              :placeholder="_t('Username')"
               field-size="FILL"
             />
           </div>
 
           <div class="orb-login__field">
-            <label for="login-password" class="orb-login__label">{{ t('auth.password') }}</label>
+            <label for="login-password" class="orb-login__label">{{ _t('Password') }}</label>
             <div class="orb-login__pw-wrap">
               <input
                 id="login-password"
@@ -58,7 +58,7 @@
               <button
                 type="button"
                 class="orb-login__pw-toggle"
-                :title="showPassword ? t('auth.hidePassword') : t('auth.showPassword')"
+                :title="showPassword ? _t('Hide password') : _t('Show password')"
                 @click="showPassword = !showPassword"
               >
                 <svg
@@ -98,7 +98,7 @@
             :disabled="authStore.loading"
             @click="handleLogin"
           >
-            {{ authStore.loading ? t('auth.signingIn') : t('auth.signIn') }}
+            {{ authStore.loading ? _t('Signing in…') : _t('Sign in') }}
           </CmkButton>
         </form>
       </div>
@@ -115,7 +115,6 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import ChangelogModal from '@/components/ChangelogModal.vue'
 import CmkAlertBox from '@/components/cmk/CmkAlertBox'
@@ -123,8 +122,9 @@ import CmkButton from '@/components/cmk/CmkButton'
 import CmkInput from '@/components/cmk/user-input/CmkInput'
 
 import { useAuthStore } from '@/stores/auth'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const authStore = useAuthStore()
 const username = ref('')
 const password = ref('')

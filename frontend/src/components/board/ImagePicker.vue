@@ -37,7 +37,7 @@
         />
       </svg>
       <span class="orb-imgpick__toggle-label">
-        {{ modelValue ? t('boardSettings.customIcon') : emptyLabel }}
+        {{ modelValue ? _t('Custom icon') : emptyLabel }}
       </span>
       <svg
         class="orb-imgpick__chevron"
@@ -63,7 +63,7 @@
         <div class="orb-imgpick__search-wrap">
           <input
             v-model="query"
-            :placeholder="t('boardSettings.searchIcons')"
+            :placeholder="_t('Search icons…')"
             class="orb-field orb-imgpick__search"
           />
         </div>
@@ -85,7 +85,7 @@
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-          {{ t('common.loading') }}
+          {{ _t('Loading…') }}
         </div>
 
         <!-- No images at all → upload prompt -->
@@ -105,7 +105,7 @@
               />
             </svg>
             <p class="orb-imgpick__empty-text">
-              {{ t('admin.noIcons') }}
+              {{ _t('No images uploaded yet') }}
             </p>
             <label class="orb-imgpick__upload-btn">
               <svg
@@ -121,7 +121,7 @@
                   d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
                 />
               </svg>
-              {{ t('boardSettings.uploadIconInline') }}
+              {{ _t('Upload icon') }}
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/svg+xml,image/webp"
@@ -160,7 +160,7 @@
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                   />
                 </svg>
-                {{ t('common.saving') }}
+                {{ _t('Saving…') }}
               </div>
               <div v-else-if="uploadError" class="orb-imgpick__error">
                 {{ uploadError }}
@@ -171,7 +171,7 @@
 
         <!-- No search match -->
         <div v-else-if="!filtered.length" class="orb-imgpick__no-match">
-          {{ t('home.noSearchResults', { q: query }) }}
+          {{ _t('No boards match "%{q}"', { q: query }) }}
         </div>
 
         <!-- Image grid + upload button at bottom -->
@@ -215,7 +215,7 @@
                   d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
                 />
               </svg>
-              {{ t('boardSettings.uploadIconInline') }}
+              {{ _t('Upload icon') }}
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/svg+xml,image/webp"
@@ -254,15 +254,15 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import { imagesApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { ImageEntry } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const BASE_URL = import.meta.env.BASE_URL
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const auth = useAuthStore()
 
 const props = defineProps<{
@@ -272,7 +272,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
-const emptyLabel = computed(() => props.placeholder ?? t('boardSettings.iconName'))
+const emptyLabel = computed(() => props.placeholder ?? _t('Icon filename'))
 
 const open = ref(false)
 const query = ref('')

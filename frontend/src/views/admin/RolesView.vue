@@ -3,10 +3,10 @@
     <div class="orb-roles__header">
       <div>
         <CmkHeading type="h2">
-          {{ t('admin.rolesAndPermissions') }}
+          {{ _t('Roles & Permissions') }}
         </CmkHeading>
         <CmkParagraph class="admin-subtitle">
-          {{ t('admin.rolesSubtitle') }}
+          {{ _t('Define access control roles') }}
         </CmkParagraph>
       </div>
       <CmkButton variant="primary" @click="showCreate = true">
@@ -19,7 +19,7 @@
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        {{ t('admin.newRole') }}
+        {{ _t('New Role') }}
       </CmkButton>
     </div>
 
@@ -34,7 +34,7 @@
             <div class="orb-roles__title-row">
               <span class="orb-roles__name">{{ role.name }}</span>
               <span class="orb-roles__count">
-                {{ role.permissions.length }} {{ t('admin.permissions') }}
+                {{ role.permissions.length }} {{ _t('permissions') }}
               </span>
             </div>
             <div v-if="role.permissions.length" class="orb-roles__perms">
@@ -46,13 +46,13 @@
               >
             </div>
             <p v-else class="orb-roles__no-perms">
-              {{ t('admin.noPermissions') }}
+              {{ _t('No permissions assigned') }}
             </p>
           </div>
           <div class="orb-roles__actions">
             <button
               class="orb-roles__action-btn orb-roles__action-btn--edit"
-              :title="t('common.edit')"
+              :title="_t('Edit')"
               @click="openEdit(role)"
             >
               <svg
@@ -71,7 +71,7 @@
             </button>
             <button
               class="orb-roles__action-btn orb-roles__action-btn--delete"
-              :title="t('common.delete')"
+              :title="_t('Delete')"
               @click="deleteTargetId = role.role_id"
             >
               <svg
@@ -93,28 +93,23 @@
       </div>
 
       <div v-if="!roles.length" class="orb-roles__empty">
-        {{ t('admin.noRoles') }}
+        {{ _t('No roles defined yet') }}
       </div>
     </div>
 
-    <OrbModal
-      :open="showCreate"
-      :title="t('admin.createRole')"
-      closable
-      @close="showCreate = false"
-    >
+    <OrbModal :open="showCreate" :title="_t('Create Role')" closable @close="showCreate = false">
       <form class="roles-create__form" @submit.prevent="createRole">
         <div class="roles-create__field">
-          <label class="roles-create__label">{{ t('admin.roleName') }}</label>
+          <label class="roles-create__label">{{ _t('Role name') }}</label>
           <CmkInput v-model="newRoleName" placeholder="e.g. operators" field-size="FILL" />
         </div>
       </form>
       <template #footer>
         <CmkButton variant="secondary" @click="showCreate = false">
-          {{ t('common.cancel') }}
+          {{ _t('Cancel') }}
         </CmkButton>
         <CmkButton variant="primary" @click="createRole">
-          {{ t('common.create') }}
+          {{ _t('Create') }}
         </CmkButton>
       </template>
     </OrbModal>
@@ -122,7 +117,7 @@
     <OrbModal :open="!!editRole" closable @close="cancelEdit">
       <template #header>
         <span class="roles-edit__title">
-          {{ t('admin.permissionsTitle') }} –
+          {{ _t('Permissions') }} –
           <span class="roles-edit__name">{{ editRole?.name }}</span>
         </span>
       </template>
@@ -130,7 +125,7 @@
         <!-- Current permissions -->
         <div>
           <p class="roles-edit__group-label">
-            {{ t('admin.assigned') }}
+            {{ _t('Assigned') }}
           </p>
           <div v-if="draftPerms.length" class="roles-edit__perm-list">
             <div
@@ -145,7 +140,7 @@
               <span v-if="perm.perm_id < 0" class="roles-edit__perm-new">new</span>
               <button
                 class="roles-edit__perm-remove"
-                :title="t('common.delete')"
+                :title="_t('Delete')"
                 @click="removeDraftPerm(perm.perm_id)"
               >
                 <svg
@@ -161,23 +156,23 @@
             </div>
           </div>
           <p v-else class="roles-edit__hint">
-            {{ t('admin.noPermissionsYet') }}
+            {{ _t('No permissions assigned yet') }}
           </p>
         </div>
 
         <!-- Add permission form -->
         <div class="roles-edit__add-section">
           <p class="roles-edit__group-label">
-            {{ t('admin.addPermission') }}
+            {{ _t('Add permission') }}
           </p>
           <form class="roles-edit__add-form" @submit.prevent="addDraftPerm">
             <div class="roles-edit__field">
-              <label class="roles-edit__label">{{ t('admin.preset') }}</label>
+              <label class="roles-edit__label">{{ _t('Preset') }}</label>
               <CmkDropdown
                 :selected-option="permPreset"
                 :options="permPresetOptions"
                 :width="'fill'"
-                :label="t('admin.preset')"
+                :label="_t('Preset')"
                 @update:selected-option="
                   (v) => {
                     permPreset = v ?? ''
@@ -187,7 +182,7 @@
               />
             </div>
             <div v-if="needsMapName" class="roles-edit__field">
-              <label class="roles-edit__label">{{ t('admin.boardNameLabel') }}</label>
+              <label class="roles-edit__label">{{ _t('Board name') }}</label>
               <CmkInput v-model="newPerm.obj" placeholder="my-board" field-size="FILL" />
             </div>
             <p v-if="permError" class="roles-edit__form-error">
@@ -195,7 +190,7 @@
             </p>
             <div class="roles-edit__add-actions">
               <button type="submit" :disabled="!permPreset" class="roles-edit__add-btn">
-                {{ t('admin.add') }}
+                {{ _t('Add') }}
               </button>
             </div>
           </form>
@@ -204,19 +199,19 @@
       <template #footer>
         <p v-if="permSaveError" class="roles-edit__error">{{ permSaveError }}</p>
         <CmkButton variant="secondary" @click="cancelEdit">
-          {{ t('common.cancel') }}
+          {{ _t('Cancel') }}
         </CmkButton>
         <CmkButton variant="primary" :disabled="permSaving" @click="savePermissions">
-          {{ permSaving ? t('common.saving') : t('common.save') }}
+          {{ permSaving ? _t('Saving…') : _t('Save') }}
         </CmkButton>
       </template>
     </OrbModal>
 
     <OrbConfirmDialog
       :open="deleteTargetId !== null"
-      :title="t('admin.deleteRole')"
-      :message="t('board.cannotBeUndone')"
-      :confirm-label="t('common.delete')"
+      :title="_t('Delete this role?')"
+      :message="_t('This cannot be undone.')"
+      :confirm-label="_t('Delete')"
       @confirm="confirmDeleteRole"
       @cancel="deleteTargetId = null"
     />
@@ -225,7 +220,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue'
 import OrbModal from '@/components/OrbModal.vue'
@@ -240,8 +234,9 @@ import { rolesApi } from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import type { PermissionRead, RoleRead } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const auth = useAuthStore()
 const toast = useToast()
 const roles = ref<RoleRead[]>([])
@@ -265,12 +260,12 @@ const needsMapName = computed(() => permPreset.value.endsWith(':custom'))
 const permPresetOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: '', title: t('admin.choosePreset') },
-    { name: 'map:view:*', title: t('admin.presetViewAll') },
-    { name: 'map:edit:*', title: t('admin.presetEditAll') },
-    { name: 'map:view:custom', title: t('admin.presetViewCustom') },
-    { name: 'map:edit:custom', title: t('admin.presetEditCustom') },
-    { name: 'user:edit:*', title: t('admin.presetEditUsers') }
+    { name: '', title: _t('— choose a preset —') },
+    { name: 'map:view:*', title: _t('View all boards') },
+    { name: 'map:edit:*', title: _t('Edit all boards (settings & objects)') },
+    { name: 'map:view:custom', title: _t('View a specific board…') },
+    { name: 'map:edit:custom', title: _t('Edit a specific board…') },
+    { name: 'user:edit:*', title: _t("Change any user's password (user/edit/*)") }
   ]
 }))
 
@@ -299,10 +294,10 @@ async function createRole() {
     await rolesApi.create(newRoleName.value, auth.accessToken!)
     showCreate.value = false
     newRoleName.value = ''
-    toast.success(t('admin.roleCreated'))
+    toast.success(_t('Role created'))
     await fetchRoles()
   } catch (e: unknown) {
-    toast.error(e instanceof Error ? e.message : t('admin.saveFailed'))
+    toast.error(e instanceof Error ? e.message : _t('Save failed'))
   }
 }
 
@@ -314,10 +309,10 @@ async function confirmDeleteRole() {
   deleteTargetId.value = null
   try {
     await rolesApi.delete(id, auth.accessToken!)
-    toast.success(t('admin.roleDeleted'))
+    toast.success(_t('Role deleted'))
     await fetchRoles()
   } catch (e: unknown) {
-    toast.error(e instanceof Error ? e.message : t('admin.deleteFailed'))
+    toast.error(e instanceof Error ? e.message : _t('Delete failed'))
   }
 }
 
@@ -348,7 +343,7 @@ function addDraftPerm() {
     obj = parts[2] ?? ''
   }
   if (!mod || !act || !obj) {
-    permError.value = t('admin.boardNameLabel')
+    permError.value = _t('Board name')
     return
   }
   // Avoid duplicates in draft
@@ -404,7 +399,7 @@ async function savePermissions() {
     await fetchRoles()
     editRole.value = null
   } catch (e: unknown) {
-    permSaveError.value = e instanceof Error ? e.message : t('admin.failedToAddPermission')
+    permSaveError.value = e instanceof Error ? e.message : _t('Failed to add permission')
   } finally {
     permSaving.value = false
   }

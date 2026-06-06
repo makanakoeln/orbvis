@@ -1,0 +1,2153 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: de\n"
+
+msgid "Loading…"
+msgstr "Lädt…"
+
+msgid "Saving…"
+msgstr "Speichert…"
+
+msgid "Save"
+msgstr "Speichern"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "Confirm"
+msgstr "Bestätigen"
+
+msgid "Close"
+msgstr "Schließen"
+
+msgid "Delete"
+msgstr "Löschen"
+
+msgid "Edit"
+msgstr "Bearbeiten"
+
+msgid "View"
+msgstr "Ansehen"
+
+msgid "Create"
+msgstr "Erstellen"
+
+msgid "Add"
+msgstr "Hinzufügen"
+
+msgid "Discard"
+msgstr "Verwerfen"
+
+msgid "Test"
+msgstr "Testen"
+
+msgid "Testing…"
+msgstr "Teste…"
+
+msgid "Upload"
+msgstr "Hochladen"
+
+msgid "Overwrite"
+msgstr "Überschreiben"
+
+msgid "%{n} object"
+msgid_plural "%{n} objects"
+msgstr[0] "%{n} Objekt"
+msgstr[1] "%{n} Objekte"
+
+msgid "Saved"
+msgstr "Gespeichert"
+
+msgid "Save failed"
+msgstr "Speichern fehlgeschlagen"
+
+msgid "Export"
+msgstr "Exportieren"
+
+msgid "None"
+msgstr "Keine"
+
+msgid "Use color"
+msgstr "Farbe verwenden"
+
+msgid "Use a 6-digit hex code like '#ffffff' or 'transparent'"
+msgstr "Hex-Code im Format '#ffffff' oder 'transparent' verwenden"
+
+msgid "Unsaved changes"
+msgstr "Ungespeicherte Änderungen"
+
+msgid "You have changed at least one field — save or cancel before leaving the page"
+msgstr "Es wurde mindestens ein Feld geändert — speichern oder verwerfen, bevor die Seite verlassen wird"
+
+msgid "Discard unsaved changes?"
+msgstr "Ungespeicherte Änderungen verwerfen?"
+
+msgid "You have unsaved changes on this page. Leaving now will discard them."
+msgstr "Es gibt ungespeicherte Änderungen auf dieser Seite. Beim Verlassen gehen sie verloren."
+
+msgid "Discard changes"
+msgstr "Änderungen verwerfen"
+
+msgid "Stay on page"
+msgstr "Auf der Seite bleiben"
+
+msgid "Username"
+msgstr "Benutzername"
+
+msgid "Password"
+msgstr "Passwort"
+
+msgid "Sign in"
+msgstr "Anmelden"
+
+msgid "Sign in to your account"
+msgstr "Bei deinem Konto anmelden"
+
+msgid "Signing in…"
+msgstr "Anmelden…"
+
+msgid "Logout"
+msgstr "Abmelden"
+
+msgid "Monitoring Visualization"
+msgstr "Monitoring-Visualisierung"
+
+msgid "Show password"
+msgstr "Passwort anzeigen"
+
+msgid "Hide password"
+msgstr "Passwort verbergen"
+
+msgid "Overview"
+msgstr "Übersicht"
+
+msgid "Manage"
+msgstr "Verwalten"
+
+msgid "User settings"
+msgstr "Benutzereinstellungen"
+
+msgid "Back to Boards"
+msgstr "Zurück zu Boards"
+
+msgid "Collapse sidebar"
+msgstr "Seitenleiste einklappen"
+
+msgid "Expand sidebar"
+msgstr "Seitenleiste ausklappen"
+
+msgid "Select a board to view monitoring status"
+msgstr "Board auswählen, um den Monitoring-Status anzuzeigen"
+
+msgid "No boards configured"
+msgstr "Keine Boards konfiguriert"
+
+msgid "Create your first board"
+msgstr "Erstes Board erstellen"
+
+msgid "Contact your administrator"
+msgstr "Kontaktieren Sie Ihren Administrator"
+
+msgid "Rotates every %{n} seconds"
+msgstr "Wechselt alle %{n} Sekunden"
+
+msgid "hidden"
+msgstr "versteckt"
+
+msgid "Hidden from regular users"
+msgstr "Für reguläre Benutzer ausgeblendet"
+
+msgid "read-only"
+msgstr "nur lesbar"
+
+msgid "Demo board — cannot be edited"
+msgstr "Demo-Board — kann nicht bearbeitet werden"
+
+msgid "Search boards…"
+msgstr "Boards suchen…"
+
+msgid "Clear search"
+msgstr "Suche zurücksetzen"
+
+msgid "No boards match \"%{q}\""
+msgstr "Keine Boards für „%{q}\" gefunden"
+
+msgid "dynamic"
+msgstr "dynamisch"
+
+msgid "Cards"
+msgstr "Kacheln"
+
+msgid "Table"
+msgstr "Tabelle"
+
+msgid "Show as card grid"
+msgstr "Als Kachelraster anzeigen"
+
+msgid "Show as table"
+msgstr "Als Tabelle anzeigen"
+
+msgid "Type"
+msgstr "Typ"
+
+msgid "Objects"
+msgstr "Objekte"
+
+msgid "Actions"
+msgstr "Aktionen"
+
+msgid "sorted ascending"
+msgstr "aufsteigend sortiert"
+
+msgid "sorted descending"
+msgstr "absteigend sortiert"
+
+msgid "Editing"
+msgstr "Bearbeitungsmodus"
+
+msgid "Read-only"
+msgstr "Schreibgeschützt"
+
+msgid "Board settings"
+msgstr "Board-Einstellungen"
+
+msgid "Loading board…"
+msgstr "Board wird geladen…"
+
+msgid "Board not found"
+msgstr "Board nicht gefunden"
+
+msgid "← Back to overview"
+msgstr "← Zur Übersicht"
+
+msgid "This board has no objects yet"
+msgstr "Dieses Board enthält noch keine Objekte"
+
+msgid "No objects yet — click the Edit button (bottom right) to add some"
+msgstr "Noch keine Objekte — klicke unten rechts auf Bearbeiten, um welche hinzuzufügen"
+
+msgid "No connection configured for this board."
+msgstr "Keine Connection für dieses Board konfiguriert."
+
+msgid "Save or discard before leaving edit mode."
+msgstr "Bitte speichern oder verwerfen Sie die Änderungen vor dem Verlassen."
+
+msgid "Save & exit"
+msgstr "Speichern & beenden"
+
+msgid "Delete object"
+msgstr "Objekt löschen"
+
+msgid "Delete %{type} \"%{name}\"?"
+msgstr "%{type} „%{name}\" löschen?"
+
+msgid "Delete %{type}?"
+msgstr "%{type} löschen?"
+
+msgid "This cannot be undone."
+msgstr "Dies kann nicht rückgängig gemacht werden."
+
+msgid "Uploaded successfully"
+msgstr "Erfolgreich hochgeladen"
+
+msgid "Board Settings"
+msgstr "Board-Einstellungen"
+
+msgid "Display name"
+msgstr "Anzeigename"
+
+msgid "Icon size"
+msgstr "Symbolgröße"
+
+msgid "Rotation interval"
+msgstr "Rotationsintervall"
+
+msgid "Seconds until the next board is shown"
+msgstr "Sekunden bis zum nächsten Board"
+
+msgid "Pause rotation"
+msgstr "Rotation pausieren"
+
+msgid "Resume rotation"
+msgstr "Rotation fortsetzen"
+
+msgid "Auto-rotate boards"
+msgstr "Boards rotieren"
+
+msgid "Cycle through visible boards on a fixed interval"
+msgstr "Im festen Intervall zwischen sichtbaren Boards wechseln"
+
+msgid "Board type"
+msgstr "Board-Typ"
+
+msgid "Board type cannot be changed after creation. Clone the board to switch type."
+msgstr "Der Board-Typ kann nach dem Anlegen nicht geändert werden. Zum Wechsel das Board klonen."
+
+msgid "Object defaults"
+msgstr "Objekt-Standardwerte"
+
+msgid "Per-board overrides of the global icon/line/label defaults"
+msgstr "Board-spezifische Overrides der globalen Icon-/Linien-/Label-Defaults"
+
+msgid "Static board"
+msgstr "Statisches Board"
+
+msgid "Radar (dynamic filter)"
+msgstr "Radar (dynamischer Filter)"
+
+msgid "Folder tree"
+msgstr "Ordnerbaum"
+
+msgid "Free placement of objects on a canvas or background image"
+msgstr "Freie Positionierung von Objekten auf einer Fläche oder einem Hintergrundbild"
+
+msgid "Objects positioned on an interactive world map using geo-coordinates"
+msgstr "Objekte auf einer interaktiven Weltkarte mit Geo-Koordinaten"
+
+msgid "Dynamic tree of all hosts and their relationships"
+msgstr "Dynamische Baumstruktur aller Hosts und ihrer Beziehungen"
+
+msgid "Automatic display of all hosts/services matching a group filter"
+msgstr "Automatische Anzeige aller Hosts/Services einer Gruppe"
+
+msgid "Live status tree along the Checkmk SETUP folder hierarchy, with worst-state roll-up"
+msgstr "Live-Statusbaum entlang der Checkmk-SETUP-Ordnerhierarchie mit Worst-State-Aggregation"
+
+msgid "Latitude"
+msgstr "Breitengrad"
+
+msgid "Longitude"
+msgstr "Längengrad"
+
+msgid "Pan/zoom the map first, then reopen settings to capture the current view."
+msgstr "Zuerst die Karte verschieben/zoomen, dann Einstellungen erneut öffnen, um die aktuelle Ansicht zu speichern."
+
+msgid "Pick from map"
+msgstr "Aus Karte wählen"
+
+msgid "Closes settings and switches the map to picker mode."
+msgstr "Schließt die Einstellungen, die Karte wird zur Auswahl scharfgeschaltet."
+
+msgid "Pan/zoom the map, then apply."
+msgstr "Karte verschieben/zoomen, dann übernehmen."
+
+msgid "Apply"
+msgstr "Übernehmen"
+
+msgid "Show preview"
+msgstr "Vorschau einblenden"
+
+msgid "Hide preview"
+msgstr "Vorschau ausblenden"
+
+msgid "Automap source"
+msgstr "Automap-Quelle"
+
+msgid "None — manual placement only"
+msgstr "Keine — nur manuell platzieren"
+
+msgid "All hosts with geo coordinates"
+msgstr "Alle Hosts mit Geo-Koordinaten"
+
+msgid "Hosts in host group…"
+msgstr "Hosts in Hostgruppe…"
+
+msgid "Hosts hosting a service in service group…"
+msgstr "Hosts mit Service in Servicegruppe…"
+
+msgid "group name (e.g. \"muc\")"
+msgstr "Gruppenname (z.B. „muc\")"
+
+msgid "Hosts are auto-discovered from monitoring data via orbvis_lat/orbvis_lng labels or LAT/LONG custom variables. They show up alongside any objects you place manually."
+msgstr "Hosts werden aus Monitoring-Daten automatisch übernommen (orbvis_lat/orbvis_lng-Labels oder LAT/LONG-Custom-Variablen). Sie erscheinen zusammen mit manuell platzierten Objekten."
+
+msgid "Tile server URL"
+msgstr "Tile-Server URL"
+
+msgid "Map saturation (%)"
+msgstr "Karten-Sättigung (%)"
+
+msgid "100 (default)"
+msgstr "100 (Standard)"
+
+msgid "Fit all objects"
+msgstr "Alle Objekte einpassen"
+
+msgid "(all folders)"
+msgstr "(alle Ordner)"
+
+msgid "Default view"
+msgstr "Standard-Ansicht"
+
+msgid "Which presentation the board opens in by default."
+msgstr "In welcher Darstellung das Board standardmäßig öffnet."
+
+msgid "List (tree)"
+msgstr "Liste (Baum)"
+
+msgid "Map (treemap)"
+msgstr "Map (Treemap)"
+
+msgid "Search folders, hosts, services…"
+msgstr "Ordner, Hosts, Services suchen…"
+
+msgid "hosts"
+msgstr "Hosts"
+
+msgid "all OK"
+msgstr "alles OK"
+
+msgid "Expand all"
+msgstr "Alle aufklappen"
+
+msgid "Collapse all"
+msgstr "Alle einklappen"
+
+msgid "List"
+msgstr "Liste"
+
+msgid "Expand"
+msgstr "Aufklappen"
+
+msgid "Collapse"
+msgstr "Einklappen"
+
+msgid "Connection lost — showing last known state"
+msgstr "Verbindung verloren — zeige letzten bekannten Stand"
+
+msgid "showing"
+msgstr "zeige"
+
+msgid "more matches exist — refine your search"
+msgstr "weitere Treffer vorhanden — Suche verfeinern"
+
+msgid "No matches for the current filter."
+msgstr "Keine Treffer für den aktuellen Filter."
+
+msgid "No problems — everything is OK."
+msgstr "Keine Probleme — alles OK."
+
+msgid "Clear filter"
+msgstr "Filter zurücksetzen"
+
+msgid "empty · 0 hosts"
+msgstr "leer · 0 Hosts"
+
+msgid "Acknowledged"
+msgstr "Quittiert"
+
+msgid "In downtime"
+msgstr "In Wartung"
+
+msgid "Flapping"
+msgstr "Flattert"
+
+msgid "Since last state change"
+msgstr "Seit letztem Statuswechsel"
+
+msgid "Loading services…"
+msgstr "Lade Services…"
+
+msgid "Could not load services"
+msgstr "Services konnten nicht geladen werden"
+
+msgid "No services"
+msgstr "Keine Services"
+
+msgid "No problem services"
+msgstr "Keine Problem-Services"
+
+msgid "Nothing to show here."
+msgstr "Nichts anzuzeigen."
+
+msgid "Folder actions"
+msgstr "Ordner-Aktionen"
+
+msgid "Folder"
+msgstr "Ordner"
+
+msgid "Open in Checkmk Setup"
+msgstr "In Checkmk Setup öffnen"
+
+msgid "Folder actions — %{folder}"
+msgstr "Ordner-Aktionen — %{folder}"
+
+msgid "Acknowledge"
+msgstr "Quittieren"
+
+msgid "Schedule downtime"
+msgstr "Wartung planen"
+
+msgid "Applies to %{count} hosts in “%{folder}”."
+msgstr "Betrifft %{count} Hosts in „%{folder}\"."
+
+msgid "Include sub-folders"
+msgstr "Unterordner einbeziehen"
+
+msgid "Duration"
+msgstr "Dauer"
+
+msgid "%{count} hosts done."
+msgstr "%{count} Hosts erledigt."
+
+msgid "Acknowledge %{count} hosts"
+msgstr "%{count} Hosts quittieren"
+
+msgid "Downtime %{count} hosts"
+msgstr "%{count} Hosts in Wartung"
+
+msgid "Waiting for folder data…"
+msgstr "Warte auf Ordnerdaten…"
+
+msgid "No folders to show. The selected connection has no SETUP folders, or your filters hide them."
+msgstr "Keine Ordner anzuzeigen. Die gewählte Verbindung hat keine SETUP-Ordner, oder die Filter blenden sie aus."
+
+msgid "Root folder"
+msgstr "Wurzelordner"
+
+msgid "Show only this folder and below. Empty = whole tree. Accepts a folder path or its stable id."
+msgstr "Nur diesen Ordner und darunter zeigen. Leer = ganzer Baum. Akzeptiert Ordnerpfad oder stabile ID."
+
+msgid "all folders"
+msgstr "alle Ordner"
+
+msgid "Auto-expand depth"
+msgstr "Auto-Aufklapptiefe"
+
+msgid "How many folder levels are expanded when the board opens."
+msgstr "Wie viele Ordnerebenen beim Öffnen aufgeklappt sind."
+
+msgid "Distributed monitoring: limit the tree to these sites. None selected = all sites."
+msgstr "Verteiltes Monitoring: den Baum auf diese Sites begrenzen. Nichts gewählt = alle Sites."
+
+msgid "Add site…"
+msgstr "Site hinzufügen…"
+
+msgid "Remove %{site}"
+msgstr "%{site} entfernen"
+
+msgid "Show empty folders"
+msgstr "Leere Ordner anzeigen"
+
+msgid "Expand hosts to their services"
+msgstr "Hosts zu ihren Services aufklappen"
+
+msgid "Show only folders/hosts with problems"
+msgstr "Nur Ordner/Hosts mit Problemen zeigen"
+
+msgid "Show only problems"
+msgstr "Nur Probleme anzeigen"
+
+msgid "Use hard states only"
+msgstr "Nur Hard-States verwenden"
+
+msgid "Root host"
+msgstr "Wurzel-Host"
+
+msgid "Leave empty to render full topology"
+msgstr "Leer lassen, um die gesamte Topologie anzuzeigen"
+
+msgid "Child layers"
+msgstr "Kind-Ebenen"
+
+msgid "Parent layers"
+msgstr "Eltern-Ebenen"
+
+msgid "unlimited"
+msgstr "unbegrenzt"
+
+msgid "Restrict the topology to a cutout around a single root host. -1 = unlimited hops, 0 = none."
+msgstr "Schränkt die Topologie auf einen Ausschnitt um einen Wurzel-Host ein. -1 = unbegrenzt, 0 = keine."
+
+msgid "Hosts with service detail"
+msgstr "Hosts mit Service-Detail"
+
+msgid "Services per host"
+msgstr "Services pro Host"
+
+msgid "Only the top-K hosts ranked by problem count render full service detail; the rest show donut-only. Leave empty to use the global default."
+msgstr "Nur die Top-K Hosts mit den meisten Problemen rendern Service-Details; alle anderen zeigen nur den Donut. Leer lassen, um den globalen Standard zu verwenden."
+
+msgid "Filter type"
+msgstr "Filtertyp"
+
+msgid "Host group"
+msgstr "Hostgruppe"
+
+msgid "Service group"
+msgstr "Servicegruppe"
+
+msgid "All hosts"
+msgstr "Alle Hosts"
+
+msgid "All services"
+msgstr "Alle Services"
+
+msgid "Group name"
+msgstr "Gruppenname"
+
+msgid "Hosts (or hosts hosting a service) belonging to this Checkmk group are pulled live from the connection. Group must exist in Checkmk WATO."
+msgstr "Hosts (oder Hosts mit Services) dieser Checkmk-Gruppe werden live aus der Connection geladen. Die Gruppe muss in Checkmk WATO existieren."
+
+msgid "Background image"
+msgstr "Hintergrundbild"
+
+msgid "Select image…"
+msgstr "Bild auswählen…"
+
+msgid "Upload background image…"
+msgstr "Hintergrundbild hochladen…"
+
+msgid "Replace…"
+msgstr "Ersetzen…"
+
+msgid "unsaved"
+msgstr "ungespeichert"
+
+msgid "Background color"
+msgstr "Hintergrundfarbe"
+
+msgid "Board changed elsewhere — close and reopen to apply your edit on top of the latest version."
+msgstr "Board wurde zwischenzeitlich geändert — bitte schließen und neu öffnen, damit deine Änderung auf der aktuellen Version basiert."
+
+msgid "Discard your unsaved changes?"
+msgstr "Ungespeicherte Änderungen verwerfen?"
+
+msgid "Board settings saved"
+msgstr "Board-Einstellungen gespeichert"
+
+msgid "No changes to save"
+msgstr "Keine Änderungen zu speichern"
+
+msgid "Fix the highlighted fields to save"
+msgstr "Markierte Felder korrigieren, dann speichern"
+
+msgid "Save (%{shortcut})"
+msgstr "Speichern (%{shortcut})"
+
+msgid "Open board"
+msgstr "Board öffnen"
+
+msgid "Hover preview:"
+msgstr "Hover-Vorschau:"
+
+msgid "Board view and edit are gated by Checkmk role permissions (orbvis.see, orbvis.edit). Manage them in Checkmk WATO."
+msgstr "Anzeige- und Bearbeitungsrechte werden über Checkmk-Rollen gesteuert (orbvis.see, orbvis.edit). Verwaltung erfolgt in Checkmk WATO."
+
+msgid "Open role editor in Checkmk"
+msgstr "Rolleneditor in Checkmk öffnen"
+
+msgid "Reset"
+msgstr "Zurücksetzen"
+
+msgid "Nothing to reset"
+msgstr "Nichts zurückzusetzen"
+
+msgid "Live preview"
+msgstr "Live-Vorschau"
+
+msgid "Delete board…"
+msgstr "Board löschen…"
+
+msgid "Delete board \"%{name}\"?"
+msgstr "Board „%{name}\" löschen?"
+
+msgid "This permanently removes the board configuration. Existing object data on other boards is unaffected."
+msgstr "Die Board-Konfiguration wird unwiderruflich entfernt. Objektdaten auf anderen Boards bleiben unberührt."
+
+msgid "Board \"%{name}\" deleted"
+msgstr "Board „%{name}\" gelöscht"
+
+msgid "Remove background image"
+msgstr "Hintergrundbild entfernen"
+
+msgid "Browser notifications enabled — click to disable"
+msgstr "Browser-Benachrichtigungen aktiv — klicken zum Deaktivieren"
+
+msgid "Enable browser notifications for state changes"
+msgstr "Browser-Benachrichtigungen bei Zustandsänderungen aktivieren"
+
+msgid "Off"
+msgstr "Aus"
+
+msgid "Fan"
+msgstr "Fächer"
+
+msgid "Row"
+msgstr "Reihe"
+
+msgid "Save changes"
+msgstr "Änderungen speichern"
+
+msgid "Hover template"
+msgstr "Hover-Template"
+
+msgid "Context template"
+msgstr "Kontext-Template"
+
+msgid "e.g. {{name}} is {{state}}"
+msgstr "z. B. {{name}} ist {{state}}"
+
+msgid "Available: {{name}}, {{state}}, {{output}}, {{host}}, {{service}}, {{address}}, {{state_type}}, {{attempts}}, {{last_check}}, {{state_duration}}, {{acknowledged}}, {{in_downtime}}, {{stale}}"
+msgstr "Verfügbar: {{name}}, {{state}}, {{output}}, {{host}}, {{service}}, {{address}}, {{state_type}}, {{attempts}}, {{last_check}}, {{state_duration}}, {{acknowledged}}, {{in_downtime}}, {{stale}}"
+
+msgid "Click action"
+msgstr "Klickaktion"
+
+msgid "Open link"
+msgstr "Link öffnen"
+
+msgid "No action"
+msgstr "Keine Aktion"
+
+msgid "Rendering style"
+msgstr "Darstellungsstil"
+
+msgid "NagVis-classic anchors objects top-left with flat textboxes on a light canvas (auto-selected for imported NagVis maps). OrbVis is the modern centered glass style."
+msgstr "NagVis-klassisch verankert Objekte oben links mit flachen Textboxen auf hellem Hintergrund (automatisch bei importierten NagVis-Karten). OrbVis ist der moderne, zentrierte Glas-Stil."
+
+msgid "OrbVis (default)"
+msgstr "OrbVis (Standard)"
+
+msgid "NagVis-classic"
+msgstr "NagVis-klassisch"
+
+msgid "Default layer (z)"
+msgstr "Standard-Ebene (z)"
+
+msgid "Layer for objects that have no explicit z value. Higher numbers render on top."
+msgstr "Ebene für Objekte ohne expliziten z-Wert. Höhere Werte liegen oben."
+
+msgid "Show in board list"
+msgstr "Im Board-Verzeichnis anzeigen"
+
+msgid "When disabled, this board is hidden from regular users"
+msgstr "Wenn deaktiviert, wird dieses Board für reguläre Benutzer ausgeblendet"
+
+msgid "No permission"
+msgstr "Keine Berechtigung"
+
+msgid "Not found in monitoring data"
+msgstr "Nicht im Monitoring gefunden"
+
+msgid "Full screen"
+msgstr "Vollbild"
+
+msgid "Exit full screen"
+msgstr "Vollbild beenden"
+
+msgid "Open in new tab (full screen)"
+msgstr "In neuem Tab öffnen (Vollbild)"
+
+msgid "Utilization ring (first metric)"
+msgstr "Auslastungsring (erste Metrik)"
+
+msgid "acknowledged"
+msgstr "quittiert"
+
+msgid "in downtime"
+msgstr "in Wartung"
+
+msgid "since %{duration}"
+msgstr "seit %{duration}"
+
+msgid "next check in %{duration}"
+msgstr "nächster Check in %{duration}"
+
+msgid "check overdue by %{duration}"
+msgstr "Check überfällig seit %{duration}"
+
+msgid "Notifications disabled — alerts will not be sent for this host"
+msgstr "Benachrichtigungen deaktiviert — bei Problemen wird nichts gemeldet"
+
+msgid "switch to donut layout"
+msgstr "auf Donut umschalten"
+
+msgid "%{total} service issues (%{critical} critical, %{warning} warning) across %{hostsWithProblems} hosts"
+msgstr "%{total} Service-Probleme (%{critical} kritisch, %{warning} warning) auf %{hostsWithProblems} Hosts"
+
+msgid "%{critical} crit · %{warning} warn"
+msgstr "%{critical} krit. · %{warning} warn."
+
+msgid "Showing service detail for the top %{shown} of %{total} most affected hosts — others are aggregated as donuts"
+msgstr "Service-Details für die %{shown} von %{total} am stärksten betroffenen Hosts werden gezeigt — übrige Hosts sind als Donut aggregiert"
+
+msgid "Services shown for %{shown} of %{total} hosts"
+msgstr "Services für %{shown} von %{total} Hosts angezeigt"
+
+msgid "Dismiss this hint"
+msgstr "Hinweis ausblenden"
+
+msgid "Show only hosts with problems"
+msgstr "Nur Hosts mit Problemen anzeigen"
+
+msgid "%{count} selected"
+msgstr "%{count} ausgewählt"
+
+msgid "Search — type '/' for operators"
+msgstr "Suchen — '/' für Operatoren"
+
+msgid "Show search operators"
+msgstr "Suchoperatoren einblenden"
+
+msgid "Type '/' to use a search operator"
+msgstr "'/' tippen, um einen Suchoperator zu wählen"
+
+msgid "Without a prefix all fields are searched. Multiple terms are AND-combined."
+msgstr "Ohne Präfix wird in allen Feldern gesucht. Mehrere Begriffe werden UND-verknüpft."
+
+msgid "Object ID"
+msgstr "Objekt-ID"
+
+msgid "Open in Checkmk"
+msgstr "In Checkmk öffnen"
+
+msgid "Edit in Checkmk Setup"
+msgstr "In Checkmk Setup bearbeiten"
+
+msgid "Worst leaf"
+msgstr "Schwerwiegendstes Element"
+
+msgid "Acknowledge %{count} contributing leaves"
+msgstr "%{count} betroffene Elemente bestätigen"
+
+msgid "Summary (depth %{depth})"
+msgstr "Übersicht (Tiefe %{depth})"
+
+msgid "%{count} nodes at depth %{depth} below the root."
+msgstr "%{count} Knoten auf Tiefe %{depth} unterhalb der Root."
+
+msgid "Acknowledged %{count} leaves"
+msgstr "%{count} Elemente bestätigt"
+
+msgid "Connection to at least one federation site is unhealthy — leaf states shown may be out of date."
+msgstr "Verbindung zu mindestens einer Federation-Site ist gestört — angezeigte Element-States sind möglicherweise nicht aktuell."
+
+msgid "Show problems"
+msgstr "Probleme anzeigen"
+
+msgid "More actions"
+msgstr "Weitere Aktionen"
+
+msgid "Check info"
+msgstr "Check-Info"
+
+msgid "Attempt"
+msgstr "Versuch"
+
+msgid "Last check"
+msgstr "Letzter Check"
+
+msgid "Next check"
+msgstr "Nächster Check"
+
+msgid "never"
+msgstr "nie"
+
+msgid "scheduled"
+msgstr "geplant"
+
+msgid "overdue"
+msgstr "überfällig"
+
+msgid "%{duration} ago"
+msgstr "vor %{duration}"
+
+msgid "Perfdata"
+msgstr "Performance-Daten"
+
+msgid "Force check"
+msgstr "Sofort prüfen"
+
+msgid "Remove ACK"
+msgstr "ACK entfernen"
+
+msgid "Remove downtime"
+msgstr "Downtime aufheben"
+
+msgid "Add comment"
+msgstr "Kommentar"
+
+msgid "Disable notifications"
+msgstr "Benachrichtigungen aus"
+
+msgid "Enable notifications"
+msgstr "Benachrichtigungen an"
+
+msgid "Raw metrics (%{n})"
+msgstr "Rohwerte (%{n})"
+
+msgid "Context"
+msgstr "Kontext"
+
+msgid "Activity"
+msgstr "Aktivität"
+
+msgid "Members"
+msgstr "Mitglieder"
+
+msgid "Search members…"
+msgstr "Mitglieder durchsuchen…"
+
+msgid "Only problems"
+msgstr "Nur Probleme"
+
+msgid "No members match the current filter"
+msgstr "Keine Mitglieder passen zum aktuellen Filter"
+
+msgid "+%{n} more — refine the filter to see them"
+msgstr "+%{n} weitere — Filter verfeinern um sie zu sehen"
+
+msgid "Open %{name} in the drawer"
+msgstr "%{name} im Drawer öffnen"
+
+msgid "Acknowledge problems on all %{n} members of this group"
+msgstr "Probleme aller %{n} Mitglieder dieser Gruppe quittieren"
+
+msgid "Schedule downtime on all %{n} members of this group"
+msgstr "Wartung für alle %{n} Mitglieder dieser Gruppe planen"
+
+msgid "Check command"
+msgstr "Check-Kommando"
+
+msgid "Last OK"
+msgstr "Zuletzt OK"
+
+msgid "Latency"
+msgstr "Latenz"
+
+msgid "Notif. period"
+msgstr "Benachr.-Zeit"
+
+msgid "Topology"
+msgstr "Topologie"
+
+msgid "Parents"
+msgstr "Eltern"
+
+msgid "Children"
+msgstr "Kinder"
+
+msgid "Host groups"
+msgstr "Hostgruppen"
+
+msgid "Service groups"
+msgstr "Servicegruppen"
+
+msgid "Contact groups"
+msgstr "Kontaktgruppen"
+
+msgid "Comments"
+msgstr "Kommentare"
+
+msgid "Active downtimes"
+msgstr "Aktive Downtimes"
+
+msgid "Flexible (triggered) downtime"
+msgstr "Flexible (getriggerte) Downtime"
+
+msgid "expires"
+msgstr "läuft ab"
+
+msgid "Edit Mode"
+msgstr "Bearbeitungsmodus"
+
+msgid "Drag objects · click to select"
+msgstr "Objekte ziehen · Klicken zum Auswählen"
+
+msgid "Show grid"
+msgstr "Raster anzeigen"
+
+msgid "off"
+msgstr "aus"
+
+msgid "Add Object"
+msgstr "Objekt hinzufügen"
+
+msgid "Select type…"
+msgstr "Typ auswählen…"
+
+msgid "Hostgroup"
+msgstr "Hostgruppe"
+
+msgid "Servicegroup"
+msgstr "Servicegruppe"
+
+msgid "Map link"
+msgstr "Kartenlink"
+
+msgid "BI aggregation"
+msgstr "BI-Aggregation"
+
+msgid "No BI aggregations available — none are configured in Checkmk, or your user has no permission to view them."
+msgstr "Keine BI-Aggregationen verfügbar — entweder sind in Checkmk keine konfiguriert, oder dein Nutzer hat keine Berechtigung, sie zu sehen."
+
+msgid "Expand depth"
+msgstr "Aufklapptiefe"
+
+msgid "Show child nodes up to N levels (0 = root only)."
+msgstr "Kindknoten bis zu N Ebenen anzeigen (0 = nur Wurzel)."
+
+msgid "Preview (live state)"
+msgstr "Vorschau (Live-Status)"
+
+msgid "%{count} more"
+msgstr "%{count} weitere"
+
+msgid "%{count} nodes — the subtree will be very crowded on the board. Set expand depth to 0 to keep only the root glyph and drill into details via the drawer."
+msgstr "%{count} Knoten — Subtree wird auf dem Board sehr dicht. Setze die Aufklapptiefe auf 0, um nur die Wurzel zu zeigen und Details über das Drawer abzurufen."
+
+msgid "Preview unavailable — the Checkmk connection is unhealthy. Check the connection status and reload."
+msgstr "Vorschau nicht verfügbar — Verbindung zur Checkmk-Site ist gestört. Status der Connection prüfen und neu laden."
+
+msgid "Function"
+msgstr "Funktion"
+
+msgid "Top-level aggregation function from Checkmk (e.g. worst, best, count_ok). Configured in WATO."
+msgstr "Top-Level-Aggregationsfunktion aus Checkmk (z. B. worst, best, count_ok). Wird in WATO konfiguriert."
+
+msgid "%{count} of %{total} leaves will be hidden."
+msgstr "%{count} von %{total} Elementen werden ausgeblendet."
+
+msgid "0 of %{total} leaves hidden — filter matches nothing."
+msgstr "0 von %{total} Elementen ausgeblendet — Filter ohne Treffer."
+
+msgid "All %{count} leaves would be hidden — the filter is too broad."
+msgstr "Alle %{count} Elemente werden ausgeblendet — Filter ist zu breit."
+
+msgid "Invalid regular expression."
+msgstr "Regex ungültig."
+
+msgid "No hosts available"
+msgstr "Keine Hosts verfügbar"
+
+msgid "No services for this host"
+msgstr "Keine Services für diesen Host"
+
+msgid "No groups available"
+msgstr "Keine Gruppen verfügbar"
+
+msgid "No host groups configured in this site"
+msgstr "Keine Hostgruppen in dieser Site konfiguriert"
+
+msgid "No service groups configured in this site"
+msgstr "Keine Servicegruppen in dieser Site konfiguriert"
+
+msgid "Please fill in the required fields."
+msgstr "Bitte alle Pflichtfelder ausfüllen."
+
+msgid "%{field} is required."
+msgstr "%{field} ist ein Pflichtfeld."
+
+msgid "No other boards available"
+msgstr "Keine weiteren Boards vorhanden"
+
+msgid "No metrics available"
+msgstr "Keine Metriken verfügbar"
+
+msgid "No graph templates available"
+msgstr "Keine Graph-Templates verfügbar"
+
+msgid "Line"
+msgstr "Linie"
+
+msgid "Textbox"
+msgstr "Textfeld"
+
+msgid "Image"
+msgstr "Bild"
+
+msgid "Icon filename"
+msgstr "Icon-Dateiname"
+
+msgid "Search icons…"
+msgstr "Icons suchen…"
+
+msgid "Upload icons to get started"
+msgstr "Zuerst Icons hochladen"
+
+msgid "Upload icon"
+msgstr "Icon hochladen"
+
+msgid "Service description"
+msgstr "Service-Beschreibung"
+
+msgid "Board name"
+msgstr "Board-Name"
+
+msgid "Label (optional)"
+msgstr "Beschriftung (optional)"
+
+msgid "Text content"
+msgstr "Textinhalt"
+
+msgid "Place on board"
+msgstr "Auf Board platzieren"
+
+msgid "Click on board to place…"
+msgstr "Auf Board klicken zum Platzieren…"
+
+msgid "Selected"
+msgstr "Ausgewählt"
+
+msgid "Monitoring object"
+msgstr "Monitoring-Objekt"
+
+msgid "Connection"
+msgstr "Verbindung"
+
+msgid "Inherit from board"
+msgstr "Vom Board übernehmen"
+
+msgid "Target board"
+msgstr "Ziel-Board"
+
+msgid "Content"
+msgstr "Inhalt"
+
+msgid "Style"
+msgstr "Stil"
+
+msgid "Default"
+msgstr "Standard"
+
+msgid "Simple line"
+msgstr "Einfache Linie"
+
+msgid "Arrow →"
+msgstr "Pfeil →"
+
+msgid "Arrow ←"
+msgstr "Pfeil ←"
+
+msgid "Double arrow ↔"
+msgstr "Doppelpfeil ↔"
+
+msgid "Double arrow (middle) →←"
+msgstr "Doppelpfeil (Mitte) →←"
+
+msgid "Dashed"
+msgstr "Gestrichelt"
+
+msgid "Line width"
+msgstr "Linienbreite"
+
+msgid "Perfdata label"
+msgstr "Perfdata-Label"
+
+msgid "Percent"
+msgstr "Prozent"
+
+msgid "Bandwidth"
+msgstr "Bandbreite"
+
+msgid "Both"
+msgstr "Beides"
+
+msgid "Color by utilization (weathermap)"
+msgstr "Färbung nach Auslastung (Weathermap)"
+
+msgid "Weathermap (utilization)"
+msgstr "Weathermap (Auslastung)"
+
+msgid "Metric"
+msgstr "Metrik"
+
+msgid "Metric (in)"
+msgstr "Metrik (in)"
+
+msgid "Metric (out)"
+msgstr "Metrik (out)"
+
+msgid "first metric"
+msgstr "erste Metrik"
+
+msgid "second metric (optional)"
+msgstr "zweite Metrik (optional)"
+
+msgid "Start X"
+msgstr "Anfang X"
+
+msgid "End X"
+msgstr "Ende X"
+
+msgid "Show label"
+msgstr "Beschriftung anzeigen"
+
+msgid "Label text"
+msgstr "Beschriftungstext"
+
+msgid "Line label"
+msgstr "Linien-Beschriftung"
+
+msgid "Lat"
+msgstr "Breite"
+
+msgid "Lng"
+msgstr "Länge"
+
+msgid "Label"
+msgstr "Beschriftung"
+
+msgid "(auto)"
+msgstr "(automatisch)"
+
+msgid "Size"
+msgstr "Größe"
+
+msgid "map default"
+msgstr "Board-Vorgabe"
+
+msgid "Color"
+msgstr "Farbe"
+
+msgid "Background"
+msgstr "Hintergrund"
+
+msgid "Map view"
+msgstr "Kartenansicht"
+
+msgid "Appearance"
+msgstr "Darstellung"
+
+msgid "View type"
+msgstr "Ansichtstyp"
+
+msgid "Icon"
+msgstr "Symbol"
+
+msgid "Text only"
+msgstr "Nur Text"
+
+msgid "Custom icon"
+msgstr "Benutzerdefiniertes Symbol"
+
+msgid "Gadget type"
+msgstr "Gadget-Typ"
+
+msgid "Gauge"
+msgstr "Messgerät"
+
+msgid "Bar"
+msgstr "Balken"
+
+msgid "Traffic light"
+msgstr "Ampel"
+
+msgid "Target"
+msgstr "Ziel"
+
+msgid "New tab"
+msgstr "Neuer Tab"
+
+msgid "Same tab"
+msgstr "Gleicher Tab"
+
+msgid "Automatically derived from Checkmk URL when left empty"
+msgstr "Automatisch aus Checkmk-URL abgeleitet wenn leer"
+
+msgid "Top frame"
+msgstr "Übergeordneter Frame"
+
+msgid "No objects found"
+msgstr "Keine Objekte gefunden"
+
+msgid "Adjust the filter via board settings"
+msgstr "Filter über die Board-Einstellungen anpassen"
+
+msgid "Preview limited — %{hidden} more not shown"
+msgstr "Vorschau begrenzt — %{hidden} weitere ausgeblendet"
+
+msgid "Preview shows the worst-state objects only. Open the board to see all %{hidden} additional objects."
+msgstr "Die Vorschau zeigt nur die Objekte mit den schlechtesten Zuständen. Im Board werden alle %{hidden} weiteren Objekte angezeigt."
+
+msgid "Pick a metric — weather coloring needs one to colorize the line."
+msgstr "Bitte eine Metrik wählen — ohne Metrik kann die Linie nicht eingefärbt werden."
+
+msgid "Subtree line"
+msgstr "Subtree-Linie"
+
+msgid "Subtree width"
+msgstr "Subtree-Linienstärke"
+
+msgid "Only hard states"
+msgstr "Nur Hard-States"
+
+msgid "Consider services"
+msgstr "Services berücksichtigen"
+
+msgid "Background & border"
+msgstr "Hintergrund & Rahmen"
+
+msgid "Border color"
+msgstr "Rahmenfarbe"
+
+msgid "Max length"
+msgstr "Max. Länge"
+
+msgid "no limit"
+msgstr "kein Limit"
+
+msgid "Width"
+msgstr "Breite"
+
+msgid "Height"
+msgstr "Höhe"
+
+msgid "Line color"
+msgstr "Linienfarbe"
+
+msgid "from state"
+msgstr "vom Status"
+
+msgid "Hover URL"
+msgstr "Hover-URL"
+
+msgid "Exclude members"
+msgstr "Mitglieder ausschließen"
+
+msgid "Exclude states"
+msgstr "Zustände ausschließen"
+
+msgid "regex pattern…"
+msgstr "Regex-Muster…"
+
+msgid "Regex to exclude members / comma-separated states to ignore"
+msgstr "Regex zum Ausschließen von Mitgliedern / kommagetrennte Zustände ignorieren"
+
+msgid "Embed as"
+msgstr "Einbettung"
+
+msgid "Image (img)"
+msgstr "Bild (img)"
+
+msgid "Interactive (iframe)"
+msgstr "Interaktiv (iframe)"
+
+msgid "Auto-refresh (s)"
+msgstr "Auto-Refresh (s)"
+
+msgid "0 = off"
+msgstr "0 = aus"
+
+msgid "Load failed"
+msgstr "Laden fehlgeschlagen"
+
+msgid "No URL configured"
+msgstr "Keine URL konfiguriert"
+
+msgid "Source"
+msgstr "Quelle"
+
+msgid "Metrics"
+msgstr "Metriken"
+
+msgid "Graph template"
+msgstr "Graph-Template"
+
+msgid "auto (all metrics)"
+msgstr "auto (alle Metriken)"
+
+msgid "Add metric…"
+msgstr "Metrik hinzufügen…"
+
+msgid "Metric Source"
+msgstr "Metrikquelle"
+
+msgid "URL Embed"
+msgstr "URL-Einbettung"
+
+msgid "Waiting for data…"
+msgstr "Warte auf Daten…"
+
+msgid "No data for \"%{service}\" on %{host}"
+msgstr "Keine Daten für „%{service}\" auf %{host}"
+
+msgid "Time window"
+msgstr "Zeitfenster"
+
+msgid "Save current view as default"
+msgstr "Aktuelle Ansicht als Standard speichern"
+
+msgid "Problem services"
+msgstr "Problematische Services"
+
+msgid "Group in Checkmk"
+msgstr "Gruppe in Checkmk"
+
+msgid "Aggregation tree in Checkmk"
+msgstr "Aggregations-Baum in Checkmk"
+
+msgid "All aggregations in Checkmk"
+msgstr "Alle Aggregationen in Checkmk"
+
+msgid "No Checkmk URL configured"
+msgstr "Keine Checkmk-URL konfiguriert"
+
+msgid "Edit properties"
+msgstr "Eigenschaften bearbeiten"
+
+msgid "Remove bend"
+msgstr "Knick entfernen"
+
+msgid "Duplicate"
+msgstr "Duplizieren"
+
+msgid "Acknowledge…"
+msgstr "Quittieren…"
+
+msgid "Schedule downtime…"
+msgstr "Downtime planen…"
+
+msgid "Downtime removed"
+msgstr "Downtime entfernt"
+
+msgid "Failed to remove downtime"
+msgstr "Fehler beim Entfernen der Downtime"
+
+msgid "No active downtimes found"
+msgstr "Keine aktiven Downtimes gefunden"
+
+msgid "Force check failed"
+msgstr "Check erzwingen fehlgeschlagen"
+
+msgid "Force check scheduled"
+msgstr "Check eingeplant"
+
+msgid "Notifications updated"
+msgstr "Benachrichtigungen aktualisiert"
+
+msgid "Add comment…"
+msgstr "Kommentar hinzufügen…"
+
+msgid "Remove acknowledgement"
+msgstr "Quittierung entfernen"
+
+msgid "Failed to remove acknowledgement"
+msgstr "Fehler beim Entfernen der Quittierung"
+
+msgid "Failed to toggle notifications"
+msgstr "Fehler beim Umschalten der Benachrichtigungen"
+
+msgid "Enable active checks"
+msgstr "Aktive Checks aktivieren"
+
+msgid "Disable active checks"
+msgstr "Aktive Checks deaktivieren"
+
+msgid "Failed to toggle active checks"
+msgstr "Fehler beim Umschalten der aktiven Checks"
+
+msgid "Comment"
+msgstr "Kommentar"
+
+msgid "Adding…"
+msgstr "Wird hinzugefügt…"
+
+msgid "Comment added"
+msgstr "Kommentar hinzugefügt"
+
+msgid "Failed to add comment"
+msgstr "Fehler beim Hinzufügen des Kommentars"
+
+msgid "Acknowledge problem"
+msgstr "Problem quittieren"
+
+msgid "Sticky (stays until OK)"
+msgstr "Sticky (bleibt bis OK)"
+
+msgid "Send notification"
+msgstr "Benachrichtigung senden"
+
+msgid "Acknowledging…"
+msgstr "Wird quittiert…"
+
+msgid "Acknowledgement set"
+msgstr "Quittierung gesetzt"
+
+msgid "Failed to acknowledge"
+msgstr "Fehler beim Quittieren"
+
+msgid "Applies to every member of the %{type}"
+msgstr "Wird auf alle Mitglieder der %{type} angewendet"
+
+msgid "Checkmk fans this command out across all members; partial failures abort the operation."
+msgstr "Checkmk verteilt das Kommando an alle Mitglieder; bei Teilfehler wird der Vorgang abgebrochen."
+
+msgid "host group"
+msgstr "Hostgruppe"
+
+msgid "service group"
+msgstr "Servicegruppe"
+
+msgid "Tip: Checkmk only accepts bulk actions on %{type}s that are configured in Setup → Host groups (or Service groups). Implicit / livestatus-only groups are rejected by the REST API."
+msgstr "Hinweis: Checkmk akzeptiert Bulk-Aktionen nur auf %{type}n, die in Setup → Hostgruppen (bzw. Servicegruppen) konfiguriert sind. Implizite / nur über Livestatus sichtbare Gruppen werden vom REST-API abgelehnt."
+
+msgid "Acknowledge contributing leaves"
+msgstr "Beitragende Elemente bestätigen"
+
+msgid "%{count} leaves from aggregation \"%{aggregation}\""
+msgstr "%{count} Elemente aus Aggregation „%{aggregation}\""
+
+msgid "Acknowledge %{count} leaves"
+msgstr "%{count} Elemente bestätigen"
+
+msgid "Acknowledging %{current}/%{total}…"
+msgstr "Quittiere %{current}/%{total}…"
+
+msgid "%{count} leaves acknowledged"
+msgstr "%{count} Elemente quittiert"
+
+msgid "%{failed} of %{total} failed: %{sample}"
+msgstr "%{failed} von %{total} fehlgeschlagen: %{sample}"
+
+msgid "Start"
+msgstr "Beginn"
+
+msgid "End"
+msgstr "Ende"
+
+msgid "Scheduling…"
+msgstr "Wird gesetzt…"
+
+msgid "Downtime scheduled"
+msgstr "Downtime gesetzt"
+
+msgid "Failed to schedule downtime"
+msgstr "Fehler beim Setzen der Downtime"
+
+msgid "%{n} downtime active"
+msgid_plural "%{n} downtimes active"
+msgstr[0] "%{n} Downtime aktiv"
+msgstr[1] "%{n} Downtimes aktiv"
+
+msgid "Remove"
+msgstr "Entfernen"
+
+msgid "Removing…"
+msgstr "Wird entfernt…"
+
+msgid "Users"
+msgstr "Benutzer"
+
+msgid "Roles & Permissions"
+msgstr "Rollen & Berechtigungen"
+
+msgid "Manage user accounts and permissions"
+msgstr "Benutzerkonten und Berechtigungen verwalten"
+
+msgid "Define access control roles"
+msgstr "Zugriffssteuerungsrollen definieren"
+
+msgid "Create and manage monitoring boards"
+msgstr "Monitoring-Boards erstellen und verwalten"
+
+msgid "Monitoring Connections"
+msgstr "Monitoring-Connections"
+
+msgid "Configure connections to monitoring systems"
+msgstr "Verbindungen zu Monitoring-Systemen konfigurieren"
+
+msgid "New User"
+msgstr "Neuer Benutzer"
+
+msgid "New Role"
+msgstr "Neue Rolle"
+
+msgid "New Board"
+msgstr "Neues Board"
+
+msgid "Add Connection"
+msgstr "Connection hinzufügen"
+
+msgid "Create User"
+msgstr "Benutzer erstellen"
+
+msgid "Edit User: %{name}"
+msgstr "Benutzer bearbeiten: %{name}"
+
+msgid "Create Role"
+msgstr "Rolle erstellen"
+
+msgid "Create Board"
+msgstr "Board erstellen"
+
+msgid "Edit Connection"
+msgstr "Connection bearbeiten"
+
+msgid "Role"
+msgstr "Rolle"
+
+msgid "Roles"
+msgstr "Rollen"
+
+msgid "User"
+msgstr "Benutzer"
+
+msgid "Active"
+msgstr "Aktiv"
+
+msgid "Inactive"
+msgstr "Inaktiv"
+
+msgid "Settings"
+msgstr "Einstellungen"
+
+msgid "Delete this user?"
+msgstr "Diesen Benutzer löschen?"
+
+msgid "Delete this role?"
+msgstr "Diese Rolle löschen?"
+
+msgid "Delete board"
+msgstr "Board löschen"
+
+msgid "Are you sure you want to delete \"%{name}\"? This action cannot be undone."
+msgstr "Soll „%{name}\" wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden."
+
+msgid "Select"
+msgstr "Auswählen"
+
+msgid "Done"
+msgstr "Fertig"
+
+msgid "Select all"
+msgstr "Alle auswählen"
+
+msgid "Select all (%{n} visible)"
+msgstr "Alle auswählen (%{n} sichtbar)"
+
+msgid "Delete %{n}"
+msgstr "%{n} löschen"
+
+msgid "%{n} selected"
+msgstr "%{n} ausgewählt"
+
+msgid "Delete %{n} boards"
+msgstr "%{n} Boards löschen"
+
+msgid "The following boards will be permanently removed:"
+msgstr "Folgende Boards werden unwiderruflich entfernt:"
+
+msgid "… and %{n} more"
+msgstr "… und %{n} weitere"
+
+msgid "%{n} boards deleted"
+msgstr "%{n} Boards gelöscht"
+
+msgid "%{ok} deleted, %{fail} failed"
+msgstr "%{ok} gelöscht, %{fail} fehlgeschlagen"
+
+msgid "Some boards could not be deleted:"
+msgstr "Einige Boards konnten nicht gelöscht werden:"
+
+msgid "Edit %{n}"
+msgstr "%{n} bearbeiten"
+
+msgid "Export %{n}"
+msgstr "%{n} exportieren"
+
+msgid "Edit %{n} boards"
+msgstr "%{n} Boards bearbeiten"
+
+msgid "Tick the fields you want to overwrite on every selected board. Unchecked fields stay untouched."
+msgstr "Haken Sie die Felder an, die für alle ausgewählten Boards überschrieben werden sollen. Nicht angehakte Felder bleiben unverändert."
+
+msgid "%{head}, … and %{n} more"
+msgstr "%{head}, … und %{n} weitere"
+
+msgid "Apply to %{n} boards"
+msgstr "Auf %{n} Boards anwenden"
+
+msgid "Updated %{n} boards"
+msgstr "%{n} Boards aktualisiert"
+
+msgid "Updated %{ok}, %{fail} failed"
+msgstr "%{ok} aktualisiert, %{fail} fehlgeschlagen"
+
+msgid "None of the selected boards is editable (all are read-only)."
+msgstr "Keines der ausgewählten Boards ist editierbar (alle sind schreibgeschützt)."
+
+msgid "Could not load the bulk-edit form."
+msgstr "Bulk-Edit-Formular konnte nicht geladen werden."
+
+msgid "Exported %{n} boards"
+msgstr "%{n} Boards exportiert"
+
+msgid "Delete connection \"%{id}\"?"
+msgstr "Connection „%{id}\" löschen?"
+
+msgid "No permissions assigned"
+msgstr "Keine Berechtigungen zugewiesen"
+
+msgid "No permissions assigned yet"
+msgstr "Noch keine Berechtigungen zugewiesen"
+
+msgid "No roles defined yet"
+msgstr "Noch keine Rollen definiert"
+
+msgid "No boards yet"
+msgstr "Noch keine Boards"
+
+msgid "No connections configured"
+msgstr "Keine Connections konfiguriert"
+
+msgid "Add a connection to receive monitoring states"
+msgstr "Connection hinzufügen, um Monitoring-Status zu empfangen"
+
+msgid "No connections configured yet — create one first."
+msgstr "Noch keine Connections konfiguriert — bitte zuerst eine erstellen."
+
+msgid "Manage connections →"
+msgstr "Connections verwalten →"
+
+msgid "permissions"
+msgstr "Berechtigungen"
+
+msgid "Assigned"
+msgstr "Zugewiesen"
+
+msgid "Add permission"
+msgstr "Berechtigung hinzufügen"
+
+msgid "Preset"
+msgstr "Vorlage"
+
+msgid "— choose a preset —"
+msgstr "— Vorlage auswählen —"
+
+msgid "View all boards"
+msgstr "Alle Boards anzeigen"
+
+msgid "Edit all boards (settings & objects)"
+msgstr "Alle Boards bearbeiten (Einstellungen & Objekte)"
+
+msgid "View a specific board…"
+msgstr "Bestimmtes Board anzeigen…"
+
+msgid "Edit a specific board…"
+msgstr "Bestimmtes Board bearbeiten…"
+
+msgid "Change any user's password (user/edit/*)"
+msgstr "Passwort eines beliebigen Benutzers ändern (user/edit/*)"
+
+msgid "Role name"
+msgstr "Rollenname"
+
+msgid "Permissions"
+msgstr "Berechtigungen"
+
+msgid "Board ID"
+msgstr "Board-ID"
+
+msgid "Letters, digits, hyphens and underscores only — spaces become hyphens automatically"
+msgstr "Buchstaben, Ziffern, Bindestriche und Unterstriche — Leerzeichen werden automatisch zu Bindestrichen"
+
+msgid "Only letters, digits, hyphens (-) and underscores (_) allowed"
+msgstr "Nur Buchstaben, Ziffern, Bindestriche (-) und Unterstriche (_) erlaubt"
+
+msgid "A board with this ID already exists"
+msgstr "Ein Board mit dieser ID existiert bereits"
+
+msgid "Some characters were removed (umlauts, punctuation, symbols are not allowed)"
+msgstr "Einige Zeichen wurden entfernt (Umlaute, Satzzeichen, Symbole sind nicht erlaubt)"
+
+msgid "Board ID is too long (max %{max} characters)"
+msgstr "Board-ID ist zu lang (max. %{max} Zeichen)"
+
+msgid "Connection ID"
+msgstr "Connection-ID"
+
+msgid "Letters, digits, hyphens and underscores only — used in URLs and configs"
+msgstr "Nur Buchstaben, Ziffern, Bindestriche und Unterstriche — wird in URLs und Konfigurationen verwendet"
+
+msgid "Connection ID is required"
+msgstr "Connection-ID ist erforderlich"
+
+msgid "A connection with this ID already exists"
+msgstr "Eine Connection mit dieser ID existiert bereits"
+
+msgid "Display label"
+msgstr "Anzeigename"
+
+msgid "Must change password on next login"
+msgstr "Muss das Passwort bei der nächsten Anmeldung ändern"
+
+msgid "Full access to all admin functions"
+msgstr "Vollzugriff auf alle Admin-Funktionen"
+
+msgid "built-in"
+msgstr "integriert"
+
+msgid "Select connection…"
+msgstr "Connection auswählen…"
+
+msgid "Unix socket path"
+msgstr "Unix-Socket-Pfad"
+
+msgid "or use TCP below"
+msgstr "oder TCP unten verwenden"
+
+msgid "Unix socket"
+msgstr "Unix-Socket"
+
+msgid "TCP host"
+msgstr "TCP-Host"
+
+msgid "Required"
+msgstr "Pflichtfeld"
+
+msgid "Fix these fields first:"
+msgstr "Bitte zuerst korrigieren:"
+
+msgid "Checkmk URL"
+msgstr "Checkmk-URL"
+
+msgid "for context links"
+msgstr "für Kontextlinks"
+
+msgid "Automation user"
+msgstr "Automation-Benutzer"
+
+msgid "Automation secret"
+msgstr "Automation-Secret"
+
+msgid "Required for metric history when using Nagios/Checkmk Raw as monitoring core (no rrddata via Livestatus)."
+msgstr "Erforderlich für Metrik-Historie bei Nutzung von Nagios/Checkmk Raw als Monitoring-Core (kein rrddata via Livestatus)."
+
+msgid "Not required: CMC detected — metric history is fetched via Livestatus rrddata."
+msgstr "Nicht erforderlich: CMC erkannt — Metrik-Historie wird direkt per Livestatus rrddata abgerufen."
+
+msgid "Test (built-in demo)"
+msgstr "Test (integrierte Demo)"
+
+msgid "Icinga2 API URL"
+msgstr "Icinga2 API-URL"
+
+msgid "Verify SSL certificate"
+msgstr "SSL-Zertifikat prüfen"
+
+msgid "Delete failed"
+msgstr "Löschen fehlgeschlagen"
+
+msgid "User \"%{name}\" created"
+msgstr "Benutzer „%{name}\" erstellt"
+
+msgid "User deleted"
+msgstr "Benutzer gelöscht"
+
+msgid "Role created"
+msgstr "Rolle erstellt"
+
+msgid "Role deleted"
+msgstr "Rolle gelöscht"
+
+msgid "Connection created"
+msgstr "Connection erstellt"
+
+msgid "Connection updated"
+msgstr "Connection aktualisiert"
+
+msgid "Connection deleted"
+msgstr "Connection gelöscht"
+
+msgid "Failed to add permission"
+msgstr "Berechtigung konnte nicht hinzugefügt werden"
+
+msgid "Images"
+msgstr "Bilder"
+
+msgid "Upload and manage images for board objects"
+msgstr "Bilder für Board-Objekte hochladen und verwalten"
+
+msgid "Upload Image"
+msgstr "Bild hochladen"
+
+msgid "No images uploaded yet"
+msgstr "Noch keine Bilder hochgeladen"
+
+msgid "Delete image \"%{name}\"?"
+msgstr "Bild „%{name}\" löschen?"
+
+msgid "Built-in"
+msgstr "Mitgeliefert"
+
+msgid "Built-in images cannot be deleted"
+msgstr "Mitgelieferte Bilder können nicht gelöscht werden"
+
+msgid "Image is still in use"
+msgstr "Bild wird noch verwendet"
+
+msgid "The image \"%{name}\" is referenced by %{count} board(s). Deleting it will leave those boards without an image. Continue?"
+msgstr "Das Bild „%{name}\" wird auf %{count} Board(s) verwendet. Beim Löschen verlieren diese Boards das Bild. Trotzdem löschen?"
+
+msgid "as background"
+msgstr "als Hintergrund"
+
+msgid "Uploaded images"
+msgstr "Hochgeladene Bilder"
+
+msgid "Built-in icons"
+msgstr "Mitgelieferte Icons"
+
+msgid "Search images…"
+msgstr "Bilder suchen…"
+
+msgid "No matches for \"%{q}\""
+msgstr "Keine Treffer für „%{q}\""
+
+msgid "No images uploaded yet — upload to add custom icons"
+msgstr "Noch keine Bilder hochgeladen — eigene Icons per Upload hinzufügen"
+
+msgid "Board Permissions"
+msgstr "Board-Berechtigungen"
+
+msgid "Permissions marked with * apply via a wildcard rule and cannot be changed here."
+msgstr "Mit * markierte Berechtigungen gelten über eine Wildcard-Regel und können hier nicht geändert werden."
+
+msgid "Granted via wildcard rule"
+msgstr "Über Wildcard-Regel gewährt"
+
+msgid "Clone board"
+msgstr "Board klonen"
+
+msgid "New name for clone of \"%{name}\""
+msgstr "Neuer Name für Klon von „%{name}\""
+
+msgid "Clone"
+msgstr "Klonen"
+
+msgid "Clone failed"
+msgstr "Klonen fehlgeschlagen"
+
+msgid "Please select at least one role."
+msgstr "Bitte mindestens eine Rolle auswählen."
+
+msgid "Export board as JSON"
+msgstr "Board als JSON exportieren"
+
+msgid "Import"
+msgstr "Importieren"
+
+msgid "Board \"%{name}\" already exists. Overwrite?"
+msgstr "Board „%{name}\" existiert bereits. Überschreiben?"
+
+msgid "Import failed"
+msgstr "Import fehlgeschlagen"
+
+msgid "Runtime and integration options. Applies across all boards."
+msgstr "Laufzeit- und Integrations-Optionen. Gelten boardübergreifend."
+
+msgid "Global Settings"
+msgstr "Globale Einstellungen"
+
+msgid "Default values applied when creating new boards and objects"
+msgstr "Standardwerte für neue Boards und Objekte"
+
+msgid "Reset this field to the factory default"
+msgstr "Feld auf Werkseinstellung zurücksetzen"
+
+msgid "1 field changed since last save"
+msgid_plural "%{n} fields changed since last save"
+msgstr[0] "1 Feld seit dem letzten Speichern geändert"
+msgstr[1] "%{n} Felder seit dem letzten Speichern geändert"
+
+msgid "Cannot save: %{field} — %{msg}"
+msgstr "Speichern nicht möglich: %{field} — %{msg}"
+
+msgid "Icon defaults"
+msgstr "Symbol-Standardwerte"
+
+msgid "Line defaults"
+msgstr "Linien-Standardwerte"
+
+msgid "Label defaults"
+msgstr "Beschriftungs-Standardwerte"
+
+msgid "New board defaults"
+msgstr "Standardwerte für neue Boards"
+
+msgid "When creating a new board"
+msgstr "Beim Anlegen eines neuen Boards"
+
+msgid "When rendering objects on a board"
+msgstr "Beim Rendern von Objekten auf Boards"
+
+msgid "Use background color"
+msgstr "Hintergrundfarbe verwenden"
+
+msgid "Global fallback — applies to any board or object without its own template set"
+msgstr "Globaler Fallback – gilt für alle Boards und Objekte ohne eigenes Template"
+
+msgid "Stacking order – higher = in front"
+msgstr "Stapelreihenfolge – höherer Wert = weiter vorne"
+
+msgid "Checkmk Integration"
+msgstr "Checkmk-Integration"
+
+msgid "Global Checkmk URL used as fallback for connections without their own URL"
+msgstr "Globale Checkmk-URL als Fallback für alle Verbindungen ohne eigene URL"
+
+msgid "Set automatically when OrbVis runs inside a Checkmk/OMD installation"
+msgstr "Wird automatisch gesetzt wenn OrbVis innerhalb von Checkmk/OMD betrieben wird"
+
+msgid "Log level"
+msgstr "Log-Level"
+
+msgid "Threshold for backend logs. Applied immediately, no restart required."
+msgstr "Schwellwert für die Backend-Logs. Wird sofort übernommen, kein Neustart nötig."
+
+msgid "Features"
+msgstr "Funktionen"
+
+msgid "Enable Folder boards"
+msgstr "Folder-Boards aktivieren"
+
+msgid "Offer the SETUP folder-tree board type in the board-type picker. Existing folder boards keep rendering even while this is off."
+msgstr "Bietet den SETUP-Ordnerbaum-Boardtyp in der Board-Typ-Auswahl an. Bestehende Folder-Boards werden weiterhin angezeigt, auch wenn dies deaktiviert ist."
+
+msgid "Enable Graph objects"
+msgstr "Graph-Objekte aktivieren"
+
+msgid "Offer the (experimental) graph object type in the add-object picker. Existing graph objects keep rendering even while this is off."
+msgstr "Bietet den (experimentellen) Graph-Objekttyp in der Objekt-Auswahl an. Bestehende Graph-Objekte werden weiterhin angezeigt, auch wenn dies deaktiviert ist."
+
+msgid "User Settings"
+msgstr "Benutzereinstellungen"
+
+msgid "Theme"
+msgstr "Design"
+
+msgid "Dark"
+msgstr "Dunkel"
+
+msgid "Light"
+msgstr "Hell"
+
+msgid "Language"
+msgstr "Sprache"
+
+msgid "Change password"
+msgstr "Passwort ändern"
+
+msgid "Reset onboarding tour"
+msgstr "Onboarding-Tour zurücksetzen"
+
+msgid "Tour will show again on next visit"
+msgstr "Tour wird beim nächsten Besuch wieder angezeigt"
+
+msgid "New password"
+msgstr "Neues Passwort"
+
+msgid "Confirm password"
+msgstr "Passwort bestätigen"
+
+msgid "At least 6 characters"
+msgstr "Mindestens 6 Zeichen"
+
+msgid "Password changed successfully."
+msgstr "Passwort erfolgreich geändert."
+
+msgid "Passwords do not match."
+msgstr "Passwörter stimmen nicht überein."
+
+msgid "Failed to change password."
+msgstr "Passwort konnte nicht geändert werden."
+
+msgid "Unsaved changes —"
+msgstr "Ungespeicherte Änderungen —"
+
+msgid "Skip tour"
+msgstr "Tour überspringen"
+
+msgid "Back"
+msgstr "Zurück"
+
+msgid "Next"
+msgstr "Weiter"
+
+msgid "Create first board"
+msgstr "Erstes Board anlegen"
+
+msgid "Welcome to OrbVis"
+msgstr "Willkommen bei OrbVis"
+
+msgid "OrbVis visualizes the status of your monitored infrastructure — hosts, services, groups and more — on customizable boards."
+msgstr "OrbVis visualisiert den Status deiner überwachten Infrastruktur — Hosts, Services, Gruppen und mehr — auf konfigurierbaren Boards."
+
+msgid "\"Overview\" in the sidebar brings you back to the board list. The admin section below gives access to connections, images, users and settings."
+msgstr "„Übersicht\" in der Seitenleiste bringt dich zur Board-Liste zurück. Darunter der Admin-Bereich mit Connections, Bildern, Benutzern und Einstellungen."
+
+msgid "\"Overview\" in the sidebar brings you back to the board list."
+msgstr "„Übersicht\" in der Seitenleiste bringt dich zur Board-Liste zurück."
+
+msgid "Your boards"
+msgstr "Deine Boards"
+
+msgid "Each card is a board — a visual map of your monitoring landscape. OrbVis supports static boards, Geo Boards, Radar views and Flow Boards."
+msgstr "Jede Kachel ist ein Board — eine visuelle Karte deiner Monitoring-Landschaft. OrbVis unterstützt statische Boards, Geo-Boards, Radar-Ansichten und Flow-Boards."
+
+msgid "Ready to go!"
+msgstr "Los geht's!"
+
+msgid "Create your first board here. Inside a board, click the pencil button (bottom-right) to enter edit mode and start placing monitoring objects."
+msgstr "Lege hier dein erstes Board an. Klicke darin auf den Stift-Button (unten rechts), um den Bearbeitungsmodus zu öffnen und Monitoring-Objekte zu platzieren."
+
+msgid "Your administrator can create boards and grant you access. Once a board is available it will appear here."
+msgstr "Dein Administrator kann Boards anlegen und dir Zugriff gewähren. Sobald ein Board verfügbar ist, erscheint es hier."
+
+msgid "Click the highlighted element →"
+msgstr "Klicke auf das markierte Element →"
+
+msgid "You're all set!"
+msgstr "Alles bereit!"
+
+msgid "Start exploring OrbVis"
+msgstr "Viel Spaß mit OrbVis"
+
+msgid "Welcome to your board"
+msgstr "Willkommen auf deinem Board"
+
+msgid "This is where your monitoring landscape comes to life. Objects update in real time."
+msgstr "Hier wird deine Monitoring-Landschaft lebendig. Objekte aktualisieren sich in Echtzeit."
+
+msgid "The canvas"
+msgstr "Der Canvas"
+
+msgid "Each object represents a monitored host, service, or group and shows its current state."
+msgstr "Jedes Objekt repräsentiert einen überwachten Host, Service oder eine Gruppe und zeigt seinen aktuellen Status."
+
+msgid "Use the gear icon to open board settings — upload a background image, set a name, and configure auto-rotation."
+msgstr "Über das Zahnrad-Symbol öffnest du die Board-Einstellungen — hier lädst du ein Hintergrundbild hoch, vergibst einen Namen und konfigurierst eine Auto-Rotation."
+
+msgid "Edit mode"
+msgstr "Bearbeitungsmodus"
+
+msgid "Click the pencil to enter edit mode and start placing monitoring objects on the board."
+msgstr "Klicke auf den Stift, um den Bearbeitungsmodus zu öffnen und Monitoring-Objekte auf dem Board zu platzieren."
+
+msgid "Add objects"
+msgstr "Objekte hinzufügen"
+
+msgid "Choose an object type, configure it, and click \"Place on board\" to position it on the canvas."
+msgstr "Wähle einen Objekttyp, konfiguriere ihn und klicke auf „Auf Board platzieren\", um ihn auf dem Canvas zu positionieren."
+
+msgid "Change your password"
+msgstr "Passwort ändern"
+
+msgid "You must set a new password before continuing."
+msgstr "Sie müssen ein neues Passwort festlegen, bevor Sie fortfahren können."
+
+msgid "Set new password"
+msgstr "Neues Passwort setzen"
+
+msgid "Logged in as"
+msgstr "Angemeldet als"
+
+msgid "no active downtimes"
+msgstr "keine aktiven Downtimes"
+
+msgid "no changes"
+msgstr "keine Änderungen"

@@ -1,27 +1,27 @@
 <template>
-  <OrbModal :open="true" :title="t('comment.title')" closable @close="$emit('close')">
+  <OrbModal :open="true" :title="_t('Add comment')" closable @close="$emit('close')">
     <p class="comment-modal__subtitle">{{ displayName }}</p>
 
     <div class="comment-modal__field">
-      <label class="comment-modal__label">{{ t('comment.comment') }}</label>
+      <label class="comment-modal__label">{{ _t('Comment') }}</label>
       <input
         ref="commentEl"
         v-model="comment"
         class="comment-modal__input"
-        :placeholder="t('comment.comment') + '…'"
+        :placeholder="_t('Comment') + '…'"
         @keydown.enter="submit"
       />
     </div>
 
     <p v-if="error" class="comment-modal__error">{{ error }}</p>
-    <p v-if="success" class="comment-modal__success">{{ t('comment.success') }}</p>
+    <p v-if="success" class="comment-modal__success">{{ _t('Comment added') }}</p>
 
     <template #footer>
       <CmkButton variant="secondary" @click="$emit('close')">
-        {{ t('common.cancel') }}
+        {{ _t('Cancel') }}
       </CmkButton>
       <CmkButton variant="primary" :disabled="submitting || !comment.trim()" @click="submit">
-        {{ submitting ? t('comment.submitting') : t('comment.submit') }}
+        {{ submitting ? _t('Adding…') : _t('Add comment') }}
       </CmkButton>
     </template>
   </OrbModal>
@@ -29,7 +29,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbModal from '@/components/OrbModal.vue'
 import CmkButton from '@/components/cmk/CmkButton'
@@ -38,8 +37,9 @@ import { cmkApi } from '@/api/client'
 import { useStatesStore } from '@/stores/states'
 import type { BoardObject } from '@/types/api'
 import { getBoardObjectName } from '@/utils/naming'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const props = defineProps<{
   object: BoardObject
@@ -85,7 +85,7 @@ async function submit() {
     success.value = true
     setTimeout(() => emit('close'), 1200)
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : t('comment.error')
+    error.value = e instanceof Error ? e.message : _t('Failed to add comment')
   } finally {
     submitting.value = false
   }

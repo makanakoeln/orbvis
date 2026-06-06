@@ -19,7 +19,12 @@
           :class="
             flowProblems.critical > 0 ? 'orb-board__pill--critical' : 'orb-board__pill--warning'
           "
-          :title="t('board.flow.issuesBanner', flowProblems)"
+          :title="
+            _t(
+              '%{total} service issues (%{critical} critical, %{warning} warning) across %{hostsWithProblems} hosts',
+              flowProblems
+            )
+          "
         >
           <svg
             style="width: 10px; height: 10px"
@@ -34,7 +39,7 @@
               d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
             />
           </svg>
-          {{ t('board.flow.problemsPill', flowProblems) }}
+          {{ _t('%{critical} crit · %{warning} warn', flowProblems) }}
         </span>
 
         <!-- Connection status -->
@@ -46,7 +51,7 @@
             class="orb-board__dot"
             :class="statesStore.connected ? 'orb-board__dot--ok' : 'orb-board__dot--offline'"
           />
-          {{ statesStore.connected ? t('board.live') : t('board.offline') }}
+          {{ statesStore.connected ? _t('Live') : _t('Offline') }}
         </div>
 
         <!-- Notification bell -->
@@ -56,8 +61,8 @@
           :class="statesStore.notificationsEnabled ? 'orb-board__topbtn--alert' : ''"
           :title="
             statesStore.notificationsEnabled
-              ? t('board.notificationsOn')
-              : t('board.notificationsOff')
+              ? _t('Browser notifications enabled — click to disable')
+              : _t('Enable browser notifications for state changes')
           "
           @click="statesStore.toggleNotifications()"
         >
@@ -91,7 +96,7 @@
               d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
             />
           </svg>
-          {{ t('board.readOnly') }}
+          {{ _t('Read-only') }}
         </span>
 
         <!-- Editing badge -->
@@ -109,13 +114,13 @@
               d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"
             />
           </svg>
-          {{ t('board.editing') }}
+          {{ _t('Editing') }}
         </span>
 
         <!-- Rotation countdown -->
         <button
           v-if="boardConfig && boardConfig.rotation_interval > 0 && rotationCountdown > 0"
-          :title="rotationPaused ? t('board.rotationResume') : t('board.rotationPause')"
+          :title="rotationPaused ? _t('Resume rotation') : _t('Pause rotation')"
           class="orb-board__pill orb-board__pill--rotation"
           :class="rotationPaused ? 'orb-board__pill--paused' : 'orb-board__pill--ok'"
           @click="toggleRotationPause"
@@ -134,14 +139,14 @@
               d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
             />
           </svg>
-          {{ rotationCountdown }}{{ t('board.rotationSuffix') }}
+          {{ rotationCountdown }}{{ _t('s') }}
         </button>
 
         <!-- Fullscreen: browser fullscreen in standalone, new-tab kiosk in Checkmk -->
         <button
           v-if="auth.ssoActive || auth.isCheckmkDeployment"
           class="orb-board__topbtn"
-          :title="t('board.openInNewTab')"
+          :title="_t('Open in new tab (full screen)')"
           @click="openKioskInNewTab"
         >
           <svg
@@ -161,7 +166,7 @@
         <button
           v-else
           class="orb-board__topbtn"
-          :title="t('board.fullscreen')"
+          :title="_t('Full screen')"
           @click="enterFullscreen"
         >
           <svg
@@ -184,7 +189,7 @@
           v-if="canEdit && !boardConfig?.readonly"
           data-tour="board-settings"
           class="orb-board__topbtn"
-          :title="t('board.boardSettings')"
+          :title="_t('Board settings')"
           @click="openSettings"
         >
           <svg
@@ -213,7 +218,7 @@
     <button
       v-if="isKiosk"
       class="orb-board__kiosk-exit"
-      :title="t('board.exitFullscreen')"
+      :title="_t('Exit full screen')"
       @click="exitFullscreen"
     >
       <svg
@@ -238,7 +243,7 @@
       <!-- Loading overlay (covers all board types) -->
       <div v-if="isLoading" class="orb-board__loading">
         <CmkLoading />
-        <span>{{ t('board.loadingBoard') }}</span>
+        <span>{{ _t('Loading board…') }}</span>
       </div>
       <!-- Worldmap -->
       <div
@@ -253,7 +258,7 @@
         >
           <span class="orb-board__error-text">{{ boardsStore.error }}</span>
           <router-link to="/" class="orb-board__backlink">
-            {{ t('board.backToOverview') }}
+            {{ _t('← Back to overview') }}
           </router-link>
         </div>
         <WorldMapCanvas
@@ -294,7 +299,7 @@
         <!-- Fit all button -->
         <button
           v-if="boardConfig && !isPreview && boardConfig.objects.some((o) => o.lat != null)"
-          :title="t('board.fitAll')"
+          :title="_t('Fit all objects')"
           class="leaflet-control-fit-all orb-board__fit-all"
           @click.stop="worldmapCanvasRef?.fitAll()"
         >
@@ -316,18 +321,18 @@
           v-else-if="!boardConfig"
           class="orb-board__msg orb-board__msg--overlay orb-board__msg--muted"
         >
-          <span>{{ t('board.boardNotFound') }}</span>
+          <span>{{ _t('Board not found') }}</span>
           <router-link to="/" class="orb-board__backlink">
-            {{ t('board.backToOverview') }}
+            {{ _t('← Back to overview') }}
           </router-link>
         </div>
         <div v-if="worldmapPickActive" class="orb-board__pick-banner" @click.stop>
-          <span class="orb-board__pick-text">{{ t('board.pickViewBanner') }}</span>
+          <span class="orb-board__pick-text">{{ _t('Pan/zoom the map, then apply.') }}</span>
           <CmkButton variant="primary" @click="applyWorldmapPick">
-            {{ t('board.pickViewApply') }}
+            {{ _t('Apply') }}
           </CmkButton>
           <CmkButton variant="secondary" @click="cancelWorldmapPick">
-            {{ t('common.cancel') }}
+            {{ _t('Cancel') }}
           </CmkButton>
         </div>
       </div>
@@ -396,7 +401,7 @@
           @positions-changed="onFlowPositionsChanged"
         />
         <div v-else class="orb-board__noconn">
-          {{ t('board.noConnectionConfigured') }}
+          {{ _t('No connection configured for this board.') }}
         </div>
       </div>
 
@@ -412,7 +417,7 @@
         >
           <span class="orb-board__error-text">{{ boardsStore.error }}</span>
           <router-link to="/" class="orb-board__backlink">
-            {{ t('board.backToOverview') }}
+            {{ _t('← Back to overview') }}
           </router-link>
         </div>
         <template v-else-if="boardConfig">
@@ -443,8 +448,10 @@
               />
             </svg>
             <p class="orb-board__empty-text">
-              <template v-if="canEdit">{{ t('board.emptyBoardAdmin') }}</template>
-              <template v-else>{{ t('board.emptyBoard') }}</template>
+              <template v-if="canEdit">{{
+                _t('No objects yet — click the Edit button (bottom right) to add some')
+              }}</template>
+              <template v-else>{{ _t('This board has no objects yet') }}</template>
             </p>
           </div>
           <BoardCanvas
@@ -480,9 +487,9 @@
           />
         </template>
         <div v-else class="orb-board__msg orb-board__msg--fill orb-board__msg--muted">
-          <span>{{ t('board.boardNotFound') }}</span>
+          <span>{{ _t('Board not found') }}</span>
           <router-link to="/" class="orb-board__backlink">
-            {{ t('board.backToOverview') }}
+            {{ _t('← Back to overview') }}
           </router-link>
         </div>
       </div>
@@ -619,7 +626,7 @@
                 v-if="addPickerOpen"
                 class="orb-board__addmenu"
                 role="menu"
-                :aria-label="t('boardSettings.selectType')"
+                :aria-label="_t('Select type…')"
               >
                 <button
                   v-for="opt in placeableTypeOptions"
@@ -648,7 +655,7 @@
             <button
               data-tour="add-object-fab"
               class="orb-board__fab orb-board__fab--primary"
-              :title="t('boardSettings.addObject')"
+              :title="_t('Add Object')"
               :aria-expanded="addPickerOpen"
               aria-haspopup="menu"
               @click="onAddFabClick"
@@ -671,7 +678,7 @@
           data-tour="edit-fab"
           class="orb-board__fab"
           :class="editor.editMode.value ? 'orb-board__fab--active' : 'orb-board__fab--idle'"
-          :title="editor.editMode.value ? t('board.editing') : t('board.edit')"
+          :title="editor.editMode.value ? _t('Editing') : _t('Edit')"
           @click="onToggleEditMode"
         >
           <svg
@@ -806,7 +813,7 @@
             :class="serviceLayout !== 'off' ? 'orb-board__svc-btn--on' : 'orb-board__svc-btn--off'"
             @click="serviceLayoutOpen = !serviceLayoutOpen"
           >
-            {{ t('board.services') }}
+            {{ _t('Services') }}
             <svg
               style="width: 10px; height: 10px"
               class="orb-board__svc-caret"
@@ -861,8 +868,8 @@
     <OrbConfirmDialog
       :open="!!deleteTargetObject"
       :title="deleteDialogTitle"
-      :message="t('board.cannotBeUndone')"
-      :confirm-label="t('common.delete')"
+      :message="_t('This cannot be undone.')"
+      :confirm-label="_t('Delete')"
       @confirm="confirmObjectDelete"
       @cancel="deleteTargetObject = null"
     />
@@ -938,7 +945,7 @@
             {{ folderCtx.node.title || 'Main' }}
           </p>
           <p class="orb-board__ctx-type">
-            {{ t('board.ftFolder') }}
+            {{ _t('Folder') }}
           </p>
         </div>
         <button
@@ -960,7 +967,7 @@
               d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <span>{{ t('board.ftBulkActions') }}</span>
+          <span>{{ _t('Folder actions') }}</span>
         </button>
         <a
           v-if="folderSetupUrl"
@@ -982,13 +989,13 @@
               d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
             />
           </svg>
-          <span>{{ t('board.ftOpenInSetup') }}</span>
+          <span>{{ _t('Open in Checkmk Setup') }}</span>
         </a>
         <div
           v-if="!(canBulkCommand && folderCtx.node.host_count > 0) && !folderSetupUrl"
           class="orb-board__ctx-empty"
         >
-          {{ t('contextMenu.noCheckmkUrl') }}
+          {{ _t('No Checkmk URL configured') }}
         </div>
       </div>
     </template>
@@ -1009,7 +1016,7 @@
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
         </svg>
-        <span>{{ t('contextMenu.saveCurrentViewAsDefault') }}</span>
+        <span>{{ _t('Save current view as default') }}</span>
       </button>
     </div>
     <AckModal
@@ -1081,7 +1088,6 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
 import OnboardingTour from '@/components/OnboardingTour.vue'
@@ -1136,11 +1142,12 @@ import { getBoardObjectIdentifier, getBoardObjectName, getObjectTypeLabel } from
 import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge'
 import { resolveTemplate } from '@/utils/template'
 import CmkLoading from '@/vendor/cmk/components/CmkLoading.vue'
+import usei18n from '@/vendor/cmk/lib/i18n'
 import useClickOutside from '@/vendor/cmk/lib/useClickOutside'
 
 type LineDragMode = 'move' | 'start' | 'end' | 'mid'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const toast = useToast()
 const route = useRoute()
 const router = useRouter()
@@ -1186,13 +1193,17 @@ const boardTourSteps = computed<TourStep[]>(() => {
   const base: TourStep[] = [
     {
       selector: null,
-      title: t('onboarding.boardStep1.title'),
-      body: t('onboarding.boardStep1.body')
+      title: _t('Welcome to your board'),
+      body: _t(
+        'This is where your monitoring landscape comes to life. Objects update in real time.'
+      )
     },
     {
       selector: '[data-tour="board-canvas"]',
-      title: t('onboarding.boardStep2.title'),
-      body: t('onboarding.boardStep2.body')
+      title: _t('The canvas'),
+      body: _t(
+        'Each object represents a monitored host, service, or group and shows its current state.'
+      )
     }
   ]
   if (!auth.isAdmin) return base
@@ -1200,18 +1211,24 @@ const boardTourSteps = computed<TourStep[]>(() => {
     ...base,
     {
       selector: '[data-tour="board-settings"]',
-      title: t('onboarding.boardStep3.title'),
-      body: t('onboarding.boardStep3.body')
+      title: _t('Board settings'),
+      body: _t(
+        'Use the gear icon to open board settings — upload a background image, set a name, and configure auto-rotation.'
+      )
     },
     {
       selector: '[data-tour="edit-fab"]',
-      title: t('onboarding.boardStep4.title'),
-      body: t('onboarding.boardStep4.body')
+      title: _t('Edit mode'),
+      body: _t(
+        'Click the pencil to enter edit mode and start placing monitoring objects on the board.'
+      )
     },
     {
       selector: '[data-tour="edit-panel"]',
-      title: t('onboarding.boardStep5.title'),
-      body: t('onboarding.boardStep5.body')
+      title: _t('Add objects'),
+      body: _t(
+        'Choose an object type, configure it, and click "Place on board" to position it on the canvas.'
+      )
     }
   ]
 })
@@ -1329,7 +1346,7 @@ const selectedObjectAnchor = computed<AnchorRect | null>(() => {
 })
 
 const placeableTypeOptions = computed(() =>
-  placeableObjectTypes(t, settingsStore.system.enable_graph_objects)
+  placeableObjectTypes(_t, settingsStore.system.enable_graph_objects)
 )
 
 function chooseAddType(type: ObjectType) {
@@ -1367,11 +1384,11 @@ const deleteTargetObject = ref<BoardObject | null>(null)
 
 const deleteDialogTitle = computed(() => {
   const obj = deleteTargetObject.value
-  if (!obj) return t('board.deleteObject')
+  if (!obj) return _t('Delete object')
   const type = getObjectTypeLabel(obj)
   const name = obj.label?.text || getBoardObjectIdentifier(obj)
-  if (!name || name === obj.id) return t('board.deleteObjectTitleUnnamed', { type })
-  return t('board.deleteObjectTitle', { type, name })
+  if (!name || name === obj.id) return _t('Delete %{type}?', { type })
+  return _t('Delete %{type} "%{name}"?', { type, name })
 })
 
 function openPropsModal(obj: BoardObject, anchor?: AnchorRect | null) {
@@ -1508,11 +1525,11 @@ async function onWorldmapCtxRemoveDowntime() {
       return
     }
   } catch {
-    toast.error(t('contextMenu.removeDowntimeFailed'))
+    toast.error(_t('Failed to remove downtime'))
     return
   }
   if (downtimes.length === 0) {
-    toast.error(t('contextMenu.noDowntimesFound'))
+    toast.error(_t('No active downtimes found'))
     return
   }
   if (downtimes.length === 1 && downtimes[0]) {
@@ -1528,10 +1545,10 @@ async function doWorldmapRemoveDowntime(dt: DowntimeEntry) {
   if (!checkmkUrl.value) return
   try {
     await cmkApi.removeDowntimeById(checkmkUrl.value, dt.id, dt.site_id)
-    toast.success(t('contextMenu.removeDowntimeSuccess'))
+    toast.success(_t('Downtime removed'))
     statesStore.refreshAfterCommand()
   } catch {
-    toast.error(t('contextMenu.removeDowntimeFailed'))
+    toast.error(_t('Failed to remove downtime'))
   }
 }
 
@@ -1566,7 +1583,9 @@ async function onWorldmapCtxRemoveAck() {
   } catch (err) {
     const detail = err instanceof Error ? err.message : ''
     toast.error(
-      detail ? `${t('contextMenu.removeAckFailed')}: ${detail}` : t('contextMenu.removeAckFailed')
+      detail
+        ? `${_t('Failed to remove acknowledgement')}: ${detail}`
+        : _t('Failed to remove acknowledgement')
     )
   }
 }
@@ -1592,7 +1611,7 @@ async function onWorldmapCtxToggleNotifications(enable: boolean) {
       )
     }
   } catch {
-    toast.error(t('contextMenu.toggleNotificationsFailed'))
+    toast.error(_t('Failed to toggle notifications'))
   }
 }
 
@@ -1613,7 +1632,7 @@ async function onWorldmapCtxForceCheck() {
       await cmkApi.forceCheckHost(checkmkUrl.value, obj.host_name, siteId)
     }
   } catch {
-    toast.error(t('contextMenu.forceCheckFailed'))
+    toast.error(_t('Force check failed'))
   }
 }
 
@@ -1654,7 +1673,7 @@ async function onPropsModalSave(updates: Record<string, unknown>) {
   try {
     await editor.updateObjectProperties(propsModalObject.value.id, updates)
   } catch (e) {
-    toast.error(e instanceof Error ? e.message : t('boardSettings.saveFailed'))
+    toast.error(e instanceof Error ? e.message : _t('Save failed'))
   } finally {
     // Always close the modal so its local "saving" state resets even if
     // the backend rejected the update — otherwise the Save button stays
@@ -2122,7 +2141,7 @@ function closeAnyDrawer(): void {
 
 const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
   const boardTitle = boardConfig.value?.alias || String(route.params.name ?? '')
-  const items: BreadcrumbItem[] = [{ title: t('home.title'), to: '/' }]
+  const items: BreadcrumbItem[] = [{ title: _t('Boards'), to: '/' }]
   if (drawerObject.value) {
     items.push({ title: boardTitle, onClick: closeAnyDrawer })
     items.push({ title: getBoardObjectName(drawerObject.value) })
@@ -2191,11 +2210,11 @@ watch(boardName, () => {
   flowProblems.value = { ...FLOW_PROBLEMS_DEFAULT }
 })
 const serviceLayoutOptions = computed(() => [
-  { value: 'off' as ServiceLayout, label: t('board.serviceLayoutOff') },
-  { value: 'donut' as ServiceLayout, label: t('board.serviceLayoutDonut') },
-  { value: 'fan' as ServiceLayout, label: t('board.serviceLayoutFan') },
-  { value: 'orbit' as ServiceLayout, label: t('board.serviceLayoutOrbit') },
-  { value: 'row' as ServiceLayout, label: t('board.serviceLayoutRow') }
+  { value: 'off' as ServiceLayout, label: _t('Off') },
+  { value: 'donut' as ServiceLayout, label: _t('Donut') },
+  { value: 'fan' as ServiceLayout, label: _t('Fan') },
+  { value: 'orbit' as ServiceLayout, label: _t('Orbit') },
+  { value: 'row' as ServiceLayout, label: _t('Row') }
 ])
 const showSettings = ref(false)
 const settingsWorldmapView = ref<{ lat: number; lng: number; zoom: number } | null>(null)

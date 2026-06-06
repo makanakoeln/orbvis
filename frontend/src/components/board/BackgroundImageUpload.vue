@@ -11,12 +11,10 @@
       <div v-else-if="previewFailed" class="orb-bgupload__thumb-fallback">?</div>
       <span class="orb-bgupload__name">
         {{ displayName }}
-        <span v-if="pendingFile" class="orb-bgupload__unsaved">
-          · {{ t('board.backgroundUnsaved') }}
-        </span>
+        <span v-if="pendingFile" class="orb-bgupload__unsaved"> · {{ _t('unsaved') }} </span>
       </span>
       <label class="orb-bgupload__replace">
-        {{ t('board.replaceBackground') }}
+        {{ _t('Replace…') }}
         <input
           type="file"
           :accept="ACCEPT_TYPES"
@@ -27,7 +25,7 @@
       <button
         type="button"
         class="orb-bgupload__remove"
-        :title="pendingFile ? t('common.cancel') : t('board.deleteBackground')"
+        :title="pendingFile ? _t('Cancel') : _t('Remove background image')"
         @click="removeOrCancel"
       >
         <svg
@@ -57,7 +55,7 @@
           d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
         />
       </svg>
-      {{ t('board.uploadBackground') }}
+      {{ _t('Upload background image…') }}
       <input
         type="file"
         :accept="ACCEPT_TYPES"
@@ -70,11 +68,12 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const ACCEPT_TYPES = 'image/png,image/jpeg,image/svg+xml,image/webp,image/gif'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const props = defineProps<{
   // Filename of the background already persisted on the server (display base).

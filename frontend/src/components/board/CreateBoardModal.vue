@@ -1,8 +1,8 @@
 <template>
-  <OrbModal :open="true" :title="t('admin.createBoard')" closable @close="$emit('close')">
+  <OrbModal :open="true" :title="_t('Create Board')" closable @close="$emit('close')">
     <form class="create-board__form" @submit.prevent="submit">
       <div class="create-board__field">
-        <label class="create-board__label">{{ t('admin.boardId') }}</label>
+        <label class="create-board__label">{{ _t('Board ID') }}</label>
         <CmkInput
           :model-value="form.name"
           placeholder="my-board"
@@ -16,10 +16,16 @@
         />
         <p v-if="nameError" class="create-board__error">{{ nameError }}</p>
         <p v-else-if="nameWarning" class="create-board__warning">{{ nameWarning }}</p>
-        <p v-else class="create-board__hint">{{ t('admin.boardIdHint') }}</p>
+        <p v-else class="create-board__hint">
+          {{
+            _t(
+              'Letters, digits, hyphens and underscores only — spaces become hyphens automatically'
+            )
+          }}
+        </p>
       </div>
       <div class="create-board__field">
-        <label class="create-board__label">{{ t('admin.alias') }}</label>
+        <label class="create-board__label">{{ _t('Display name') }}</label>
         <CmkInput
           v-model="form.alias"
           placeholder="My Board"
@@ -28,32 +34,32 @@
         />
       </div>
       <div class="create-board__field">
-        <label class="create-board__label">{{ t('board.connection') }}</label>
+        <label class="create-board__label">{{ _t('Connection') }}</label>
         <template v-if="connectionsStore.connections.length > 0">
           <CmkDropdown
             :selected-option="form.connection_id || null"
             :options="connectionOptions"
             :width="'fill'"
-            :label="t('board.connection')"
+            :label="_t('Connection')"
             @update:selected-option="form.connection_id = $event ?? ''"
           />
         </template>
         <template v-else>
           <CmkAlertBox variant="warning" size="small">
-            {{ t('admin.noConnectionsCreate') }}
+            {{ _t('No connections configured yet — create one first.') }}
             <router-link
               :to="{ name: 'admin-connections' }"
               class="create-board__link"
               @click="$emit('close')"
             >
-              {{ t('admin.createConnectionLink') }}
+              {{ _t('Manage connections →') }}
             </router-link>
           </CmkAlertBox>
         </template>
       </div>
       <div class="create-board__field">
-        <label class="create-board__label">{{ t('board.boardType') }}</label>
-        <div class="create-board__type-grid" role="radiogroup" :aria-label="t('board.boardType')">
+        <label class="create-board__label">{{ _t('Board type') }}</label>
+        <div class="create-board__type-grid" role="radiogroup" :aria-label="_t('Board type')">
           <button
             v-for="opt in boardTypeCards"
             :key="opt.name"
@@ -75,14 +81,14 @@
 
     <template #footer>
       <CmkButton variant="secondary" @click="$emit('close')">
-        {{ t('common.cancel') }}
+        {{ _t('Cancel') }}
       </CmkButton>
       <CmkButton
         variant="primary"
         :disabled="!form.name || !!nameError || !form.connection_id"
         @click="submit"
       >
-        {{ t('common.create') }}
+        {{ _t('Create') }}
       </CmkButton>
     </template>
   </OrbModal>
@@ -90,7 +96,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbModal from '@/components/OrbModal.vue'
 import CmkAlertBox from '@/components/cmk/CmkAlertBox'
@@ -104,10 +109,11 @@ import { useConnectionsStore } from '@/stores/connections'
 import { useSettingsStore } from '@/stores/settings'
 import { boardTypeOptions } from '@/utils/dropdownOptions'
 import { sanitizeBoardName, sanitizeStrippedChars, slugToTitleCase } from '@/utils/naming'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const emit = defineEmits<{ close: []; created: [name: string] }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const boardsStore = useBoardsStore()
 const connectionsStore = useConnectionsStore()
 const settingsStore = useSettingsStore()
@@ -121,18 +127,20 @@ const connectionOptions = computed(() => ({
   suggestions: connectionsStore.connections.map((b) => ({ name: b.id, title: b.label || b.id }))
 }))
 const boardTypeCards = computed(() =>
-  boardTypeOptions(t, settingsStore.system.enable_folder_boards).map((o) => ({
+  boardTypeOptions(_t, settingsStore.system.enable_folder_boards).map((o) => ({
     ...o,
     desc:
       o.name === 'static'
-        ? t('board.boardTypeStaticDesc')
+        ? _t('Free placement of objects on a canvas or background image')
         : o.name === 'worldmap'
-          ? t('board.boardTypeGeoBoardDesc')
+          ? _t('Objects positioned on an interactive world map using geo-coordinates')
           : o.name === 'flow'
-            ? t('board.boardTypeFlowBoardDesc')
+            ? _t('Dynamic tree of all hosts and their relationships')
             : o.name === 'radar'
-              ? t('board.boardTypeRadarDesc')
-              : t('board.boardTypeFolderTreeDesc')
+              ? _t('Automatic display of all hosts/services matching a group filter')
+              : _t(
+                  'Live status tree along the Checkmk SETUP folder hierarchy, with worst-state roll-up'
+                )
   }))
 )
 
@@ -147,13 +155,15 @@ function onNameInput(e: Event) {
   const stripped = sanitizeStrippedChars(raw)
   form.value.name = sanitizeBoardName(raw)
   if (form.value.name.length > _MAX_NAME_LEN) {
-    nameError.value = t('admin.boardIdTooLong', { max: _MAX_NAME_LEN })
+    nameError.value = _t('Board ID is too long (max %{max} characters)', { max: _MAX_NAME_LEN })
   } else if (form.value.name && !_NAME_RE.test(form.value.name)) {
-    nameError.value = t('admin.boardIdInvalid')
+    nameError.value = _t('Only letters, digits, hyphens (-) and underscores (_) allowed')
   } else {
     nameError.value = ''
   }
-  nameWarning.value = stripped ? t('admin.boardIdStripped') : ''
+  nameWarning.value = stripped
+    ? _t('Some characters were removed (umlauts, punctuation, symbols are not allowed)')
+    : ''
   if (!aliasTouched.value) {
     form.value.alias = slugToTitleCase(form.value.name)
   }
@@ -164,7 +174,9 @@ function onAliasInput() {
   if (!nameTouched.value) {
     form.value.name = sanitizeBoardName(form.value.alias).toLowerCase()
     nameError.value =
-      form.value.name && !_NAME_RE.test(form.value.name) ? t('admin.boardIdInvalid') : ''
+      form.value.name && !_NAME_RE.test(form.value.name)
+        ? _t('Only letters, digits, hyphens (-) and underscores (_) allowed')
+        : ''
   }
 }
 
@@ -194,9 +206,10 @@ async function submit() {
   } catch (err) {
     if (err instanceof ApiError) {
       if (err.status === 409) {
-        nameError.value = t('admin.boardIdTaken')
+        nameError.value = _t('A board with this ID already exists')
       } else if (err.status === 422) {
-        nameError.value = err.message || t('admin.boardIdInvalid')
+        nameError.value =
+          err.message || _t('Only letters, digits, hyphens (-) and underscores (_) allowed')
       } else {
         nameError.value = err.message || `HTTP ${err.status}`
       }

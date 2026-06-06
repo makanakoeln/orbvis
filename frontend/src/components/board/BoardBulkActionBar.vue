@@ -5,8 +5,8 @@
         <button
           type="button"
           class="board-bulk-bar__dismiss"
-          :title="t('common.cancel')"
-          :aria-label="t('common.cancel')"
+          :title="_t('Cancel')"
+          :aria-label="_t('Cancel')"
           @click="emit('cancel')"
         >
           <svg
@@ -19,7 +19,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <span class="board-bulk-bar__count">{{ t('admin.nSelected', { n: count }) }}</span>
+        <span class="board-bulk-bar__count">{{ _t('%{n} selected', { n: count }) }}</span>
         <label class="board-bulk-bar__selectall">
           <CmkCheckbox
             :model-value="selectAllChecked"
@@ -30,13 +30,13 @@
       </div>
       <div class="board-bulk-bar__actions">
         <CmkButton v-if="canEdit" variant="primary" :disabled="busy" @click="emit('edit')">
-          {{ t('common.edit') }}
+          {{ _t('Edit') }}
         </CmkButton>
         <CmkButton variant="secondary" :disabled="busy" @click="emit('export')">
-          {{ t('common.export') }}
+          {{ _t('Export') }}
         </CmkButton>
         <CmkButton variant="danger" :disabled="busy" @click="emit('delete')">
-          {{ t('common.delete') }}
+          {{ _t('Delete') }}
         </CmkButton>
       </div>
     </div>
@@ -45,10 +45,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import CmkButton from '@/components/cmk/CmkButton'
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
+
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   count: number
@@ -65,8 +66,8 @@ const emit = defineEmits<{
   'toggle-select-all': [checked: boolean]
 }>()
 
-const { t } = useI18n()
-const ariaLabel = computed(() => t('admin.nSelected', { n: props.count }))
+const { _t } = usei18n()
+const ariaLabel = computed(() => _t('%{n} selected', { n: props.count }))
 </script>
 
 <style scoped>

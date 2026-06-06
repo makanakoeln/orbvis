@@ -3,10 +3,10 @@
     <div class="orb-connlist__header">
       <div>
         <CmkHeading type="h2">
-          {{ t('admin.connectionsTitle') }}
+          {{ _t('Monitoring Connections') }}
         </CmkHeading>
         <CmkParagraph class="admin-subtitle">
-          {{ t('admin.connectionsSubtitle') }}
+          {{ _t('Configure connections to monitoring systems') }}
         </CmkParagraph>
       </div>
       <CmkButton variant="primary" @click="openCreate">
@@ -19,7 +19,7 @@
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        {{ t('admin.addConnection') }}
+        {{ _t('Add Connection') }}
       </CmkButton>
     </div>
 
@@ -30,9 +30,9 @@
     <CmkAlertBox v-else-if="store.error" variant="error">{{ store.error }}</CmkAlertBox>
 
     <div v-else-if="store.connections.length === 0" class="orb-connlist__empty">
-      <p class="orb-connlist__empty-text">{{ t('admin.noConnections') }}</p>
+      <p class="orb-connlist__empty-text">{{ _t('No connections configured') }}</p>
       <p class="orb-connlist__empty-text orb-connlist__empty-text--hint">
-        {{ t('admin.noConnectionsHint') }}
+        {{ _t('Add a connection to receive monitoring states') }}
       </p>
     </div>
 
@@ -41,20 +41,20 @@
         <thead>
           <tr class="orb-connlist__head-row">
             <th class="orb-connlist__th">
-              {{ t('admin.status') }}
+              {{ _t('Status') }}
             </th>
             <th class="orb-connlist__th">ID</th>
             <th class="orb-connlist__th">
-              {{ t('admin.displayLabel') }}
+              {{ _t('Display label') }}
             </th>
             <th class="orb-connlist__th">
-              {{ t('admin.type') }}
+              {{ _t('Type') }}
             </th>
             <th class="orb-connlist__th">
-              {{ t('admin.connection') }}
+              {{ _t('Connection') }}
             </th>
             <th class="orb-connlist__th orb-connlist__th--right">
-              {{ t('admin.actions') }}
+              {{ _t('Actions') }}
             </th>
           </tr>
         </thead>
@@ -65,7 +65,7 @@
               <button
                 :disabled="statusLoading[b.id]"
                 class="orb-connlist__status-btn"
-                :title="t('common.test')"
+                :title="_t('Test')"
                 @click="testExisting(b.id)"
               >
                 <span class="orb-connlist__dot-wrap">
@@ -84,11 +84,7 @@
                   <span v-else class="orb-connlist__dot orb-connlist__dot--error" />
                 </span>
                 <span class="orb-connlist__status-label">
-                  {{
-                    statusLoading[b.id]
-                      ? t('common.testing')
-                      : (statusMessages[b.id] ?? t('common.test'))
-                  }}
+                  {{ statusLoading[b.id] ? _t('Testing…') : (statusMessages[b.id] ?? _t('Test')) }}
                 </span>
                 <!-- Refresh icon — visible on hover to signal clickability -->
                 <svg
@@ -129,13 +125,13 @@
               <template v-else-if="b.type === 'icinga2'">
                 {{ b.icinga2_url || '—' }}
               </template>
-              <span v-else>{{ t('admin.builtIn') }}</span>
+              <span v-else>{{ _t('built-in') }}</span>
             </td>
             <td class="orb-connlist__td orb-connlist__td--right">
               <div class="orb-connlist__actions">
                 <button
                   class="orb-connlist__action-btn orb-connlist__action-btn--edit"
-                  :title="t('common.edit')"
+                  :title="_t('Edit')"
                   @click="openEdit(b)"
                 >
                   <svg
@@ -154,7 +150,7 @@
                 </button>
                 <button
                   class="orb-connlist__action-btn orb-connlist__action-btn--delete"
-                  :title="t('common.delete')"
+                  :title="_t('Delete')"
                   @click="deleteTarget = b.id"
                 >
                   <svg
@@ -180,22 +176,22 @@
 
     <OrbConfirmDialog
       :open="!!deleteTarget"
-      :title="deleteTarget ? t('admin.deleteConnection', { id: deleteTarget }) : ''"
-      :message="t('board.cannotBeUndone')"
-      :confirm-label="t('common.delete')"
+      :title="deleteTarget ? _t('Delete connection &quot;%{id}&quot;?', { id: deleteTarget }) : ''"
+      :message="_t('This cannot be undone.')"
+      :confirm-label="_t('Delete')"
       @confirm="confirmRemove"
       @cancel="deleteTarget = null"
     />
 
     <OrbModal
       :open="dialog.open"
-      :title="dialog.mode === 'create' ? t('admin.addConnectionTitle') : t('admin.editConnection')"
+      :title="dialog.mode === 'create' ? _t('Add Connection') : _t('Edit Connection')"
       closable
       @close="dialog.open = false"
     >
       <form class="connections-dialog__form" @submit.prevent="save">
         <div v-if="dialog.mode === 'create'" class="connections-dialog__field">
-          <label class="connections-dialog__label">{{ t('admin.connectionId') }}</label>
+          <label class="connections-dialog__label">{{ _t('Connection ID') }}</label>
           <CmkInput
             v-model="form.id"
             :placeholder="idPlaceholder"
@@ -203,22 +199,22 @@
             :external-errors="fieldErrors.id"
           />
           <p class="connections-dialog__hint">
-            {{ t('admin.connectionIdHint') }}
+            {{ _t('Letters, digits, hyphens and underscores only — used in URLs and configs') }}
           </p>
         </div>
 
         <div class="connections-dialog__field">
-          <label class="connections-dialog__label">{{ t('admin.displayLabel') }}</label>
+          <label class="connections-dialog__label">{{ _t('Display label') }}</label>
           <CmkInput v-model="form.label" :placeholder="labelPlaceholder" field-size="FILL" />
         </div>
 
         <div class="connections-dialog__field">
-          <label class="connections-dialog__label">{{ t('admin.type') }}</label>
+          <label class="connections-dialog__label">{{ _t('Type') }}</label>
           <CmkDropdown
             :selected-option="form.type || null"
             :options="connectionTypeOptions"
             :width="'fill'"
-            :label="t('admin.type')"
+            :label="_t('Type')"
             @update:selected-option="form.type = ($event ?? '') as typeof form.type"
           />
         </div>
@@ -226,19 +222,19 @@
         <template v-if="form.type === 'livestatus'">
           <!-- Transport: socket vs TCP -->
           <div class="connections-dialog__field">
-            <label class="connections-dialog__label">{{ t('admin.livestatusTransport') }}</label>
+            <label class="connections-dialog__label">{{ _t('Transport') }}</label>
             <CmkDropdown
               :selected-option="livestatusMode"
               :options="livestatusModeOptions"
               :width="'fill'"
-              :label="t('admin.livestatusTransport')"
+              :label="_t('Transport')"
               @update:selected-option="onLivestatusModeChange($event)"
             />
           </div>
 
           <!-- Unix socket -->
           <div v-if="livestatusMode === 'socket'" class="connections-dialog__field">
-            <label class="connections-dialog__label">{{ t('admin.unixSocket') }}</label>
+            <label class="connections-dialog__label">{{ _t('Unix socket path') }}</label>
             <CmkInput
               v-model="form.socket_path"
               placeholder="/var/run/check_mk/live"
@@ -250,7 +246,7 @@
           <!-- TCP Host + Port -->
           <div v-else class="connections-dialog__row connections-dialog__row--host-port">
             <div class="connections-dialog__field">
-              <label class="connections-dialog__label">{{ t('admin.tcpHost') }}</label>
+              <label class="connections-dialog__label">{{ _t('TCP host') }}</label>
               <CmkInput
                 v-model="form.host"
                 placeholder="monitoring.example.com"
@@ -259,7 +255,7 @@
               />
             </div>
             <div class="connections-dialog__field">
-              <label class="connections-dialog__label">{{ t('admin.port') }}</label>
+              <label class="connections-dialog__label">{{ _t('Port') }}</label>
               <NumberInput
                 v-model="form.port"
                 min="1"
@@ -272,20 +268,20 @@
           <!-- Checkmk URL + Automation + Timeout -->
           <div class="connections-dialog__section">
             <div class="connections-dialog__field">
-              <label class="connections-dialog__label">{{ t('admin.checkmkUrl') }}</label>
+              <label class="connections-dialog__label">{{ _t('Checkmk URL') }}</label>
               <CmkInput
                 v-model="form.checkmk_url"
                 placeholder="http://monitoring.example.com/mysite"
                 field-size="FILL"
               />
               <p class="connections-dialog__hint">
-                {{ t('admin.contextLinks') }}
+                {{ _t('for context links') }}
               </p>
             </div>
             <template v-if="!isCmc">
               <div class="connections-dialog__row">
                 <div class="connections-dialog__field">
-                  <label class="connections-dialog__label">{{ t('admin.automationUser') }}</label>
+                  <label class="connections-dialog__label">{{ _t('Automation user') }}</label>
                   <CmkInput
                     v-model="form.automation_user"
                     placeholder="automation"
@@ -293,7 +289,7 @@
                   />
                 </div>
                 <div class="connections-dialog__field">
-                  <label class="connections-dialog__label">{{ t('admin.automationSecret') }}</label>
+                  <label class="connections-dialog__label">{{ _t('Automation secret') }}</label>
                   <CmkInput
                     v-model="form.automation_secret"
                     type="password"
@@ -303,14 +299,20 @@
                 </div>
               </div>
               <p class="connections-dialog__hint">
-                {{ t('admin.automationHint') }}
+                {{
+                  _t(
+                    'Required for metric history when using Nagios/Checkmk Raw as monitoring core (no rrddata via Livestatus).'
+                  )
+                }}
               </p>
             </template>
             <p v-else class="connections-dialog__hint">
-              {{ t('admin.automationHintCmc') }}
+              {{
+                _t('Not required: CMC detected — metric history is fetched via Livestatus rrddata.')
+              }}
             </p>
             <div class="connections-dialog__field">
-              <label class="connections-dialog__label">{{ t('admin.timeout') }}</label>
+              <label class="connections-dialog__label">{{ _t('Timeout (s)') }}</label>
               <NumberInput
                 v-model="form.timeout"
                 min="1"
@@ -325,7 +327,7 @@
 
         <template v-if="form.type === 'icinga2'">
           <div class="connections-dialog__field">
-            <label class="connections-dialog__label">{{ t('admin.icinga2Url') }}</label>
+            <label class="connections-dialog__label">{{ _t('Icinga2 API URL') }}</label>
             <CmkInput
               v-model="form.icinga2_url"
               placeholder="https://icinga.example.com:5665"
@@ -336,21 +338,21 @@
 
           <div class="connections-dialog__row">
             <div class="connections-dialog__field">
-              <label class="connections-dialog__label">{{ t('admin.icinga2Username') }}</label>
+              <label class="connections-dialog__label">{{ _t('Username') }}</label>
               <CmkInput v-model="form.icinga2_username" placeholder="root" field-size="FILL" />
             </div>
             <div class="connections-dialog__field">
-              <label class="connections-dialog__label">{{ t('admin.icinga2Password') }}</label>
+              <label class="connections-dialog__label">{{ _t('Password') }}</label>
               <CmkInput v-model="form.icinga2_password" type="password" field-size="FILL" />
             </div>
           </div>
 
           <div class="connections-dialog__checkbox-row">
-            <CmkCheckbox v-model="form.icinga2_verify_ssl" :label="t('admin.icinga2VerifySsl')" />
+            <CmkCheckbox v-model="form.icinga2_verify_ssl" :label="_t('Verify SSL certificate')" />
           </div>
 
           <div class="connections-dialog__field">
-            <label class="connections-dialog__label">{{ t('admin.timeout') }}</label>
+            <label class="connections-dialog__label">{{ _t('Timeout (s)') }}</label>
             <NumberInput
               v-model="form.timeout"
               min="1"
@@ -398,10 +400,10 @@
       </form>
       <template #footer>
         <CmkButton variant="secondary" @click="dialog.open = false">
-          {{ t('common.cancel') }}
+          {{ _t('Cancel') }}
         </CmkButton>
         <CmkButton variant="optional" :disabled="dialogTest.loading" @click="testDialog">
-          {{ dialogTest.loading ? t('common.testing') : t('common.test') }}
+          {{ dialogTest.loading ? _t('Testing…') : _t('Test') }}
         </CmkButton>
         <CmkButton
           variant="primary"
@@ -409,7 +411,7 @@
           :title="!isFormValid ? saveBlockedTitle : ''"
           @click="save"
         >
-          {{ saving ? t('common.saving') : t('common.save') }}
+          {{ saving ? _t('Saving…') : _t('Save') }}
         </CmkButton>
       </template>
     </OrbModal>
@@ -418,7 +420,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import NumberInput from '@/components/NumberInput.vue'
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue'
@@ -438,8 +439,9 @@ import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import { useConnectionsStore } from '@/stores/connections'
 import type { ConnectionConfig } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const store = useConnectionsStore()
 const auth = useAuthStore()
 const toast = useToast()
@@ -491,8 +493,8 @@ const livestatusMode = ref<LivestatusMode>('socket')
 const livestatusModeOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: 'socket', title: t('admin.livestatusTransportSocket') },
-    { name: 'tcp', title: t('admin.livestatusTransportTcp') }
+    { name: 'socket', title: _t('Unix socket') },
+    { name: 'tcp', title: _t('TCP') }
   ]
 }))
 function onLivestatusModeChange(next: string | null) {
@@ -529,19 +531,19 @@ const liveValidationErrors = computed<Record<string, string>>(() => {
   if (dialog.mode === 'create') {
     const id = (form.id || '').trim()
     if (!id) {
-      errs.id = t('admin.fieldRequired')
+      errs.id = _t('Required')
     } else if (!ID_PATTERN.test(id)) {
-      errs.id = t('admin.connectionIdInvalid')
+      errs.id = _t('Only letters, digits, hyphens (-) and underscores (_) allowed')
     }
   }
   if (form.type === 'livestatus') {
     if (livestatusMode.value === 'socket') {
-      if (!(form.socket_path || '').trim()) errs.socket_path = t('admin.fieldRequired')
+      if (!(form.socket_path || '').trim()) errs.socket_path = _t('Required')
     } else {
-      if (!(form.host || '').trim()) errs.host = t('admin.fieldRequired')
+      if (!(form.host || '').trim()) errs.host = _t('Required')
     }
   } else if (form.type === 'icinga2') {
-    if (!(form.icinga2_url || '').trim()) errs.icinga2_url = t('admin.fieldRequired')
+    if (!(form.icinga2_url || '').trim()) errs.icinga2_url = _t('Required')
   }
   return errs
 })
@@ -550,7 +552,7 @@ const saveBlockedTitle = computed(() => {
   const errs = liveValidationErrors.value
   const fields = Object.keys(errs)
   if (!fields.length) return ''
-  return t('admin.saveBlocked') + ' ' + fields.map((f) => `${f}: ${errs[f]}`).join('; ')
+  return _t('Fix these fields first:') + ' ' + fields.map((f) => `${f}: ${errs[f]}`).join('; ')
 })
 
 // Optional ``ConnectionConfig`` fields are required (nullable) in the dialog
@@ -593,11 +595,11 @@ const form = reactive<ConnectionForm>(emptyForm())
 const connectionTypeOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
-    { name: 'livestatus', title: t('admin.connectionTypeLivestatus') },
-    { name: 'icinga2', title: t('admin.connectionTypeIcinga2') },
+    { name: 'livestatus', title: _t('MK Livestatus') },
+    { name: 'icinga2', title: _t('Icinga2 REST API') },
     {
       name: 'test',
-      title: t('admin.connectionTypeTest'),
+      title: _t('Test (built-in demo)'),
       muted: true,
       divider: true
     }
@@ -680,11 +682,11 @@ async function save() {
   try {
     if (dialog.mode === 'create') {
       await store.createConnection({ ...form })
-      toast.success(t('admin.connectionCreated'))
+      toast.success(_t('Connection created'))
     } else {
       const { id: _id, ...rest } = form
       await store.updateConnection(dialog.editId, rest)
-      toast.success(t('admin.connectionUpdated'))
+      toast.success(_t('Connection updated'))
     }
     dialog.open = false
     testAll()
@@ -697,7 +699,7 @@ async function save() {
           : undefined
       )
     if (!handled) {
-      formError.value = e instanceof Error ? e.message : t('admin.saveFailed')
+      formError.value = e instanceof Error ? e.message : _t('Save failed')
     }
   } finally {
     saving.value = false
@@ -712,9 +714,9 @@ async function confirmRemove() {
     await store.deleteConnection(id)
     delete statuses[id]
     delete statusMessages[id]
-    toast.success(t('admin.connectionDeleted'))
+    toast.success(_t('Connection deleted'))
   } catch (e: unknown) {
-    toast.error(e instanceof Error ? e.message : t('admin.deleteFailed'))
+    toast.error(e instanceof Error ? e.message : _t('Delete failed'))
   }
 }
 

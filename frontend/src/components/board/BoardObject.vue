@@ -33,12 +33,12 @@
           />
         </svg>
         <span v-if="dataTimedOut" class="orb-obj__graph-hint orb-obj__graph-hint--padded">{{
-          t('boardSettings.graphNotFound', {
-            service: object.service_description || object.host_name,
-            host: object.host_name
+          _t('No data for "%{service}" on %{host}', {
+            service: object.service_description || object.host_name || '',
+            host: object.host_name ?? ''
           })
         }}</span>
-        <span v-else class="orb-obj__graph-hint">{{ t('boardSettings.graphWaitingData') }}</span>
+        <span v-else class="orb-obj__graph-hint">{{ _t('Waiting for data…') }}</span>
       </div>
       <!-- D3 chart -->
       <div v-else class="orb-obj__chart" style="padding: 6px 8px 5px">
@@ -124,7 +124,7 @@
           />
         </svg>
         <span class="orb-obj__graph-hint">{{
-          object.graph_url ? t('boardSettings.graphLoadFailed') : t('boardSettings.graphNoUrl')
+          object.graph_url ? _t('Load failed') : _t('No URL configured')
         }}</span>
       </div>
       <!-- img embed -->
@@ -377,7 +377,7 @@
         pointer-events="none"
         class="orb-obj__arc"
         :style="{ top: `-${RING_PAD}px`, left: `-${RING_PAD}px`, pointerEvents: 'none' }"
-        :title="t('board.utilizationRing')"
+        :title="_t('Utilization ring (first metric)')"
       />
 
       <!-- Stale data badge -->
@@ -452,7 +452,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import { metricsApi } from '@/api/client'
 import { useArcRing } from '@/composables/useArcRing'
@@ -468,6 +467,7 @@ import type { MetricPoint } from '@/stores/states'
 import { useStatesStore } from '@/stores/states'
 import type { BoardObject, ObjectState } from '@/types/api'
 import { utilColor as _utilColor, getMetric, parsePerfData, utilPercent } from '@/utils/perf'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 import AggregationSubtree from './AggregationSubtree.vue'
 import GadgetRenderer from './GadgetRenderer.vue'
@@ -476,7 +476,7 @@ import MetricChart from './MetricChart.vue'
 const BASE_URL = import.meta.env.BASE_URL
 const RING_PAD = 6
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const props = defineProps<{
   object: BoardObject

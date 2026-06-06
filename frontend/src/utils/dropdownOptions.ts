@@ -1,23 +1,22 @@
-import type { ComposerTranslation } from 'vue-i18n'
-
+import type { TranslateFn } from '@/i18n'
 import { useObjectOptionsStore } from '@/stores/objectOptions'
 import type { ObjectType } from '@/types/api'
 
-type T = ComposerTranslation
-
-// Maps backend ``name`` → frontend i18n key. The backend ships english
+// Maps backend ``name`` → translated title. The backend ships english
 // titles too (used for FormSpec dropdowns where translations don't run),
 // but the per-object EditPanel reads through this map so existing
 // translations keep working. Unknown names fall back to the backend
 // title — that means a new style added in the registry shows up
-// immediately, just untranslated until someone adds a key here.
-const LINE_STYLE_I18N: Record<string, string> = {
-  plain: 'boardSettings.lineSimple',
-  dashed: 'boardSettings.lineDashed',
-  arrow_end: 'boardSettings.lineArrowRight',
-  arrow_start: 'boardSettings.lineArrowLeft',
-  arrow_both: 'boardSettings.lineDoubleArrow',
-  arrow_inward: 'boardSettings.lineInward'
+// immediately, just untranslated until someone adds an entry here.
+function lineStyleTitles(_t: TranslateFn): Record<string, string> {
+  return {
+    plain: _t('Simple line'),
+    dashed: _t('Dashed'),
+    arrow_end: _t('Arrow →'),
+    arrow_start: _t('Arrow ←'),
+    arrow_both: _t('Double arrow ↔'),
+    arrow_inward: _t('Double arrow (middle) →←')
+  }
 }
 
 // Hard-coded list the very first paint uses — once the store has
@@ -36,23 +35,23 @@ const LINE_STYLE_FALLBACK: { name: string; title: string }[] = [
 // Settings feature flag (``includeGraph``, on by default). When off it's hidden
 // from the add-object picker; existing graph objects keep rendering.
 export function placeableObjectTypes(
-  t: T,
+  _t: TranslateFn,
   includeGraph = true
 ): { name: ObjectType; title: string }[] {
   const types: { name: ObjectType; title: string }[] = [
-    { name: 'host', title: t('boardSettings.typeHost') },
-    { name: 'service', title: t('boardSettings.typeService') },
-    { name: 'hostgroup', title: t('boardSettings.typeHostgroup') },
-    { name: 'servicegroup', title: t('boardSettings.typeServicegroup') },
+    { name: 'host', title: _t('Host') },
+    { name: 'service', title: _t('Service') },
+    { name: 'hostgroup', title: _t('Hostgroup') },
+    { name: 'servicegroup', title: _t('Servicegroup') },
     { name: 'dyngroup', title: 'Dynamic group' },
-    { name: 'map', title: t('boardSettings.typeMap') },
-    { name: 'aggregation', title: t('boardSettings.typeAggregation') },
-    { name: 'line', title: t('boardSettings.typeLine') },
-    { name: 'textbox', title: t('boardSettings.typeTextbox') },
-    { name: 'image', title: t('boardSettings.typeImage') }
+    { name: 'map', title: _t('Map link') },
+    { name: 'aggregation', title: _t('BI aggregation') },
+    { name: 'line', title: _t('Line') },
+    { name: 'textbox', title: _t('Textbox') },
+    { name: 'image', title: _t('Image') }
   ]
   if (includeGraph) {
-    types.push({ name: 'graph', title: `${t('boardSettings.typeGraph')} (experimental)` })
+    types.push({ name: 'graph', title: `${_t('Graph')} (experimental)` })
   }
   return types
 }
@@ -61,39 +60,40 @@ export function placeableObjectTypes(
 // ``includeFolderTree`` is the resolved flag; when off the type is hidden from
 // the picker (existing folder boards still render). It stays listed when the
 // board being edited is already a folder board, so its type isn't silently lost.
-export function boardTypeOptions(t: T, includeFolderTree = false) {
+export function boardTypeOptions(_t: TranslateFn, includeFolderTree = false) {
   const options = [
-    { name: 'static', title: t('board.boardTypeStatic') },
-    { name: 'worldmap', title: t('board.boardTypeGeoBoard') },
-    { name: 'flow', title: t('board.boardTypeFlowBoard') },
-    { name: 'radar', title: t('board.boardTypeRadar') }
+    { name: 'static', title: _t('Static board') },
+    { name: 'worldmap', title: _t('Geo Board') },
+    { name: 'flow', title: _t('Flow Board') },
+    { name: 'radar', title: _t('Radar (dynamic filter)') }
   ]
   if (includeFolderTree) {
     options.push({
       name: 'foldertree',
-      title: `${t('board.boardTypeFolderTree')} (experimental)`
+      title: `${_t('Folder tree')} (experimental)`
     })
   }
   return options
 }
 
-export function lineStyleOptions(t: T): { name: string | null; title: string }[] {
+export function lineStyleOptions(_t: TranslateFn): { name: string | null; title: string }[] {
   const store = useObjectOptionsStore()
   const source = store.lineStyles.length > 0 ? store.lineStyles : LINE_STYLE_FALLBACK
+  const titles = lineStyleTitles(_t)
   return [
-    { name: null, title: t('boardSettings.lineDefault') },
+    { name: null, title: _t('Default') },
     ...source.map((s) => {
-      const i18nKey = LINE_STYLE_I18N[s.name]
-      return { name: s.name, title: i18nKey ? t(i18nKey) : s.title }
+      const title = titles[s.name]
+      return { name: s.name, title: title ?? s.title }
     })
   ]
 }
 
-export function linePerfdataLabelOptions(t: T) {
+export function linePerfdataLabelOptions(_t: TranslateFn) {
   return [
-    { name: 'none', title: t('boardSettings.linePerfdataNone') },
-    { name: 'percent', title: t('boardSettings.linePerfdataPercent') },
-    { name: 'bandwidth', title: t('boardSettings.linePerfdataBandwidth') },
-    { name: 'both', title: t('boardSettings.linePerfdataBoth') }
+    { name: 'none', title: _t('None') },
+    { name: 'percent', title: _t('Percent') },
+    { name: 'bandwidth', title: _t('Bandwidth') },
+    { name: 'both', title: _t('Both') }
   ]
 }

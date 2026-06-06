@@ -5,9 +5,10 @@ reuse of CmkDropdown rather than vendoring CMK's (stubbed) multi-choice form.
 -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown'
+
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   modelValue: string[]
@@ -15,7 +16,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ 'update:modelValue': [string[]] }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const aliasOf = (id: string) => props.options.find((o) => o.id === id)?.alias ?? id
 
@@ -49,7 +50,7 @@ function remove(id: string) {
         <button
           type="button"
           class="ft-sites__remove"
-          :aria-label="t('board.ftSitesRemove', { site: aliasOf(id) })"
+          :aria-label="_t('Remove %{site}', { site: aliasOf(id) })"
           @click="remove(id)"
         >
           ×
@@ -60,8 +61,8 @@ function remove(id: string) {
       :selected-option="null"
       :options="available"
       width="fill"
-      :label="t('board.ftSites')"
-      :input-hint="t('board.ftSitesPlaceholder')"
+      :label="_t('Sites')"
+      :input-hint="_t('Add site…')"
       @update:selected-option="add"
     />
   </div>

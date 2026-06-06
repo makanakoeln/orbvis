@@ -21,10 +21,10 @@
         </svg>
       </div>
       <p class="orb-radar__empty-title">
-        {{ t('boardSettings.radarEmptyTitle') }}
+        {{ _t('No objects found') }}
       </p>
       <p class="orb-radar__empty-hint">
-        <span>{{ t('boardSettings.radarEmptyHintLead') }}</span>
+        <span>{{ _t('Adjust the filter via board settings') }}</span>
         <svg
           class="orb-radar__hint-gear"
           fill="none"
@@ -151,9 +151,14 @@
         <div
           v-if="compactOverflow > 0"
           class="orb-radar__overflow"
-          :title="t('boardSettings.radarPreviewLimitTitle', { hidden: compactOverflow })"
+          :title="
+            _t(
+              'Preview shows the worst-state objects only. Open the board to see all %{hidden} additional objects.',
+              { hidden: compactOverflow }
+            )
+          "
         >
-          {{ t('boardSettings.radarPreviewLimit', { hidden: compactOverflow }) }}
+          {{ _t('Preview limited — %{hidden} more not shown', { hidden: compactOverflow }) }}
         </div>
       </div>
     </template>
@@ -162,15 +167,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import CmkLoading from '@/components/cmk/CmkLoading'
 
 import type { BoardObject, ObjectState } from '@/types/api'
 import { type FilterField, matchesFilterTerms, parseFilterTerms } from '@/utils/objectFilter'
 import { isProblemState } from '@/utils/problemState'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const props = defineProps<{
   states: Record<string, ObjectState>

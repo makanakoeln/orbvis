@@ -14,10 +14,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import CmkDialog from '@/components/cmk/CmkDialog'
 import CmkPopup from '@/components/cmk/CmkPopup'
+
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 type DialogVariant = 'error' | 'warning' | 'success' | 'info'
 type ButtonVariant =
@@ -49,16 +50,16 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{ confirm: []; cancel: [] }>()
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const dialogButtons = computed(() => [
   {
-    title: props.confirmLabel || t('common.confirm'),
+    title: props.confirmLabel || _t('Confirm'),
     variant: props.confirmVariant,
     onclick: () => emit('confirm')
   },
   {
-    title: props.cancelLabel || t('common.cancel'),
+    title: props.cancelLabel || _t('Cancel'),
     variant: 'secondary' as ButtonVariant,
     onclick: () => emit('cancel')
   }

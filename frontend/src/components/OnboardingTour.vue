@@ -66,34 +66,34 @@
 
         <div class="orb-tour__footer">
           <button class="orb-tour__skip" @click="skip">
-            {{ t('onboarding.skip') }}
+            {{ _t('Skip tour') }}
           </button>
           <div class="orb-tour__nav">
             <button v-if="step > 1" class="orb-tour__btn-back" @click="prev">
-              {{ t('onboarding.back') }}
+              {{ _t('Back') }}
             </button>
             <!-- Last step with create-board action -->
             <template v-if="step === TOTAL && showCreateBoard">
               <button class="orb-tour__btn-primary" @click="createBoard">
-                {{ t('onboarding.createFirstBoard') }}
+                {{ _t('Create first board') }}
               </button>
             </template>
             <!-- Last step without create-board -->
             <button v-else-if="step === TOTAL" class="orb-tour__btn-primary" @click="finish">
-              {{ t('onboarding.finish') }}
+              {{ _t('Done') }}
             </button>
             <!-- Intermediate step with selector: click-to-continue hint + Next button -->
             <template v-else-if="currentStep.selector && targetRect">
               <span class="orb-tour__hint">
-                {{ t('onboarding.clickToContinue') }}
+                {{ _t('Click the highlighted element →') }}
               </span>
               <button class="orb-tour__btn-primary" @click="onClickNext">
-                {{ t('onboarding.next') }}
+                {{ _t('Next') }}
               </button>
             </template>
             <!-- Intermediate step without selector (or target not found): Next button -->
             <button v-else class="orb-tour__btn-primary" @click="onClickNext">
-              {{ t('onboarding.next') }}
+              {{ _t('Next') }}
             </button>
           </div>
         </div>
@@ -125,9 +125,9 @@
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </div>
-          <p class="orb-tour__completion-title">{{ t('onboarding.complete') }}</p>
+          <p class="orb-tour__completion-title">{{ _t("You're all set!") }}</p>
           <p class="orb-tour__completion-subtitle">
-            {{ t('onboarding.completeSubtitle') }}
+            {{ _t('Start exploring OrbVis') }}
           </p>
         </div>
       </div>
@@ -137,14 +137,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OnboardingDemoScene from '@/components/OnboardingDemoScene.vue'
 import OnboardingSettingsScene from '@/components/OnboardingSettingsScene.vue'
 
 import type { TourStep } from '@/types/tour'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const props = defineProps<{
   steps: TourStep[]

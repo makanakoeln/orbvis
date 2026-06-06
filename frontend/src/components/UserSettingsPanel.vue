@@ -2,7 +2,7 @@
   <OrbModal :open="true" closable @close="tryClose">
     <template #header>
       <span class="user-settings__title">
-        {{ isSelf ? t('userSettings.title') : t('admin.editUser', { name: userName }) }}
+        {{ isSelf ? _t('User Settings') : _t('Edit User: %{name}', { name: userName }) }}
         <span v-if="isSelf" class="user-settings__user">{{ userName }}</span>
       </span>
     </template>
@@ -10,15 +10,15 @@
     <div class="user-settings__body">
       <!-- Admin settings (non-self editing) -->
       <section v-if="!isSelf && userRead" class="user-settings__section">
-        <p class="user-settings__section-title">{{ t('admin.settings') }}</p>
+        <p class="user-settings__section-title">{{ _t('Settings') }}</p>
 
         <div class="user-settings__row">
-          <CmkCheckbox v-model="adminIsAdmin" :label="t('admin.administrator')" />
-          <p class="user-settings__hint">{{ t('admin.administratorHint') }}</p>
+          <CmkCheckbox v-model="adminIsAdmin" :label="_t('Administrator')" />
+          <p class="user-settings__hint">{{ _t('Full access to all admin functions') }}</p>
         </div>
 
-        <CmkCheckbox v-model="adminIsActive" :label="t('admin.active')" />
-        <CmkCheckbox v-model="adminMustChange" :label="t('admin.mustChangePassword')" />
+        <CmkCheckbox v-model="adminIsActive" :label="_t('Active')" />
+        <CmkCheckbox v-model="adminMustChange" :label="_t('Must change password on next login')" />
       </section>
 
       <!-- Role assignment (non-self editing) -->
@@ -26,7 +26,7 @@
         v-if="!isSelf && userRead && availableRoles?.length"
         class="user-settings__section user-settings__section--divided"
       >
-        <p class="user-settings__section-title">{{ t('admin.roles') }}</p>
+        <p class="user-settings__section-title">{{ _t('Roles') }}</p>
         <div v-for="role in availableRoles" :key="role.role_id">
           <CmkCheckbox
             :model-value="adminRoleIds.includes(role.role_id)"
@@ -43,7 +43,7 @@
 
       <!-- Theme selector (only for self) -->
       <section v-if="isSelf" class="user-settings__section">
-        <CmkLabel>{{ t('userSettings.theme') }}</CmkLabel>
+        <CmkLabel>{{ _t('Theme') }}</CmkLabel>
         <div class="user-settings__toggle-group">
           <button
             v-for="opt in themeOptions"
@@ -64,7 +64,7 @@
         v-if="isSelf && !auth.ssoActive && !auth.isCheckmkDeployment"
         class="user-settings__section"
       >
-        <CmkLabel>{{ t('userSettings.language') }}</CmkLabel>
+        <CmkLabel>{{ _t('Language') }}</CmkLabel>
         <div class="user-settings__toggle-group">
           <button
             v-for="opt in languageOptions"
@@ -85,10 +85,10 @@
         class="user-settings__section"
         :class="{ 'user-settings__section--divided': isSelf }"
       >
-        <p class="user-settings__section-title">{{ t('userSettings.changePassword') }}</p>
+        <p class="user-settings__section-title">{{ _t('Change password') }}</p>
         <form class="user-settings__pw-form" @submit.prevent="savePassword">
           <div class="user-settings__pw-field">
-            <CmkLabel>{{ t('userSettings.newPassword') }}</CmkLabel>
+            <CmkLabel>{{ _t('New password') }}</CmkLabel>
             <CmkInput
               v-model="password"
               type="password"
@@ -96,11 +96,11 @@
               field-size="FILL"
             />
             <p class="user-settings__hint">
-              {{ t('userSettings.passwordMinLength') }}
+              {{ _t('At least 6 characters') }}
             </p>
           </div>
           <div class="user-settings__pw-field">
-            <CmkLabel>{{ t('userSettings.confirmPassword') }}</CmkLabel>
+            <CmkLabel>{{ _t('Confirm password') }}</CmkLabel>
             <CmkInput
               v-model="confirm"
               type="password"
@@ -111,12 +111,12 @@
 
           <p v-if="pwError" class="user-settings__error">{{ pwError }}</p>
           <p v-if="pwSuccess" class="user-settings__success">
-            {{ t('userSettings.passwordChanged') }}
+            {{ _t('Password changed successfully.') }}
           </p>
 
           <div v-if="!pwSuccess" class="user-settings__pw-actions">
             <CmkButton variant="secondary" :disabled="pwSaving" @click="savePassword">
-              {{ pwSaving ? t('common.saving') : t('userSettings.changePasswordBtn') }}
+              {{ pwSaving ? _t('Saving…') : _t('Change password') }}
             </CmkButton>
           </div>
         </form>
@@ -125,10 +125,10 @@
       <!-- Tour reset (self only) -->
       <section v-if="isSelf" class="user-settings__section user-settings__section--divided">
         <p v-if="tourResetDone" class="user-settings__success">
-          {{ t('userSettings.tourResetDone') }}
+          {{ _t('Tour will show again on next visit') }}
         </p>
         <CmkButton v-else variant="secondary" @click="resetTour">
-          {{ t('userSettings.resetTour') }}
+          {{ _t('Reset onboarding tour') }}
         </CmkButton>
       </section>
 
@@ -139,23 +139,23 @@
 
       <!-- Unsaved-changes warning -->
       <CmkAlertBox v-if="showUnsavedWarning" variant="warning" size="small">
-        {{ t('userSettings.unsavedChanges') }}
+        {{ _t('Unsaved changes —') }}
         <CmkButton variant="secondary" @click="discardAndClose">
-          {{ t('common.discard') }}
+          {{ _t('Discard') }}
         </CmkButton>
       </CmkAlertBox>
     </div>
 
     <template v-if="isSelf || (!isSelf && userRead)" #footer>
       <CmkButton variant="secondary" @click="discardAndClose">
-        {{ t('common.cancel') }}
+        {{ _t('Cancel') }}
       </CmkButton>
       <CmkButton
         variant="primary"
         :disabled="isSelf ? saving || !isDirty : adminSaving"
         @click="isSelf ? save() : saveAdminSettings()"
       >
-        {{ (isSelf ? saving : adminSaving) ? t('common.saving') : t('common.save') }}
+        {{ (isSelf ? saving : adminSaving) ? _t('Saving…') : _t('Save') }}
       </CmkButton>
     </template>
   </OrbModal>
@@ -163,7 +163,6 @@
 
 <script setup lang="ts">
 import { computed, h, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import OrbModal from '@/components/OrbModal.vue'
 import CmkAlertBox from '@/components/cmk/CmkAlertBox'
@@ -174,11 +173,12 @@ import CmkInput from '@/components/cmk/user-input/CmkInput'
 
 import { usersApi } from '@/api/client'
 import { applyTheme } from '@/composables/useTheme'
-import { i18n } from '@/i18n'
+import { setLanguage } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import type { RoleRead, UserRead } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const props = defineProps<{
   userId: number
@@ -277,9 +277,9 @@ const SystemIcon = () =>
   ])
 
 const themeOptions = computed(() => [
-  { value: 'dark', label: t('userSettings.themeDark'), icon: MoonIcon },
-  { value: 'light', label: t('userSettings.themeLight'), icon: SunIcon },
-  { value: 'system', label: t('userSettings.themeAuto'), icon: SystemIcon }
+  { value: 'dark', label: _t('Dark'), icon: MoonIcon },
+  { value: 'light', label: _t('Light'), icon: SunIcon },
+  { value: 'system', label: _t('Auto'), icon: SystemIcon }
 ])
 
 function selectTheme(theme: string) {
@@ -300,7 +300,7 @@ async function save() {
     savedTheme.value = selectedTheme.value
     savedLanguage.value = selectedLanguage.value
     if (props.isSelf) {
-      i18n.global.locale.value = selectedLanguage.value as 'en' | 'de'
+      await setLanguage(selectedLanguage.value)
       await auth.fetchCurrentUser()
     }
     showUnsavedWarning.value = false
@@ -352,7 +352,7 @@ const pwSuccess = ref(false)
 async function savePassword() {
   pwError.value = ''
   if (password.value !== confirm.value) {
-    pwError.value = t('userSettings.passwordMismatch')
+    pwError.value = _t('Passwords do not match.')
     return
   }
   pwSaving.value = true
@@ -363,7 +363,7 @@ async function savePassword() {
     password.value = ''
     confirm.value = ''
   } catch (e: unknown) {
-    pwError.value = e instanceof Error ? e.message : t('userSettings.failedToChange')
+    pwError.value = e instanceof Error ? e.message : _t('Failed to change password.')
   } finally {
     pwSaving.value = false
   }

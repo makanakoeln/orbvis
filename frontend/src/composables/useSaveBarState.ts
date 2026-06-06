@@ -8,7 +8,8 @@
  */
 import type { Ref } from 'vue'
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 export type SaveBarState = 'clean' | 'dirty' | 'saving' | 'saved' | 'error'
 export type SaveBarVariant = 'warning' | 'loading' | 'success' | 'error'
@@ -21,7 +22,7 @@ export interface SaveBarSources {
 }
 
 export function useSaveBarState(sources: SaveBarSources) {
-  const { t } = useI18n()
+  const { _t } = usei18n()
 
   const state = computed<SaveBarState>(() => {
     if (sources.error.value) return 'error'
@@ -51,11 +52,11 @@ export function useSaveBarState(sources: SaveBarSources) {
   const heading = computed(() => {
     switch (state.value) {
       case 'dirty':
-        return t('common.unsavedChanges')
+        return _t('Unsaved changes')
       case 'saving':
-        return t('common.saving')
+        return _t('Saving…')
       case 'saved':
-        return t('common.saved')
+        return _t('Saved')
       case 'error':
         return sources.error.value
       default:

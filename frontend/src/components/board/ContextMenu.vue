@@ -28,7 +28,7 @@
           d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
         />
       </svg>
-      <span>{{ t('contextMenu.hostInCheckmk') }}</span>
+      <span>{{ _t('Host in Checkmk') }}</span>
     </a>
     <a v-if="hostServicesUrl" :href="hostServicesUrl" target="_blank" class="orb-ctx__item">
       <svg
@@ -44,7 +44,7 @@
           d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
         />
       </svg>
-      <span>{{ t('contextMenu.hostProblemServices') }}</span>
+      <span>{{ _t('Problem services') }}</span>
     </a>
     <a v-if="serviceUrl" :href="serviceUrl" target="_blank" class="orb-ctx__item">
       <svg
@@ -60,7 +60,7 @@
           d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
         />
       </svg>
-      <span>{{ t('contextMenu.serviceInCheckmk') }}</span>
+      <span>{{ _t('Service in Checkmk') }}</span>
     </a>
     <a v-if="groupUrl" :href="groupUrl" target="_blank" class="orb-ctx__item">
       <svg
@@ -76,7 +76,7 @@
           d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
         />
       </svg>
-      <span>{{ t('contextMenu.groupInCheckmk') }}</span>
+      <span>{{ _t('Group in Checkmk') }}</span>
     </a>
     <a v-if="aggregationUrl" :href="aggregationUrl" target="_blank" class="orb-ctx__item">
       <svg
@@ -92,7 +92,7 @@
           d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
         />
       </svg>
-      <span>{{ t('contextMenu.aggregationInCheckmk') }}</span>
+      <span>{{ _t('Aggregation tree in Checkmk') }}</span>
     </a>
     <a
       v-if="aggregationOverviewUrl"
@@ -113,7 +113,7 @@
           d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
         />
       </svg>
-      <span>{{ t('contextMenu.aggregationOverview') }}</span>
+      <span>{{ _t('All aggregations in Checkmk') }}</span>
     </a>
 
     <div
@@ -122,7 +122,7 @@
       "
       class="orb-ctx__empty"
     >
-      {{ t('contextMenu.noCheckmkUrl') }}
+      {{ _t('No Checkmk URL configured') }}
     </div>
 
     <!-- Operational actions (ack, downtime, force-check, comment, notifications)
@@ -141,7 +141,7 @@
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 18L20 6" />
         </svg>
-        {{ t('contextMenu.straightenLine') }}
+        {{ _t('Remove bend') }}
       </button>
       <button v-if="showEdit" class="orb-ctx__item" @click="$emit('edit')">
         <svg
@@ -157,7 +157,7 @@
             d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"
           />
         </svg>
-        {{ t('contextMenu.editProperties') }}
+        {{ _t('Edit properties') }}
       </button>
       <button v-if="showEdit" class="orb-ctx__item" @click="$emit('duplicate')">
         <svg
@@ -173,7 +173,7 @@
             d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
           />
         </svg>
-        {{ t('contextMenu.duplicate') }}
+        {{ _t('Duplicate') }}
       </button>
       <button v-if="showEdit" class="orb-ctx__item orb-ctx__item--danger" @click="$emit('delete')">
         <svg
@@ -189,7 +189,7 @@
             d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
           />
         </svg>
-        {{ t('contextMenu.delete') }}
+        {{ _t('Delete') }}
       </button>
     </div>
   </div>
@@ -197,14 +197,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import type { BoardObject, ObjectState } from '@/types/api'
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
 import { sanitizeTemplateHtml } from '@/utils/sanitize'
 import { interpolateTemplate } from '@/utils/template'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
-const { t } = useI18n()
+const { _t } = usei18n()
 
 const props = defineProps<{
   object: BoardObject

@@ -28,7 +28,7 @@
             @click="col.sortable && setSort(col.id)"
           >
             <span class="orb-btable__th-label">
-              {{ t(col.label) }}
+              {{ col.label }}
               <span
                 v-if="col.sortable"
                 class="orb-btable__sort"
@@ -76,21 +76,21 @@
                 <span
                   v-if="map.show_in_lists === false"
                   class="orb-btable__flag-badge"
-                  :title="t('home.hiddenBoard')"
+                  :title="_t('Hidden from regular users')"
                 >
-                  {{ t('home.hidden') }}
+                  {{ _t('hidden') }}
                 </span>
                 <span
                   v-if="map.readonly"
                   class="orb-btable__flag-badge"
-                  :title="t('home.readonlyBoardTitle')"
+                  :title="_t('Demo board — cannot be edited')"
                 >
-                  {{ t('home.readonly') }}
+                  {{ _t('read-only') }}
                 </span>
                 <span
                   v-if="map.rotation_interval > 0"
                   class="orb-btable__rotation-badge"
-                  :title="t('home.rotationBadgeTitle', { n: map.rotation_interval })"
+                  :title="_t('Rotates every %{n} seconds', { n: map.rotation_interval })"
                 >
                   ↻ {{ map.rotation_interval }}s
                 </span>
@@ -124,7 +124,7 @@
           </td>
           <td class="orb-btable__objects-cell">
             <span v-if="isDynamic(map)" class="orb-btable__dynamic">
-              {{ t('home.dynamicObjects') }}
+              {{ _t('dynamic') }}
             </span>
             <span v-else>{{ map.object_count }}</span>
           </td>
@@ -133,7 +133,7 @@
               <button
                 v-if="(auth.isAdmin || map.can_edit) && !map.readonly"
                 class="orb-btable__action orb-btable__action--settings"
-                :title="t('board.settingsTitle')"
+                :title="_t('Board Settings')"
                 @click="$emit('open-settings', map)"
               >
                 <svg
@@ -158,7 +158,7 @@
               <button
                 v-if="auth.canCreateBoards"
                 class="orb-btable__action orb-btable__action--clone"
-                :title="t('admin.cloneBoard')"
+                :title="_t('Clone board')"
                 @click="$emit('clone', map)"
               >
                 <svg
@@ -178,7 +178,7 @@
               <button
                 v-if="auth.canCreateBoards"
                 class="orb-btable__action orb-btable__action--export"
-                :title="t('admin.exportBoard')"
+                :title="_t('Export board as JSON')"
                 @click="$emit('export', map.name)"
               >
                 <svg
@@ -198,7 +198,7 @@
               <button
                 v-if="auth.canCreateBoards"
                 class="orb-btable__action orb-btable__action--delete"
-                :title="t('admin.deleteBoard', { name: map.alias || map.name })"
+                :title="deleteBoardTitle(map)"
                 @click="$emit('delete', map)"
               >
                 <svg
@@ -223,7 +223,7 @@
             :colspan="visibleColumns.length + (auth.canCreateBoards ? 1 : 0)"
             class="orb-btable__empty"
           >
-            {{ t('home.noSearchResults', { q: searchQuery }) }}
+            {{ _t('No boards match "%{q}"', { q: searchQuery }) }}
           </td>
         </tr>
       </tbody>
@@ -233,13 +233,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 
 import { useAuthStore } from '@/stores/auth'
 import { useCapabilitiesStore } from '@/stores/capabilities'
 import type { BoardRead } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
   boards: BoardRead[]
@@ -257,24 +257,26 @@ defineEmits<{
   (e: 'delete', map: BoardRead): void
 }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const auth = useAuthStore()
 const capabilities = useCapabilitiesStore()
 
 type SortCol = 'name' | 'type' | 'connection' | 'objects'
 
-const COLUMNS: ReadonlyArray<{
-  id: SortCol | 'actions'
-  label: string
-  sortable: boolean
-  align?: 'right'
-}> = [
-  { id: 'name', label: 'home.colName', sortable: true },
-  { id: 'type', label: 'home.colType', sortable: true },
-  { id: 'connection', label: 'home.colConnection', sortable: true },
-  { id: 'objects', label: 'home.colObjects', sortable: true, align: 'right' },
-  { id: 'actions', label: 'home.colActions', sortable: false, align: 'right' }
-]
+const columns = computed<
+  ReadonlyArray<{
+    id: SortCol | 'actions'
+    label: string
+    sortable: boolean
+    align?: 'right'
+  }>
+>(() => [
+  { id: 'name', label: _t('Name'), sortable: true },
+  { id: 'type', label: _t('Type'), sortable: true },
+  { id: 'connection', label: _t('Connection'), sortable: true },
+  { id: 'objects', label: _t('Objects'), sortable: true, align: 'right' },
+  { id: 'actions', label: _t('Actions'), sortable: false, align: 'right' }
+])
 
 // A non-admin may still hold edit rights on individual boards; show the actions
 // column for them when at least one listed board is editable.
@@ -283,9 +285,9 @@ const anyEditable = computed(() => props.boards.some((b) => b.can_edit === true)
 // Connection is admin-oriented; non-admins get a plain read-only list, plus
 // the actions column only when they can edit some board.
 const visibleColumns = computed(() => {
-  if (auth.isAdmin) return COLUMNS
+  if (auth.isAdmin) return columns.value
   const hidden = anyEditable.value ? ['connection'] : ['connection', 'actions']
-  return COLUMNS.filter((c) => !hidden.includes(c.id))
+  return columns.value.filter((c) => !hidden.includes(c.id))
 })
 
 const sortState = ref<{ col: SortCol | null; dir: 'asc' | 'desc' }>({
@@ -310,6 +312,10 @@ function ariaSortFor(col: SortCol | 'actions'): 'ascending' | 'descending' | 'no
 
 function isDynamic(map: BoardRead): boolean {
   return Boolean(map.readonly) || ['flow', 'radar', 'worldmap'].includes(map.view.type)
+}
+
+function deleteBoardTitle(map: BoardRead): string {
+  return _t('Delete board "%{name}"?', { name: map.alias || map.name })
 }
 
 function sortKey(map: BoardRead, col: SortCol): string | number {

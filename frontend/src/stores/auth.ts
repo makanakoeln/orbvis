@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
 import { ApiError, authApi } from '@/api/client'
-import { i18n } from '@/i18n'
+import { setLanguage } from '@/i18n'
 import router from '@/router'
 import { useSettingsStore } from '@/stores/settings'
 import type { UserRead } from '@/types/api'
@@ -153,7 +153,7 @@ export const useAuthStore = defineStore('auth', () => {
         ssoActive.value && user.value.cmk_language
           ? user.value.cmk_language
           : (user.value.language ?? 'en')
-      i18n.global.locale.value = lang as 'en' | 'de'
+      void setLanguage(lang)
       applyInlineHelp(user.value.cmk_inline_help)
       // Load global settings so they're available for new map/object creation
       useSettingsStore()
@@ -178,7 +178,7 @@ export const useAuthStore = defineStore('auth', () => {
               ssoActive.value && user.value.cmk_language
                 ? user.value.cmk_language
                 : (user.value.language ?? 'en')
-            i18n.global.locale.value = lang2 as 'en' | 'de'
+            void setLanguage(lang2)
             applyInlineHelp(user.value.cmk_inline_help)
             useSettingsStore()
               .load()

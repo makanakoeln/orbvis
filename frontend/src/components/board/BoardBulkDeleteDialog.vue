@@ -3,22 +3,24 @@
     <div class="bulk-delete-dialog">
       <DialogTitle as-child>
         <h3 class="bulk-delete-dialog__title">
-          {{ t('admin.bulkDeleteTitle', { n: names.length }) }}
+          {{ _t('Delete %{n} boards', { n: names.length }) }}
         </h3>
       </DialogTitle>
-      <p class="bulk-delete-dialog__intro">{{ t('admin.bulkDeleteIntro') }}</p>
+      <p class="bulk-delete-dialog__intro">
+        {{ _t('The following boards will be permanently removed:') }}
+      </p>
       <ul class="bulk-delete-dialog__list">
         <li v-for="entry in shown" :key="entry">{{ entry }}</li>
       </ul>
       <p v-if="overflow > 0" class="bulk-delete-dialog__more">
-        {{ t('admin.bulkDeleteMore', { n: overflow }) }}
+        {{ _t('… and %{n} more', { n: overflow }) }}
       </p>
       <footer class="bulk-delete-dialog__footer">
         <CmkButton variant="secondary" @click="emit('cancel')">
-          {{ t('common.cancel') }}
+          {{ _t('Cancel') }}
         </CmkButton>
         <CmkButton variant="danger" :disabled="busy" @click="emit('confirm')">
-          {{ t('common.delete') }}
+          {{ _t('Delete') }}
         </CmkButton>
       </footer>
     </div>
@@ -28,17 +30,18 @@
 <script setup lang="ts">
 import { DialogTitle } from 'reka-ui'
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import CmkButton from '@/components/cmk/CmkButton'
 import CmkPopup from '@/components/cmk/CmkPopup'
+
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 const MAX_VISIBLE = 20
 
 const props = defineProps<{ open: boolean; names: string[]; busy?: boolean }>()
 const emit = defineEmits<{ confirm: []; cancel: [] }>()
 
-const { t } = useI18n()
+const { _t } = usei18n()
 const shown = computed(() => props.names.slice(0, MAX_VISIBLE))
 const overflow = computed(() => Math.max(0, props.names.length - MAX_VISIBLE))
 </script>
