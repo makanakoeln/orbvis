@@ -894,6 +894,7 @@ async def _get_folder_tree_states(cfg: BoardConfig, connection: ConnectionBase) 
         states=[],
         generated_at=time.time(),
         connection_ok=fetch_ok,
+        dead_sites=data.dead_sites,
         folder_tree=root,
     )
 
@@ -980,6 +981,7 @@ def _build_folder_tree(data: FolderTreeData, fv: FolderTreeView) -> FolderTreeNo
                 acknowledged=h.get("acknowledged", False),
                 in_downtime=h.get("in_downtime", False),
                 is_flapping=h.get("is_flapping", False),
+                stale=h.get("stale", False),
                 last_state_change=h.get("last_state_change"),
                 site_id=h.get("site_id"),
                 services_summary=summary,
@@ -1365,6 +1367,7 @@ def _ft_field_sig(node: FolderTreeNode) -> int:
             node.acknowledged,
             node.in_downtime,
             node.is_flapping,
+            node.stale,
             node.last_state_change,
             None if ss is None else (ss.ok, ss.warning, ss.critical, ss.unknown, ss.pending),
         )
@@ -1385,6 +1388,7 @@ def _ft_patch(node: FolderTreeNode, include_order: bool) -> FolderTreeNodePatch:
         acknowledged=node.acknowledged,
         in_downtime=node.in_downtime,
         is_flapping=node.is_flapping,
+        stale=node.stale,
         last_state_change=node.last_state_change,
         services_summary=node.services_summary,
         children_order=[c.path for c in node.children] if include_order else None,

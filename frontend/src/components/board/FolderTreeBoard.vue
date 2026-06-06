@@ -74,6 +74,19 @@
     <div v-if="!preview && root && !states.connected" class="ft-stale-row" role="status">
       {{ _t('Connection lost — showing last known state') }}
     </div>
+    <!-- Per-site trust (distributed): a dead federation site freezes its
+             leaves on the last known state (greyed) instead of dropping them. -->
+    <div
+      v-if="!preview && root && states.connected && states.deadSites.length"
+      class="ft-stale-row"
+      role="status"
+    >
+      {{
+        _t('Site unreachable: %{sites} — showing last known state for its hosts', {
+          sites: states.deadSites.join(', ')
+        })
+      }}
+    </div>
 
     <div v-if="!root" class="ft-placeholder">{{ _t('Waiting for folder data…') }}</div>
     <div v-else-if="!root.children.length" class="ft-placeholder">

@@ -170,6 +170,9 @@ class FolderTreeHostRow(TypedDict):
     is_flapping: NotRequired[bool]
     last_state_change: NotRequired[float | None]
     services_summary: NotRequired[ServicesSummary | None]
+    # Per-site trust: the host's site went dead and this row is replayed from
+    # the last successful fetch (livestatus connection-level cache).
+    stale: NotRequired[bool]
 
 
 @dataclass
@@ -181,6 +184,9 @@ class FolderTreeData:
 
     folders: list[FolderInfo] = field(default_factory=list)
     hosts: list[FolderTreeHostRow] = field(default_factory=list)
+    # Federation sites that stopped answering (their hosts above are the
+    # replayed last-known rows, marked ``stale``).
+    dead_sites: list[str] = field(default_factory=list)
 
 
 @dataclass

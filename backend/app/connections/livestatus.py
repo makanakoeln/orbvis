@@ -906,6 +906,11 @@ class LivestatusConnection(ConnectionBase):
         # Keyed by AuthUser scope (None = unscoped): contact-scoped users get
         # a filtered aggregation list, so entries must not leak across scopes.
         self._aggregations_cache: dict[str | None, tuple[float, list[AggregationInfo]]] = {}
+        # Per-site trust: last successful foldertree host rows per
+        # (auth-scope, site-filter) -> site_id, replayed when a site dies.
+        self._ft_rows_cache: dict[
+            tuple[str | None, tuple[str, ...] | None], dict[str, list[FolderTreeHostRow]]
+        ] = {}
         # Per-host-set cache for get_services_summary (TTL=_SERVICES_SUMMARY_CACHE_TTL)
         self._services_summary_cache: dict[
             frozenset[str], tuple[float, dict[str, ServicesSummary]]
@@ -919,6 +924,9 @@ class LivestatusConnection(ConnectionBase):
         )
         self._mc: MultiSiteConnection | None = None  # lazy
         self._mc_mtime: float = 0.0
+        # monotonic timestamp of the last MC (re)build — drives the dead-site
+        # reconnect retry (see _mc_needs_rebuild).
+        self._mc_built_at: float = 0.0
         self._mc_lock = threading.Lock()
         self._mc_dead: set[str] = set()
         if self._sites:
@@ -2225,24 +2233,49 @@ class LivestatusConnection(ConnectionBase):
         )
         site_filter = set(sites) if sites else None
         hosts: list[FolderTreeHostRow] = []
+        rows_by_site: dict[str, list[FolderTreeHostRow]] = {}
         for sid, row in tagged:
             site = _default_site_id(sid)
             if site_filter is not None and site not in site_filter:
                 continue
-            hosts.append(
-                {
-                    "host_name": _row_str(row, 0),
-                    "folder_path": _folder_path_from_filename(_row_str(row, 1)),
-                    "state": _HOST_STATE_MAP.get(_row_int(row, 2), "UNKNOWN"),
-                    "output": _row_str(row, 3),
-                    "site_id": site,
-                    "acknowledged": _row_int(row, 4) > 0,
-                    "in_downtime": _row_int(row, 5) > 0,
-                    "services_summary": _services_summary_from_row(row, 6),
-                    "is_flapping": _row_int(row, 11) > 0,
-                    "last_state_change": _row_float_or_none(row, 12),
-                }
-            )
+            host_row: FolderTreeHostRow = {
+                "host_name": _row_str(row, 0),
+                "folder_path": _folder_path_from_filename(_row_str(row, 1)),
+                "state": _HOST_STATE_MAP.get(_row_int(row, 2), "UNKNOWN"),
+                "output": _row_str(row, 3),
+                "site_id": site,
+                "acknowledged": _row_int(row, 4) > 0,
+                "in_downtime": _row_int(row, 5) > 0,
+                "services_summary": _services_summary_from_row(row, 6),
+                "is_flapping": _row_int(row, 11) > 0,
+                "last_state_change": _row_float_or_none(row, 12),
+            }
+            hosts.append(host_row)
+            rows_by_site.setdefault(site, []).append(host_row)
+
+        # Per-site trust (distributed): a federation site that stops answering
+        # silently drops out of MultiSiteConnection results — its hosts would
+        # vanish from the tree and the board would read "all green". Replay the
+        # last successful fetch for dead sites instead, marked ``stale`` so the
+        # UI greys them out. The cache is keyed by the auth scope (a contact-
+        # scoped user must never see another user's host rows) + site filter.
+        dead_sites = sorted(self._mc_dead) if self._sites else []
+        cache_key = (_auth_user_ctx.get(), tuple(sorted(sites)) if sites else None)
+        # Bound the per-scope cache: SSE groups are few, but REST calls from
+        # rotating contact-scoped users would otherwise accumulate forever.
+        # FIFO eviction via dict insertion order is plenty here.
+        while len(self._ft_rows_cache) > 32 and cache_key not in self._ft_rows_cache:
+            self._ft_rows_cache.pop(next(iter(self._ft_rows_cache)))
+        site_cache = self._ft_rows_cache.setdefault(cache_key, {})
+        for site, site_rows in rows_by_site.items():
+            site_cache[site] = site_rows
+        replayed_dead: list[str] = []
+        for site in dead_sites:
+            if site_filter is not None and site not in site_filter:
+                continue
+            replayed_dead.append(site)
+            for cached_row in site_cache.get(site, []):
+                hosts.append(cast("FolderTreeHostRow", {**cached_row, "stale": True}))
         # Scope the (otherwise unscoped) folder skeleton to what the requesting
         # user may *read* in SETUP, mirroring Checkmk folder permissions
         # (``wato.see_all_folders`` OR membership in a folder's contact groups).
@@ -2259,7 +2292,7 @@ class LivestatusConnection(ConnectionBase):
             )
             for f in folders
         ]
-        return FolderTreeData(folders=scoped, hosts=hosts)
+        return FolderTreeData(folders=scoped, hosts=hosts, dead_sites=replayed_dead)
 
     async def get_all_services_states(
         self, only_hard: bool = False
@@ -2537,6 +2570,24 @@ class LivestatusConnection(ConnectionBase):
         finally:
             conn.disconnect()
 
+    # MultiSiteConnection marks unreachable sites dead at CONNECT time and
+    # never retries them for its lifetime (cmk.gui sidesteps this by building
+    # a fresh connection per request). With our cached MC a dead federation
+    # site would stay dead until the daemon restarts — rebuild periodically
+    # while anything is dead so recovered sites come back. Trade-off: the
+    # rebuild happens under _mc_lock, so a SYN-blackholed site (machine gone,
+    # not just process down) can stall concurrent queries for one connect
+    # timeout every retry interval — still far less often than cmk.gui's
+    # connect-per-request.
+    _MC_DEAD_RETRY_SECONDS = 30.0
+
+    def _mc_needs_rebuild(self, current_mtime: float) -> bool:
+        if self._mc is None or current_mtime != self._mc_mtime:
+            return True
+        return bool(
+            self._mc_dead and time.monotonic() - self._mc_built_at > self._MC_DEAD_RETRY_SECONDS
+        )
+
     def _run_multisite_command(self, command_body: str, site_id: str | None) -> None:
         """Send a Livestatus external command via MultiSiteConnection.
 
@@ -2550,23 +2601,28 @@ class LivestatusConnection(ConnectionBase):
             return
         with self._mc_lock:
             current_mtime = _cmk_sites.sites_mk_mtime()
-            if self._mc is None or current_mtime != self._mc_mtime:
+            if self._mc_needs_rebuild(current_mtime):
                 self._sites = _cmk_sites.load_sites()
                 if not self._sites:
                     self._mc = None
                     self._mc_mtime = current_mtime
                     self._mc_dead = set()
                     return
+                if self._mc is not None:
+                    with contextlib.suppress(Exception):
+                        self._mc.disconnect()
                 self._mc = MultiSiteConnection(sites=SiteConfigurations(self._sites))
                 self._mc.set_prepend_site(True)
                 self._mc_mtime = current_mtime
-                self._mc_dead = set()
+                self._mc_built_at = time.monotonic()
             # `MultiSiteConnection.command` requires a real configured
             # sitename — "local" only matches when the literal site is
             # named "local". In OMD the site name comes from $OMD_SITE
             # (RTEST25C etc.).
             target = _default_site_id(site_id)
-            self._mc.command(command_body, target)
+            mc = self._mc
+            assert mc is not None  # rebuilt above when missing
+            mc.command(command_body, target)
 
     def _run_multisite_sync(
         self, lql: str, only_sites: list[str] | None = None
@@ -2584,8 +2640,8 @@ class LivestatusConnection(ConnectionBase):
 
         with self._mc_lock:
             current_mtime = _cmk_sites.sites_mk_mtime()
-            if self._mc is None or current_mtime != self._mc_mtime:
-                if self._mc is not None:
+            if self._mc_needs_rebuild(current_mtime):
+                if self._mc is not None and current_mtime != self._mc_mtime:
                     logger.info("sites.mk changed — reloading enabled sites")
                 self._sites = _cmk_sites.load_sites()
                 if not self._sites:
@@ -2593,11 +2649,20 @@ class LivestatusConnection(ConnectionBase):
                     self._mc_mtime = current_mtime
                     self._mc_dead = set()
                     return []
+                if self._mc is not None:
+                    # Close the superseded connection's sockets — dead-retry
+                    # rebuilds every 30s would otherwise leak FDs until GC.
+                    with contextlib.suppress(Exception):
+                        self._mc.disconnect()
                 self._mc = MultiSiteConnection(sites=SiteConfigurations(self._sites))
                 self._mc.set_prepend_site(True)
                 self._mc_mtime = current_mtime
-                self._mc_dead = set()
+                self._mc_built_at = time.monotonic()
+                # Deliberately NOT clearing _mc_dead here: a still-dead site
+                # must stay marked until the post-query dead_sites() refresh,
+                # or its stale foldertree leaves would flicker out for a tick.
             mc = self._mc
+            assert mc is not None  # rebuilt above when missing
 
             headers = ""
             auth_user = _auth_user_ctx.get()

@@ -98,6 +98,9 @@ export const useStatesStore = defineStore('states', () => {
   const metricTitles = ref<Record<string, Record<string, string>>>({})
   const metricGraphs = ref<Record<string, MetricGraphGroup[]>>({})
   const connected = ref(false)
+  // Distributed: federation sites that stopped answering — foldertree leaves
+  // from these sites are frozen on their last known state (node.stale).
+  const deadSites = ref<string[]>([])
   const lastUpdate = ref<number | null>(null)
   const initialLoad = ref(false)
   const topology = ref<TopologyNode[]>([])
@@ -152,6 +155,7 @@ export const useStatesStore = defineStore('states', () => {
       node.acknowledged = p.acknowledged
       node.in_downtime = p.in_downtime
       node.is_flapping = p.is_flapping
+      node.stale = p.stale ?? false
       node.last_state_change = p.last_state_change ?? null
       node.services_summary = p.services_summary ?? null
       if (p.children_order) {
@@ -267,6 +271,7 @@ export const useStatesStore = defineStore('states', () => {
       Object.assign(states.value, newStates)
       lastUpdate.value = ts
       connected.value = data.connection_ok
+      deadSites.value = data.dead_sites ?? []
       _setFolderTree(data.folder_tree ?? null)
       if (notificationsEnabled.value)
         prevFolderHostStates = _diffNotifyFolderTree(folderTree.value, prevFolderHostStates)
@@ -419,6 +424,7 @@ export const useStatesStore = defineStore('states', () => {
           }
           lastUpdate.value = msg.states.generated_at
           connected.value = msg.states.connection_ok
+          deadSites.value = msg.states.dead_sites ?? []
           // A disk-cfg delta would overwrite the preview override snapshot.
           if (!folderOverride.value) _applyFolderTreeDelta(msg.states.folder_tree_delta)
           if (notificationsEnabled.value)
@@ -547,6 +553,7 @@ export const useStatesStore = defineStore('states', () => {
     metricTitles,
     metricGraphs,
     connected,
+    deadSites,
     lastUpdate,
     initialLoad,
     topology,

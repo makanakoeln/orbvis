@@ -46,6 +46,9 @@ router = APIRouter()
 # Without this every connected client would independently fetch the topology
 # + states and push to all clients.
 _broadcast_tasks: dict[str, asyncio.Task[None]] = {}
+# Last dead-sites list pushed per (board, subscriber-group): a federation site
+# dying/recovering must reach clients even when no node-level delta exists.
+_dead_sites_snapshots: dict[tuple[str, str | None], list[str]] = {}
 
 # Heartbeat cadence for SSE keepalives. Sized below typical Apache ProxyTimeout
 # (60 s default in OMD) so the stream doesn't get torn down on idle boards.
@@ -116,6 +119,7 @@ def _build_states_msg(
                 "states": [s.model_dump() for s in to_send],
                 "generated_at": states.generated_at,
                 "connection_ok": states.connection_ok,
+                "dead_sites": states.dead_sites,
                 # Foldertree boards diff the tree per tick: ``full`` on the first
                 # tick / a structural change, else only changed nodes. At 100k+
                 # hosts the full tree is ~45MB raw, so streaming the whole thing
@@ -206,7 +210,10 @@ async def _broadcast_loop(board_name: str) -> None:
                         ft_changed = ft_delta is not None and (
                             ft_delta.full or bool(ft_delta.changed)
                         )
-                        if is_full or to_send or removed_ids or timing or ft_changed:
+                        ds_key = (board_name, group_key)
+                        ds_changed = _dead_sites_snapshots.get(ds_key) != states.dead_sites
+                        _dead_sites_snapshots[ds_key] = states.dead_sites
+                        if is_full or to_send or removed_ids or timing or ft_changed or ds_changed:
                             msg = _build_states_msg(
                                 board_name, states, to_send, removed_ids, is_full, timing, ft_delta
                             )
@@ -251,6 +258,8 @@ async def _broadcast_loop(board_name: str) -> None:
         _broadcast_tasks.pop(board_name, None)
         state_service.drop_topology_snapshot(board_name)
         state_service.drop_states_snapshot(board_name)
+        for key in [k for k in _dead_sites_snapshots if k[0] == board_name]:
+            _dead_sites_snapshots.pop(key, None)
         logger.debug("Broadcast loop stopped for board '%s'", board_name)
 
 

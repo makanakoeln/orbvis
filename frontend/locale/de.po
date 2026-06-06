@@ -2163,3 +2163,12 @@ msgstr "Nur kritisch & down"
 
 msgid "On typical sites almost every host carries some WARNING service — narrowing to critical keeps the problem filter meaningful."
 msgstr "Auf typischen Sites hat fast jeder Host irgendeinen WARNING-Service — die Eingrenzung auf kritisch hält den Problemfilter aussagekräftig."
+
+msgid "Site unreachable: %{sites} — showing last known state for its hosts"
+msgstr "Site nicht erreichbar: %{sites} — letzter bekannter Stand ihrer Hosts wird angezeigt"
+
+msgid "Site unreachable — last known state"
+msgstr "Site nicht erreichbar — letzter bekannter Stand"
+
+msgid "stale"
+msgstr "veraltet"

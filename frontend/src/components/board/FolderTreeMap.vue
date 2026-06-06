@@ -198,6 +198,9 @@ function fillOpacityFor(d: FNode): number {
     if (isLight.value) return isProblem(n) ? 0.1 : 0.05
     return isProblem(n) ? 0.16 : 0.09
   }
+  // Per-site trust: a leaf frozen on its dead site's last known state must
+  // not read as a live status — dim it below the healthy-chip level.
+  if (n.stale) return 0.3
   return isProblem(n) ? 1 : 0.4 // healthy chips recede, problems dominate
 }
 
@@ -431,7 +434,8 @@ function showTip(event: MouseEvent, d: FNode): void {
   const flags = [
     n.acknowledged ? 'ACK' : '',
     n.in_downtime ? 'DOWNTIME' : '',
-    n.is_flapping ? 'FLAPPING' : ''
+    n.is_flapping ? 'FLAPPING' : '',
+    n.stale ? 'STALE — site unreachable' : ''
   ]
     .filter(Boolean)
     .join(' · ')

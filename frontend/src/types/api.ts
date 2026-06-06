@@ -150,6 +150,8 @@ export interface FolderTreeNode {
   output: string
   acknowledged: boolean
   in_downtime: boolean
+  /** Distributed: the node's site went dead — last known state, render greyed. */
+  stale?: boolean
   site_id: string | null
   services_summary?: ServicesSummary | null
   children: FolderTreeNode[]
@@ -178,6 +180,7 @@ export interface FolderTreeNodePatch {
   acknowledged: boolean
   in_downtime: boolean
   is_flapping: boolean
+  stale?: boolean
   last_state_change?: number | null
   services_summary?: ServicesSummary | null
   children_order?: string[] | null
@@ -462,6 +465,9 @@ export interface MapStates {
   states: ObjectState[]
   generated_at: number
   connection_ok: boolean
+  /** Distributed: federation sites that stopped answering (their tree leaves
+   *  freeze on the last known state, marked stale). */
+  dead_sites?: string[]
   folder_tree?: FolderTreeNode | null
 }
 
@@ -591,6 +597,7 @@ export interface StateUpdatePayload {
   states: ObjectState[]
   generated_at: number
   connection_ok: boolean
+  dead_sites?: string[]
   folder_tree_delta?: FolderTreeDelta | null
 }
 

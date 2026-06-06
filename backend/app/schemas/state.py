@@ -141,6 +141,9 @@ class FolderTreeNode(BaseModel):
     acknowledged: bool = False
     in_downtime: bool = False
     is_flapping: bool = False
+    # Distributed monitoring: the node's site went dead and this is its last
+    # known state (per-site trust) — render greyed/stale, not healthy.
+    stale: bool = False
     last_state_change: float | None = None  # leaf age for triage ("since…")
     # Distributed monitoring: leaf hosts carry their originating site (v3 §5).
     site_id: str | None = None
@@ -169,6 +172,7 @@ class FolderTreeNodePatch(BaseModel):
     acknowledged: bool
     in_downtime: bool
     is_flapping: bool
+    stale: bool = False
     last_state_change: float | None = None
     services_summary: ServicesSummary | None = None
     children_order: list[str] | None = None
@@ -229,5 +233,8 @@ class MapStates(BaseModel):
     states: list[ObjectState]
     generated_at: float  # unix timestamp
     connection_ok: bool = True  # False when the monitoring connection is unreachable
+    # Distributed monitoring: federation sites that stopped answering — their
+    # objects (foldertree leaves) freeze on the last known state, marked stale.
+    dead_sites: list[str] = Field(default_factory=list)
     # Populated only for foldertree boards: the resolved + aggregated tree.
     folder_tree: FolderTreeNode | None = None

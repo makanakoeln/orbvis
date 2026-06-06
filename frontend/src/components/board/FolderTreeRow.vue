@@ -3,7 +3,8 @@
     class="ft-row"
     :class="{
       'ft-row--folder': node.kind === 'folder',
-      'ft-row--clickable': node.kind !== 'folder'
+      'ft-row--clickable': node.kind !== 'folder',
+      'ft-row--stale': node.stale
     }"
     role="treeitem"
     :aria-level="depth + 1"
@@ -103,6 +104,12 @@
 
     <span class="ft-rowfill" />
 
+    <span
+      v-if="node.stale"
+      class="ft-badge ft-badge--stale"
+      :title="_t('Site unreachable — last known state')"
+      >{{ _t('stale') }}</span
+    >
     <span v-if="node.kind === 'host' && multiSite && node.site_id" class="ft-site">{{
       node.site_id
     }}</span>
@@ -321,6 +328,16 @@ function onCtx(e: MouseEvent) {
 .ft-badge--empty {
   color: var(--text-muted);
   border: 1px dashed var(--border);
+}
+
+/* Per-site trust: leaf frozen on last known state (its site is unreachable). */
+.ft-badge--stale {
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.ft-row--stale {
+  opacity: 0.55;
 }
 
 .ft-pills {
