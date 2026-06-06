@@ -4,14 +4,19 @@
 
 :root {
   --color-warning: #ffd000;
-  --color-state-up: #00ff00;
-  --color-state-down: #ff0000;
-  --color-state-unreachable: #ff8800;
-  --color-state-ok: #00ff00;
-  --color-state-warning: #ffd000;
-  --color-state-critical: #ff0000;
-  --color-state-unknown: #ff8800;
-  --color-state-pending: #aaaaaa;
+
+  /* Monitoring status palette — Checkmk's facelift/modern-dark
+       $color-state-* values (shipped only as compiled SCSS, mirrored here).
+       Used in standalone AND embedded deployments so boards look identical
+       everywhere; the pure-primary NagVis-era palette glared in light mode. */
+  --color-state-up: rgb(21 209 160);
+  --color-state-down: rgb(200 50 50);
+  --color-state-unreachable: rgb(255 132 0);
+  --color-state-ok: rgb(21 209 160);
+  --color-state-warning: rgb(255 215 3);
+  --color-state-critical: rgb(200 50 50);
+  --color-state-unknown: rgb(255 132 0);
+  --color-state-pending: rgb(140 140 140);
 
   /* Modifier badges shown alongside states in the slidein. CMK's vendored
        palette has no semantic ack/downtime tokens so we define them here. */
@@ -90,23 +95,6 @@
   --shadow-text:
     1px 1px 0 rgb(0 0 0 / 90%), -1px 1px 0 rgb(0 0 0 / 90%), 1px -1px 0 rgb(0 0 0 / 90%),
     -1px -1px 0 rgb(0 0 0 / 90%), 0 0 3px rgb(0 0 0 / 70%);
-}
-
-/* In a Checkmk-embedded deployment, adopt Checkmk's own monitoring status palette
-   (its facelift/modern-dark $color-state-* values) instead of OrbVis' standalone
-   pure primaries, so boards match the surrounding Checkmk UI. Checkmk ships these
-   only as compiled SCSS (no CSS vars), so the values are mirrored here; they are
-   identical across the facelift/modern-dark themes. Standalone keeps the @theme
-   primaries above (OrbVis-native, no Checkmk dependency). */
-:root.cmk-deployment {
-  --color-state-up: rgb(21 209 160);
-  --color-state-ok: rgb(21 209 160);
-  --color-state-warning: rgb(255 215 3);
-  --color-state-critical: rgb(200 50 50);
-  --color-state-down: rgb(200 50 50);
-  --color-state-unknown: rgb(255 132 0);
-  --color-state-unreachable: rgb(255 132 0);
-  --color-state-pending: rgb(140 140 140);
 }
 
 /* Override browser autofill yellow highlight */
