@@ -78,11 +78,14 @@ repos:
       # src/vendor is excluded from all three fixers: vendored files must
       # stay byte-identical to upstream cmk-frontend-vue (drift-check),
       # and auto-fixes (e.g. stripping eslint-disable comments) break that.
+      # Covers tool configs/scripts too (eslint.config.js, prettier.config.cjs,
+      # vite.config.ts, e2e/, scripts/) — CI lints `eslint .`, so a config-only
+      # change must not slip past the hook.
       - id: eslint
         name: eslint (auto-fix)
         entry: bash -c 'cd frontend && npx eslint --fix "${@#frontend/}"' --
         language: system
-        files: ^frontend/src/.*\.(ts|vue)$
+        files: ^frontend/(src/.*\.(ts|vue)|e2e/.*\.ts|scripts/.*\.(js|mjs|cjs)|[^/]+\.(ts|js|cjs|mjs))$
         exclude: ^frontend/src/vendor/
         pass_filenames: true
 
@@ -118,6 +121,17 @@ repos:
         entry: bash -c 'cd frontend && npx vitest run'
         language: system
         files: ^frontend/src/
+        pass_filenames: false
+        stages: [pre-push]
+
+      # Full CI-parity lint (eslint . + stylelint) — the per-file commit hook
+      # can't see files outside its pattern; this catches everything before
+      # the GitHub workflow does.
+      - id: frontend-lint
+        name: npm run lint (CI parity)
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        files: ^frontend/
         pass_filenames: false
         stages: [pre-push]
 

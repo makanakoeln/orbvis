@@ -11,10 +11,10 @@ const config = {
   plugins: ['@trivago/prettier-plugin-sort-imports'],
   importOrder: [
     '^[a-zA-z1-9@]{2, }$',
-    '^@\/lib.*$',
-    '^@\/components.*$',
-    '^@\/form.*$',
-    '^@\/.*$',
+    '^@/lib.*$',
+    '^@/components.*$',
+    '^@/form.*$',
+    '^@/.*$',
     '^[./]'
   ],
   importOrderSeparation: true,
