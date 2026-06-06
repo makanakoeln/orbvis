@@ -95,7 +95,10 @@
       :x="hoverMenu.x"
       :y="hoverMenu.y"
       :connection-id="props.connectionId"
+      :checkmk-url="props.checkmkUrl ?? null"
       :template="resolveTemplate(null, props.hoverTemplate, settingsStore.settings.hover_template)"
+      @card-enter="hoverGrace.cancelClose()"
+      @card-leave="hoverGrace.scheduleClose()"
     />
 
     <DetailDrawer
@@ -246,6 +249,7 @@ import CmkLoading from '@/components/cmk/CmkLoading'
 
 import { connectionsApi } from '@/api/client'
 import { useD3Cleanup } from '@/composables/useD3Cleanup'
+import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useObjectActions } from '@/composables/useObjectActions'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
@@ -546,6 +550,14 @@ const hoverMenu = reactive<{
 // topologyTimingVersion makes next-check/overdue tick in an open tooltip the
 // same way the detail drawer does, instead of freezing at the hover moment.
 const hoverFNode = ref<FNode | null>(null)
+
+// Close-grace so the operator can move from a node onto the hover card and
+// click a service-state pill (HoverMenu @card-enter/-leave round-trip).
+const hoverGrace = useHoverGrace(() => {
+  hoverMenu.visible = false
+  hoverMenu.object = null
+  hoverFNode.value = null
+})
 const hoverState = computed<ObjectState | undefined>(() => {
   const cur = hoverFNode.value
   if (!cur) return undefined
@@ -2217,6 +2229,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
       // Site root opens an aggregated drawer; no shift-select / context
       // menu since site-level bulk ops aren't a thing.
       if (d.nodeType === 'site') {
+        hoverGrace.cancelClose()
         hoverMenu.visible = false
         openDetail(boardObjectFromFNode(d), d)
         return
@@ -2238,12 +2251,14 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         if (url) openUrl(url, '_blank')
         return
       }
+      hoverGrace.cancelClose()
       hoverMenu.visible = false
       openDetail(boardObjectFromFNode(d), d)
     })
     .on('contextmenu', (event: MouseEvent, d) => {
       if (d.nodeType === 'site') return
       event.preventDefault()
+      hoverGrace.cancelClose()
       hoverMenu.visible = false
       contextMenu.object = boardObjectFromFNode(d)
       contextMenu.state = objectStateFromFNode(d)
@@ -2253,6 +2268,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     })
     .on('mouseenter', (event: MouseEvent, d) => {
       if (props.preview || d.nodeType === 'site') return
+      hoverGrace.cancelClose()
       const nodeRect = (event.currentTarget as SVGGElement).getBoundingClientRect()
       hoverFNode.value = d
       hoverMenu.object = boardObjectFromFNode(d)
@@ -2261,9 +2277,9 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
       hoverMenu.visible = true
     })
     .on('mouseleave', () => {
-      hoverMenu.visible = false
-      hoverMenu.object = null
-      hoverFNode.value = null
+      // Grace instead of hiding outright: the card carries clickable state
+      // pills, so the pointer must survive the trip onto it.
+      hoverGrace.scheduleClose()
     })
 
   // Readonly boards keep drag interactive (persistence inside drag.end

@@ -798,7 +798,12 @@ import {
   BI_STATE_TONE,
   walkAggregationLeavesWithPath
 } from '@/utils/aggregationTree'
-import { buildCheckmkSetupUrl, buildCheckmkUrl } from '@/utils/boardNavigation'
+import {
+  buildCheckmkSetupUrl,
+  buildCheckmkUrl,
+  buildServiceStateViewUrl,
+  hostStateOn
+} from '@/utils/boardNavigation'
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
 import { type PerfMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
 import { stateColor } from '@/utils/stateColors'
@@ -1295,43 +1300,14 @@ function _countByState(rows: ReadonlyArray<{ state: number }>): Record<number, n
   return out
 }
 
-// Checkmk's filter machinery takes a single "svc_state" / "host_state" filter
-// whose individual st*/hst* checkboxes are interpreted as a bitmask. A box
-// only counts as ON when its parameter is present and equals "on" — sending
-// "off" or omitting it both mean "exclude this state". The whole filter is
-// only honored when "_active" lists svcstate/hoststate alongside the host /
-// site filter; without it the Setup-defined view defaults win.
-function svcStateOn(state: string): string {
-  if (state === 'CRITICAL') return 'st2'
-  if (state === 'WARNING') return 'st1'
-  if (state === 'UNKNOWN') return 'st3'
-  return 'st0' // OK
-}
-
-function hostStateOn(state: string): string {
-  if (state === 'DOWN') return 'hst1'
-  if (state === 'UNREACHABLE') return 'hst2'
-  return 'hst0' // UP
-}
-
 function buildServiceChipUrl(state: string, count: number): string | null {
-  if (count <= 0 || !props.checkmkUrl || !props.object) return null
-  const base = props.checkmkUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
-  const params: Record<string, string> = {
-    view_name: 'allservices',
-    filled_in: 'filter',
-    _active: 'svcstate;host',
-    [svcStateOn(state)]: 'on'
-  }
-  if (props.object.type === 'site' && props.object.host_name) {
-    params.site = props.object.host_name
-    params._active = 'svcstate;site'
-  } else if (props.object.host_name) {
-    params.host = props.object.host_name
-  } else {
-    return null
-  }
-  return `${base}/check_mk/view.py?${new URLSearchParams(params)}`
+  if (count <= 0 || !props.object) return null
+  const isSiteObj = props.object.type === 'site'
+  return buildServiceStateViewUrl(
+    props.checkmkUrl ?? null,
+    isSiteObj ? { site: props.object.host_name } : { host: props.object.host_name },
+    state
+  )
 }
 
 function buildHostChipUrl(state: string, count: number): string | null {

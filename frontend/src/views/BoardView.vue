@@ -882,6 +882,7 @@
       :x="worldmapHover.x"
       :y="worldmapHover.y"
       :connection-id="boardConfig?.connection_id ?? null"
+      :checkmk-url="checkmkUrl"
       :template="
         resolveTemplate(
           worldmapHover.object.hover_template,
@@ -889,6 +890,8 @@
           settingsStore.settings.hover_template
         )
       "
+      @card-enter="worldmapHoverGrace.cancelClose()"
+      @card-leave="worldmapHoverGrace.scheduleClose()"
     />
 
     <!-- Worldmap ContextMenu -->
@@ -927,6 +930,9 @@
       :state="folderHover.state"
       :x="folderHover.x"
       :y="folderHover.y"
+      :checkmk-url="checkmkUrl"
+      @card-enter="folderHoverGrace.cancelClose()"
+      @card-leave="folderHoverGrace.scheduleClose()"
     />
 
     <template v-if="isFolderTree && folderCtx">
@@ -1118,6 +1124,7 @@ import CmkButton from '@/components/cmk/CmkButton'
 import { boardsApi, cmkApi, connectionsApi } from '@/api/client'
 import { useBoardEditor } from '@/composables/useBoardEditor'
 import { useElementRect } from '@/composables/useElementRect'
+import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useObjectActions } from '@/composables/useObjectActions'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
@@ -1442,7 +1449,14 @@ const worldmapCanvasCtxMenu = reactive({
   view: null as { lat: number; lng: number; zoom: number } | null
 })
 
+// Close-grace so the operator can move onto the hover card and click a
+// service-state pill (HoverMenu @card-enter/-leave round-trip).
+const worldmapHoverGrace = useHoverGrace(() => {
+  worldmapHover.visible = false
+})
+
 function onWorldmapHover(obj: BoardObject, event: MouseEvent) {
+  worldmapHoverGrace.cancelClose()
   worldmapHover.object = obj
   worldmapHover.x = event.pageX + 12
   worldmapHover.y = event.pageY + 12
@@ -1450,7 +1464,7 @@ function onWorldmapHover(obj: BoardObject, event: MouseEvent) {
 }
 
 function onWorldmapHoverLeave() {
-  worldmapHover.visible = false
+  worldmapHoverGrace.scheduleClose()
 }
 
 function onWorldmapContextMenuView(obj: BoardObject, x: number, y: number) {
@@ -1637,6 +1651,7 @@ async function onWorldmapCtxForceCheck() {
 }
 
 function closeWorldmapMenus() {
+  worldmapHoverGrace.cancelClose()
   worldmapHover.visible = false
   worldmapCtxMenu.visible = false
   worldmapCanvasCtxMenu.visible = false
@@ -1880,6 +1895,7 @@ interface FolderHover {
 const folderHover = ref<FolderHover | null>(null)
 
 function onFolderHoverHost(node: FolderTreeNode, x: number, y: number) {
+  folderHoverGrace.cancelClose()
   folderHover.value = {
     object: {
       id: node.title,
@@ -1897,6 +1913,7 @@ function onFolderHoverHost(node: FolderTreeNode, x: number, y: number) {
 }
 
 function onFolderHoverService(host: string, node: FolderTreeNode, x: number, y: number) {
+  folderHoverGrace.cancelClose()
   const id = `${host};${node.title}`
   folderHover.value = {
     object: {
@@ -1915,8 +1932,12 @@ function onFolderHoverService(host: string, node: FolderTreeNode, x: number, y: 
   }
 }
 
-function onFolderHoverClear() {
+const folderHoverGrace = useHoverGrace(() => {
   folderHover.value = null
+})
+
+function onFolderHoverClear() {
+  folderHoverGrace.scheduleClose()
 }
 
 interface FolderCtx {

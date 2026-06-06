@@ -1,6 +1,6 @@
 <template>
   <div ref="rootEl" class="orb-hover" :style="positionStyle">
-    <div class="orb-hover__card">
+    <div class="orb-hover__card" @mouseenter="onCardEnter" @mouseleave="onCardLeave">
       <!-- No permission: skip all templates and show only this -->
       <div v-if="isNoPermission" class="orb-hover__empty">
         {{ _t('No permission') }}
@@ -123,17 +123,24 @@
             {{ state.output }}
           </div>
 
-          <!-- Services summary pills (host objects only) -->
+          <!-- Services summary pills (host objects only). With a Checkmk URL
+                         each pill deep-links into the filtered allservices view, so the
+                         operator jumps straight from hover to "the 3 CRIT services"
+                         without the drawer detour. -->
           <div v-if="servicePills.length" class="orb-hover__pills">
-            <span
+            <component
+              :is="pill.url ? 'a' : 'span'"
               v-for="pill in servicePills"
               :key="pill.label"
               class="orb-hover__pill"
-              :class="pill.cls"
+              :class="[pill.cls, { 'orb-hover__pill--link': pill.url }]"
+              :href="pill.url || undefined"
+              :target="pill.url ? '_blank' : undefined"
+              :rel="pill.url ? 'noopener noreferrer' : undefined"
             >
               <span class="orb-hover__pill-dot" :class="pill.dot" />
               {{ pill.count }} {{ pill.label }}
-            </span>
+            </component>
           </div>
 
           <!-- CMK Perfometer (loaded async from backend) -->
@@ -193,6 +200,7 @@ import { type CSSProperties, computed, nextTick, onMounted, onUnmounted, ref, wa
 import { metricsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { BoardObject, ObjectState, PerfometerResult } from '@/types/api'
+import { buildServiceStateViewUrl } from '@/utils/boardNavigation'
 import { VISUAL_ONLY_TYPES, getBoardObjectIdentifier, getObjectTypeLabel } from '@/utils/naming'
 import { type PerfMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
 import { sanitizeTemplateHtml } from '@/utils/sanitize'
@@ -207,11 +215,40 @@ const props = defineProps<{
   y: number
   template?: string | null
   connectionId?: string | null
+  // Checkmk GUI base — makes the service-state pills clickable links into
+  // the filtered allservices view. Omit (standalone) for plain pills.
+  checkmkUrl?: string | null
   // Bounding rect of the hovered icon (in viewport coords). When the tooltip
   // has to flip to avoid overflow we anchor the flipped position at this
   // rect's edges so the tooltip never lands on top of the icon.
   anchorRect?: { left: number; top: number; right: number; bottom: number } | null
 }>()
+
+// Card hover round-trip for the close-grace in the host views: the parent
+// delays its close on hover-leave so the operator can move onto the card
+// (clickable pills, readable output); entering the card cancels the close,
+// leaving it re-schedules — the card may overlap its own object, so the
+// pointer must be able to slide card→object→card without a flicker.
+// Listen on mouseenter (NOT pointerenter): the browser fires pointer events
+// before mouse events, so a pointerenter-cancel would run BEFORE the
+// object's mouseleave schedules the close and the timer would survive.
+const emit = defineEmits<{
+  'card-enter': []
+  'card-leave': []
+}>()
+
+// While the pointer is on the card, freeze the position — the parent may
+// keep emitting hover coordinates which would yank the card from under
+// the cursor mid-click.
+const pinned = ref(false)
+function onCardEnter() {
+  pinned.value = true
+  emit('card-enter')
+}
+function onCardLeave() {
+  pinned.value = false
+  emit('card-leave')
+}
 
 const { _t } = usei18n()
 const authStore = useAuthStore()
@@ -288,6 +325,9 @@ async function updatePosition() {
 watch(
   () => [props.x, props.y],
   () => {
+    // Frozen while the pointer is on the card — repositioning would yank
+    // the pill out from under the cursor mid-click.
+    if (pinned.value) return
     adjusted.value.ready = false
     void updatePosition()
   }
@@ -479,6 +519,8 @@ interface ServicePill {
   count: number
   cls: string
   dot: string
+  /** Deep-link into the filtered Checkmk allservices view (hosts only). */
+  url: string | null
 }
 
 const servicePills = computed((): ServicePill[] => {
@@ -497,48 +539,37 @@ const servicePills = computed((): ServicePill[] => {
   // Severity-descending: a CRIT pill catches the eye before "all green",
   // matching the operator's "what's broken?" mental model. OK is still
   // shown last as confirmation.
-  const pills: ServicePill[] = []
-  if (summary.critical) {
-    pills.push({
-      label: 'CRIT',
-      count: summary.critical,
-      cls: 'orb-hover__pill--crit',
-      dot: 'orb-hover__pill-dot--crit'
-    })
-  }
-  if (summary.unknown) {
-    pills.push({
-      label: 'UNKN',
-      count: summary.unknown,
-      cls: 'orb-hover__pill--unknown',
-      dot: 'orb-hover__pill-dot--unknown'
-    })
-  }
-  if (summary.warning) {
-    pills.push({
-      label: 'WARN',
-      count: summary.warning,
-      cls: 'orb-hover__pill--warn',
-      dot: 'orb-hover__pill-dot--warn'
-    })
-  }
-  if (summary.pending) {
-    pills.push({
-      label: 'PEND',
-      count: summary.pending,
-      cls: 'orb-hover__pill--pending',
-      dot: 'orb-hover__pill-dot--pending'
-    })
-  }
-  if (summary.ok) {
-    pills.push({
-      label: 'OK',
-      count: summary.ok,
-      cls: 'orb-hover__pill--ok',
-      dot: 'orb-hover__pill-dot--ok'
-    })
-  }
-  return pills
+  // Pills deep-link only for plain hosts: group pills count MEMBER states
+  // (hosts/services of the group), so a per-host svcstate URL would lie.
+  const linkable = props.object.type === 'host'
+  const url = (state: string | null): string | null =>
+    linkable && state
+      ? buildServiceStateViewUrl(props.checkmkUrl ?? null, { host: props.object.host_name }, state)
+      : null
+  // Severity-descending: a CRIT pill catches the eye before "all green";
+  // OK stays last as confirmation. PENDING carries no URL — the Checkmk
+  // svcstate filter has no checkbox for it.
+  const defs: Array<{
+    key: keyof typeof summary
+    label: ServicePill['label']
+    tone: string
+    state: string | null
+  }> = [
+    { key: 'critical', label: 'CRIT', tone: 'crit', state: 'CRITICAL' },
+    { key: 'unknown', label: 'UNKN', tone: 'unknown', state: 'UNKNOWN' },
+    { key: 'warning', label: 'WARN', tone: 'warn', state: 'WARNING' },
+    { key: 'pending', label: 'PEND', tone: 'pending', state: null },
+    { key: 'ok', label: 'OK', tone: 'ok', state: 'OK' }
+  ]
+  return defs
+    .filter((d) => (summary[d.key] ?? 0) > 0)
+    .map((d) => ({
+      label: d.label,
+      count: summary[d.key] ?? 0,
+      cls: `orb-hover__pill--${d.tone}`,
+      dot: `orb-hover__pill-dot--${d.tone}`,
+      url: url(d.state)
+    }))
 })
 
 const perfMetrics = computed((): PerfMetric[] => {
@@ -564,7 +595,21 @@ function fmtMetricValue(m: PerfMetric): string {
   pointer-events: none;
 }
 
+a.orb-hover__pill {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+a.orb-hover__pill:hover {
+  filter: brightness(1.25);
+  text-decoration: underline;
+}
+
+/* The card is interactive (tooltip stays while the pointer is on it; the
+   pills are links). It can overlap neighbouring objects — leaving it
+   re-schedules the close so anything underneath becomes hoverable again. */
 .orb-hover__card {
+  pointer-events: auto;
   min-width: 208px;
   max-width: 288px;
   padding: 14px;

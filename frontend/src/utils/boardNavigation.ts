@@ -113,3 +113,53 @@ export function openUrl(url: string, target: string): void {
   a.click()
   document.body.removeChild(a)
 }
+
+// Checkmk's filter machinery takes a single "svc_state" / "host_state" filter
+// whose individual st*/hst* checkboxes are interpreted as a bitmask. A box
+// only counts as ON when its parameter is present and equals "on" — sending
+// "off" or omitting it both mean "exclude this state". The whole filter is
+// only honored when "_active" lists svcstate/hoststate alongside the host /
+// site filter; without it the Setup-defined view defaults win.
+export function svcStateOn(state: string): string {
+  if (state === 'CRITICAL') return 'st2'
+  if (state === 'WARNING') return 'st1'
+  if (state === 'UNKNOWN') return 'st3'
+  return 'st0' // OK
+}
+
+export function hostStateOn(state: string): string {
+  if (state === 'DOWN') return 'hst1'
+  if (state === 'UNREACHABLE') return 'hst2'
+  return 'hst0' // UP
+}
+
+/**
+ * Checkmk view listing a host's (or site's) services filtered to one state —
+ * the target of the clickable state pills/chips in HoverMenu and DetailDrawer.
+ * Returns null outside a Checkmk deployment or for unfilterable states (the
+ * svcstate filter has no PENDING checkbox).
+ */
+export function buildServiceStateViewUrl(
+  checkmkUrl: string | null,
+  target: { host?: string | null | undefined; site?: string | null | undefined },
+  state: string
+): string | null {
+  if (!checkmkUrl) return null
+  if (!['OK', 'WARNING', 'CRITICAL', 'UNKNOWN'].includes(state)) return null
+  const base = checkmkUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
+  const params: Record<string, string> = {
+    view_name: 'allservices',
+    filled_in: 'filter',
+    _active: 'svcstate;host',
+    [svcStateOn(state)]: 'on'
+  }
+  if (target.site) {
+    params.site = target.site
+    params._active = 'svcstate;site'
+  } else if (target.host) {
+    params.host = target.host
+  } else {
+    return null
+  }
+  return `${base}/check_mk/view.py?${new URLSearchParams(params)}`
+}

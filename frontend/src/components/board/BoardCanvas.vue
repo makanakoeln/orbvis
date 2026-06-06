@@ -64,7 +64,7 @@
           @context-menu="(evt) => onObjectContextMenu(evt, line)"
           @line-click="onLineClick(line)"
           @hover="openHoverMenu($event, line)"
-          @hover-leave="closeHoverMenu()"
+          @hover-leave="hoverGrace.scheduleClose()"
         />
       </g>
     </svg>
@@ -97,12 +97,12 @@
         :connection-id="config.connection_id"
         :render-mode="config.render_mode ?? 'default'"
         @hover="!editMode && openHoverMenu($event, obj)"
-        @hover-leave="!editMode && closeHoverMenu()"
+        @hover-leave="!editMode && hoverGrace.scheduleClose()"
         @graph-resize-start="onGraphResizeStart($event, obj)"
         @subtree-enter="
           (subObj, subState, evt) => !editMode && openSubtreeHover(evt, subObj, subState)
         "
-        @subtree-leave="!editMode && closeHoverMenu()"
+        @subtree-leave="!editMode && hoverGrace.scheduleClose()"
       />
     </div>
 
@@ -121,6 +121,7 @@
       :y="hoverMenu.y"
       :anchor-rect="hoverMenu.anchorRect"
       :connection-id="props.config.connection_id"
+      :checkmk-url="checkmkUrl ?? null"
       :template="
         resolveTemplate(
           hoverMenu.object.hover_template,
@@ -128,6 +129,8 @@
           settingsStore.settings.hover_template
         )
       "
+      @card-enter="hoverGrace.cancelClose()"
+      @card-leave="hoverGrace.scheduleClose()"
     />
 
     <!-- Context menu -->
@@ -199,6 +202,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue'
 
+import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useObjectActions } from '@/composables/useObjectActions'
 import { useBoardsStore } from '@/stores/boards'
 import { useSettingsStore } from '@/stores/settings'
@@ -873,8 +877,16 @@ function lineDragProps(id: string): { dragCoords?: (typeof props.lineDragPositio
   return dragCoords !== undefined ? { dragCoords } : {}
 }
 
+// Close-grace so the operator can move onto the card and click a state pill
+// (HoverMenu @card-enter cancels, @card-leave closes). Programmatic closes
+// (context menu, edit mode) go through closeMenus() and stay immediate.
+const hoverGrace = useHoverGrace(() => {
+  hoverMenu.visible = false
+})
+
 function openHoverMenu(event: MouseEvent, obj: BoardObjectType) {
   if (props.preview) return
+  hoverGrace.cancelClose()
   hoverMenu.object = obj
   hoverMenu.stateOverride = null
   hoverMenu.x = event.pageX + 12
@@ -888,6 +900,7 @@ function openHoverMenu(event: MouseEvent, obj: BoardObjectType) {
 }
 
 function openSubtreeHover(event: MouseEvent, obj: BoardObjectType, state: ObjectState) {
+  hoverGrace.cancelClose()
   hoverMenu.object = obj
   hoverMenu.stateOverride = state
   hoverMenu.x = event.pageX + 12
@@ -910,10 +923,6 @@ function findIconWrapperRect(
     el = el.parentElement
   }
   return null
-}
-
-function closeHoverMenu() {
-  hoverMenu.visible = false
 }
 
 function openContextMenu(event: MouseEvent, obj: BoardObjectType) {
@@ -966,6 +975,7 @@ const onContextMenuToggleNotifications = (enable: boolean) =>
 const onContextMenuForceCheck = () => objectActions.handlers.forceCheck(contextMenu.object)
 
 function closeMenus() {
+  hoverGrace.cancelClose()
   hoverMenu.visible = false
   contextMenu.visible = false
 }
