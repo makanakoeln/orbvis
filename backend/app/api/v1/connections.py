@@ -6,6 +6,8 @@ import asyncio
 import logging
 import re
 import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Literal
 
@@ -51,6 +53,24 @@ from app.services.state_service import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+@asynccontextmanager
+async def _auth_scope(connection: ConnectionBase, user: User) -> AsyncIterator[None]:
+    """Scope livestatus queries inside the block to the user's contact visibility.
+
+    ``resolve_auth_user`` returns ``None`` for admins / users with
+    ``general.see_all`` — those run UNSCOPED. Livestatus ``AuthUser`` only
+    knows contacts, and cmkadmin typically is no contact, so passing the raw
+    username would silently filter every query down to zero rows.
+    """
+    auth_user = resolve_auth_user(user.name, user.is_admin)
+    with_auth = getattr(connection, "with_auth_user", None)
+    if auth_user is not None and with_auth is not None:
+        async with with_auth(auth_user):
+            yield
+    else:
+        yield
 
 
 class TestResult(BaseModel):
@@ -804,16 +824,7 @@ async def list_group_members(
     connection = get_connection(connection_id)
     if connection is None:
         return []
-    # ``resolve_auth_user`` returns ``None`` for admins / users with see_all,
-    # which is what every other state-fetch path uses. Passing ``user.name``
-    # unconditionally caused the AuthUser filter to drop hosts where cmkadmin
-    # isn't an explicit contact — admins must see the whole group.
-    auth_user = resolve_auth_user(user.name, user.is_admin)
-    with_auth = getattr(connection, "with_auth_user", None)
-    if auth_user is not None and with_auth is not None:
-        async with with_auth(auth_user):
-            rows = await connection.get_group_member_states(group_type, group_name)
-    else:
+    async with _auth_scope(connection, user):
         rows = await connection.get_group_member_states(group_type, group_name)
     return [GroupMember.model_validate(dict(r)) for r in rows]
 
@@ -841,14 +852,7 @@ async def list_dyngroup_members(
     connection = get_connection(connection_id)
     if connection is None:
         return []
-    auth_user = resolve_auth_user(user.name, user.is_admin)
-    with_auth = getattr(connection, "with_auth_user", None)
-    if auth_user is not None and with_auth is not None:
-        async with with_auth(auth_user):
-            rows = await connection.get_dyngroup_member_states(
-                body.object_types, body.object_filter
-            )
-    else:
+    async with _auth_scope(connection, user):
         rows = await connection.get_dyngroup_member_states(body.object_types, body.object_filter)
     return [GroupMember.model_validate(dict(r)) for r in rows]
 
@@ -863,12 +867,11 @@ async def list_backend_aggregations(
     if connection is None:
         return []
     try:
-        # Use the user's auth context so cmk.bi filters by their permissions.
-        with_auth = getattr(connection, "with_auth_user", None)
-        if with_auth is not None:
-            async with with_auth(user.name):
-                return await connection.list_aggregations()
-        return await connection.list_aggregations()
+        # _auth_scope, not raw user.name: a raw name would scope every BI
+        # query to zero hosts for non-contact admins (empty branch compile,
+        # "no aggregations" for the people most likely to configure boards).
+        async with _auth_scope(connection, user):
+            return await connection.list_aggregations()
     except Exception as exc:
         logger.warning("list_aggregations failed for connection %s: %s", connection_id, exc)
         return []
@@ -913,11 +916,7 @@ async def get_backend_aggregation_tree(
     if connection is None:
         return AggregationTreeResult(tree=None, connection_ok=False)
     try:
-        with_auth = getattr(connection, "with_auth_user", None)
-        if with_auth is not None:
-            async with with_auth(user.name):
-                tree = await connection.get_aggregation_tree(aggregation_id, depth)
-        else:
+        async with _auth_scope(connection, user):
             tree = await connection.get_aggregation_tree(aggregation_id, depth)
         # Probe connection health independently — a tree of None on a
         # healthy connection is a legitimate "0 leaves" / "aggregation

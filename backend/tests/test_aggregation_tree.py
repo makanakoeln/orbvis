@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
 
 import pytest
@@ -163,3 +164,95 @@ async def test_state_service_dedupes_tree_fetches(mock_connection, monkeypatch):
     await state_service.get_board_states(cfg, auth_user=None)
     # Two distinct (id, depth) pairs even though "A" appears twice.
     assert mock_connection.get_aggregation_tree.await_count == 2
+
+
+class _FakeBiConnection:
+    """Records the AuthUser the aggregation endpoints scope with (or don't)."""
+
+    def __init__(self) -> None:
+        self.auth_users: list[str] = []
+
+    @asynccontextmanager
+    async def with_auth_user(self, username: str):
+        self.auth_users.append(username)
+        yield
+
+    async def list_aggregations(self):
+        return []
+
+    async def get_aggregation_tree(self, aggregation_id: str, depth: int):
+        return None
+
+    async def is_available(self) -> bool:
+        return True
+
+
+def _cmk_mode(monkeypatch, *, see_all: bool):
+    monkeypatch.setattr("app.api.v1.deps.settings.checkmk_omd_root", "/omd/sites/test")
+    monkeypatch.setattr(
+        "app.api.v1.deps.cmk_integration.check_checkmk_permission",
+        lambda username, perm: see_all,
+    )
+
+
+@pytest.mark.asyncio
+async def test_aggregations_endpoint_unscoped_for_admin(client, admin_token, monkeypatch):
+    """Admins are usually no livestatus contacts — a raw AuthUser would scope
+    every BI query to zero hosts AND poison the site-global structure cache.
+    resolve_auth_user must keep them unscoped (regression: with_auth(user.name))."""
+    _cmk_mode(monkeypatch, see_all=False)
+    fake = _FakeBiConnection()
+    monkeypatch.setattr("app.api.v1.connections.get_connection", lambda cid: fake)
+
+    resp = await client.get(
+        "/api/v1/connections/x/aggregations",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200
+    assert fake.auth_users == []
+
+    resp = await client.get(
+        "/api/v1/connections/x/aggregations/some-aggr/tree",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200
+    assert fake.auth_users == []
+
+
+@pytest.mark.asyncio
+async def test_aggregations_endpoint_scoped_for_regular_user(
+    client, regular_token, regular_user, monkeypatch
+):
+    _cmk_mode(monkeypatch, see_all=False)
+    fake = _FakeBiConnection()
+    monkeypatch.setattr("app.api.v1.connections.get_connection", lambda cid: fake)
+
+    resp = await client.get(
+        "/api/v1/connections/x/aggregations",
+        headers={"Authorization": f"Bearer {regular_token}"},
+    )
+    assert resp.status_code == 200
+    assert fake.auth_users == ["regular"]
+
+    resp = await client.get(
+        "/api/v1/connections/x/aggregations/some-aggr/tree",
+        headers={"Authorization": f"Bearer {regular_token}"},
+    )
+    assert resp.status_code == 200
+    assert fake.auth_users == ["regular", "regular"]
+
+
+@pytest.mark.asyncio
+async def test_aggregations_endpoint_unscoped_for_see_all_user(
+    client, regular_token, regular_user, monkeypatch
+):
+    _cmk_mode(monkeypatch, see_all=True)
+    fake = _FakeBiConnection()
+    monkeypatch.setattr("app.api.v1.connections.get_connection", lambda cid: fake)
+
+    resp = await client.get(
+        "/api/v1/connections/x/aggregations",
+        headers={"Authorization": f"Bearer {regular_token}"},
+    )
+    assert resp.status_code == 200
+    assert fake.auth_users == []

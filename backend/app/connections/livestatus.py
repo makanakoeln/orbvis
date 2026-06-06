@@ -1947,7 +1947,7 @@ class LivestatusConnection(ConnectionBase):
         ``_query_raw``. ``AuthUser:`` is injected automatically via the
         ``_auth_user_ctx`` ContextVar set by ``with_auth_user(...)``.
 
-        Two pieces of compatibility shimming:
+        Three pieces of compatibility shimming:
         - cmk.bi hardcodes ``Cache: reload`` in compiler.py + data_fetcher.py.
           Some Livestatus connections reject the header with HTTP 400 ("undefined
           request header") — strip it; it's only a perf hint, not correctness.
@@ -1955,30 +1955,40 @@ class LivestatusConnection(ConnectionBase):
           which prepends the site_id column to each row. cmk.bi consumers
           (compiler:309, data_fetcher:363/424) read ``row[0]`` as site_id and
           ``row[1]+`` as actual data — we replicate that here.
+        - ``fetch_full_data`` marks BIStructureFetcher queries. cmk.gui runs
+          those in the ``bi_fetch_full_data`` auth domain, which NEVER carries
+          an AuthUser (sites.py only sets auth users for read/action/bi/ec) —
+          the compiled host/service structure is site-global and persisted to
+          ``tmp/check_mk/bi_cache``, which the Checkmk GUI shares. Letting a
+          contact-scoped AuthUser leak in would persist a partial (or, for
+          non-contact admins, empty) structure for EVERY consumer until the
+          next core restart. Suppress the auth context for these queries.
         """
         from cmk.livestatus_client import LivestatusResponse
 
-        del fetch_full_data  # bi_fetch_full_data isn't needed
-
         lql = "\n".join(line for line in str(query).splitlines() if not line.startswith("Cache:"))
 
-        if self._sites:
-            sites_filter: list[str] | None = None
-            if isinstance(only_sites, list):
-                sites_filter = [str(s) for s in only_sites if s]
-            return LivestatusResponse(self._run_multisite_sync(lql, only_sites=sites_filter))
+        auth_token = _auth_user_ctx.set(None) if fetch_full_data else None
+        try:
+            if self._sites:
+                sites_filter: list[str] | None = None
+                if isinstance(only_sites, list):
+                    sites_filter = [str(s) for s in only_sites if s]
+                return LivestatusResponse(self._run_multisite_sync(lql, only_sites=sites_filter))
 
-        del only_sites
-        if self._use_cmk_client:
-            # Already inside a worker thread — call the sync client directly,
-            # no event-loop detour needed.
-            rows = self._run_singlesite_sync(lql)
-        else:
-            loop = asyncio.new_event_loop()
-            try:
-                rows = loop.run_until_complete(self._query_raw(lql))
-            finally:
-                loop.close()
+            if self._use_cmk_client:
+                # Already inside a worker thread — call the sync client directly,
+                # no event-loop detour needed.
+                rows = self._run_singlesite_sync(lql)
+            else:
+                loop = asyncio.new_event_loop()
+                try:
+                    rows = loop.run_until_complete(self._query_raw(lql))
+                finally:
+                    loop.close()
+        finally:
+            if auth_token is not None:
+                _auth_user_ctx.reset(auth_token)
         site_id = _default_site_id()
         return LivestatusResponse([[site_id, *row] for row in rows])
 

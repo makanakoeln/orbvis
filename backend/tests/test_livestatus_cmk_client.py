@@ -80,6 +80,7 @@ def fake_cmk_client(monkeypatch):
     client_mod.SingleSiteConnection = _FakeSingleSiteConnection  # type: ignore[attr-defined]
     client_mod.Query = _FakeQuery  # type: ignore[attr-defined]
     client_mod.QuerySpecification = _FakeQuerySpecification  # type: ignore[attr-defined]
+    client_mod.LivestatusResponse = list  # type: ignore[attr-defined]
     cmk_pkg.livestatus_client = client_mod  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "cmk", cmk_pkg)
     monkeypatch.setitem(sys.modules, "cmk.livestatus_client", client_mod)
@@ -146,6 +147,34 @@ async def test_query_passes_auth_user_header(fake_cmk_client):
         await conn._query_with_site("GET hosts\n")
     _lql, headers = _FakeSingleSiteConnection.instances[-1].queries[0]
     assert headers == "AuthUser: ops\n"
+
+
+@pytest.mark.asyncio
+async def test_bi_structure_query_runs_unscoped(fake_cmk_client):
+    """fetch_full_data marks BIStructureFetcher queries — they must NEVER carry
+    AuthUser. The compiled structure is site-global (shared with the CMK GUI
+    via tmp/check_mk/bi_cache); a contact-scoped fetch would persist a partial
+    or empty host structure for every consumer until the next core restart."""
+    conn = LivestatusConnection(socket_path="/dev/null")
+    conn._use_cmk_client = True
+    async with conn.with_auth_user("ops"):
+        conn._bi_query_sync("GET hosts\nColumns: name\n", fetch_full_data=True)
+        # ContextVar must be restored afterwards for regular queries.
+        conn._bi_query_sync("GET hosts\nColumns: name\n", fetch_full_data=False)
+    structure_headers = _FakeSingleSiteConnection.instances[-2].queries[0][1]
+    status_headers = _FakeSingleSiteConnection.instances[-1].queries[0][1]
+    assert structure_headers == ""
+    assert status_headers == "AuthUser: ops\n"
+
+
+@pytest.mark.asyncio
+async def test_bi_query_prepends_site_id(fake_cmk_client):
+    """cmk.bi consumers read row[0] as site_id (prepend_site replication)."""
+    conn = LivestatusConnection(socket_path="/dev/null")
+    conn._use_cmk_client = True
+    rows = conn._bi_query_sync("GET hosts\nColumns: name state\n")
+    assert all(row[0] for row in rows)
+    assert [row[1:] for row in rows] == [["h1", 0], ["h2", 1]]
 
 
 @pytest.mark.asyncio
