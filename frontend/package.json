@@ -30,7 +30,7 @@
     "e2e:install": "playwright install --with-deps chromium",
     "e2e:ui": "playwright test --ui",
     "i18n:extract": "vue-gettext-extract",
-    "i18n:compile": "vue-gettext-compile"
+    "i18n:compile": "vue-gettext-compile > /dev/null && node scripts/sort-locale-json.js"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.21",
