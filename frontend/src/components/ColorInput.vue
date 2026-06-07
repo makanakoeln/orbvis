@@ -1,7 +1,7 @@
 <template>
   <div ref="rootEl" class="orb-color-input">
     <label v-if="enableLabel !== undefined" class="orb-color-input__toggle">
-      <CmkSwitch :data="enabled" @update:data="setEnabled" />
+      <CmkSwitch :model-value="enabled" @update:model-value="setEnabled" />
       <span>{{ enableLabel }}</span>
     </label>
     <div class="orb-color-input__swatch" :class="{ 'orb-color-input__swatch--disabled': !enabled }">

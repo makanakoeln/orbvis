@@ -22,10 +22,12 @@ const value = defineModel<boolean>('data', { required: true })
 </script>
 
 <template>
-  <label class="form-boolean-choice">
-    <CmkSwitch v-model:data="value" />
-    <span v-if="spec.label" class="form-boolean-choice__label">{{ spec.label }}</span>
-  </label>
+  <span class="form-boolean-choice">
+    <CmkSwitch v-model="value" />
+    <span v-if="spec.label" class="form-boolean-choice__label" @click="value = !value">{{
+      spec.label
+    }}</span>
+  </span>
 </template>
 
 <style scoped>
@@ -33,11 +35,11 @@ const value = defineModel<boolean>('data', { required: true })
   display: inline-flex;
   align-items: center;
   gap: var(--dimension-3, 8px);
-  cursor: pointer;
 }
 
 .form-boolean-choice__label {
   color: var(--text);
   font-size: var(--font-size-normal);
+  cursor: pointer;
 }
 </style>

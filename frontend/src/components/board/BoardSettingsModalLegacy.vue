@@ -64,7 +64,10 @@
                   <CmkLabel :help="_t('Cycle through visible boards on a fixed interval')">{{
                     _t('Auto-rotate boards')
                   }}</CmkLabel>
-                  <CmkSwitch :data="rotationEnabled" @update:data="onToggleRotation" />
+                  <CmkSwitch
+                    :model-value="rotationEnabled"
+                    @update:model-value="onToggleRotation"
+                  />
                 </div>
                 <div v-if="rotationEnabled" class="board-settings__detail">
                   <NumberInput
@@ -409,22 +412,30 @@
                   <FtSitesSelect v-model="ftSites" :options="siteOptions" />
                 </div>
                 <div class="board-settings__toggle-list">
-                  <label class="board-settings__toggle">
-                    <CmkSwitch v-model:data="form.ft_show_empty_folders" />
-                    <span class="board-settings__toggle-label">{{ _t('Show empty folders') }}</span>
-                  </label>
-                  <label class="board-settings__toggle">
-                    <CmkSwitch v-model:data="form.ft_show_services" />
-                    <span class="board-settings__toggle-label">{{
-                      _t('Expand hosts to their services')
-                    }}</span>
-                  </label>
-                  <label class="board-settings__toggle">
-                    <CmkSwitch v-model:data="form.ft_problems_only" />
-                    <span class="board-settings__toggle-label">{{
-                      _t('Show only folders/hosts with problems')
-                    }}</span>
-                  </label>
+                  <div class="board-settings__toggle">
+                    <CmkSwitch v-model="form.ft_show_empty_folders" />
+                    <span
+                      class="board-settings__toggle-label"
+                      @click="form.ft_show_empty_folders = !form.ft_show_empty_folders"
+                      >{{ _t('Show empty folders') }}</span
+                    >
+                  </div>
+                  <div class="board-settings__toggle">
+                    <CmkSwitch v-model="form.ft_show_services" />
+                    <span
+                      class="board-settings__toggle-label"
+                      @click="form.ft_show_services = !form.ft_show_services"
+                      >{{ _t('Expand hosts to their services') }}</span
+                    >
+                  </div>
+                  <div class="board-settings__toggle">
+                    <CmkSwitch v-model="form.ft_problems_only" />
+                    <span
+                      class="board-settings__toggle-label"
+                      @click="form.ft_problems_only = !form.ft_problems_only"
+                      >{{ _t('Show only folders/hosts with problems') }}</span
+                    >
+                  </div>
                   <div v-if="form.ft_problems_only" class="board-settings__field">
                     <CmkLabel
                       :help="
@@ -444,12 +455,14 @@
                       "
                     />
                   </div>
-                  <label class="board-settings__toggle">
-                    <CmkSwitch v-model:data="form.ft_only_hard_states" />
-                    <span class="board-settings__toggle-label">{{
-                      _t('Use hard states only')
-                    }}</span>
-                  </label>
+                  <div class="board-settings__toggle">
+                    <CmkSwitch v-model="form.ft_only_hard_states" />
+                    <span
+                      class="board-settings__toggle-label"
+                      @click="form.ft_only_hard_states = !form.ft_only_hard_states"
+                      >{{ _t('Use hard states only') }}</span
+                    >
+                  </div>
                 </div>
               </template>
 
@@ -539,7 +552,7 @@
                 <CmkLabel :help="_t('When disabled, this board is hidden from regular users')">{{
                   _t('Show in board list')
                 }}</CmkLabel>
-                <CmkSwitch v-model:data="form.show_in_lists" />
+                <CmkSwitch v-model="form.show_in_lists" />
               </div>
 
               <!-- Background (static only) -->

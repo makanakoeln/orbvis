@@ -3,12 +3,12 @@ OrbVis-native CmkSwitch, swapped in for the vendored variant when
 VITE_BUILD_TARGET=standalone (see vite.config.ts STANDALONE_OVERRIDES).
 -->
 <script setup lang="ts">
-const data = defineModel('data', { type: Boolean, default: false })
+const modelValue = defineModel({ type: Boolean, default: false })
 </script>
 
 <template>
   <label class="orb-switch">
-    <input v-model="data" type="checkbox" />
+    <input v-model="modelValue" type="checkbox" />
     <span class="orb-switch__slider"></span>
   </label>
 </template>

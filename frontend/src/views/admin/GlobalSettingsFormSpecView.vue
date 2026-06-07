@@ -42,7 +42,7 @@
           </button>
         </nav>
 
-        <div class="settings-page__detail" :data-active="activeGroup">
+        <div ref="detailEl" class="settings-page__detail" :data-active="activeGroup">
           <FormEdit v-model:data="data" :spec="schema" :backend-validation="validation" />
         </div>
       </div>
@@ -93,6 +93,7 @@ import CmkHeading from '@/components/cmk/typography/CmkHeading'
 import CmkParagraph from '@/components/cmk/typography/CmkParagraph'
 
 import { ApiError, settingsApi } from '@/api/client'
+import { useDictionaryGroupAttrs } from '@/composables/useDictionaryGroupAttrs'
 import { useFormSpecSchema } from '@/composables/useFormSpecSchema'
 import { useSaveBarState } from '@/composables/useSaveBarState'
 import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
@@ -146,6 +147,8 @@ const data = ref<unknown>({})
 const initialData = ref<unknown>({})
 const validation = ref<Validation>([])
 const activeGroup = ref<string>('')
+const detailEl = ref<HTMLElement | null>(null)
+useDictionaryGroupAttrs(detailEl, () => (schema.value as DictionarySchema | null)?.elements)
 
 let savedOkTimer: ReturnType<typeof setTimeout> | null = null
 let saveErrorTimer: ReturnType<typeof setTimeout> | null = null
@@ -704,6 +707,12 @@ onUnmounted(() => {
   ) {
   border-top: 1px solid rgb(255 255 255 / 12%);
   padding-top: var(--dimension-6);
+}
+
+.settings-page__detail[data-active='object_defaults']
+  :deep(tr[data-group='object_appearance'] > td.form-dictionary__dictleft) {
+  border-top: 0 !important;
+  padding-top: 0 !important;
 }
 
 .settings-page__detail[data-active='object_defaults']

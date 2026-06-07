@@ -24,7 +24,7 @@
 
           <div class="board-settings__scroll">
             <!-- General -->
-            <div v-if="activeTab === 'general'" class="board-settings__form">
+            <div v-if="activeTab === 'general'" ref="generalFormEl" class="board-settings__form">
               <!-- Generic metadata (Identification, Display, Behavior,
                          Templates) renders first so the operator can name and
                          wire up the board before tuning type-specific
@@ -322,22 +322,30 @@
                   <FtSitesSelect v-model="ftSites" :options="siteOptions" />
                 </div>
                 <div class="board-settings__toggle-list">
-                  <label class="board-settings__toggle">
-                    <CmkSwitch v-model:data="form.ft_show_empty_folders" />
-                    <span class="board-settings__toggle-label">{{ _t('Show empty folders') }}</span>
-                  </label>
-                  <label class="board-settings__toggle">
-                    <CmkSwitch v-model:data="form.ft_show_services" />
-                    <span class="board-settings__toggle-label">{{
-                      _t('Expand hosts to their services')
-                    }}</span>
-                  </label>
-                  <label class="board-settings__toggle">
-                    <CmkSwitch v-model:data="form.ft_problems_only" />
-                    <span class="board-settings__toggle-label">{{
-                      _t('Show only folders/hosts with problems')
-                    }}</span>
-                  </label>
+                  <div class="board-settings__toggle">
+                    <CmkSwitch v-model="form.ft_show_empty_folders" />
+                    <span
+                      class="board-settings__toggle-label"
+                      @click="form.ft_show_empty_folders = !form.ft_show_empty_folders"
+                      >{{ _t('Show empty folders') }}</span
+                    >
+                  </div>
+                  <div class="board-settings__toggle">
+                    <CmkSwitch v-model="form.ft_show_services" />
+                    <span
+                      class="board-settings__toggle-label"
+                      @click="form.ft_show_services = !form.ft_show_services"
+                      >{{ _t('Expand hosts to their services') }}</span
+                    >
+                  </div>
+                  <div class="board-settings__toggle">
+                    <CmkSwitch v-model="form.ft_problems_only" />
+                    <span
+                      class="board-settings__toggle-label"
+                      @click="form.ft_problems_only = !form.ft_problems_only"
+                      >{{ _t('Show only folders/hosts with problems') }}</span
+                    >
+                  </div>
                   <div v-if="form.ft_problems_only" class="board-settings__field">
                     <CmkLabel
                       :help="
@@ -357,12 +365,14 @@
                       "
                     />
                   </div>
-                  <label class="board-settings__toggle">
-                    <CmkSwitch v-model:data="form.ft_only_hard_states" />
-                    <span class="board-settings__toggle-label">{{
-                      _t('Use hard states only')
-                    }}</span>
-                  </label>
+                  <div class="board-settings__toggle">
+                    <CmkSwitch v-model="form.ft_only_hard_states" />
+                    <span
+                      class="board-settings__toggle-label"
+                      @click="form.ft_only_hard_states = !form.ft_only_hard_states"
+                      >{{ _t('Use hard states only') }}</span
+                    >
+                  </div>
                 </div>
               </div>
 
@@ -583,6 +593,7 @@ import CmkInput from '@/components/cmk/user-input/CmkInput'
 
 import { ApiError, boardsApi, boardsApiFormSpec, connectionsApi, rolesApi } from '@/api/client'
 import { orbFormComponents } from '@/composables/orbFormComponents'
+import { useDictionaryGroupAttrs } from '@/composables/useDictionaryGroupAttrs'
 import { useRadarGroups } from '@/composables/useRadarGroups'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
@@ -751,6 +762,11 @@ type Schema = NonNullable<VueFormspecComponents['components']>
 initializeComponentRegistry(orbFormComponents)
 const formSchema = ref<Schema | null>(null)
 const schemaLoading = ref(true)
+const generalFormEl = ref<HTMLElement | null>(null)
+useDictionaryGroupAttrs(
+  generalFormEl,
+  () => (formSchema.value as { elements?: { group?: { key?: string | null } | null }[] })?.elements
+)
 // Optional fields are omitted entirely when the board has no value, so the
 // FormSpec dispatcher renders them as un-checked (= inherit global defaults);
 // '' / null would leave the checkbox enabled with an empty value, which reads
@@ -1766,6 +1782,7 @@ onBeforeUnmount(() => {
 
 .board-settings__toggle-label {
   font-size: var(--font-size-large);
+  cursor: pointer;
 }
 
 .board-settings__errors {

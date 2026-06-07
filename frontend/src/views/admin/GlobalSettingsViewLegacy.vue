@@ -185,9 +185,7 @@
           </CmkCollapsible>
         </section>
 
-        <!-- Label defaults — Show-label is a master toggle in the card header.
-                 Header uses a div+role=button instead of a native <button> so we can
-                 nest the CmkSwitch <label> (invalid HTML inside <button>). -->
+        <!-- div+role=button: the interactive CmkSwitch may not nest in a native <button> -->
         <section class="orb-gset__card">
           <div
             class="orb-gset__card-toggle orb-gset__card-toggle--clickable"
@@ -201,10 +199,10 @@
               {{ _t('Label defaults') }}
             </h3>
             <div class="orb-gset__card-actions" @click.stop>
-              <label class="orb-gset__switch-label">
-                <CmkSwitch v-model:data="form.label_show" />
-                <span>{{ _t('Show label') }}</span>
-              </label>
+              <span class="orb-gset__switch-label">
+                <CmkSwitch v-model="form.label_show" />
+                <span @click="form.label_show = !form.label_show">{{ _t('Show label') }}</span>
+              </span>
               <svg
                 class="orb-gset__chevron orb-gset__chevron--pointer"
                 :class="{ 'orb-gset__chevron--open': sectionOpen.labelDefaults }"
