@@ -2,7 +2,7 @@
   "name": "demo-flowmap",
   "alias": "Flow Board (Demo)",
   "readonly": true,
-  "backend_id": "test",
+  "connection_id": "test",
   "icon_size": 30,
   "rotation_interval": 0,
   "hover_template": null,
