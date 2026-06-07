@@ -9,7 +9,14 @@
  */
 import type { IconNames } from 'cmk-shared-typing/typescript/icon'
 
+import copiedIconUrl from './icon_copied.svg'
 import { iconSizes, themedIcons, unthemedIcons } from './icons.constants'
+
+// Icons that older Checkmk themes don't ship (icon_copied.svg only exists
+// from 2.5 on) are bundled so they render on every supported version.
+const bundledIcons: Partial<Record<IconNames, string>> = {
+  copied: copiedIconUrl
+}
 
 type IconSizeNames = keyof typeof iconSizes
 type SimpleIcons = IconNames
@@ -38,6 +45,11 @@ function checkmkBase(): string {
 }
 
 export function getIconPath(name: SimpleIcons, theme: string): string {
+  const bundled = bundledIcons[name]
+  if (bundled) {
+    return bundled
+  }
+
   const internalTheme = theme === 'facelift' ? 'light' : 'dark'
 
   const themedPath = themedIcons[internalTheme]?.[name]
