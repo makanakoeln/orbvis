@@ -177,7 +177,7 @@ async def _warmup_tick() -> None:
                 ranked = sorted(rows, key=topology_problem_rank, reverse=True)
                 sample = [r["name"] for r in ranked[:top_k]]
                 await connection.get_hosts_services_batch(sample)
-            logger.info(
+            logger.debug(
                 "warmup tick connection=%s hosts=%d elapsed=%.0fms",
                 connection_id,
                 len(rows),
