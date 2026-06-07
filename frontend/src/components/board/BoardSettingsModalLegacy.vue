@@ -1015,7 +1015,6 @@ async function save() {
   saving.value = true
   saveError.value = ''
   try {
-    // Always save any pending permission changes
     if (permDraft.size > 0) {
       await savePermissions()
     }

@@ -81,8 +81,6 @@ def _parse_perf_data(raw: str) -> dict[str, _RawMetric]:
 
 @dataclass
 class _PluginData:
-    # canonical_metric_name → (value, unit, warn, crit) after translation
-    # perfometers: list of (Perfometer | Bidirectional | Stacked)
     # Perfometer / Bidirectional / Stacked instances from cmk.graphing.v1 (untyped from mypy's view)
     perfometers: list[object] = field(default_factory=list)
     # check_plugin_name → {raw_metric_name → canonical_name}

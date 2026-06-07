@@ -958,7 +958,6 @@ async function save() {
   saveError.value = ''
   formBackendValidation.value = []
   try {
-    // Always save any pending permission changes
     if (permDraft.size > 0) {
       await savePermissions()
     }

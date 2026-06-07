@@ -346,7 +346,6 @@ function addDraftPerm() {
     permError.value = _t('Board name')
     return
   }
-  // Avoid duplicates in draft
   const exists = draftPerms.value.some((p) => p.mod === mod && p.act === act && p.obj === obj)
   if (exists) return
   draftPerms.value.push({ perm_id: draftCounter--, mod, act, obj })
@@ -368,7 +367,6 @@ async function savePermissions() {
   permSaveError.value = ''
   try {
     const roleId = editRole.value.role_id
-    // Remove permissions that were deleted in draft
     for (const permId of removedPermIds.value) {
       await rolesApi.removePermission(roleId, permId, auth.accessToken!)
     }
