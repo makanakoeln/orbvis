@@ -2160,14 +2160,16 @@ function onTourCreateBoard(): void {
   align-items: center;
 }
 
-.home-view-toggle :deep(.toggle_buttons_container) {
+.home-view-toggle :deep(.cmk-toggle-button-group__container) {
   margin-bottom: 0;
-  padding: 3px;
+  padding: 2px;
+  border-radius: 4px;
 }
 
-.home-view-toggle :deep(.toggle_option) {
+.home-view-toggle :deep(.cmk-toggle-button-group__toggle-option) {
   min-width: 60px;
   font-size: 12px;
   padding: 3px 10px;
+  border-radius: 3px;
 }
 </style>
