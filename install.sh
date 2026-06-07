@@ -308,7 +308,8 @@ EnvironmentFile=$ENV_FILE
 ExecStart=$VENV_DIR/bin/uvicorn app.main:app \\
     --host 127.0.0.1 \\
     --port $BACKEND_PORT \\
-    --log-level warning
+    --log-level warning \\
+    --timeout-graceful-shutdown 5
 Restart=on-failure
 RestartSec=5
 

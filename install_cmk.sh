@@ -562,6 +562,7 @@ case "\$1" in
     setsid nohup "\$VENV/bin/python3" -m uvicorn \$APP \\
       --host 127.0.0.1 --port "\$PORT" \\
       --log-level warning \\
+      --timeout-graceful-shutdown 5 \\
       </dev/null >> "\$LOGFILE" 2>&1 &
     PID=\$!
     echo \$PID > "\$PIDFILE"
@@ -586,6 +587,12 @@ case "\$1" in
           kill -0 "\$PID" 2>/dev/null || break
           sleep 0.5
         done
+        # A hung graceful shutdown must not leave the port occupied for the
+        # next start (omd restart would crash on EADDRINUSE).
+        if kill -0 "\$PID" 2>/dev/null; then
+          kill -9 "\$PID" 2>/dev/null || true
+          for _ in \$(seq 1 10); do kill -0 "\$PID" 2>/dev/null || break; sleep 0.2; done
+        fi
         echo " OK"
       fi
       rm -f "\$PIDFILE"
