@@ -49,6 +49,7 @@ Legend: ✅ done · 🟡 partial / different · ❌ not yet · ➕ new in OrbVis
 | Geo map (lat / lng) with Leaflet                | 🟡 [^2] | ✅     |
 | Force-directed topology (Flow board)            | ❌     | ➕     |
 | Severity grid (Radar board)                     | ❌     | ➕     |
+| Folder tree as treemap (Folder board)           | ❌     | ➕     |
 | Multi-select + bulk move                        | ❌     | ➕     |
 | Drag-drop reorder of boards on home screen      | ❌     | ➕     |
 | Inline edit panel (vs. modal-only edit)         | ❌     | ➕     |

@@ -8,7 +8,7 @@ the source of truth.
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  Browser  ──────────────────────────────────────────────────────│
-│  Vue 3 SPA · TypeScript · Pinia · Vite · Tailwind · D3 v7        │
+│  Vue 3 SPA · TypeScript · Pinia · Vite · D3 v7                   │
 └────────────┬──────────────────────────────────────┬──────────────┘
              │ REST + JWT (access + refresh)        │ Server-Sent Events
              │ /api/v1/…                            │ /api/v1/sse/boards/{name}
@@ -46,6 +46,8 @@ Board types:
 - **Flow** — D3 force-directed topology
 - **Radar** — severity grid
 - **Geo** — Leaflet world map with lat/lng objects and polylines
+- **Folder** — Checkmk SETUP folder tree as a treemap with worst-state
+  bubbling; scales to six-digit host counts via SSE delta updates
 
 Object types are unified across board types (host, service, hostgroup,
 servicegroup, board link, line, textbox, image, graph, BI). The same

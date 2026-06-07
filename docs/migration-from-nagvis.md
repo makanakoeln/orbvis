@@ -47,7 +47,7 @@ The `line_type` integer decomposes into three orthogonal OrbVis attributes:
 - **Backend connection definitions** — NagVis' `[backend_*]` sections are
   not converted. Configure backends in OrbVis via *Admin → Backends*
   (or `backends.json`).
-- **Custom CSS / templates** — OrbVis uses Vue + Tailwind, not PHP
+- **Custom CSS / templates** — OrbVis uses Vue components, not PHP
   templates. Visual customisation goes through board settings and the
   hover/context menu template fields.
 
