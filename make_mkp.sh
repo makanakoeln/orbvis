@@ -82,6 +82,10 @@ echo ""
 if [[ "$SKIP_FRONTEND" == "1" ]]; then
   [[ -d "$SCRIPT_DIR/frontend/dist" ]] \
     || die "--skip-frontend was set but frontend/dist/ is missing. Build it first."
+  REPO_VERSION="$(tr -d '[:space:]' < "$SCRIPT_DIR/VERSION" 2>/dev/null || echo unknown)"
+  if [[ "$VERSION" != "$REPO_VERSION" ]]; then
+    warn "frontend/dist reused, but packaging as $VERSION (repo VERSION is $REPO_VERSION) — the bundle's __APP_VERSION__ may not match"
+  fi
   ok "Frontend reused (skip requested)"
 else
   step "Building frontend (relative base path)"
@@ -103,7 +107,7 @@ else
     Install a newer Node (e.g. via nvm: 'nvm install 22 && nvm use 22')."
   cd "$SCRIPT_DIR/frontend"
   npm install --silent
-  VITE_BASE_PATH=./ npm run build -- --base='./' --logLevel=warn 2>&1 | awk '
+  ORBVIS_VERSION="$VERSION" VITE_BASE_PATH=./ npm run build -- --base='./' --logLevel=warn 2>&1 | awk '
     /didn.t resolve at build time, it will remain unchanged to be resolved at runtime/ { next }
     /^\[plugin builtin:vite-reporter\]/ { next }
     /^\(!\) Some chunks are larger than/ { next }

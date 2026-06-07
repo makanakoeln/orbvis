@@ -4,7 +4,10 @@ import path from 'node:path'
 import { URL, fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 
-const appVersion = readFileSync(new URL('../VERSION', import.meta.url), 'utf-8').trim()
+// ORBVIS_VERSION: make_mkp.sh --version must reach __APP_VERSION__ (changelog-modal gate)
+const appVersion = (
+  process.env.ORBVIS_VERSION ?? readFileSync(new URL('../VERSION', import.meta.url), 'utf-8')
+).trim()
 
 const CMK_VENDOR = fileURLToPath(new URL('./src/vendor/cmk', import.meta.url))
 const CMK_SRC = process.env.CMK_FRONTEND_VUE_SRC
