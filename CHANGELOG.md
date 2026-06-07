@@ -4,6 +4,53 @@ All notable changes to OrbVis are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-06-07
+
+Iterative release on top of 0.4.1. The Folder board graduates into a fast,
+treemap-first surface that scales to six-digit host counts, the frontend
+completes its move onto Checkmk's design system, and a hardened release-test
+pipeline (real upgrade-from-release tests, input sweeps across every settings
+surface) caught and fixed a series of regressions before they could ship.
+
+### Features
+
+- **Folder board, treemap-first**: the board now opens in the Map (treemap) view by default — row details moved to hover, bulk acknowledge/downtime to right-click; the list stays one click away
+- **Folder board at scale**: per-tick **SSE delta** updates instead of full-tree pushes, virtualized list rendering and pixel-culled map tiles, a leaner states payload and a single-pass tree build with paused GC — tested against 113k hosts / 4M services
+- **Folder board operator tools**: server-side service search (`s:`) that scales to millions of services, quicksearch-operator alignment, auto-expand to reveal matches, a *Problem severity* threshold for the problems-only filter (any vs. critical-only), per-board site scoping with a site picker, OK-host counts in the breakdown and live status refresh without navigating
+- **Per-site trust**: when a federation site stops responding, its hosts freeze as *stale* (last known state) with a visible warning instead of silently flapping to UNKNOWN
+- **Lines**: NagVis bent lines import faithfully (explicit middle point), a *Remove bend* context action, per-line z-layering plus a board-wide `default_z`, and weathermap lines accept a second (outbound) metric
+- **Status visibility**: custom icons are tinted by object status with a solid ring, search matches are desaturated/raised above dimmed objects, and the *show only problems* toggle is available on every board type
+- **Checkmk deep-links**: hover pills open the filtered service view, and host/service names in the detail drawer link to their Checkmk pages
+- **BI drawer polish**: worst-leaf plugin output, multi-host labels, seeded drilldown and no-op command buttons removed
+- Checkmk status palette now also applies to standalone deployments
+- Checkmk-mode Livestatus single-site queries route through `cmk.livestatus_client` with a fast JSON parse path
+
+### Changed
+
+- **Frontend on Checkmk's design system**: Tailwind removed in favor of scoped CSS on cmk tokens across all views and components, cmk-frontend-vue strict tsconfig and prettier conventions adopted, the vendored cmk tree refreshed to current master, and `dompurify`/`vueuse`/`vue-draggable-plus` replaced with cmk-style natives
+- **i18n migrated** from vue-i18n to vue3-gettext following cmk conventions; locale compilation is deterministic and quiet
+- `upstream-checkmk/` now carries the complete built-in integration payload (`cmk/gui/orbvis` module + unit tests, `cmk-orbvis-frontend` package via the sync pipeline)
+- Geo-board tile proxy complies with the OSM tile usage policy (bare host rotation, proper user agent, cache revalidation)
+- Routine logs quieted: per-tick warmup lines moved to debug, bundled demo boards ship without legacy keys
+
+### Security
+
+- Host/service actions are gated on granular Checkmk command permissions instead of a blanket admin check
+- Board create/configuration is gated on `orbvis.edit_all`/configure permissions instead of admin
+- BI aggregation titles and trees are scoped to the requesting user's contact visibility
+- Login redirects into Checkmk's 2FA challenge instead of dead-ending with a hint
+
+### Fixed
+
+- `omd restart` could kill the OrbVis service when a graceful shutdown hung: the old process kept the port, the new one crashed on bind — the init script now escalates to `kill -9` and uvicorn caps graceful shutdown at 5s
+- Settings pages after the cmk vendor refresh: section navigation filters again, every toggle switch works again (model rename + a native-label double-toggle that affected board settings and the color inputs too), and the boards-overview view toggle is compact again
+- The *copied* clipboard icon in the detail drawer is bundled — Checkmk themes before 2.5 don't ship it
+- Healthy BI aggregations could render PENDING (falsy-zero state) and a shared status-fetcher race returned other users' scopes; structure queries now run unscoped with the auth user resolved per request
+- `make_mkp.sh --version` now reaches the frontend bundle, so the UI version and the changelog-modal gate match the packaged version
+- `/api/changelog` was empty in MKP installs (changelog/version now copied into the backend source tree)
+- Folder board: settings save no longer reports a 409 after the view-preference auto-save, and the live preview reflects unsaved settings
+- CI lint gap closed (tool configs cleaned, strict mypy annotation in the BI branch fallback)
+
 ## [0.4.1] - 2026-06-01
 
 Point release on top of 0.4.0. Adds the (experimental) **Folder board** — a SETUP folder-tree visualization — behind a feature flag, a matching feature flag for graph objects, plus Flow Board fixes and Checkmk-palette alignment.
