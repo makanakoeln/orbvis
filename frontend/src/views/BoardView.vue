@@ -281,6 +281,8 @@
           @canvas-contextmenu-view="onWorldmapCanvasContextMenu"
           @latlng-drag-end="onLatLngDragEnd"
           @latlng2-drag-end="onLatLng2DragEnd"
+          @endpoint-bind="onWorldmapEndpointBind"
+          @textbox-resize="onGraphResizeEnd"
         />
         <BoardSearch
           v-if="
@@ -462,6 +464,8 @@
             :placing="editor.placing.value"
             :line-drag-positions="editor.lineDragPositions"
             :selected-object-id="editor.selectedObjectId.value"
+            :selected-ids="editor.selectedIds.value"
+            :line-bind-candidate="editor.lineBindCandidate.value"
             :checkmk-url="checkmkUrl"
             :is-admin="canEdit && !isKiosk && !isPreview"
             :snap-grid="editor.snapGrid.value"
@@ -475,12 +479,20 @@
                 onObjectDragEnd(id, x, y)
               }
             "
+            @objects-drag-end="
+              (moves) => {
+                isDragging = false
+                editor.saveObjectPositions(moves)
+              }
+            "
             @object-click="onObjectClick"
+            @marquee-select="(ids, additive) => editor.selectObjects(ids, additive)"
             @object-contextmenu="onObjectContextMenu"
             @object-dblclick="onObjectDblclick"
             @object-delete="onObjectDelete"
             @object-duplicate="onObjectDuplicate"
             @object-straighten="onObjectStraighten"
+            @object-detach="onObjectDetach"
             @line-drag-start="onLineDragStart"
             @canvas-click="onCanvasClick"
             @graph-resize-end="onGraphResizeEnd"
@@ -673,6 +685,70 @@
           </div>
         </Transition>
 
+        <!-- FAB: Grid snap (edit mode, canvas boards only) — popover with sizes -->
+        <div
+          v-if="editor.editMode.value && !isWorldmap"
+          v-click-outside="closeGridMenu"
+          class="orb-board__fab-wrap"
+        >
+          <Transition
+            enter-from-class="orb-board__menu-enter-from"
+            enter-active-class="orb-board__menu-enter-active"
+            leave-to-class="orb-board__menu-leave-to"
+            leave-active-class="orb-board__menu-leave-active"
+          >
+            <div
+              v-if="gridMenuOpen"
+              class="orb-board__addmenu"
+              role="menu"
+              :aria-label="_t('Grid')"
+            >
+              <button
+                v-for="opt in gridSizeOptions"
+                :key="opt.value"
+                role="menuitemradio"
+                :aria-checked="editor.snapGrid.value === opt.value"
+                class="orb-board__addmenu-item"
+                @click="pickGrid(opt.value)"
+              >
+                <svg
+                  class="orb-board__addmenu-icon"
+                  :style="editor.snapGrid.value === opt.value ? '' : 'visibility:hidden'"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                <span>{{ opt.label }}</span>
+              </button>
+            </div>
+          </Transition>
+          <button
+            class="orb-board__fab"
+            :class="gridSnapActive ? 'orb-board__fab--active' : 'orb-board__fab--idle'"
+            :title="_t('Grid')"
+            :aria-expanded="gridMenuOpen"
+            aria-haspopup="menu"
+            @click="gridMenuOpen = !gridMenuOpen"
+          >
+            <svg
+              style="width: 18px; height: 18px"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="1.75"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M3.75 3.75h16.5v16.5H3.75zM9 3.75v16.5M15 3.75v16.5M3.75 9h16.5M3.75 15h16.5"
+              />
+            </svg>
+          </button>
+        </div>
+
         <!-- FAB: Edit toggle -->
         <button
           data-tour="edit-fab"
@@ -734,9 +810,14 @@
           class="orb-board__actionbar"
           :style="actionBarStyle"
         >
-          <span class="orb-board__actionbar-type">{{ selectedObject!.type }}</span>
+          <span class="orb-board__actionbar-type">{{
+            editor.selectedCount.value > 1
+              ? _t('%{n} selected', { n: editor.selectedCount.value })
+              : selectedObject!.type
+          }}</span>
           <div class="orb-board__actionbar-divider" />
           <button
+            v-if="editor.selectedCount.value <= 1"
             title="Edit properties"
             class="orb-board__actionbar-btn orb-board__actionbar-btn--edit"
             @click="openPropsModal(selectedObject!, selectedObjectAnchor)"
@@ -756,6 +837,7 @@
             </svg>
           </button>
           <button
+            v-if="editor.selectedCount.value <= 1"
             title="Duplicate"
             class="orb-board__actionbar-btn"
             @click="editor.duplicateSelected()"
@@ -775,9 +857,47 @@
             </svg>
           </button>
           <button
-            title="Delete"
+            :title="_t('Bring to front')"
+            class="orb-board__actionbar-btn"
+            @click="editor.moveSelectedLayer('front')"
+          >
+            <svg
+              style="width: 14px; height: 14px"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9 4.5h10.5a.75.75 0 0 1 .75.75V15.75M6 9h9a.75.75 0 0 1 .75.75v9a.75.75 0 0 1-.75.75H6a.75.75 0 0 1-.75-.75v-9A.75.75 0 0 1 6 9Z"
+              />
+            </svg>
+          </button>
+          <button
+            :title="_t('Send to back')"
+            class="orb-board__actionbar-btn"
+            @click="editor.moveSelectedLayer('back')"
+          >
+            <svg
+              style="width: 14px; height: 14px"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9 4.5h10.5a.75.75 0 0 1 .75.75V15.75M6 9h3.75M5.25 12.75h4.5m-4.5 3.75h4.5M6 9h.008v9.75A.75.75 0 0 1 5.25 18"
+              />
+            </svg>
+          </button>
+          <button
+            :title="editor.selectedCount.value > 1 ? _t('Delete selected') : _t('Delete')"
             class="orb-board__actionbar-btn orb-board__actionbar-btn--danger"
-            @click="deleteTargetObject = selectedObject"
+            @click="onActionBarDelete"
           >
             <svg
               style="width: 14px; height: 14px"
@@ -874,6 +994,16 @@
       @cancel="deleteTargetObject = null"
     />
 
+    <!-- Bulk delete confirmation (multi-selection) -->
+    <OrbConfirmDialog
+      :open="bulkDeleteOpen"
+      :title="_t('Delete %{n} objects?', { n: editor.selectedCount.value })"
+      :message="_t('This cannot be undone.')"
+      :confirm-label="_t('Delete')"
+      @confirm="confirmBulkDelete"
+      @cancel="bulkDeleteOpen = false"
+    />
+
     <!-- Worldmap HoverMenu -->
     <HoverMenu
       v-if="isWorldmap && worldmapHover.visible && worldmapHover.object"
@@ -903,6 +1033,7 @@
       :y="worldmapCtxMenu.y"
       :checkmk-url="checkmkUrl"
       :show-edit="canEdit && !editor.editMode.value"
+      :edit-mode="editor.editMode.value"
       :template="
         resolveTemplate(
           worldmapCtxMenu.object.context_template,
@@ -914,6 +1045,7 @@
       @edit="onWorldmapCtxEdit"
       @delete="onWorldmapCtxDelete"
       @duplicate="onWorldmapCtxDuplicate"
+      @detach="onWorldmapCtxDetach"
       @acknowledge="onWorldmapCtxAck"
       @remove-ack="onWorldmapCtxRemoveAck"
       @schedule-downtime="onWorldmapCtxDowntime"
@@ -1066,6 +1198,7 @@
         @close="_closePropsModal()"
         @save="onPropsModalSave"
         @delete="onPropsModalDelete"
+        @detach="onPropsModalDetach"
       />
     </Teleport>
 
@@ -1388,6 +1521,17 @@ type AnchorRect = { left: number; top: number; right: number; bottom: number }
 const propsModalObject = ref<BoardObject | null>(null)
 const propsModalAnchor = ref<AnchorRect | null>(null)
 const deleteTargetObject = ref<BoardObject | null>(null)
+const bulkDeleteOpen = ref(false)
+
+function onActionBarDelete() {
+  if (editor.selectedCount.value > 1) bulkDeleteOpen.value = true
+  else deleteTargetObject.value = selectedObject.value
+}
+
+async function confirmBulkDelete() {
+  bulkDeleteOpen.value = false
+  await editor.deleteAllSelected()
+}
 
 const deleteDialogTitle = computed(() => {
   const obj = deleteTargetObject.value
@@ -1428,6 +1572,10 @@ function onObjectDuplicate(obj: BoardObject) {
 
 function onObjectStraighten(obj: BoardObject) {
   void editor.updateObjectProperties(obj.id, { mid_x: null, mid_y: null })
+}
+
+function onObjectDetach(obj: BoardObject) {
+  void editor.updateObjectProperties(obj.id, { start_ref: null, end_ref: null })
 }
 
 // ---- Worldmap hover & context menu ----
@@ -1500,6 +1648,12 @@ function onWorldmapCtxDuplicate() {
     editor.selectObject(obj.id)
     editor.duplicateSelected()
   }
+}
+
+function onWorldmapCtxDetach() {
+  const obj = worldmapCtxMenu.object
+  worldmapCtxMenu.visible = false
+  if (obj) void editor.updateObjectProperties(obj.id, { start_ref: null, end_ref: null })
 }
 
 const worldmapAckModal = ref<BoardObject | null>(null)
@@ -1706,8 +1860,30 @@ async function onPropsModalDelete() {
   }
 }
 
+async function onPropsModalDetach() {
+  const obj = propsModalObject.value
+  _closePropsModal()
+  if (obj) await editor.updateObjectProperties(obj.id, { start_ref: null, end_ref: null })
+}
+
 function onToggleEditMode() {
   editor.toggleEditMode()
+}
+
+const gridMenuOpen = ref(false)
+const gridSnapActive = computed(() => editor.snapGrid.value > 0)
+const gridSizeOptions = computed(() => [
+  { value: 0, label: _t('Off') },
+  { value: 10, label: '10 px' },
+  { value: 20, label: '20 px' },
+  { value: 50, label: '50 px' }
+])
+function pickGrid(value: number) {
+  editor.snapGrid.value = value
+  gridMenuOpen.value = false
+}
+function closeGridMenu() {
+  gridMenuOpen.value = false
 }
 
 function onObjectDelete(obj: BoardObject) {
@@ -2026,7 +2202,8 @@ async function onObjectDragEnd(id: string, x: number, y: number) {
 
 function onObjectClick(obj: BoardObject, event?: MouseEvent) {
   if (editor.editMode.value) {
-    editor.selectObject(obj.id)
+    const additive = !!(event && (event.shiftKey || event.ctrlKey || event.metaKey))
+    editor.selectObject(obj.id, additive)
     return
   }
   if (boardConfig.value?.click_action === 'none') return
@@ -2140,6 +2317,18 @@ function onLatLngDragEnd(id: string, lat: number, lng: number) {
 
 function onLatLng2DragEnd(id: string, lat: number, lng: number) {
   editor.moveObjectToLatLng2(id, lat, lng)
+}
+
+function onWorldmapEndpointBind(
+  id: string,
+  endpoint: 1 | 2,
+  lat: number,
+  lng: number,
+  refId: string | null
+) {
+  const updates =
+    endpoint === 1 ? { lat, lng, start_ref: refId } : { lat2: lat, lng2: lng, end_ref: refId }
+  void editor.updateObjectProperties(id, updates)
 }
 
 // ---- Map Settings ----

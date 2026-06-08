@@ -5,7 +5,7 @@
       <img
         :src="`${BASE_URL}images/${modelValue}`"
         class="orb-imgpick__thumb"
-        :class="modelValue.endsWith('.svg') ? 'svg-icon' : ''"
+        :class="selectedIsBuiltinSvg ? 'svg-icon' : ''"
       />
       <span class="orb-imgpick__selected-name">{{ modelValue }}</span>
       <button class="orb-imgpick__clear" type="button" @click="$emit('update:modelValue', '')">
@@ -190,7 +190,7 @@
                 :src="`${BASE_URL}${image.url}`"
                 :alt="image.name"
                 class="orb-imgpick__thumb"
-                :class="image.name.endsWith('.svg') ? 'svg-icon' : ''"
+                :class="image.builtin && image.name.endsWith('.svg') ? 'svg-icon' : ''"
               />
               <span class="orb-imgpick__tile-name">{{ image.name }}</span>
             </button>
@@ -286,6 +286,13 @@ const filtered = computed(() =>
     ? images.value.filter((i) => i.name.toLowerCase().includes(query.value.toLowerCase()))
     : images.value
 )
+
+// Only built-in (monochrome) SVG icons get theme-inverted in dark mode;
+// uploaded SVGs keep their own colours.
+const selectedIsBuiltinSvg = computed(() => {
+  if (!props.modelValue?.endsWith('.svg')) return false
+  return images.value.find((i) => i.name === props.modelValue)?.builtin ?? false
+})
 
 async function fetchImages() {
   loading.value = true

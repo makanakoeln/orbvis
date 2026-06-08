@@ -258,6 +258,9 @@ export interface BoardObject {
   // Optional line bend; null ⇒ geometric midpoint of the two endpoints.
   mid_x?: number | null
   mid_y?: number | null
+  // Sticky connectors: a bound endpoint follows the referenced object's position.
+  start_ref?: string | null
+  end_ref?: string | null
   line_style?: LineStyle | null
   line_width?: number | null
   line_perfdata_label?: LinePerfdataLabel | null

@@ -131,6 +131,22 @@
              quickpath. -->
 
     <div class="orb-ctx__footer">
+      <button v-if="lineHasBinding" class="orb-ctx__item" @click="$emit('detach')">
+        <svg
+          class="orb-ctx__icon"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+          />
+        </svg>
+        {{ _t('Detach from object') }}
+      </button>
       <button v-if="showEdit && lineHasBend" class="orb-ctx__item" @click="$emit('straighten')">
         <svg
           class="orb-ctx__icon"
@@ -213,6 +229,7 @@ const props = defineProps<{
   y: number
   checkmkUrl?: string | null
   showEdit?: boolean
+  editMode?: boolean
   template?: string | null
 }>()
 
@@ -222,11 +239,20 @@ defineEmits<{
   duplicate: []
   delete: []
   straighten: []
+  detach: []
 }>()
 
 // A bent line can be straightened back to a direct two-point line.
 const lineHasBend = computed(
   () => props.object.type === 'line' && props.object.mid_x != null && props.object.mid_y != null
+)
+
+// Show detach only for a bound line and only where the user can edit.
+const lineHasBinding = computed(
+  () =>
+    props.object.type === 'line' &&
+    (!!props.object.start_ref || !!props.object.end_ref) &&
+    (props.showEdit || props.editMode)
 )
 
 const renderedTemplate = computed(() =>

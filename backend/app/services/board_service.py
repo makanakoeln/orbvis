@@ -266,6 +266,12 @@ def delete_object(board_name: str, obj_id: str) -> bool:
         cfg.objects = [o for o in cfg.objects if o.id != obj_id]
         if len(cfg.objects) == original_len:
             return False
+        # Drop dangling sticky-connector bindings so no line points at a gone object.
+        for o in cfg.objects:
+            if o.start_ref == obj_id:
+                o.start_ref = None
+            if o.end_ref == obj_id:
+                o.end_ref = None
         cfg.version += 1
         _save_board(cfg)
         return True

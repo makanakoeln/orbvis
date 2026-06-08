@@ -195,6 +195,26 @@
     @contextmenu.prevent="$emit('context-menu', $event)"
   >
     {{ textboxText }}
+    <div
+      v-if="editMode && resizableTypes.has(object.type)"
+      class="orb-obj__resize-handle"
+      title="Resize"
+      @pointerdown.stop="$emit('graph-resize-start', $event)"
+    >
+      <svg
+        class="orb-obj__resize-icon"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2.5"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M4.5 19.5l15-15M19.5 4.5v6m0-6h-6"
+        />
+      </svg>
+    </div>
   </div>
 
   <!-- Gadget -->
@@ -1225,6 +1245,7 @@ const displayName = computed(() => {
   position: absolute;
   right: 0;
   bottom: 0;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1257,6 +1278,7 @@ const displayName = computed(() => {
 }
 
 .orb-obj__textbox {
+  position: relative;
   font-size: var(--font-size-large);
   line-height: 20px;
   font-weight: 500;

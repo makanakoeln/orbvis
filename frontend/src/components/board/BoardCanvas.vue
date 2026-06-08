@@ -40,6 +40,18 @@
       <rect width="100%" height="100%" :fill="`url(#grid-${snapGrid})`" />
     </svg>
 
+    <!-- Marquee (rubber-band) selection rectangle -->
+    <div
+      v-if="marqueeVisible"
+      class="orb-canvas__marquee"
+      :style="{
+        left: `${marqueeRect.left}px`,
+        top: `${marqueeRect.top}px`,
+        width: `${marqueeRect.width}px`,
+        height: `${marqueeRect.height}px`
+      }"
+    />
+
     <!-- One SVG layer per distinct line-z so lines interleave with the HTML
              object divs by z-index. pointer-events:none lets empty areas of a
              higher layer pass clicks through to objects below; the inner <g>
@@ -59,6 +71,7 @@
           :state="states[line.id]"
           :edit-mode="editMode"
           v-bind="lineDragProps(line.id)"
+          :bound-coords="boundCoordsFor(line)"
           :connection-id="config.connection_id"
           @line-drag-start="(evt, mode) => $emit('line-drag-start', evt, line, mode)"
           @context-menu="(evt) => onObjectContextMenu(evt, line)"
@@ -74,6 +87,10 @@
       v-for="obj in nonLineObjects"
       :key="obj.id"
       class="orb-canvas__object"
+      :class="{
+        'orb-canvas__object--bind-target': obj.id === lineBindCandidate,
+        'orb-canvas__object--selected': editMode && isSelected(obj.id)
+      }"
       :data-object-id="obj.id"
       :style="objectWrapperStyle(obj)"
       @pointerdown="onObjectPointerDown($event, obj)"
@@ -91,7 +108,7 @@
             ? GADGET_DEFAULT_SIZE
             : (iconSizeOverride ?? config.icon_size ?? settingsStore.settings.icon_size))
         "
-        :selected="selectedObjectId === obj.id"
+        :selected="isSelected(obj.id)"
         :edit-mode="editMode"
         :resize-override="localResizeDimensions[obj.id]"
         :connection-id="config.connection_id"
@@ -142,6 +159,7 @@
       :y="contextMenu.y"
       :checkmk-url="checkmkUrl ?? null"
       :show-edit="isAdmin && !editMode"
+      :edit-mode="editMode"
       :template="
         resolveTemplate(
           contextMenu.object.context_template,
@@ -154,6 +172,7 @@
       @duplicate="onContextMenuDuplicate"
       @delete="onContextMenuDelete"
       @straighten="onContextMenuStraighten"
+      @detach="onContextMenuDetach"
       @acknowledge="onContextMenuAck"
       @remove-ack="onContextMenuRemoveAck"
       @schedule-downtime="onContextMenuDowntime"
@@ -243,6 +262,8 @@ const props = defineProps<{
     }
   >
   selectedObjectId: string | null
+  selectedIds?: string[]
+  lineBindCandidate?: string | null
   checkmkUrl?: string | null
   iconSizeOverride?: number
   isAdmin?: boolean
@@ -260,6 +281,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'object-drag-start': [id: string]
   'object-drag-end': [id: string, x: number, y: number]
+  'objects-drag-end': [moves: { id: string; x: number; y: number }[]]
   'object-click': [obj: BoardObjectType, event?: MouseEvent]
   'object-contextmenu': [
     obj: BoardObjectType,
@@ -269,12 +291,14 @@ const emit = defineEmits<{
   'object-delete': [obj: BoardObjectType]
   'object-duplicate': [obj: BoardObjectType]
   'object-straighten': [obj: BoardObjectType]
+  'object-detach': [obj: BoardObjectType]
   'line-drag-start': [
     event: MouseEvent,
     obj: BoardObjectType,
     mode: 'move' | 'start' | 'end' | 'mid'
   ]
   'canvas-click': [event: MouseEvent]
+  'marquee-select': [ids: string[], additive: boolean]
   'graph-resize-end': [id: string, width: number, height: number]
 }>()
 
@@ -290,6 +314,26 @@ const _dragInitX = ref(0)
 const _dragInitY = ref(0)
 const _didMove = ref(false)
 const localDragPositions = reactive<Record<string, { x: number; y: number }>>({})
+// Other selected objects that move together with the grabbed one (group drag).
+let _groupMembers: { id: string; initX: number; initY: number }[] = []
+
+// Rubber-band (marquee) selection on empty canvas in edit mode. Coords are
+// viewport px relative to the canvas element.
+const _marqueeActive = ref(false)
+const _marqueeMoved = ref(false)
+const _marqueeStartX = ref(0)
+const _marqueeStartY = ref(0)
+const _marqueeCurX = ref(0)
+const _marqueeCurY = ref(0)
+const _marqueePointerId = ref<number | null>(null)
+let _marqueeAdditive = false
+const marqueeRect = computed(() => ({
+  left: Math.min(_marqueeStartX.value, _marqueeCurX.value),
+  top: Math.min(_marqueeStartY.value, _marqueeCurY.value),
+  width: Math.abs(_marqueeCurX.value - _marqueeStartX.value),
+  height: Math.abs(_marqueeCurY.value - _marqueeStartY.value)
+}))
+const marqueeVisible = computed(() => _marqueeActive.value && _marqueeMoved.value)
 // When the user taps an object (no drag, no placing), pointer capture redirects
 // the synthetic click to the canvas div. Suppress that canvas-click so it doesn't
 // deselect the just-selected object.
@@ -513,7 +557,23 @@ const canvasCursorClass = computed(() => {
 
 function onCanvasPointerDown(event: PointerEvent): void {
   if (event.button !== 0) return
-  if (props.editMode || props.placing) return
+  // Edit mode: start a marquee selection on empty canvas (not on an object).
+  if (props.editMode) {
+    if (props.placing) return
+    if ((event.target as HTMLElement | null)?.closest('[data-object-id]')) return
+    const rect = canvasEl.value?.getBoundingClientRect()
+    if (!rect) return
+    _marqueeActive.value = true
+    _marqueeMoved.value = false
+    _marqueeStartX.value = event.clientX - rect.left
+    _marqueeStartY.value = event.clientY - rect.top
+    _marqueeCurX.value = _marqueeStartX.value
+    _marqueeCurY.value = _marqueeStartY.value
+    _marqueePointerId.value = event.pointerId
+    _marqueeAdditive = event.shiftKey || event.ctrlKey || event.metaKey
+    return
+  }
+  if (props.placing) return
   // Pan-on-drag activates whenever the canvas overflows the pane: either
   // the user zoomed in, or nagvis_classic renders at native size.
   if (userZoom.value <= 1 && !isNagvisClassic.value) return
@@ -600,6 +660,12 @@ watch(
 )
 
 const nonLineObjects = computed(() => props.config.objects.filter((o) => o.type !== 'line'))
+
+function isSelected(id: string): boolean {
+  return props.selectedIds && props.selectedIds.length
+    ? props.selectedIds.includes(id)
+    : props.selectedObjectId === id
+}
 
 // An object without an explicit z inherits the board's default_z (NagVis-style
 // global default), falling back to 1 for boards saved before that field existed.
@@ -706,6 +772,15 @@ function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
   _dragObj.value = obj
   _dragPointerId.value = event.pointerId
   localDragPositions[obj.id] = { x: obj.x, y: obj.y }
+  // Group drag: when the grabbed object is part of a multi-selection, the other
+  // selected non-line objects move with it by the same delta.
+  _groupMembers =
+    props.selectedIds && props.selectedIds.length > 1 && props.selectedIds.includes(obj.id)
+      ? props.config.objects
+          .filter((o) => o.id !== obj.id && o.type !== 'line' && props.selectedIds!.includes(o.id))
+          .map((o) => ({ id: o.id, initX: o.x, initY: o.y }))
+      : []
+  for (const m of _groupMembers) localDragPositions[m.id] = { x: m.initX, y: m.initY }
 }
 
 function onGraphResizeStart(event: PointerEvent, obj: BoardObjectType) {
@@ -729,6 +804,26 @@ function onGraphResizeStart(event: PointerEvent, obj: BoardObjectType) {
 }
 
 function onCanvasPointerMove(event: PointerEvent) {
+  if (_marqueeActive.value && canvasEl.value) {
+    const rect = canvasEl.value.getBoundingClientRect()
+    _marqueeCurX.value = event.clientX - rect.left
+    _marqueeCurY.value = event.clientY - rect.top
+    if (
+      !_marqueeMoved.value &&
+      (Math.abs(_marqueeCurX.value - _marqueeStartX.value) > 4 ||
+        Math.abs(_marqueeCurY.value - _marqueeStartY.value) > 4)
+    ) {
+      _marqueeMoved.value = true
+      if (_marqueePointerId.value !== null) {
+        try {
+          canvasEl.value.setPointerCapture(_marqueePointerId.value)
+        } catch {
+          // pointer may have ended already
+        }
+      }
+    }
+    return
+  }
   if (_panActive.value && _panScroller.value) {
     const scroller = _panScroller.value
     scroller.scrollLeft = _panStartScrollLeft.value - (event.clientX - _panStartX.value)
@@ -766,9 +861,47 @@ function onCanvasPointerMove(event: PointerEvent) {
     emit('object-drag-start', id)
   }
   localDragPositions[id] = { x, y }
+  if (_groupMembers.length) {
+    const dgx = x - _dragInitX.value
+    const dgy = y - _dragInitY.value
+    for (const m of _groupMembers) {
+      localDragPositions[m.id] = {
+        x: Math.max(0, m.initX + dgx),
+        y: Math.max(0, m.initY + dgy)
+      }
+    }
+  }
 }
 
 function onCanvasPointerUp(event: PointerEvent) {
+  if (_marqueeActive.value) {
+    _marqueeActive.value = false
+    const pid = _marqueePointerId.value
+    _marqueePointerId.value = null
+    if (pid !== null) {
+      try {
+        canvasEl.value?.releasePointerCapture(pid)
+      } catch {
+        // pointer may already be released
+      }
+    }
+    if (_marqueeMoved.value && canvasEl.value) {
+      const rect = canvasEl.value.getBoundingClientRect()
+      const a = viewportToNative(marqueeRect.value.left, marqueeRect.value.top, rect)
+      const b = viewportToNative(
+        marqueeRect.value.left + marqueeRect.value.width,
+        marqueeRect.value.top + marqueeRect.value.height,
+        rect
+      )
+      const ids = props.config.objects
+        .filter((o) => o.type !== 'line' && o.x >= a.x && o.x <= b.x && o.y >= a.y && o.y <= b.y)
+        .map((o) => o.id)
+      emit('marquee-select', ids, _marqueeAdditive)
+      _suppressNextCanvasClick.value = true
+    }
+    _marqueeMoved.value = false
+    return
+  }
   if (_panActive.value) {
     _panActive.value = false
     if (_panPointerId.value !== null) {
@@ -805,8 +938,21 @@ function onCanvasPointerUp(event: PointerEvent) {
   }
   const pos = localDragPositions[id]
   delete localDragPositions[id]
+  const group = _groupMembers
+  _groupMembers = []
+  // Clear members unconditionally — a no-move click must not leak overrides.
+  const moves = [{ id, x: pos?.x ?? 0, y: pos?.y ?? 0 }]
+  for (const m of group) {
+    const mp = localDragPositions[m.id]
+    delete localDragPositions[m.id]
+    if (mp) moves.push({ id: m.id, x: mp.x, y: mp.y })
+  }
   if (_didMove.value && pos) {
-    emit('object-drag-end', id, pos.x, pos.y)
+    // Pointer capture redirects the post-drag synthetic click to the canvas;
+    // suppress it so it doesn't deselect the just-moved object(s).
+    _suppressNextCanvasClick.value = true
+    if (group.length) emit('objects-drag-end', moves)
+    else emit('object-drag-end', id, pos.x, pos.y)
   } else if (!_didMove.value && props.placing) {
     emit('canvas-click', event as unknown as MouseEvent)
   }
@@ -875,6 +1021,33 @@ const contextMenuStateProps = computed<{ state?: ObjectState }>(() => {
 function lineDragProps(id: string): { dragCoords?: (typeof props.lineDragPositions)[string] } {
   const dragCoords = props.lineDragPositions[id]
   return dragCoords !== undefined ? { dragCoords } : {}
+}
+
+function objectPosById(id: string): { x: number; y: number } | null {
+  const live = localDragPositions[id]
+  if (live) return { x: live.x, y: live.y }
+  const o = props.config.objects.find((obj) => obj.id === id)
+  return o ? { x: o.x, y: o.y } : null
+}
+
+function boundCoordsFor(line: BoardObjectType): {
+  x?: number
+  y?: number
+  x2?: number
+  y2?: number
+} {
+  const start = line.start_ref ? objectPosById(line.start_ref) : null
+  const end = line.end_ref ? objectPosById(line.end_ref) : null
+  const r: { x?: number; y?: number; x2?: number; y2?: number } = {}
+  if (start) {
+    r.x = start.x
+    r.y = start.y
+  }
+  if (end) {
+    r.x2 = end.x
+    r.y2 = end.y
+  }
+  return r
 }
 
 // Close-grace so the operator can move onto the card and click a state pill
@@ -959,6 +1132,12 @@ function onContextMenuStraighten() {
   if (obj) emit('object-straighten', obj)
 }
 
+function onContextMenuDetach() {
+  const obj = contextMenu.object
+  closeMenus()
+  if (obj) emit('object-detach', obj)
+}
+
 // ---- CMK actions from context menu ----
 
 const objectActions = useObjectActions(() => props.checkmkUrl ?? null, closeMenus)
@@ -1009,6 +1188,10 @@ function closeRemoveDowntimeModal(): void {
   position: relative;
   background: var(--bg);
   user-select: none;
+
+  /* Own stacking context so objects sent to back (negative z-index) stay above
+     the canvas background instead of vanishing behind it. */
+  isolation: isolate;
 }
 
 .orb-canvas--placing {
@@ -1040,5 +1223,25 @@ function closeRemoveDowntimeModal(): void {
 
 .orb-canvas__object {
   position: absolute;
+}
+
+.orb-canvas__marquee {
+  position: absolute;
+  z-index: 90;
+  border: 1px solid var(--color-corporate-green-50, #4ade80);
+  background: rgb(74 222 128 / 12%);
+  pointer-events: none;
+}
+
+.orb-canvas__object--bind-target {
+  outline: 3px solid #22c55e;
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.orb-canvas__object--selected {
+  outline: 2px dashed var(--color-corporate-green-50, #4ade80);
+  outline-offset: 4px;
+  border-radius: 6px;
 }
 </style>

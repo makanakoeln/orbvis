@@ -48,6 +48,12 @@ export function getMetric(metrics: PerfMetric[], label?: string | null): PerfMet
   return metrics.find((m) => m.label === label) ?? first
 }
 
+/** Without an upper bound (max/crit) or % unit a percentage is meaningless —
+ * Checkmk shows such metrics as absolute values, so we must too. */
+export function hasPercentScale(m: PerfMetric): boolean {
+  return (m.max !== null && m.max > 0) || (m.crit !== null && m.crit > 0) || m.unit === '%'
+}
+
 /** Calculate utilization percentage (0–100) for a metric. */
 export function utilPercent(m: PerfMetric): number {
   if (m.max !== null && m.max > 0) return Math.min(100, Math.max(0, (m.value / m.max) * 100))

@@ -46,19 +46,20 @@
         boxShadow: 'inset 0 0 0 1px var(--gadget-ring)'
       }"
     >
-      <div class="orb-gadget__fill" :style="{ width: pct + '%', background: color }" />
+      <div class="orb-gadget__fill" :style="{ width: fillPct + '%', background: color }" />
       <span
         class="orb-gadget__pct"
         style="color: var(--gadget-text); text-shadow: var(--shadow-text)"
-        :style="{ fontSize: Math.max(8, Math.round(size * 0.13)) + 'px' }"
-        >{{ pct.toFixed(0) }}%</span
+        :style="{ fontSize: Math.max(8, Math.round(size * 0.13 * readoutScale)) + 'px' }"
+        >{{ readout }}</span
       >
     </div>
     <span
+      v-if="caption"
       style="color: var(--gadget-text-dim); text-shadow: var(--shadow-text)"
       class="orb-gadget__value orb-gadget__value--bar"
       :style="{ fontSize: Math.max(8, Math.round(size * 0.13)) + 'px' }"
-      >{{ valueLabel }}</span
+      >{{ caption }}</span
     >
   </div>
 
@@ -84,7 +85,7 @@
         :x="size / 2"
         :y="size * 0.55"
         text-anchor="middle"
-        :font-size="size * 0.18"
+        :font-size="size * 0.18 * readoutScale"
         font-weight="700"
         fill="var(--gadget-text)"
         stroke="rgb(0 0 0 / 0.9)"
@@ -92,14 +93,15 @@
         stroke-linejoin="round"
         paint-order="stroke"
       >
-        {{ pct.toFixed(0) }}%
+        {{ readout }}
       </text>
     </svg>
     <span
+      v-if="caption"
       style="color: var(--gadget-text-dim); text-shadow: var(--shadow-text)"
       class="orb-gadget__value"
       :style="{ fontSize: '9px', maxWidth: size + 'px' }"
-      >{{ valueLabel }}</span
+      >{{ caption }}</span
     >
   </div>
 </template>
@@ -108,7 +110,8 @@
 import { computed } from 'vue'
 
 import type { ObjectState } from '@/types/api'
-import { getMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
+import { getMetric, hasPercentScale, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
+import { stateColor } from '@/utils/stateColors'
 
 const props = defineProps<{
   type: string // 'gauge' | 'bar' | 'trafficlight'
@@ -119,13 +122,35 @@ const props = defineProps<{
 
 const metrics = computed(() => parsePerfData(props.state?.perf_data ?? ''))
 const m = computed(() => getMetric(metrics.value, props.metric))
+const scaled = computed(() => (m.value ? hasPercentScale(m.value) : false))
 const pct = computed(() => (m.value ? utilPercent(m.value) : 0))
-const color = computed(() => utilColor(pct.value))
+const fillPct = computed(() => (scaled.value ? pct.value : 100))
+const color = computed(() => (scaled.value ? utilColor(pct.value) : stateColor(props.state?.state)))
+
+function fmtNum(v: number): string {
+  if (Number.isInteger(v) || Math.abs(v) >= 100) return Math.round(v).toString()
+  if (Math.abs(v) >= 10) return v.toFixed(1)
+  return v.toFixed(2)
+}
 
 const valueLabel = computed(() => {
   if (!m.value) return '—'
   const { value, unit } = m.value
-  return unit ? `${value.toFixed(1)} ${unit}` : value.toFixed(1)
+  return unit ? `${fmtNum(value)} ${unit}` : fmtNum(value)
+})
+
+// Primary readout inside the gauge/bar: a percentage only when one is
+// meaningful, otherwise the absolute value (the caption below is then redundant).
+const readout = computed(() => (scaled.value ? `${pct.value.toFixed(0)}%` : valueLabel.value))
+const caption = computed(() => (scaled.value ? valueLabel.value : ''))
+
+// Shrink the readout font for long absolute values so e.g. "512 MB" still fits.
+const readoutScale = computed(() => {
+  const n = readout.value.length
+  if (n <= 3) return 1
+  if (n <= 5) return 0.78
+  if (n <= 7) return 0.62
+  return 0.5
 })
 
 // Traffic light state
@@ -172,7 +197,7 @@ const bgArc = computed(() => {
 })
 
 const valArc = computed(() => {
-  const sweep = (pct.value / 100) * SWEEP
+  const sweep = (fillPct.value / 100) * SWEEP
   if (sweep < 1) return ''
   const ex = polarX(START + sweep),
     ey = polarY(START + sweep)

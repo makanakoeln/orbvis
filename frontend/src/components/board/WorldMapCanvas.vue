@@ -46,6 +46,8 @@ const emit = defineEmits<{
   ]
   'latlng-drag-end': [id: string, lat: number, lng: number]
   'latlng2-drag-end': [id: string, lat: number, lng: number]
+  'endpoint-bind': [id: string, endpoint: 1 | 2, lat: number, lng: number, refId: string | null]
+  'textbox-resize': [id: string, width: number, height: number]
 }>()
 
 const mapEl = ref<HTMLDivElement | null>(null)
@@ -82,12 +84,110 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
+// Live size override while a textbox is being drag-resized; null when idle.
+let _tbResize: {
+  id: string
+  startX: number
+  startY: number
+  initW: number
+  initH: number
+  w: number
+  h: number
+} | null = null
+
+function makeTextboxIcon(obj: BoardObjectType, selected: boolean): L.DivIcon {
+  const label = obj.label
+  const text = escapeHtml(label?.text || 'Text').replace(/\n/g, '<br>')
+  const bg = obj.textbox_background
+  const hasCustomBg = !!bg && bg !== 'transparent'
+  const border = obj.textbox_border
+  const color =
+    label?.color && label.color !== '#ffffff' && label.color !== '#FFFFFF' ? label.color : '#f8fafc'
+  const resizing = _tbResize?.id === obj.id ? _tbResize : null
+  const w = resizing ? resizing.w : obj.textbox_width
+  const h = resizing ? resizing.h : obj.textbox_height
+  const styles = [
+    'position:relative;',
+    hasCustomBg ? `background:${bg};` : 'background:rgba(15,23,42,0.72);backdrop-filter:blur(4px);',
+    border ? `border:1px solid ${border};` : '',
+    `color:${color};`,
+    `font-size:${label?.size ?? 13}px;`,
+    label?.weight ? `font-weight:${label.weight};` : '',
+    `text-align:${label?.align ?? 'left'};`,
+    w ? `width:${w}px;` : '',
+    h ? `height:${h}px;` : '',
+    'padding:3px 8px;border-radius:6px;box-sizing:border-box;white-space:pre-wrap;line-height:1.3;',
+    hasCustomBg ? '' : 'text-shadow:0 1px 2px rgba(0,0,0,0.6);',
+    selected ? 'outline:2px solid #4ade80;outline-offset:2px;' : ''
+  ].join('')
+  const handle =
+    props.editMode && !props.preview
+      ? `<div class="orb-wm-resize" data-resize-id="${obj.id}" title="Resize" style="position:absolute;right:0;bottom:0;width:14px;height:14px;cursor:se-resize;background:rgba(34,197,94,0.85);border-top-left-radius:4px;pointer-events:auto;"></div>`
+      : ''
+  return L.divIcon({
+    className: '',
+    html: `<div style="${styles}">${text}${handle}</div>`,
+    iconSize: w && h ? [w, h] : undefined,
+    iconAnchor: [0, 0]
+  })
+}
+
+function _refreshTextbox(id: string) {
+  const marker = markers.get(id)
+  const obj = props.config.objects.find((o) => o.id === id)
+  if (marker && obj) marker.setIcon(makeTextboxIcon(obj, props.selectedObjectId === obj.id))
+}
+
+function onTextboxResizeMove(e: MouseEvent) {
+  if (!_tbResize) return
+  e.preventDefault()
+  _tbResize.w = Math.max(40, Math.round(_tbResize.initW + (e.clientX - _tbResize.startX)))
+  _tbResize.h = Math.max(24, Math.round(_tbResize.initH + (e.clientY - _tbResize.startY)))
+  _refreshTextbox(_tbResize.id)
+}
+
+function onTextboxResizeEnd() {
+  document.removeEventListener('mousemove', onTextboxResizeMove, true)
+  document.removeEventListener('mouseup', onTextboxResizeEnd, true)
+  const r = _tbResize
+  _tbResize = null
+  if (r) {
+    emit('textbox-resize', r.id, r.w, r.h)
+    _refreshTextbox(r.id)
+  }
+}
+
+function onTextboxResizeStart(e: MouseEvent) {
+  const handle = (e.target as HTMLElement | null)?.closest?.('.orb-wm-resize') as HTMLElement | null
+  if (!handle) return
+  const id = handle.dataset.resizeId
+  if (!id) return
+  const obj = props.config.objects.find((o) => o.id === id)
+  if (!obj) return
+  e.preventDefault()
+  e.stopPropagation()
+  const box = handle.parentElement?.getBoundingClientRect()
+  _tbResize = {
+    id,
+    startX: e.clientX,
+    startY: e.clientY,
+    initW: obj.textbox_width ?? Math.round(box?.width ?? 120),
+    initH: obj.textbox_height ?? Math.round(box?.height ?? 32),
+    w: obj.textbox_width ?? Math.round(box?.width ?? 120),
+    h: obj.textbox_height ?? Math.round(box?.height ?? 32)
+  }
+  document.addEventListener('mousemove', onTextboxResizeMove, true)
+  document.addEventListener('mouseup', onTextboxResizeEnd, true)
+}
+
 function makeDivIcon(obj: BoardObjectType): L.DivIcon {
+  const selected = props.selectedObjectId === obj.id
+  if (obj.type === 'textbox') return makeTextboxIcon(obj, selected)
+
   const color = stateColor(obj.id)
   const size = obj.display?.image_size ?? props.config.icon_size ?? settingsStore.settings.icon_size
   const escapedName = escapeHtml(getBoardObjectName(obj))
   const label = obj.label?.show !== false ? escapedName : ''
-  const selected = props.selectedObjectId === obj.id
 
   const TYPE_CHARS: Record<string, string> = {
     host: 'H',
@@ -238,8 +338,22 @@ function syncMarkers() {
         if (props.preview) return
         emit('object-hover-leave')
       })
+      marker.on('drag', () => {
+        if (!hasBoundLines(objId)) return
+        const pos = marker.getLatLng()
+        _liveObjPos.set(objId, [pos.lat, pos.lng])
+        syncLines()
+      })
       marker.on('dragend', () => {
         const pos = marker.getLatLng()
+        // Apply optimistically so the bound line doesn't flash to the old coord
+        // before the async store update lands.
+        const obj = props.config.objects.find((o) => o.id === objId)
+        if (obj) {
+          obj.lat = pos.lat
+          obj.lng = pos.lng
+        }
+        _liveObjPos.delete(objId)
         emit('latlng-drag-end', objId, pos.lat, pos.lng)
       })
       marker.addTo(leafletMap!)
@@ -322,6 +436,61 @@ function midpoint(p1: [number, number], p2: [number, number]): [number, number] 
   return [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2]
 }
 
+// Live marker positions during an in-flight drag, so bound lines follow live.
+const _liveObjPos = new Map<string, [number, number]>()
+
+function boundEndpoint(refId: string | null | undefined): [number, number] | null {
+  if (!refId) return null
+  const live = _liveObjPos.get(refId)
+  if (live) return live
+  const o = props.config.objects.find((obj) => obj.id === refId)
+  return o && o.lat != null && o.lng != null ? [o.lat, o.lng] : null
+}
+
+function hasBoundLines(objId: string): boolean {
+  return props.config.objects.some(
+    (o) => o.type === 'line' && (o.start_ref === objId || o.end_ref === objId)
+  )
+}
+
+const BOUND_COLOR = '#22c55e'
+
+// Offset a bound endpoint's handle ~16 screen px toward the other end so it
+// clears the connected marker and leaves the marker grabbable.
+function nudgedHandle(
+  pt: [number, number],
+  toward: [number, number],
+  bound: boolean
+): [number, number] {
+  if (!bound || !leafletMap) return pt
+  const p = leafletMap.latLngToContainerPoint(pt)
+  const t = leafletMap.latLngToContainerPoint(toward)
+  const dx = t.x - p.x
+  const dy = t.y - p.y
+  const len = Math.sqrt(dx * dx + dy * dy)
+  if (len < 1) return pt
+  const d = Math.min(16, len / 2)
+  const ll = leafletMap.containerPointToLatLng(L.point(p.x + (dx / len) * d, p.y + (dy / len) * d))
+  return [ll.lat, ll.lng]
+}
+
+// Nearest non-line marker within ~24 screen px of a dropped handle, for binding.
+function markerNear(latlng: L.LatLng, lineId: string): string | null {
+  if (!leafletMap) return null
+  const p = leafletMap.latLngToContainerPoint(latlng)
+  let best: string | null = null
+  let bestDist = 24
+  for (const obj of props.config.objects) {
+    if (obj.id === lineId || obj.type === 'line' || obj.lat == null || obj.lng == null) continue
+    const d = p.distanceTo(leafletMap.latLngToContainerPoint([obj.lat, obj.lng]))
+    if (d <= bestDist) {
+      bestDist = d
+      best = obj.id
+    }
+  }
+  return best
+}
+
 function syncLines() {
   if (!leafletMap) return
   const lineObjs = props.config.objects.filter(
@@ -332,8 +501,8 @@ function syncLines() {
   for (const obj of lineObjs) {
     const color = resolveLineColor(obj)
     const borderColor = obj.line_color_border ?? null
-    const p1: [number, number] = [obj.lat!, obj.lng!]
-    const p2: [number, number] = [obj.lat2!, obj.lng2!]
+    const p1 = boundEndpoint(obj.start_ref) ?? ([obj.lat!, obj.lng!] as [number, number])
+    const p2 = boundEndpoint(obj.end_ref) ?? ([obj.lat2!, obj.lng2!] as [number, number])
     const style = obj.line_style ?? 'plain'
     const dashArray = style === 'dashed' ? '8 6' : undefined
     const hasEnd = style === 'arrow_end' || style === 'arrow_both'
@@ -362,10 +531,10 @@ function syncLines() {
       }
       entry.polyline.setLatLngs([p1, p2])
       entry.polyline.setStyle({ color, dashArray })
-      entry.handle1.setLatLng(p1)
-      entry.handle2.setLatLng(p2)
-      entry.handle1.setIcon(makeHandleIcon(color))
-      entry.handle2.setIcon(makeHandleIcon(color))
+      entry.handle1.setLatLng(nudgedHandle(p1, p2, !!obj.start_ref))
+      entry.handle2.setLatLng(nudgedHandle(p2, p1, !!obj.end_ref))
+      entry.handle1.setIcon(makeHandleIcon(obj.start_ref ? BOUND_COLOR : color))
+      entry.handle2.setIcon(makeHandleIcon(obj.end_ref ? BOUND_COLOR : color))
       if (props.editMode) {
         entry.handle1.dragging?.enable()
         entry.handle2.dragging?.enable()
@@ -412,12 +581,12 @@ function syncLines() {
         ? L.polyline([p1, p2], { color: borderColor, weight: 5, dashArray }).addTo(leafletMap!)
         : null
       const polyline = L.polyline([p1, p2], { color, weight: 3, dashArray }).addTo(leafletMap!)
-      const handle1 = L.marker(p1, {
-        icon: makeHandleIcon(color),
+      const handle1 = L.marker(nudgedHandle(p1, p2, !!obj.start_ref), {
+        icon: makeHandleIcon(obj.start_ref ? BOUND_COLOR : color),
         draggable: props.editMode
       }).addTo(leafletMap!)
-      const handle2 = L.marker(p2, {
-        icon: makeHandleIcon(color),
+      const handle2 = L.marker(nudgedHandle(p2, p1, !!obj.end_ref), {
+        icon: makeHandleIcon(obj.end_ref ? BOUND_COLOR : color),
         draggable: props.editMode
       }).addTo(leafletMap!)
       const label =
@@ -466,11 +635,23 @@ function syncLines() {
       })
       handle1.on('dragend', () => {
         const pos = handle1.getLatLng()
-        emit('latlng-drag-end', objId, pos.lat, pos.lng)
+        const ref = markerNear(pos, objId)
+        if (ref) {
+          const o = props.config.objects.find((x) => x.id === ref)
+          emit('endpoint-bind', objId, 1, o?.lat ?? pos.lat, o?.lng ?? pos.lng, ref)
+        } else {
+          emit('endpoint-bind', objId, 1, pos.lat, pos.lng, null)
+        }
       })
       handle2.on('dragend', () => {
         const pos = handle2.getLatLng()
-        emit('latlng2-drag-end', objId, pos.lat, pos.lng)
+        const ref = markerNear(pos, objId)
+        if (ref) {
+          const o = props.config.objects.find((x) => x.id === ref)
+          emit('endpoint-bind', objId, 2, o?.lat ?? pos.lat, o?.lng ?? pos.lng, ref)
+        } else {
+          emit('endpoint-bind', objId, 2, pos.lat, pos.lng, null)
+        }
       })
       lines.set(objId, { polyline, border, handle1, handle2, label, arrowEnd, arrowStart })
     }
@@ -555,6 +736,8 @@ onMounted(() => {
   syncLines()
   resizeObserver = new ResizeObserver(() => leafletMap?.invalidateSize())
   resizeObserver.observe(mapEl.value)
+  // Capture phase so we start a textbox resize before Leaflet's marker-drag.
+  mapEl.value.addEventListener('mousedown', onTextboxResizeStart, true)
   if (props.preview) {
     // Iframe-Container ist beim Init oft noch 0×0; ein RAF später ist er
     // gemessen und die Karte muss sich auf den richtigen Center neu setzen.
@@ -569,6 +752,9 @@ onMounted(() => {
 onUnmounted(() => {
   resizeObserver?.disconnect()
   resizeObserver = null
+  mapEl.value?.removeEventListener('mousedown', onTextboxResizeStart, true)
+  document.removeEventListener('mousemove', onTextboxResizeMove, true)
+  document.removeEventListener('mouseup', onTextboxResizeEnd, true)
   leafletMap?.remove()
   leafletMap = null
   tileLayer = null

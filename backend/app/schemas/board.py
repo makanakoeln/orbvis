@@ -316,6 +316,10 @@ class BoardObject(BaseModel):
     # mirrors NagVis' explicit middle coordinate on two-segment lines.
     mid_x: int | float | None = None
     mid_y: int | float | None = None
+    # Line endpoint bindings: when set, the start/end follows the referenced
+    # object's position instead of a fixed coordinate (sticky connectors).
+    start_ref: str | None = None
+    end_ref: str | None = None
     line_style: LineStyle | None = None
     # Stroke width in pixels. None → renderer's per-style default.
     line_width: int | None = Field(default=None, ge=1, le=20)
@@ -511,6 +515,8 @@ class BoardObjectUpdate(BaseModel):
     lng2: float | None = None
     mid_x: int | float | None = None
     mid_y: int | float | None = None
+    start_ref: str | None = None
+    end_ref: str | None = None
     line_style: LineStyle | None = None
     line_width: int | None = Field(default=None, ge=1, le=20)
     line_perfdata_label: LinePerfdataLabel | None = None

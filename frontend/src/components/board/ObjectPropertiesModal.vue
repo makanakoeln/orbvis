@@ -214,6 +214,33 @@
               :placeholder="_t('Text content') + '…'"
             />
             <div class="orb-props__fields">
+              <div class="field-row">
+                <label class="field-label">{{ _t('Alignment') }}</label>
+                <div class="orb-props__btn-group">
+                  <button
+                    v-for="opt in textAlignOptions"
+                    :key="opt.value"
+                    type="button"
+                    class="orb-props__seg-btn"
+                    :class="
+                      (form.label.align ?? 'left') === opt.value ? 'orb-props__seg-btn--active' : ''
+                    "
+                    :title="opt.title"
+                    :aria-label="opt.title"
+                    @click="form.label.align = opt.value"
+                  >
+                    <svg
+                      style="width: 15px; height: 15px"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" :d="opt.icon" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
               <div class="orb-props__grid-2">
                 <div class="field-row">
                   <label class="field-label">{{ _t('Width') }}</label>
@@ -465,6 +492,17 @@
                   class="orb-props__grow"
                 />
               </div>
+            </div>
+          </section>
+          <section v-if="object.type === 'line' && (object.start_ref || object.end_ref)">
+            <p class="orb-section-title">{{ _t('Connection') }}</p>
+            <div class="orb-props__fields">
+              <p class="orb-props__note">
+                {{ _t('This line is attached to an object and follows it.') }}
+              </p>
+              <CmkButton variant="secondary" @click="$emit('detach')">
+                {{ _t('Detach from object') }}
+              </CmkButton>
             </div>
           </section>
           <section v-if="object.type === 'line'">
@@ -1071,6 +1109,7 @@ const emit = defineEmits<{
   close: []
   save: [updates: Record<string, unknown>]
   delete: []
+  detach: []
 }>()
 useEscapeClose(() => emit('close'))
 
@@ -1228,6 +1267,24 @@ const urlTargetOptions = computed(() => ({
   ]
 }))
 
+const textAlignOptions = computed(() => [
+  {
+    value: 'left' as const,
+    title: _t('Left'),
+    icon: 'M3.75 6.75h16.5M3.75 12h10.5M3.75 17.25h13.5'
+  },
+  {
+    value: 'center' as const,
+    title: _t('Center'),
+    icon: 'M3.75 6.75h16.5M6.75 12h10.5M5.25 17.25h13.5'
+  },
+  {
+    value: 'right' as const,
+    title: _t('Right'),
+    icon: 'M3.75 6.75h16.5M9.75 12h10.5M6.75 17.25h13.5'
+  }
+])
+
 // Metric IDs available for suggestions
 const metricIdSuggestions = computed((): string[] => {
   if (fetchedMetrics.value.length) return fetchedMetrics.value
@@ -1336,7 +1393,8 @@ const form = reactive({
     y: 0,
     size: 11,
     color: '#ffffff',
-    background: 'transparent'
+    background: 'transparent',
+    align: null as 'left' | 'center' | 'right' | null
   },
   label_border: null as string | null,
   label_maxlen: null as number | null,
@@ -1421,6 +1479,7 @@ watch(
     form.label.size = obj.label?.size ?? 11
     form.label.color = obj.label?.color ?? '#ffffff'
     form.label.background = obj.label?.background ?? 'transparent'
+    form.label.align = (obj.label?.align as 'left' | 'center' | 'right' | null) ?? null
     form.label_border = obj.label_border ?? null
     form.label_maxlen = obj.label_maxlen ?? null
     form.textbox_background = obj.textbox_background ?? null
@@ -1712,7 +1771,8 @@ async function save() {
         y: form.label.y,
         size: form.label.size,
         color: form.label.color,
-        background: form.label.background
+        background: form.label.background,
+        align: form.label.align
       },
       label_border: form.label_border || null,
       label_maxlen: form.label_maxlen ?? null,

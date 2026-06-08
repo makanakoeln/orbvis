@@ -200,13 +200,15 @@
       >{{ props.object.label?.text }}</text
     >
 
-    <!-- Edit handles -->
+    <!-- Edit handles. A bound endpoint's handle is nudged inward along the line
+         so it stops covering the connected icon — leaving the icon's centre
+         grabbable (drag the icon → line follows; drag this handle → detach). -->
     <template v-if="editMode">
       <circle
-        :cx="x1"
-        :cy="y1"
+        :cx="handle1.x"
+        :cy="handle1.y"
         r="7"
-        fill="#3b82f6"
+        :fill="startBound ? '#22c55e' : '#3b82f6'"
         fill-opacity="0.85"
         stroke="white"
         stroke-width="1.5"
@@ -214,10 +216,10 @@
         @mousedown.prevent.stop="$emit('line-drag-start', $event, 'start')"
       />
       <circle
-        :cx="x2"
-        :cy="y2"
+        :cx="handle2.x"
+        :cy="handle2.y"
         r="7"
-        fill="#3b82f6"
+        :fill="endBound ? '#22c55e' : '#3b82f6'"
         fill-opacity="0.85"
         stroke="white"
         stroke-width="1.5"
@@ -263,6 +265,9 @@ const props = defineProps<{
     mid_x?: number | null
     mid_y?: number | null
   }
+  // Resolved positions for endpoints bound to an object (sticky connectors).
+  // An active drag still wins so the operator sees the endpoint move.
+  boundCoords?: { x?: number; y?: number; x2?: number; y2?: number }
   connectionId?: string | null
 }>()
 
@@ -283,14 +288,25 @@ const canvasScale = inject<Ref<{ sx: number; sy: number }>>(
   ref({ sx: 1, sy: 1 }) as Ref<{ sx: number; sy: number }>
 )
 
-const x1 = computed(() => (props.dragCoords?.x ?? props.object.x) * canvasScale.value.sx)
-const y1 = computed(() => (props.dragCoords?.y ?? props.object.y) * canvasScale.value.sy)
+const x1 = computed(
+  () => (props.dragCoords?.x ?? props.boundCoords?.x ?? props.object.x) * canvasScale.value.sx
+)
+const y1 = computed(
+  () => (props.dragCoords?.y ?? props.boundCoords?.y ?? props.object.y) * canvasScale.value.sy
+)
 const x2 = computed(
-  () => (props.dragCoords?.x2 ?? props.object.x2 ?? props.object.x + 50) * canvasScale.value.sx
+  () =>
+    (props.dragCoords?.x2 ?? props.boundCoords?.x2 ?? props.object.x2 ?? props.object.x + 50) *
+    canvasScale.value.sx
 )
 const y2 = computed(
-  () => (props.dragCoords?.y2 ?? props.object.y2 ?? props.object.y + 50) * canvasScale.value.sy
+  () =>
+    (props.dragCoords?.y2 ?? props.boundCoords?.y2 ?? props.object.y2 ?? props.object.y + 50) *
+    canvasScale.value.sy
 )
+
+const startBound = computed(() => props.boundCoords?.x != null)
+const endBound = computed(() => props.boundCoords?.x2 != null)
 
 // No explicit bend ⇒ geometric center, so straight lines render unchanged.
 const rawMidX = computed(() => props.dragCoords?.mid_x ?? props.object.mid_x ?? null)
@@ -312,6 +328,43 @@ function _halfTowardMid(fromX: number, fromY: number): { ux: number; uy: number;
 }
 const half1 = computed(() => _halfTowardMid(x1.value, y1.value))
 const half2 = computed(() => _halfTowardMid(x2.value, y2.value))
+
+// Bound-endpoint handles are nudged ~18px inward along the line so they clear
+// the connected icon; unbound handles sit exactly on the endpoint.
+const HANDLE_NUDGE = 18
+function _nudge(
+  px: number,
+  py: number,
+  tx: number,
+  ty: number,
+  on: boolean
+): { x: number; y: number } {
+  if (!on) return { x: px, y: py }
+  const dx = tx - px
+  const dy = ty - py
+  const len = Math.sqrt(dx * dx + dy * dy)
+  if (len < 1) return { x: px, y: py }
+  const d = Math.min(HANDLE_NUDGE, len / 2)
+  return { x: px + (dx / len) * d, y: py + (dy / len) * d }
+}
+const handle1 = computed(() =>
+  _nudge(
+    x1.value,
+    y1.value,
+    hasMid.value ? midX.value : x2.value,
+    hasMid.value ? midY.value : y2.value,
+    startBound.value
+  )
+)
+const handle2 = computed(() =>
+  _nudge(
+    x2.value,
+    y2.value,
+    hasMid.value ? midX.value : x1.value,
+    hasMid.value ? midY.value : y1.value,
+    endBound.value
+  )
+)
 
 const lineColor = computed(() => props.object.line_color ?? stateColor(props.state?.state))
 const lineColorBorder = computed(() => props.object.line_color_border ?? null)
@@ -355,35 +408,49 @@ function arrowPoints(tx: number, ty: number, fx: number, fy: number): string {
   return `${tx},${ty} ${p1x},${p1y} ${p2x},${p2y}`
 }
 
-// Trim back from an arrowed endpoint so the round cap hides under the triangle
-// base. Trims along that endpoint's own segment (toward the bend when set).
-const trimmedStart = computed(() => {
-  if (!hasStartArrow.value) return { x1: x1.value, y1: y1.value }
-  const tx = hasMid.value ? midX.value : x2.value
-  const ty = hasMid.value ? midY.value : y2.value
-  const dx = tx - x1.value
-  const dy = ty - y1.value
+// Trim an endpoint inward (toward the bend/other end) for an arrowhead, and for
+// a bound endpoint so stroke + hit-area clear the icon and leave it grabbable.
+const BIND_TRIM = 16
+function _trimPoint(
+  px: number,
+  py: number,
+  tx: number,
+  ty: number,
+  dist: number
+): { x: number; y: number } {
+  if (dist <= 0) return { x: px, y: py }
+  const dx = tx - px
+  const dy = ty - py
   const len = Math.sqrt(dx * dx + dy * dy)
-  if (len < 1) return { x1: x1.value, y1: y1.value }
-  const trim = arrowLen.value * 0.6
-  return {
-    x1: x1.value + (dx / len) * trim,
-    y1: y1.value + (dy / len) * trim
-  }
+  if (len < 1) return { x: px, y: py }
+  const d = Math.min(dist, len - 1)
+  return { x: px + (dx / len) * d, y: py + (dy / len) * d }
+}
+const startTrimDist = computed(() =>
+  Math.max(hasStartArrow.value ? arrowLen.value * 0.6 : 0, startBound.value ? BIND_TRIM : 0)
+)
+const endTrimDist = computed(() =>
+  Math.max(hasEndArrow.value ? arrowLen.value * 0.6 : 0, endBound.value ? BIND_TRIM : 0)
+)
+const trimmedStart = computed(() => {
+  const p = _trimPoint(
+    x1.value,
+    y1.value,
+    hasMid.value ? midX.value : x2.value,
+    hasMid.value ? midY.value : y2.value,
+    startTrimDist.value
+  )
+  return { x1: p.x, y1: p.y }
 })
 const trimmedEnd = computed(() => {
-  if (!hasEndArrow.value) return { x2: x2.value, y2: y2.value }
-  const fx = hasMid.value ? midX.value : x1.value
-  const fy = hasMid.value ? midY.value : y1.value
-  const dx = x2.value - fx
-  const dy = y2.value - fy
-  const len = Math.sqrt(dx * dx + dy * dy)
-  if (len < 1) return { x2: x2.value, y2: y2.value }
-  const trim = arrowLen.value * 0.6
-  return {
-    x2: x2.value - (dx / len) * trim,
-    y2: y2.value - (dy / len) * trim
-  }
+  const p = _trimPoint(
+    x2.value,
+    y2.value,
+    hasMid.value ? midX.value : x1.value,
+    hasMid.value ? midY.value : y1.value,
+    endTrimDist.value
+  )
+  return { x2: p.x, y2: p.y }
 })
 
 const fillPolyline = computed(() => {
@@ -393,15 +460,18 @@ const fillPolyline = computed(() => {
   return hasMid.value ? `${s.x1},${s.y1} ${midX.value},${midY.value} ${e.x2},${e.y2}` : ends
 })
 const borderPolyline = computed(() => {
+  const s = trimmedStart.value
   const e = trimmedEnd.value
-  const ends = `${x1.value},${y1.value} ${e.x2},${e.y2}`
-  return hasMid.value ? `${x1.value},${y1.value} ${midX.value},${midY.value} ${e.x2},${e.y2}` : ends
+  const ends = `${s.x1},${s.y1} ${e.x2},${e.y2}`
+  return hasMid.value ? `${s.x1},${s.y1} ${midX.value},${midY.value} ${e.x2},${e.y2}` : ends
 })
-const hitPolyline = computed(() =>
-  hasMid.value
-    ? `${x1.value},${y1.value} ${midX.value},${midY.value} ${x2.value},${y2.value}`
-    : `${x1.value},${y1.value} ${x2.value},${y2.value}`
-)
+const hitPolyline = computed(() => {
+  const s = trimmedStart.value
+  const e = trimmedEnd.value
+  return hasMid.value
+    ? `${s.x1},${s.y1} ${midX.value},${midY.value} ${e.x2},${e.y2}`
+    : `${s.x1},${s.y1} ${e.x2},${e.y2}`
+})
 
 // A head arrow aligns with its own segment: it points away from the bend when
 // one is set, otherwise away from the opposite endpoint.
