@@ -222,12 +222,14 @@
 import { computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue'
 
 import { useHoverGrace } from '@/composables/useHoverGrace'
+import { useMarquee } from '@/composables/useMarquee'
 import { useObjectActions } from '@/composables/useObjectActions'
 import { useBoardsStore } from '@/stores/boards'
 import { useSettingsStore } from '@/stores/settings'
 import { useStatesStore } from '@/stores/states'
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api'
 import { GADGET_DEFAULT_SIZE } from '@/utils/gadget'
+import { type GroupMember, applyGroupDelta, collectGroupMembers } from '@/utils/groupDrag'
 import { DIMMED_FILTER, DIMMED_OPACITY, objectMatchesFilter } from '@/utils/objectFilter'
 import { STATEFUL_OBJECT_TYPES, isProblemState } from '@/utils/problemState'
 import { resolveTemplate } from '@/utils/template'
@@ -315,25 +317,22 @@ const _dragInitY = ref(0)
 const _didMove = ref(false)
 const localDragPositions = reactive<Record<string, { x: number; y: number }>>({})
 // Other selected objects that move together with the grabbed one (group drag).
-let _groupMembers: { id: string; initX: number; initY: number }[] = []
+let _groupMembers: GroupMember[] = []
 
 // Rubber-band (marquee) selection on empty canvas in edit mode. Coords are
-// viewport px relative to the canvas element.
-const _marqueeActive = ref(false)
-const _marqueeMoved = ref(false)
-const _marqueeStartX = ref(0)
-const _marqueeStartY = ref(0)
-const _marqueeCurX = ref(0)
-const _marqueeCurY = ref(0)
+// viewport px relative to the canvas element; the pointer id stays local for
+// pointer capture.
+const {
+  rect: marqueeRect,
+  visible: marqueeVisible,
+  active: marqueeActive,
+  moved: marqueeMoved,
+  additive: marqueeAdditive,
+  begin: marqueeBegin,
+  update: marqueeUpdate,
+  reset: marqueeReset
+} = useMarquee()
 const _marqueePointerId = ref<number | null>(null)
-let _marqueeAdditive = false
-const marqueeRect = computed(() => ({
-  left: Math.min(_marqueeStartX.value, _marqueeCurX.value),
-  top: Math.min(_marqueeStartY.value, _marqueeCurY.value),
-  width: Math.abs(_marqueeCurX.value - _marqueeStartX.value),
-  height: Math.abs(_marqueeCurY.value - _marqueeStartY.value)
-}))
-const marqueeVisible = computed(() => _marqueeActive.value && _marqueeMoved.value)
 // When the user taps an object (no drag, no placing), pointer capture redirects
 // the synthetic click to the canvas div. Suppress that canvas-click so it doesn't
 // deselect the just-selected object.
@@ -563,14 +562,12 @@ function onCanvasPointerDown(event: PointerEvent): void {
     if ((event.target as HTMLElement | null)?.closest('[data-object-id]')) return
     const rect = canvasEl.value?.getBoundingClientRect()
     if (!rect) return
-    _marqueeActive.value = true
-    _marqueeMoved.value = false
-    _marqueeStartX.value = event.clientX - rect.left
-    _marqueeStartY.value = event.clientY - rect.top
-    _marqueeCurX.value = _marqueeStartX.value
-    _marqueeCurY.value = _marqueeStartY.value
+    marqueeBegin(
+      event.clientX - rect.left,
+      event.clientY - rect.top,
+      event.shiftKey || event.ctrlKey || event.metaKey
+    )
     _marqueePointerId.value = event.pointerId
-    _marqueeAdditive = event.shiftKey || event.ctrlKey || event.metaKey
     return
   }
   if (props.placing) return
@@ -774,13 +771,11 @@ function onObjectPointerDown(event: PointerEvent, obj: BoardObjectType) {
   localDragPositions[obj.id] = { x: obj.x, y: obj.y }
   // Group drag: when the grabbed object is part of a multi-selection, the other
   // selected non-line objects move with it by the same delta.
-  _groupMembers =
-    props.selectedIds && props.selectedIds.length > 1 && props.selectedIds.includes(obj.id)
-      ? props.config.objects
-          .filter((o) => o.id !== obj.id && o.type !== 'line' && props.selectedIds!.includes(o.id))
-          .map((o) => ({ id: o.id, initX: o.x, initY: o.y }))
-      : []
-  for (const m of _groupMembers) localDragPositions[m.id] = { x: m.initX, y: m.initY }
+  _groupMembers = collectGroupMembers(props.config.objects, props.selectedIds, obj.id, (o) => [
+    o.x,
+    o.y
+  ])
+  for (const m of _groupMembers) localDragPositions[m.id] = { x: m.init[0], y: m.init[1] }
 }
 
 function onGraphResizeStart(event: PointerEvent, obj: BoardObjectType) {
@@ -804,22 +799,14 @@ function onGraphResizeStart(event: PointerEvent, obj: BoardObjectType) {
 }
 
 function onCanvasPointerMove(event: PointerEvent) {
-  if (_marqueeActive.value && canvasEl.value) {
+  if (marqueeActive.value && canvasEl.value) {
     const rect = canvasEl.value.getBoundingClientRect()
-    _marqueeCurX.value = event.clientX - rect.left
-    _marqueeCurY.value = event.clientY - rect.top
-    if (
-      !_marqueeMoved.value &&
-      (Math.abs(_marqueeCurX.value - _marqueeStartX.value) > 4 ||
-        Math.abs(_marqueeCurY.value - _marqueeStartY.value) > 4)
-    ) {
-      _marqueeMoved.value = true
-      if (_marqueePointerId.value !== null) {
-        try {
-          canvasEl.value.setPointerCapture(_marqueePointerId.value)
-        } catch {
-          // pointer may have ended already
-        }
+    const crossed = marqueeUpdate(event.clientX - rect.left, event.clientY - rect.top)
+    if (crossed && _marqueePointerId.value !== null) {
+      try {
+        canvasEl.value.setPointerCapture(_marqueePointerId.value)
+      } catch {
+        // pointer may have ended already
       }
     }
     return
@@ -862,20 +849,17 @@ function onCanvasPointerMove(event: PointerEvent) {
   }
   localDragPositions[id] = { x, y }
   if (_groupMembers.length) {
-    const dgx = x - _dragInitX.value
-    const dgy = y - _dragInitY.value
-    for (const m of _groupMembers) {
-      localDragPositions[m.id] = {
-        x: Math.max(0, m.initX + dgx),
-        y: Math.max(0, m.initY + dgy)
-      }
-    }
+    const moves = applyGroupDelta(_groupMembers, [x - _dragInitX.value, y - _dragInitY.value], 0)
+    for (const [mid, [mx, my]] of moves) localDragPositions[mid] = { x: mx, y: my }
   }
 }
 
 function onCanvasPointerUp(event: PointerEvent) {
-  if (_marqueeActive.value) {
-    _marqueeActive.value = false
+  if (marqueeActive.value) {
+    const wasMoved = marqueeMoved.value
+    const r = marqueeRect.value
+    const additive = marqueeAdditive.value
+    marqueeReset()
     const pid = _marqueePointerId.value
     _marqueePointerId.value = null
     if (pid !== null) {
@@ -885,21 +869,16 @@ function onCanvasPointerUp(event: PointerEvent) {
         // pointer may already be released
       }
     }
-    if (_marqueeMoved.value && canvasEl.value) {
+    if (wasMoved && canvasEl.value) {
       const rect = canvasEl.value.getBoundingClientRect()
-      const a = viewportToNative(marqueeRect.value.left, marqueeRect.value.top, rect)
-      const b = viewportToNative(
-        marqueeRect.value.left + marqueeRect.value.width,
-        marqueeRect.value.top + marqueeRect.value.height,
-        rect
-      )
+      const a = viewportToNative(r.left, r.top, rect)
+      const b = viewportToNative(r.left + r.width, r.top + r.height, rect)
       const ids = props.config.objects
         .filter((o) => o.type !== 'line' && o.x >= a.x && o.x <= b.x && o.y >= a.y && o.y <= b.y)
         .map((o) => o.id)
-      emit('marquee-select', ids, _marqueeAdditive)
+      emit('marquee-select', ids, additive)
       _suppressNextCanvasClick.value = true
     }
-    _marqueeMoved.value = false
     return
   }
   if (_panActive.value) {

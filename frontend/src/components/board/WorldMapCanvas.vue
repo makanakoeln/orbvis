@@ -17,8 +17,9 @@
 <script setup lang="ts">
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 
+import { useMarquee } from '@/composables/useMarquee'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   BoardConfig,
@@ -27,6 +28,7 @@ import type {
   ObjectState,
   WorldmapView
 } from '@/types/api'
+import { type GroupMember, applyGroupDelta, collectGroupMembers } from '@/utils/groupDrag'
 import { getBoardObjectName } from '@/utils/naming'
 import { DIMMED_FILTER, DIMMED_OPACITY, objectMatchesFilter } from '@/utils/objectFilter'
 import { STATEFUL_OBJECT_TYPES, isProblemState } from '@/utils/problemState'
@@ -377,34 +379,24 @@ function syncMarkers() {
       })
       marker.on('dragstart', () => {
         _markerDragging = true
-        const inMulti = (props.selectedIds?.length ?? 0) > 1 && !!props.selectedIds?.includes(objId)
-        _geoDragStart = inMulti ? marker.getLatLng() : null
-        _geoGroup = inMulti
-          ? props.config.objects
-              .filter(
-                (o) =>
-                  o.id !== objId &&
-                  o.type !== 'line' &&
-                  o.lat != null &&
-                  o.lng != null &&
-                  props.selectedIds!.includes(o.id)
-              )
-              .map((o) => ({ id: o.id, startLat: o.lat!, startLng: o.lng! }))
-          : []
+        _geoGroup = collectGroupMembers(props.config.objects, props.selectedIds, objId, (o) =>
+          o.lat != null && o.lng != null ? [o.lat, o.lng] : null
+        )
+        _geoDragStart = _geoGroup.length ? marker.getLatLng() : null
       })
       marker.on('drag', () => {
         const pos = marker.getLatLng()
         let dirty = hasBoundLines(objId)
         if (dirty) _liveObjPos.set(objId, [pos.lat, pos.lng])
         if (_geoGroup.length && _geoDragStart) {
-          const dLat = pos.lat - _geoDragStart.lat
-          const dLng = pos.lng - _geoDragStart.lng
-          for (const m of _geoGroup) {
-            const nlat = m.startLat + dLat
-            const nlng = m.startLng + dLng
-            markers.get(m.id)?.setLatLng([nlat, nlng])
-            if (hasBoundLines(m.id)) {
-              _liveObjPos.set(m.id, [nlat, nlng])
+          const moves = applyGroupDelta(_geoGroup, [
+            pos.lat - _geoDragStart.lat,
+            pos.lng - _geoDragStart.lng
+          ])
+          for (const [mid, [nlat, nlng]] of moves) {
+            markers.get(mid)?.setLatLng([nlat, nlng])
+            if (hasBoundLines(mid)) {
+              _liveObjPos.set(mid, [nlat, nlng])
               dirty = true
             }
           }
@@ -423,19 +415,19 @@ function syncMarkers() {
         }
         _liveObjPos.delete(objId)
         if (_geoGroup.length && _geoDragStart) {
-          const dLat = pos.lat - _geoDragStart.lat
-          const dLng = pos.lng - _geoDragStart.lng
+          const delta = applyGroupDelta(_geoGroup, [
+            pos.lat - _geoDragStart.lat,
+            pos.lng - _geoDragStart.lng
+          ])
           const moves = [{ id: objId, lat: pos.lat, lng: pos.lng }]
-          for (const m of _geoGroup) {
-            const nlat = m.startLat + dLat
-            const nlng = m.startLng + dLng
-            const mo = props.config.objects.find((o) => o.id === m.id)
+          for (const [mid, [nlat, nlng]] of delta) {
+            const mo = props.config.objects.find((o) => o.id === mid)
             if (mo) {
               mo.lat = nlat
               mo.lng = nlng
             }
-            _liveObjPos.delete(m.id)
-            moves.push({ id: m.id, lat: nlat, lng: nlng })
+            _liveObjPos.delete(mid)
+            moves.push({ id: mid, lat: nlat, lng: nlng })
           }
           _geoGroup = []
           _geoDragStart = null
@@ -530,48 +522,47 @@ const _liveObjPos = new Map<string, [number, number]>()
 // Group drag (multi-selection): the other selected markers move with the grabbed
 // one by the same lat/lng delta.
 let _geoDragStart: L.LatLng | null = null
-let _geoGroup: { id: string; startLat: number; startLng: number }[] = []
+let _geoGroup: GroupMember[] = []
 let _markerDragging = false
 
-// Shift+drag marquee selection (plain drag stays map-pan).
-const _mqActive = ref(false)
-const _mqStart = ref<{ x: number; y: number }>({ x: 0, y: 0 })
-const _mqCur = ref<{ x: number; y: number }>({ x: 0, y: 0 })
-const _mqAdditive = ref(false)
-const mqVisible = computed(() => _mqActive.value)
-const mqRect = computed(() => ({
-  left: Math.min(_mqStart.value.x, _mqCur.value.x),
-  top: Math.min(_mqStart.value.y, _mqCur.value.y),
-  width: Math.abs(_mqCur.value.x - _mqStart.value.x),
-  height: Math.abs(_mqCur.value.y - _mqStart.value.y)
-}))
+// Shift+drag marquee selection (plain drag stays map-pan). Coords are leaflet
+// container points.
+const {
+  rect: mqRect,
+  visible: mqVisible,
+  active: mqActive,
+  moved: mqMoved,
+  additive: mqAdditive,
+  begin: mqBegin,
+  update: mqUpdate,
+  reset: mqReset
+} = useMarquee()
 
 function onMarqueeMove(e: MouseEvent) {
-  if (!_mqActive.value || !leafletMap) return
+  if (!mqActive.value || !leafletMap) return
   e.preventDefault()
   const p = leafletMap.mouseEventToContainerPoint(e)
-  _mqCur.value = { x: p.x, y: p.y }
+  mqUpdate(p.x, p.y)
 }
 
 function onMarqueeUp() {
   document.removeEventListener('mousemove', onMarqueeMove, true)
   document.removeEventListener('mouseup', onMarqueeUp, true)
-  if (!_mqActive.value || !leafletMap) return
-  _mqActive.value = false
+  if (!mqActive.value || !leafletMap) return
+  const r = mqRect.value
+  const wasMoved = mqMoved.value
+  const additive = mqAdditive.value
+  mqReset()
   leafletMap.dragging.enable()
-  const minX = Math.min(_mqStart.value.x, _mqCur.value.x)
-  const maxX = Math.max(_mqStart.value.x, _mqCur.value.x)
-  const minY = Math.min(_mqStart.value.y, _mqCur.value.y)
-  const maxY = Math.max(_mqStart.value.y, _mqCur.value.y)
-  if (maxX - minX < 4 && maxY - minY < 4) return
+  if (!wasMoved) return
   const ids = props.config.objects
     .filter((o) => o.type !== 'line' && o.lat != null && o.lng != null)
     .filter((o) => {
       const p = leafletMap!.latLngToContainerPoint([o.lat!, o.lng!])
-      return p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY
+      return p.x >= r.left && p.x <= r.left + r.width && p.y >= r.top && p.y <= r.top + r.height
     })
     .map((o) => o.id)
-  emit('marquee-select', ids, _mqAdditive.value)
+  emit('marquee-select', ids, additive)
 }
 
 function onMarqueeStart(e: L.LeafletMouseEvent) {
@@ -579,10 +570,11 @@ function onMarqueeStart(e: L.LeafletMouseEvent) {
   if (!e.originalEvent.shiftKey) return
   L.DomEvent.preventDefault(e.originalEvent)
   leafletMap.dragging.disable()
-  _mqAdditive.value = e.originalEvent.ctrlKey || e.originalEvent.metaKey
-  _mqStart.value = { x: e.containerPoint.x, y: e.containerPoint.y }
-  _mqCur.value = { x: e.containerPoint.x, y: e.containerPoint.y }
-  _mqActive.value = true
+  mqBegin(
+    e.containerPoint.x,
+    e.containerPoint.y,
+    e.originalEvent.ctrlKey || e.originalEvent.metaKey
+  )
   document.addEventListener('mousemove', onMarqueeMove, true)
   document.addEventListener('mouseup', onMarqueeUp, true)
 }
