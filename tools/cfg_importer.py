@@ -473,6 +473,32 @@ _BLOCK_TYPES = frozenset(
     }
 )
 
+# Keys that identify a block and must never leak from a template/global layer
+# into an inheriting object.
+_NON_INHERITED_KEYS = frozenset({"object_id", "name", "template"})
+
+# Global-block keys that configure the board itself (handled by _apply_global)
+# and must not be pushed onto every object as a per-object default. backend_id/
+# connection_id stay board-level so objects only get a per-object backend
+# override when they (or their template) set one explicitly. view_type is
+# excluded too: a global view_type=line would reroute every host into the line
+# handler — view_type is inherited from templates (line/gadget templates) only.
+_GLOBAL_BOARD_KEYS = frozenset(
+    {
+        "alias",
+        "map_image",
+        "background_color",
+        "backend_id",
+        "connection_id",
+        "iconset",
+        "sources",
+        "root",
+        "child_layers",
+        "parent_layers",
+        "view_type",
+    }
+)
+
 
 def _apply_global(board: dict[str, Any], p: dict[str, str]) -> None:
     if "alias" in p:
@@ -545,6 +571,21 @@ def _line_obj_common(p: dict[str, str], raw_id: str) -> dict[str, Any]:
     return obj
 
 
+def _apply_weathermap_defaults(obj: dict[str, Any]) -> None:
+    """Give weathermap lines NagVis' implicit ``in``/``out`` metric defaults.
+
+    NagVis needs no metric configuration: ``line_label_in``/``line_label_out``
+    default to ``in``/``out`` and are matched against the bound service's
+    perfdata (ElementLine.js). OrbVis requires an explicit ``weathermap_metric``,
+    so mirror that default — otherwise imported weathermap lines have the
+    gradient enabled but no metric to read and stay uncolored.
+    """
+    if not obj.get("line_weather_color"):
+        return
+    obj.setdefault("weathermap_metric", "in")
+    obj.setdefault("weathermap_metric_out", "out")
+
+
 def _handle_view_type_line(p: dict[str, str], raw_id: str) -> dict[str, Any]:
     obj = _line_obj_common(p, raw_id)
     if "host_name" in p:
@@ -555,6 +596,7 @@ def _handle_view_type_line(p: dict[str, str], raw_id: str) -> dict[str, Any]:
         obj["weathermap_metric"] = p["line_label_in"]
     if "line_label_out" in p:
         obj["weathermap_metric_out"] = p["line_label_out"]
+    _apply_weathermap_defaults(obj)
     return obj
 
 
@@ -569,6 +611,9 @@ def _handle_line_block(p: dict[str, str], raw_id: str) -> dict[str, Any]:
             obj["service_description"] = p["service_description"]
         if "weathermap_metric" in p:
             obj["weathermap_metric"] = p["weathermap_metric"]
+        if "weathermap_metric_out" in p:
+            obj["weathermap_metric_out"] = p["weathermap_metric_out"]
+    _apply_weathermap_defaults(obj)
     return obj
 
 
@@ -798,6 +843,25 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
     objects: list[dict[str, Any]] = []
     counter = 0
 
+    # Pre-pass: collect templates and global object-defaults. NagVis resolves
+    # each parameter as object > template (``template=name``) > global > built-in
+    # default; the importer previously only saw the object's own value. Block
+    # order is not guaranteed, so gather these before converting objects.
+    templates: dict[str, dict[str, str]] = {}
+    global_props: dict[str, str] = {}
+    for block in blocks:
+        if block.block_type == "template":
+            name = block.properties.get("name")
+            if name:
+                templates[name] = block.properties
+        elif block.block_type == "global":
+            global_props = block.properties
+    global_defaults = {
+        k: v
+        for k, v in global_props.items()
+        if k not in _NON_INHERITED_KEYS and k not in _GLOBAL_BOARD_KEYS
+    }
+
     for block in blocks:
         p = block.properties
         if block.block_type == "global":
@@ -806,8 +870,16 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
         if block.block_type not in _BLOCK_TYPES:
             continue
         counter += 1
+        # object_id identifies the object and is never inherited.
         raw_id = p.get("object_id", str(counter))
-        objects.append(_handle_object_block(block.block_type, p, raw_id))
+        tmpl = {
+            k: v
+            for k, v in templates.get(p.get("template", ""), {}).items()
+            if k not in _NON_INHERITED_KEYS
+        }
+        effective = {**global_defaults, **tmpl, **p}
+        effective.pop("template", None)
+        objects.append(_handle_object_block(block.block_type, effective, raw_id))
 
     _resolve_pending_refs(objects)
 

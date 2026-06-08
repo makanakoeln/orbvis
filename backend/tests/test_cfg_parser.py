@@ -247,6 +247,93 @@ def test_cfg_to_board_line_two_points_has_no_mid():
     assert "mid_x" not in obj and "mid_y" not in obj
 
 
+def test_cfg_to_board_line_type_inherited_from_template():
+    # NagVis lines often carry no explicit line_type — it comes from a
+    # referenced template. Without resolving template > object these lines
+    # silently fall back to the built-in default (11 = plain arrow).
+    content = (
+        "define template {\n    name = wm\n    line_type = 13\n}\n"
+        "define line {\n    object_id = l1\n    x = 10,20\n    y = 30,40\n"
+        "    template = wm\n}\n"
+    )
+    obj = cfg_to_board(content, "test")["objects"][0]
+    assert obj["line_style"] == "arrow_inward"
+    assert obj["line_perfdata_label"] == "percent"
+    assert obj["line_weather_color"] is True
+    assert "name" not in obj
+    assert "template" not in obj
+
+
+def test_cfg_to_board_object_line_type_overrides_template():
+    content = (
+        "define template {\n    name = wm\n    line_type = 13\n}\n"
+        "define line {\n    object_id = l1\n    x = 10,20\n    y = 30,40\n"
+        "    template = wm\n    line_type = 12\n}\n"
+    )
+    obj = cfg_to_board(content, "test")["objects"][0]
+    assert obj["line_style"] == "plain"
+    assert obj.get("line_weather_color") in (None, False)
+
+
+def test_cfg_to_board_line_type_inherited_from_global():
+    content = (
+        "define global {\n    line_type = 13\n}\n"
+        "define line {\n    object_id = l1\n    x = 10,20\n    y = 30,40\n}\n"
+    )
+    obj = cfg_to_board(content, "test")["objects"][0]
+    assert obj["line_style"] == "arrow_inward"
+    assert obj["line_weather_color"] is True
+
+
+def test_cfg_to_board_global_backend_not_inherited_by_objects():
+    # backend_id stays board-level: a global backend must not become a
+    # per-object connection_id override.
+    content = (
+        "define global {\n    backend_id = primary\n    line_type = 13\n}\n"
+        "define line {\n    object_id = l1\n    x = 10,20\n    y = 30,40\n}\n"
+    )
+    board = cfg_to_board(content, "test")
+    assert board["connection_id"] == "primary"
+    obj = board["objects"][0]
+    assert "connection_id" not in obj
+    assert obj["line_weather_color"] is True
+
+
+def test_cfg_to_board_weathermap_metric_defaults_to_in_out():
+    # NagVis weathermap lines need no metric config; in/out are matched against
+    # the service perfdata by the implicit "in"/"out" labels.
+    content = (
+        "define service {\n    object_id = l1\n    x = 10,20\n    y = 30,40\n"
+        "    view_type = line\n    line_type = 13\n"
+        "    host_name = sw1\n    service_description = Interface WAN\n}\n"
+    )
+    obj = cfg_to_board(content, "test")["objects"][0]
+    assert obj["line_weather_color"] is True
+    assert obj["weathermap_metric"] == "in"
+    assert obj["weathermap_metric_out"] == "out"
+
+
+def test_cfg_to_board_weathermap_explicit_label_wins():
+    content = (
+        "define service {\n    object_id = l1\n    x = 10,20\n    y = 30,40\n"
+        "    view_type = line\n    line_type = 13\n    line_label_in = if_in_octets\n"
+        "    host_name = sw1\n    service_description = Interface WAN\n}\n"
+    )
+    obj = cfg_to_board(content, "test")["objects"][0]
+    assert obj["weathermap_metric"] == "if_in_octets"
+    assert obj["weathermap_metric_out"] == "out"
+
+
+def test_cfg_to_board_plain_line_gets_no_weathermap_metric():
+    content = (
+        "define line {\n    object_id = l1\n    x = 10,20\n    y = 30,40\n    line_type = 11\n}\n"
+    )
+    obj = cfg_to_board(content, "test")["objects"][0]
+    assert obj["line_style"] == "arrow_end"
+    assert "weathermap_metric" not in obj
+    assert "weathermap_metric_out" not in obj
+
+
 def test_cfg_to_board_default_z_is_ten_and_objects_inherit():
     # NagVis' global default is z=10; objects without explicit z stay unset
     # so the renderer resolves them against the board's default_z.

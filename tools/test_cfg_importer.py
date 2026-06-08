@@ -518,6 +518,165 @@ def test_aggr_object(tmp_path: Path):
     assert obj["url"].endswith("aggr_name=Servers")
 
 
+def test_line_type_inherited_from_template(tmp_path: Path):
+    # NagVis lines usually carry no explicit line_type — it comes from a
+    # referenced template. The importer must resolve template > object so these
+    # lines don't silently fall back to the built-in default (11 = plain arrow).
+    cfg_text = textwrap.dedent("""
+        define template {
+            name=wm
+            line_type=13
+        }
+        define line {
+            x=10,20
+            y=30,40
+            template=wm
+            object_id=l1
+        }
+    """)
+    cfg = tmp_path / "tmpl-line.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    obj = blocks_to_board_json(blocks, "tmpl-line")["objects"][0]
+    assert obj["line_style"] == "arrow_inward"
+    assert obj["line_perfdata_label"] == "percent"
+    assert obj["line_weather_color"] is True
+    # template name must not leak into the object
+    assert "name" not in obj
+    assert "template" not in obj
+
+
+def test_object_line_type_overrides_template(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define template {
+            name=wm
+            line_type=13
+        }
+        define line {
+            x=10,20
+            y=30,40
+            template=wm
+            line_type=12
+            object_id=l1
+        }
+    """)
+    cfg = tmp_path / "tmpl-override.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    obj = blocks_to_board_json(blocks, "tmpl-override")["objects"][0]
+    assert obj["line_style"] == "plain"
+    assert obj.get("line_weather_color") in (None, False)
+
+
+def test_line_type_inherited_from_global(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define global {
+            line_type=13
+        }
+        define line {
+            x=10,20
+            y=30,40
+            object_id=l1
+        }
+    """)
+    cfg = tmp_path / "global-line.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    obj = blocks_to_board_json(blocks, "global-line")["objects"][0]
+    assert obj["line_style"] == "arrow_inward"
+    assert obj["line_weather_color"] is True
+
+
+def test_global_backend_not_inherited_by_objects(tmp_path: Path):
+    # backend_id stays board-level: a global backend must not become a
+    # per-object connection_id override (regression guard for the inheritance).
+    cfg_text = textwrap.dedent("""
+        define global {
+            backend_id=primary
+            line_type=13
+        }
+        define line {
+            x=10,20
+            y=30,40
+            object_id=l1
+        }
+    """)
+    cfg = tmp_path / "global-backend-line.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    result = blocks_to_board_json(blocks, "global-backend-line")
+    assert result["connection_id"] == "primary"
+    obj = result["objects"][0]
+    assert "connection_id" not in obj
+    # line_type still inherits from global
+    assert obj["line_weather_color"] is True
+
+
+def test_weathermap_metric_defaults_to_in_out(tmp_path: Path):
+    # NagVis weathermap lines need no metric config; in/out are matched against
+    # the service perfdata by the implicit "in"/"out" labels.
+    cfg_text = textwrap.dedent("""
+        define service {
+            host_name=sw1
+            service_description=Interface WAN
+            x=10,20
+            y=30,40
+            view_type=line
+            line_type=13
+            object_id=l1
+        }
+    """)
+    cfg = tmp_path / "wm-defaults.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    obj = blocks_to_board_json(blocks, "wm-defaults")["objects"][0]
+    assert obj["line_weather_color"] is True
+    assert obj["weathermap_metric"] == "in"
+    assert obj["weathermap_metric_out"] == "out"
+    assert obj["host_name"] == "sw1"
+    assert obj["service_description"] == "Interface WAN"
+
+
+def test_weathermap_explicit_label_wins_over_default(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define service {
+            host_name=sw1
+            service_description=Interface WAN
+            x=10,20
+            y=30,40
+            view_type=line
+            line_type=13
+            line_label_in=if_in_octets
+            object_id=l1
+        }
+    """)
+    cfg = tmp_path / "wm-explicit.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    obj = blocks_to_board_json(blocks, "wm-explicit")["objects"][0]
+    assert obj["weathermap_metric"] == "if_in_octets"
+    # out still gets the NagVis default
+    assert obj["weathermap_metric_out"] == "out"
+
+
+def test_plain_line_gets_no_weathermap_metric(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define line {
+            x=10,20
+            y=30,40
+            line_type=11
+            object_id=l1
+        }
+    """)
+    cfg = tmp_path / "plain-line.cfg"
+    cfg.write_text(cfg_text)
+    blocks = parse_cfg_file(cfg)
+    obj = blocks_to_board_json(blocks, "plain-line")["objects"][0]
+    assert obj["line_style"] == "arrow_end"
+    assert "weathermap_metric" not in obj
+    assert "weathermap_metric_out" not in obj
+
+
 def test_comment_handling(tmp_path: Path):
     cfg_text = textwrap.dedent("""
         # This is a comment
