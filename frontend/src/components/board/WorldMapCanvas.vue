@@ -1,11 +1,23 @@
 <template>
-  <div ref="mapEl" class="orb-worldmap" />
+  <div class="orb-worldmap">
+    <div ref="mapEl" class="orb-worldmap__map" />
+    <div
+      v-if="mqVisible"
+      class="orb-worldmap__marquee"
+      :style="{
+        left: `${mqRect.left}px`,
+        top: `${mqRect.top}px`,
+        width: `${mqRect.width}px`,
+        height: `${mqRect.height}px`
+      }"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { useSettingsStore } from '@/stores/settings'
 import type {
@@ -26,6 +38,7 @@ const props = defineProps<{
   editMode: boolean
   placing: boolean
   selectedObjectId: string | null
+  selectedIds?: string[]
   filterNeedle?: string
   problemsOnly?: boolean
   preview?: boolean
@@ -45,9 +58,13 @@ const emit = defineEmits<{
     screen: { x: number; y: number }
   ]
   'latlng-drag-end': [id: string, lat: number, lng: number]
+  'latlngs-drag-end': [moves: { id: string; lat: number; lng: number }[]]
   'latlng2-drag-end': [id: string, lat: number, lng: number]
   'endpoint-bind': [id: string, endpoint: 1 | 2, lat: number, lng: number, refId: string | null]
   'textbox-resize': [id: string, width: number, height: number]
+  'view-changed': []
+  'marquee-select': [ids: string[], additive: boolean]
+  'canvas-click': []
 }>()
 
 const mapEl = ref<HTMLDivElement | null>(null)
@@ -74,6 +91,16 @@ const DEFAULT_TILE_URL = `${import.meta.env.BASE_URL}api/v1/maps/tiles/{z}/{x}/{
 
 function stateColor(id: string): string {
   return stateColorFromName(props.states[id]?.state)
+}
+
+function isSelected(id: string): boolean {
+  return props.selectedIds && props.selectedIds.length
+    ? props.selectedIds.includes(id)
+    : props.selectedObjectId === id
+}
+
+function markerZBase(obj: BoardObjectType): number {
+  return (obj.z ?? props.config.default_z ?? 1) * 1000
 }
 
 function escapeHtml(s: string): string {
@@ -118,7 +145,9 @@ function makeTextboxIcon(obj: BoardObjectType, selected: boolean): L.DivIcon {
     h ? `height:${h}px;` : '',
     'padding:3px 8px;border-radius:6px;box-sizing:border-box;white-space:pre-wrap;line-height:1.3;',
     hasCustomBg ? '' : 'text-shadow:0 1px 2px rgba(0,0,0,0.6);',
-    selected ? 'outline:2px solid #4ade80;outline-offset:2px;' : ''
+    selected
+      ? 'outline:3px dashed #4ade80;outline-offset:5px;box-shadow:0 0 0 4px #fff,0 0 0 7px rgba(0,0,0,0.8),0 0 14px 5px rgba(0,0,0,0.55);'
+      : ''
   ].join('')
   const handle =
     props.editMode && !props.preview
@@ -126,7 +155,7 @@ function makeTextboxIcon(obj: BoardObjectType, selected: boolean): L.DivIcon {
       : ''
   return L.divIcon({
     className: '',
-    html: `<div style="${styles}">${text}${handle}</div>`,
+    html: `<div data-object-id="${obj.id}" style="${styles}">${text}${handle}</div>`,
     iconSize: w && h ? [w, h] : undefined,
     iconAnchor: [0, 0]
   })
@@ -135,7 +164,7 @@ function makeTextboxIcon(obj: BoardObjectType, selected: boolean): L.DivIcon {
 function _refreshTextbox(id: string) {
   const marker = markers.get(id)
   const obj = props.config.objects.find((o) => o.id === id)
-  if (marker && obj) marker.setIcon(makeTextboxIcon(obj, props.selectedObjectId === obj.id))
+  if (marker && obj) marker.setIcon(makeTextboxIcon(obj, isSelected(obj.id)))
 }
 
 function onTextboxResizeMove(e: MouseEvent) {
@@ -181,7 +210,7 @@ function onTextboxResizeStart(e: MouseEvent) {
 }
 
 function makeDivIcon(obj: BoardObjectType): L.DivIcon {
-  const selected = props.selectedObjectId === obj.id
+  const selected = isSelected(obj.id)
   if (obj.type === 'textbox') return makeTextboxIcon(obj, selected)
 
   const color = stateColor(obj.id)
@@ -278,7 +307,13 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
       ">${label.replace(/\n/g, '<br>')}</div>`
       : ''
 
-  const wrappedIcon = `<div style="position:relative;display:inline-block;">${iconHtml}${ackBadge}${downtimeBadge}${labelHtml}</div>`
+  // Dashed green outline like the static board, but markers are themselves
+  // state-coloured (often green) — so sandwich a white ring between the marker
+  // and the dashes, plus a dark glow, to stay visible on any marker/background.
+  const selWrap = selected
+    ? 'outline:3px dashed #4ade80;outline-offset:5px;border-radius:9px;box-shadow:0 0 0 4px #fff,0 0 0 7px rgba(0,0,0,0.8),0 0 14px 5px rgba(0,0,0,0.55);'
+    : ''
+  const wrappedIcon = `<div data-object-id="${obj.id}" style="position:relative;display:inline-block;${selWrap}">${iconHtml}${ackBadge}${downtimeBadge}${labelHtml}</div>`
 
   return L.divIcon({
     className: '',
@@ -305,12 +340,14 @@ function syncMarkers() {
       const marker = markers.get(objId)!
       marker.setLatLng([lat, lng])
       marker.setIcon(icon)
+      marker.setZIndexOffset(markerZBase(obj))
       if (props.editMode && !props.preview) marker.dragging?.enable()
       else marker.dragging?.disable()
     } else {
       const marker = L.marker([lat, lng], {
         icon,
-        draggable: props.editMode && !props.preview
+        draggable: props.editMode && !props.preview,
+        zIndexOffset: markerZBase(obj)
       })
       marker.on('click', (e: L.LeafletMouseEvent) => {
         if (props.preview) return
@@ -330,7 +367,7 @@ function syncMarkers() {
         }
       })
       marker.on('mouseover', (e: L.LeafletMouseEvent) => {
-        if (props.preview) return
+        if (props.preview || props.editMode) return
         const current = props.config.objects.find((o) => o.id === objId)
         if (current) emit('object-hover', current, e.originalEvent)
       })
@@ -338,23 +375,74 @@ function syncMarkers() {
         if (props.preview) return
         emit('object-hover-leave')
       })
+      marker.on('dragstart', () => {
+        _markerDragging = true
+        const inMulti = (props.selectedIds?.length ?? 0) > 1 && !!props.selectedIds?.includes(objId)
+        _geoDragStart = inMulti ? marker.getLatLng() : null
+        _geoGroup = inMulti
+          ? props.config.objects
+              .filter(
+                (o) =>
+                  o.id !== objId &&
+                  o.type !== 'line' &&
+                  o.lat != null &&
+                  o.lng != null &&
+                  props.selectedIds!.includes(o.id)
+              )
+              .map((o) => ({ id: o.id, startLat: o.lat!, startLng: o.lng! }))
+          : []
+      })
       marker.on('drag', () => {
-        if (!hasBoundLines(objId)) return
         const pos = marker.getLatLng()
-        _liveObjPos.set(objId, [pos.lat, pos.lng])
-        syncLines()
+        let dirty = hasBoundLines(objId)
+        if (dirty) _liveObjPos.set(objId, [pos.lat, pos.lng])
+        if (_geoGroup.length && _geoDragStart) {
+          const dLat = pos.lat - _geoDragStart.lat
+          const dLng = pos.lng - _geoDragStart.lng
+          for (const m of _geoGroup) {
+            const nlat = m.startLat + dLat
+            const nlng = m.startLng + dLng
+            markers.get(m.id)?.setLatLng([nlat, nlng])
+            if (hasBoundLines(m.id)) {
+              _liveObjPos.set(m.id, [nlat, nlng])
+              dirty = true
+            }
+          }
+        }
+        if (dirty) syncLines()
       })
       marker.on('dragend', () => {
+        _markerDragging = false
         const pos = marker.getLatLng()
-        // Apply optimistically so the bound line doesn't flash to the old coord
-        // before the async store update lands.
+        // Apply optimistically so bound lines / group members don't flash to the
+        // old coord before the async store update lands.
         const obj = props.config.objects.find((o) => o.id === objId)
         if (obj) {
           obj.lat = pos.lat
           obj.lng = pos.lng
         }
         _liveObjPos.delete(objId)
-        emit('latlng-drag-end', objId, pos.lat, pos.lng)
+        if (_geoGroup.length && _geoDragStart) {
+          const dLat = pos.lat - _geoDragStart.lat
+          const dLng = pos.lng - _geoDragStart.lng
+          const moves = [{ id: objId, lat: pos.lat, lng: pos.lng }]
+          for (const m of _geoGroup) {
+            const nlat = m.startLat + dLat
+            const nlng = m.startLng + dLng
+            const mo = props.config.objects.find((o) => o.id === m.id)
+            if (mo) {
+              mo.lat = nlat
+              mo.lng = nlng
+            }
+            _liveObjPos.delete(m.id)
+            moves.push({ id: m.id, lat: nlat, lng: nlng })
+          }
+          _geoGroup = []
+          _geoDragStart = null
+          emit('latlngs-drag-end', moves)
+        } else {
+          emit('latlng-drag-end', objId, pos.lat, pos.lng)
+        }
       })
       marker.addTo(leafletMap!)
       markers.set(objId, marker)
@@ -438,6 +526,66 @@ function midpoint(p1: [number, number], p2: [number, number]): [number, number] 
 
 // Live marker positions during an in-flight drag, so bound lines follow live.
 const _liveObjPos = new Map<string, [number, number]>()
+
+// Group drag (multi-selection): the other selected markers move with the grabbed
+// one by the same lat/lng delta.
+let _geoDragStart: L.LatLng | null = null
+let _geoGroup: { id: string; startLat: number; startLng: number }[] = []
+let _markerDragging = false
+
+// Shift+drag marquee selection (plain drag stays map-pan).
+const _mqActive = ref(false)
+const _mqStart = ref<{ x: number; y: number }>({ x: 0, y: 0 })
+const _mqCur = ref<{ x: number; y: number }>({ x: 0, y: 0 })
+const _mqAdditive = ref(false)
+const mqVisible = computed(() => _mqActive.value)
+const mqRect = computed(() => ({
+  left: Math.min(_mqStart.value.x, _mqCur.value.x),
+  top: Math.min(_mqStart.value.y, _mqCur.value.y),
+  width: Math.abs(_mqCur.value.x - _mqStart.value.x),
+  height: Math.abs(_mqCur.value.y - _mqStart.value.y)
+}))
+
+function onMarqueeMove(e: MouseEvent) {
+  if (!_mqActive.value || !leafletMap) return
+  e.preventDefault()
+  const p = leafletMap.mouseEventToContainerPoint(e)
+  _mqCur.value = { x: p.x, y: p.y }
+}
+
+function onMarqueeUp() {
+  document.removeEventListener('mousemove', onMarqueeMove, true)
+  document.removeEventListener('mouseup', onMarqueeUp, true)
+  if (!_mqActive.value || !leafletMap) return
+  _mqActive.value = false
+  leafletMap.dragging.enable()
+  const minX = Math.min(_mqStart.value.x, _mqCur.value.x)
+  const maxX = Math.max(_mqStart.value.x, _mqCur.value.x)
+  const minY = Math.min(_mqStart.value.y, _mqCur.value.y)
+  const maxY = Math.max(_mqStart.value.y, _mqCur.value.y)
+  if (maxX - minX < 4 && maxY - minY < 4) return
+  const ids = props.config.objects
+    .filter((o) => o.type !== 'line' && o.lat != null && o.lng != null)
+    .filter((o) => {
+      const p = leafletMap!.latLngToContainerPoint([o.lat!, o.lng!])
+      return p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY
+    })
+    .map((o) => o.id)
+  emit('marquee-select', ids, _mqAdditive.value)
+}
+
+function onMarqueeStart(e: L.LeafletMouseEvent) {
+  if (!props.editMode || props.preview || !leafletMap) return
+  if (!e.originalEvent.shiftKey) return
+  L.DomEvent.preventDefault(e.originalEvent)
+  leafletMap.dragging.disable()
+  _mqAdditive.value = e.originalEvent.ctrlKey || e.originalEvent.metaKey
+  _mqStart.value = { x: e.containerPoint.x, y: e.containerPoint.y }
+  _mqCur.value = { x: e.containerPoint.x, y: e.containerPoint.y }
+  _mqActive.value = true
+  document.addEventListener('mousemove', onMarqueeMove, true)
+  document.addEventListener('mouseup', onMarqueeUp, true)
+}
 
 function boundEndpoint(refId: string | null | undefined): [number, number] | null {
   if (!refId) return null
@@ -625,7 +773,7 @@ function syncLines() {
         else emit('object-contextmenu-view', cur, e.originalEvent.clientX, e.originalEvent.clientY)
       })
       polyline.on('mouseover', (e: L.LeafletMouseEvent) => {
-        if (props.preview) return
+        if (props.preview || props.editMode) return
         const cur = props.config.objects.find((o) => o.id === objId)
         if (cur) emit('object-hover', cur, e.originalEvent)
       })
@@ -717,6 +865,9 @@ onMounted(() => {
   leafletMap.on('click', (e) => {
     if (props.placing) {
       emit('canvas-latlng-click', e.latlng.lat, e.latlng.lng)
+    } else if (props.editMode && !e.originalEvent.shiftKey) {
+      // Clicking the empty map clears the selection (shift is the marquee gesture).
+      emit('canvas-click')
     }
   })
   leafletMap.on('contextmenu', (e: L.LeafletMouseEvent) => {
@@ -734,6 +885,11 @@ onMounted(() => {
   applyTileSettings()
   syncMarkers()
   syncLines()
+  // Lets the selected-object action bar re-anchor as the map pans/zooms.
+  leafletMap.on('move zoom', () => emit('view-changed'))
+  // Shift+drag is a marquee selection in edit mode, not the default box-zoom.
+  leafletMap.boxZoom.disable()
+  leafletMap.on('mousedown', onMarqueeStart)
   resizeObserver = new ResizeObserver(() => leafletMap?.invalidateSize())
   resizeObserver.observe(mapEl.value)
   // Capture phase so we start a textbox resize before Leaflet's marker-drag.
@@ -755,6 +911,8 @@ onUnmounted(() => {
   mapEl.value?.removeEventListener('mousedown', onTextboxResizeStart, true)
   document.removeEventListener('mousemove', onTextboxResizeMove, true)
   document.removeEventListener('mouseup', onTextboxResizeEnd, true)
+  document.removeEventListener('mousemove', onMarqueeMove, true)
+  document.removeEventListener('mouseup', onMarqueeUp, true)
   leafletMap?.remove()
   leafletMap = null
   tileLayer = null
@@ -768,15 +926,21 @@ watch(
     props.config.icon_size,
     props.states,
     props.selectedObjectId,
+    props.selectedIds,
     props.editMode
   ],
   () => {
-    syncMarkers()
+    // Skip the marker rebuild while a drag is in flight — setIcon would replace
+    // the dragged element and silently abort Leaflet's drag (no dragend fires).
+    if (!_markerDragging) syncMarkers()
     syncLines()
     // syncMarkers recreates markers at full opacity, so re-apply dimming
     // here too — this is also where live state polls land (states mutate
     // in place, so a non-deep watch on props.states wouldn't fire).
     applyFilterDimming()
+    // setIcon replaces the selected marker's DOM node; tell the parent to
+    // re-resolve the action-bar anchor.
+    emit('view-changed')
   },
   { deep: true }
 )
@@ -799,7 +963,9 @@ function applyFilterDimming(): void {
       m.setOpacity(opacity)
       const el = m.getElement()
       if (el) el.style.filter = matches ? '' : DIMMED_FILTER
-      m.setZIndexOffset(filterActive && matches ? 10000 : 0)
+      // Bring-to-front/back maps the object's z to the marker stacking order;
+      // a filter match still boosts above everything.
+      m.setZIndexOffset((filterActive && matches ? 10000 : 0) + markerZBase(obj))
     }
     const line = lines.get(obj.id)
     if (line) {
@@ -861,5 +1027,18 @@ defineExpose({ getView, getContainerSize, setView, fitAll })
   position: absolute;
   inset: 0;
   z-index: 0;
+}
+
+.orb-worldmap__map {
+  position: absolute;
+  inset: 0;
+}
+
+.orb-worldmap__marquee {
+  position: absolute;
+  z-index: 600;
+  border: 1px solid var(--color-corporate-green-50, #4ade80);
+  background: rgb(74 222 128 / 12%);
+  pointer-events: none;
 }
 </style>

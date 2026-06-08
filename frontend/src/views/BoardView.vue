@@ -269,6 +269,7 @@
           :edit-mode="editor.editMode.value"
           :placing="editor.placing.value"
           :selected-object-id="editor.selectedObjectId.value"
+          :selected-ids="editor.selectedIds.value"
           :filter-needle="boardFilterNeedle"
           :problems-only="problemsOnly"
           :preview="isPreview"
@@ -280,9 +281,13 @@
           @canvas-latlng-click="onCanvasLatLngClick"
           @canvas-contextmenu-view="onWorldmapCanvasContextMenu"
           @latlng-drag-end="onLatLngDragEnd"
+          @latlngs-drag-end="(moves) => editor.saveLatLngs(moves)"
           @latlng2-drag-end="onLatLng2DragEnd"
           @endpoint-bind="onWorldmapEndpointBind"
           @textbox-resize="onGraphResizeEnd"
+          @view-changed="geoViewTick++"
+          @marquee-select="(ids, additive) => editor.selectObjects(ids, additive)"
+          @canvas-click="editor.selectObject(null)"
         />
         <BoardSearch
           v-if="
@@ -1448,11 +1453,15 @@ const isDragging = ref(false)
 
 // ---- Action bar position anchored to selected object ----
 const selectedObjectEl = ref<HTMLElement | null>(null)
-const selectedRect = useElementRect(selectedObjectEl)
+// Bumped on every worldmap pan/zoom so the action bar re-anchors to the marker.
+const geoViewTick = ref(0)
+const selectedRect = useElementRect(selectedObjectEl, () => geoViewTick.value)
 
+// Re-resolve on geoViewTick too: a worldmap re-render (setIcon) replaces the
+// marker's DOM node, detaching the cached one.
 watch(
-  () => editor.selectedObjectId.value,
-  async (id) => {
+  [() => editor.selectedObjectId.value, () => geoViewTick.value],
+  async ([id]) => {
     await nextTick()
     selectedObjectEl.value = id
       ? (document.querySelector(`[data-object-id="${CSS.escape(id)}"]`) as HTMLElement | null)

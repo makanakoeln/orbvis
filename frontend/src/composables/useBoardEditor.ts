@@ -647,6 +647,31 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     return moveObjectToLatLng(id, lat, lng, 2)
   }
 
+  // Group drag on geo boards: persist each moved object's lat/lng.
+  async function saveLatLngs(moves: { id: string; lat: number; lng: number }[]) {
+    const objects = boardsStore.currentBoard?.objects ?? []
+    for (const m of moves) {
+      const obj = objects.find((o) => o.id === m.id)
+      if (obj) {
+        obj.lat = m.lat
+        obj.lng = m.lng
+      }
+    }
+    try {
+      for (const m of moves) {
+        await boardsApi.updateObject(
+          mapName.value,
+          m.id,
+          { lat: m.lat, lng: m.lng },
+          auth.accessToken!
+        )
+      }
+    } catch (e) {
+      console.error('Failed to save geo group drag', e)
+      await onMapChange()
+    }
+  }
+
   function resetForNewMap() {
     editMode.value = false
     selectObject(null)
@@ -699,6 +724,16 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       clone.x2 = (clone.x2 as number) + 30
       clone.y2 = (clone.y2 as number) + 30
     }
+    // Geo objects are placed by lat/lng — offset those too so the clone doesn't
+    // land exactly on top of the original.
+    if (src.lat != null && src.lng != null) {
+      clone.lat = src.lat - 0.05
+      clone.lng = src.lng + 0.05
+      if (src.lat2 != null && src.lng2 != null) {
+        clone.lat2 = src.lat2 - 0.05
+        clone.lng2 = src.lng2 + 0.05
+      }
+    }
     try {
       const newConfig = await boardsApi.addObject(mapName.value, clone, auth.accessToken!)
       if (boardsStore.currentBoard) boardsStore.currentBoard.objects = newConfig.objects
@@ -738,6 +773,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     placeAtLatLng,
     moveObjectToLatLng,
     moveObjectToLatLng2,
+    saveLatLngs,
     deleteSelected,
     duplicateSelected,
     cancelPlacing,

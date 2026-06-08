@@ -14,7 +14,7 @@ export interface ElementRect {
 // positioned via inline style, so pure moves must refresh too), window resize
 // and any scroll — covers the action-bar anchoring in BoardView without
 // pulling in @vueuse/core.
-export function useElementRect(el: Ref<HTMLElement | null>): ElementRect {
+export function useElementRect(el: Ref<HTMLElement | null>, deps?: () => unknown): ElementRect {
   const rect = reactive<ElementRect>({ top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 })
 
   function update() {
@@ -30,6 +30,10 @@ export function useElementRect(el: Ref<HTMLElement | null>): ElementRect {
 
   const resizeObserver = new ResizeObserver(update)
   const mutationObserver = new MutationObserver(update)
+
+  // Leaflet pans/zooms move markers without a style mutation on the tracked
+  // child, so callers can force a refresh via a reactive dependency.
+  if (deps) watch(deps, update)
 
   watch(
     el,
