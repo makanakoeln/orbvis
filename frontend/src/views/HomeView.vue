@@ -1058,7 +1058,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import OnboardingTour from '@/components/OnboardingTour.vue'
@@ -1077,6 +1077,8 @@ import CmkButton from '@/components/cmk/CmkButton'
 import CmkToggleButtonGroup from '@/components/cmk/CmkToggleButtonGroup'
 
 import { boardsApi } from '@/api/client'
+import { useBoardImportExport } from '@/composables/useBoardImportExport'
+import { useBoardListViewMode } from '@/composables/useBoardListViewMode'
 import { useChangelog } from '@/composables/useChangelog'
 import { useDragReorder } from '@/composables/useDragReorder'
 import { useToast } from '@/composables/useToast'
@@ -1084,15 +1086,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
 import { useCapabilitiesStore } from '@/stores/capabilities'
 import { useSettingsStore } from '@/stores/settings'
-import type {
-  BoardBulkDeleteFailure,
-  BoardConfig,
-  BoardListView,
-  BoardRead,
-  WorldmapView
-} from '@/types/api'
+import type { BoardBulkDeleteFailure, BoardRead, WorldmapView } from '@/types/api'
 import type { TourStep } from '@/types/tour'
-import { sanitizeBoardName } from '@/utils/naming'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 const { _t, _tn } = usei18n()
@@ -1153,36 +1148,8 @@ const capabilities = useCapabilitiesStore()
 const settingsStore = useSettingsStore()
 const toast = useToast()
 
-// Per-user view choice (all roles), read synchronously at setup so the first
-// render honours it; the global board_list_view is only the default otherwise.
-function viewModeStorageKey(): string {
-  return `orbvis_board_list_view_${auth.user?.user_id ?? 'anon'}`
-}
-function readStoredViewMode(): BoardListView | null {
-  const v = localStorage.getItem(viewModeStorageKey())
-  return v === 'table' || v === 'cards' ? v : null
-}
-const localViewMode = ref<BoardListView | null>(readStoredViewMode())
-
-const viewMode = computed<BoardListView>(
-  () =>
-    localViewMode.value ?? (settingsStore.settings.board_list_view === 'table' ? 'table' : 'cards')
-)
-const viewModeOptions = computed(() => [
-  { label: _t('Cards'), value: 'cards' },
-  { label: _t('Table'), value: 'table' }
-])
-
-function setViewMode(value: string) {
-  const next: BoardListView = value === 'table' ? 'table' : 'cards'
-  if (viewMode.value === next) return
-  localViewMode.value = next
-  try {
-    localStorage.setItem(viewModeStorageKey(), next)
-  } catch {
-    // localStorage unavailable (e.g. private mode); the in-memory ref still applies.
-  }
-}
+// Cards-vs-table choice (per-user localStorage override + global default).
+const { viewMode, viewModeOptions, setViewMode } = useBoardListViewMode()
 
 const selectedBoards = ref<Set<string>>(new Set())
 const confirmBulkDelete = ref(false)
@@ -1354,105 +1321,21 @@ async function doBulkExport() {
   }
 }
 
-const importConflict = ref<{ name: string; action: () => Promise<unknown> } | null>(null)
-
-async function importBoard(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  try {
-    if (file.name.toLowerCase().endsWith('.cfg')) {
-      try {
-        await boardsApi.importCfg(file, auth.accessToken!, false)
-      } catch (e: unknown) {
-        if (e instanceof Error && e.message.includes('already exists')) {
-          const name = file.name.replace(/\.cfg$/i, '')
-          importConflict.value = {
-            name,
-            action: () => boardsApi.importCfg(file, auth.accessToken!, true)
-          }
-          return
-        } else {
-          throw e
-        }
-      }
-    } else {
-      const text = await file.text()
-      const data: BoardConfig = JSON.parse(text)
-      try {
-        await boardsApi.importBoard(data, auth.accessToken!, false)
-      } catch (e: unknown) {
-        if (e instanceof Error && e.message.includes('already exists')) {
-          importConflict.value = {
-            name: data.name,
-            action: () => boardsApi.importBoard(data, auth.accessToken!, true)
-          }
-          return
-        } else {
-          throw e
-        }
-      }
-    }
-    await boardsStore.fetchBoards()
-  } catch (e: unknown) {
-    alert(e instanceof Error ? e.message : _t('Import failed'))
-  } finally {
-    ;(event.target as HTMLInputElement).value = ''
-  }
-}
-
-async function confirmImportOverwrite() {
-  if (!importConflict.value) return
-  const action = importConflict.value.action
-  importConflict.value = null
-  try {
-    await action()
-    await boardsStore.fetchBoards()
-  } catch (e: unknown) {
-    alert(e instanceof Error ? e.message : _t('Import failed'))
-  }
-}
-
-async function exportBoard(name: string) {
-  await boardsApi.exportBoard(name, auth.accessToken!)
-}
-
-const confirmClone = ref<string | null>(null)
-const cloneNewName = ref('')
-const cloneAlias = ref('')
-const cloneError = ref('')
+// Single-board import / export / clone (with overwrite-conflict handling).
 const cloneInputEl = ref<HTMLInputElement | null>(null)
-
-function cloneBoard(map: BoardRead) {
-  confirmClone.value = map.name
-  cloneNewName.value = `${map.name}_copy`
-  cloneAlias.value = map.alias ? `${map.alias} (Copy)` : ''
-  cloneError.value = ''
-  nextTick(() => {
-    cloneInputEl.value?.select()
-  })
-}
-
-function onCloneNameInput(e: Event) {
-  cloneNewName.value = sanitizeBoardName((e.target as HTMLInputElement).value)
-}
-
-async function doClone() {
-  if (!confirmClone.value || !cloneNewName.value) return
-  try {
-    await boardsApi.clone(
-      confirmClone.value,
-      {
-        new_name: cloneNewName.value,
-        ...(cloneAlias.value ? { alias: cloneAlias.value } : {})
-      },
-      auth.accessToken!
-    )
-    await boardsStore.fetchBoards()
-    confirmClone.value = null
-  } catch (e: unknown) {
-    cloneError.value = e instanceof Error ? e.message : _t('Clone failed')
-  }
-}
+const {
+  importConflict,
+  importBoard,
+  confirmImportOverwrite,
+  exportBoard,
+  confirmClone,
+  cloneNewName,
+  cloneAlias,
+  cloneError,
+  cloneBoard,
+  onCloneNameInput,
+  doClone
+} = useBoardImportExport({ cloneInputEl })
 
 const settingsBoard = ref<BoardRead | null>(null)
 
