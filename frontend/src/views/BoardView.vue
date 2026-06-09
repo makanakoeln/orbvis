@@ -1300,6 +1300,7 @@ import CmkButton from '@/components/cmk/CmkButton'
 
 import { boardsApi, cmkApi, connectionsApi } from '@/api/client'
 import { useBoardEditor } from '@/composables/useBoardEditor'
+import { useBoardFullscreen } from '@/composables/useBoardFullscreen'
 import { useBoardRotation } from '@/composables/useBoardRotation'
 import { useBoardTour } from '@/composables/useBoardTour'
 import { useElementRect } from '@/composables/useElementRect'
@@ -1349,26 +1350,10 @@ const boardName = computed(() => route.params.name as string)
 const isKiosk = computed(() => !!route.meta.kiosk)
 const isPreview = computed(() => route.query.preview === '1')
 
-function openKioskInNewTab() {
-  const url = router.resolve({ name: 'board-kiosk', params: { name: boardName.value } }).href
-  const a = document.createElement('a')
-  a.href = url
-  a.target = '_blank'
-  a.rel = 'noreferrer'
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-}
-
-function enterFullscreen() {
-  router.push({ name: 'board-kiosk', params: { name: boardName.value } })
-  document.documentElement.requestFullscreen().catch(() => {})
-}
-
-function exitFullscreen() {
-  router.push({ name: 'board', params: { name: boardName.value } })
-  if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
-}
+const { openKioskInNewTab, enterFullscreen, exitFullscreen } = useBoardFullscreen(
+  boardName,
+  isKiosk
+)
 
 const boardConfig = computed(() => boardsStore.currentBoard)
 // Whether the current user may edit *this* board: admins always, otherwise the
@@ -2529,12 +2514,6 @@ function onKeyDown(e: KeyboardEvent) {
   }
 }
 
-function onFullscreenChange() {
-  if (!document.fullscreenElement && isKiosk.value) {
-    router.push({ name: 'board', params: { name: boardName.value } })
-  }
-}
-
 function onPreviewMessage(ev: MessageEvent) {
   if (ev.origin !== window.location.origin) return
   const data = ev.data as { source?: string; patch?: Record<string, unknown> } | null
@@ -2581,7 +2560,6 @@ onMounted(() => {
   // direct deep-link so non-admin editors get their edit affordances.
   if (boardsStore.boards.length === 0) void boardsStore.fetchBoards()
   document.addEventListener('keydown', onKeyDown)
-  document.addEventListener('fullscreenchange', onFullscreenChange)
   window.addEventListener('message', onPreviewMessage)
 })
 
@@ -2597,7 +2575,6 @@ watch(
 onUnmounted(() => {
   statesStore.disconnect()
   document.removeEventListener('keydown', onKeyDown)
-  document.removeEventListener('fullscreenchange', onFullscreenChange)
   window.removeEventListener('message', onPreviewMessage)
 })
 
