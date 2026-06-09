@@ -29,30 +29,69 @@ _WEBP_RIFF = b"RIFF"
 _WEBP_MARK = b"WEBP"
 
 
+# Real-world SVGs (Illustrator/Inkscape exports) often carry an XML
+# declaration, a DOCTYPE, and licence comments before the root element, so the
+# sniff window has to be generous — a 512-byte window missed those exports.
+_SVG_SNIFF_BYTES = 65536
+
+
 def _looks_like_svg_header(content: bytes) -> bool:
-    """Quick byte-level sniff — presence of '<svg' in the first 512 bytes."""
-    return b"<svg" in content[:512].lower()
+    """Quick byte-level sniff — presence of '<svg' in the leading bytes."""
+    return b"<svg" in content[:_SVG_SNIFF_BYTES].lower()
 
 
 # SVG elements / attributes that can execute scripts. Rejected even though
 # defusedxml accepts them — once an SVG sits under /images and is opened with
-# image/svg+xml, scripts run with the application's origin (XSS).
-_SVG_FORBIDDEN_TAGS = frozenset({"script", "foreignObject", "use"})
+# image/svg+xml, scripts run with the application's origin (XSS). ``use`` is
+# *not* blanket-rejected (internal `#fragment` references are both safe and
+# common); instead its href is constrained below.
+_SVG_FORBIDDEN_TAGS = frozenset({"script", "foreignObject"})
 _SVG_FORBIDDEN_ATTR_PREFIXES = ("on",)
+
+# Schemes that can execute or read local resources — never allowed in any href.
+_DANGEROUS_URI_SCHEMES = ("javascript:", "vbscript:", "file:")
+# data: URIs are allowed only for embedded raster images. text/html and
+# image/svg+xml data URIs can carry script, so they stay rejected.
+_SAFE_DATA_URI_PREFIXES = (
+    "data:image/png",
+    "data:image/jpeg",
+    "data:image/jpg",
+    "data:image/gif",
+    "data:image/webp",
+)
+
+
+def _href_is_safe(value: str, *, is_use: bool) -> bool:
+    """Whether an href / xlink:href value is safe for a sandboxed SVG icon."""
+    v = value.strip()
+    low = v.lower()
+    if low.startswith(_DANGEROUS_URI_SCHEMES):
+        return False
+    if low.startswith("data:"):
+        # Only embedded rasters; svg+xml/text data URIs could carry script.
+        return low.startswith(_SAFE_DATA_URI_PREFIXES)
+    if is_use:
+        # <use> may only reference local fragments — a remote target lets the
+        # icon pull in (and run) external SVG content.
+        return v.startswith("#")
+    return True
 
 
 def is_safe_svg(content: bytes) -> bool:
-    """Parse *content* as SVG with defusedxml; reject DTDs and external entities.
+    """Parse *content* as SVG with defusedxml; reject script vectors.
 
     Must be called only after a byte-level ``<svg`` sniff — defusedxml parses any
     well-formed XML, but only a real ``<svg>`` root element is acceptable here.
 
-    DTDs are rejected outright (even benign ones) so that a future DefinedET
-    upgrade that loosens entity handling cannot silently open a hole. The
-    parsed tree is then walked to reject ``<script>``, on-event attributes,
-    and ``<foreignObject>``/``<use>`` (which can pull in remote content).
+    A DOCTYPE is permitted (the standard SVG DTD reference is ubiquitous in
+    exported assets) but ``forbid_entities``/``forbid_external`` stay on, so
+    billion-laughs entity expansion and XXE external entities are still blocked.
+    The parsed tree is then walked to reject ``<script>``, on-event attributes,
+    ``<foreignObject>``, remote ``<use>`` targets, and script-bearing URIs.
     """
-    parser = DefusedET.DefusedXMLParser(forbid_dtd=True, forbid_entities=True)
+    parser = DefusedET.DefusedXMLParser(
+        forbid_dtd=False, forbid_entities=True, forbid_external=True
+    )
     try:
         parser.feed(content)
         root = parser.close()
@@ -64,15 +103,13 @@ def is_safe_svg(content: bytes) -> bool:
         local_tag = elem.tag.rsplit("}", 1)[-1]
         if local_tag in _SVG_FORBIDDEN_TAGS:
             return False
+        is_use = local_tag == "use"
         for attr_name, attr_val in elem.attrib.items():
             local_attr = attr_name.rsplit("}", 1)[-1].lower()
             if local_attr.startswith(_SVG_FORBIDDEN_ATTR_PREFIXES):
                 return False
-            # Reject javascript:/data: in href / xlink:href.
-            if local_attr in ("href", "xlink:href"):
-                v = attr_val.strip().lower()
-                if v.startswith(("javascript:", "data:", "vbscript:", "file:")):
-                    return False
+            if local_attr in ("href", "xlink:href") and not _href_is_safe(attr_val, is_use=is_use):
+                return False
     return True
 
 

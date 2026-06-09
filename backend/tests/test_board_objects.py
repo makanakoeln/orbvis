@@ -76,14 +76,21 @@ def test_is_valid_image_rejects_svg_with_external_entity():
     assert not _is_valid_image(data)
 
 
-def test_is_valid_image_rejects_svg_with_dtd():
-    """DTDs inside SVG are rejected by defusedxml."""
+def test_is_valid_image_accepts_standard_svg_doctype():
+    """The standard SVG DOCTYPE (no entity declarations) is accepted.
+
+    Real Illustrator/Inkscape exports carry this DOCTYPE. The external DTD is
+    never fetched and declares no entities, so it is inert — billion-laughs and
+    XXE (which require entity declarations) are still rejected, see
+    test_is_valid_image_rejects_svg_with_external_entity above.
+    """
     data = (
-        b'<?xml version="1.0"?>'
-        b'<!DOCTYPE svg SYSTEM "attacker://payload">'
+        b'<?xml version="1.0" encoding="utf-8"?>'
+        b'<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" '
+        b'"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">'
         b'<svg xmlns="http://www.w3.org/2000/svg"/>'
     )
-    assert not _is_valid_image(data)
+    assert _is_valid_image(data)
 
 
 def test_is_valid_image_rejects_svg_with_broken_xml():

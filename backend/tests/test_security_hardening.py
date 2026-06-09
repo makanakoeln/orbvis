@@ -11,7 +11,7 @@ from app.api.v1.connections import (
     _build_host_command,
     _build_service_command,
 )
-from app.core.image_security import is_safe_svg
+from app.core.image_security import is_safe_svg, is_valid_image
 from app.models.user import User
 from app.schemas.board import BoardObject, BoardObjectUpdate, normalize_object_filter
 from app.schemas.connection import REDACTED_SECRET, ConnectionConfig, _redact
@@ -122,6 +122,73 @@ class TestSvgSafety:
             b"</svg>"
         )
         assert is_safe_svg(bad) is False
+
+    def test_accepts_doctype_export(self) -> None:
+        # Illustrator/Inkscape exports carry the standard SVG DOCTYPE; it must
+        # be accepted (entity/external protections stay on, see below).
+        good = (
+            b'<?xml version="1.0" encoding="utf-8"?>\n'
+            b'<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" '
+            b'"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n'
+            b'<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>'
+        )
+        assert is_safe_svg(good) is True
+
+    def test_rejects_billion_laughs(self) -> None:
+        bad = (
+            b'<?xml version="1.0"?><!DOCTYPE lolz ['
+            b'<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;">]>'
+            b'<svg xmlns="http://www.w3.org/2000/svg">&lol2;</svg>'
+        )
+        assert is_safe_svg(bad) is False
+
+    def test_rejects_xxe_external_entity(self) -> None:
+        bad = (
+            b'<?xml version="1.0"?><!DOCTYPE svg ['
+            b'<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
+            b'<svg xmlns="http://www.w3.org/2000/svg">&xxe;</svg>'
+        )
+        assert is_safe_svg(bad) is False
+
+    def test_accepts_internal_use_reference(self) -> None:
+        good = (
+            b'<svg xmlns="http://www.w3.org/2000/svg" '
+            b'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            b'<defs><rect id="r"/></defs><use xlink:href="#r"/></svg>'
+        )
+        assert is_safe_svg(good) is True
+
+    def test_rejects_remote_use_reference(self) -> None:
+        bad = (
+            b'<svg xmlns="http://www.w3.org/2000/svg" '
+            b'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            b'<use xlink:href="https://evil.example/x.svg#a"/></svg>'
+        )
+        assert is_safe_svg(bad) is False
+
+    def test_accepts_embedded_raster_data_uri(self) -> None:
+        good = (
+            b'<svg xmlns="http://www.w3.org/2000/svg" '
+            b'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            b'<image xlink:href="data:image/png;base64,iVBORw0KGgo="/></svg>'
+        )
+        assert is_safe_svg(good) is True
+
+    def test_rejects_svg_data_uri(self) -> None:
+        bad = (
+            b'<svg xmlns="http://www.w3.org/2000/svg" '
+            b'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            b'<image xlink:href="data:image/svg+xml;base64,PHN2Zz48L3N2Zz4="/></svg>'
+        )
+        assert is_safe_svg(bad) is False
+
+    def test_valid_image_accepts_svg_after_long_preamble(self) -> None:
+        # A long licence comment must not push <svg> out of the sniff window.
+        good = (
+            b'<?xml version="1.0"?>\n<!-- ' + b"x" * 600 + b" -->\n"
+            b'<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>'
+        )
+        assert is_valid_image(good) is True
 
 
 class TestDyngroupFilterValidation:
