@@ -8,6 +8,7 @@ import logging
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from app.connections.base import FolderTreeData, ServiceRow
@@ -339,58 +340,57 @@ async def _states_for_objects(
     return merged
 
 
-async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types inline; splitting hides intent
-    connection: ConnectionBase,
-    objects: list[BoardObject],
-    auth_user: str | None = None,
-    can_view_board: Callable[[str], bool] | None = None,
-    board_cfg_cache: dict[str, BoardConfig | None] | None = None,
-    _visited_maps: frozenset[str] | None = None,
-) -> dict[str, ObjectState]:
-    """Fetch states for all board objects using batch queries where supported.
+@dataclass
+class _BoardObjectBins:
+    """Board objects split by the kind of state query each needs."""
 
-    ``board_cfg_cache`` memoises ``board_service.get_board`` across the full
-    map-link recursion so a board referenced by several sibling or nested maps
-    loads only once. The cache stores ``None`` for not-found boards to avoid
-    retrying missing names.
+    hosts_soft: list[BoardObject] = field(default_factory=list)
+    hosts_hard: list[BoardObject] = field(default_factory=list)
+    svcs_soft: list[BoardObject] = field(default_factory=list)
+    svcs_hard: list[BoardObject] = field(default_factory=list)
+    lines: list[BoardObject] = field(default_factory=list)
+    map_objects: list[BoardObject] = field(default_factory=list)
+    aggregation_objs: list[BoardObject] = field(default_factory=list)
+    others: list[BoardObject] = field(default_factory=list)
 
-    ``_visited_maps`` carries the set of board names already on the current
-    recursion path so map-link aggregation can transitively include nested
-    maps without infinite-looping on cycles.
+
+def _bin_board_objects(objects: list[BoardObject]) -> _BoardObjectBins:
+    """Split board objects into per-query-kind bins (hosts vs services vs …).
+
+    Hosts and services are further split by ``only_hard_states`` so each batch
+    query carries a uniform ``only_hard`` flag. ``graph`` objects piggyback on
+    the host/service batches depending on whether they target a service.
     """
-    if board_cfg_cache is None:
-        board_cfg_cache = {}
-    if _visited_maps is None:
-        _visited_maps = frozenset()
-    hosts_soft: list[BoardObject] = []
-    hosts_hard: list[BoardObject] = []
-    svcs_soft: list[BoardObject] = []
-    svcs_hard: list[BoardObject] = []
-    lines: list[BoardObject] = []
-    map_objects: list[BoardObject] = []
-    aggregation_objs: list[BoardObject] = []
-    others: list[BoardObject] = []
-
+    bins = _BoardObjectBins()
     for obj in objects:
         if obj.type == "host" and obj.host_name:
-            (hosts_hard if obj.only_hard_states else hosts_soft).append(obj)
+            (bins.hosts_hard if obj.only_hard_states else bins.hosts_soft).append(obj)
         elif obj.type == "service" and obj.host_name and obj.service_description:
-            (svcs_hard if obj.only_hard_states else svcs_soft).append(obj)
+            (bins.svcs_hard if obj.only_hard_states else bins.svcs_soft).append(obj)
         elif obj.type == "graph" and obj.host_name and obj.service_description:
-            svcs_soft.append(obj)
+            bins.svcs_soft.append(obj)
         elif obj.type == "graph" and obj.host_name:
-            hosts_soft.append(obj)
+            bins.hosts_soft.append(obj)
         elif obj.type == "line":
-            lines.append(obj)
+            bins.lines.append(obj)
         elif obj.type == "map" and obj.map_name:
-            map_objects.append(obj)
+            bins.map_objects.append(obj)
         elif obj.type == "aggregation" and obj.aggregation_id:
-            aggregation_objs.append(obj)
+            bins.aggregation_objs.append(obj)
         else:
-            others.append(obj)
+            bins.others.append(obj)
+    return bins
 
-    results: dict[str, ObjectState] = {}
 
+async def _resolve_host_states(
+    connection: ConnectionBase,
+    hosts_soft: list[BoardObject],
+    hosts_hard: list[BoardObject],
+    auth_user: str | None,
+    results: dict[str, ObjectState],
+) -> None:
+    """Batch-fetch host states, then enrich with service summaries and
+    ``recognize_services`` aggregation. Writes resolved states into *results*."""
     for host_group, only_hard in [(hosts_soft, False), (hosts_hard, True)]:
         if not host_group:
             continue
@@ -481,6 +481,15 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
                 rs_svc_batch.get(obj.host_name, []),
             )
 
+
+async def _resolve_service_states(
+    connection: ConnectionBase,
+    svcs_soft: list[BoardObject],
+    svcs_hard: list[BoardObject],
+    auth_user: str | None,
+    results: dict[str, ObjectState],
+) -> None:
+    """Batch-fetch service states (soft and hard groups) into *results*."""
     for svc_group, only_hard in [(svcs_soft, False), (svcs_hard, True)]:
         if not svc_group:
             continue
@@ -513,127 +522,200 @@ async def _get_board_states_batched(  # noqa: C901 — dispatches 7 object types
                 )
                 results[obj.id] = s
 
-    if aggregation_objs:
-        aids = [o.aggregation_id for o in aggregation_objs if o.aggregation_id]
-        try:
-            aggr_batch = await connection.get_aggregations_states(aids)
-        except Exception:
-            logger.warning("Batch aggregation state query failed", exc_info=True)
-            aggr_batch = {}
 
-        # Always fetch enough tree depth to populate the detail drawer's leaf
-        # list — even when ``expand_depth=0`` (icon stays collapsed on canvas
-        # but the drawer still needs the full leaf set for the worst-path and
-        # ack-leaves actions). The canvas renderer keys off ``expand_depth``
-        # separately and ignores deeper levels.
-        # Tree-fetch deduplicated by (aggregation_id, depth) — multiple board
-        # objects with the same aggregation+depth share one connection call.
-        drawer_tree_depth = 10
-        unique_keys: set[tuple[str, int]] = set()
-        for o in aggregation_objs:
-            if o.aggregation_id:
-                unique_keys.add((o.aggregation_id, max(o.expand_depth, drawer_tree_depth)))
-        tree_keys: list[tuple[str, int]] = sorted(unique_keys)
-        tree_map: dict[tuple[str, int], AggregationNode] = {}
-        if tree_keys:
-            tasks = [connection.get_aggregation_tree(aid, depth) for aid, depth in tree_keys]
-            trees = await asyncio.gather(*tasks, return_exceptions=True)
-            for tree_key, tree in zip(tree_keys, trees, strict=True):
-                if isinstance(tree, AggregationNode):
-                    tree_map[tree_key] = tree
-                elif isinstance(tree, BaseException):
-                    logger.warning("Aggregation tree fetch failed for %r", tree_key, exc_info=tree)
+async def _resolve_aggregation_states(
+    connection: ConnectionBase,
+    aggregation_objs: list[BoardObject],
+    results: dict[str, ObjectState],
+) -> None:
+    """Batch-fetch BI aggregation states plus the deduplicated trees the detail
+    drawer needs, writing the combined states into *results*."""
+    if not aggregation_objs:
+        return
+    aids = [o.aggregation_id for o in aggregation_objs if o.aggregation_id]
+    try:
+        aggr_batch = await connection.get_aggregations_states(aids)
+    except Exception:
+        logger.warning("Batch aggregation state query failed", exc_info=True)
+        aggr_batch = {}
 
-        for obj in aggregation_objs:
-            assert obj.aggregation_id is not None
-            raw = aggr_batch.get(obj.aggregation_id)
-            tree = tree_map.get((obj.aggregation_id, max(obj.expand_depth, drawer_tree_depth)))
-            # Some BI aggregations (e.g. static non-host templates) come back
-            # empty from the batched state call but render fine through the
-            # per-aggregation tree call. Fall back to the tree root so the
-            # canvas badge isn't stuck on PENDING while the slidein shows
-            # the real states underneath.
-            if raw is None and tree is not None:
-                raw = ObjectState(
-                    object_id=obj.id,
-                    type="aggregation",
-                    state=_BI_INT_TO_STATE.get(tree.state, "UNKNOWN"),
-                    acknowledged=tree.acknowledged,
-                    in_downtime=tree.in_downtime,
-                )
-            s = (
-                ObjectState(**{**raw.model_dump(), "object_id": obj.id})
-                if raw is not None
-                else ObjectState(object_id=obj.id, type="aggregation", state="PENDING", stale=True)
+    # Always fetch enough tree depth to populate the detail drawer's leaf
+    # list — even when ``expand_depth=0`` (icon stays collapsed on canvas
+    # but the drawer still needs the full leaf set for the worst-path and
+    # ack-leaves actions). The canvas renderer keys off ``expand_depth``
+    # separately and ignores deeper levels.
+    # Tree-fetch deduplicated by (aggregation_id, depth) — multiple board
+    # objects with the same aggregation+depth share one connection call.
+    drawer_tree_depth = 10
+    unique_keys: set[tuple[str, int]] = set()
+    for o in aggregation_objs:
+        if o.aggregation_id:
+            unique_keys.add((o.aggregation_id, max(o.expand_depth, drawer_tree_depth)))
+    tree_keys: list[tuple[str, int]] = sorted(unique_keys)
+    tree_map: dict[tuple[str, int], AggregationNode] = {}
+    if tree_keys:
+        tasks = [connection.get_aggregation_tree(aid, depth) for aid, depth in tree_keys]
+        trees = await asyncio.gather(*tasks, return_exceptions=True)
+        for tree_key, tree in zip(tree_keys, trees, strict=True):
+            if isinstance(tree, AggregationNode):
+                tree_map[tree_key] = tree
+            elif isinstance(tree, BaseException):
+                logger.warning("Aggregation tree fetch failed for %r", tree_key, exc_info=tree)
+
+    for obj in aggregation_objs:
+        assert obj.aggregation_id is not None
+        raw = aggr_batch.get(obj.aggregation_id)
+        tree = tree_map.get((obj.aggregation_id, max(obj.expand_depth, drawer_tree_depth)))
+        # Some BI aggregations (e.g. static non-host templates) come back
+        # empty from the batched state call but render fine through the
+        # per-aggregation tree call. Fall back to the tree root so the
+        # canvas badge isn't stuck on PENDING while the slidein shows
+        # the real states underneath.
+        if raw is None and tree is not None:
+            raw = ObjectState(
+                object_id=obj.id,
+                type="aggregation",
+                state=_BI_INT_TO_STATE.get(tree.state, "UNKNOWN"),
+                acknowledged=tree.acknowledged,
+                in_downtime=tree.in_downtime,
             )
-            if tree is not None:
-                s = s.model_copy(update={"tree": tree})
-            results[obj.id] = s
+        s = (
+            ObjectState(**{**raw.model_dump(), "object_id": obj.id})
+            if raw is not None
+            else ObjectState(object_id=obj.id, type="aggregation", state="PENDING", stale=True)
+        )
+        if tree is not None:
+            s = s.model_copy(update={"tree": tree})
+        results[obj.id] = s
 
-    individual = [_get_object_state(connection, obj) for obj in lines + others]
+
+async def _resolve_individual_states(
+    connection: ConnectionBase,
+    objects: list[BoardObject],
+    results: dict[str, ObjectState],
+) -> None:
+    """Resolve objects that have no batch query (lines and everything else)
+    one-by-one, in parallel, into *results*."""
+    individual = [_get_object_state(connection, obj) for obj in objects]
     for state in await asyncio.gather(*individual):
         results[state.object_id] = state
 
-    if map_objects:
-        from app.services import board_service
 
-        # Load each unique referenced board once (avoid N reads for N map-link objects)
-        # Maps without view permission are recorded as None to produce NO_PERMISSION state.
-        board_states: dict[str, dict[str, ObjectState] | None] = {}
-        for map_name in {o.map_name for o in map_objects if o.map_name}:
-            if can_view_board is not None and not can_view_board(map_name):
-                board_states[map_name] = None
-                continue
-            if map_name not in board_cfg_cache:
-                board_cfg_cache[map_name] = board_service.get_board(map_name)
-            ref_cfg = board_cfg_cache[map_name]
-            if ref_cfg is None:
-                continue
-            ref_backend = get_connection(ref_cfg.connection_id)
-            if ref_backend is None:
-                continue
-            # Include nested map-objects in the recursion as long as they
-            # don't form a cycle — otherwise a board with only nested links
-            # would aggregate to PENDING even when its leaves have real states.
-            child_visited = _visited_maps | {map_name}
-            included_objs = [
-                o
-                for o in ref_cfg.objects
-                if o.type != "map" or (o.map_name and o.map_name not in child_visited)
-            ]
-            try:
-                board_states[map_name] = await _states_for_objects(
-                    included_objs,
-                    default_connection=ref_backend,
-                    default_connection_id=ref_cfg.connection_id,
-                    auth_user=auth_user,
-                    board_cfg_cache=board_cfg_cache,
-                    visited_maps=child_visited,
-                )
-            except Exception as exc:
-                # A broken nested map-link shouldn't sink the parent board, but
-                # the failure is otherwise invisible — surface it at debug level.
-                logger.debug("Nested map-link state aggregation failed: %s", exc)
-        for obj in map_objects:
-            assert obj.map_name is not None
-            entry = board_states.get(obj.map_name)
-            if entry is None and obj.map_name in board_states:
-                # Explicitly None → no permission for the referenced board
+async def _resolve_map_link_states(
+    map_objects: list[BoardObject],
+    auth_user: str | None,
+    can_view_board: Callable[[str], bool] | None,
+    board_cfg_cache: dict[str, BoardConfig | None],
+    visited_maps: frozenset[str],
+    results: dict[str, ObjectState],
+) -> None:
+    """Aggregate each map-link object to the worst state of the board it
+    references, recursing into nested maps while guarding against cycles."""
+    if not map_objects:
+        return
+    from app.services import board_service
+
+    # Load each unique referenced board once (avoid N reads for N map-link objects)
+    # Maps without view permission are recorded as None to produce NO_PERMISSION state.
+    board_states: dict[str, dict[str, ObjectState] | None] = {}
+    for map_name in {o.map_name for o in map_objects if o.map_name}:
+        if can_view_board is not None and not can_view_board(map_name):
+            board_states[map_name] = None
+            continue
+        if map_name not in board_cfg_cache:
+            board_cfg_cache[map_name] = board_service.get_board(map_name)
+        ref_cfg = board_cfg_cache[map_name]
+        if ref_cfg is None:
+            continue
+        ref_backend = get_connection(ref_cfg.connection_id)
+        if ref_backend is None:
+            continue
+        # Include nested map-objects in the recursion as long as they
+        # don't form a cycle — otherwise a board with only nested links
+        # would aggregate to PENDING even when its leaves have real states.
+        child_visited = visited_maps | {map_name}
+        included_objs = [
+            o
+            for o in ref_cfg.objects
+            if o.type != "map" or (o.map_name and o.map_name not in child_visited)
+        ]
+        try:
+            board_states[map_name] = await _states_for_objects(
+                included_objs,
+                default_connection=ref_backend,
+                default_connection_id=ref_cfg.connection_id,
+                auth_user=auth_user,
+                board_cfg_cache=board_cfg_cache,
+                visited_maps=child_visited,
+            )
+        except Exception as exc:
+            # A broken nested map-link shouldn't sink the parent board, but
+            # the failure is otherwise invisible — surface it at debug level.
+            logger.debug("Nested map-link state aggregation failed: %s", exc)
+    for obj in map_objects:
+        assert obj.map_name is not None
+        entry = board_states.get(obj.map_name)
+        if entry is None and obj.map_name in board_states:
+            # Explicitly None → no permission for the referenced board
+            results[obj.id] = ObjectState(object_id=obj.id, type="map", state="NO_PERMISSION")
+            continue
+        sub = entry or {}
+        mon = [s for s in sub.values() if s.type in _MAP_AGGREGATION_TYPES]
+        if mon:
+            real = [s for s in mon if s.state != "NO_PERMISSION"]
+            if not real:
                 results[obj.id] = ObjectState(object_id=obj.id, type="map", state="NO_PERMISSION")
-                continue
-            sub = entry or {}
-            mon = [s for s in sub.values() if s.type in _MAP_AGGREGATION_TYPES]
-            if mon:
-                real = [s for s in mon if s.state != "NO_PERMISSION"]
-                if not real:
-                    results[obj.id] = ObjectState(
-                        object_id=obj.id, type="map", state="NO_PERMISSION"
-                    )
-                else:
-                    worst = max(real, key=lambda s: _COMBINED_SEVERITY.get(s.state, 0))
-                    results[obj.id] = ObjectState(object_id=obj.id, type="map", state=worst.state)
             else:
-                results[obj.id] = ObjectState(object_id=obj.id, type="map", state="PENDING")
+                worst = max(real, key=lambda s: _COMBINED_SEVERITY.get(s.state, 0))
+                results[obj.id] = ObjectState(object_id=obj.id, type="map", state=worst.state)
+        else:
+            results[obj.id] = ObjectState(object_id=obj.id, type="map", state="PENDING")
+
+
+async def _get_board_states_batched(
+    connection: ConnectionBase,
+    objects: list[BoardObject],
+    auth_user: str | None = None,
+    can_view_board: Callable[[str], bool] | None = None,
+    board_cfg_cache: dict[str, BoardConfig | None] | None = None,
+    _visited_maps: frozenset[str] | None = None,
+) -> dict[str, ObjectState]:
+    """Fetch states for all board objects using batch queries where supported.
+
+    Objects are binned by kind (:func:`_bin_board_objects`) and each kind is
+    resolved by a dedicated helper that writes into the shared ``results`` map.
+    The helpers run in sequence because the host helper's output feeds the
+    service-summary/recognize-services enrichment.
+
+    ``board_cfg_cache`` memoises ``board_service.get_board`` across the full
+    map-link recursion so a board referenced by several sibling or nested maps
+    loads only once. The cache stores ``None`` for not-found boards to avoid
+    retrying missing names.
+
+    ``_visited_maps`` carries the set of board names already on the current
+    recursion path so map-link aggregation can transitively include nested
+    maps without infinite-looping on cycles.
+    """
+    if board_cfg_cache is None:
+        board_cfg_cache = {}
+    if _visited_maps is None:
+        _visited_maps = frozenset()
+
+    bins = _bin_board_objects(objects)
+    results: dict[str, ObjectState] = {}
+
+    await _resolve_host_states(connection, bins.hosts_soft, bins.hosts_hard, auth_user, results)
+    await _resolve_service_states(connection, bins.svcs_soft, bins.svcs_hard, auth_user, results)
+    await _resolve_aggregation_states(connection, bins.aggregation_objs, results)
+    await _resolve_individual_states(connection, bins.lines + bins.others, results)
+    await _resolve_map_link_states(
+        bins.map_objects,
+        auth_user=auth_user,
+        can_view_board=can_view_board,
+        board_cfg_cache=board_cfg_cache,
+        visited_maps=_visited_maps,
+        results=results,
+    )
 
     return results
 
