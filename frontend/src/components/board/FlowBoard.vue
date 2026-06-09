@@ -249,6 +249,7 @@ import { connectionsApi } from '@/api/client'
 import { useD3Cleanup } from '@/composables/useD3Cleanup'
 import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useObjectActions } from '@/composables/useObjectActions'
+import { useTopKHint } from '@/composables/useTopKHint'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 import { useStatesStore } from '@/stores/states'
@@ -848,22 +849,7 @@ const topKBreakdown = computed(() => {
 
 const needsServiceDetail = computed(() => needsServices(props.serviceLayout))
 
-// The top-K hint explains a fixed concept, so once an operator has understood
-// it they can banish it for good — persisted across boards/reloads. Scoped per
-// user so one operator's dismissal doesn't hide the hint from another sharing
-// the browser (matches the onboarding-tour key convention).
-const topKHintDismissedKey = `orbvis.flow.topkHintDismissed.${auth.user?.user_id ?? 'anon'}`
-const topKHintDismissed = ref(
-  typeof window !== 'undefined' && window.localStorage?.getItem(topKHintDismissedKey) === '1'
-)
-function dismissTopKHint() {
-  topKHintDismissed.value = true
-  try {
-    window.localStorage?.setItem(topKHintDismissedKey, '1')
-  } catch {
-    // Private mode or storage full — the dismissal only lasts this session.
-  }
-}
+const { topKHintDismissed, dismissTopKHint } = useTopKHint(() => auth.user?.user_id)
 
 // Free-text filter: dim (don't hide) nodes that don't match so the spatial
 // context is preserved. Hiding would re-trigger force-collide and rearrange
