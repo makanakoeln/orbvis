@@ -408,9 +408,10 @@ function arrowPoints(tx: number, ty: number, fx: number, fy: number): string {
   return `${tx},${ty} ${p1x},${p1y} ${p2x},${p2y}`
 }
 
-// Trim an endpoint inward (toward the bend/other end) for an arrowhead, and for
-// a bound endpoint so stroke + hit-area clear the icon and leave it grabbable.
-const BIND_TRIM = 16
+// Trim an endpoint inward (toward the bend/other end) so an arrowhead's stroke
+// doesn't run through its own triangle. Bound endpoints already sit on the
+// connected object's edge (BoardCanvas.boundCoordsFor), so no extra inset is
+// needed there — the stroke meets the icon border directly.
 function _trimPoint(
   px: number,
   py: number,
@@ -426,12 +427,8 @@ function _trimPoint(
   const d = Math.min(dist, len - 1)
   return { x: px + (dx / len) * d, y: py + (dy / len) * d }
 }
-const startTrimDist = computed(() =>
-  Math.max(hasStartArrow.value ? arrowLen.value * 0.6 : 0, startBound.value ? BIND_TRIM : 0)
-)
-const endTrimDist = computed(() =>
-  Math.max(hasEndArrow.value ? arrowLen.value * 0.6 : 0, endBound.value ? BIND_TRIM : 0)
-)
+const startTrimDist = computed(() => (hasStartArrow.value ? arrowLen.value * 0.6 : 0))
+const endTrimDist = computed(() => (hasEndArrow.value ? arrowLen.value * 0.6 : 0))
 const trimmedStart = computed(() => {
   const p = _trimPoint(
     x1.value,

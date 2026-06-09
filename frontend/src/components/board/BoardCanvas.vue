@@ -1014,22 +1014,77 @@ function objectPosById(id: string): { x: number; y: number } | null {
   return o ? { x: o.x, y: o.y } : null
 }
 
+// Rendered icon footprint (display px) for an object, mirroring the size that
+// feeds <BoardObject :icon-size>. Used to anchor bound line endpoints on the
+// object's edge rather than its centre.
+function objectRenderSize(o: BoardObjectType): number {
+  return (
+    o.display?.image_size ??
+    (o.display?.mode === 'gadget'
+      ? GADGET_DEFAULT_SIZE
+      : (props.iconSizeOverride ?? props.config.icon_size ?? settingsStore.settings.icon_size))
+  )
+}
+
+interface Footprint {
+  x: number
+  y: number
+  halfX: number
+  halfY: number
+}
+
+// Centre + board-coord half-extents of an object. The icon size is in display
+// px, so divide by the canvas scale to convert each half-extent into the
+// board coordinate space the line endpoints live in.
+function objectFootprintById(id: string): Footprint | null {
+  const pos = objectPosById(id)
+  if (!pos) return null
+  const o = props.config.objects.find((obj) => obj.id === id)
+  if (!o) return null
+  const size = objectRenderSize(o)
+  const { sx, sy } = canvasScale.value
+  return { x: pos.x, y: pos.y, halfX: size / 2 / sx, halfY: size / 2 / sy }
+}
+
+// Point on the footprint's edge along the ray from its centre toward
+// (towardX, towardY) — the side (left/right/top/bottom) that faces the rest of
+// the line, so the stroke and any arrowhead land on the icon's border instead
+// of being buried under its centre.
+function edgePoint(fp: Footprint, towardX: number, towardY: number): { x: number; y: number } {
+  const dx = towardX - fp.x
+  const dy = towardY - fp.y
+  if (dx === 0 && dy === 0) return { x: fp.x, y: fp.y }
+  const tx = dx !== 0 ? fp.halfX / Math.abs(dx) : Infinity
+  const ty = dy !== 0 ? fp.halfY / Math.abs(dy) : Infinity
+  const t = Math.min(tx, ty)
+  return { x: fp.x + dx * t, y: fp.y + dy * t }
+}
+
 function boundCoordsFor(line: BoardObjectType): {
   x?: number
   y?: number
   x2?: number
   y2?: number
 } {
-  const start = line.start_ref ? objectPosById(line.start_ref) : null
-  const end = line.end_ref ? objectPosById(line.end_ref) : null
+  const start = line.start_ref ? objectFootprintById(line.start_ref) : null
+  const end = line.end_ref ? objectFootprintById(line.end_ref) : null
+  // A bend wins as the aim point for both ends; otherwise each end aims at the
+  // opposite endpoint (the other object's centre, or the free coordinate).
+  const hasMid = line.mid_x != null && line.mid_y != null
   const r: { x?: number; y?: number; x2?: number; y2?: number } = {}
   if (start) {
-    r.x = start.x
-    r.y = start.y
+    const toX = hasMid ? line.mid_x! : (end?.x ?? line.x2 ?? line.x + 50)
+    const toY = hasMid ? line.mid_y! : (end?.y ?? line.y2 ?? line.y + 50)
+    const p = edgePoint(start, toX, toY)
+    r.x = p.x
+    r.y = p.y
   }
   if (end) {
-    r.x2 = end.x
-    r.y2 = end.y
+    const toX = hasMid ? line.mid_x! : (start?.x ?? line.x)
+    const toY = hasMid ? line.mid_y! : (start?.y ?? line.y)
+    const p = edgePoint(end, toX, toY)
+    r.x2 = p.x
+    r.y2 = p.y
   }
   return r
 }
