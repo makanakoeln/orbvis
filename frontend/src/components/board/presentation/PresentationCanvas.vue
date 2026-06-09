@@ -318,6 +318,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { boardsApi } from '@/api/client'
 import { useHistory } from '@/composables/useHistory'
 import { useMarquee } from '@/composables/useMarquee'
+import { usePresentationSelectionGeometry } from '@/composables/usePresentationSelectionGeometry'
 import { useSlideViewport } from '@/composables/useSlideViewport'
 import { type Box, type Guide, computeSmartGuides } from '@/composables/useSmartGuides'
 import { useAuthStore } from '@/stores/auth'
@@ -926,109 +927,26 @@ function applyMarquee(): void {
   selectedIds.value = marquee.additive.value ? [...new Set([...selectedIds.value, ...hits])] : hits
 }
 
-const selectionBox = computed<Box | null>(() => {
-  if (!selectedElements.value.length) return null
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-  for (const e of selectedElements.value) {
-    // A connector's real extent is the box of its (possibly docked) endpoints,
-    // not its vestigial x/y/w/h.
-    if (isConnectorShape(e)) {
-      const { start, end } = connectorEndpoints(e)
-      minX = Math.min(minX, start.x, end.x)
-      minY = Math.min(minY, start.y, end.y)
-      maxX = Math.max(maxX, start.x, end.x)
-      maxY = Math.max(maxY, start.y, end.y)
-    } else {
-      minX = Math.min(minX, e.x)
-      minY = Math.min(minY, e.y)
-      maxX = Math.max(maxX, e.x + e.w)
-      maxY = Math.max(maxY, e.y + e.h)
-    }
-  }
-  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
-})
-// A single selected connector has no resize/rotate handles (its geometry comes
-// from its endpoints), so the overlay shows only the selection outline.
-const singleIsConnector = computed(
-  () =>
-    selectedIds.value.length === 1 &&
-    !!selectedElements.value[0] &&
-    isConnectorShape(selectedElements.value[0])
-)
-// On a single rotated element the overlay (and its handles) rotate with it so
-// the handles still sit on the element's corners.
-const singleRotation = computed(() =>
-  selectedIds.value.length === 1 ? (selectedElements.value[0]?.rotation ?? 0) : 0
-)
-const selBoxStyle = computed(() => {
-  const b = selectionBox.value
-  if (!b) return {}
-  return {
-    left: `${b.x}px`,
-    top: `${b.y}px`,
-    width: `${b.w}px`,
-    height: `${b.h}px`,
-    outlineWidth: `${1.5 / scale.value}px`,
-    transform: singleRotation.value ? `rotate(${singleRotation.value}deg)` : 'none',
-    transformOrigin: 'center center'
-  }
-})
-const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']
-function handleStyle(h: string): Record<string, string> {
-  const s = 10 / scale.value
-  const pos: Record<string, [string, string]> = {
-    nw: ['0%', '0%'],
-    n: ['50%', '0%'],
-    ne: ['100%', '0%'],
-    e: ['100%', '50%'],
-    se: ['100%', '100%'],
-    s: ['50%', '100%'],
-    sw: ['0%', '100%'],
-    w: ['0%', '50%']
-  }
-  const [l, t] = pos[h] ?? ['0%', '0%']
-  return {
-    width: `${s}px`,
-    height: `${s}px`,
-    left: l,
-    top: t,
-    marginLeft: `${-s / 2}px`,
-    marginTop: `${-s / 2}px`,
-    borderWidth: `${1 / scale.value}px`
-  }
-}
-const rotateHandleStyle = computed(() => {
-  const s = 12 / scale.value
-  return {
-    width: `${s}px`,
-    height: `${s}px`,
-    left: '50%',
-    top: `${-26 / scale.value}px`,
-    marginLeft: `${-s / 2}px`,
-    borderWidth: `${1 / scale.value}px`
-  }
+// Read-only overlay geometry (selection box, handle styles, inspector anchor).
+const {
+  selectionBox,
+  singleIsConnector,
+  selBoxStyle,
+  handles,
+  handleStyle,
+  rotateHandleStyle,
+  inspectorEl,
+  inspectorPos
+} = usePresentationSelectionGeometry({
+  selectedIds: () => selectedIds.value,
+  selectedElements: () => selectedElements.value,
+  scale: () => scale.value,
+  offsetX: () => offsetX.value,
+  offsetY: () => offsetY.value,
+  connectorEndpoints,
+  isConnectorShape
 })
 
-const inspectorEl = computed(() =>
-  selectedIds.value.length === 1 ? selectedElements.value[0] : null
-)
-// Anchor the inspector centered just above the selection; the card transforms
-// itself up by its own height (CSS translate -100%) so it never covers the
-// element. Near the top edge it flips below so it can't leave the viewport.
-const inspectorPos = computed(() => {
-  const b = selectionBox.value
-  if (!b || !inspectorEl.value) return null
-  const topY = offsetY.value + b.y * scale.value
-  const below = topY < 150
-  return {
-    x: offsetX.value + (b.x + b.w / 2) * scale.value,
-    y: below ? offsetY.value + (b.y + b.h) * scale.value : topY,
-    below
-  }
-})
 function onInspectorPatch(patch: Record<string, unknown>): void {
   const el = inspectorEl.value
   if (!el) return
