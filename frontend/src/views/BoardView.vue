@@ -1301,6 +1301,7 @@ import CmkButton from '@/components/cmk/CmkButton'
 import { boardsApi, cmkApi, connectionsApi } from '@/api/client'
 import { useBoardEditor } from '@/composables/useBoardEditor'
 import { useBoardRotation } from '@/composables/useBoardRotation'
+import { useBoardTour } from '@/composables/useBoardTour'
 import { useElementRect } from '@/composables/useElementRect'
 import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useObjectActions } from '@/composables/useObjectActions'
@@ -1320,7 +1321,6 @@ import type {
   ObjectType,
   ServiceLayout
 } from '@/types/api'
-import type { TourStep } from '@/types/tour'
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation'
 import { placeableObjectTypes } from '@/utils/dropdownOptions'
 import { getBoardObjectIdentifier, getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
@@ -1370,66 +1370,6 @@ function exitFullscreen() {
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
 }
 
-// ─── Board tour ───────────────────────────────────────────────────────────────
-
-const showBoardTour = ref(false)
-
-const boardTourSteps = computed<TourStep[]>(() => {
-  const base: TourStep[] = [
-    {
-      selector: null,
-      title: _t('Welcome to your board'),
-      body: _t(
-        'This is where your monitoring landscape comes to life. Objects update in real time.'
-      )
-    },
-    {
-      selector: '[data-tour="board-canvas"]',
-      title: _t('The canvas'),
-      body: _t(
-        'Each object represents a monitored host, service, or group and shows its current state.'
-      )
-    }
-  ]
-  if (!auth.isAdmin) return base
-  return [
-    ...base,
-    {
-      selector: '[data-tour="board-settings"]',
-      title: _t('Board settings'),
-      body: _t(
-        'Use the gear icon to open board settings — upload a background image, set a name, and configure auto-rotation.'
-      )
-    },
-    {
-      selector: '[data-tour="edit-fab"]',
-      title: _t('Edit mode'),
-      body: _t(
-        'Click the pencil to enter edit mode and start placing monitoring objects on the board.'
-      )
-    },
-    {
-      selector: '[data-tour="edit-panel"]',
-      title: _t('Add objects'),
-      body: _t(
-        'Choose an object type, configure it, and click "Place on board" to position it on the canvas.'
-      )
-    }
-  ]
-})
-
-function onBoardTourStepClick(step: number) {
-  // Step 4 = FAB — ensure edit mode is ON so EditPanel renders for step 5
-  if (auth.isAdmin && step === 4 && !editor.editMode.value) {
-    editor.toggleEditMode()
-  }
-}
-function onBoardTourStepBack(step: number) {
-  // Leaving step 5 backwards — ensure edit mode is OFF
-  if (auth.isAdmin && step === 5 && editor.editMode.value) {
-    editor.toggleEditMode()
-  }
-}
 const boardConfig = computed(() => boardsStore.currentBoard)
 // Whether the current user may edit *this* board: admins always, otherwise the
 // per-board capability the backend stamps on the board-list entry.
@@ -1488,6 +1428,9 @@ const editor = useBoardEditor(boardName, reloadBoard)
 
 const { rotationCountdown, rotationPaused, stopRotation, scheduleRotation, toggleRotationPause } =
   useBoardRotation(boardName, editor.editMode)
+
+const { showBoardTour, boardTourSteps, onBoardTourStepClick, onBoardTourStepBack } =
+  useBoardTour(editor)
 
 // ---- Add-object type picker (anchored above the "+" FAB) ----
 
