@@ -1305,7 +1305,7 @@ import { useBoardFullscreen } from '@/composables/useBoardFullscreen'
 import { useBoardRotation } from '@/composables/useBoardRotation'
 import { useBoardTour } from '@/composables/useBoardTour'
 import { useElementRect } from '@/composables/useElementRect'
-import { useHoverGrace } from '@/composables/useHoverGrace'
+import { useFolderTreeInteractions } from '@/composables/useFolderTreeInteractions'
 import { useObjectActions } from '@/composables/useObjectActions'
 import { useToast } from '@/composables/useToast'
 import { useWorldmapMenus } from '@/composables/useWorldmapMenus'
@@ -1314,14 +1314,7 @@ import { useBoardsStore } from '@/stores/boards'
 import { useConnectionsStore } from '@/stores/connections'
 import { useSettingsStore } from '@/stores/settings'
 import { useStatesStore } from '@/stores/states'
-import type {
-  BoardObject,
-  BulkAckTarget,
-  FolderTreeNode,
-  MonitoringState,
-  ObjectState,
-  ServiceLayout
-} from '@/types/api'
+import type { BoardObject, BulkAckTarget, ObjectState, ServiceLayout } from '@/types/api'
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation'
 import { getBoardObjectIdentifier, getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
 import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge'
@@ -1745,154 +1738,30 @@ function closeDetail() {
   drawerSeedState.value = null
 }
 
-// Foldertree leaves never enter the SSE states map (services are lazy; the flat
-// host states list is empty by design), so synthesise an ObjectState from the
-// tree node for the hover/drawer. Pass `host` for a service leaf, omit for a host.
-function folderNodeToState(node: FolderTreeNode, host?: string): ObjectState {
-  const isService = host !== undefined
-  return {
-    object_id: isService ? `${host};${node.title}` : node.title,
-    type: isService ? 'service' : 'host',
-    state: node.state as MonitoringState,
-    output: node.output,
-    perf_data: '',
-    acknowledged: node.acknowledged,
-    in_downtime: node.in_downtime,
-    stale: false,
-    site_id: node.site_id,
-    last_state_change: node.last_state_change ?? null,
-    services_summary: node.services_summary ?? null
+const {
+  folderHover,
+  folderHoverGrace,
+  folderCtx,
+  folderBulkModal,
+  folderSetupUrl,
+  onFolderHostSelect,
+  onFolderServiceSelect,
+  onFolderHoverHost,
+  onFolderHoverService,
+  onFolderHoverClear,
+  onFolderCtx,
+  closeFolderCtx,
+  onFolderCtxBulk,
+  closeFolderBulkModal
+} = useFolderTreeInteractions({
+  isPreview,
+  checkmkUrl,
+  canBulkCommand,
+  isClickActionNone: () => boardConfig.value?.click_action === 'none',
+  onObjectClick,
+  setDrawerSeed: (state) => {
+    drawerSeedState.value = state
   }
-}
-
-function onFolderHostSelect(node: FolderTreeNode) {
-  if (isPreview.value) return
-  if (node.kind !== 'host') return
-  drawerSeedState.value = folderNodeToState(node)
-  onObjectClick({
-    id: node.title,
-    type: 'host',
-    host_name: node.title,
-    x: 0,
-    y: 0,
-    z: 0,
-    url_target: '_blank'
-  })
-}
-
-function onFolderServiceSelect(host: string, node: FolderTreeNode) {
-  if (isPreview.value) return
-  // The drawer self-fetches the richer detail (long output, comments,
-  // downtimes) by host + service on top of this node-derived state.
-  const id = `${host};${node.title}`
-  drawerSeedState.value = folderNodeToState(node, host)
-  onObjectClick({
-    id,
-    type: 'service',
-    host_name: host,
-    service_description: node.title,
-    x: 0,
-    y: 0,
-    z: 0,
-    url_target: '_blank'
-  })
-}
-
-const folderBulkModal = ref<FolderTreeNode | null>(null)
-function onFolderAction(node: FolderTreeNode) {
-  if (!canBulkCommand.value) return
-  folderBulkModal.value = node
-}
-
-// Same node-derived state as the folder click→drawer path (see folderNodeToState).
-interface FolderHover {
-  object: BoardObject
-  state: ObjectState | undefined
-  x: number
-  y: number
-}
-const folderHover = ref<FolderHover | null>(null)
-
-function onFolderHoverHost(node: FolderTreeNode, x: number, y: number) {
-  folderHoverGrace.cancelClose()
-  folderHover.value = {
-    object: {
-      id: node.title,
-      type: 'host',
-      host_name: node.title,
-      x: 0,
-      y: 0,
-      z: 0,
-      url_target: '_blank'
-    },
-    state: folderNodeToState(node),
-    x: x + 12,
-    y: y + 12
-  }
-}
-
-function onFolderHoverService(host: string, node: FolderTreeNode, x: number, y: number) {
-  folderHoverGrace.cancelClose()
-  const id = `${host};${node.title}`
-  folderHover.value = {
-    object: {
-      id,
-      type: 'service',
-      host_name: host,
-      service_description: node.title,
-      x: 0,
-      y: 0,
-      z: 0,
-      url_target: '_blank'
-    },
-    state: folderNodeToState(node, host),
-    x: x + 12,
-    y: y + 12
-  }
-}
-
-const folderHoverGrace = useHoverGrace(() => {
-  folderHover.value = null
-})
-
-function onFolderHoverClear() {
-  folderHoverGrace.scheduleClose()
-}
-
-interface FolderCtx {
-  node: FolderTreeNode
-  x: number
-  y: number
-}
-const folderCtx = ref<FolderCtx | null>(null)
-
-function onFolderCtx(node: FolderTreeNode, x: number, y: number) {
-  // The settings preview is non-interactive; read-only displays (click_action
-  // 'none') get no context menu, mirroring onObjectClick's click gating.
-  if (isPreview.value || boardConfig.value?.click_action === 'none') return
-  folderHover.value = null
-  folderCtx.value = { node, x, y }
-}
-
-function closeFolderCtx() {
-  folderCtx.value = null
-}
-
-function onFolderCtxBulk() {
-  if (folderCtx.value) onFolderAction(folderCtx.value.node)
-  closeFolderCtx()
-}
-
-// wato.py addresses folders by their relative path (Main = ""), which is the
-// tree node's path.
-const folderSetupUrl = computed(() => {
-  const node = folderCtx.value?.node
-  if (!node) return null
-  const raw = checkmkUrl.value
-  if (!raw) return null
-  const base = raw.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
-  const p = new URLSearchParams({ mode: 'folder', folder: node.path })
-  return `${base}/check_mk/wato.py?${p.toString()}`
 })
 
 function onDetailAck() {
@@ -2357,11 +2226,6 @@ function closeDetailRemoveDowntimeModal(): void {
 
 function closeBulkAckModal(): void {
   bulkAckModal.value = null
-  statesStore.refreshAfterCommand()
-}
-
-function closeFolderBulkModal(): void {
-  folderBulkModal.value = null
   statesStore.refreshAfterCommand()
 }
 
