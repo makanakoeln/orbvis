@@ -1062,26 +1062,15 @@ import CmkInput from '@/components/cmk/user-input/CmkInput'
 
 import { boardsApi, connectionsApi } from '@/api/client'
 import { useEscapeClose } from '@/composables/useEscapeClose'
+import { useExcludeMembersPreview } from '@/composables/useExcludeMembersPreview'
 import { usePropertiesPopover } from '@/composables/usePropertiesPopover'
 import { useAuthStore } from '@/stores/auth'
 import { useStatesStore } from '@/stores/states'
-import type {
-  AggregationNode,
-  BoardObject,
-  LinePerfdataLabel,
-  MetricGraphGroup,
-  ObjectState
-} from '@/types/api'
-import {
-  BI_STATE_LABEL,
-  aggregationLeafId,
-  flattenAggregationLeaves
-} from '@/utils/aggregationTree'
+import type { BoardObject, LinePerfdataLabel, MetricGraphGroup, ObjectState } from '@/types/api'
 import { linePerfdataLabelOptions, lineStyleOptions } from '@/utils/dropdownOptions'
 import { GADGET_DEFAULT_SIZE } from '@/utils/gadget'
 import { getBoardObjectIdentifier } from '@/utils/naming'
 import { parsePerfData } from '@/utils/perf'
-import { compileRegex } from '@/utils/regex'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 import AutocompleteInput from './AutocompleteInput.vue'
@@ -1533,97 +1522,12 @@ async function loadAutocomplete() {
 
 loadAutocomplete()
 
-// ── exclude_members suppression-count preview ─────────────────────────
-// Cache the live tree once we know the aggregation id; the suppression
-// count then re-computes locally as the operator types the regex without
-// hitting the backend on every keystroke.
-const excludeMembersTree = ref<AggregationNode | null>(null)
-
-watch(
-  () => [form.aggregation_id, props.connectionId] as const,
-  async ([aggId, cid]) => {
-    if (!aggId || !cid || !auth.accessToken) {
-      excludeMembersTree.value = null
-      return
-    }
-    try {
-      // Fixed depth=10 = the API cap; "every leaf" guarantees the
-      // count reflects the full aggregation, not just the
-      // currently-displayed subtree.
-      const result = await connectionsApi.aggregationTree(cid, aggId, 10, auth.accessToken)
-      excludeMembersTree.value = result.tree
-    } catch {
-      excludeMembersTree.value = null
-    }
-  },
-  { immediate: true }
-)
-
-const excludeMembersFeedback = computed<{ text: string; tone: string } | null>(() => {
-  const tree = excludeMembersTree.value
-  if (!tree) return null
-  const memberRe = (form.exclude_members || '').trim()
-  const stateList = (form.exclude_member_states || '')
-    .split(',')
-    .map((s) => s.trim().toUpperCase())
-    .filter(Boolean)
-  if (!memberRe && stateList.length === 0) return null
-
-  let regex: RegExp | null = null
-  if (memberRe) {
-    try {
-      // Pattern is operator-typed and only used to test against the
-      // already-fetched leaves array — no server round-trip and no
-      // unbounded input source. compileRegex centralises the eslint
-      // tradeoff for security/detect-non-literal-regexp so we can
-      // keep using the standard linter elsewhere.
-      regex = compileRegex(memberRe)
-    } catch {
-      return {
-        text: _t('Invalid regular expression.'),
-        tone: 'orb-props__feedback--invalid'
-      }
-    }
-  }
-
-  const leaves = flattenAggregationLeaves(tree)
-  const total = leaves.length
-  let suppressed = 0
-  for (const l of leaves) {
-    const key = aggregationLeafId(l)
-    const matchesMember = regex ? regex.test(key) : true
-    const matchesState = stateList.length ? stateList.includes(BI_STATE_LABEL[l.state] ?? '') : true
-    // exclude when BOTH (or only-defined) filters match the leaf.
-    const memberApplies = !!regex
-    const stateApplies = stateList.length > 0
-    if (
-      (memberApplies && stateApplies && matchesMember && matchesState) ||
-      (memberApplies && !stateApplies && matchesMember) ||
-      (!memberApplies && stateApplies && matchesState)
-    ) {
-      suppressed += 1
-    }
-  }
-
-  if (suppressed === 0) {
-    return {
-      text: _t('0 of %{total} leaves hidden — filter matches nothing.', { total }),
-      tone: 'orb-props__feedback--muted'
-    }
-  }
-  if (suppressed >= total) {
-    return {
-      text: _t('All %{count} leaves would be hidden — the filter is too broad.', {
-        count: suppressed,
-        total
-      }),
-      tone: 'orb-props__feedback--warn'
-    }
-  }
-  return {
-    text: _t('%{count} of %{total} leaves will be hidden.', { count: suppressed, total }),
-    tone: 'orb-props__feedback--matched'
-  }
+// Live "N of M leaves hidden" preview for the BI exclude_members filter.
+const { excludeMembersFeedback } = useExcludeMembersPreview({
+  connectionId: () => props.connectionId,
+  aggregationId: () => form.aggregation_id,
+  excludeMembers: () => form.exclude_members,
+  excludeMemberStates: () => form.exclude_member_states
 })
 
 onMounted(() => {
