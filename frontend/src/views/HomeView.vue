@@ -1077,16 +1077,16 @@ import CmkButton from '@/components/cmk/CmkButton'
 import CmkToggleButtonGroup from '@/components/cmk/CmkToggleButtonGroup'
 
 import { boardsApi } from '@/api/client'
+import { useBoardBulkActions } from '@/composables/useBoardBulkActions'
 import { useBoardImportExport } from '@/composables/useBoardImportExport'
 import { useBoardListViewMode } from '@/composables/useBoardListViewMode'
 import { useChangelog } from '@/composables/useChangelog'
 import { useDragReorder } from '@/composables/useDragReorder'
-import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
 import { useCapabilitiesStore } from '@/stores/capabilities'
 import { useSettingsStore } from '@/stores/settings'
-import type { BoardBulkDeleteFailure, BoardRead, WorldmapView } from '@/types/api'
+import type { BoardRead, WorldmapView } from '@/types/api'
 import type { TourStep } from '@/types/tour'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
@@ -1146,21 +1146,33 @@ const tourSteps = computed<TourStep[]>(() => {
 const confirmDelete = ref<{ name: string; alias: string } | null>(null)
 const capabilities = useCapabilitiesStore()
 const settingsStore = useSettingsStore()
-const toast = useToast()
 
 // Cards-vs-table choice (per-user localStorage override + global default).
 const { viewMode, viewModeOptions, setViewMode } = useBoardListViewMode()
 
-const selectedBoards = ref<Set<string>>(new Set())
-const confirmBulkDelete = ref(false)
-const bulkBusy = ref(false)
-const bulkFailures = ref<BoardBulkDeleteFailure[]>([])
-
-watch(viewMode, (mode) => {
-  if (mode === 'cards' && selectedBoards.value.size > 0) {
-    selectedBoards.value = new Set()
-    bulkFailures.value = []
-  }
+// Multi-select + bulk delete/edit/export for the board list (table view).
+const {
+  selectedBoards,
+  confirmBulkDelete,
+  bulkBusy,
+  showBulkEdit,
+  clearSelection,
+  toggleBoardSelection,
+  selectedCount,
+  allFilteredSelected,
+  toggleSelectAllFiltered,
+  selectedAliases,
+  openBulkDelete,
+  doBulkDelete,
+  editableSelectedNames,
+  editableSelectedAliases,
+  openBulkEdit,
+  doBulkEdit,
+  doBulkExport
+} = useBoardBulkActions({
+  filteredBoards: () => filteredBoards.value,
+  viewMode: () => viewMode.value,
+  openSettings: (map) => openSettings(map)
 })
 
 function onCreated(name: string) {
@@ -1176,149 +1188,6 @@ async function doDelete() {
   if (!confirmDelete.value) return
   await boardsStore.deleteBoard(confirmDelete.value.name)
   confirmDelete.value = null
-}
-
-function clearSelection() {
-  selectedBoards.value = new Set()
-  bulkFailures.value = []
-}
-
-function toggleBoardSelection(name: string) {
-  const next = new Set(selectedBoards.value)
-  if (next.has(name)) next.delete(name)
-  else next.add(name)
-  selectedBoards.value = next
-}
-
-const selectedCount = computed(() => selectedBoards.value.size)
-
-const allFilteredSelected = computed(() => {
-  const list = filteredBoards.value
-  if (list.length === 0) return false
-  return list.every((b) => selectedBoards.value.has(b.name))
-})
-
-function toggleSelectAllFiltered(checked: boolean) {
-  const next = new Set(selectedBoards.value)
-  if (checked) {
-    for (const b of filteredBoards.value) next.add(b.name)
-  } else {
-    for (const b of filteredBoards.value) next.delete(b.name)
-  }
-  selectedBoards.value = next
-}
-
-const selectedNames = computed(() => Array.from(selectedBoards.value))
-
-const selectedAliases = computed(() => {
-  const byName = new Map(boardsStore.boards.map((b) => [b.name, b.alias || b.name]))
-  return selectedNames.value.map((n) => byName.get(n) ?? n)
-})
-
-function openBulkDelete() {
-  if (selectedCount.value === 0) return
-  bulkFailures.value = []
-  confirmBulkDelete.value = true
-}
-
-async function doBulkDelete() {
-  if (bulkBusy.value) return
-  bulkBusy.value = true
-  try {
-    const result = await boardsStore.bulkDeleteBoards(selectedNames.value)
-    const okCount = result.deleted.length
-    const failed = result.failed
-    const okSet = new Set(result.deleted)
-    const remaining = new Set<string>()
-    for (const n of selectedBoards.value) {
-      if (!okSet.has(n)) remaining.add(n)
-    }
-    selectedBoards.value = remaining
-    bulkFailures.value = failed
-    confirmBulkDelete.value = false
-    if (failed.length === 0) {
-      toast.success(_t('%{n} boards deleted', { n: okCount }))
-    } else {
-      toast.error(_t('%{ok} deleted, %{fail} failed', { ok: okCount, fail: failed.length }))
-    }
-  } catch (e: unknown) {
-    toast.error(e instanceof Error ? e.message : 'Bulk delete failed')
-    confirmBulkDelete.value = false
-  } finally {
-    bulkBusy.value = false
-  }
-}
-
-const showBulkEdit = ref(false)
-
-const editableSelectedNames = computed(() => {
-  const writable = new Set(boardsStore.boards.filter((b) => !b.readonly).map((b) => b.name))
-  return selectedNames.value.filter((n) => writable.has(n))
-})
-
-const editableSelectedAliases = computed(() => {
-  const byName = new Map(boardsStore.boards.map((b) => [b.name, b.alias || b.name]))
-  return editableSelectedNames.value.map((n) => byName.get(n) ?? n)
-})
-
-function openBulkEdit() {
-  if (editableSelectedNames.value.length === 0) {
-    toast.error(_t('None of the selected boards is editable (all are read-only).'))
-    return
-  }
-  if (editableSelectedNames.value.length === 1) {
-    const board = boardsStore.boards.find((b) => b.name === editableSelectedNames.value[0])
-    if (board) {
-      openSettings(board)
-      return
-    }
-  }
-  showBulkEdit.value = true
-}
-
-async function doBulkEdit(updates: Record<string, unknown>) {
-  if (bulkBusy.value) return
-  if (Object.keys(updates).length === 0) {
-    showBulkEdit.value = false
-    return
-  }
-  const targets = editableSelectedNames.value
-  if (targets.length === 0) {
-    showBulkEdit.value = false
-    return
-  }
-  bulkBusy.value = true
-  try {
-    const result = await boardsStore.bulkEditBoards(targets, updates)
-    showBulkEdit.value = false
-    if (result.failed.length === 0) {
-      toast.success(_t('Updated %{n} boards', { n: result.updated.length }))
-    } else {
-      toast.error(
-        _t('Updated %{ok}, %{fail} failed', {
-          ok: result.updated.length,
-          fail: result.failed.length
-        })
-      )
-    }
-  } catch (e: unknown) {
-    toast.error(e instanceof Error ? e.message : 'Bulk edit failed')
-  } finally {
-    bulkBusy.value = false
-  }
-}
-
-async function doBulkExport() {
-  if (bulkBusy.value || selectedNames.value.length === 0) return
-  bulkBusy.value = true
-  try {
-    await boardsStore.bulkExportBoards(selectedNames.value)
-    toast.success(_t('Exported %{n} boards', { n: selectedNames.value.length }))
-  } catch (e: unknown) {
-    toast.error(e instanceof Error ? e.message : 'Bulk export failed')
-  } finally {
-    bulkBusy.value = false
-  }
 }
 
 // Single-board import / export / clone (with overwrite-conflict handling).
