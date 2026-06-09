@@ -778,21 +778,15 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 
-import { connectionsApi, metricsApi } from '@/api/client'
+import { connectionsApi } from '@/api/client'
 import { useAggregationDetail } from '@/composables/useAggregationDetail'
 import { useGroupMembers } from '@/composables/useGroupMembers'
+import { useObjectDetailsFetch } from '@/composables/useObjectDetailsFetch'
 import { usePerformanceMetrics } from '@/composables/usePerformanceMetrics'
 import { useSummaryChips } from '@/composables/useSummaryChips'
 import { useIsDark } from '@/composables/useTheme'
 import { useAuthStore } from '@/stores/auth'
-import type {
-  BoardObject,
-  BulkAckTarget,
-  MetricPoint,
-  ObjectDetails,
-  ObjectState,
-  PerfometerResult
-} from '@/types/api'
+import type { BoardObject, BulkAckTarget, MetricPoint, ObjectState } from '@/types/api'
 import { buildCheckmkUrl } from '@/utils/boardNavigation'
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
 import { stateColor } from '@/utils/stateColors'
@@ -884,61 +878,14 @@ const auth = useAuthStore()
 
 const canCommand = (verb: string): boolean => !props.readonly && auth.mayCommand(verb)
 
-// On-demand details kept separate from the streamed ObjectState — long_output,
-// comments, downtimes and topology rarely change but can be many KB each, so
-// fetching them per Drawer-open keeps the WebSocket payload compact.
-const details = ref<ObjectDetails | null>(null)
-// CMK perf-o-meter result — same metric Checkmk shows in views, computed
-// from the service's perfometer plugin definition (e.g. mem_used_percent for
-// Linux Memory). Only populated for services.
-const perfometer = ref<PerfometerResult | null>(null)
-
-// Source the watch on primitive keys (not the reactive object) so it fires
-// only when selection actually changes — state-stream updates that re-create
-// the prop reference would otherwise cause refetches on every tick.
-watch(
-  [
-    () => props.object?.type,
-    () => props.object?.host_name,
-    () => props.object?.service_description,
-    () => props.connectionId
-  ],
-  async ([objType, host, service, connId]) => {
-    details.value = null
-    perfometer.value = null
-    if (!connId || !auth.accessToken || !host) return
-    if (objType !== 'host' && objType !== 'service') return
-    if (objType === 'service' && !service) return
-    const reqService = objType === 'service' ? (service ?? null) : null
-    try {
-      const [detailsRes, perfRes] = await Promise.all([
-        connectionsApi.objectDetails(connId, objType, host, reqService, auth.accessToken),
-        objType === 'service' && reqService
-          ? metricsApi.getPerfometer(connId, host, reqService, auth.accessToken)
-          : Promise.resolve(null)
-      ])
-      // Stale-response guard: between the await and now the user may have
-      // clicked another object. Match all three identity fields so a host
-      // response doesn't land on a same-named service or vice versa.
-      // Note: service_description may be undefined on host BoardObjects
-      // (Flow Board synthesises hosts without it) — normalise to null
-      // before comparing so guard doesn't reject legitimate hosts.
-      const currentService = props.object?.service_description ?? null
-      if (
-        props.object?.type === objType &&
-        props.object?.host_name === host &&
-        currentService === reqService
-      ) {
-        details.value = detailsRes
-        perfometer.value = perfRes
-      }
-    } catch {
-      details.value = null
-      perfometer.value = null
-    }
-  },
-  { immediate: true }
-)
+// On-demand details (long_output, comments, downtimes, topology, metric
+// titles) + CMK perfometer, kept off the streamed ObjectState because they're
+// large and rarely change.
+const { details, perfometer } = useObjectDetailsFetch({
+  object: () => props.object,
+  connectionId: () => props.connectionId,
+  accessToken: () => auth.accessToken
+})
 
 // Hostgroup / Servicegroup / dyngroup member-list — drives the Members tab.
 const {
