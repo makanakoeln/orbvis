@@ -244,7 +244,6 @@ import ProblemsOnlyToggle from '@/components/board/ProblemsOnlyToggle.vue'
 import RemoveDowntimeModal from '@/components/board/RemoveDowntimeModal.vue'
 import CmkLoading from '@/components/cmk/CmkLoading'
 
-import { connectionsApi } from '@/api/client'
 import { useD3Cleanup } from '@/composables/useD3Cleanup'
 import { useFlowFilter } from '@/composables/useFlowFilter'
 import {
@@ -257,6 +256,7 @@ import { useFlowSelection } from '@/composables/useFlowSelection'
 import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useObjectActions } from '@/composables/useObjectActions'
 import { useTopKHint } from '@/composables/useTopKHint'
+import { useTopologyFeed } from '@/composables/useTopologyFeed'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 import { useStatesStore } from '@/stores/states'
@@ -377,7 +377,12 @@ const topKWorstIds = computed<Set<string>>(() => {
 
 const svgEl = ref<SVGSVGElement | null>(null)
 useD3Cleanup(svgEl)
-const nodes = ref<TopologyNode[]>([])
+
+const { nodes, loading, error, fetchTopology } = useTopologyFeed({
+  connectionId: () => props.connectionId,
+  flowView: () => props.flowView,
+  withServices: () => needsServices(props.serviceLayout)
+})
 
 const {
   worstServiceState,
@@ -393,8 +398,6 @@ const {
   topKWorstIds: () => topKWorstIds.value
 })
 
-const loading = ref(true)
-const error = ref('')
 const hoverMenu = reactive<{
   visible: boolean
   object: BoardObject | null
@@ -557,8 +560,6 @@ const onContextMenuForceCheck = () => objectActions.handlers.forceCheck(contextM
 const onContextMenuToggleNotifications = (enable: boolean) =>
   objectActions.handlers.toggleNotifications(contextMenu.object, enable)
 
-let timer: ReturnType<typeof setInterval> | null = null
-
 // Layouts that need the full per-host service list. Donut renders only
 // services_summary aggregates and therefore skips the bulk query entirely —
 // that's the main scaling win for large installations.
@@ -645,49 +646,6 @@ const { filterText, applyFilterOpacity } = useFlowFilter({
   worstServiceState
 })
 
-// ---- Data sources ----
-//
-// Primary: the central WebSocket pipeline pushes `topology_update` deltas via
-// statesStore.topology, scoped per auth_user. We just mirror it into the
-// local `nodes` ref so the existing render watch still fires.
-//
-// Fallback: when the WS handshake never opens (reverse proxy without WS
-// support), statesStore flips `wsAvailable` to false. In that mode this
-// component takes over and polls `/topology` every 15 s, the same behaviour
-// as before the WS push landed.
-async function fetchTopology() {
-  try {
-    nodes.value = await connectionsApi.topology(
-      props.connectionId,
-      auth.accessToken!,
-      needsServices(props.serviceLayout),
-      {
-        root: props.flowView?.root ?? null,
-        childLayers: props.flowView?.child_layers ?? null,
-        parentLayers: props.flowView?.parent_layers ?? null,
-        topAffectedHosts: props.flowView?.top_affected_hosts ?? null,
-        servicesPerHost: props.flowView?.max_services_per_host ?? null
-      }
-    )
-    if (error.value) error.value = ''
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load topology'
-  } finally {
-    loading.value = false
-  }
-}
-
-watch(
-  () => statesStore.topology,
-  (topo) => {
-    if (!statesStore.wsAvailable) return
-    nodes.value = [...topo]
-    if (error.value) error.value = ''
-    loading.value = false
-  },
-  { deep: false }
-)
-
 // Re-fetch and clear service cache when serviceLayout prop changes. With WS
 // the topology is pushed unconditionally with services, so the layout switch
 // is a pure render-side concern; we still drop cached service positions so
@@ -731,73 +689,17 @@ watch(
   }
 )
 
-// Polling-fallback timer (only used when WS is unavailable). Tab-visibility
-// pause keeps idle multi-tab setups from each driving their own round-trip.
-function startPollTimer(): void {
-  if (timer || statesStore.wsAvailable) return
-  timer = setInterval(fetchTopology, 15000)
-}
-function stopPollTimer(): void {
-  if (timer) {
-    clearInterval(timer)
-    timer = null
-  }
-}
-function onVisibilityChange(): void {
-  if (statesStore.wsAvailable) return
-  if (document.hidden) {
-    stopPollTimer()
-  } else {
-    fetchTopology()
-    startPollTimer()
-  }
-}
-
-let bootstrapTimer: ReturnType<typeof setTimeout> | null = null
-
 onMounted(() => {
-  if (statesStore.topology.length > 0) {
-    nodes.value = [...statesStore.topology]
-    loading.value = false
-  } else if (statesStore.wsAvailable) {
-    // Wait briefly for the first WS topology_update; if none arrives,
-    // fall back to a one-shot REST fetch so the user isn't stuck on a
-    // blank board.
-    bootstrapTimer = setTimeout(() => {
-      if (!statesStore.topologyReady && nodes.value.length === 0) {
-        fetchTopology()
-      }
-    }, 2000)
-  } else {
-    fetchTopology()
-    if (!document.hidden) startPollTimer()
-  }
-  document.addEventListener('visibilitychange', onVisibilityChange)
   document.addEventListener('click', onDocumentClick)
 })
 
-watch(
-  () => statesStore.wsAvailable,
-  (available) => {
-    if (!available) {
-      fetchTopology()
-      if (!document.hidden) startPollTimer()
-    } else {
-      stopPollTimer()
-    }
-  }
-)
-
 onUnmounted(() => {
-  document.removeEventListener('visibilitychange', onVisibilityChange)
   document.removeEventListener('click', onDocumentClick)
-  if (bootstrapTimer) clearTimeout(bootstrapTimer)
   if (pendingZoomRaf !== null) {
     cancelAnimationFrame(pendingZoomRaf)
     pendingZoomRaf = null
     pendingZoomTransform = null
   }
-  stopPollTimer()
   simulation?.stop()
   if (svgEl.value) select(svgEl.value).selectAll('*').remove()
 })
