@@ -5,12 +5,11 @@ from __future__ import annotations
 import ast
 import asyncio
 import contextlib
-import json as _json
+import json
 import logging
 import math
 import random
 import re
-import re as _re
 import ssl
 import threading
 import time
@@ -850,12 +849,12 @@ def _build_details(
 def _parse_metrics_from_perf(perf_data: str) -> list[_MetricInfo]:
     """Parse perf_data string into [{label, unit}] for rrddata queries."""
     results: list[_MetricInfo] = []
-    for part in _re.findall(r"(?:'[^']+'|[^\s]+)=\S*", perf_data):
+    for part in re.findall(r"(?:'[^']+'|[^\s]+)=\S*", perf_data):
         eq = part.index("=")
         label = part[:eq].strip("'")
         rest = part[eq + 1 :]
         # Extract unit from the value part (digits/dots/minus, then unit letters)
-        m = _re.match(r"[-\d.]+([a-zA-Z%]*)", rest.split(";")[0])
+        m = re.match(r"[-\d.]+([a-zA-Z%]*)", rest.split(";")[0])
         unit = m.group(1) if m else ""
         results.append({"label": label, "unit": unit})
     return results
@@ -1620,7 +1619,7 @@ class LivestatusConnection(ConnectionBase):
                 state = await self.get_host_state(host)
             metrics = {
                 part[: part.index("=")].strip("'")
-                for part in _re.findall(r"(?:'[^']+'|[^\s]+)=[^\s]*", state.perf_data)
+                for part in re.findall(r"(?:'[^']+'|[^\s]+)=[^\s]*", state.perf_data)
             }
             return _match_graphs(metrics)
         except Exception as exc:
@@ -2132,7 +2131,7 @@ class LivestatusConnection(ConnectionBase):
         # Bearer-auth-capable since CMK 2.4; older versions silently return None.
         ajax = await self._cmk_gui_get(
             "/ajax_fetch_aggregation_data.py",
-            params={"aggregations": _json.dumps([aggregation_id])},
+            params={"aggregations": json.dumps([aggregation_id])},
         )
         if not isinstance(ajax, dict):
             return None
@@ -2795,7 +2794,7 @@ class LivestatusConnection(ConnectionBase):
             text = body.decode("utf-8").strip()
             if not text:
                 return []
-            parsed: list[LivestatusRow] = _json.loads(text)
+            parsed: list[LivestatusRow] = json.loads(text)
             return parsed
         finally:
             writer.close()
