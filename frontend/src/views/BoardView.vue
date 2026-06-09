@@ -1269,7 +1269,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import OnboardingTour from '@/components/OnboardingTour.vue'
@@ -1298,7 +1298,7 @@ import type { BreadcrumbItem } from '@/components/cmk/CmkBreadcrumb.vue'
 import CmkBreadcrumb from '@/components/cmk/CmkBreadcrumb.vue'
 import CmkButton from '@/components/cmk/CmkButton'
 
-import { boardsApi, cmkApi, connectionsApi } from '@/api/client'
+import { boardsApi, connectionsApi } from '@/api/client'
 import { useBoardEditor } from '@/composables/useBoardEditor'
 import { useBoardFabMenus } from '@/composables/useBoardFabMenus'
 import { useBoardFullscreen } from '@/composables/useBoardFullscreen'
@@ -1308,6 +1308,7 @@ import { useElementRect } from '@/composables/useElementRect'
 import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useObjectActions } from '@/composables/useObjectActions'
 import { useToast } from '@/composables/useToast'
+import { useWorldmapMenus } from '@/composables/useWorldmapMenus'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
 import { useConnectionsStore } from '@/stores/connections'
@@ -1316,7 +1317,6 @@ import { useStatesStore } from '@/stores/states'
 import type {
   BoardObject,
   BulkAckTarget,
-  DowntimeEntry,
   FolderTreeNode,
   MonitoringState,
   ObjectState,
@@ -1539,256 +1539,54 @@ function onObjectDetach(obj: BoardObject) {
   void editor.updateObjectProperties(obj.id, { start_ref: null, end_ref: null })
 }
 
-// ---- Worldmap hover & context menu ----
+// ---- Worldmap menus (hover / context / canvas-context + command modals) ----
 
-const worldmapHover = reactive({ visible: false, object: null as BoardObject | null, x: 0, y: 0 })
-const worldmapCtxMenu = reactive({
-  visible: false,
-  object: null as BoardObject | null,
-  x: 0,
-  y: 0
-})
-const worldmapCtxState = computed(() =>
-  worldmapCtxMenu.object ? statesStore.states[worldmapCtxMenu.object.id] : undefined
-)
-const worldmapCanvasCtxMenu = reactive({
-  visible: false,
-  x: 0,
-  y: 0,
-  view: null as { lat: number; lng: number; zoom: number } | null
-})
-
-// Close-grace so the operator can move onto the hover card and click a
-// service-state pill (HoverMenu @card-enter/-leave round-trip).
-const worldmapHoverGrace = useHoverGrace(() => {
-  worldmapHover.visible = false
-})
-
-function onWorldmapHover(obj: BoardObject, event: MouseEvent) {
-  worldmapHoverGrace.cancelClose()
-  worldmapHover.object = obj
-  worldmapHover.x = event.pageX + 12
-  worldmapHover.y = event.pageY + 12
-  worldmapHover.visible = true
-}
-
-function onWorldmapHoverLeave() {
-  worldmapHoverGrace.scheduleClose()
-}
-
-function onWorldmapContextMenuView(obj: BoardObject, x: number, y: number) {
-  editor.selectObject(obj.id)
-  worldmapCtxMenu.object = obj
-  worldmapCtxMenu.x = x
-  worldmapCtxMenu.y = y
-  worldmapCtxMenu.visible = true
-}
-
-function onWorldmapCtxEdit() {
-  const obj = worldmapCtxMenu.object
-  const x = worldmapCtxMenu.x
-  const y = worldmapCtxMenu.y
-  worldmapCtxMenu.visible = false
-  if (obj) openPropsModal(obj, { left: x, top: y, right: x, bottom: y })
-}
-
-function onWorldmapCtxDelete() {
-  if (boardConfig.value?.readonly) return
-  const obj = worldmapCtxMenu.object
-  worldmapCtxMenu.visible = false
-  if (obj) {
-    editor.selectObject(obj.id)
-    editor.deleteSelected()
-  }
-}
-
-function onWorldmapCtxDuplicate() {
-  const obj = worldmapCtxMenu.object
-  worldmapCtxMenu.visible = false
-  if (obj) {
-    editor.selectObject(obj.id)
-    editor.duplicateSelected()
-  }
-}
-
-function onWorldmapCtxDetach() {
-  const obj = worldmapCtxMenu.object
-  worldmapCtxMenu.visible = false
-  if (obj) void editor.updateObjectProperties(obj.id, { start_ref: null, end_ref: null })
-}
-
-const worldmapAckModal = ref<BoardObject | null>(null)
-const worldmapDowntimeModal = ref<BoardObject | null>(null)
-const worldmapCommentModal = ref<BoardObject | null>(null)
-const worldmapRemoveDowntimeModal = reactive<{
-  visible: boolean
-  downtimes: DowntimeEntry[]
-  objectName: string
-}>({
-  visible: false,
-  downtimes: [],
-  objectName: ''
-})
-
-function onWorldmapCtxDowntime() {
-  const obj = worldmapCtxMenu.object
-  worldmapCtxMenu.visible = false
-  if (obj) worldmapDowntimeModal.value = obj
-}
-
-async function onWorldmapCtxRemoveDowntime() {
-  const obj = worldmapCtxMenu.object
-  worldmapCtxMenu.visible = false
-  if (!obj || !checkmkUrl.value) return
-  let downtimes: DowntimeEntry[]
-  try {
-    if (obj.type === 'service' && obj.host_name && obj.service_description) {
-      downtimes = await cmkApi.listDowntimesService(
-        checkmkUrl.value,
-        obj.host_name,
-        obj.service_description
-      )
-    } else if (obj.host_name) {
-      downtimes = await cmkApi.listDowntimesHost(checkmkUrl.value, obj.host_name)
-    } else {
-      return
-    }
-  } catch {
-    toast.error(_t('Failed to remove downtime'))
-    return
-  }
-  if (downtimes.length === 0) {
-    toast.error(_t('No active downtimes found'))
-    return
-  }
-  if (downtimes.length === 1 && downtimes[0]) {
-    await doWorldmapRemoveDowntime(downtimes[0])
-    return
-  }
-  worldmapRemoveDowntimeModal.downtimes = downtimes
-  worldmapRemoveDowntimeModal.objectName = obj.host_name ?? ''
-  worldmapRemoveDowntimeModal.visible = true
-}
-
-async function doWorldmapRemoveDowntime(dt: DowntimeEntry) {
-  if (!checkmkUrl.value) return
-  try {
-    await cmkApi.removeDowntimeById(checkmkUrl.value, dt.id, dt.site_id)
-    toast.success(_t('Downtime removed'))
-    statesStore.refreshAfterCommand()
-  } catch {
-    toast.error(_t('Failed to remove downtime'))
-  }
-}
-
-function onWorldmapCtxAck() {
-  const obj = worldmapCtxMenu.object
-  worldmapCtxMenu.visible = false
-  if (obj) worldmapAckModal.value = obj
-}
-
-function onWorldmapCtxAddComment() {
-  const obj = worldmapCtxMenu.object
-  worldmapCtxMenu.visible = false
-  if (obj) worldmapCommentModal.value = obj
-}
-
-async function onWorldmapCtxRemoveAck() {
-  const obj = worldmapCtxMenu.object
-  worldmapCtxMenu.visible = false
-  if (!obj || !checkmkUrl.value) return
-  const siteId = statesStore.getState(obj.id)?.site_id ?? null
-  try {
-    if (obj.type === 'service' && obj.host_name && obj.service_description) {
-      await cmkApi.removeAcknowledgementService(
-        checkmkUrl.value,
-        obj.host_name,
-        obj.service_description,
-        siteId
-      )
-    } else if (obj.host_name) {
-      await cmkApi.removeAcknowledgementHost(checkmkUrl.value, obj.host_name, siteId)
-    }
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : ''
-    toast.error(
-      detail
-        ? `${_t('Failed to remove acknowledgement')}: ${detail}`
-        : _t('Failed to remove acknowledgement')
-    )
-  }
-}
-
-async function onWorldmapCtxToggleNotifications(enable: boolean) {
-  const obj = worldmapCtxMenu.object
-  worldmapCtxMenu.visible = false
-  if (!obj || !checkmkUrl.value) return
-  const siteId = statesStore.getState(obj.id)?.site_id ?? null
-  try {
-    if (obj.type === 'service' && obj.host_name && obj.service_description) {
-      await (enable ? cmkApi.enableNotificationsService : cmkApi.disableNotificationsService)(
-        checkmkUrl.value,
-        obj.host_name,
-        obj.service_description,
-        siteId
-      )
-    } else if (obj.host_name) {
-      await (enable ? cmkApi.enableNotificationsHost : cmkApi.disableNotificationsHost)(
-        checkmkUrl.value,
-        obj.host_name,
-        siteId
-      )
-    }
-  } catch {
-    toast.error(_t('Failed to toggle notifications'))
-  }
-}
-
-async function onWorldmapCtxForceCheck() {
-  const obj = worldmapCtxMenu.object
-  worldmapCtxMenu.visible = false
-  if (!obj || !checkmkUrl.value) return
-  const siteId = statesStore.getState(obj.id)?.site_id ?? null
-  try {
-    if (obj.type === 'service' && obj.host_name && obj.service_description) {
-      await cmkApi.forceCheckService(
-        checkmkUrl.value,
-        obj.host_name,
-        obj.service_description,
-        siteId
-      )
-    } else if (obj.host_name) {
-      await cmkApi.forceCheckHost(checkmkUrl.value, obj.host_name, siteId)
-    }
-  } catch {
-    toast.error(_t('Force check failed'))
-  }
-}
-
-function closeWorldmapMenus() {
-  worldmapHoverGrace.cancelClose()
-  worldmapHover.visible = false
-  worldmapCtxMenu.visible = false
-  worldmapCanvasCtxMenu.visible = false
-}
-
-function onWorldmapCanvasContextMenu(
-  view: { lat: number; lng: number; zoom: number },
-  screen: { x: number; y: number }
-) {
-  worldmapCanvasCtxMenu.view = view
-  worldmapCanvasCtxMenu.x = screen.x
-  worldmapCanvasCtxMenu.y = screen.y
-  worldmapCanvasCtxMenu.visible = true
-}
-
-function onWorldmapCanvasCtxSaveAsDefault() {
-  if (!worldmapCanvasCtxMenu.view) return
-  settingsWorldmapView.value = { ...worldmapCanvasCtxMenu.view }
+// Writing the picked map view into board settings is the settings cluster's
+// job, so the worldmap-menus composable calls back into this. Body reads the
+// settings refs lazily (only on click), so they may be declared further down.
+function onSaveWorldmapViewAsDefault(view: { lat: number; lng: number; zoom: number }) {
+  settingsWorldmapView.value = { ...view }
   settingsParentMapSize.value = worldmapCanvasRef.value?.getContainerSize() ?? null
-  worldmapCanvasCtxMenu.visible = false
   showSettings.value = true
 }
+
+const {
+  worldmapHover,
+  worldmapCtxMenu,
+  worldmapCtxState,
+  worldmapCanvasCtxMenu,
+  worldmapHoverGrace,
+  worldmapAckModal,
+  worldmapDowntimeModal,
+  worldmapCommentModal,
+  worldmapRemoveDowntimeModal,
+  onWorldmapHover,
+  onWorldmapHoverLeave,
+  onWorldmapContextMenuView,
+  onWorldmapCtxEdit,
+  onWorldmapCtxDelete,
+  onWorldmapCtxDuplicate,
+  onWorldmapCtxDetach,
+  onWorldmapCtxDowntime,
+  onWorldmapCtxRemoveDowntime,
+  onWorldmapCtxAck,
+  onWorldmapCtxAddComment,
+  onWorldmapCtxRemoveAck,
+  onWorldmapCtxToggleNotifications,
+  onWorldmapCtxForceCheck,
+  closeWorldmapMenus,
+  onWorldmapCanvasContextMenu,
+  onWorldmapCanvasCtxSaveAsDefault,
+  closeWorldmapAckModal,
+  closeWorldmapDowntimeModal,
+  closeWorldmapRemoveDowntimeModal
+} = useWorldmapMenus({
+  editor,
+  checkmkUrl,
+  isReadonly: () => boardConfig.value?.readonly ?? false,
+  openPropsModal,
+  onSaveViewAsDefault: onSaveWorldmapViewAsDefault
+})
 
 function _closePropsModal() {
   propsModalObject.value = null
@@ -2570,21 +2368,6 @@ function closeFolderBulkModal(): void {
 function pickServiceLayout(v: Parameters<typeof onServiceLayoutChanged>[0]): void {
   onServiceLayoutChanged(v)
   serviceLayoutOpen.value = false
-}
-
-function closeWorldmapAckModal(): void {
-  worldmapAckModal.value = null
-  statesStore.refreshAfterCommand()
-}
-
-function closeWorldmapDowntimeModal(): void {
-  worldmapDowntimeModal.value = null
-  statesStore.refreshAfterCommand()
-}
-
-function closeWorldmapRemoveDowntimeModal(): void {
-  worldmapRemoveDowntimeModal.visible = false
-  statesStore.refreshAfterCommand()
 }
 </script>
 
