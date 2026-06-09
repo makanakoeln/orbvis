@@ -1300,6 +1300,7 @@ import CmkButton from '@/components/cmk/CmkButton'
 
 import { boardsApi, cmkApi, connectionsApi } from '@/api/client'
 import { useBoardEditor } from '@/composables/useBoardEditor'
+import { useBoardFabMenus } from '@/composables/useBoardFabMenus'
 import { useBoardFullscreen } from '@/composables/useBoardFullscreen'
 import { useBoardRotation } from '@/composables/useBoardRotation'
 import { useBoardTour } from '@/composables/useBoardTour'
@@ -1319,11 +1320,9 @@ import type {
   FolderTreeNode,
   MonitoringState,
   ObjectState,
-  ObjectType,
   ServiceLayout
 } from '@/types/api'
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation'
-import { placeableObjectTypes } from '@/utils/dropdownOptions'
 import { getBoardObjectIdentifier, getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
 import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge'
 import { resolveTemplate } from '@/utils/template'
@@ -1417,10 +1416,20 @@ const { rotationCountdown, rotationPaused, stopRotation, scheduleRotation, toggl
 const { showBoardTour, boardTourSteps, onBoardTourStepClick, onBoardTourStepBack } =
   useBoardTour(editor)
 
-// ---- Add-object type picker (anchored above the "+" FAB) ----
+const {
+  addPickerOpen,
+  placeableTypeOptions,
+  chooseAddType,
+  onAddFabClick,
+  closeAddPicker,
+  gridMenuOpen,
+  gridSnapActive,
+  gridSizeOptions,
+  pickGrid,
+  closeGridMenu
+} = useBoardFabMenus(editor)
 
 const vClickOutside = useClickOutside()
-const addPickerOpen = ref(false)
 const isDragging = ref(false)
 
 // ---- Action bar position anchored to selected object ----
@@ -1465,35 +1474,6 @@ const selectedObjectAnchor = computed<AnchorRect | null>(() => {
     bottom: selectedRect.bottom
   }
 })
-
-const placeableTypeOptions = computed(() =>
-  placeableObjectTypes(_t, settingsStore.system.enable_graph_objects)
-)
-
-function chooseAddType(type: ObjectType) {
-  editor.draft.type = type
-  addPickerOpen.value = false
-}
-
-function onAddFabClick() {
-  if (editor.draft.type) {
-    editor.resetDraft()
-    addPickerOpen.value = true
-  } else {
-    addPickerOpen.value = !addPickerOpen.value
-  }
-}
-
-function closeAddPicker() {
-  addPickerOpen.value = false
-}
-
-watch(
-  () => editor.editMode.value,
-  (on) => {
-    if (!on) addPickerOpen.value = false
-  }
-)
 
 // ---- Object properties modal (right-click in view mode) ----
 
@@ -1849,22 +1829,6 @@ async function onPropsModalDetach() {
 
 function onToggleEditMode() {
   editor.toggleEditMode()
-}
-
-const gridMenuOpen = ref(false)
-const gridSnapActive = computed(() => editor.snapGrid.value > 0)
-const gridSizeOptions = computed(() => [
-  { value: 0, label: _t('Off') },
-  { value: 10, label: '10 px' },
-  { value: 20, label: '20 px' },
-  { value: 50, label: '50 px' }
-])
-function pickGrid(value: number) {
-  editor.snapGrid.value = value
-  gridMenuOpen.value = false
-}
-function closeGridMenu() {
-  gridMenuOpen.value = false
 }
 
 function onObjectDelete(obj: BoardObject) {
