@@ -781,7 +781,7 @@ import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 import { connectionsApi, metricsApi } from '@/api/client'
 import { useAggregationDetail } from '@/composables/useAggregationDetail'
 import { useGroupMembers } from '@/composables/useGroupMembers'
-import { fmtValueWithUnit } from '@/composables/useMetricChart'
+import { usePerformanceMetrics } from '@/composables/usePerformanceMetrics'
 import { useSummaryChips } from '@/composables/useSummaryChips'
 import { useIsDark } from '@/composables/useTheme'
 import { useAuthStore } from '@/stores/auth'
@@ -795,7 +795,6 @@ import type {
 } from '@/types/api'
 import { buildCheckmkUrl } from '@/utils/boardNavigation'
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
-import { type PerfMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
 import { stateColor } from '@/utils/stateColors'
 import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time'
 import CmkButton from '@/vendor/cmk/components/CmkButton'
@@ -1058,7 +1057,19 @@ const modifiers = computed<Modifier[]>(() => {
   return list
 })
 
-const longOutputText = computed(() => details.value?.long_output ?? '')
+const {
+  perfRows,
+  mainMetric,
+  mainPerfRow,
+  otherPerfRows,
+  mainHeadline,
+  longOutputRows,
+  longOutputText
+} = usePerformanceMetrics({
+  state: () => props.state,
+  details,
+  perfometer
+})
 
 interface MetaRow {
   label: string
@@ -1262,21 +1273,6 @@ const downtimeList = computed<Downtime[]>(() => {
   }))
 })
 
-interface PerfRow {
-  label: string
-  pct: number
-  color: string
-  warnPct: number | null
-  critPct: number | null
-  warnLabel: string
-  critLabel: string
-  valueLabel: string
-}
-
-function fmtNum(n: number, unit: string): string {
-  return fmtValueWithUnit(n, unit)
-}
-
 // Tab visibility — only show tabs that actually have content. The Status tab
 // always renders (output + state badges + chips); others appear conditionally.
 const showPerformanceTab = computed(() => perfRows.value.length > 0 || !!longOutputText.value)
@@ -1335,111 +1331,6 @@ const checkCommandRow = computed<MetaRow2 | null>(
 const contextMetaRowsWithoutCheckCmd = computed<MetaRow2[]>(() =>
   contextMetaRows.value.filter((r) => r.label !== _t('Check command'))
 )
-
-const parsedMetrics = computed<PerfMetric[]>(() => {
-  const raw = props.state?.perf_data
-  return raw ? parsePerfData(raw) : []
-})
-
-function _displayLabel(metricId: string): string {
-  return details.value?.metric_titles[metricId] || metricId
-}
-
-function _toPerfRow(m: PerfMetric): PerfRow {
-  const pct = utilPercent(m)
-  const refMax = m.max ?? m.crit ?? null
-  const warnPct =
-    m.warn !== null && refMax !== null && refMax > 0 ? Math.min(100, (m.warn / refMax) * 100) : null
-  const critPct =
-    m.crit !== null && refMax !== null && refMax > 0 ? Math.min(100, (m.crit / refMax) * 100) : null
-  return {
-    label: _displayLabel(m.label),
-    pct,
-    color: utilColor(pct),
-    warnPct,
-    critPct,
-    warnLabel: m.warn !== null ? fmtNum(m.warn, m.unit) : '',
-    critLabel: m.crit !== null ? fmtNum(m.crit, m.unit) : '',
-    valueLabel: fmtNum(m.value, m.unit)
-  }
-}
-
-const perfRows = computed<PerfRow[]>(() => parsedMetrics.value.map(_toPerfRow))
-
-// Pick the metric that best summarizes the service: prefer one with thresholds
-// set (those drive the actual state), then fall back to the highest utilization.
-// Anchors the Performance tab so the operator sees the headline value first.
-const mainMetric = computed<PerfMetric | null>(() => {
-  const metrics = parsedMetrics.value
-  if (!metrics.length) return null
-  const withThresholds = metrics.filter((m) => m.warn !== null || m.crit !== null)
-  const candidates = withThresholds.length ? withThresholds : metrics
-  return [...candidates].sort((a, b) => utilPercent(b) - utilPercent(a))[0] ?? null
-})
-
-const mainPerfRow = computed<PerfRow | null>(() =>
-  mainMetric.value ? _toPerfRow(mainMetric.value) : null
-)
-
-const otherPerfRows = computed<PerfRow[]>(() => {
-  const main = mainMetric.value?.label
-  return perfRows.value.filter((r) => r.label !== main)
-})
-
-// Headline label/value above the bar — match what Checkmk's own Perf-O-Meter
-// would show (e.g. "RAM usage" for Linux Memory). Falls back to the highest
-// long-output percent line, then to the raw perf_data metric.
-interface MainHeadline {
-  label: string
-  valueLabel: string
-  pct: number
-  color: string
-}
-const mainHeadline = computed<MainHeadline | null>(() => {
-  const pf = perfometer.value
-  const firstPct = pf?.pcts[0]
-  if (pf && firstPct !== undefined) {
-    const pct = Math.min(100, firstPct)
-    // pf.label already encodes both name and value ("RAM 53.88%"), so we
-    // don't repeat it as a separate detail line under the bar.
-    return { label: pf.label, valueLabel: '', pct, color: utilColor(pct) }
-  }
-  const longRow = [...longOutputRows.value]
-    .map((r) => {
-      const pctStr = r.value.match(/(\d+(?:\.\d+)?)\s*%/)?.[1]
-      return pctStr && r.label ? { ...r, pct: parseFloat(pctStr) } : null
-    })
-    .filter((r): r is NonNullable<typeof r> => r !== null)
-    .sort((a, b) => b.pct - a.pct)[0]
-  if (longRow) {
-    const pct = Math.min(100, longRow.pct)
-    return { label: longRow.label, valueLabel: longRow.value, pct, color: utilColor(pct) }
-  }
-  const row = mainPerfRow.value
-  if (!row) return null
-  return { label: row.label, valueLabel: row.valueLabel, pct: row.pct, color: row.color }
-})
-
-// Long output is a multi-line agent summary; each line tends to be
-// "Label: <value>" — render as a structured two-column list instead of <pre>
-// so it scans like a real summary table.
-interface LongOutputRow {
-  label: string
-  value: string
-}
-const longOutputRows = computed<LongOutputRow[]>(() => {
-  const raw = longOutputText.value
-  if (!raw) return []
-  return raw
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const idx = line.indexOf(':')
-      if (idx <= 0) return { label: '', value: line }
-      return { label: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim() }
-    })
-})
 
 // Mini-graph data — fetched lazily when the Performance tab is visible.
 // 4 hours window matches Checkmk's default Perf-O-Meter graph; it's enough to
