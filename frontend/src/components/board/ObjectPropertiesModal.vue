@@ -1049,7 +1049,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 
 import ColorInput from '@/components/ColorInput.vue'
 import NumberInput from '@/components/NumberInput.vue'
@@ -1060,17 +1060,14 @@ import CmkScrollContainer from '@/components/cmk/CmkScrollContainer'
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 import CmkInput from '@/components/cmk/user-input/CmkInput'
 
-import { boardsApi, connectionsApi } from '@/api/client'
 import { useEscapeClose } from '@/composables/useEscapeClose'
 import { useExcludeMembersPreview } from '@/composables/useExcludeMembersPreview'
+import { useObjectFormData } from '@/composables/useObjectFormData'
 import { usePropertiesPopover } from '@/composables/usePropertiesPopover'
-import { useAuthStore } from '@/stores/auth'
-import { useStatesStore } from '@/stores/states'
-import type { BoardObject, LinePerfdataLabel, MetricGraphGroup, ObjectState } from '@/types/api'
+import type { BoardObject, LinePerfdataLabel, ObjectState } from '@/types/api'
 import { linePerfdataLabelOptions, lineStyleOptions } from '@/utils/dropdownOptions'
 import { GADGET_DEFAULT_SIZE } from '@/utils/gadget'
 import { getBoardObjectIdentifier } from '@/utils/naming'
-import { parsePerfData } from '@/utils/perf'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 import AutocompleteInput from './AutocompleteInput.vue'
@@ -1102,9 +1099,6 @@ const emit = defineEmits<{
   detach: []
 }>()
 useEscapeClose(() => emit('close'))
-
-const auth = useAuthStore()
-const statesStore = useStatesStore()
 
 // Auto-derived Checkmk URL for the current object (used as placeholder / hint in the URL field)
 const autoUrl = computed((): string | null => {
@@ -1143,11 +1137,6 @@ const {
   anchorRect: () => props.anchorRect,
   object: () => props.object
 })
-
-const fetchedMetrics = ref<string[]>([])
-const graphTemplates = ref<MetricGraphGroup[]>([])
-const boardNames = ref<string[]>([])
-const boardLabels = ref<string[]>([])
 
 const lineStyleOpts = computed(() => ({
   type: 'fixed' as const,
@@ -1199,89 +1188,6 @@ const textAlignOptions = computed(() => [
     icon: 'M3.75 6.75h16.5M9.75 12h10.5M6.75 17.25h13.5'
   }
 ])
-
-// Metric IDs available for suggestions
-const metricIdSuggestions = computed((): string[] => {
-  if (fetchedMetrics.value.length) return fetchedMetrics.value
-  return parsePerfData(props.state?.perf_data ?? '').map((m) => m.label)
-})
-
-// Map metric ID → human-readable title (falls back to the ID itself)
-const metricIdToTitle = computed((): Record<string, string> => {
-  return statesStore.metricTitles[props.object.id] ?? {}
-})
-
-// Map display title → metric ID (for reverse lookup when user selects a suggestion)
-const metricTitleToId = computed((): Map<string, string> => {
-  const m = new Map<string, string>()
-  for (const id of metricIdSuggestions.value) {
-    m.set(metricIdToTitle.value[id] ?? id, id)
-  }
-  return m
-})
-
-// Display titles for autocomplete (unique: prefer title over ID)
-const metricSuggestions = computed((): string[] =>
-  metricIdSuggestions.value.map((id) => metricIdToTitle.value[id] ?? id)
-)
-
-// Autocomplete loads degrade to an empty list when the API errors; log the
-// reason so an empty dropdown is diagnosable instead of looking like "no data".
-function logLoadError(what: string): (e: unknown) => never[] {
-  return (e) => {
-    console.warn(`[OrbVis] Failed to load ${what}:`, e)
-    return []
-  }
-}
-
-async function fetchMetrics(host: string, service?: string) {
-  if (!props.connectionId || !host) return
-  fetchedMetrics.value = await connectionsApi
-    .perfMetrics(props.connectionId, host, auth.accessToken!, service || undefined)
-    .catch(logLoadError('metrics'))
-}
-
-async function fetchGraphTemplates(host: string, service?: string) {
-  if (!props.connectionId || !host || props.object.type !== 'graph') return
-  graphTemplates.value = await connectionsApi
-    .graphTemplates(props.connectionId, host, service ?? null, auth.accessToken!)
-    .catch(logLoadError('graph templates'))
-}
-
-async function fetchBoardNames() {
-  if (props.object.type !== 'map' || !auth.accessToken) return
-  const boards = await boardsApi.list(auth.accessToken).catch(logLoadError('board names'))
-  boardNames.value = boards.map((b) => b.name)
-  boardLabels.value = boards.map((b) => b.alias || b.name)
-}
-
-// ---- Graph source mode ----
-
-function _deriveGraphSource(obj: BoardObject): 'auto' | 'metrics' | 'template' {
-  if (obj.graph_id) return 'template'
-  if (obj.graph_metric?.length) return 'metrics'
-  return 'auto'
-}
-
-const graphSource = ref<'auto' | 'metrics' | 'template'>(_deriveGraphSource(props.object))
-
-function setGraphSource(mode: 'auto' | 'metrics' | 'template') {
-  graphSource.value = mode
-  if (mode !== 'template') form.graph_id = null
-  if (mode !== 'metrics') form.graph_metric = []
-}
-
-const metricInput = ref('')
-const metricAddEl = ref<HTMLElement | null>(null)
-
-async function addMetric(value: string) {
-  const title = value.trim()
-  const id = metricTitleToId.value.get(title) ?? title
-  if (id && !form.graph_metric.includes(id)) form.graph_metric.push(id)
-  metricInput.value = ''
-  await nextTick()
-  metricAddEl.value?.querySelector('input')?.focus()
-}
 
 // ---- Form state ----
 
@@ -1352,6 +1258,39 @@ const form = reactive({
   y2: 0
 })
 
+// Remote data + suggestion model (metrics, graph templates, board names,
+// host/service/group/aggregation autocomplete, connection override list).
+const metricAddEl = ref<HTMLElement | null>(null)
+const {
+  graphTemplates,
+  boardNames,
+  boardLabels,
+  metricIdToTitle,
+  metricTitleToId,
+  metricSuggestions,
+  graphSource,
+  deriveGraphSource,
+  setGraphSource,
+  metricInput,
+  addMetric,
+  connectionDropdownOptions,
+  hosts,
+  services,
+  groups,
+  aggregationIds,
+  aggregationLabels,
+  loadingHosts,
+  loadingServices,
+  loadingGroups,
+  loadingAggregations
+} = useObjectFormData({
+  form,
+  object: () => props.object,
+  state: () => props.state,
+  connectionId: () => props.connectionId,
+  metricAddEl
+})
+
 const saving = ref(false)
 const saveError = ref('')
 const confirmDelete = ref(false)
@@ -1408,7 +1347,7 @@ watch(
     form.graph_refresh_interval = obj.graph_refresh_interval ?? 0
     form.graph_metric = obj.graph_metric ?? []
     form.graph_id = obj.graph_id ?? null
-    graphSource.value = _deriveGraphSource(obj)
+    graphSource.value = deriveGraphSource(obj)
     form.graph_time_window = obj.graph_time_window ?? 60
     form.display.mode = obj.display?.mode ?? 'icon'
     form.display.image = obj.display?.image ?? ''
@@ -1440,88 +1379,6 @@ watch(
   { immediate: true }
 )
 
-// ---- Autocomplete ----
-
-const availableConnections = ref<{ id: string; label: string }[]>([])
-const connectionDropdownOptions = computed(() => ({
-  type: 'fixed' as const,
-  suggestions: [
-    { name: '', title: _t('Inherit from board') },
-    ...availableConnections.value.map((c) => ({ name: c.id, title: c.label }))
-  ]
-}))
-async function loadConnections(): Promise<void> {
-  if (!auth.accessToken) return
-  try {
-    const all = await connectionsApi.list(auth.accessToken)
-    availableConnections.value = all.map((c) => ({ id: c.id, label: c.label || c.id }))
-  } catch {
-    availableConnections.value = []
-  }
-}
-loadConnections()
-
-// Refetch host/service suggestions whenever the operator switches the
-// per-object connection — otherwise the dropdown stays bound to the board's
-// default backend and the override is invisible until they save+reopen.
-watch(
-  () => form.connection_id,
-  () => loadAutocomplete()
-)
-
-const hosts = ref<string[]>([])
-const services = ref<string[]>([])
-const groups = ref<string[]>([])
-const aggregationIds = ref<string[]>([])
-const aggregationLabels = ref<string[]>([])
-const loadingHosts = ref(false)
-const loadingServices = ref(false)
-const loadingGroups = ref(false)
-const loadingAggregations = ref(false)
-
-async function loadAutocomplete() {
-  // Per-object connection override wins; fall back to the board default.
-  const cid = form.connection_id || props.connectionId
-  if (!cid) return
-  const type = props.object.type
-  if (type === 'host' || type === 'service' || type === 'line' || type === 'graph') {
-    loadingHosts.value = true
-    hosts.value = await connectionsApi
-      .objects(cid, 'host', auth.accessToken!)
-      .catch(logLoadError('hosts'))
-    loadingHosts.value = false
-    if ((type === 'service' || type === 'line' || type === 'graph') && form.host_name) {
-      loadingServices.value = true
-      services.value = await connectionsApi
-        .objects(cid, 'service', auth.accessToken!, form.host_name)
-        .catch(logLoadError('services'))
-      loadingServices.value = false
-    }
-  } else if (type === 'hostgroup') {
-    loadingGroups.value = true
-    groups.value = await connectionsApi
-      .objects(cid, 'hostgroup', auth.accessToken!)
-      .catch(logLoadError('host groups'))
-    loadingGroups.value = false
-  } else if (type === 'servicegroup') {
-    loadingGroups.value = true
-    groups.value = await connectionsApi
-      .objects(cid, 'servicegroup', auth.accessToken!)
-      .catch(logLoadError('service groups'))
-    loadingGroups.value = false
-  } else if (type === 'aggregation') {
-    loadingAggregations.value = true
-    const aggrs = await connectionsApi
-      .aggregations(cid, auth.accessToken!)
-      .catch(logLoadError('aggregations'))
-    aggregationIds.value = aggrs.map((a) => a.id)
-    aggregationLabels.value = aggrs.map((a) => a.title || a.id)
-    loadingAggregations.value = false
-  }
-}
-
-loadAutocomplete()
-
 // Live "N of M leaves hidden" preview for the BI exclude_members filter.
 const { excludeMembersFeedback } = useExcludeMembersPreview({
   connectionId: () => props.connectionId,
@@ -1529,45 +1386,6 @@ const { excludeMembersFeedback } = useExcludeMembersPreview({
   excludeMembers: () => form.exclude_members,
   excludeMemberStates: () => form.exclude_member_states
 })
-
-onMounted(() => {
-  if (form.host_name) {
-    fetchMetrics(form.host_name, form.service_description || undefined)
-    fetchGraphTemplates(form.host_name, form.service_description || undefined)
-  }
-  if (props.object.type === 'map') fetchBoardNames()
-})
-
-watch(
-  () => [form.host_name, form.service_description],
-  ([host, svc]) => {
-    if (host) {
-      fetchMetrics(host, svc || undefined)
-      fetchGraphTemplates(host, svc || undefined)
-    } else {
-      fetchedMetrics.value = []
-      graphTemplates.value = []
-    }
-  }
-)
-
-watch(
-  () => form.host_name,
-  async (host) => {
-    if (
-      (props.object.type === 'service' ||
-        props.object.type === 'line' ||
-        props.object.type === 'graph') &&
-      host
-    ) {
-      loadingServices.value = true
-      services.value = await connectionsApi
-        .objects(props.connectionId, 'service', auth.accessToken!, host)
-        .catch(logLoadError('services'))
-      loadingServices.value = false
-    }
-  }
-)
 
 const displayName = computed(() => getBoardObjectIdentifier(props.object))
 
