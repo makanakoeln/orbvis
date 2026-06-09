@@ -21,6 +21,7 @@ from app.schemas.board import (
     RadarView,
     WorldmapView,
 )
+from app.schemas.presentation import DataElement, PresentationView, ShapeElement
 from app.schemas.state import (
     FolderHostService,
     FolderTreeDelta,
@@ -204,6 +205,11 @@ async def _execute_board_states(
 
     if cfg.view.type == "foldertree":
         return await _get_folder_tree_states(cfg, connection)
+
+    if cfg.view.type == "presentation":
+        return await _get_presentation_states(
+            cfg, connection, auth_user=auth_user, can_view_board=can_view_board
+        )
 
     # Inflate worldmap automap-source hosts into transient board objects so
     # the rest of the pipeline (state fetch, websocket diffing, frontend
@@ -705,6 +711,60 @@ async def _aggregate_host_with_services(
     except Exception:
         return host_state
     return _aggregate_host_with_services_from_data(host_state, services)
+
+
+async def _get_presentation_states(
+    cfg: BoardConfig,
+    connection: ConnectionBase,
+    auth_user: str | None = None,
+    can_view_board: Callable[[str], bool] | None = None,
+) -> MapStates:
+    """Resolve live states for the bound data elements of a presentation board.
+
+    Bound elements are adapted to transient ``BoardObject``s and run through the
+    shared ``_states_for_objects`` pipeline so per-connection batching, auth
+    scoping and ``ObjectState`` shaping are reused. Results key by element id, so
+    the frontend states store lights up the matching element with no extra wiring.
+    """
+    pv = cfg.view if isinstance(cfg.view, PresentationView) else PresentationView()
+    bound = [
+        el for el in pv.elements if isinstance(el, DataElement | ShapeElement) and el.host_name
+    ]
+
+    objects = [
+        BoardObject(
+            id=el.id,
+            type="service" if el.service_description else "host",
+            connection_id=el.connection_id,
+            host_name=el.host_name,
+            service_description=el.service_description,
+            only_hard_states=el.only_hard_states,
+        )
+        for el in bound
+    ]
+
+    state_map = await _states_for_objects(
+        objects,
+        default_connection=connection,
+        default_connection_id=cfg.connection_id,
+        auth_user=auth_user,
+        can_view_board=can_view_board,
+        visited_maps=frozenset({cfg.name}),
+    )
+    states = list(state_map.values())
+
+    monitoring_states = [s for s in states if s.type in _MONITORING_TYPES]
+    if monitoring_states:
+        connection_ok = not all(s.stale for s in monitoring_states)
+    else:
+        try:
+            connection_ok = await connection.is_available()
+        except Exception:
+            connection_ok = False
+
+    return MapStates(
+        map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=connection_ok
+    )
 
 
 async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> MapStates:

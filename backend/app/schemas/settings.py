@@ -110,3 +110,7 @@ class SystemSettings(BaseModel):
     # add-object picker. On by default; existing graph objects keep rendering
     # even when an operator turns it off.
     enable_graph_objects: bool = True
+    # Feature flag: offer the (experimental) presentation board type in the
+    # board-type picker. Off by default so operators opt in explicitly; existing
+    # presentation boards keep rendering regardless.
+    enable_presentation_boards: bool = False

@@ -60,7 +60,11 @@ export function placeableObjectTypes(
 // ``includeFolderTree`` is the resolved flag; when off the type is hidden from
 // the picker (existing folder boards still render). It stays listed when the
 // board being edited is already a folder board, so its type isn't silently lost.
-export function boardTypeOptions(_t: TranslateFn, includeFolderTree = false) {
+export function boardTypeOptions(
+  _t: TranslateFn,
+  includeFolderTree = false,
+  includePresentation = false
+) {
   const options = [
     { name: 'static', title: _t('Static board') },
     { name: 'worldmap', title: _t('Geo Board') },
@@ -71,6 +75,12 @@ export function boardTypeOptions(_t: TranslateFn, includeFolderTree = false) {
     options.push({
       name: 'foldertree',
       title: `${_t('Folder tree')} (experimental)`
+    })
+  }
+  if (includePresentation) {
+    options.push({
+      name: 'presentation',
+      title: `${_t('Presentation')} (experimental)`
     })
   }
   return options

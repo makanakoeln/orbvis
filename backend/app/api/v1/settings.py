@@ -258,6 +258,7 @@ if FORM_SPECS_AVAILABLE:
             out["access_token_expire_minutes"] = s.access_token_expire_minutes
         out["enable_folder_boards"] = s.enable_folder_boards
         out["enable_graph_objects"] = s.enable_graph_objects
+        out["enable_presentation_boards"] = s.enable_presentation_boards
         return out
 
     def _system_from_form(form: dict[str, object]) -> SystemSettings:
@@ -275,6 +276,7 @@ if FORM_SPECS_AVAILABLE:
                 access_token_expire_minutes=_optional_int(form.get("access_token_expire_minutes")),
                 enable_folder_boards=bool(form.get("enable_folder_boards", False)),
                 enable_graph_objects=bool(form.get("enable_graph_objects", True)),
+                enable_presentation_boards=bool(form.get("enable_presentation_boards", False)),
             )
         except ValidationError as e:
             details: list[dict[str, object]] = []

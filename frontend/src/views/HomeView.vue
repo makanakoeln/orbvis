@@ -726,7 +726,9 @@
                             ? 'orb-home__type-badge--static'
                             : map.view.type === 'foldertree'
                               ? 'orb-home__type-badge--foldertree'
-                              : 'orb-home__type-badge--generic'
+                              : map.view.type === 'presentation'
+                                ? 'orb-home__type-badge--presentation'
+                                : 'orb-home__type-badge--generic'
                   "
                 >
                   {{ boardTypeLabel(map.view.type) }}
@@ -1499,7 +1501,8 @@ const TYPE_LABELS: Record<string, string> = {
   worldmap: 'Geo Board',
   flow: 'Flow Board',
   radar: 'Radar',
-  foldertree: 'Folder Tree'
+  foldertree: 'Folder Tree',
+  presentation: 'Presentation'
 }
 function boardTypeLabel(type: string) {
   return TYPE_LABELS[type] ?? type
@@ -1945,6 +1948,18 @@ function onTourCreateBoard(): void {
   color: var(--color-yellow-30);
   background: color-mix(in srgb, var(--color-yellow-50) 20%, transparent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-yellow-50) 30%, transparent);
+}
+
+.orb-home__type-badge--presentation {
+  color: var(--color-pink-80);
+  background: color-mix(in srgb, var(--color-pink-50) 15%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-pink-60) 40%, transparent);
+}
+
+.dark .orb-home__type-badge--presentation {
+  color: var(--color-pink-30);
+  background: color-mix(in srgb, var(--color-pink-50) 20%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-pink-50) 30%, transparent);
 }
 
 .orb-home__type-badge--generic {

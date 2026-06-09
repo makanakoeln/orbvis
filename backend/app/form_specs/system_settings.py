@@ -158,5 +158,19 @@ def system_settings_spec() -> Dictionary:
                     prefill=DefaultValue(True),
                 ),
             ),
+            "enable_presentation_boards": DictElement(
+                required=True,
+                group=_FEATURES,
+                parameter_form=BooleanChoice(
+                    title=Title("Presentation boards"),
+                    label=Label("Offer the (experimental) presentation board type"),
+                    help_text=Help(
+                        "Adds the Presentation board type — a design-first, slide-style "
+                        "surface — to the board-type picker. Existing presentation boards "
+                        "keep rendering even while this is off."
+                    ),
+                    prefill=DefaultValue(False),
+                ),
+            ),
         },
     )

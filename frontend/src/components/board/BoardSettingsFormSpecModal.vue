@@ -1024,7 +1024,10 @@ async function save() {
         show_in_lists: (fs.show_in_lists as boolean | undefined) ?? true,
         background_image: form.value.background_image || null,
         background_color: form.value.background_color || null,
-        view,
+        // Presentation slide design (elements, theme, size, background) is
+        // owned and autosaved by the canvas — omit ``view`` here so saving
+        // board metadata never clobbers the slide.
+        ...(form.value.map_type === 'presentation' ? {} : { view }),
         hover_template: ((fs.hover_template as string) ?? '') || null,
         context_template: ((fs.context_template as string) ?? '') || null
       },
@@ -1263,7 +1266,9 @@ function buildPreviewPatch(): Record<string, unknown> {
     hover_template: (fs.hover_template as string) ?? '',
     context_template: (fs.context_template as string) ?? '',
     background_color: form.value.background_color || null,
-    view: buildViewFromForm()
+    // Presentation slides are designed on the canvas, not here — patching a
+    // metadata-only ``view`` would blank the slide in the preview iframe.
+    ...(form.value.map_type === 'presentation' ? {} : { view: buildViewFromForm() })
   }
 }
 
@@ -1475,6 +1480,18 @@ onMounted(async () => {
         .add('render_mode')
         .add('hover_template')
         .add('context_template')
+    } else if (form.value.map_type === 'presentation') {
+      // The presentation board has no coordinate-positioned icons, no
+      // hover/context popups and no per-object click action — slide design
+      // lives on the canvas. Keep only identification, connection, rotation
+      // and show-in-lists here.
+      drop
+        .add('icon_size')
+        .add('default_z')
+        .add('render_mode')
+        .add('hover_template')
+        .add('context_template')
+        .add('click_action')
     }
     if (drop.size) {
       const dict = spec as { elements?: { name: string }[] }

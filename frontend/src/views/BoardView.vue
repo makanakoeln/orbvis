@@ -412,6 +412,19 @@
         </div>
       </div>
 
+      <!-- Presentation (design-first slide) -->
+      <div v-else-if="isPresentation" class="orb-board__area orb-board__area--canvas">
+        <PresentationCanvas
+          v-if="boardConfig"
+          :config="boardConfig"
+          :states="statesStore.states"
+          :edit-mode="editor.editMode.value"
+          :readonly="boardConfig.readonly ?? false"
+          :preview="isPreview"
+          :kiosk="isKiosk"
+        />
+      </div>
+
       <!-- Static map -->
       <div
         v-else
@@ -603,7 +616,7 @@
           @after-leave="editor.resetDraft()"
         >
           <div
-            v-if="editor.editMode.value && !!editor.draft.type"
+            v-if="editor.editMode.value && !!editor.draft.type && !isPresentation"
             class="orb-board__edit-panel"
             data-tour="edit-panel"
           >
@@ -629,7 +642,7 @@
           leave-active-class="orb-board__pop-leave-active"
         >
           <div
-            v-if="editor.editMode.value && !editor.placing.value"
+            v-if="editor.editMode.value && !editor.placing.value && !isPresentation"
             v-click-outside="closeAddPicker"
             class="orb-board__fab-wrap"
           >
@@ -692,7 +705,7 @@
 
         <!-- FAB: Grid snap (edit mode, canvas boards only) — popover with sizes -->
         <div
-          v-if="editor.editMode.value && !isWorldmap"
+          v-if="editor.editMode.value && !isWorldmap && !isPresentation"
           v-click-outside="closeGridMenu"
           class="orb-board__fab-wrap"
         >
@@ -1255,6 +1268,7 @@ import ProblemsOnlyToggle from '@/components/board/ProblemsOnlyToggle.vue'
 import RadarCanvas from '@/components/board/RadarCanvas.vue'
 import RemoveDowntimeModal from '@/components/board/RemoveDowntimeModal.vue'
 import WorldMapCanvas from '@/components/board/WorldMapCanvas.vue'
+import PresentationCanvas from '@/components/board/presentation/PresentationCanvas.vue'
 import type { BreadcrumbItem } from '@/components/cmk/CmkBreadcrumb.vue'
 import CmkBreadcrumb from '@/components/cmk/CmkBreadcrumb.vue'
 import CmkButton from '@/components/cmk/CmkButton'
@@ -1414,6 +1428,7 @@ const isWorldmap = computed(() => boardConfig.value?.view.type === 'worldmap')
 const isFlowmap = computed(() => boardConfig.value?.view.type === 'flow')
 const isRadar = computed(() => boardConfig.value?.view.type === 'radar')
 const isFolderTree = computed(() => boardConfig.value?.view.type === 'foldertree')
+const isPresentation = computed(() => boardConfig.value?.view.type === 'presentation')
 
 // Top-right search bar shared by static / worldmap / radar boards.
 // FlowBoard ships its own search because it filters d3 nodes directly.

@@ -83,7 +83,10 @@
               <!-- Object defaults (per-board overrides of global icon defaults).
                                  The foldertree has no coordinate-positioned icons, so icon
                                  size / layer don't apply. -->
-              <div v-if="form.map_type !== 'foldertree'" class="board-settings__subsection">
+              <div
+                v-if="form.map_type !== 'foldertree' && form.map_type !== 'presentation'"
+                class="board-settings__subsection"
+              >
                 <p class="orb-section-title">{{ _t('Object defaults') }}</p>
                 <div class="board-settings__field">
                   <CmkLabel>{{ _t('Icon size') }}</CmkLabel>
@@ -469,7 +472,11 @@
               <!-- Templates: radar cards and the foldertree tree have no
                                  per-object hover / context popups, so the templates never apply. -->
               <div
-                v-if="form.map_type !== 'radar' && form.map_type !== 'foldertree'"
+                v-if="
+                  form.map_type !== 'radar' &&
+                  form.map_type !== 'foldertree' &&
+                  form.map_type !== 'presentation'
+                "
                 class="board-settings__subsection board-settings__stack"
               >
                 <p class="orb-section-title">{{ _t('Templates') }}</p>
@@ -506,7 +513,10 @@
               </div>
 
               <!-- Click action -->
-              <div class="board-settings__subsection board-settings__field">
+              <div
+                v-if="form.map_type !== 'presentation'"
+                class="board-settings__subsection board-settings__field"
+              >
                 <div>
                   <CmkLabel>{{ _t('Click action') }}</CmkLabel>
                 </div>
@@ -921,7 +931,7 @@ const boardTypeLabel = computed(
   () =>
     // Resolve the label for whatever type the board already is, so a folder
     // board still shows its proper name even when the feature flag is off.
-    boardTypeOptions(_t, true).find((o) => o.name === form.value.map_type)?.title ??
+    boardTypeOptions(_t, true, true).find((o) => o.name === form.value.map_type)?.title ??
     form.value.map_type
 )
 
@@ -1106,7 +1116,10 @@ async function save() {
         show_in_lists: form.value.show_in_lists,
         background_image: form.value.background_image || null,
         background_color: form.value.background_color || null,
-        view,
+        // Presentation slide design (elements, theme, size, background) is
+        // owned and autosaved by the canvas — omit ``view`` so saving board
+        // metadata never clobbers the slide.
+        ...(form.value.map_type === 'presentation' ? {} : { view }),
         hover_template: form.value.hover_template || null,
         context_template: form.value.context_template || null
       },
@@ -1196,7 +1209,9 @@ function postPreviewPatch() {
     hover_template: form.value.hover_template || '',
     context_template: form.value.context_template || '',
     background_color: form.value.background_color || null,
-    view: buildPreviewView()
+    // Presentation slides are designed on the canvas; a metadata-only view
+    // would blank the slide in the preview iframe.
+    ...(form.value.map_type === 'presentation' ? {} : { view: buildPreviewView() })
   }
   win.postMessage({ source: PREVIEW_EDIT, patch }, window.location.origin)
 }

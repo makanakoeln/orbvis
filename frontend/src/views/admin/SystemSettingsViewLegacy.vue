@@ -169,6 +169,18 @@
                   )
                 }}
               </p>
+              <CmkCheckbox
+                v-model="enablePresentationBoards"
+                :label="_t('Enable Presentation boards')"
+                style="margin-top: 12px"
+              />
+              <p class="orb-sset__feature-hint">
+                {{
+                  _t(
+                    'Offer the (experimental) presentation board type — a design-first, slide-style surface. Existing presentation boards keep rendering even while this is off.'
+                  )
+                }}
+              </p>
             </div>
           </CmkCollapsible>
         </section>
@@ -261,6 +273,13 @@ const enableGraphObjects = computed({
   get: () => form.enable_graph_objects ?? true,
   set: (v: boolean) => {
     form.enable_graph_objects = v
+  }
+})
+
+const enablePresentationBoards = computed({
+  get: () => form.enable_presentation_boards ?? false,
+  set: (v: boolean) => {
+    form.enable_presentation_boards = v
   }
 })
 

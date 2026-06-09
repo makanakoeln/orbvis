@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.schemas.board import BoardConfig, BoardObject, StaticView
+from app.schemas.presentation import DataElement, PresentationView, ShapeElement
 from app.schemas.state import FolderTreeNode, ObjectState
 from app.services import state_service
 from app.services.state_service import (
@@ -974,3 +975,49 @@ async def test_foldertree_problems_severity_critical_prunes_warnings(_test_conn)
     assert set(crit_hosts) <= set(any_hosts)
     dropped = set(any_hosts) - set(crit_hosts)
     assert all(any_hosts[h] not in critical for h in dropped)
+
+
+@pytest.mark.asyncio
+async def test_presentation_board_resolves_bound_data_elements(mock_connection, monkeypatch):
+    """A presentation board resolves live state for its bound data elements,
+    keyed by element id, and ignores design-only elements."""
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+
+    host_state = ObjectState(object_id="ignored", type="host", state="UP")
+    mock_connection.get_hosts_states = AsyncMock(return_value={"web01": host_state})
+
+    view = PresentationView(
+        elements=[
+            ShapeElement(id="shape1", kind="shape", shape="rect"),
+            ShapeElement(id="shape2", kind="shape", shape="line", host_name="web01"),
+            DataElement(id="data1", kind="data", host_name="web01"),
+            DataElement(id="data2", kind="data"),
+        ]
+    )
+    board = BoardConfig(name="pres", alias="P", connection_id="mock", view=view)
+
+    result = await get_board_states(board)
+
+    by_id = {s.object_id: s for s in result.states}
+    assert by_id["data1"].state == "UP"
+    # A monitoring-bound shape (weathermap-style link) resolves like a data element.
+    assert by_id["shape2"].state == "UP"
+    # Design-only elements (unbound shape, unbound data) carry no state.
+    assert "shape1" not in by_id
+    assert "data2" not in by_id
+    assert result.connection_ok is True
+
+
+def test_presentation_view_rejects_duplicate_element_ids():
+    with pytest.raises(ValueError, match="duplicate element id"):
+        PresentationView(
+            elements=[
+                ShapeElement(id="dup", kind="shape"),
+                DataElement(id="dup", kind="data"),
+            ]
+        )
+
+
+def test_presentation_shape_rejects_css_injection_color():
+    with pytest.raises(ValueError, match="invalid color"):
+        ShapeElement(id="x", kind="shape", fill="expression(alert(1))")

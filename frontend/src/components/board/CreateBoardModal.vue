@@ -126,23 +126,23 @@ const connectionOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: connectionsStore.connections.map((b) => ({ name: b.id, title: b.label || b.id }))
 }))
-const boardTypeCards = computed(() =>
-  boardTypeOptions(_t, settingsStore.system.enable_folder_boards).map((o) => ({
-    ...o,
-    desc:
-      o.name === 'static'
-        ? _t('Free placement of objects on a canvas or background image')
-        : o.name === 'worldmap'
-          ? _t('Objects positioned on an interactive world map using geo-coordinates')
-          : o.name === 'flow'
-            ? _t('Dynamic tree of all hosts and their relationships')
-            : o.name === 'radar'
-              ? _t('Automatic display of all hosts/services matching a group filter')
-              : _t(
-                  'Live status tree along the Checkmk SETUP folder hierarchy, with worst-state roll-up'
-                )
-  }))
-)
+const boardTypeCards = computed(() => {
+  const descriptions: Record<string, string> = {
+    static: _t('Free placement of objects on a canvas or background image'),
+    worldmap: _t('Objects positioned on an interactive world map using geo-coordinates'),
+    flow: _t('Dynamic tree of all hosts and their relationships'),
+    radar: _t('Automatic display of all hosts/services matching a group filter'),
+    foldertree: _t(
+      'Live status tree along the Checkmk SETUP folder hierarchy, with worst-state roll-up'
+    ),
+    presentation: _t('Design-first slide for dashboards and status walls — direct manipulation')
+  }
+  return boardTypeOptions(
+    _t,
+    settingsStore.system.enable_folder_boards,
+    settingsStore.system.enable_presentation_boards
+  ).map((o) => ({ ...o, desc: descriptions[o.name] ?? '' }))
+})
 
 const _NAME_RE = /^[a-zA-Z0-9_-]+$/
 const _MAX_NAME_LEN = 64

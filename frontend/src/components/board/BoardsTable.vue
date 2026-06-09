@@ -350,7 +350,8 @@ const TYPE_LABELS: Record<string, string> = {
   worldmap: 'Geo Board',
   flow: 'Flow Board',
   radar: 'Radar',
-  foldertree: 'Folder Tree'
+  foldertree: 'Folder Tree',
+  presentation: 'Presentation'
 }
 function boardTypeLabel(type: string) {
   return TYPE_LABELS[type] ?? type
@@ -368,6 +369,8 @@ function typeBadgeClass(type: string): string {
       return 'orb-btable__type-badge--static'
     case 'foldertree':
       return 'orb-btable__type-badge--foldertree'
+    case 'presentation':
+      return 'orb-btable__type-badge--presentation'
     default:
       return 'orb-btable__type-badge--generic'
   }
@@ -568,6 +571,18 @@ function typeBadgeClass(type: string): string {
   color: var(--color-yellow-30);
   background: color-mix(in srgb, var(--color-yellow-50) 20%, transparent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-yellow-50) 30%, transparent);
+}
+
+.orb-btable__type-badge--presentation {
+  color: var(--color-pink-80);
+  background: color-mix(in srgb, var(--color-pink-50) 15%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-pink-60) 40%, transparent);
+}
+
+.dark .orb-btable__type-badge--presentation {
+  color: var(--color-pink-30);
+  background: color-mix(in srgb, var(--color-pink-50) 20%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-pink-50) 30%, transparent);
 }
 
 .orb-btable__type-badge--generic {

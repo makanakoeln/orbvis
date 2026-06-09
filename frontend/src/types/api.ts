@@ -125,7 +125,121 @@ export interface FolderTreeView {
   only_hard_states?: boolean
   sites?: string[]
 }
-export type BoardView = StaticView | WorldmapView | RadarView | FlowView | FolderTreeView
+export type PresentationTheme = 'midnight' | 'paper' | 'ops' | 'aurora'
+
+export interface ElementLabel {
+  show: boolean
+  text?: string | null
+  size: number
+  // null = inherit the slide theme.
+  color?: string | null
+  background?: string | null
+  weight?: 'normal' | 'bold' | null
+  align?: 'left' | 'right' | 'center' | null
+}
+
+// Absolute slide pixels — deliberately not the static board's percentages.
+interface PresentationElementBase {
+  id: string
+  x: number
+  y: number
+  w: number
+  h: number
+  rotation: number
+  z: number
+  opacity: number
+  locked: boolean
+  hidden: boolean
+  name?: string | null
+}
+
+export interface ShapeElement extends PresentationElementBase {
+  kind: 'shape'
+  shape: 'rect' | 'ellipse' | 'line' | 'arrow'
+  fill?: string | null
+  stroke?: string | null
+  stroke_width: number
+  corner_radius: number
+  dash: 'solid' | 'dashed' | 'dotted'
+  // Optional monitoring binding: when bound, the shape colours by state and can
+  // show a state label.
+  connection_id?: string | null
+  host_name?: string | null
+  service_description?: string | null
+  only_hard_states?: boolean
+  label?: ElementLabel | null
+  // Endpoint docking (line/arrow): start/end follows a referenced element's centre.
+  start_ref?: string | null
+  end_ref?: string | null
+  // Weathermap flow: animate + drive colour/width/speed from a utilisation metric.
+  flow?: boolean
+  flow_metric?: string | null
+}
+
+export interface TextElement extends PresentationElementBase {
+  kind: 'text'
+  text: string
+  font_family?: string | null
+  font_size: number
+  font_weight: 'normal' | 'bold'
+  font_style: 'normal' | 'italic'
+  text_align: 'left' | 'center' | 'right' | 'justify'
+  line_height: number
+  // null = inherit the slide theme.
+  color?: string | null
+  background?: string | null
+  letter_spacing: number
+}
+
+export interface ImageElement extends PresentationElementBase {
+  kind: 'image'
+  src?: string | null
+  fit: 'cover' | 'contain' | 'fill'
+  alt?: string | null
+}
+
+export interface DataElement extends PresentationElementBase {
+  kind: 'data'
+  connection_id?: string | null
+  host_name?: string | null
+  service_description?: string | null
+  only_hard_states: boolean
+  display: DisplayConfig
+  label?: ElementLabel | null
+  fill?: string | null
+  stroke?: string | null
+}
+
+export interface GroupElement extends PresentationElementBase {
+  kind: 'group'
+  children: string[]
+}
+
+export type PresentationElement =
+  | ShapeElement
+  | TextElement
+  | ImageElement
+  | DataElement
+  | GroupElement
+
+export interface PresentationView {
+  type: 'presentation'
+  width: number
+  height: number
+  theme: PresentationTheme
+  background?: string | null
+  background_image?: string | null
+  elements: PresentationElement[]
+  problems_only?: boolean
+}
+
+export type BoardView =
+  | StaticView
+  | WorldmapView
+  | RadarView
+  | FlowView
+  | FolderTreeView
+  | PresentationView
 
 // Unsaved server-side foldertree view fields the Settings preview sends so the
 // server rebuilds the tree without persisting. Client-side fields (problems_only,
@@ -583,6 +697,7 @@ export interface SystemSettings {
   checkmk_url?: string | null
   enable_folder_boards?: boolean
   enable_graph_objects?: boolean
+  enable_presentation_boards?: boolean
 }
 
 // Slim timing patch for fields excluded from the state change-hash; see backend ObjectTiming.

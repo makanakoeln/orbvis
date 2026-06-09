@@ -7,6 +7,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.schemas.presentation import PresentationView
+
 
 def _accept_legacy_backend_id(data: object) -> object:
     """Translate the pre-rename ``backend_id`` key to ``connection_id`` on input.
@@ -278,9 +280,21 @@ class FolderTreeView(BaseModel):
 
 
 BoardView = Annotated[
-    StaticView | WorldmapView | RadarView | FlowView | FolderTreeView,
+    StaticView | WorldmapView | RadarView | FlowView | FolderTreeView | PresentationView,
     Field(discriminator="type"),
 ]
+
+
+def view_element_count(view: BoardView) -> int:
+    """Object count for a board's list/read payload.
+
+    Presentation boards keep ``BoardConfig.objects`` empty and carry their
+    content as ``view.elements`` instead, so count those for them.
+    """
+    if isinstance(view, PresentationView):
+        return len(view.elements)
+    return 0
+
 
 ClickAction = Literal["link", "none"]
 RenderMode = Literal["default", "nagvis_classic"]

@@ -416,7 +416,8 @@ const mapTypeOptions = computed(() => ({
   // or when it is already the configured default (so it isn't silently dropped).
   suggestions: boardTypeOptions(
     _t,
-    store.system.enable_folder_boards || form.default_map_type === 'foldertree'
+    store.system.enable_folder_boards || form.default_map_type === 'foldertree',
+    store.system.enable_presentation_boards || form.default_map_type === 'presentation'
   )
 }))
 const lineStyleOpts = computed(() => ({

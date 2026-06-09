@@ -94,7 +94,9 @@ export const useBoardsStore = defineStore('boards', () => {
       connection_id: cfg.connection_id,
       view_type: cfg.view?.type ?? 'static',
       view: cfg.view,
-      object_count: cfg.objects?.length ?? 0,
+      object_count:
+        (cfg.objects?.length ?? 0) +
+        (cfg.view?.type === 'presentation' ? (cfg.view.elements?.length ?? 0) : 0),
       rotation_interval: cfg.rotation_interval,
       sort_order: cfg.sort_order,
       click_action: cfg.click_action,

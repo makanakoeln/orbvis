@@ -18,6 +18,7 @@ from app.schemas.board import (
     BoardObjectUpdate,
     BoardRead,
     BoardUpdate,
+    view_element_count,
 )
 
 logger = logging.getLogger(__name__)
@@ -448,7 +449,7 @@ def _to_read(cfg: BoardConfig) -> BoardRead:
         connection_id=cfg.connection_id,
         view_type=cfg.view.type,
         view=cfg.view,
-        object_count=len(cfg.objects),
+        object_count=len(cfg.objects) + view_element_count(cfg.view),
         rotation_interval=cfg.rotation_interval,
         sort_order=cfg.sort_order,
         click_action=cfg.click_action,
