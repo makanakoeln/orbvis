@@ -1300,6 +1300,7 @@ import CmkButton from '@/components/cmk/CmkButton'
 
 import { boardsApi, cmkApi, connectionsApi } from '@/api/client'
 import { useBoardEditor } from '@/composables/useBoardEditor'
+import { useBoardRotation } from '@/composables/useBoardRotation'
 import { useElementRect } from '@/composables/useElementRect'
 import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useObjectActions } from '@/composables/useObjectActions'
@@ -1484,6 +1485,9 @@ async function reloadBoard() {
 }
 
 const editor = useBoardEditor(boardName, reloadBoard)
+
+const { rotationCountdown, rotationPaused, stopRotation, scheduleRotation, toggleRotationPause } =
+  useBoardRotation(boardName, editor.editMode)
 
 // ---- Add-object type picker (anchored above the "+" FAB) ----
 
@@ -2540,49 +2544,6 @@ async function onSettingsUpdated() {
   await statesStore.refreshWithIndicator()
 }
 
-// ---- Rotation ----
-
-let rotationTimer: ReturnType<typeof setInterval> | null = null
-const rotationCountdown = ref(0)
-const rotationPaused = ref(false)
-
-function stopRotation() {
-  if (rotationTimer !== null) {
-    clearInterval(rotationTimer)
-    rotationTimer = null
-  }
-  rotationCountdown.value = 0
-}
-
-async function goToNextBoard() {
-  if (boardsStore.boards.length === 0) await boardsStore.fetchBoards()
-  const pool = boardsStore.boards.filter((b) => (b.rotation_interval ?? 0) > 0)
-  if (pool.length < 2) return
-  const idx = pool.findIndex((b) => b.name === boardName.value)
-  const next = pool[(idx + 1) % pool.length]
-  if (!next) return
-  router.push({ name: 'board', params: { name: next.name } })
-}
-
-function scheduleRotation(intervalSeconds: number) {
-  stopRotation()
-  rotationPaused.value = false
-  if (intervalSeconds <= 0 || editor.editMode.value) return
-  rotationCountdown.value = intervalSeconds
-  rotationTimer = setInterval(() => {
-    if (rotationPaused.value || editor.editMode.value) return
-    rotationCountdown.value--
-    if (rotationCountdown.value <= 0) {
-      stopRotation()
-      goToNextBoard()
-    }
-  }, 1000)
-}
-
-function toggleRotationPause() {
-  rotationPaused.value = !rotationPaused.value
-}
-
 // Re-run whenever the map name changes (component is reused by Vue Router between maps).
 // Reset all edit state so edit mode, selection, and unsaved changes from Map A
 // don't carry over when navigating to Map B.
@@ -2692,7 +2653,6 @@ watch(
 
 onUnmounted(() => {
   statesStore.disconnect()
-  stopRotation()
   document.removeEventListener('keydown', onKeyDown)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
   window.removeEventListener('message', onPreviewMessage)
