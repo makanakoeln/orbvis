@@ -795,6 +795,17 @@ function syncLines() {
       })
       lines.set(objId, { polyline, border, handle1, handle2, label, arrowEnd, arrowStart })
     }
+
+    // Tag the polyline's DOM path with the object id so the parent's action bar
+    // (which anchors via [data-object-id]) can attach to a selected line, and
+    // give a selected line a glow — markers carry both, lines lacked them.
+    const pathEl = lines.get(obj.id)?.polyline.getElement() as SVGElement | null
+    if (pathEl) {
+      pathEl.setAttribute('data-object-id', obj.id)
+      pathEl.style.filter = isSelected(obj.id)
+        ? 'drop-shadow(0 0 4px #4ade80) drop-shadow(0 0 2px #4ade80)'
+        : ''
+    }
   }
 
   for (const [id, entry] of lines) {

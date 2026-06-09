@@ -65,7 +65,12 @@
       class="orb-canvas__line-layer"
       :style="{ zIndex: layer.z, pointerEvents: 'none' }"
     >
-      <g v-for="line in layer.lines" :key="line.id" :style="lineDimStyle(line)">
+      <g
+        v-for="line in layer.lines"
+        :key="line.id"
+        :data-object-id="line.id"
+        :style="lineDimStyle(line)"
+      >
         <BoardLine
           :object="line"
           :state="states[line.id]"
