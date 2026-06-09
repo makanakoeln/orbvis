@@ -220,8 +220,6 @@ import {
   type SimulationLinkDatum,
   type SimulationNodeDatum,
   type ZoomTransform,
-  arc as d3arc,
-  pie as d3pie,
   drag,
   forceCollide,
   forceLink,
@@ -265,6 +263,25 @@ import type {
 } from '@/types/api'
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation'
 import {
+  DONUT_MAX_WIDTH,
+  type DonutArc,
+  type DonutSegment,
+  FAN_SPREAD,
+  HEALTHY_HOST_STATES,
+  NODE_R,
+  buildDonutArc,
+  donutOuterRadius,
+  donutPie,
+  fanR,
+  finiteOr,
+  firstFinite,
+  orbitR,
+  problemScoreFromTopo,
+  severityRank,
+  showSvcLabel,
+  svcR
+} from '@/utils/flowGeometry'
+import {
   DIMMED_FILTER,
   DIMMED_OPACITY,
   type FilterField,
@@ -302,78 +319,15 @@ const auth = useAuthStore()
 const statesStore = useStatesStore()
 const settingsStore = useSettingsStore()
 
-const NODE_R = 18
-const SVC_R_MAX = 11 // service node radius at low service count
-const ORBIT_R_MIN = 80 // minimum orbit/fan radius
-
-// A NaN position reaching a geometry attr makes d3 abort the render; a NaN in
-// the zoom transform corrupts d3-zoom and floods every later frame. `?? 0`
-// doesn't catch NaN, so coordinates are funnelled through these guards.
-const finiteOr = (v: unknown, fallback = 0): number =>
-  typeof v === 'number' && Number.isFinite(v) ? v : fallback
-const firstFinite = (a: unknown, b: unknown): number => finiteOr(a, finiteOr(b, NaN))
-
-// Scale service node radius down when a host has many services
-function svcR(N: number): number {
-  if (N <= 6) return SVC_R_MAX
-  if (N <= 12) return 9
-  if (N <= 20) return 7
-  return 6
-}
-
-// Scale orbit radius up so service circles don't overlap.
-// Full circle circumference = 2π·R must fit N circles of diameter 2r+gap.
-function orbitR(N: number): number {
-  const r = svcR(N)
-  return Math.max(ORBIT_R_MIN, Math.ceil((N * (r * 2 + 3)) / (2 * Math.PI)))
-}
-
-// Fan = semicircle below host. Arc length = FAN_SPREAD·R must fit N service
-// circles spaced 2r+gap apart, so the radius scales like ~2× orbitR for large N.
-const FAN_SPREAD = Math.PI * 0.9
-function fanR(N: number): number {
-  const r = svcR(N)
-  if (N <= 1) return ORBIT_R_MIN
-  return Math.max(ORBIT_R_MIN, Math.ceil(((N - 1) * (r * 2 + 3)) / FAN_SPREAD))
-}
-
 function layoutR(N: number): number {
   return props.serviceLayout === 'fan' ? fanR(N) : orbitR(N)
 }
 
-// Show labels only when few enough services per host
-function showSvcLabel(N: number): boolean {
-  return N <= 10
-}
-
 const MORE_NODE_MARKER = '__more__'
-
-// Donut ring around a host: aggregated services_summary as proportional arcs.
-// Width grows inversely with zoom so the ring stays ≥ DONUT_MIN_SCREEN_PX on
-// fit-to-view of dense boards — otherwise an 8 model-px ring collapses to <2 px
-// screen at scale ~0.2 and the entire status aggregate becomes invisible.
-const DONUT_INNER = NODE_R + 3
-const DONUT_BASE_WIDTH = 8
-const DONUT_MIN_SCREEN_PX = 4
-const DONUT_MAX_WIDTH = 24
-function donutOuterRadius(zoomK: number): number {
-  const widthForMinScreen = DONUT_MIN_SCREEN_PX / Math.max(finiteOr(zoomK, 1), 0.0001)
-  const width = Math.min(DONUT_MAX_WIDTH, Math.max(DONUT_BASE_WIDTH, widthForMinScreen))
-  return DONUT_INNER + width
-}
-type DonutSegment = { state: 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN' | 'PENDING'; value: number }
-type DonutArc = { startAngle: number; endAngle: number }
-function buildDonutArc(zoomK: number) {
-  return d3arc<DonutArc>().innerRadius(DONUT_INNER).outerRadius(donutOuterRadius(zoomK))
-}
-const donutPie = d3pie<DonutSegment>()
-  .sort(null)
-  .value((d) => d.value)
 
 // Border halo on the host glyph; the fill stays the host's own state so the
 // host-DOWN vs. host-UP-with-CRIT-services distinction isn't erased.
 const HALO_DEFAULT_STROKE = 'rgba(0,0,0,0.4)'
-const HEALTHY_HOST_STATES = new Set(['UP', 'OK', 'PENDING'])
 
 function worstServiceState(d: FNode): string | null {
   const s = d.topo?.services_summary
@@ -445,27 +399,6 @@ function badgeXY(corner: CmdMarker['corner'], r: number): [number, number] {
   if (corner === 'tr') return [o, -o]
   if (corner === 'tl') return [-o, -o]
   return [o, o]
-}
-
-function problemScoreFromTopo(n: TopologyNode): number {
-  const hostPenalty = HEALTHY_HOST_STATES.has(n.state) ? 0 : 100
-  const s = n.services_summary
-  if (!s) return hostPenalty
-  return hostPenalty + s.critical * 4 + s.warning * 2 + s.unknown * 2
-}
-
-// Severity rank: 2 = critical/down, 1 = warn/unknown, 0 = ok.
-// Used for the initial spiral pre-layout (problems toward the center) and
-// for severity-stratified forceX/forceY targets so high-severity hosts stay
-// near origin instead of getting flung to the rim by charge alone.
-function severityRank(n: TopologyNode | undefined): 0 | 1 | 2 {
-  if (!n) return 0
-  if (!HEALTHY_HOST_STATES.has(n.state)) return 2
-  const s = n.services_summary
-  if (!s) return 0
-  if (s.critical > 0) return 2
-  if (s.warning > 0 || s.unknown > 0) return 1
-  return 0
 }
 
 // Phyllotaxis (sunflower) layout: even-density spiral with no holes. Sorting
