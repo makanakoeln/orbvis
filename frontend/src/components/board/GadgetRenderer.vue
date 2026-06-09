@@ -124,7 +124,9 @@ const metrics = computed(() => parsePerfData(props.state?.perf_data ?? ''))
 const m = computed(() => getMetric(metrics.value, props.metric))
 const scaled = computed(() => (m.value ? hasPercentScale(m.value) : false))
 const pct = computed(() => (m.value ? utilPercent(m.value) : 0))
-const fillPct = computed(() => (scaled.value ? pct.value : 100))
+// Fill is proportional (NagVis scales to crit when there's no max); the readout
+// text stays absolute unless the unit is %.
+const fillPct = computed(() => pct.value)
 const color = computed(() => (scaled.value ? utilColor(pct.value) : stateColor(props.state?.state)))
 
 function fmtNum(v: number): string {
