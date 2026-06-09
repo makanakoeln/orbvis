@@ -781,6 +781,7 @@ import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 import { connectionsApi, metricsApi } from '@/api/client'
 import { useGroupMembers } from '@/composables/useGroupMembers'
 import { fmtValueWithUnit } from '@/composables/useMetricChart'
+import { type SummaryChip, useSummaryChips } from '@/composables/useSummaryChips'
 import { useIsDark } from '@/composables/useTheme'
 import { useAuthStore } from '@/stores/auth'
 import type {
@@ -798,12 +799,7 @@ import {
   BI_STATE_TONE,
   walkAggregationLeavesWithPath
 } from '@/utils/aggregationTree'
-import {
-  buildCheckmkSetupUrl,
-  buildCheckmkUrl,
-  buildServiceStateViewUrl,
-  hostStateOn
-} from '@/utils/boardNavigation'
+import { buildCheckmkSetupUrl, buildCheckmkUrl } from '@/utils/boardNavigation'
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
 import { type PerfMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
 import { stateColor } from '@/utils/stateColors'
@@ -1066,14 +1062,6 @@ const sinceText = computed(() => {
   return duration ? _t('since %{duration}', { duration }) : null
 })
 
-interface SummaryChip {
-  state: string
-  count: number
-  label: string
-  tone: 'crit' | 'warn' | 'unknown' | 'ok'
-  url: string | null
-}
-
 interface AggregationLeafRow {
   id: string
   label: string
@@ -1157,30 +1145,6 @@ function _countByState(rows: ReadonlyArray<{ state: number }>): Record<number, n
   const out: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 }
   for (const r of rows) out[r.state] = (out[r.state] ?? 0) + 1
   return out
-}
-
-function buildServiceChipUrl(state: string, count: number): string | null {
-  if (count <= 0 || !props.object) return null
-  const isSiteObj = props.object.type === 'site'
-  return buildServiceStateViewUrl(
-    props.checkmkUrl ?? null,
-    isSiteObj ? { site: props.object.host_name } : { host: props.object.host_name },
-    state
-  )
-}
-
-function buildHostChipUrl(state: string, count: number): string | null {
-  if (count <= 0 || !props.checkmkUrl || !props.object) return null
-  if (props.object.type !== 'site' || !props.object.host_name) return null
-  const base = props.checkmkUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
-  const params: Record<string, string> = {
-    view_name: 'allhosts',
-    filled_in: 'filter',
-    _active: 'hoststate;site',
-    site: props.object.host_name,
-    [hostStateOn(state)]: 'on'
-  }
-  return `${base}/check_mk/view.py?${new URLSearchParams(params)}`
 }
 
 const aggregationSummary = computed<AggregationSummary | null>(() => {
@@ -1319,62 +1283,11 @@ function onBulkAcknowledgeClick(): void {
   )
 }
 
-const serviceChips = computed<SummaryChip[]>(() => {
-  const s = props.state?.services_summary
-  if (!s) return []
-  const make = (
-    state: string,
-    count: number,
-    label: string,
-    tone: SummaryChip['tone']
-  ): SummaryChip => ({
-    state,
-    count,
-    label,
-    tone,
-    url: buildServiceChipUrl(state, count)
-  })
-  // Hide problem chips at zero (visual noise); always keep the OK anchor so
-  // the operator sees an "all green" cue when nothing is wrong.
-  return [
-    make('CRITICAL', s.critical ?? 0, 'CRIT', 'crit'),
-    make('WARNING', s.warning ?? 0, 'WARN', 'warn'),
-    make('UNKNOWN', s.unknown ?? 0, 'UNKN', 'unknown'),
-    make('OK', s.ok ?? 0, 'OK', 'ok')
-  ].filter((chip) => chip.state === 'OK' || chip.count > 0)
-})
-
-// Site state output looks like "504 hosts (504 up, 0 down, 0 unreachable)";
-// extract the host counts so we can render the same kind of chip row as services.
-const hostsSummary = computed<{ up: number; down: number; unreachable: number } | null>(() => {
-  if (!isSite.value) return null
-  const out = props.state?.output
-  if (!out) return null
-  const m = out.match(/(\d+)\s+up,\s*(\d+)\s+down,\s*(\d+)\s+unreachable/)
-  if (!m?.[1] || !m[2] || !m[3]) return null
-  return { up: parseInt(m[1], 10), down: parseInt(m[2], 10), unreachable: parseInt(m[3], 10) }
-})
-
-const hostChips = computed<SummaryChip[]>(() => {
-  const h = hostsSummary.value
-  if (!h) return []
-  const make = (
-    state: string,
-    count: number,
-    label: string,
-    tone: SummaryChip['tone']
-  ): SummaryChip => ({
-    state,
-    count,
-    label,
-    tone,
-    url: buildHostChipUrl(state, count)
-  })
-  return [
-    make('DOWN', h.down, 'DOWN', 'crit'),
-    make('UNREACHABLE', h.unreachable, 'UNRCH', 'warn'),
-    make('UP', h.up, 'UP', 'ok')
-  ].filter((chip) => chip.state === 'UP' || chip.count > 0)
+const { serviceChips, hostChips } = useSummaryChips({
+  object: () => props.object,
+  state: () => props.state,
+  checkmkUrl: () => props.checkmkUrl,
+  isSite: () => isSite.value
 })
 
 interface Modifier {
