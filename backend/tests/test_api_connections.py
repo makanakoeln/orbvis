@@ -591,6 +591,59 @@ async def test_topology_cache_isolated_per_auth_user(
 
 
 # ---------------------------------------------------------------------------
+# Detail endpoints must apply contact-group scoping
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_object_details_scopes_to_caller_auth_user(
+    client, regular_user, mock_connection, monkeypatch
+):
+    """A non-admin reading object-details must be wrapped in ``with_auth_user``
+    so they can't read hosts outside their contact groups."""
+    monkeypatch.setitem(state_service._connections, "live_det_auth", mock_connection)
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", "/tmp/dummy")  # nosec B108
+    monkeypatch.setattr(
+        "app.api.v1.deps.cmk_integration.check_checkmk_permission",
+        lambda *_a, **_k: False,
+    )
+    mock_connection.get_host_details = AsyncMock(return_value=None)
+    holder = _attach_with_auth_user(mock_connection)
+
+    login = await client.post(
+        "/api/v1/auth/login", json={"username": "regular", "password": "secret"}
+    )
+    token = login.json()["access_token"]
+
+    resp = await client.get(
+        "/api/v1/connections/live_det_auth/object-details",
+        params={"type": "host", "host": "secret-host"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    holder.assert_called_once_with(regular_user.name)
+
+
+@pytest.mark.asyncio
+async def test_object_details_admin_bypasses_auth_user_scope(
+    client, admin_token, mock_connection, monkeypatch
+):
+    """Admins must NOT be scoped — they see everything."""
+    monkeypatch.setitem(state_service._connections, "live_det_admin", mock_connection)
+    monkeypatch.setattr("app.core.config.settings.checkmk_omd_root", "/tmp/dummy")  # nosec B108
+    mock_connection.get_host_details = AsyncMock(return_value=None)
+    holder = _attach_with_auth_user(mock_connection)
+
+    resp = await client.get(
+        "/api/v1/connections/live_det_admin/object-details",
+        params={"type": "host", "host": "any-host"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200
+    holder.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # GET /connections/{id}/groups/{type}/{name}/members
 # ---------------------------------------------------------------------------
 

@@ -596,17 +596,18 @@ async def get_perf_metrics(
     connection_id: str,
     host: str = Query(...),
     service: str | None = Query(None),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> list[str]:
     """Return perf_data metric names for a host or service (for metric autocomplete)."""
     connection = get_connection(connection_id)
     if connection is None:
         return []
     try:
-        if service:
-            state = await connection.get_service_state(host, service)
-        else:
-            state = await connection.get_host_state(host)
+        async with _auth_scope(connection, user):
+            if service:
+                state = await connection.get_service_state(host, service)
+            else:
+                state = await connection.get_host_state(host)
         return _parse_metric_names(state.perf_data)
     except Exception:
         return []
@@ -643,7 +644,7 @@ async def get_metric_history(
     host: str = Query(...),
     service: str | None = Query(None),
     minutes: int = Query(60, ge=1, le=10080),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> MetricHistoryResponse:
     """Return RRD metric history for a host/service using Livestatus rrddata (Checkmk only)."""
     connection = get_connection(connection_id)
@@ -652,7 +653,8 @@ async def get_metric_history(
     end = int(time.time())
     start = end - minutes * 60
     try:
-        raw = await connection.get_metric_history(host, service, start, end)
+        async with _auth_scope(connection, user):
+            raw = await connection.get_metric_history(host, service, start, end)
     except Exception as exc:
         logger.error("metric-history error: %s", exc, exc_info=True)
         return MetricHistoryResponse(
@@ -678,13 +680,14 @@ class HostGeo(BaseModel):
 async def get_host_geo(
     connection_id: str,
     host: str = Query(...),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> HostGeo | None:
     """Return orbvis_lat/orbvis_lng coordinates for a host, or null if not set."""
     connection = get_connection(connection_id)
     if connection is None:
         return None
-    result = await connection.get_host_geo(host)
+    async with _auth_scope(connection, user):
+        result = await connection.get_host_geo(host)
     return HostGeo(lat=result[0], lng=result[1]) if result else None
 
 
@@ -693,23 +696,24 @@ async def get_graph_templates_for_object(
     connection_id: str,
     host: str = Query(...),
     service: str | None = Query(None),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> list[GraphGroupResponse]:
     """Return applicable CMK graph template groups for a host/service (for graph object properties)."""
     connection = get_connection(connection_id)
     if connection is None:
         return []
-    groups = await connection.get_graph_templates(host, service)
+    async with _auth_scope(connection, user):
+        groups = await connection.get_graph_templates(host, service)
     return [GraphGroupResponse(id=g.id, title=g.title, metrics=g.metrics) for g in groups]
 
 
 @router.get("/{connection_id}/object-details", response_model=ObjectDetails | None)
 async def get_object_details(
     connection_id: str,
-    obj_type: str = Query(..., alias="type", regex="^(host|service)$"),
+    obj_type: str = Query(..., alias="type", pattern="^(host|service)$"),
     host: str = Query(...),
     service: str | None = Query(None),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> ObjectDetails | None:
     """Return on-demand drawer/properties details for a host or service.
 
@@ -720,14 +724,15 @@ async def get_object_details(
     connection = get_connection(connection_id)
     if connection is None:
         return None
-    if obj_type == "host":
-        return await connection.get_host_details(host)
-    if not service:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="service query parameter required for type=service",
-        )
-    return await connection.get_service_details(host, service)
+    async with _auth_scope(connection, user):
+        if obj_type == "host":
+            return await connection.get_host_details(host)
+        if not service:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="service query parameter required for type=service",
+            )
+        return await connection.get_service_details(host, service)
 
 
 @router.get("/{connection_id}/objects", response_model=list[str])
