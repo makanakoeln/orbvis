@@ -779,6 +779,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 
 import { connectionsApi, metricsApi } from '@/api/client'
+import { useGroupMembers } from '@/composables/useGroupMembers'
 import { fmtValueWithUnit } from '@/composables/useMetricChart'
 import { useIsDark } from '@/composables/useTheme'
 import { useAuthStore } from '@/stores/auth'
@@ -786,7 +787,6 @@ import type {
   AggregationNode,
   BoardObject,
   BulkAckTarget,
-  GroupMember,
   MetricPoint,
   ObjectDetails,
   ObjectState,
@@ -951,167 +951,26 @@ watch(
   { immediate: true }
 )
 
-// Hostgroup / Servicegroup member-list — drives the Members tab. We fetch
-// per-member state (not just the aggregate pill) so the operator can triage
-// without leaving the drawer.
-const groupMembers = ref<GroupMember[]>([])
-const loadingMembers = ref(false)
-const memberSearch = ref('')
-const onlyProblems = ref(false)
-
-watch(
-  [
-    () => props.object?.type,
-    () => props.object?.group_name,
-    () => props.object?.object_filter,
-    () => props.object?.object_types,
-    () => props.connectionId
-  ],
-  async ([objType, groupName, objFilter, objTypes, connId]) => {
-    groupMembers.value = []
-    memberSearch.value = ''
-    onlyProblems.value = false
-    if (!connId || !auth.accessToken) return
-    const isHostOrServiceGroup = objType === 'hostgroup' || objType === 'servicegroup'
-    if (isHostOrServiceGroup && !groupName) return
-    if (objType === 'dyngroup' && !objFilter) return
-    if (!isHostOrServiceGroup && objType !== 'dyngroup') return
-    loadingMembers.value = true
-    try {
-      const rows =
-        objType === 'dyngroup'
-          ? await connectionsApi.dyngroupMembers(
-              connId,
-              objTypes ?? 'host',
-              objFilter ?? '',
-              auth.accessToken
-            )
-          : await connectionsApi.groupMembers(
-              connId,
-              objType as 'hostgroup' | 'servicegroup',
-              groupName ?? '',
-              auth.accessToken
-            )
-      // Stale-response guard.
-      if (
-        props.object?.type === objType &&
-        props.object?.group_name === groupName &&
-        props.object?.object_filter === objFilter
-      ) {
-        groupMembers.value = rows
-      }
-    } catch {
-      groupMembers.value = []
-    } finally {
-      loadingMembers.value = false
-    }
-  },
-  { immediate: true }
-)
-
-// Severity rank for sort: worst first. Matches the same intent as the radar
-// view but inlined here so the member list and the donut counts agree.
-const _MEMBER_SEVERITY: Record<string, number> = {
-  DOWN: 5,
-  CRITICAL: 5,
-  UNREACHABLE: 4,
-  WARNING: 3,
-  UNKNOWN: 3,
-  PENDING: 1,
-  UP: 0,
-  OK: 0
-}
-
-const memberHealth = computed(() => {
-  const counts = { ok: 0, warn: 0, crit: 0, unkn: 0, pending: 0 }
-  for (const m of groupMembers.value) {
-    if (m.state === 'OK' || m.state === 'UP') counts.ok += 1
-    else if (m.state === 'WARNING') counts.warn += 1
-    else if (m.state === 'CRITICAL' || m.state === 'DOWN') counts.crit += 1
-    else if (m.state === 'UNKNOWN' || m.state === 'UNREACHABLE') counts.unkn += 1
-    else counts.pending += 1
-  }
-  return counts
+// Hostgroup / Servicegroup / dyngroup member-list — drives the Members tab.
+const {
+  groupMembers,
+  loadingMembers,
+  memberSearch,
+  onlyProblems,
+  filteredMembers,
+  visibleMembers,
+  truncatedMemberCount,
+  memberChips,
+  memberStateTone,
+  memberStateBadge,
+  isGroup
+} = useGroupMembers({
+  object: () => props.object,
+  connectionId: () => props.connectionId,
+  accessToken: () => auth.accessToken
 })
 
-const filteredMembers = computed(() => {
-  const needle = memberSearch.value.trim().toLowerCase()
-  return groupMembers.value
-    .filter((m) => {
-      if (onlyProblems.value && (m.state === 'OK' || m.state === 'UP')) return false
-      if (!needle) return true
-      return (
-        m.host.toLowerCase().includes(needle) ||
-        m.service.toLowerCase().includes(needle) ||
-        m.output.toLowerCase().includes(needle)
-      )
-    })
-    .sort((a, b) => {
-      const sa = _MEMBER_SEVERITY[a.state] ?? 0
-      const sb = _MEMBER_SEVERITY[b.state] ?? 0
-      if (sa !== sb) return sb - sa
-      return a.host.localeCompare(b.host) || a.service.localeCompare(b.service)
-    })
-})
-
-const MEMBER_TRUNCATE = 50
-const visibleMembers = computed(() => filteredMembers.value.slice(0, MEMBER_TRUNCATE))
-const truncatedMemberCount = computed(() =>
-  Math.max(0, filteredMembers.value.length - MEMBER_TRUNCATE)
-)
-
-const isGroup = computed(
-  () =>
-    props.object?.type === 'hostgroup' ||
-    props.object?.type === 'servicegroup' ||
-    props.object?.type === 'dyngroup'
-)
 const isAggregation = computed(() => props.object?.type === 'aggregation')
-
-interface MemberChip {
-  label: string
-  count: number
-  tone: 'crit' | 'warn' | 'unknown' | 'ok'
-}
-
-const memberChips = computed<MemberChip[]>(() => {
-  const h = memberHealth.value
-  const chips: MemberChip[] = []
-  if (h.crit > 0) chips.push({ label: 'CRIT', count: h.crit, tone: 'crit' })
-  if (h.warn > 0) chips.push({ label: 'WARN', count: h.warn, tone: 'warn' })
-  if (h.unkn > 0) chips.push({ label: 'UNKN', count: h.unkn, tone: 'unknown' })
-  chips.push({ label: 'OK', count: h.ok, tone: 'ok' })
-  return chips
-})
-
-function memberStateTone(state: string): string {
-  if (state === 'CRITICAL' || state === 'DOWN') return 'crit'
-  if (state === 'WARNING') return 'warn'
-  if (state === 'UNKNOWN' || state === 'UNREACHABLE') return 'unknown'
-  if (state === 'PENDING') return 'pending'
-  return 'ok'
-}
-
-function memberStateBadge(state: string): string {
-  switch (state) {
-    case 'CRITICAL':
-    case 'DOWN':
-      return state === 'DOWN' ? 'D' : 'C'
-    case 'WARNING':
-      return 'W'
-    case 'UNKNOWN':
-      return '?'
-    case 'UNREACHABLE':
-      return 'U'
-    case 'PENDING':
-      return '·'
-    case 'OK':
-    case 'UP':
-      return '✓'
-    default:
-      return '·'
-  }
-}
 
 function formatRelativeAge(ts: number | null | undefined): string {
   return formatRelativeDuration(ts, nowMs.value)
