@@ -246,6 +246,7 @@ import CmkLoading from '@/components/cmk/CmkLoading'
 
 import { connectionsApi } from '@/api/client'
 import { useD3Cleanup } from '@/composables/useD3Cleanup'
+import { useFlowFilter } from '@/composables/useFlowFilter'
 import {
   type CmdMarker,
   type FLink,
@@ -271,7 +272,6 @@ import {
   DONUT_MAX_WIDTH,
   type DonutArc,
   FAN_SPREAD,
-  HEALTHY_HOST_STATES,
   NODE_R,
   buildDonutArc,
   donutOuterRadius,
@@ -285,13 +285,6 @@ import {
   showSvcLabel,
   svcR
 } from '@/utils/flowGeometry'
-import {
-  DIMMED_FILTER,
-  DIMMED_OPACITY,
-  type FilterField,
-  matchesFilterTerms,
-  parseFilterTerms
-} from '@/utils/objectFilter'
 import { stateColor } from '@/utils/stateColors'
 import { resolveTemplate } from '@/utils/template'
 import usei18n from '@/vendor/cmk/lib/i18n'
@@ -780,80 +773,11 @@ const needsServiceDetail = computed(() => needsServices(props.serviceLayout))
 
 const { topKHintDismissed, dismissTopKHint } = useTopKHint(() => auth.user?.user_id)
 
-// Free-text filter: dim (don't hide) nodes that don't match so the spatial
-// context is preserved. Hiding would re-trigger force-collide and rearrange
-// the whole board on every keystroke.
-const filterText = ref('')
-// Flow nodes are only hosts/services, so group operators can never match —
-// drop them instead of letting an `hg:`/`sg:` term filter everything away.
-const UNSUPPORTED_FLOW_FIELDS: ReadonlySet<FilterField> = new Set(['hostgroup', 'servicegroup'])
-const filterTerms = computed(() =>
-  parseFilterTerms(filterText.value).filter((term) => !UNSUPPORTED_FLOW_FIELDS.has(term.field))
-)
-
-function nodeHasProblem(d: FNode): boolean {
-  if (d.nodeType === 'host') {
-    if (!HEALTHY_HOST_STATES.has(d.state)) return true
-    return worstServiceState(d) !== null
-  }
-  return d.state !== 'OK' && d.state !== 'PENDING'
-}
-
-function flowFieldValue(d: FNode, field: FilterField): string[] {
-  const isService = d.nodeType === 'service'
-  const svcName = isService ? d.id.split('::').slice(1).join('::') : ''
-  const hostName = isService || d.nodeType === 'more' ? (d.hostId ?? '') : d.id
-  switch (field) {
-    case 'host':
-      return [hostName, d.topo?.alias ?? d.parentTopo?.alias ?? '']
-    case 'service':
-      return [svcName]
-    case 'id':
-      return [d.id]
-    case 'any':
-      return [d.id, hostName, svcName, d.topo?.alias ?? '', d.parentTopo?.alias ?? '']
-    case 'hostgroup':
-    case 'servicegroup':
-      return []
-  }
-}
-
-function nodeMatchesFilter(d: FNode): boolean {
-  if (props.problemsOnly && !nodeHasProblem(d)) return false
-  return matchesFilterTerms(filterTerms.value, (field) => flowFieldValue(d, field))
-}
-
-const filterIsActive = computed(() => !!props.problemsOnly || filterTerms.value.length > 0)
-
-watch([filterText, () => props.problemsOnly], () => {
-  if (svgEl.value) applyFilterOpacity()
+const { filterText, applyFilterOpacity } = useFlowFilter({
+  svgEl,
+  problemsOnly: () => props.problemsOnly,
+  worstServiceState
 })
-
-let filterOpacityActive = false
-
-function applyFilterOpacity(): void {
-  if (!svgEl.value) return
-  const sel = select(svgEl.value)
-  if (!filterIsActive.value) {
-    if (!filterOpacityActive) return
-    filterOpacityActive = false
-    sel.selectAll('g.node, g.links line').attr('opacity', 1)
-    sel.selectAll('g.node').style('filter', null)
-    return
-  }
-  filterOpacityActive = true
-  sel
-    .selectAll<SVGGElement, FNode>('g.node')
-    .attr('opacity', (d) => (nodeMatchesFilter(d) ? 1 : DIMMED_OPACITY))
-    .style('filter', (d) => (nodeMatchesFilter(d) ? null : DIMMED_FILTER))
-    .filter((d) => nodeMatchesFilter(d))
-    .raise()
-  sel.selectAll<SVGLineElement, FLink>('g.links line').attr('opacity', (d) => {
-    const src = d.source as FNode
-    const tgt = d.target as FNode
-    return nodeMatchesFilter(src) && nodeMatchesFilter(tgt) ? 1 : DIMMED_OPACITY
-  })
-}
 
 // ---- Data sources ----
 //
