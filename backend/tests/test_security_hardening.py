@@ -5,7 +5,14 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
+from app.api.v1.connections import (
+    HostActionRequest,
+    ServiceActionRequest,
+    _build_host_command,
+    _build_service_command,
+)
 from app.core.image_security import is_safe_svg
+from app.models.user import User
 from app.schemas.board import BoardObject, BoardObjectUpdate, normalize_object_filter
 from app.schemas.connection import REDACTED_SECRET, ConnectionConfig, _redact
 
@@ -160,3 +167,46 @@ class TestDyngroupFilterValidation:
     def test_board_object_update_normalises_filter(self) -> None:
         obj = BoardObjectUpdate(object_filter="Filter: host_name ~ ^web")
         assert obj.object_filter == "Filter: host_name ~ ^web\n"
+
+
+class TestCommandInjection:
+    """Host/service names reach the livestatus command pipe via
+    ``COMMAND [ts] <body>\\n``. A crafted name must not be able to inject a
+    second COMMAND line (newline) or forge command fields (``;``)."""
+
+    _ADMIN = User(user_id=1, name="admin", is_admin=True)
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "host\nCOMMAND [0] DISABLE_NOTIFICATIONS;evil",
+            "host;sneaky",
+            "host\rmalice",
+        ],
+    )
+    def test_host_schema_rejects_separators(self, name: str) -> None:
+        with pytest.raises(ValidationError):
+            HostActionRequest(action="force_check", host_name=name)
+
+    @pytest.mark.parametrize("field", ["host_name", "service_description"])
+    def test_service_schema_rejects_separators(self, field: str) -> None:
+        kwargs = {"action": "force_check", "host_name": "h", "service_description": "s"}
+        kwargs[field] = "x\nGET hosts"
+        with pytest.raises(ValidationError):
+            ServiceActionRequest(**kwargs)
+
+    def test_builder_sanitizes_simple_host_command(self) -> None:
+        # Defense-in-depth: even if a name bypasses the schema validator, the
+        # builder must neutralise separators before they reach the pipe.
+        body = HostActionRequest.model_construct(action="force_check", host_name="host\nINJECT;x")
+        cmd = _build_host_command(body, self._ADMIN)
+        assert "\n" not in cmd and "\r" not in cmd
+        assert cmd.startswith("SCHEDULE_FORCED_HOST_CHECK;host INJECT x;")
+
+    def test_builder_sanitizes_simple_service_command(self) -> None:
+        body = ServiceActionRequest.model_construct(
+            action="force_check", host_name="h\nx", service_description="s;y"
+        )
+        cmd = _build_service_command(body, self._ADMIN)
+        assert "\n" not in cmd and "\r" not in cmd
+        assert cmd.startswith("SCHEDULE_FORCED_SVC_CHECK;h x;s y;")

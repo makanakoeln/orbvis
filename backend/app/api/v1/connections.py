@@ -962,6 +962,15 @@ def _cmd_safe(value: str) -> str:
     return value.replace(";", " ").replace("\n", " ").replace("\r", " ")
 
 
+def _reject_command_separators(value: str) -> str:
+    # Host/service names that reach the livestatus command pipe must not carry
+    # field (;) or line (\n, \r) separators — a Checkmk object name never does,
+    # and allowing them lets a crafted name inject a second COMMAND line.
+    if any(sep in value for sep in (";", "\n", "\r")):
+        raise ValueError("name must not contain ';', newline or carriage return")
+    return value
+
+
 class HostActionRequest(BaseModel):
     action: str
     host_name: str
@@ -972,6 +981,11 @@ class HostActionRequest(BaseModel):
     persistent: bool = False
     start_time: int | None = None
     end_time: int | None = None
+
+    @field_validator("host_name")
+    @classmethod
+    def _validate_host_name(cls, value: str) -> str:
+        return _reject_command_separators(value)
 
 
 class ServiceActionRequest(BaseModel):
@@ -986,11 +1000,17 @@ class ServiceActionRequest(BaseModel):
     start_time: int | None = None
     end_time: int | None = None
 
+    @field_validator("host_name", "service_description")
+    @classmethod
+    def _validate_names(cls, value: str) -> str:
+        return _reject_command_separators(value)
+
 
 def _build_host_command(body: HostActionRequest, user: User) -> str:
+    host = _cmd_safe(body.host_name)
     template = _SIMPLE_HOST_COMMANDS.get(body.action)
     if template is not None:
-        return template.format(host=body.host_name, ts=int(time.time()))
+        return template.format(host=host, ts=int(time.time()))
     if body.action not in _PARAMETERISED_HOST_ACTIONS:
         raise HTTPException(
             status_code=400,
@@ -1003,7 +1023,6 @@ def _build_host_command(body: HostActionRequest, user: User) -> str:
         raise HTTPException(status_code=400, detail=f"{body.action} requires a comment")
     author = _cmd_safe(user.name)
     comment = _cmd_safe(body.comment)
-    host = _cmd_safe(body.host_name)
     if body.action == "acknowledge":
         return (
             f"ACKNOWLEDGE_HOST_PROBLEM;{host};{int(body.sticky)};{int(body.notify)};"
@@ -1025,11 +1044,11 @@ def _build_host_command(body: HostActionRequest, user: User) -> str:
 
 
 def _build_service_command(body: ServiceActionRequest, user: User) -> str:
+    host = _cmd_safe(body.host_name)
+    svc = _cmd_safe(body.service_description)
     template = _SIMPLE_SERVICE_COMMANDS.get(body.action)
     if template is not None:
-        return template.format(
-            host=body.host_name, svc=body.service_description, ts=int(time.time())
-        )
+        return template.format(host=host, svc=svc, ts=int(time.time()))
     if body.action not in _PARAMETERISED_SERVICE_ACTIONS:
         raise HTTPException(
             status_code=400,
@@ -1042,8 +1061,6 @@ def _build_service_command(body: ServiceActionRequest, user: User) -> str:
         raise HTTPException(status_code=400, detail=f"{body.action} requires a comment")
     author = _cmd_safe(user.name)
     comment = _cmd_safe(body.comment)
-    host = _cmd_safe(body.host_name)
-    svc = _cmd_safe(body.service_description)
     if body.action == "acknowledge":
         return (
             f"ACKNOWLEDGE_SVC_PROBLEM;{host};{svc};{int(body.sticky)};{int(body.notify)};"
