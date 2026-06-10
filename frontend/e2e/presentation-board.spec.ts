@@ -121,8 +121,9 @@ test.describe('OrbVis presentation board', () => {
     await expect(inspector).toContainText('Layout')
     await expect(inspector).toContainText('Host')
 
-    // The debounced save lands and survives a reload.
-    await expect(page.locator('.pres__hud-status')).toHaveText(/saved/i, { timeout: 5000 })
+    // The debounced save lands (status now lives in the inspector top bar)
+    // and survives a reload.
+    await expect(page.locator('.insp__save-label')).toHaveText(/saved/i, { timeout: 5000 })
     await page.reload()
     await page.locator('[data-tour="edit-fab"]').click()
     await expect(page.locator('.ptg')).toHaveCount(0)

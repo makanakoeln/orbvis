@@ -59,7 +59,7 @@ describe('useConnectGuide', () => {
     expect(guide.currentId.value).toBe(b.id)
   })
 
-  it('advances when the current slot becomes bound and exits when all are done', async () => {
+  it('keeps the current slot after binding so the service step stays open', async () => {
     const a = slot(0, 0)
     const b = slot(300, 0)
     const { elements, guide } = setup([a, b])
@@ -70,10 +70,36 @@ describe('useConnectGuide', () => {
     await nextTick()
     expect(guide.active.value).toBe(true)
     expect(guide.boundCount.value).toBe(1)
+    // No auto-advance: the operator can still pick a service on slot a.
+    expect(guide.currentId.value).toBe(a.id)
+    expect(guide.currentBound.value).toBe(true)
+
+    // Explicit Next moves to the remaining unbound slot.
+    guide.next()
     expect(guide.currentId.value).toBe(b.id)
+    expect(guide.currentBound.value).toBe(false)
 
     b.host_name = 'web02'
     elements.value = [...elements.value]
+    await nextTick()
+    expect(guide.active.value).toBe(true)
+    // With nothing left to visit, Next finishes the walkthrough.
+    guide.next()
+    expect(guide.active.value).toBe(false)
+  })
+
+  it('retargets when the current slot is deleted and exits when none remain', async () => {
+    const a = slot(0, 0)
+    const b = slot(300, 0)
+    const { elements, guide } = setup([a, b])
+    guide.enter()
+
+    elements.value = [b]
+    await nextTick()
+    expect(guide.active.value).toBe(true)
+    expect(guide.currentId.value).toBe(b.id)
+
+    elements.value = []
     await nextTick()
     expect(guide.active.value).toBe(false)
   })

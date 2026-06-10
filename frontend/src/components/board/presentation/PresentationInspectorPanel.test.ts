@@ -31,7 +31,8 @@ function mountPanel(selection: PresentationElement[]) {
       view: makeView(),
       connectionId: 'live_1',
       targets: [],
-      backgroundImageName: ''
+      backgroundImageName: '',
+      saveLabel: ''
     }
   })
 }
@@ -99,6 +100,41 @@ describe('PresentationInspectorPanel', () => {
     const wrapper = mountPanel([a, b])
     expect(wrapper.text()).toContain('2 elements selected')
     expect(wrapper.find('.orb-range').exists()).toBe(true)
+  })
+
+  it('emits group/ungroup from the multi-selection actions', async () => {
+    const a = createElement('rect', 0, 0)
+    const b = createElement('text', 0, 0)
+    const wrapper = mountPanel([a, b])
+    await wrapper
+      .findAll('button')
+      .find((btn) => btn.text() === 'Group')!
+      .trigger('click')
+    expect(wrapper.emitted('group')).toBeTruthy()
+    const ungroup = wrapper.findAll('button').find((btn) => btn.text() === 'Ungroup')!
+    expect(ungroup.attributes('disabled')).toBeDefined()
+  })
+
+  it('switches between Slide and Element context via the top bar tabs', async () => {
+    const shape = createElement('rect', 0, 0)
+    const wrapper = mountPanel([shape])
+    expect(wrapper.text()).toContain('Appearance')
+    await wrapper
+      .findAll('.insp__tab')
+      .find((t) => t.text() === 'Slide')!
+      .trigger('click')
+    expect(wrapper.text()).toContain('Aspect / size')
+    await wrapper
+      .findAll('.insp__tab')
+      .find((t) => t.text() === 'Element')!
+      .trigger('click')
+    expect(wrapper.text()).toContain('Appearance')
+  })
+
+  it('emits save from the topbar save button', async () => {
+    const wrapper = mountPanel([])
+    await wrapper.find('button[title="Save now"]').trigger('click')
+    expect(wrapper.emitted('save')).toBeTruthy()
   })
 
   it('renames the element via the header input', async () => {

@@ -53,6 +53,7 @@ const badgeStyle = computed(() => ({
 .pco {
   position: absolute;
   inset: 0;
+  z-index: 1002;
   pointer-events: none;
 }
 

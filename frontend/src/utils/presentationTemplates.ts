@@ -175,6 +175,7 @@ function kpiDashboard(_t: (s: string) => string): PresentationElement[] {
 function weathermap(_t: (s: string) => string): PresentationElement[] {
   const core = shape('rect', { x: 810, y: 440, w: 300, h: 180, z: 20 }, { data_slot: true })
   core.label = label(_t('Core'), 18)
+  core.name = _t('Core')
   const sites: Geo[] = [
     { x: 160, y: 120, w: 260, h: 150, z: 21 },
     { x: 830, y: 90, w: 260, h: 150, z: 22 },
@@ -182,12 +183,19 @@ function weathermap(_t: (s: string) => string): PresentationElement[] {
     { x: 160, y: 780, w: 260, h: 150, z: 24 },
     { x: 1500, y: 780, w: 260, h: 150, z: 25 }
   ]
+  // Named elements: the layers panel and the connector endpoint dropdowns
+  // would otherwise show five anonymous "Rect"/"Line" entries.
   const nodes = sites.map((g, i) => {
     const el = shape('rect', g, { data_slot: true })
     el.label = label(`${_t('Site')} ${i + 1}`, 16)
+    el.name = `${_t('Site')} ${i + 1}`
     return el
   })
-  const links = nodes.map((n, i) => connector(core.id, n.id, 5 + i))
+  const links = nodes.map((n, i) => {
+    const link = connector(core.id, n.id, 5 + i)
+    link.name = `${_t('Link')} ${i + 1}`
+    return link
+  })
   return [
     textBlock(
       _t('NETWORK WEATHERMAP'),

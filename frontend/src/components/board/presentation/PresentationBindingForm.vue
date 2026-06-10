@@ -101,12 +101,22 @@ async function loadServices(host: string): Promise<void> {
   loadingServices.value = false
 }
 
+// Track binding fields too (not just the element id): a drag&drop bind can
+// repatch the very element that is already selected, and the inputs must
+// follow. Selecting in the autocomplete round-trips to the same value, so
+// this never fights the user's typing.
 watch(
-  () => props.element.id,
-  () => {
+  () => [props.element.id, props.element.host_name, props.element.service_description],
+  (next, prev) => {
     hostModel.value = props.element.host_name ?? ''
     serviceModel.value = props.element.service_description ?? ''
-    if (hostModel.value) void loadServices(hostModel.value)
+    if (!hostModel.value) {
+      services.value = []
+      return
+    }
+    const idChanged = next[0] !== prev?.[0]
+    const hostChanged = next[1] !== prev?.[1]
+    if (idChanged || hostChanged) void loadServices(hostModel.value)
   },
   { immediate: true }
 )
@@ -132,10 +142,10 @@ function onConnectionChange(v: string | null): void {
   void loadHosts()
 }
 
+// The watch above re-syncs the models and reloads services from the patched
+// element — these handlers only commit the change.
 function onHostChange(v: string): void {
   emit('patch', { host_name: v || null, service_description: null })
-  serviceModel.value = ''
-  void loadServices(v)
 }
 
 function onServiceChange(v: string): void {

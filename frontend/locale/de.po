@@ -2577,3 +2577,24 @@ msgstr "https://…"
 
 msgid "…or image URL"
 msgstr "…oder Bild-URL"
+
+msgid "Connected"
+msgstr "Verbunden"
+
+msgid "Element"
+msgstr "Element"
+
+msgid "Finish"
+msgstr "Fertigstellen"
+
+msgid "Link"
+msgstr "Link"
+
+msgid "Save now"
+msgstr "Jetzt speichern"
+
+msgid "Select an element on the slide"
+msgstr "Ein Element auf dem Slide auswählen"
+
+msgid "Site"
+msgstr "Standort"

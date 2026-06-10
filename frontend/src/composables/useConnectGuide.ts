@@ -1,12 +1,16 @@
 import { computed, ref, watch } from 'vue'
 
 import type { PresentationElement } from '@/types/api'
-import { isUnboundSlot } from '@/utils/presentationSampleState'
+import { type BindableElement, isBindable, isUnboundSlot } from '@/utils/presentationSampleState'
 
 // The connect-data walkthrough: after designing a slide (or applying a
 // template), every unbound data slot is visited in reading order and bound via
 // the shared binding form. The guide only steers which slot is current — all
 // mutations stay on the canvas's mutate() pipeline.
+//
+// Binding a host does NOT auto-advance: the slot stays current so the operator
+// can still pick a service and label. Advancing is always explicit (Next/Skip,
+// badge click), which keeps the flow predictable.
 
 // Reading order: rows top→bottom (with a tolerance so slightly staggered tiles
 // count as one row), left→right within a row.
@@ -28,7 +32,14 @@ export function useConnectGuide(elements: () => PresentationElement[]) {
   const slots = computed(() => elements().filter(isUnboundSlot).sort(readingOrder))
   const unboundCount = computed(() => slots.value.length)
   const boundCount = computed(() => Math.max(0, totalCount.value - slots.value.length))
-  const current = computed(() => slots.value.find((s) => s.id === currentId.value) ?? null)
+
+  // The current slot survives being bound (unlike `slots`) so the popover can
+  // stay open for the service/label step.
+  const current = computed<BindableElement | null>(() => {
+    const el = elements().find((e) => e.id === currentId.value)
+    return el && isBindable(el) ? el : null
+  })
+  const currentBound = computed(() => !!current.value && !isUnboundSlot(current.value))
 
   function enter(): void {
     totalCount.value = slots.value.length
@@ -42,15 +53,35 @@ export function useConnectGuide(elements: () => PresentationElement[]) {
   }
 
   function goTo(id: string): void {
-    if (slots.value.some((s) => s.id === id)) currentId.value = id
+    const el = elements().find((e) => e.id === id)
+    if (el && isUnboundSlot(el)) currentId.value = id
   }
 
+  // Next/prev move through the remaining unbound slots relative to the current
+  // element's reading-order position — also when the current one is already
+  // bound (and therefore no longer part of `slots`). With nothing left to
+  // visit, Next finishes the walkthrough.
   function step(dir: 1 | -1): void {
     const list = slots.value
-    if (!list.length) return
+    if (!list.length) {
+      exit()
+      return
+    }
+    const cur = current.value
     const idx = list.findIndex((s) => s.id === currentId.value)
-    const next = idx === -1 ? 0 : (idx + dir + list.length) % list.length
-    currentId.value = list[next]?.id ?? null
+    if (idx !== -1) {
+      currentId.value = list[(idx + dir + list.length) % list.length]?.id ?? null
+      return
+    }
+    if (!cur) {
+      currentId.value = list[0]?.id ?? null
+      return
+    }
+    const after = list.filter((s) => readingOrder(cur, s) < 0)
+    const before = list.filter((s) => readingOrder(cur, s) >= 0)
+    const target =
+      dir === 1 ? (after[0] ?? list[0]) : (before[before.length - 1] ?? list[list.length - 1])
+    currentId.value = target?.id ?? null
   }
 
   function next(): void {
@@ -60,20 +91,18 @@ export function useConnectGuide(elements: () => PresentationElement[]) {
     step(-1)
   }
 
-  // When the current slot gets bound it disappears from the list — advance to
-  // the nearest remaining slot; when none remain the walkthrough is done.
-  watch(slots, (now, before) => {
-    if (!active.value) return
-    if (!now.length) {
-      exit()
-      return
-    }
-    if (currentId.value && !now.some((s) => s.id === currentId.value)) {
-      const oldIdx = before?.findIndex((s) => s.id === currentId.value) ?? 0
-      const target = now[Math.min(Math.max(oldIdx, 0), now.length - 1)]
-      currentId.value = target?.id ?? null
-    }
-  })
+  // Only a deleted current element retargets the guide; with nothing bindable
+  // left at all the walkthrough ends. Sync flush so a delete that is undone in
+  // the same tick can't slip past the pre-flush change comparison.
+  watch(
+    current,
+    (c) => {
+      if (!active.value || c) return
+      if (slots.value.length) currentId.value = slots.value[0]?.id ?? null
+      else exit()
+    },
+    { flush: 'sync' }
+  )
 
   return {
     active,
@@ -82,6 +111,7 @@ export function useConnectGuide(elements: () => PresentationElement[]) {
     boundCount,
     totalCount,
     current,
+    currentBound,
     currentId,
     enter,
     exit,

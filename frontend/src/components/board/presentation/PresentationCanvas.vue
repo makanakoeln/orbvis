@@ -62,8 +62,8 @@
           class="pres__el"
           :class="{
             'pres__el--selected': interactive && selectedIds.includes(topLevelId(el.id)),
-            'pres__el--locked': el.locked,
-            'pres__el--hidden': interactive && el.hidden
+            'pres__el--locked': isLocked(el),
+            'pres__el--hidden': interactive && isHidden(el)
           }"
           :style="elementStyle(el)"
           @pointerdown.stop="onElementPointerDown(el, $event)"
@@ -171,6 +171,12 @@
         @pointerdown.stop
       >
         <div class="pres__connect-pop-head">
+          <span
+            v-if="connectGuide.currentBound.value"
+            class="pres__connect-check"
+            :title="_t('Connected')"
+            >✓</span
+          >
           <span class="pres__connect-pop-title">{{ connectSlotTitle }}</span>
           <button class="pres__layers-x" :title="_t('Done')" @click="connectGuide.exit()">×</button>
         </div>
@@ -182,7 +188,16 @@
           />
         </div>
         <div class="pres__connect-pop-foot">
-          <button class="pres__layer-action" @click="connectGuide.next()">{{ _t('Skip') }}</button>
+          <button
+            v-if="!connectGuide.currentBound.value"
+            class="pres__layer-action"
+            @click="connectGuide.next()"
+          >
+            {{ _t('Skip') }}
+          </button>
+          <CmkButton v-else variant="primary" @click="connectGuide.next()">
+            {{ connectGuide.unboundCount.value ? _t('Next') : _t('Finish') }}
+          </CmkButton>
         </div>
       </div>
 
@@ -258,7 +273,6 @@
         >
           <span v-html="ICONS.redo" />
         </button>
-        <span class="pres__hud-status">{{ saveLabel }}</span>
       </div>
 
       <div
@@ -338,10 +352,14 @@
       :connection-id="config.connection_id"
       :targets="connectorTargets"
       :background-image-name="backgroundImageName"
+      :save-label="saveLabel"
       @patch="onInspectorPatch"
       @delete="deleteSelected"
       @duplicate="duplicateSelected"
       @slide="onSlideChange"
+      @save="saveNow"
+      @group="groupSelected"
+      @ungroup="ungroupSelected"
     >
       <template #slide>
         <CmkButton class="pres__tpl-btn" @click="galleryOpen = true">
@@ -425,6 +443,7 @@ const {
   mutate,
   setElements,
   scheduleSave,
+  saveNow,
   saveLabel,
   undo,
   redo,
@@ -477,8 +496,21 @@ const overlaySvgStyle = computed(() => ({
 const selectedIds = ref<string[]>([])
 const editingTextId = ref<string | null>(null)
 
+// Hidden/locked cascade from a group to its members — hiding a group must
+// hide everything in it, locking it must freeze everything in it.
+function isHidden(el: PresentationElement): boolean {
+  if (el.hidden) return true
+  const group = byId(childToGroup.value.get(el.id))
+  return !!group?.hidden
+}
+function isLocked(el: PresentationElement): boolean {
+  if (el.locked) return true
+  const group = byId(childToGroup.value.get(el.id))
+  return !!group?.locked
+}
+
 const orderedElements = computed(() =>
-  [...elements.value].filter((e) => !e.hidden || interactive.value).sort((a, b) => a.z - b.z)
+  [...elements.value].filter((e) => !isHidden(e) || interactive.value).sort((a, b) => a.z - b.z)
 )
 
 const layersList = computed(() =>
@@ -488,7 +520,7 @@ const layersList = computed(() =>
 const selectedElements = computed(() =>
   selectedIds.value.map(byId).filter((e): e is PresentationElement => !!e)
 )
-const primaryLocked = computed(() => selectedElements.value.some((e) => e.locked))
+const primaryLocked = computed(() => selectedElements.value.some((e) => isLocked(e)))
 const hasGroupSelected = computed(() => selectedElements.value.some((e) => e.kind === 'group'))
 
 // ── Connectors (line + arrow shapes) ────────────────────────────────────────
@@ -521,7 +553,7 @@ const connectorIds = computed(
 const connectors = computed(() =>
   [...elements.value]
     .filter((e): e is ShapeElement => isConnectorShape(e))
-    .filter((e) => !e.hidden || interactive.value)
+    .filter((e) => !isHidden(e) || interactive.value)
     .sort((a, b) => a.z - b.z)
     .map((el) => ({ el, ...connectorEndpoints(el) }))
 )
@@ -553,7 +585,7 @@ function elementStyle(el: PresentationElement): Record<string, string> {
     opacity: String(el.opacity),
     transform: el.rotation ? `rotate(${el.rotation}deg)` : 'none',
     zIndex: String(el.z),
-    pointerEvents: !interactive.value || el.locked ? 'none' : 'auto'
+    pointerEvents: !interactive.value || isLocked(el) ? 'none' : 'auto'
   }
 }
 
@@ -623,7 +655,7 @@ function onSlidePointerDown(e: PointerEvent): void {
 }
 
 function onElementPointerDown(el: PresentationElement, e: PointerEvent): void {
-  if (!interactive.value || el.locked) return
+  if (!interactive.value || isLocked(el)) return
   // In connect mode an element click only retargets the walkthrough to an
   // unbound slot — no selection, no dragging.
   if (connectGuide.active.value) {
@@ -650,7 +682,7 @@ function onElementPointerDown(el: PresentationElement, e: PointerEvent): void {
 // own pointer handler. Stop propagation so the stage's deselect doesn't fire.
 // A fully free connector (no docked end) can still be dragged by its body.
 function onConnectorPointerDown(el: ShapeElement, e: PointerEvent): void {
-  if (!interactive.value || el.locked) return
+  if (!interactive.value || isLocked(el)) return
   e.stopPropagation()
   if (connectGuide.active.value) {
     if (isUnboundSlot(el)) connectGuide.goTo(el.id)
@@ -683,7 +715,7 @@ function elementAt(p: { x: number; y: number }, excludeId: string): string | nul
 // Grab a connector endpoint to drag it: dropping it on an element docks that
 // end; dropping it on empty canvas leaves it free at the release position.
 function onEndpointPointerDown(el: ShapeElement, which: 'start' | 'end', e: PointerEvent): void {
-  if (!interactive.value || el.locked) return
+  if (!interactive.value || isLocked(el)) return
   e.stopPropagation()
   selectedIds.value = [el.id]
   const { start, end } = connectorEndpoints(el)
@@ -848,20 +880,12 @@ function resizeBy(p: { x: number; y: number }, shift: boolean): void {
   const dx = rdx * Math.cos(a) - rdy * Math.sin(a)
   const dy = rdx * Math.sin(a) + rdy * Math.cos(a)
   const h = drag.value.handle
-  let x = o.x
-  let y = o.y
   let w = o.w
   let hh = o.h
   if (h.includes('e')) w = o.w + dx
+  if (h.includes('w')) w = o.w - dx
   if (h.includes('s')) hh = o.h + dy
-  if (h.includes('w')) {
-    w = o.w - dx
-    x = o.x + dx
-  }
-  if (h.includes('n')) {
-    hh = o.h - dy
-    y = o.y + dy
-  }
+  if (h.includes('n')) hh = o.h - dy
   const MIN = 8
   if (w < MIN) w = MIN
   if (hh < MIN) hh = MIN
@@ -870,8 +894,20 @@ function resizeBy(p: { x: number; y: number }, shift: boolean): void {
     if (Math.abs(dx) > Math.abs(dy)) hh = w / ratio
     else w = hh * ratio
   }
-  el.x = x
-  el.y = y
+  // The element rotates around its centre, so x/y can't be patched in slide
+  // axes directly — compute how the LOCAL centre moves (the grabbed side
+  // shifts, the opposite side stays), rotate that shift into slide space and
+  // re-derive x/y from the new centre. Keeps the fixed edge truly fixed at
+  // any rotation (the old axis-aligned math drifted the centre).
+  const lx = h.includes('w') ? o.w - w : 0
+  const ly = h.includes('n') ? o.h - hh : 0
+  const rad = ((o.rotation || 0) * Math.PI) / 180
+  const dcxL = lx + (w - o.w) / 2
+  const dcyL = ly + (hh - o.h) / 2
+  const cx = o.x + o.w / 2 + dcxL * Math.cos(rad) - dcyL * Math.sin(rad)
+  const cy = o.y + o.h / 2 + dcxL * Math.sin(rad) + dcyL * Math.cos(rad)
+  el.x = cx - w / 2
+  el.y = cy - hh / 2
   el.w = w
   el.h = hh
 }
@@ -1227,6 +1263,11 @@ const connectProgressPct = computed(() => {
 const connectSlotTitle = computed(() => {
   const el = connectGuide.current.value
   if (!el) return ''
+  // A bound slot stays current for the service/label step — title flips to
+  // its binding instead of a (no longer meaningful) slot number.
+  if (connectGuide.currentBound.value) {
+    return el.service_description || el.host_name || layerName(el)
+  }
   const idx = connectGuide.slots.value.findIndex((s) => s.id === el.id)
   return _t('Connect slot %{n}: %{name}', {
     n: String(idx + 1),
@@ -1316,7 +1357,7 @@ let lastNudgeAt = 0
 function nudge(dx: number, dy: number): void {
   const movable = movingIds()
     .map(byId)
-    .filter((e): e is PresentationElement => !!e && !e.locked)
+    .filter((e): e is PresentationElement => !!e && !isLocked(e))
   if (!movable.length) return
   const now = Date.now()
   if (now - lastNudgeAt > 600) snapshot()
@@ -1342,7 +1383,15 @@ function isTypingTarget(): boolean {
 }
 
 function onKey(e: KeyboardEvent): void {
-  if (!interactive.value || editingTextId.value || isTypingTarget()) return
+  if (!interactive.value) return
+  // Escape ends inline text editing (the blur commits the text) — checked
+  // before the typing guard, which swallows every other key while editing.
+  if (e.key === 'Escape' && editingTextId.value) {
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    editingTextId.value = null
+    return
+  }
+  if (editingTextId.value || isTypingTarget()) return
   const meta = e.ctrlKey || e.metaKey
   if (meta && e.key.toLowerCase() === 'z') {
     e.preventDefault()
@@ -1413,6 +1462,11 @@ const shapeTools: PaletteTool[] = [
   width: 100%;
   height: 100%;
   overflow: hidden;
+  background: var(--bg, #0f1117);
+}
+
+/* The checkerboard gutter is editor chrome — view/kiosk get a calm surround. */
+.pres--edit {
   background:
     repeating-conic-gradient(rgb(128 128 128 / 7%) 0% 25%, transparent 0% 50%) 50% / 22px 22px,
     var(--bg, #0f1117);
@@ -1472,6 +1526,7 @@ const shapeTools: PaletteTool[] = [
 
 .pres__guides {
   position: absolute;
+  z-index: 1001;
   inset: 0;
   pointer-events: none;
   overflow: visible;
@@ -1493,8 +1548,11 @@ const shapeTools: PaletteTool[] = [
   pointer-events: none;
 }
 
+/* The selection box sits above every element (template z reaches 40+) so the
+   resize/rotate handles stay clickable; the box itself ignores pointers. */
 .pres__sel {
   position: absolute;
+  z-index: 1000;
   outline: solid var(--accent, #15d1a0);
   pointer-events: none;
 }
@@ -1540,6 +1598,7 @@ const shapeTools: PaletteTool[] = [
 
 .pres__marquee {
   position: absolute;
+  z-index: 1001;
   background: color-mix(in srgb, var(--accent, #15d1a0) 12%, transparent);
   border: 1px solid var(--accent, #15d1a0);
   pointer-events: none;
@@ -1722,9 +1781,16 @@ const shapeTools: PaletteTool[] = [
 }
 
 .pres__connect-pop-title {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.pres__connect-check {
+  flex-shrink: 0;
+  color: var(--color-state-up, #4ade80);
+  font-weight: 700;
 }
 
 .pres__connect-pop-body {
@@ -1777,12 +1843,6 @@ const shapeTools: PaletteTool[] = [
 .pres__hud-btn:disabled {
   opacity: 0.3;
   cursor: default;
-}
-
-.pres__hud-status {
-  font-size: 12px;
-  color: var(--text-muted, #8b93a7);
-  min-width: 48px;
 }
 
 .pres__layers {
