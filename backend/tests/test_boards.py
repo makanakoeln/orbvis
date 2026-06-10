@@ -525,3 +525,50 @@ async def test_import_drops_now_invalid_urls(client, admin_token, tmp_path, monk
     )
     assert resp.status_code == 201
     assert resp.json()["objects"][0]["url"] is None
+
+
+# ---- Import name safety ----
+
+
+@pytest.mark.asyncio
+async def test_import_rejects_unsafe_board_name(client, admin_token, tmp_path, monkeypatch):
+    """A name that _board_path would reject must fail the import up front —
+    otherwise the board lives only in the cache, every debounced flush fails
+    and the data silently vanishes on restart."""
+    _patch(monkeypatch, tmp_path)
+    resp = await client.post(
+        "/api/v1/boards/import",
+        json={"name": "Mein Netz", "objects": []},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 409
+    listing = await client.get("/api/v1/boards", headers={"Authorization": f"Bearer {admin_token}"})
+    assert "Mein Netz" not in [b["name"] for b in listing.json()]
+
+
+@pytest.mark.asyncio
+async def test_import_rejects_case_insensitive_duplicate(
+    client, admin_token, tmp_path, monkeypatch
+):
+    await _create(client, admin_token, tmp_path, monkeypatch, "folder")
+    resp = await client.post(
+        "/api/v1/boards/import",
+        json={"name": "Folder", "objects": []},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_cfg_import_sanitizes_filename_to_board_name(
+    client, admin_token, tmp_path, monkeypatch
+):
+    _patch(monkeypatch, tmp_path)
+    cfg = "define global {\n}\n"
+    resp = await client.post(
+        "/api/v1/boards/import/cfg",
+        files={"file": ("Mein Netz (alt).cfg", cfg.encode(), "text/plain")},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["name"] == "Mein_Netz__alt_"

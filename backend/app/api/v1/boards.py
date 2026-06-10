@@ -6,6 +6,7 @@ import asyncio
 import io
 import json
 import os
+import re
 import sqlite3
 import tempfile
 import zipfile
@@ -422,7 +423,10 @@ async def import_cfg(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Only .cfg files are accepted"
         )
     content = (await file.read()).decode("utf-8", errors="replace")
-    map_name = Path(file.filename).stem
+    # Legacy NagVis map files may carry spaces/umlauts in the filename; board
+    # names are file-backed and restricted, so map to the safe charset instead
+    # of failing the import.
+    map_name = re.sub(r"[^a-zA-Z0-9_\-]", "_", Path(file.filename).stem) or "imported_map"
     data = cfg_to_board(content, map_name)
     # Imported connection ids (typically the source-site name) almost never match
     # the OrbVis-side ids (live_1, live_2, …). Without remapping the imported

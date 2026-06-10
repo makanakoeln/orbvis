@@ -429,6 +429,14 @@ def import_board(data: dict[str, object], *, overwrite: bool = False) -> BoardCo
     # as the load path so one stale value doesn't fail the whole import.
     _sanitize_legacy_data(data)
     cfg = BoardConfig.model_validate(data)
+    # BoardConfig.name carries no pattern (the load path must accept whatever
+    # is on disk), so guard the write path here: an unsafe name would pass the
+    # cache but make every debounced flush fail in _board_path — the board
+    # would silently vanish on restart and be undeletable meanwhile.
+    if not _NAME_RE.match(cfg.name):
+        raise ValueError(
+            f"Board name {cfg.name!r} is invalid — only letters, digits, '_' and '-' are allowed"
+        )
     with _board_lock(cfg.name):
         existing = get_board(cfg.name)
         if existing is not None:
@@ -436,6 +444,12 @@ def import_board(data: dict[str, object], *, overwrite: bool = False) -> BoardCo
                 raise ValueError(f"Board '{cfg.name}' already exists")
             if existing.readonly:
                 raise ValueError(f"Board '{cfg.name}' is read-only and cannot be overwritten")
+        else:
+            # Same case-insensitive collision guard as create_board/clone_board
+            # (file-backed names collide on case-insensitive filesystems).
+            lowered = cfg.name.lower()
+            if any(b.name.lower() == lowered for b in list_boards()):
+                raise ValueError(f"Board '{cfg.name}' already exists")
         _save_board(cfg)
         return cfg
 
