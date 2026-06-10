@@ -148,14 +148,17 @@ describe('useAuthStore', () => {
     expect(mockPush).toHaveBeenCalledWith({ name: 'home' })
   })
 
-  it('login() sets error and rethrows on failure', async () => {
+  it('login() surfaces failure via the error state without rejecting', async () => {
     const { useAuthStore } = await import('./auth')
     mockAuthApi.login.mockRejectedValue(new Error('Invalid credentials'))
 
     const store = useAuthStore()
-    await expect(store.login('bad', 'bad')).rejects.toThrow('Invalid credentials')
+    // Must not reject: the submit handler doesn't catch, so a re-throw would
+    // be an unhandled rejection on every failed login.
+    await store.login('bad', 'bad')
     expect(store.error).toBe('Invalid credentials')
     expect(store.loading).toBe(false)
+    expect(store.user).toBeNull()
   })
 
   it('logout() clears auth state and navigates to login', async () => {

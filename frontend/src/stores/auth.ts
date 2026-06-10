@@ -145,44 +145,39 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function _loadUser(token: string) {
+    user.value = await authApi.me(token)
+    const lang =
+      ssoActive.value && user.value.cmk_language
+        ? user.value.cmk_language
+        : (user.value.language ?? 'en')
+    void setLanguage(lang)
+    applyInlineHelp(user.value.cmk_inline_help)
+    // Load global settings so they're available for new map/object creation
+    useSettingsStore()
+      .load()
+      .catch((e) => console.warn('[OrbVis] Failed to load settings:', e))
+    // Load object-option registry (line styles, …) so dropdowns
+    // in the EditPanel / Global Settings stay in sync. Lazy import
+    // keeps the auth store free of a circular dep through pinia.
+    import('@/stores/objectOptions').then((m) => {
+      m.useObjectOptionsStore()
+        .ensureLoaded()
+        .catch((e) => console.warn('[OrbVis] Failed to load object options:', e))
+    })
+  }
+
   async function fetchCurrentUser() {
     if (!accessToken.value) return
     try {
-      user.value = await authApi.me(accessToken.value)
-      const lang =
-        ssoActive.value && user.value.cmk_language
-          ? user.value.cmk_language
-          : (user.value.language ?? 'en')
-      void setLanguage(lang)
-      applyInlineHelp(user.value.cmk_inline_help)
-      // Load global settings so they're available for new map/object creation
-      useSettingsStore()
-        .load()
-        .catch((e) => console.warn('[OrbVis] Failed to load settings:', e))
-      // Load object-option registry (line styles, …) so dropdowns
-      // in the EditPanel / Global Settings stay in sync. Lazy import
-      // keeps the auth store free of a circular dep through pinia.
-      import('@/stores/objectOptions').then((m) => {
-        m.useObjectOptionsStore()
-          .ensureLoaded()
-          .catch((e) => console.warn('[OrbVis] Failed to load object options:', e))
-      })
+      await _loadUser(accessToken.value)
     } catch {
       // Access token may be expired — try refresh before giving up
       if (refreshToken.value) {
         const ok = await refreshAccessToken()
         if (ok && accessToken.value) {
           try {
-            user.value = await authApi.me(accessToken.value)
-            const lang2 =
-              ssoActive.value && user.value.cmk_language
-                ? user.value.cmk_language
-                : (user.value.language ?? 'en')
-            void setLanguage(lang2)
-            applyInlineHelp(user.value.cmk_inline_help)
-            useSettingsStore()
-              .load()
-              .catch((e) => console.warn('[OrbVis] Failed to load settings:', e))
+            await _loadUser(accessToken.value)
             return
           } catch {
             /* fall through to clearAuth */
@@ -203,12 +198,16 @@ export const useAuthStore = defineStore('auth', () => {
       sessionStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token)
       sessionStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token)
       await fetchCurrentUser()
-      const redirect = router.currentRoute.value.query.redirect as string | undefined
-      const target: RouteLocationRaw = redirect ? { path: redirect } : { name: 'home' }
+      // query params can be string[] (?redirect=a&redirect=b) — only honor a
+      // plain single value, anything else lands on home.
+      const redirect = router.currentRoute.value.query.redirect
+      const target: RouteLocationRaw =
+        typeof redirect === 'string' && redirect ? { path: redirect } : { name: 'home' }
       router.push(target)
     } catch (e: unknown) {
+      // Communicated via `error` (LoginView renders it) — re-throwing would
+      // only produce an unhandled rejection in the submit handler.
       error.value = e instanceof Error ? e.message : 'Login failed'
-      throw e
     } finally {
       loading.value = false
     }
