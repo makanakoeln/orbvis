@@ -7,12 +7,7 @@
           :model-value="form.name"
           placeholder="my-board"
           field-size="FILL"
-          @update:model-value="
-            (v) =>
-              onNameInput({
-                target: { value: String(v ?? '') }
-              } as unknown as Event)
-          "
+          @update:model-value="(v) => onNameInput(String(v ?? ''))"
         />
         <p v-if="nameError" class="create-board__error">{{ nameError }}</p>
         <p v-else-if="nameWarning" class="create-board__warning">{{ nameWarning }}</p>
@@ -149,9 +144,8 @@ const _MAX_NAME_LEN = 64
 const nameError = ref('')
 const nameWarning = ref('')
 
-function onNameInput(e: Event) {
+function onNameInput(raw: string) {
   nameTouched.value = true
-  const raw = (e.target as HTMLInputElement).value
   const stripped = sanitizeStrippedChars(raw)
   form.value.name = sanitizeBoardName(raw)
   if (form.value.name.length > _MAX_NAME_LEN) {

@@ -105,7 +105,7 @@ export const useBoardsStore = defineStore('boards', () => {
       hover_template: cfg.hover_template ?? null,
       context_template: cfg.context_template ?? null,
       render_mode: cfg.render_mode ?? 'default',
-      can_edit: true // creation is admin-only; creator can always edit
+      can_edit: true // the creator can always edit their new board
     })
     return cfg
   }

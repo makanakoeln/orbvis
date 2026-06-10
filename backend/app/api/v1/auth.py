@@ -29,6 +29,7 @@ from app.core.security import (
     decode_token,
     is_token_blocked,
 )
+from app.integrations.checkmk import load_user_inline_help
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RefreshRequest, StreamTicketResponse, TokenResponse
 from app.schemas.user import UserRead
@@ -132,8 +133,6 @@ async def me(current_user: User = Depends(get_current_user)) -> UserRead:
     result.can_configure = can_configure(current_user)
     result.can_create_boards = can_create_board(current_user)
     result.command_permissions = allowed_command_actions(current_user)
-    from app.integrations.checkmk import load_user_inline_help
-
     result.cmk_inline_help = load_user_inline_help(current_user.name)
     return result
 

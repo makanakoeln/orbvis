@@ -308,8 +308,9 @@ def _sanitize_legacy_data(data: object) -> None:
                 obj[key] = coerce_user_url(obj[key])
     view = data.get("view")
     if isinstance(view, dict):
-        if "background_image" in view:
-            view["background_image"] = coerce_user_url(view["background_image"])
+        for key in ("background_image", "tile_url"):
+            if key in view:
+                view[key] = coerce_user_url(view[key])
         for el in view.get("elements") or []:
             if isinstance(el, dict) and "src" in el:
                 el["src"] = coerce_user_url(el["src"])

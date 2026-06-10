@@ -764,6 +764,7 @@
           variant="success"
           :href="problemsUrlFull"
           target="_blank"
+          rel="noopener noreferrer"
           class="detail-drawer__action detail-drawer__action--primary"
         >
           {{ _t('Show problems') }} ↗

@@ -202,6 +202,12 @@ class WorldmapView(BaseModel):
     auto_filter_value: str = ""
     problems_only: bool = False
 
+    @field_validator("tile_url")
+    @classmethod
+    def _validate_tile_url(cls, v: str | None) -> str | None:
+        # Lands in Leaflet's <img src> — same scheme allowlist as object URLs.
+        return validate_user_url(v)
+
 
 class RadarView(BaseModel):
     type: Literal["radar"] = "radar"

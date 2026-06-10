@@ -566,6 +566,9 @@ class MetricHistoryResponse(BaseModel):
     series: dict[str, list[MetricPoint]]
     titles: dict[str, str]
     graphs: list[GraphGroupResponse] = []
+    # Set (with empty series) when the backend fetch failed — details stay in
+    # the server log, the client only needs "no data vs. error".
+    error: str | None = None
 
 
 @router.get("/{connection_id}/metric-history", response_model=MetricHistoryResponse)
@@ -587,10 +590,7 @@ async def get_metric_history(
             raw = await connection.get_metric_history(host, service, start, end)
     except Exception as exc:
         logger.error("metric-history error: %s", exc, exc_info=True)
-        return MetricHistoryResponse(
-            series={"_error": [MetricPoint(ts=0, value=0, unit=str(exc))]},
-            titles={},
-        )
+        return MetricHistoryResponse(series={}, titles={}, error="Metric history fetch failed")
     return MetricHistoryResponse(
         series={
             label: [MetricPoint(ts=ts, value=v, unit=u) for ts, v, u in pts]

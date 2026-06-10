@@ -15,7 +15,6 @@
       </div>
 
       <!-- Custom template — sanitized via sanitizeTemplateHtml before rendering -->
-      <!-- eslint-disable-next-line vue/no-v-html -->
       <div v-else-if="renderedTemplate" class="orb-hover__template" v-html="renderedTemplate" />
 
       <!-- Default content -->

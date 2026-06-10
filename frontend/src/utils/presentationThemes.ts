@@ -3,7 +3,9 @@ import type { PresentationTheme } from '@/types/api'
 // A theme is a CSS-variable token set applied inline on the slide root, so
 // shapes and text default to a coherent palette without per-element styling.
 // Element insert-defaults pull from the active theme (see elementDefaults).
-export interface PresentationThemeTokens {
+// The index signature lets the tokens spread directly into a CSS-var style
+// object without casting.
+export interface PresentationThemeTokens extends Record<string, string> {
   '--pres-bg': string
   '--pres-fg': string
   '--pres-muted': string

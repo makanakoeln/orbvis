@@ -804,6 +804,7 @@ export interface MetricHistoryResponse {
   series: Record<string, MetricPoint[]>
   titles: Record<string, string>
   graphs: MetricGraphGroup[]
+  error?: string | null
 }
 
 export interface CommentInfo {

@@ -274,8 +274,6 @@ async def get_auto_objects(
     transient — they're never persisted, so the editor only ever sees the
     operator's curated set.
     """
-    from app.services import state_service
-
     _require_board_view(name, current_user)
     cfg = board_service.get_board(name)
     if cfg is None:

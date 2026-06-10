@@ -5,7 +5,7 @@ import os
 import secrets
 from typing import Literal, Self, cast
 
-from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.core._env import load_env_file
 
@@ -89,7 +89,6 @@ class Settings(BaseModel):
         default_factory=lambda: _env_str("CONNECTIONS_FILE", "./connections.json")
     )
 
-    ws_ping_interval: int = Field(default_factory=lambda: _env_int("WS_PING_INTERVAL", 30))
     state_refresh_interval: int = Field(
         default_factory=lambda: _env_int("STATE_REFRESH_INTERVAL", 5)
     )
@@ -145,11 +144,6 @@ class Settings(BaseModel):
             "ALLOWED_ORIGINS", ["http://localhost:3000", "http://localhost:5173"]
         )
     )
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def sync_database_url(self) -> str:
-        return self.database_url.replace("+aiosqlite", "")
 
     @model_validator(mode="after")
     def _ensure_secret_key(self) -> Self:

@@ -1,5 +1,4 @@
 import {
-  type NavigationGuardNext,
   type RouteLocationNormalized,
   type RouteLocationRaw,
   createRouter,
@@ -127,8 +126,5 @@ export async function authGuard(
 }
 
 router.beforeEach(authGuard)
-
-// Suppress "unused" warnings for types only consumed by the guard signature.
-export type { NavigationGuardNext }
 
 export default router

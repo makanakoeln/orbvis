@@ -396,9 +396,7 @@ const slideW = computed(() => local.value.width)
 const slideH = computed(() => local.value.height)
 const { scale, offsetX, offsetY, screenToSlide } = useSlideViewport(containerRef, slideW, slideH)
 
-const themeVars = computed(
-  () => themeTokens(local.value.theme) as unknown as Record<string, string>
-)
+const themeVars = computed(() => themeTokens(local.value.theme))
 const stageStyle = computed(() => ({
   ...themeVars.value,
   position: 'absolute' as const,

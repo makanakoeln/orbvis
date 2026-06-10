@@ -204,7 +204,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             settings_service.save_system_settings(_sys)
             logger.info("Auto-set global checkmk_url to /%s", settings.checkmk_site)
 
-    if settings.checkmk_omd_root and settings.checkmk_site:
         conn_id = f"cmk_{settings.checkmk_site}"
         if not connection_service.load_all():
             socket_path = str(Path(settings.checkmk_omd_root) / "tmp" / "run" / "live")

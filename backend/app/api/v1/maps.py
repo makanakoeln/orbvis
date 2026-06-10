@@ -150,54 +150,55 @@ async def get_tile(
         return _png_response(cached, if_none_match)
 
     key = (z, x, y)
+    # Locks stay in the dict for the process lifetime: popping in a finally
+    # would release the key while other coroutines still wait on the same
+    # lock, letting a third request create a fresh lock and fetch in
+    # parallel. Growth is bounded by the distinct tiles actually viewed.
     lock = _inflight.setdefault(key, asyncio.Lock())
-    try:
-        async with lock:
-            # Re-check after acquiring the lock — another coroutine may have
-            # already refreshed the cache while we were waiting.
-            cached = _read_cached(cache_path)
-            meta = _read_meta(cache_path)
+    async with lock:
+        # Re-check after acquiring the lock — another coroutine may have
+        # already refreshed the cache while we were waiting.
+        cached = _read_cached(cache_path)
+        meta = _read_meta(cache_path)
+        now = time.time()
+        if cached is not None and meta is not None and now < meta.expires_at:
+            return _png_response(cached, if_none_match)
+
+        validators = meta if cached is not None else None
+        try:
+            resp = await _fetch_upstream(z, x, y, validators)
             now = time.time()
-            if cached is not None and meta is not None and now < meta.expires_at:
+            if resp.status_code == 304 and cached is not None:
+                _write_meta(cache_path, _meta_from_headers(resp.headers, now, meta))
                 return _png_response(cached, if_none_match)
-
-            validators = meta if cached is not None else None
-            try:
-                resp = await _fetch_upstream(z, x, y, validators)
-                now = time.time()
-                if resp.status_code == 304 and cached is not None:
-                    _write_meta(cache_path, _meta_from_headers(resp.headers, now, meta))
-                    return _png_response(cached, if_none_match)
-                if resp.status_code == 200:
-                    data = resp.content
-                    _write_cache(cache_path, data)
-                    _write_meta(cache_path, _meta_from_headers(resp.headers, now, None))
-                    return _png_response(data, if_none_match)
-                upstream_error: Exception = HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Upstream returned {resp.status_code} for tile {z}/{x}/{y}",
-                )
-            except httpx.HTTPError as e:
-                upstream_error = e
-
-            # Reached only on upstream failure: a stale tile beats a hard error
-            # (and spares OSM a retry storm); only propagate when nothing cached.
-            if cached is not None:
-                logger.warning(
-                    "Tile fetch/revalidation failed for %s/%s/%s, serving stale: %s",
-                    z,
-                    x,
-                    y,
-                    upstream_error,
-                )
-                return _png_response(cached, if_none_match)
-            logger.warning("Tile fetch failed for %s/%s/%s: %s", z, x, y, upstream_error)
-            raise HTTPException(
+            if resp.status_code == 200:
+                data = resp.content
+                _write_cache(cache_path, data)
+                _write_meta(cache_path, _meta_from_headers(resp.headers, now, None))
+                return _png_response(data, if_none_match)
+            upstream_error: Exception = HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Upstream tile fetch failed",
-            ) from upstream_error
-    finally:
-        _inflight.pop(key, None)
+                detail=f"Upstream returned {resp.status_code} for tile {z}/{x}/{y}",
+            )
+        except httpx.HTTPError as e:
+            upstream_error = e
+
+        # Reached only on upstream failure: a stale tile beats a hard error
+        # (and spares OSM a retry storm); only propagate when nothing cached.
+        if cached is not None:
+            logger.warning(
+                "Tile fetch/revalidation failed for %s/%s/%s, serving stale: %s",
+                z,
+                x,
+                y,
+                upstream_error,
+            )
+            return _png_response(cached, if_none_match)
+        logger.warning("Tile fetch failed for %s/%s/%s: %s", z, x, y, upstream_error)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Upstream tile fetch failed",
+        ) from upstream_error
 
 
 def _read_cached(path: Path) -> bytes | None:

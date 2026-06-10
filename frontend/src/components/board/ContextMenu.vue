@@ -11,10 +11,15 @@
     </div>
 
     <!-- Custom template block -->
-    <!-- eslint-disable-next-line vue/no-v-html -->
     <div v-if="renderedTemplate" class="orb-ctx__template" v-html="renderedTemplate" />
 
-    <a v-if="hostUrl" :href="hostUrl" target="_blank" class="orb-ctx__item">
+    <a
+      v-if="hostUrl"
+      :href="hostUrl"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="orb-ctx__item"
+    >
       <svg
         class="orb-ctx__icon"
         fill="none"
@@ -30,7 +35,13 @@
       </svg>
       <span>{{ _t('Host in Checkmk') }}</span>
     </a>
-    <a v-if="hostServicesUrl" :href="hostServicesUrl" target="_blank" class="orb-ctx__item">
+    <a
+      v-if="hostServicesUrl"
+      :href="hostServicesUrl"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="orb-ctx__item"
+    >
       <svg
         class="orb-ctx__icon"
         fill="none"
@@ -46,7 +57,13 @@
       </svg>
       <span>{{ _t('Problem services') }}</span>
     </a>
-    <a v-if="serviceUrl" :href="serviceUrl" target="_blank" class="orb-ctx__item">
+    <a
+      v-if="serviceUrl"
+      :href="serviceUrl"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="orb-ctx__item"
+    >
       <svg
         class="orb-ctx__icon"
         fill="none"
@@ -62,7 +79,13 @@
       </svg>
       <span>{{ _t('Service in Checkmk') }}</span>
     </a>
-    <a v-if="groupUrl" :href="groupUrl" target="_blank" class="orb-ctx__item">
+    <a
+      v-if="groupUrl"
+      :href="groupUrl"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="orb-ctx__item"
+    >
       <svg
         class="orb-ctx__icon"
         fill="none"
@@ -78,7 +101,13 @@
       </svg>
       <span>{{ _t('Group in Checkmk') }}</span>
     </a>
-    <a v-if="aggregationUrl" :href="aggregationUrl" target="_blank" class="orb-ctx__item">
+    <a
+      v-if="aggregationUrl"
+      :href="aggregationUrl"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="orb-ctx__item"
+    >
       <svg
         class="orb-ctx__icon"
         fill="none"
@@ -98,6 +127,7 @@
       v-if="aggregationOverviewUrl"
       :href="aggregationOverviewUrl"
       target="_blank"
+      rel="noopener noreferrer"
       class="orb-ctx__item"
     >
       <svg

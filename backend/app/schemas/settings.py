@@ -17,6 +17,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
+from app.schemas._validators import coerce_user_url
+
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 # Hex (#rrggbb) or the literal "transparent". Mirrors the FormSpec MatchRegex
@@ -80,10 +82,10 @@ class GlobalSettings(BaseModel):
     default_render_mode: Literal["default", "nagvis_classic"] = "default"
     # Default tile URL applied to new Geo boards. ``None`` keeps the per-board
     # default the BoardSettingsModal already picks (CartoDB dark in dark mode).
-    default_tile_url: str | None = None
-    # Per-user preference for the Home boards overview: visual card grid
-    # (default) or scannable table. Persisted so each operator keeps their
-    # preferred layout across browsers.
+    default_tile_url: Annotated[str | None, BeforeValidator(coerce_user_url)] = None
+    # Instance-wide default for the Home boards overview: visual card grid
+    # (default) or scannable table. The per-operator preference lives in the
+    # browser's localStorage (useBoardListViewMode) and overrides this.
     board_list_view: Literal["cards", "table"] = "cards"
 
 

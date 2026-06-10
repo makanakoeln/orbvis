@@ -1,16 +1,15 @@
 """Stdlib sqlite3 wrapper — replaces SQLAlchemy + aiosqlite + alembic.
 
 Schema lives in core/schema.sql, applied idempotently at startup. Service-layer
-queries are wrapped in ``asyncio.to_thread`` (via ``db_run``) so the async
-surface to FastAPI handlers stays the same.
+queries are wrapped in ``asyncio.to_thread`` so the async surface to FastAPI
+handlers stays the same.
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import sqlite3
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from app.core.config import settings
@@ -36,7 +35,7 @@ def _resolve_db_path() -> str:
 def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(
         _resolve_db_path(),
-        # FastAPI yields the connection to threadpool workers via db_run.
+        # FastAPI yields the connection to threadpool workers (asyncio.to_thread).
         check_same_thread=False,
         # autocommit; explicit BEGIN/COMMIT where transactionality matters.
         isolation_level=None,
@@ -53,10 +52,6 @@ async def get_db() -> AsyncGenerator[sqlite3.Connection, None]:
         yield conn
     finally:
         conn.close()
-
-
-async def db_run[**P, T](fn: Callable[P, T], /, *args: P.args, **kwargs: P.kwargs) -> T:
-    return await asyncio.to_thread(fn, *args, **kwargs)
 
 
 def _ensure_schema() -> None:

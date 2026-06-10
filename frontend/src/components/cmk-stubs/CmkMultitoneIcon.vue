@@ -5,7 +5,6 @@ Add new icons by dropping the corresponding `icon-<name>.svg` into
 `frontend/src/assets/icons/` — they'll be picked up automatically.
 -->
 <template>
-  <!-- eslint-disable-next-line vue/no-v-html -->
   <div v-if="svg" class="cmk-multitone-icon" :title="title" v-html="svg" />
 </template>
 
