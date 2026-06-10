@@ -611,6 +611,7 @@ import type {
   WorldmapView
 } from '@/types/api'
 import { openUrl } from '@/utils/boardNavigation'
+import { asFormSpecSchema } from '@/utils/formSpec'
 import { toFormValidation } from '@/utils/formValidation'
 import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge'
 import { interpolateTemplate } from '@/utils/template'
@@ -1499,9 +1500,9 @@ onMounted(async () => {
         dict.elements = dict.elements.filter((el) => !drop.has(el.name))
       }
     }
-    formSchema.value = spec as unknown as Schema
+    formSchema.value = asFormSpecSchema(spec)
   }
-  if (flowSpec) flowViewFormSchema.value = flowSpec as unknown as Schema
+  if (flowSpec) flowViewFormSchema.value = asFormSpecSchema(flowSpec)
   // Wait for FormEdit's first render to normalise formSpecData, then
   // snapshot again so isDirty doesn't fire on the visitor's own defaults.
   await nextTick()

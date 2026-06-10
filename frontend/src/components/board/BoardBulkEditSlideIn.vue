@@ -57,6 +57,7 @@ import CmkSlideInDialog from '@/components/cmk/CmkSlideInDialog'
 import { boardsApiFormSpec } from '@/api/client'
 import { orbFormComponents } from '@/composables/orbFormComponents'
 import { useAuthStore } from '@/stores/auth'
+import { asFormSpecSchema } from '@/utils/formSpec'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 const props = defineProps<{
@@ -95,7 +96,7 @@ async function loadSchema() {
   schemaLoading.value = true
   try {
     const spec = await boardsApiFormSpec.getBulkMetadataSchema(auth.accessToken ?? '')
-    formSchema.value = spec as unknown as Schema
+    formSchema.value = asFormSpecSchema(spec)
   } catch {
     formSchema.value = null
   } finally {
