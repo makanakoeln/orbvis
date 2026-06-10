@@ -367,13 +367,20 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     canvasEl: HTMLElement
   ) {
     const mouse = _mouseToCanvas(event, canvasEl)
+    // A bound endpoint renders at its connected object's live position
+    // (BoardCanvas.boundCoordsFor), while the line's stored x/y is only a bind-time
+    // fallback that goes stale once the object is moved. Seed init from the live
+    // object so grabbing the line doesn't snap the endpoint to the stale coordinate.
+    const objects = boardsStore.currentBoard?.objects ?? []
+    const startRef = obj.start_ref ? objects.find((o) => o.id === obj.start_ref) : null
+    const endRef = obj.end_ref ? objects.find((o) => o.id === obj.end_ref) : null
     const x2 = obj.x2 ?? obj.x + 100
     const y2 = obj.y2 ?? obj.y + 100
     const init: LineCoords = {
-      x: obj.x,
-      y: obj.y,
-      x2,
-      y2,
+      x: startRef ? startRef.x : obj.x,
+      y: startRef ? startRef.y : obj.y,
+      x2: endRef ? endRef.x : x2,
+      y2: endRef ? endRef.y : y2,
       mid_x: obj.mid_x ?? null,
       mid_y: obj.mid_y ?? null
     }
