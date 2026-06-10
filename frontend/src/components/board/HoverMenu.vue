@@ -546,8 +546,7 @@ const servicePills = computed((): ServicePill[] => {
       ? buildServiceStateViewUrl(props.checkmkUrl ?? null, { host: props.object.host_name }, state)
       : null
   // Severity-descending: a CRIT pill catches the eye before "all green";
-  // OK stays last as confirmation. PENDING carries no URL — the Checkmk
-  // svcstate filter has no checkbox for it.
+  // OK stays last as confirmation.
   const defs: Array<{
     key: keyof typeof summary
     label: ServicePill['label']
@@ -557,7 +556,7 @@ const servicePills = computed((): ServicePill[] => {
     { key: 'critical', label: 'CRIT', tone: 'crit', state: 'CRITICAL' },
     { key: 'unknown', label: 'UNKN', tone: 'unknown', state: 'UNKNOWN' },
     { key: 'warning', label: 'WARN', tone: 'warn', state: 'WARNING' },
-    { key: 'pending', label: 'PEND', tone: 'pending', state: null },
+    { key: 'pending', label: 'PEND', tone: 'pending', state: 'PENDING' },
     { key: 'ok', label: 'OK', tone: 'ok', state: 'OK' }
   ]
   return defs

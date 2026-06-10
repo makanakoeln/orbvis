@@ -159,6 +159,7 @@ export function svcStateOn(state: string): string {
   if (state === 'CRITICAL') return 'st2'
   if (state === 'WARNING') return 'st1'
   if (state === 'UNKNOWN') return 'st3'
+  if (state === 'PENDING') return 'stp'
   return 'st0' // OK
 }
 
@@ -171,8 +172,8 @@ export function hostStateOn(state: string): string {
 /**
  * Checkmk view listing a host's (or site's) services filtered to one state —
  * the target of the clickable state pills/chips in HoverMenu and DetailDrawer.
- * Returns null outside a Checkmk deployment or for unfilterable states (the
- * svcstate filter has no PENDING checkbox).
+ * Returns null outside a Checkmk deployment or for states the svcstate filter
+ * can't express (PENDING maps to the filter's "stp" checkbox, so it's fine).
  */
 export function buildServiceStateViewUrl(
   checkmkUrl: string | null,
@@ -180,7 +181,7 @@ export function buildServiceStateViewUrl(
   state: string
 ): string | null {
   if (!checkmkUrl) return null
-  if (!['OK', 'WARNING', 'CRITICAL', 'UNKNOWN'].includes(state)) return null
+  if (!['OK', 'WARNING', 'CRITICAL', 'UNKNOWN', 'PENDING'].includes(state)) return null
   const params: Record<string, string> = {
     filled_in: 'filter',
     _active: 'svcstate;host',

@@ -8,6 +8,7 @@ describe('svcStateOn / hostStateOn', () => {
     expect(svcStateOn('WARNING')).toBe('st1')
     expect(svcStateOn('CRITICAL')).toBe('st2')
     expect(svcStateOn('UNKNOWN')).toBe('st3')
+    expect(svcStateOn('PENDING')).toBe('stp')
     expect(hostStateOn('UP')).toBe('hst0')
     expect(hostStateOn('DOWN')).toBe('hst1')
     expect(hostStateOn('UNREACHABLE')).toBe('hst2')
@@ -38,8 +39,15 @@ describe('buildServiceStateViewUrl', () => {
     expect(buildServiceStateViewUrl(cmk, {}, 'OK')).toBeNull()
   })
 
+  it('links PENDING to the svcstate "stp" checkbox', () => {
+    const url = buildServiceStateViewUrl(cmk, { host: 'web01' }, 'PENDING')
+    expect(url).toContain('view_name=allservices')
+    expect(url).toContain('host=web01')
+    expect(url).toContain('stp=on')
+  })
+
   it('returns null for states the svcstate filter cannot express', () => {
-    expect(buildServiceStateViewUrl(cmk, { host: 'web01' }, 'PENDING')).toBeNull()
+    expect(buildServiceStateViewUrl(cmk, { host: 'web01' }, 'DOWN')).toBeNull()
   })
 })
 
