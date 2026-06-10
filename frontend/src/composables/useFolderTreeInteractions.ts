@@ -3,6 +3,7 @@ import { type Ref, computed, ref } from 'vue'
 import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useStatesStore } from '@/stores/states'
 import type { BoardObject, FolderTreeNode, MonitoringState, ObjectState } from '@/types/api'
+import { stripCheckmkBase } from '@/utils/boardNavigation'
 
 interface FolderHover {
   object: BoardObject
@@ -173,7 +174,7 @@ export function useFolderTreeInteractions(options: FolderTreeOptions) {
     if (!node) return null
     const raw = checkmkUrl.value
     if (!raw) return null
-    const base = raw.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
+    const base = stripCheckmkBase(raw)
     const p = new URLSearchParams({ mode: 'folder', folder: node.path })
     return `${base}/check_mk/wato.py?${p.toString()}`
   })

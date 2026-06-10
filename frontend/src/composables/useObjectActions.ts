@@ -23,6 +23,9 @@ export interface UseObjectActions {
   downtimeModalObject: ReturnType<typeof ref<BoardObject | null>>
   commentModalObject: ReturnType<typeof ref<BoardObject | null>>
   removeDowntimeModal: { visible: boolean; downtimes: DowntimeEntry[]; objectName: string }
+  closeAckModal(): void
+  closeDowntimeModal(): void
+  closeRemoveDowntimeModal(): void
   handlers: {
     acknowledge(obj: BoardObject | null): void
     removeAck(obj: BoardObject | null): Promise<void>
@@ -170,11 +173,31 @@ export function useObjectActions(
     })
   }
 
+  // Modal close = command finished (or aborted) — refresh so the board
+  // reflects the acknowledged/downtimed state without waiting a full tick.
+  function closeAckModal(): void {
+    ackModalObject.value = null
+    statesStore.refreshAfterCommand()
+  }
+
+  function closeDowntimeModal(): void {
+    downtimeModalObject.value = null
+    statesStore.refreshAfterCommand()
+  }
+
+  function closeRemoveDowntimeModal(): void {
+    removeDowntimeModal.visible = false
+    statesStore.refreshAfterCommand()
+  }
+
   return {
     ackModalObject,
     downtimeModalObject,
     commentModalObject,
     removeDowntimeModal,
+    closeAckModal,
+    closeDowntimeModal,
+    closeRemoveDowntimeModal,
     handlers: {
       acknowledge,
       removeAck,

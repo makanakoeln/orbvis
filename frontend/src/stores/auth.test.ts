@@ -28,6 +28,7 @@ const { mockPush, mockAuthApi, ApiError } = vi.hoisted(() => {
 })
 
 vi.mock('@/api/client', () => ({
+  ACCESS_TOKEN_KEY: 'orbvis_access_token',
   ApiError,
   authApi: mockAuthApi,
   settingsApi: { get: vi.fn().mockResolvedValue({}), update: vi.fn() },

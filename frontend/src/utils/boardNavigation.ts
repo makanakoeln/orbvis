@@ -2,11 +2,17 @@ import type { BoardObject } from '@/types/api'
 
 import { SAFE_URL_SCHEMES } from './sanitize'
 
+// Strip the trailing "/check_mk" segment (and trailing slash) from a stored
+// Checkmk GUI URL, leaving the site base every deep link is built from.
+export function stripCheckmkBase(checkmkUrl: string | null | undefined): string {
+  return checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '') ?? ''
+}
+
 function _baseAndSite(
   checkmkUrl: string | null,
   siteOverride?: string | null
 ): { base: string; p: Record<string, string> } | null {
-  const base = checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
+  const base = stripCheckmkBase(checkmkUrl)
   if (!base) return null
   // Don't fall back to the URL's path segment — on a central that would pin
   // the link to the central site id even for hosts on remotes.
@@ -26,47 +32,59 @@ function _wrapInChrome(base: string, viewPath: string, viewParams: URLSearchPara
   return `${base}/check_mk/index.py?${outer}`
 }
 
+// One Checkmk view deep link. ``chrome: true`` wraps it in
+// index.py?start_url=… so the landing page keeps Checkmk's sidebar/topbar
+// (see _wrapInChrome) — bare view URLs stay useful inside embedded iframes.
+export function buildCheckmkViewUrl(
+  checkmkUrl: string | null | undefined,
+  viewName: string,
+  params: Record<string, string> = {},
+  opts: { site?: string | null; chrome?: boolean } = {}
+): string | null {
+  const base = stripCheckmkBase(checkmkUrl)
+  if (!base) return null
+  const p: Record<string, string> = { view_name: viewName, ...params }
+  if (opts.site) p.site = opts.site
+  const search = new URLSearchParams(p)
+  return opts.chrome ? _wrapInChrome(base, 'view.py', search) : `${base}/check_mk/view.py?${search}`
+}
+
 export function buildCheckmkUrl(
   obj: BoardObject,
   checkmkUrl: string | null,
   siteOverride?: string | null
 ): string | null {
-  const r = _baseAndSite(checkmkUrl, siteOverride)
-  if (!r) return null
-  const { base, p } = r
-
+  // Don't fall back to the URL's path segment for the site — on a central
+  // that would pin the link to the central site id even for remote hosts.
+  const opts = { site: siteOverride ?? null, chrome: true }
   if ((obj.type === 'host' || obj.type === 'line') && obj.host_name && !obj.service_description) {
-    p.view_name = 'hoststatus'
-    p.host = obj.host_name
-    return _wrapInChrome(base, 'view.py', new URLSearchParams(p))
+    return buildCheckmkViewUrl(checkmkUrl, 'hoststatus', { host: obj.host_name }, opts)
   }
   if ((obj.type === 'service' || obj.type === 'line') && obj.host_name && obj.service_description) {
-    p.view_name = 'service'
-    p.host = obj.host_name
-    p.service = obj.service_description
-    return _wrapInChrome(base, 'view.py', new URLSearchParams(p))
+    return buildCheckmkViewUrl(
+      checkmkUrl,
+      'service',
+      { host: obj.host_name, service: obj.service_description },
+      opts
+    )
   }
   if (obj.type === 'hostgroup' && obj.group_name) {
-    p.view_name = 'hostgroup'
-    p.hostgroup = obj.group_name
-    return _wrapInChrome(base, 'view.py', new URLSearchParams(p))
+    return buildCheckmkViewUrl(checkmkUrl, 'hostgroup', { hostgroup: obj.group_name }, opts)
   }
   if (obj.type === 'servicegroup' && obj.group_name) {
-    p.view_name = 'servicegroup'
-    p.servicegroup = obj.group_name
-    return _wrapInChrome(base, 'view.py', new URLSearchParams(p))
+    return buildCheckmkViewUrl(checkmkUrl, 'servicegroup', { servicegroup: obj.group_name }, opts)
   }
   if (obj.type === 'aggregation' && obj.aggregation_id) {
-    p.view_name = 'aggr_single'
-    p.aggr_name = obj.aggregation_id
-    p.po_aggr_expand = '1'
-    return _wrapInChrome(base, 'view.py', new URLSearchParams(p))
+    return buildCheckmkViewUrl(
+      checkmkUrl,
+      'aggr_single',
+      { aggr_name: obj.aggregation_id, po_aggr_expand: '1' },
+      opts
+    )
   }
   if (obj.type === 'site' && obj.host_name) {
     // Site root drills into the per-site host overview.
-    p.view_name = 'allhosts'
-    p.site = obj.host_name
-    return _wrapInChrome(base, 'view.py', new URLSearchParams(p))
+    return buildCheckmkViewUrl(checkmkUrl, 'allhosts', {}, { site: obj.host_name, chrome: true })
   }
   return null
 }
@@ -163,9 +181,7 @@ export function buildServiceStateViewUrl(
 ): string | null {
   if (!checkmkUrl) return null
   if (!['OK', 'WARNING', 'CRITICAL', 'UNKNOWN'].includes(state)) return null
-  const base = checkmkUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
   const params: Record<string, string> = {
-    view_name: 'allservices',
     filled_in: 'filter',
     _active: 'svcstate;host',
     [svcStateOn(state)]: 'on'
@@ -178,5 +194,5 @@ export function buildServiceStateViewUrl(
   } else {
     return null
   }
-  return `${base}/check_mk/view.py?${new URLSearchParams(params)}`
+  return buildCheckmkViewUrl(checkmkUrl, 'allservices', params)
 }

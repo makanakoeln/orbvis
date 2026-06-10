@@ -549,8 +549,15 @@ function onSelectFlowHost(hostName: string): void {
 }
 
 const objectActions = useObjectActions(() => props.checkmkUrl ?? null, closeContextMenu)
-const { ackModalObject, downtimeModalObject, commentModalObject, removeDowntimeModal } =
-  objectActions
+const {
+  ackModalObject,
+  downtimeModalObject,
+  commentModalObject,
+  removeDowntimeModal,
+  closeAckModal,
+  closeDowntimeModal,
+  closeRemoveDowntimeModal
+} = objectActions
 const onContextMenuAck = () => objectActions.handlers.acknowledge(contextMenu.object)
 const onContextMenuRemoveAck = () => objectActions.handlers.removeAck(contextMenu.object)
 const onContextMenuDowntime = () => objectActions.handlers.scheduleDowntime(contextMenu.object)
@@ -2036,21 +2043,6 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
       if (ticks >= maxTicks) fireFit()
     })
   }
-}
-
-function closeAckModal(): void {
-  ackModalObject.value = null
-  statesStore.refreshAfterCommand()
-}
-
-function closeDowntimeModal(): void {
-  downtimeModalObject.value = null
-  statesStore.refreshAfterCommand()
-}
-
-function closeRemoveDowntimeModal(): void {
-  removeDowntimeModal.visible = false
-  statesStore.refreshAfterCommand()
 }
 </script>
 

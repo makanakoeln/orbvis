@@ -231,12 +231,15 @@ import { useMarquee } from '@/composables/useMarquee'
 import { useObjectActions } from '@/composables/useObjectActions'
 import { useBoardsStore } from '@/stores/boards'
 import { useSettingsStore } from '@/stores/settings'
-import { useStatesStore } from '@/stores/states'
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api'
 import { GADGET_DEFAULT_SIZE } from '@/utils/gadget'
 import { type GroupMember, applyGroupDelta, collectGroupMembers } from '@/utils/groupDrag'
-import { DIMMED_FILTER, DIMMED_OPACITY, objectMatchesFilter } from '@/utils/objectFilter'
-import { STATEFUL_OBJECT_TYPES, isProblemState } from '@/utils/problemState'
+import {
+  DIMMED_FILTER,
+  DIMMED_OPACITY,
+  objectMatchesFilter,
+  passesProblemFilter
+} from '@/utils/objectFilter'
 import { resolveTemplate } from '@/utils/template'
 
 import AckModal from './AckModal.vue'
@@ -250,7 +253,6 @@ import HoverMenu from './HoverMenu.vue'
 import RemoveDowntimeModal from './RemoveDowntimeModal.vue'
 
 const settingsStore = useSettingsStore()
-const statesStore = useStatesStore()
 
 const props = defineProps<{
   config: BoardConfig
@@ -723,13 +725,11 @@ function objectWrapperStyle(obj: BoardObjectType) {
   }
 }
 
-function passesProblemFilter(obj: BoardObjectType): boolean {
-  if (!props.problemsOnly || !STATEFUL_OBJECT_TYPES.has(obj.type)) return true
-  return isProblemState(props.states[obj.id]?.state)
-}
-
 function matchesSearch(obj: BoardObjectType): boolean {
-  return objectMatchesFilter(obj, props.filterNeedle ?? '') && passesProblemFilter(obj)
+  return (
+    objectMatchesFilter(obj, props.filterNeedle ?? '') &&
+    passesProblemFilter(obj, props.problemsOnly, props.states[obj.id]?.state)
+  )
 }
 
 const filterActive = computed(
@@ -1180,8 +1180,15 @@ function onContextMenuDetach() {
 // ---- CMK actions from context menu ----
 
 const objectActions = useObjectActions(() => props.checkmkUrl ?? null, closeMenus)
-const { ackModalObject, downtimeModalObject, commentModalObject, removeDowntimeModal } =
-  objectActions
+const {
+  ackModalObject,
+  downtimeModalObject,
+  commentModalObject,
+  removeDowntimeModal,
+  closeAckModal,
+  closeDowntimeModal,
+  closeRemoveDowntimeModal
+} = objectActions
 const onContextMenuAck = () => objectActions.handlers.acknowledge(contextMenu.object)
 const onContextMenuRemoveAck = () => objectActions.handlers.removeAck(contextMenu.object)
 const onContextMenuDowntime = () => objectActions.handlers.scheduleDowntime(contextMenu.object)
@@ -1205,21 +1212,6 @@ function getMapPosition(event: MouseEvent): { x: number; y: number } {
 }
 
 defineExpose({ getCanvasEl: () => canvasEl.value, getMapPosition, resetZoom })
-
-function closeAckModal(): void {
-  ackModalObject.value = null
-  statesStore.refreshAfterCommand()
-}
-
-function closeDowntimeModal(): void {
-  downtimeModalObject.value = null
-  statesStore.refreshAfterCommand()
-}
-
-function closeRemoveDowntimeModal(): void {
-  removeDowntimeModal.visible = false
-  statesStore.refreshAfterCommand()
-}
 </script>
 
 <style scoped>

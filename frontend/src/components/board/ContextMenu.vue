@@ -215,6 +215,7 @@
 import { computed } from 'vue'
 
 import type { BoardObject, ObjectState } from '@/types/api'
+import { buildCheckmkViewUrl } from '@/utils/boardNavigation'
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
 import { sanitizeTemplateHtml } from '@/utils/sanitize'
 import { interpolateTemplate } from '@/utils/template'
@@ -270,77 +271,74 @@ const isProblematic = computed(
 
 const displayName = computed(() => getBoardObjectName(props.object))
 
-const base = computed(() => {
-  // Strip trailing /check_mk or /check_mk/ so we can safely append /check_mk/view.py
-  return props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '') ?? null
-})
-
 const site = computed(() => props.state?.site_id ?? null)
 
 const hostUrl = computed(() => {
-  if (!base.value || !props.object.host_name) return null
-  const p: Record<string, string> = { view_name: 'hoststatus', host: props.object.host_name }
-  if (site.value) p.site = site.value
-  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`
+  if (!props.object.host_name) return null
+  return buildCheckmkViewUrl(
+    props.checkmkUrl,
+    'hoststatus',
+    { host: props.object.host_name },
+    { site: site.value }
+  )
 })
 
 const serviceUrl = computed(() => {
-  if (!base.value || !props.object.host_name || !props.object.service_description) return null
-  const p: Record<string, string> = {
-    view_name: 'service',
-    host: props.object.host_name,
-    service: props.object.service_description
-  }
-  if (site.value) p.site = site.value
-  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`
+  if (!props.object.host_name || !props.object.service_description) return null
+  return buildCheckmkViewUrl(
+    props.checkmkUrl,
+    'service',
+    { host: props.object.host_name, service: props.object.service_description },
+    { site: site.value }
+  )
 })
 
 const groupUrl = computed(() => {
-  if (!base.value || !props.object.group_name) return null
+  if (!props.object.group_name) return null
   const view = props.object.type === 'hostgroup' ? 'hostgroup' : 'servicegroup'
-  const key = props.object.type === 'hostgroup' ? 'hostgroup' : 'servicegroup'
-  const p: Record<string, string> = { view_name: view, [key]: props.object.group_name }
-  if (site.value) p.site = site.value
-  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`
+  return buildCheckmkViewUrl(
+    props.checkmkUrl,
+    view,
+    { [view]: props.object.group_name },
+    { site: site.value }
+  )
 })
 
 const aggregationUrl = computed(() => {
-  if (!base.value || props.object.type !== 'aggregation' || !props.object.aggregation_id)
-    return null
-  const p: Record<string, string> = {
-    view_name: 'aggr_single',
-    aggr_name: props.object.aggregation_id,
-    po_aggr_expand: '1'
-  }
-  if (site.value) p.site = site.value
-  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`
+  if (props.object.type !== 'aggregation' || !props.object.aggregation_id) return null
+  return buildCheckmkViewUrl(
+    props.checkmkUrl,
+    'aggr_single',
+    { aggr_name: props.object.aggregation_id, po_aggr_expand: '1' },
+    { site: site.value }
+  )
 })
 
 const aggregationOverviewUrl = computed(() => {
-  if (!base.value || props.object.type !== 'aggregation') return null
-  const p: Record<string, string> = { view_name: 'aggr_all' }
-  if (site.value) p.site = site.value
-  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`
+  if (props.object.type !== 'aggregation') return null
+  return buildCheckmkViewUrl(props.checkmkUrl, 'aggr_all', {}, { site: site.value })
 })
 
 const hostServicesUrl = computed(() => {
-  if (!base.value || props.object.type !== 'host' || !props.object.host_name) return null
+  if (props.object.type !== 'host' || !props.object.host_name) return null
   if (!isProblematic.value) return null
   // When the host itself is down/unreachable, services can't be checked independently
   const hostState = props.state?.state
   if (hostState === 'DOWN' || hostState === 'UNREACHABLE') return null
-  const p: Record<string, string> = {
-    view_name: 'host',
-    host: props.object.host_name,
-    filled_in: 'filter',
-    _active: 'serviceregex;svcstate;host;siteopt',
-    st1: 'on',
-    st2: 'on',
-    st3: 'on',
-    stp: 'on'
-  }
-  if (site.value) p.site = site.value
-  return `${base.value}/check_mk/view.py?${new URLSearchParams(p)}`
+  return buildCheckmkViewUrl(
+    props.checkmkUrl,
+    'host',
+    {
+      host: props.object.host_name,
+      filled_in: 'filter',
+      _active: 'serviceregex;svcstate;host;siteopt',
+      st1: 'on',
+      st2: 'on',
+      st3: 'on',
+      stp: 'on'
+    },
+    { site: site.value }
+  )
 })
 </script>
 <style scoped>

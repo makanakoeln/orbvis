@@ -1065,6 +1065,7 @@ import { useExcludeMembersPreview } from '@/composables/useExcludeMembersPreview
 import { useObjectFormData } from '@/composables/useObjectFormData'
 import { usePropertiesPopover } from '@/composables/usePropertiesPopover'
 import type { BoardObject, LinePerfdataLabel, ObjectState } from '@/types/api'
+import { buildCheckmkViewUrl } from '@/utils/boardNavigation'
 import { linePerfdataLabelOptions, lineStyleOptions } from '@/utils/dropdownOptions'
 import { GADGET_DEFAULT_SIZE } from '@/utils/gadget'
 import { getBoardObjectIdentifier } from '@/utils/naming'
@@ -1102,25 +1103,22 @@ useEscapeClose(() => emit('close'))
 
 // Auto-derived Checkmk URL for the current object (used as placeholder / hint in the URL field)
 const autoUrl = computed((): string | null => {
-  const base = props.checkmkUrl?.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
-  if (!base) return null
-  const p: Record<string, string> = {}
-  if (props.state?.site_id) p.site = props.state.site_id
+  const opts = { site: props.state?.site_id ?? null }
   const { type } = props.object
   const host = form.host_name
   const svc = form.service_description
   const grp = form.group_name
   if (type === 'host' && host) {
-    return `${base}/check_mk/view.py?${new URLSearchParams({ ...p, view_name: 'hoststatus', host })}`
+    return buildCheckmkViewUrl(props.checkmkUrl, 'hoststatus', { host }, opts)
   }
   if (type === 'service' && host && svc) {
-    return `${base}/check_mk/view.py?${new URLSearchParams({ ...p, view_name: 'service', host, service: svc })}`
+    return buildCheckmkViewUrl(props.checkmkUrl, 'service', { host, service: svc }, opts)
   }
   if (type === 'hostgroup' && grp) {
-    return `${base}/check_mk/view.py?${new URLSearchParams({ ...p, view_name: 'hostgroup', hostgroup: grp })}`
+    return buildCheckmkViewUrl(props.checkmkUrl, 'hostgroup', { hostgroup: grp }, opts)
   }
   if (type === 'servicegroup' && grp) {
-    return `${base}/check_mk/view.py?${new URLSearchParams({ ...p, view_name: 'servicegroup', servicegroup: grp })}`
+    return buildCheckmkViewUrl(props.checkmkUrl, 'servicegroup', { servicegroup: grp }, opts)
   }
   return null
 })

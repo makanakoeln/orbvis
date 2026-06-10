@@ -32,9 +32,15 @@ import type {
   TokenResponse,
   UserRead
 } from '@/types/api'
+import { stripCheckmkBase } from '@/utils/boardNavigation'
 
 // import.meta.env.BASE_URL is '/' in dev and '/heute/orbvis/' when built with --base
 const BASE_URL = `${import.meta.env.BASE_URL}api/v1`
+
+// sessionStorage key for the access token. Lives here (not in stores/auth)
+// because both the auth store and the direct CMK-origin command path read
+// it, and the store already imports this module.
+export const ACCESS_TOKEN_KEY = 'orbvis_access_token'
 
 export class ApiError extends Error {
   constructor(
@@ -711,11 +717,18 @@ export const systemSettingsApi = {
     request('/settings/system/form', { method: 'PUT', body: JSON.stringify(data) }, token)
 }
 
+// Shared error path for the direct-fetch helpers below (CMK REST + command
+// proxy) — same ApiError shape as request() so callers can inspect status.
+async function throwApiError(response: Response): Promise<never> {
+  const detail = await response.json().catch(() => null)
+  throw new ApiError(response.status, formatApiErrorBody(detail, response.status), detail)
+}
+
 // ---- Checkmk REST API (direct browser → CMK, same-origin session) ----
 
 async function cmkRequest(baseUrl: string, path: string, body?: unknown): Promise<void> {
   // baseUrl e.g. "http://host/site" → API at "http://host/site/check_mk/api/1.0"
-  const base = baseUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
+  const base = stripCheckmkBase(baseUrl)
   const url = `${base}/check_mk/api/1.0${path}`
   const response = await fetch(url, {
     method: 'POST',
@@ -727,11 +740,7 @@ async function cmkRequest(baseUrl: string, path: string, body?: unknown): Promis
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {})
   })
-  if (!response.ok) {
-    const detail = await response.json().catch(() => null)
-    const msg = detail?.detail ?? detail?.title ?? `HTTP ${response.status}`
-    throw new Error(typeof msg === 'string' ? msg : `HTTP ${response.status}`)
-  }
+  if (!response.ok) await throwApiError(response)
 }
 
 interface CmkDowntimeItem {
@@ -752,7 +761,7 @@ async function cmkGetDowntimes(
   baseUrl: string,
   params: Record<string, string>
 ): Promise<DowntimeEntry[]> {
-  const base = baseUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
+  const base = stripCheckmkBase(baseUrl)
   const query = new URLSearchParams(params).toString()
   const url = `${base}/check_mk/api/1.0/domain-types/downtime/collections/all?${query}`
   const response = await fetch(url, {
@@ -760,11 +769,7 @@ async function cmkGetDowntimes(
     credentials: 'include',
     headers: { Accept: 'application/json' }
   })
-  if (!response.ok) {
-    const detail = await response.json().catch(() => null)
-    const msg = detail?.detail ?? detail?.title ?? `HTTP ${response.status}`
-    throw new Error(typeof msg === 'string' ? msg : `HTTP ${response.status}`)
-  }
+  if (!response.ok) await throwApiError(response)
   const data: { value: CmkDowntimeItem[] } = await response.json()
   return data.value.map((item) => ({
     id: item.id,
@@ -822,7 +827,7 @@ async function orbvisCommand(
   // replacement uses OrbVis's own JWT. Read the same key the auth store
   // writes — keeping cmkApi callable from places without a vue-store
   // injection (composables, modal components).
-  const token = sessionStorage.getItem('orbvis_access_token') || ''
+  const token = sessionStorage.getItem(ACCESS_TOKEN_KEY) || ''
   // OrbVis hardcodes "live_1" as the default connection_id on every
   // CMK-bundled install (set by orbvis-setup), so it's a safe default
   // for action commands. Future work: thread the active board's
@@ -837,11 +842,7 @@ async function orbvisCommand(
     headers,
     body: JSON.stringify(body)
   })
-  if (!response.ok) {
-    const detail = await response.json().catch(() => null)
-    const msg = detail?.detail ?? detail?.title ?? `HTTP ${response.status}`
-    throw new Error(typeof msg === 'string' ? msg : `HTTP ${response.status}`)
-  }
+  if (!response.ok) await throwApiError(response)
 }
 
 function cmkHostAction(

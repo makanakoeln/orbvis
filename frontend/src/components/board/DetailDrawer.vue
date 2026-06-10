@@ -787,7 +787,7 @@ import { useSummaryChips } from '@/composables/useSummaryChips'
 import { useIsDark } from '@/composables/useTheme'
 import { useAuthStore } from '@/stores/auth'
 import type { BoardObject, BulkAckTarget, ObjectState } from '@/types/api'
-import { buildCheckmkUrl } from '@/utils/boardNavigation'
+import { buildCheckmkUrl, stripCheckmkBase } from '@/utils/boardNavigation'
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
 import { stateColor } from '@/utils/stateColors'
 import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time'
@@ -964,7 +964,7 @@ const {
 
 const problemsUrlFull = computed(() => {
   if (!props.object || props.object.type !== 'site' || !props.checkmkUrl) return null
-  const base = props.checkmkUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
+  const base = stripCheckmkBase(props.checkmkUrl)
   const siteId = props.object.host_name ?? props.state?.site_id
   if (!siteId) return null
   // svcproblems' built-in defaults (CRIT/WARN/UNKN active) are exactly what

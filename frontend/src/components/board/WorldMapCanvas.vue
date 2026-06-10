@@ -32,8 +32,12 @@ import type {
 } from '@/types/api'
 import { type GroupMember, applyGroupDelta, collectGroupMembers } from '@/utils/groupDrag'
 import { getBoardObjectName } from '@/utils/naming'
-import { DIMMED_FILTER, DIMMED_OPACITY, objectMatchesFilter } from '@/utils/objectFilter'
-import { STATEFUL_OBJECT_TYPES, isProblemState } from '@/utils/problemState'
+import {
+  DIMMED_FILTER,
+  DIMMED_OPACITY,
+  objectMatchesFilter,
+  passesProblemFilter
+} from '@/utils/objectFilter'
 import { stateColor as stateColorFromName } from '@/utils/stateColors'
 
 const props = defineProps<{
@@ -980,16 +984,13 @@ watch(
 
 watch([() => props.filterNeedle ?? '', () => props.problemsOnly], () => applyFilterDimming())
 
-function passesProblemFilter(obj: BoardObjectType): boolean {
-  if (!props.problemsOnly || !STATEFUL_OBJECT_TYPES.has(obj.type)) return true
-  return isProblemState(props.states[obj.id]?.state)
-}
-
 function applyFilterDimming(): void {
   const needle = props.filterNeedle ?? ''
   const filterActive = needle.trim() !== '' || !!props.problemsOnly
   for (const obj of props.config.objects) {
-    const matches = objectMatchesFilter(obj, needle) && passesProblemFilter(obj)
+    const matches =
+      objectMatchesFilter(obj, needle) &&
+      passesProblemFilter(obj, props.problemsOnly, props.states[obj.id]?.state)
     const opacity = matches ? 1 : DIMMED_OPACITY
     const m = markers.get(obj.id)
     if (m) {

@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 
 import type { BoardObject, ObjectState } from '@/types/api'
-import { buildServiceStateViewUrl, hostStateOn } from '@/utils/boardNavigation'
+import { buildServiceStateViewUrl, hostStateOn, stripCheckmkBase } from '@/utils/boardNavigation'
 
 export interface SummaryChip {
   state: string
@@ -43,7 +43,7 @@ export function useSummaryChips(options: SummaryChipsOptions) {
     const url = checkmkUrl()
     if (count <= 0 || !url || !obj) return null
     if (obj.type !== 'site' || !obj.host_name) return null
-    const base = url.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
+    const base = stripCheckmkBase(url)
     const params: Record<string, string> = {
       view_name: 'allhosts',
       filled_in: 'filter',

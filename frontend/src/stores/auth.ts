@@ -2,13 +2,12 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
-import { ApiError, authApi } from '@/api/client'
+import { ACCESS_TOKEN_KEY, ApiError, authApi } from '@/api/client'
 import { setLanguage } from '@/i18n'
 import router from '@/router'
 import { useSettingsStore } from '@/stores/settings'
 import type { UserRead } from '@/types/api'
 
-const ACCESS_TOKEN_KEY = 'orbvis_access_token'
 const REFRESH_TOKEN_KEY = 'orbvis_refresh_token'
 const SSO_ACTIVE_KEY = 'orbvis_sso'
 // Guards against a redirect loop if we return from Checkmk still 2FA-pending.
