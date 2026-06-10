@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.connections.livestatus import _identity
+from app.integrations.cmk_plugins import _identity
 
 
 def test_identity_strips_expression_placeholder():

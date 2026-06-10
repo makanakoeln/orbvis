@@ -13,10 +13,9 @@ import re
 import ssl
 import threading
 import time
-from collections.abc import AsyncIterator, Iterator, Mapping
+from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
@@ -45,7 +44,7 @@ from app.core.config import settings
 from app.integrations import checkmk as _cmk_integration
 from app.integrations import checkmk_sites as _cmk_sites
 from app.integrations.checkmk import FolderScope
-from app.integrations.cmk_plugins import get_plugin_dirs, iter_graphing_modules
+from app.integrations.cmk_plugins import load_cmk_graphing_data
 from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.state import (
     CommentInfo,
@@ -80,138 +79,6 @@ _auth_user_ctx: ContextVar[str | None] = ContextVar("_auth_user_ctx", default=No
 _folder_scope_ctx: ContextVar[FolderScope | None] = ContextVar("_folder_scope_ctx", default=None)
 
 
-_EXPRESSION_PLACEHOLDER_RE = re.compile(r"\s*_EXPRESSION:\{[^}]*\}\s*")
-
-
-def _identity(x: str) -> str:
-    # CMK's Title.localize for graphs that embed metric expressions emits raw
-    # `_EXPRESSION:{"metric":"…"}` placeholders when no real translator is
-    # supplied. Stripping them keeps the legend readable.
-    cleaned = _EXPRESSION_PLACEHOLDER_RE.sub(" ", x)
-    return " ".join(cleaned.split())
-
-
-def _extract_quantity_metrics(qty: object) -> Iterator[str]:
-    """Recursively yield metric names from a CMK graphing Quantity expression."""
-    if isinstance(qty, str):
-        yield qty
-        return
-    # WarningOf, CriticalOf, MinimumOf, MaximumOf — all have .metric_name: str
-    metric_name = getattr(qty, "metric_name", None)
-    if isinstance(metric_name, str):
-        yield metric_name
-        return
-    # Sum (.summands), Product (.factors)
-    for seq_attr in ("summands", "factors"):
-        items = getattr(qty, seq_attr, None)
-        if items is not None:
-            for item in items:
-                yield from _extract_quantity_metrics(item)
-            return
-    # Difference (.minuend + .subtrahend), Fraction (.dividend + .divisor)
-    for a_attr, b_attr in (("minuend", "subtrahend"), ("dividend", "divisor")):
-        a = getattr(qty, a_attr, None)
-        b = getattr(qty, b_attr, None)
-        if a is not None and b is not None:
-            yield from _extract_quantity_metrics(a)
-            yield from _extract_quantity_metrics(b)
-            return
-    # Constant or unknown — no metric
-
-
-@dataclass
-class _CMKGraphingData:
-    titles: dict[str, str] = field(default_factory=dict)
-    graphs: dict[str, tuple[str, list[str], frozenset[str]]] = field(default_factory=dict)
-    units: dict[str, str] = field(default_factory=dict)
-    # scale factor per source metric name (0.0 = conflict sentinel → don't scale)
-    scales: dict[str, float] = field(default_factory=dict)
-
-
-@lru_cache(maxsize=1)
-def _load_cmk_graphing_data() -> _CMKGraphingData:
-    """Single-pass loader for CMK metric titles, graph templates, unit symbols, and scale factors."""
-    if not _cmk_integration.available:
-        return _CMKGraphingData()
-    try:
-        from cmk.graphing.v1 import graphs as _gg
-        from cmk.graphing.v1 import metrics as _gm
-        from cmk.graphing.v1 import translations as _gt
-    except ImportError:
-        return _CMKGraphingData()
-    data = _CMKGraphingData()
-    for mod in iter_graphing_modules(get_plugin_dirs()):
-        for attr in dir(mod):
-            obj = getattr(mod, attr)
-            if attr.startswith("metric_") and isinstance(obj, _gm.Metric):
-                try:
-                    data.titles[obj.name] = obj.title.localize(_identity)
-                    data.units[obj.name] = getattr(obj.unit.notation, "symbol", "")
-                except Exception:
-                    pass
-            elif attr.startswith("graph_") and isinstance(obj, _gg.Graph):
-                names = _extract_graph_metric_names(obj)
-                if names:
-                    try:
-                        conflicting: frozenset[str] = frozenset(getattr(obj, "conflicting", ()))
-                        data.graphs[obj.name] = (obj.title.localize(_identity), names, conflicting)
-                    except Exception:
-                        pass
-            elif attr.startswith("translation_") and hasattr(obj, "translations"):
-                try:
-                    for src_metric, trans in obj.translations.items():
-                        if src_metric.startswith("~"):
-                            continue
-                        if isinstance(trans, (_gt.ScaleBy, _gt.RenameToAndScaleBy)):
-                            factor = float(trans.factor)
-                            if src_metric in data.scales and data.scales[src_metric] != factor:
-                                data.scales[src_metric] = 0.0  # conflict: two different factors
-                            elif src_metric not in data.scales:
-                                data.scales[src_metric] = factor
-                except Exception:
-                    pass
-    logger.debug(
-        "Loaded %d CMK metric titles, %d graph templates, %d scale factors",
-        len(data.titles),
-        len(data.graphs),
-        len(data.scales),
-    )
-    return data
-
-
-def _extract_graph_metric_names(graph: object) -> list[str]:
-    """Extract metric names from compound_lines only (the actual data series).
-
-    Recursively handles complex Quantity expressions (Sum, WarningOf, …).
-    simple_lines are excluded — they contain threshold/overlay lines derived
-    from compound metrics and would cause false-positive matches.
-    """
-    seen: set[str] = set()
-    names: list[str] = []
-    for item in getattr(graph, "compound_lines", ()):
-        for name in _extract_quantity_metrics(item):
-            if name not in seen:
-                seen.add(name)
-                names.append(name)
-    return names
-
-
-def _load_cmk_metric_titles() -> dict[str, str]:
-    return _load_cmk_graphing_data().titles
-
-
-def _load_cmk_graphs() -> dict[str, tuple[str, list[str], frozenset[str]]]:
-    return _load_cmk_graphing_data().graphs
-
-
-def _load_cmk_metric_units() -> dict[str, str]:
-    return _load_cmk_graphing_data().units
-
-
-def _load_cmk_metric_scales() -> dict[str, float]:
-    return _load_cmk_graphing_data().scales
-
-
 def _match_graphs(available: set[str]) -> list[GraphGroup]:
     """Return CMK graph groups whose compound metrics overlap with ``available``.
 
@@ -220,7 +87,7 @@ def _match_graphs(available: set[str]) -> list[GraphGroup]:
     (most metrics covered) is kept.
     """
     candidates: list[GraphGroup] = []
-    for graph_id, (title, metrics, conflicting) in _load_cmk_graphs().items():
+    for graph_id, (title, metrics, conflicting) in load_cmk_graphing_data().graphs.items():
         if conflicting & available:
             continue
         matching = [m for m in metrics if m in available]
@@ -237,7 +104,7 @@ def _match_graphs(available: set[str]) -> list[GraphGroup]:
 
 
 def _cmk_metric_title(label: str) -> str:
-    return _load_cmk_metric_titles().get(label) or " ".join(
+    return load_cmk_graphing_data().titles.get(label) or " ".join(
         w.capitalize() for w in label.split("_")
     )
 
@@ -1834,8 +1701,8 @@ class LivestatusConnection(ConnectionBase):
         # CMC returns each rrddata column as a flat list:
         #   [actual_start, actual_end, actual_step, v0, v1, ..., vN]
         # A value of None means no RRD file / metric exists for this column.
-        metric_scales = _load_cmk_metric_scales()
-        metric_units = _load_cmk_metric_units()
+        metric_scales = load_cmk_graphing_data().scales
+        metric_units = load_cmk_graphing_data().units
         series: dict[str, list[tuple[float, float, str]]] = {}
         titles: dict[str, str] = {}
         row = rows[0]

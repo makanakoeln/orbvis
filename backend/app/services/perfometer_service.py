@@ -8,7 +8,11 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import lru_cache
 
-from app.integrations.cmk_plugins import get_plugin_dirs, iter_graphing_modules
+from app.integrations.cmk_plugins import (
+    get_plugin_dirs,
+    iter_graphing_modules,
+    load_cmk_graphing_data,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -497,27 +501,10 @@ def _label_from_segments(
     return f"{title} {value}".strip() if title else value
 
 
-@lru_cache(maxsize=1)
-def _metric_title_map() -> dict[str, str]:
-    """Map metric name → display title from cmk.plugins.<x>.graphing modules."""
-    titles: dict[str, str] = {}
-    try:
-        from cmk.graphing.v1 import metrics as _gm
-    except ImportError:
-        return titles
-    for mod in iter_graphing_modules(get_plugin_dirs()):
-        for attr in dir(mod):
-            obj = getattr(mod, attr)
-            if isinstance(obj, _gm.Metric):
-                try:
-                    titles[obj.name] = obj.title.localize(lambda s: s)
-                except Exception:
-                    pass
-    return titles
-
-
 def _metric_title(name: str) -> str:
-    return _metric_title_map().get(name, "")
+    # Shared single-pass loader — a second cmk.plugins graphing walk here
+    # would double the startup cost cmk_plugins.py exists to avoid.
+    return load_cmk_graphing_data().titles.get(name, "")
 
 
 # ---------------------------------------------------------------------------
