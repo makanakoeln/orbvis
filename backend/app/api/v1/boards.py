@@ -45,6 +45,7 @@ from app.schemas.board import (
     BoardCreate,
     BoardObject,
     BoardObjectUpdate,
+    BoardOrderItem,
     BoardPermissionsRead,
     BoardRead,
     BoardUpdate,
@@ -107,16 +108,10 @@ async def list_boards(current_user: User = Depends(get_current_user)) -> list[Bo
 
 @router.post("/reorder", status_code=status.HTTP_204_NO_CONTENT)
 async def reorder_boards(
-    order: list[dict[str, int | str]], _: User = Depends(require_create_board)
+    order: list[BoardOrderItem], _: User = Depends(require_create_board)
 ) -> None:
     """Update sort_order for multiple boards at once. Body: [{"name": "...", "sort_order": 0}, ...]"""
-    board_service.reorder_boards(
-        [
-            (str(item["name"]), int(item["sort_order"]))
-            for item in order
-            if "name" in item and "sort_order" in item
-        ]
-    )
+    board_service.reorder_boards([(item.name, item.sort_order) for item in order])
 
 
 @router.post("", response_model=BoardConfig, status_code=status.HTTP_201_CREATED)

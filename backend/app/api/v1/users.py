@@ -21,6 +21,8 @@ from app.services.auth_service import (
 
 router = APIRouter()
 
+_SELF_SERVICE_FIELDS = {"password", "theme", "language"}
+
 
 @router.get("", response_model=list[UserRead])
 async def list_users(
@@ -92,6 +94,12 @@ async def update_user(
 
     update_data = data.model_dump(exclude_none=True)
 
+    # Non-admins only ever reach their own account here (gate above); their
+    # self-service surface is password/theme/language — not name, is_active
+    # or must_change_password, which are administrative attributes.
+    if not current_user.is_admin:
+        update_data = {k: v for k, v in update_data.items() if k in _SELF_SERVICE_FIELDS}
+
     # Changing another user's password requires explicit user/edit/* — is_admin alone is not enough.
     if "password" in update_data and current_user.user_id != user_id:
         if not user_has_permission(current_user, "user", "edit", "*", require_explicit=True):
@@ -104,11 +112,23 @@ async def update_user(
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    if "name" in update_data and update_data["name"] != user.name:
+        # users.name is UNIQUE — surface the conflict as 409 like the create
+        # endpoint instead of letting the IntegrityError become a 500.
+        new_name = update_data["name"]
+        taken = await asyncio.to_thread(
+            lambda: db.execute(
+                "SELECT 1 FROM users WHERE name = ? AND user_id != ?", (new_name, user_id)
+            ).fetchone()
+        )
+        if taken:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="Username already exists"
+            )
+
     if "password" in update_data:
         update_data["password"] = hash_password(update_data.pop("password"))
         update_data["must_change_password"] = False
-    if not current_user.is_admin:
-        update_data.pop("is_admin", None)
 
     if update_data:
         # Boolean fields are stored as 0/1 in SQLite.

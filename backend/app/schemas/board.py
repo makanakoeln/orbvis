@@ -458,6 +458,11 @@ class BoardUpdate(BaseModel):
     default_z: int | None = None
 
 
+class BoardOrderItem(BaseModel):
+    name: str
+    sort_order: int
+
+
 class BoardRead(BaseModel):
     _migrate_legacy_keys = model_validator(mode="before")(_accept_legacy_backend_id)
 

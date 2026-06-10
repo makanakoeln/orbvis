@@ -268,3 +268,55 @@ async def test_assign_role_not_found(client, admin_token, admin_user):
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# update_user hardening: rename conflicts + self-service field restriction
+# ---------------------------------------------------------------------------
+
+
+async def _create_user(client, admin_token, name, password="password123"):
+    resp = await client.post(
+        "/api/v1/users",
+        json={"name": name, "password": password},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 201
+    return resp.json()
+
+
+@pytest.mark.asyncio
+async def test_rename_to_taken_username_yields_409(client, admin_token):
+    a = await _create_user(client, admin_token, "rename-a")
+    await _create_user(client, admin_token, "rename-b")
+    resp = await client.patch(
+        f"/api/v1/users/{a['user_id']}",
+        json={"name": "rename-b"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_self_service_cannot_change_administrative_fields(client, admin_token):
+    created = await _create_user(client, admin_token, "selfsvc", password="initial-pw")
+    login = await client.post(
+        "/api/v1/auth/login", json={"username": "selfsvc", "password": "initial-pw"}
+    )
+    token = login.json()["access_token"]
+    resp = await client.patch(
+        f"/api/v1/users/{created['user_id']}",
+        json={
+            "name": "hijacked",
+            "is_active": False,
+            "must_change_password": True,
+            "theme": "dark",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["name"] == "selfsvc"
+    assert body["is_active"] is True
+    assert body["must_change_password"] is False
+    assert body["theme"] == "dark"
