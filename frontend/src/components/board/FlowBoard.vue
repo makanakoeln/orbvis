@@ -282,10 +282,18 @@ import {
   firstFinite,
   orbitR,
   problemScoreFromTopo,
-  severityRank,
   showSvcLabel,
   svcR
 } from '@/utils/flowGeometry'
+import {
+  SPIRAL_SPACING,
+  bfsLevels,
+  layoutR,
+  needsServices,
+  preLayoutHosts,
+  preLayoutHostsBelowSite,
+  siteScaleForZoom
+} from '@/utils/flowLayout'
 import { stateColor } from '@/utils/stateColors'
 import { resolveTemplate } from '@/utils/template'
 import usei18n from '@/vendor/cmk/lib/i18n'
@@ -317,52 +325,7 @@ const auth = useAuthStore()
 const statesStore = useStatesStore()
 const settingsStore = useSettingsStore()
 
-function layoutR(N: number): number {
-  return props.serviceLayout === 'fan' ? fanR(N) : orbitR(N)
-}
-
 const MORE_NODE_MARKER = '__more__'
-
-// Phyllotaxis (sunflower) layout: even-density spiral with no holes. Sorting
-// by severity rank (desc) means hosts with the worst state get the inner
-// slots, healthy hosts the outer. The combined effect is a compact disk
-// whose center is dominated by problems and whose rim is mostly green —
-// readable at a glance even on 500-host boards.
-const PHYLLOTAXIS_ANGLE = Math.PI * (3 - Math.sqrt(5))
-const SPIRAL_SPACING = 55
-function rankBySeverity(hosts: FNode[]): FNode[] {
-  return [...hosts].sort((a, b) => {
-    const sa = severityRank(a.topo)
-    const sb = severityRank(b.topo)
-    if (sa !== sb) return sb - sa
-    return a.id.localeCompare(b.id)
-  })
-}
-function preLayoutHosts(hosts: FNode[]): void {
-  if (!hosts.length) return
-  rankBySeverity(hosts).forEach((d, i) => {
-    const angle = i * PHYLLOTAXIS_ANGLE
-    const r = SPIRAL_SPACING * Math.sqrt(i + 1)
-    d.x = r * Math.cos(angle)
-    d.y = r * Math.sin(angle)
-  })
-}
-// Half-disk phyllotaxis below the site: mirror the negative-y points so the
-// entire spiral lands in the lower half-plane. Hosts visually hang under
-// their site root instead of orbiting around (0,0).
-function preLayoutHostsBelowSite(
-  sitePos: { x: number; y: number },
-  hosts: FNode[],
-  gap: number
-): void {
-  if (!hosts.length) return
-  rankBySeverity(hosts).forEach((d, i) => {
-    const angle = i * PHYLLOTAXIS_ANGLE
-    const r = SPIRAL_SPACING * Math.sqrt(i + 1)
-    d.x = sitePos.x + r * Math.cos(angle)
-    d.y = sitePos.y + gap + Math.abs(r * Math.sin(angle))
-  })
-}
 
 const TOP_K_LIMIT = 5
 const TOP_K_THRESHOLD = 50
@@ -567,13 +530,6 @@ const onContextMenuForceCheck = () => objectActions.handlers.forceCheck(contextM
 const onContextMenuToggleNotifications = (enable: boolean) =>
   objectActions.handlers.toggleNotifications(contextMenu.object, enable)
 
-// Layouts that need the full per-host service list. Donut renders only
-// services_summary aggregates and therefore skips the bulk query entirely —
-// that's the main scaling win for large installations.
-function needsServices(layout: typeof props.serviceLayout): boolean {
-  return layout === 'fan' || layout === 'orbit' || layout === 'row'
-}
-
 // Off-layout hides per-service health; aggregate problem counts to surface
 // them in a click-to-fix CTA so a green-dot board doesn't mask CRIT/WARN.
 // Total includes UNKNOWN (so unknown-only sites still trigger the banner)
@@ -766,13 +722,6 @@ function refreshHostLabelOffsets(): void {
     .attr('y', labelY)
 }
 
-// Site root box scales up at low zoom so the label stays legible. At fit-zoom
-// (k≈0.25) the 110-px-wide rect would render as ~28px without this — too
-// small to read. At full zoom the scale stays 1 (no inflation).
-function siteScaleForZoom(zoomK: number): number {
-  const inv = 1 / Math.max(finiteOr(zoomK, 1), 0.0001)
-  return Math.min(3.5, Math.max(1, inv))
-}
 function refreshSiteScale(): void {
   if (!svgEl.value) return
   const scale = siteScaleForZoom(currentZoomK)
@@ -841,29 +790,6 @@ watch(flowViewKey, () => {
 
 // Stable node map — keeps d3 positions across topology refreshes
 const nodeCache = new Map<string, FNode>()
-
-// ---- BFS level (loose — for forceY only) ----
-function bfsLevels(topoNodes: TopologyNode[]): Map<string, number> {
-  const nameSet = new Set(topoNodes.map((n) => n.name))
-  const levels = new Map<string, number>()
-  const roots = topoNodes.filter(
-    (n) => !n.parents.length || n.parents.every((p) => !nameSet.has(p))
-  )
-  const queue: string[] = roots.map((r) => r.name)
-  roots.forEach((r) => levels.set(r.name, 0))
-  while (queue.length) {
-    const name = queue.shift()!
-    const lvl = levels.get(name)!
-    for (const n of topoNodes) {
-      if (n.parents.includes(name) && !levels.has(n.name)) {
-        levels.set(n.name, lvl + 1)
-        queue.push(n.name)
-      }
-    }
-  }
-  topoNodes.filter((n) => !levels.has(n.name)).forEach((n) => levels.set(n.name, levels.size))
-  return levels
-}
 
 // ---- Zoom controls ----
 function fitView({ animated = true }: { animated?: boolean } = {}) {
@@ -1381,13 +1307,16 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
           if (src.nodeType === 'site' || tgt.nodeType === 'site') {
             const host = src.nodeType === 'site' ? tgt : src
             const N = servicesByHost.get(host.id)?.length ?? 0
-            return N > 0 ? Math.max(220, layoutR(N) + 80) : 220
+            return N > 0 ? Math.max(220, layoutR(props.serviceLayout, N) + 80) : 220
           }
           // Host → host
           const srcN = servicesByHost.get(src.id)?.length ?? 0
           const tgtN = servicesByHost.get(tgt.id)?.length ?? 0
           if (srcN === 0 && tgtN === 0) return 160
-          return Math.max(200, layoutR(srcN) + layoutR(tgtN) + 60)
+          return Math.max(
+            200,
+            layoutR(props.serviceLayout, srcN) + layoutR(props.serviceLayout, tgtN) + 60
+          )
         })
         // Site links pull more softly than host parent-child links so
         // the severity-disk pre-layout still dominates at rest while
@@ -1416,7 +1345,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         if (d.nodeType !== 'host') return 0
         if (maxLvl === 0 && !needsServices(props.serviceLayout)) return 0
         const N = servicesByHost.get(d.id)?.length ?? 0
-        return N > 0 ? -Math.max(700, layoutR(N) * 9) : -600
+        return N > 0 ? -Math.max(700, layoutR(props.serviceLayout, N) * 9) : -600
       })
     )
     // Anchor strength: full grip on donut/off (where collide-radius is small
@@ -1449,7 +1378,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
           return wantsDonut ? NODE_R + 14 : NODE_R + 10
         }
         if (props.serviceLayout === 'fan' || props.serviceLayout === 'orbit')
-          return layoutR(N) + svcR(N) + 35
+          return layoutR(props.serviceLayout, N) + svcR(N) + 35
         // Row grid
         const cols = Math.min(N, Math.max(4, Math.ceil(Math.sqrt(N * 1.5))))
         const spacingX = rowSpacings.get(d.id) ?? 60
