@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { BoardConfig, ObjectState } from '@/types/api'
 
@@ -111,5 +112,68 @@ describe('BoardCanvas', () => {
       .map((style) => parseInt(style.match(/z-index:\s*(\d+)/)?.[1] ?? '', 10))
     // Three distinct buckets (2, 10, 20) sorted ascending; z-less + z=10 merge.
     expect(zLayers).toEqual([2, 10, 20])
+  })
+})
+
+// Smoke test for the full render path: real BoardObject children (not stubbed),
+// so a regression anywhere in the static board's object rendering fails here.
+describe('BoardCanvas – smoke with real BoardObject', () => {
+  const smokeConfig: BoardConfig = {
+    ...sampleConfig,
+    objects: [
+      ...sampleConfig.objects,
+      {
+        id: '2',
+        type: 'textbox',
+        x: 300,
+        y: 100,
+        label: {
+          show: true,
+          text: 'Hello board',
+          x: 0,
+          y: 0,
+          size: 13,
+          color: '#ffffff',
+          background: 'transparent'
+        },
+        url_target: '_blank',
+        z: 1
+      }
+    ]
+  }
+
+  const stubs = { HoverMenu: true, ContextMenu: true }
+  let pinia: ReturnType<typeof createPinia>
+
+  beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+  })
+
+  it('renders host icon and textbox content', () => {
+    const wrapper = mount(BoardCanvas, {
+      props: { ...baseProps, config: smokeConfig },
+      global: { plugins: [pinia], stubs }
+    })
+
+    expect(wrapper.findAll('[data-object-id]')).toHaveLength(2)
+    // Host state circle carries the UP colour.
+    expect(wrapper.find('.orb-obj__state-svg circle').attributes('fill')).toBe('rgb(34,197,94)')
+    expect(wrapper.find('.orb-obj__textbox').text()).toBe('Hello board')
+  })
+
+  it('reflects a state change (UP → DOWN) in the rendered icon colour', async () => {
+    const wrapper = mount(BoardCanvas, {
+      props: { ...baseProps, config: smokeConfig },
+      global: { plugins: [pinia], stubs }
+    })
+
+    await wrapper.setProps({
+      states: {
+        '1': { ...sampleStates['1']!, state: 'DOWN', output: 'PING CRITICAL' }
+      }
+    })
+
+    expect(wrapper.find('.orb-obj__state-svg circle').attributes('fill')).toBe('rgb(239,68,68)')
   })
 })
