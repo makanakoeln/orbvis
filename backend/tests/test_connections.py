@@ -456,3 +456,21 @@ def test_walk_wato_folders_tolerates_bad_file(tmp_path):
     folders = _walk_wato_folders(wato)
     # Unparseable .wato → folder still listed, title falls back to the slug.
     assert {f["path"]: f["title"] for f in folders} == {"broken": "broken"}
+
+
+@pytest.mark.asyncio
+async def test_get_objects_escapes_regex_metachars(monkeypatch):
+    """The autocomplete needle goes into a `~~` regex filter — metacharacters
+    typed by the user must arrive escaped, not break the query."""
+    connection = _make_livestatus_connection()
+    captured: list[str] = []
+
+    async def _fake_query(query: str) -> list[list[object]]:
+        captured.append(query)
+        return [["web01"]]
+
+    monkeypatch.setattr(connection, "_query", _fake_query)
+    result = await connection.get_objects("host", search="srv(1[+")
+
+    assert result == ["web01"]
+    assert "Filter: name ~~ srv\\(1\\[\\+" in captured[0]

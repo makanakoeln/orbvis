@@ -1297,7 +1297,10 @@ class LivestatusConnection(ConnectionBase):
             return names
 
         def _name_filter(column: str) -> str:
-            return f"Filter: {column} ~~ {_ls_escape(q)}\n" if q else ""
+            # ``~~`` is a case-insensitive *regex* match — escape the typed
+            # substring (same as search_services) or a literal `(`/`[`/`+`
+            # makes livestatus reject the whole query.
+            return f"Filter: {column} ~~ {_ls_escape(re.escape(q))}\n" if q else ""
 
         if obj_type == "host":
             rows = await self._query(
