@@ -20,6 +20,7 @@ import 'leaflet/dist/leaflet.css'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { useMarquee } from '@/composables/useMarquee'
+import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   BoardConfig,
@@ -47,6 +48,7 @@ const props = defineProps<{
 }>()
 
 const settingsStore = useSettingsStore()
+const auth = useAuthStore()
 
 const emit = defineEmits<{
   'object-click': [obj: BoardObjectType, event: MouseEvent]
@@ -825,7 +827,11 @@ function syncLines() {
 function applyTileSettings() {
   if (!leafletMap) return
   const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null
-  const url = wv?.tile_url || DEFAULT_TILE_URL
+  // The tile proxy requires auth, but Leaflet's <img> tiles cannot carry an
+  // Authorization header — the token travels as a query param (same pattern
+  // as the SSE stream). External tile_url overrides stay untouched.
+  const url =
+    wv?.tile_url || `${DEFAULT_TILE_URL}?token=${encodeURIComponent(auth.accessToken ?? '')}`
   if (tileLayer) tileLayer.remove()
   tileLayer = L.tileLayer(url, {
     attribution:
@@ -992,6 +998,13 @@ watch(() => {
   const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null
   return [wv?.tile_url, wv?.tile_saturate]
 }, applyTileSettings)
+
+// The proxy tile URL embeds the access token — rebuild the layer after a
+// token refresh so tiles fetched later don't 401 with the expired one.
+watch(
+  () => auth.accessToken,
+  () => applyTileSettings()
+)
 
 watch(
   () => {

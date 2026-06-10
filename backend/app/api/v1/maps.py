@@ -14,17 +14,21 @@ import hashlib
 import json
 import logging
 import re
+import sqlite3
 import time
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 import httpx
-from fastapi import APIRouter, Header, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from fastapi import Path as PathParam
 
 from app.core.config import settings
+from app.core.database import get_db
+from app.core.ratelimit import tile_fetch_limiter
 from app.core.version import APP_VERSION
+from app.services.auth_service import authenticate_bearer_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -40,6 +44,14 @@ _MIN_FRESH_SECONDS = 7 * 24 * 3600
 # Per-tile lock so two concurrent requests for the same tile don't both fetch.
 _inflight: dict[tuple[int, int, int], asyncio.Lock] = {}
 _client: httpx.AsyncClient | None = None
+
+# Hard ceiling for the on-disk cache: tiles are written on every cache miss,
+# and at z=20 there are 2^40 possible coordinates — without a cap an abusive
+# client could fill the disk. Beyond the cap tiles are still proxied, just no
+# longer cached. Size is tracked incrementally after one lazy scan.
+_MAX_CACHE_BYTES = 2 * 1024**3
+_cache_bytes: int | None = None
+_cache_full_logged = False
 
 
 def _get_client() -> httpx.AsyncClient:
@@ -106,11 +118,25 @@ async def _fetch_upstream(z: int, x: int, y: int, validators: _TileMeta | None) 
 
 @router.get("/tiles/{z}/{x}/{y}.png")
 async def get_tile(
+    request: Request,
     z: int = PathParam(..., ge=0, le=20),
     x: int = PathParam(..., ge=0),
     y: int = PathParam(..., ge=0),
+    token: str = Query(..., description="JWT access token (Leaflet <img> can't set headers)"),
     if_none_match: str | None = Header(default=None, alias="If-None-Match"),
+    db: sqlite3.Connection = Depends(get_db),
 ) -> Response:
+    # Same ?token= pattern as the SSE endpoint: tile fetches come from <img>
+    # elements, which cannot carry an Authorization header. Rate limiting on
+    # top keeps even an authenticated client from filling cache/bandwidth.
+    client_ip = request.client.host if request.client else "unknown"
+    if tile_fetch_limiter.is_blocked(client_ip):
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Rate limited")
+    tile_fetch_limiter.record(client_ip)
+    user = await authenticate_bearer_token(db, token)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
     if x >= 1 << z or y >= 1 << z:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -184,7 +210,30 @@ def _read_cached(path: Path) -> bytes | None:
     return data or None
 
 
+def _cache_has_room(cache_path: Path, incoming: int) -> bool:
+    global _cache_bytes, _cache_full_logged
+    if _cache_bytes is None:
+        _cache_bytes = sum(f.stat().st_size for f in _tiles_dir().rglob("*.png"))
+    try:
+        previous = cache_path.stat().st_size
+    except OSError:
+        previous = 0
+    if _cache_bytes - previous + incoming > _MAX_CACHE_BYTES:
+        if not _cache_full_logged:
+            _cache_full_logged = True
+            logger.warning(
+                "Tile cache reached %d bytes — serving tiles uncached; wipe %s to reset",
+                _MAX_CACHE_BYTES,
+                _tiles_dir(),
+            )
+        return False
+    _cache_bytes += incoming - previous
+    return True
+
+
 def _write_cache(cache_path: Path, data: bytes) -> None:
+    if not _cache_has_room(cache_path, len(data)):
+        return
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = cache_path.with_name(cache_path.name + ".tmp")
     try:

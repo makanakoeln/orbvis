@@ -67,3 +67,7 @@ login_limiter = RateLimiter(max_calls=5, window_seconds=15 * 60)
 # 30 WebSocket handshakes per minute per IP — covers typical reconnect storms
 # (tab restore, laptop wake) but blocks scripted connection floods.
 ws_connect_limiter = RateLimiter(max_calls=30, window_seconds=60)
+
+# Worldmap tile proxy: a pan/zoom burst legitimately pulls a few hundred tiles
+# per minute; the cap only stops scripted cache-fill/bandwidth abuse.
+tile_fetch_limiter = RateLimiter(max_calls=600, window_seconds=60)
