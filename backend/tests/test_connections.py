@@ -474,3 +474,14 @@ async def test_get_objects_escapes_regex_metachars(monkeypatch):
 
     assert result == ["web01"]
     assert "Filter: name ~~ srv\\(1\\[\\+" in captured[0]
+
+
+def test_ls_escape_strips_query_terminators():
+    """LQL filter values are newline-terminated — an embedded \\n/\\r would
+    inject extra filter/command lines into the query."""
+    from app.connections.livestatus import _ls_escape
+
+    assert _ls_escape("plain-host") == "plain-host"
+    assert _ls_escape("evil\nFilter: name = other") == "evilFilter: name = other"
+    assert _ls_escape("evil\r\nGET hosts") == "evilGET hosts"
+    assert _ls_escape("") == ""
