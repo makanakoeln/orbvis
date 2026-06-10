@@ -1018,6 +1018,26 @@ class LivestatusConnection(ConnectionBase):
             site_id=_default_site_id(sid),
         )
 
+    async def host_visible(self, hostname: str) -> bool:
+        """Whether *hostname* exists and is visible in the current auth scope.
+
+        Run inside ``with_auth_user`` this answers "is the user a contact for
+        this host" — the commands API uses it so the livestatus pipe (which
+        itself enforces no ACLs) can't be used on objects outside the user's
+        contact groups.
+        """
+        query = f"GET hosts\nColumns: name\nFilter: name = {_ls_escape(hostname)}\n"
+        return bool(await self._query(query))
+
+    async def service_visible(self, host: str, service: str) -> bool:
+        """Service counterpart of :meth:`host_visible`."""
+        query = (
+            "GET services\nColumns: description\n"
+            f"Filter: host_name = {_ls_escape(host)}\n"
+            f"Filter: description = {_ls_escape(service)}\n"
+        )
+        return bool(await self._query(query))
+
     async def get_service_perf_and_cmd(self, host: str, service: str) -> tuple[str, str]:
         """Return (perf_data, check_command) for a single service."""
         query = (

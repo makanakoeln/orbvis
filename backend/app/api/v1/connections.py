@@ -939,9 +939,10 @@ async def get_backend_aggregation_tree(
 # Operational commands (ack-removal, force-check, notifications, active-checks)
 # ---------------------------------------------------------------------------
 # All command verbs route through the livestatus pipe — bypasses CMK REST
-# (no automation credentials needed) and works on Nagios + CMC. Note: the pipe
-# also bypasses CMK contact-group ACLs; the per-verb command permission
-# (can_run_command) is the only gate on the action itself.
+# (no automation credentials needed) and works on Nagios + CMC. The pipe
+# enforces no ACLs of its own, so each action is gated twice: the per-verb
+# command permission (can_run_command) plus an AuthUser-scoped visibility
+# check on the target object (_require_target_visible).
 _SIMPLE_HOST_COMMANDS: dict[str, str] = {
     "force_check": "SCHEDULE_FORCED_HOST_CHECK;{host};{ts}",
     "enable_notifications": "ENABLE_HOST_NOTIFICATIONS;{host}",
@@ -1094,6 +1095,30 @@ def _require_command_permission(user: User, action: str) -> None:
         )
 
 
+async def _require_target_visible(
+    connection: ConnectionBase, user: User, host: str, service: str | None = None
+) -> None:
+    """Reject commands on objects outside the user's contact-group visibility.
+
+    The livestatus command pipe enforces no ACLs of its own, so without this
+    check the per-verb permission would let a user act on *any* object — in
+    Checkmk itself the command ACL restricts actions to visible objects.
+    Admins/see-all users run unscoped; the lookup then only catches typos.
+    """
+    host_visible = getattr(connection, "host_visible", None)
+    service_visible = getattr(connection, "service_visible", None)
+    if host_visible is None or service_visible is None:
+        return
+    async with _auth_scope(connection, user):
+        if service is None:
+            visible = await host_visible(host)
+        else:
+            visible = await service_visible(host, service)
+    if not visible:
+        # 404 (not 403) so the response doesn't leak whether the object exists.
+        raise HTTPException(status_code=404, detail="Object not found or not visible")
+
+
 @router.post("/{connection_id}/host-action", status_code=status.HTTP_204_NO_CONTENT)
 async def host_action(
     connection_id: str,
@@ -1105,6 +1130,7 @@ async def host_action(
     connection = get_connection(connection_id)
     if connection is None or not hasattr(connection, "send_command"):
         raise HTTPException(status_code=404, detail="Connection not found or not livestatus-backed")
+    await _require_target_visible(connection, user, body.host_name)
     try:
         await connection.send_command(cmd, body.site_id)
     except Exception as exc:
@@ -1123,6 +1149,7 @@ async def service_action(
     connection = get_connection(connection_id)
     if connection is None or not hasattr(connection, "send_command"):
         raise HTTPException(status_code=404, detail="Connection not found or not livestatus-backed")
+    await _require_target_visible(connection, user, body.host_name, body.service_description)
     try:
         await connection.send_command(cmd, body.site_id)
     except Exception as exc:

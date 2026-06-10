@@ -758,3 +758,57 @@ async def test_group_members_non_admin_uses_authuser_filter(
     assert resp.status_code == 200
     # AuthUser scope IS active for a regular user.
     assert mock_connection.with_auth_user.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# host-action / service-action — target visibility gate
+# ---------------------------------------------------------------------------
+
+
+class _CommandConn:
+    """Livestatus-like connection stub: records commands, fakes visibility."""
+
+    def __init__(self, visible: bool) -> None:
+        self._visible = visible
+        self.sent: list[tuple[str, str | None]] = []
+
+    async def send_command(self, command: str, site_id: str | None = None) -> None:
+        self.sent.append((command, site_id))
+
+    async def host_visible(self, hostname: str) -> bool:
+        return self._visible
+
+    async def service_visible(self, host: str, service: str) -> bool:
+        return self._visible
+
+
+@pytest.mark.asyncio
+async def test_host_action_rejected_when_target_not_visible(client, admin_token, monkeypatch):
+    conn = _CommandConn(visible=False)
+    monkeypatch.setitem(state_service._connections, "live_cmd", conn)
+    resp = await client.post(
+        "/api/v1/connections/live_cmd/host-action",
+        json={"action": "acknowledge", "host_name": "h1", "comment": "x"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 404
+    assert conn.sent == []
+
+
+@pytest.mark.asyncio
+async def test_service_action_sent_when_target_visible(client, admin_token, monkeypatch):
+    conn = _CommandConn(visible=True)
+    monkeypatch.setitem(state_service._connections, "live_cmd", conn)
+    resp = await client.post(
+        "/api/v1/connections/live_cmd/service-action",
+        json={
+            "action": "acknowledge",
+            "host_name": "h1",
+            "service_description": "CPU",
+            "comment": "x",
+        },
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 204
+    assert len(conn.sent) == 1
+    assert conn.sent[0][0].startswith("ACKNOWLEDGE_SVC_PROBLEM;h1;CPU;")
