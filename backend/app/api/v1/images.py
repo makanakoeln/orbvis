@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import tempfile
 from pathlib import Path
 from typing import TypedDict
@@ -34,6 +35,16 @@ class ImageUsageEntry(TypedDict):
 
 _MAX_ICON_BYTES = 2 * 1024 * 1024  # 2 MB
 _BUILTIN_DIR = Path(__file__).resolve().parents[2] / "builtin_icons"
+
+# Stems are restricted to the same safe charset as board names — uploads with
+# e.g. a Windows path in the filename would otherwise persist a file that the
+# delete/usage endpoints (which reject '\\') can never address again.
+_UNSAFE_STEM_CHARS = re.compile(r"[^a-zA-Z0-9_\-]")
+
+
+def _require_valid_image_name(name: str) -> None:
+    if "/" in name or "\\" in name or name in ("", ".", ".."):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
 
 
 def _images_dir() -> Path:
@@ -101,8 +112,7 @@ async def image_usage(
     name: str,
     _current_user: User = Depends(get_current_user),
 ) -> list[ImageUsageEntry]:
-    if "/" in name or "\\" in name or name in ("", ".", ".."):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
+    _require_valid_image_name(name)
     return _find_image_usage(name)
 
 
@@ -124,7 +134,9 @@ async def upload_image(
             detail="Image file too large (max 2 MB)",
         )
 
-    if not is_valid_image(contents):
+    # GIF stays out of icons (ICON_MIME_TYPES has no image/gif) even when the
+    # client fakes the Content-Type — the magic-byte check enforces it too.
+    if not is_valid_image(contents, allow_gif=False):
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="File content does not match a supported image format",
@@ -132,8 +144,16 @@ async def upload_image(
 
     raw_suffix = Path(file.filename or "").suffix.lower()
     suffix = raw_suffix if raw_suffix in ICON_SUFFIXES else ".png"
-    stem = Path(file.filename or "image").stem
+    stem = _UNSAFE_STEM_CHARS.sub("_", Path(file.filename or "image").stem) or "image"
     filename = stem + suffix
+    if _is_builtin(filename):
+        # DELETE protects builtins; uploads must not overwrite them either —
+        # a builtin icon is referenced across boards and silently replacing
+        # it would change every board at once.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Built-in images cannot be overwritten",
+        )
 
     d = _images_dir()
     fd, tmp_path = tempfile.mkstemp(dir=d, prefix="upload_", suffix=suffix)
@@ -162,8 +182,7 @@ async def delete_image(
 ) -> None:
     d = _images_dir().resolve()
     # Reject obvious traversal attempts before hitting the filesystem.
-    if "/" in name or "\\" in name or name in ("", ".", ".."):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
+    _require_valid_image_name(name)
     if _is_builtin(name):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

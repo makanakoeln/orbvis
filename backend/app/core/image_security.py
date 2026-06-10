@@ -113,8 +113,13 @@ def is_safe_svg(content: bytes) -> bool:
     return True
 
 
-def is_valid_image(content: bytes, *, allow_svg: bool = True) -> bool:
-    """True if *content* starts with a recognised raster header or is a safe SVG."""
+def is_valid_image(content: bytes, *, allow_svg: bool = True, allow_gif: bool = True) -> bool:
+    """True if *content* starts with a recognised raster header or is a safe SVG.
+
+    ``allow_gif=False`` for icon uploads — ICON_MIME_TYPES excludes GIF (no
+    animated icons), and without the flag a GIF body with a faked PNG
+    Content-Type would slip through the magic-byte check.
+    """
     if not content:
         return False
     head = content[:16]
@@ -122,7 +127,7 @@ def is_valid_image(content: bytes, *, allow_svg: bool = True) -> bool:
         return True
     if head[:3] == _JPEG_MAGIC:
         return True
-    if head[:6] in _GIF_MAGIC:
+    if allow_gif and head[:6] in _GIF_MAGIC:
         return True
     if head[:4] == _WEBP_RIFF and content[8:12] == _WEBP_MARK:
         return True

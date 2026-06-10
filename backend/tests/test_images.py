@@ -139,3 +139,56 @@ async def test_usage_endpoint_lists_referencing_boards(client, admin_token, tmp_
     body = usage.json()
     assert body[0]["board"] == "with-bg"
     assert body[0]["is_background"] is True
+
+
+# ---------------------------------------------------------------------------
+# Upload hardening: stem sanitisation, builtin protection, GIF rejection
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_sanitizes_windows_path_stem(client, admin_token, tmp_path, monkeypatch):
+    _patch_dirs(monkeypatch, tmp_path)
+    resp = await client.post(
+        "/api/v1/images",
+        files={"file": (r"C:\Users\x\my icon.png", _PNG_BYTES, "image/png")},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 201
+    name = resp.json()["name"]
+    assert "\\" not in name and "/" not in name and " " not in name
+    # The sanitised name must be addressable by the delete endpoint.
+    del_resp = await client.delete(
+        f"/api/v1/images/{name}?force=true",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert del_resp.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_upload_cannot_overwrite_builtin(client, admin_token, tmp_path, monkeypatch):
+    _patch_dirs(monkeypatch, tmp_path)
+    builtin_dir = tmp_path / "builtin"
+    builtin_dir.mkdir()
+    (builtin_dir / "server.png").write_bytes(_PNG_BYTES)
+    _patch_builtin_dir(monkeypatch, builtin_dir)
+    resp = await client.post(
+        "/api/v1/images",
+        files={"file": ("server.png", _PNG_BYTES, "image/png")},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_upload_rejects_gif_with_faked_content_type(
+    client, admin_token, tmp_path, monkeypatch
+):
+    _patch_dirs(monkeypatch, tmp_path)
+    gif = b"GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
+    resp = await client.post(
+        "/api/v1/images",
+        files={"file": ("anim.png", gif, "image/png")},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 415
