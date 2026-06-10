@@ -1232,6 +1232,17 @@ def _build_folder_tree(data: FolderTreeData, fv: FolderTreeView) -> FolderTreeNo
 # emit incremental updates instead of re-sending the full topology every tick.
 # ---------------------------------------------------------------------------
 
+
+def drop_board_snapshots[V](snapshot: dict[tuple[str, str | None], V], board_name: str) -> None:
+    """Drop every (board, user) entry for ``board_name`` from a snapshot dict.
+
+    The broadcast-loop snapshot dicts are keyed by ``(board_name, auth_user)``;
+    forgetting a board means removing all of its per-user entries.
+    """
+    for key in [k for k in snapshot if k[0] == board_name]:
+        snapshot.pop(key, None)
+
+
 # (board_name, auth_user) → (host_name → volatile-fields hash)
 _topology_snapshots: dict[tuple[str, str | None], dict[str, int]] = {}
 # Parallel to _topology_snapshots, hashing only the check-timing fields that
@@ -1367,10 +1378,8 @@ def drop_topology_snapshot(board_name: str, auth_user: str | None = None) -> Non
         _topology_snapshots.pop((board_name, auth_user), None)
         _topology_timing_snapshots.pop((board_name, auth_user), None)
         return
-    for key in [k for k in _topology_snapshots if k[0] == board_name]:
-        _topology_snapshots.pop(key, None)
-    for key in [k for k in _topology_timing_snapshots if k[0] == board_name]:
-        _topology_timing_snapshots.pop(key, None)
+    drop_board_snapshots(_topology_snapshots, board_name)
+    drop_board_snapshots(_topology_timing_snapshots, board_name)
 
 
 # ---------------------------------------------------------------------------
@@ -1598,9 +1607,6 @@ def drop_states_snapshot(board_name: str, auth_user: str | None = None) -> None:
         _timing_snapshots.pop((board_name, auth_user), None)
         _folder_tree_snapshots.pop((board_name, auth_user), None)
         return
-    for key in [k for k in _state_snapshots if k[0] == board_name]:
-        _state_snapshots.pop(key, None)
-    for key in [k for k in _timing_snapshots if k[0] == board_name]:
-        _timing_snapshots.pop(key, None)
-    for key in [k for k in _folder_tree_snapshots if k[0] == board_name]:
-        _folder_tree_snapshots.pop(key, None)
+    drop_board_snapshots(_state_snapshots, board_name)
+    drop_board_snapshots(_timing_snapshots, board_name)
+    drop_board_snapshots(_folder_tree_snapshots, board_name)

@@ -258,8 +258,7 @@ async def _broadcast_loop(board_name: str) -> None:
         _broadcast_tasks.pop(board_name, None)
         state_service.drop_topology_snapshot(board_name)
         state_service.drop_states_snapshot(board_name)
-        for key in [k for k in _dead_sites_snapshots if k[0] == board_name]:
-            _dead_sites_snapshots.pop(key, None)
+        state_service.drop_board_snapshots(_dead_sites_snapshots, board_name)
         logger.debug("Broadcast loop stopped for board '%s'", board_name)
 
 
