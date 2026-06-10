@@ -917,7 +917,7 @@ function onCanvasPointerUp(event: PointerEvent) {
   _dragPointerId.value = null
 
   if (!id) {
-    if (props.placing) emit('canvas-click', event as unknown as MouseEvent)
+    if (props.placing) emit('canvas-click', event)
     return
   }
   const pos = localDragPositions[id]
@@ -938,7 +938,7 @@ function onCanvasPointerUp(event: PointerEvent) {
     if (group.length) emit('objects-drag-end', moves)
     else emit('object-drag-end', id, pos.x, pos.y)
   } else if (!_didMove.value && props.placing) {
-    emit('canvas-click', event as unknown as MouseEvent)
+    emit('canvas-click', event)
   }
   // !_didMove && !placing: nothing to do — native click on the object div
   // fires @click.stop="onObjectClick", and @click.stop prevents the event
