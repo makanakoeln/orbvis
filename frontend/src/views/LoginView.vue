@@ -53,6 +53,7 @@
                 autocomplete="current-password"
                 placeholder="••••••••"
                 class="orb-login__pw-input"
+                @keydown.enter="handleLogin"
               />
               <button
                 type="button"
@@ -91,10 +92,16 @@
 
           <CmkAlertBox v-if="authStore.error" variant="error">{{ authStore.error }}</CmkAlertBox>
 
-          <!-- CmkButton renders a <button> without type, i.e. an implicit
-               submit button — the form's @submit handler is the only login
-               trigger (an extra @click/@keydown handler would fire twice). -->
-          <CmkButton variant="primary" class="orb-login__submit" :disabled="authStore.loading">
+          <!-- CmkButton never triggers a native form submit (the CMK build
+               renders @click.prevent, the standalone build type="button"), so
+               the click/Enter handlers are the actual login triggers; the
+               store's loading guard absorbs any duplicate submit. -->
+          <CmkButton
+            variant="primary"
+            class="orb-login__submit"
+            :disabled="authStore.loading"
+            @click="handleLogin"
+          >
             {{ authStore.loading ? _t('Signing in…') : _t('Sign in') }}
           </CmkButton>
         </form>

@@ -188,6 +188,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(username: string, password: string) {
+    // Guard against a double submit (e.g. Enter firing both the input's keydown
+    // handler and the form's implicit submission) re-entering mid-request.
+    if (loading.value) return
     loading.value = true
     error.value = null
     try {
