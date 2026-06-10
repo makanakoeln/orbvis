@@ -1,3 +1,8 @@
+// OrbVis-only dev tooling: upstream cmk-frontend-vue lints with eslint +
+// prettier + tsc and has no stylelint. Once OrbVis ships as a built-in
+// Checkmk package this config must stay self-contained (no custom plugins,
+// no rules their pipeline would have to adopt) or be droppable without
+// touching the sources.
 export default {
   extends: ['stylelint-config-standard', 'stylelint-config-html/vue'],
   ignoreFiles: ['src/vendor/**'],

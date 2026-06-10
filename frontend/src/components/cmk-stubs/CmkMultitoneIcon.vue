@@ -51,7 +51,6 @@ const customColor = computed(() => {
 /* Not scoped: v-html injects the SVG outside the scoped-CSS attribute boundary
    so the `svg .icon-primary-color` selector wouldn't match otherwise. */
 
-/* stylelint-disable-next-line checkmk/vue-bem-naming-convention */
 .cmk-multitone-icon {
   display: inline-flex;
   align-items: center;
