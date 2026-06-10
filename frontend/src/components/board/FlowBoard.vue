@@ -2050,11 +2050,8 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
 /* Level-of-detail: at low zoom the service rings + "+more" badges and the
    service-links between them are unreadable, so we hide them via a single
    class on the SVG root rather than inline-styling thousands of elements. */
-/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
 :deep(svg.lod-low g.node-service),
-/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
 :deep(svg.lod-low g.node-more),
-/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
 :deep(svg.lod-low g.links line.link-service) {
   display: none;
 }
@@ -2063,7 +2060,6 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
    browser can re-rasterize the (large) SVG subtree once and just translate
    the layer per frame, instead of repainting all 500+ host icons +
    service rings every pan/zoom step. */
-/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
 :deep(g.zoom-layer) {
   will-change: transform;
 }
@@ -2072,7 +2068,6 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
    zoom-layer so pointermove doesn't traverse ~3000 SVG descendants per
    frame just to figure out hover targets the user can't interact with
    while dragging anyway. d3-zoom's start/end handlers toggle this class. */
-/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
 :deep(svg.pan-active g.zoom-layer) {
   pointer-events: none;
 }

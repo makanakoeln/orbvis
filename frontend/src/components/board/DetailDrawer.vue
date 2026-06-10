@@ -1442,7 +1442,6 @@ const isDark = useIsDark()
 
 /* Override the vendor CmkTabs styling to fit the narrow Drawer: thin tab pills
    instead of the default boxy tab bar, no content-area border. */
-/* stylelint-disable selector-pseudo-class-no-unknown */
 .detail-drawer__tabs :deep(.cmk-tabs__list) {
   padding: 0 12px;
   background: var(--bg-surface);
@@ -1472,7 +1471,6 @@ const isDark = useIsDark()
   border: none;
   padding: 0;
 }
-/* stylelint-enable selector-pseudo-class-no-unknown */
 
 .detail-drawer__pane {
   display: flex;
