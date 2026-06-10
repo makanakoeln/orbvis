@@ -4,10 +4,12 @@
 import { type Ref, computed, getCurrentInstance, onBeforeUnmount, reactive, ref, toRaw } from 'vue'
 
 import { boardsApi } from '@/api/client'
+import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
 import { useSettingsStore } from '@/stores/settings'
 import type { BoardObject, ObjectType } from '@/types/api'
+import usei18n from '@/vendor/cmk/lib/i18n'
 
 export interface NewObjectDraft {
   type: ObjectType | ''
@@ -47,6 +49,16 @@ type DragTarget = {
 export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<void>) {
   const auth = useAuthStore()
   const boardsStore = useBoardsStore()
+  const toast = useToast()
+  const { _t } = usei18n()
+
+  // A silent console.error reads as "my click did nothing" to the operator —
+  // every failed persistence call surfaces as a toast. Call sites that changed
+  // local state optimistically additionally revert via onMapChange().
+  function _reportError(message: string, e: unknown) {
+    console.error(message, e)
+    toast.error(e instanceof Error && e.message ? `${message}: ${e.message}` : message)
+  }
 
   const editMode = ref(false)
   function toggleEditMode() {
@@ -114,7 +126,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       try {
         await boardsApi.updateObject(mapName.value, obj.id, { z: newZ }, auth.accessToken!)
       } catch (e) {
-        console.error('Failed to update layer', e)
+        _reportError(_t('Changing the layer failed'), e)
         await onMapChange()
         return
       }
@@ -140,7 +152,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         _clearDanglingRefs(ids)
       }
     } catch (e) {
-      console.error('Failed to delete objects', e)
+      _reportError(_t('Deleting failed'), e)
       await onMapChange()
     }
   }
@@ -311,7 +323,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       )
       if (_onDragSaved) _onDragSaved(id)
     } catch (e) {
-      console.error('Failed to save drag', e)
+      _reportError(_t('Saving the move failed'), e)
       await onMapChange()
     }
   }
@@ -336,7 +348,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         if (_onDragSaved) _onDragSaved(m.id)
       }
     } catch (e) {
-      console.error('Failed to save group drag', e)
+      _reportError(_t('Saving the move failed'), e)
       await onMapChange()
     }
   }
@@ -461,7 +473,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       delete lineDragPositions[t.id]
       if (_onDragSaved) _onDragSaved(t.id)
     } catch (e) {
-      console.error('Failed to save line drag', e)
+      _reportError(_t('Saving the line failed'), e)
       await onMapChange()
     }
   }
@@ -512,96 +524,16 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     draft.graph_url = ''
   }
 
-  async function placeAt(x: number, y: number) {
-    if (!placing.value || !draft.type) return
-    placing.value = false
+  // The shared part of a Draft → BoardObject mapping: id, monitoring binding,
+  // label and display defaults. Position/coordinate fields and type-specific
+  // extras stay with the two placement paths (pixel vs. geo).
+  function _draftToObject(id: string): BoardObject {
     const s = useSettingsStore().settings
-    // Use crypto.randomUUID() to avoid collisions from rapid or concurrent placements.
-    const id = `${draft.type}_${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)}`
-    const existing = boardsStore.currentBoard?.objects ?? []
-    const placePos =
-      draft.type === 'line'
-        ? { x: _snap(Math.round(x)), y: _snap(Math.round(y)) }
-        : _avoidOverlap(id, Math.round(x), Math.round(y), existing)
-    const obj: BoardObject = {
+    return {
       id,
-      type: draft.type,
-      x: placePos.x,
-      y: placePos.y,
-      host_name: draft.host_name || null,
-      service_description: draft.service_description || null,
-      group_name: draft.group_name || null,
-      map_name: draft.board_name || null,
-      aggregation_id: draft.aggregation_id || null,
-      object_types: draft.type === 'dyngroup' ? draft.object_types : null,
-      object_filter: draft.type === 'dyngroup' ? draft.object_filter || null : null,
-      ...(draft.expand_depth ? { expand_depth: draft.expand_depth } : {}),
-      label: {
-        show: s.label_show,
-        text:
-          draft.label_text ||
-          (draft.type === 'image' && draft.image_src
-            ? (draft.image_src
-                .split('/')
-                .pop()
-                ?.replace(/\.[^/.]+$/, '') ?? null)
-            : null),
-        x: 0,
-        y: 0,
-        size: s.label_size,
-        color: s.label_color,
-        background: s.label_background
-      },
-      display:
-        draft.type === 'line' || draft.type === 'graph'
-          ? null
-          : {
-              mode: s.view_type as 'icon' | 'text' | 'gadget',
-              image: draft.image_src || null,
-              image_size: null
-            },
-      image_src: draft.type === 'image' ? draft.image_src || null : null,
-      url_target: s.url_target,
-      z: s.z,
-      ...(draft.type === 'line'
-        ? {
-            x2: _snap(Math.round(x)) + 150,
-            y2: _snap(Math.round(y)),
-            line_style: s.line_style ?? 'plain'
-          }
-        : {}),
-      ...(draft.type === 'graph'
-        ? {
-            graph_url: draft.graph_url || null,
-            graph_width: 400,
-            graph_height: 200,
-            graph_embed_type: 'img',
-            graph_refresh_interval: 0
-          }
-        : {})
-    }
-    try {
-      const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!)
-      if (boardsStore.currentBoard) boardsStore.currentBoard.objects = newConfig.objects
-      selectObject(id)
-      resetDraft()
-    } catch (e) {
-      console.error('Failed to add object', e)
-    }
-  }
-
-  async function placeAtLatLng(lat: number, lng: number) {
-    if (!placing.value || !draft.type) return
-    placing.value = false
-    const s = useSettingsStore().settings
-    const id = `${draft.type}_${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)}`
-    const obj: BoardObject = {
-      id,
-      type: draft.type,
+      type: draft.type as ObjectType,
       x: 0,
       y: 0,
-      lat,
-      lng,
       host_name: draft.host_name || null,
       service_description: draft.service_description || null,
       group_name: draft.group_name || null,
@@ -625,17 +557,82 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         image_size: null
       },
       url_target: s.url_target,
-      z: s.z,
-      ...(draft.type === 'line' ? { lat2: lat + 2, lng2: lng + 4 } : {})
+      z: s.z
     }
+  }
+
+  function _newDraftId(): string {
+    // crypto.randomUUID() avoids collisions from rapid or concurrent placements.
+    return `${draft.type}_${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)}`
+  }
+
+  async function placeAt(x: number, y: number) {
+    if (!placing.value || !draft.type) return
+    placing.value = false
+    const s = useSettingsStore().settings
+    const id = _newDraftId()
+    const existing = boardsStore.currentBoard?.objects ?? []
+    const placePos =
+      draft.type === 'line'
+        ? { x: _snap(Math.round(x)), y: _snap(Math.round(y)) }
+        : _avoidOverlap(id, Math.round(x), Math.round(y), existing)
+    const base = _draftToObject(id)
+    if (!base.label!.text && draft.type === 'image' && draft.image_src) {
+      // Image objects default their label to the file name.
+      base.label!.text =
+        draft.image_src
+          .split('/')
+          .pop()
+          ?.replace(/\.[^/.]+$/, '') ?? null
+    }
+    const obj: BoardObject = {
+      ...base,
+      x: placePos.x,
+      y: placePos.y,
+      display: draft.type === 'line' || draft.type === 'graph' ? null : (base.display ?? null),
+      image_src: draft.type === 'image' ? draft.image_src || null : null,
+      ...(draft.type === 'line'
+        ? {
+            x2: _snap(Math.round(x)) + 150,
+            y2: _snap(Math.round(y)),
+            line_style: s.line_style ?? 'plain'
+          }
+        : {}),
+      ...(draft.type === 'graph'
+        ? {
+            graph_url: draft.graph_url || null,
+            graph_width: 400,
+            graph_height: 200,
+            graph_embed_type: 'img',
+            graph_refresh_interval: 0
+          }
+        : {})
+    }
+    await _persistNewObject(obj)
+  }
+
+  // Shared persist step for both placement paths (pixel + geo).
+  async function _persistNewObject(obj: BoardObject) {
     try {
       const newConfig = await boardsApi.addObject(mapName.value, obj, auth.accessToken!)
       if (boardsStore.currentBoard) boardsStore.currentBoard.objects = newConfig.objects
-      selectObject(id)
+      selectObject(obj.id)
       resetDraft()
     } catch (e) {
-      console.error('Failed to add object', e)
+      _reportError(_t('Adding the object failed'), e)
     }
+  }
+
+  async function placeAtLatLng(lat: number, lng: number) {
+    if (!placing.value || !draft.type) return
+    placing.value = false
+    const obj: BoardObject = {
+      ..._draftToObject(_newDraftId()),
+      lat,
+      lng,
+      ...(draft.type === 'line' ? { lat2: lat + 2, lng2: lng + 4 } : {})
+    }
+    await _persistNewObject(obj)
   }
 
   async function moveObjectToLatLng(id: string, lat: number, lng: number, endpoint: 1 | 2 = 1) {
@@ -645,7 +642,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       const obj = boardsStore.currentBoard?.objects.find((o) => o.id === id)
       if (obj) Object.assign(obj, keys)
     } catch (e) {
-      console.error('Failed to save lat/lng', e)
+      _reportError(_t('Saving the position failed'), e)
       await onMapChange()
     }
   }
@@ -674,7 +671,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         )
       }
     } catch (e) {
-      console.error('Failed to save geo group drag', e)
+      _reportError(_t('Saving the move failed'), e)
       await onMapChange()
     }
   }
@@ -710,7 +707,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
         _clearDanglingRefs([id])
       }
     } catch (e) {
-      console.error('Failed to delete object', e)
+      _reportError(_t('Deleting failed'), e)
       await onMapChange()
     }
   }
@@ -746,7 +743,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
       if (boardsStore.currentBoard) boardsStore.currentBoard.objects = newConfig.objects
       selectObject(newId)
     } catch (e) {
-      console.error('Failed to duplicate object', e)
+      _reportError(_t('Duplicating the object failed'), e)
     }
   }
 

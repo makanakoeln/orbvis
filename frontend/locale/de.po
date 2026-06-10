@@ -2172,3 +2172,24 @@ msgstr "Site nicht erreichbar — letzter bekannter Stand"
 
 msgid "stale"
 msgstr "veraltet"
+
+msgid "Changing the layer failed"
+msgstr "Ebene ändern fehlgeschlagen"
+
+msgid "Deleting failed"
+msgstr "Löschen fehlgeschlagen"
+
+msgid "Saving the move failed"
+msgstr "Verschieben konnte nicht gespeichert werden"
+
+msgid "Saving the line failed"
+msgstr "Linie konnte nicht gespeichert werden"
+
+msgid "Saving the position failed"
+msgstr "Position konnte nicht gespeichert werden"
+
+msgid "Adding the object failed"
+msgstr "Objekt konnte nicht hinzugefügt werden"
+
+msgid "Duplicating the object failed"
+msgstr "Objekt konnte nicht dupliziert werden"
