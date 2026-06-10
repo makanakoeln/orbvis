@@ -685,7 +685,7 @@ watch(
       }
     }
     _hasFitOnce = false
-    if (!statesStore.wsAvailable) {
+    if (!statesStore.sseAvailable) {
       fetchTopology()
     } else if (svgEl.value && nodes.value.length) {
       // Re-render immediately with the new layout. Without this the

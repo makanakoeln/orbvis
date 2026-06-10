@@ -19,7 +19,7 @@ interface TopologyFeedOptions {
  * statesStore.topology (scoped per auth_user); we mirror them into `nodes`.
  *
  * Fallback: when the WS handshake never opens (reverse proxy without WS
- * support), statesStore flips `wsAvailable` to false and this composable polls
+ * support), statesStore flips `sseAvailable` to false and this composable polls
  * `/topology` every 15 s, pausing while the tab is hidden. The poll timer +
  * bootstrap timer + visibilitychange listener are owned and cleaned up here;
  * the host view keeps its own render/zoom/context-menu lifecycle.
@@ -61,7 +61,7 @@ export function useTopologyFeed(options: TopologyFeedOptions) {
   watch(
     () => statesStore.topology,
     (topo) => {
-      if (!statesStore.wsAvailable) return
+      if (!statesStore.sseAvailable) return
       nodes.value = [...topo]
       if (error.value) error.value = ''
       loading.value = false
@@ -72,7 +72,7 @@ export function useTopologyFeed(options: TopologyFeedOptions) {
   // Polling-fallback timer (only used when WS is unavailable). Tab-visibility
   // pause keeps idle multi-tab setups from each driving their own round-trip.
   function startPollTimer(): void {
-    if (timer || statesStore.wsAvailable) return
+    if (timer || statesStore.sseAvailable) return
     timer = setInterval(fetchTopology, 15000)
   }
   function stopPollTimer(): void {
@@ -82,7 +82,7 @@ export function useTopologyFeed(options: TopologyFeedOptions) {
     }
   }
   function onVisibilityChange(): void {
-    if (statesStore.wsAvailable) return
+    if (statesStore.sseAvailable) return
     if (document.hidden) {
       stopPollTimer()
     } else {
@@ -92,7 +92,7 @@ export function useTopologyFeed(options: TopologyFeedOptions) {
   }
 
   watch(
-    () => statesStore.wsAvailable,
+    () => statesStore.sseAvailable,
     (available) => {
       if (!available) {
         fetchTopology()
@@ -107,7 +107,7 @@ export function useTopologyFeed(options: TopologyFeedOptions) {
     if (statesStore.topology.length > 0) {
       nodes.value = [...statesStore.topology]
       loading.value = false
-    } else if (statesStore.wsAvailable) {
+    } else if (statesStore.sseAvailable) {
       // Wait briefly for the first WS topology_update; if none arrives, fall
       // back to a one-shot REST fetch so the user isn't stuck on a blank board.
       bootstrapTimer = setTimeout(() => {

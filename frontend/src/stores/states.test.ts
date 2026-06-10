@@ -49,11 +49,11 @@ describe('states store — SSE polling fallback + re-probe (T14)', () => {
 
     // _connect opened exactly one EventSource; nothing has failed yet.
     expect(FakeEventSource.instances).toHaveLength(1)
-    expect(store.wsAvailable).toBe(true)
+    expect(store.sseAvailable).toBe(true)
 
     // The connection errors before it ever opened → permanent-polling path.
     FakeEventSource.instances[0]!.onerror?.()
-    expect(store.wsAvailable).toBe(false)
+    expect(store.sseAvailable).toBe(false)
     expect(FakeEventSource.instances[0]!.closed).toBe(true)
 
     // After the re-probe interval, a probe EventSource is opened to test SSE.
@@ -65,7 +65,7 @@ describe('states store — SSE polling fallback + re-probe (T14)', () => {
     probe.onopen?.()
     await vi.advanceTimersByTimeAsync(0)
     expect(probe.closed).toBe(true)
-    expect(store.wsAvailable).toBe(true)
+    expect(store.sseAvailable).toBe(true)
     expect(FakeEventSource.instances).toHaveLength(3)
   })
 
@@ -73,14 +73,14 @@ describe('states store — SSE polling fallback + re-probe (T14)', () => {
     const store = useStatesStore()
     await store.connectToMap('board1', 'token')
     FakeEventSource.instances[0]!.onerror?.()
-    expect(store.wsAvailable).toBe(false)
+    expect(store.sseAvailable).toBe(false)
 
     // First re-probe fails before opening → discarded, still polling.
     await vi.advanceTimersByTimeAsync(60_000)
     expect(FakeEventSource.instances).toHaveLength(2)
     FakeEventSource.instances[1]!.onerror?.()
     expect(FakeEventSource.instances[1]!.closed).toBe(true)
-    expect(store.wsAvailable).toBe(false)
+    expect(store.sseAvailable).toBe(false)
 
     // Next interval re-probes again (one probe per tick, no overlap leak).
     await vi.advanceTimersByTimeAsync(60_000)

@@ -168,9 +168,9 @@ export const useStatesStore = defineStore('states', () => {
     triggerRef(folderTree)
     folderTreeVersion.value++
   }
-  // Kept under the historical name for compatibility with views; false after
-  // we fall back to HTTP polling because SSE didn't work.
-  const wsAvailable = ref(true)
+  // False after we fall back to HTTP polling because SSE didn't work
+  // (proxy without streaming support, auth rejected, …).
+  const sseAvailable = ref(true)
   const _LS_NOTIF = 'orbvis_notifications'
   const notificationsEnabled = ref(
     typeof Notification !== 'undefined' &&
@@ -337,7 +337,7 @@ export const useStatesStore = defineStore('states', () => {
         reprobeTimer = null
       }
       pollingMode = false
-      wsAvailable.value = true
+      sseAvailable.value = true
       void _connect()
     }
     probe.onerror = () => {
@@ -465,7 +465,7 @@ export const useStatesStore = defineStore('states', () => {
       // streaming support, auth rejected etc.).
       if (!opened) {
         pollingMode = true
-        wsAvailable.value = false
+        sseAvailable.value = false
         sse?.close()
         sse = null
         _startPolling()
@@ -578,7 +578,7 @@ export const useStatesStore = defineStore('states', () => {
     topologyTimingVersion,
     folderTree,
     folderTreeVersion,
-    wsAvailable,
+    sseAvailable,
     notificationsEnabled,
     connectToMap,
     disconnect,
