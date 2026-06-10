@@ -1075,7 +1075,7 @@
       :x="worldmapCtxMenu.x"
       :y="worldmapCtxMenu.y"
       :checkmk-url="checkmkUrl"
-      :show-edit="canEdit && !editor.editMode.value"
+      :show-edit="canEdit && editor.editMode.value"
       :edit-mode="editor.editMode.value"
       :template="
         resolveTemplate(

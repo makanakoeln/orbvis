@@ -157,8 +157,8 @@
 
     <!-- Operational actions (ack, downtime, force-check, comment, notifications)
              live exclusively in the detail drawer to avoid two competing paths
-             for the same operation. Right-click stays as a navigation/edit
-             quickpath. -->
+             for the same operation. In view mode right-click is navigation only;
+             edit/duplicate/delete are gated on edit mode via showEdit. -->
 
     <div class="orb-ctx__footer">
       <button v-if="lineHasBinding" class="orb-ctx__item" @click="$emit('detach')">

@@ -163,7 +163,7 @@
       :x="contextMenu.x"
       :y="contextMenu.y"
       :checkmk-url="checkmkUrl ?? null"
-      :show-edit="isAdmin && !editMode"
+      :show-edit="isAdmin && editMode"
       :edit-mode="editMode"
       :template="
         resolveTemplate(
