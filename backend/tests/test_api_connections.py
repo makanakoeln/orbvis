@@ -205,10 +205,14 @@ async def test_delete_backend(client, admin_token, tmp_path, monkeypatch):
         json=_SAMPLE_BACKEND,
         headers={"Authorization": f"Bearer {admin_token}"},
     )
+    assert state_service.get_connection("live_1") is not None
     response = await client.delete(
         "/api/v1/connections/live_1", headers={"Authorization": f"Bearer {admin_token}"}
     )
     assert response.status_code == 204
+    # Delete must mirror activation: the runtime instance goes away too,
+    # otherwise boards keep getting live data from the deleted connection.
+    assert state_service.get_connection("live_1") is None
 
 
 @pytest.mark.asyncio

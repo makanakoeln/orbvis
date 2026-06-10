@@ -108,6 +108,10 @@ def delete(connection_id: str) -> bool:
     if len(new) == len(connections):
         return False
     _save_all(new)
+    # Mirror _activate: without this the registered instance keeps serving
+    # board states and the warmup loop keeps polling the deleted backend
+    # until the next restart.
+    state_service.unregister_connection(connection_id)
     return True
 
 

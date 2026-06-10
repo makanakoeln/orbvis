@@ -104,6 +104,10 @@ def register_connection(connection_id: str, connection: ConnectionBase) -> None:
     _connections[connection_id] = connection
 
 
+def unregister_connection(connection_id: str) -> None:
+    _connections.pop(connection_id, None)
+
+
 def get_connection(connection_id: str) -> ConnectionBase | None:
     return _connections.get(connection_id)
 
