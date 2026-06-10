@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from app.form_specs._wire_types import WireDictionaryGroup
 from app.vendor.cmk_form_specs_extended import DictGroupExtended, DictionaryGroupLayout
 
 from cmk.rulesets.v1._localize import _Localizable
@@ -84,7 +85,7 @@ def slugify(text: str) -> str:
     return "".join(c.lower() if c.isalnum() else "_" for c in text).strip("_")
 
 
-def group_dict(el: DictElement[object]) -> dict[str, object] | None:
+def group_dict(el: DictElement[object]) -> WireDictionaryGroup | None:
     """Serialise a DictElement's ``group`` for the wire format.
 
     Prefers an explicit ``OrbDictGroup.key`` over the title-slug fallback,

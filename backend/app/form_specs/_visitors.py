@@ -122,7 +122,7 @@ class DictionaryVisitor(FormSpecVisitor[Dictionary]):
                 "parameter_form": child.serialize(el.parameter_form),
                 "default_value": child.default_value(el.parameter_form),
                 "render_only": el.render_only,
-                "group": group_dict(el),  # type: ignore[typeddict-item]
+                "group": group_dict(el),
             }
             elements.append(wire_el)
         return {
