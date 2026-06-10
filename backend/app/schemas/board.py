@@ -7,6 +7,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.schemas._validators import validate_user_url
 from app.schemas.presentation import PresentationView
 
 
@@ -21,31 +22,6 @@ def _accept_legacy_backend_id(data: object) -> object:
     if isinstance(data, dict) and "backend_id" in data and "connection_id" not in data:
         data["connection_id"] = data.pop("backend_id")
     return data
-
-
-# Schemes that must never appear in user-supplied URL fields stored on a board.
-# javascript:/data:/vbscript: would let an editor inject XSS payloads that fire
-# whenever another user clicks the linked board object.
-_BLOCKED_URL_PREFIXES = (
-    "javascript:",
-    "data:",
-    "vbscript:",
-    "file:",
-)
-
-
-def _validate_user_url(value: str | None) -> str | None:
-    """Reject URL-injection schemes for user-supplied URL fields on board objects."""
-    if not value:
-        return value
-    if len(value) > 4096:
-        raise ValueError("URL too long")
-    s = value.strip()
-    lowered = s.lower()
-    for prefix in _BLOCKED_URL_PREFIXES:
-        if lowered.startswith(prefix):
-            raise ValueError(f"URL scheme {prefix!r} is not allowed")
-    return s
 
 
 # Hex (#rgb/#rgba/#rrggbb/#rrggbbaa), a plain CSS named color, or "transparent".
@@ -390,7 +366,7 @@ class BoardObject(BaseModel):
     @field_validator("url", "hover_url", "graph_url")
     @classmethod
     def _validate_urls(cls, v: str | None) -> str | None:
-        return _validate_user_url(v)
+        return validate_user_url(v)
 
     @field_validator("line_color", "line_color_border")
     @classmethod
@@ -575,7 +551,7 @@ class BoardObjectUpdate(BaseModel):
     @field_validator("url", "hover_url", "graph_url")
     @classmethod
     def _validate_urls(cls, v: str | None) -> str | None:
-        return _validate_user_url(v)
+        return validate_user_url(v)
 
     @field_validator("line_color", "line_color_border")
     @classmethod

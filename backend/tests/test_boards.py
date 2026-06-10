@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 
@@ -474,3 +476,52 @@ async def test_update_board_without_if_match_skips_check(
         "/api/v1/boards/lock-board", headers={"Authorization": f"Bearer {admin_token}"}
     )
     assert final.json()["version"] == 2
+
+
+# ---- Legacy URL coercion on load/import ----
+
+
+@pytest.mark.asyncio
+async def test_load_coerces_now_invalid_urls(client, admin_token, tmp_path, monkeypatch):
+    """Boards persisted before the URL allowlist must stay loadable: hostile or
+    unknown schemes are dropped on read instead of failing the whole board."""
+    from pathlib import Path
+
+    _patch(monkeypatch, tmp_path)
+    Path(tmp_path, "legacy-board.json").write_text(
+        json.dumps(
+            {
+                "name": "legacy-board",
+                "objects": [
+                    {"id": "o1", "type": "image", "url": "java\tscript:alert(1)"},
+                    {"id": "o2", "type": "image", "url": "ssh://switch01"},
+                    {"id": "o3", "type": "image", "graph_url": "weird-scheme://x"},
+                ],
+            }
+        )
+    )
+    resp = await client.get(
+        "/api/v1/boards/legacy-board",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200
+    objs = {o["id"]: o for o in resp.json()["objects"]}
+    assert objs["o1"]["url"] is None
+    assert objs["o2"]["url"] == "ssh://switch01"
+    assert objs["o3"]["graph_url"] is None
+
+
+@pytest.mark.asyncio
+async def test_import_drops_now_invalid_urls(client, admin_token, tmp_path, monkeypatch):
+    _patch(monkeypatch, tmp_path)
+    payload = {
+        "name": "imported-legacy",
+        "objects": [{"id": "o1", "type": "image", "url": "javascript:alert(1)"}],
+    }
+    resp = await client.post(
+        "/api/v1/boards/import",
+        json=payload,
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["objects"][0]["url"] is None

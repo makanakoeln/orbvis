@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildServiceStateViewUrl, hostStateOn, svcStateOn } from './boardNavigation'
+import { buildServiceStateViewUrl, hostStateOn, openUrl, svcStateOn } from './boardNavigation'
 
 describe('svcStateOn / hostStateOn', () => {
   it('maps monitoring states to Checkmk filter checkboxes', () => {
@@ -40,5 +40,40 @@ describe('buildServiceStateViewUrl', () => {
 
   it('returns null for states the svcstate filter cannot express', () => {
     expect(buildServiceStateViewUrl(cmk, { host: 'web01' }, 'PENDING')).toBeNull()
+  })
+})
+
+describe('openUrl', () => {
+  function clickedHrefs(run: () => void): string[] {
+    const hrefs: string[] = []
+    const orig = HTMLAnchorElement.prototype.click
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+      hrefs.push(this.href)
+    }
+    try {
+      run()
+    } finally {
+      HTMLAnchorElement.prototype.click = orig
+    }
+    return hrefs
+  }
+
+  it('opens http(s)/mailto/tel and relative URLs', () => {
+    const hrefs = clickedHrefs(() => {
+      openUrl('https://example.com/x', '_blank')
+      openUrl('mailto:ops@example.com', '_blank')
+      openUrl('/relative/path', '_self')
+    })
+    expect(hrefs).toHaveLength(3)
+  })
+
+  it('refuses javascript: URLs even with embedded control characters', () => {
+    const hrefs = clickedHrefs(() => {
+      openUrl('javascript:alert(1)', '_blank')
+      openUrl('java\tscript:alert(1)', '_blank')
+      openUrl('java\nscript:alert(1)', '_blank')
+      openUrl('data:text/html,<script>alert(1)</script>', '_blank')
+    })
+    expect(hrefs).toHaveLength(0)
   })
 })

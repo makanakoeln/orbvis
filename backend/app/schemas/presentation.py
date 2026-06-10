@@ -24,12 +24,12 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.schemas._validators import validate_user_url
+
 # Hex (#rgb/#rgba/#rrggbb/#rrggbbaa), a plain CSS named color, or "transparent".
 # Same strict posture as board.py's color validator — keeps CSS-injection
 # payloads out of fill/stroke attributes rendered downstream.
 _COLOR_RE = re.compile(r"^(#[0-9a-fA-F]{3,8}|[a-zA-Z]{1,32}|transparent)$")
-
-_BLOCKED_URL_PREFIXES = ("javascript:", "data:", "vbscript:", "file:")
 
 
 def _validate_color(value: str | None) -> str | None:
@@ -57,16 +57,7 @@ def _validate_font_family(value: str | None) -> str | None:
 
 
 def _validate_image_src(value: str | None) -> str | None:
-    if not value:
-        return value
-    if len(value) > 4096:
-        raise ValueError("URL too long")
-    s = value.strip()
-    lowered = s.lower()
-    for prefix in _BLOCKED_URL_PREFIXES:
-        if lowered.startswith(prefix):
-            raise ValueError(f"URL scheme {prefix!r} is not allowed")
-    return s
+    return validate_user_url(value)
 
 
 class ElementDisplay(BaseModel):

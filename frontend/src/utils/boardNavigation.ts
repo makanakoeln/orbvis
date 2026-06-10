@@ -1,5 +1,7 @@
 import type { BoardObject } from '@/types/api'
 
+import { SAFE_URL_SCHEMES } from './sanitize'
+
 function _baseAndSite(
   checkmkUrl: string | null,
   siteOverride?: string | null
@@ -102,9 +104,24 @@ export function buildCheckmkSetupUrl(
   return null
 }
 
+// Defense-in-depth mirror of the backend allowlist (schemas/_validators.py):
+// board JSON predating the server-side check may still carry hostile URLs.
+const SAFE_PROTOCOLS = SAFE_URL_SCHEMES.map((s) => `${s}:`)
+
 // Uses a real <a> click so the browser doesn't treat it as a popup (important
 // when OrbVis runs inside a Checkmk iframe — window.open gets popup-blocked).
 export function openUrl(url: string, target: string): void {
+  let protocol: string
+  try {
+    protocol = new URL(url, window.location.href).protocol
+  } catch {
+    console.warn(`openUrl: unparseable URL blocked: ${url}`)
+    return
+  }
+  if (!SAFE_PROTOCOLS.includes(protocol)) {
+    console.warn(`openUrl: blocked unsafe URL scheme: ${protocol}`)
+    return
+  }
   const a = document.createElement('a')
   a.href = url
   a.target = target

@@ -11,6 +11,7 @@ import threading
 from pathlib import Path
 
 from app.core.config import settings
+from app.schemas._validators import coerce_user_url
 from app.schemas.board import (
     BoardConfig,
     BoardCreate,
@@ -18,6 +19,7 @@ from app.schemas.board import (
     BoardObjectUpdate,
     BoardRead,
     BoardUpdate,
+    _coerce_color,
     view_element_count,
 )
 
@@ -295,14 +297,22 @@ def _sanitize_legacy_data(data: object) -> None:
     """
     if not isinstance(data, dict):
         return
-    from app.schemas.board import _coerce_color
-
     for obj in data.get("objects") or []:
         if not isinstance(obj, dict):
             continue
         for key in ("line_color", "line_color_border"):
             if key in obj:
                 obj[key] = _coerce_color(obj[key])
+        for key in ("url", "hover_url", "graph_url"):
+            if key in obj:
+                obj[key] = coerce_user_url(obj[key])
+    view = data.get("view")
+    if isinstance(view, dict):
+        if "background_image" in view:
+            view["background_image"] = coerce_user_url(view["background_image"])
+        for el in view.get("elements") or []:
+            if isinstance(el, dict) and "src" in el:
+                el["src"] = coerce_user_url(el["src"])
 
 
 def _save_board_file(cfg: BoardConfig) -> None:
@@ -415,6 +425,9 @@ def clone_board(name: str, new_name: str, alias: str | None = None) -> BoardConf
 
 
 def import_board(data: dict[str, object], *, overwrite: bool = False) -> BoardConfig:
+    # Imports carry exported/legacy JSON — apply the same read-side coercion
+    # as the load path so one stale value doesn't fail the whole import.
+    _sanitize_legacy_data(data)
     cfg = BoardConfig.model_validate(data)
     with _board_lock(cfg.name):
         existing = get_board(cfg.name)

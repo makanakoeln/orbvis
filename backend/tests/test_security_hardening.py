@@ -82,7 +82,24 @@ class TestBoardObjectUrlValidation:
     @pytest.mark.parametrize("field", ["url", "hover_url", "graph_url"])
     @pytest.mark.parametrize(
         "scheme",
-        ["javascript:", "data:", "vbscript:", "file:", "JavaScript:", " javascript:"],
+        [
+            "javascript:",
+            "data:",
+            "vbscript:",
+            "file:",
+            "JavaScript:",
+            " javascript:",
+            # Browsers strip ASCII control chars when parsing URLs, so these
+            # would still execute on click — the validator must reject them.
+            "java\tscript:",
+            "java\nscript:",
+            "java\rscript:",
+            "\x01javascript:",
+            # Allowlist posture: unknown schemes are rejected outright.
+            "blob:",
+            "chrome:",
+            "about:",
+        ],
     )
     def test_rejects_xss_schemes(self, field: str, scheme: str) -> None:
         with pytest.raises(ValidationError):
@@ -91,8 +108,24 @@ class TestBoardObjectUrlValidation:
             BoardObjectUpdate(**{field: scheme + "alert(1)"})
 
     @pytest.mark.parametrize("field", ["url", "hover_url", "graph_url"])
-    def test_accepts_http(self, field: str) -> None:
-        BoardObject(id="o1", type="image", **{field: "https://example.com/x"})
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://example.com/x",
+            "http://example.com/x",
+            "mailto:ops@example.com",
+            "tel:+491234567",
+            # Remote-access handlers monitoring boards traditionally link.
+            "ssh://switch01",
+            "rdp://winserver",
+            "vnc://kvm01",
+            "/relative/path?x=1",
+            "view.py?view_name=host",
+            "//cdn.example.com/x",
+        ],
+    )
+    def test_accepts_safe_urls(self, field: str, url: str) -> None:
+        BoardObject(id="o1", type="image", **{field: url})
 
 
 class TestSvgSafety:
