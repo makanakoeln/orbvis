@@ -9,7 +9,7 @@ they only register when :mod:`cmk.rulesets.v1` is importable.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
@@ -18,7 +18,7 @@ from app.api.v1.deps import get_current_user, require_configure
 from app.form_specs import FORM_SPECS_AVAILABLE
 from app.models.user import User
 from app.object_options import LINE_STYLES
-from app.schemas.settings import GlobalSettings, SystemSettings
+from app.schemas.settings import GlobalSettings, LogLevel, SystemSettings
 from app.services import settings_service
 
 if FORM_SPECS_AVAILABLE:
@@ -263,14 +263,14 @@ if FORM_SPECS_AVAILABLE:
 
     def _system_from_form(form: dict[str, object]) -> SystemSettings:
         raw_level = form.get("log_level", "env_default")
-        log_level: object
-        if raw_level == "env_default":
-            log_level = None
-        else:
-            log_level = raw_level
+        # The form value is an untyped string; pydantic re-validates it against
+        # LogLevel below (an invalid value raises ValidationError, handled here).
+        log_level: LogLevel | None = (
+            None if raw_level == "env_default" else cast(LogLevel, raw_level)
+        )
         try:
             return SystemSettings(
-                log_level=log_level,  # type: ignore[arg-type]
+                log_level=log_level,
                 checkmk_url=_optional_str(form.get("checkmk_url")),
                 state_refresh_interval=_optional_int(form.get("state_refresh_interval")),
                 access_token_expire_minutes=_optional_int(form.get("access_token_expire_minutes")),
