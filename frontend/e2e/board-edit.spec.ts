@@ -14,7 +14,7 @@ const EDITED_ALIAS = 'E2E Edited Alias'
 // change the display name in board settings, save, reload, assert it stuck.
 
 async function apiToken(ctx: APIRequestContext): Promise<string> {
-  const res = await ctx.post('/api/v1/auth/login', {
+  const res = await ctx.post('api/v1/auth/login', {
     data: { username: ADMIN_USER, password: ADMIN_PASSWORD }
   })
   expect(res.ok(), 'API login should succeed').toBeTruthy()
@@ -51,8 +51,8 @@ test.describe('OrbVis board edit', () => {
     ctx = await playwright.request.newContext({ baseURL })
     authHeader = { Authorization: `Bearer ${await apiToken(ctx)}` }
     // Idempotent: clear any leftover from a previous run, then provision fresh.
-    await ctx.delete(`/api/v1/boards/${BOARD}`, { headers: authHeader })
-    const res = await ctx.post('/api/v1/boards', {
+    await ctx.delete(`api/v1/boards/${BOARD}`, { headers: authHeader })
+    const res = await ctx.post('api/v1/boards', {
       headers: authHeader,
       data: { name: BOARD, alias: ORIGINAL_ALIAS, connection_id: 'test', view_type: 'static' }
     })
@@ -60,7 +60,7 @@ test.describe('OrbVis board edit', () => {
   })
 
   test.afterAll(async () => {
-    await ctx.delete(`/api/v1/boards/${BOARD}`, { headers: authHeader })
+    await ctx.delete(`api/v1/boards/${BOARD}`, { headers: authHeader })
     await ctx.dispose()
   })
 
@@ -84,7 +84,7 @@ test.describe('OrbVis board edit', () => {
     await expect(page.getByText(EDITED_ALIAS).first()).toBeVisible({ timeout: 10_000 })
 
     // And it is persisted server-side, not just in the live store.
-    const fresh = await ctx.get(`/api/v1/boards/${BOARD}`, { headers: authHeader })
+    const fresh = await ctx.get(`api/v1/boards/${BOARD}`, { headers: authHeader })
     expect((await fresh.json()).alias).toBe(EDITED_ALIAS)
   })
 })
