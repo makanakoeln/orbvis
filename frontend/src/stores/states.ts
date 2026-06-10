@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { markRaw, ref, shallowRef, triggerRef } from 'vue'
 
-import { boardsApi, connectionsApi } from '@/api/client'
+import { authApi, boardsApi, connectionsApi } from '@/api/client'
 import type {
   FolderTreeDelta,
   FolderTreeNode,
@@ -235,7 +235,7 @@ export const useStatesStore = defineStore('states', () => {
     } finally {
       initialLoad.value = false
     }
-    if (!pollingMode) _connect()
+    if (!pollingMode) await _connect()
     else _startPolling()
   }
 
@@ -287,23 +287,36 @@ export const useStatesStore = defineStore('states', () => {
     if (!reprobeTimer) reprobeTimer = setInterval(_attemptSseReprobe, SSE_REPROBE_INTERVAL_MS)
   }
 
-  // SSE: GET endpoint, token in query string (EventSource cannot set
-  // Authorization). Access-token TTL is short (60 min default), so the
-  // exposure window is bounded.
-  function _sseUrl(): string {
-    return `${_base}/api/v1/sse/boards/${encodeURIComponent(
-      currentMap!
-    )}?token=${encodeURIComponent(currentToken!)}`
+  // SSE: GET endpoint, credential in query string (EventSource cannot set
+  // Authorization). Proxies log query strings, so prefer a minutes-lived
+  // stream ticket over the 60-min access token; fall back to the token when
+  // the ticket endpoint is unavailable (older backend during an update).
+  async function _sseUrl(map: string, token: string): Promise<string> {
+    let credential = token
+    try {
+      credential = (await authApi.streamTicket(token)).ticket
+    } catch {
+      // documented fallback above
+    }
+    return `${_base}/api/v1/sse/boards/${encodeURIComponent(map)}?token=${encodeURIComponent(
+      credential
+    )}`
   }
 
   // While polling, periodically test whether SSE is reachable again. On
   // success we discard the probe and re-establish the real stream via the
   // normal _connect() path (which wires the message/error handlers).
-  function _attemptSseReprobe() {
+  async function _attemptSseReprobe() {
     if (probing || !pollingMode || !currentMap || !currentToken) return
     probing = true
     const probeMap = currentMap
-    const probe = new EventSource(_sseUrl())
+    const probeUrl = await _sseUrl(probeMap, currentToken)
+    // A board switch / disconnect may have happened during the ticket fetch.
+    if (!pollingMode || currentMap !== probeMap) {
+      probing = false
+      return
+    }
+    const probe = new EventSource(probeUrl)
     reprobe = probe
     let opened = false
     probe.onopen = () => {
@@ -325,7 +338,7 @@ export const useStatesStore = defineStore('states', () => {
       }
       pollingMode = false
       wsAvailable.value = true
-      _connect()
+      void _connect()
     }
     probe.onerror = () => {
       // Still unreachable — discard; the timer retries on the next tick.
@@ -384,9 +397,13 @@ export const useStatesStore = defineStore('states', () => {
     }
   }
 
-  function _connect() {
+  async function _connect() {
     if (!currentMap || !currentToken) return
-    sse = new EventSource(_sseUrl())
+    const map = currentMap
+    const url = await _sseUrl(map, currentToken)
+    // Board switched / disconnected while the ticket fetch was in flight.
+    if (currentMap !== map || sse) return
+    sse = new EventSource(url)
     let opened = false
 
     sse.onopen = () => {

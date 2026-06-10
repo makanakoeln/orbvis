@@ -28,7 +28,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.ratelimit import tile_fetch_limiter
 from app.core.version import APP_VERSION
-from app.services.auth_service import authenticate_bearer_token
+from app.services.auth_service import authenticate_url_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -122,7 +122,7 @@ async def get_tile(
     z: int = PathParam(..., ge=0, le=20),
     x: int = PathParam(..., ge=0),
     y: int = PathParam(..., ge=0),
-    token: str = Query(..., description="JWT access token (Leaflet <img> can't set headers)"),
+    token: str = Query(..., description="Stream ticket or access token (<img> can't set headers)"),
     if_none_match: str | None = Header(default=None, alias="If-None-Match"),
     db: sqlite3.Connection = Depends(get_db),
 ) -> Response:
@@ -133,7 +133,7 @@ async def get_tile(
     if tile_fetch_limiter.is_blocked(client_ip):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Rate limited")
     tile_fetch_limiter.record(client_ip)
-    user = await authenticate_bearer_token(db, token)
+    user = await authenticate_url_token(db, token)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 

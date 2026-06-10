@@ -478,17 +478,14 @@ async def get_user_by_id(conn: sqlite3.Connection, user_id: int) -> User | None:
     return await asyncio.to_thread(_fetch_user, conn, "user_id = ?", (user_id,))
 
 
-async def authenticate_bearer_token(conn: sqlite3.Connection, token: str) -> User | None:
-    """Decode a bearer JWT, verify it's an active access token, load the user.
-
-    Shared by FastAPI HTTP deps and the SSE handshake so both paths reject
-    non-access tokens, blocklisted tokens, and inactive users identically.
-    """
+async def _authenticate_token(
+    conn: sqlite3.Connection, token: str, allowed_types: tuple[str, ...]
+) -> User | None:
     from app.core.security import decode_token, is_token_blocked
 
     try:
         payload = decode_token(token)
-        if payload.get("type") != "access":
+        if payload.get("type") not in allowed_types:
             return None
         user_id = int(str(payload["sub"]))
         jti = str(payload.get("jti", ""))
@@ -502,6 +499,25 @@ async def authenticate_bearer_token(conn: sqlite3.Connection, token: str) -> Use
     if user is None or not user.is_active:
         return None
     return user
+
+
+async def authenticate_bearer_token(conn: sqlite3.Connection, token: str) -> User | None:
+    """Decode a bearer JWT, verify it's an active access token, load the user.
+
+    Header-borne auth only accepts access tokens — a leaked stream ticket
+    (URL-borne, may appear in proxy logs) must stay useless here.
+    """
+    return await _authenticate_token(conn, token, ("access",))
+
+
+async def authenticate_url_token(conn: sqlite3.Connection, token: str) -> User | None:
+    """Auth for URL-borne tokens (SSE handshake, tile proxy <img> fetches).
+
+    Prefers the short-lived stream ticket (POST /auth/stream-ticket); regular
+    access tokens stay accepted for older external callers, at the cost of a
+    longer exposure window when proxies log the query string.
+    """
+    return await _authenticate_token(conn, token, ("stream", "access"))
 
 
 def _is_checkmk_admin(username: str) -> bool:

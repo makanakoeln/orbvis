@@ -188,3 +188,42 @@ async def test_refresh_rejects_access_token(client, admin_user):
 async def test_refresh_rejects_garbage(client):
     response = await client.post("/api/v1/auth/refresh", json={"refresh_token": "not-a-jwt"})
     assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Stream tickets (URL-borne auth for SSE / tile fetches)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_stream_ticket_issued_for_authenticated_user(client, admin_token):
+    resp = await client.post(
+        "/api/v1/auth/stream-ticket",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["expires_in"] <= 300
+
+    from app.core.security import decode_token
+
+    payload = decode_token(body["ticket"])
+    assert payload["type"] == "stream"
+
+
+@pytest.mark.asyncio
+async def test_stream_ticket_rejected_on_header_auth_routes(client, admin_token):
+    """A leaked URL-borne ticket must be useless against normal API routes."""
+    resp = await client.post(
+        "/api/v1/auth/stream-ticket",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    ticket = resp.json()["ticket"]
+    me = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {ticket}"})
+    assert me.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_stream_ticket_requires_auth(client):
+    resp = await client.post("/api/v1/auth/stream-ticket")
+    assert resp.status_code in (401, 403)

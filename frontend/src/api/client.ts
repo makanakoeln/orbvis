@@ -27,6 +27,7 @@ import type {
   PerfometerResult,
   PermissionRead,
   RoleRead,
+  StreamTicketResponse,
   SystemSettings,
   TokenResponse,
   UserRead
@@ -151,6 +152,11 @@ export const authApi = {
   sso: (): Promise<TokenResponse> => request('/auth/sso', {}),
 
   me: (token: string): Promise<UserRead> => request('/auth/me', {}, token),
+
+  // Short-lived credential for URL-borne auth (SSE / tile <img> fetches) —
+  // keeps the long-lived access token out of proxy access logs.
+  streamTicket: (token: string): Promise<StreamTicketResponse> =>
+    request('/auth/stream-ticket', { method: 'POST' }, token),
 
   logout: (token: string): Promise<void> => request('/auth/logout', { method: 'POST' }, token)
 }

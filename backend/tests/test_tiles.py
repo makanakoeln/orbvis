@@ -153,3 +153,15 @@ async def test_cache_cap_stops_writes_but_still_serves(
     # Not cached, so the next request goes upstream again.
     second = await client.get(f"/api/v1/maps/tiles/2/1/1.png?token={admin_token}")
     assert second.content == b"PNG2"
+
+
+@pytest.mark.asyncio
+async def test_tile_accepts_stream_ticket(client, admin_token, fake_upstream):
+    fake_upstream([_png(b"PNG1")])
+    ticket_resp = await client.post(
+        "/api/v1/auth/stream-ticket",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    ticket = ticket_resp.json()["ticket"]
+    resp = await client.get(f"/api/v1/maps/tiles/2/1/1.png?token={ticket}")
+    assert resp.status_code == 200

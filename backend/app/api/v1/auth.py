@@ -21,14 +21,16 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.ratelimit import login_limiter
 from app.core.security import (
+    STREAM_TICKET_TTL,
     blocklist_token,
     create_access_token,
     create_refresh_token,
+    create_stream_ticket,
     decode_token,
     is_token_blocked,
 )
 from app.models.user import User
-from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse
+from app.schemas.auth import LoginRequest, RefreshRequest, StreamTicketResponse, TokenResponse
 from app.schemas.user import UserRead
 from app.services.auth_service import (
     authenticate_user,
@@ -176,6 +178,22 @@ async def sso_login(request: Request, db: sqlite3.Connection = Depends(get_db)) 
 
     user = await get_or_create_sso_user(db, username)
     return create_tokens(user)
+
+
+@router.post("/stream-ticket", response_model=StreamTicketResponse)
+async def issue_stream_ticket(
+    current_user: User = Depends(get_current_user),
+) -> StreamTicketResponse:
+    """Issue a short-lived ticket for URL-borne auth (SSE / tile fetches).
+
+    EventSource and <img> cannot set an Authorization header, so those
+    consumers carry their credential in the query string — which proxies log.
+    The ticket bounds that exposure to minutes.
+    """
+    return StreamTicketResponse(
+        ticket=create_stream_ticket(current_user.user_id),
+        expires_in=int(STREAM_TICKET_TTL.total_seconds()),
+    )
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

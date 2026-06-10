@@ -16,3 +16,10 @@ class TokenResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+
+class StreamTicketResponse(BaseModel):
+    """Short-lived token for URL-borne auth (SSE / tile <img> fetches)."""
+
+    ticket: str
+    expires_in: int

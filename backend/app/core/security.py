@@ -68,5 +68,18 @@ def create_refresh_token(subject: str | int) -> str:
     return _jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
+# SSE streams and Leaflet <img> tiles cannot send an Authorization header, so
+# their auth has to ride in the URL — which proxies write to access logs. A
+# dedicated short-lived ticket bounds that exposure to minutes (instead of the
+# access token's TTL) and is useless against every header-authenticated route.
+STREAM_TICKET_TTL = timedelta(minutes=5)
+
+
+def create_stream_ticket(subject: str | int) -> str:
+    expire = datetime.now(UTC) + STREAM_TICKET_TTL
+    payload = {"sub": str(subject), "exp": expire, "type": "stream", "jti": uuid4().hex}
+    return _jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+
+
 def decode_token(token: str) -> dict[str, object]:
     return _jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])

@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useStatesStore } from './states'
 
 vi.mock('@/api/client', () => ({
+  authApi: {
+    streamTicket: vi.fn().mockResolvedValue({ ticket: 'short-lived-ticket', expires_in: 300 })
+  },
   boardsApi: { getStates: vi.fn().mockResolvedValue({ states: [], connection_ok: true }) },
   connectionsApi: {}
 }))
@@ -54,12 +57,13 @@ describe('states store — SSE polling fallback + re-probe (T14)', () => {
     expect(FakeEventSource.instances[0]!.closed).toBe(true)
 
     // After the re-probe interval, a probe EventSource is opened to test SSE.
-    vi.advanceTimersByTime(60_000)
+    await vi.advanceTimersByTimeAsync(60_000)
     expect(FakeEventSource.instances).toHaveLength(2)
     const probe = FakeEventSource.instances[1]!
 
     // Probe opens → SSE is back: probe discarded, live stream re-established.
     probe.onopen?.()
+    await vi.advanceTimersByTimeAsync(0)
     expect(probe.closed).toBe(true)
     expect(store.wsAvailable).toBe(true)
     expect(FakeEventSource.instances).toHaveLength(3)
@@ -72,19 +76,19 @@ describe('states store — SSE polling fallback + re-probe (T14)', () => {
     expect(store.wsAvailable).toBe(false)
 
     // First re-probe fails before opening → discarded, still polling.
-    vi.advanceTimersByTime(60_000)
+    await vi.advanceTimersByTimeAsync(60_000)
     expect(FakeEventSource.instances).toHaveLength(2)
     FakeEventSource.instances[1]!.onerror?.()
     expect(FakeEventSource.instances[1]!.closed).toBe(true)
     expect(store.wsAvailable).toBe(false)
 
     // Next interval re-probes again (one probe per tick, no overlap leak).
-    vi.advanceTimersByTime(60_000)
+    await vi.advanceTimersByTimeAsync(60_000)
     expect(FakeEventSource.instances).toHaveLength(3)
 
     // Disconnect stops all timers — no further probes are created.
     store.disconnect()
-    vi.advanceTimersByTime(120_000)
+    await vi.advanceTimersByTimeAsync(120_000)
     expect(FakeEventSource.instances).toHaveLength(3)
   })
 
@@ -92,7 +96,7 @@ describe('states store — SSE polling fallback + re-probe (T14)', () => {
     const store = useStatesStore()
     await store.connectToMap('board1', 'token')
     FakeEventSource.instances[0]!.onerror?.() // → polling
-    vi.advanceTimersByTime(60_000) // → probe (instance[1])
+    await vi.advanceTimersByTimeAsync(60_000) // → probe (instance[1])
     const probe = FakeEventSource.instances[1]!
     expect(probe.onopen).toBeTypeOf('function')
 
@@ -103,6 +107,7 @@ describe('states store — SSE polling fallback + re-probe (T14)', () => {
 
     // A late open must not promote a stream (no instance[2] appears).
     probe.onopen?.()
+    await vi.advanceTimersByTimeAsync(0)
     expect(FakeEventSource.instances).toHaveLength(2)
   })
 })
@@ -245,5 +250,34 @@ describe('states store — folder-tree delta apply', () => {
       ]
     })
     expect(store.folderTree?.children.map((c) => c.path)).toEqual(['f/h2', 'f/h1'])
+  })
+})
+
+describe('states store — SSE auth credential', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    FakeEventSource.instances = []
+    vi.stubGlobal('EventSource', FakeEventSource)
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('connects with the short-lived stream ticket, not the access token', async () => {
+    const store = useStatesStore()
+    await store.connectToMap('b', 'long-lived-access-token')
+    const es = FakeEventSource.instances[0]!
+    expect(es.url).toContain('token=short-lived-ticket')
+    expect(es.url).not.toContain('long-lived-access-token')
+  })
+
+  it('falls back to the access token when the ticket endpoint is unavailable', async () => {
+    const { authApi } = await import('@/api/client')
+    vi.mocked(authApi.streamTicket).mockRejectedValueOnce(new Error('404'))
+    const store = useStatesStore()
+    await store.connectToMap('b', 'fallback-token')
+    const es = FakeEventSource.instances[0]!
+    expect(es.url).toContain('token=fallback-token')
   })
 })

@@ -19,6 +19,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
+import { authApi } from '@/api/client'
 import { useMarquee } from '@/composables/useMarquee'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
@@ -824,14 +825,30 @@ function syncLines() {
   }
 }
 
+// The tile proxy requires auth, but Leaflet's <img> tiles cannot carry an
+// Authorization header — a short-lived stream ticket travels as a query
+// param instead (same pattern as the SSE stream), keeping the long-lived
+// access token out of proxy logs. Refreshed before its TTL so panning a
+// long-open board doesn't hit 401 tiles.
+const tileTicket = ref('')
+const TILE_TICKET_REFRESH_MS = 4 * 60_000 // ticket TTL is 5 min
+let tileTicketTimer: ReturnType<typeof setInterval> | null = null
+
+async function refreshTileTicket() {
+  if (!auth.accessToken) return
+  try {
+    tileTicket.value = (await authApi.streamTicket(auth.accessToken)).ticket
+  } catch {
+    // Older backend without the ticket endpoint — the access token works too.
+    tileTicket.value = auth.accessToken
+  }
+}
+
 function applyTileSettings() {
   if (!leafletMap) return
   const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null
-  // The tile proxy requires auth, but Leaflet's <img> tiles cannot carry an
-  // Authorization header — the token travels as a query param (same pattern
-  // as the SSE stream). External tile_url overrides stay untouched.
-  const url =
-    wv?.tile_url || `${DEFAULT_TILE_URL}?token=${encodeURIComponent(auth.accessToken ?? '')}`
+  // External tile_url overrides stay untouched; only the proxy needs auth.
+  const url = wv?.tile_url || `${DEFAULT_TILE_URL}?token=${encodeURIComponent(tileTicket.value)}`
   if (tileLayer) tileLayer.remove()
   tileLayer = L.tileLayer(url, {
     attribution:
@@ -854,7 +871,10 @@ function fitAll() {
 
 let resizeObserver: ResizeObserver | null = null
 
-onMounted(() => {
+onMounted(async () => {
+  if (!mapEl.value) return
+  await refreshTileTicket()
+  tileTicketTimer = setInterval(refreshTileTicket, TILE_TICKET_REFRESH_MS)
   if (!mapEl.value) return
   const wv = props.config.view.type === 'worldmap' ? (props.config.view as WorldmapView) : null
   leafletMap = L.map(mapEl.value, {
@@ -915,6 +935,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (tileTicketTimer) {
+    clearInterval(tileTicketTimer)
+    tileTicketTimer = null
+  }
   resizeObserver?.disconnect()
   resizeObserver = null
   mapEl.value?.removeEventListener('mousedown', onTextboxResizeStart, true)
@@ -999,11 +1023,12 @@ watch(() => {
   return [wv?.tile_url, wv?.tile_saturate]
 }, applyTileSettings)
 
-// The proxy tile URL embeds the access token — rebuild the layer after a
-// token refresh so tiles fetched later don't 401 with the expired one.
+// The proxy tile URL embeds the ticket — rebuild the layer whenever it
+// rotates so tiles fetched later don't 401 with the expired one.
+watch(tileTicket, () => applyTileSettings())
 watch(
   () => auth.accessToken,
-  () => applyTileSettings()
+  () => refreshTileTicket()
 )
 
 watch(

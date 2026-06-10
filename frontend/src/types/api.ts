@@ -594,6 +594,11 @@ export interface TokenResponse {
   token_type: string
 }
 
+export interface StreamTicketResponse {
+  ticket: string
+  expires_in: number
+}
+
 export interface PermissionRef {
   perm_id: number
   mod: string

@@ -35,7 +35,7 @@ from app.schemas.state import (
     ObjectTiming,
 )
 from app.services import board_service, settings_service, state_service
-from app.services.auth_service import authenticate_bearer_token
+from app.services.auth_service import authenticate_url_token
 
 logger = logging.getLogger(__name__)
 
@@ -516,22 +516,24 @@ async def folder_service_search(
 async def sse_board_states(
     name: BoardName,
     request: Request,
-    token: str = Query(..., description="JWT access token (EventSource can't set Authorization)"),
+    token: str = Query(
+        ..., description="Stream ticket or access token (EventSource can't set headers)"
+    ),
     db: sqlite3.Connection = Depends(get_db),
 ) -> StreamingResponse:
     """SSE endpoint streaming state + topology updates for a board.
 
     Authentication: ``?token=`` query parameter (EventSource cannot set custom
-    headers). Browsers may log query strings; trade-off accepted because the
-    access-token TTL is short (60 min by default). For a tighter setup, fetch
-    a short-lived ticket via POST and use that.
+    headers). Proxies log query strings, so the frontend sends a short-lived
+    stream ticket (``POST /auth/stream-ticket``); plain access tokens stay
+    accepted for older external callers.
     """
     client_ip = request.client.host if request.client else "unknown"
     if ws_connect_limiter.is_blocked(client_ip):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Rate limited")
     ws_connect_limiter.record(client_ip)
 
-    user = await authenticate_bearer_token(db, token)
+    user = await authenticate_url_token(db, token)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     if not _can_view_board(user, name):
