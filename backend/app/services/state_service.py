@@ -33,6 +33,12 @@ from app.schemas.state import (
     ObjectTiming,
     ServicesSummary,
 )
+from app.schemas.topology import (
+    ServiceTiming,
+    TopologyDelta,
+    TopologyNode,
+    TopologyTiming,
+)
 
 # AggregationNode.state uses cmk.bi integer codes; map them to OrbVis'
 # monitoring-state strings for ObjectState.state when we have to derive
@@ -46,12 +52,6 @@ _BI_INT_TO_STATE: dict[int, str] = {
     3: "UNKNOWN",
     4: "UNKNOWN",
 }
-
-# Late import to avoid the connections-API module being imported at startup.
-# TopologyNode lives there because it's the response_model of /topology;
-# the snapshot diff helpers below are the only state_service consumers.
-if TYPE_CHECKING:
-    from app.api.v1.connections import TopologyDelta, TopologyNode
 
 # Combined severity for cross-scale worst-state aggregation (recognize_services)
 _COMBINED_SEVERITY: dict[str, int] = {
@@ -1320,14 +1320,6 @@ def compute_topology_delta(
     Flow Board's next-check / overdue readouts stay live without re-sending whole
     nodes. Empty on a full send (timing rides inside the node payloads).
     """
-    from app.api.v1.connections import (
-        ServiceTiming,
-        TopologyTiming,
-    )
-    from app.api.v1.connections import (
-        TopologyDelta as _TopologyDelta,
-    )
-
     key = (board_name, auth_user)
     prev = _topology_snapshots.get(key)
     prev_timing = _topology_timing_snapshots.get(key)
@@ -1337,7 +1329,7 @@ def compute_topology_delta(
     if force_full or prev is None:
         _topology_snapshots[key] = new_hashes
         _topology_timing_snapshots[key] = new_timing
-        return _TopologyDelta(full=True, generated_at=time.time(), added=current)
+        return TopologyDelta(full=True, generated_at=time.time(), added=current)
 
     by_name = {n.name: n for n in current}
     added = [n for n in current if n.name not in prev]
@@ -1363,7 +1355,7 @@ def compute_topology_delta(
 
     _topology_snapshots[key] = new_hashes
     _topology_timing_snapshots[key] = new_timing
-    return _TopologyDelta(
+    return TopologyDelta(
         full=False,
         generated_at=time.time(),
         added=added,

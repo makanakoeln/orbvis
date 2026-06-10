@@ -386,7 +386,7 @@ async def test_get_board_states_non_monitoring_objects(mock_connection, monkeypa
 
 def _topo_node(name: str, **kwargs):
     """Build a TopologyNode with sensible defaults for diff tests."""
-    from app.api.v1.connections import TopologyNode
+    from app.schemas.topology import TopologyNode
 
     return TopologyNode(**{"parents": [], "state": "UP", "output": "ok", "name": name, **kwargs})
 
@@ -462,7 +462,7 @@ def test_topology_delta_changed_host_not_also_in_timing():
 
 
 def test_topology_delta_timing_patch_tracks_service_recheck():
-    from app.api.v1.connections import ServiceNode
+    from app.schemas.topology import ServiceNode
 
     def node(svc_next: float):
         return _topo_node(

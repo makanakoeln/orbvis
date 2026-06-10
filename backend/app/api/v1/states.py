@@ -12,7 +12,7 @@ from typing import Literal, cast
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
 
-from app.api.v1.connections import TopologyNode, build_topology_response
+from app.api.v1.connections import build_topology_response
 from app.api.v1.deps import can_view_board as _can_view_board
 from app.api.v1.deps import can_view_board_by_name as _can_view_board_by_name
 from app.api.v1.deps import get_current_user, resolve_auth_user
@@ -34,6 +34,7 @@ from app.schemas.state import (
     ObjectState,
     ObjectTiming,
 )
+from app.schemas.topology import TopologyNode
 from app.services import board_service, settings_service, state_service
 from app.services.auth_service import authenticate_url_token
 
