@@ -8,8 +8,7 @@ from pydantic import ValidationError
 from app.api.v1.connections import (
     HostActionRequest,
     ServiceActionRequest,
-    _build_host_command,
-    _build_service_command,
+    _build_action_command,
 )
 from app.core.image_security import is_safe_svg, is_valid_image
 from app.models.user import User
@@ -299,7 +298,7 @@ class TestCommandInjection:
         # Defense-in-depth: even if a name bypasses the schema validator, the
         # builder must neutralise separators before they reach the pipe.
         body = HostActionRequest.model_construct(action="force_check", host_name="host\nINJECT;x")
-        cmd = _build_host_command(body, self._ADMIN)
+        cmd = _build_action_command(body, self._ADMIN)
         assert "\n" not in cmd and "\r" not in cmd
         assert cmd.startswith("SCHEDULE_FORCED_HOST_CHECK;host INJECT x;")
 
@@ -307,6 +306,6 @@ class TestCommandInjection:
         body = ServiceActionRequest.model_construct(
             action="force_check", host_name="h\nx", service_description="s;y"
         )
-        cmd = _build_service_command(body, self._ADMIN)
+        cmd = _build_action_command(body, self._ADMIN)
         assert "\n" not in cmd and "\r" not in cmd
         assert cmd.startswith("SCHEDULE_FORCED_SVC_CHECK;h x;s y;")

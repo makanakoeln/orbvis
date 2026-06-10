@@ -109,6 +109,18 @@ def _fetch_user(conn: sqlite3.Connection, where: str, params: tuple[Any, ...]) -
     return user
 
 
+def list_users_sync(conn: sqlite3.Connection) -> list[User]:
+    """All users with roles, ordered by id — single home for row hydration."""
+    # _USER_COLS is a fixed module constant, no user input reaches the f-string.
+    rows = conn.execute(f"SELECT {_USER_COLS} FROM users ORDER BY user_id").fetchall()  # nosec B608
+    users = []
+    for row in rows:
+        user = _row_to_user(row)
+        user.roles = _load_roles_for_user(conn, user.user_id)
+        users.append(user)
+    return users
+
+
 def get_cmk_language(username: str) -> str | None:
     """Return the CMK UI language for a user mapped to a supported OrbVis language.
 
@@ -524,46 +536,11 @@ def _is_checkmk_admin(username: str) -> bool:
     if not settings.checkmk_omd_root:
         logger.warning("CHECKMK_OMD_ROOT not set – cannot determine Checkmk role for %s", username)
         return False
-
-    if cmk_integration.available:
-        user_data = cmk_integration.load_user(username)
-        roles = user_data.get("roles", [])
-        is_admin = isinstance(roles, list) and "admin" in roles
-        logger.debug(
-            "Checkmk role check for %s: roles=%s is_admin=%s",
-            username,
-            roles,
-            is_admin,
-        )
-        return is_admin
-    users_mk = (
-        pathlib.Path(settings.checkmk_omd_root)
-        / "etc"
-        / "check_mk"
-        / "multisite.d"
-        / "wato"
-        / "users.mk"
-    )
-    if not users_mk.is_file():
-        logger.warning("Checkmk users.mk not found at %s", users_mk)
-        return False
-    try:
-        multisite_users = cmk_integration.exec_mk_file(users_mk, {"multisite_users": {}})[
-            "multisite_users"
-        ]
-        user_cfg = multisite_users.get(username, {}) if isinstance(multisite_users, dict) else {}
-        roles = user_cfg.get("roles", []) if isinstance(user_cfg, dict) else []
-        is_admin = isinstance(roles, list) and "admin" in roles
-        logger.debug(
-            "Checkmk role check for %s: roles=%s is_admin=%s",
-            username,
-            roles,
-            is_admin,
-        )
-        return is_admin
-    except Exception as e:
-        logger.warning("Could not read Checkmk users.mk: %s", e)
-        return False
+    # load_user handles both the cmk.gui.userdb path and the users.mk fallback.
+    roles = cmk_integration.load_user(username).get("roles", [])
+    is_admin = isinstance(roles, list) and "admin" in roles
+    logger.debug("Checkmk role check for %s: roles=%s is_admin=%s", username, roles, is_admin)
+    return is_admin
 
 
 def _insert_user_sync(

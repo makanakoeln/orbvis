@@ -135,9 +135,11 @@ def load_user(username: str) -> dict[str, object]:
     Falls back to direct file parsing when the CMK API is unavailable.
     Returns an empty dict when the user is not found.
     """
-    if not available or not settings.checkmk_omd_root:
+    if not settings.checkmk_omd_root:
         return {}
-    if _userdb_store_available:
+    # The file fallback needs no cmk imports, so it also serves setups where
+    # the cmk packages aren't importable (``available`` is False).
+    if available and _userdb_store_available:
         try:
             from cmk.gui.userdb.store import load_custom_attr as _load_custom_attr
             from cmk.gui.userdb.store import load_user as _load_user

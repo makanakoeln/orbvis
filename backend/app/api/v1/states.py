@@ -12,7 +12,7 @@ from typing import Literal, cast
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
 
-from app.api.v1.connections import build_topology_response
+from app.api.v1.connections import auth_user_scope, build_topology_response
 from app.api.v1.deps import can_view_board as _can_view_board
 from app.api.v1.deps import can_view_board_by_name as _can_view_board_by_name
 from app.api.v1.deps import get_current_user, resolve_auth_user
@@ -89,14 +89,8 @@ async def _fetch_topology_for_user(
         )
 
     try:
-        if (
-            auth_user is not None
-            and settings.checkmk_omd_root
-            and hasattr(connection, "with_auth_user")
-        ):
-            async with connection.with_auth_user(auth_user):
-                return await _build()
-        return await _build()
+        async with auth_user_scope(connection, auth_user):
+            return await _build()
     except Exception:
         logger.warning("topology fetch failed for board '%s'", cfg.name, exc_info=True)
         return None
@@ -378,14 +372,7 @@ async def get_folder_host_services(
         return await connection.get_host_services(host, only_hard=only_hard)
 
     try:
-        if (
-            auth_user is not None
-            and settings.checkmk_omd_root
-            and hasattr(connection, "with_auth_user")
-        ):
-            async with connection.with_auth_user(auth_user):
-                rows = await _fetch()
-        else:
+        async with auth_user_scope(connection, auth_user):
             rows = await _fetch()
     except Exception:
         logger.warning("folder host-services fetch failed for '%s'/%s", name, host, exc_info=True)
@@ -472,14 +459,7 @@ async def folder_service_search(
         )
 
     try:
-        if (
-            auth_user is not None
-            and settings.checkmk_omd_root
-            and hasattr(connection, "with_auth_user")
-        ):
-            async with connection.with_auth_user(auth_user):
-                rows = await _fetch()
-        else:
+        async with auth_user_scope(connection, auth_user):
             rows = await _fetch()
     except Exception:
         logger.warning("folder service search failed for '%s'", name, exc_info=True)

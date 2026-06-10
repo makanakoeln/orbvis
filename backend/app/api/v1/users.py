@@ -14,9 +14,9 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.services.auth_service import (
     _fetch_user,
-    _load_roles_for_user,
     create_user,
     get_user_by_id,
+    list_users_sync,
 )
 
 router = APIRouter()
@@ -28,28 +28,7 @@ _SELF_SERVICE_FIELDS = {"password", "theme", "language"}
 async def list_users(
     db: sqlite3.Connection = Depends(get_db), _: User = Depends(require_admin)
 ) -> list[UserRead]:
-    def _list() -> list[User]:
-        rows = db.execute(
-            "SELECT user_id, name, password, is_active, is_admin, "
-            "must_change_password, theme, language FROM users ORDER BY user_id"
-        ).fetchall()
-        result = []
-        for row in rows:
-            user = User(
-                user_id=row["user_id"],
-                name=row["name"],
-                password=row["password"],
-                is_active=bool(row["is_active"]),
-                is_admin=bool(row["is_admin"]),
-                must_change_password=bool(row["must_change_password"]),
-                theme=row["theme"],
-                language=row["language"],
-            )
-            user.roles = _load_roles_for_user(db, user.user_id)
-            result.append(user)
-        return result
-
-    users = await asyncio.to_thread(_list)
+    users = await asyncio.to_thread(list_users_sync, db)
     return [UserRead.model_validate(u) for u in users]
 
 

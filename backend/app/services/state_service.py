@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from app.connections.base import FolderTreeData, ServiceRow
+from app.connections.base import BI_INT_TO_STATE, FolderTreeData, ServiceRow
 from app.core.config import settings
 from app.integrations.checkmk import FolderScope
 from app.schemas.board import (
@@ -39,19 +39,6 @@ from app.schemas.topology import (
     TopologyNode,
     TopologyTiming,
 )
-
-# AggregationNode.state uses cmk.bi integer codes; map them to OrbVis'
-# monitoring-state strings for ObjectState.state when we have to derive
-# the badge state from the tree root.
-_BI_INT_TO_STATE: dict[int, str] = {
-    -2: "UNKNOWN",
-    -1: "PENDING",
-    0: "OK",
-    1: "WARNING",
-    2: "CRITICAL",
-    3: "UNKNOWN",
-    4: "UNKNOWN",
-}
 
 # Combined severity for cross-scale worst-state aggregation (recognize_services)
 _COMBINED_SEVERITY: dict[str, int] = {
@@ -198,6 +185,23 @@ async def get_board_states(
     return await _run()
 
 
+async def _derive_connection_ok(states: list[ObjectState], connection: ConnectionBase) -> bool:
+    """Connection health from monitoring-object states.
+
+    Non-monitoring types (image, textbox, map) always return PENDING without
+    ``stale=True``, so they are excluded — the connection counts as down only
+    when ALL monitoring queries raised (stale). Boards without monitoring
+    objects ping the connection explicitly.
+    """
+    monitoring_states = [s for s in states if s.type in _MONITORING_TYPES]
+    if monitoring_states:
+        return not all(s.stale for s in monitoring_states)
+    try:
+        return await connection.is_available()
+    except Exception:
+        return False
+
+
 async def _execute_board_states(
     cfg: BoardConfig,
     connection: ConnectionBase,
@@ -232,19 +236,7 @@ async def _execute_board_states(
     )
     states = list(state_map.values())
 
-    # Determine connection health using only monitoring-object states.
-    # Non-monitoring types (image, textbox, map) always return PENDING without stale=True,
-    # so including them would mask a genuinely unreachable connection.
-    monitoring_states = [s for s in states if s.type in _MONITORING_TYPES]
-    if monitoring_states:
-        # Backend is considered down only if ALL monitoring queries raised exceptions (stale=True).
-        connection_ok = not all(s.stale for s in monitoring_states)
-    else:
-        # No monitoring objects in this map – ping the connection explicitly.
-        try:
-            connection_ok = await connection.is_available()
-        except Exception:
-            connection_ok = False
+    connection_ok = await _derive_connection_ok(states, connection)
 
     return MapStates(
         map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=connection_ok
@@ -579,7 +571,7 @@ async def _resolve_aggregation_states(
             raw = ObjectState(
                 object_id=obj.id,
                 type="aggregation",
-                state=_BI_INT_TO_STATE.get(tree.state, "UNKNOWN"),
+                state=BI_INT_TO_STATE.get(tree.state, "UNKNOWN"),
                 acknowledged=tree.acknowledged,
                 in_downtime=tree.in_downtime,
             )
@@ -839,14 +831,7 @@ async def _get_presentation_states(
     )
     states = list(state_map.values())
 
-    monitoring_states = [s for s in states if s.type in _MONITORING_TYPES]
-    if monitoring_states:
-        connection_ok = not all(s.stale for s in monitoring_states)
-    else:
-        try:
-            connection_ok = await connection.is_available()
-        except Exception:
-            connection_ok = False
+    connection_ok = await _derive_connection_ok(states, connection)
 
     return MapStates(
         map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=connection_ok

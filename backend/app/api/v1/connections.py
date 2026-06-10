@@ -60,20 +60,25 @@ router = APIRouter()
 
 
 @asynccontextmanager
-async def _auth_scope(connection: ConnectionBase, user: User) -> AsyncIterator[None]:
-    """Scope livestatus queries inside the block to the user's contact visibility.
-
-    ``resolve_auth_user`` returns ``None`` for admins / users with
-    ``general.see_all`` — those run UNSCOPED. Livestatus ``AuthUser`` only
-    knows contacts, and cmkadmin typically is no contact, so passing the raw
-    username would silently filter every query down to zero rows.
+async def auth_user_scope(connection: ConnectionBase, auth_user: str | None) -> AsyncIterator[None]:
+    """Scope livestatus queries inside the block to *auth_user*'s contact
+    visibility; ``None`` (admins / ``general.see_all`` / non-CMK setups) runs
+    UNSCOPED. Livestatus ``AuthUser`` only knows contacts, and cmkadmin
+    typically is no contact, so passing the raw username would silently
+    filter every query down to zero rows.
     """
-    auth_user = resolve_auth_user(user.name, user.is_admin)
     with_auth = getattr(connection, "with_auth_user", None)
     if auth_user is not None and with_auth is not None:
         async with with_auth(auth_user):
             yield
     else:
+        yield
+
+
+@asynccontextmanager
+async def _auth_scope(connection: ConnectionBase, user: User) -> AsyncIterator[None]:
+    """Resolve *user* to a Livestatus AuthUser and scope queries accordingly."""
+    async with auth_user_scope(connection, resolve_auth_user(user.name, user.is_admin)):
         yield
 
 
@@ -884,8 +889,7 @@ _SIMPLE_SERVICE_COMMANDS: dict[str, str] = {
     "disable_checks": "DISABLE_SVC_CHECK;{host};{svc}",
     "remove_acknowledgement": "REMOVE_SVC_ACKNOWLEDGEMENT;{host};{svc}",
 }
-_PARAMETERISED_HOST_ACTIONS = {"acknowledge", "add_comment", "schedule_downtime"}
-_PARAMETERISED_SERVICE_ACTIONS = {"acknowledge", "add_comment", "schedule_downtime"}
+_PARAMETERISED_ACTIONS = {"acknowledge", "add_comment", "schedule_downtime"}
 
 
 def _cmd_safe(value: str) -> str:
@@ -937,79 +941,59 @@ class ServiceActionRequest(BaseModel):
         return _reject_command_separators(value)
 
 
-def _build_host_command(body: HostActionRequest, user: User) -> str:
-    host = _cmd_safe(body.host_name)
-    template = _SIMPLE_HOST_COMMANDS.get(body.action)
-    if template is not None:
-        return template.format(host=host, ts=int(time.time()))
-    if body.action not in _PARAMETERISED_HOST_ACTIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Unknown host action {body.action!r} "
-                f"(valid: {sorted(set(_SIMPLE_HOST_COMMANDS) | _PARAMETERISED_HOST_ACTIONS)})"
-            ),
-        )
-    if not body.comment:
-        raise HTTPException(status_code=400, detail=f"{body.action} requires a comment")
-    author = _cmd_safe(user.name)
-    comment = _cmd_safe(body.comment)
-    if body.action == "acknowledge":
-        return (
-            f"ACKNOWLEDGE_HOST_PROBLEM;{host};{int(body.sticky)};{int(body.notify)};"
-            f"{int(body.persistent)};{author};{comment}"
-        )
-    if body.action == "add_comment":
-        return f"ADD_HOST_COMMENT;{host};{int(body.persistent)};{author};{comment}"
-    if body.action == "schedule_downtime":
-        if body.start_time is None or body.end_time is None:
-            raise HTTPException(
-                status_code=400,
-                detail="schedule_downtime requires start_time and end_time",
-            )
-        return (
-            f"SCHEDULE_HOST_DOWNTIME;{host};{body.start_time};{body.end_time};1;0;0;"
-            f"{author};{comment}"
-        )
-    raise HTTPException(status_code=400, detail=f"Unhandled host action {body.action!r}")
+def _build_action_command(body: HostActionRequest | ServiceActionRequest, user: User) -> str:
+    """Build the external-command line for a host or service action.
 
-
-def _build_service_command(body: ServiceActionRequest, user: User) -> str:
+    Host and service commands only differ in the command-name infix
+    (HOST/SVC), the target field list and the simple-command templates —
+    one builder keeps the two verb sets from drifting apart.
+    """
     host = _cmd_safe(body.host_name)
-    svc = _cmd_safe(body.service_description)
-    template = _SIMPLE_SERVICE_COMMANDS.get(body.action)
+    # The inline isinstance (instead of reusing a flag) lets mypy narrow the union.
+    svc = _cmd_safe(body.service_description) if isinstance(body, ServiceActionRequest) else None
+    is_service = svc is not None
+    templates = _SIMPLE_SERVICE_COMMANDS if is_service else _SIMPLE_HOST_COMMANDS
+    template = templates.get(body.action)
     if template is not None:
         return template.format(host=host, svc=svc, ts=int(time.time()))
-    if body.action not in _PARAMETERISED_SERVICE_ACTIONS:
+    if body.action not in _PARAMETERISED_ACTIONS:
+        kind = "service" if is_service else "host"
         raise HTTPException(
             status_code=400,
             detail=(
-                f"Unknown service action {body.action!r} "
-                f"(valid: {sorted(set(_SIMPLE_SERVICE_COMMANDS) | _PARAMETERISED_SERVICE_ACTIONS)})"
+                f"Unknown {kind} action {body.action!r} "
+                f"(valid: {sorted(set(templates) | _PARAMETERISED_ACTIONS)})"
             ),
         )
     if not body.comment:
         raise HTTPException(status_code=400, detail=f"{body.action} requires a comment")
     author = _cmd_safe(user.name)
     comment = _cmd_safe(body.comment)
+    target = f"{host};{svc}" if is_service else host
+    infix = "SVC" if is_service else "HOST"
     if body.action == "acknowledge":
         return (
-            f"ACKNOWLEDGE_SVC_PROBLEM;{host};{svc};{int(body.sticky)};{int(body.notify)};"
+            f"ACKNOWLEDGE_{infix}_PROBLEM;{target};{int(body.sticky)};{int(body.notify)};"
             f"{int(body.persistent)};{author};{comment}"
         )
     if body.action == "add_comment":
-        return f"ADD_SVC_COMMENT;{host};{svc};{int(body.persistent)};{author};{comment}"
+        return f"ADD_{infix}_COMMENT;{target};{int(body.persistent)};{author};{comment}"
     if body.action == "schedule_downtime":
         if body.start_time is None or body.end_time is None:
             raise HTTPException(
                 status_code=400,
                 detail="schedule_downtime requires start_time and end_time",
             )
+        if body.start_time < 0 or body.end_time <= body.start_time:
+            raise HTTPException(
+                status_code=400,
+                detail="schedule_downtime requires end_time after a non-negative start_time",
+            )
         return (
-            f"SCHEDULE_SVC_DOWNTIME;{host};{svc};{body.start_time};{body.end_time};1;0;0;"
+            f"SCHEDULE_{infix}_DOWNTIME;{target};{body.start_time};{body.end_time};1;0;0;"
             f"{author};{comment}"
         )
-    raise HTTPException(status_code=400, detail=f"Unhandled service action {body.action!r}")
+    raise HTTPException(status_code=400, detail=f"Unhandled action {body.action!r}")
 
 
 def _require_command_permission(user: User, action: str) -> None:
@@ -1051,7 +1035,7 @@ async def host_action(
     user: User = Depends(get_current_user),
 ) -> None:
     _require_command_permission(user, body.action)
-    cmd = _build_host_command(body, user)
+    cmd = _build_action_command(body, user)
     connection = get_connection(connection_id)
     if connection is None or not hasattr(connection, "send_command"):
         raise HTTPException(status_code=404, detail="Connection not found or not livestatus-backed")
@@ -1070,7 +1054,7 @@ async def service_action(
     user: User = Depends(get_current_user),
 ) -> None:
     _require_command_permission(user, body.action)
-    cmd = _build_service_command(body, user)
+    cmd = _build_action_command(body, user)
     connection = get_connection(connection_id)
     if connection is None or not hasattr(connection, "send_command"):
         raise HTTPException(status_code=404, detail="Connection not found or not livestatus-backed")

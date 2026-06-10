@@ -459,9 +459,12 @@ def reorder_boards(order: list[tuple[str, int]]) -> None:
     for name, sort_order in order:
         with _board_lock(name):
             cfg = get_board(name)
-            if cfg is None:
+            if cfg is None or cfg.sort_order == sort_order:
                 continue
             cfg.sort_order = sort_order
+            # Every mutation bumps the version so optimistic locking
+            # (If-Match) sees reorders like any other write.
+            cfg.version += 1
             _save_board(cfg)
 
 

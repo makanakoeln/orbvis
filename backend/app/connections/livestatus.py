@@ -17,7 +17,7 @@ from collections.abc import AsyncIterator, Iterator, Mapping
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from datetime import UTC
+from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TypedDict, cast
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 import httpx
 
 from app.connections.base import (
+    BI_INT_TO_STATE,
     ConnectionBase,
     FolderInfo,
     FolderTreeData,
@@ -517,15 +518,65 @@ _HOST_STATE_MAP = {0: "UP", 1: "DOWN", 2: "UNREACHABLE"}
 _SERVICE_STATE_MAP = {0: "OK", 1: "WARNING", 2: "CRITICAL", 3: "UNKNOWN"}
 # Checkmk BI aggregation states (cmk.bi.bi_aggregation.BIStates).
 # -2 = ERROR / 4 = UNREACHABLE — both rare; collapsed onto UNKNOWN for OrbVis.
-_BI_STATE_MAP = {
-    -2: "UNKNOWN",
-    -1: "PENDING",
-    0: "OK",
-    1: "WARNING",
-    2: "CRITICAL",
-    3: "UNKNOWN",
-    4: "UNKNOWN",
-}
+
+
+_HOST_MEMBER_COLUMNS = (
+    "name state plugin_output acknowledged "
+    "scheduled_downtime_depth notifications_enabled last_state_change"
+)
+_SVC_MEMBER_COLUMNS = (
+    "host_name description state plugin_output acknowledged "
+    "scheduled_downtime_depth notifications_enabled last_state_change"
+)
+
+
+def _host_member_rows(rows: list[LivestatusRow]) -> list[GroupMemberRow]:
+    """Map ``_HOST_MEMBER_COLUMNS`` rows to GroupMemberRow (drawer triage list).
+
+    Plugin output is cut to the first line so a one-line preview shows next to
+    each member without bloating the response.
+    """
+    out: list[GroupMemberRow] = []
+    for r in rows:
+        name = _row_str(r, 0)
+        if not name:
+            continue
+        out.append(
+            GroupMemberRow(
+                host=name,
+                service="",
+                state=_HOST_STATE_MAP.get(_row_int(r, 1), "UNKNOWN"),
+                output=_row_str(r, 2).split("\n", 1)[0],
+                acknowledged=bool(_row_int(r, 3)),
+                in_downtime=_row_int(r, 4) > 0,
+                notifications_enabled=bool(_row_int(r, 5)),
+                last_state_change=_row_float(r, 6) or None,
+            )
+        )
+    return out
+
+
+def _service_member_rows(rows: list[LivestatusRow]) -> list[GroupMemberRow]:
+    """Service counterpart of :func:`_host_member_rows` (``_SVC_MEMBER_COLUMNS``)."""
+    out: list[GroupMemberRow] = []
+    for r in rows:
+        host = _row_str(r, 0)
+        svc = _row_str(r, 1)
+        if not host or not svc:
+            continue
+        out.append(
+            GroupMemberRow(
+                host=host,
+                service=svc,
+                state=_SERVICE_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
+                output=_row_str(r, 3).split("\n", 1)[0],
+                acknowledged=bool(_row_int(r, 4)),
+                in_downtime=_row_int(r, 5) > 0,
+                notifications_enabled=bool(_row_int(r, 6)),
+                last_state_change=_row_float(r, 7) or None,
+            )
+        )
+    return out
 
 
 def _parse_bi_state(state_raw: object) -> int:
@@ -564,7 +615,7 @@ def _aggregations_to_object_states(
         out[aid] = ObjectState(
             object_id="",
             type="aggregation",
-            state=_BI_STATE_MAP.get(_parse_bi_state(entry.get("state", -1)), "UNKNOWN"),
+            state=BI_INT_TO_STATE.get(_parse_bi_state(entry.get("state", -1)), "UNKNOWN"),
             output=str(entry.get("output", "") or ""),
             acknowledged=bool(entry.get("acknowledged", False)),
             in_downtime=bool(entry.get("in_downtime", False)),
@@ -1191,57 +1242,10 @@ class LivestatusConnection(ConnectionBase):
         if not lql_filter.endswith("\n"):
             lql_filter += "\n"
         if object_types == "service":
-            query = (
-                "GET services\n"
-                "Columns: host_name description state plugin_output acknowledged "
-                "scheduled_downtime_depth notifications_enabled last_state_change\n"
-                f"{lql_filter}"
-            )
-            rows = await self._query(query)
-            svc_out: list[GroupMemberRow] = []
-            for r in rows:
-                host = _row_str(r, 0)
-                svc = _row_str(r, 1)
-                if not host or not svc:
-                    continue
-                svc_out.append(
-                    GroupMemberRow(
-                        host=host,
-                        service=svc,
-                        state=_SERVICE_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
-                        output=_row_str(r, 3).split("\n", 1)[0],
-                        acknowledged=bool(_row_int(r, 4)),
-                        in_downtime=_row_int(r, 5) > 0,
-                        notifications_enabled=bool(_row_int(r, 6)),
-                        last_state_change=_row_float(r, 7) or None,
-                    )
-                )
-            return svc_out
-        query = (
-            "GET hosts\n"
-            "Columns: name state plugin_output acknowledged "
-            "scheduled_downtime_depth notifications_enabled last_state_change\n"
-            f"{lql_filter}"
-        )
-        rows = await self._query(query)
-        host_out: list[GroupMemberRow] = []
-        for r in rows:
-            name = _row_str(r, 0)
-            if not name:
-                continue
-            host_out.append(
-                GroupMemberRow(
-                    host=name,
-                    service="",
-                    state=_HOST_STATE_MAP.get(_row_int(r, 1), "UNKNOWN"),
-                    output=_row_str(r, 2).split("\n", 1)[0],
-                    acknowledged=bool(_row_int(r, 3)),
-                    in_downtime=_row_int(r, 4) > 0,
-                    notifications_enabled=bool(_row_int(r, 5)),
-                    last_state_change=_row_float(r, 6) or None,
-                )
-            )
-        return host_out
+            query = f"GET services\nColumns: {_SVC_MEMBER_COLUMNS}\n{lql_filter}"
+            return _service_member_rows(await self._query(query))
+        query = f"GET hosts\nColumns: {_HOST_MEMBER_COLUMNS}\n{lql_filter}"
+        return _host_member_rows(await self._query(query))
 
     async def get_dyngroup_state(self, object_types: str, object_filter: str) -> ObjectState:
         # NagVis-style: feed the validated filter into GET hosts/services and
@@ -1524,57 +1528,16 @@ class LivestatusConnection(ConnectionBase):
         """
         if group_type == "hostgroup":
             query = (
-                "GET hosts\n"
-                "Columns: name state plugin_output acknowledged "
-                "scheduled_downtime_depth notifications_enabled last_state_change\n"
+                f"GET hosts\nColumns: {_HOST_MEMBER_COLUMNS}\n"
                 f"Filter: groups >= {_ls_escape(group_name)}\n"
             )
-            rows = await self._query(query)
-            out: list[GroupMemberRow] = []
-            for r in rows:
-                name = _row_str(r, 0)
-                if not name:
-                    continue
-                out.append(
-                    GroupMemberRow(
-                        host=name,
-                        service="",
-                        state=_HOST_STATE_MAP.get(_row_int(r, 1), "UNKNOWN"),
-                        output=_row_str(r, 2).split("\n", 1)[0],
-                        acknowledged=bool(_row_int(r, 3)),
-                        in_downtime=_row_int(r, 4) > 0,
-                        notifications_enabled=bool(_row_int(r, 5)),
-                        last_state_change=_row_float(r, 6) or None,
-                    )
-                )
-            return out
+            return _host_member_rows(await self._query(query))
         if group_type == "servicegroup":
             query = (
-                "GET services\n"
-                "Columns: host_name description state plugin_output acknowledged "
-                "scheduled_downtime_depth notifications_enabled last_state_change\n"
+                f"GET services\nColumns: {_SVC_MEMBER_COLUMNS}\n"
                 f"Filter: groups >= {_ls_escape(group_name)}\n"
             )
-            rows = await self._query(query)
-            out_s: list[GroupMemberRow] = []
-            for r in rows:
-                host = _row_str(r, 0)
-                svc = _row_str(r, 1)
-                if not host or not svc:
-                    continue
-                out_s.append(
-                    GroupMemberRow(
-                        host=host,
-                        service=svc,
-                        state=_SERVICE_STATE_MAP.get(_row_int(r, 2), "UNKNOWN"),
-                        output=_row_str(r, 3).split("\n", 1)[0],
-                        acknowledged=bool(_row_int(r, 4)),
-                        in_downtime=_row_int(r, 5) > 0,
-                        notifications_enabled=bool(_row_int(r, 6)),
-                        last_state_change=_row_float(r, 7) or None,
-                    )
-                )
-            return out_s
+            return _service_member_rows(await self._query(query))
         return []
 
     async def get_hosts_with_geo(
@@ -1674,17 +1637,13 @@ class LivestatusConnection(ConnectionBase):
         end: int,
     ) -> MetricHistoryResult:
         """Fetch metric history via Checkmk 2.x REST API (works with Nagios/Raw core)."""
-        from datetime import datetime
-
-        assert self._checkmk_url is not None
-        cmk_url = self._checkmk_url.rstrip("/")
-        if cmk_url.startswith("/"):
-            cmk_url = "http://127.0.0.1" + cmk_url
-        base_url = cmk_url
+        base_auth = self._cmk_base_and_auth()
+        if base_auth is None:
+            return MetricHistoryResult()
+        base_url, auth_header = base_auth
         parts = base_url.rstrip("/").split("/")
         site = parts[-2] if len(parts) >= 2 and parts[-1] == "check_mk" else parts[-1]
         api_url = base_url + "/api/1.0/domain-types/metric/actions/get/invoke"
-        auth_header = f"Bearer {self._automation_user} {self._automation_secret}"
 
         metric_names = await self._get_perf_metric_names(host, service)
         if not metric_names:
@@ -1937,14 +1896,23 @@ class LivestatusConnection(ConnectionBase):
     # Checkmk BI (Business Intelligence) — REST API
     # ------------------------------------------------------------------
 
-    def _cmk_rest_base(self) -> str | None:
-        """Return the Checkmk REST API base, or None if not configured for REST calls."""
+    def _cmk_base_and_auth(self) -> tuple[str, str] | None:
+        """Normalised GUI base URL + Bearer header, or None without REST creds.
+
+        A site-relative ``checkmk_url`` (``/<site>/check_mk``) is reachable via
+        the local webserver, so it gets the ``http://127.0.0.1`` origin.
+        """
         if not (self._checkmk_url and self._automation_user and self._automation_secret):
             return None
         cmk_url = self._checkmk_url.rstrip("/")
         if cmk_url.startswith("/"):
             cmk_url = "http://127.0.0.1" + cmk_url
-        return cmk_url + "/api/1.0"
+        return cmk_url, f"Bearer {self._automation_user} {self._automation_secret}"
+
+    def _cmk_rest_base(self) -> str | None:
+        """Return the Checkmk REST API base, or None if not configured for REST calls."""
+        base_auth = self._cmk_base_and_auth()
+        return None if base_auth is None else base_auth[0] + "/api/1.0"
 
     async def _cmk_rest(
         self,
@@ -2071,13 +2039,12 @@ class LivestatusConnection(ConnectionBase):
         return _aggregations_to_object_states(rest_data.get("aggregations") or {}, aggregation_ids)
 
     async def list_aggregations(self) -> list[AggregationInfo]:
-        import time as _time
 
         # Contact-scoped callers get a per-user filtered list (branch titles
         # can be as sensitive as SETUP folder names), so the cache must be
         # keyed by the auth scope — one unscoped entry would leak across users.
         auth_user = _auth_user_ctx.get()
-        now = _time.time()
+        now = time.time()
         cached = self._aggregations_cache.get(auth_user)
         if cached is not None and now - cached[0] < 60.0:
             return cached[1]
@@ -2172,13 +2139,11 @@ class LivestatusConnection(ConnectionBase):
         ``self._checkmk_url`` is the GUI base (e.g. ``/<site>/check_mk``) so the
         page lives at ``{cmk_url}{path}``. Returns parsed JSON or None.
         """
-        if not (self._checkmk_url and self._automation_user and self._automation_secret):
+        base_auth = self._cmk_base_and_auth()
+        if base_auth is None:
             return None
-        cmk_url = self._checkmk_url.rstrip("/")
-        if cmk_url.startswith("/"):
-            cmk_url = "http://127.0.0.1" + cmk_url
+        cmk_url, auth = base_auth
         url = cmk_url + path
-        auth = f"Bearer {self._automation_user} {self._automation_secret}"
         try:
             async with httpx.AsyncClient(verify=self._verify_ssl, timeout=self._timeout) as client:
                 resp = await client.get(

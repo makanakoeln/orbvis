@@ -10,6 +10,19 @@ from typing import NotRequired, TypedDict
 from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.state import ObjectDetails, ObjectState, ServicesSummary
 
+# Checkmk BI integer state → OrbVis monitoring-state string. Shared by the
+# livestatus backend (aggregation states) and state_service (badge state from
+# a tree root) so the two mappings cannot drift apart.
+BI_INT_TO_STATE: dict[int, str] = {
+    -2: "UNKNOWN",
+    -1: "PENDING",
+    0: "OK",
+    1: "WARNING",
+    2: "CRITICAL",
+    3: "UNKNOWN",
+    4: "UNKNOWN",
+}
+
 
 class TopologyRow(TypedDict):
     """One host in the topology view (parent-child flow-graph).

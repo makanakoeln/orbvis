@@ -71,6 +71,24 @@ router = APIRouter()
 _MAX_BACKGROUND_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
+def _require_template_admin(
+    user: User,
+    hover_template: object,
+    context_template: object,
+    hover_url: object = None,
+) -> None:
+    """Templates (and hover URLs) render in *other* users' browsers — a
+    non-admin editor could plant XSS through them, so editing stays admin-only.
+    """
+    if not user.is_admin and (
+        hover_template is not None or context_template is not None or hover_url is not None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Editing hover/context templates requires admin privileges",
+        )
+
+
 def _require_board_view(name: str, user: User) -> None:
     if not can_view_board(user, name):
         raise HTTPException(
@@ -183,14 +201,9 @@ if FORM_SPECS_AVAILABLE:
     ) -> BoardConfig:
         _require_board_edit(name, current_user)
         _require_not_readonly(name)
-        if not current_user.is_admin and (
-            form_data.get("hover_template") is not None
-            or form_data.get("context_template") is not None
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Editing hover/context templates requires admin privileges",
-            )
+        _require_template_admin(
+            current_user, form_data.get("hover_template"), form_data.get("context_template")
+        )
         update_payload = _form_data_to_update_payload(form_data, METADATA_FIELDS)
         update = BoardUpdate.model_validate(update_payload)
         expected_version = _parse_if_match(request.headers.get("If-Match"))
@@ -219,14 +232,11 @@ if FORM_SPECS_AVAILABLE:
         payload: BoardBulkEdit, current_user: User = Depends(require_create_board)
     ) -> BoardBulkEditResult:
         update_payload = _form_data_to_update_payload(payload.updates, BULK_METADATA_FIELDS)
-        if not current_user.is_admin and (
-            update_payload.get("hover_template") is not None
-            or update_payload.get("context_template") is not None
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Editing hover/context templates requires admin privileges",
-            )
+        _require_template_admin(
+            current_user,
+            update_payload.get("hover_template"),
+            update_payload.get("context_template"),
+        )
         update = BoardUpdate.model_validate(update_payload)
         updated: list[str] = []
         failed: list[BoardBulkEditFailure] = []
@@ -289,13 +299,7 @@ async def update_board(
 ) -> BoardConfig:
     _require_board_edit(name, current_user)
     _require_not_readonly(name)
-    if not current_user.is_admin and (
-        data.hover_template is not None or data.context_template is not None
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Editing hover/context templates requires admin privileges",
-        )
+    _require_template_admin(current_user, data.hover_template, data.context_template)
     expected_version = _parse_if_match(request.headers.get("If-Match"))
     try:
         cfg = board_service.update_board(name, data, expected_version=expected_version)
@@ -583,18 +587,9 @@ async def update_object(
 ) -> BoardObject:
     _require_board_edit(name, current_user)
     _require_not_readonly(name)
-    # Templates render as HTML in other users' browsers, so a non-admin editor
-    # could plant XSS via hover_template/context_template. Hover URL is treated
-    # the same way (a malicious URL fires when another user hovers the object).
-    if not current_user.is_admin and (
-        updates.hover_template is not None
-        or updates.context_template is not None
-        or updates.hover_url is not None
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Editing hover/context templates requires admin privileges",
-        )
+    _require_template_admin(
+        current_user, updates.hover_template, updates.context_template, updates.hover_url
+    )
     obj = board_service.update_object(name, obj_id, updates)
     if obj is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Object not found")
