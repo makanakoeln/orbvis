@@ -174,6 +174,9 @@ export interface ShapeElement extends PresentationElementBase {
   // Weathermap flow: animate + drive colour/width/speed from a utilisation metric.
   flow?: boolean
   flow_metric?: string | null
+  // Intended data slot (template placeholder): counted by the connect-data
+  // walkthrough until bound; plain decorative shapes never are.
+  data_slot?: boolean
 }
 
 export interface TextElement extends PresentationElementBase {

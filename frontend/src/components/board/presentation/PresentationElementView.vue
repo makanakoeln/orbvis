@@ -89,10 +89,10 @@
   >
     <div class="pres-el__data-body">
       <GadgetRenderer
-        v-if="element.display.mode === 'gadget' && element.host_name"
+        v-if="element.display.mode === 'gadget' && (element.host_name || sampleState)"
         :type="element.display.gadget_type ?? 'gauge'"
-        :metric="element.display.gadget_metric ?? null"
-        :state="state"
+        :metric="element.display.gadget_metric ?? sampleMetric"
+        :state="effectiveState"
         :size="gadgetSize"
       />
       <div
@@ -127,6 +127,9 @@
     <div v-if="showLabel" class="pres-el__data-label" :style="labelStyle">
       {{ labelText }}
     </div>
+    <div v-if="sampleState && !element.host_name" class="pres-el__sample">
+      {{ _t('Sample') }}
+    </div>
   </div>
 </template>
 
@@ -145,6 +148,8 @@ const { _t } = usei18n()
 const props = defineProps<{
   element: PresentationElement
   state: ObjectState | undefined
+  // Demo data for an unbound data slot in the editor — never set in view mode.
+  sampleState?: ObjectState | undefined
   editingText?: boolean
 }>()
 
@@ -158,10 +163,22 @@ function resolve(color: string | null | undefined, fallbackVar: string): string 
   return color && color.length > 0 ? color : `var(${fallbackVar})`
 }
 
+// Live state when bound, sample data when previewing an unbound slot.
+const effectiveState = computed(() => props.state ?? props.sampleState)
+// The sample perf_data always carries exactly one metric; hand its name to the
+// gadget so an unbound preview renders a value instead of an empty dial.
+const sampleMetric = computed(() => {
+  const pd = props.sampleState?.perf_data ?? ''
+  return pd.split('=')[0] || null
+})
+
 // A bound shape colours its primary surface by the live state — fill for
-// rect/ellipse, stroke for line/arrow — overriding the manual colour.
+// rect/ellipse, stroke for line/arrow — overriding the manual colour. An
+// unbound data-slot shape previews with its sample state the same way.
 const shapeStateColor = computed(() =>
-  props.element.kind === 'shape' && props.element.host_name ? stateColor(props.state?.state) : null
+  props.element.kind === 'shape' && (props.element.host_name || props.sampleState)
+    ? stateColor(effectiveState.value?.state)
+    : null
 )
 
 const fillColor = computed(() => {
@@ -185,7 +202,9 @@ const shapeLabelShow = computed(
 const shapeLabelText = computed(() => {
   const el = props.element
   if (el.kind !== 'shape') return ''
-  return el.label?.text || props.state?.state || el.service_description || el.host_name || ''
+  return (
+    el.label?.text || effectiveState.value?.state || el.service_description || el.host_name || ''
+  )
 })
 const shapeLabelStyle = computed(() => {
   const el = props.element
@@ -257,8 +276,8 @@ const iconSize = computed(() => {
   return Math.max(20, Math.min(96, Math.min(el.w - 28, el.h - labelH - 24) * 0.55))
 })
 
-const stateClr = computed(() => stateColor(props.state?.state))
-const stateText = computed(() => props.state?.state ?? _t('PENDING'))
+const stateClr = computed(() => stateColor(effectiveState.value?.state))
+const stateText = computed(() => effectiveState.value?.state ?? _t('PENDING'))
 
 const dataBoxStyle = computed(() => {
   const el = props.element
@@ -275,7 +294,12 @@ const showLabel = computed(
 const labelText = computed(() => {
   const el = props.element
   if (el.kind !== 'data') return ''
-  return el.label?.text || el.service_description || el.host_name || _t('Unbound')
+  return (
+    el.label?.text ||
+    el.service_description ||
+    el.host_name ||
+    (props.sampleState ? _t('Sample') : _t('Unbound'))
+  )
 })
 const labelStyle = computed(() => {
   const el = props.element
@@ -427,5 +451,21 @@ function onTextBlur(): void {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Editor-only badge marking a slot that previews with sample data. */
+.pres-el__sample {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  padding: 0 5px;
+  border: 1px dashed var(--pres-muted);
+  border-radius: 5px;
+  font-size: 10px;
+  font-family: var(--pres-font, sans-serif);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pres-muted);
+  pointer-events: none;
 }
 </style>

@@ -129,6 +129,10 @@ class ShapeElement(_ElementBase):
     # bound object's perf-data; falls back to state colour when absent).
     flow: bool = False
     flow_metric: str | None = None
+    # Marks the shape as an intended data slot (template placeholder): the
+    # editor's connect-data walkthrough counts it as unbound until a host is
+    # set, while a plain decorative shape is never treated as one.
+    data_slot: bool = False
 
     @field_validator("fill", "stroke")
     @classmethod

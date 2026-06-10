@@ -1021,3 +1021,19 @@ def test_presentation_view_rejects_duplicate_element_ids():
 def test_presentation_shape_rejects_css_injection_color():
     with pytest.raises(ValueError, match="invalid color"):
         ShapeElement(id="x", kind="shape", fill="expression(alert(1))")
+
+
+def test_presentation_shape_data_slot_roundtrip():
+    """``data_slot`` defaults to False (old payloads stay valid) and survives a
+    serialize/deserialize roundtrip; an unbound slot still yields no state
+    (the binding filter is ``host_name``, not ``data_slot``)."""
+    legacy = ShapeElement.model_validate({"id": "old", "kind": "shape", "shape": "rect"})
+    assert legacy.data_slot is False
+
+    view = PresentationView(
+        elements=[ShapeElement(id="slot1", kind="shape", shape="rect", data_slot=True)]
+    )
+    restored = PresentationView.model_validate(view.model_dump())
+    el = restored.elements[0]
+    assert isinstance(el, ShapeElement)
+    assert el.data_slot is True

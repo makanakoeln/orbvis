@@ -2193,3 +2193,387 @@ msgstr "Objekt konnte nicht hinzugefügt werden"
 
 msgid "Duplicating the object failed"
 msgstr "Objekt konnte nicht dupliziert werden"
+
+msgid "%{bound} of %{total} connected"
+msgstr "%{bound} von %{total} verbunden"
+
+msgid "%{n} elements selected"
+msgstr "%{n} Elemente ausgewählt"
+
+msgid "+%{n} more — keep typing to narrow results"
+msgstr "+%{n} weitere — weitertippen zum Eingrenzen"
+
+msgid "Align"
+msgstr "Ausrichten"
+
+msgid "Align bottom"
+msgstr "Unten ausrichten"
+
+msgid "Align center"
+msgstr "Zentriert ausrichten"
+
+msgid "Align left"
+msgstr "Links ausrichten"
+
+msgid "Align middle"
+msgstr "Mittig ausrichten"
+
+msgid "Align right"
+msgstr "Rechts ausrichten"
+
+msgid "Align top"
+msgstr "Oben ausrichten"
+
+msgid "All states update live"
+msgstr "Alle Zustände aktualisieren sich live"
+
+msgid "Animate flow (weathermap)"
+msgstr "Fluss animieren (Weathermap)"
+
+msgid "Apply template"
+msgstr "Template anwenden"
+
+msgid "Applying a template replaces every element on this slide. Undo restores them."
+msgstr "Ein Template ersetzt alle Elemente auf diesem Slide. Rückgängig stellt sie wieder her."
+
+msgid "Arrow"
+msgstr "Pfeil"
+
+msgid "Aspect / size"
+msgstr "Format / Größe"
+
+msgid "Automatic"
+msgstr "Automatisch"
+
+msgid "Background image…"
+msgstr "Hintergrundbild…"
+
+msgid "Bind a host first"
+msgstr "Zuerst einen Host verbinden"
+
+msgid "Bind to host…"
+msgstr "Mit Host verbinden…"
+
+msgid "Blank"
+msgstr "Leer"
+
+msgid "Board default"
+msgstr "Board-Standard"
+
+msgid "Bold"
+msgstr "Fett"
+
+msgid "Browse templates…"
+msgstr "Templates durchsuchen…"
+
+msgid "CRITICAL SERVICES"
+msgstr "KRITISCHE SERVICES"
+
+msgid "Center"
+msgstr "Zentriert"
+
+msgid "Choose an image…"
+msgstr "Bild auswählen…"
+
+msgid "Connect data"
+msgstr "Daten verbinden"
+
+msgid "Connect each tile to a host or service"
+msgstr "Jede Kachel mit einem Host oder Service verbinden"
+
+msgid "Connect slot %{n}: %{name}"
+msgstr "Slot %{n} verbinden: %{name}"
+
+msgid "Contain"
+msgstr "Einpassen"
+
+msgid "Core"
+msgstr "Core"
+
+msgid "Core and five sites with animated flow links"
+msgstr "Core und fünf Standorte mit animierten Fluss-Links"
+
+msgid "Cover"
+msgstr "Ausfüllen"
+
+msgid "Data"
+msgstr "Daten"
+
+msgid "Data browser"
+msgstr "Daten-Browser"
+
+msgid "Data slot (fill in connect mode)"
+msgstr "Daten-Slot (im Verbinden-Modus füllen)"
+
+msgid "Display"
+msgstr "Darstellung"
+
+msgid "Distribute horizontally"
+msgstr "Horizontal verteilen"
+
+msgid "Distribute vertically"
+msgstr "Vertikal verteilen"
+
+msgid "Dotted"
+msgstr "Gepunktet"
+
+msgid "Drag a host or service onto the slide"
+msgstr "Host oder Service auf das Slide ziehen"
+
+msgid "Element name"
+msgstr "Elementname"
+
+msgid "Ellipse"
+msgstr "Ellipse"
+
+msgid "End endpoint"
+msgstr "End-Endpunkt"
+
+msgid "Fill"
+msgstr "Füllung"
+
+msgid "Fit"
+msgstr "Anpassung"
+
+msgid "Floor plan or photo beside four status tiles"
+msgstr "Grundriss oder Foto neben vier Status-Kacheln"
+
+msgid "Flow metric"
+msgstr "Fluss-Metrik"
+
+msgid "Font"
+msgstr "Schriftart"
+
+msgid "Four gauges and two bars on a dark ops theme"
+msgstr "Vier Gauges und zwei Balken im dunklen Ops-Theme"
+
+msgid "Free"
+msgstr "Frei"
+
+msgid "From image library"
+msgstr "Aus der Bildbibliothek"
+
+msgid "Gadget"
+msgstr "Gadget"
+
+msgid "Group"
+msgstr "Gruppe"
+
+msgid "Group — move or duplicate it as one unit. Ungroup via the layers panel."
+msgstr "Gruppe — als Einheit verschieben oder duplizieren. Aufheben über das Ebenen-Panel."
+
+msgid "Headline and six gauge tiles for the big screen"
+msgstr "Überschrift und sechs Gauge-Kacheln für die große Wand"
+
+msgid "Hide"
+msgstr "Ausblenden"
+
+msgid "Host"
+msgstr "Host"
+
+msgid "Incident Board"
+msgstr "Incident-Board"
+
+msgid "Italic"
+msgstr "Kursiv"
+
+msgid "KPI Dashboard"
+msgstr "KPI-Dashboard"
+
+msgid "LOCATION STATUS"
+msgstr "STANDORT-STATUS"
+
+msgid "Label color"
+msgstr "Label-Farbe"
+
+msgid "Label size"
+msgstr "Label-Größe"
+
+msgid "Layers"
+msgstr "Ebenen"
+
+msgid "Layout"
+msgstr "Layout"
+
+msgid "Left"
+msgstr "Links"
+
+msgid "Live infrastructure overview"
+msgstr "Live-Überblick über die Infrastruktur"
+
+msgid "Live status"
+msgstr "Live-Status"
+
+msgid "Location Status"
+msgstr "Standort-Status"
+
+msgid "Lock"
+msgstr "Sperren"
+
+msgid "Lock aspect ratio"
+msgstr "Seitenverhältnis sperren"
+
+msgid "NETWORK OPERATIONS"
+msgstr "NETWORK OPERATIONS"
+
+msgid "NETWORK WEATHERMAP"
+msgstr "NETZWERK-WEATHERMAP"
+
+msgid "NOC Overview"
+msgstr "NOC-Übersicht"
+
+msgid "Network Weathermap"
+msgstr "Netzwerk-Weathermap"
+
+msgid "Next slot"
+msgstr "Nächster Slot"
+
+msgid "No hosts match your search"
+msgstr "Keine Hosts entsprechen der Suche"
+
+msgid "No image"
+msgstr "Kein Bild"
+
+msgid "Not connected"
+msgstr "Nicht verbunden"
+
+msgid "Offer the (experimental) presentation board type — a design-first, slide-style surface. Existing presentation boards keep rendering even while this is off."
+msgstr "Bietet den (experimentellen) Presentation-Board-Typ an — eine design-orientierte Slide-Oberfläche. Bestehende Presentation-Boards werden auch bei deaktivierter Option weiter gerendert."
+
+msgid "On slide"
+msgstr "Auf dem Slide"
+
+msgid "Opacity"
+msgstr "Deckkraft"
+
+msgid "PENDING"
+msgstr "PENDING"
+
+msgid "Pick a metric…"
+msgstr "Metrik wählen…"
+
+msgid "Pick a template, then connect your hosts and services — or start blank."
+msgstr "Template wählen und dann Hosts und Services verbinden — oder leer starten."
+
+msgid "Pick a tool above to start your slide"
+msgstr "Oben ein Werkzeug wählen, um das Slide zu beginnen"
+
+msgid "Previous slot"
+msgstr "Vorheriger Slot"
+
+msgid "Radius"
+msgstr "Radius"
+
+msgid "Rectangle"
+msgstr "Rechteck"
+
+msgid "Redo"
+msgstr "Wiederholen"
+
+msgid "Replace slide contents?"
+msgstr "Slide-Inhalt ersetzen?"
+
+msgid "Right"
+msgstr "Rechts"
+
+msgid "Rotation"
+msgstr "Drehung"
+
+msgid "SERVICE KPIs"
+msgstr "SERVICE-KPIs"
+
+msgid "STATUS WALL"
+msgstr "STATUS WALL"
+
+msgid "Sample"
+msgstr "Beispiel"
+
+msgid "Search hosts…"
+msgstr "Hosts durchsuchen…"
+
+msgid "Service (optional)"
+msgstr "Service (optional)"
+
+msgid "Shift-click to select multiple"
+msgstr "Shift-Klick für Mehrfachauswahl"
+
+msgid "Show"
+msgstr "Einblenden"
+
+msgid "Show services"
+msgstr "Services anzeigen"
+
+msgid "Skip"
+msgstr "Überspringen"
+
+msgid "Slide"
+msgstr "Slide"
+
+msgid "Solid"
+msgstr "Durchgezogen"
+
+msgid "Start endpoint"
+msgstr "Start-Endpunkt"
+
+msgid "Start from an empty slide"
+msgstr "Mit einem leeren Slide beginnen"
+
+msgid "Start with a design"
+msgstr "Mit einem Design starten"
+
+msgid "State dot (default)"
+msgstr "Status-Punkt (Standard)"
+
+msgid "Status Wall"
+msgstr "Status Wall"
+
+msgid "Stroke"
+msgstr "Kontur"
+
+msgid "Stroke style"
+msgstr "Konturstil"
+
+msgid "Text"
+msgstr "Text"
+
+msgid "Theme default"
+msgstr "Theme-Standard"
+
+msgid "Three large state tiles for war-room walls"
+msgstr "Drei große Status-Kacheln für War-Room-Wände"
+
+msgid "Twelve status tiles at a glance"
+msgstr "Zwölf Status-Kacheln auf einen Blick"
+
+msgid "Typography"
+msgstr "Typografie"
+
+msgid "Unbound"
+msgstr "Nicht verbunden"
+
+msgid "Undo"
+msgstr "Rückgängig"
+
+msgid "Ungroup"
+msgstr "Gruppierung aufheben"
+
+msgid "Unlock"
+msgstr "Entsperren"
+
+msgid "Use the toolbar above the slide to align and distribute."
+msgstr "Zum Ausrichten und Verteilen die Leiste über dem Slide nutzen."
+
+msgid "Use theme color"
+msgstr "Theme-Farbe verwenden"
+
+msgid "Whole host if empty"
+msgstr "Leer = ganzer Host"
+
+msgid "e.g. if_in_bps"
+msgstr "z. B. if_in_bps"
+
+msgid "https://…"
+msgstr "https://…"
+
+msgid "…or image URL"
+msgstr "…oder Bild-URL"

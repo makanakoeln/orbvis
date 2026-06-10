@@ -1,0 +1,104 @@
+import { createPinia, setActivePinia } from 'pinia'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { useAuthStore } from '@/stores/auth'
+import type { BoardConfig, PresentationView } from '@/types/api'
+import { createElement } from '@/utils/presentationElements'
+
+import { usePresentationDocument } from './usePresentationDocument'
+
+const { mockBoardsApi } = vi.hoisted(() => ({
+  mockBoardsApi: {
+    update: vi.fn(),
+    get: vi.fn()
+  }
+}))
+
+vi.mock('@/api/client', () => ({
+  boardsApi: mockBoardsApi
+}))
+
+function makeConfig(): BoardConfig {
+  const view: PresentationView = {
+    type: 'presentation',
+    width: 1920,
+    height: 1080,
+    theme: 'midnight',
+    elements: []
+  }
+  return { name: 'pres1', alias: 'P', connection_id: 'live_1', version: 3, view } as BoardConfig
+}
+
+describe('usePresentationDocument', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    setActivePinia(createPinia())
+    useAuthStore().accessToken = 'tok'
+    mockBoardsApi.update.mockReset()
+    mockBoardsApi.get.mockReset()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('mutate records a history step; undo restores elements and theme together', () => {
+    const doc = usePresentationDocument(makeConfig)
+    const el = createElement('rect', 10, 10)
+
+    doc.mutate(() => {
+      doc.local.value = { ...doc.local.value, theme: 'ops', elements: [el] }
+    })
+    expect(doc.elements.value).toHaveLength(1)
+    expect(doc.local.value.theme).toBe('ops')
+
+    doc.undo()
+    expect(doc.elements.value).toHaveLength(0)
+    expect(doc.local.value.theme).toBe('midnight')
+
+    doc.redo()
+    expect(doc.elements.value).toHaveLength(1)
+    expect(doc.local.value.theme).toBe('ops')
+  })
+
+  it('debounces saves and adopts the returned version', async () => {
+    mockBoardsApi.update.mockResolvedValue({ name: 'pres1', version: 4, view: {} })
+    const doc = usePresentationDocument(makeConfig)
+
+    doc.mutate(() => doc.setElements([createElement('rect', 0, 0)]))
+    doc.mutate(() => doc.setElements([...doc.elements.value, createElement('text', 0, 0)]))
+    expect(mockBoardsApi.update).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(500)
+    expect(mockBoardsApi.update).toHaveBeenCalledTimes(1)
+    expect(mockBoardsApi.update).toHaveBeenCalledWith('pres1', expect.anything(), 'tok', 3)
+    expect(doc.version.value).toBe(4)
+  })
+
+  it('realigns to the canonical version after a conflicting save', async () => {
+    mockBoardsApi.update.mockRejectedValue(new Error('409'))
+    mockBoardsApi.get.mockResolvedValue({ name: 'pres1', version: 9, view: {} })
+    const doc = usePresentationDocument(makeConfig)
+
+    doc.mutate(() => doc.setElements([createElement('rect', 0, 0)]))
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(mockBoardsApi.get).toHaveBeenCalledWith('pres1', 'tok')
+    expect(doc.version.value).toBe(9)
+    // The working copy survives — the conflict realigns the version only.
+    expect(doc.elements.value).toHaveLength(1)
+  })
+
+  it('exposes shared lookups (byId, topLevelId, nextZ)', () => {
+    const doc = usePresentationDocument(makeConfig)
+    const a = createElement('rect', 0, 0)
+    a.z = 5
+    const group = createElement('rect', 0, 0)
+    doc.setElements([a])
+    expect(doc.byId(a.id)?.id).toBe(a.id)
+    expect(doc.byId(undefined)).toBeUndefined()
+    expect(doc.topLevelId(a.id)).toBe(a.id)
+    expect(doc.nextZ.value).toBe(6)
+    expect(doc.byId(group.id)).toBeUndefined()
+  })
+})

@@ -46,3 +46,47 @@
   text-transform: uppercase;
   color: var(--text-muted);
 }
+
+/* Tiny field caption used throughout the presentation editor panels. */
+.orb-cap {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+/* Slim range slider on CMK tokens (opacity controls etc.). */
+.orb-range {
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  border-radius: 2px;
+  background: var(--default-form-element-border-color);
+  cursor: pointer;
+}
+
+.orb-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--color-corporate-green-50);
+  cursor: grab;
+}
+
+.orb-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--color-corporate-green-50);
+  cursor: grab;
+}
+
+.orb-range-pct {
+  min-width: 36px;
+  text-align: right;
+  font-size: var(--font-size-normal);
+  color: var(--text-muted);
+}

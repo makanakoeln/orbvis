@@ -1,328 +1,369 @@
 <template>
-  <div
-    ref="containerRef"
-    class="pres"
-    :class="{ 'pres--edit': interactive }"
-    @pointerdown="onStagePointerDown"
-  >
+  <div class="pres" :class="{ 'pres--edit': interactive }">
+    <PresentationDataPanel
+      v-if="interactive && dataPanelOpen"
+      :connection-id="config.connection_id"
+      :elements="elements"
+      :states="states"
+      @close="dataPanelOpen = false"
+    />
     <div
-      class="pres__stage"
-      :style="stageStyle"
-      @pointerdown.stop="onSlidePointerDown"
-      @dblclick="onSlideDblClick"
+      ref="containerRef"
+      class="pres__viewport"
+      @pointerdown="onStagePointerDown"
+      @dragover="onBindingDragOver"
+      @dragleave="onBindingDragLeave"
+      @drop="onBindingDrop"
     >
-      <div class="pres__bg" :style="bgStyle" />
+      <div
+        class="pres__stage"
+        :style="stageStyle"
+        @pointerdown.stop="onSlidePointerDown"
+        @dblclick="onSlideDblClick"
+      >
+        <div class="pres__bg" :style="bgStyle" />
 
-      <!-- Connectors render in their own slide-space layer (behind boxes) so a
+        <!-- Connectors render in their own slide-space layer (behind boxes) so a
            docked line can run at any angle between the elements it links. -->
-      <svg class="pres__connectors" :style="overlaySvgStyle">
-        <!-- Highlight the element an endpoint would dock to on release. -->
-        <rect
-          v-if="dockCandidate"
-          class="pres__dock-target"
-          :x="dockCandidate.x"
-          :y="dockCandidate.y"
-          :width="dockCandidate.w"
-          :height="dockCandidate.h"
-          :stroke-width="2 / scale"
-          :rx="6 / scale"
-        />
-        <PresentationConnector
-          v-for="c in connectors"
-          :key="c.el.id"
-          :element="c.el"
-          :start="c.start"
-          :end="c.end"
-          :state="stateFor(c.el)"
-          :selected="interactive && selectedIds.includes(c.el.id)"
-          :interactive="interactive"
-          :scale="scale"
-          @pointerdown="onConnectorPointerDown(c.el, $event)"
-          @endpoint-down="(which, e) => onEndpointPointerDown(c.el, which, e)"
-        />
-      </svg>
+        <svg class="pres__connectors" :style="overlaySvgStyle">
+          <!-- Highlight the element an endpoint would dock to on release. -->
+          <rect
+            v-if="dockCandidate"
+            class="pres__dock-target"
+            :x="dockCandidate.x"
+            :y="dockCandidate.y"
+            :width="dockCandidate.w"
+            :height="dockCandidate.h"
+            :stroke-width="2 / scale"
+            :rx="6 / scale"
+          />
+          <PresentationConnector
+            v-for="c in connectors"
+            :key="c.el.id"
+            :element="c.el"
+            :start="c.start"
+            :end="c.end"
+            :state="stateFor(c.el) ?? sampleFor(c.el)"
+            :selected="interactive && selectedIds.includes(c.el.id)"
+            :interactive="interactive"
+            :scale="scale"
+            @pointerdown="onConnectorPointerDown(c.el, $event)"
+            @endpoint-down="(which, e) => onEndpointPointerDown(c.el, which, e)"
+          />
+        </svg>
 
-      <div v-if="interactive && !elements.length" class="pres__empty">
-        {{ _t('Pick a tool above to start your slide') }}
+        <div v-if="interactive && !elements.length" class="pres__empty">
+          {{ _t('Pick a tool above to start your slide') }}
+        </div>
+
+        <div
+          v-for="el in inlineElements"
+          :key="el.id"
+          class="pres__el"
+          :class="{
+            'pres__el--selected': interactive && selectedIds.includes(topLevelId(el.id)),
+            'pres__el--locked': el.locked,
+            'pres__el--hidden': interactive && el.hidden
+          }"
+          :style="elementStyle(el)"
+          @pointerdown.stop="onElementPointerDown(el, $event)"
+        >
+          <PresentationElementView
+            :element="el"
+            :state="stateFor(el)"
+            :sample-state="sampleFor(el)"
+            :editing-text="editingTextId === el.id"
+            @text-change="onTextChange(el.id, $event)"
+          />
+        </div>
+
+        <svg
+          v-if="interactive && activeGuides.length"
+          class="pres__guides"
+          :style="overlaySvgStyle"
+        >
+          <line
+            v-for="(g, i) in activeGuides"
+            :key="i"
+            :x1="g.axis === 'x' ? g.pos : g.start"
+            :y1="g.axis === 'x' ? g.start : g.pos"
+            :x2="g.axis === 'x' ? g.pos : g.end"
+            :y2="g.axis === 'x' ? g.end : g.pos"
+            stroke="#f472b6"
+            :stroke-width="1 / scale"
+          />
+        </svg>
+
+        <div v-if="interactive && selectionBox" class="pres__sel" :style="selBoxStyle">
+          <template v-if="selectedIds.length === 1 && !primaryLocked && !singleIsConnector">
+            <div
+              v-for="h in handles"
+              :key="h"
+              class="pres__handle"
+              :class="`pres__handle--${h}`"
+              :style="handleStyle(h)"
+              @pointerdown.stop="onHandlePointerDown(h, $event)"
+            />
+            <div
+              class="pres__rotate"
+              :style="rotateHandleStyle"
+              @pointerdown.stop="onRotatePointerDown($event)"
+            />
+          </template>
+        </div>
+
+        <div v-if="marquee.visible.value" class="pres__marquee" :style="marqueeStyle" />
+
+        <PresentationConnectOverlay
+          v-if="interactive && connectGuide.active.value"
+          :slots="connectGuide.slots.value"
+          :current-id="connectGuide.currentId.value"
+          :scale="scale"
+          @pick="connectGuide.goTo($event)"
+        />
+      </div>
+
+      <PresentationTemplateGallery
+        v-if="interactive && galleryOpen"
+        @apply="applyTemplate"
+        @close="dismissGallery"
+      />
+
+      <OrbConfirmDialog
+        :open="!!pendingTemplate"
+        :title="_t('Replace slide contents?')"
+        :message="
+          _t('Applying a template replaces every element on this slide. Undo restores them.')
+        "
+        :confirm-label="_t('Apply template')"
+        @confirm="confirmTemplate"
+        @cancel="pendingTemplate = null"
+      />
+
+      <div v-if="interactive && connectGuide.active.value" class="pres__connect-bar">
+        <span class="pres__connect-progress">
+          {{
+            _t('%{bound} of %{total} connected', {
+              bound: String(connectGuide.boundCount.value),
+              total: String(connectGuide.totalCount.value)
+            })
+          }}
+        </span>
+        <div class="pres__connect-track">
+          <div class="pres__connect-fill" :style="{ width: connectProgressPct + '%' }" />
+        </div>
+        <button class="pres__tool" :title="_t('Previous slot')" @click="connectGuide.prev()">
+          <span v-html="ICONS.undo" />
+        </button>
+        <button class="pres__tool" :title="_t('Next slot')" @click="connectGuide.next()">
+          <span v-html="ICONS.redo" />
+        </button>
+        <button class="pres__connect-exit" @click="connectGuide.exit()">{{ _t('Done') }}</button>
       </div>
 
       <div
-        v-for="el in inlineElements"
-        :key="el.id"
-        class="pres__el"
-        :class="{
-          'pres__el--selected': interactive && selectedIds.includes(topLevelId(el.id)),
-          'pres__el--locked': el.locked,
-          'pres__el--hidden': interactive && el.hidden
-        }"
-        :style="elementStyle(el)"
-        @pointerdown.stop="onElementPointerDown(el, $event)"
-      >
-        <PresentationElementView
-          :element="el"
-          :state="stateFor(el)"
-          :editing-text="editingTextId === el.id"
-          @text-change="onTextChange(el.id, $event)"
-        />
-      </div>
-
-      <svg v-if="interactive && activeGuides.length" class="pres__guides" :style="overlaySvgStyle">
-        <line
-          v-for="(g, i) in activeGuides"
-          :key="i"
-          :x1="g.axis === 'x' ? g.pos : g.start"
-          :y1="g.axis === 'x' ? g.start : g.pos"
-          :x2="g.axis === 'x' ? g.pos : g.end"
-          :y2="g.axis === 'x' ? g.end : g.pos"
-          stroke="#f472b6"
-          :stroke-width="1 / scale"
-        />
-      </svg>
-
-      <div v-if="interactive && selectionBox" class="pres__sel" :style="selBoxStyle">
-        <template v-if="selectedIds.length === 1 && !primaryLocked && !singleIsConnector">
-          <div
-            v-for="h in handles"
-            :key="h"
-            class="pres__handle"
-            :class="`pres__handle--${h}`"
-            :style="handleStyle(h)"
-            @pointerdown.stop="onHandlePointerDown(h, $event)"
-          />
-          <div
-            class="pres__rotate"
-            :style="rotateHandleStyle"
-            @pointerdown.stop="onRotatePointerDown($event)"
-          />
-        </template>
-      </div>
-
-      <div v-if="marquee.visible.value" class="pres__marquee" :style="marqueeStyle" />
-    </div>
-
-    <div v-if="interactive" class="pres__palette">
-      <button
-        v-for="tool in contentTools"
-        :key="tool.kind"
-        class="pres__tool"
-        :title="tool.title"
+        v-if="
+          interactive && connectGuide.active.value && connectGuide.current.value && connectPopPos
+        "
+        class="pres__connect-pop"
+        :class="{ 'pres__connect-pop--below': connectPopPos.below }"
+        :style="{ left: connectPopPos.x + 'px', top: connectPopPos.y + 'px' }"
         @pointerdown.stop
-        @click="insert(tool.kind)"
       >
-        <span v-html="tool.icon" />
-      </button>
-      <div class="pres__tool-sep" />
-      <button
-        v-for="tool in shapeTools"
-        :key="tool.kind"
-        class="pres__tool"
-        :title="tool.title"
-        @pointerdown.stop
-        @click="insert(tool.kind)"
-      >
-        <span v-html="tool.icon" />
-      </button>
-      <div class="pres__tool-sep" />
-      <button
-        class="pres__tool"
-        :class="{ 'pres__tool--on': settingsOpen }"
-        :title="_t('Slide settings')"
-        @click.stop="toggleSettings"
-      >
-        <span v-html="ICONS.settings" />
-      </button>
-      <button
-        class="pres__tool"
-        :class="{ 'pres__tool--on': layersOpen }"
-        :title="_t('Layers')"
-        @click.stop="toggleLayers"
-      >
-        <span v-html="ICONS.layers" />
-      </button>
-    </div>
-
-    <div
-      v-if="interactive && settingsOpen"
-      v-click-outside="closeSettings"
-      class="pres__settings"
-      @pointerdown.stop
-    >
-      <div class="pres__settings-head">
-        <span>{{ _t('Slide settings') }}</span>
-        <button class="pres__layers-x" @click="settingsOpen = false">×</button>
+        <div class="pres__connect-pop-head">
+          <span class="pres__connect-pop-title">{{ connectSlotTitle }}</span>
+          <button class="pres__layers-x" :title="_t('Done')" @click="connectGuide.exit()">×</button>
+        </div>
+        <div class="pres__connect-pop-body">
+          <PresentationBindingForm
+            :element="connectGuide.current.value"
+            :connection-id="config.connection_id"
+            @patch="onConnectPatch"
+          />
+        </div>
+        <div class="pres__connect-pop-foot">
+          <button class="pres__layer-action" @click="connectGuide.next()">{{ _t('Skip') }}</button>
+        </div>
       </div>
-      <div class="pres__settings-body">
-        <label class="pres__settings-label">{{ _t('Theme') }}</label>
-        <select v-model="local.theme" class="pres__select" @change="onSlideMetaChange">
-          <option v-for="t in themeChoices" :key="t.name" :value="t.name">{{ t.title }}</option>
-        </select>
 
-        <label class="pres__settings-label">{{ _t('Aspect / size') }}</label>
-        <div class="pres__preset-grid">
+      <div v-if="interactive && !connectGuide.active.value" class="pres__palette">
+        <button
+          class="pres__tool"
+          :class="{ 'pres__tool--on': dataPanelOpen }"
+          :title="_t('Data browser')"
+          @pointerdown.stop
+          @click.stop="dataPanelOpen = !dataPanelOpen"
+        >
+          <span v-html="ICONS.database" />
+        </button>
+        <div class="pres__tool-sep" />
+        <button
+          v-for="tool in contentTools"
+          :key="tool.kind"
+          class="pres__tool"
+          :title="tool.title"
+          @pointerdown.stop
+          @click="insert(tool.kind)"
+        >
+          <span v-html="tool.icon" />
+        </button>
+        <div class="pres__tool-sep" />
+        <button
+          v-for="tool in shapeTools"
+          :key="tool.kind"
+          class="pres__tool"
+          :title="tool.title"
+          @pointerdown.stop
+          @click="insert(tool.kind)"
+        >
+          <span v-html="tool.icon" />
+        </button>
+        <div class="pres__tool-sep" />
+        <button
+          class="pres__tool pres__tool--connect"
+          :disabled="!connectGuide.unboundCount.value"
+          :title="_t('Connect data')"
+          @pointerdown.stop
+          @click.stop="enterConnectMode"
+        >
+          <span v-html="ICONS.plug" />
+          <span v-if="connectGuide.unboundCount.value" class="pres__tool-badge">{{
+            connectGuide.unboundCount.value
+          }}</span>
+        </button>
+        <button
+          class="pres__tool"
+          :class="{ 'pres__tool--on': layersOpen }"
+          :title="_t('Layers')"
+          @click.stop="toggleLayers"
+        >
+          <span v-html="ICONS.layers" />
+        </button>
+      </div>
+
+      <div v-if="interactive" class="pres__hud">
+        <button
+          class="pres__hud-btn"
+          :disabled="!history.canUndo.value"
+          :title="_t('Undo')"
+          @click="undo"
+        >
+          <span v-html="ICONS.undo" />
+        </button>
+        <button
+          class="pres__hud-btn"
+          :disabled="!history.canRedo.value"
+          :title="_t('Redo')"
+          @click="redo"
+        >
+          <span v-html="ICONS.redo" />
+        </button>
+        <span class="pres__hud-status">{{ saveLabel }}</span>
+      </div>
+
+      <div
+        v-if="interactive && selectedIds.length >= 2 && !connectGuide.active.value"
+        class="pres__align"
+      >
+        <button
+          v-for="a in alignActions"
+          :key="a.id"
+          class="pres__tool"
+          :title="a.title"
+          @click="a.run()"
+        >
+          <span v-html="a.icon" />
+        </button>
+      </div>
+
+      <div
+        v-if="interactive && layersOpen"
+        v-click-outside="closeLayers"
+        class="pres__layers"
+        @pointerdown.stop
+      >
+        <div class="pres__layers-head">
+          <span>{{ _t('Layers') }}</span>
+          <button class="pres__layers-x" @click="layersOpen = false">×</button>
+        </div>
+        <div class="pres__layers-hint">{{ _t('Shift-click to select multiple') }}</div>
+        <div
+          v-for="el in layersList"
+          :key="el.id"
+          class="pres__layer"
+          :class="{
+            'pres__layer--sel': selectedIds.includes(el.id),
+            'pres__layer--hidden': el.hidden
+          }"
+          @click="onLayerClick(el.id, $event)"
+        >
+          <span class="pres__layer-name">{{ layerName(el) }}</span>
+          <span v-if="isUnboundSlot(el)" class="pres__layer-unbound" :title="_t('Not connected')" />
           <button
-            v-for="p in slidePresets"
-            :key="p.label"
-            class="pres__preset"
-            :class="{ 'pres__preset--on': local.width === p.w && local.height === p.h }"
-            @click="applyPreset(p.w, p.h)"
+            class="pres__layer-btn"
+            :class="{ 'pres__layer-btn--on': el.locked }"
+            :title="el.locked ? _t('Unlock') : _t('Lock')"
+            @click.stop="toggleLock(el.id)"
           >
-            {{ p.label }}
+            <span v-html="el.locked ? ICONS.lock : ICONS.unlock" />
+          </button>
+          <button
+            class="pres__layer-btn"
+            :class="{ 'pres__layer-btn--on': el.hidden }"
+            :title="el.hidden ? _t('Show') : _t('Hide')"
+            @click.stop="toggleHidden(el.id)"
+          >
+            <span v-html="el.hidden ? ICONS.eyeOff : ICONS.eye" />
           </button>
         </div>
-
-        <div class="pres__settings-row">
-          <label class="pres__num">
-            {{ _t('Width') }}
-            <input
-              type="number"
-              min="320"
-              max="8192"
-              :value="local.width"
-              @change="setSlideSize(numVal($event), local.height)"
-            />
-          </label>
-          <label class="pres__num">
-            {{ _t('Height') }}
-            <input
-              type="number"
-              min="320"
-              max="8192"
-              :value="local.height"
-              @change="setSlideSize(local.width, numVal($event))"
-            />
-          </label>
+        <div class="pres__layers-foot">
+          <button
+            class="pres__layer-action"
+            :disabled="selectedIds.length < 2"
+            @click="groupSelected"
+          >
+            {{ _t('Group') }}
+          </button>
+          <button class="pres__layer-action" :disabled="!hasGroupSelected" @click="ungroupSelected">
+            {{ _t('Ungroup') }}
+          </button>
         </div>
-
-        <label class="pres__settings-label">{{ _t('Background') }}</label>
-        <div class="pres__bg-row">
-          <ColorField
-            :label="_t('Background color')"
-            :value="local.background ?? null"
-            @set="setBackground"
-          />
-          <span class="pres__bg-hint">{{
-            local.background ? local.background : _t('Theme default')
-          }}</span>
-        </div>
-        <ImagePicker
-          :model-value="local.background_image ?? ''"
-          :placeholder="_t('Background image…')"
-          @update:model-value="setBackgroundImage"
-        />
       </div>
     </div>
 
-    <div v-if="interactive" class="pres__hud">
-      <button
-        class="pres__hud-btn"
-        :disabled="!history.canUndo.value"
-        :title="_t('Undo')"
-        @click="undo"
-      >
-        <span v-html="ICONS.undo" />
-      </button>
-      <button
-        class="pres__hud-btn"
-        :disabled="!history.canRedo.value"
-        :title="_t('Redo')"
-        @click="redo"
-      >
-        <span v-html="ICONS.redo" />
-      </button>
-      <span class="pres__hud-status">{{ saveLabel }}</span>
-    </div>
-
-    <div v-if="interactive && selectedIds.length >= 2" class="pres__align">
-      <button
-        v-for="a in alignActions"
-        :key="a.id"
-        class="pres__tool"
-        :title="a.title"
-        @click="a.run()"
-      >
-        <span v-html="a.icon" />
-      </button>
-    </div>
-
-    <PresentationInspector
-      v-if="interactive && inspectorEl && inspectorPos"
-      :element="inspectorEl"
+    <PresentationInspectorPanel
+      v-if="interactive"
+      :selection="selectedElements"
+      :view="local"
       :connection-id="config.connection_id"
       :targets="connectorTargets"
-      :style="{ left: inspectorPos.x + 'px', top: inspectorPos.y + 'px' }"
-      class="pres__inspector"
-      :class="{ 'pres__inspector--below': inspectorPos.below }"
+      :background-image-name="backgroundImageName"
       @patch="onInspectorPatch"
       @delete="deleteSelected"
       @duplicate="duplicateSelected"
-    />
-
-    <div
-      v-if="interactive && layersOpen"
-      v-click-outside="closeLayers"
-      class="pres__layers"
-      @pointerdown.stop
+      @slide="onSlideChange"
     >
-      <div class="pres__layers-head">
-        <span>{{ _t('Layers') }}</span>
-        <button class="pres__layers-x" @click="layersOpen = false">×</button>
-      </div>
-      <div class="pres__layers-hint">{{ _t('Shift-click to select multiple') }}</div>
-      <div
-        v-for="el in layersList"
-        :key="el.id"
-        class="pres__layer"
-        :class="{
-          'pres__layer--sel': selectedIds.includes(el.id),
-          'pres__layer--hidden': el.hidden
-        }"
-        @click="onLayerClick(el.id, $event)"
-      >
-        <span class="pres__layer-name">{{ layerName(el) }}</span>
-        <button
-          class="pres__layer-btn"
-          :class="{ 'pres__layer-btn--on': el.locked }"
-          :title="el.locked ? _t('Unlock') : _t('Lock')"
-          @click.stop="toggleLock(el.id)"
-        >
-          <span v-html="el.locked ? ICONS.lock : ICONS.unlock" />
-        </button>
-        <button
-          class="pres__layer-btn"
-          :class="{ 'pres__layer-btn--on': el.hidden }"
-          :title="el.hidden ? _t('Show') : _t('Hide')"
-          @click.stop="toggleHidden(el.id)"
-        >
-          <span v-html="el.hidden ? ICONS.eyeOff : ICONS.eye" />
-        </button>
-      </div>
-      <div class="pres__layers-foot">
-        <button
-          class="pres__layer-action"
-          :disabled="selectedIds.length < 2"
-          @click="groupSelected"
-        >
-          {{ _t('Group') }}
-        </button>
-        <button class="pres__layer-action" :disabled="!hasGroupSelected" @click="ungroupSelected">
-          {{ _t('Ungroup') }}
-        </button>
-      </div>
-    </div>
+      <template #slide>
+        <CmkButton class="pres__tpl-btn" @click="galleryOpen = true">
+          {{ _t('Browse templates…') }}
+        </CmkButton>
+      </template>
+    </PresentationInspectorPanel>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-import { boardsApi } from '@/api/client'
-import { useHistory } from '@/composables/useHistory'
+import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue'
+import CmkButton from '@/components/cmk/CmkButton'
+
+import { useConnectGuide } from '@/composables/useConnectGuide'
 import { useMarquee } from '@/composables/useMarquee'
+import { clone, usePresentationDocument } from '@/composables/usePresentationDocument'
 import { usePresentationSelectionGeometry } from '@/composables/usePresentationSelectionGeometry'
 import { useSlideViewport } from '@/composables/useSlideViewport'
 import { type Box, type Guide, computeSmartGuides } from '@/composables/useSmartGuides'
-import { useAuthStore } from '@/stores/auth'
-import { useBoardsStore } from '@/stores/boards'
 import type {
   BoardConfig,
   ObjectState,
@@ -331,22 +372,33 @@ import type {
   ShapeElement
 } from '@/types/api'
 import { type GroupMember, applyGroupDelta } from '@/utils/groupDrag'
-import { ICONS, SLIDE_PRESETS } from '@/utils/presentationCanvasChrome'
+import {
+  BINDING_DROP_MIME,
+  applyBindingDrop,
+  bindableElementAt,
+  parseBindingDropPayload
+} from '@/utils/presentationBindingDrop'
+import { ICONS } from '@/utils/presentationCanvasChrome'
 import {
   type InsertKind,
   createElement,
+  imageRefName,
   newElementId,
   resolveImageRef
 } from '@/utils/presentationElements'
-import { themeOptions, themeTokens } from '@/utils/presentationThemes'
+import { isUnboundSlot, sampleStateFor } from '@/utils/presentationSampleState'
+import type { PresentationTemplate } from '@/utils/presentationTemplates'
+import { themeTokens } from '@/utils/presentationThemes'
 import usei18n from '@/vendor/cmk/lib/i18n'
 import useClickOutside from '@/vendor/cmk/lib/useClickOutside'
 
-import ImagePicker from '../ImagePicker.vue'
-import ColorField from './ColorField.vue'
+import PresentationBindingForm from './PresentationBindingForm.vue'
+import PresentationConnectOverlay from './PresentationConnectOverlay.vue'
 import PresentationConnector from './PresentationConnector.vue'
+import PresentationDataPanel from './PresentationDataPanel.vue'
 import PresentationElementView from './PresentationElementView.vue'
-import PresentationInspector from './PresentationInspector.vue'
+import PresentationInspectorPanel from './PresentationInspectorPanel.vue'
+import PresentationTemplateGallery from './PresentationTemplateGallery.vue'
 
 const { _t } = usei18n()
 
@@ -359,35 +411,31 @@ const props = defineProps<{
   kiosk?: boolean
 }>()
 
-const auth = useAuthStore()
-const boardsStore = useBoardsStore()
 const vClickOutside = useClickOutside()
 
-// JSON clone (not structuredClone): the view is pure JSON, and structuredClone
-// throws DataCloneError on Vue reactive proxies.
-function clone<T>(v: T): T {
-  return JSON.parse(JSON.stringify(v))
-}
-
-function initialView(): PresentationView {
-  const v = props.config.view
-  if (v.type === 'presentation') return clone(v)
-  return { type: 'presentation', width: 1920, height: 1080, theme: 'midnight', elements: [] }
-}
-
-const local = ref<PresentationView>(initialView())
-const version = ref(props.config.version ?? 0)
 const interactive = computed(
   () => props.editMode && !props.readonly && !props.preview && !props.kiosk
 )
 
-watch(
-  () => props.config.name,
+const {
+  local,
+  elements,
+  history,
+  snapshot,
+  mutate,
+  setElements,
+  scheduleSave,
+  saveLabel,
+  undo,
+  redo,
+  childToGroup,
+  topLevelId,
+  byId,
+  nextZ
+} = usePresentationDocument(
+  () => props.config,
   () => {
-    local.value = initialView()
-    version.value = props.config.version ?? 0
     selectedIds.value = []
-    history.reset()
   }
 )
 
@@ -429,20 +477,6 @@ const overlaySvgStyle = computed(() => ({
 const selectedIds = ref<string[]>([])
 const editingTextId = ref<string | null>(null)
 
-const elements = computed(() => local.value.elements)
-
-// Top-level elements are everything not referenced as a group child.
-const childToGroup = computed(() => {
-  const map = new Map<string, string>()
-  for (const el of elements.value) {
-    if (el.kind === 'group') for (const c of el.children) map.set(c, el.id)
-  }
-  return map
-})
-function topLevelId(id: string): string {
-  return childToGroup.value.get(id) ?? id
-}
-
 const orderedElements = computed(() =>
   [...elements.value].filter((e) => !e.hidden || interactive.value).sort((a, b) => a.z - b.z)
 )
@@ -451,9 +485,6 @@ const layersList = computed(() =>
   [...elements.value].sort((a, b) => b.z - a.z).filter((e) => !childToGroup.value.has(e.id))
 )
 
-function byId(id: string | undefined): PresentationElement | undefined {
-  return id ? elements.value.find((e) => e.id === id) : undefined
-}
 const selectedElements = computed(() =>
   selectedIds.value.map(byId).filter((e): e is PresentationElement => !!e)
 )
@@ -507,6 +538,11 @@ function stateFor(el: PresentationElement): ObjectState | undefined {
   // Data elements and monitoring-bound shapes both receive states keyed by id.
   return el.kind === 'data' || el.kind === 'shape' ? props.states[el.id] : undefined
 }
+// Unbound data slots preview with deterministic sample data — editor only, so
+// view/kiosk keep rendering unbound elements neutrally.
+function sampleFor(el: PresentationElement): ObjectState | undefined {
+  return interactive.value && isUnboundSlot(el) ? sampleStateFor(el) : undefined
+}
 
 function elementStyle(el: PresentationElement): Record<string, string> {
   return {
@@ -519,62 +555,6 @@ function elementStyle(el: PresentationElement): Record<string, string> {
     zIndex: String(el.z),
     pointerEvents: !interactive.value || el.locked ? 'none' : 'auto'
   }
-}
-
-const history = useHistory<PresentationElement[]>(
-  (els) => JSON.stringify(els),
-  (s) => JSON.parse(s)
-)
-function snapshot(): void {
-  history.record(clone(elements.value))
-}
-
-let saveTimer: ReturnType<typeof setTimeout> | null = null
-const saving = ref(false)
-const savedAt = ref(false)
-const saveLabel = computed(() => (saving.value ? _t('Saving…') : savedAt.value ? _t('Saved') : ''))
-
-function scheduleSave(): void {
-  savedAt.value = false
-  if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(saveNow, 400)
-}
-
-async function saveNow(): Promise<void> {
-  if (!auth.accessToken) return
-  const name = props.config.name
-  saving.value = true
-  try {
-    const payload = { view: clone(local.value) }
-    const cfg = await boardsApi.update(name, payload, auth.accessToken, version.value)
-    version.value = cfg.version ?? version.value
-    if (boardsStore.currentBoard?.name === cfg.name) {
-      boardsStore.currentBoard.version = cfg.version ?? 0
-      boardsStore.currentBoard.view = cfg.view
-    }
-    savedAt.value = true
-  } catch {
-    // Version conflict or transient error: realign to the canonical version
-    // without tearing the working copy down (fetchBoard nulls currentBoard,
-    // which would unmount this component and drop in-progress edits).
-    try {
-      const cfg = await boardsApi.get(name, auth.accessToken)
-      version.value = cfg.version ?? 0
-    } catch {
-      /* leave version as-is; the next edit retries */
-    }
-  } finally {
-    saving.value = false
-  }
-}
-
-function mutate(fn: () => void): void {
-  snapshot()
-  fn()
-  scheduleSave()
-}
-function setElements(next: PresentationElement[]): void {
-  local.value = { ...local.value, elements: next }
 }
 
 const marquee = useMarquee(4)
@@ -619,7 +599,7 @@ function selectOne(id: string): void {
 }
 
 function onStagePointerDown(e: PointerEvent): void {
-  if (!interactive.value) return
+  if (!interactive.value || connectGuide.active.value) return
   editingTextId.value = null
   // A pointer-down on the bare canvas gutter (the area around the slide, not an
   // element, panel, or HUD control — those stop propagation or are child nodes)
@@ -629,7 +609,7 @@ function onStagePointerDown(e: PointerEvent): void {
 }
 
 function onSlidePointerDown(e: PointerEvent): void {
-  if (!interactive.value) return
+  if (!interactive.value || connectGuide.active.value) return
   // A click on the slide ends any in-progress text edit (the contenteditable's
   // blur commits it) and clears the selection, dismissing the inspector. The
   // element being edited swallows its own pointer events, so reaching here
@@ -644,6 +624,12 @@ function onSlidePointerDown(e: PointerEvent): void {
 
 function onElementPointerDown(el: PresentationElement, e: PointerEvent): void {
   if (!interactive.value || el.locked) return
+  // In connect mode an element click only retargets the walkthrough to an
+  // unbound slot — no selection, no dragging.
+  if (connectGuide.active.value) {
+    if (isUnboundSlot(el)) connectGuide.goTo(el.id)
+    return
+  }
   // Selecting another element ends an in-progress text edit (blur commits it).
   // The element being edited stops its own pointer events, so this never fires
   // for the element currently being edited.
@@ -666,6 +652,10 @@ function onElementPointerDown(el: PresentationElement, e: PointerEvent): void {
 function onConnectorPointerDown(el: ShapeElement, e: PointerEvent): void {
   if (!interactive.value || el.locked) return
   e.stopPropagation()
+  if (connectGuide.active.value) {
+    if (isUnboundSlot(el)) connectGuide.goTo(el.id)
+    return
+  }
   editingTextId.value = null
   selectedIds.value = [el.id]
   if (!isDocked(el)) beginMove(e)
@@ -927,32 +917,25 @@ function applyMarquee(): void {
 }
 
 // Read-only overlay geometry (selection box, handle styles, inspector anchor).
-const {
-  selectionBox,
-  singleIsConnector,
-  selBoxStyle,
-  handles,
-  handleStyle,
-  rotateHandleStyle,
-  inspectorEl,
-  inspectorPos
-} = usePresentationSelectionGeometry({
-  selectedIds: () => selectedIds.value,
-  selectedElements: () => selectedElements.value,
-  scale: () => scale.value,
-  offsetX: () => offsetX.value,
-  offsetY: () => offsetY.value,
-  connectorEndpoints,
-  isConnectorShape
-})
+const { selectionBox, singleIsConnector, selBoxStyle, handles, handleStyle, rotateHandleStyle } =
+  usePresentationSelectionGeometry({
+    selectedIds: () => selectedIds.value,
+    selectedElements: () => selectedElements.value,
+    scale: () => scale.value,
+    offsetX: () => offsetX.value,
+    offsetY: () => offsetY.value,
+    connectorEndpoints,
+    isConnectorShape
+  })
 
+// Inspector patches apply to the whole selection — a single element gets its
+// fields, a multi-selection shares the patched subset (e.g. opacity).
 function onInspectorPatch(patch: Record<string, unknown>): void {
-  const el = inspectorEl.value
-  if (!el) return
-  mutate(() => Object.assign(el, patch))
+  const els = selectedElements.value
+  if (!els.length) return
+  mutate(() => els.forEach((el) => Object.assign(el, patch)))
 }
 
-const nextZ = computed(() => elements.value.reduce((m, e) => Math.max(m, e.z), 0) + 1)
 function insert(kind: InsertKind): void {
   const cx = slideW.value / 2 - 100 + (elements.value.length % 6) * 16
   const cy = slideH.value / 2 - 70 + (elements.value.length % 6) * 16
@@ -1174,49 +1157,157 @@ function ungroupSelected(): void {
   selectedIds.value = []
 }
 
-const settingsOpen = ref(false)
-// Opening one floating panel closes the other so they never overlap; both
-// also close on an outside click (v-click-outside).
-function toggleSettings(): void {
-  settingsOpen.value = !settingsOpen.value
-  if (settingsOpen.value) layersOpen.value = false
-}
 function toggleLayers(): void {
   layersOpen.value = !layersOpen.value
-  if (layersOpen.value) settingsOpen.value = false
 }
-function closeSettings(): void {
-  settingsOpen.value = false
+
+// ── Template gallery ────────────────────────────────────────────────────────
+// Greets an empty slide once per board and session; reopenable from the slide
+// settings. Applying a template swaps theme + elements in ONE history step so
+// a single undo restores the previous slide.
+const galleryOpen = ref(false)
+const pendingTemplate = ref<PresentationTemplate | null>(null)
+const galleryKey = computed(() => `orbvis-pres-templates-seen:${props.config.name}`)
+
+watch(
+  [interactive, () => elements.value.length, () => props.config.name],
+  ([ia, n]) => {
+    if (ia && n === 0 && !sessionStorage.getItem(galleryKey.value)) galleryOpen.value = true
+  },
+  { immediate: true }
+)
+
+function dismissGallery(): void {
+  sessionStorage.setItem(galleryKey.value, '1')
+  galleryOpen.value = false
+}
+
+function applyTemplate(t: PresentationTemplate): void {
+  if (t.id === 'blank') {
+    dismissGallery()
+    return
+  }
+  if (elements.value.length) {
+    pendingTemplate.value = t
+    return
+  }
+  runTemplate(t)
+}
+
+function confirmTemplate(): void {
+  const t = pendingTemplate.value
+  pendingTemplate.value = null
+  if (t) runTemplate(t)
+}
+
+function runTemplate(t: PresentationTemplate): void {
+  selectedIds.value = []
+  mutate(() => {
+    local.value = { ...local.value, theme: t.theme, elements: t.build() }
+  })
+  dismissGallery()
+  connectGuide.enter()
+}
+
+// ── Connect-data walkthrough ────────────────────────────────────────────────
+const connectGuide = useConnectGuide(() => elements.value)
+
+function enterConnectMode(): void {
+  selectedIds.value = []
+  editingTextId.value = null
+  connectGuide.enter()
+}
+
+const connectProgressPct = computed(() => {
+  const total = connectGuide.totalCount.value
+  if (!total) return 100
+  return Math.round((connectGuide.boundCount.value / total) * 100)
+})
+
+const connectSlotTitle = computed(() => {
+  const el = connectGuide.current.value
+  if (!el) return ''
+  const idx = connectGuide.slots.value.findIndex((s) => s.id === el.id)
+  return _t('Connect slot %{n}: %{name}', {
+    n: String(idx + 1),
+    name: el.name || layerName(el)
+  })
+})
+
+// Anchor the binding popover centred above the current slot (below near the
+// top edge), mirroring the old floating-inspector anchor math.
+const connectPopPos = computed(() => {
+  const el = connectGuide.current.value
+  if (!el) return null
+  const topY = offsetY.value + el.y * scale.value
+  const below = topY < 170
+  return {
+    x: offsetX.value + (el.x + el.w / 2) * scale.value,
+    y: below ? offsetY.value + (el.y + el.h) * scale.value : topY,
+    below
+  }
+})
+
+function onConnectPatch(patch: Record<string, unknown>): void {
+  const el = connectGuide.current.value
+  if (!el) return
+  mutate(() => Object.assign(el, patch))
+}
+
+// ── Drag&drop binding from the data browser ─────────────────────────────────
+const dataPanelOpen = ref(false)
+
+function bindingDragPoint(e: DragEvent): { x: number; y: number } {
+  const p = screenToSlide(e.clientX, e.clientY)
+  // A drop on the gutter still creates the element on the slide.
+  return {
+    x: Math.min(slideW.value, Math.max(0, p.x)),
+    y: Math.min(slideH.value, Math.max(0, p.y))
+  }
+}
+
+function onBindingDragOver(e: DragEvent): void {
+  if (!interactive.value || !e.dataTransfer?.types.includes(BINDING_DROP_MIME)) return
+  e.preventDefault()
+  e.dataTransfer.dropEffect = 'copy'
+  dockCandidateId.value = bindableElementAt(elements.value, bindingDragPoint(e))?.id ?? null
+}
+
+function onBindingDragLeave(): void {
+  dockCandidateId.value = null
+}
+
+function onBindingDrop(e: DragEvent): void {
+  dockCandidateId.value = null
+  if (!interactive.value) return
+  const raw = e.dataTransfer?.getData(BINDING_DROP_MIME)
+  const payload = raw ? parseBindingDropPayload(raw) : null
+  if (!payload) return
+  e.preventDefault()
+  const result = applyBindingDrop(elements.value, bindingDragPoint(e), payload, nextZ.value)
+  if (result.kind === 'bind') {
+    const el = byId(result.id)
+    if (el) mutate(() => Object.assign(el, result.patch))
+    selectedIds.value = [result.id]
+  } else {
+    mutate(() => setElements([...elements.value, result.element]))
+    selectedIds.value = [result.element.id]
+  }
 }
 function closeLayers(): void {
   layersOpen.value = false
 }
-const slidePresets = SLIDE_PRESETS
-function numVal(e: Event): number {
-  return Number((e.target as HTMLInputElement).value)
-}
 // Slide-level changes (theme/size/background) are board metadata, not element
-// edits, so they save without touching the element undo history.
-function onSlideMetaChange(): void {
+// edits, so they save without touching the element undo history. Size values
+// are clamped to the schema's bounds.
+function onSlideChange(p: Partial<PresentationView>): void {
+  const next = { ...local.value, ...p }
+  next.width = Math.min(8192, Math.max(320, Math.round(next.width) || local.value.width))
+  next.height = Math.min(8192, Math.max(320, Math.round(next.height) || local.value.height))
+  local.value = next
   scheduleSave()
 }
-function setSlideSize(w: number, h: number): void {
-  const cw = Math.min(8192, Math.max(320, Math.round(w) || local.value.width))
-  const ch = Math.min(8192, Math.max(320, Math.round(h) || local.value.height))
-  local.value = { ...local.value, width: cw, height: ch }
-  scheduleSave()
-}
-function applyPreset(w: number, h: number): void {
-  setSlideSize(w, h)
-}
-function setBackground(color: string | null): void {
-  local.value = { ...local.value, background: color }
-  scheduleSave()
-}
-function setBackgroundImage(name: string): void {
-  local.value = { ...local.value, background_image: name || null }
-  scheduleSave()
-}
+const backgroundImageName = computed(() => imageRefName(local.value.background_image))
 
 // Arrow-key nudge of the selection (1px, 10px with Shift) — a design-tool staple.
 // Held repeats coalesce into one undo step (like a drag), and an all-locked
@@ -1235,21 +1326,6 @@ function nudge(dx: number, dy: number): void {
     el.y += dy
   }
   scheduleSave()
-}
-
-function undo(): void {
-  const restored = history.undo(clone(elements.value))
-  if (restored) {
-    setElements(restored)
-    scheduleSave()
-  }
-}
-function redo(): void {
-  const restored = history.redo(clone(elements.value))
-  if (restored) {
-    setElements(restored)
-    scheduleSave()
-  }
 }
 
 // True while a form control (inspector field, etc.) has focus, so canvas
@@ -1294,6 +1370,10 @@ function onKey(e: KeyboardEvent): void {
     else if (e.key === 'ArrowUp') nudge(0, -s)
     else if (e.key === 'ArrowDown') nudge(0, s)
   } else if (e.key === 'Escape') {
+    if (connectGuide.active.value) {
+      connectGuide.exit()
+      return
+    }
     selectedIds.value = []
     editingTextId.value = null
   }
@@ -1308,10 +1388,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('pointermove', onPointerMove)
   window.removeEventListener('pointerup', onPointerUp)
   window.removeEventListener('keydown', onKey)
-  if (saveTimer) clearTimeout(saveTimer)
 })
 
-const themeChoices = themeOptions()
 type PaletteTool = { kind: InsertKind; title: string; icon: string }
 // Lead with the monitoring operator's primary content — live status and text —
 // then the decorative shapes and image.
@@ -1330,13 +1408,23 @@ const shapeTools: PaletteTool[] = [
 
 <style scoped>
 .pres {
-  position: relative;
+  display: flex;
+  align-items: stretch;
   width: 100%;
   height: 100%;
   overflow: hidden;
   background:
     repeating-conic-gradient(rgb(128 128 128 / 7%) 0% 25%, transparent 0% 50%) 50% / 22px 22px,
     var(--bg, #0f1117);
+}
+
+/* The slide viewport flexes between the docked panels; useSlideViewport's
+   ResizeObserver re-fits the zoom whenever a panel opens or closes. */
+.pres__viewport {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .pres__stage {
@@ -1499,7 +1587,6 @@ const shapeTools: PaletteTool[] = [
 
 @media (prefers-reduced-motion: reduce) {
   .pres__align,
-  .pres__settings,
   .pres__layers {
     animation: none;
   }
@@ -1533,129 +1620,130 @@ const shapeTools: PaletteTool[] = [
   background: var(--border, rgb(255 255 255 / 12%));
 }
 
-.pres__settings {
+.pres__tool--connect {
+  position: relative;
+}
+
+.pres__tool:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pres__tool-badge {
   position: absolute;
-  top: 56px;
+  top: -4px;
+  right: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--accent, #15d1a0);
+  color: var(--black, #0b0f14);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pres__connect-bar {
+  position: absolute;
+  top: 12px;
   left: 50%;
   transform: translateX(-50%);
-  width: 280px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--bg-surface, #1b1f2a);
+  border: 1px solid var(--border, rgb(255 255 255 / 8%));
+  box-shadow: 0 8px 24px rgb(0 0 0 / 30%);
+  color: var(--text, #e5e7eb);
+  z-index: 6;
+}
+
+.pres__connect-progress {
+  font-size: var(--font-size-normal);
+  white-space: nowrap;
+}
+
+.pres__connect-track {
+  width: 120px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--default-form-element-border-color, rgb(255 255 255 / 14%));
+  overflow: hidden;
+}
+
+.pres__connect-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent, #15d1a0);
+  transition: width 0.25s ease;
+}
+
+.pres__connect-exit {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 7px;
+  background: var(--accent, #15d1a0);
+  color: var(--black, #0b0f14);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pres__connect-pop {
+  position: absolute;
+  z-index: 7;
+  width: 264px;
+  transform: translate(-50%, calc(-100% - 14px));
   border-radius: 10px;
   background: var(--bg-surface, #1b1f2a);
   border: 1px solid var(--border, rgb(255 255 255 / 8%));
   box-shadow: 0 10px 30px rgb(0 0 0 / 35%);
   color: var(--text, #e5e7eb);
-  z-index: 6;
-  animation: pres-pop-center 0.12s ease-out;
 }
 
-.pres__settings-head {
+.pres__connect-pop--below {
+  transform: translate(-50%, 14px);
+}
+
+.pres__connect-pop-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 8px 12px;
   font-weight: 600;
+  font-size: var(--font-size-normal);
   border-bottom: 1px solid var(--border, rgb(255 255 255 / 8%));
 }
 
-.pres__settings-body {
-  padding: 10px 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.pres__settings-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted, #8b93a7);
-  margin-top: 6px;
-}
-
-.pres__preset-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-
-.pres__preset {
-  padding: 6px 4px;
-  border: 1px solid var(--border, rgb(255 255 255 / 14%));
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.pres__preset:hover {
-  background: var(--bg-hover, rgb(255 255 255 / 6%));
-}
-
-.pres__preset--on {
-  border: 1px solid var(--accent, #15d1a0);
-  background: color-mix(in srgb, var(--accent, #15d1a0) 18%, transparent);
-}
-
-.pres__num {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 10px;
-  color: var(--text-muted, #8b93a7);
-}
-
-.pres__settings-row {
-  display: flex;
-  gap: 8px;
-}
-
-.pres__settings-row .pres__num {
-  flex: 1;
-}
-
-.pres__num input,
-.pres__select {
-  height: 30px;
-  box-sizing: border-box;
-  border: 1px solid var(--default-form-element-border-color, var(--border, rgb(255 255 255 / 14%)));
-  border-radius: 6px;
-  background-color: var(--bg-input, rgb(255 255 255 / 4%));
-  color: var(--text, #e5e7eb);
-  padding: 0 8px;
-  width: 100%;
-  transition:
-    border-color 0.12s ease,
-    box-shadow 0.12s ease;
-}
-
-.pres__select {
-  appearance: none;
-  padding-right: 24px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 9px center;
-}
-
-.pres__num input:focus,
-.pres__select:focus {
-  outline: none;
-  border-color: var(--accent, #15d1a0);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #15d1a0) 22%, transparent);
-}
-
-.pres__bg-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pres__bg-hint {
-  font-size: 12px;
-  color: var(--text-muted, #8b93a7);
+.pres__connect-pop-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.pres__connect-pop-body {
+  padding: 10px 12px;
+}
+
+.pres__connect-pop-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border, rgb(255 255 255 / 8%));
+}
+
+.pres__layer-unbound {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border: 1.5px dashed var(--accent, #15d1a0);
+  border-radius: 9999px;
 }
 
 .pres__hud {
@@ -1695,16 +1783,6 @@ const shapeTools: PaletteTool[] = [
   font-size: 12px;
   color: var(--text-muted, #8b93a7);
   min-width: 48px;
-}
-
-.pres__inspector {
-  position: absolute;
-  z-index: 6;
-  transform: translate(-50%, calc(-100% - 12px));
-}
-
-.pres__inspector--below {
-  transform: translate(-50%, 12px);
 }
 
 .pres__layers {
