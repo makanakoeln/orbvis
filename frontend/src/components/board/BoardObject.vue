@@ -108,8 +108,8 @@
     </template>
     <!-- URL embed mode -->
     <template v-else>
-      <!-- Placeholder: no URL or load error -->
-      <div v-if="!object.graph_url || graphLoadFailed" class="orb-obj__graph-placeholder">
+      <!-- Placeholder: no URL, unembeddable scheme, or load error -->
+      <div v-if="!embeddableGraphUrl || graphLoadFailed" class="orb-obj__graph-placeholder">
         <svg
           class="orb-obj__graph-glyph"
           fill="none"
@@ -136,12 +136,15 @@
         @error="graphLoadFailed = true"
         @load="graphLoadFailed = false"
       />
-      <!-- iframe embed -->
+      <!-- iframe embed. No allow-same-origin: combined with allow-scripts it
+           would void the sandbox entirely for same-origin content — graphs
+           only need to render and run their own scripts, never to reach our
+           origin (cookies, sessionStorage tokens, parent DOM). -->
       <iframe
         v-else
-        :src="object.graph_url"
+        :src="embeddableGraphUrl"
         class="orb-obj__graph-iframe"
-        sandbox="allow-scripts allow-same-origin"
+        sandbox="allow-scripts"
       />
     </template>
     <!-- Optional caption label -->
@@ -729,8 +732,22 @@ onUnmounted(() => {
   if (dataTimeoutTimer) clearTimeout(dataTimeoutTimer)
 })
 
-const graphSrc = computed(() => {
+// Render-sink guard: board JSON predating the server-side scheme allowlist
+// may still carry hostile URLs — only ever embed http(s) content (relative
+// URLs resolve to the page origin and pass).
+const embeddableGraphUrl = computed(() => {
   const url = props.object.graph_url
+  if (!url) return ''
+  try {
+    const protocol = new URL(url, window.location.href).protocol
+    return protocol === 'http:' || protocol === 'https:' ? url : ''
+  } catch {
+    return ''
+  }
+})
+
+const graphSrc = computed(() => {
+  const url = embeddableGraphUrl.value
   if (!url) return ''
   if ((props.object.graph_refresh_interval ?? 0) > 0) {
     const sep = url.includes('?') ? '&' : '?'
