@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -21,6 +22,11 @@ if TYPE_CHECKING:
     from app.connections.base import ConnectionBase
 
 logger = logging.getLogger(__name__)
+
+# create/update/delete do read-modify-write on connections.json from FastAPI's
+# threadpool — serialise them so two concurrent admin requests can't lose an
+# update (atomic rename only prevents torn files, not lost updates).
+_connections_lock = threading.Lock()
 
 
 def _path() -> Path:
@@ -82,32 +88,37 @@ def get(connection_id: str) -> ConnectionConfig | None:
 
 
 def create(cfg: ConnectionConfig) -> ConnectionConfig:
-    connections = load_all()
-    if any(b.id == cfg.id for b in connections):
-        raise ValueError(f"Connection '{cfg.id}' already exists")
-    connections.append(cfg)
-    _save_all(connections)
+    with _connections_lock:
+        connections = load_all()
+        if any(b.id == cfg.id for b in connections):
+            raise ValueError(f"Connection '{cfg.id}' already exists")
+        connections.append(cfg)
+        _save_all(connections)
     _activate(cfg)
     return cfg
 
 
 def update(connection_id: str, updates: ConnectionConfig) -> ConnectionConfig | None:
-    connections = load_all()
-    for i, b in enumerate(connections):
-        if b.id == connection_id:
-            connections[i] = updates
-            _save_all(connections)
-            _activate(updates)
-            return updates
-    return None
+    with _connections_lock:
+        connections = load_all()
+        for i, b in enumerate(connections):
+            if b.id == connection_id:
+                connections[i] = updates
+                _save_all(connections)
+                break
+        else:
+            return None
+    _activate(updates)
+    return updates
 
 
 def delete(connection_id: str) -> bool:
-    connections = load_all()
-    new = [b for b in connections if b.id != connection_id]
-    if len(new) == len(connections):
-        return False
-    _save_all(new)
+    with _connections_lock:
+        connections = load_all()
+        new = [b for b in connections if b.id != connection_id]
+        if len(new) == len(connections):
+            return False
+        _save_all(new)
     # Mirror _activate: without this the registered instance keeps serving
     # board states and the warmup loop keeps polling the deleted backend
     # until the next restart.

@@ -260,3 +260,34 @@ async def test_put_system_settings_api_non_admin_forbidden(
         headers={"Authorization": f"Bearer {regular_token}"},
     )
     assert response.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Concurrency: both domains share settings.json
+# ---------------------------------------------------------------------------
+
+
+def test_concurrent_saves_do_not_lose_updates(tmp_path, monkeypatch):
+    """Global and System settings share one settings.json — interleaved saves
+    must not lose either domain's update (read-modify-write under a lock)."""
+    import threading
+
+    _patch(monkeypatch, tmp_path)
+
+    def save_global_many() -> None:
+        for _ in range(50):
+            save_global_settings(GlobalSettings(icon_size=42))
+
+    def save_system_many() -> None:
+        for _ in range(50):
+            save_system_settings(SystemSettings(log_level="DEBUG"))
+
+    t1 = threading.Thread(target=save_global_many)
+    t2 = threading.Thread(target=save_system_many)
+    t1.start()
+    t2.start()
+    t1.join(timeout=30)
+    t2.join(timeout=30)
+
+    assert get_global_settings().icon_size == 42
+    assert get_system_settings().log_level == "DEBUG"

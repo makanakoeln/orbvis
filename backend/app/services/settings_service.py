@@ -14,12 +14,19 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 from pathlib import Path
 
 from app.core.config import settings
 from app.schemas.settings import GlobalSettings, SystemSettings
 
 logger = logging.getLogger(__name__)
+
+# Both save paths do read-modify-write on the shared settings.json, and
+# handlers run in FastAPI's threadpool — without a lock a concurrent Global
+# and System save loses one of the two updates (atomic rename only prevents
+# torn files, not lost updates).
+_settings_lock = threading.Lock()
 
 
 def _settings_path() -> Path:
@@ -75,9 +82,10 @@ def get_global_settings() -> GlobalSettings:
 
 
 def save_global_settings(data: GlobalSettings) -> GlobalSettings:
-    raw = _read_raw()
-    raw.update(data.model_dump())
-    _write_raw(raw)
+    with _settings_lock:
+        raw = _read_raw()
+        raw.update(data.model_dump())
+        _write_raw(raw)
     return data
 
 
@@ -114,9 +122,10 @@ def get_effective_access_token_expire_minutes() -> int:
 
 
 def save_system_settings(data: SystemSettings) -> SystemSettings:
-    raw = _read_raw()
-    raw.update(data.model_dump())
-    _write_raw(raw)
+    with _settings_lock:
+        raw = _read_raw()
+        raw.update(data.model_dump())
+        _write_raw(raw)
     # Use the effective level (storage overrides env) so toggling the
     # UI back to "Use environment default" takes effect immediately
     # instead of waiting for the next restart.
