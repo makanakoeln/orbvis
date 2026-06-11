@@ -4,6 +4,7 @@ import { boardsApi } from '@/api/client'
 import { useHistory } from '@/composables/useHistory'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
+import { useStatesStore } from '@/stores/states'
 import type {
   BoardConfig,
   PresentationElement,
@@ -35,6 +36,7 @@ export function usePresentationDocument(config: () => BoardConfig, onBoardSwitch
   const { _t } = usei18n()
   const auth = useAuthStore()
   const boardsStore = useBoardsStore()
+  const statesStore = useStatesStore()
 
   function initialView(): PresentationView {
     const v = config().view
@@ -96,6 +98,9 @@ export function usePresentationDocument(config: () => BoardConfig, onBoardSwitch
         boardsStore.currentBoard.view = cfg.view
       }
       savedAt.value = true
+      // A save may have (re)bound elements — fetch states right away instead
+      // of leaving fresh bindings on PENDING until the next stream tick.
+      void statesStore.refreshNow()
     } catch {
       // Version conflict or transient error: realign to the canonical version
       // without tearing the working copy down (fetchBoard nulls currentBoard,

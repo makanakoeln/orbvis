@@ -29,13 +29,17 @@
       </label>
     </div>
     <div class="ins__row">
-      <div class="ins__field">
+      <div v-if="!element.flow" class="ins__field">
         <span class="orb-cap">{{ _t('Stroke style') }}</span>
         <CmkToggleButtonGroup
           :model-value="element.dash"
           :options="dashOptions"
           @update:model-value="emit('patch', { dash: $event })"
         />
+      </div>
+      <div v-else class="ins__field">
+        <span class="orb-cap">{{ _t('Stroke style') }}</span>
+        <span class="ins__note">{{ _t('Flow animation overrides the stroke style') }}</span>
       </div>
       <label v-if="element.shape === 'rect'" class="ins__num">
         <span class="orb-cap">{{ _t('Radius') }}</span>
@@ -101,5 +105,10 @@ const dashOptions = computed(() => [
   flex-direction: column;
   gap: 4px;
   width: 76px;
+}
+
+.ins__note {
+  font-size: var(--font-size-normal);
+  color: var(--text-muted);
 }
 </style>

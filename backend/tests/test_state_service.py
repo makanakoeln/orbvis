@@ -1074,9 +1074,18 @@ def test_presentation_shape_data_slot_roundtrip():
     assert legacy.data_slot is False
 
     view = PresentationView(
-        elements=[ShapeElement(id="slot1", kind="shape", shape="rect", data_slot=True)]
+        elements=[
+            ShapeElement(
+                id="slot1",
+                kind="shape",
+                shape="rect",
+                data_slot=True,
+                flow_metric_back="if_out_bps",
+            )
+        ]
     )
     restored = PresentationView.model_validate(view.model_dump())
     el = restored.elements[0]
     assert isinstance(el, ShapeElement)
     assert el.data_slot is True
+    assert el.flow_metric_back == "if_out_bps"

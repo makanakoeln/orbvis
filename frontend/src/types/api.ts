@@ -183,9 +183,11 @@ export interface ShapeElement extends PresentationElementBase {
   // Endpoint docking (line/arrow): start/end follows a referenced element's centre.
   start_ref?: string | null
   end_ref?: string | null
-  // Weathermap flow: animate + drive colour/width/speed from a utilisation metric.
+  // Weathermap flow: animate + drive colour/width/speed from a utilisation
+  // metric; a back metric splits the connector into a two-way link.
   flow?: boolean
   flow_metric?: string | null
+  flow_metric_back?: string | null
   // Intended data slot (template placeholder): counted by the connect-data
   // walkthrough until bound; plain decorative shapes never are.
   data_slot?: boolean

@@ -2634,3 +2634,12 @@ msgstr "Aggregationen durchsuchen…"
 
 msgid "Search groups…"
 msgstr "Gruppen durchsuchen…"
+
+msgid "Return metric (optional)"
+msgstr "Rück-Metrik (optional)"
+
+msgid "Splits the link into a two-way weathermap"
+msgstr "Teilt den Link in eine Zweirichtungs-Weathermap"
+
+msgid "Flow animation overrides the stroke style"
+msgstr "Die Fluss-Animation übersteuert den Konturstil"

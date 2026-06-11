@@ -87,7 +87,6 @@ function connector(startRef: string, endRef: string, z: number): ShapeElement {
   el.data_slot = true
   el.flow = true
   el.stroke_width = 4
-  el.label = { ...label(null, 12), show: false }
   return el
 }
 

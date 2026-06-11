@@ -18,24 +18,26 @@
       :y1="start.y"
       :x2="end.x"
       :y2="end.y"
-      :stroke-width="vis.width + 8"
+      :stroke-width="haloWidth"
     />
-    <!-- The connector itself. -->
-    <line
-      class="pres-conn__line"
-      :class="{ 'pres-conn__line--flow': vis.durationSec !== null }"
-      :x1="start.x"
-      :y1="start.y"
-      :x2="arrowBase.x"
-      :y2="arrowBase.y"
-      :stroke="vis.color"
-      :stroke-width="vis.width"
-      :stroke-dasharray="vis.dashArray"
-      :style="flowStyle"
-      stroke-linecap="round"
-    />
-    <!-- Arrowhead. -->
-    <polygon v-if="isArrow" :points="arrowPoints" :fill="vis.color" />
+    <!-- One segment for a plain link, two (split at the midpoint, arrows
+         meeting in the middle) for a two-way weathermap link. -->
+    <template v-for="(seg, i) in segments" :key="i">
+      <line
+        class="pres-conn__line"
+        :class="{ 'pres-conn__line--flow': seg.vis.durationSec !== null }"
+        :x1="seg.x1"
+        :y1="seg.y1"
+        :x2="seg.x2"
+        :y2="seg.y2"
+        :stroke="seg.vis.color"
+        :stroke-width="seg.vis.width"
+        :stroke-dasharray="seg.vis.dashArray"
+        :style="seg.flowStyle"
+        stroke-linecap="round"
+      />
+      <polygon v-if="seg.arrowPoints" :points="seg.arrowPoints" :fill="seg.vis.color" />
+    </template>
     <!-- Endpoint handles: drag onto an element to dock, off to free. -->
     <template v-if="selected && interactive">
       <circle
@@ -55,11 +57,24 @@
         @pointerdown.stop="$emit('endpointDown', 'end', $event)"
       />
     </template>
-    <!-- Value pill at the midpoint. -->
-    <g v-if="showPill" :transform="`translate(${mid.x}, ${mid.y})`">
-      <rect :x="-pillW / 2" y="-9" :width="pillW" height="18" rx="9" class="pres-conn__pill-bg" />
-      <text class="pres-conn__pill-text" text-anchor="middle" dominant-baseline="central">
-        {{ vis.valueText }}
+    <!-- Value/label pills (one per direction on a two-way link). -->
+    <g v-for="(pill, i) in pills" :key="`p${i}`" :transform="`translate(${pill.x}, ${pill.y})`">
+      <rect
+        :x="-pill.w / 2"
+        :y="-pill.h / 2"
+        :width="pill.w"
+        :height="pill.h"
+        :rx="pill.h / 2"
+        class="pres-conn__pill-bg"
+        :style="{ fill: pillBg }"
+      />
+      <text
+        class="pres-conn__pill-text"
+        text-anchor="middle"
+        dominant-baseline="central"
+        :style="{ fill: pillColor, fontSize: `${pillFontSize}px` }"
+      >
+        {{ pill.text }}
       </text>
     </g>
   </g>
@@ -69,7 +84,7 @@
 import { computed } from 'vue'
 
 import type { ObjectState, ShapeElement } from '@/types/api'
-import { flowVisual } from '@/utils/connectorFlow'
+import { type FlowVisual, flowVisual } from '@/utils/connectorFlow'
 
 interface Pt {
   x: number
@@ -91,55 +106,146 @@ defineEmits<{
   endpointDown: [which: 'start' | 'end', event: PointerEvent]
 }>()
 
-const vis = computed(() => flowVisual(props.element, props.state))
+const visForward = computed(() => flowVisual(props.element, props.state))
+const visBack = computed(() =>
+  flowVisual(props.element, props.state, props.element.flow_metric_back ?? null)
+)
+// Classic two-way weathermap: a back metric splits the link at its midpoint,
+// each half coloured/animated by its own direction, arrows meeting in the middle.
+const twoWay = computed(() => !!props.element.flow && !!props.element.flow_metric_back)
+
 const isArrow = computed(() => props.element.shape === 'arrow')
-
 const angle = computed(() => Math.atan2(props.end.y - props.start.y, props.end.x - props.start.x))
-const headLen = computed(() => Math.max(10, vis.value.width * 2.4))
 
-// Pull the line back so it meets the arrowhead's base instead of poking through.
-const arrowBase = computed<Pt>(() => {
-  if (!isArrow.value) return props.end
+const haloWidth = computed(
+  () => Math.max(visForward.value.width, twoWay.value ? visBack.value.width : 0) + 8
+)
+
+function lerp(t: number): Pt {
   return {
-    x: props.end.x - Math.cos(angle.value) * headLen.value,
-    y: props.end.y - Math.sin(angle.value) * headLen.value
+    x: props.start.x + (props.end.x - props.start.x) * t,
+    y: props.start.y + (props.end.y - props.start.y) * t
   }
-})
-const arrowPoints = computed(() => {
-  const a = angle.value
-  const w = Math.max(6, vis.value.width * 1.6)
-  const tip = props.end
-  const baseL = {
-    x: arrowBase.value.x - Math.sin(a) * w,
-    y: arrowBase.value.y + Math.cos(a) * w
-  }
-  const baseR = {
-    x: arrowBase.value.x + Math.sin(a) * w,
-    y: arrowBase.value.y - Math.cos(a) * w
-  }
-  return `${tip.x},${tip.y} ${baseL.x},${baseL.y} ${baseR.x},${baseR.y}`
-})
+}
 
-const mid = computed<Pt>(() => ({
-  x: (props.start.x + props.end.x) / 2,
-  y: (props.start.y + props.end.y) / 2
-}))
-
-const showPill = computed(() => vis.value.valueText.length > 0)
-const pillW = computed(() => Math.max(28, vis.value.valueText.length * 8 + 12))
-
-// Marching-ants flow: animate the dash offset toward the end by one dash period.
-const flowStyle = computed(() => {
-  if (vis.value.durationSec === null) return {}
+// Marching-ants flow: animate the dash offset toward the segment end by one
+// dash period.
+function flowStyleFor(vis: FlowVisual): Record<string, string> {
+  if (vis.durationSec === null) return {}
   const period =
-    (vis.value.dashArray ?? '')
+    (vis.dashArray ?? '')
       .split(/\s+/)
       .map(Number)
       .reduce((a, b) => a + b, 0) || 18
   return {
     '--pres-flow-shift': `${-period}px`,
-    animationDuration: `${vis.value.durationSec}s`
+    animationDuration: `${vis.durationSec}s`
   }
+}
+
+function arrowFor(tip: Pt, a: number, width: number): { base: Pt; points: string } {
+  const headLen = Math.max(10, width * 2.4)
+  const base = { x: tip.x - Math.cos(a) * headLen, y: tip.y - Math.sin(a) * headLen }
+  const w = Math.max(6, width * 1.6)
+  const baseL = { x: base.x - Math.sin(a) * w, y: base.y + Math.cos(a) * w }
+  const baseR = { x: base.x + Math.sin(a) * w, y: base.y - Math.cos(a) * w }
+  return { base, points: `${tip.x},${tip.y} ${baseL.x},${baseL.y} ${baseR.x},${baseR.y}` }
+}
+
+interface Segment {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  vis: FlowVisual
+  arrowPoints: string | null
+  flowStyle: Record<string, string>
+}
+
+const segments = computed<Segment[]>(() => {
+  if (!twoWay.value) {
+    const vis = visForward.value
+    const arrow = isArrow.value ? arrowFor(props.end, angle.value, vis.width) : null
+    const tail = arrow ? arrow.base : props.end
+    return [
+      {
+        x1: props.start.x,
+        y1: props.start.y,
+        x2: tail.x,
+        y2: tail.y,
+        vis,
+        arrowPoints: arrow?.points ?? null,
+        flowStyle: flowStyleFor(vis)
+      }
+    ]
+  }
+  // Two-way: forward half runs start→mid, return half end→mid; both always
+  // carry an arrowhead so the directions read at a glance.
+  const GAP = 0.04
+  const midF = lerp(0.5 - GAP)
+  const midB = lerp(0.5 + GAP)
+  const arrowF = arrowFor(midF, angle.value, visForward.value.width)
+  const arrowB = arrowFor(midB, angle.value + Math.PI, visBack.value.width)
+  return [
+    {
+      x1: props.start.x,
+      y1: props.start.y,
+      x2: arrowF.base.x,
+      y2: arrowF.base.y,
+      vis: visForward.value,
+      arrowPoints: arrowF.points,
+      flowStyle: flowStyleFor(visForward.value)
+    },
+    {
+      x1: props.end.x,
+      y1: props.end.y,
+      x2: arrowB.base.x,
+      y2: arrowB.base.y,
+      vis: visBack.value,
+      arrowPoints: arrowB.points,
+      flowStyle: flowStyleFor(visBack.value)
+    }
+  ]
+})
+
+// ── pills ────────────────────────────────────────────────────────────────────
+// The element label controls the pill: ``show === false`` hides it, a label
+// text replaces the live value on a one-way link. Two-way links show one value
+// pill per direction.
+const labelShow = computed(() => props.element.label?.show !== false)
+const pillFontSize = computed(() => props.element.label?.size ?? 11)
+const pillColor = computed(() => props.element.label?.color || '#fff')
+const pillBg = computed(() => props.element.label?.background || 'rgb(0 0 0 / 65%)')
+
+interface Pill {
+  x: number
+  y: number
+  text: string
+  w: number
+  h: number
+}
+
+function pillFor(at: Pt, text: string): Pill {
+  const h = Math.max(18, pillFontSize.value + 8)
+  return {
+    x: at.x,
+    y: at.y,
+    text,
+    w: Math.max(28, text.length * pillFontSize.value * 0.72 + 12),
+    h
+  }
+}
+
+const pills = computed<Pill[]>(() => {
+  if (!labelShow.value) return []
+  if (!twoWay.value) {
+    const text = props.element.label?.text || visForward.value.valueText
+    return text ? [pillFor(lerp(0.5), text)] : []
+  }
+  const out: Pill[] = []
+  if (visForward.value.valueText) out.push(pillFor(lerp(0.25), visForward.value.valueText))
+  if (visBack.value.valueText) out.push(pillFor(lerp(0.75), visBack.value.valueText))
+  return out
 })
 </script>
 
@@ -190,13 +296,10 @@ const flowStyle = computed(() => {
 }
 
 .pres-conn__pill-bg {
-  fill: rgb(0 0 0 / 65%);
   pointer-events: none;
 }
 
 .pres-conn__pill-text {
-  fill: #fff;
-  font-size: 11px;
   font-weight: 600;
   pointer-events: none;
 }

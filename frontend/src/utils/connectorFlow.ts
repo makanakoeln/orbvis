@@ -1,5 +1,6 @@
 import type { ObjectState, ShapeElement } from '@/types/api'
 import { getMetric, hasPercentScale, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
+import { hasBinding } from '@/utils/presentationSampleState'
 import { stateColor } from '@/utils/stateColors'
 
 export interface FlowVisual {
@@ -25,11 +26,17 @@ function staticDash(dash: ShapeElement['dash'], w: number): string | undefined {
 
 /** Resolve the visual treatment of a (possibly bound / flowing) line connector
  * from its definition and the live state. Pure so the inline line and the
- * slide-overlay connector render identically. */
-export function flowVisual(el: ShapeElement, state: ObjectState | undefined): FlowVisual {
-  const bound = !!el.host_name
+ * slide-overlay connector render identically. ``metricName`` overrides the
+ * element's forward metric — the two-way weathermap resolves each direction
+ * with its own metric. */
+export function flowVisual(
+  el: ShapeElement,
+  state: ObjectState | undefined,
+  metricName: string | null = el.flow_metric ?? null
+): FlowVisual {
+  const bound = hasBinding(el)
   const metrics = parsePerfData(state?.perf_data ?? '')
-  const m = el.flow_metric ? getMetric(metrics, el.flow_metric) : null
+  const m = metricName ? getMetric(metrics, metricName) : null
   const util = m && hasPercentScale(m) ? utilPercent(m) : null
 
   let color: string

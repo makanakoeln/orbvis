@@ -135,8 +135,11 @@ class ShapeElement(_ElementBase):
     # Weathermap flow styling: animate the connector and drive its colour /
     # width / flow speed from a utilisation metric (``flow_metric`` from the
     # bound object's perf-data; falls back to state colour when absent).
+    # ``flow_metric_back`` adds the classic two-way weathermap: the connector
+    # splits at its midpoint, the far half showing the return direction.
     flow: bool = False
     flow_metric: str | None = None
+    flow_metric_back: str | None = None
     # Marks the shape as an intended data slot (template placeholder): the
     # editor's connect-data walkthrough counts it as unbound until a host is
     # set, while a plain decorative shape is never treated as one.

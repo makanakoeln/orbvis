@@ -55,7 +55,7 @@
     </template>
 
     <CmkCheckbox
-      :model-value="element.label?.show ?? false"
+      :model-value="effectiveLabelShow"
       :label="_t('Show label')"
       @update:model-value="emit('patch', { label: { ...labelBase, show: $event } })"
     />
@@ -119,16 +119,28 @@
         :label="_t('Animate flow (weathermap)')"
         @update:model-value="emit('patch', { flow: $event })"
       />
-      <div v-if="connectorEl.flow" class="ins__field">
-        <span class="orb-cap">{{ _t('Flow metric') }}</span>
-        <AutocompleteInput
-          v-model="flowMetricModel"
-          :suggestions="metrics"
-          :loading="loadingMetrics"
-          :placeholder="element.host_name ? _t('Pick a metric…') : _t('e.g. if_in_bps')"
-          @change="emit('patch', { flow_metric: $event || null })"
-        />
-      </div>
+      <template v-if="connectorEl.flow">
+        <div class="ins__field">
+          <span class="orb-cap">{{ _t('Flow metric') }}</span>
+          <AutocompleteInput
+            v-model="flowMetricModel"
+            :suggestions="metrics"
+            :loading="loadingMetrics"
+            :placeholder="element.host_name ? _t('Pick a metric…') : _t('e.g. if_in_bps')"
+            @change="emit('patch', { flow_metric: $event || null })"
+          />
+        </div>
+        <div class="ins__field">
+          <span class="orb-cap">{{ _t('Return metric (optional)') }}</span>
+          <AutocompleteInput
+            v-model="flowMetricBackModel"
+            :suggestions="metrics"
+            :loading="loadingMetrics"
+            :placeholder="_t('Splits the link into a two-way weathermap')"
+            @change="emit('patch', { flow_metric_back: $event || null })"
+          />
+        </div>
+      </template>
     </template>
 
     <div v-if="element.kind === 'shape'" class="ins__slot">
@@ -208,6 +220,12 @@ function patchDisplay(p: Record<string, unknown>): void {
   emit('patch', { display: { ...props.element.display, ...p } })
 }
 
+// A connector's value pill defaults to visible (label === null), a box
+// shape's state label to hidden — the checkbox mirrors the effective state.
+const effectiveLabelShow = computed(() =>
+  connectorEl.value ? props.element.label?.show !== false : (props.element.label?.show ?? false)
+)
+
 const labelBase = computed<ElementLabel>(() => {
   return (
     props.element.label ?? {
@@ -233,6 +251,7 @@ const metrics = ref<string[]>([])
 const loadingMetrics = ref(false)
 const metricModel = ref('')
 const flowMetricModel = ref('')
+const flowMetricBackModel = ref('')
 
 watch(
   () => [props.element.id, props.element.host_name, props.element.service_description],
@@ -240,6 +259,7 @@ watch(
     metricModel.value =
       (props.element.kind === 'data' ? props.element.display.gadget_metric : null) ?? ''
     flowMetricModel.value = (connectorEl.value?.flow_metric ?? '') as string
+    flowMetricBackModel.value = (connectorEl.value?.flow_metric_back ?? '') as string
     const host = props.element.host_name
     if (!host) {
       metrics.value = []
