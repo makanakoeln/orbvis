@@ -1,5 +1,12 @@
 import type { ObjectState, ShapeElement } from '@/types/api'
-import { getMetric, hasPercentScale, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
+import {
+  fmtSI,
+  getMetric,
+  hasPercentScale,
+  parsePerfData,
+  utilColor,
+  utilPercent
+} from '@/utils/perf'
 import { hasBinding } from '@/utils/presentationSampleState'
 import { stateColor } from '@/utils/stateColors'
 
@@ -63,7 +70,7 @@ export function flowVisual(
 
   let valueText = ''
   if (util !== null) valueText = `${Math.round(util)}%`
-  else if (m) valueText = `${Math.round(m.value * 100) / 100}${m.unit}`
+  else if (m) valueText = fmtSI(m.value, m.unit)
   else if (bound) valueText = state?.state ?? ''
 
   return { color, width, dashArray, durationSec, util, valueText }

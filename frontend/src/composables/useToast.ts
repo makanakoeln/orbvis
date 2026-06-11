@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 
-export type ToastType = 'success' | 'error'
+export type ToastType = 'success' | 'error' | 'warning'
 
 export interface ToastAction {
   label: string
@@ -30,6 +30,7 @@ export function useToast() {
   return {
     toasts,
     success: (msg: string, action?: ToastAction) => show('success', msg, 3500, action),
-    error: (msg: string) => show('error', msg, 5000)
+    error: (msg: string) => show('error', msg, 5000),
+    warning: (msg: string) => show('warning', msg, 5000)
   }
 }

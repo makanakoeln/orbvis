@@ -40,6 +40,13 @@ export function isBoundElement(el: PresentationElement): boolean {
   return isBindable(el) && hasBinding(el)
 }
 
+// Group and BI bindings have a state but no perf metrics — gauges, bars and
+// metric pickers are meaningless for them. One predicate so the renderer,
+// the inspector and the perfometer fetch can't drift apart.
+export function isMetriclessBinding(el: BindableElement): boolean {
+  return !!(el.group_name || el.aggregation_id)
+}
+
 // Human-readable name of the bound object — group and aggregation bindings
 // fall back to their identifiers.
 export function bindingLabel(el: BindableElement): string {

@@ -33,7 +33,7 @@
             @update:model-value="patchDisplay({ gadget_type: $event })"
           />
         </div>
-        <div class="ins__field">
+        <div v-if="!isGroupBinding" class="ins__field">
           <span class="orb-cap">{{ _t('Metric') }}</span>
           <AutocompleteInput
             v-model="metricModel"
@@ -43,6 +43,13 @@
             @change="patchDisplay({ gadget_metric: $event || null })"
           />
         </div>
+        <span v-else class="ins__note">
+          {{
+            _t(
+              'Groups and BI aggregations carry no metrics — gauge and bar show a state light instead.'
+            )
+          }}
+        </span>
       </template>
       <div class="ins__field">
         <span class="orb-cap">{{ _t('Fill') }}</span>
@@ -170,6 +177,7 @@ import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 import { useDataBinding } from '@/composables/useDataBinding'
 import type { DataElement, ElementLabel, ShapeElement } from '@/types/api'
 import { connectorLabelVisible } from '@/utils/connectorFlow'
+import { isMetriclessBinding } from '@/utils/presentationSampleState'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 import AutocompleteInput from '../../AutocompleteInput.vue'
@@ -203,6 +211,10 @@ const endpointOptions = computed(() => ({
       .map((t) => ({ name: t.id, title: t.name }))
   ]
 }))
+
+// Group/BI bindings have a state but no perf metrics — the metric picker
+// would only mislead ("Bind a host first" on an already-bound element).
+const isGroupBinding = computed(() => isMetriclessBinding(props.element))
 
 const modeOptions = computed(() => [
   { label: _t('Icon'), value: 'icon' },
@@ -302,6 +314,11 @@ watch(
   height: 1px;
   margin: 2px 0;
   background: var(--default-form-element-border-color);
+}
+
+.ins__note {
+  font-size: var(--font-size-normal);
+  color: var(--text-muted);
 }
 
 .ins__slot {

@@ -1,14 +1,18 @@
 <template>
   <g :class="{ 'pres-conn--selected': selected }" @pointerdown="$emit('pointerdown', $event)">
-    <!-- Wide transparent hit area for selecting / dragging the connector. -->
+    <!-- Wide transparent hit area: selecting / dragging in the editor, hover
+         and drill-down on a bound link in view mode. -->
     <line
-      v-if="interactive"
+      v-if="interactive || hoverable"
       class="pres-conn__hit"
       :x1="start.x"
       :y1="start.y"
       :x2="end.x"
       :y2="end.y"
       :stroke-width="16 / scale"
+      @mouseenter="hoverable && $emit('hover', $event)"
+      @mouseleave="hoverable && $emit('hover-leave')"
+      @click="hoverable && $emit('open')"
     />
     <!-- Selection halo. -->
     <line
@@ -57,26 +61,8 @@
         @pointerdown.stop="$emit('endpointDown', 'end', $event)"
       />
     </template>
-    <!-- Value/label pills (one per direction on a two-way link). -->
-    <g v-for="(pill, i) in pills" :key="`p${i}`" :transform="`translate(${pill.x}, ${pill.y})`">
-      <rect
-        :x="-pill.w / 2"
-        :y="-pill.h / 2"
-        :width="pill.w"
-        :height="pill.h"
-        :rx="pill.h / 2"
-        class="pres-conn__pill-bg"
-        :style="{ fill: pillBg }"
-      />
-      <text
-        class="pres-conn__pill-text"
-        text-anchor="middle"
-        dominant-baseline="central"
-        :style="{ fill: pillColor, fontSize: `${pillFontSize}px` }"
-      >
-        {{ pill.text }}
-      </text>
-    </g>
+    <!-- Value/label pills render in the labels overlay above the elements
+         (PresentationConnectorLabels) so docked endpoints can't cover them. -->
   </g>
 </template>
 
@@ -84,7 +70,7 @@
 import { computed } from 'vue'
 
 import type { ObjectState, ShapeElement } from '@/types/api'
-import { type FlowVisual, connectorLabelVisible, flowVisual } from '@/utils/connectorFlow'
+import { type FlowVisual, flowVisual } from '@/utils/connectorFlow'
 
 interface Pt {
   x: number
@@ -98,12 +84,17 @@ const props = defineProps<{
   state: ObjectState | undefined
   selected: boolean
   interactive: boolean
+  // View-mode drill-down on a bound link: hover/open events instead of editing.
+  hoverable?: boolean
   scale: number
 }>()
 
 defineEmits<{
   pointerdown: [PointerEvent]
   endpointDown: [which: 'start' | 'end', event: PointerEvent]
+  hover: [MouseEvent]
+  'hover-leave': []
+  open: []
 }>()
 
 const visForward = computed(() => flowVisual(props.element, props.state))
@@ -209,46 +200,6 @@ const segments = computed<Segment[]>(() => {
     }
   ]
 })
-
-// ── pills ────────────────────────────────────────────────────────────────────
-// The element label controls the pill: ``show === false`` hides it, a label
-// text replaces the live value on a one-way link. Two-way links show one value
-// pill per direction.
-const labelShow = computed(() => connectorLabelVisible(props.element))
-const pillFontSize = computed(() => props.element.label?.size ?? 11)
-const pillColor = computed(() => props.element.label?.color || '#fff')
-const pillBg = computed(() => props.element.label?.background || 'rgb(0 0 0 / 65%)')
-
-interface Pill {
-  x: number
-  y: number
-  text: string
-  w: number
-  h: number
-}
-
-function pillFor(at: Pt, text: string): Pill {
-  const h = Math.max(18, pillFontSize.value + 8)
-  return {
-    x: at.x,
-    y: at.y,
-    text,
-    w: Math.max(28, text.length * pillFontSize.value * 0.72 + 12),
-    h
-  }
-}
-
-const pills = computed<Pill[]>(() => {
-  if (!labelShow.value) return []
-  if (!twoWay.value) {
-    const text = props.element.label?.text || visForward.value.valueText
-    return text ? [pillFor(lerp(0.5), text)] : []
-  }
-  const out: Pill[] = []
-  if (visForward.value.valueText) out.push(pillFor(lerp(0.25), visForward.value.valueText))
-  if (visBack.value.valueText) out.push(pillFor(lerp(0.75), visBack.value.valueText))
-  return out
-})
 </script>
 
 <style scoped>
@@ -295,14 +246,5 @@ const pills = computed<Pill[]>(() => {
 
 .pres-conn__dot:active {
   cursor: grabbing;
-}
-
-.pres-conn__pill-bg {
-  pointer-events: none;
-}
-
-.pres-conn__pill-text {
-  font-weight: 600;
-  pointer-events: none;
 }
 </style>

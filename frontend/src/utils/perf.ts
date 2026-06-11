@@ -62,6 +62,48 @@ export function utilPercent(m: PerfMetric): number {
   return 0
 }
 
+/** Trim trailing zeros after the decimal point only: "5.00" → "5", "5.10" → "5.1".
+ * Integers pass through untouched ("250" must stay "250"). */
+function trimFixed(s: string): string {
+  return s.includes('.') ? s.replace(/0+$/, '').replace(/\.$/, '') : s
+}
+
+// Units that already carry a magnitude prefix — prepending an SI prefix would
+// produce nonsense like "2.05 kMB" for 2048 MB.
+const PREFIXED_UNIT = /^[KMGTP]i?B$/i
+
+/** Format a metric value with an SI prefix: 8927830016 + "B" → "8.93 GB".
+ * Percent values keep their plain form ("54%"). */
+export function fmtSI(value: number, unit: string): string {
+  if (unit === '%') return `${value.toFixed(0)}%`
+  if (PREFIXED_UNIT.test(unit)) return `${trimFixed(value.toFixed(2))} ${unit}`
+  const av = Math.abs(value)
+  let v = value
+  let p = ''
+  if (av >= 1e12) {
+    v = value / 1e12
+    p = 'T'
+  } else if (av >= 1e9) {
+    v = value / 1e9
+    p = 'G'
+  } else if (av >= 1e6) {
+    v = value / 1e6
+    p = 'M'
+  } else if (av >= 1e3) {
+    v = value / 1e3
+    p = 'k'
+  }
+  const fixed = trimFixed(Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2))
+  return unit ? `${fixed} ${p}${unit}` : p ? `${fixed}${p}` : fixed
+}
+
+/** Whether the metric carries any client-side scale a fill can be computed
+ * from: a real max, a crit threshold (NagVis-style proportional fill) or a %
+ * unit. Distinct from hasPercentScale, which gates the percent *readout*. */
+export function hasFillScale(m: PerfMetric): boolean {
+  return (m.max !== null && m.max > 0) || (m.crit !== null && m.crit > 0) || m.unit === '%'
+}
+
 /** Map utilization percentage to a color: green → amber → red. */
 export function utilColor(pct: number): string {
   if (pct <= 50) {

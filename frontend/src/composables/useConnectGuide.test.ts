@@ -88,6 +88,45 @@ describe('useConnectGuide', () => {
     expect(guide.active.value).toBe(false)
   })
 
+  it('keeps slot numbers stable after binding', async () => {
+    const a = slot(0, 0)
+    const b = slot(300, 0)
+    const c = slot(600, 0)
+    const { elements, guide } = setup([a, b, c])
+    guide.enter()
+    expect(guide.slotNumber(b.id)).toBe(2)
+
+    a.host_name = 'web01'
+    elements.value = [...elements.value]
+    await nextTick()
+    // a is bound — b and c keep their original numbers.
+    expect(guide.slotNumber(b.id)).toBe(2)
+    expect(guide.slotNumber(c.id)).toBe(3)
+    expect(guide.sessionSlots.value.map((s) => [s.n, s.bound])).toEqual([
+      [1, true],
+      [2, false],
+      [3, false]
+    ])
+  })
+
+  it('skipping the only remaining slot ends the walkthrough', () => {
+    const a = slot(0, 0)
+    const { guide } = setup([a])
+    guide.enter()
+    expect(guide.active.value).toBe(true)
+    guide.next()
+    expect(guide.active.value).toBe(false)
+  })
+
+  it('prev on the only remaining slot stays instead of exiting', () => {
+    const a = slot(0, 0)
+    const { guide } = setup([a])
+    guide.enter()
+    guide.prev()
+    expect(guide.active.value).toBe(true)
+    expect(guide.currentId.value).toBe(a.id)
+  })
+
   it('retargets when the current slot is deleted and exits when none remain', async () => {
     const a = slot(0, 0)
     const b = slot(300, 0)

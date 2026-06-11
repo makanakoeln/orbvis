@@ -230,10 +230,11 @@
   >
     <div :class="selected ? 'orb-obj__gadget-frame--selected' : ''">
       <GadgetRenderer
-        :type="object.display?.gadget_type || 'gauge'"
+        :type="effectiveGadgetType"
         :metric="object.display?.gadget_metric ?? null"
         :state="state"
         :size="iconSize"
+        :perfometer="gadgetPerfometer"
       />
     </div>
     <div
@@ -484,6 +485,7 @@ import {
   fmtValueWithUnit,
   normalizeMetricValue
 } from '@/composables/useMetricChart'
+import { usePerfometer } from '@/composables/usePerfometer'
 import { useIsDark } from '@/composables/useTheme'
 import { useAuthStore } from '@/stores/auth'
 import type { MetricPoint } from '@/stores/states'
@@ -525,6 +527,27 @@ defineEmits<{
 
 const statesStore = useStatesStore()
 const authStore = useAuthStore()
+
+// Group/BI objects have a state but no perf metrics — a gauge or bar would
+// permanently render "—", so they fall back to the state light.
+const effectiveGadgetType = computed(() => {
+  const gt = props.object.display?.gadget_type || 'gauge'
+  return ['hostgroup', 'servicegroup', 'dyngroup', 'aggregation'].includes(props.object.type)
+    ? 'trafficlight'
+    : gt
+})
+
+// CMK perfometer behind gauge/bar gadgets — fills the dial when the raw
+// perf_data has no max and supplies the CMK-formatted caption.
+const gadgetPerfometer = usePerfometer({
+  connectionId: () => props.connectionId,
+  hostName: () => props.object.host_name,
+  serviceDescription: () => props.object.service_description,
+  perfData: () => props.state?.perf_data,
+  enabled: () =>
+    props.object.display?.mode === 'gadget' &&
+    (props.object.display?.gadget_type || 'gauge') !== 'trafficlight'
+})
 
 const GRAPH_DATA_TIMEOUT_MS = 15_000
 const dataTimedOut = ref(false)

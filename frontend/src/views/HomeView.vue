@@ -780,7 +780,7 @@
                     />
                   </svg>
                   <span class="orb-home__card-conn" :title="map.connection_id">{{
-                    map.connection_id
+                    connectionsStore.labelFor(map.connection_id)
                   }}</span>
                   <span class="orb-home__card-dot">·</span>
                 </template>
@@ -1085,6 +1085,7 @@ import { useDragReorder } from '@/composables/useDragReorder'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
 import { useCapabilitiesStore } from '@/stores/capabilities'
+import { useConnectionsStore } from '@/stores/connections'
 import { useSettingsStore } from '@/stores/settings'
 import type { BoardRead, WorldmapView } from '@/types/api'
 import type { TourStep } from '@/types/tour'
@@ -1098,6 +1099,11 @@ const bgImageFailed = reactive<Record<string, boolean>>({})
 const auth = useAuthStore()
 const boardsStore = useBoardsStore()
 const router = useRouter()
+
+// Card meta shows the connection's display name, not the raw id — same
+// treatment as the boards table; falls back to the id until loaded.
+const connectionsStore = useConnectionsStore()
+if (auth.isAdmin) void connectionsStore.ensureConnections()
 const { changelogVisible } = useChangelog()
 const showCreate = ref(false)
 const showOnboarding = ref(false)

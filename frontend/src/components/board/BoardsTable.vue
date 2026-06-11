@@ -118,7 +118,7 @@
                 />
               </svg>
               <span class="orb-btable__conn-id" :title="map.connection_id">
-                {{ map.connection_id }}
+                {{ connectionsStore.labelFor(map.connection_id) }}
               </span>
             </div>
           </td>
@@ -238,6 +238,7 @@ import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 
 import { useAuthStore } from '@/stores/auth'
 import { useCapabilitiesStore } from '@/stores/capabilities'
+import { useConnectionsStore } from '@/stores/connections'
 import type { BoardRead } from '@/types/api'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
@@ -260,6 +261,11 @@ defineEmits<{
 const { _t } = usei18n()
 const auth = useAuthStore()
 const capabilities = useCapabilitiesStore()
+
+// Show the connection's display name ("cmk ZWEIFUENF") like the create dialog
+// does, not the raw id — falls back to the id until the list is loaded.
+const connectionsStore = useConnectionsStore()
+if (auth.isAdmin) void connectionsStore.ensureConnections()
 
 type SortCol = 'name' | 'type' | 'connection' | 'objects'
 

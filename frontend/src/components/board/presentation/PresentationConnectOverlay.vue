@@ -1,14 +1,19 @@
 <template>
   <div class="pco">
     <div
-      v-for="(slot, i) in slots"
+      v-for="slot in slots"
       :key="slot.id"
       class="pco__slot"
-      :class="{ 'pco__slot--current': slot.id === currentId }"
+      :class="{
+        'pco__slot--current': slot.id === currentId,
+        'pco__slot--bound': slot.bound
+      }"
       :style="slotStyle(slot)"
-      @pointerdown.stop="emit('pick', slot.id)"
+      @pointerdown.stop="!slot.bound && emit('pick', slot.id)"
     >
-      <span class="pco__badge" :style="badgeStyle">{{ i + 1 }}</span>
+      <span class="pco__badge" :class="{ 'pco__badge--bound': slot.bound }" :style="badgeStyle">
+        {{ slot.bound ? '✓' : slot.n }}
+      </span>
     </div>
   </div>
 </template>
@@ -22,6 +27,9 @@ export interface ConnectSlotBox {
   y: number
   w: number
   h: number
+  // Stable session number — binding a slot must not renumber the others.
+  n: number
+  bound: boolean
 }
 
 const props = defineProps<{
@@ -72,6 +80,11 @@ const badgeStyle = computed(() => ({
   pointer-events: auto;
 }
 
+.pco__slot--bound {
+  border-color: color-mix(in srgb, var(--pres-accent, #38bdf8) 35%, transparent);
+  cursor: default;
+}
+
 .pco__slot--current {
   animation: pco-pulse 1.4s ease-in-out infinite;
 }
@@ -104,5 +117,9 @@ const badgeStyle = computed(() => ({
   background: var(--pres-accent, #38bdf8);
   color: var(--pres-bg, #0b1020);
   font-weight: 700;
+}
+
+.pco__badge--bound {
+  background: #22c55e;
 }
 </style>

@@ -27,6 +27,25 @@ export const useConnectionsStore = defineStore('connections', () => {
     }
   }
 
+  // Lazy load shared by every surface that only needs the list for display —
+  // concurrent callers (e.g. HomeView and the boards table in the same render)
+  // share one request instead of racing duplicates.
+  let _inflight: Promise<void> | null = null
+  function ensureConnections(): Promise<void> {
+    if (connections.value.length) return Promise.resolve()
+    _inflight ??= fetchConnections().finally(() => {
+      _inflight = null
+    })
+    return _inflight
+  }
+
+  /** Display name for a connection id ("cmk ZWEIFUENF"), falling back to the
+   * raw id until the list is loaded or for unknown/deleted connections. */
+  function labelFor(id: string | null | undefined): string {
+    if (!id) return ''
+    return connections.value.find((c) => c.id === id)?.label || id
+  }
+
   async function createConnection(data: ConnectionConfig) {
     const b = await connectionsApi.create(data, token())
     connections.value.push(b)
@@ -50,6 +69,8 @@ export const useConnectionsStore = defineStore('connections', () => {
     loading,
     error,
     fetchConnections,
+    ensureConnections,
+    labelFor,
     createConnection,
     updateConnection,
     deleteConnection

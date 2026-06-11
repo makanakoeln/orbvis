@@ -243,15 +243,12 @@
 </template>
 
 <script setup lang="ts">
-import { type Ref, computed, inject, onMounted, ref, watch } from 'vue'
+import { type Ref, computed, inject, ref } from 'vue'
 
-import { metricsApi } from '@/api/client'
-import { useAuthStore } from '@/stores/auth'
-import type { BoardObject, ObjectState, PerfometerResult } from '@/types/api'
-import { getMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
+import { splitPerfometerLabel, usePerfometer } from '@/composables/usePerfometer'
+import type { BoardObject, ObjectState } from '@/types/api'
+import { fmtSI, getMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
 import { stateColor } from '@/utils/stateColors'
-
-const authStore = useAuthStore()
 
 const props = defineProps<{
   object: BoardObject
@@ -610,79 +607,26 @@ const showsPerfdataLabels = computed(
   () => props.object.line_perfdata_label != null && props.object.line_perfdata_label !== 'none'
 )
 
-function _fmtSI(value: number, unit: string): string {
-  if (unit === '%') return `${value.toFixed(0)}%`
-  const av = Math.abs(value)
-  let v = value
-  let p = ''
-  if (av >= 1e12) {
-    v = value / 1e12
-    p = 'T'
-  } else if (av >= 1e9) {
-    v = value / 1e9
-    p = 'G'
-  } else if (av >= 1e6) {
-    v = value / 1e6
-    p = 'M'
-  } else if (av >= 1e3) {
-    v = value / 1e3
-    p = 'k'
-  }
-  const fixed = (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2)).replace(/\.?0+$/, '')
-  return unit ? `${fixed} ${p}${unit}` : p ? `${fixed}${p}` : fixed
-}
-
 function _fmtMetric(m: ReturnType<typeof getMetric>): string {
   if (!m) return ''
-  return _fmtSI(m.value, m.unit)
+  return fmtSI(m.value, m.unit)
 }
 
 // CMK-formatted bandwidth strings & utilization via /metrics/perfometer (when
 // host+service set). The endpoint applies the proper Metric.unit (kbit/s, …)
 // and computes percentages from the plugin's focus_range — which the raw
 // perfdata's max field often doesn't carry for interface checks.
-const cmkPerfData = ref<PerfometerResult | null>(null)
-
-async function _fetchPerfometer(): Promise<void> {
-  if (
-    !props.object.host_name ||
-    !props.object.service_description ||
-    !props.connectionId ||
-    !authStore.accessToken
-  ) {
-    return
-  }
-  try {
-    cmkPerfData.value = await metricsApi.getPerfometer(
-      props.connectionId,
-      props.object.host_name,
-      props.object.service_description,
-      authStore.accessToken
-    )
-  } catch {
-    cmkPerfData.value = null
-  }
-}
-
-onMounted(() => {
-  if (showsPerfdataLabels.value) void _fetchPerfometer()
+const cmkPerfData = usePerfometer({
+  connectionId: () => props.connectionId,
+  hostName: () => props.object.host_name,
+  serviceDescription: () => props.object.service_description,
+  perfData: () => props.state?.perf_data,
+  enabled: () => showsPerfdataLabels.value
 })
-watch(
-  () => props.state?.perf_data,
-  () => {
-    if (showsPerfdataLabels.value) void _fetchPerfometer()
-  }
-)
 
 // Split the perfometer label "in / out" into the two halves for separate
 // rendering on each side of the midpoint arrows.
-const cmkSplit = computed<[string | null, string | null]>(() => {
-  const label = cmkPerfData.value?.label
-  if (!label) return [null, null]
-  const parts = label.split(' / ')
-  if (parts.length === 2) return [parts[0]?.trim() || null, parts[1]?.trim() || null]
-  return [label, null]
-})
+const cmkSplit = computed(() => splitPerfometerLabel(cmkPerfData.value?.label))
 
 const cmkPcts = computed<[number | null, number | null]>(() => {
   const pcts = cmkPerfData.value?.pcts ?? []

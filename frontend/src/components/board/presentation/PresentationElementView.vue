@@ -90,10 +90,11 @@
     <div class="pres-el__data-body">
       <GadgetRenderer
         v-if="element.display.mode === 'gadget' && (isBoundElement(element) || sampleState)"
-        :type="element.display.gadget_type ?? 'gauge'"
+        :type="effectiveGadgetType"
         :metric="element.display.gadget_metric ?? sampleMetric"
         :state="effectiveState"
         :size="gadgetSize"
+        :perfometer="perfometer"
       />
       <div
         v-else-if="element.display.mode === 'text'"
@@ -136,9 +137,10 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 
+import { usePerfometer } from '@/composables/usePerfometer'
 import type { ObjectState, PresentationElement } from '@/types/api'
 import { resolveImageRef } from '@/utils/presentationElements'
-import { bindingLabel, isBoundElement } from '@/utils/presentationSampleState'
+import { bindingLabel, isBoundElement, isMetriclessBinding } from '@/utils/presentationSampleState'
 import { stateColor } from '@/utils/stateColors'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
@@ -149,6 +151,9 @@ const { _t } = usei18n()
 const props = defineProps<{
   element: PresentationElement
   state: ObjectState | undefined
+  // Effective connection for the element's binding (element override or board
+  // default) — needed for the CMK perfometer lookup behind gauge/bar gadgets.
+  connectionId?: string | null
   // Demo data for an unbound data slot in the editor — never set in view mode.
   sampleState?: ObjectState | undefined
   editingText?: boolean
@@ -166,6 +171,29 @@ function resolve(color: string | null | undefined, fallbackVar: string): string 
 
 // Live state when bound, sample data when previewing an unbound slot.
 const effectiveState = computed(() => props.state ?? props.sampleState)
+
+// Group/BI bindings have a state but no perf metrics — a gauge or bar would
+// permanently render "—", so they fall back to the state light.
+const effectiveGadgetType = computed(() => {
+  const el = props.element
+  if (el.kind !== 'data') return 'gauge'
+  return isMetriclessBinding(el) ? 'trafficlight' : (el.display.gadget_type ?? 'gauge')
+})
+
+// CMK perfometer behind gauge/bar gadgets — fills the dial when the raw
+// perf_data has no max and supplies the CMK-formatted caption. Only plain
+// host/service bindings have one; groups, BI and traffic lights don't.
+const perfometer = usePerfometer({
+  connectionId: () => props.connectionId,
+  hostName: () => (props.element.kind === 'data' ? props.element.host_name : null),
+  serviceDescription: () =>
+    props.element.kind === 'data' ? props.element.service_description : null,
+  perfData: () => props.state?.perf_data,
+  enabled: () =>
+    props.element.kind === 'data' &&
+    props.element.display.mode === 'gadget' &&
+    effectiveGadgetType.value !== 'trafficlight'
+})
 // The sample perf_data always carries exactly one metric; hand its name to the
 // gadget so an unbound preview renders a value instead of an empty dial.
 const sampleMetric = computed(() => {
@@ -263,7 +291,7 @@ const gadgetSize = computed(() => {
   const labelH = (el.label?.show ?? false) ? 30 : 0
   const availW = el.w - 28
   const availH = el.h - labelH - 24
-  const gt = el.display.gadget_type
+  const gt = effectiveGadgetType.value
   const hFactor = gt === 'trafficlight' ? 1.85 : gt === 'bar' ? 0.55 : 0.7
   return Math.max(36, Math.min(availW, availH / hFactor))
 })

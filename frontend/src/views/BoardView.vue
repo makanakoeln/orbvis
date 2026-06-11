@@ -422,6 +422,9 @@
           :readonly="boardConfig.readonly ?? false"
           :preview="isPreview"
           :kiosk="isKiosk"
+          @object-hover="onPresentationHover"
+          @object-hover-leave="presHoverGrace.scheduleClose()"
+          @object-click="onPresentationObjectClick"
         />
       </div>
 
@@ -530,7 +533,7 @@
         :object="detailDrawerObject"
         :state="detailDrawerState"
         :checkmk-url="checkmkUrl"
-        :connection-id="boardConfig?.connection_id ?? null"
+        :connection-id="detailDrawerObject?.connection_id ?? boardConfig?.connection_id ?? null"
         :selectable-hosts="selectableHostNames"
         :readonly="boardConfig?.readonly ?? false"
         portal-target="#orbvis-board-shell"
@@ -1110,6 +1113,26 @@
       @card-leave="folderHoverGrace.scheduleClose()"
     />
 
+    <!-- Presentation HoverMenu (bound elements in view mode) -->
+    <HoverMenu
+      v-if="isPresentation && presHover.visible && presHover.object"
+      :object="presHover.object"
+      :state="statesStore.states[presHover.object.id]"
+      :x="presHover.x"
+      :y="presHover.y"
+      :connection-id="presHover.object.connection_id ?? boardConfig?.connection_id ?? null"
+      :checkmk-url="checkmkUrl"
+      :template="
+        resolveTemplate(
+          undefined,
+          boardConfig?.hover_template,
+          settingsStore.settings.hover_template
+        )
+      "
+      @card-enter="presHoverGrace.cancelClose()"
+      @card-leave="presHoverGrace.scheduleClose()"
+    />
+
     <template v-if="isFolderTree && folderCtx">
       <div
         class="orb-board__ctx-backdrop"
@@ -1269,7 +1292,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import OnboardingTour from '@/components/OnboardingTour.vue'
@@ -1306,6 +1329,7 @@ import { useBoardRotation } from '@/composables/useBoardRotation'
 import { useBoardTour } from '@/composables/useBoardTour'
 import { useElementRect } from '@/composables/useElementRect'
 import { useFolderTreeInteractions } from '@/composables/useFolderTreeInteractions'
+import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useObjectActions } from '@/composables/useObjectActions'
 import { useToast } from '@/composables/useToast'
 import { useWorldmapMenus } from '@/composables/useWorldmapMenus'
@@ -1736,6 +1760,32 @@ function onSelectHost(
 function closeDetail() {
   detailDrawerObject.value = null
   drawerSeedState.value = null
+}
+
+// Presentation view mode: bound elements surface as transient BoardObjects —
+// hover opens the shared HoverMenu, click the shared detail drawer.
+const presHover = reactive({
+  visible: false,
+  object: null as BoardObject | null,
+  x: 0,
+  y: 0
+})
+const presHoverGrace = useHoverGrace(() => {
+  presHover.visible = false
+})
+
+function onPresentationHover(obj: BoardObject, event: MouseEvent): void {
+  presHoverGrace.cancelClose()
+  presHover.object = obj
+  presHover.x = event.pageX + 12
+  presHover.y = event.pageY + 12
+  presHover.visible = true
+}
+
+function onPresentationObjectClick(obj: BoardObject): void {
+  presHoverGrace.cancelClose()
+  presHover.visible = false
+  openDetail(obj)
 }
 
 const {

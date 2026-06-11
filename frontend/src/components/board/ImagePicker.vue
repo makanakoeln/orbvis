@@ -61,11 +61,7 @@
       <div v-if="open" class="orb-imgpick__panel">
         <!-- Search -->
         <div class="orb-imgpick__search-wrap">
-          <input
-            v-model="query"
-            :placeholder="_t('Search icons…')"
-            class="orb-field orb-imgpick__search"
-          />
+          <input v-model="query" :placeholder="searchLabel" class="orb-field orb-imgpick__search" />
         </div>
 
         <!-- Loading -->
@@ -121,7 +117,7 @@
                   d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
                 />
               </svg>
-              {{ _t('Upload icon') }}
+              {{ uploadLabel }}
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/svg+xml,image/webp"
@@ -198,9 +194,7 @@
 
           <!-- Upload more -->
           <div class="orb-imgpick__footer">
-            <span class="orb-imgpick__count"
-              >{{ images.length }} icon{{ images.length === 1 ? '' : 's' }}</span
-            >
+            <span class="orb-imgpick__count">{{ countLabel }}</span>
             <label class="orb-imgpick__upload-link">
               <svg
                 class="orb-imgpick__upload-icon orb-imgpick__upload-icon--sm"
@@ -215,7 +209,7 @@
                   d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
                 />
               </svg>
-              {{ _t('Upload icon') }}
+              {{ uploadLabel }}
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/svg+xml,image/webp"
@@ -262,24 +256,40 @@ import usei18n from '@/vendor/cmk/lib/i18n'
 
 const BASE_URL = import.meta.env.BASE_URL
 
-const { _t } = usei18n()
+const { _t, _tn } = usei18n()
 const auth = useAuthStore()
 
 const props = defineProps<{
   modelValue: string
   /** Override the placeholder label shown when no image is selected. */
   placeholder?: string
+  /** 'icon' (default) offers the full library including built-in icons;
+   * 'image' hides them — 24px monochrome icons are no slide background. */
+  kind?: 'icon' | 'image'
 }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
 const emptyLabel = computed(() => props.placeholder ?? _t('Icon filename'))
+const isImageKind = computed(() => props.kind === 'image')
+const searchLabel = computed(() => (isImageKind.value ? _t('Search images…') : _t('Search icons…')))
+const uploadLabel = computed(() => (isImageKind.value ? _t('Upload image') : _t('Upload icon')))
+const countLabel = computed(() => {
+  const n = images.value.length
+  return isImageKind.value
+    ? _tn('%{n} image', '%{n} images', n, { n })
+    : _tn('%{n} icon', '%{n} icons', n, { n })
+})
 
 const open = ref(false)
 const query = ref('')
-const images = ref<ImageEntry[]>([])
+const allImages = ref<ImageEntry[]>([])
 const loading = ref(false)
 const uploading = ref(false)
 const uploadError = ref('')
+
+const images = computed(() =>
+  isImageKind.value ? allImages.value.filter((i) => !i.builtin) : allImages.value
+)
 
 const filtered = computed(() =>
   query.value
@@ -291,15 +301,15 @@ const filtered = computed(() =>
 // uploaded SVGs keep their own colours.
 const selectedIsBuiltinSvg = computed(() => {
   if (!props.modelValue?.endsWith('.svg')) return false
-  return images.value.find((i) => i.name === props.modelValue)?.builtin ?? false
+  return allImages.value.find((i) => i.name === props.modelValue)?.builtin ?? false
 })
 
 async function fetchImages() {
   loading.value = true
   try {
-    images.value = await imagesApi.list(auth.accessToken!)
+    allImages.value = await imagesApi.list(auth.accessToken!)
   } catch {
-    images.value = []
+    allImages.value = []
   } finally {
     loading.value = false
   }

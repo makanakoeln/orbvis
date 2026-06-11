@@ -53,9 +53,14 @@
       </div>
       <CmkScrollContainer class="insp__body-wrap">
         <div class="insp__body">
-          <div v-if="single.kind === 'group'" class="insp__hint">
-            {{ _t('Group — move or duplicate it as one unit. Ungroup via the layers panel.') }}
-          </div>
+          <template v-if="single.kind === 'group'">
+            <div class="insp__hint">
+              {{ _t('Group — move or duplicate it as one unit.') }}
+            </div>
+            <CmkButton class="insp__grow" @click="emit('ungroup')">
+              {{ _t('Ungroup') }}
+            </CmkButton>
+          </template>
           <InspectorLayoutSection
             v-if="showLayout"
             :element="single"
@@ -194,6 +199,7 @@
             <ImagePicker
               :model-value="backgroundImageName"
               :placeholder="_t('Background image…')"
+              kind="image"
               @update:model-value="emit('slide', { background_image: $event || null })"
             />
             <CmkButton class="insp__grow" :disabled="bgUploading" @click="bgFileInput?.click()">

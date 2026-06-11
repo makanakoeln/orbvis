@@ -30,9 +30,10 @@ function readingOrder(a: { x: number; y: number }, b: { x: number; y: number }):
 export function useConnectGuide(elements: () => PresentationElement[]) {
   const active = ref(false)
   const currentId = ref<string | null>(null)
-  // Slot count at entry — bound slots vanish from `slots`, so progress is
-  // total minus remaining.
-  const totalCount = ref(0)
+  // Slot ids in the reading order captured at entry. Binding a slot must not
+  // renumber the rest — badges and the popover title stay stable across the
+  // whole walkthrough. Slots created mid-session append at the end.
+  const slotOrder = ref<string[]>([])
 
   function byId(id: string | null | undefined): PresentationElement | undefined {
     return id ? elements().find((e) => e.id === id) : undefined
@@ -48,7 +49,33 @@ export function useConnectGuide(elements: () => PresentationElement[]) {
       .sort((a, b) => readingOrder(bounds(a), bounds(b)))
   )
   const unboundCount = computed(() => slots.value.length)
-  const boundCount = computed(() => Math.max(0, totalCount.value - slots.value.length))
+
+  watch(slots, (list) => {
+    if (!active.value) return
+    for (const s of list) if (!slotOrder.value.includes(s.id)) slotOrder.value.push(s.id)
+  })
+
+  // Every slot of the session (bound ones included) with its stable number —
+  // the overlay shows bound slots as checked instead of dropping them.
+  const sessionSlots = computed(() => {
+    const index = new Map(elements().map((e) => [e.id, e]))
+    return slotOrder.value
+      .map((id, i) => {
+        const el = index.get(id)
+        return el && isBindable(el) ? { el, n: i + 1, bound: !isUnboundSlot(el) } : null
+      })
+      .filter((s): s is { el: BindableElement; n: number; bound: boolean } => s !== null)
+  })
+
+  // Progress derives from the session order so slots created mid-session
+  // count toward the total instead of pushing the bar past 100%.
+  const totalCount = computed(() => sessionSlots.value.length)
+  const boundCount = computed(() => sessionSlots.value.filter((s) => s.bound).length)
+
+  function slotNumber(id: string): number | null {
+    const i = slotOrder.value.indexOf(id)
+    return i === -1 ? null : i + 1
+  }
 
   // The current slot survives being bound (unlike `slots`) so the popover can
   // stay open for the service/label step.
@@ -59,9 +86,9 @@ export function useConnectGuide(elements: () => PresentationElement[]) {
   const currentBound = computed(() => !!current.value && !isUnboundSlot(current.value))
 
   function enter(): void {
-    totalCount.value = slots.value.length
+    slotOrder.value = slots.value.map((s) => s.id)
     currentId.value = slots.value[0]?.id ?? null
-    active.value = totalCount.value > 0
+    active.value = slotOrder.value.length > 0
   }
 
   function exit(): void {
@@ -87,6 +114,13 @@ export function useConnectGuide(elements: () => PresentationElement[]) {
     const cur = current.value
     const idx = list.findIndex((s) => s.id === currentId.value)
     if (idx !== -1) {
+      // Skipping forward off the only remaining slot ends the walkthrough —
+      // cycling back onto the slot just skipped would trap the operator.
+      // Prev stays put instead of tearing the session down.
+      if (list.length === 1) {
+        if (dir === 1) exit()
+        return
+      }
       currentId.value = list[(idx + dir + list.length) % list.length]?.id ?? null
       return
     }
@@ -125,6 +159,8 @@ export function useConnectGuide(elements: () => PresentationElement[]) {
   return {
     active,
     slots,
+    sessionSlots,
+    slotNumber,
     unboundCount,
     boundCount,
     totalCount,

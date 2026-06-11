@@ -12,6 +12,10 @@
       <div v-else-if="error" class="changelog-modal__error">{{ error }}</div>
       <pre v-else class="changelog-modal__text">{{ content }}</pre>
     </div>
+
+    <template #footer>
+      <CmkButton variant="primary" @click="$emit('close')">{{ _t('Got it') }}</CmkButton>
+    </template>
   </OrbModal>
 </template>
 
@@ -19,6 +23,11 @@
 import { onMounted, ref } from 'vue'
 
 import OrbModal from '@/components/OrbModal.vue'
+import CmkButton from '@/components/cmk/CmkButton'
+
+import usei18n from '@/vendor/cmk/lib/i18n'
+
+const { _t } = usei18n()
 
 defineEmits<{ close: [] }>()
 

@@ -2359,8 +2359,8 @@ msgstr "Gadget"
 msgid "Group"
 msgstr "Gruppe"
 
-msgid "Group — move or duplicate it as one unit. Ungroup via the layers panel."
-msgstr "Gruppe — als Einheit verschieben oder duplizieren. Aufheben über das Ebenen-Panel."
+msgid "Group — move or duplicate it as one unit."
+msgstr "Gruppe — als Einheit verschieben oder duplizieren."
 
 msgid "Headline and six gauge tiles for the big screen"
 msgstr "Überschrift und sechs Gauge-Kacheln für die große Wand"
@@ -2649,3 +2649,28 @@ msgstr "Wird hochgeladen…"
 
 msgid "Upload failed"
 msgstr "Upload fehlgeschlagen"
+
+msgid "Search images…"
+msgstr "Bilder durchsuchen…"
+
+msgid "Upload image"
+msgstr "Bild hochladen"
+
+msgid "%{n} image"
+msgid_plural "%{n} images"
+msgstr[0] "%{n} Bild"
+msgstr[1] "%{n} Bilder"
+
+msgid "%{n} icon"
+msgid_plural "%{n} icons"
+msgstr[0] "%{n} Icon"
+msgstr[1] "%{n} Icons"
+
+msgid "Groups and BI aggregations carry no metrics — gauge and bar show a state light instead."
+msgstr "Gruppen und BI-Aggregationen liefern keine Metriken — Gauge und Bar zeigen stattdessen eine Status-Ampel."
+
+msgid "Some elements now extend beyond the slide — move or resize them."
+msgstr "Einige Elemente ragen jetzt über die Folie hinaus — verschieben oder verkleinern."
+
+msgid "Got it"
+msgstr "Verstanden"

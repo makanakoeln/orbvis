@@ -6,7 +6,7 @@
           v-for="toast in toasts"
           :key="toast.id"
           class="orb-toast"
-          :class="toast.type === 'success' ? 'orb-toast--success' : 'orb-toast--error'"
+          :class="`orb-toast--${toast.type}`"
         >
           <svg
             v-if="toast.type === 'success'"
@@ -91,6 +91,14 @@ const { toasts } = useToast()
   color: var(--color-light-red-40);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--color-light-red-50) 30%, transparent),
+    0 20px 25px -5px rgb(0 0 0 / 40%),
+    0 8px 10px -6px rgb(0 0 0 / 40%);
+}
+
+.orb-toast--warning {
+  color: var(--color-warning);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-warning) 30%, transparent),
     0 20px 25px -5px rgb(0 0 0 / 40%),
     0 8px 10px -6px rgb(0 0 0 / 40%);
 }

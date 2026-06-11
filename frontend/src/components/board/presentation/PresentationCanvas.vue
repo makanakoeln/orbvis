@@ -46,9 +46,13 @@
             :state="stateFor(c.el) ?? sampleFor(c.el)"
             :selected="interactive && selectedIds.includes(c.el.id)"
             :interactive="interactive"
+            :hoverable="viewLinked(c.el)"
             :scale="scale"
             @pointerdown="onConnectorPointerDown(c.el, $event)"
             @endpoint-down="(which, e) => onEndpointPointerDown(c.el, which, e)"
+            @hover="onElementHoverEnter(c.el, $event)"
+            @hover-leave="onElementHoverLeave(c.el)"
+            @open="onElementViewClick(c.el)"
           />
         </svg>
 
@@ -56,26 +60,51 @@
           {{ _t('Pick a tool above to start your slide') }}
         </div>
 
-        <div
-          v-for="el in inlineElements"
-          :key="el.id"
-          class="pres__el"
-          :class="{
-            'pres__el--selected': interactive && selectedIds.includes(topLevelId(el.id)),
-            'pres__el--locked': isLocked(el),
-            'pres__el--hidden': interactive && isHidden(el)
-          }"
-          :style="elementStyle(el)"
-          @pointerdown.stop="onElementPointerDown(el, $event)"
-        >
-          <PresentationElementView
-            :element="el"
-            :state="stateFor(el)"
-            :sample-state="sampleFor(el)"
-            :editing-text="editingTextId === el.id"
-            @text-change="onTextChange(el.id, $event)"
-          />
+        <!-- Isolated stacking context: element z values (unbounded via
+           bring-to-front) order elements among themselves but can never climb
+           above the later overlays — DOM order alone keeps pills, selection
+           and badges on top. -->
+        <div class="pres__els">
+          <div
+            v-for="el in inlineElements"
+            :key="el.id"
+            class="pres__el"
+            :class="{
+              'pres__el--selected': interactive && selectedIds.includes(topLevelId(el.id)),
+              'pres__el--locked': isLocked(el),
+              'pres__el--hidden': interactive && isHidden(el),
+              'pres__el--link': viewLinked(el)
+            }"
+            :style="elementStyle(el)"
+            @pointerdown.stop="onElementPointerDown(el, $event)"
+            @mouseenter="onElementHoverEnter(el, $event)"
+            @mouseleave="onElementHoverLeave(el)"
+            @click="onElementViewClick(el)"
+          >
+            <PresentationElementView
+              :element="el"
+              :state="stateFor(el)"
+              :connection-id="connectionFor(el)"
+              :sample-state="sampleFor(el)"
+              :editing-text="editingTextId === el.id"
+              @text-change="onTextChange(el.id, $event)"
+            />
+          </div>
         </div>
+
+        <!-- Connector value pills above the elements — a docked endpoint sits
+           under its element, which would otherwise cover the label. -->
+        <svg class="pres__connectors" :style="overlaySvgStyle">
+          <PresentationConnectorLabels
+            v-for="c in connectors"
+            :key="`lbl-${c.el.id}`"
+            :element="c.el"
+            :start="c.start"
+            :end="c.end"
+            :state="stateFor(c.el) ?? sampleFor(c.el)"
+            :connection-id="connectionFor(c.el)"
+          />
+        </svg>
 
         <svg
           v-if="interactive && activeGuides.length"
@@ -288,12 +317,9 @@
         </button>
       </div>
 
-      <div
-        v-if="interactive && layersOpen"
-        v-click-outside="closeLayers"
-        class="pres__layers"
-        @pointerdown.stop
-      >
+      <!-- Tool panel, not a dropdown: it stays open across canvas and
+           inspector interactions (multi-step cleanups) until × or re-toggle. -->
+      <div v-if="interactive && layersOpen" class="pres__layers" @pointerdown.stop>
         <div class="pres__layers-head">
           <span>{{ _t('Layers') }}</span>
           <button class="pres__layers-x" @click="layersOpen = false">×</button>
@@ -380,8 +406,10 @@ import { clone, usePresentationDocument } from '@/composables/usePresentationDoc
 import { usePresentationSelectionGeometry } from '@/composables/usePresentationSelectionGeometry'
 import { useSlideViewport } from '@/composables/useSlideViewport'
 import { type Box, type Guide, computeSmartGuides } from '@/composables/useSmartGuides'
+import { useToast } from '@/composables/useToast'
 import type {
   BoardConfig,
+  BoardObject,
   ObjectState,
   PresentationElement,
   PresentationView,
@@ -394,6 +422,7 @@ import {
   bindableElementAt,
   parseBindingDropPayload
 } from '@/utils/presentationBindingDrop'
+import { boardObjectFromElement } from '@/utils/presentationBoardObject'
 import { ICONS } from '@/utils/presentationCanvasChrome'
 import {
   type InsertKind,
@@ -404,6 +433,8 @@ import {
 } from '@/utils/presentationElements'
 import {
   bindingLabel,
+  isBindable,
+  isBoundElement,
   isUnboundSlot,
   sampleStateFor,
   slotBounds
@@ -411,17 +442,18 @@ import {
 import type { PresentationTemplate } from '@/utils/presentationTemplates'
 import { themeTokens } from '@/utils/presentationThemes'
 import usei18n from '@/vendor/cmk/lib/i18n'
-import useClickOutside from '@/vendor/cmk/lib/useClickOutside'
 
 import PresentationBindingForm from './PresentationBindingForm.vue'
 import PresentationConnectOverlay from './PresentationConnectOverlay.vue'
 import PresentationConnector from './PresentationConnector.vue'
+import PresentationConnectorLabels from './PresentationConnectorLabels.vue'
 import PresentationDataPanel from './PresentationDataPanel.vue'
 import PresentationElementView from './PresentationElementView.vue'
 import PresentationInspectorPanel from './PresentationInspectorPanel.vue'
 import PresentationTemplateGallery from './PresentationTemplateGallery.vue'
 
 const { _t } = usei18n()
+const toast = useToast()
 
 const props = defineProps<{
   config: BoardConfig
@@ -432,11 +464,41 @@ const props = defineProps<{
   kiosk?: boolean
 }>()
 
-const vClickOutside = useClickOutside()
+const emit = defineEmits<{
+  'object-hover': [obj: BoardObject, event: MouseEvent]
+  'object-hover-leave': []
+  'object-click': [obj: BoardObject]
+}>()
 
 const interactive = computed(
   () => props.editMode && !props.readonly && !props.preview && !props.kiosk
 )
+
+// View-mode drill-down: outside the editor, bound elements act like board
+// objects — hover opens the shared HoverMenu, click the detail drawer.
+function viewLinked(el: PresentationElement): boolean {
+  return !interactive.value && !props.preview && isBoundElement(el)
+}
+
+function viewObjectFor(el: PresentationElement): BoardObject | null {
+  if (!viewLinked(el) || !isBindable(el)) return null
+  const obj = boardObjectFromElement(el)
+  return obj ? { ...obj, connection_id: connectionFor(el) } : null
+}
+
+function onElementHoverEnter(el: PresentationElement, event: MouseEvent): void {
+  const obj = viewObjectFor(el)
+  if (obj) emit('object-hover', obj, event)
+}
+
+function onElementHoverLeave(el: PresentationElement): void {
+  if (viewLinked(el)) emit('object-hover-leave')
+}
+
+function onElementViewClick(el: PresentationElement): void {
+  const obj = viewObjectFor(el)
+  if (obj) emit('object-click', obj)
+}
 
 const {
   local,
@@ -569,6 +631,12 @@ const connectorTargets = computed(() =>
   elements.value.filter((e) => e.kind !== 'group').map((e) => ({ id: e.id, name: layerName(e) }))
 )
 
+// Effective connection of a bindable element: its own override or the board default.
+function connectionFor(el: PresentationElement): string | null {
+  const own = el.kind === 'data' || el.kind === 'shape' ? el.connection_id : null
+  return own || props.config.connection_id || null
+}
+
 function stateFor(el: PresentationElement): ObjectState | undefined {
   // Data elements and monitoring-bound shapes both receive states keyed by id.
   return el.kind === 'data' || el.kind === 'shape' ? props.states[el.id] : undefined
@@ -588,7 +656,15 @@ function elementStyle(el: PresentationElement): Record<string, string> {
     opacity: String(el.opacity),
     transform: el.rotation ? `rotate(${el.rotation}deg)` : 'none',
     zIndex: String(el.z),
-    pointerEvents: !interactive.value || isLocked(el) ? 'none' : 'auto'
+    // View mode keeps decorative elements transparent to the pointer, but a
+    // bound element is a drill-down target (hover card, detail drawer).
+    pointerEvents: interactive.value
+      ? isLocked(el)
+        ? 'none'
+        : 'auto'
+      : viewLinked(el)
+        ? 'auto'
+        : 'none'
   }
 }
 
@@ -1271,17 +1347,23 @@ const connectSlotTitle = computed(() => {
   if (connectGuide.currentBound.value) {
     return el.service_description || el.host_name || layerName(el)
   }
-  const idx = connectGuide.slots.value.findIndex((s) => s.id === el.id)
+  const n = connectGuide.slotNumber(el.id)
   return _t('Connect slot %{n}: %{name}', {
-    n: String(idx + 1),
+    n: String(n ?? '?'),
     name: el.name || layerName(el)
   })
 })
 
 // Badge boxes for the connect overlay — resolved to the real on-slide bounds
-// (a connector's badge sits on the box spanned by its endpoints).
+// (a connector's badge sits on the box spanned by its endpoints). Bound slots
+// stay listed with their stable number, shown as checked.
 const connectSlotBoxes = computed(() =>
-  connectGuide.slots.value.map((s) => ({ id: s.id, ...slotBounds(s, byId) }))
+  connectGuide.sessionSlots.value.map((s) => ({
+    id: s.el.id,
+    n: s.n,
+    bound: s.bound,
+    ...slotBounds(s.el, byId)
+  }))
 )
 
 // The binding popover prefers to sit centred above the current slot (below it
@@ -1389,17 +1471,35 @@ function onBindingDrop(e: DragEvent): void {
     selectedIds.value = [result.element.id]
   }
 }
-function closeLayers(): void {
-  layersOpen.value = false
-}
 // Slide-level changes (theme/size/background) are board metadata, not element
 // edits, so they save without touching the element undo history. Size values
 // are clamped to the schema's bounds.
+// Debounced so typing a width digit-by-digit (the number field emits partial
+// values like "2" on the way to "2560") can't fire a warning per keystroke —
+// the check runs once against the size the input settles on.
+let clipWarnTimer: ReturnType<typeof setTimeout> | null = null
+
 function onSlideChange(p: Partial<PresentationView>): void {
   const next = { ...local.value, ...p }
   next.width = Math.min(8192, Math.max(320, Math.round(next.width) || local.value.width))
   next.height = Math.min(8192, Math.max(320, Math.round(next.height) || local.value.height))
+  const shrunk = next.width < local.value.width || next.height < local.value.height
   local.value = next
+  // Elements keep their absolute positions across a size change (Figma-style)
+  // — warn when a smaller slide silently cuts some of them off.
+  if (shrunk) {
+    if (clipWarnTimer) clearTimeout(clipWarnTimer)
+    clipWarnTimer = setTimeout(() => {
+      clipWarnTimer = null
+      const clipped = elements.value.some((el) => {
+        const b = slotBounds(el, byId)
+        return b.x + b.w > local.value.width || b.y + b.h > local.value.height
+      })
+      if (clipped) {
+        toast.warning(_t('Some elements now extend beyond the slide — move or resize them.'))
+      }
+    }, 800)
+  }
   scheduleSave()
 }
 const backgroundImageName = computed(() => imageRefName(local.value.background_image))
@@ -1568,6 +1668,10 @@ const shapeTools: PaletteTool[] = [
   cursor: move;
 }
 
+.pres__el--link {
+  cursor: pointer;
+}
+
 .pres__el--locked {
   cursor: default;
 }
@@ -1594,6 +1698,17 @@ const shapeTools: PaletteTool[] = [
   position: absolute;
   inset: 0;
   overflow: visible;
+  pointer-events: none;
+}
+
+/* Container for all slide elements. isolation: isolate keeps their z-index
+   values local, so overlays later in the DOM (value pills, selection, badges)
+   always paint above without any magic z numbers. pointer-events: none lets
+   stage clicks through; each element re-enables its own via elementStyle. */
+.pres__els {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
   pointer-events: none;
 }
 
