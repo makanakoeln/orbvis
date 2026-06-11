@@ -78,9 +78,13 @@ test.describe('OrbVis board edit', () => {
     await expect(aliasInput).toHaveValue(ORIGINAL_ALIAS)
     await aliasInput.fill(EDITED_ALIAS)
     await page.getByRole('button', { name: /^save$/i }).click()
-    // The dialog closes once the update settled — navigating earlier can
-    // abort the in-flight PUT and the alias silently stays unchanged.
-    await expect(aliasInput).toBeHidden({ timeout: 10_000 })
+    // Both settings modals patch the live store with the PUT response once
+    // the update settled — the breadcrumb flipping to the new alias is the
+    // mode-independent signal (the FormSpec modal stays open after save,
+    // the legacy modal closes). Navigating earlier can abort the in-flight
+    // PUT and the alias silently stays unchanged. getByText never matches
+    // input values, so the filled alias field cannot satisfy this early.
+    await expect(page.getByText(EDITED_ALIAS).first()).toBeVisible({ timeout: 10_000 })
 
     // Reload from scratch; the persisted alias must survive the round-trip.
     // goto() on the identical hash URL is a no-op for the SPA — reload()
