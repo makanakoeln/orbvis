@@ -16,10 +16,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import type { PresentationElement } from '@/types/api'
+export interface ConnectSlotBox {
+  id: string
+  x: number
+  y: number
+  w: number
+  h: number
+}
 
 const props = defineProps<{
-  slots: PresentationElement[]
+  // Pre-resolved on-slide bounds (a connector's box spans its endpoints).
+  slots: ConnectSlotBox[]
   currentId: string | null
   scale: number
 }>()
@@ -28,12 +35,12 @@ const emit = defineEmits<{ pick: [string] }>()
 
 // Slide-space overlay: outlines hug the slot's box; chrome (border, badge) is
 // divided by the zoom factor so it keeps a constant on-screen size.
-function slotStyle(el: PresentationElement): Record<string, string> {
+function slotStyle(box: ConnectSlotBox): Record<string, string> {
   return {
-    left: `${el.x}px`,
-    top: `${el.y}px`,
-    width: `${el.w}px`,
-    height: `${el.h}px`,
+    left: `${box.x}px`,
+    top: `${box.y}px`,
+    width: `${box.w}px`,
+    height: `${box.h}px`,
     borderWidth: `${2 / props.scale}px`,
     borderRadius: `${10 / props.scale}px`
   }

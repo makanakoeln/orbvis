@@ -7,7 +7,8 @@ import {
   isBindable,
   isBoundElement,
   isUnboundSlot,
-  sampleStateFor
+  sampleStateFor,
+  slotBounds
 } from './presentationSampleState'
 
 function data(over: Partial<DataElement> = {}): DataElement {
@@ -47,6 +48,33 @@ describe('isBindable / isBoundElement', () => {
     expect(isBindable(createElement('text', 0, 0))).toBe(false)
     expect(isBoundElement(data({ host_name: 'web01' }))).toBe(true)
     expect(isBoundElement(data())).toBe(false)
+  })
+})
+
+describe('slotBounds', () => {
+  it('returns the element box for non-connectors', () => {
+    const el = data({ x: 10, y: 20, w: 100, h: 50 })
+    expect(slotBounds(el, () => undefined)).toEqual({ x: 10, y: 20, w: 100, h: 50 })
+  })
+
+  it('spans a docked connector between its endpoint centres', () => {
+    const a = data({ x: 0, y: 0, w: 100, h: 100 })
+    const b = data({ x: 400, y: 200, w: 100, h: 100 })
+    const link = createElement('line', 0, 0)
+    if (link.kind !== 'shape') throw new Error('unreachable')
+    link.start_ref = a.id
+    link.end_ref = b.id
+    const byId = (id: string | null | undefined) => [a, b].find((e) => e.id === id)
+    // Endpoint centres: (50,50) and (450,250).
+    expect(slotBounds(link, byId)).toEqual({ x: 50, y: 50, w: 400, h: 200 })
+  })
+
+  it('falls back to the connector corners for free endpoints', () => {
+    const link = createElement('line', 30, 40)
+    if (link.kind !== 'shape') throw new Error('unreachable')
+    link.w = 260
+    link.h = 4
+    expect(slotBounds(link, () => undefined)).toEqual({ x: 30, y: 40, w: 260, h: 4 })
   })
 })
 

@@ -116,7 +116,7 @@
 
         <PresentationConnectOverlay
           v-if="interactive && connectGuide.active.value"
-          :slots="connectGuide.slots.value"
+          :slots="connectSlotBoxes"
           :current-id="connectGuide.currentId.value"
           :scale="scale"
           @pick="connectGuide.goTo($event)"
@@ -162,12 +162,10 @@
       </div>
 
       <div
-        v-if="
-          interactive && connectGuide.active.value && connectGuide.current.value && connectPopPos
-        "
+        v-if="interactive && connectGuide.active.value && connectGuide.current.value"
+        ref="connectPopEl"
         class="pres__connect-pop"
-        :class="{ 'pres__connect-pop--below': connectPopPos.below }"
-        :style="{ left: connectPopPos.x + 'px', top: connectPopPos.y + 'px' }"
+        :style="connectPopStyle ?? { visibility: 'hidden', left: '0px', top: '0px' }"
         @pointerdown.stop
       >
         <div class="pres__connect-pop-head">
@@ -371,7 +369,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue'
 import CmkButton from '@/components/cmk/CmkButton'
@@ -404,7 +402,7 @@ import {
   newElementId,
   resolveImageRef
 } from '@/utils/presentationElements'
-import { isUnboundSlot, sampleStateFor } from '@/utils/presentationSampleState'
+import { isUnboundSlot, sampleStateFor, slotBounds } from '@/utils/presentationSampleState'
 import type { PresentationTemplate } from '@/utils/presentationTemplates'
 import { themeTokens } from '@/utils/presentationThemes'
 import usei18n from '@/vendor/cmk/lib/i18n'
@@ -1275,17 +1273,68 @@ const connectSlotTitle = computed(() => {
   })
 })
 
-// Anchor the binding popover centred above the current slot (below near the
-// top edge), mirroring the old floating-inspector anchor math.
-const connectPopPos = computed(() => {
+// Badge boxes for the connect overlay — resolved to the real on-slide bounds
+// (a connector's badge sits on the box spanned by its endpoints).
+const connectSlotBoxes = computed(() =>
+  connectGuide.slots.value.map((s) => ({ id: s.id, ...slotBounds(s, byId) }))
+)
+
+// The binding popover prefers to sit centred above the current slot (below it
+// near the top edge) but is always clamped into the viewport — a slot at the
+// slide's edge must not push the form out of reach. The popover is measured
+// after render (its height varies with the form's fields), and a
+// ResizeObserver re-clamps when the service/label step grows it.
+const connectPopEl = ref<HTMLElement | null>(null)
+const connectPopStyle = ref<{ left: string; top: string } | null>(null)
+
+const connectAnchor = computed(() => {
   const el = connectGuide.current.value
   if (!el) return null
-  const topY = offsetY.value + el.y * scale.value
-  const below = topY < 170
+  const b = slotBounds(el, byId)
   return {
-    x: offsetX.value + (el.x + el.w / 2) * scale.value,
-    y: below ? offsetY.value + (el.y + el.h) * scale.value : topY,
-    below
+    cx: offsetX.value + (b.x + b.w / 2) * scale.value,
+    top: offsetY.value + b.y * scale.value,
+    bottom: offsetY.value + (b.y + b.h) * scale.value
+  }
+})
+
+function placeConnectPop(): void {
+  const a = connectAnchor.value
+  const pop = connectPopEl.value
+  const vp = containerRef.value
+  if (!a || !pop || !vp) {
+    connectPopStyle.value = null
+    return
+  }
+  const MARGIN = 12
+  const TOPBAR = 64 // keep clear of the connect progress bar
+  const GAP = 14
+  const w = pop.offsetWidth
+  const h = pop.offsetHeight
+  const left = Math.min(
+    Math.max(a.cx - w / 2, MARGIN),
+    Math.max(MARGIN, vp.clientWidth - w - MARGIN)
+  )
+  let top = a.top - h - GAP
+  if (top < TOPBAR + MARGIN) top = a.bottom + GAP
+  top = Math.min(top, vp.clientHeight - h - MARGIN)
+  top = Math.max(top, TOPBAR + MARGIN)
+  connectPopStyle.value = { left: `${left}px`, top: `${top}px` }
+}
+
+watch(connectAnchor, async () => {
+  await nextTick()
+  placeConnectPop()
+})
+let connectPopRo: ResizeObserver | null = null
+watch(connectPopEl, (el) => {
+  connectPopRo?.disconnect()
+  connectPopRo = null
+  connectPopStyle.value = null
+  if (el) {
+    connectPopRo = new ResizeObserver(placeConnectPop)
+    connectPopRo.observe(el)
+    placeConnectPop()
   }
 })
 
@@ -1437,6 +1486,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('pointermove', onPointerMove)
   window.removeEventListener('pointerup', onPointerUp)
   window.removeEventListener('keydown', onKey)
+  connectPopRo?.disconnect()
 })
 
 type PaletteTool = { kind: InsertKind; title: string; icon: string }
@@ -1757,16 +1807,11 @@ const shapeTools: PaletteTool[] = [
   position: absolute;
   z-index: 7;
   width: 264px;
-  transform: translate(-50%, calc(-100% - 14px));
   border-radius: 10px;
   background: var(--bg-surface, #1b1f2a);
   border: 1px solid var(--border, rgb(255 255 255 / 8%));
   box-shadow: 0 10px 30px rgb(0 0 0 / 35%);
   color: var(--text, #e5e7eb);
-}
-
-.pres__connect-pop--below {
-  transform: translate(-50%, 14px);
 }
 
 .pres__connect-pop-head {

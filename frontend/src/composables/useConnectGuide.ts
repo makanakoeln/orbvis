@@ -1,7 +1,12 @@
 import { computed, ref, watch } from 'vue'
 
 import type { PresentationElement } from '@/types/api'
-import { type BindableElement, isBindable, isUnboundSlot } from '@/utils/presentationSampleState'
+import {
+  type BindableElement,
+  isBindable,
+  isUnboundSlot,
+  slotBounds
+} from '@/utils/presentationSampleState'
 
 // The connect-data walkthrough: after designing a slide (or applying a
 // template), every unbound data slot is visited in reading order and bound via
@@ -16,7 +21,7 @@ import { type BindableElement, isBindable, isUnboundSlot } from '@/utils/present
 // count as one row), left→right within a row.
 const ROW_TOLERANCE = 80
 
-function readingOrder(a: PresentationElement, b: PresentationElement): number {
+function readingOrder(a: { x: number; y: number }, b: { x: number; y: number }): number {
   const rowA = Math.floor(a.y / ROW_TOLERANCE)
   const rowB = Math.floor(b.y / ROW_TOLERANCE)
   return rowA - rowB || a.x - b.x
@@ -29,7 +34,19 @@ export function useConnectGuide(elements: () => PresentationElement[]) {
   // total minus remaining.
   const totalCount = ref(0)
 
-  const slots = computed(() => elements().filter(isUnboundSlot).sort(readingOrder))
+  function byId(id: string | null | undefined): PresentationElement | undefined {
+    return id ? elements().find((e) => e.id === id) : undefined
+  }
+  // Sort on the real on-slide bounds — a connector's own x/y is vestigial.
+  function bounds(el: PresentationElement): { x: number; y: number; w: number; h: number } {
+    return slotBounds(el, byId)
+  }
+
+  const slots = computed(() =>
+    elements()
+      .filter(isUnboundSlot)
+      .sort((a, b) => readingOrder(bounds(a), bounds(b)))
+  )
   const unboundCount = computed(() => slots.value.length)
   const boundCount = computed(() => Math.max(0, totalCount.value - slots.value.length))
 
@@ -77,8 +94,9 @@ export function useConnectGuide(elements: () => PresentationElement[]) {
       currentId.value = list[0]?.id ?? null
       return
     }
-    const after = list.filter((s) => readingOrder(cur, s) < 0)
-    const before = list.filter((s) => readingOrder(cur, s) >= 0)
+    const curBox = bounds(cur)
+    const after = list.filter((s) => readingOrder(curBox, bounds(s)) < 0)
+    const before = list.filter((s) => readingOrder(curBox, bounds(s)) >= 0)
     const target =
       dir === 1 ? (after[0] ?? list[0]) : (before[before.length - 1] ?? list[list.length - 1])
     currentId.value = target?.id ?? null

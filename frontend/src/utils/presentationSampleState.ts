@@ -23,6 +23,30 @@ export function isBoundElement(el: PresentationElement): boolean {
   return isBindable(el) && !!el.host_name
 }
 
+// The on-slide bounds of a slot. A connector's x/y/w/h box is vestigial (its
+// endpoints drive the geometry) — badges and popovers must anchor on the box
+// spanned by the actual endpoints instead.
+export function slotBounds(
+  el: PresentationElement,
+  byId: (id: string | null | undefined) => PresentationElement | undefined
+): { x: number; y: number; w: number; h: number } {
+  if (el.kind === 'shape' && (el.shape === 'line' || el.shape === 'arrow')) {
+    const centerOf = (ref?: string | null) => {
+      const t = ref ? byId(ref) : undefined
+      return t ? { x: t.x + t.w / 2, y: t.y + t.h / 2 } : null
+    }
+    const start = centerOf(el.start_ref) ?? { x: el.x, y: el.y }
+    const end = centerOf(el.end_ref) ?? { x: el.x + el.w, y: el.y + el.h }
+    return {
+      x: Math.min(start.x, end.x),
+      y: Math.min(start.y, end.y),
+      w: Math.abs(end.x - start.x),
+      h: Math.abs(end.y - start.y)
+    }
+  }
+  return { x: el.x, y: el.y, w: el.w, h: el.h }
+}
+
 function hash(s: string): number {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0

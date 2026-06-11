@@ -146,7 +146,7 @@ export function usePresentationDocument(config: () => BoardConfig, onBoardSwitch
   function topLevelId(id: string): string {
     return childToGroup.value.get(id) ?? id
   }
-  function byId(id: string | undefined): PresentationElement | undefined {
+  function byId(id: string | null | undefined): PresentationElement | undefined {
     return id ? elements.value.find((e) => e.id === id) : undefined
   }
   const nextZ = computed(() => elements.value.reduce((m, e) => Math.max(m, e.z), 0) + 1)
